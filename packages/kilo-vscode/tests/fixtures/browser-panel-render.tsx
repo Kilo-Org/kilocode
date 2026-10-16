@@ -14,6 +14,7 @@ Object.assign(globalThis, {
   SVGElement: window.SVGElement,
   MutationObserver: window.MutationObserver,
   ResizeObserver: window.ResizeObserver,
+  IntersectionObserver: window.IntersectionObserver,
   Event: window.Event,
   MouseEvent: window.MouseEvent,
   getComputedStyle: window.getComputedStyle.bind(window),
@@ -23,29 +24,45 @@ Object.assign(globalThis, {
 
 const { createSignal } = await import("solid-js")
 const { render } = await import("solid-js/web")
-const { BrowserPanel } = await import("../../webview-ui/browser")
+const { BrowserPanel, browserCursorEvent } = await import("../../webview-ui/browser")
+const { StreamViewport } = await import("../../webview-ui/browser/StreamViewport")
 import type { BrowserCommand, BrowserEvent, BrowserLabels } from "../../webview-ui/browser/types"
 import type { BrowserReference } from "../../src/shared/browser-feedback"
+import type { BrowserCursor } from "../../src/shared/browser-stream"
 
 const root = document.createElement("div")
 document.body.append(root)
 const scope = { sessionId: "standalone", projectId: "fixture" }
 const sent: BrowserCommand[] = []
 const references: BrowserReference[] = []
-let receive: ((event: BrowserEvent) => void) | undefined
+const listeners = new Set<(event: BrowserEvent) => void>()
+const receive = (event: BrowserEvent) => {
+  for (const listener of [...listeners]) listener(event)
+}
 let closed = 0
+const actions = { download: 0, settings: 0, openExternal: [] as string[] }
 const [labels, update] = createSignal<BrowserLabels>({
   title: "Browser",
   url: "Address",
   urlPlaceholder: "Local URL",
   open: "Go",
+  openExternal: "Open in external browser",
   refresh: "Reload",
+  back: "Back",
+  forward: "Forward",
   close: "Close",
   inspect: "Select element",
   devtoolsTitle: "Developer tools",
   diagnostics: "Browser diagnostics",
   diagnosticsHint: "Recent events from the automation browser. Security blocks are not console errors.",
   empty: "Open a local page",
+  requirement: "Requires an installed browser",
+  missingTitle: "Browser not found",
+  missingChrome: "Install Google Chrome, then retry.",
+  missingChromium: "Install compatible Playwright Chromium or change Browser Settings.",
+  download: "Download Chrome",
+  retry: "Retry",
+  settings: "Browser Settings",
   noSession: "Choose a session",
   screenshotAlt: "Preview",
   errors: (count) => `${count} errors`,
@@ -59,12 +76,13 @@ const dispose = render(
       transport={{
         send: (command) => sent.push(command),
         subscribe: (handler) => {
-          receive = handler
-          return () => {
-            receive = undefined
-          }
+          listeners.add(handler)
+          return () => listeners.delete(handler)
         },
       }}
+      download={() => actions.download++}
+      settings={() => actions.settings++}
+      openExternal={(url) => actions.openExternal.push(url)}
       onReference={(reference) => references.push(reference)}
       onClose={() => closed++}
     />
@@ -72,40 +90,87 @@ const dispose = render(
   root,
 )
 assert.deepEqual(sent[0], { type: "state", scope })
-const state = { scope, browserId: "browser", status: "ready" as const, errors: 0, url: "about:blank" }
+assert.ok(root.querySelector(".am-browser-empty")?.textContent?.includes(labels().requirement))
+const state = {
+  scope,
+  browserId: "browser",
+  navigation: 0,
+  status: "ready" as const,
+  errors: 0,
+  url: "https://example.com/",
+}
+receive({
+  type: "state",
+  value: { ...state, browserId: "", status: "error", missing: "chrome", error: "Internal runtime details" },
+})
+const warning = root.querySelector('[role="alert"][data-component="card"][data-variant="warning"]')
+assert.ok(warning)
+assert.equal(warning.querySelector('[data-slot="card-title"]')?.textContent, labels().missingTitle)
+assert.equal(warning.querySelector('[data-slot="card-description"]')?.textContent, labels().missingChrome)
+assert.equal(warning.textContent?.includes("Internal runtime details"), false)
+const button = (label: string) =>
+  [...root.querySelectorAll("button")].find((node) => node.textContent?.trim() === label)
+button(labels().download)!.click()
+button(labels().settings)!.click()
+assert.deepEqual(actions, { download: 1, settings: 1, openExternal: [] })
+button(labels().retry)!.click()
+assert.deepEqual(sent.at(-1), { type: "open", scope, url: state.url })
+receive({ type: "state", value: { ...state, browserId: "", status: "error", missing: "chromium" } })
+assert.equal(warning.querySelector('[data-slot="card-description"]')?.textContent, labels().missingChromium)
+assert.equal(button(labels().download), undefined)
+update((value) => ({ ...value, missingTitle: "Navigateur introuvable" }))
+assert.equal(warning.querySelector('[data-slot="card-title"]')?.textContent, "Navigateur introuvable")
 receive?.({ type: "state", value: { ...state, status: "error", error: "Cannot connect to the local server" } })
+assert.equal(root.querySelector('[data-variant="warning"]'), null)
 const failure = root.querySelector('[role="alert"][data-component="card"][data-variant="error"]')
 assert.ok(failure)
 assert.equal(failure.querySelector(".error-card-message")?.textContent, "Cannot connect to the local server")
 assert.ok(failure.querySelector('[data-component="icon"]'))
-assert.equal(root.querySelector(".am-browser-frame"), null)
+assert.equal(root.querySelector(".am-browser-stream canvas"), null)
 assert.equal(root.querySelector(".am-browser-empty"), null)
 receive?.({ type: "state", value: state })
 assert.equal(root.querySelector('[role="alert"]'), null)
+const external = root.querySelector(`button[aria-label="${labels().openExternal}"]`) as HTMLButtonElement
+assert.ok(external, "external browser button renders")
+external.click()
+assert.deepEqual(actions.openExternal, [state.url])
 await window.happyDOM.waitUntilComplete()
-const frame = root.querySelector(".am-browser-frame")
+const frame = root.querySelector(".am-browser-stream canvas")
 assert.ok(frame)
 assert.equal(root.querySelector(".am-browser-site"), null)
 receive?.({ type: "state", value: { ...state, logs: ["[info] Updated"] } })
-assert.equal(root.querySelector(".am-browser-frame"), frame)
+assert.equal(root.querySelector(".am-browser-stream canvas"), frame)
 assert.equal(root.querySelector(".am-browser-diagnostics button")?.textContent, "Browser diagnostics")
 assert.equal(root.querySelector(".am-browser-console"), null)
+const back = root.querySelector("button[aria-label=Back]") as HTMLButtonElement
+const forward = root.querySelector("button[aria-label=Forward]") as HTMLButtonElement
+assert.equal(back.disabled, true)
+assert.equal(forward.disabled, true)
+receive?.({ type: "state", value: { ...state, back: true } })
+assert.equal(back.disabled, false)
+assert.equal(forward.disabled, true)
+back.click()
+assert.deepEqual(sent.at(-1), { type: "back", scope })
+receive?.({ type: "state", value: { ...state, forward: true } })
+assert.equal(back.disabled, true)
+forward.click()
+assert.deepEqual(sent.at(-1), { type: "forward", scope })
 ;(root.querySelector("button[aria-label=Reload]") as HTMLButtonElement).click()
 assert.deepEqual(sent.at(-1), { type: "refresh", scope })
 receive?.({ type: "state", value: { ...state, navigation: 1 } })
 await window.happyDOM.waitUntilComplete()
-assert.equal(frame.isConnected, false)
-const refreshed = root.querySelector(".am-browser-frame")
-assert.ok(refreshed)
-assert.equal(refreshed.getAttribute("src"), state.url)
-assert.equal(refreshed.getAttribute("sandbox"), "allow-scripts allow-forms allow-same-origin")
+assert.equal(frame.isConnected, true)
+const refreshed = root.querySelector(".am-browser-stream canvas")
+assert.equal(refreshed, frame)
+assert.equal(refreshed.getAttribute("src"), null)
+assert.equal(root.querySelector(".am-browser-viewport iframe"), null)
 receive?.({ type: "state", value: { ...state, navigation: 1, errors: 1 } })
-assert.equal(root.querySelector(".am-browser-frame"), refreshed)
+assert.equal(root.querySelector(".am-browser-stream canvas"), refreshed)
 receive?.({
   type: "state",
   value: { ...state, navigation: 1, title: "", error: "Developer tools are unavailable" },
 })
-assert.equal(root.querySelector(".am-browser-frame"), refreshed)
+assert.equal(root.querySelector(".am-browser-stream canvas"), refreshed)
 assert.equal(
   root.querySelector('[role="alert"][data-variant="error"] .error-card-message')?.textContent,
   "Developer tools are unavailable",
@@ -162,7 +227,7 @@ assert.equal(entries.length, 3, root.querySelector(".am-browser-diagnostics")?.o
 assert.equal(entries.at(0)?.textContent, `${blocked}×3`)
 assert.equal(entries.at(1)?.textContent, other)
 assert.equal(entries.at(2)?.textContent, "[error] Failed to load")
-assert.equal(root.querySelector(".am-browser-frame"), refreshed)
+assert.equal(root.querySelector(".am-browser-stream canvas"), refreshed)
 ;(root.querySelector(".am-browser-tools-action button") as HTMLButtonElement).click()
 assert.deepEqual(sent.at(-1), { type: "devtools", scope, theme: "light" })
 receive?.({ type: "devtools", value: { scope, browserId: state.browserId, url: "about:blank" } })
@@ -176,5 +241,117 @@ assert.equal(root.querySelector(".am-browser-diagnostics"), null)
 assert.equal(closed, 1)
 assert.deepEqual(sent.at(-1), { type: "close", scope })
 dispose()
-assert.equal(receive, undefined)
+assert.equal(listeners.size, 0)
+
+const emptyRoot = document.createElement("div")
+document.body.append(emptyRoot)
+const sentEmpty: BrowserCommand[] = []
+const disposeEmpty = render(
+  () => (
+    <BrowserPanel
+      scope={() => undefined}
+      labels={labels()}
+      theme={() => "light"}
+      transport={{
+        send: (command) => sentEmpty.push(command),
+        subscribe: () => () => undefined,
+      }}
+      download={() => undefined}
+      settings={() => undefined}
+      openExternal={() => undefined}
+      onReference={() => undefined}
+      onClose={() => undefined}
+    />
+  ),
+  emptyRoot,
+)
+assert.equal(sentEmpty.length, 0)
+const noSession = emptyRoot.querySelector('[role="alert"][data-component="card"][data-variant="warning"]')
+assert.ok(noSession, "no-session panel shows a warning card")
+assert.equal(noSession.textContent?.includes(labels().noSession), true)
+assert.equal(emptyRoot.querySelector(".am-browser-empty"), null)
+assert.equal((emptyRoot.querySelector("input") as HTMLInputElement | null)?.disabled, true)
+assert.equal((emptyRoot.querySelector(`button[aria-label="${labels().open}"]`) as HTMLButtonElement)?.disabled, true)
+disposeEmpty()
+
+// Exercise cursor identity checks with a visible viewport, without decoding or modifying any streamed image.
+const bounds = { left: 0, top: 0, width: 400, height: 200, right: 400, bottom: 200 } as DOMRect
+Object.assign(globalThis, {
+  ResizeObserver: class {
+    observe(target: Element) {
+      target.getBoundingClientRect = () => bounds
+    }
+    disconnect() {}
+  },
+  IntersectionObserver: class {
+    constructor(private readonly notify: IntersectionObserverCallback) {}
+    observe(target: Element) {
+      this.notify(
+        [{ target, isIntersecting: true, intersectionRect: bounds } as IntersectionObserverEntry],
+        this as unknown as IntersectionObserver,
+      )
+    }
+    disconnect() {}
+  },
+})
+const viewport = document.createElement("div")
+document.body.append(viewport)
+const commands: BrowserCommand[] = []
+const readers = new Set<(event: BrowserEvent) => void>()
+const [page, setPage] = createSignal(state)
+const [inspecting, inspect] = createSignal(false)
+const stop = render(
+  () => (
+    <StreamViewport
+      scope={() => scope}
+      state={page}
+      inspecting={inspecting}
+      label="Cursor viewport"
+      transport={{
+        send: (command) => commands.push(command),
+        subscribe: (listener) => {
+          readers.add(listener)
+          return () => readers.delete(listener)
+        },
+      }}
+    />
+  ),
+  viewport,
+)
+const command = commands.findLast((command) => command.type === "viewport")
+assert.ok(command?.type === "viewport" && command.viewport.active)
+const identity = { browserId: command.browserId, navigation: command.navigation, revision: command.viewport.revision }
+const canvas = viewport.querySelector("canvas")!
+const cursor = (value: Partial<BrowserCursor & { scope: typeof scope }> = {}) => {
+  const event: BrowserEvent = { type: "cursor", value: { ...identity, scope, cursor: "pointer", ...value } }
+  for (const reader of readers) reader(event)
+}
+assert.equal(canvas.style.cursor, "default")
+for (const value of [
+  { browserId: "retired" },
+  { navigation: identity.navigation + 1 },
+  { revision: identity.revision - 1 },
+  { scope: { ...scope, sessionId: "other" } },
+  { scope: { ...scope, projectId: "other" } },
+  { cursor: "url(https://example.com/cursor), pointer" },
+  { cursor: "invalid" },
+]) {
+  cursor(value)
+  assert.equal(canvas.style.cursor, "default")
+}
+assert.equal(browserCursorEvent(scope, { ...identity, cursor: "url(https://example.com/cursor), pointer" }), undefined)
+cursor()
+assert.equal(canvas.style.cursor, "pointer")
+inspect(true)
+assert.equal(canvas.style.cursor, "crosshair")
+cursor({ cursor: "grab" })
+assert.equal(canvas.style.cursor, "crosshair")
+inspect(false)
+assert.equal(canvas.style.cursor, "grab")
+setPage({ ...state, navigation: 1 })
+assert.equal(canvas.style.cursor, "default")
+cursor()
+assert.equal(canvas.style.cursor, "default")
+stop()
+assert.equal(readers.size, 0)
 await window.happyDOM.close()

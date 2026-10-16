@@ -35,6 +35,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Todos os projetos nesta máquina. Armazenado na sua configuração de usuário.",
   "marketplace.install.destination": "Destino da instalação",
+  "marketplace.install.includedSkills": "Habilidades incluídas",
   "marketplace.install.about.mcp":
     "Um servidor MCP fornece ao Kilo ferramentas adicionais para trabalhar com serviços externos ou programas locais.",
   "marketplace.install.about.agent": "Um agente adiciona uma função reutilizável com instruções e permissões próprias.",
@@ -50,7 +51,6 @@ export const dict = {
     "Um plugin adiciona ferramentas e integrações personalizadas ao Kilo. Os plugins são executados com permissões totais.",
   "marketplace.install.plugin.warning":
     "Os plugins executam código com permissões totais. Eles podem ler e alterar seus arquivos, executar comandos e acessar suas credenciais e sua rede. Instale apenas plugins em que você confia.",
-  "marketplace.install.installedAt": "Instalado em {{path}}",
   "marketplace.intro":
     "Instale agentes, habilidades, ferramentas MCP e plugins reutilizáveis em um projeto ou em todos os projetos.",
   "marketplace.intro.learnMore": "Sobre o Marketplace",
@@ -61,10 +61,19 @@ export const dict = {
   "marketplace.install.failed": "Falha na instalação",
   "marketplace.install.done": "Concluído",
   "marketplace.install.close": "Fechar",
+  "marketplace.install.mcp.signIn.message": "{{name}} está instalado, mas precisa de login antes que suas ferramentas possam ser usadas.",
+  "marketplace.install.mcp.signIn.button": "Entrar",
+  "marketplace.install.mcp.signIn.waiting": "Aguardando login pelo navegador…",
+  "marketplace.install.mcp.signIn.cancel": "Cancelar",
+  "marketplace.install.mcp.signIn.skip": "Mais tarde",
+  "marketplace.install.mcp.signIn.success": "Login realizado em {{name}}.",
+  "marketplace.install.mcp.signIn.failed": "Falha ao fazer login em {{name}}.",
   "marketplace.remove.title": "Remover {{name}}?",
   "marketplace.remove.confirm":
     "Tem certeza que deseja remover este {{type}}? Isso o removerá da sua configuração {{scope}}.",
   "marketplace.remove.cancel": "Cancelar",
+  "marketplace.remove.mcp.skills":
+    "Isso também remove as habilidades complementares pertencentes a esta instalação. As habilidades instaladas de forma independente são mantidas.",
   "marketplace.remove.confirm.button": "Remover",
   "marketplace.search": "Pesquisar...",
   "marketplace.filter.all": "Todos os Itens",
@@ -73,6 +82,7 @@ export const dict = {
   "marketplace.empty": "Nenhum item encontrado",
   "marketplace.empty.relevant": "Nenhum item relevante do marketplace foi encontrado para este espaço de trabalho.",
   "marketplace.badge.mcpServer": "Servidor MCP",
+  "marketplace.badge.skills": "Inclui habilidades",
   "marketplace.card.by": "por {{author}}",
   "marketplace.install.method": "Método de Instalação",
   "marketplace.install.parameters": "Parâmetros",

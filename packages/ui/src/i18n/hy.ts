@@ -69,7 +69,7 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "Ավելացնել միավորներ",
   "dialog.usageExceeded.freeTier.title": "Ազատ սահմանաչափը հասել է",
   "dialog.usageExceeded.freeTier.description":
-    "Բաժանորդագրվեք Kilo-ին Գնացեք՝ բաց կոդով լավագույն մոդելներին հուսալի մուտք ունենալու համար՝ սկսած $5/ամսական արժեքից:", // kilocode_change
+    "Բաժանորդագրվեք Kilo Go-ին՝ բաց կոդով լավագույն մոդելներին հուսալի մուտք ունենալու համար՝ ամսական $10 արժեքով:", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Բաժանորդագրվել",
   "dialog.usageExceeded.accountRateLimit.title": "Գնալ սահմանաչափը հասել է",
   "dialog.usageExceeded.accountRateLimit.description":

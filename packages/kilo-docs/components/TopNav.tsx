@@ -7,6 +7,7 @@ import { ThemeToggle } from "./ThemeToggle"
 interface NavItem {
   label: string
   href: string
+  badge?: string
 }
 
 interface DropdownItem {
@@ -31,6 +32,7 @@ const mainNavItems: NavItem[] = [
   { label: "Automate", href: "/automate" },
   { label: "Deploy & Secure", href: "/deploy-secure" },
   { label: "Kilo Gateway", href: "/gateway" },
+  { label: "Kilo Desktop", href: "/desktop", badge: "Beta" },
   { label: "Contributing", href: "/contributing" },
 ]
 
@@ -198,12 +200,30 @@ function NavTab({ item, isActive }: { item: NavItem; isActive: boolean }) {
     <Link
       href={item.href}
       className={`relative px-1 py-3 text-sm font-medium transition-colors ${
-        isActive ? "text-indigo-600 dark:text-[#F8F675]" : "hover:text-[var(--text-color)]"
+        isActive ? "text-indigo-600 dark:text-[var(--kilo-yellow)]" : "hover:text-[var(--text-color)]"
       }`}
       style={{ color: isActive ? "var(--text-brand)" : "var(--text-secondary)" }}
     >
       {item.label}
-      {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-[#F8F675]" />}
+      {item.badge ? (
+        <span
+          className="bg-blue-100 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300"
+          style={{
+            marginLeft: "0.375rem",
+            fontSize: "0.625rem",
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: "0.03em",
+            padding: "0.0625rem 0.3125rem",
+            borderRadius: "0.1875rem",
+            lineHeight: 1.4,
+            verticalAlign: "middle",
+          }}
+        >
+          {item.badge}
+        </span>
+      ) : null}
+      {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-[var(--kilo-yellow)]" />}
     </Link>
   )
 }

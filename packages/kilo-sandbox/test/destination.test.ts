@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { isPublicAddress, normalizeDestinations, parseDestination } from "../src/destination"
+import { isIpAddress, isPublicAddress, normalizeDestinations, parseDestination } from "../src/destination"
 
 describe("sandbox network destinations", () => {
   test("normalizes exact DNS hosts and ports", () => {
@@ -71,5 +71,11 @@ describe("sandbox network destinations", () => {
     ] as const) {
       expect(isPublicAddress(input), `${note}: ${input}`).toBe(expected)
     }
+  })
+
+  test("classifies IP literals without treating hostnames as addresses", () => {
+    expect(isIpAddress("8.8.8.8")).toBe(true)
+    expect(isIpAddress("2001:4860:4860::8888")).toBe(true)
+    expect(isIpAddress("example.com")).toBe(false)
   })
 })

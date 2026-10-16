@@ -165,7 +165,7 @@ abstract class BaseSearchToolView(
         parts.targets.forEachIndexed { index, label ->
             val text = values.getOrNull(index) ?: ""
             changed = setVisible(label, text.isNotBlank()) || changed
-            changed = setTargetText(label, text) || changed
+            changed = setText(label, text) || changed
             changed = setForeground(label, SessionUiStyle.Colors.foreground()) || changed
         }
         return changed

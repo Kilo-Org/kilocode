@@ -7,6 +7,7 @@ import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.LayeredOverlayPanel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.LayoutPass
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
@@ -263,6 +264,13 @@ internal class ActiveListRenderer(
         syncScale()
     }
 
+    // The stamp is invalidated wholesale for every row (see [activeListInvalidate]), so without a pass each
+    // nested Stack/Align re-measures its whole subtree for every size it is asked. The painting validate and
+    // every row-height read run as one [LayoutPass] each, which measures every container once.
+    override fun validate() = LayoutPass.measure { super.validate() }
+
+    override fun getPreferredSize(): Dimension = LayoutPass.measure { super.getPreferredSize() }
+
     @RequiresEdt
     override fun getListCellRendererComponent(
         list: JList<out ActiveListItem>,
@@ -350,7 +358,11 @@ internal class ActiveListRenderer(
         trail.foreground = weak
 
         val hovered = (list as? ActiveListActive)?.hoveredIndex() == index
-        val show = if (cfg.hoverActions) list.isEnabled && selected && hovered else active && list.isEnabled
+        val show = when {
+            cfg.hoverActions -> list.isEnabled && selected && hovered
+            cfg.keepActions -> selected && list.isEnabled
+            else -> active && list.isEnabled
+        }
         syncCells(value, show)
         cellPane.isVisible = cells.isVisible
         pill.isVisible = cells.isVisible
@@ -443,7 +455,7 @@ internal class ActiveListRenderer(
         val fixed = bodyHeight
         bodyHeight = null
         getListCellRendererComponent(list, value, index, selected, focused)
-        val height = wrap.preferredSize.height
+        val height = LayoutPass.measure { wrap.preferredSize.height }
         bodyHeight = fixed
         return height
     }
@@ -624,8 +636,9 @@ internal class ActiveListBadgeCell : JBLabel(), ActiveListHitCell {
 
     private fun pill(badge: ActiveListBadge): Icon {
         val current = icon as? FilledBadgeIcon
-        if (current?.text == badge.text && current.style == badge.style) return current
-        return FilledBadgeIcon(badge.text, badge.style)
+        val parts = badge.parts()
+        if (current?.segments == parts) return current
+        return FilledBadgeIcon(parts)
     }
 
     override fun cellEnabled(): Boolean = badge?.action != null

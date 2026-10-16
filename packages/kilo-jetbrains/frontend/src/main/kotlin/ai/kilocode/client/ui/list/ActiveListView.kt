@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
@@ -123,6 +124,13 @@ internal class ActiveListView(
     private var wired = false
     internal var onSelect: (() -> Unit)? = null
 
+    // Without a delegate every animation frame repaints the whole list, and every row re-renders and re-lays out
+    // its stamp at the frame rate of whichever spinner is running. Only rows that show an animated glyph need
+    // the next frame. REFRESH_DELEGATE is an experimental platform hook, installed/cleared with the view's own
+    // attach/detach (see addNotify/removeNotify) rather than once in init, because a worktree session editor
+    // tab switch detaches and re-attaches this exact view.
+    private val refreshDelegate = Runnable { repaintAnimated() }
+
     fun setEmptyText(text: String) {
         list.emptyText.text = text
     }
@@ -237,6 +245,24 @@ internal class ActiveListView(
         ScrollingUtil.installActions(list)
         next(list)
         wired = true
+    }
+
+    // Symmetric with removeNotify below: the client property only matters while this view is actually showing
+    // (that is when the platform's own animation cycle reads it), and a tab switch detaches and re-attaches the
+    // same view, so installing it once in init would leave it cleared — and the whole-list repaint it exists to
+    // avoid back — for the rest of the view's life after the first switch.
+    override fun addNotify() {
+        super.addNotify()
+        list.putClientProperty(AnimatedIcon.REFRESH_DELEGATE, refreshDelegate)
+    }
+
+    // The delegate closes over this view's model/renderer/items. It costs nothing while the view stays attached
+    // — the platform only reads it during its own paint/animation cycle — but clearing it on detach makes the
+    // delegate's lifetime match the view's instead of depending on how long the platform's animation registry
+    // happens to retain it.
+    override fun removeNotify() {
+        super.removeNotify()
+        list.putClientProperty(AnimatedIcon.REFRESH_DELEGATE, null)
     }
 
     /**
@@ -372,18 +398,22 @@ internal class ActiveListView(
         return model.items.firstOrNull { it.key == key }
     }
 
+    /**
+     * Anchor for a popup or balloon attached to [key]'s row, or to one [cell] of it. [leading] takes
+     * the target's bottom-left corner, which keeps a dropdown aligned with the cell it belongs to;
+     * the default takes its bottom middle for a balloon callout.
+     */
     @RequiresEdt
-    fun point(key: String, cell: String? = null): RelativePoint {
+    fun point(key: String, cell: String? = null, leading: Boolean = false): RelativePoint {
         checkEdt()
         val idx = activeListIndex(model.items, key)
         if (idx < 0) return RelativePoint(list, Point(0, 0))
         val bounds = list.getCellBounds(idx, idx) ?: return RelativePoint(list, Point(0, 0))
         val rect = cell?.let { activeListCellBounds(list, idx, list.isSelectedIndex(idx))[it] }
         val target = rect ?: bounds
-        // Horizontal middle of the target, anchored to its bottom edge: the balloon opens below, so
-        // a center anchor would bury the callout under the balloon body and cover the row instead of
-        // pointing at it.
-        val x = target.x + target.width / 2
+        // Anchored to the target's bottom edge: the balloon opens below, so a center anchor would
+        // bury the callout under the balloon body and cover the row instead of pointing at it.
+        val x = if (leading) target.x else target.x + target.width / 2
         val y = target.y + target.height
         return RelativePoint(list, Point(x.coerceIn(bounds.x, bounds.x + bounds.width), y))
     }
@@ -569,6 +599,18 @@ internal class ActiveListView(
         checkEdt()
         if (idx < 0) return
         list.getCellBounds(idx, idx)?.let { list.repaint(it) }
+    }
+
+    /** Advances an animation frame: repaints only the visible rows that paint an animated glyph. */
+    @RequiresEdt
+    private fun repaintAnimated() {
+        checkEdt()
+        val first = list.firstVisibleIndex
+        val last = list.lastVisibleIndex
+        if (first < 0 || last < first) return
+        for (idx in first..last) {
+            if (activeListAnimated(model.getElementAt(idx))) repaintRow(idx)
+        }
     }
 
     @RequiresEdt
@@ -843,10 +885,17 @@ internal class ActiveListView(
         val id = if (enabled) {
             activeListCellAt(list, idx, e.point, selected, menu?.takeIf { it.available(item) } != null)
         } else {
-            activeListCellBounds(list, idx, selected)
-                .entries
-                .firstOrNull { it.value.contains(e.point) }
-                ?.key
+            // A hit-tested region without an action — a status pill with only an id for tooltip
+            // hit-testing — must not swallow a click/double-click that falls through to it. `action`
+            // is only the per-cell handler and is null for every cell routed through the panel-level
+            // `onCell` callback (Sign In, Connect, Delete, rename, the row menu glyph, ...), so
+            // blocking must key off whether the hit id is a real cell/region, not that field.
+            val ids = activeListVisibleCells(item, selected, menu?.takeIf { it.available(item) } != null)
+                .map { it.id }
+                .toSet() + activeListRegions(item).keys
+            activeListHits(list, idx, selected)
+                .firstOrNull { it.id in ids && it.bounds.contains(e.point) }
+                ?.id
         }
         return Hit(item, id)
     }
@@ -942,7 +991,46 @@ internal class ActiveListView(
         return preferredSize.height < view.height
     }
 
-    override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
+    /**
+     * Full rendered row height at [width], measured from every cell renderer.
+     *
+     * `JList.preferredSize` can be stale before the list enters a viewport: wrapped row height only
+     * becomes known once the final width reaches the renderer. Popup owners need this answer before
+     * building their balloon, so measure the same renderers the list will use and sum every cell.
+     */
+    @RequiresEdt
+    internal fun preferredRowsHeight(width: Int): Int {
+        checkEdt()
+        val old = list.size
+        list.setSize(width.coerceAtLeast(1), old.height.coerceAtLeast(1))
+        try {
+            val fixed = list.fixedCellHeight
+            val body = if (fixed > 0) {
+                fixed.toLong() * model.size
+            } else {
+                (0 until model.size).sumOf { idx ->
+                    list.cellRenderer.getListCellRendererComponent(
+                        list,
+                        model.getElementAt(idx),
+                        idx,
+                        false,
+                        false,
+                    ).preferredSize.height.toLong()
+                }
+            }
+            return (body + list.insets.top + list.insets.bottom)
+                .coerceAtMost(Int.MAX_VALUE.toLong())
+                .toInt()
+        } finally {
+            list.size = old
+        }
+    }
+
+    override fun getPreferredScrollableViewportSize(): Dimension {
+        val pref = super.getPreferredSize()
+        val width = width.takeIf { it > 0 } ?: pref.width
+        return Dimension(pref.width, preferredRowsHeight(width))
+    }
 
     override fun getScrollableUnitIncrement(
         visibleRect: Rectangle,
@@ -999,6 +1087,7 @@ private data class ActiveListHeightBadge(
     val style: UiStyle.Badge.Style,
     val id: String?,
     val icon: Any?,
+    val segments: List<FilledBadgeIcon.Segment>,
 )
 
 private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
@@ -1009,7 +1098,7 @@ private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
         item.description,
         item.icon,
         item.section,
-        item.badges.map { ActiveListHeightBadge(it.text, it.style, it.id, it.icon) },
+        item.badges.map { ActiveListHeightBadge(it.text, it.style, it.id, it.icon, it.segments) },
         item.trailing,
         item.cells,
         item.disabled,

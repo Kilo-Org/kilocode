@@ -59,6 +59,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "กระดาน",
+  "task.swarm.open": "เปิดกระดาน",
   "task.swarm.refresh": "รีเฟรช",
   "task.swarm.reset": "รีเซ็ตกระดาน",
   "task.swarm.resetTitle": "รีเซ็ตกระดานนี้หรือไม่?",
@@ -95,6 +96,7 @@ export const dict = {
     "ย้อนกลับการสนทนาแล้ว ไม่ทราบสถานะการกู้คืนพื้นที่ทำงานสำหรับการย้อนกลับก่อนหน้านี้",
   "revert.banner.workspace.enableSnapshots": "เปิดใช้งานสแนปชอต",
   "revert.disabled.agentBusy": "รอให้เอเจนต์ทำงานเสร็จ",
+  "revert.error.body": "ที่เก็บข้อมูลอาจกำลังถูกใช้งาน ลองอีกครั้ง หรือดูรายละเอียดในบันทึกของ Kilo",
   "command.session.compact": "บีบอัดเซสชัน",
   "command.session.export": "ส่งออกบันทึกเซสชัน",
 
@@ -197,13 +199,28 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "ค้นหา Worktree",
   "prompt.thinking.tooltip": "ความพยายามในการให้เหตุผล",
+  "prompt.shortcutHint.addSelection": "เพื่อเพิ่มส่วนที่เลือก",
+  "prompt.shortcutHint.waiting": "เพื่อตอบเซสชันที่รออยู่",
+  "prompt.shortcutHint.type": "เพื่อพิมพ์",
+  "prompt.shortcutHint.sessions": "เพื่อสลับเซสชัน",
+  "prompt.shortcutHint.stop": "เพื่อหยุด",
+  "prompt.shortcutHint.changes": "เพื่อตรวจสอบการเปลี่ยนแปลง",
+  "prompt.shortcutHint.pr": "เพื่อเปิด PR",
+  "prompt.shortcutHint.mode": "โหมดถัดไป",
   "prompt.action.send": "ส่ง",
   "prompt.action.continue": "ดำเนินการต่อ",
   "prompt.action.send.blocked": "โปรดตอบหรือข้ามคำถามที่รอดำเนินการก่อน",
   "prompt.action.send.recording": "ถอดเสียงและส่ง",
   "prompt.action.stop": "หยุด",
+  "prompt.action.stop.background": "หยุดเอเจนต์หลัก เอเจนต์เบื้องหลังจะยังคงทำงานต่อ",
+  "prompt.agents.show": "แสดงเอเจนต์เบื้องหลัง",
   "prompt.action.enhance": "ปรับปรุงพรอมต์",
+  "prompt.action.more": "การดำเนินการเพิ่มเติม",
   "prompt.paste.expand": "คลิกเพื่อขยายข้อความที่วาง",
+  "prompt.issues.title": "ปัญหาของเซสชัน",
+  "prompt.mcp.provider": "MCP {{name}}",
+  "prompt.mcp.openSettings": "เปิดในการตั้งค่า",
+  "prompt.mcp.signIn.busy": "กำลังเข้าสู่ระบบ…",
   "prompt.action.autoApprove.enable": "เปิดใช้การอนุมัติอัตโนมัติ",
   "prompt.action.autoApprove.disable": "ปิดใช้การอนุมัติอัตโนมัติ",
   "prompt.action.autoApprove.enabled": "เปิดใช้การอนุมัติอัตโนมัติแล้ว คำขอสิทธิ์จะได้รับการอนุมัติโดยอัตโนมัติ",
@@ -269,6 +286,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI ออกจากระบบของคุณแล้ว",
   "error.providerAuth.chatgpt.description":
     "เข้าสู่ระบบ ChatGPT อีกครั้ง จากนั้นส่งข้อความของคุณใหม่เพื่อใช้งานโมเดล Codex ต่อไป",
+
+  "provider.failure.unauthorized": "ข้อมูลรับรองถูกปฏิเสธ (HTTP {{status}}) โปรดเข้าสู่ระบบอีกครั้ง",
+  "provider.failure.unauthorizedNoStatus": "ข้อมูลรับรองถูกปฏิเสธ โปรดเข้าสู่ระบบอีกครั้ง",
+  "provider.failure.unauthenticated": "ยังไม่ได้เข้าสู่ระบบ",
+  "provider.failure.network": "ไม่สามารถเชื่อมต่อผู้ให้บริการได้ โปรดตรวจสอบการเชื่อมต่อของคุณ",
+  "provider.failure.http": "เกิดข้อผิดพลาดของผู้ให้บริการ (HTTP {{status}})",
+  "provider.failure.httpNoStatus": "เกิดข้อผิดพลาดของผู้ให้บริการ",
+  "provider.failure.schema": "ได้รับการตอบกลับที่ไม่คาดคิดจากผู้ให้บริการ",
 
   "notification.permission.title": "ต้องการสิทธิ์",
   "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
@@ -504,6 +529,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "สลับรูปภาพสำหรับทุกโมเดล",
   "provider.custom.models.remove": "ลบโมเดล",
   "provider.custom.models.add": "เพิ่มโมเดล",
+  "provider.custom.models.fetch.button": "ดึงโมเดล",
   "provider.custom.models.fetch.authError": "การยืนยันตัวตนล้มเหลว ตรวจสอบคีย์ API ด้านบนแล้วลองอีกครั้ง",
   "provider.custom.models.fetch.empty": "ไม่พบโมเดลบนเซิร์ฟเวอร์นี้",
   "provider.custom.models.fetch.added": "เพิ่มแล้ว {{count}} โมเดล",
@@ -533,6 +559,9 @@ export const dict = {
   "provider.custom.error.duplicate": "ซ้ำ",
   "settings.openLocalConfig": "คอนฟิก Local",
   "settings.openGlobalConfig": "คอนฟิก Global",
+  "settings.search.placeholder": "ค้นหาการตั้งค่า",
+  "settings.search.noResults": "ไม่พบการตั้งค่า",
+  "settings.search.clear": "ล้างการค้นหา",
   "settings.config.scope.local": "ภายใน",
   "settings.config.scope.global": "ทั่วโลก",
   "settings.config.status.loaded": "โหลดแล้ว",
@@ -592,6 +621,7 @@ export const dict = {
   "session.tabs.switcher.pending": "ใหม่",
   "session.tabs.switcher.busy": "กำลังทำงาน",
   "session.tabs.switcher.scheduled": "ตั้งเวลาไว้",
+  "session.tabs.pinHint": "Shift+คลิกเพื่อปักหมุดหรือเลิกปักหมุด",
   "session.tab.local": "ในเครื่อง",
   "session.tab.cloud": "คลาวด์",
   "session.tab.worktree": "เวิร์กทรี Git",
@@ -727,6 +757,10 @@ export const dict = {
   "settings.aboutKiloCode.title": "เกี่ยวกับ Kilo Code",
 
   "session.messages.welcome": "Kilo Code เป็นผู้ช่วยเขียนโค้ด AI ขอให้สร้างฟีเจอร์ แก้ไขบัก หรืออธิบายโค้ดเบสของคุณ",
+  "session.workspaceScope.description": "แชต Kilo ใช้เฉพาะ “{{folder}}” ซึ่งเป็นโฟลเดอร์แรกในพื้นที่ทำงานนี้",
+  "session.workspaceScope.alternatives":
+    "หากต้องการทำงานกับโฟลเดอร์อื่น ให้เปิดโฟลเดอร์นั้นในหน้าต่างแยกต่างหาก หรือเพิ่มเป็นโปรเจกต์ใน Agent Manager",
+  "session.workspaceScope.dismiss": "ปิดคำแนะนำเกี่ยวกับขอบเขตพื้นที่ทำงาน",
   "session.messages.scrollToBottom": "เลื่อนไปด้านล่าง",
   "session.messages.initializing": "กำลังเริ่มต้น...",
   "session.messages.taskStarting": "กำลังเริ่มทำงาน...",
@@ -769,10 +803,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "กำลังพิจารณาขั้นตอนถัดไป...",
 
   "dialog.model.noProviders": "ไม่มีผู้ให้บริการ",
+  "dialog.model.unavailable": "ไม่สามารถใช้โมเดล Kilo ได้",
 
   "prompt.placeholder.connecting": "กำลังเชื่อมต่อกับเซิร์ฟเวอร์...",
   "prompt.placeholder.error": "การเชื่อมต่อล้มเหลว ตรวจสอบแผงเอาต์พุตหรือรีสตาร์ทส่วนขยาย",
   "prompt.placeholder.default": "พิมพ์ข้อความ, @ เพื่ออ้างถึงไฟล์... (Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)",
+  "prompt.placeholder.hint": "พิมพ์ข้อความ, @ เพื่ออ้างถึงไฟล์... ({{key}} {{action}})",
 
   "context.usage.sessionCost": "ค่าใช้จ่ายเซสชัน",
   "context.usage.olderSessions": "{{count}} เซสชันก่อนหน้า",
@@ -828,7 +864,8 @@ export const dict = {
   "settings.browser.description":
     "กำหนดค่าการทำงานอัตโนมัติของเบราว์เซอร์ในตัวที่ขับเคลื่อนโดย Playwright Kilo สามารถนำทาง โต้ตอบ และจับภาพหน้าจอของหน้าเว็บในเซสชันของคุณได้",
   "settings.browser.enable.title": "เปิดใช้งานการทำงานอัตโนมัติของเบราว์เซอร์",
-  "settings.browser.enable.description": "ลงทะเบียนเซิร์ฟเวอร์ Playwright MCP กับ CLI backend",
+  "settings.browser.enable.description":
+    "เปิดใช้งานเบราว์เซอร์ Agent Manager แบบแยกตามเซสชันสำหรับแอปพลิเคชันในเครื่องและหน้าเว็บ HTTPS สาธารณะ",
   "settings.browser.systemChrome.title": "ใช้ Chrome ของระบบ",
   "settings.browser.systemChrome.description": "ใช้เบราว์เซอร์ Chrome ที่ติดตั้งแทนอินสแตนซ์ Chromium แยกต่างหาก",
   "settings.browser.headless.title": "โหมด Headless",
@@ -906,6 +943,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "เครื่องมือโน้ตบุ๊กดั้งเดิม",
   "settings.experimental.nativeNotebookTools.description":
     "เปิดใช้งานเครื่องมือทดลองสำหรับการอ่าน แก้ไข และเรียกใช้โน้ตบุ๊ก VS Code",
+  "settings.experimental.globIncludeIgnored.title": "ค้นหาพาธที่ถูกละเว้น",
+  "settings.experimental.globIncludeIgnored.description":
+    "โฟลเดอร์หรือไฟล์ที่เครื่องมือ glob ควรค้นหาแม้ว่า .gitignore หรือไฟล์ ignore อื่นๆ จะยกเว้นไว้ ใช้รูปแบบสไตล์ gitignore ที่อ้างอิงจากเวิร์กสเปซ โฟลเดอร์ที่ถูกละเว้นภายในจะยังคงถูกข้าม",
   "settings.experimental.continueOnDeny.title": "ดำเนินต่อเมื่อถูกปฏิเสธ",
   "settings.experimental.continueOnDeny.description": "ดำเนินลูปเอเจนต์ต่อเมื่อสิทธิ์ถูกปฏิเสธ",
   "settings.sandboxing.title": "การทำงานในแซนด์บ็อกซ์",
@@ -919,15 +959,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "เส้นทางที่เขียนได้เพิ่มเติม",
   "settings.sandboxing.writablePaths.description":
     "เส้นทางระบบไฟล์เพิ่มเติมที่แซนด์บ็อกซ์อนุญาตให้เขียนได้ (เช่น /tmp, /var/log) จะถูกรวมเข้ากับเส้นทางที่เขียนได้เริ่มต้นเมื่อแซนด์บ็อกซ์เปิดใช้งาน",
-  "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
+  "settings.experimental.conversationPromptHistory.title": "ประวัติพรอมต์แยกตามการสนทนา",
+  "settings.experimental.conversationPromptHistory.description":
+    "แยกประวัติพรอมต์ (ArrowUp/ArrowDown) ตามแต่ละการสนทนา แทนการใช้ประวัติเดียวร่วมกันในทุกการสนทนา",
   "settings.experimental.claudeMigration.title": "การย้าย Claude Code",
   "settings.experimental.claudeMigration.description":
     "นำเข้าคำสั่ง CLAUDE.md ระดับโลกที่รองรับ ทักษะอย่างง่าย และคำจำกัดความ MCP ที่ปิดใช้งานเพียงครั้งเดียว ไฟล์ Claude ต้นฉบับจะไม่ถูกแก้ไข ให้เริ่มแบ็กเอนด์ใหม่หลังเปิดใช้งาน",
-  "settings.experimental.multiProject.description":
-    "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",
-  "settings.experimental.taskModelSelection.title": "การเลือกโมเดลตัวแทนย่อยของ Task",
-  "settings.experimental.taskModelSelection.description":
-    "เปิดให้เลือกโมเดล ผู้ให้บริการ และระดับการใช้เหตุผลสำหรับตัวแทนย่อยของ Task ได้อย่างชัดเจน",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",
@@ -1014,12 +1051,31 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "ลบเซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'ต้องการลบเซิร์ฟเวอร์ MCP "{{name}}" หรือไม่? การดำเนินการนี้จะลบออกจากการกำหนดค่าของคุณ',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'ลบเซิร์ฟเวอร์ MCP "{{name}}" และทักษะคู่กันหรือไม่? การดำเนินการนี้จะลบทั้งเซิร์ฟเวอร์และทักษะทั้งหมดที่เป็นของการติดตั้ง Marketplace นี้',
   "settings.agentBehaviour.removeMcp.button": "ลบ",
   "settings.agentBehaviour.editMcp": "แก้ไขเซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.editMcp.transportLocal": "เซิร์ฟเวอร์ภายใน (การขนส่ง stdio)",
   "settings.agentBehaviour.editMcp.transportRemote": "เซิร์ฟเวอร์ระยะไกล (การขนส่ง SSE/HTTP)",
   "settings.agentBehaviour.editMcp.env": "ตัวแปรสภาพแวดล้อม",
   "settings.agentBehaviour.editMcp.env.help": "ตัวแปรที่ส่งไปยังกระบวนการเซิร์ฟเวอร์ MCP",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "ปล่อยไว้ที่อัตโนมัติ เว้นแต่เซิร์ฟเวอร์ต้องการไคลเอ็นต์ที่ลงทะเบียนไว้ล่วงหน้า ไคลเอ็นต์ซีเคร็ตจะถูกจัดเก็บไว้ในไฟล์การกำหนดค่า Kilo ของคุณ",
+  "settings.agentBehaviour.editMcp.oauth.mode": "โหมด",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "อัตโนมัติ",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "ปิดใช้งาน",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "ไคลเอ็นต์กำหนดเอง",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "ไคลเอ็นต์ไอดี",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "ไคลเอ็นต์ซีเคร็ต",
+  "settings.agentBehaviour.editMcp.oauth.scope": "สโคป",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "พอร์ตคอลแบ็ก",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "URI การเปลี่ยนเส้นทาง",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "ค่าเริ่มต้นคือ http://127.0.0.1:19876/mcp/oauth/callback และจะแทนที่พอร์ตคอลแบ็ก",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "ป้อนพอร์ตระหว่าง 1 ถึง 65535",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "ไคลเอ็นต์ซีเคร็ตต้องมีไคลเอ็นต์ไอดี",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "ป้อน URI การเปลี่ยนเส้นทางที่ถูกต้อง",
   "settings.agentBehaviour.addMcp.command": "คำสั่ง",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "อาร์กิวเมนต์",
@@ -1032,6 +1088,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "ลบทักษะ",
   "settings.agentBehaviour.removeSkill.confirm":
     'ต้องการลบทักษะ "{{name}}" หรือไม่? การดำเนินการนี้จะลบไฟล์ทักษะออกจากดิสก์',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'ลบทักษะ "{{name}}" หรือไม่? การดำเนินการนี้จะถอนการติดตั้งเซิร์ฟเวอร์ MCP {{mcp}} และทักษะคู่กันทั้งหมดจากการติดตั้ง Marketplace เดียวกันด้วย',
   "settings.agentBehaviour.removeSkill.button": "ลบ",
   "settings.agentBehaviour.rules.description":
     "กฎคือไฟล์คำสั่งที่แนะนำพฤติกรรมของเอเจนต์ กฎเหล่านี้จะถูกรวมอยู่ในพรอมต์ระบบสำหรับทุกการสนทนา เพิ่มเส้นทางไฟล์ด้านล่างเพื่อรวมกฎเพิ่มเติม",
@@ -1047,6 +1105,12 @@ export const dict = {
   "settings.agentBehaviour.mcpDetail.command": "คำสั่ง",
   "settings.agentBehaviour.mcpDetail.args": "อาร์กิวเมนต์",
   "settings.agentBehaviour.mcpDetail.env": "สภาพแวดล้อม",
+  "settings.agentBehaviour.mcpSignIn.cancel": "ยกเลิกการเข้าสู่ระบบ",
+  "settings.agentBehaviour.mcpRemoving": "กำลังนำออก…",
+  "settings.agentBehaviour.mcpResetAuth": "รีเซ็ตการเข้าสู่ระบบ",
+  "settings.agentBehaviour.mcpResetAuth.title": "รีเซ็ตการเข้าสู่ระบบ MCP",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'ล้างข้อมูลการเข้าสู่ระบบที่บันทึกไว้สำหรับ "{{name}}" หรือไม่? คุณจะต้องเข้าสู่ระบบอีกครั้ง',
   "settings.agentBehaviour.mcpBrowseMarketplace": "เรียกดู Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "ไม่ได้กำหนดค่าเซิร์ฟเวอร์ MCP เพิ่มเซิร์ฟเวอร์ MCP ใน kilo.jsonc หรือขอให้เอเจนต์เพิ่มให้คุณ",
@@ -1121,6 +1185,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "รันการล้างเดี๋ยวนี้",
   "settings.autoCleanup.runNow.confirm":
     "ลบเซสชันที่หมดอายุอย่างถาวรทั่วทุกโปรเจกต์และไคลเอนต์ Kilo ทุกตัวบนเครื่องนี้หรือไม่?",
+  "settings.autoCleanup.stop": "หยุดการล้างข้อมูล",
+  "settings.autoCleanup.progress.cancelling": "กำลังหยุดการล้างเซสชัน...",
+  "settings.autoCleanup.lastRun.cancelled": "ถูกยกเลิก",
   "settings.context.autoCompaction.title": "การบีบอัดอัตโนมัติ",
   "settings.context.autoCompaction.description": "บีบอัดบริบทอัตโนมัติก่อนถึงขีดจำกัด",
   "settings.context.compaction.title": "การบีบอัด",
@@ -1207,6 +1274,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "ขยาย",
   "settings.display.mcpTool.collapsed": "ยุบ",
 
+  "settings.display.shortcutHints.title": "แสดงคำแนะนำปุ่มลัด",
+  "settings.display.shortcutHints.description":
+    "แสดงปุ่มลัดที่เหมาะกับสิ่งที่คุณทำอยู่ในช่องพรอมต์ที่ว่าง เช่น วิธีเพิ่มโค้ดที่เลือกหรือกลับไปที่พรอมต์",
   "settings.display.tokenThroughput.title": "แสดงอัตราการประมวลผลโทเคน",
   "settings.display.tokenThroughput.description":
     "แสดงอัตราการสร้างข้อความ (tokens/sec) ในข้อความล่าสุดของผู้ช่วยและส่วนหัวของงาน แสดงโดยค่าเริ่มต้น; ปิดใช้งานการตั้งค่านี้เพื่อซ่อนเมื่อจำเป็น",
@@ -1283,16 +1353,16 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} งานเสร็จแล้ว",
   "task.todos.allDone": "{{count}} งานเสร็จแล้ว",
+  "task.todos.title": "รายการงาน",
+  "task.todos.done": "เสร็จทั้งหมด",
   "task.backgroundAgents.running.one": "เอเจนต์เบื้องหลัง 1 ตัว",
   "task.backgroundAgents.running.many": "เอเจนต์เบื้องหลัง {{count}} ตัว",
-  "task.backgroundAgents.more": "+{{count}} เพิ่มเติม",
   "task.backgroundAgents.open": "เปิดเอเจนต์เบื้องหลัง",
   "task.backgroundAgents.openAll": "เปิดเอเจนต์เบื้องหลังทั้งหมด",
   "task.backgroundAgents.cancel": "หยุด",
   "task.backgroundAgents.continueInBackground": "ทำต่อในเบื้องหลัง",
   "task.backgroundAgents.waiting": "เอเจนต์เบื้องหลังต้องการข้อมูลจากคุณ",
   "task.backgroundAgents.needsInput": "ต้องการข้อมูล",
-  "task.backgroundAgents.dismiss": "ยกเลิก",
   "task.backgroundAgents.clearFinished": "ล้างรายการที่เสร็จแล้ว",
   "task.backgroundAgents.summary": "เอเจนต์เบื้องหลัง {{running}} จาก {{total}} ตัวกำลังทำงาน",
   "task.backgroundAgents.status.running": "กำลังทำงาน",
@@ -1301,6 +1371,10 @@ export const dict = {
   "task.backgroundAgents.status.error": "ข้อผิดพลาด",
   "task.backgroundAgents.untitled": "เอเจนต์เบื้องหลัง",
   "task.backgroundAgents.stopAll": "หยุดทั้งหมด ({{count}})",
+  "task.backgroundAgents.finished": "เอเจนต์เบื้องหลังทำงานเสร็จแล้ว",
+  "task.stop": "หยุดเอเจนต์ย่อย",
+  "task.open.panel": "เปิดเอเจนต์ย่อยในแผง",
+  "task.open.tab": "เปิดเอเจนต์ย่อยในแท็บ",
   "settings.saveBar.unsavedChanges": "การเปลี่ยนแปลงที่ยังไม่ได้บันทึก",
   "settings.saveBar.discard": "ยกเลิก",
   "settings.saveBar.save": "บันทึก",
@@ -1365,5 +1439,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "ใช้ Chrome ของระบบ",
   "settings.experimental.browserAutomation.systemChrome.description":
     "ใช้ Google Chrome ที่ติดตั้งไว้สำหรับเบราว์เซอร์ในตัว ปิดใช้งานเฉพาะเมื่อติดตั้งเบราว์เซอร์ Playwright Chromium ที่เข้ากันได้ไว้แล้วเท่านั้น",
+  "settings.experimental.browserLinks.title": "เปิดลิงก์ใน",
+  "settings.experimental.browserLinks.description": "เลือกว่าเว็บลิงก์จะเปิดจากแชท Kilo ที่ใด ต้องใช้เบราว์เซอร์ในตัว",
+  "settings.experimental.browserLinks.external": "เบราว์เซอร์ของระบบ",
+  "settings.experimental.browserLinks.integrated": "เบราว์เซอร์ในตัว",
   "chat.search.searchingHistory": "กำลังค้นหาข้อความก่อนหน้า…",
+  "browserTab.noSession": "เปิดเบราว์เซอร์จากเซสชันเพื่อดูตัวอย่างแอปพลิเคชันในเครื่องหรือหน้า HTTPS สาธารณะ",
+  "browserTab.disabled": "เบราว์เซอร์ในตัวถูกปิดใช้งาน เปิดใช้งานได้ในการตั้งค่า Kilo > ทดลอง",
 }

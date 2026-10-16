@@ -5,8 +5,10 @@ import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
+import ai.kilocode.client.settings.base.SettingsInfo
 import ai.kilocode.client.settings.base.SettingsListPanel
 import ai.kilocode.client.settings.base.SettingsPathDialog
 import ai.kilocode.client.settings.base.SettingsRow
@@ -107,6 +109,12 @@ internal class RulesSettingsUi(
     )
 
     override fun showRefresh(): Boolean = false
+
+    override fun info(): JComponent = SettingsInfo(
+        KiloBundle.message("settings.rules.info"),
+        KiloBundle.message("settings.rules.info.more"),
+        KiloDocs.RULES,
+    )
 
     override fun searchPlaceholder() = KiloBundle.message("settings.rules.files.search")
 

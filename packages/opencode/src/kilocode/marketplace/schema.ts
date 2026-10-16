@@ -22,6 +22,12 @@ export const McpInstallationMethod = Schema.Struct({
 }).annotate({ identifier: "McpInstallationMethod" })
 export type McpInstallationMethod = typeof McpInstallationMethod.Type
 
+export const McpSkill = Schema.Struct({
+  id: Schema.String,
+  content: Schema.String,
+}).annotate({ identifier: "McpSkill" })
+export type McpSkill = typeof McpSkill.Type
+
 // The live catalog ships vscode_extension either as a bare extension id string or
 // as a { name, id } object, so accept both to avoid rejecting valid catalog data.
 export const VscodeExtensionRef = Schema.Union([
@@ -53,6 +59,7 @@ export const McpMarketplaceItem = Schema.Struct({
   url: Schema.String,
   content: Schema.Union([Schema.String, Schema.Array(McpInstallationMethod)]),
   parameters: Schema.optional(Schema.Array(McpParameter)),
+  skills: Schema.optional(Schema.Array(McpSkill)),
 }).annotate({ identifier: "McpMarketplaceItem" })
 export type McpMarketplaceItem = typeof McpMarketplaceItem.Type
 
@@ -138,6 +145,8 @@ export type MarketplaceInstalledMetadata = typeof MarketplaceInstalledMetadata.T
 export const MarketplaceListResult = Schema.Struct({
   items: Schema.Array(MarketplaceItem),
   installed: MarketplaceInstalledMetadata,
+  /** `suggest_for.filename` patterns that match a file in the routed workspace. */
+  filenames: Schema.optional(Schema.Array(Schema.String)),
   errors: Schema.optional(Schema.Array(Schema.String)),
 }).annotate({ identifier: "MarketplaceListResult" })
 export type MarketplaceListResult = typeof MarketplaceListResult.Type
@@ -150,6 +159,7 @@ export const McpInstallItem = Schema.Struct({
   type: Schema.Literal("mcp"),
   id: Schema.String,
   content: Schema.Union([Schema.String, Schema.Array(McpInstallationMethod)]),
+  skills: Schema.optional(Schema.Array(McpSkill)),
 }).annotate({ identifier: "McpInstallItem" })
 export type McpInstallItem = typeof McpInstallItem.Type
 

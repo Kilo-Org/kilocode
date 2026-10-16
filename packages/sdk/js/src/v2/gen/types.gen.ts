@@ -77,6 +77,7 @@ export type Event =
   | EventTuiSessionSelect1
   | EventMcpToolsChanged1
   | EventMcpBrowserOpenFailed1
+  | EventMcpAuthUrl1
   | EventCommandExecuted1
   | EventProjectUpdated1
   | EventSessionStatus1
@@ -196,6 +197,7 @@ export type Event =
   | EventTuiSessionSelect
   | EventMcpToolsChanged
   | EventMcpBrowserOpenFailed
+  | EventMcpAuthUrl
   | EventCommandExecuted
   | EventProjectUpdated
   | EventSessionStatus
@@ -236,6 +238,7 @@ export type OAuth = {
   expires: number
   accountId?: string
   enterpriseUrl?: string
+  baseURL?: string
 }
 
 export type ApiAuth = {
@@ -1092,6 +1095,10 @@ export type SessionStatus =
       requestID: string
       message: string
     }
+  | {
+      type: "scheduled"
+      scheduledAt: string
+    }
 
 export type QuestionOption = {
   /**
@@ -1240,6 +1247,7 @@ export type GlobalEvent = {
     | EventTuiSessionSelect
     | EventMcpToolsChanged
     | EventMcpBrowserOpenFailed
+    | EventMcpAuthUrl
     | EventCommandExecuted
     | EventProjectUpdated
     | EventSessionStatus
@@ -1998,6 +2006,14 @@ export type GlobalEvent = {
       }
     | {
         id: string
+        type: "mcp.auth.url"
+        properties: {
+          mcpName: string
+          url: string
+        }
+      }
+    | {
+        id: string
         type: "command.executed"
         properties: {
           name: string
@@ -2596,6 +2612,7 @@ export type Config = {
   subagent_variant_overrides?: {
     [key: string]: string
   }
+  memory_model?: string
   default_agent?: string
   subagent_depth?: number
   username?: string
@@ -2701,7 +2718,7 @@ export type Config = {
     image_generation?: boolean
     image_generation_model?: string
     native_notebook_tools?: boolean
-    task_model_selection?: boolean
+    glob_include_ignored?: Array<string>
     code_mode?: boolean
     speech_to_text_model?: string
     speech_to_text_base_url?: string
@@ -3137,6 +3154,7 @@ export type McpStatusFailed = {
 
 export type McpStatusNeedsAuth = {
   status: "needs_auth"
+  error?: string
 }
 
 export type McpStatusNeedsClientRegistration = {
@@ -3225,6 +3243,12 @@ export type PermissionNotFoundError = {
   _tag: "PermissionNotFoundError"
   requestID: string
   message: string
+}
+
+export type ProviderFailure = {
+  providerID: string
+  kind: "unauthorized" | "unauthenticated" | "network" | "schema" | "http"
+  status?: number
 }
 
 export type ProviderAuthMethod = {
@@ -4026,6 +4050,21 @@ export type ConfigOverlayConflictError = {
   }
 }
 
+export type ConfigOverlayShadowedError = {
+  message: string
+  path: string
+  shadowedBy?: string
+}
+
+export type ConfigOverlayWriteError = {
+  message: string
+  path?: string
+  issues?: Array<{
+    message: string
+    path: Array<string>
+  }>
+}
+
 export type ConfigRulesResponse = {
   scope: "project"
   target: string
@@ -4201,6 +4240,11 @@ export type McpInstallationMethod = {
   prerequisites?: Array<string>
 }
 
+export type McpSkill = {
+  id: string
+  content: string
+}
+
 export type McpMarketplaceItem = {
   id: string
   name: string
@@ -4214,6 +4258,7 @@ export type McpMarketplaceItem = {
   url: string
   content: string | Array<McpInstallationMethod>
   parameters?: Array<McpParameter>
+  skills?: Array<McpSkill>
 }
 
 export type AgentMarketplaceItem = {
@@ -4295,6 +4340,7 @@ export type MarketplaceInstalledMetadata = {
 export type MarketplaceListResult = {
   items: Array<MarketplaceItem>
   installed: MarketplaceInstalledMetadata
+  filenames?: Array<string>
   errors?: Array<string>
 }
 
@@ -4302,6 +4348,7 @@ export type McpInstallItem = {
   type: "mcp"
   id: string
   content: string | Array<McpInstallationMethod>
+  skills?: Array<McpSkill>
 }
 
 export type AgentInstallItem = {
@@ -5036,6 +5083,7 @@ export type V2Event =
   | TuiSessionSelect
   | McpToolsChanged
   | McpBrowserOpenFailed
+  | McpAuthUrl
   | CommandExecuted
   | ProjectUpdated
   | SessionStatus2
@@ -6305,6 +6353,15 @@ export type EventMcpToolsChanged = {
 export type EventMcpBrowserOpenFailed = {
   id: string
   type: "mcp.browser.open.failed"
+  properties: {
+    mcpName: string
+    url: string
+  }
+}
+
+export type EventMcpAuthUrl = {
+  id: string
+  type: "mcp.auth.url"
   properties: {
     mcpName: string
     url: string
@@ -9225,6 +9282,24 @@ export type McpBrowserOpenFailed = {
   }
 }
 
+export type McpAuthUrl = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "mcp.auth.url"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    mcpName: string
+    url: string
+  }
+}
+
 export type CommandExecuted = {
   id: string
   metadata?: {
@@ -10400,6 +10475,15 @@ export type EventMcpToolsChanged1 = {
 export type EventMcpBrowserOpenFailed1 = {
   id: string
   type: "mcp.browser.open.failed"
+  properties: {
+    mcpName: string
+    url: string
+  }
+}
+
+export type EventMcpAuthUrl1 = {
+  id: string
+  type: "mcp.auth.url"
   properties: {
     mcpName: string
     url: string
@@ -12395,7 +12479,9 @@ export type McpAuthCallbackResponses = {
 export type McpAuthCallbackResponse = McpAuthCallbackResponses[keyof McpAuthCallbackResponses]
 
 export type McpAuthAuthenticateData = {
-  body?: never
+  body?: {
+    external?: boolean
+  }
   path: {
     name: string
   }
@@ -12427,6 +12513,42 @@ export type McpAuthAuthenticateResponses = {
 }
 
 export type McpAuthAuthenticateResponse = McpAuthAuthenticateResponses[keyof McpAuthAuthenticateResponses]
+
+export type McpAuthCancelData = {
+  body?: never
+  path: {
+    name: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/mcp/{name}/auth/cancel"
+}
+
+export type McpAuthCancelErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * McpServerNotFoundError
+   */
+  404: McpServerNotFoundError
+}
+
+export type McpAuthCancelError = McpAuthCancelErrors[keyof McpAuthCancelErrors]
+
+export type McpAuthCancelResponses = {
+  /**
+   * OAuth authentication cancelled
+   */
+  200: {
+    success: true
+  }
+}
+
+export type McpAuthCancelResponse = McpAuthCancelResponses[keyof McpAuthCancelResponses]
 
 export type McpConnectData = {
   body?: never
@@ -13287,6 +13409,7 @@ export type ProviderListResponses = {
     }
     connected: Array<string>
     failed: Array<string>
+    failures: Array<ProviderFailure>
   }
 }
 
@@ -15670,13 +15793,13 @@ export type ConfigOverlayUpdateData = {
 
 export type ConfigOverlayUpdateErrors = {
   /**
-   * Bad request
+   * ConfigOverlayWriteError | InvalidRequestError
    */
-  400: BadRequestError
+  400: ConfigOverlayWriteError | InvalidRequestError
   /**
-   * ConfigOverlayConflictError
+   * ConfigOverlayConflictError | ConfigOverlayShadowedError
    */
-  409: ConfigOverlayConflictError
+  409: ConfigOverlayConflictError | ConfigOverlayShadowedError
 }
 
 export type ConfigOverlayUpdateError = ConfigOverlayUpdateErrors[keyof ConfigOverlayUpdateErrors]
@@ -17728,9 +17851,11 @@ export type KilocodeRetentionStatusResponses = {
       skippedActive: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       failed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      cancelled?: boolean
+      reclaimedBytes?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
     }
     progress?: {
-      phase: "scanning" | "deleting"
+      phase: "scanning" | "deleting" | "cancelling"
       total: number
       processed: number
       deleted: number
@@ -17779,9 +17904,11 @@ export type KilocodeRetentionRunResponses = {
       skippedActive: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       failed: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       durationMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      cancelled?: boolean
+      reclaimedBytes?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
     }
     progress?: {
-      phase: "scanning" | "deleting"
+      phase: "scanning" | "deleting" | "cancelling"
       total: number
       processed: number
       deleted: number
@@ -17792,6 +17919,36 @@ export type KilocodeRetentionRunResponses = {
 }
 
 export type KilocodeRetentionRunResponse = KilocodeRetentionRunResponses[keyof KilocodeRetentionRunResponses]
+
+export type KilocodeRetentionCancelData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/retention/cancel"
+}
+
+export type KilocodeRetentionCancelErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeRetentionCancelError = KilocodeRetentionCancelErrors[keyof KilocodeRetentionCancelErrors]
+
+export type KilocodeRetentionCancelResponses = {
+  /**
+   * Retention cancel request outcome; false when no pass was running
+   */
+  200: {
+    requested: boolean
+  }
+}
+
+export type KilocodeRetentionCancelResponse = KilocodeRetentionCancelResponses[keyof KilocodeRetentionCancelResponses]
 
 export type AnacondaDesktopStatusData = {
   body?: never

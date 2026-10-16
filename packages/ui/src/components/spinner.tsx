@@ -1,17 +1,5 @@
 import { ComponentProps, For } from "solid-js"
-import { observe } from "../kilocode/spinner" // kilocode_change
-
-const outerIndices = new Set([1, 2, 4, 7, 8, 11, 13, 14])
-const cornerIndices = new Set([0, 3, 12, 15])
-const squares = Array.from({ length: 16 }, (_, i) => ({
-  id: i,
-  x: (i % 4) * 4,
-  y: Math.floor(i / 4) * 4,
-  delay: Math.random() * 1.5,
-  duration: 1 + Math.random() * 1,
-  outer: outerIndices.has(i),
-  corner: cornerIndices.has(i),
-}))
+import { observe, squares } from "../kilocode/spinner" // kilocode_change
 
 export function Spinner(props: {
   class?: string
@@ -22,7 +10,7 @@ export function Spinner(props: {
     <svg
       ref={observe /* kilocode_change */}
       {...props}
-      viewBox="0 0 15 15"
+      viewBox="0 0 19 19" // kilocode_change
       data-component="spinner"
       classList={{
         ...props.classList,
@@ -32,21 +20,17 @@ export function Spinner(props: {
     >
       <For each={squares}>
         {(square) => (
-          <rect
-            x={square.x}
-            y={square.y}
-            width="3"
-            height="3"
-            rx="1"
+          // kilocode_change start
+          <path
+            d={square.d}
             style={{
-              opacity: square.corner ? 0 : square.outer ? 0.15 : 0.4, // kilocode_change
-              animation: square.corner
-                ? undefined
-                : `${square.outer ? "pulse-opacity-dim" : "pulse-opacity"} ${square.duration}s ease-in-out infinite`,
-              "animation-fill-mode": square.corner ? undefined : "both",
-              "animation-delay": square.corner ? undefined : `${square.delay}s`,
+              opacity: square.outer ? 0.15 : 0.4,
+              animation: `${square.outer ? "pulse-opacity-dim" : "pulse-opacity"} ${square.duration}s ease-in-out infinite`,
+              "animation-fill-mode": "both",
+              "animation-delay": `${square.delay}s`,
             }}
           />
+          // kilocode_change end
         )}
       </For>
     </svg>

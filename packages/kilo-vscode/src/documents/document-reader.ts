@@ -1,4 +1,5 @@
 import * as fs from "fs"
+import * as os from "os"
 import * as path from "path"
 
 const MAX_TEXT_BYTES = 2_000_000
@@ -30,6 +31,24 @@ export function isInsideWorktree(
   return target === base || target.startsWith(base + sep)
 }
 
+/**
+ * Canonical plans dir for non-git projects, mirroring the CLI's
+ * `Global.Path.data` resolution (`XDG_DATA_HOME` or `~/.local/share`, same
+ * fallback pattern as `config-file.ts` and `cli-resources.ts`). For non-git
+ * projects plan files legitimately live here, outside the worktree, and the
+ * CLI's plan-file logic already admits the dir — see #14588.
+ */
+export function plansDir(dataHome = process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share")): string {
+  return path.join(dataHome, "kilo", "plans")
+}
+
+/** Whether `resolved` lives in the canonical plans dir (realpath-folded for tmpfs/symlink cases). */
+function isPlan(resolved: string): boolean {
+  const dir = plansDir()
+  if (!fs.existsSync(dir)) return false
+  return isInsideWorktree(fs.realpathSync(dir), resolved)
+}
+
 function mime(file: string): string | undefined {
   const ext = path.extname(file).toLowerCase()
   if (ext === ".png") return "image/png"
@@ -47,7 +66,8 @@ export function readDocument(root: string, file: string): DocumentResult {
     const base = fs.realpathSync(root)
     const target = path.isAbsolute(file) ? file : path.resolve(root, file)
     const resolved = fs.realpathSync(target)
-    if (!isInsideWorktree(base, resolved)) return { error: "Document is outside the worktree." }
+    const inside = isInsideWorktree(base, resolved)
+    if (!inside && !isPlan(resolved)) return { error: "Document is outside the worktree." }
 
     const stat = fs.statSync(resolved)
     if (!stat.isFile()) return { error: "Document is not a file." }
@@ -56,7 +76,7 @@ export function readDocument(root: string, file: string): DocumentResult {
     const limit = type ? MAX_IMAGE_BYTES : MAX_TEXT_BYTES
     if (stat.size > limit) return { error: "Document is too large to preview." }
 
-    const relative = path.relative(base, resolved).split(path.sep).join("/")
+    const relative = inside ? path.relative(base, resolved).split(path.sep).join("/") : resolved
     if (type) return { file: relative, kind: "image", mime: type, data: fs.readFileSync(resolved).toString("base64") }
 
     const content = fs.readFileSync(resolved)

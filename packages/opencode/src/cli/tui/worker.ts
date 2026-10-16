@@ -11,14 +11,26 @@ import { AppRuntime } from "@/effect/app-runtime"
 import { Effect } from "effect"
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
 import { KiloLog } from "@/kilocode/log" // kilocode_change
+import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process" // kilocode_change
 import { createWorkerRemoteExit } from "@/kilocode/cli/cmd/tui/remote-exit-worker" // kilocode_change
 import { createWorkerShutdown } from "@/cli/tui/worker-shutdown" // kilocode_change
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
+import { KiloRpc } from "@/kilocode/util/rpc" // kilocode_change
+
+// kilocode_change start - queue parent requests before the await below; KiloRpc.listen replays them
+KiloRpc.arm()
+// kilocode_change end
 
 ensureProcessMetadata("worker") // kilocode_change - retain worker role and parent run correlation
 await KiloLog.init() // kilocode_change - keep compatibility logs off the TUI terminal
 Heap.start()
+
+// kilocode_change start - startup checkpoints: these separate "worker never started" from
+// "worker up but RPC stuck", which is how the release PTY smoke stall was localised
+const log = Log.create({ service: "tui-worker" })
+log.info("worker booted")
+// kilocode_change end
 
 // kilocode_change start - keep upstream's keep-alive intent but never swallow the error silently
 const onUnhandledRejection = (error: unknown) => {
@@ -113,4 +125,7 @@ export const rpc = {
   },
 }
 
-Rpc.listen(rpc)
+// kilocode_change start - KiloRpc.listen replays queued requests and announces readiness
+KiloRpc.listen(rpc)
+log.info("worker listening") // checkpoint, see the note above KiloRpc.arm
+// kilocode_change end

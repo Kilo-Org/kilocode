@@ -25,6 +25,7 @@ describe("createWorktreeOnDisk", () => {
 
     const messages: AgentManagerOutMessage[] = []
     const failures: WorktreeCreationFailure[] = []
+    const logs: string[] = []
     const state = { getDefaultBaseBranch: () => undefined }
     const ctx = {
       getWorktreeManager: () => new WorktreeManager(root, () => {}),
@@ -32,7 +33,7 @@ describe("createWorktreeOnDisk", () => {
       postToWebview: (message: AgentManagerOutMessage) => messages.push(message),
       capture: () => {},
       pushState: () => {},
-      log: () => {},
+      log: (message: string) => logs.push(message),
     } as unknown as CreateWorktreeOnDiskContext
 
     const value = await createWorktreeOnDisk(ctx, {
@@ -53,5 +54,6 @@ describe("createWorktreeOnDisk", () => {
       status: "error",
       errorCode: "no_commits",
     })
+    expect(logs.some((line) => line.includes("This repository has no commits yet."))).toBe(true)
   })
 })

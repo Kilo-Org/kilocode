@@ -37,6 +37,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Tutti i progetti su questo computer. Viene salvato nella configurazione utente.",
   "marketplace.install.destination": "Destinazione dell'installazione",
+  "marketplace.install.includedSkills": "Skill incluse",
   "marketplace.install.about.mcp":
     "Un server MCP fornisce a Kilo strumenti aggiuntivi per interagire con servizi esterni o programmi locali.",
   "marketplace.install.about.agent":
@@ -53,7 +54,6 @@ export const dict = {
     "Un plugin aggiunge strumenti e integrazioni personalizzati a Kilo. I plugin vengono eseguiti con tutte le autorizzazioni.",
   "marketplace.install.plugin.warning":
     "I plugin eseguono codice con tutte le autorizzazioni. Possono leggere e modificare i tuoi file, eseguire comandi e accedere alle tue credenziali e alla tua rete. Installa solo plugin di cui ti fidi.",
-  "marketplace.install.installedAt": "Installato in {{path}}",
   "marketplace.intro": "Installa agenti, skill, strumenti MCP e plugin riutilizzabili per uno o tutti i progetti.",
   "marketplace.intro.learnMore": "Informazioni sul Marketplace",
   "marketplace.install.prerequisites": "Prerequisiti",
@@ -63,9 +63,18 @@ export const dict = {
   "marketplace.install.failed": "Installazione non riuscita",
   "marketplace.install.done": "Fatto",
   "marketplace.install.close": "Chiudi",
+  "marketplace.install.mcp.signIn.message": "{{name}} è installato, ma richiede l'accesso prima che i suoi strumenti possano essere usati.",
+  "marketplace.install.mcp.signIn.button": "Accedi",
+  "marketplace.install.mcp.signIn.waiting": "In attesa dell'accesso tramite browser…",
+  "marketplace.install.mcp.signIn.cancel": "Annulla",
+  "marketplace.install.mcp.signIn.skip": "Più tardi",
+  "marketplace.install.mcp.signIn.success": "Accesso effettuato a {{name}}.",
+  "marketplace.install.mcp.signIn.failed": "Accesso a {{name}} non riuscito.",
   "marketplace.remove.title": "Rimuovere {{name}}?",
   "marketplace.remove.confirm": "Vuoi davvero rimuovere questo {{type}}? Verrà rimosso dalla configurazione {{scope}}.",
   "marketplace.remove.cancel": "Annulla",
+  "marketplace.remove.mcp.skills":
+    "Questa operazione rimuove anche le skill complementari appartenenti a questa installazione. Le skill installate in modo indipendente vengono conservate.",
   "marketplace.remove.confirm.button": "Rimuovi",
   "marketplace.search": "Cerca...",
   "marketplace.filter.all": "Tutti gli elementi",
@@ -74,6 +83,7 @@ export const dict = {
   "marketplace.empty": "Nessun elemento trovato",
   "marketplace.empty.relevant": "Nessun elemento rilevante del marketplace trovato per questo spazio di lavoro.",
   "marketplace.badge.mcpServer": "Server MCP",
+  "marketplace.badge.skills": "Include skill",
   "marketplace.card.by": "di {{author}}",
   "marketplace.install.method": "Metodo di installazione",
   "marketplace.install.parameters": "Parametri",

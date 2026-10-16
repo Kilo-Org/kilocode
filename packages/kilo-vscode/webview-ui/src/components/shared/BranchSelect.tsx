@@ -1,11 +1,19 @@
 // Reusable branch selector: search input + scrollable list with keyboard navigation
 
-import { type Component, For, Show, type JSXElement, type ParentProps } from "solid-js"
+import { type Component, For, Show, createMemo, type JSXElement, type ParentProps } from "solid-js"
 import type { BranchInfo } from "../../types/messages"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { formatRelativeDate } from "../../utils/date"
+import { useLanguage } from "../../context/language"
 import { DeferredPopover } from "./DeferredPopover"
+
+/**
+ * Maximum rows rendered at once. Large repositories can have thousands of
+ * branches, and rendering all of them blocks the popover open. Search narrows
+ * the list, so the cap only hides rows nobody scrolls to.
+ */
+export const BRANCH_LIMIT = 100
 
 interface AutoOption {
   label: string
@@ -32,9 +40,10 @@ interface BranchSelectProps {
   defaultLabel: string
   remoteLabel: string
   autoOption?: AutoOption
+  footer?: JSXElement
 }
 
-type Placement = "top-start" | "bottom-start"
+type Placement = "top-start" | "bottom-start" | "bottom-end"
 
 interface BranchSelectPopoverProps extends ParentProps {
   open: boolean
@@ -52,6 +61,10 @@ interface BranchSelectPopoverProps extends ParentProps {
    * enough room. Defaults to `false` to match the agent manager behavior.
    */
   flip?: boolean
+  /** Extra class for the popover content, e.g. to set a fixed width. */
+  class?: string
+  /** Match the trigger width. Defaults to `true`. */
+  sameWidth?: boolean
 }
 
 export const BranchSelectPopover: Component<BranchSelectPopoverProps> = (props) => (
@@ -60,10 +73,10 @@ export const BranchSelectPopover: Component<BranchSelectPopoverProps> = (props) 
     onOpenChange={props.onOpenChange}
     placement={props.placement ?? "top-start"}
     flip={props.flip ?? false}
-    sameWidth
+    sameWidth={props.sameWidth ?? true}
     portal={false}
     deferDismiss
-    class="am-dropdown"
+    class={props.class ? `am-dropdown ${props.class}` : "am-dropdown"}
     trigger={props.trigger}
   >
     {props.children}
@@ -71,10 +84,13 @@ export const BranchSelectPopover: Component<BranchSelectPopoverProps> = (props) 
 )
 
 export const BranchSelect: Component<BranchSelectProps> = (props) => {
+  const { t } = useLanguage()
   const isDefault = (branch: BranchInfo) => {
     if (props.defaultName) return branch.name === props.defaultName
     return branch.isDefault
   }
+  const visible = createMemo(() => props.branches.slice(0, BRANCH_LIMIT))
+  const more = () => props.branches.length - visible().length
 
   return (
     <>
@@ -123,7 +139,7 @@ export const BranchSelect: Component<BranchSelectProps> = (props) => {
             </Show>
           }
         >
-          <For each={props.branches}>
+          <For each={visible()}>
             {(branch, index) => (
               <button
                 class="am-branch-item"
@@ -152,6 +168,9 @@ export const BranchSelect: Component<BranchSelectProps> = (props) => {
               </button>
             )}
           </For>
+          <Show when={more() > 0}>
+            <div class="am-dropdown-more">{t("agentManager.dialog.moreBranches", { count: more() })}</div>
+          </Show>
         </Show>
         <Show when={props.loading && props.branches.length === 0 && !props.autoOption}>
           <div class="am-dropdown-empty">
@@ -160,6 +179,9 @@ export const BranchSelect: Component<BranchSelectProps> = (props) => {
           </div>
         </Show>
       </div>
+      <Show when={props.footer}>
+        <div class="am-dropdown-footer">{props.footer}</div>
+      </Show>
     </>
   )
 }

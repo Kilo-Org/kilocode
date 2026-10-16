@@ -3,8 +3,11 @@ import {
   configUnsetPaths,
   ConfigState,
   deepMerge,
+  hideRemovedMcp,
   mergeScopedConfig,
   pruneConfigSet,
+  removeMcpConfig,
+  retainUnconfirmedMcpRemovals,
   stripNulls,
 } from "../../webview-ui/src/utils/config-utils"
 import type { Config } from "../../webview-ui/src/types/messages"
@@ -98,11 +101,52 @@ describe("stripNulls", () => {
   })
 })
 
+describe("removeMcpConfig", () => {
+  it("removes only the selected MCP server", () => {
+    const config = {
+      mcp: {
+        anaconda: { type: "remote", url: "https://anaconda.com/api/mcp" },
+        docs: { type: "remote", url: "https://docs.example/mcp" },
+      },
+    } satisfies Config
+
+    expect(removeMcpConfig(config, "anaconda")).toEqual({ mcp: { docs: config.mcp.docs } })
+  })
+
+  it("removes the empty MCP collection", () => {
+    expect(removeMcpConfig({ mcp: { anaconda: { type: "remote" } } }, "anaconda")).toEqual({})
+  })
+
+  it("keeps a removed MCP hidden from stale server snapshots", () => {
+    const config = { mcp: { anaconda: { type: "remote" as const }, docs: { type: "remote" as const } } }
+
+    expect(hideRemovedMcp(config, new Set(["anaconda"]))).toEqual({ mcp: { docs: { type: "remote" } } })
+    expect(retainUnconfirmedMcpRemovals(new Set(["anaconda"]), config)).toEqual(new Set(["anaconda"]))
+    expect(retainUnconfirmedMcpRemovals(new Set(["anaconda"]), {})).toEqual(new Set())
+  })
+})
+
 // ---------------------------------------------------------------------------
 // Config state machine — reproduces the actual message-handler flow
 // ---------------------------------------------------------------------------
 
 describe("ConfigState", () => {
+  it("does not let a pending MCP draft resurrect a server removed outside Settings", () => {
+    const s = new ConfigState()
+    const anaconda = { type: "remote" as const, url: "https://anaconda.com/api/mcp" }
+    s.handleConfigLoaded({ mcp: { anaconda } })
+    s.updateConfig({ mcp: { anaconda: { ...anaconda, enabled: true } } })
+
+    s.handleConfigLoaded({})
+    expect(s.config.mcp?.anaconda).toBeDefined()
+
+    s.removeMcp("anaconda")
+    expect(s.config.mcp).toBeUndefined()
+    expect(s.saved.mcp).toBeUndefined()
+    expect(s.draft.mcp).toBeUndefined()
+    expect(s.dirty).toBe(false)
+  })
+
   it("configLoaded sets config when no draft is pending", () => {
     const s = new ConfigState()
     s.handleConfigLoaded({ snapshot: true, username: "alice" })
