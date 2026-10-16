@@ -30,6 +30,12 @@ export const RemoteCommand = lazy({
   load: async () => (await import("@/cli/cmd/remote")).RemoteCommand,
 })
 
+export const SoulCommand = lazy({
+  command: "soul",
+  describe: "soul constitution layer: validate the soul file, run deterministic evals",
+  load: async () => (await import("@/kilocode/cli/cmd/soul")).SoulCommand,
+})
+
 export const DaemonCommand = lazy({
   command: "daemon",
   describe: "manage the local kilo daemon",
