@@ -456,6 +456,22 @@ const layer = Layer.effect(
 
         KiloAgent.hardenSystemAgents(agents) // kilocode_change - keep system utility agents deny-only after config merges
 
+        // kilocode_change start - #34: apply subagent_steps default for subagent-mode agents
+        // Sub-agents (e.g. "general") do not define a `steps` property, so they
+        // default to Infinity in the prompt runner. When `subagent_steps` is
+        // configured, apply it as the default for all subagent-mode agents that
+        // don't already have a step limit. This prevents runaway reasoning
+        // loops that consume millions of tokens before reaching compaction.
+        if (cfg.subagent_steps !== undefined && cfg.subagent_steps > 0) {
+          for (const name in agents) {
+            const a = agents[name]
+            if (a.mode === "subagent" && a.steps === undefined) {
+              a.steps = cfg.subagent_steps
+            }
+          }
+        }
+        // kilocode_change end
+
         const get = Effect.fnUntraced(function* (agent: string) {
           return agents[KiloAgent.resolveKey(agent)] // kilocode_change - treat "build" as "code"
         })
