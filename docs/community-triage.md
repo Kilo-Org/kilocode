@@ -66,6 +66,7 @@ Set by hand:
 | `high-value` | We want this change. The sweep never closes it |
 | `low-value` | Triaged. Not a priority |
 | `keep-open` | The sweep never closes this PR |
+| `priority:p0` to `priority:p3` | Optional priority: critical, high, medium, low. A PR with one counts as triaged. Tools that read GitHub labels can use it |
 
 The sweep owns the status labels, `first-time-contributor` and `quick-win`. It adds and removes them on its own. Do not manage them by hand.
 
