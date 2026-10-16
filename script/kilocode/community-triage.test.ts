@@ -6,6 +6,8 @@ import {
   easy,
   hasPriority,
   kind,
+  labels,
+  sync,
   priority,
   mention,
   newcomer,
@@ -419,5 +421,49 @@ describe("priority", () => {
     for (const title of ["fix: security crash", "feat: x", "docs: y", "other"]) {
       expect(priority(title, [])).not.toBe("priority:p0")
     }
+  })
+})
+
+describe("sync", () => {
+  const want = [
+    { name: "a", color: "ffffff", description: "First" },
+    { name: "b", color: "000000", description: "Second" },
+    { name: "c", color: "111111", description: "Third" },
+  ]
+
+  test("creates missing labels and updates changed ones", () => {
+    const have = [
+      { name: "A", color: "FFFFFF", description: "First" },
+      { name: "b", color: "000000", description: "Old text" },
+    ]
+    const out = sync(have, want)
+    expect(out.create.map((item) => item.name)).toEqual(["c"])
+    expect(out.update.map((item) => item.name)).toEqual(["b"])
+  })
+
+  test("a changed color counts, and a missing description is empty", () => {
+    const out = sync([{ name: "a", color: "123456", description: null }], [want[0]])
+    expect(out.update.map((item) => item.name)).toEqual(["a"])
+    expect(
+      sync([{ name: "a", color: "ffffff", description: null }], [{ name: "a", color: "ffffff", description: "" }]),
+    ).toEqual({
+      create: [],
+      update: [],
+    })
+  })
+
+  test("does nothing when the repo matches", () => {
+    expect(sync(want, want)).toEqual({ create: [], update: [] })
+  })
+})
+
+describe("label list", () => {
+  test("descriptions fit the 100 character GitHub limit", () => {
+    for (const item of labels) expect(item.description.length).toBeLessThanOrEqual(100)
+  })
+
+  test("names are unique", () => {
+    const names = labels.map((item) => item.name.toLowerCase())
+    expect(new Set(names).size).toBe(names.length)
   })
 })

@@ -82,7 +82,7 @@ export function priority(title: string, tags: string[]) {
   return hasPriority(tags) ? undefined : levels[kind(title, tags)]
 }
 
-const labels = [
+export const labels = [
   { name: label.community, color: "0e8a16", description: "Opened by someone outside the Kilo team" },
   { name: label.triage, color: "fbca04", description: "Waiting for a maintainer to look" },
   { name: label.awaiting, color: "d4c5f9", description: "Waiting for the contributor to reply" },
@@ -436,9 +436,38 @@ async function maintainer(login: string, assoc: string) {
   return found
 }
 
+type Have = { name: string; color: string; description: string | null }
+
+// Compare the labels on the repo with the list above. A label that exists with
+// another color or description is updated, so edits to the list reach the repo.
+export function sync(have: Have[], want: typeof labels) {
+  const known = new Map(have.map((item) => [item.name.toLowerCase(), item]))
+  const create: typeof labels = []
+  const update: typeof labels = []
+  for (const item of want) {
+    const hit = known.get(item.name.toLowerCase())
+    if (!hit) create.push(item)
+    else if (hit.color.toLowerCase() !== item.color.toLowerCase() || (hit.description ?? "") !== item.description)
+      update.push(item)
+  }
+  return { create, update }
+}
+
 async function ensure() {
-  for (const item of labels)
+  const have: Have[] = []
+  for (let page = 1; page <= 10; page++) {
+    const list: Have[] = await (await api(`/repos/${repo}/labels?per_page=100&page=${page}`)).json()
+    have.push(...list)
+    if (list.length < 100) break
+  }
+  const todo = sync(have, labels)
+  for (const item of todo.create)
     await api(`/repos/${repo}/labels`, { method: "POST", body: JSON.stringify(item), ok: [422] })
+  for (const item of todo.update)
+    await api(`/repos/${repo}/labels/${encodeURIComponent(item.name)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ color: item.color, description: item.description }),
+    })
 }
 
 const add = (num: number, list: string[]) =>
