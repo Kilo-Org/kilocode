@@ -57,7 +57,7 @@ If you prefer to use your own API key or existing subscription, Kilo Code suppor
 
 | Provider | Best For | API Key Required |
 |---|---|---|
-| [ChatGPT Plus/Pro](/docs/ai-providers/openai-chatgpt-plus-pro) | Use your existing subscription | No |
+| [ChatGPT Go/Plus/Pro](/docs/ai-providers/openai-chatgpt-plus-pro) | Use your existing subscription | No |
 | [OpenRouter](/docs/ai-providers/openrouter) | Access multiple models with one key | Yes |
 | [Anthropic](/docs/ai-providers/anthropic) | Direct access to Claude models | Yes |
 | [OpenAI](/docs/ai-providers/openai) | Access to GPT models | Yes |
@@ -112,7 +112,7 @@ Set the API key as an environment variable:
 export ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
-Or use `kilo auth login` for providers that support OAuth, such as GitHub Copilot or ChatGPT Plus/Pro.
+Or use `kilo auth login` for providers that support OAuth, such as GitHub Copilot or ChatGPT Go, Plus, or Pro.
 
 To set a default model:
 

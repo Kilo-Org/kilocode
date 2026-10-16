@@ -58,6 +58,8 @@ import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.ProvidersDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.Disposable
@@ -196,6 +198,12 @@ class SessionController(
     // commit, so a stale reconnect snapshot cannot overwrite or resurrect a fresher prompt state.
     private var promptRevision = 0L
     private var reconnectRecoveryJob: Job? = null
+    // Convergence recoveries (activity mismatch, stuck-busy watchdog), separate from the reconnect
+    // path above so a reconnect pass is never cancelled by a routine convergence probe.
+    private var promptRecoveryJob: Job? = null
+    // The last (activity kind, promptRevision) an activity-mismatch probe was started for, so the
+    // same unchanged signal cannot refetch repeatedly.
+    private var activityProbe: Pair<SessionActivityKindDto, Long>? = null
     private var recentsState: RecentsState = RecentsState.Idle
     private var recentsSnapshot: List<SessionDto> = emptyList()
     private var viewState: SessionControllerEvent.ViewChanged? = null
@@ -1141,6 +1149,20 @@ class SessionController(
             LOG.debug { "session=${sid ?: ref?.key ?: "pending"} model: $event" }
         }
 
+        // The Agent Manager badges a worktree row from the backend's global activity map, which the
+        // transcript never consumes. A `question.asked` the per-session stream dropped (the backend
+        // flow has no replay) leaves the badge showing while the session stays Busy forever. Probe
+        // the authoritative pending-prompt endpoints whenever the backend says this session waits
+        // but the model does not.
+        cs.launch {
+            sessions.activity.collect { map ->
+                edt {
+                    if (disposed) return@edt
+                    reconcilePrompt(map)
+                }
+            }
+        }
+
         app.connect()
         cs.launch {
             app.state.collect { state ->
@@ -1411,10 +1433,10 @@ class SessionController(
             try {
                 sessions.events(id, directory).collect { event ->
                     if (!matchesSession(event, id)) {
-                        LOG.debug { "${ChatLogSummary.sid(id)} pass=false ${ChatLogSummary.eventBody(event)}" }
+                        logEvent(id, "pass=false", event)
                         return@collect
                     }
-                    LOG.debug { "${ChatLogSummary.sid(id)} pass=true ${ChatLogSummary.eventBody(event)}" }
+                    logEvent(id, "pass=true", event)
                     updates.enqueue(event)
                 }
             } catch (e: CancellationException) {
@@ -1657,6 +1679,57 @@ class SessionController(
         reconnectRecoveryJob = cs.launch { recoverPending(id, revision, trigger = "reconnect") }
     }
 
+    /**
+     * Converge a session whose backend activity says it is waiting for a prompt the transcript is
+     * not showing. The Agent Manager badge and the transcript read the same backend event stream,
+     * but only the badge keeps a collector alive for the whole session, so a `question.asked` the
+     * per-session subscription missed shows the badge and leaves the session Busy forever. Only
+     * probes when the model is not already showing a prompt, and only once per (kind, revision) so
+     * an unchanged signal cannot refetch. Runs on the EDT.
+     */
+    @RequiresEdt
+    private fun reconcilePrompt(map: Map<String, SessionActivityDto>) {
+        val id = sid ?: return
+        val dto = map[id] ?: return
+        if (!waiting(dto.kind)) return
+        if (reconcilable()) return logProbe("activity", dto.kind, "state")
+        if (sessionLoadState !is SessionLoadState.Idle) return logProbe("activity", dto.kind, "loading")
+        val key = dto.kind to promptRevision
+        if (activityProbe == key) return
+        activityProbe = key
+        // Capture the revision on the EDT, like recoverOnReconnect: reading it inside the
+        // coroutine would let the debounce key and the guard token diverge.
+        val revision = promptRevision
+        LOG.info("${ChatLogSummary.sid(id)} kind=prompt-reconcile trigger=activity activity=${dto.kind} state=${model.state::class.simpleName} action=recover")
+        promptRecoveryJob?.cancel()
+        promptRecoveryJob = cs.launch { recoverPending(id, revision, trigger = "activity") }
+    }
+
+    /** True when the transcript already shows something the backend activity map only mirrors. */
+    @RequiresEdt
+    private fun reconcilable(): Boolean = when (model.state) {
+        is SessionState.AwaitingQuestion,
+        is SessionState.AwaitingPermission,
+        is SessionState.Reverting,
+        is SessionState.LoginRequired -> true
+        else -> false
+    }
+
+    private fun waiting(kind: SessionActivityKindDto): Boolean =
+        kind == SessionActivityKindDto.QUESTION ||
+            kind == SessionActivityKindDto.PLAN ||
+            kind == SessionActivityKindDto.PERMISSION
+
+    private fun logProbe(trigger: String, activity: SessionActivityKindDto, reason: String) {
+        LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=prompt-reconcile trigger=$trigger activity=$activity state=${model.state::class.simpleName} action=skip reason=$reason" }
+    }
+
+    /** Prompt delivery is rare and high-signal, so log it at INFO; everything else stays on DEBUG. */
+    private fun logEvent(id: String, tag: String, event: ChatEventDto) {
+        if (promptEvent(event)) LOG.info("${ChatLogSummary.sid(id)} $tag ${ChatLogSummary.eventBody(event)}")
+        else LOG.debug { "${ChatLogSummary.sid(id)} $tag ${ChatLogSummary.eventBody(event)}" }
+    }
+
     /** Rehydrate pending permissions/questions and current session status after history load or reconnect. */
     private suspend fun recoverPending(id: String, revision: Long, trigger: String = "history") {
         try {
@@ -1713,7 +1786,10 @@ class SessionController(
                     } else if (questions.isNotEmpty()) {
                         model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
                     } else if (live != null) {
-                        model.setState(live)
+                        // A convergence probe must not reset a more specific busy label (one set on
+                        // PartUpdated) back to "Considering next steps…"; it only needs to surface a
+                        // prompt, and the status is already correct when the model is Busy.
+                        if (!(live is SessionState.Busy && model.state is SessionState.Busy)) model.setState(live)
                     } else {
                         seedOutcome()
                     }
@@ -1960,7 +2036,8 @@ class SessionController(
     }
 
     private fun handleMetadata(event: ChatEventDto) {
-        LOG.debug { ChatLogSummary.event(event) }
+        if (promptEvent(event)) LOG.info("${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} evt=${ChatLogSummary.eventBody(event)}")
+        else LOG.debug { ChatLogSummary.event(event) }
         when (event) {
             is ChatEventDto.Error -> error(event, false)
             is ChatEventDto.SessionInterrupted -> interrupted(event)
@@ -2948,6 +3025,10 @@ class SessionController(
             disposed = true
             connectionDelay.dispose()
             cancelSubscriptions()
+            promptRecoveryJob?.cancel()
+            promptRecoveryJob = null
+            reconnectRecoveryJob?.cancel()
+            reconnectRecoveryJob = null
             drainJob?.cancel()
             drainJob = null
             revertWatchdog?.stop()
@@ -3069,6 +3150,16 @@ private fun matchesSession(event: ChatEventDto, id: String): Boolean = when (eve
     is ChatEventDto.SessionCompacted -> event.sessionID == id
     is ChatEventDto.SessionDiffChanged -> event.sessionID == id
     is ChatEventDto.TodoUpdated -> event.sessionID == id
+}
+
+/** Returns true for the rare prompt events whose delivery is worth logging at INFO. */
+private fun promptEvent(event: ChatEventDto): Boolean = when (event) {
+    is ChatEventDto.PermissionAsked,
+    is ChatEventDto.PermissionReplied,
+    is ChatEventDto.QuestionAsked,
+    is ChatEventDto.QuestionReplied,
+    is ChatEventDto.QuestionRejected -> true
+    else -> false
 }
 
 private fun summary(count: Int): String {
