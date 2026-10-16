@@ -105,7 +105,7 @@ const live: Layer.Layer<
 
     // kilocode_change start - ADR 0005: a custom auto router that this CLI can
     // serve asks the routing worker for a decision and dispatches it itself.
-    const route = Effect.fn("LLM.route")(function* (input: StreamRequest) {
+    const route = Effect.fn("LLM.route")(function* (input: StreamInput) {
       if (!KiloCustomRouter.isCustomRouter({ providerID: input.model.providerID, modelID: input.model.id })) {
         return undefined
       }
@@ -134,7 +134,7 @@ const live: Layer.Layer<
     })
     // kilocode_change end
 
-    const execute = Effect.fn("LLM.execute")(function* (input: StreamRequest) {
+    const run = Effect.fn("LLM.run")(function* (input: StreamRequest) {
       const l = log.clone().tag("providerID", input.model.providerID).tag("modelID", input.model.id) // kilocode_change
       yield* Effect.logInfo("stream", {
         providerID: input.model.providerID,
@@ -492,19 +492,7 @@ const live: Layer.Layer<
         messages: prepared.messages,
       }
       // kilocode_change end
-      // kilocode_change start - ADR 0005 routing wrapper
     })
-
-    const run = Effect.fn("LLM.run")(function* (input: StreamRequest) {
-      const routed = yield* route(input)
-      if (!routed) return yield* execute(input)
-      if (input.route) input.route.current = { providerID: routed.model.providerID, modelID: routed.model.id }
-      const user = routed.variant
-        ? { ...input.user, model: { ...input.user.model, variant: routed.variant } }
-        : input.user
-      return yield* execute({ ...input, model: routed.model, user })
-    })
-    // kilocode_change end
 
     const stream: Interface["stream"] = (input) =>
       Stream.scoped(
@@ -515,27 +503,33 @@ const live: Layer.Layer<
               (ctrl) => Effect.sync(() => ctrl.abort()),
             )
 
-            // kilocode_change start - ADR 0005: record the client-served model identity
-            const route: { current?: { providerID: string; modelID: string } } = {}
-            const mark = (events: Stream.Stream<LLMEvent, unknown>): Stream.Stream<LLMEvent, unknown> => {
-              const current = route.current
-              if (!current) return events
-              return events.pipe(Stream.map((event) => KiloRoutedModel.stamp(event, current)))
-            }
+            // kilocode_change start - ADR 0005: dispatch a custom auto router this CLI can serve
+            const routing: { current?: { providerID: string; modelID: string } } = {}
+            const stamp = (event: LLMEvent) =>
+              routing.current ? KiloRoutedModel.stamp(event, routing.current) : event
+            const mark = (events: Stream.Stream<LLMEvent, unknown>): Stream.Stream<LLMEvent, unknown> =>
+              events.pipe(Stream.map(stamp))
+            const routed = yield* route(input)
+            if (routed) routing.current = { providerID: routed.model.providerID, modelID: routed.model.id }
+            const request: StreamInput = routed
+              ? {
+                  ...input,
+                  model: routed.model,
+                  user: routed.variant
+                    ? { ...input.user, model: { ...input.user.model, variant: routed.variant } }
+                    : input.user,
+                }
+              : input
             // kilocode_change end
 
-            const result = yield* run({ ...input, abort: ctrl.signal, route })
+            const result = yield* run({ ...request, abort: ctrl.signal }) // kilocode_change - ADR 0005 dispatch the routed model
 
-            if (result.type === "native") {
-              // kilocode_change start - ADR 0005
-              return mark(result.stream)
-              // kilocode_change end
-            }
+            if (result.type === "native") return mark(result.stream) // kilocode_change - ADR 0005 stamp the routed model
 
             // Adapter seam: both runtimes expose the same LLMEvent stream. Native
             // already returns one; AI SDK streams are converted here.
             const state = LLMAISDK.adapterState()
-            const events = Stream.fromAsyncIterable(result.result.fullStream, (e) =>
+            return Stream.fromAsyncIterable(result.result.fullStream, (e) =>
               e instanceof Error ? e : new Error(String(e)),
             ).pipe(
               Stream.mapEffect((event) => LLMAISDK.toLLMEvents(state, event)),
@@ -546,10 +540,8 @@ const live: Layer.Layer<
               ),
               // kilocode_change end
               Stream.flatMap((events) => Stream.fromIterable(events)),
+              Stream.map(stamp), // kilocode_change - ADR 0005 stamp the routed model
             )
-            // kilocode_change start - ADR 0005
-            return mark(events)
-            // kilocode_change end
           }),
         ),
       )
