@@ -433,6 +433,15 @@ async function api(path: string, init?: RequestInit & { token?: string; ok?: num
   throw new Error(`${init?.method ?? "GET"} ${path} failed: ${res.status} ${await res.text()}`)
 }
 
+// Without MEMBER_TOKEN every private org member looks like a community author.
+// Fail the run, so a missing secret is seen at once and does not label team PRs.
+export function needMember(value: string | undefined) {
+  if (!value)
+    throw new Error(
+      "COMMUNITY_TRIAGE_MEMBER_TOKEN is not set. Without it, private org members are labeled as community authors.",
+    )
+}
+
 // GITHUB_TOKEN cannot see private org members, so they show up as plain
 // contributors. MEMBER_TOKEN (read:org) fixes that.
 async function maintainer(login: string, assoc: string) {
@@ -506,6 +515,7 @@ async function files(num: number) {
 }
 
 async function onevent() {
+  needMember(process.env.MEMBER_TOKEN)
   const event = await Bun.file(process.env.GITHUB_EVENT_PATH!).json()
   const pr = event.pull_request
   const item = pr ?? event.issue
@@ -619,6 +629,7 @@ async function quick(pr: Pull, ready: boolean) {
 }
 
 async function sweep() {
+  needMember(process.env.MEMBER_TOKEN)
   const now = Date.now()
   const enabled = process.env.CLOSE_ENABLED === "true"
   const cap = Number(process.env.MAX_COMMENTS ?? 20)

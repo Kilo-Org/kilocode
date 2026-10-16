@@ -6,6 +6,7 @@ import {
   easy,
   hasPriority,
   kind,
+  needMember,
   parse,
   labels,
   sync,
@@ -495,5 +496,16 @@ describe("community-maintainers.json", () => {
   test("is sorted, lower case and without duplicates", async () => {
     const list = ((await Bun.file(file).json()) as { logins: string[] }).logins
     expect(list).toEqual([...new Set(list.map((item) => item.toLowerCase()))].sort())
+  })
+})
+
+describe("needMember", () => {
+  test("fails when the token is missing or empty", () => {
+    expect(() => needMember(undefined)).toThrow("COMMUNITY_TRIAGE_MEMBER_TOKEN is not set")
+    expect(() => needMember("")).toThrow("COMMUNITY_TRIAGE_MEMBER_TOKEN is not set")
+  })
+
+  test("accepts a token", () => {
+    expect(() => needMember("token")).not.toThrow()
   })
 })
