@@ -388,7 +388,9 @@ describe("session compaction cap", () => {
             const prompt = yield* SessionPrompt.Service
             const sessions = yield* Session.Service
             const compaction = yield* SessionCompaction.Service
+            // An explicit title skips async title generation, which would add a racy LLM hit.
             const chat = yield* sessions.create({
+              title: "Filtered compaction",
               permission: [{ permission: "*", pattern: "*", action: "allow" }],
             })
             const errors: Array<typeof Session.Event.Error.data.Type> = []
@@ -454,7 +456,9 @@ describe("session compaction cap", () => {
           const prompt = yield* SessionPrompt.Service
           const sessions = yield* Session.Service
           const compaction = yield* SessionCompaction.Service
+          // An explicit title skips async title generation, which would add a racy LLM hit.
           const chat = yield* sessions.create({
+            title: "Failed compaction",
             permission: [{ permission: "*", pattern: "*", action: "allow" }],
           })
 
