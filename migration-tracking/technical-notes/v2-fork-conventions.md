@@ -125,6 +125,18 @@ gains a marked two-line pointer to this document and to the baseline report.
 That is the intended shape of a shared hook: without it, agents in this
 checkout follow upstream's conventions and never find these rules.
 
+## Plugin-first extension order
+
+Use the first rung that works. Prefer rungs 1–2 even when the donor has a working non-plugin solution. A PR that uses rung 3 or 4 says why rungs 1 and 2 do not work, and rungs 3 and 4 carry a `kilocode_change` marker. Branding and product strings are handled by the rename script (rung 5), never by hand edits. Source of truth: `.kilo/skills/v2-migration/SKILL.md`; the plan adds the per-unit `Mechanism` column (`../plans/kilo-v2-migration-plan.md` §B0).
+
+| Rung | What | v2 mechanism, examples | Marker |
+|---|---|---|---|
+| 1 | Kilo plugin on the public plugin API | `@opencode/plugin` domains: agent, provider, model, aisdk, session, event, tool, permission, command, skill, mcp, rpc, storage, worktree, shell, vcs, websearch | None (Kilo-owned path) |
+| 2 | Kilo host composition (unit U-E0-01) | Kilo's own entry point. Register Kilo plugins through `SdkPlugins.register` (`packages/core/src/plugin/sdk.ts`). Replace Effect services with layers, for example `Global.layerWith` for app directories. Translate `KILO_*` environment variables before boot | None |
+| 3 | Seam patch in a shared file | Small and generic: widen an API, add a hook, export a value. Prefer files that change rarely. Offer it upstream when it is generic | `kilocode_change` |
+| 4 | Feature patch in a shared file | Last resort | `kilocode_change`, reason in the PR |
+| 5 | Branding and product strings | The rename script during each sync, never hand edits | None (script) |
+
 ## Narrow shared hooks
 
 When a Kilo capability genuinely needs upstream code to call it:
@@ -145,6 +157,8 @@ When a Kilo capability genuinely needs upstream code to call it:
 
 - Mark every Kilo edit inside a shared upstream file with a `kilocode_change`
   comment saying what changed and why, so upstream merges show the intent.
+  Markers apply to plugin-first rungs 3 and 4 only (see Plugin-first extension
+  order above).
 - Do not mark Kilo-owned files. A file under `kilocode/` or `src/kilocode/` is
   Kilo by construction; markers there are noise. This also applies to Kilo-owned
   packages such as `packages/kilo-ide-ui`, including source relocated from a
