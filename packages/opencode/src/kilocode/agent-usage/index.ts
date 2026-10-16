@@ -121,10 +121,17 @@ export namespace AgentUsage {
     return conditions.length ? sql` WHERE ${sql.join(conditions, sql` AND `)}` : sql``
   }
 
-  // Project scope is resolved from the routed instance, so the query joins
-  // `session` (via session_project_idx) before touching message/part. Cost and
-  // tokens come from `step-finish` parts only (D4): `message.info.cost` carries
-  // propagated subagent cost and would double-count a child run in its parent.
+  // Project scope is resolved from the routed instance. The `msg`/`usage` CTEs
+  // join `session` on `project_id` before touching message/part, and the planner
+  // still drives both off the existing indexes: `session_project_idx` for the
+  // session lookup, `message_session_time_created_id_idx` for messages, and
+  // `part_session_step_finish_idx` for step-finish parts. That is verified by the
+  // `EXPLAIN QUERY PLAN` assertion in the test suite, so the whole `part` table is
+  // never scanned (which is what `ModelUsage`'s explicit id list guards against).
+  //
+  // Cost and tokens come from `step-finish` parts only (D4): `message.info.cost`
+  // carries propagated subagent cost and would double-count a child run in its
+  // parent.
   //
   // `role` is the assistant message's persisted `mode`, the execution-time
   // record the schema exposes alongside `agent`. Compaction summary messages
@@ -238,9 +245,9 @@ export namespace AgentUsage {
         grouped.read AS read,
         grouped.write AS write,
         CASE
-          WHEN last.completed IS NULL THEN 'running'
           WHEN last.errorName = 'MessageAbortedError' THEN 'cancelled'
           WHEN last.errorName IS NOT NULL THEN 'errored'
+          WHEN last.completed IS NULL THEN 'running'
           ELSE 'completed'
         END AS outcome
       FROM grouped
@@ -346,6 +353,9 @@ export namespace AgentUsage {
     const rows = yield* db.all<Row>(runsSql(ctx.project.id, filter)).pipe(Effect.orDie)
     return rows.map(toRun)
   })
+
+  /** Exposed for index-usage regression coverage; not part of the usage surface. */
+  export const runsQuery = (projectID: ProjectV2.ID, filter: Filter = {}) => runsSql(projectID, filter)
 
   export const summary = Effect.fn("AgentUsage.summary")(function* (filter: Filter = {}) {
     const { db } = yield* Database.Service

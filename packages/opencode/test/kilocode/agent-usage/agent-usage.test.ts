@@ -8,8 +8,11 @@ import { Session } from "@/session/session"
 import { MessageID, PartID, SessionID } from "@/session/schema"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { ProjectV2 } from "@opencode-ai/core/project"
 import { Database } from "@opencode-ai/core/database/database"
+import { sql } from "drizzle-orm"
 import { testEffect } from "../../lib/effect"
+import { TestInstance } from "../../fixture/fixture"
 
 const it = testEffect(LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node, Database.node])))
 
@@ -351,12 +354,23 @@ describe("agent usage", () => {
         cost: 0.25,
         tokens: tokens(1, 1, 0, 0, 0),
       })
+      // Imported or partially written rows can carry an error without a
+      // completion time; the error must win over `running`.
+      yield* turn({
+        sessionID: root.id,
+        agent: "errored-incomplete",
+        created: 5_000,
+        error: failed,
+        cost: 0.25,
+        tokens: tokens(1, 1, 0, 0, 0),
+      })
 
       const runs = yield* AgentUsage.runs()
       expect(Object.fromEntries(runs.map((run) => [run.agent, run.outcome]))).toEqual({
         completed: "completed",
         cancelled: "cancelled",
         errored: "errored",
+        "errored-incomplete": "errored",
         running: "running",
       })
 
@@ -365,6 +379,7 @@ describe("agent usage", () => {
         cancelled: 0,
         completed: 0,
         errored: 1,
+        "errored-incomplete": 1,
         running: 0,
       })
     }),
@@ -421,6 +436,23 @@ describe("agent usage", () => {
       ])
 
       expect(yield* AgentUsage.runs({ agent: "missing" })).toEqual([])
+    }),
+  )
+
+  it.instance("drives the runs query off the session, message, and step-finish indexes", () =>
+    Effect.gen(function* () {
+      const { db } = yield* Database.Service
+      const test = yield* TestInstance
+      const projectID = ProjectV2.ID.make("plan-project")
+      const plan = yield* db.all<{ detail: string }>(
+        sql`EXPLAIN QUERY PLAN ${AgentUsage.runsQuery(projectID)}`,
+      )
+      const details = plan.map((row) => row.detail).join("\n")
+      expect(details).toContain("USING INDEX session_project_idx")
+      expect(details).toContain("USING INDEX message_session_time_created_id_idx")
+      expect(details).toContain("USING INDEX part_session_step_finish_idx")
+      expect(details).not.toContain("SCAN part")
+      expect(test.directory).toContain("opencode-test-")
     }),
   )
 })
