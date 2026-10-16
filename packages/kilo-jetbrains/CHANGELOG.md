@@ -1,5 +1,13 @@
 # Changelog
 
+## 7.8.13
+
+### Patch Changes
+
+- [#15112](https://github.com/Kilo-Org/kilocode/pull/15112) [`3cb7685`](https://github.com/Kilo-Org/kilocode/commit/3cb7685900ca5bc5adc337c797c18cc16cb8ebe6) - Use the primary brand yellow for the JetBrains plugin icon and in-app Kilo logos.
+
+- [#15179](https://github.com/Kilo-Org/kilocode/pull/15179) [`90791a0`](https://github.com/Kilo-Org/kilocode/commit/90791a055fd4108f5a042f16ba54771de089a96d) - Prevent editor context ignore-file loading from blocking the JetBrains UI thread.
+
 ## 7.8.10
 
 ### Patch Changes
