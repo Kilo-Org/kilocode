@@ -23,6 +23,8 @@ export const owned = [
   "script/check-*.ts",
   "script/dev-isolated.ts",
   ".github/workflows/kilo-v2.yml",
+  // Review policy for the Kilo review bot. Upstream has no REVIEW.md.
+  "REVIEW.md",
 ]
 
 /**
