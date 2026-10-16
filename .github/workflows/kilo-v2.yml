@@ -110,11 +110,7 @@ jobs:
             echo '<!-- migration-progress -->'
             bun script/upstream/progress.ts --compare base.json migration-tracking/progress/progress.json
             echo
-            echo '<details><summary>Map at this commit</summary>'
-            echo
-            echo "<img width=\"900\" alt=\"v2 migration progress map\" src=\"https://raw.githubusercontent.com/$REPO/$HEAD_SHA/migration-tracking/progress/progress.svg\" />"
-            echo
-            echo "</details>"
+            echo "<img width=\"900\" alt=\"v2 migration progress map at this commit\" src=\"https://raw.githubusercontent.com/$REPO/$HEAD_SHA/migration-tracking/progress/progress.svg\" />"
             echo
             echo "[Full map](https://github.com/$REPO/blob/$HEAD_SHA/migration-tracking/progress/README.md) · [how cells close](https://github.com/$REPO/blob/$HEAD_SHA/.kilo/skills/v2-migration/SKILL.md#progress-map)"
           } > body.md
