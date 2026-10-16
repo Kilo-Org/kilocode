@@ -45,6 +45,18 @@ describe("routeChatInput", () => {
     expect(posted[0]).toBe(message)
   })
 
+  it("re-posts review comments", () => {
+    const message = {
+      type: "appendReviewComments",
+      comments: [{ id: "c-1", file: "greet.js", side: "additions", line: 2, comment: "Use a template string" }],
+      autoSend: true,
+    }
+    const { calls, posted } = run(message, "history")
+    expect(calls).toEqual(["show", "post"])
+    expect(posted[0]).toBe(message)
+    expect(run(message, "newTask").calls).toEqual([])
+  })
+
   it("delivers the re-posted message once, without posting it again", () => {
     let view = "history"
     const queue: { type?: string }[] = []

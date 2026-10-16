@@ -20,6 +20,9 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var skills = emptyList<SkillDto>()
     var commandFiles = emptyList<CommandFileDto>()
     var mcps = emptyList<McpStatusDto>()
+
+    /** Per-directory MCP status, overriding [mcps], so tests can distinguish sessions. */
+    var mcpsByDirectory = emptyMap<String, List<McpStatusDto>>()
     var mcpConfigs = emptyMap<String, McpServerConfigDto>()
     val agentCalls = mutableListOf<String>()
     val skillCalls = mutableListOf<String>()
@@ -187,7 +190,7 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
         mcpStatusError?.let { throw it }
         mcpCalls.add(directory)
         mcpStatusGate?.await()
-        return mcps
+        return mcpsByDirectory[directory] ?: mcps
     }
 
     override suspend fun mcpConfig(directory: String): Map<String, McpServerConfigDto> {

@@ -178,6 +178,9 @@ class PromptPanel(
     // by a failure permanently loses whatever the user typed -- there is no draft store or
     // prompt history to fall back on.
     private var lastSubmission: Pair<String, List<PromptAttachment>>? = null
+    // What restoreLastSubmission() put back, so it can be dropped again if the send turns out to
+    // have been persisted after all -- but only while the user has not touched it.
+    private var restoredSubmission: Pair<String, List<PromptAttachment>>? = null
     private val highlighters = mutableListOf<RangeHighlighter>()
     private val folds: EditorFolds = EditorFolds(live = { editor.getEditor(false) }, resize = ::syncEditorHeight)
     private val strip = PromptAttachmentStrip(project) { removeAttachment(it) }
@@ -247,7 +250,7 @@ class PromptPanel(
         isFocusPainted = false
         addActionListener {
             syncTooltip()
-            val id = if (busy && !hasDraft()) StopSessionAction.ID else SendPromptAction.ID
+            val id = if (stopping()) StopSessionAction.ID else SendPromptAction.ID
             val action = ActionManager.getInstance().getAction(id)
                 ?: return@addActionListener
             val ctx = DataManager.getInstance().getDataContext(button)
@@ -531,7 +534,6 @@ class PromptPanel(
         busy = value
         if (value) invalidateEnhancement() else syncEnhance()
         syncButton()
-        syncTooltip()
     }
 
     @RequiresEdt
@@ -565,13 +567,26 @@ class PromptPanel(
     fun hasDraft(): Boolean = text().isNotEmpty() || attachments.isNotEmpty()
 
     @RequiresEdt
-    fun hasAttachments(): Boolean = attachments.isNotEmpty()
+    fun attachments(): List<PromptAttachment> = attachments.toList()
 
     @RequiresEdt
     fun setText(value: String) {
         editor.text = value
         syncEditorHeight()
         syncHighlights()
+    }
+
+    // Replaces the whole draft (text and attachments) at once, used to refill the box from a
+    // reverted message. Attachment chips are cleared first so the result is exactly [items].
+    @RequiresEdt
+    fun setDraft(text: String, items: List<PromptAttachment>) {
+        if (this.text() == text.trim() && attachments == items) return
+        setText(text)
+        attachments.clear()
+        strip.clear()
+        items.forEach(::addAttachment)
+        syncEditorHeight()
+        syncButton()
     }
 
     @RequiresEdt
@@ -637,6 +652,17 @@ class PromptPanel(
         if (hasDraft()) return
         setText(text)
         items.forEach(::addAttachment)
+        restoredSubmission = text to items
+    }
+
+    // Drops a restored draft once the send is confirmed to have been persisted. Only clears while
+    // the draft still matches what was restored, so a user edit made in the meantime is kept.
+    @RequiresEdt
+    fun discardRestoredSubmission() {
+        val (text, items) = restoredSubmission ?: return
+        restoredSubmission = null
+        if (this.text() != text || attachments != items) return
+        clear()
     }
 
     // Drops the retained submission once the send is confirmed. A pasted image is held as a full
@@ -655,10 +681,10 @@ class PromptPanel(
         completion?.clearMentions()
         completion?.prewarm()
         strip.clear()
+        restoredSubmission = null
         syncEditorHeight()
         syncHighlights()
         syncButton()
-        syncTooltip()
     }
 
     @RequiresEdt
@@ -836,9 +862,16 @@ class PromptPanel(
         }
     }
 
+    // A running session always offers Stop, even with a draft in the box: the turn is the thing the
+    // user may need to interrupt, and a draft (typed, or restored after a send) must not hide that.
+    // The draft can still be queued while busy through the Send shortcut, which the tooltip names.
+    // The click, icon, and tooltip all read this one decision so they cannot disagree.
+    private fun stopping() = busy
+
     @RequiresEdt
     private fun syncButton() {
-        button.icon = if (busy && !hasDraft()) STOP_ICON else SEND_ICON
+        button.icon = if (stopping()) STOP_ICON else SEND_ICON
+        syncTooltip()
     }
 
     @RequiresEdt
@@ -968,7 +1001,6 @@ class PromptPanel(
         LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} count=${attachments.size}" }
         syncEditorHeight()
         syncButton()
-        syncTooltip()
         onChange()
     }
 
@@ -978,7 +1010,6 @@ class PromptPanel(
         strip.remove(item)
         syncEditorHeight()
         syncButton()
-        syncTooltip()
         onChange()
     }
 
@@ -1153,7 +1184,8 @@ class PromptPanel(
 
     @RequiresEdt
     private fun syncTooltip() {
-        button.toolTipText = tooltip()
+        val tip = tooltip()
+        if (button.toolTipText != tip) button.toolTipText = tip
     }
 
     private fun syncAutoApprove() {
@@ -1173,20 +1205,22 @@ class PromptPanel(
     }
 
     private fun tooltip(): String {
-        val stop = busy && !hasDraft()
-        val id = if (stop) StopSessionAction.ID else SendPromptAction.ID
-        val text = if (stop) {
-            KiloBundle.message("prompt.button.stop")
-        } else {
-            KiloBundle.message("prompt.button.send")
+        if (stopping()) {
+            val tip = KeymapUtil.createTooltipText(KiloBundle.message("prompt.button.stop"), StopSessionAction.ID)
+            if (!hasDraft()) return tip
+            return hint(tip, SendPromptAction.ID, "prompt.button.stop.tooltip.send")
         }
-        val tip = KeymapUtil.createTooltipText(text, id)
-        if (stop) return tip
-        val shortcut = KeymapUtil.getFirstKeyboardShortcutText(StopSessionAction.ID)
+        val tip = KeymapUtil.createTooltipText(KiloBundle.message("prompt.button.send"), SendPromptAction.ID)
+        return hint(tip, StopSessionAction.ID, "prompt.button.send.tooltip.stop")
+    }
+
+    /** Appends a second line naming the other action's shortcut, when it has one. */
+    private fun hint(tip: String, id: String, key: String): String {
+        val shortcut = KeymapUtil.getFirstKeyboardShortcutText(id)
         if (shortcut.isEmpty()) return tip
         return XmlStringUtil.wrapInHtml(
             XmlStringUtil.escapeString(tip) + "<br>" +
-                XmlStringUtil.escapeString(KiloBundle.message("prompt.button.send.tooltip.stop", shortcut))
+                XmlStringUtil.escapeString(KiloBundle.message(key, shortcut))
         )
     }
 
