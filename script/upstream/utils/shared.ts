@@ -7,6 +7,8 @@
 
 import { $ } from "bun"
 import path from "node:path"
+import { defaultConfig } from "./config"
+import { matches } from "./match"
 import { isGenerated, isKiloOwned } from "./owned"
 
 export interface SharedFile {
@@ -49,8 +51,14 @@ export async function sharedFiles(input: SharedInput): Promise<SharedFile[]> {
         .filter(Boolean)
         .map((file) => ({ status: "A", path: file }))
 
+  // Paths in `skipFiles` are upstream product areas that Kilo removed on purpose. The sync removes them again, so
+  // they are not shared patches.
   const files = [...tracked, ...untracked].filter(
-    (item) => item.path && ["A", "M", "D", "T"].includes(item.status) && !isKiloOwned(item.path, upstream),
+    (item) =>
+      item.path &&
+      ["A", "M", "D", "T"].includes(item.status) &&
+      !isKiloOwned(item.path, upstream) &&
+      !matches(item.path, defaultConfig.skipFiles),
   )
   // T (type change, for example file to symlink) counts as a modification.
   return Promise.all(

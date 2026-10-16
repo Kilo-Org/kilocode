@@ -107,9 +107,31 @@ export const defaultConfig: MergeConfig = {
   // `kiloOwned`. Add a file here only when Kilo owns its full content and the reason is in the PR.
   keepOurs: [],
 
-  // Kilo removed no upstream file on v2, except workflows. Workflows are handled by
-  // `script/check-workflows.ts --fix` (its `removed` list), not by this list.
-  skipFiles: [],
+  // Upstream product areas that Kilo does not ship. The sync removes upstream changes and additions under
+  // these paths (modify/delete conflicts included), and the shared-patch counter does not count them.
+  // Workflows are handled by `script/check-workflows.ts --fix` (its `removed` list), not by this list.
+  skipFiles: [
+    // Desktop and web app, and the GUI packages only they use
+    "packages/desktop/**",
+    "packages/app/**",
+    "packages/gui-extensions/**",
+    "packages/session-ui/**",
+    "packages/storybook/**",
+    "script/sdk-docs.ts",
+    "script/ast-grep/gui-extensions/**",
+    // Hosted opencode.ai platform
+    "packages/console/**",
+    "packages/enterprise/**",
+    "packages/web/**",
+    "packages/posts/**",
+    "packages/function/**",
+    "packages/stats/**",
+    "infra/**",
+    "sst.config.ts",
+    "salesforce/**",
+    // Upstream VS Code extension (Kilo ships its own)
+    "sdks/vscode/**",
+  ],
 
   // Branding only (`transforms.branding`).
   takeTheirsAndTransform: ["packages/ui/src/components/**/*.tsx", "packages/ui/src/context/**/*.tsx"],

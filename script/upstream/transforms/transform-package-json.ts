@@ -326,9 +326,10 @@ const KILO_BIN: Record<string, Record<string, string>> = {}
 const TRANSFORM_PACKAGE_NAMES: Record<string, string> = {}
 
 // Kilo-specific scripts to preserve from the base branch per package.json. Kilo's root `dev`
-// runs `bun script/dev-isolated.ts`, which upstream does not have.
+// runs `bun script/dev-isolated.ts`, which upstream does not have. Kilo's root `lint` drops the
+// `packages/gui-extensions` checks, because Kilo removed that package (`skipFiles`).
 const PRESERVE_SCRIPTS: Record<string, string[]> = {
-  "package.json": ["dev"],
+  "package.json": ["dev", "lint"],
 }
 
 // Upstream-only trusted dependencies to delete per package.json. Empty on v2.
