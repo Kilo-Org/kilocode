@@ -60,6 +60,8 @@ export interface DiffFile {
   after: string
   /** Hunk-bounded unified patch used by Pierre to avoid re-diffing full files. */
   patch?: string
+  /** before/after contain concatenated patch hunks rather than complete files. */
+  excerpt?: boolean
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
