@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 8,
+    "done": 12,
     "total": 9854,
     "percent": 0.1,
     "dropped": 0,
     "kinds": [
       {
         "kind": "module",
-        "done": 5,
+        "done": 9,
         "total": 3557
       },
       {
@@ -837,12 +837,12 @@
     },
     {
       "feature": "gateway",
-      "done": 8,
+      "done": 12,
       "total": 87,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 5,
+          "done": 9,
           "total": 44
         },
         "api": {
@@ -6022,8 +6022,12 @@
   ],
   "done": [
     "module:packages/kilo-gateway/src/api/models.ts",
+    "module:packages/kilo-gateway/src/api/modes.ts",
+    "module:packages/kilo-gateway/src/api/notifications.ts",
     "module:packages/kilo-gateway/src/api/profile.ts",
+    "module:packages/kilo-gateway/src/api/trpc.ts",
     "module:packages/kilo-gateway/src/auth/device.ts",
+    "module:packages/kilo-gateway/src/autocomplete.ts",
     "module:packages/kilo-gateway/src/headers.ts",
     "module:packages/kilo-gateway/src/index.ts",
     "module:packages/kilo-gateway/test/api/models.test.ts",
