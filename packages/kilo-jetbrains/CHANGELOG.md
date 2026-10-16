@@ -612,6 +612,55 @@
 
 ## [Unreleased]
 
+## [7.1.10] - 2026-10-15
+
+### Added
+
+- Show and edit agent models from the agents list.
+- Configure transcript display, with a live preview and localized settings.
+- Reuse the Core submenu in the prompt bar menu.
+- Opt in to the Marketplace error handler.
+- Fork a remote session from a message in the CLI.
+- Let glob search an opt-in allowlist of ignored paths.
+- Bundle Kilo CLI v7.8.12.
+
+### Fixed
+
+- Restore session lists after a CLI reconnect.
+- Stop overriding the user permission config.
+- Clear MCP sign-in state when the server is removed.
+- Make the model reset forget the saved per-mode pick.
+- Navigate to transcript parts from the session timeline, and jump to a step when its timeline bar is clicked.
+- Auto-expand transcript blocks only while live.
+- Recover a missed pending prompt from backend activity.
+- Surface unreadable attachments as an inline chat notice.
+- Use the primary brand yellow for logos.
+- Keep RC builds on the production session database.
+- Report why a provider failed to load instead of hiding it.
+- Preserve custom agents and edit permissions during delegation.
+- Stop automatic MCP OAuth reset and sync auth badges.
+- Handle non-UTF-8 ripgrep matches in grep.
+- Stop glob and grep include patterns from bypassing `.gitignore`.
+- Track Windows background jobs and runner identity natively, and reject stale parent links when stopping them.
+- Require explicit user intent before starting Agent Manager sessions or worktrees.
+- Expose a reserved command-name clash as `/goal:command`.
+- Point cloud sessions at a permitted temp directory.
+- Resolve bare model names for task subagents.
+- Surface terminal compaction failures.
+- Limit Z.ai thinking defaults to built-in providers.
+- Avoid false frontmatter errors when saving command files.
+- Bound serve shutdown after signals.
+- Send tool-result images as user content for Bedrock GPT-6 models.
+- Reuse the loaded transcript when pruning large payloads.
+- Clean up MCP servers when their startup is interrupted.
+- Improve the missing-binary error message for Windows ARM64.
+- Retry retryable connection resets through the normal backoff path.
+- Start the backend in Windows drive-root workspaces.
+
+### Changed
+
+- Route gateway traffic via `KILO_AI_GATEWAY_URL`.
+
 ## [7.1.10-rc.4] - 2026-10-14
 
 ### Added

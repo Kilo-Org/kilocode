@@ -1,5 +1,6 @@
 import { describe, expect, test, beforeEach } from "bun:test"
 import { IngestQueue } from "../../../src/kilo-sessions/ingest-queue"
+import { StatusSync } from "../../../src/kilo-sessions/status-sync"
 
 function scheduler(now: () => number) {
   const tasks = new Map<number, { at: number; fn: () => void }>()
@@ -403,6 +404,78 @@ describe("share ingest queue", () => {
     const payload = sent[0] as { data: { type: string; data: unknown }[] }
     const status = payload.data.find((d) => d.type === "session_status")
     expect(status?.data).toEqual({ status: "scheduled", scheduledAt: "2026-08-28T12:34:56.789Z" })
+  })
+
+  test("retains all timestamped transitions across the cutoff, same-ms changes, full sync, and retry", async () => {
+    const sent: { data: IngestQueue.Data[] }[] = []
+    const sched = scheduler(() => clock.now)
+    const q = IngestQueue.create({
+      now: () => clock.now,
+      setTimeout: sched.setTimeout,
+      clearTimeout: sched.clearTimeout,
+      log: { error: () => {} },
+      getShare: async () => ({ ingestPath: "/ingest" }),
+      getClient: async () => ({
+        url: "https://ingest.test",
+        fetch: async (_input, init) => {
+          sent.push(JSON.parse(String(init?.body)))
+          return new Response("{}", { status: sent.length === 1 ? 503 : 200 })
+        },
+      }),
+    })
+    const statuses = StatusSync.create()
+    const records = [
+      statuses.record("cutoff", { status: "question" }, "2026-10-15T07:59:59.900Z"),
+      statuses.record("cutoff", { status: "permission" }, "2026-10-15T07:59:59.900Z"),
+      statuses.record("cutoff", { status: "idle" }, "2026-10-15T08:00:00.100Z"),
+      statuses.record("cutoff", { status: "question" }, "2026-10-15T08:00:00.100Z"),
+    ]
+    for (const data of records) await q.sync("cutoff", [{ type: "session_status", data }])
+    const snapshot = await statuses.snapshot("cutoff", async () => ({ status: "question" }))
+    await q.sync("cutoff", [{ type: "session_status", data: snapshot }])
+    await q.flush("cutoff")
+    expect(sent[0]?.data).toEqual(records.map((data) => ({ type: "session_status", data })))
+
+    clock.now = 2000
+    await q.sync("cutoff", [{ type: "session_status", data: snapshot }])
+    await q.flush("cutoff")
+    expect(sent).toHaveLength(2)
+    expect(sent[1]?.data).toHaveLength(4)
+    expect(sent[1]?.data).toEqual(expect.arrayContaining(records.map((data) => ({ type: "session_status", data }))))
+    expect(sched.size()).toBe(0)
+  })
+
+  test("repeated same-status transitions in one millisecond stay distinct while unknown snapshots coalesce", async () => {
+    const sent: { data: IngestQueue.Data[] }[] = []
+    const sched = scheduler(() => clock.now)
+    const q = IngestQueue.create({
+      now: () => clock.now,
+      setTimeout: sched.setTimeout,
+      clearTimeout: sched.clearTimeout,
+      log: { error: () => {} },
+      getShare: async () => ({ ingestPath: "/ingest" }),
+      getClient: async () => ({
+        url: "https://ingest.test",
+        fetch: async (_input, init) => {
+          sent.push(JSON.parse(String(init?.body)))
+          return new Response("{}", { status: 200 })
+        },
+      }),
+    })
+    const statuses = StatusSync.create()
+    const instant = "2026-10-15T07:59:59.900Z"
+    const records = (["question", "idle", "question"] as const).map((status) =>
+      statuses.record("same-ms", { status }, instant),
+    )
+    await q.sync("same-ms", [{ type: "session_status", data: { status: "busy" } }])
+    for (const data of records) await q.sync("same-ms", [{ type: "session_status", data }])
+    await q.sync("same-ms", [{ type: "session_status", data: { status: "idle" } }])
+    await q.flush("same-ms")
+    expect(sent[0]?.data).toEqual([
+      { type: "session_status", data: { status: "idle" } },
+      ...records.map((data) => ({ type: "session_status" as const, data })),
+    ])
+    expect(sched.size()).toBe(0)
   })
 
   test("session_pr_link uses stable key and coalesces", async () => {
