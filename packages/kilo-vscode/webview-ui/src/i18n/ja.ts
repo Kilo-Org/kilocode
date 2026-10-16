@@ -1042,6 +1042,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "これは組み込みモードです。基本定義は変更できませんが、以下でオーバーライドを設定できます。",
   "settings.agentBehaviour.editMode.promptOverride": "この組み込みモードのカスタムプロンプト上書き",
+  "settings.agentBehaviour.mode.title": "モード",
+  "settings.agentBehaviour.mode.description":
+    "プライマリエージェントはチャットのモード切り替えに表示されます。サブエージェントは、説明に基づいて Task ツール経由で他のエージェントからのみ呼び出されます。",
+  "settings.agentBehaviour.mode.primary": "プライマリ",
+  "settings.agentBehaviour.mode.subagent": "サブエージェント",
+  "settings.agentBehaviour.mode.all": "プライマリとサブエージェント",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "これはデフォルトエージェントのため、サブエージェント専用にはできません。先に別のデフォルトエージェントを選択してください。",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "このエージェントはプロジェクトの kilo.jsonc でデフォルトエージェントに設定されているため、サブエージェント専用にはできません。先にそこで default_agent を変更してください。",
   "settings.agentBehaviour.badge.subagent": "サブエージェント",
   "settings.agentBehaviour.permissions.title": "計算された権限",
   "settings.agentBehaviour.permissions.count": "{{count}} 個のルール",

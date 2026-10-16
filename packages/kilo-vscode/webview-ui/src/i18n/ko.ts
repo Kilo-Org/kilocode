@@ -1035,6 +1035,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "이것은 내장 모드입니다. 기본 정의는 변경할 수 없지만, 아래에서 재정의를 구성할 수 있습니다.",
   "settings.agentBehaviour.editMode.promptOverride": "이 내장 모드에 대한 사용자 지정 프롬프트 재정의",
+  "settings.agentBehaviour.mode.title": "모드",
+  "settings.agentBehaviour.mode.description":
+    "주 에이전트는 채팅의 모드 전환기에 표시됩니다. 서브에이전트는 설명에 따라 Task 도구를 통해 다른 에이전트에 의해서만 호출됩니다.",
+  "settings.agentBehaviour.mode.primary": "주 에이전트",
+  "settings.agentBehaviour.mode.subagent": "서브에이전트",
+  "settings.agentBehaviour.mode.all": "주 에이전트 및 서브에이전트",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "기본 에이전트이므로 서브에이전트 전용으로 설정할 수 없습니다. 먼저 다른 기본 에이전트를 선택하세요.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "이 에이전트는 프로젝트 kilo.jsonc의 기본 에이전트이므로 서브에이전트 전용으로 설정할 수 없습니다. 먼저 해당 파일에서 default_agent를 변경하세요.",
   "settings.agentBehaviour.badge.subagent": "서브에이전트",
   "settings.agentBehaviour.permissions.title": "계산된 권한",
   "settings.agentBehaviour.permissions.count": "{{count}}개 규칙",

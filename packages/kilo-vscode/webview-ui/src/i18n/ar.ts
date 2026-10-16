@@ -1022,6 +1022,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "هذا وضع مضمن. لا يمكن تغيير تعريفه الأساسي، ولكن يمكنك تكوين التجاوزات أدناه.",
   "settings.agentBehaviour.editMode.promptOverride": "تجاوز موجه مخصص لهذا الوضع المدمج",
+  "settings.agentBehaviour.mode.title": "الوضع",
+  "settings.agentBehaviour.mode.description":
+    "يظهر الوكلاء الأساسيون في مبدل الأوضاع في الدردشة. لا يُستدعى الوكلاء الفرعيون إلا من قِبل وكلاء آخرين عبر أداة Task، بناءً على وصفهم.",
+  "settings.agentBehaviour.mode.primary": "أساسي",
+  "settings.agentBehaviour.mode.subagent": "وكيل فرعي",
+  "settings.agentBehaviour.mode.all": "أساسي ووكيل فرعي",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "هذا هو الوكيل الافتراضي، لذا لا يمكن أن يكون وكيلًا فرعيًا فقط. اختر وكيلًا افتراضيًا آخر أولًا.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "هذا الوكيل هو الوكيل الافتراضي في ملف kilo.jsonc الخاص بالمشروع، لذا لا يمكن أن يكون وكيلًا فرعيًا فقط. غيّر default_agent هناك أولًا.",
   "settings.agentBehaviour.badge.subagent": "وكيل فرعي",
   "settings.agentBehaviour.permissions.title": "الأذونات المحسوبة",
   "settings.agentBehaviour.permissions.count": "{{count}} قواعد",

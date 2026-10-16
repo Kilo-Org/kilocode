@@ -999,6 +999,15 @@ export const dict = {
   "settings.agentBehaviour.editMode.back": "返回列表",
   "settings.agentBehaviour.editMode.native": "这是一个内置模式。它的基础定义无法更改，但您可以在下方配置覆盖项。",
   "settings.agentBehaviour.editMode.promptOverride": "此内置模式的自定义提示覆盖",
+  "settings.agentBehaviour.mode.title": "模式",
+  "settings.agentBehaviour.mode.description":
+    "主智能体会显示在聊天的模式切换器中。子代理只能由其他智能体根据其描述通过 Task 工具调用。",
+  "settings.agentBehaviour.mode.primary": "主智能体",
+  "settings.agentBehaviour.mode.subagent": "子代理",
+  "settings.agentBehaviour.mode.all": "主智能体和子代理",
+  "settings.agentBehaviour.mode.defaultAgent": "这是默认智能体，因此不能仅作为子代理。请先选择其他默认智能体。",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "此智能体是项目 kilo.jsonc 中的默认智能体，因此不能仅作为子代理。请先在该文件中修改 default_agent。",
   "settings.agentBehaviour.badge.subagent": "子代理",
   "settings.agentBehaviour.permissions.title": "计算出的权限",
   "settings.agentBehaviour.permissions.count": "{{count}} 条规则",
