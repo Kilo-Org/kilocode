@@ -165,6 +165,22 @@ When a PR first gets `awaiting-contributor`, the sweep also posts one comment th
 
 `kilo-auto-close.yml` is separate. It does not read these labels. It still closes any PR with no activity for 30 days, including `high-value` and `keep-open` PRs.
 
+## The digest
+
+Each sweep writes a queue to the job summary, and to [Slack](#slack). It lists the open community PRs in these sections. An empty section is left out. Each section shows at most 15 PRs, oldest first, and a line with the number of the others.
+
+| Section | PRs |
+|---|---|
+| Adopt | `high-value` PRs with no contributor reply for 14 days. The team takes them over |
+| Quick wins | PRs with `quick-win` that are not waiting for the contributor |
+| Needs triage | No maintainer has reacted yet |
+| Contributor replied, needs review | The contributor answered after the last maintainer reaction |
+| Approved, ready to merge | The last maintainer reaction is an approval |
+| Waiting for contributor | Days waiting, out of 14. Longest wait first |
+| Closed in this run | PRs the sweep closed. Only when closing is on |
+
+A PR can be in "Quick wins" and in its state section. The digest marks first-time contributors and PRs with failing checks next to the PR. The first two sections use the labels. The others come from the same rules as the status labels. `needs-triage` covers both "Needs triage" and "Contributor replied, needs review", because a maintainer should look in both cases.
+
 ## The maintainer routine
 
 Open the latest "Community sweep" run. The job summary has the queue. A copy goes to [Slack](#slack) when a Slack secret is set.
