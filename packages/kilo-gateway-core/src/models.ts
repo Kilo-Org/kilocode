@@ -417,7 +417,11 @@ function toModel(model: RawModel): Model {
       input: inputModalities,
       output: outputModalities,
     },
-    ...(reasoningOptions ? { reasoningOptions } : {}),
+    // An explicit empty list means no variants, as in v1. A list with only malformed entries counts as missing,
+    // so the default variants still apply.
+    ...(reasoningOptions && (reasoningOptions.length > 0 || model.opencode?.reasoning_options?.length === 0)
+      ? { reasoningOptions }
+      : {}),
   }
 }
 
