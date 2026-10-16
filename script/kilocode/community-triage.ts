@@ -400,12 +400,23 @@ const repo = process.env.REPO ?? "Kilo-Org/kilocode"
 const [owner, name] = repo.split("/")
 const bots = (login: string) => login.endsWith("[bot]")
 const trusted = new Set(["OWNER", "MEMBER", "COLLABORATOR"])
-const extra = new Set(
-  (process.env.MAINTAINERS ?? "")
-    .split(",")
-    .map((x) => x.trim().toLowerCase())
-    .filter(Boolean),
-)
+
+// Logins that count as maintainers although they are not in the org: bot and
+// agent accounts, and people outside the org. The file is shared with other
+// tools. Org members are found with the member token, not listed here.
+export function parse(data: unknown) {
+  const list = (data as { logins?: unknown } | null)?.logins
+  const valid = (item: unknown) => typeof item === "string" && /^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i.test(item)
+  if (!Array.isArray(list) || !list.every(valid))
+    throw new Error('.github/community-maintainers.json must look like { "logins": ["login", ...] }')
+  return new Set((list as string[]).map((item) => item.toLowerCase()))
+}
+
+const memo: { list?: Promise<Set<string>> } = {}
+const listed = () =>
+  (memo.list ??= Bun.file(new URL("../../.github/community-maintainers.json", import.meta.url))
+    .json()
+    .then(parse))
 const cache = new Map<string, boolean>()
 
 async function api(path: string, init?: RequestInit & { token?: string; ok?: number[] }) {
@@ -423,9 +434,9 @@ async function api(path: string, init?: RequestInit & { token?: string; ok?: num
 }
 
 // GITHUB_TOKEN cannot see private org members, so they show up as plain
-// contributors. An optional MEMBER_TOKEN (read:org) or MAINTAINERS list fixes that.
+// contributors. MEMBER_TOKEN (read:org) fixes that.
 async function maintainer(login: string, assoc: string) {
-  if (trusted.has(assoc) || extra.has(login.toLowerCase())) return true
+  if (trusted.has(assoc) || (await listed()).has(login.toLowerCase())) return true
   const key = login.toLowerCase()
   const hit = cache.get(key)
   if (hit !== undefined) return hit

@@ -49,7 +49,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           MEMBER_TOKEN: ${{ secrets.COMMUNITY_TRIAGE_MEMBER_TOKEN }}
-          MAINTAINERS: ${{ vars.COMMUNITY_MAINTAINERS }}
           # Closing stays off until the repo variable is set to "true".
           CLOSE_ENABLED: ${{ github.event_name == 'workflow_dispatch' && format('{0}', inputs.close) || vars.COMMUNITY_AUTO_CLOSE_ENABLED }}
           SLACK_PAYLOAD: ${{ runner.temp }}/slack-payload.json
