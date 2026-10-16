@@ -271,13 +271,13 @@ async function collect(config: Config, dispositions: Record<string, Disposition>
   const shared = (await git(["diff", "--diff-filter=M", "--name-only", v1Base, v1Target, "--", "packages"]))
     .split("\n")
     .filter((f) => f && !isKiloOwned(f) && !GENERATED.some((re) => re.test(f)))
-  const diff = await git(["diff", "-U0", "--no-color", v1Base, v1Target, "--", ...shared])
+  // An empty pathspec after `--` would diff the whole tree, so skip the diff when no shared file changed.
+  const diff = shared.length ? await git(["diff", "-U0", "--no-color", v1Base, v1Target, "--", ...shared]) : ""
   const hunks = parseHunks(diff)
   const bindings = new Map<string, Map<string, string>>()
-  const batch = await $`git cat-file --batch < ${new Response(shared.map((f) => `${v1Target}:${f}`).join("\n") + "\n")}`
-    .cwd(ROOT)
-    .quiet()
-    .text()
+  const batch = shared.length
+    ? await $`git cat-file --batch < ${new Response(shared.map((f) => `${v1Target}:${f}`).join("\n") + "\n")}`.cwd(ROOT).quiet().text()
+    : ""
   let cursor = 0
   for (const f of shared) {
     const end = batch.indexOf("\n", cursor)
