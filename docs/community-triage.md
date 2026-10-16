@@ -106,14 +106,24 @@ The 14 day clock starts at the time of the last maintainer reaction.
 
 Every community PR gets a priority label when it opens, so the queue can be sorted at once. The label workflow sets it. The sweep adds it to PRs that have none. Other tools can read the same label.
 
-| Type | How it is detected | Label |
-|---|---|---|
-| Fix | Title starts with `fix`, `fixes`, `bugfix`, `hotfix` or `revert`, or the PR has the `bug` label | `priority:p1` |
-| Feature | Title starts with `feat`, `feature`, `add`, `adds`, `support` or `implement`, or the PR has the `enhancement` or `feature` label | `priority:p2` |
-| Other | Nothing above fits | `priority:p2` |
-| Docs | Title starts with `docs` or `documentation`, or the PR has a docs label, or `area:docs` is its only area | `priority:p3` |
+The type of a PR decides the label:
 
-A title prefix wins over labels, and labels win over the area. P0 is never automatic.
+| Type | Label |
+|---|---|
+| Fix | `priority:p1` |
+| Feature | `priority:p2` |
+| Other | `priority:p2` |
+| Docs | `priority:p3` |
+
+The first rule that fits decides the type:
+
+1. The title starts with `fix`, `fixes`, `bugfix`, `hotfix` or `revert`: fix. Or with `docs` or `documentation`: docs. Or with `feat` or `feature`: feature.
+2. The PR has the label `bug`: fix. Or `documentation` or `docs`: docs. Or `enhancement` or `feature`: feature.
+3. `area:docs` is the only area label: docs.
+4. The title starts with `add`, `adds`, `support` or `implement`: feature.
+5. Nothing fits: other.
+
+So a PR titled `Add docs for X` with the `documentation` label is docs, not a feature. P0 is never automatic.
 
 To change a priority, edit the label on GitHub. The sweep never changes an existing priority, even when the title changes. Priority does not mean the PR is triaged. A PR is triaged when a maintainer reacts, or when it has `high-value` or `keep-open`.
 
@@ -228,7 +238,7 @@ New issues get the `community` label, `needs-triage`, `first-time-contributor` f
 | `COMMUNITY_TRIAGE_SLACK_CHANNEL` | Secret | No | Channel ID (`C...`) for the bot token |
 | `COMMUNITY_TRIAGE_SLACK_WEBHOOK` | Secret | No | Posts the whole queue as one message. Used when there is no bot token, or when the bot post fails |
 
-Labels are created by the workflows. Run "Community sweep" once by hand after merge to create them and label the open PRs.
+Labels are created by the workflows, and their color and description are kept in line with the list in the script. Run "Community sweep" once by hand after merge to create them and label the open PRs.
 
 ## Safety
 
