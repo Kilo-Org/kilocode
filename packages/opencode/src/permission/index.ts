@@ -4,7 +4,7 @@ import { ConfigPermissionV1 } from "@opencode-ai/core/v1/config/permission"
 import * as Config from "@/config/config" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
 import { Wildcard } from "@opencode-ai/core/util/wildcard"
-import { Deferred, Effect, Layer, Context } from "effect"
+import { Cause, Context, Deferred, Effect, Layer } from "effect"
 import os from "os"
 import z from "zod" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
@@ -18,6 +18,7 @@ import { KiloHeadless } from "@/kilocode/permission/headless"
 import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
 import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // kilocode_change
+import { PermissionRule } from "@/kilocode/permission/rule" // kilocode_change
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
 // kilocode_change end
 
@@ -69,13 +70,30 @@ export interface AskOutcome {
   manual: boolean
   /** The winning rule (carries an optional `source` marker set at ruleset-build time). */
   rule?: Rule
+  /** true when a `permission.ask` plugin hook, not a rule, settled this call. */
+  plugin?: boolean
 }
+// kilocode_change end
+
+// kilocode_change start: a reviewer sees the effective rule decision and may
+// replace it. This is the interception point the documented `permission.ask`
+// plugin hook needs — without it the hook is declared but never invoked.
+export type PermissionReviewer = (
+  input: Request,
+  // `status` is whatever the hook left behind, so it is typed as an unvalidated
+  // string rather than the union: plugins are external, untyped JavaScript, and
+  // an unrecognised value must not be able to read as a decision.
+  output: { status: string; message?: string },
+) => Effect.Effect<void>
+/** deny beats ask beats allow; anything else is not a decision at all. */
+const strictness = (status: string) => (status === "deny" ? 2 : status === "ask" ? 1 : status === "allow" ? 0 : -1) // kilocode_change
 // kilocode_change end
 
 export interface Interface {
   readonly ask: (input: AskInput) => Effect.Effect<AskOutcome, Error> // kilocode_change - was Effect<void>; returns the decision
   readonly reply: (input: ReplyInput) => Effect.Effect<void, NotFoundError>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
+  readonly setReviewer: (fn: PermissionReviewer) => Effect.Effect<void> // kilocode_change
   // kilocode_change start
   readonly saveAlwaysRules: (input: z.infer<typeof SaveAlwaysRulesInput>) => Effect.Effect<void, NotFoundError>
   readonly allowEverything: (input: z.infer<typeof AllowEverythingInput>) => Effect.Effect<void>
@@ -123,7 +141,13 @@ export function resolve(permission: string, pattern: string, ruleset: Ruleset, .
     pattern,
     ReadPermission.harden(permission, pattern, evalFn(permission, pattern, ruleset)),
   ) // kilocode_change
-  const saved = AgentManagerPermission.harden(permission, pattern, evalFn(permission, pattern, ...overrides)) // kilocode_change
+  // kilocode_change - harden the saved/session side too: a broad "always allow" must not
+  // silently grant a secret-file read any more than a broad config rule may
+  const saved = AgentManagerPermission.harden(
+    permission,
+    pattern,
+    ReadPermission.harden(permission, pattern, evalFn(permission, pattern, ...overrides)),
+  )
   if (base.action === "deny") return base
   if (saved.action === "deny") return saved
   if (base.action === "ask") {
@@ -160,6 +184,7 @@ const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const events = yield* EventV2Bridge.Service
+    let reviewer: PermissionReviewer | undefined // kilocode_change: registered once by the plugin layer
     const config = yield* Config.Service // kilocode_change
     const database = yield* Database.Service // kilocode_change
     const state = yield* InstanceState.make<State>(
@@ -193,6 +218,8 @@ const layer = Layer.effect(
       // kilocode_change end
       let needsAsk = false
       let approvedRule: Rule | undefined // kilocode_change - remember the rule that auto-approved
+      let decidedByPlugin = false // kilocode_change - a reviewer overrode what the rules decided
+      let forcedAsk = false // kilocode_change - this prompt is one a human must answer, whatever the rules say
 
       // kilocode_change start - protect config access while honoring explicit global skill trust
       const isProtected = ConfigProtection.isRequest(request)
@@ -229,6 +256,7 @@ const layer = Layer.effect(
         // kilocode_change start - skill shell forces a prompt instead of honoring an allow/auto-approve rule
         if (forceAsk) {
           needsAsk = true
+          forcedAsk = true
           continue
         }
         // kilocode_change end
@@ -239,9 +267,87 @@ const layer = Layer.effect(
         }
         // kilocode_change end
         needsAsk = true
+        // kilocode_change start - a prompt the service insists on: a protected config path, or
+        // an ask it hardened itself (reading a *.env file, an agent_manager side effect). No
+        // allow rule the user writes can relax these, so a permission.ask hook must not either.
+        if ((isProtected && !trusted) || PermissionRule.hardened(rule)) forcedAsk = true
+        // kilocode_change end
       }
 
-      if (!needsAsk) return { manual: false, rule: approvedRule } // kilocode_change - report auto-approval
+      const id = request.id ?? PermissionV1.ID.ascending() // kilocode_change - one id for the hook and the request
+
+      // kilocode_change start: the reviewer may replace the effective decision.
+      // It sees the id the real request will carry, and copies of the mutable
+      // fields: a hook must not be able to rewrite the request the user is about
+      // to be shown, nor the patterns an "always" answer persists.
+      if (reviewer) {
+        const review: { status: string; message?: string } = { status: needsAsk ? "ask" : "allow" }
+        const before = review.status
+        yield* reviewer(
+          {
+            id,
+            sessionID: request.sessionID,
+            permission: request.permission,
+            patterns: [...request.patterns],
+            metadata: { ...request.metadata },
+            always: [...request.always],
+            tool: request.tool,
+          },
+          review,
+        ).pipe(
+          // A hook that throws must not take the permission check down with it:
+          // `trigger` runs hooks through Effect.promise, so a rejection arrives as a
+          // defect. Treat it like a hook that answered nonsense — keep the rules'
+          // decision, discarding whatever the hook wrote before it failed.
+          Effect.catchCause((cause) =>
+            Cause.hasInterrupts(cause)
+              ? Effect.failCause(cause)
+              : Effect.gen(function* () {
+                  // Every hook shares one `review`, so a failure can follow a decision an
+                  // earlier hook already made. Discard what the failing hook left behind
+                  // only when keeping it would be more permissive than the rules were.
+                  if (strictness(review.status) <= strictness(before)) {
+                    review.status = before
+                    review.message = undefined
+                  }
+                  yield* Effect.logWarning("permission.ask hook failed; keeping the safer decision", {
+                    cause: Cause.pretty(cause),
+                    permission: request.permission,
+                  })
+                }),
+          ),
+        )
+        if (review.status === "deny") {
+          // No rule matched: inventing one here would send the user looking
+          // through their config for something that is not there. The reason
+          // carries the explanation instead.
+          return yield* new DeniedError({
+            ruleset: [],
+            reason: review.message ?? "A plugin denied this permission request.",
+          })
+        }
+        // A hook may make a decision stricter. It may not cancel a prompt Kilo forces
+        // regardless of the user's own allow rules — skill shells, sandbox escapes,
+        // config writes, *.env reads and agent_manager side effects.
+        if (review.status === "allow" && forcedAsk) {
+          yield* Effect.logWarning("permission.ask hook tried to auto-approve a forced prompt; keeping the prompt", {
+            permission: request.permission,
+          })
+        } else if (review.status === "ask" || review.status === "allow") {
+          decidedByPlugin = review.status !== (needsAsk ? "ask" : "allow")
+          needsAsk = review.status === "ask"
+        } else
+          // Any other value is a misbehaving hook, not a decision: keep what the
+          // rules decided rather than failing open to allow.
+          yield* Effect.logWarning("permission.ask hook returned an unknown status; keeping the rule decision", {
+            status: review.status,
+            permission: request.permission,
+          })
+      }
+      // kilocode_change end
+
+      // kilocode_change - report auto-approval, and never credit a rule for a decision a plugin made
+      if (!needsAsk) return decidedByPlugin ? { manual: false, plugin: true } : { manual: false, rule: approvedRule }
 
       // kilocode_change start - headless subagent asks fail instead of queuing for a reply that never comes (#11903)
       if (yield* KiloHeadless.denies(request.sessionID).pipe(Effect.provideService(Database.Service, database))) {
@@ -249,7 +355,6 @@ const layer = Layer.effect(
       }
       // kilocode_change end
 
-      const id = request.id ?? PermissionV1.ID.ascending()
       const info: PermissionV1.Request = {
         id,
         sessionID: request.sessionID,
@@ -463,7 +568,8 @@ const layer = Layer.effect(
     })
     // kilocode_change end
 
-    return Service.of({ ask, reply, list, saveAlwaysRules, allowEverything, pending }) // kilocode_change
+    const setReviewer = (fn: PermissionReviewer) => Effect.sync(() => { reviewer = fn }) // kilocode_change
+    return Service.of({ ask, reply, list, saveAlwaysRules, allowEverything, pending, setReviewer }) // kilocode_change
   }),
 )
 
