@@ -921,6 +921,7 @@ export const layer: Layer.Layer<
         sessionID: session.id,
         remapped: new Map([[input.sessionID, session.id]]),
         ops: writer,
+        invalidated: (child) => KiloSessionRevert.invalidated(storage, child), // kilocode_change - do not clone invalidated checkpoints
       })
       yield* writer.flush
       // kilocode_change end

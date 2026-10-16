@@ -103,12 +103,16 @@ const layer = Layer.effect(
         ? yield* KiloSessionRevert.ordered(sessions, input.sessionID, session.revert, all, state.assertNotBusy, storage)
         : undefined
       const previous = session.revert
-        ? ((yield* KiloSessionRevert.saved(storage, input.sessionID, session.revert)) ?? earlier?.patches ?? [])
+        ? ((yield* KiloSessionRevert.saved(storage, input.sessionID, session.revert))?.history ??
+          earlier?.patches ??
+          [])
         : []
-      const applied = KiloSessionRevert.merge(all, session.revert, rev, ordered.patches, previous)
+      const merged = KiloSessionRevert.merge(all, session.revert, rev, ordered.patches, previous)
       patches.length = 0
-      patches.push(...applied)
+      patches.push(...merged.applied)
       if (patches.length > 0) rev.workspace = "restored"
+      // Restore the previously reverted files from the pre-revert snapshot, then move each one to
+      // the baseline of the earliest checkpoint that is still inside the new range.
       const prior = [...new Set(previous.flatMap((patch) => patch.files))]
       const files = [...new Set([...prior, ...patches.flatMap((patch) => patch.files)])]
       const baseline = session.revert?.snapshot && files.length > 0 ? yield* snap.track() : rev.snapshot
@@ -136,7 +140,7 @@ const layer = Layer.effect(
             deletions: d.deletions,
             status: d.status,
           }))
-          yield* KiloSessionRevert.remember(storage, input.sessionID, rev, applied)
+          yield* KiloSessionRevert.remember(storage, input.sessionID, rev, merged)
           yield* sessions.setRevert({
             sessionID: input.sessionID,
             revert: rev,
@@ -169,7 +173,8 @@ const layer = Layer.effect(
         state.assertNotBusy,
         storage,
       )
-      const patches = (yield* KiloSessionRevert.saved(storage, input.sessionID, session.revert)) ?? found.patches
+      const patches =
+        (yield* KiloSessionRevert.saved(storage, input.sessionID, session.revert))?.history ?? found.patches
       const files = [...new Set(patches.flatMap((patch) => patch.files))]
       const baseline = files.length > 0 ? yield* snap.track() : undefined
       if (files.length > 0 && !baseline) {
@@ -205,7 +210,8 @@ const layer = Layer.effect(
         state.assertNotBusy,
         storage,
       )
-      const discarded = (yield* KiloSessionRevert.saved(storage, sessionID, session.revert)) ?? found.patches
+      const discarded =
+        (yield* KiloSessionRevert.saved(storage, sessionID, session.revert))?.applied ?? found.patches
       yield* KiloSessionRevert.discard(storage, sessionID, discarded)
       // kilocode_change end
       const remove = [] as SessionV1.WithParts[]

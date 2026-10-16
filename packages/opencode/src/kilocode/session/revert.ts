@@ -61,6 +61,16 @@ export namespace KiloSessionRevert {
       }
     }
 
+    // A resumed task's selected invocations are anchored on the child's own prompt: the processor
+    // records a call's start only when it consumes the event, which can happen after the child
+    // already executed and recorded its edit.
+    const invocation = (msgs: MessageV2.WithParts[], calls: MessageV2.Part[], chosen: MessageV2.Part[]) => {
+      const index = calls.findIndex((part) => chosen.includes(part))
+      const prompts = msgs.filter((msg) => msg.info.role === "user")
+      if (index < 0 || prompts.length !== calls.length) return undefined
+      return prompts.at(index)?.info.time.created
+    }
+
     const walk = (
       parent: SessionID,
       history: MessageV2.WithParts[],
@@ -73,18 +83,17 @@ export namespace KiloSessionRevert {
         for (const kid of yield* sessions.children(parent).pipe(Effect.orDie)) {
           const calls = history.flatMap((msg) => msg.parts).filter((part) => childID(part) === kid.id)
           const chosen = selected.flatMap((msg) => msg.parts).filter((part) => childID(part) === kid.id)
-          const cutoff =
-            chosen.length > 0 && chosen.length < calls.length
-              ? Math.max(
-                  from,
-                  Math.min(
-                    ...chosen.flatMap((part) =>
-                      part.type === "tool" && part.state.status !== "pending" ? [part.state.time.start] : [],
-                    ),
-                  ),
-                )
-              : from
           const all = yield* sessions.messages({ sessionID: kid.id }).pipe(Effect.orDie)
+          const resume =
+            chosen.length > 0 && chosen.length < calls.length
+              ? (invocation(all, calls, chosen) ??
+                Math.min(
+                  ...chosen.flatMap((part) =>
+                    part.type === "tool" && part.state.status !== "pending" ? [part.state.time.start] : [],
+                  ),
+                ))
+              : undefined
+          const cutoff = resume === undefined || Number.isNaN(resume) ? from : Math.max(from, resume)
           const local = all.filter(eligible)
           // A foreign-only child cannot mutate this worktree. Empty same-worktree children
           // still need the busy check because their first patch may not have been recorded yet.
@@ -143,49 +152,77 @@ export namespace KiloSessionRevert {
     rev.snapshot ?? "none",
   ]
 
+  // An undo set travels with the revert chain. `applied` is the suffix currently undone and
+  // `history` keeps every checkpoint the chain has seen, so a later boundary can shrink the
+  // suffix and a move back can undo the whole range again even after the child was deleted.
+  export type Saved = { applied: Patch[]; history: Patch[] }
+
+  // True when a checkpoint still falls inside the suffix of a later boundary. Patches from a
+  // deleted child only carry their message chronology, which is all a later move can compare.
+  const suffix = (
+    part: Patch,
+    messages: MessageV2.WithParts[],
+    after: number,
+    rev: NonNullable<Session.Info["revert"]>,
+  ) => {
+    const position = part.revertOrder
+    if (!position) return true
+    const at = messages.at(after)?.info.time.created ?? 0
+    if (position.at !== at) return position.at > at
+    if (position.id !== rev.messageID || !rev.partID) return true
+    const parts = messages.at(after)?.parts ?? []
+    const index = parts.findIndex((item) => item.id === rev.partID)
+    return parts.findIndex((item) => item.id === part.id) >= index
+  }
+
   // Moving to the same or an earlier boundary still undoes the previous suffix, including
   // checkpoints whose child was deleted after the original revert. A later boundary restores
-  // those files first and selects only the newly requested suffix.
+  // the dropped files first and undoes only the part of the history that still lies after it.
   export function merge(
     messages: MessageV2.WithParts[],
     prior: Session.Info["revert"],
     rev: NonNullable<Session.Info["revert"]>,
     patches: Patch[],
     previous: Patch[],
-  ) {
-    if (!prior) return patches
-    const before = messages.findIndex((msg) => msg.info.id === prior.messageID)
-    const after = messages.findIndex((msg) => msg.info.id === rev.messageID)
-    if (before < 0 || after < 0 || after > before) return patches
-    if (after === before && rev.partID) {
-      if (!prior.partID) return patches
-      const parts = messages.at(after)?.parts ?? []
-      if (parts.findIndex((part) => part.id === rev.partID) > parts.findIndex((part) => part.id === prior.partID))
-        return patches
-    }
+  ): Saved {
+    if (!prior) return { applied: patches, history: patches }
     const ids = new Set(patches.map((part) => part.id))
     const combined = [...patches, ...previous.filter((part) => !ids.has(part.id))]
+    let history: Patch[]
     if (combined.every((part) => part.revertOrder)) {
-      return combined.toSorted((left, right) =>
+      history = combined.toSorted((left, right) =>
         left.revertOrder && right.revertOrder ? order(left.revertOrder, right.revertOrder) : 0,
       )
+    } else {
+      // Older saved sets lack message chronology. Preserve their relative order by anchoring
+      // missing patches to surviving patches instead of appending deleted-child baselines.
+      const pending = [...previous]
+      const merged: Patch[] = []
+      for (const part of patches) {
+        const index = pending.findIndex((item) => item.id === part.id)
+        if (index >= 0) merged.push(...pending.splice(0, index))
+        if (index >= 0) pending.shift()
+        merged.push(part)
+      }
+      history = [...merged, ...pending]
     }
-    // Older saved sets lack message chronology. Preserve their relative order by anchoring
-    // missing patches to surviving patches instead of appending deleted-child baselines.
-    const pending = [...previous]
-    const merged: Patch[] = []
-    for (const part of patches) {
-      const index = pending.findIndex((item) => item.id === part.id)
-      if (index >= 0) merged.push(...pending.splice(0, index))
-      if (index >= 0) pending.shift()
-      merged.push(part)
+    const before = messages.findIndex((msg) => msg.info.id === prior.messageID)
+    const after = messages.findIndex((msg) => msg.info.id === rev.messageID)
+    if (before < 0 || after < 0) return { applied: patches, history }
+    if (after > before) return { applied: history.filter((part) => suffix(part, messages, after, rev)), history }
+    if (after === before && rev.partID) {
+      if (!prior.partID) return { applied: patches, history }
+      const parts = messages.at(after)?.parts ?? []
+      if (parts.findIndex((part) => part.id === rev.partID) > parts.findIndex((part) => part.id === prior.partID))
+        return { applied: patches, history }
     }
-    return [...merged, ...pending]
+    return { applied: history, history }
   }
 
   // Persist the applied patch set, independent of whether a descendant still exists on redo.
   export const saved = (storage: Storage.Interface, sessionID: SessionID, rev: NonNullable<Session.Info["revert"]>) =>
-    storage.read<Patch[]>(key(sessionID, rev)).pipe(
+    storage.read<Saved | Patch[]>(key(sessionID, rev)).pipe(
+      Effect.map((value) => (Array.isArray(value) ? { applied: value, history: value } : value)),
       Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)),
       Effect.orDie,
     )
@@ -194,8 +231,19 @@ export namespace KiloSessionRevert {
     storage: Storage.Interface,
     sessionID: SessionID,
     rev: NonNullable<Session.Info["revert"]>,
-    patches: Patch[],
-  ) => storage.write(key(sessionID, rev), patches).pipe(Effect.orDie)
+    saved: Saved,
+  ) => storage.write(key(sessionID, rev), saved).pipe(Effect.orDie)
+
+  // Checkpoints a cleanup invalidated: they must not be collected again, and a fork must not
+  // clone them into a session whose revert state no longer knows they were dropped.
+  export const invalidated = (storage: Storage.Interface, sessionID: SessionID) =>
+    storage
+      .read<string[]>(["session_discarded_patches", sessionID])
+      .pipe(
+        Effect.map((ids) => new Set(ids)),
+        Effect.catchTag("NotFoundError", () => Effect.succeed(new Set<string>())),
+        Effect.orDie,
+      )
 
   // Garbage collection follows a committed state transition. Keep the active undo set;
   // discard markers must outlive cleanup while the child's historical patches still exist.

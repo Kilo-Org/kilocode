@@ -405,12 +405,11 @@ describe("descendant revert regressions", () => {
               const storage = yield* Storage.Service
               const saved = yield* KiloSessionRevert.saved(storage, parent.id, undone.revert)
               if (!saved) throw new Error("expected saved set")
-              yield* KiloSessionRevert.remember(
-                storage,
-                parent.id,
-                undone.revert,
-                saved.map(({ revertOrder: _, ...part }) => part),
-              )
+              const strip = ({ revertOrder: _, ...part }: (typeof saved)["applied"][number]) => part
+              yield* KiloSessionRevert.remember(storage, parent.id, undone.revert, {
+                applied: saved.applied.map(strip),
+                history: saved.history.map(strip),
+              })
             }
             yield* sessions.remove(child.id)
             yield* revert.revert({
@@ -567,6 +566,110 @@ describe("descendant revert regressions", () => {
           for (const file of files) expect(yield* read(file)).toBe("before\n")
           expect(undone.summary?.files).toBe(3)
           expect(undone.summary?.diffs?.map((diff) => diff.file).sort()).toEqual(["child.txt", "first.txt", "last.txt"])
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  it.live(
+    "undoes a resumed invocation the child ran before its start was recorded",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const file = path.join(dir, "resumed.txt")
+          yield* Effect.promise(() => fs.writeFile(file, "before"))
+          const parent = yield* sessions.create({})
+          const prompt = yield* user(parent.id, 1)
+          const msg = yield* assistant(parent.id, prompt.id, 2)
+          yield* text(msg)
+          const child = yield* sessions.create({ parentID: parent.id })
+          yield* task(msg, child.id, 3)
+          const first = yield* user(child.id, 3)
+          yield* edit(yield* assistant(child.id, first.id, 4), file, "retained")
+          const boundary = yield* text(msg)
+          // The SDK admitted this invocation at t=5 and the child wrote at t=6, while the
+          // processor only stamped the call's start when it consumed the event at t=10.
+          yield* task(msg, child.id, 10)
+          const second = yield* user(child.id, 5)
+          yield* edit(yield* assistant(child.id, second.id, 6), file, "later")
+          yield* revert.revert({ sessionID: parent.id, messageID: msg.id, partID: boundary.id })
+          expect(yield* read(file)).toBe("retained")
+          yield* revert.unrevert({ sessionID: parent.id })
+          expect(yield* read(file)).toBe("later")
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  it.live(
+    "restores only the newer suffix when a later boundary follows a deleted child",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const file = path.join(dir, "shared.txt")
+          yield* Effect.promise(() => fs.writeFile(file, "before"))
+          const parent = yield* sessions.create({})
+          const first = yield* user(parent.id, 1)
+          const msg = yield* assistant(parent.id, first.id, 2)
+          const child = yield* sessions.create({ parentID: parent.id })
+          yield* task(msg, child.id, 2)
+          const early = yield* user(child.id, 3)
+          yield* edit(yield* assistant(child.id, early.id, 3), file, "early")
+          const later = yield* user(parent.id, 4)
+          yield* task(msg, child.id, 4)
+          const late = yield* user(child.id, 5)
+          yield* edit(yield* assistant(child.id, late.id, 5), file, "late")
+          yield* revert.revert({ sessionID: parent.id, messageID: first.id })
+          expect(yield* read(file)).toBe("before")
+          yield* sessions.remove(child.id)
+          yield* revert.revert({ sessionID: parent.id, messageID: later.id })
+          expect(yield* read(file)).toBe("early")
+          yield* revert.revert({ sessionID: parent.id, messageID: first.id })
+          expect(yield* read(file)).toBe("before")
+          yield* revert.unrevert({ sessionID: parent.id })
+          expect(yield* read(file)).toBe("late")
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  it.live(
+    "does not clone invalidated checkpoints into a fork",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const file = path.join(dir, "shared.txt")
+          yield* Effect.promise(() => fs.writeFile(file, "before"))
+          const parent = yield* sessions.create({})
+          const retained = yield* user(parent.id, 1)
+          const earlier = yield* assistant(parent.id, retained.id, 2)
+          const child = yield* sessions.create({ parentID: parent.id })
+          yield* task(earlier, child.id, 2)
+          const discarded = yield* user(parent.id, 3)
+          const msg = yield* assistant(parent.id, discarded.id, 4)
+          yield* edit(msg, file, "parent")
+          yield* task(msg, child.id, 5)
+          const prompt = yield* user(child.id, 5)
+          yield* edit(yield* assistant(child.id, prompt.id, 6), file, "child")
+          const undone = yield* revert.revert({ sessionID: parent.id, messageID: discarded.id })
+          expect(yield* read(file)).toBe("before")
+          yield* revert.cleanup(undone)
+          expect(yield* read(file)).toBe("before")
+          // Fork through the earlier retained task reference, which still points at the child.
+          const fork = yield* sessions.fork({ sessionID: parent.id, messageID: MessageID.ascending() })
+          const clone = (yield* sessions.messages({ sessionID: fork.id })).at(0)
+          if (!clone) throw new Error("expected forked history")
+          yield* revert.revert({ sessionID: fork.id, messageID: clone.info.id })
+          expect(yield* read(file)).toBe("before")
         }),
       { git: true },
     ),
