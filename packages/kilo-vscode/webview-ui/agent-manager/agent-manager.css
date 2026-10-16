@@ -3721,7 +3721,9 @@ body.am-wt-dragging-active * {
    resize); the textarea always fills it and is the only element that scrolls,
    so long prompts never produce nested scrollbars. */
 .am-nv-dialog .am-prompt-input-container {
-  margin: 0;
+  /* Keep the composer's minimum vertical gutter, but sit flush with the
+     dialog padding horizontally so it lines up with the fields above it. */
+  margin: var(--prompt-min-gutter) 0;
   resize: vertical;
   overflow: hidden;
   min-height: 120px;
@@ -4070,8 +4072,8 @@ body.am-wt-dragging-active * {
     background-color 140ms ease;
 }
 
-/* Many themes set button.hoverBackground within a few percent of the base
-   color, so the theme hover alone is invisible. Lift the button as well. */
+/* Many themes set the VS Code button hover color within a few percent of the
+   base color, so the theme hover alone is invisible. Lift the button as well. */
 .am-nv-submit:hover:not(:disabled) {
   filter: brightness(1.12);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
