@@ -227,7 +227,7 @@ describe("WakeEngine line buffering", () => {
     expect(fired[0][0]).not.toContain("\ufffd")
   })
 
-  test("I: unbounded no-newline input is truncated, memory bounded, subsequent events still fire", async () => {
+  test("I: unbounded no-newline input enters drop-mode; memory bounded; no fragment is matched", async () => {
     const fired: string[][] = []
     const overflowed: string[] = []
     const state = WakeEngine.createWake({
@@ -243,25 +243,35 @@ describe("WakeEngine line buffering", () => {
     })
 
     // Feed in pieces, none of which ends in a newline, totalling well above
-    // the per-line cap. The trailing partial buffer must stay bounded.
+    // the per-line cap. The trailing partial buffer must stay bounded and
+    // drop-mode must be entered.
     const perChunk = 8 * 1024
     const huge = "x".repeat(WakeEngine.MAX_WAKE_LINE_BYTES * 2)
     for (let offset = 0; offset < huge.length; offset += perChunk) {
       WakeEngine.feed(state, "stdout", Buffer.from(huge.slice(offset, offset + perChunk), "utf8"))
     }
-    // The buffered tail must stay bounded.
-    expect(Buffer.byteLength(state.buffer.stdout, "utf8")).toBeLessThanOrEqual(WakeEngine.MAX_WAKE_LINE_BYTES + 1024)
-    expect(overflowed.length).toBeGreaterThan(0)
+    // The buffered tail must stay bounded and the engine must have entered
+    // drop-mode for stdout.
+    expect(Buffer.byteLength(state.buffer.stdout, "utf8")).toBeLessThanOrEqual(WakeEngine.MAX_WAKE_LINE_BYTES)
+    expect(state.dropping.stdout).toBe(true)
+    expect(state.droppedLines).toBe(1)
+    expect(overflowed.length).toBe(1)
     expect(state.overflowed).toBe(true)
 
-    // The discarded prefix must NOT have fired anything (no trigger word
-    // appears in pure x's).
+    // No event was fired while the overlong line was being accumulated.
     expect(fired).toEqual([])
 
-    // Now feed a normal event - it must still fire.
-    WakeEngine.feed(state, "stdout", Buffer.from("after:trigger\n", "utf8"))
-    await asyncWait(() => state.fired === 1, "post-truncation event did not fire")
-    expect(fired[0][0]).toContain("trigger")
+    // Send a chunk that finishes the dropped line (with a newline) and then
+    // contains a new, well-formed line. The dropped portion (including any
+    // text before the newline) is discarded; the new line fires.
+    WakeEngine.feed(
+      state,
+      "stdout",
+      Buffer.from(`x\n{"type":"trigger","id":"1"}\n`, "utf8"),
+    )
+    await asyncWait(() => state.fired === 1, "post-drop event did not fire")
+    expect(state.dropping.stdout).toBe(false)
+    expect(fired.flat()).toEqual(['{"type":"trigger","id":"1"}'])
     expect(fired.flat().some((line) => /\u2026/.test(line))).toBe(false)
   })
 
@@ -281,6 +291,294 @@ describe("WakeEngine line buffering", () => {
     expect(fired).toEqual([])
     expect(state.queue).toEqual([])
     expect(state.disposed).toBe(true)
+  })
+
+  // ------------------------------------------------------------------
+  // Drop-mode regression tests (per-line, not per-chunk, overlong handling).
+  // The previous implementation kept a sliding window of the last
+  // `MAX_WAKE_LINE_BYTES` and ran the pattern on the truncated tail. That
+  // was unsafe: a fragment of a JSON line could match the pattern and
+  // wake the agent on a false positive. The current policy is drop-mode:
+  // any single line whose UTF-8 byte length exceeds `MAX_WAKE_LINE_BYTES`
+  // is discarded entirely, with a single warning, until the producer
+  // signals the line's end with `\n`. Subsequent lines on the same stream
+  // are processed normally.
+  // ------------------------------------------------------------------
+
+  test("drop-mode A: a single chunk with >100 short events is processed line-by-line", async () => {
+    const fired: string[][] = []
+    const state = WakeEngine.createWake({
+      pattern: /"type":"event"/,
+      cooldownMs: 0,
+      batchMax: 1000,
+      fire: async (input) => {
+        fired.push([...input.lines])
+      },
+    })
+
+    // Build a chunk whose TOTAL size is well above `MAX_WAKE_LINE_BYTES`
+    // but where every individual line stays under the cap. We pad each
+    // event with a long JSON field so 200 lines already exceed the cap.
+    const count = 200
+    const pad = "x".repeat(400)
+    const body: string[] = []
+    for (let i = 0; i < count; i++) {
+      body.push(`{"type":"event","id":${i},"pad":"${pad}"}`)
+    }
+    const chunk = body.join("\n") + "\n"
+    expect(Buffer.byteLength(chunk, "utf8")).toBeGreaterThan(WakeEngine.MAX_WAKE_LINE_BYTES)
+    // Sanity-check the spec assumption: no single line crosses the cap.
+    for (const line of body) {
+      expect(Buffer.byteLength(line, "utf8")).toBeLessThanOrEqual(WakeEngine.MAX_WAKE_LINE_BYTES)
+    }
+
+    WakeEngine.feed(state, "stdout", Buffer.from(chunk, "utf8"))
+    await asyncWait(() => state.fired === count, `expected ${count} fires, got ${state.fired}`)
+    const flat = fired.flat()
+    expect(flat.length).toBe(count)
+    for (let i = 0; i < count; i++) {
+      expect(flat[i]).toBe(body[i])
+    }
+    expect(state.dropping.stdout).toBe(false)
+    expect(state.droppedLines).toBe(0)
+  })
+
+  test("drop-mode B: a single overlong line is dropped entirely; one warning", async () => {
+    const fired: string[][] = []
+    const warnings: { message: string; meta: unknown }[] = []
+    const state = WakeEngine.createWake({
+      pattern: /"type":"x"/,
+      cooldownMs: 0,
+      batchMax: 1000,
+      fire: async (input) => {
+        fired.push([...input.lines])
+      },
+      log: (level, message, meta) => {
+        if (level === "warn") warnings.push({ message, meta })
+      },
+    })
+
+    const overlong = '{"type":"x","pad":"' + "y".repeat(WakeEngine.MAX_WAKE_LINE_BYTES) + '"}'
+    WakeEngine.feed(state, "stdout", Buffer.from(overlong + "\n", "utf8"))
+
+    expect(state.dropping.stdout).toBe(false)
+    expect(state.droppedLines).toBe(1)
+    expect(fired).toEqual([])
+    expect(warnings.length).toBe(1)
+    expect(warnings[0].message).toContain("exceeded max length")
+    expect(warnings[0].message).not.toContain("y".repeat(50))
+  })
+
+  test("drop-mode C: overlong line split across many chunks drops each piece until the newline", async () => {
+    const fired: string[][] = []
+    const state = WakeEngine.createWake({
+      pattern: /"type":"x"/,
+      cooldownMs: 0,
+      batchMax: 1000,
+      fire: async (input) => {
+        fired.push([...input.lines])
+      },
+    })
+
+    const overlong = '{"type":"x","pad":"' + "y".repeat(WakeEngine.MAX_WAKE_LINE_BYTES * 2) + '"}'
+    const parts = ["\"" + overlong.slice(1, 30_000), overlong.slice(30_000, 80_000), overlong.slice(80_000) + "\n"]
+
+    for (const part of parts) {
+      WakeEngine.feed(state, "stdout", Buffer.from(part, "utf8"))
+    }
+    expect(state.droppedLines).toBe(1)
+    expect(state.dropping.stdout).toBe(false)
+    expect(fired).toEqual([])
+
+    // A normal line in a fresh chunk fires.
+    WakeEngine.feed(state, "stdout", Buffer.from('{"type":"x","id":"next"}\n', "utf8"))
+    await asyncWait(() => state.fired === 1, "post-drop event did not fire")
+    expect(fired[0][0]).toContain('"id":"next"')
+  })
+
+  test("drop-mode D: an overlong line followed by normal events in the same chunk", async () => {
+    const fired: string[][] = []
+    const state = WakeEngine.createWake({
+      pattern: /"type":"(generate|exit)"/,
+      cooldownMs: 0,
+      batchMax: 1000,
+      fire: async (input) => {
+        fired.push([...input.lines])
+      },
+    })
+
+    const overlong = '{"type":"x","pad":"' + "y".repeat(WakeEngine.MAX_WAKE_LINE_BYTES) + '"}\n'
+    const chunk = overlong + '{"type":"generate","id":"2"}\n{"type":"exit","token":"3"}\n'
+    WakeEngine.feed(state, "stdout", Buffer.from(chunk, "utf8"))
+
+    // Both events must fire in the original order; the overlong line is dropped.
+    await asyncWait(() => state.fired === 2, "post-drop events did not fire")
+    expect(fired.flat()).toEqual(['{"type":"generate","id":"2"}', '{"type":"exit","token":"3"}'])
+    expect(state.droppedLines).toBe(1)
+  })
+
+  test("drop-mode E: stdout in drop-mode does not affect stderr", async () => {
+    const fired: string[][] = []
+    const state = WakeEngine.createWake({
+      pattern: /"type":"(generate|warning)"/,
+      cooldownMs: 0,
+      batchMax: 1000,
+      fire: async (input) => {
+        fired.push([...input.lines])
+      },
+    })
+
+    // stdout: long line that drops, then a normal event
+    const overlong = '{"type":"x","pad":"' + "y".repeat(WakeEngine.MAX_WAKE_LINE_BYTES) + '"}\n'
+    WakeEngine.feed(state, "stdout", Buffer.from(overlong, "utf8"))
+    WakeEngine.feed(state, "stdout", Buffer.from('{"type":"generate","id":"1"}\n', "utf8"))
+
+    // stderr: independent normal event, must not be impacted by stdout drop-mode
+    WakeEngine.feed(state, "stderr", Buffer.from('{"type":"warning","msg":"low memory"}\n', "utf8"))
+
+    expect(state.dropping.stdout).toBe(false)
+    expect(state.dropping.stderr).toBe(false)
+    expect(state.droppedLines).toBe(1)
+    await asyncWait(() => state.fired === 2, "stderr event was lost due to stdout drop-mode")
+    const flat = fired.flat()
+    expect(flat).toEqual(['{"type":"generate","id":"1"}', '{"type":"warning","msg":"low memory"}'])
+  })
+
+  test("drop-mode F: flush at process exit while in drop-mode discards the leftover", async () => {
+    const fired: string[][] = []
+    const state = WakeEngine.createWake({
+      pattern: /"type":"x"/,
+      cooldownMs: 0,
+      batchMax: 1000,
+      fire: async (input) => {
+        fired.push([...input.lines])
+      },
+    })
+
+    // Build a partial overlong line and do NOT send a newline.
+    const overlongPrefix = '{"type":"x","pad":"' + "y".repeat(WakeEngine.MAX_WAKE_LINE_BYTES)
+    WakeEngine.feed(state, "stdout", Buffer.from(overlongPrefix, "utf8"))
+    expect(state.dropping.stdout).toBe(true)
+
+    // Process exits with the overlong line still unterminated. The engine
+    // must not flush a fragment.
+    WakeEngine.flush(state)
+    await WakeEngine.flushDispatch(state)
+    expect(fired).toEqual([])
+    expect(state.dropping.stdout).toBe(false)
+    expect(state.buffer.stdout).toBe("")
+    expect(state.droppedLines).toBe(1)
+
+    // A second flush must be a no-op.
+    WakeEngine.flush(state)
+    await WakeEngine.flushDispatch(state)
+    expect(fired).toEqual([])
+  })
+
+  test("drop-mode G: boundary lengths and multi-byte characters", async () => {
+    const fired: string[][] = []
+    const makeState = () =>
+      WakeEngine.createWake({
+        pattern: /X/,
+        cooldownMs: 0,
+        batchMax: 1000,
+        fire: async (input) => {
+          fired.push([...input.lines])
+        },
+      })
+
+    // G.1: line exactly at the cap is accepted.
+    {
+      const state = makeState()
+      const line = "X".repeat(WakeEngine.MAX_WAKE_LINE_BYTES) + "\n"
+      WakeEngine.feed(state, "stdout", Buffer.from(line, "utf8"))
+      await asyncWait(() => state.fired === 1, "line at exactly MAX should fire")
+      expect(fired[0][0].length).toBe(WakeEngine.MAX_WAKE_LINE_BYTES)
+      expect(state.droppedLines).toBe(0)
+    }
+
+    // G.2: line one byte over the cap is dropped.
+    {
+      fired.length = 0
+      const state = makeState()
+      const line = "X".repeat(WakeEngine.MAX_WAKE_LINE_BYTES + 1) + "\n"
+      WakeEngine.feed(state, "stdout", Buffer.from(line, "utf8"))
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(fired).toEqual([])
+      expect(state.droppedLines).toBe(1)
+    }
+
+    // G.3: byte-based check, not character count. "修" is 3 bytes per char.
+    // 21845 copies = 65535 bytes; + 1 ASCII "X" = 65536 bytes of line content,
+    // which is exactly MAX and therefore allowed.
+    {
+      fired.length = 0
+      const state = makeState()
+      const content = "修".repeat(21845) + "X"
+      expect(Buffer.byteLength(content, "utf8")).toBe(WakeEngine.MAX_WAKE_LINE_BYTES)
+      WakeEngine.feed(state, "stdout", Buffer.from(content + "\n", "utf8"))
+      await asyncWait(() => state.fired === 1, "multibyte line at MAX bytes should fire")
+      expect(fired.length).toBe(1)
+      expect(state.droppedLines).toBe(0)
+    }
+
+    // G.4: one more multi-byte char pushes us over the byte cap -> drop.
+    {
+      fired.length = 0
+      const state = makeState()
+      const line = "修".repeat(21846) + "\n"
+      expect(Buffer.byteLength(line, "utf8")).toBeGreaterThan(WakeEngine.MAX_WAKE_LINE_BYTES)
+      WakeEngine.feed(state, "stdout", Buffer.from(line, "utf8"))
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(fired).toEqual([])
+      expect(state.droppedLines).toBe(1)
+    }
+  })
+
+  test("drop-mode H: warning is logged once per overlong line, not per chunk", async () => {
+    const fired: string[][] = []
+    const warnings: string[] = []
+    const state = WakeEngine.createWake({
+      pattern: /"type":"x"/,
+      cooldownMs: 0,
+      batchMax: 1000,
+      fire: async (input) => {
+        fired.push([...input.lines])
+      },
+      log: (level, message) => {
+        if (level === "warn" && message.includes("exceeded max length")) warnings.push(message)
+      },
+    })
+
+    // Build a single overlong line, delivered in 8 separate chunks. We must
+    // not log 8 warnings.
+    const overlong = '{"type":"x","pad":"' + "y".repeat(WakeEngine.MAX_WAKE_LINE_BYTES * 2) + '"}\n'
+    const chunks: Buffer[] = []
+    for (let offset = 0; offset < overlong.length; offset += 16 * 1024) {
+      chunks.push(Buffer.from(overlong.slice(offset, offset + 16 * 1024), "utf8"))
+    }
+    expect(chunks.length).toBeGreaterThan(1)
+
+    for (const chunk of chunks) {
+      WakeEngine.feed(state, "stdout", chunk)
+    }
+    expect(state.droppedLines).toBe(1)
+    expect(warnings.length).toBe(1)
+    expect(fired).toEqual([])
+
+    // A second overlong line increments the counter and logs again, but
+    // each line is one warning regardless of how many chunks it took.
+    const overlong2 = '{"type":"x","pad":"' + "y".repeat(WakeEngine.MAX_WAKE_LINE_BYTES * 2) + '"}\n'
+    const chunks2: Buffer[] = []
+    for (let offset = 0; offset < overlong2.length; offset += 12 * 1024) {
+      chunks2.push(Buffer.from(overlong2.slice(offset, offset + 12 * 1024), "utf8"))
+    }
+    expect(chunks2.length).toBeGreaterThan(1)
+    for (const chunk of chunks2) {
+      WakeEngine.feed(state, "stdout", chunk)
+    }
+    expect(state.droppedLines).toBe(2)
+    expect(warnings.length).toBe(2)
   })
 })
 
