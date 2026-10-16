@@ -2,7 +2,7 @@
 
 Review policy for PRs into the Kilo v2 line (`v2` and PRs stacked on v2 PR branches). Kilo is a fork of OpenCode: Kilo code lives in Kilo-owned paths, and upstream code arrives only through sync PRs.
 
-- Kilo-owned paths: `packages/kilo-*`, `packages/**/src/kilocode/**`, `packages/**/test/kilocode/**`, `.kilo/**`, `migration-tracking/**`, `script/upstream/**`, `script/check-*.ts`, `script/dev-isolated.ts`, `.github/workflows/kilo-v2.yml`, `REVIEW.md`. Every other path is shared with upstream.
+- Kilo-owned paths (as in `script/upstream/utils/owned.ts`): `packages/kilo-*/**`, `packages/**/src/kilocode/**`, `packages/**/test/kilocode/**`, `.kilo/**`, `migration-tracking/**`, `script/upstream/**`, `script/check-*.ts`, `script/dev-isolated.ts`, `.github/workflows/kilo-v2.yml`, `REVIEW.md`. A path that also exists in the pinned upstream release is shared, even when it matches. Every other path is shared.
 - Kilo seam: a `kilocode_change` line in a shared file (listed in `script/upstream/shared-patches.json` with rung and missing seam), or Kilo-owned code that calls an upstream API.
 - Kilo CI: the workflows on `v2` (`check.yml`, `kilo-v2.yml`, `test.yml`) and the scripts they call.
 
