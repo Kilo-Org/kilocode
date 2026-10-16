@@ -40,7 +40,7 @@ An author or commenter is a maintainer when one of these is true:
 - The secret `COMMUNITY_TRIAGE_MEMBER_TOKEN` (`read:org`) shows they are in the org.
 - Their login is in `.github/community-maintainers.json`.
 
-The default token cannot see private org members. They look like normal contributors. The member token fixes that, so it is needed. Org members are never listed in the file.
+The default token cannot see private org members. They look like normal contributors. The member token fixes that, so it is needed. If the secret is missing or empty, the label job and the sweep fail with a clear message, so team PRs are not labeled as community. Org members are never listed in the file.
 
 Bots are ignored.
 
