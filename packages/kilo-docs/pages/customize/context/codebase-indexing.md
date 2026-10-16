@@ -39,7 +39,7 @@ This enables natural language queries like "user authentication logic" or "datab
 1. Open Kilo Code **Settings** → **Indexing**, or click the indexing indicator at the bottom of the prompt input panel.
 2. Turn on **Global Enable** to index every workspace, or turn on **Enable for This Project** to index only the current workspace. Both toggles are off until explicitly enabled.
 3. Pick an **Embedding Provider** and fill in its required fields.
-4. Pick a **Vector Store** (`LanceDB` or `Qdrant`) and configure it.
+4. Pick a **Vector Store** (`LanceDB`, `Qdrant`, or `Valkey`) and configure it.
 5. Optionally adjust **Tuning Parameters** (search score, batch size, retries, max results).
 6. Save to start the initial scan.
 
@@ -77,9 +77,14 @@ You can also edit the `indexing` section in `kilo.jsonc` directly:
 
 - **LanceDB** (default). Embedded and file-based, with no server to run. Stores data under your Kilo data directory by default.
 - **Qdrant**. External server recommended for team deployments and larger codebases. See [Setting Up Qdrant](#setting-up-qdrant).
+- **Valkey**. External Valkey server with the search module. Set the URL and an optional password. See [Setting Up Valkey](#setting-up-valkey).
 
 {% callout type="warning" title="Intel Macs" %}
 LanceDB does not support Intel Macs. Select **Qdrant** and configure a Qdrant server instead.
+{% /callout %}
+
+{% callout type="warning" title="Windows" %}
+Valkey is not supported on Windows. Select **LanceDB** or **Qdrant** instead.
 {% /callout %}
 
 {% callout type="tip" %}
@@ -111,7 +116,7 @@ This opens an interactive configuration dialog where you can:
 - Choose an **Embedding Provider** and fill in provider settings (API key, base URL, AWS region, etc.)
 - Set the **Embedding Model** (blank = provider default)
 - Set the **Vector Dimension** (blank = auto-detect from the model)
-- Choose a **Vector Store** (`LanceDB` or `Qdrant`) and configure its connection
+- Choose a **Vector Store** (`LanceDB`, `Qdrant`, or `Valkey`) and configure its connection
 - Adjust **Tuning Parameters** (search threshold, batch size, retries, max results)
 
 All changes are written to your `kilo.jsonc` config and take effect immediately.
@@ -157,6 +162,7 @@ You can also edit the `indexing` section directly. This is the full shape of the
 
 - `lancedb` uses `{ directory? }` and is the default. It is embedded and file-based, with no server to run. Kilo uses its data directory when `directory` is omitted.
 - `qdrant` uses `{ url?, apiKey? }`. See [Setting Up Qdrant](#setting-up-qdrant).
+- `valkey` uses `{ url, password? }`, for example `{ "url": "redis://localhost:6379" }`. Not supported on Windows. See [Setting Up Valkey](#setting-up-valkey).
 
 {% callout type="tip" %}
 For a fully local, zero-cost setup, combine **Ollama** (embeddings) with **LanceDB** (vector store — no separate server needed).
@@ -203,6 +209,31 @@ For team or production use:
 - [Qdrant Cloud](https://cloud.qdrant.io/) — managed service
 - Self-hosted on AWS, GCP, or Azure
 - Local server with network access for team sharing
+
+## Setting Up Valkey
+
+If you choose **Valkey** as your vector store, you need a running Valkey server with the [search module](https://github.com/valkey-io/valkey-search) loaded. A plain Valkey server without it does not work. Kilo downloads the Valkey client the first time you select Valkey, so the first index start needs network access.
+
+### Quick Local Setup
+
+The `valkey-bundle` image includes the search module:
+
+```bash
+docker run -p 6379:6379 valkey/valkey-bundle
+```
+
+Then set the URL in `kilo.jsonc`:
+
+```json
+{
+  "indexing": {
+    "vectorStore": "valkey",
+    "valkey": { "url": "redis://localhost:6379" }
+  }
+}
+```
+
+Use `rediss://` for TLS connections. If your server requires a password, set `valkey.password` instead of putting it in the URL.
 
 ## Understanding Index Status
 
@@ -293,13 +324,13 @@ These advanced settings live under the `indexing` key and are exposed in the CLI
 - **Code Privacy**: Only small code snippets are sent for embedding — never whole files.
 - **Local Processing**: All parsing (Tree-sitter) happens locally.
 - **Fully Local Option**: Pair **Ollama** (embeddings) with **LanceDB** (local vector store) for a setup that never leaves your machine.
-- **Qdrant Security**: Use authentication for production deployments.
+- **Qdrant and Valkey Security**: Use authentication for production deployments.
 
 ## Current Limitations
 
 - **File Size**: 1MB maximum per file
 - **Single Workspace**: One workspace at a time
-- **Dependencies**: Requires an embedding provider, and — for Qdrant — a running Qdrant instance
+- **Dependencies**: Requires an embedding provider, and — for Qdrant or Valkey — a running server
 - **Language Coverage**: Optimal parsing is limited to Tree-sitter supported languages
 
 ## Troubleshooting
@@ -312,7 +343,8 @@ If your local embedding server is based on llama.cpp (including Ollama), indexin
 
 - Check that `indexing.enabled` is `true` in your `kilo.jsonc`
 - Verify that the selected provider has all required credentials set
-- If using Qdrant, make sure the Qdrant server is reachable at the configured URL
+- If using Qdrant or Valkey, make sure the server is reachable at the configured URL
+- If using Valkey, make sure the server has the search module loaded (`MODULE LIST` should include `search`)
 
 ### Rate-limit or batch errors with a hosted provider
 

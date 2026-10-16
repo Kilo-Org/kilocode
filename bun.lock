@@ -339,6 +339,7 @@
         "@lancedb/lancedb": "0.26.2",
         "@parcel/watcher": "2.5.1",
         "@qdrant/js-client-rest": "1.17.0",
+        "@valkey/valkey-glide": "2.5.2",
         "async-mutex": "0.5.0",
         "effect": "catalog:",
         "glob": "13.0.6",
@@ -357,6 +358,7 @@
         "@tsconfig/node22": "catalog:",
         "@types/node": "catalog:",
         "@typescript/native-preview": "catalog:",
+        "fast-check": "4.9.0",
         "typescript": "catalog:",
       },
     },
@@ -2754,6 +2756,20 @@
     "@ungap/structured-clone": ["@ungap/structured-clone@1.3.3", "", {}, "sha512-60YRaenCQcVjYEKOcG824+DRGGIQ3VKErcBoAEDJZz5bKIs2ZG+X/H9Nk+Q6EVkwJk5QNApxbrc5QtBSwtrXAg=="],
 
     "@upsetjs/venn.js": ["@upsetjs/venn.js@2.0.0", "", { "optionalDependencies": { "d3-selection": "^3.0.0", "d3-transition": "^3.0.1" } }, "sha512-WbBhLrooyePuQ1VZxrJjtLvTc4NVfpOyKx0sKqioq9bX1C1m7Jgykkn8gLrtwumBioXIqam8DLxp88Adbue6Hw=="],
+
+    "@valkey/valkey-glide": ["@valkey/valkey-glide@2.5.2", "", { "dependencies": { "long": "5", "protobufjs": "^7.6.3" }, "optionalDependencies": { "@valkey/valkey-glide-darwin-arm64": "2.5.2", "@valkey/valkey-glide-darwin-x64": "2.5.2", "@valkey/valkey-glide-linux-arm64-gnu": "2.5.2", "@valkey/valkey-glide-linux-arm64-musl": "2.5.2", "@valkey/valkey-glide-linux-x64-gnu": "2.5.2", "@valkey/valkey-glide-linux-x64-musl": "2.5.2" } }, "sha512-8d3m2NyveQ2Ws4OUd7Zz3zsPP835Nqi4Rm3ZMoLdUjTfnEJejIMPJGR8b09foiPEG4GXV9j+QWyDRuM9VHOuVw=="],
+
+    "@valkey/valkey-glide-darwin-arm64": ["@valkey/valkey-glide-darwin-arm64@2.5.2", "", { "os": "darwin", "cpu": "arm64" }, "sha512-6kmFsyBrMj8kRF72ZiKpLsT0WZrRQdM3P2p9vJskRaXbRiMGmLVoqj8vv1tYcu/xRr7bI6aEONOlwKbHojRLkQ=="],
+
+    "@valkey/valkey-glide-darwin-x64": ["@valkey/valkey-glide-darwin-x64@2.5.2", "", { "os": "darwin", "cpu": "x64" }, "sha512-2RgllAJlYvoKirMKDIseYfX7LNFOF06UohqRB4LM2U3Y9mjE/ssNrPy+netFYdqz0aWcgYajzCMr2jXeckmoEg=="],
+
+    "@valkey/valkey-glide-linux-arm64-gnu": ["@valkey/valkey-glide-linux-arm64-gnu@2.5.2", "", { "os": "linux", "cpu": "arm64" }, "sha512-EVWT7VT9porB670AxjQ+b/g/Dx5Nm/GaMy9irCzdDdnnTOwPyHvK1kPFzMATNuyDgXd5L504i99u8iHL1GpDEw=="],
+
+    "@valkey/valkey-glide-linux-arm64-musl": ["@valkey/valkey-glide-linux-arm64-musl@2.5.2", "", { "os": "linux", "cpu": "arm64" }, "sha512-CFTrYPWIrh+k66eqH3/FvUlMZ4S7p328iFTK+qsHxyYH3CnhAmKMaOHcptFKz5n7ypT8L/XuOBl+NIQgUrJGQA=="],
+
+    "@valkey/valkey-glide-linux-x64-gnu": ["@valkey/valkey-glide-linux-x64-gnu@2.5.2", "", { "os": "linux", "cpu": "x64" }, "sha512-osWsmJ+cg2iZjjNZ5IHQUMg/Xb/TQVyBvDxKA11vpLuEFMulQYfUfw+LWo0PwnG2mGJGKHhDnZ8KZAJpd03LWQ=="],
+
+    "@valkey/valkey-glide-linux-x64-musl": ["@valkey/valkey-glide-linux-x64-musl@2.5.2", "", { "os": "linux", "cpu": "x64" }, "sha512-gJCma4s3j3AUQk3k2Kcxe3ImWpla4e9jr41f1w9VwZd6CkWuZQdk1PsLpdROvtaBxUiRiq+RZvvLKvGf0md1Kg=="],
 
     "@vercel/oidc": ["@vercel/oidc@3.2.0", "", {}, "sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug=="],
 
