@@ -15,12 +15,14 @@ interface Props {
   title?: string
   ariaLabel?: string
   disabled?: boolean
+  ref?: (el: HTMLDivElement) => void
 }
 
 /** Shared layout for sidebar headings with a fixed leading control column. */
 export const SidebarSectionHeader: Component<Props> = (props) => {
   return (
     <div
+      ref={props.ref}
       class={`am-sidebar-header${props.onToggle ? " am-sidebar-header-toggleable" : ""}${props.class ? ` ${props.class}` : ""}`}
       title={props.title}
       onClick={(event) => {

@@ -169,7 +169,7 @@ Hosted service families live in [`Kilo-Org/cloud`](https://github.com/Kilo-Org/c
 |---|---|---|
 | Kilo Cloud | `apps/web/`{% linebreak /%}`services/` | Hosted platform repository for identity, billing, routing, product configuration, automation, and scoped execution services |
 | Web control plane | `apps/web/` | Hosted application layer for authorization, configuration, and API orchestration |
-| Kilo Gateway | `apps/web/src/app/api/gateway/`{% linebreak /%}`apps/web/src/lib/ai-gateway/`{% linebreak /%}Local integration: `Kilo-Org/kilocode/packages/kilo-gateway/` | First-party model-routing boundary and local client integration |
+| Kilo Gateway | `apps/ai-gateway/`{% linebreak /%}`packages/web-shared/src/lib/ai-gateway/`{% linebreak /%}Local integration: `Kilo-Org/kilocode/packages/kilo-gateway/` | First-party model-routing boundary and local client integration |
 | Cloud Agent | `services/cloud-agent-next/` | Hosted coding-session capability with policy-selected sandbox allocation |
 | Automation Services | `services/code-review-infra/`{% linebreak /%}`services/auto-triage-infra/`{% linebreak /%}`services/auto-fix-infra/`{% linebreak /%}`services/security-auto-analysis/`{% linebreak /%}`services/security-sync/`{% linebreak /%}`services/webhook-agent-ingest/` | Trigger-driven review, triage, fix, security, and configured webhook flows |
 | Adjacent hosted boundaries | `services/gastown/`{% linebreak /%}`services/wasteland/`{% linebreak /%}Supporting services | Gas Town, Wasteland, chat, notifications, and supporting services |

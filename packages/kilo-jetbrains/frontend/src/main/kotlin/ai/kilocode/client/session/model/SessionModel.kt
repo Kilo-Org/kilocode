@@ -46,6 +46,18 @@ class SessionModel {
     companion object {
         /** Part types that are internal server markers and must never be stored or rendered. */
         val SILENT_PART_TYPES = setOf("step-start", "patch")
+
+        /**
+         * Shape of the synthetic user text the CLI persists when it cannot read an attached file:
+         * `Read tool failed to read <path> with the following error: <message>`. The text is
+         * addressed to the model; the client only uses it to recognize the failure and show a
+         * notice. If the wording changes, the part falls back to being hidden like any other
+         * synthetic user text. It is produced in `packages/opencode/src/session/prompt.ts`, and
+         * `packages/opencode/test/kilocode/session-attachment-read-failure.test.ts` pins this
+         * shape so an upstream rewording fails CI.
+         */
+        private const val READ_FAILED = "Read tool failed to read "
+        private const val READ_FAILED_ERROR = " with the following error: "
     }
 
     private val entries = LinkedHashMap<String, Message>()
@@ -580,6 +592,7 @@ class SessionModel {
                 existing.cost = dto.cost
                 existing.tokens = dto.tokens
             }
+            is Notice -> return
             is Generic -> return
         }
         fire(SessionModelEvent.ContentUpdated(messageId, existing))
@@ -589,12 +602,24 @@ class SessionModel {
     private fun empty(dto: PartDto) = dto.type == "text" && dto.text?.isNotBlank() != true
 
     private fun hiddenSynthetic(msg: Message, dto: PartDto) =
-        msg.info.role == "user" && dto.type == "text" && dto.synthetic == true
+        msg.info.role == "user" && dto.type == "text" && dto.synthetic == true && notice(dto) == null
+
+    /** Recognizes the CLI's synthetic "could not read attachment" text and turns it into a [Notice]. */
+    private fun notice(dto: PartDto): Notice? {
+        if (dto.type != "text" || dto.synthetic != true) return null
+        val text = dto.text ?: return null
+        if (!text.startsWith(READ_FAILED)) return null
+        val end = text.indexOf(READ_FAILED_ERROR, READ_FAILED.length)
+        if (end < 0) return null
+        val path = text.substring(READ_FAILED.length, end).takeIf { it.isNotBlank() }
+        val name = path?.substringAfterLast('/')?.substringAfterLast('\\')?.takeIf { it.isNotBlank() }
+        return Notice(dto.id, Notice.ATTACHMENT_READ_FAILED, name, path)
+    }
 
     private fun fromDto(dto: PartDto, text: CharSequence? = null): Content {
         val content = text ?: dto.text
         return when (dto.type) {
-            "text" -> Text(dto.id).apply {
+            "text" -> notice(dto) ?: Text(dto.id).apply {
                 if (content != null && content.isNotEmpty()) this.content.append(content)
             }
             "reasoning" -> Reasoning(dto.id).apply {
@@ -709,17 +734,35 @@ class SessionModel {
     private fun timeline(items: List<Message>): List<TimelineItem> = items
         .filter { it.info.role == "assistant" }
         .flatMap { msg ->
-            msg.parts.values.map { part ->
+            // Adjacent reasoning parts render through a single ReasoningView (see MessageView's
+            // aliases map), so they get a single bar. One bar per part would put several bars on the
+            // same block: clicking the second and later ones would jump nowhere new, which reads as a
+            // dead bar.
+            runs(msg.parts.values.toList()).map { run ->
+                val head = run.first()
                 TimelineItem(
-                    id = "${msg.info.id}/${part.id}",
-                    part = part,
-                    title = part.timelineTitle(),
-                    weight = part.weight().coerceIn(1, 10),
-                    durationMs = (part as? Tool)?.time?.durationMs(),
-                    active = (part as? Tool)?.state == ToolExecState.RUNNING || part is Reasoning && !part.done,
+                    message = msg.info.id,
+                    part = head,
+                    title = head.timelineTitle(),
+                    weight = run.sumOf { it.weight() }.coerceIn(1, 10),
+                    durationMs = (head as? Tool)?.time?.durationMs(),
+                    active = run.any {
+                        (it as? Tool)?.state == ToolExecState.RUNNING || it is Reasoning && !it.done
+                    },
                 )
             }
         }
+
+    /** Groups each stretch of adjacent reasoning parts together; every other part stands alone. */
+    private fun runs(parts: List<Content>): List<List<Content>> {
+        val result = mutableListOf<MutableList<Content>>()
+        for (part in parts) {
+            val last = result.lastOrNull()
+            if (part is Reasoning && last != null && last.last() is Reasoning) last.add(part)
+            else result.add(mutableListOf(part))
+        }
+        return result
+    }
 
     private fun item(key: String): ModelItem? = models.firstOrNull { it.key == key }
 
@@ -861,6 +904,7 @@ private fun Content.timelineTitle(): String = when (this) {
     is Tool -> fileActionTitle() ?: title?.takeIf { it.isNotBlank() } ?: name
     is Compaction -> "Compaction"
     is StepFinish -> "Step finish"
+    is Notice -> "Notice"
     is Generic -> type
 }
 
@@ -895,6 +939,7 @@ private fun Content.weight(): Int = when (this) {
     is Tool -> listOf(input.size, output?.length?.div(400) ?: 0, error?.length?.div(200) ?: 0).sum() + 1
     is Compaction -> 2
     is StepFinish -> tokens?.stepWeight() ?: 1
+    is Notice -> 1
     is Generic -> 1
 }
 
@@ -922,6 +967,7 @@ private fun renderMessage(msg: Message): List<String> {
             is Tool -> out.add(renderTool(part))
             is Compaction -> out.add("compaction#${part.id}")
             is StepFinish -> out.add("step-finish#${part.id}")
+            is Notice -> out.add("notice#${part.id} ${part.kind} ${part.name ?: ""}".trimEnd())
             is Generic -> out.add("${part.type}#${part.id}")
         }
     }

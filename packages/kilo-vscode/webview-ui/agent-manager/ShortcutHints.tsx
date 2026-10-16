@@ -1,20 +1,14 @@
-import { For, Show, type JSX } from "solid-js"
+import { For, Show } from "solid-js"
 import { useConfig } from "../src/context/config"
 import { useLanguage } from "../src/context/language"
 import type { ManagerContext } from "../src/utils/shortcut-hint"
-import { parseBindingTokens } from "../src/utils/keybind-tokens"
+import { ShortcutKeys } from "../src/components/shared/ShortcutKeys"
 import { hintRows } from "./shortcut-hints"
 import { SidePanel } from "./side-panel-layout"
 import { LOCAL, type NavEntry } from "./navigate"
 
 type Stats = { files: number; additions: number; deletions: number }
 type Activity = { project: (projectId: string, worktree: string | null) => string }
-
-const keys = (binding: string): JSX.Element => (
-  <span class="am-hint-keys">
-    <For each={parseBindingTokens(binding)}>{(token) => <kbd class="am-hint-kbd">{token}</kbd>}</For>
-  </span>
-)
 
 /** Agent Manager input for the prompt shortcut hint, and the empty session list. */
 export function createShortcutHints(opts: {
@@ -72,9 +66,7 @@ export function createShortcutHints(opts: {
           {(row) => (
             <>
               <span class="am-hint-label">{t(row.label)}</span>
-              <span class="am-hint-keys">
-                <For each={row.bindings}>{(binding) => keys(binding)}</For>
-              </span>
+              <ShortcutKeys binding={row.bindings.join(" ")} />
             </>
           )}
         </For>

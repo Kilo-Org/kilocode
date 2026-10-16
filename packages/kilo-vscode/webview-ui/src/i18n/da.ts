@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tavle",
+  "task.swarm.open": "Åbn tavle",
   "task.swarm.refresh": "Opdater",
   "task.swarm.reset": "Nulstil tavle",
   "task.swarm.resetTitle": "Nulstil denne tavle?",
@@ -215,6 +216,7 @@ export const dict = {
   "prompt.action.stop.background": "Stop hovedagenten. Baggrundsagenter kører videre.",
   "prompt.agents.show": "Vis baggrundsagenter",
   "prompt.action.enhance": "Forbedr prompt",
+  "prompt.action.more": "Flere handlinger",
   "prompt.paste.expand": "Klik for at udvide den indsatte tekst",
   "prompt.issues.title": "Sessionsproblemer",
   "prompt.mcp.provider": "{{name}} MCP",
@@ -286,6 +288,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI har logget dig af",
   "error.providerAuth.chatgpt.description":
     "Log ind med ChatGPT igen, og send din besked på ny for at fortsætte med at bruge Codex-modeller.",
+
+  "provider.failure.unauthorized": "Loginoplysninger blev afvist (HTTP {{status}}). Log ind igen.",
+  "provider.failure.unauthorizedNoStatus": "Loginoplysninger blev afvist. Log ind igen.",
+  "provider.failure.unauthenticated": "Ikke logget ind.",
+  "provider.failure.network": "Kunne ikke nå udbyderen. Tjek din forbindelse.",
+  "provider.failure.http": "Udbyderfejl (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Udbyderfejl.",
+  "provider.failure.schema": "Uventet svar fra udbyderen.",
 
   "notification.permission.title": "Tilladelse påkrævet",
   "notification.permission.titleSubagent": "Tilladelse påkrævet (underagent)",
@@ -623,6 +633,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Ny",
   "session.tabs.switcher.busy": "Arbejder",
   "session.tabs.switcher.scheduled": "Planlagt",
+  "session.tabs.pinHint": "Skift+klik for at fastgøre eller frigøre",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Sky",
   "session.tab.worktree": "Arbejdstræ",
@@ -948,6 +959,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Indbyggede notebook-værktøjer",
   "settings.experimental.nativeNotebookTools.description":
     "Aktivér eksperimentelle værktøjer til at læse, redigere og køre VS Code-notebooks",
+  "settings.experimental.globIncludeIgnored.title": "Søg i ignorerede stier",
+  "settings.experimental.globIncludeIgnored.description":
+    "Mapper eller filer, som glob-værktøjet skal søge i, selv når .gitignore eller andre ignore-filer udelukker dem. Brug mønstre i gitignore-stil relativt til arbejdsområdet; ignorerede mapper inde i dem springes stadig over.",
   "settings.experimental.continueOnDeny.title": "Fortsæt ved afvisning",
   "settings.experimental.continueOnDeny.description": "Fortsæt agentløkken, når en tilladelse afvises",
   "settings.sandboxing.title": "Sandboxing",
@@ -1386,6 +1400,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Stop alle ({{count}})",
   "task.backgroundAgents.finished": "Baggrundsagenter er færdige",
   "task.stop": "Stop underagent",
+  "task.open.panel": "Åbn underagent i panel",
+  "task.open.tab": "Åbn underagent i fane",
   "settings.saveBar.unsavedChanges": "Ikke-gemte ændringer",
   "settings.saveBar.discard": "Kassér",
   "settings.saveBar.save": "Gem",
@@ -1450,6 +1466,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Brug system-Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Brug den installerede Google Chrome til den integrerede browser. Deaktivér kun, når en kompatibel Playwright Chromium-browser allerede er installeret.",
+  "settings.experimental.browserLinks.title": "Åbn links i",
+  "settings.experimental.browserLinks.description":
+    "Vælg, hvor web-links åbnes fra Kilo-chats. Kræver den integrerede browser.",
+  "settings.experimental.browserLinks.external": "Systembrowser",
+  "settings.experimental.browserLinks.integrated": "Integreret browser",
   "chat.search.searchingHistory": "Søger i tidligere beskeder…",
   "browserTab.noSession":
     "Åbn browseren fra en session for at forhåndsvise en lokal applikation eller en offentlig HTTPS-side.",

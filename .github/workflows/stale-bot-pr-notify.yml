@@ -7,7 +7,8 @@ name: Stale bot PR notify
 # failing -- dependabot-auto-merge.yml only arms auto-merge once and never
 # checks back, so nothing else would ever catch that case. Once a day, flag
 # any open bot PR that's conflicting, has a failing required check, or has
-# sat unreviewed too long.
+# sat unreviewed too long. Bots can open several PRs for one fix, so PRs that
+# upgrade the same package are reported as one line (script/kilocode/bot-prs.ts).
 
 on:
   schedule:
@@ -28,6 +29,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
       - id: build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -90,18 +99,15 @@ jobs:
           flagged=$(jq -c -s '.' .cache/flagged.ndjson)
           echo "flagged=$flagged" >> "$GITHUB_OUTPUT"
 
-          # Build real JSON via jq instead of splicing PR titles (free text)
-          # into the Slack payload through Actions expressions. Do not write
-          # the expression delimiters here: Actions evaluates them even in a
-          # shell comment, and an empty one makes the whole workflow invalid.
-          echo "$flagged" | jq '
-            if length == 0 then {text: ""} else
-              {text: (["*Bot PRs needing attention:*"] + map(
-                "- <" + .url + "|#" + (.number | tostring) + " " + .title + "> ("
-                + .author.login + ", " + (.age_days | tostring) + "d old, " + .reason + ")"
-              )) | join("\n")}
-            end
-          ' > .cache/slack-payload.json
+          # Duplicate fix PRs (several PRs upgrading one package) are found
+          # across all open bot PRs, so keep the full bot list for the script.
+          echo "$prs" | jq -c 'map(select(.author.is_bot == true))' > .cache/bots.json
+          echo "$flagged" > .cache/flagged.json
+
+          # bot-prs.ts builds the Slack JSON, so PR titles (free text) never
+          # reach the payload through Actions expressions. It collapses PRs
+          # that touch the same package into one line.
+          bun run script/kilocode/bot-prs.ts .cache/bots.json .cache/flagged.json > .cache/slack-payload.json
 
       - if: steps.build.outputs.flagged != '[]'
         name: Notify Slack

@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tableau",
+  "task.swarm.open": "Ouvrir le tableau",
   "task.swarm.refresh": "Actualiser",
   "task.swarm.reset": "Réinitialiser le tableau",
   "task.swarm.resetTitle": "Réinitialiser ce tableau ?",
@@ -217,6 +218,7 @@ export const dict = {
   "prompt.action.stop.background": "Arrêter l'agent principal. Les agents en arrière-plan continuent de s'exécuter.",
   "prompt.agents.show": "Afficher les agents en arrière-plan",
   "prompt.action.enhance": "Améliorer le prompt",
+  "prompt.action.more": "Autres actions",
   "prompt.paste.expand": "Cliquez pour développer le texte collé",
   "prompt.issues.title": "Problèmes de session",
   "prompt.mcp.provider": "MCP {{name}}",
@@ -290,6 +292,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI vous a déconnecté",
   "error.providerAuth.chatgpt.description":
     "Reconnectez-vous à ChatGPT, puis renvoyez votre message pour continuer à utiliser les modèles Codex.",
+
+  "provider.failure.unauthorized": "Identifiants refusés (HTTP {{status}}). Reconnectez-vous.",
+  "provider.failure.unauthorizedNoStatus": "Identifiants refusés. Reconnectez-vous.",
+  "provider.failure.unauthenticated": "Non connecté.",
+  "provider.failure.network": "Impossible de joindre le fournisseur. Vérifiez votre connexion.",
+  "provider.failure.http": "Erreur du fournisseur (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Erreur du fournisseur.",
+  "provider.failure.schema": "Réponse inattendue du fournisseur.",
 
   "notification.permission.title": "Permission requise",
   "notification.permission.titleSubagent": "Permission requise (sous-agent)",
@@ -631,6 +641,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Nouveau",
   "session.tabs.switcher.busy": "En cours",
   "session.tabs.switcher.scheduled": "Programmé",
+  "session.tabs.pinHint": "Maj+clic pour épingler ou détacher",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Arbre de travail",
@@ -969,6 +980,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Outils de notebook natifs",
   "settings.experimental.nativeNotebookTools.description":
     "Activer les outils expérimentaux pour lire, modifier et exécuter les notebooks VS Code",
+  "settings.experimental.globIncludeIgnored.title": "Rechercher les chemins ignorés",
+  "settings.experimental.globIncludeIgnored.description":
+    "Dossiers ou fichiers que l’outil glob doit parcourir même lorsque .gitignore ou d’autres fichiers d’exclusion les excluent. Utilisez des motifs de style gitignore relatifs à l’espace de travail ; les dossiers ignorés qu’ils contiennent restent exclus.",
   "settings.experimental.continueOnDeny.title": "Continuer en cas de refus",
   "settings.experimental.continueOnDeny.description":
     "Continuer la boucle de l'agent lorsqu'une autorisation est refusée",
@@ -1426,6 +1440,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Tout arrêter ({{count}})",
   "task.backgroundAgents.finished": "Agents en arrière-plan terminés",
   "task.stop": "Arrêter le sous-agent",
+  "task.open.panel": "Ouvrir le sous-agent dans le panneau",
+  "task.open.tab": "Ouvrir le sous-agent dans un onglet",
   "settings.saveBar.unsavedChanges": "Modifications non enregistrées",
   "settings.saveBar.discard": "Ignorer",
   "settings.saveBar.save": "Enregistrer",
@@ -1490,6 +1506,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Utiliser le Chrome système",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Utilisez le Google Chrome installé pour le Navigateur intégré. Désactivez uniquement lorsqu'un navigateur Playwright Chromium compatible est déjà installé.",
+  "settings.experimental.browserLinks.title": "Ouvrir les liens dans",
+  "settings.experimental.browserLinks.description":
+    "Choisissez l'emplacement d'ouverture des liens web depuis les chats Kilo. Nécessite le Navigateur intégré.",
+  "settings.experimental.browserLinks.external": "Navigateur système",
+  "settings.experimental.browserLinks.integrated": "Navigateur intégré",
   "chat.search.searchingHistory": "Recherche dans les messages précédents…",
   "browserTab.noSession":
     "Ouvrez le navigateur depuis une session pour prévisualiser une application locale ou une page HTTPS publique.",

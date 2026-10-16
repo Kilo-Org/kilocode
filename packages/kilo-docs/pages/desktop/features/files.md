@@ -19,7 +19,7 @@ The file tree shows the files in your workspace. You can:
 
 Select a file to open it in the editor with syntax highlighting.
 
-- Notebook (`.ipynb`) files open in a [Notebook](/docs/desktop/features/notebooks) tab.
+- Notebook (`.ipynb`) files open in a [Notebook](/docs/desktop/features/notebooks) tab (requires sign-in).
 - Markdown (`.md`) files can be viewed in a {% svgIcon src="/docs/img/desktop/eye.svg" /%} rendered preview or {% svgIcon src="/docs/img/desktop/code.svg" /%} as source code, with links to other workspace files clickable inline.
 - Images open in a preview.
 - Files that can't be shown — such as binaries or very large files — open read-only or explain why they can't be previewed.

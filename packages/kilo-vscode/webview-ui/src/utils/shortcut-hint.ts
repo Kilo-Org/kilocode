@@ -41,6 +41,8 @@ export interface HintContext {
   busy: boolean
   /** The active editor has selected text. */
   selection: boolean
+  /** The sidebar or editor tab has another session tab to switch to. */
+  tabs?: boolean
   manager?: ManagerContext
 }
 
@@ -48,10 +50,14 @@ const hint = (binding: string | undefined, label: HintLabel): Hint | undefined =
   binding ? { binding, label } : undefined
 
 /** Previous and next session, when there is another session to switch to. */
-function sessions(kb: Record<string, string>, am?: ManagerContext): Hint | undefined {
-  if (!am || am.worktrees === 0 || !kb.previousSession || !kb.nextSession) return undefined
-  return { binding: `${kb.previousSession} ${kb.nextSession}`, label: "sessions" }
+function sessions(kb: Record<string, string>, am?: ManagerContext, tabs?: boolean): Hint | undefined {
+  if (!am) return tabs ? pair(kb.previousTab, kb.nextTab) : undefined
+  if (am.worktrees === 0) return undefined
+  return pair(kb.previousSession, kb.nextSession)
 }
+
+const pair = (prev: string | undefined, next: string | undefined): Hint | undefined =>
+  prev && next ? { binding: `${prev} ${next}`, label: "sessions" } : undefined
 
 /** The finished agent left something to review that is not open yet. */
 function review(kb: Record<string, string>, am: ManagerContext): Hint | undefined {
@@ -80,10 +86,10 @@ export function recommend(ctx: HintContext): Hint | undefined {
   // Focus is somewhere else: show how to get back to the prompt.
   if (!ctx.focused) return hint(am ? kb.agentManagerOpen : kb.focusChatInput, "type")
 
-  // The agent is running. In Agent Manager the user can work on another session
-  // meanwhile; elsewhere the useful key is to stop the run.
-  if (ctx.busy) return sessions(kb, am) ?? { binding: "Esc", label: "stop" }
+  // The agent is running. When another session is open the user can work on it
+  // meanwhile; otherwise the useful key is to stop the run.
+  if (ctx.busy) return sessions(kb, am, ctx.tabs) ?? { binding: "Esc", label: "stop" }
 
-  if (!am) return undefined
+  if (!am) return sessions(kb, am, ctx.tabs)
   return review(kb, am) ?? sessions(kb, am)
 }

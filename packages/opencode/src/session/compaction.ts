@@ -185,7 +185,13 @@ export interface Interface {
     tokens: SessionV1.Assistant["tokens"]
     model: Provider.Model
   }) => Effect.Effect<boolean>
-  readonly prune: (input: { sessionID: SessionID; reason?: PruneReason }) => Effect.Effect<void> // kilocode_change
+  // kilocode_change start - callers that already loaded the transcript pass it as messages; returns cleared outputs
+  readonly prune: (input: {
+    sessionID: SessionID
+    reason?: PruneReason
+    messages?: SessionV1.WithParts[]
+  }) => Effect.Effect<number>
+  // kilocode_change end
   readonly process: (input: {
     parentID: MessageID
     messages: SessionV1.WithParts[]
@@ -299,17 +305,20 @@ const layer = Layer.effect(
     const prune = Effect.fn("SessionCompaction.prune")(function* (input: {
       sessionID: SessionID
       reason?: PruneReason
+      messages?: SessionV1.WithParts[]
     }) {
       const cfg = yield* config.get()
       const reason = input.reason ?? "normal"
-      if (cfg.compaction?.prune === false) return
-      if (reason === "normal" && cfg.compaction?.prune !== true) return
+      if (cfg.compaction?.prune === false) return 0
+      if (reason === "normal" && cfg.compaction?.prune !== true) return 0
       yield* Effect.logInfo("pruning", { reason })
 
-      const msgs = yield* session
-        .messages({ sessionID: input.sessionID })
-        .pipe(Effect.catchIf(NotFoundError.isInstance, () => Effect.succeed(undefined)))
-      if (!msgs) return
+      const msgs =
+        input.messages ??
+        (yield* session
+          .messages({ sessionID: input.sessionID })
+          .pipe(Effect.catchIf(NotFoundError.isInstance, () => Effect.succeed(undefined))))
+      if (!msgs) return 0
 
       let total = 0
       let pruned = 0
@@ -342,15 +351,20 @@ const layer = Layer.effect(
       }
 
       yield* Effect.logInfo("found", { pruned, total })
-      if (pruned > PRUNE_MINIMUM) {
-        for (const part of toPrune) {
-          if (part.state.status === "completed") {
-            part.state.time.compacted = Date.now()
-            yield* session.updatePart(part)
-          }
-        }
-        yield* Effect.logInfo("pruned", { reason, count: toPrune.length })
+      if (pruned <= PRUNE_MINIMUM) return 0
+      for (const part of toPrune) {
+        if (part.state.status !== "completed") continue
+        part.state.time.compacted = Date.now()
+        // Supplied messages may carry prompt-time transforms, so persist the stored part instead.
+        const stored = input.messages
+          ? yield* session.getPart({ sessionID: part.sessionID, messageID: part.messageID, partID: part.id })
+          : part
+        if (stored?.type !== "tool" || stored.state.status !== "completed") continue
+        stored.state.time.compacted = part.state.time.compacted
+        yield* session.updatePart(stored)
       }
+      yield* Effect.logInfo("pruned", { reason, count: toPrune.length })
+      return toPrune.length
     })
     // kilocode_change end
 
@@ -537,11 +551,16 @@ const layer = Layer.effect(
         // kilocode_change end
         processor.message.error = new SessionV1.ContextOverflowError({
           message: replay
-            ? "Conversation history too large to compact - exceeds model context limit"
-            : "Session too large to compact - context exceeds model limit even after stripping media",
+            ? "Conversation history too large to compact - exceeds model context limit. Start a new session to continue." // kilocode_change
+            : "Session too large to compact - context exceeds model limit even after stripping media. Start a new session to continue.", // kilocode_change
         }).toObject()
         processor.message.finish = "error"
+        processor.message.time.completed = Date.now() // kilocode_change
         yield* session.updateMessage(processor.message)
+        // kilocode_change start - publish the terminal failure after all compaction recovery paths
+        yield* Effect.logError("compaction failed", { "session.id": input.sessionID, error: processor.message.error })
+        yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: processor.message.error })
+        // kilocode_change end
         return "stop"
       }
 
@@ -706,6 +725,10 @@ const layer = Layer.effect(
             type: "text",
             text: KiloCompactionChunks.EMPTY_SUMMARY,
           })
+        }
+        if (empty) {
+          yield* Effect.logError("compaction failed", { "session.id": input.sessionID, error })
+          yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error })
         }
         return "stop"
       }

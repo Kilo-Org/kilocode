@@ -2,10 +2,12 @@ package ai.kilocode.client.ui.popup
 
 import ai.kilocode.client.testing.TestUiTimers
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
+import java.awt.Point
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -174,6 +176,12 @@ class SidePopupControllerTest : BasePlatformTestCase() {
 
         assertEquals(0, builds)
         assertNull(field<Any>(controller, "target"))
+    }
+
+    fun `test popup spot callout defaults on and can be disabled`() {
+        val pane = JPanel()
+        assertTrue(SidePopupSpot(pane, Point(), Balloon.Position.atLeft, 0).callout)
+        assertFalse(SidePopupSpot(pane, Point(), Balloon.Position.atLeft, 0, callout = false).callout)
     }
 
     private fun controller(dwell: Int = SidePopupController.SHOW_MS): SidePopupController {

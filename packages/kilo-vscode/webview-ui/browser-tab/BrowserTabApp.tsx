@@ -60,6 +60,7 @@ export const BrowserTabApp: Component = () => {
             vscode.postMessage({ type: "browserTab.openExternal", url: "https://www.google.com/chrome/" })
           }
           settings={() => vscode.postMessage({ type: "browserTab.openSettings" })}
+          openExternal={(url) => vscode.postMessage({ type: "browserTab.openExternal", url })}
           onReference={reference}
           onClose={() => undefined}
         />

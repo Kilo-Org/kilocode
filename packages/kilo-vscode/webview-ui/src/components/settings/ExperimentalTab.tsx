@@ -9,6 +9,7 @@ import { useVSCode } from "../../context/vscode"
 import { useImageModels } from "../../context/image-models"
 import type { ExtensionMessage } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
+import PatternList from "./PatternList"
 
 interface ShareOption {
   value: string
@@ -19,6 +20,11 @@ const SHARE_OPTIONS: ShareOption[] = [
   { value: "manual", labelKey: "settings.experimental.share.manual" },
   { value: "auto", labelKey: "settings.experimental.share.auto" },
   { value: "disabled", labelKey: "settings.experimental.share.disabled" },
+]
+
+const LINK_OPTIONS: ShareOption[] = [
+  { value: "external", labelKey: "settings.experimental.browserLinks.external" },
+  { value: "integrated", labelKey: "settings.experimental.browserLinks.integrated" },
 ]
 
 const ExperimentalTab: Component = () => {
@@ -258,6 +264,30 @@ const ExperimentalTab: Component = () => {
           </Switch>
         </SettingsRow>
 
+        <Show when={settings().browserAutomation === true}>
+          <SettingsRow
+            title={language.t("settings.experimental.browserLinks.title")}
+            description={language.t("settings.experimental.browserLinks.description")}
+          >
+            <Select
+              options={LINK_OPTIONS}
+              current={LINK_OPTIONS.find(
+                (o) => o.value === (settings().agentManagerBrowserOpenLinksIn ?? "integrated"),
+              )}
+              value={(o) => o.value}
+              label={(o) => language.t(o.labelKey)}
+              onSelect={(o) => {
+                if (!o) return
+                if (o.value === (settings().agentManagerBrowserOpenLinksIn ?? "integrated")) return
+                applySetting("agentManagerBrowserOpenLinksIn", o.value, "agentManager.browser.openLinksIn")
+              }}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+            />
+          </SettingsRow>
+        </Show>
+
         <SettingsRow
           title={language.t("settings.experimental.browserAutomation.systemChrome.title")}
           description={language.t("settings.experimental.browserAutomation.systemChrome.description")}
@@ -290,6 +320,19 @@ const ExperimentalTab: Component = () => {
           />
         </SettingsRow>
       </Card>
+
+      <h4
+        style={{ "margin-top": "16px", "margin-bottom": "8px" }}
+        data-search-label={language.t("settings.experimental.globIncludeIgnored.title")}
+      >
+        {language.t("settings.experimental.globIncludeIgnored.title")}
+      </h4>
+      <PatternList
+        patterns={experimental().glob_include_ignored ?? []}
+        description={language.t("settings.experimental.globIncludeIgnored.description")}
+        placeholder="e.g. packages/*/dist"
+        onChange={(patterns) => updateExperimental("glob_include_ignored", patterns)}
+      />
 
       {/* Tool toggles */}
       <Show when={config().tools && Object.keys(config().tools ?? {}).length > 0}>
