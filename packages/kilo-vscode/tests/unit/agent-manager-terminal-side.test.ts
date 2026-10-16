@@ -151,6 +151,32 @@ describe("Agent Manager side terminal controller", () => {
     expect(item.calls.refocus).toBe(0)
   })
 
+  it("panel close button hides the panel without killing terminals, handing focus back", () => {
+    const focused = scene({ visible: true, focusedId: "terminal:side" })
+    focused.ctl.closePanel()
+    expect(focused.calls.hide).toBe(1)
+    expect(focused.calls.closed).toEqual([])
+    expect(focused.calls.refocus).toBe(1)
+
+    const unfocused = scene({ visible: true })
+    unfocused.ctl.closePanel()
+    expect(unfocused.calls.hide).toBe(1)
+    expect(unfocused.calls.refocus).toBe(0)
+  })
+
+  it("panel close button still works after the destination was switched away", () => {
+    // The stranded-panel bug: pick the Agent Manager panel, open it, then
+    // switch the dropdown to the VS Code terminal — the button now only
+    // routes to VS Code, so the panel close button is the only way out.
+    const item = scene({ visible: true })
+    item.ctl.choose("vscode")
+    item.ctl.openPreferred("tab_toolbar")
+    expect(item.calls.openVscode).toBe(1)
+    expect(item.calls.hide).toBe(0)
+    item.ctl.closePanel()
+    expect(item.calls.hide).toBe(1)
+  })
+
   it.each(["tab_toolbar", "keyboard_shortcut"] as const)(
     "opens the Agent Manager panel by default from %s without saving a preference",
     (trigger) => {

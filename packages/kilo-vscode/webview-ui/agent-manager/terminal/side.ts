@@ -143,6 +143,20 @@ export function createSideTerminal(deps: SideTerminalDeps) {
     return deps.handlers.closeSide(id)
   }
 
+  /**
+   * Panel close button: leave terminal mode without touching the terminals.
+   * Needed because once the destination is switched to the VS Code terminal,
+   * the toolbar button and shortcut only route there, and closing the last
+   * terminal tab deliberately keeps the panel open — without this the panel
+   * would be stranded with no way to dismiss it. Terminals stay alive and
+   * reappear when the destination is switched back and the button is pressed.
+   */
+  const closePanel = () => {
+    const was = deps.focusedId() !== undefined
+    deps.hide()
+    handoff(was)
+  }
+
   /** Toolbar button and `Cmd/Ctrl+/`: follow the user's destination. */
   const openPreferred = (trigger: "keyboard_shortcut" | "tab_toolbar") => {
     const target = destination()
@@ -222,5 +236,5 @@ export function createSideTerminal(deps: SideTerminalDeps) {
     return true
   }
 
-  return { destination, syncDefault, syncContext, toggle, close, openPreferred, choose, press, echo }
+  return { destination, syncDefault, syncContext, toggle, close, closePanel, openPreferred, choose, press, echo }
 }
