@@ -219,8 +219,8 @@ export const kiloScenarios: Scenario[] = [
       body: { name: "httpapi-mcp", config: { type: "remote", url: "https://mcp-edit.example.test" } },
     }))
     .json(200, object),
-  // MCP Apps experimental endpoints are gated behind experimentalMcpApps; the exerciser runs with the
-  // flag off, so both routes return 404 before touching any MCP client.
+  // resource/read is gated behind experimentalMcpApps (off in the exerciser) and returns 404 before
+  // touching any MCP client; call-tool is not gated and returns 404 because the server is not connected.
   http.protected
     .post("/experimental/resource/read", "mcp.readResource")
     .at((ctx) => ({
