@@ -274,6 +274,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI 已将您登出",
   "error.providerAuth.chatgpt.description": "请再次登录 ChatGPT，然后重新发送消息以继续使用 Codex 模型。",
 
+  "provider.failure.unauthorized": "凭据被拒绝（HTTP {{status}}）。请重新登录。",
+  "provider.failure.unauthorizedNoStatus": "凭据被拒绝。请重新登录。",
+  "provider.failure.unauthenticated": "尚未登录。",
+  "provider.failure.network": "无法连接到提供方。请检查您的网络连接。",
+  "provider.failure.http": "提供方错误（HTTP {{status}}）。",
+  "provider.failure.httpNoStatus": "提供方错误。",
+  "provider.failure.schema": "提供方返回了意外的响应。",
+
   "notification.permission.title": "需要权限",
   "notification.permission.titleSubagent": "需要权限（子代理）",
   "notification.permission.titleSkillShell": "要执行技能「{{skill}}」的 shell 命令吗？",
@@ -730,6 +738,10 @@ export const dict = {
   "settings.aboutKiloCode.title": "关于 Kilo Code",
 
   "session.messages.welcome": "Kilo Code 是一个 AI 编程助手。让它帮你构建功能、修复 bug 或解释代码库。",
+  "session.workspaceScope.description": "Kilo 聊天仅使用此工作区中的第一个文件夹“{{folder}}”。",
+  "session.workspaceScope.alternatives":
+    "要使用其他文件夹，请在单独的窗口中打开它，或将其作为项目添加到 Agent Manager。",
+  "session.workspaceScope.dismiss": "关闭工作区范围提示",
   "session.messages.scrollToBottom": "滚动到底部",
   "session.messages.initializing": "初始化中...",
   "session.messages.taskStarting": "启动中...",

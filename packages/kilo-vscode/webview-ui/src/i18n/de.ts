@@ -298,6 +298,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Melden Sie sich erneut bei ChatGPT an und senden Sie Ihre Nachricht noch einmal, um weiterhin Codex-Modelle zu verwenden.",
 
+  "provider.failure.unauthorized": "Anmeldedaten abgelehnt (HTTP {{status}}). Melden Sie sich erneut an.",
+  "provider.failure.unauthorizedNoStatus": "Anmeldedaten abgelehnt. Melden Sie sich erneut an.",
+  "provider.failure.unauthenticated": "Nicht angemeldet.",
+  "provider.failure.network": "Anbieter nicht erreichbar. Überprüfen Sie Ihre Verbindung.",
+  "provider.failure.http": "Anbieterfehler (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Anbieterfehler.",
+  "provider.failure.schema": "Unerwartete Antwort vom Anbieter.",
+
   "notification.permission.title": "Berechtigung erforderlich",
   "notification.permission.titleSubagent": "Berechtigung erforderlich (Subagent)",
   "notification.permission.titleSkillShell": "Shell-Befehle aus dem Skill „{{skill}}“ ausführen?",
@@ -771,6 +779,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code ist ein KI-Programmierassistent. Bitten Sie ihn, Funktionen zu erstellen, Fehler zu beheben oder Ihre Codebasis zu erklären.",
+  "session.workspaceScope.description":
+    "Der Kilo-Chat verwendet nur „{{folder}}“, den ersten Ordner in diesem Arbeitsbereich.",
+  "session.workspaceScope.alternatives":
+    "Um mit einem anderen Ordner zu arbeiten, öffnen Sie ihn in einem eigenen Fenster oder fügen Sie ihn als Projekt im Agent Manager hinzu.",
+  "session.workspaceScope.dismiss": "Hinweis zum Umfang des Arbeitsbereichs ausblenden",
   "session.messages.scrollToBottom": "Nach unten scrollen",
   "session.messages.initializing": "Initialisierung...",
   "session.messages.taskStarting": "Wird gestartet...",

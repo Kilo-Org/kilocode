@@ -436,7 +436,7 @@ test("fetches and filters the transcription catalog", async () => {
       name: "Fish Audio: Transcribe 1",
     },
   ])
-  expect(calls[0]).toContain("/api/gateway/transcription-models")
+  expect(calls[0]).toBe("https://ai-gateway.kilo.ai/api/v1/transcription-models")
 })
 
 test("keeps organization catalog errors from silently falling back to personal models", async () => {
@@ -456,7 +456,7 @@ test("keeps organization catalog errors from silently falling back to personal m
   expect(result.models).toEqual([])
   expect(result.error?.kind).toBe("unauthorized")
   expect(calls).toHaveLength(1)
-  expect(calls[0]).toContain("/api/gateway/transcription-models")
+  expect(calls[0]).toBe("https://ai-gateway.kilo.ai/api/v1/transcription-models")
   expect(headers[0]?.get("X-KILOCODE-ORGANIZATIONID")).toBe("org-1")
 })
 
