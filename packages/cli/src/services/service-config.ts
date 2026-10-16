@@ -43,7 +43,16 @@ export function filename(channel = OPENCODE_CHANNEL) {
   return `service-${channel.replace(/[^a-zA-Z0-9._-]/g, "-")}.json`
 }
 
-export function defaultPort(channel = OPENCODE_CHANNEL) {
+export function defaultPort(channel = OPENCODE_CHANNEL, platform = process.platform) {
+  const port = channelPort(channel)
+  // Windows hands out 0xC000-0xFFFF for outgoing connections, and Hyper-V and WinNAT reserve blocks of that range at
+  // boot, so a port there can fail as in use while nothing listens on it. Moving into the 0xB000 block keeps the low
+  // 12 bits: 0xC0DE becomes 0xB0DE, which is 0xC0DE - 4096, a nod to the v1 port.
+  if (platform === "win32" && port >= 0xc000) return 0xb000 | (port & 0xfff)
+  return port
+}
+
+function channelPort(channel: string) {
   if (channel === "latest" || channel === "dev" || channel === "beta" || channel === "next") return 0xc0de
   if (channel === "local") return 0xc0df
   return 10_000 + (Number.parseInt(Hash.fast(channel).slice(0, 8), 16) % 50_000)

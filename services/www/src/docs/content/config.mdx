@@ -27,7 +27,42 @@ OpenCode supports JSON and JSONC. Use JSONC when you want comments or trailing c
 
 ## Locations
 
-Put settings for every project in the global configuration:
+Put managed, machine-wide settings in the system configuration directory:
+
+| Platform | Directory                               |
+| -------- | --------------------------------------- |
+| macOS    | `/Library/Application Support/opencode` |
+| Linux    | `/etc/opencode`                         |
+| Windows  | `%ProgramData%\opencode`                |
+
+The system directory works like the global directory. Besides
+`opencode.json(c)`, it loads `agents/`, `commands/`, `skills/`, and `plugins/`
+for every user on the machine:
+
+```text
+/etc/opencode/
+├── opencode.json
+├── agents/review.md
+├── commands/release.md
+└── skills/deploy/SKILL.md
+```
+
+On macOS, OpenCode also reads managed preferences that MDM tools deploy for the
+`ai.opencode.managed` domain. A user-specific profile replaces the
+machine-wide one:
+
+```text
+/Library/Managed Preferences/<user>/ai.opencode.managed.plist
+/Library/Managed Preferences/ai.opencode.managed.plist
+```
+
+Managed settings have the highest precedence, so users and projects cannot
+override the values they set, and managed preferences override the system
+directory. Settings alone cannot stop users from adding providers, MCP servers,
+agents, or plugins; use [policies](/policies#precedence) in managed
+configuration to enforce restrictions.
+
+Put user settings for every project in the global configuration:
 
 ```text
 ~/.config/opencode/opencode.json(c)
@@ -49,6 +84,7 @@ Use one form throughout a directory tree unless you need that behavior.
 For example, start OpenCode from `/home/user/projects/acme/packages/web`:
 
 ```text
+/etc/opencode/opencode.json
 ~/.config/opencode/opencode.json
 
 /home/user/projects/acme/
@@ -64,9 +100,13 @@ OpenCode applies these files from lowest to highest precedence:
 1. `~/.config/opencode/opencode.json`
 2. `/home/user/projects/acme/opencode.json`
 3. `/home/user/projects/acme/packages/web/opencode.json`
+4. `/etc/opencode/opencode.json`
 
 The package config overrides matching settings from the repository config,
-which overrides the global config. Settings that do not conflict are preserved.
+which overrides the global config. The system config overrides all of them.
+Settings that do not conflict are preserved. [Policies](/policies#precedence)
+from global and project files evaluate in the reverse order, and system
+policies outrank all of them.
 
 ## Schema
 
@@ -136,19 +176,6 @@ Project-level values are ignored.
 }
 ```
 
-### Sharing
-
-Set the session sharing policy. OpenCode accepts this field, but session sharing
-is not supported yet.
-
-```jsonc
-{
-  "share": "manual",
-}
-```
-
-See the [sharing guide](/sharing) for more details.
-
 ### Username
 
 Set a username. OpenCode accepts this field but does not display it in
@@ -181,18 +208,17 @@ See the [permissions guide](/permissions) for rule matching and available action
 
 ### Policies
 
-Allow or deny use of a provider, or hard-deny a permission check, with ordered
-statements that broader configuration can override.
+Allow or deny use of a provider, hard-deny a permission check, or block an MCP
+server, skill, or plugin, with ordered statements that broader configuration can
+override.
 
 ```jsonc
 {
-  "experimental": {
-    "policies": [
-      { "action": "provider.use", "resource": "*", "effect": "deny" },
-      { "action": "provider.use", "resource": "anthropic", "effect": "allow" },
-      { "action": "permission", "resource": "shell:git push *", "effect": "deny" },
-    ],
-  },
+  "policies": [
+    { "action": "provider.use", "resource": "*", "effect": "deny" },
+    { "action": "provider.use", "resource": "anthropic", "effect": "allow" },
+    { "action": "tool.use", "resource": "shell:git push *", "effect": "deny" },
+  ],
 }
 ```
 
@@ -414,8 +440,8 @@ See the [commands guide](/commands) for arguments, models, agents, and file-base
 
 ### Instructions
 
-Declare additional instruction files, globs, or URLs. OpenCode accepts this
-field but does not load its entries; use `AGENTS.md` for instructions.
+Declare additional instruction files, globs, or HTTP(S) URLs. OpenCode loads
+them alongside discovered `AGENTS.md` files.
 
 ```jsonc
 {

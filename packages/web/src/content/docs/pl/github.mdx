@@ -69,7 +69,6 @@ Można też uszkodzić to rozwiązanie.
              ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
            with:
              model: anthropic/claude-sonnet-4-20250514
-             # share: true
              # github_token: xxxx
    ```
 
@@ -83,7 +82,6 @@ Można też uszkodzić to rozwiązanie.
 
 - `model`: Model używany z opencode. Przyjmuje format `provider/model`. To **wymagane**.
 - `agent`: Agent, którego należy używać. Musi być odległym agentem. Wraca do `default_agent` z konfiguracją lub `"build"`, jeśli nie został znaleziony.
-- `share`: Czyć funkcję sesji opencode. Domyślnie **true** dla repozytoriów publicznych.
 - `prompt`: Opcjonalny niestandardowy monit o zastąpienie przestrzegania zachowania. Wykorzystanie tego, aby dostosować sposób przetwarzania przez opencode.
 - `token`: opcjonalny token dostępu GitHub podstawowe operacje, takie jak tworzenie komentarzy, zatwierdzanie zmian i otwieranie zastosowania ściągnięcia. Domyślnie opencode używa tokena dostępu do instalacji z aplikacji opencode GitHub, więc zatwierdzenia, komentarze i zasady ściągnięcia widoczne jako źródło z aplikacji.
 

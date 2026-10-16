@@ -100,14 +100,15 @@ afterEach(() =>
 function fixture(input: { session?: Commit; agents?: Agent[]; config?: ConfigModel; preferred?: string } = {}) {
   const directory = `/selection-test/${crypto.randomUUID()}`
 
+  // SAFETY: fixture transitions clear the route as well as selecting session IDs.
   const [state, set] = createStore({
     visible: true,
     configLoaded: true,
     connection: "connected",
     route: { id: "ses_a" as string | undefined },
     agents: input.agents ?? [agent("build"), agent("plan")],
-    config: input.config as ConfigModel | undefined,
-    sessions: { ses_a: input.session } as Record<string, Commit | undefined>,
+    config: input.config,
+    sessions: Object.fromEntries([["ses_a", input.session]]),
     providers: [{ id: "provider", name: "Provider", package: "@ai-sdk/test", activation: "enabled" }],
     models: ["a", "b", "c"].map((id) => ({
       id,
@@ -126,6 +127,7 @@ function fixture(input: { session?: Commit; agents?: Agent[]; config?: ConfigMod
     })),
   })
 
+  // SAFETY: empty collections are valid preferences; tests later populate them with the declared model keys and variants.
   const [preferences, setPreferences] = createStore({
     user: [] as Array<ModelKey & { visibility: "show" | "hide" }>,
     recent: [] as ModelKey[],
@@ -350,9 +352,8 @@ test("uses historical message selection only when durable and local selection ar
   expect(selection(local)).toEqual({ agent: "plan", model: "b", variant: "high" })
 })
 
-test("invalid durable models fall through agent, global, recent, and connected defaults", () => {
+test("sessions without a selection fall through agent, global, recent, and connected defaults", () => {
   const f = fixture({
-    session: durable("removed", "high"),
     agents: [agent("build", key("b"), "low")],
     config: "provider/c",
   })

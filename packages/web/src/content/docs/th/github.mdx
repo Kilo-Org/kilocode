@@ -69,7 +69,6 @@ opencode github install
              ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
            with:
              model: anthropic/claude-sonnet-4-20250514
-             # share: true
              # github_token: xxxx
    ```
 
@@ -83,7 +82,6 @@ opencode github install
 
 - `model`: โมเดลที่จะใช้กับ OpenCode ใช้รูปแบบของ `provider/model` นี่คือ **จำเป็น**
 - `agent`: ตัวแทนที่จะใช้ จะต้องเป็นตัวแทนหลัก ย้อนกลับไปที่ `default_agent` จาก config หรือ `"build"` หากไม่พบ
-- `share`: ไม่ว่าจะแชร์เซสชัน OpenCode หรือไม่ ค่าเริ่มต้นเป็น **จริง** สำหรับที่เก็บข้อมูลสาธารณะ
 - `prompt`: ตัวเลือกที่กำหนดเองพร้อมท์เพื่อแทนที่การทำงานเริ่มต้น ใช้สิ่งนี้เพื่อปรับแต่งวิธีที่ OpenCode ประมวลผลคำขอ
 - `token`: GitHub Access Token เสริมสำหรับการดำเนินการ เช่น การสร้างความคิดเห็น การยอมรับการเปลี่ยนแปลง และการเปิดคำขอดึง ตามค่าเริ่มต้น OpenCode จะใช้โทเค็นการเข้าถึงการติดตั้งจาก OpenCode GitHub App ดังนั้นคอมมิต แสดงความคิดเห็น และคำขอดึงข้อมูลจะปรากฏว่ามาจากแอป
 

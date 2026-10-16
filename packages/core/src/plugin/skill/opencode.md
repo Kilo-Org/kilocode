@@ -23,10 +23,9 @@ Use only <https://opencode.ai/v2/docs/> documentation as the source of truth for
 Do not use <https://opencode.ai/docs/>, which documents V1, and do not use
 general web search to resolve a V2 documentation question when the V2 docs or
 linked pages cover it. The schema served from
-<https://opencode.ai/config.json> may describe V1 even though V2 configuration
-files include that URL for editor integration. Never use it to infer V2 field
-names or shapes. If V2 documentation is missing or contradictory, state the
-uncertainty or ask for clarification instead of falling back to V1.
+<https://opencode.ai/config.json> accepts both V2 fields and deprecated V1
+fields. Never recommend a field it marks deprecated. If V2 documentation is
+missing or contradictory, state the uncertainty or ask for clarification instead of falling back to V1.
 
 V1 documentation and syntax may be consulted only when the user explicitly
 asks about V1 or when needed as migration input. Outputs and recommendations

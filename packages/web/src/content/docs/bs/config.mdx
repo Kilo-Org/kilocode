@@ -356,27 +356,6 @@ Ova postavka se primjenjuje na sva sučelja: TUI, CLI (`opencode run`), desktop 
 
 ---
 
-### Dijeljenje
-
-Možete konfigurirati funkciju [share](/docs/share) putem opcije `share`.
-
-```json title="opencode.json"
-{
-  "$schema": "https://opencode.ai/config.json",
-  "share": "manual"
-}
-```
-
-Ovo prihvata:
-
-- `"manual"` - Dozvoli ručno dijeljenje putem naredbi (podrazumevano)
-- `"auto"` - Automatski dijelite nove razgovore
-- `"disabled"` - Onemogući dijeljenje u potpunosti
-
-Podrazumevano, dijeljenje je postavljeno na ručni način rada gdje trebate eksplicitno dijeliti razgovore pomoću naredbe `/share`.
-
----
-
 ### Naredbe
 
 Možete konfigurirati prilagođene naredbe za ponavljanje zadataka putem opcije `command`.

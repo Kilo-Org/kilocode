@@ -340,6 +340,71 @@ it.live("Homebrew Core installs check and upgrade the Core formula", () =>
   )
 })
 
+const winget = (search: Partial<AppProcess.RunResult>) =>
+  fixture(
+    (command) => (command.args[0] === "search" ? search : {}),
+    "@opencode/cli",
+    false,
+    "@opencode/cli",
+    undefined,
+    (root) =>
+      Effect.succeed(
+        path.join(
+          root,
+          "AppData",
+          "Local",
+          "Microsoft",
+          "WinGet",
+          "Packages",
+          "Anomaly.OpenCode_Microsoft.Winget.Source_8wekyb3d8bbwe",
+          "opencode.exe",
+        ),
+      ),
+  )
+const wingetArgs = [
+  "--id",
+  "Anomaly.OpenCode",
+  "--exact",
+  "--source",
+  "winget",
+  "--accept-source-agreements",
+  "--disable-interactivity",
+]
+
+it.live("WinGet installs check, upgrade, and remove the version in the WinGet index", () =>
+  Effect.gen(function* () {
+    const test = yield* winget({
+      stdout: Buffer.from(
+        "Name     Id               Version\r\n------------------------------\r\nOpenCode Anomaly.OpenCode 2.0.28\r\n",
+      ),
+    })
+    expect(yield* test.updater.method()).toBe("winget")
+    expect(yield* test.updater.latest()).toBe("2.0.28")
+    yield* test.updater.upgrade("winget", "v2.0.28")
+    const removal = test.updater.removal("winget")
+    if (!removal) return yield* Effect.die("Expected winget removal command")
+    yield* removal.run
+    expect(test.commands).toEqual([
+      ["winget", "search", ...wingetArgs],
+      ["winget", "upgrade", ...wingetArgs, "--version", "2.0.28", "--silent", "--accept-package-agreements"],
+      ["winget", "uninstall", ...wingetArgs],
+    ])
+    // WinGet moderates submissions, so the OpenCode release service may list a version WinGet cannot install yet.
+    expect(test.requests).toEqual([])
+  }),
+)
+
+it.live("WinGet update checks report a missing package instead of a version", () =>
+  Effect.gen(function* () {
+    const test = yield* winget({
+      exitCode: -1978335212,
+      stdout: Buffer.from("No package found matching input criteria.\r\n"),
+    })
+    const error = yield* test.updater.latest().pipe(Effect.flip)
+    expect(error.message).toBe("No package found matching input criteria.")
+  }),
+)
+
 // Links are named opencode-upgrade-<pid>-<random>.exe; read them from inside the installer run.
 const links = (directory: string) =>
   existsSync(directory) ? readdirSync(directory).filter((name) => name.startsWith("opencode-")) : []

@@ -62,6 +62,7 @@ export function CurrentSessionProviders(props: { document: SessionDocument; chil
         },
         session_diff: { [CURRENT_SESSION_ID]: props.document.diffs },
       }}
+      turnDiff={{ get: () => props.document.diffs, load: () => {} }}
     >
       <FileComponentProvider component={File}>{props.children}</FileComponentProvider>
     </DataProvider>
@@ -76,6 +77,7 @@ export function CurrentSessionTimelineStory(props: {
   width?: string
   shellToolDefaultOpen?: boolean
   editToolDefaultOpen?: boolean
+  turnDiffs?: boolean
 }) {
   // Inline story documents rebuild their messages on every prop read, and the timeline projection keys text by identity.
   const document = createMemo(() => props.document)
@@ -118,6 +120,7 @@ export function CurrentSessionTimelineStory(props: {
                   actions={actions}
                   shellToolDefaultOpen={props.shellToolDefaultOpen}
                   editToolDefaultOpen={props.editToolDefaultOpen}
+                  turnDiffs={props.turnDiffs}
                 />
               </CurrentSessionProviders>
             </div>

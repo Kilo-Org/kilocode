@@ -187,9 +187,11 @@ describe("current session timeline rows", () => {
     expect(result.activeMessageID).toBe("msg_active")
     expect(result.rows.map(TimelineRow.key)).toEqual([
       "user-message:msg_active",
+      "activity",
       "turn-gap:msg_queued",
       "user-message:msg_queued",
     ])
+    expect(result.rows[1].userMessageID).toBe("msg_active")
   })
 
   test("suppresses thinking while a subagent is delegating or running", () => {
@@ -380,11 +382,17 @@ describe("current session timeline rows", () => {
       new Set(["queued"]),
     )
 
-    expect(result.rows.map((row) => row._tag)).toEqual(["UserMessage", "Thinking", "TurnGap", "UserMessage"])
+    expect(result.rows.map((row) => row._tag)).toEqual([
+      "UserMessage",
+      "Thinking",
+      "Activity",
+      "TurnGap",
+      "UserMessage",
+    ])
     expect(result.rows[1].userMessageID).toBe(document.messages[0].id)
   })
 
-  test("places a queued compaction after the active turn and before undelivered prompts", () => {
+  test("places live status, then a queued compaction, after the active turn and before undelivered prompts", () => {
     const document = storyDocument([{ type: "text", text: "Working" }], true)
 
     const result = Timeline.constructSessionMessageRows(
@@ -402,11 +410,12 @@ describe("current session timeline rows", () => {
     expect(result.rows.map((row) => row._tag)).toEqual([
       "UserMessage",
       "AssistantPart",
+      "Activity",
       "CompactionQueued",
       "TurnGap",
       "UserMessage",
     ])
-    expect(result.rows[2].userMessageID).toBe(document.messages[0].id)
+    expect(result.rows[3].userMessageID).toBe(document.messages[0].id)
   })
 
   test("places a queued compaction ahead of a pending notice, which the server delivers after it", () => {
@@ -432,7 +441,42 @@ describe("current session timeline rows", () => {
       ["inb_compact"],
     )
 
-    expect(result.rows.map((row) => row._tag)).toEqual(["UserMessage", "AssistantPart", "CompactionQueued", "Notice"])
+    expect(result.rows.map((row) => row._tag)).toEqual([
+      "UserMessage",
+      "AssistantPart",
+      "Activity",
+      "CompactionQueued",
+      "Notice",
+    ])
+  })
+
+  test("keeps a grouped undelivered notice out of accepted work and spaced from it", () => {
+    const document = storyDocument([{ type: "text", text: "Working" }], true)
+
+    const notice = {
+      id: "notice",
+      type: "synthetic",
+      text: "done",
+      description: "Background work completed",
+      time: { created: 10 },
+    } satisfies SessionMessageInfo
+
+    const result = Timeline.constructSessionMessageRows(
+      [...document.messages, notice],
+      true,
+      document.status,
+      new Set(["notice"]),
+      false,
+      false,
+      undefined,
+      timelinePresets[2].value,
+    )
+
+    expect(result.rows.map((row) => row._tag)).toEqual(["UserMessage", "AssistantPart", "Activity", "AssistantPart"])
+    expect(result.rows[3]).toMatchObject({
+      spacing: "tool",
+      group: { type: "context", refs: [{ messageID: "notice", partID: "notice" }] },
+    })
   })
 
   test("keeps live thinking above a notice that arrives while it streams", () => {
@@ -1407,5 +1451,68 @@ describe("current session timeline rows", () => {
         text: "Execution was interrupted repeatedly and will not be resumed automatically.",
       }),
     )
+  })
+
+  test("summarizes a turn's changed files after the idle marker that ends it", () => {
+    const step = (id: string, files?: string[]) =>
+      ({
+        id,
+        type: "assistant",
+        agent: "build",
+        model: { id: "model", providerID: "provider" },
+        content: [{ type: "text", text: id }],
+        snapshot: files && { start: "tree_a", end: "tree_b", files },
+        time: { created: 1, completed: 2 },
+      }) satisfies SessionMessageAssistant
+
+    const idle = (id: string) => ({ id, type: "idle", outcome: "succeeded", time: { created: 1 } }) as const
+    const user = (id: string) => ({ id, type: "user", text: id, time: { created: 1 } }) as const
+
+    const source = [
+      // A steered prompt joins the running turn; the summary diffs from its opening prompt and lists
+      // every path its steps recorded once, sorted.
+      user("msg_open"),
+      step("msg_edit", ["src/a.ts"]),
+      user("msg_steer"),
+      step("msg_answer", ["src/c.ts", "src/a.ts"]),
+      idle("msg_idle_1"),
+      // A turn that changed nothing gets no summary.
+      user("msg_ask"),
+      step("msg_reply", []),
+      idle("msg_idle_2"),
+      // Neither does a turn still running.
+      user("msg_next"),
+      step("msg_running", ["src/b.ts"]),
+    ] satisfies SessionMessageInfo[]
+
+    const rows = createTimelineProjection({
+      sessionMessages: source,
+      status: { type: "busy" },
+      reasoningMode: "compact",
+      turnDiffs: true,
+    }).rows
+
+    expect(rows.filter((row) => Predicate.isTagged(row, "TurnDiff"))).toEqual([
+      new TimelineRow.TurnDiff({
+        userMessageID: "msg_steer",
+        messageID: "msg_idle_1",
+        from: "msg_open",
+        files: ["src/a.ts", "src/c.ts"],
+      }),
+    ])
+    expect(rows.map(TimelineRow.key).slice(0, 6)).toEqual([
+      "user-message:msg_open",
+      "assistant-part:part:part:msg_edit:msg_edit:text:0",
+      "turn-gap:msg_steer",
+      "user-message:msg_steer",
+      "assistant-part:part:part:msg_answer:msg_answer:text:0",
+      "turn-diff:msg_idle_1",
+    ])
+    // Hosts opt in, so a timeline without the setting lists no summaries.
+    expect(
+      Timeline.constructSessionMessageRows(source, true, { type: "busy" }).rows.some((row) =>
+        Predicate.isTagged(row, "TurnDiff"),
+      ),
+    ).toBe(false)
   })
 })

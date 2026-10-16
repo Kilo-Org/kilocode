@@ -1,8 +1,18 @@
 import { useRenderer, useTerminalDimensions } from "@opentui/solid"
-import { batch, createContext, createEffect, onCleanup, Show, useContext, type JSX, type ParentProps } from "solid-js"
+import {
+  batch,
+  createContext,
+  createEffect,
+  For,
+  onCleanup,
+  Show,
+  useContext,
+  type JSX,
+  type ParentProps,
+} from "solid-js"
 import { Keymap } from "../context/keymap"
 import { ThemeContextProvider, useTheme } from "../context/theme"
-import { InputRenderable, MouseButton, Renderable, RGBA } from "@opentui/core"
+import { InputRenderable, MouseButton, Renderable, RGBA, TextAttributes } from "@opentui/core"
 import { createStore } from "solid-js/store"
 import { useToast } from "./toast"
 import { useClipboard } from "../context/clipboard"
@@ -10,6 +20,10 @@ import { useConfig } from "../config"
 import { copy, copyOnSelectRelease } from "../util/selection"
 
 export type DialogSize = "medium" | "large" | "xlarge"
+
+export const DIALOG_INSET = 3
+// List rows reserve a 1-cell gutter for the ▌ bar / ● marker.
+export const DIALOG_LIST_INSET = DIALOG_INSET + 1
 
 export function dialogWidth(size: DialogSize) {
   if (size === "xlarge") return 116
@@ -32,51 +46,186 @@ export function Dialog(
   return (
     <ThemeContextProvider context="dialog">
       <box
-      onMouseDown={() => {
-        dismiss = !!renderer.getSelection()
-      }}
-      onMouseUp={() => {
-        if (dismiss) {
-          dismiss = false
-          return
-        }
-        props.onClose?.()
-      }}
-      width={dimensions().width}
-      height={dimensions().height}
-      alignItems="center"
-      justifyContent={props.centered ? "center" : undefined}
-      position="absolute"
-      zIndex={3000}
-      paddingTop={props.centered ? 0 : dimensions().height / 4}
-      left={0}
-      top={0}
-      backgroundColor={RGBA.fromInts(0, 0, 0, 150)}
-    >
-      <box
-        onMouseUp={(e: { stopPropagation(): void }) => {
-          // A selection release must bubble up to the copy-on-select handler in
-          // DialogProvider; the backdrop's dismiss flag keeps it from closing the dialog.
-          if (renderer.getSelection()?.getSelectedText()) return
-          dismiss = false
-          e.stopPropagation()
+        onMouseDown={() => {
+          dismiss = !!renderer.getSelection()
         }}
-        width={dialogWidth(props.size ?? "medium")}
-        maxWidth={dimensions().width - 2}
-        backgroundColor={theme.background.base}
-        paddingTop={1}
+        onMouseUp={() => {
+          if (dismiss) {
+            dismiss = false
+            return
+          }
+          props.onClose?.()
+        }}
+        width={dimensions().width}
+        height={dimensions().height}
+        alignItems="center"
+        justifyContent={props.centered ? "center" : undefined}
+        position="absolute"
+        zIndex={3000}
+        paddingTop={props.centered ? 0 : dimensions().height / 4}
+        left={0}
+        top={0}
+        backgroundColor={RGBA.fromInts(0, 0, 0, 150)}
       >
-        {props.children}
-      </box>
+        <box
+          onMouseUp={(e: { stopPropagation(): void }) => {
+            // A selection release must bubble up to the copy-on-select handler in
+            // DialogProvider; the backdrop's dismiss flag keeps it from closing the dialog.
+            if (renderer.getSelection()?.getSelectedText()) return
+            dismiss = false
+            e.stopPropagation()
+          }}
+          width={dialogWidth(props.size ?? "medium")}
+          maxWidth={dimensions().width - 2}
+          backgroundColor={theme.background.base}
+          paddingTop={1}
+        >
+          {props.children}
+        </box>
       </box>
     </ThemeContextProvider>
+  )
+}
+
+export function DialogHeader(
+  props: ParentProps<{
+    title?: JSX.Element
+    titleView?: JSX.Element
+    closeLabel?: string
+    onClose?: () => void
+    gap?: number
+  }>,
+) {
+  const dialog = useDialog()
+  const theme = useTheme().surface("dialog")
+  return (
+    <box flexDirection="row" justifyContent="space-between" gap={props.gap}>
+      {props.titleView ?? (
+        <text attributes={TextAttributes.BOLD} fg={theme.text.base}>
+          {props.title}
+        </text>
+      )}
+      {props.children}
+      <text fg={theme.text.muted} flexShrink={0} onMouseUp={() => (props.onClose ?? dialog.clear)()}>
+        {props.closeLabel ?? "esc"}
+      </text>
+    </box>
+  )
+}
+
+/**
+ * Standard dialog layout: header, body and an optional footer, one blank row between
+ * each and one blank row at the bottom, with the shared side padding.
+ */
+export function DialogLayout(
+  props: ParentProps<{
+    id?: string
+    /** Usually a `DialogHeader`. */
+    header: JSX.Element
+    /** Usually a `DialogFooter` or a row of buttons. */
+    footer?: JSX.Element
+    /** Side padding in cells. Defaults to DIALOG_INSET. */
+    inset?: number
+  }>,
+) {
+  const inset = () => props.inset ?? DIALOG_INSET
+  return (
+    <box id={props.id} paddingLeft={inset()} paddingRight={inset()} paddingBottom={1} gap={1}>
+      {props.header}
+      <box>{props.children}</box>
+      {props.footer}
+    </box>
+  )
+}
+
+/** Stretches a raised band inside a `DialogLayout` across the side padding; its content re-applies `DIALOG_INSET`. */
+export function DialogBleed(props: ParentProps) {
+  return (
+    <box marginLeft={-DIALOG_INSET} marginRight={-DIALOG_INSET}>
+      {props.children}
+    </box>
+  )
+}
+
+export type DialogFooterAction = {
+  title: string
+  /** Literal key label, e.g. "enter". */
+  key?: string
+  /** Keymap command id whose first shortcut is shown when `key` is not set. The action hides when it has no shortcut. */
+  command?: string
+  onTrigger?: () => void
+  side?: "left" | "right"
+  disabled?: boolean
+  /** Overrides the title color, e.g. for a "✓ copied" confirmation. */
+  color?: RGBA
+}
+
+export function DialogFooter(
+  props: ParentProps<{
+    actions?: DialogFooterAction[]
+    /** Side padding in cells, e.g. DIALOG_INSET or DIALOG_LIST_INSET. Omit when the parent already pads. */
+    inset?: number
+  }>,
+) {
+  const dimensions = useTerminalDimensions()
+  const shortcuts = Keymap.useShortcuts()
+  const narrow = () => dimensions().width < 60
+  const actions = () =>
+    (props.actions ?? []).flatMap((action) => {
+      if (action.key !== undefined || action.command === undefined) return [action]
+      const key = shortcuts.get(action.command)
+      return key ? [{ ...action, key }] : []
+    })
+  const left = () => actions().filter((action) => action.side !== "right")
+  const right = () => actions().filter((action) => action.side === "right")
+  return (
+    <box
+      paddingLeft={props.inset}
+      paddingRight={props.inset}
+      flexDirection="row"
+      justifyContent="space-between"
+      flexShrink={0}
+    >
+      <box flexDirection={narrow() ? "column" : "row"} gap={narrow() ? 0 : 2}>
+        {props.children}
+        <For each={left()}>{(action) => <DialogFooterItem action={action} />}</For>
+      </box>
+      <box flexDirection="row" gap={2}>
+        <For each={right()}>{(action) => <DialogFooterItem action={action} />}</For>
+      </box>
+    </box>
+  )
+}
+
+function DialogFooterItem(props: { action: DialogFooterAction }) {
+  const theme = useTheme().surface("dialog")
+  return (
+    <text
+      onMouseUp={() => {
+        if (props.action.disabled) return
+        props.action.onTrigger?.()
+      }}
+    >
+      <span
+        style={{
+          fg: props.action.disabled ? theme.text.action.primary.disabled : (props.action.color ?? theme.text.base),
+        }}
+      >
+        {props.action.title}
+      </span>
+      <Show when={props.action.key}>
+        <span style={{ fg: props.action.disabled ? theme.text.action.primary.disabled : theme.text.muted }}>
+          {" " + props.action.key}
+        </span>
+      </Show>
+    </text>
   )
 }
 
 function init() {
   const [store, setStore] = createStore({
     stack: [] as {
-      element: JSX.Element
+      element: () => JSX.Element
       onClose?: () => void
       key?: unknown
     }[],
@@ -167,7 +316,7 @@ function init() {
       })
       refocus()
     },
-    replace(input: any, onClose?: () => void, options?: { key?: unknown; size?: DialogSize }) {
+    replace(input: () => JSX.Element, onClose?: () => void, options?: { key?: unknown; size?: DialogSize }) {
       if (store.stack.length === 0) {
         focus = renderer.currentFocusedRenderable
         focus?.blur()
@@ -241,7 +390,11 @@ export function DialogProvider(props: ParentProps) {
       >
         <Show when={value.stack.length}>
           <Dialog onClose={() => value.clear()} size={value.size} centered={value.centered}>
-            {value.stack.at(-1)!.element}
+            {/* Render each entry once: inserting the element function directly would re-run it, remounting
+                the dialog with fresh state, whenever a signal it reads at its root (e.g. a top-level <Show>) changes. */}
+            <Show when={value.stack.at(-1)} keyed>
+              {(item) => item.element()}
+            </Show>
           </Dialog>
         </Show>
       </box>

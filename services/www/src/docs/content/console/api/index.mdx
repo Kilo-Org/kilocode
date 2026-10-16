@@ -146,7 +146,8 @@ curl --fail-with-body "${CONSOLE_URL}/api/v2/config" \
 | `providers`             | Console, Go, and connected providers, each with its gateway settings and models. |
 | `websearch`             | Hosted [web search](/console/websearch), for members when enabled.               |
 | `mcp`                   | The Console MCP server, for members.                                             |
-| `experimental.policies` | Workspace [policy](/policies#console) statements.                                |
+| `policies`              | Workspace [policy](/policies#console) statements.                                |
+| `experimental.policies` | Deprecated name for `policies`, still accepted.                                  |
 
 Every key permission level and member role can read the config.
 

@@ -6,6 +6,8 @@ import os from "node:os"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import type { Configuration } from "electron-builder"
+import { getConfig } from "./electron-builder.config"
+import { CLI_BINARIES, nodePtyPackage } from "./scripts/utils"
 
 // Use electron-builder's matcher so the tests also cover its glob and directory traversal semantics.
 const { FileMatcher } = createRequire(import.meta.resolve("electron-builder"))("app-builder-lib/out/fileMatcher")
@@ -16,30 +18,37 @@ const channels = [
   { channel: "prod", appId: "ai.opencode.desktop" },
 ] as const
 
-async function load(channel: string) {
+function load(channel: string, target?: string): Configuration {
   const previous = process.env.OPENCODE_CHANNEL
+  const previousTarget = process.env.OPENCODE_CLI_TARGET
   process.env.OPENCODE_CHANNEL = channel
 
+  if (target !== undefined) process.env.OPENCODE_CLI_TARGET = target
+  else delete process.env.OPENCODE_CLI_TARGET
+
   try {
-    return (await import(`./electron-builder.config.ts?${channel}`)).default as Configuration
+    return getConfig()
   } finally {
     delete process.env.OPENCODE_CHANNEL
+    delete process.env.OPENCODE_CLI_TARGET
 
     if (previous !== undefined) process.env.OPENCODE_CHANNEL = previous
+
+    if (previousTarget !== undefined) process.env.OPENCODE_CLI_TARGET = previousTarget
   }
 }
 
 function trimFilter(dir: string, config: Configuration) {
+  const patterns = Array.isArray(config.files) ? config.files.flatMap((value) => (value ? [String(value)] : [])) : []
+
   return new FileMatcher(dir, "", (value: string) => value, [
     "**/*",
-    ...(Array.isArray(config.files) ? config.files : []).filter(
-      (value): value is string => typeof value === "string" && value.startsWith("!"),
-    ),
+    ...patterns.filter((value) => value.startsWith("!")),
   ]).createFilter()
 }
 
-test.each(channels)("channel identity for $channel", async ({ channel, appId }) => {
-  const config = await load(channel)
+test.each(channels)("channel identity for $channel", ({ channel, appId }) => {
+  const config = load(channel)
   expect(config.appId).toBe(appId)
   expect(config.extraMetadata?.desktopName).toBe(`${appId}.desktop`)
   expect(config.linux?.executableName).toBe(appId)
@@ -62,7 +71,7 @@ test("legacy Linux launcher stays hidden", async () => {
 })
 
 test("shared packaging defaults", async () => {
-  const config = await load("dev")
+  const config = load("dev")
   expect(config.mac?.sign).toBeFunction()
   expect(config.dmg?.sign).not.toBe(true)
   expect(config.mac?.extendInfo?.NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac).toBe(true)
@@ -75,12 +84,13 @@ test("shared packaging defaults", async () => {
   ])
 })
 
-test("trims external dependencies without excluding runtime files", async () => {
-  const filter = trimFilter(import.meta.dirname, await load("dev"))
+test("trims external dependencies without excluding runtime files", () => {
+  const fileStats = statSync(import.meta.filename)
+  const dirStats = statSync(import.meta.dirname)
+  const filter = trimFilter(import.meta.dirname, load("dev"))
 
   for (const prefix of ["node_modules/", "node_modules/parent/node_modules/"]) {
-    const included = (file: string, stats = statSync(import.meta.filename)) =>
-      filter(path.join(import.meta.dirname, prefix, file), stats)
+    const included = (file: string, stats = fileStats) => filter(path.join(import.meta.dirname, prefix, file), stats)
 
     // One file for each excluded pattern, including each brace alternative.
     for (const file of [
@@ -125,13 +135,24 @@ test("trims external dependencies without excluding runtime files", async () => 
       expect(included(file)).toBe(true)
     }
 
-    expect(included("@zip.js/zip.js/dist", statSync(import.meta.dirname))).toBe(false)
-    expect(included("@zip.js/zip.js/lib", statSync(import.meta.dirname))).toBe(true)
+    expect(included("@zip.js/zip.js/dist", dirStats)).toBe(false)
+    expect(included("@zip.js/zip.js/lib", dirStats)).toBe(true)
+  }
+
+  for (const item of CLI_BINARIES) {
+    const targetFilter = trimFilter(import.meta.dirname, load("prod", item.target))
+    const active = nodePtyPackage(item.target)
+
+    for (const candidate of CLI_BINARIES) {
+      const pkg = nodePtyPackage(candidate.target)
+      const included = targetFilter(path.join(import.meta.dirname, "node_modules", pkg, "lib/index.js"), fileStats)
+      expect(included).toBe(pkg === active)
+    }
   }
 })
 
 test("the trimmed Zip.js package can still export compressed logs", async () => {
-  const config = (await import("./electron-builder.config.ts")).default
+  const config = load("dev")
   const dir = await mkdtemp(path.join(os.tmpdir(), "opencode-zip-package-"))
   const source = path.dirname(fileURLToPath(import.meta.resolve("@zip.js/zip.js/package.json")))
   const filter = trimFilter(dir, config)

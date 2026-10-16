@@ -151,6 +151,23 @@ test("focuses a terminal created from the new-terminal button", async ({ page })
   await expect.poll(() => active.evaluate((element) => element.contains(document.activeElement))).toBe(true)
 })
 
+test("focuses the terminal opened from the command palette", async ({ page }) => {
+  const { editor } = await openSession(page, workspace)
+  const terminal = page.locator('[data-component="terminal"]')
+  await editor.click()
+  await page.keyboard.press("ControlOrMeta+Shift+P")
+  const palette = page.getByRole("dialog")
+  const search = palette.getByRole("textbox")
+  await expect(search).toBeFocused()
+  await search.fill("Toggle terminal")
+  await expect(palette.getByRole("option", { name: /^Toggle terminal/ })).toHaveAttribute("aria-selected", "true")
+
+  await search.press("Enter")
+  await expect(palette).toHaveCount(0)
+  await expect(terminal.locator("textarea")).toHaveCount(1)
+  await expect.poll(() => terminal.evaluate((element) => element.contains(document.activeElement))).toBe(true)
+})
+
 test("closing the last restored terminal does not create a hidden replacement", async ({ page }) => {
   const cached = { id: "pty_cached", title: "Terminal 1" }
 

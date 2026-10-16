@@ -153,7 +153,7 @@ export const loadPackage = Effect.fn("Provider.loadPackage")(function* (input: s
 })
 
 /** opencode settings consumed in Core; native packages never receive them. */
-const CORE_KEYS = ["chunkTimeout", "compaction", "fetch", "headerTimeout", "timeout", "transport"] as const
+const CORE_KEYS = ["chunkTimeout", "compaction", "encoding", "fetch", "headerTimeout", "timeout", "transport"] as const
 const PROVIDER_ONLY_KEYS = ["chunkTimeout", "headerTimeout", "timeout", "transport"] as const
 
 export function nativeSettings(settings: Settings): Settings {
@@ -166,8 +166,15 @@ export function modelSettings(settings: Settings | undefined) {
 
 const decodeTimeout = Schema.decodeUnknownOption(HttpTimeout)
 
-/** Applied to `headerTimeout` and `chunkTimeout` when provider settings leave them unset or invalid. */
+/** Applied to `headerTimeout` when provider settings leave it unset or invalid. */
 export const DEFAULT_TIMEOUT_MS = 300_000
+
+/**
+ * Applied to `chunkTimeout` when provider settings leave it unset or invalid. Some providers, such as DeepSeek, have
+ * specifically asked clients to allow at least 15 minutes, because their models can stream nothing for minutes while
+ * they reason.
+ */
+export const DEFAULT_CHUNK_TIMEOUT_MS = 900_000
 
 /** One timeout setting without a default; invalid values are dropped. */
 export function timeout(value: unknown) {
@@ -179,8 +186,15 @@ export function timeouts(settings: Readonly<Record<string, unknown>>) {
   return {
     timeout: timeout(settings.timeout),
     headerTimeout: timeout(settings.headerTimeout) ?? DEFAULT_TIMEOUT_MS,
-    chunkTimeout: timeout(settings.chunkTimeout) ?? DEFAULT_TIMEOUT_MS,
+    chunkTimeout: timeout(settings.chunkTimeout) ?? DEFAULT_CHUNK_TIMEOUT_MS,
   }
+}
+
+const decodeEncoding = Schema.decodeUnknownOption(Provider.Encoding)
+
+/** Request body encoding from provider or model settings; invalid values are dropped. */
+export function encoding(settings: Readonly<Record<string, unknown>>) {
+  return Option.getOrUndefined(decodeEncoding(settings.encoding))
 }
 
 export function mergeOverlay(

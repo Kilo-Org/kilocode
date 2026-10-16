@@ -38,6 +38,10 @@ export default defineMain({
         dedupe: ["solid-js", "solid-js/web", "@solidjs/meta"],
         alias: [
           { find: "@solidjs/router", replacement: path.resolve(mocks, "solid-router.tsx") },
+          {
+            find: "@tanstack/solid-query",
+            replacement: path.resolve(here, "../../app/node_modules/@tanstack/solid-query"),
+          },
           { find: /^@\/providers\/models\/selection$/, replacement: path.resolve(mocks, "app/context/local.ts") },
           { find: /^@\/workspaces\/files\/model$/, replacement: path.resolve(mocks, "app/context/file.ts") },
           { find: /^@\/shell\/state\/layout$/, replacement: path.resolve(mocks, "app/context/layout.ts") },

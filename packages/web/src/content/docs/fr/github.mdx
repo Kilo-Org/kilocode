@@ -69,7 +69,6 @@ Ajoutez le fichier de workflow suivant à `.github/workflows/opencode.yml` dans 
              ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
            with:
              model: anthropic/claude-sonnet-4-20250514
-             # share: true
              # github_token: xxxx
 ```
 
@@ -83,7 +82,6 @@ Dans les **paramètres** de votre organisation ou de votre projet, développez *
 
 - `model` : Le modèle à utiliser avec OpenCode. Prend le format `provider/model`. Ceci est **obligatoire**.
 - `agent` : l'agent à utiliser. Doit être un agent primaire. Revient à `default_agent` à partir de la configuration ou à `"build"` s'il n'est pas trouvé.
-- `share` : s'il faut partager la session OpenCode. La valeur par défaut est **true** pour les référentiels publics.
 - `prompt` : prompt personnalisé facultatif pour remplacer le comportement par défaut. Utilisez-le pour personnaliser la façon dont OpenCode traite les demandes.
 - `token` : jeton d'accès GitHub facultatif pour effectuer des opérations telles que la création de commentaires, le commit de modifications et l'ouverture de pull requests. Par défaut, OpenCode utilise le jeton d'accès à l'installation de l'application OpenCode GitHub, de sorte que les commits, les commentaires et les pull requests apparaissent comme provenant de l'application.
 

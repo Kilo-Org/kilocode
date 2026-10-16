@@ -311,7 +311,7 @@ function resourceMcpLayer(
               new Document({
                 type: "document",
                 info: new Info({
-                  experimental: { policies: overrides?.policies ?? [] },
+                  policies: overrides?.policies ?? [],
                   mcp: new ConfigMCP.Info({
                     servers: {
                       resources:
@@ -991,15 +991,7 @@ test("applies configured MCP timeouts to resource operations", async () => {
 })
 
 for (const entry of [
-  { name: "default", query: "", codemode: undefined, expected: "?codemode=false" },
-  { name: "explicit local code mode", query: "", codemode: true, expected: "?codemode=false" },
   { name: "direct tools", query: "", codemode: false, expected: "" },
-  {
-    name: "existing query",
-    query: "?source=opencode",
-    codemode: undefined,
-    expected: "?source=opencode&codemode=false",
-  },
   { name: "explicit remote code mode", query: "?codemode=true", codemode: undefined, expected: "?codemode=true" },
   { name: "explicit remote opt-out", query: "?codemode=false", codemode: undefined, expected: "?codemode=false" },
   { name: "portal opt-out", query: "?codemode=off", codemode: undefined, expected: "?codemode=off" },
@@ -1024,42 +1016,7 @@ for (const entry of [
   )
 }
 
-for (const { status, query } of [400, 404].flatMap((status) =>
-  ["", "?source=hello%20world&tag=a&tag=b"].map((query) => ({ status, query })),
-)) {
-  testEffect(Layer.empty).live(`retries MCP initialization ${status} at the original URL: ${query || "no query"}`, () =>
-    Effect.gen(function* () {
-      const headers: Array<string | null> = []
-      const server = yield* resourceServer({
-        respond: (request) => {
-          headers.push(request.headers.get("x-mcp-test"))
-          return new URL(request.url).searchParams.has("codemode") ? new Response(null, { status }) : undefined
-        },
-      })
-      const config = new ConfigMCP.Remote({
-        type: "remote",
-        url: server.url + query,
-        headers: { "x-mcp-test": "preserved" },
-        oauth: false,
-      })
-      const connection = yield* connect("resources", config, import.meta.dir)
-      yield* connection.tools()
-      yield* connection.resources()
-
-      expect(server.state.initializations).toBe(2)
-      expect(new URL(server.state.urls[0]).searchParams.get("codemode")).toBe("false")
-      expect(new Set(server.state.urls.slice(1))).toEqual(new Set([config.url]))
-      expect(new Set(headers)).toEqual(new Set(["preserved"]))
-      expect(server.state.toolLists).toBe(1)
-      expect(server.state.resourceLists).toBe(1)
-      expect(config.url).toBe(server.url + query)
-    }),
-  )
-}
-
 for (const entry of [
-  { name: "second 404", status: 404, query: "", codemode: undefined, attempts: 2 },
-  { name: "second 400", status: 400, query: "", codemode: undefined, attempts: 2 },
   { name: "401", status: 401, query: "", codemode: undefined, attempts: 1 },
   { name: "403", status: 403, query: "", codemode: undefined, attempts: 1 },
   { name: "501", status: 501, query: "", codemode: undefined, attempts: 1 },
@@ -1089,30 +1046,6 @@ for (const entry of [
       expect(server.state.initializations).toBe(entry.attempts)
       expect(server.state.urls).toHaveLength(entry.attempts)
       if (entry.query || entry.codemode === false) expect(server.state.urls).toEqual([config.url])
-      if (entry.attempts === 2) expect(server.state.urls[1]).toBe(config.url)
-    }),
-  )
-}
-
-for (const status of [400, 404]) {
-  testEffect(Layer.empty).live(`does not strip codemode for an MCP ${status} after initialization`, () =>
-    Effect.gen(function* () {
-      let expired = false
-      const server = yield* resourceServer({
-        respond: (request) => (expired && request.method === "POST" ? new Response(null, { status }) : undefined),
-      })
-      const config = new ConfigMCP.Remote({ type: "remote", url: server.url, oauth: false })
-      const connection = yield* connect("resources", config, import.meta.dir)
-      expired = true
-      const error = yield* connection.tools().pipe(Effect.flip)
-
-      // A 404 against a live session is reported as an expiry for the lifecycle to recover; the
-      // connection itself never re-initializes or changes URL.
-      if (status === 404) expect(error).toBeInstanceOf(McpClient.SessionExpiredError)
-      else expect(error).not.toBeInstanceOf(McpClient.SessionExpiredError)
-      expect(server.state.initializations).toBe(1)
-      expect(new Set(server.state.urls)).toEqual(new Set([server.url + "?codemode=false"]))
-      expect(server.state.toolLists).toBe(0)
     }),
   )
 }
@@ -1575,6 +1508,8 @@ test("adds, disconnects, and reconnects MCP servers at runtime", async () => {
   await Effect.runPromise(
     Effect.scoped(
       Effect.gen(function* () {
+        const server = yield* resourceServer({ modern: true, resources: false })
+        const config = { type: "remote", url: server.url, oauth: false, protocol: "2026-07-28" } as const
         yield* Effect.gen(function* () {
           const service = yield* Mcp.Service
 
@@ -1582,25 +1517,12 @@ test("adds, disconnects, and reconnects MCP servers at runtime", async () => {
           expect(published).toContain(McpEvent.StatusChanged.type)
           expect(yield* service.connect("missing").pipe(Effect.flip)).toBeInstanceOf(Mcp.NotFoundError)
           expect(yield* service.disconnect("missing").pipe(Effect.flip)).toBeInstanceOf(Mcp.NotFoundError)
-          yield* service.add(
-            "dynamic",
-            new ConfigMCP.Local({
-              type: "local",
-              command: [process.execPath, path.join(import.meta.dir, "fixture/mcp-output-schema.ts")],
-            }),
-          )
+          yield* service.add("dynamic", new ConfigMCP.Remote(config))
           expect((yield* service.servers()).find((server) => server.name === "dynamic")?.status).toEqual({
             status: "connected",
           })
 
-          yield* service.add(
-            "dynamic",
-            new ConfigMCP.Local({
-              type: "local",
-              command: [process.execPath, path.join(import.meta.dir, "fixture/mcp-output-schema.ts")],
-              disabled: true,
-            }),
-          )
+          yield* service.add("dynamic", new ConfigMCP.Remote({ ...config, disabled: true }))
           expect((yield* service.servers()).find((server) => server.name === "dynamic")?.status).toEqual({
             status: "disabled",
           })
@@ -1628,11 +1550,7 @@ test("adds, disconnects, and reconnects MCP servers at runtime", async () => {
         }).pipe(
           Effect.provide(
             resourceMcpLayer(
-              new ConfigMCP.Local({
-                type: "local",
-                command: [process.execPath, path.join(import.meta.dir, "fixture/mcp-output-schema.ts")],
-                disabled: true,
-              }),
+              new ConfigMCP.Local({ type: "local", command: ["unused"], disabled: true }),
               undefined,
               undefined,
               { published },
@@ -1719,22 +1637,20 @@ testEffect(resourceMcpLayer(new ConfigMCP.Local({ type: "local", command: ["unus
   () =>
     Effect.gen(function* () {
       const service = yield* Mcp.Service
+      const server = yield* resourceServer({ modern: true, resources: false })
 
       yield* Effect.scoped(
         Effect.gen(function* () {
           yield* service.transform((editor) => {
-            editor.set("dynamic", {
-              type: "local",
-              command: [process.execPath, path.join(import.meta.dir, "fixture/mcp-output-schema.ts")],
-            })
+            editor.set("dynamic", { type: "remote", url: server.url, oauth: false, protocol: "2026-07-28" })
           })
           expect((yield* service.servers()).find((server) => server.name === "dynamic")?.status.status).toBe(
             "connected",
           )
-          expect(yield* service.tools()).toHaveLength(2)
+          expect(yield* service.tools()).toHaveLength(1)
 
           yield* service.transform((editor) => editor.update("dynamic", (server) => (server.codemode = false)))
-          expect((yield* service.tools()).map((tool) => tool.codemode)).toEqual([false, false])
+          expect((yield* service.tools()).map((tool) => tool.codemode)).toEqual([false])
 
           const settings = { disabled: true }
           yield* service.transform((editor) => {
@@ -1750,7 +1666,7 @@ testEffect(resourceMcpLayer(new ConfigMCP.Local({ type: "local", command: ["unus
           expect((yield* service.servers()).find((server) => server.name === "dynamic")?.status.status).toBe(
             "connected",
           )
-          expect(yield* service.tools()).toHaveLength(2)
+          expect(yield* service.tools()).toHaveLength(1)
 
           const removed = yield* service.transform((editor) => editor.remove("dynamic"))
           expect((yield* service.servers()).some((server) => server.name === "dynamic")).toBe(false)
@@ -1760,7 +1676,7 @@ testEffect(resourceMcpLayer(new ConfigMCP.Local({ type: "local", command: ["unus
           expect((yield* service.servers()).find((server) => server.name === "dynamic")?.status.status).toBe(
             "connected",
           )
-          expect(yield* service.tools()).toHaveLength(2)
+          expect(yield* service.tools()).toHaveLength(1)
         }),
       )
 
@@ -2088,6 +2004,7 @@ test("serializes concurrent MCP lifecycle operations", async () => {
   await Effect.runPromise(
     Effect.scoped(
       Effect.gen(function* () {
+        const server = yield* resourceServer({ modern: true, resources: false })
         yield* Effect.gen(function* () {
           const service = yield* Mcp.Service
 
@@ -2116,9 +2033,11 @@ test("serializes concurrent MCP lifecycle operations", async () => {
         }).pipe(
           Effect.provide(
             resourceMcpLayer(
-              new ConfigMCP.Local({
-                type: "local",
-                command: [process.execPath, path.join(import.meta.dir, "fixture/mcp-output-schema.ts")],
+              new ConfigMCP.Remote({
+                type: "remote",
+                url: server.url,
+                oauth: false,
+                protocol: "2026-07-28",
                 disabled: true,
               }),
             ),
@@ -2527,7 +2446,7 @@ it.effect("waits for permission before calling an MCP tool", () =>
           type: "tool-call",
           id: "call_mcp_permission",
           name: "execute",
-          input: { code: "return await tools.demo.search({})" },
+          input: { code: 'return await tools.demo.search({ query: "open issues" })' },
         },
       })
       .pipe(Effect.forkScoped)
@@ -2535,7 +2454,7 @@ it.effect("waits for permission before calling an MCP tool", () =>
       action: "demo_search",
       resources: ["*"],
       save: ["*"],
-      metadata: {},
+      metadata: { input: { query: "open issues" } },
       sessionID: Session.ID.make("ses_mcp_permission"),
       agent: toolIdentity.agent,
       source: {
@@ -2635,7 +2554,7 @@ for (const source of ["config", "organization"] as const) {
               mcp: new ConfigMCP.Info({
                 servers: { resources: new ConfigMCP.Remote({ type: "remote", url: server.url, oauth: false }) },
               }),
-              experimental: { policies: [{ action: "integration.use", resource: "mcp:*", effect }] },
+              policies: [{ action: "integration.use", resource: "mcp:*", effect }],
             }),
           })
         yield* test.setEntries([document("allow")])

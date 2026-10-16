@@ -1034,18 +1034,18 @@ test("error investigations repeatedly seed editable home drafts without creating
   setup.mockInput.pressKey("F6")
   await setup.waitForFrame((frame) => frame.includes("MCP servers") && frame.includes("alpha"))
   setup.mockInput.pressEnter()
-  await setup.waitForFrame((frame) => frame.includes("Alpha connection refused") && frame.includes("i investigate"))
+  await setup.waitForFrame((frame) => frame.includes("Alpha connection refused") && frame.includes("investigate i"))
   setup.mockInput.pressKey("i")
-  await setup.waitForFrame((frame) => frame.includes("Alpha connection refused") && !frame.includes("i investigate"))
+  await setup.waitForFrame((frame) => frame.includes("Alpha connection refused") && !frame.includes("investigate i"))
 
   setup.mockInput.pressKey("F6")
   await setup.waitForFrame((frame) => frame.includes("MCP servers"))
   setup.mockInput.pressArrow("down")
   setup.mockInput.pressEnter()
-  await setup.waitForFrame((frame) => frame.includes("Beta initialization failed") && frame.includes("i investigate"))
+  await setup.waitForFrame((frame) => frame.includes("Beta initialization failed") && frame.includes("investigate i"))
   setup.mockInput.pressKey("i")
   const draft = await setup.waitForFrame(
-    (frame) => frame.includes("Beta initialization failed") && !frame.includes("i investigate"),
+    (frame) => frame.includes("Beta initialization failed") && !frame.includes("investigate i"),
   )
 
   expect(draft).not.toContain("Alpha connection refused")

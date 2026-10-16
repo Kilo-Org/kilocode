@@ -345,7 +345,6 @@ opencode run --attach http://localhost:4096 "Explain async/await in JavaScript"
 | <nobr><code>{"--continue"}</code></nobr> | `-c` | 继续上一个会话                                                      |
 | <nobr><code>{"--session"}</code></nobr>  | `-s` | 要继续的会话 ID                                                     |
 | <nobr><code>{"--fork"}</code></nobr>     |      | 继续时分叉会话（与 `--continue` 或 `--session` 配合使用）           |
-| <nobr><code>{"--share"}</code></nobr>    |      | 分享会话                                                            |
 | <nobr><code>{"--model"}</code></nobr>    | `-m` | 要使用的模型，格式为 provider/model                                 |
 | <nobr><code>{"--agent"}</code></nobr>    |      | 要使用的代理                                                        |
 | <nobr><code>{"--file"}</code></nobr>     | `-f` | 附加到消息的文件                                                    |
@@ -442,17 +441,14 @@ opencode export [sessionID]
 
 ### import
 
-从 JSON 文件或 OpenCode 分享链接导入会话数据。
+从 JSON 文件导入会话数据。
 
 ```bash
 opencode import <file>
 ```
 
-您可以从本地文件或 OpenCode 分享链接导入。
-
 ```bash
 opencode import session.json
-opencode import https://opncd.ai/s/abc123
 ```
 
 ---
@@ -564,7 +560,6 @@ OpenCode 可以通过环境变量进行配置。
 
 | 变量                                  | 类型    | 描述                                    |
 | ------------------------------------- | ------- | --------------------------------------- |
-| `OPENCODE_AUTO_SHARE`                 | boolean | 自动分享会话                            |
 | `OPENCODE_GIT_BASH_PATH`              | string  | Windows 上 Git Bash 可执行文件的路径    |
 | `OPENCODE_CONFIG`                     | string  | 配置文件路径                            |
 | `OPENCODE_TUI_CONFIG`                 | string  | TUI 配置文件路径                        |

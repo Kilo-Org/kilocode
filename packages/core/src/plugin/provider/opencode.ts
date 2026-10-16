@@ -20,6 +20,23 @@ import { Money } from "@opencode/schema/money"
 const defaultServer = "https://opencode.ai/console"
 const clientID = "opencode-cli"
 const methodID = Integration.MethodID.make("device")
+// Drop statements whose action or effect is a value this version does not know, so a newer Console can
+// extend either enum. Malformed statements still fail validation.
+const RemotePolicies = Schema.Array(Schema.Unknown).pipe(
+  Schema.decodeTo(Schema.Unknown, {
+    decode: SchemaGetter.transform((policies) =>
+      policies.filter((policy) => {
+        const action = Schema.decodeUnknownOption(Schema.Struct({ action: Schema.String }))(policy)
+        if (Option.isSome(action) && !Schema.is(ConfigPolicy.Info.fields.action)(action.value.action)) return false
+        const effect = Schema.decodeUnknownOption(Schema.Struct({ effect: Schema.String }))(policy)
+        return Option.isNone(effect) || Schema.is(ConfigPolicy.Effect)(effect.value.effect)
+      }),
+    ),
+    encode: SchemaGetter.passthrough({ strict: false }),
+  }),
+  Schema.decodeTo(Schema.Array(ConfigPolicy.Info)),
+  Schema.optional,
+)
 const RemoteResponse = Schema.Struct({
   providers: Schema.Record(Schema.String, ConfigProvider.Info),
   websearch: Schema.Struct({
@@ -35,22 +52,9 @@ const RemoteResponse = Schema.Struct({
     ),
   }).pipe(Schema.optional),
   // Organization policy compiled for the authenticated caller; omitted when there is none.
-  experimental: Schema.Struct({
-    policies: Schema.Array(Schema.Unknown).pipe(
-      Schema.decodeTo(Schema.Unknown, {
-        // Filter only unsupported actions. Malformed supported statements still fail validation.
-        decode: SchemaGetter.transform((policies) =>
-          policies.filter((policy) => {
-            const action = Schema.decodeUnknownOption(Schema.Struct({ action: Schema.String }))(policy)
-            return Option.isNone(action) || Schema.is(ConfigPolicy.Info.fields.action)(action.value.action)
-          }),
-        ),
-        encode: SchemaGetter.passthrough({ strict: false }),
-      }),
-      Schema.decodeTo(Schema.Array(ConfigPolicy.Info)),
-      Schema.optional,
-    ),
-  }).pipe(Schema.optional),
+  // `experimental.policies` remains accepted alongside top-level `policies`.
+  policies: RemotePolicies,
+  experimental: Schema.Struct({ policies: RemotePolicies }).pipe(Schema.optional),
 })
 const Device = Schema.Struct({
   device_code: Schema.String,
@@ -243,7 +247,10 @@ export const OpencodePlugin = define<HttpClient.HttpClient | Bus.Service | Manag
     })
     // Statements ride on the snapshot, so a credential switch, disconnect, or 404 replaces them too.
     const publish = (next: typeof snapshot) =>
-      managed.set({ statements: next.config?.experimental?.policies ?? [], organization: next.organization })
+      managed.set({
+        statements: [...(next.config?.experimental?.policies ?? []), ...(next.config?.policies ?? [])],
+        organization: next.organization,
+      })
 
     yield* ctx.integration.transform((editor) => {
       editor.update("opencode", (integration) => {

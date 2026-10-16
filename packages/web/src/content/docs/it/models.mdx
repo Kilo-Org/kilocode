@@ -57,7 +57,7 @@ Per impostarne uno come modello predefinito, puoi impostare la chiave `model` ne
 }
 ```
 
-Qui l'ID completo e `provider_id/model_id`. Per esempio, se usi [OpenCode Zen](/docs/zen), useresti `opencode/gpt-5.1-codex` per GPT 5.1 Codex.
+Qui l'ID completo e `provider_id/model_id`. Per esempio, se usi [OpenCode Zen](https://opencode.ai/v2/docs/console/), useresti `opencode/gpt-5.1-codex` per GPT 5.1 Codex.
 
 Se hai configurato un [provider personalizzato](/docs/providers#custom), `provider_id` e la chiave nella sezione `provider` della config e `model_id` e la chiave in `provider.models`.
 

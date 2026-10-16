@@ -52,6 +52,112 @@ test("uses the configured initial window and retains normal cursor page sizes", 
   }
 })
 
+test("counts every subagent page in a root session's cost", async () => {
+  const child = (index: number): SessionInfo => ({
+    ...session(0),
+    id: `ses_child_${index}`,
+    parentID: "ses_root",
+    cost: 1,
+  })
+  const requests: string[] = []
+  const api = OpenCode.make({
+    baseUrl: "http://opencode.local",
+    fetch: async (input, init) => {
+      const url = new URL((input instanceof Request ? input : new Request(input, init)).url)
+      requests.push(`${url.pathname}?${url.searchParams}`)
+
+      if (url.pathname === "/api/session/ses_root") return Response.json({ data: { ...session(0), id: "ses_root", cost: 0.5 } })
+
+      if (url.searchParams.get("cursor") === "page_2")
+        return Response.json({ data: Array.from({ length: 50 }, (_, index) => child(200 + index)), cursor: { next: "page_3" } })
+
+      return Response.json({ data: Array.from({ length: 200 }, (_, index) => child(index)), cursor: { next: "page_2" } })
+    },
+  })
+  const setup = createRoot((dispose) => ({
+    data: createData({ api: () => api, directory: "/project", event: { on: () => () => {}, listen: () => () => {} } }),
+    dispose,
+  }))
+
+  try {
+    await setup.data.session.sync("ses_root", { children: true })
+    expect(setup.data.session.family("ses_root")).toHaveLength(251)
+    expect(setup.data.session.cost("ses_root")).toBe(250.5)
+    expect(requests.toSorted()).toEqual([
+      "/api/session/ses_root?",
+      "/api/session?limit=200&cursor=page_2",
+      "/api/session?limit=200&order=desc&parentID=ses_root",
+    ])
+  } finally {
+    setup.dispose()
+  }
+})
+
+test("keeps the previous model in a live variant notice until the projected message arrives", async () => {
+  const projected = Promise.withResolvers<void>()
+  const previous = { providerID: "provider", id: "model", variant: "high" }
+  const model = { providerID: "provider", id: "model" }
+  const listeners = new Set<Parameters<CreateDataInput["event"]["listen"]>[0]>()
+  const api = OpenCode.make({
+    baseUrl: "http://opencode.local",
+    fetch: async (input, init) => {
+      const request = input instanceof Request ? input : new Request(input, init)
+      const pathname = new URL(request.url).pathname
+      if (pathname === "/api/session/ses_refresh/message") return Response.json({ data: [], cursor: {} })
+      if (pathname === "/api/session/ses_refresh/message/msg_variant") {
+        await projected.promise
+        return Response.json({
+          data: {
+            id: "msg_variant",
+            type: "model-switched",
+            model,
+            previous,
+            metadata: { refetched: true },
+            time: { created: 2 },
+          },
+        })
+      }
+      throw new Error(`Unexpected request: ${request.url}`)
+    },
+  })
+  const setup = createRoot((dispose) => ({
+    data: createData({
+      api: () => api,
+      directory: "/project",
+      event: {
+        on: () => () => {},
+        listen(handler) {
+          listeners.add(handler)
+          return () => listeners.delete(handler)
+        },
+      },
+    }),
+    dispose,
+  }))
+
+  try {
+    await setup.data.session.message.sync("ses_refresh")
+    const event: OpenCodeEvent = {
+      id: "evt_variant",
+      created: 2,
+      type: "session.model.selected",
+      durable: { aggregateID: "ses_refresh", seq: 1, version: 1 },
+      data: { sessionID: "ses_refresh", model, previous },
+    }
+    listeners.forEach((listener) => listener({ name: event.type, details: event }))
+    expect(setup.data.session.message.get("ses_refresh", "msg_variant")).toMatchObject({
+      type: "model-switched",
+      model,
+      previous,
+    })
+    projected.resolve()
+    await wait(() => setup.data.session.message.get("ses_refresh", "msg_variant")?.metadata?.refetched === true)
+  } finally {
+    projected.resolve()
+    setup.dispose()
+  }
+})
+
 test("reconciles a stale running tool when execution settles", async () => {
   const listeners = new Set<Parameters<CreateDataInput["event"]["listen"]>[0]>()
   let completed = false

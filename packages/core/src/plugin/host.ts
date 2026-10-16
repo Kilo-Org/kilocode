@@ -252,6 +252,9 @@ export const make = Effect.fn("PluginHost.make")(function* (
       reload: commands.reload,
       transform: commands.transform,
     },
+    credential: {
+      activate: (input) => integration.connection.activate(input.credentialID),
+    },
     event: {
       subscribe: () =>
         bus
@@ -431,6 +434,16 @@ export const make = Effect.fn("PluginHost.make")(function* (
                 : Effect.fail(new Error(`Permission request not found: ${input.requestID}`)),
             ),
           ),
+      // Plain rejections stay defects, as for built-in tools, so they end the step.
+      assert: (input) =>
+        permission.assert(input).pipe(
+          Effect.catchTags({
+            "Permission.BlockedError": (error) => Effect.fail(new Tool.Error({ message: error.message, error })),
+            "Permission.CorrectedError": (error) => Effect.fail(new Tool.Error({ message: error.feedback, error })),
+            "Session.NotFoundError": (error) =>
+              Effect.fail(new Tool.Error({ message: `Session not found: ${error.sessionID}`, error })),
+          }),
+        ),
     },
     plugin: {
       list: () => response(plugin.list()),

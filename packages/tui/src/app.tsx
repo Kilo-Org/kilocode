@@ -1,3 +1,5 @@
+import { existsSync } from "fs"
+import path from "path"
 import { render, useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { registerOpencodeSpinner } from "./component/register-spinner"
 import { Effect, Latch } from "effect"
@@ -37,6 +39,7 @@ import {
   TuiStartupProvider,
   TuiTerminalEnvironmentProvider,
   useTuiApp,
+  useTuiPaths,
   useTuiStartup,
   useTuiTerminalEnvironment,
   type TuiApp,
@@ -64,6 +67,8 @@ import { DialogStatus } from "./component/dialog-status"
 import { DialogConfig } from "./component/dialog-config"
 import { DialogDebug } from "./component/dialog-debug"
 import { DialogPair } from "./component/dialog-pair"
+import { DialogHighlights } from "./component/dialog-highlights"
+import { claim } from "./util/highlights"
 import { DialogThemeList } from "./component/dialog-theme-list"
 import { DialogHelp } from "./ui/dialog-help"
 import { DialogAgent } from "./component/dialog-agent"
@@ -685,6 +690,30 @@ function App() {
       .catch(toast.error)
   })
 
+  // Opens the release highlights once after an update, but only into an idle home screen during startup.
+  const storage = useStorage()
+  const paths = useTuiPaths()
+  let highlighted = false
+  createEffect(() => {
+    if (highlighted || !plugins.ready() || client.connection.status() !== "connected") return
+    highlighted = true
+    const items = app.highlights ?? []
+    if (config.data.highlights === false) return
+    if (route.data.type !== "home" || dialog.stack.length > 0 || promptRef.current?.current.text) return
+    if (args.prompt || args.continue || args.sessionID || args.newSessionID) return
+    if (process.env.OPENCODE_DRIVE || process.env.OPENCODE_STORY || process.env.OPENCODE_ROUTE) return
+    void claim(storage, {
+      version: app.version,
+      count: items.length,
+      history: existsSync(path.join(paths.state, "prompt-history.jsonl")),
+    })
+      .then((show) => {
+        if (show && dialog.stack.length === 0)
+          dialog.replace(() => <DialogHighlights version={app.version} items={items} />)
+      })
+      .catch(toast.error)
+  })
+
   const connected = useConnected()
   const appCommands = createMemo(() =>
     [
@@ -957,6 +986,17 @@ function App() {
         },
         category: "Integration",
       },
+      ...(app.highlights?.length
+        ? [
+            {
+              name: "opencode.highlights",
+              title: "Show release highlights",
+              slash: { name: "highlights" },
+              run: () => dialog.replace(() => <DialogHighlights version={app.version} items={app.highlights ?? []} />),
+              category: "System",
+            },
+          ]
+        : []),
       {
         name: "opencode.settings",
         title: "Open settings",

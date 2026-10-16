@@ -498,6 +498,46 @@ it.effect("manual compaction summarizes short context instead of no-op", () =>
   }),
 )
 
+it.effect("compaction lowers the output limit when it sends a request it could not shrink", () =>
+  Effect.gen(function* () {
+    requests = []
+    const session = yield* insertSession(Session.ID.make("ses_unshrinkable_compaction"))
+    // One exchange estimated at 250k tokens, past the 200k window, so no older exchange can be dropped.
+    const messages = [
+      SessionMessage.User.make({
+        id: SessionMessage.ID.create(),
+        type: "user",
+        text: "x".repeat(1_000_000),
+        time: { created: DateTime.makeUnsafe(0) },
+      }),
+    ]
+
+    expect(yield* compactManually(session, messages)).toEqual({ status: "completed" })
+    expect(requests).toHaveLength(1)
+    expect(requests[0]?.generation).toEqual(GenerationOptions.make({ maxTokens: 1_024 }))
+  }),
+)
+
+it.effect("compaction keeps the output limit for a request that fits its target", () =>
+  Effect.gen(function* () {
+    requests = []
+    const session = yield* insertSession(Session.ID.make("ses_fitting_compaction"))
+    // About 170k estimated tokens, under the 180k target, leaving 30k of the 200k window.
+    const messages = [
+      SessionMessage.User.make({
+        id: SessionMessage.ID.create(),
+        type: "user",
+        text: "x".repeat(680_000),
+        time: { created: DateTime.makeUnsafe(0) },
+      }),
+    ]
+
+    expect(yield* compactManually(session, messages)).toEqual({ status: "completed" })
+    expect(requests).toHaveLength(1)
+    expect(requests[0]?.generation).toEqual(GenerationOptions.make({ maxTokens: 20_000 }))
+  }),
+)
+
 it.effect("compaction hooks can supply the summary instead of the model", () =>
   Effect.gen(function* () {
     requests = []

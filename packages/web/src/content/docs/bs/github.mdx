@@ -66,7 +66,6 @@ Ili ga možete postaviti ručno.
              ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
            with:
              model: anthropic/claude-sonnet-4-20250514
-             # share: true
              # github_token: xxxx
 ```
 
@@ -79,7 +78,6 @@ Ili ga možete postaviti ručno.
 
 - `model`: Model za korištenje s OpenCode. Uzima format `provider/model`. Ovo je **obavezno**.
 - `agent`: Agent za korištenje. Mora biti primarni agent. Vraća se na `default_agent` iz konfiguracije ili `"build"` ako nije pronađen.
-- `share`: Da li dijeliti OpenCode sesiju. Podrazumevano je **true** za javna spremišta.
 - `prompt`: Opcioni prilagođeni upit za nadjačavanje zadanog ponašanja. Koristite ovo da prilagodite kako OpenCode obrađuje zahtjeve.
 - `token`: Opcionalni GitHub pristupni token za izvođenje operacija kao što su kreiranje komentara, upisivanje promjena i otvaranje zahtjeva za povlačenjem. OpenCode prema zadanim postavkama koristi token za pristup instalaciji iz aplikacije OpenCode GitHub, tako da se urezivanje, komentari i zahtjevi za povlačenjem pojavljuju kao da dolaze iz aplikacije.
   Alternativno, možete koristiti GitHub Action runner [ugrađeni `GITHUB_TOKEN`](https://docs.github.com/en/actions/tutorials/authenticate-with-github_token) bez instaliranja OpenCode GitHub aplikacije. Samo se pobrinite da date potrebna odobrenja u svom toku rada:

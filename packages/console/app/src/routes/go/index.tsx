@@ -1,5 +1,5 @@
 import "./index.css"
-import { createAsync, query, useSearchParams } from "@solidjs/router"
+import { useSearchParams } from "@solidjs/router"
 import { Title, Meta } from "@solidjs/meta"
 import { For, Show } from "solid-js"
 //import { HttpHeader } from "@solidjs/start"
@@ -10,7 +10,6 @@ import { Footer } from "~/component/footer"
 import { Header } from "~/component/header"
 import { GoPlanChart } from "~/component/go-plan-chart"
 import { config } from "~/config"
-import { getLastSeenWorkspaceID } from "../workspace/common"
 import {
   IconAlibaba,
   IconAnthropic,
@@ -30,22 +29,18 @@ import {
 import { useI18n } from "~/context/i18n"
 import { useLanguage } from "~/context/language"
 import { LocaleLinks } from "~/component/locale-links"
-import { goUsageLimits } from "~/lib/language"
-
-const checkLoggedIn = query(async () => {
-  "use server"
-  return await getLastSeenWorkspaceID().catch(() => undefined)
-}, "checkLoggedIn.get")
 
 const models = [
   { name: "Space Bunny", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention0" },
   { name: "LongCat 2.5 Preview Free", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention0" },
   { name: "Step 5 Preview Free", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention0" },
+  { name: "Cat Jam Free", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention30" },
   { name: "Grok 4.7", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention30" },
   { name: "Grok 4.6", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention30" },
   { name: "GPT 6 Luna", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention30" },
   { name: "GPT 5.6 Luna", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention30" },
   { name: "Claude Haiku 5.5", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention30" },
+  { name: "Gemini 4 Argon Contributor", training: "go.faq.a5.used", retention: "go.faq.a5.notZdr" },
   { name: "GLM-5.3-Flash", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention0" },
   { name: "GLM-5.3", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention0" },
   { name: "GLM-5.2", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention0" },
@@ -65,14 +60,11 @@ const models = [
   { name: "Muse Spark 1.2 Contributor", training: "go.faq.a5.used", retention: "go.faq.a5.notZdr" },
   { name: "DeepSeek V4.1 Flash", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention0" },
   { name: "DeepSeek V4 Pro", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention0" },
-  { name: "DeepSeek V4 Flash", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention0" },
-  { name: "DeepSeek V4 Flash Vision Exp", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention0" },
   { name: "Hy4 preview", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention0" },
   { name: "Hy3", training: "go.faq.a5.notUsed", retention: "go.faq.a5.retention0" },
 ] as const
 
 export default function Home() {
-  const workspaceID = createAsync(() => checkLoggedIn())
   const subscribeUrl = "https://opencode.ai/console/go"
   const i18n = useI18n()
   const language = useLanguage()
@@ -98,7 +90,6 @@ export default function Home() {
         content={`${i18n.t("go.meta.description")} ${i18n.t("go.plans.plus.description")}`}
       />
       <Meta name="twitter:image" content="/social-share-black.png" />
-      <Meta name="opencode:auth" content={workspaceID() ? "true" : "false"} />
 
       <div data-component="container">
         <Header go hideGetStarted />
@@ -108,7 +99,7 @@ export default function Home() {
             <div data-component="desktop-app-banner">
               <span data-slot="badge">{i18n.t("home.banner.badge")}</span>
               <div data-slot="content">
-                <span data-slot="text">{i18n.t("go.promo.step5")}</span>
+                <span data-slot="text">{i18n.t("go.promo.gemini")}</span>
               </div>
             </div>
             <Show when={searchParams.ref}>
@@ -193,7 +184,7 @@ export default function Home() {
           </section>
 
           <section data-component="comparison">
-            <GoPlanChart href={goUsageLimits(language.locale())} />
+            <GoPlanChart href="/v2/docs/console/go/#usage-limits" />
           </section>
 
           <section data-component="problem">
@@ -232,7 +223,7 @@ export default function Home() {
                 <span>[1]</span>
                 <div>
                   <strong>{i18n.t("go.how.step1.title")}</strong> - {i18n.t("go.how.step1.beforeLink")}{" "}
-                  <a href={language.route("/docs/go/#how-it-works")} title={i18n.t("go.how.step1.link")}>
+                  <a href="/v2/docs/console/go/#how-it-works" title={i18n.t("go.how.step1.link")}>
                     {i18n.t("go.how.step1.link")}
                   </a>
                 </div>
@@ -241,7 +232,7 @@ export default function Home() {
                 <span>[2]</span>
                 <div>
                   <strong>{i18n.t("go.how.step2.title")}</strong> -{" "}
-                  <a href={language.route("/docs/go/#pricing")}>{i18n.t("go.how.step2.link")}</a>{" "}
+                  <a href="/v2/docs/console/go/">{i18n.t("go.how.step2.link")}</a>{" "}
                   {i18n.t("go.how.step2.afterLink")} · {i18n.t("go.plans.plus.description")}
                 </div>
               </li>
@@ -281,7 +272,7 @@ export default function Home() {
               <li>
                 <Faq question={i18n.t("go.faq.q4")}>
                   {i18n.t("go.faq.a4.p1.beforePricing")}{" "}
-                  <a href={language.route("/docs/go/#pricing")}>{i18n.t("go.faq.a4.p1.pricingLink")}</a>{" "}
+                  <a href="/v2/docs/console/go/">{i18n.t("go.faq.a4.p1.pricingLink")}</a>{" "}
                   {i18n.t("go.faq.a4.p1.afterPricing")} {i18n.t("go.plans.plus.description")}{" "}
                   {i18n.t("go.faq.a4.p2.beforeAccount")} <a href={subscribeUrl}>{i18n.t("go.faq.a4.p2.accountLink")}</a>
                   . {i18n.t("go.faq.a4.p3")}
@@ -335,6 +326,9 @@ export default function Home() {
                       .
                     </p>
                     <p>
+                      <strong>Gemini 4 Argon Contributor:</strong> {i18n.t("go.faq.a5.geminiRetention")}
+                    </p>
+                    <p>
                       <strong>Muse Spark 1.3 Contributor:</strong> {i18n.t("go.faq.a5.museRetention")}{" "}
                       <a href="https://dev.meta.ai/docs/pricing-rate-limits#contributor-tier">
                         {i18n.t("go.faq.a5.learnMore")}
@@ -349,7 +343,7 @@ export default function Home() {
                       .
                     </p>
                     <p>
-                      <strong>DeepSeek V4 Flash:</strong> {i18n.t("go.faq.a5.deepseekRetention")}
+                      <strong>DeepSeek:</strong> {i18n.t("go.faq.a5.deepseekRetention")}
                     </p>
                   </div>
                 </Faq>

@@ -8,10 +8,11 @@ import type { ServerConnection } from "@/runtime/server/registry"
 import { sessionHref } from "@/shell/routes/session"
 import { useData } from "@/runtime/server/current"
 import { useServerSDK } from "@/runtime/server/client"
-import { useTabs } from "@/shell/tabs/tabs"
+import { useTabs, type Tab } from "@/shell/tabs/tabs"
 import { readLocalImage } from "@/runtime/server/image"
 import { useLanguage } from "@/runtime/i18n/language"
 import { showToast } from "@/shell/notifications/toast"
+import { createTurnDiffCache } from "@/session/timeline/turn-diffs"
 
 export function SessionUIProvider(
   props: ParentProps<{
@@ -65,6 +66,23 @@ export function SessionUIProvider(
 
   const providers = useProviders(directory)
 
+  // Turn diffs live in the tab's in-memory state, so they outlast timeline remounts and go when the tab closes.
+  const turnDiffs = () => {
+    const id = params.id
+
+    if (!id) return
+
+    const tab =
+      tabs.store.find(
+        (item) =>
+          item.type === "session" &&
+          item.server === props.server &&
+          (item.sessionId === id || item.routeSessionId === id),
+      ) ?? ({ type: "session", server: props.server, sessionId: id } satisfies Tab)
+
+    return tabs.state(tab, "turnDiffs", createTurnDiffCache)
+  }
+
   const sessionUIData = createMemo(() => ({
     provider: providers.ready()
       ? { all: providers.all(), default: providers.default(), connected: providers.connected().map((item) => item.id) }
@@ -88,6 +106,10 @@ export function SessionUIProvider(
       sessionID={params.id}
       shellRunning={(id) => !!data.shell.get(id)}
       shellOutput={(input) => serverSDK.api.shell.output(input)}
+      turnDiff={{
+        get: (input) => turnDiffs()?.get(input),
+        load: (input) => turnDiffs()?.load(input, () => serverSDK.api.session.diff(input)),
+      }}
       onNavigateToSession={navigateToSession}
       onSessionHref={href}
     >

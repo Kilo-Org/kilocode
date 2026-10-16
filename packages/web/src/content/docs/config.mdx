@@ -199,8 +199,6 @@ Use the `ai.opencode.managed` PayloadType. The OpenCode config keys go directly 
       <string>GENERATE-YOUR-OWN-UUID</string>
       <key>PayloadVersion</key>
       <integer>1</integer>
-      <key>share</key>
-      <string>disabled</string>
       <key>server</key>
       <dict>
         <key>hostname</key>
@@ -393,7 +391,7 @@ Provider options can include `timeout`, `headerTimeout`, `chunkTimeout`, and `se
 
 - `timeout` - Request timeout in milliseconds (default: 300000). Set to `false` to disable.
 - `headerTimeout` - Timeout in milliseconds to wait for response headers (default: 300000, or 5 minutes). This timer stops once headers arrive and does not limit the streamed response body. Set to `false` to disable.
-- `chunkTimeout` - Timeout in milliseconds between streamed response chunks (default: 300000, or 5 minutes). If no chunk arrives in time, the request is aborted. Set to `false` to disable.
+- `chunkTimeout` - Timeout in milliseconds between streamed response chunks (default: 900000, or 15 minutes). If no chunk arrives in time, the request is aborted. Set to `false` to disable.
 - `setCacheKey` - Ensure a cache key is always set for designated provider.
 
 You can also configure [local models](/docs/models#local). [Learn more](/docs/models).
@@ -557,27 +555,6 @@ You can control how deeply subagents can invoke other subagents using the `subag
 ```
 
 The default is `1`, which allows primary agents to launch subagents but prevents those subagents from launching additional subagents. Set it to `2` to allow one additional level of nested subagents, or `0` to prevent all subagent launches.
-
----
-
-### Sharing
-
-You can configure the [share](/docs/share) feature through the `share` option.
-
-```json title="opencode.json"
-{
-  "$schema": "https://opencode.ai/config.json",
-  "share": "manual"
-}
-```
-
-This takes:
-
-- `"manual"` - Allow manual sharing via commands (default)
-- `"auto"` - Automatically share new conversations
-- `"disabled"` - Disable sharing entirely
-
-By default, sharing is set to manual mode where you need to explicitly share conversations using the `/share` command.
 
 ---
 

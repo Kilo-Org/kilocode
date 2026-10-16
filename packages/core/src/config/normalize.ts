@@ -192,6 +192,7 @@ export function normalize(input: unknown): Result {
   normalizeSkills(input, encoded, diagnostics)
   normalizeMcp(input, encoded, diagnostics)
   normalizeCompaction(input, encoded, diagnostics)
+  normalizePolicies(input, encoded, diagnostics)
   normalizeExperimental(input, encoded, diagnostics)
   normalizeWatcher(input, encoded, diagnostics)
   normalizeFormatter(input, encoded, diagnostics)
@@ -378,12 +379,13 @@ function normalizeCompaction(
   if (Object.keys(result).length || !Object.keys(input.compaction).length) encoded.compaction = result
 }
 
-function normalizeExperimental(
+// V1 provider lists and `experimental.policies` stay supported and merge into
+// top-level `policies`; within a document, later sources win ties.
+function normalizePolicies(
   input: Record<string, unknown>,
   encoded: Record<string, unknown>,
   diagnostics: Diagnostic[],
 ) {
-  const result: Record<string, unknown> = {}
   const generated: unknown[] = []
   const enabled = decodeProviderList(input, "enabled_providers", diagnostics)
   if (enabled.present && (!enabled.nonEmpty || enabled.values.length)) {
@@ -404,7 +406,32 @@ function normalizeExperimental(
       effect: "deny",
     })),
   )
-  const native: unknown[] = []
+  const experimental = isRecord(input.experimental)
+    ? decodeList(
+        input.experimental.policies,
+        ConfigPolicy.Info,
+        ["experimental", "policies"],
+        diagnostics,
+        decodeEncoded,
+      )
+    : []
+  const native = decodeList(input.policies, ConfigPolicy.Info, ["policies"], diagnostics, decodeEncoded)
+  if (
+    generated.length ||
+    experimental.length ||
+    native.length ||
+    Array.isArray(input.policies) ||
+    (isRecord(input.experimental) && Array.isArray(input.experimental.policies))
+  )
+    encoded.policies = [...generated, ...experimental, ...native]
+}
+
+function normalizeExperimental(
+  input: Record<string, unknown>,
+  encoded: Record<string, unknown>,
+  diagnostics: Diagnostic[],
+) {
+  const result: Record<string, unknown> = {}
   if (own(input, "experimental")) {
     if (!isRecord(input.experimental)) invalid(["experimental"], diagnostics)
     if (isRecord(input.experimental)) {
@@ -430,19 +457,8 @@ function normalizeExperimental(
         )
         if (value !== undefined) result.subagent_depth = value
       }
-      native.push(
-        ...decodeList(
-          experimental.policies,
-          ConfigPolicy.Info,
-          ["experimental", "policies"],
-          diagnostics,
-          decodeEncoded,
-        ),
-      )
     }
   }
-  if (generated.length || native.length || (isRecord(input.experimental) && Array.isArray(input.experimental.policies)))
-    result.policies = [...generated, ...native]
   if (Object.keys(result).length || (isRecord(input.experimental) && !Object.keys(input.experimental).length))
     encoded.experimental = result
 }

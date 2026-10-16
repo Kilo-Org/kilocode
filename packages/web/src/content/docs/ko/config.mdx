@@ -356,27 +356,6 @@ Bearer token(`AWS_BEARER_TOKEN_BEDROCK` 또는 `/connect`)은 profile 기반 인
 
 ---
 
-### Sharing
-
-`share` 옵션으로 [share](/docs/share) 기능을 설정할 수 있습니다.
-
-```json title="opencode.json"
-{
-  "$schema": "https://opencode.ai/config.json",
-  "share": "manual"
-}
-```
-
-허용 값:
-
-- `"manual"` - 명령으로 수동 공유 허용(기본값)
-- `"auto"` - 새 대화를 자동 공유
-- `"disabled"` - 공유 기능 완전 비활성화
-
-기본값은 manual 모드이며, `/share` 명령으로 명시적으로 공유해야 합니다.
-
----
-
 ### Commands
 
 `command` 옵션으로 반복 작업용 custom command를 구성할 수 있습니다.

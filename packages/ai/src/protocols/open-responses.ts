@@ -334,14 +334,14 @@ export const StreamItem = Schema.StructWithRest(
     id: Schema.optional(Schema.String),
     call_id: Schema.optional(Schema.String),
     name: Schema.optional(Schema.String),
-    namespace: Schema.optional(Schema.String),
+    namespace: optionalNull(Schema.String),
     arguments: Schema.optional(Schema.String),
     encrypted_content: optionalNull(Schema.String),
   }),
   [Schema.Record(Schema.String, Schema.Unknown)],
 )
 export type StreamItem = Schema.Schema.Type<typeof StreamItem>
-export type OutputItem = StreamItem & { readonly id: string }
+export type OutputItem = StreamItem & { readonly id: string; readonly namespace?: string }
 
 // Responses-compatible providers put error details at the top level, under `error`, or under
 // `response.error`, and gateways reshape them freely: strings, numeric codes, extra fields. Those
@@ -946,6 +946,8 @@ const resolveItem = (
   index: number | undefined,
 ): OutputItem => ({
   ...item,
+  // Some gateways serialize an absent namespace as null.
+  namespace: item.namespace ?? undefined,
   id:
     item.id ??
     (index === undefined ? undefined : state.outputItems[index]) ??

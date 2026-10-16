@@ -214,8 +214,8 @@ Read package.json and README.md in parallel, then return their relevant setup de
 
 The runtime has no direct filesystem access, imports, timers, or `fetch`; it can
 only call tools in its catalog. Permission `execute` with resource `*` controls
-whether Code Mode is available. Every nested tool still enforces its own
-permission.
+whether Code Mode is available. Nested built-in and MCP tools still enforce
+their own permissions, and plugin tools enforce the permissions they assert.
 
 ### Sessions
 

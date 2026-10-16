@@ -7,10 +7,12 @@ import type { ConfigDiscovery } from "./discovery.js"
 
 export function plan(sources: ConfigDiscovery.Sources) {
   const directories = [
+    ...(sources.system?.present ? [sources.system.path] : []),
     ...(sources.global ? [sources.global] : []),
     ...sources.project.filter((root) => root.present).map((root) => root.path),
   ]
   const files = [
+    ...(sources.system ? [sources.system.path] : []),
     ...sources.direct,
     ...sources.project.map((root) => root.path),
     ...sources.claude,

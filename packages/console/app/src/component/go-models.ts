@@ -5,6 +5,16 @@ export const goModels = [
   { id: "grok-4.7", name: "Grok 4.7", requests: 169, allowance: 15 },
   { id: "grok-4.6", name: "Grok 4.6", requests: 169, allowance: 15 },
   { id: "glm-5.3", name: "GLM-5.3", requests: 220, allowance: 15 },
+  {
+    id: "gemini-4-argon-contributor",
+    name: "Gemini 4 Argon Contributor",
+    requests: 440,
+    allowance: 60,
+    bonus: 2,
+    featured: true,
+    fresh: true,
+    limitedTime: true,
+  },
   { id: "glm-5.2", name: "GLM-5.2", requests: 880, allowance: 60 },
   { id: "deepseek-v4-pro", name: "DeepSeek V4 Pro", requests: 1050, allowance: 15 },
   { id: "kimi-k2.7-code", name: "Kimi K2.7 Code", requests: 1350, allowance: 60, featured: true },
@@ -16,7 +26,6 @@ export const goModels = [
   { id: "mimo-v2.5-pro", name: "MiMo-V2.5-Pro", requests: 3250, allowance: 15 },
   { id: "minimax-m2.7", name: "MiniMax M2.7", requests: 3400, allowance: 60 },
   { id: "claude-haiku-5-5", name: "Claude Haiku 5.5", requests: 3850, allowance: 15, featured: true, fresh: true },
-  { id: "deepseek-v4-flash-vision-exp", name: "DeepSeek V4 Flash Vision Exp", requests: 6500, allowance: 15 },
   { id: "qwen3.7-plus", name: "Qwen3.7 Plus", requests: 4300, allowance: 60, featured: true },
   { id: "gpt-6-luna", name: "GPT 6 Luna", requests: 4230, allowance: 15, featured: true },
   { id: "hy3", name: "Hy3", requests: 4300, allowance: 60 },
@@ -25,12 +34,11 @@ export const goModels = [
   {
     id: "deepseek-flash",
     name: "DeepSeek V4.1 Flash",
-    requests: 26000,
-    allowance: 60,
+    requests: 34670,
+    allowance: 80,
     featured: true,
   },
   { id: "longcat-2.0", name: "LongCat-2.0", requests: 11400, allowance: 60 },
-  { id: "deepseek-v4-flash", name: "DeepSeek V4 Flash", requests: 13000, allowance: 30 },
   {
     id: "mimo-v2.6-flash",
     name: "MiMo-V2.6-Flash",
@@ -71,6 +79,15 @@ export const goModels = [
     fresh: true,
     limitedTime: true,
   },
+  {
+    id: "cat-jam-free",
+    name: "Cat Jam Free",
+    requests: Infinity,
+    allowance: Infinity,
+    featured: true,
+    fresh: true,
+    limitedTime: true,
+  },
 ].sort((a, b) => a.requests - b.requests)
 
 // Go Plus limits are published per model in the Console, not a fixed multiplier of Go.
@@ -80,6 +97,7 @@ const plusLimits: Record<string, [number, number]> = {
   "grok-4.7": [676, 60],
   "grok-4.6": [676, 60],
   "glm-5.3": [1760, 120],
+  "gemini-4-argon-contributor": [1760, 240],
   "glm-5.2": [2640, 180],
   "deepseek-v4-pro": [4200, 60],
   "kimi-k2.7-code": [4050, 180],
@@ -90,26 +108,39 @@ const plusLimits: Record<string, [number, number]> = {
   "mimo-v2.6-pro": [13000, 60],
   "mimo-v2.5-pro": [13000, 60],
   "minimax-m2.7": [13600, 240],
-  "deepseek-v4-flash-vision-exp": [26000, 60],
   "qwen3.7-plus": [12900, 180],
   "gpt-6-luna": [16920, 60],
   "claude-haiku-5-5": [15380, 60],
   hy3: [17200, 240],
   "qwen3.8-flash": [16200, 90],
   "glm-5.3-flash": [18960, 180],
-  "deepseek-flash": [52000, 120],
+  "deepseek-flash": [69330, 160],
   "longcat-2.0": [45600, 240],
-  "deepseek-v4-flash": [52000, 120],
   "mimo-v2.6-flash": [60200, 120],
   "mimo-v2.5": [60200, 120],
   "muse-spark-1.3-contributor": [90600, 120],
   "muse-spark-1.2-contributor": [90600, 120],
   "longcat-2.5-preview-free": [Infinity, Infinity],
   "step-5-preview-free": [Infinity, Infinity],
+  "cat-jam-free": [Infinity, Infinity],
 }
 
-export const goPlanModels = goModels.map((model) => ({
-  ...model,
-  plusRequests: plusLimits[model.id]![0],
-  plusAllowance: plusLimits[model.id]![1],
-}))
+// A bonus multiplies a model's usual allowance, which is shown crossed out beside the current limits.
+export const goPlanModels = goModels.map((model) => {
+  const [plusRequests, plusAllowance] = plusLimits[model.id]!
+  const bonus = "bonus" in model ? model.bonus : undefined
+  return {
+    ...model,
+    plusRequests,
+    plusAllowance,
+    previous:
+      bonus === undefined
+        ? undefined
+        : {
+            requests: model.requests / bonus,
+            allowance: model.allowance / bonus,
+            plusRequests: plusRequests / bonus,
+            plusAllowance: plusAllowance / bonus,
+          },
+  }
+})
