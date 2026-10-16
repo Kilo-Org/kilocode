@@ -224,6 +224,8 @@ export const ClientEvalPlanResponseSchema = z.object({
   engineIdentity: z.string().min(1),
   repetitions: z.number().int().positive(),
   items: z.array(ClientEvalPlanItemSchema),
+  // Pairs still serving from an older engine identity; their re-eval items are already in `items`.
+  staleEntries: z.array(z.object({ entry: CustomRouterEntryRefSchema, variant: VariantSchema })).default([]),
 })
 export type ClientEvalPlanResponse = z.infer<typeof ClientEvalPlanResponseSchema>
 

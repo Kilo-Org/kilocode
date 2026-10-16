@@ -114,6 +114,9 @@ export namespace KiloAutoEval {
     }
 
     UI.println(`Eval plan for ${router.modelId}: ${plan.items.length} case(s), engine ${plan.engineIdentity}.`)
+    for (const stale of plan.staleEntries) {
+      UI.println(`  stale: ${label(stale.entry)} variant ${stale.variant ?? "default"} (serving an older measurement)`)
+    }
     if (!input.yes && !(await confirm(input.router))) {
       UI.println("Cancelled.")
       return 0

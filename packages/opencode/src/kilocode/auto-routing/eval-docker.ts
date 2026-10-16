@@ -7,8 +7,6 @@ import type { Provider } from "@/provider/provider"
 export const EVAL_IMAGE_PREFIX = "kilo-auto-eval"
 export const EVAL_ENTRYPOINT_FILE = "eval-run.mjs"
 export const HOST_ALIAS = "host.docker.internal"
-export const FINAL_ANSWER_SUFFIX =
-  "\n\nIMPORTANT: Your final message must contain ONLY the answer in the exact requested format - no explanations, no preamble, no extra words."
 
 // Runs one `kilo run --format json` case inside the container and reports the
 // same measurements the platform container reports: exit code, wall-clock
@@ -107,8 +105,10 @@ export function evalImageTag(version: string): string {
   return `${EVAL_IMAGE_PREFIX}:${hasher.digest("hex").slice(0, 12)}`
 }
 
+// The case userPrompt already ends with the platform's final-answer
+// instruction, so the client folds prompts exactly like the platform container.
 export function evalPrompt(input: { systemPrompt: string; userPrompt: string }): string {
-  return `${input.systemPrompt}\n\n${input.userPrompt}${FINAL_ANSWER_SUFFIX}`
+  return `${input.systemPrompt}\n\n${input.userPrompt}`
 }
 
 export function evalCliArgs(input: {

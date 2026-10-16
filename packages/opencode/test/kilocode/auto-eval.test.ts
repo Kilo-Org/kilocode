@@ -151,8 +151,7 @@ describe("docker invocation", () => {
   })
 
   test("folds the system prompt into the case prompt like the platform runner", () => {
-    expect(evalPrompt({ systemPrompt: "S", userPrompt: "U" })).toContain("S\n\nU")
-    expect(evalPrompt({ systemPrompt: "S", userPrompt: "U" })).toContain("ONLY the answer")
+    expect(evalPrompt({ systemPrompt: "S", userPrompt: "U" })).toBe("S\n\nU")
   })
 })
 
