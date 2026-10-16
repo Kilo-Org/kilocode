@@ -77,7 +77,7 @@ export function registerToggleAutoApprove(
           if (generation !== snapshot) break
           // The server refuses a non-interactive approval for these and leaves the ask pending, so
           // replying only costs a round trip and suppresses the attention nudge for a live prompt.
-          if (req.metadata?.["sandboxEscalation"] === true || req.metadata?.["skillShell"] === true) continue
+          if (human(req.metadata)) continue
           await replyOnce(client, req.id, dir, () => generation === snapshot)
         }
       } catch (err) {
@@ -92,8 +92,7 @@ export function registerToggleAutoApprove(
     if (!active) return false
     const client = tryGetClient(connectionService)
     if (!client) return false
-    if (event.properties.metadata?.["sandboxEscalation"] === true) return false
-    if (event.properties.metadata?.["skillShell"] === true) return false
+    if (human(event.properties.metadata)) return false
     const dir =
       directory ?? connectionService.getPermissionDirectory(event.properties.id) ?? resolve(event.properties.sessionID)
     return replyOnce(client, event.properties.id, dir)
@@ -147,4 +146,11 @@ function tryGetClient(connectionService: KiloConnectionService): KiloClient | un
   } catch {
     return undefined
   }
+}
+
+/** Asks the server only lets a human answer. Mirrors `PermissionHumanOnly.requires` in the CLI. */
+function human(metadata: Record<string, unknown> | undefined) {
+  return (
+    metadata?.["sandboxEscalation"] === true || metadata?.["skillShell"] === true || metadata?.["securityAsk"] != null
+  )
 }

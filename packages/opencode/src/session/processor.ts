@@ -152,7 +152,7 @@ const layer = Layer.effect(
         shouldBreak: false,
         snapshot: initialSnapshot,
         blocked: false,
-        securityBlocks: SecurityContinuation.state(), // kilocode_change
+        securityBlocks: SecurityContinuation.turn(input.assistantMessage.parentID), // kilocode_change - per turn, not per step
         needsCompaction: false,
         compactionError: undefined, // kilocode_change
         currentText: undefined,

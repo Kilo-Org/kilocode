@@ -144,3 +144,13 @@ describe("SecurityContinuation.blocked", () => {
     expect(SecurityContinuation.blocked(seen, "edit", { filePath: "b" })).toBe(false)
   })
 })
+
+describe("SecurityContinuation.turn", () => {
+  test("one turn keeps one state across model steps", () => {
+    const call = { tool: "edit", input: { filePath: ".git/hooks/pre-commit" } }
+    const blocked = SecurityBlocked.of("SEC.V1.GIT_HOOK_WRITE", {} as never)
+    expect(SecurityContinuation.after(SecurityContinuation.turn("msg_turn_a"), blocked, call)).toBe("continue")
+    expect(SecurityContinuation.after(SecurityContinuation.turn("msg_turn_a"), blocked, call)).toBe("stop")
+    expect(SecurityContinuation.after(SecurityContinuation.turn("msg_turn_b"), blocked, call)).toBe("continue")
+  })
+})

@@ -15,7 +15,7 @@ function on() {
 }
 
 function config(permission: Record<string, unknown> = {}) {
-  return { getGlobal: () => Effect.succeed({ permission } as any) }
+  return { getGlobal: () => Effect.succeed({ permission } as any), get: () => Effect.succeed({} as any) }
 }
 
 function run(input: Partial<Parameters<typeof KiloSecurityGate.evaluate>[0]> = {}) {
@@ -376,6 +376,16 @@ describe("KiloSecurityGate reviewer transport", () => {
 
     expect(state.called).toBe(1)
     expect(out?.decision).toBe("allow")
+  })
+
+  test("is not consulted when the caller cannot show its merged config", async () => {
+    on()
+    const state = counting()
+
+    const out = await run({ ...unclassified, config: { getGlobal: () => Effect.succeed(trusted as never) } })
+
+    expect(state.called).toBe(0)
+    expect(out?.decision).toBe("ask")
   })
 
   test("is not consulted where this workspace has no trusted model of its own", async () => {

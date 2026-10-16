@@ -46,8 +46,9 @@ export namespace SecurityRealpath {
       let stat
       try {
         stat = await fs.lstat(current)
-      } catch {
-        return current
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code
+        return code === "ENOENT" || code === "ENOTDIR" ? current : undefined
       }
       if (!stat.isSymbolicLink()) return current
       try {

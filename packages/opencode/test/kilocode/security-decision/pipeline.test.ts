@@ -6,6 +6,7 @@ import { Permission } from "@/permission"
 import * as Config from "@/config/config"
 import { SessionID } from "@/session/schema"
 import { SecurityBlocked } from "@/kilocode/security-decision/block"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { SecurityAsk } from "@/kilocode/security-decision/ask"
 import { SecurityReviewer } from "@/kilocode/security-decision/reviewer"
 import type { SecurityDecisionAdapter } from "@/kilocode/security-decision/adapter"
@@ -249,6 +250,29 @@ it.instance("returns a contained command to the auto path when the reviewer clea
     expect(outcome.security?.rule_id).toBe("SEC.V1.CONTAINED_EXEC")
     expect(outcome.security?.final_enforcement).toBe("allow")
     expect(outcome.security?.reviewer).toMatchObject({ state: "allow", reason_code: "ORDINARY_DEV_COMMAND" })
+  }),
+)
+
+it.instance("drops the reviewer's allow when a hard rule lands during the review", () =>
+  Effect.gen(function* () {
+    process.env["KILO_SECURITY_DECISION"] = "1"
+    SecurityReviewer.bind(() => Promise.resolve('{"decision":"allow","reason_code":"ORDINARY_DEV_COMMAND"}'))
+    const permission = yield* Permission.Service
+
+    const fiber = yield* ask({
+      ...npmTest,
+      containment: { sandbox: "operational", network: "deny", destinations: [], escalated: false },
+      authorization: () =>
+        Effect.succeed({
+          ruleset: npmTest.ruleset,
+          hardRuleset: [{ permission: "bash", pattern: "*", action: "deny" as const }],
+        }),
+    }).pipe(Effect.forkScoped)
+
+    const request = yield* published(permission)
+    expect(request.permission).toBe("bash")
+    yield* permission.reply({ requestID: request.id, reply: "reject", interactive: true })
+    yield* Fiber.await(fiber)
   }),
 )
 
@@ -508,6 +532,24 @@ it.instance("leaves an ordinary ask unmarked", () =>
     expect(SecurityAsk.is(request.metadata)).toBe(false)
     yield* permission.reply({ requestID: request.id, reply: "reject", interactive: true })
     yield* Fiber.await(fiber)
+  }),
+)
+
+it.instance("a rejected security ask keeps the human's feedback for the model", () =>
+  Effect.gen(function* () {
+    process.env["KILO_SECURITY_DECISION"] = "1"
+    const permission = yield* Permission.Service
+    const records: SecurityDecisionAdapter.Audit[] = []
+    const fiber = yield* ask({ ...ciEdit, audit: (record) => Effect.sync(() => void records.push(record)) }).pipe(
+      Effect.forkScoped,
+    )
+    const request = yield* published(permission)
+    yield* permission.reply({ requestID: request.id, reply: "reject", interactive: true, message: "use the staging file" })
+    const exit = yield* Fiber.await(fiber)
+    const error = Cause.squash((exit as Exit.Failure<never, unknown>).cause)
+    expect(error).toBeInstanceOf(PermissionV1.CorrectedError)
+    expect((error as PermissionV1.CorrectedError).feedback).toBe("use the staging file")
+    expect(records.at(-1)?.final_enforcement).toBe("reject")
   }),
 )
 

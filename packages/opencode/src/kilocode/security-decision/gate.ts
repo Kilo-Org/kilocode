@@ -92,9 +92,8 @@ export namespace KiloSecurityGate {
   const provenHere = Effect.fn("KiloSecurityGate.provenHere")(function* (
     config: Pick<Config.Interface, "getGlobal"> & Partial<Pick<Config.Interface, "get">>,
   ) {
-    // Nothing merged to compare against: the caller cannot express a repointed transport either, so
-    // this is the single-configuration case the binding was already proven for.
-    if (typeof config.get !== "function") return true
+    // Nothing merged to compare against means nothing proven here.
+    if (typeof config.get !== "function") return false
     const resolved = yield* SecurityReviewerConfig.resolve(
       config as Pick<Config.Interface, "get" | "getGlobal">,
     ).pipe(Effect.catchCause(() => Effect.succeed({ enabled: false, reason: "config_unreadable" } as const)))

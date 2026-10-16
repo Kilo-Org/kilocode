@@ -36,7 +36,7 @@ export namespace SecurityDecisionAdapter {
     containment: T.Containment & { probe_id?: string; checked_at?: number }
   }>
 
-  export type Enforcement = "allow" | "ask_pending" | "reject" | "deny" | "blocked" | "error"
+  export type Enforcement = "allow" | "ask_pending" | "reject" | "deny" | "blocked"
 
   /**
    * How the review itself ended.

@@ -56,6 +56,7 @@ function config(...blocks: Array<Record<string, unknown>>) {
         call += 1
         return { permission: block } as never
       }),
+    get: () => Effect.succeed({} as never),
   }
 }
 

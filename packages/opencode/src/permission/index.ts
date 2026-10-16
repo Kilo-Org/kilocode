@@ -131,7 +131,7 @@ interface PendingEntry {
    * Set by `reply` when a human or a client actually rejected this request, so `ask` can tell an
    * answered rejection from a session teardown that fails every pending deferred at once.
    */
-  rejection?: { interactive: boolean }
+  rejection?: { interactive: boolean; feedback?: boolean }
   /**
    * Set by `reply` when this request was approved, recording whether a human actually answered.
    * Auto mode replies from the client without `interactive`, and an approval nobody looked at must
@@ -310,7 +310,9 @@ const layer = Layer.effect(
         const session = now.session[request.sessionID] ?? []
         const resolvedNow: KiloSecurityGate.Resolved[] = request.patterns.map((pattern) => ({
           pattern,
-          action: resolve(request.permission, pattern, rules, now.approved, session).action,
+          action: veto(request.permission, pattern, fresh?.hardRuleset ?? hardRuleset)
+            ? "deny"
+            : resolve(request.permission, pattern, rules, now.approved, session).action,
         }))
         const trustedNow = yield* trustedFor(now.approved)
         const containmentNow = containmentLive ? yield* containmentLive() : containment
@@ -441,6 +443,8 @@ const layer = Layer.effect(
           "security",
         )
         if (audit) yield* audit(record)
+        // A human's corrective message is an answer for the model, not a policy refusal.
+        if (entry.rejection.feedback) return yield* Effect.failCause(exit.cause)
         return yield* SecurityBlocked.of(security.rule_id, record)
       }
       // kilocode_change end
@@ -507,7 +511,7 @@ const layer = Layer.effect(
       })
 
       if (input.reply === "reject") {
-        existing.rejection = { interactive: input.interactive === true } // kilocode_change - answered, not torn down
+        existing.rejection = { interactive: input.interactive === true, feedback: !!input.message } // kilocode_change - answered, not torn down
         yield* Deferred.fail(
           existing.deferred,
           input.message

@@ -543,3 +543,17 @@ describe.skipIf(process.platform === "win32")("the agent's own control plane ins
     }),
   )
 })
+
+describe.skipIf(process.platform === "win32")("a wrapper hides the program it runs", () => {
+  test.each([
+    "strace rm build/a",
+    "ltrace rm build/a",
+    "flock x rm -rf build",
+    "ionice rm build/a",
+    "taskset 1 rm build/a",
+  ])("%s is never offered to a reviewer", (command) =>
+    withTmp(async (cwd) => {
+      expect((await decide(command, cwd, context(cwd, CONFINED))).reviewable).toBe(false)
+    })(),
+  )
+})

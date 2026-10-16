@@ -128,10 +128,13 @@ export namespace ContainmentMacos {
         stdout: "ignore",
         stderr: "ignore",
       })
+      let timer: ReturnType<typeof setTimeout> | undefined
       const code = await Promise.race([
         child.exited,
-        new Promise<number>((resolve) => setTimeout(() => resolve(-1), TIMEOUT_MS)),
-      ])
+        new Promise<number>((resolve) => {
+          timer = setTimeout(() => resolve(-1), TIMEOUT_MS)
+        }),
+      ]).finally(() => clearTimeout(timer))
       if (code !== 0) child.kill()
       return code === 0 ? "operational" : "failed"
     } catch {

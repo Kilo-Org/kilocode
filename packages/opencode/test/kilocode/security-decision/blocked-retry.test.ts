@@ -47,7 +47,7 @@ const request = {
   resolved: [{ pattern: "rm -rf build", action: "allow" as const }],
   humanOnly: false,
   workspace: "/repo",
-  config: { getGlobal: () => Effect.succeed({ permission: {} } as never) },
+  config: { getGlobal: () => Effect.succeed({ permission: {} } as never), get: () => Effect.succeed({} as never) },
   containment: CONTAINED,
 }
 

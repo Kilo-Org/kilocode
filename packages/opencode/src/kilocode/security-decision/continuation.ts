@@ -57,6 +57,24 @@ export namespace SecurityContinuation {
     }
   }
 
+  const turns = new Map<string, State>()
+
+  /**
+   * The state for one user turn. A turn spans several processors (one per model step), so the state
+   * is keyed by the parent user message, like `malformedToolGuard`. Bounded to the 64 newest turns.
+   */
+  export function turn(key: string): State {
+    const found = turns.get(key)
+    if (found) return found
+    if (turns.size >= 64) {
+      const oldest = turns.keys().next()
+      if (!oldest.done) turns.delete(oldest.value)
+    }
+    const fresh = state()
+    turns.set(key, fresh)
+    return fresh
+  }
+
   /** Stable signature of a tool call: argument order must not make a repeat look like a new path. */
   export function signature(tool: string, input: unknown): string {
     return `${tool} ${stable(input)}`
