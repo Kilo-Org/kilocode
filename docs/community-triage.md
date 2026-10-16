@@ -167,7 +167,7 @@ When a PR first gets `awaiting-contributor`, the sweep also posts one comment th
 
 ## The digest
 
-Each sweep writes a queue to the job summary, and to [Slack](#slack). It lists the open community PRs in these sections. An empty section is left out. Each section shows at most 15 PRs, oldest first, and a line with the number of the others.
+Each sweep writes a queue to the job summary, and to [Slack](#slack). It lists the open community PRs in these sections. An empty section is left out. Each section shows at most 15 PRs, and a line with the number of the others.
 
 | Section | PRs |
 |---|---|
@@ -179,7 +179,7 @@ Each sweep writes a queue to the job summary, and to [Slack](#slack). It lists t
 | Waiting for contributor | Days waiting, out of 14. Longest wait first |
 | Closed in this run | PRs the sweep closed. Only when closing is on |
 
-A PR can be in "Quick wins" and in its state section. The digest marks first-time contributors and PRs with failing checks next to the PR. The first two sections use the labels. The others come from the same rules as the status labels. `needs-triage` covers both "Needs triage" and "Contributor replied, needs review", because a maintainer should look in both cases.
+A PR can be in "Quick wins" and in its state section. The digest marks first-time contributors and PRs with failing checks next to the PR. Adopt and Quick wins follow the `high-value` and `quick-win` rules. The other sections use the same state rules as the status labels. `needs-triage` covers both "Needs triage" and "Contributor replied, needs review", because a maintainer should look in both cases.
 
 ## The maintainer routine
 
