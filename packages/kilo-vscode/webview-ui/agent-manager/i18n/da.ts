@@ -195,9 +195,10 @@ export const dict = {
   "agentManager.dialog.namePlaceholder": "Worktree-navn (valgfrit)",
   "agentManager.dialog.promptPlaceholder.mac": "Skriv en besked (⌘Enter for at sende)",
   "agentManager.dialog.promptPlaceholder.other": "Skriv en besked (Ctrl+Enter for at sende)",
-  "agentManager.dialog.advancedOptions": "Avancerede indstillinger",
   "agentManager.dialog.branchName": "Branch-navn",
   "agentManager.dialog.branchNamePlaceholder": "automatisk genereret",
+  "agentManager.dialog.branchNameHint":
+    "Branch-navn (valgfrit). Bruger som standard worktree-navnet. Hvis begge er tomme, genereres et navn.",
   "agentManager.dialog.baseBranch": "Base-branch",
   "agentManager.dialog.searchBranches": "Søg branches...",
   "agentManager.dialog.branchBadge.default": "standard",

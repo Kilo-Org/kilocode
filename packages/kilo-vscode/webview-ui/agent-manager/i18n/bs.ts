@@ -195,9 +195,10 @@ export const dict = {
   "agentManager.dialog.namePlaceholder": "Naziv Worktree-a (opcionalno)",
   "agentManager.dialog.promptPlaceholder.mac": "Unesite poruku (⌘Enter za slanje)",
   "agentManager.dialog.promptPlaceholder.other": "Unesite poruku (Ctrl+Enter za slanje)",
-  "agentManager.dialog.advancedOptions": "Napredne opcije",
   "agentManager.dialog.branchName": "Naziv brancha",
   "agentManager.dialog.branchNamePlaceholder": "automatski generirano",
+  "agentManager.dialog.branchNameHint":
+    "Naziv grane (opcionalno). Zadano je naziv worktree-a. Ako su oba prazna, naziv se generiše.",
   "agentManager.dialog.baseBranch": "Osnovni branch",
   "agentManager.dialog.searchBranches": "Pretraži brancheve...",
   "agentManager.dialog.branchBadge.default": "zadano",

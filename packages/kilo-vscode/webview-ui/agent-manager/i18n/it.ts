@@ -204,9 +204,10 @@ export const dict = {
   "agentManager.dialog.namePlaceholder": "Nome worktree (facoltativo)",
   "agentManager.dialog.promptPlaceholder.mac": "Scrivi un messaggio (Cmd+Invio per inviare)",
   "agentManager.dialog.promptPlaceholder.other": "Scrivi un messaggio (Ctrl+Invio per inviare)",
-  "agentManager.dialog.advancedOptions": "Opzioni avanzate",
   "agentManager.dialog.branchName": "Nome branch",
   "agentManager.dialog.branchNamePlaceholder": "generato automaticamente",
+  "agentManager.dialog.branchNameHint":
+    "Nome del branch (facoltativo). Per impostazione predefinita è il nome del worktree. Se entrambi sono vuoti, viene generato un nome.",
   "agentManager.dialog.baseBranch": "Branch base",
   "agentManager.dialog.searchBranches": "Cerca branch...",
   "agentManager.dialog.branchBadge.default": "predefinito",

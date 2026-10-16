@@ -62,6 +62,7 @@ import type { ModeRouter } from "./mode-router"
 import { WorktreeOrigin } from "./WorktreeOrigin"
 import { createDialogPreferences } from "./new-worktree-models"
 import { validBranch } from "./new-worktree-branch"
+import { sanitizeBranchName } from "../../src/shared/branch-slug"
 import { shouldComposeGoal, submitPayload } from "./new-worktree-command"
 
 type VersionCount = 1 | 2 | 3 | 4
@@ -225,7 +226,6 @@ export const NewWorktreeDialog: Component<{
   const [starting, setStarting] = createSignal(false)
   const [goalMode, setGoalMode] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
-  const [showAdvanced, setShowAdvanced] = createSignal(false)
   const [branchName, setBranchName] = createSignal("")
   const [baseBranch, setBaseBranch] = createSignal<string | null>(null)
   const [compareOpen, setCompareOpen] = createSignal(false)
@@ -499,8 +499,7 @@ export const NewWorktreeDialog: Component<{
 
   const handleSubmit = () => {
     if (!canSubmit()) return
-    const advanced = showAdvanced()
-    const customBranch = advanced ? branchName() || undefined : undefined
+    const customBranch = branchName().trim() || undefined
     if (!validBranch(customBranch)) {
       showToast({
         variant: "error",
@@ -830,12 +829,27 @@ export const NewWorktreeDialog: Component<{
       <Show when={tab() === "new"}>
         <div class="am-nv-dialog" onKeyDown={handleKeyDown}>
           <div class="am-nv-dialog-content">
-            <input
-              class="am-nv-name-input"
-              placeholder={t("agentManager.dialog.namePlaceholder")}
-              value={name()}
-              onInput={(e) => setName(e.currentTarget.value)}
-            />
+            {/* The worktree name leads. The branch follows it unless set explicitly. */}
+            <div class="am-nv-name-row">
+              <input
+                class="am-nv-name-input"
+                placeholder={t("agentManager.dialog.namePlaceholder")}
+                value={name()}
+                onInput={(e) => setName(e.currentTarget.value)}
+              />
+              <label class="am-nv-branch-field" title={t("agentManager.dialog.branchNameHint")}>
+                <Icon name="branch" size="small" />
+                <input
+                  class="am-nv-branch-input"
+                  type="text"
+                  spellcheck={false}
+                  aria-label={t("agentManager.dialog.branchName")}
+                  placeholder={sanitizeBranchName(name()) || t("agentManager.dialog.branchNamePlaceholder")}
+                  value={branchName()}
+                  onInput={(e) => setBranchName(e.currentTarget.value)}
+                />
+              </label>
+            </div>
             {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
             <div
               ref={containerRef}
@@ -1100,36 +1114,6 @@ export const NewWorktreeDialog: Component<{
               </div>
             </div>
 
-            {/* Advanced options toggle */}
-            <button
-              class="am-advanced-toggle"
-              onClick={click(
-                "advanced_options",
-                "configure_worktree_dialog",
-                () => setShowAdvanced(!showAdvanced()),
-                () => ({ action: showAdvanced() ? "close" : "open" }),
-              )}
-              type="button"
-            >
-              <Icon name={showAdvanced() ? "chevron-down" : "chevron-right"} size="small" />
-              <span>{t("agentManager.dialog.advancedOptions")}</span>
-            </button>
-
-            <Show when={showAdvanced()}>
-              <div class="am-advanced-section">
-                <div class="am-advanced-field">
-                  <span class="am-nv-config-label">{t("agentManager.dialog.branchName")}</span>
-                  <input
-                    class="am-advanced-input"
-                    type="text"
-                    placeholder={t("agentManager.dialog.branchNamePlaceholder")}
-                    value={branchName()}
-                    onInput={(e) => setBranchName(e.currentTarget.value)}
-                  />
-                </div>
-              </div>
-            </Show>
-
             {/* Version / compare mode selector */}
             <Show
               when={compareMode()}
@@ -1245,8 +1229,7 @@ export const NewWorktreeDialog: Component<{
               onClick={click("create_worktree", "configure_worktree_dialog", handleSubmit, () => ({
                 mode: mode(),
                 versionCount: total(),
-                advanced: showAdvanced(),
-                customBranch: showAdvanced() && !!branchName().trim(),
+                customBranch: !!branchName().trim(),
                 customBase: customBase(),
                 hasPrompt: !!prompt().trim(),
                 hasAttachments: imageAttach.images().length > 0,

@@ -203,9 +203,10 @@ export const dict = {
   "agentManager.dialog.namePlaceholder": "Worktree adı (isteğe bağlı)",
   "agentManager.dialog.promptPlaceholder.mac": "Bir mesaj yazın (Göndermek için \u2318Enter)",
   "agentManager.dialog.promptPlaceholder.other": "Bir mesaj yazın (Göndermek için Ctrl+Enter)",
-  "agentManager.dialog.advancedOptions": "Gelişmiş seçenekler",
   "agentManager.dialog.branchName": "Dal adı",
   "agentManager.dialog.branchNamePlaceholder": "otomatik oluşturulan",
+  "agentManager.dialog.branchNameHint":
+    "Dal adı (isteğe bağlı). Varsayılan olarak worktree adıdır. İkisi de boşsa bir ad oluşturulur.",
   "agentManager.dialog.baseBranch": "Temel dal",
   "agentManager.dialog.searchBranches": "Dalları ara...",
   "agentManager.dialog.branchBadge.default": "varsayılan",

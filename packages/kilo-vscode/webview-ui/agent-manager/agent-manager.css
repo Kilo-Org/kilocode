@@ -3530,6 +3530,57 @@ body.am-wt-dragging-active * {
   color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
+/* Worktree name leads the row; the branch field is a fixed, quieter override. */
+.am-nv-name-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 220px);
+  gap: 8px;
+}
+
+.am-nv-branch-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: text;
+  transition: border-color 120ms ease;
+}
+
+.am-nv-branch-field:hover {
+  border-color: var(--border-base);
+}
+
+.am-nv-branch-field:focus-within {
+  border-color: var(--border-focus, #007fd4);
+}
+
+.am-nv-branch-field [data-component="icon"] {
+  flex-shrink: 0;
+  color: var(--text-weaker);
+}
+
+.am-nv-branch-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-base);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--kilo-font-size-12);
+  outline: none;
+  text-overflow: ellipsis;
+}
+
+.am-nv-branch-input::placeholder {
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
+}
+
 /* Dialog overrides for prompt-input-container — resizable from bottom edge.
    The container is the only element that changes size (auto-grow + manual
    resize); the textarea always fills it and is the only element that scrolls,
@@ -3881,61 +3932,6 @@ body.am-wt-dragging-active * {
 .am-nv-submit {
   width: auto;
   justify-content: center;
-}
-
-/* Advanced options toggle */
-
-.am-advanced-toggle {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 0;
-  border: none;
-  background: none;
-  color: var(--text-weak);
-  font-size: var(--kilo-font-size-12);
-  cursor: pointer;
-  transition: color 100ms;
-}
-
-.am-advanced-toggle:hover {
-  color: var(--text-base);
-}
-
-/* Advanced options section */
-
-.am-advanced-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 8px 0;
-}
-
-.am-advanced-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.am-advanced-input {
-  width: 100%;
-  padding: 6px 10px;
-  border: 1px solid var(--border-base);
-  border-radius: var(--radius-sm);
-  background: var(--surface-base);
-  color: var(--text-base);
-  font-size: var(--kilo-font-size-12);
-  font-family: inherit;
-  outline: none;
-  transition: border-color 120ms;
-}
-
-.am-advanced-input:focus {
-  border-color: var(--border-focus, #007fd4);
-}
-
-.am-advanced-input::placeholder {
-  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 /* Branch selector */
@@ -4363,16 +4359,17 @@ body.am-wt-dragging-active * {
 }
 
 /* Worktree origin: project and base branch as one segmented control,
-   inline with the New/Import tabs. Reads as "project / branch". */
+   inline with the New/Import tabs. Reads as "project / branch". It fills the
+   row and splits it in fixed shares, so the layout does not move with the
+   length of the project or branch name. */
 
 .am-nv-origin {
   display: flex;
   align-items: center;
-  flex: 0 1 auto;
+  flex: 1 1 0;
   min-width: 0;
-  max-width: 72%;
   height: 30px;
-  margin-left: auto;
+  margin-left: 12px;
   border: 1px solid var(--border-weak-base);
   border-radius: var(--radius-sm);
   background: var(--vscode-input-background, var(--surface-inset-base));
@@ -4394,12 +4391,11 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-origin > [data-slot="popover-trigger"]:has(.am-nv-origin-project) {
-  flex: 0 0 auto;
-  max-width: 200px;
+  flex: 4 1 0;
 }
 
 .am-nv-origin > [data-slot="popover-trigger"]:has(.am-nv-origin-branch) {
-  flex: 1 1 auto;
+  flex: 5 1 0;
 }
 
 .am-nv-origin-segment {
@@ -4410,6 +4406,7 @@ body.am-wt-dragging-active * {
   min-width: 0;
   height: 100%;
   padding: 0 8px 0 10px;
+  overflow: hidden;
   border: none;
   border-radius: calc(var(--radius-sm) - 1px);
   background: transparent;
@@ -5502,7 +5499,7 @@ body.vscode-high-contrast-light {
   /* Inputs and textareas */
   .am-worktree-rename-input,
   .am-nv-name-input,
-  .am-advanced-input,
+  .am-nv-branch-field,
   .am-pr-input,
   .am-annotation-textarea {
     border-color: var(--vscode-contrastBorder, var(--border-base));
@@ -5510,7 +5507,7 @@ body.vscode-high-contrast-light {
 
   .am-worktree-rename-input:focus,
   .am-nv-name-input:focus,
-  .am-advanced-input:focus,
+  .am-nv-branch-field:focus-within,
   .am-pr-input:focus,
   .am-annotation-textarea:focus {
     border-color: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
@@ -5576,11 +5573,6 @@ body.vscode-high-contrast-light {
   /* Multi-model count select */
   .am-mm-count-select {
     border-color: var(--vscode-contrastBorder, var(--border-base));
-  }
-
-  /* Advanced toggle */
-  .am-advanced-toggle {
-    border: 1px solid var(--vscode-contrastBorder, transparent);
   }
 
   /* Keyboard shortcut keys */

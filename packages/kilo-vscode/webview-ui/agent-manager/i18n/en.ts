@@ -241,9 +241,10 @@ export const dict = {
   "agentManager.dialog.project.missing": "Repository not found",
   "agentManager.dialog.promptPlaceholder.mac": "Type a message (\u2318Enter to send)",
   "agentManager.dialog.promptPlaceholder.other": "Type a message (Ctrl+Enter to send)",
-  "agentManager.dialog.advancedOptions": "Advanced options",
   "agentManager.dialog.branchName": "Branch name",
   "agentManager.dialog.branchNamePlaceholder": "auto-generated",
+  "agentManager.dialog.branchNameHint":
+    "Branch name (optional). Defaults to the worktree name. When both are empty, a name is generated.",
   "agentManager.dialog.baseBranch": "Base branch",
   "agentManager.dialog.searchBranches": "Search branches...",
   "agentManager.dialog.branchBadge.default": "default",

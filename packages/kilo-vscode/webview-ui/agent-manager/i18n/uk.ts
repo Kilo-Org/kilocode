@@ -206,9 +206,10 @@ export const dict = {
   "agentManager.dialog.namePlaceholder": "Назва робочого дерева (необов'язково)",
   "agentManager.dialog.promptPlaceholder.mac": "Введіть повідомлення (\u2318Enter для надсилання)",
   "agentManager.dialog.promptPlaceholder.other": "Введіть повідомлення (Ctrl+Enter для надсилання)",
-  "agentManager.dialog.advancedOptions": "Розширені параметри",
   "agentManager.dialog.branchName": "Назва гілки",
   "agentManager.dialog.branchNamePlaceholder": "автоматично згенерована",
+  "agentManager.dialog.branchNameHint":
+    "Назва гілки (необов'язково). Типово назва worktree. Якщо обидві порожні, назву буде створено.",
   "agentManager.dialog.baseBranch": "Базова гілка",
   "agentManager.dialog.searchBranches": "Пошук гілок...",
   "agentManager.dialog.branchBadge.default": "за замовчуванням",

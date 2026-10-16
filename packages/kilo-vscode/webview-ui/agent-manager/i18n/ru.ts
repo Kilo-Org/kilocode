@@ -199,9 +199,10 @@ export const dict = {
   "agentManager.dialog.namePlaceholder": "Имя Worktree (необязательно)",
   "agentManager.dialog.promptPlaceholder.mac": "Введите сообщение (⌘Enter для отправки)",
   "agentManager.dialog.promptPlaceholder.other": "Введите сообщение (Ctrl+Enter для отправки)",
-  "agentManager.dialog.advancedOptions": "Расширенные параметры",
   "agentManager.dialog.branchName": "Имя ветки",
   "agentManager.dialog.branchNamePlaceholder": "генерируется автоматически",
+  "agentManager.dialog.branchNameHint":
+    "Имя ветки (необязательно). По умолчанию имя worktree. Если оба пусты, имя создаётся автоматически.",
   "agentManager.dialog.baseBranch": "Базовая ветка",
   "agentManager.dialog.searchBranches": "Поиск веток...",
   "agentManager.dialog.branchBadge.default": "по умолчанию",

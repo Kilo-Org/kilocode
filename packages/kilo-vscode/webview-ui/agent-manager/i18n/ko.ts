@@ -194,9 +194,10 @@ export const dict = {
   "agentManager.dialog.namePlaceholder": "Worktree 이름 (선택사항)",
   "agentManager.dialog.promptPlaceholder.mac": "메시지를 입력하세요 (⌘Enter로 전송)",
   "agentManager.dialog.promptPlaceholder.other": "메시지를 입력하세요 (Ctrl+Enter로 전송)",
-  "agentManager.dialog.advancedOptions": "고급 옵션",
   "agentManager.dialog.branchName": "브랜치 이름",
   "agentManager.dialog.branchNamePlaceholder": "자동 생성",
+  "agentManager.dialog.branchNameHint":
+    "브랜치 이름 (선택 사항). 기본값은 worktree 이름입니다. 둘 다 비어 있으면 이름이 생성됩니다.",
   "agentManager.dialog.baseBranch": "베이스 브랜치",
   "agentManager.dialog.searchBranches": "브랜치 검색...",
   "agentManager.dialog.branchBadge.default": "기본",

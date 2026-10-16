@@ -190,9 +190,10 @@ export const dict = {
   "agentManager.dialog.namePlaceholder": "ชื่อ Worktree (ไม่บังคับ)",
   "agentManager.dialog.promptPlaceholder.mac": "พิมพ์ข้อความ (⌘Enter เพื่อส่ง)",
   "agentManager.dialog.promptPlaceholder.other": "พิมพ์ข้อความ (Ctrl+Enter เพื่อส่ง)",
-  "agentManager.dialog.advancedOptions": "ตัวเลือกขั้นสูง",
   "agentManager.dialog.branchName": "ชื่อ Branch",
   "agentManager.dialog.branchNamePlaceholder": "สร้างอัตโนมัติ",
+  "agentManager.dialog.branchNameHint":
+    "ชื่อ branch (ไม่บังคับ) ค่าเริ่มต้นคือชื่อ worktree หากว่างทั้งคู่ ระบบจะสร้างชื่อให้",
   "agentManager.dialog.baseBranch": "Branch ฐาน",
   "agentManager.dialog.searchBranches": "ค้นหา Branch...",
   "agentManager.dialog.branchBadge.default": "ค่าเริ่มต้น",

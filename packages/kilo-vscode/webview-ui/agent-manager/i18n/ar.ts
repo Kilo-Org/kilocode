@@ -192,9 +192,10 @@ export const dict = {
   "agentManager.dialog.namePlaceholder": "اسم Worktree (اختياري)",
   "agentManager.dialog.promptPlaceholder.mac": "اكتب رسالة (⌘Enter للإرسال)",
   "agentManager.dialog.promptPlaceholder.other": "اكتب رسالة (Ctrl+Enter للإرسال)",
-  "agentManager.dialog.advancedOptions": "خيارات متقدمة",
   "agentManager.dialog.branchName": "اسم الفرع",
   "agentManager.dialog.branchNamePlaceholder": "يتم إنشاؤه تلقائيًا",
+  "agentManager.dialog.branchNameHint":
+    "اسم الفرع (اختياري). يستخدم اسم worktree افتراضيًا. إذا كان كلاهما فارغًا، يتم إنشاء اسم.",
   "agentManager.dialog.baseBranch": "الفرع الأساسي",
   "agentManager.dialog.searchBranches": "البحث في الفروع...",
   "agentManager.dialog.branchBadge.default": "افتراضي",
