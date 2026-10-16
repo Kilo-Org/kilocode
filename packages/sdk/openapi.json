@@ -36127,6 +36127,10 @@
                 "type": "integer",
                 "exclusiveMinimum": 0
               },
+              "chatMaxRetries": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
               "policies": {
                 "type": "array",
                 "items": {
