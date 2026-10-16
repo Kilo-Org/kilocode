@@ -11,7 +11,7 @@ Background: [Slack discussion](https://anaconda.slack.com/archives/C0BJ2GQ40HM/p
 ```mermaid
 flowchart LR
     A[PR or issue opened] --> B[community-label.yml]
-    B --> C[Labels: community, needs-triage, area:*]
+    B --> C[Labels: community, needs-triage,<br/>first-time-contributor, area:*]
     C --> D[community-sweep.yml<br/>Mon + Thu 17:00 UTC]
     D --> E[Status labels synced]
     D --> F[Queue posted to job summary and Slack]
@@ -22,12 +22,13 @@ flowchart LR
     I --> D
 ```
 
-Two workflows do the work. Both use `script/kilocode/community-triage.ts`.
+Two workflows do the work. Both use `script/kilocode/community-triage.ts`. A third runs the tests of that script.
 
 | Workflow | Runs | Does |
 |---|---|---|
 | `community-label.yml` | When a PR or issue opens or is edited | Adds `community`, `needs-triage` (new items only, not reopened ones), `first-time-contributor` and `area:*` labels |
-| `community-sweep.yml` | Monday and Thursday, 17:00 UTC | Syncs status labels, closes stale PRs, posts the queue |
+| `community-sweep.yml` | Monday and Thursday, 17:00 UTC, or by hand | Syncs status labels, `first-time-contributor` and `quick-win`, closes stale PRs, posts the queue |
+| `community-triage-test.yml` | On PRs that change the script, its tests or the community workflows | Runs the unit tests |
 
 The sweep runs the evening before each maintainer slot. Andrea starts Friday and Bruno starts Tuesday with a fresh queue.
 
@@ -50,7 +51,7 @@ Set by the workflows:
 | Label | Meaning |
 |---|---|
 | `community` | Author is not a maintainer |
-| `area:vscode`, `area:cli`, `area:agent-manager`, `area:jetbrains`, `area:desktop`, `area:docs`, `area:gateway`, `area:sdk`, `area:ui`, `area:i18n` | Part of the repo. Comes from the title scope, the changed paths, or the issue "Component" dropdown |
+| `area:vscode`, `area:cli`, `area:agent-manager`, `area:jetbrains`, `area:desktop`, `area:docs`, `area:gateway`, `area:sdk`, `area:ui`, `area:i18n` | Part of the repo. Comes from the title scope (`fix(vscode): ...`), a product name in the title ("Kilo Desktop", "Agent Manager" or "JetBrains"), the changed paths, or the issue "Component" dropdown |
 | `first-time-contributor` | First contribution to this repo. See [First-time contributors](#first-time-contributors) |
 | `quick-win` | Small, low-risk PR. See [Quick wins](#quick-wins) |
 | `needs-triage` | No maintainer has reacted yet |
@@ -72,7 +73,7 @@ The sweep owns the status labels, `first-time-contributor` and `quick-win`. It a
 
 The sweep also removes `community`, `first-time-contributor`, `quick-win` and the status labels from open PRs whose author is a maintainer. This fixes labels set before the maintainer list was known. It only handles PRs.
 
-`area:*` labels are only added, never removed. Fix a wrong one by hand.
+`area:*` labels are only added, never removed. Fix a wrong one by hand. On every run the sweep also adds an area for a product name in the title of each open community PR.
 
 ## Whose turn is it
 
@@ -97,8 +98,8 @@ stateDiagram-v2
 
 | State | Label | Rule |
 |---|---|---|
-| triage | `needs-triage` | No maintainer reaction yet, and no `high-value` or `low-value` label |
-| review | `needs-review` | The contributor acted after the last maintainer reaction, or a `high-value` or `low-value` label exists |
+| triage | `needs-triage` | No maintainer reaction yet, and no `high-value`, `low-value` or `priority:*` label |
+| review | `needs-review` | The contributor acted after the last maintainer reaction, or a `high-value`, `low-value` or `priority:*` label exists |
 | approved | none | The last maintainer reaction is an approval |
 | awaiting | `awaiting-contributor` | The last maintainer reaction asked for something and the contributor has not answered |
 
@@ -109,7 +110,7 @@ The 14 day clock starts at the time of the last maintainer reaction.
 A warm first reply matters most for people who are new here.
 
 - GitHub marks an author as `FIRST_TIME_CONTRIBUTOR` or `FIRST_TIMER` until one of their PRs is merged. These PRs and issues get `first-time-contributor`.
-- The label is set when the item opens. The sweep keeps it in sync on PRs, and removes it after the first merge. Issues keep the label.
+- The label is set when the item opens or is edited. The sweep keeps it in sync on PRs, and removes it after the first merge. Issues keep the label.
 - The digest adds "first-time contributor" next to these PRs, and the Slack summary shows how many there are.
 - First-time contributors often need a maintainer to approve their workflow runs before CI starts. Approve the runs early. Few checks on a PR can mean this.
 
@@ -146,7 +147,7 @@ When a PR has been `awaiting-contributor` for 14 days:
 
 Before the sweep closes or adopts a PR, it checks the full history for a contributor reply. This catches replies on long PRs.
 
-Closing is **off by default**. Until it is on, the sweep only logs what it would close. To turn it on, set the repo variable `COMMUNITY_AUTO_CLOSE_ENABLED` to `true`. To try it by hand, run the sweep from the Actions tab and tick "close". Manual runs also have a "slack" box, ticked by default. Untick it to run the sweep without posting to Slack. Scheduled runs always post.
+Closing is **off by default**. Until it is on, the sweep only logs what it would close. To turn it on, set the repo variable `COMMUNITY_AUTO_CLOSE_ENABLED` to `true`. To try it by hand, run the sweep from the Actions tab and tick "close".
 
 When a PR first gets `awaiting-contributor`, the sweep also posts one comment that gives the due date. That comment is also off until closing is on. The sweep posts at most 20 comments per run (`MAX_COMMENTS`).
 
@@ -154,11 +155,11 @@ When a PR first gets `awaiting-contributor`, the sweep also posts one comment th
 
 ## The maintainer routine
 
-Open the latest "Community sweep" run. The job summary has the queue. A copy goes to Slack when a Slack secret is set. With a bot token, the channel gets one short summary and the lists are posted in its thread. With only a webhook, the channel gets the whole queue as one message. If the bot post fails, the sweep still finishes and logs a warning with the Slack error. If not even the summary was posted, the whole queue goes through the webhook when one is set. If only a thread reply fails, the sweep warns and keeps the rest, so the queue is not posted twice.
+Open the latest "Community sweep" run. The job summary has the queue. A copy goes to [Slack](#slack) when a Slack secret is set.
 
 1. **Adopt**: pick an owner and add the PR to the standup doc.
 2. **Quick wins**: review these first. They are the fastest way to clear the queue.
-3. **Needs triage**: decide. Add `high-value` or `low-value`, or comment on it. Not sure? Put it in the standup doc.
+3. **Needs triage**: decide. Add `high-value`, `low-value` or a `priority:*` label, or comment on it. Not sure? Put it in the standup doc.
 4. **Needs review**: the contributor replied. Review again.
 5. **Approved**: merge.
 6. **Waiting for contributor**: nothing to do.
@@ -175,9 +176,18 @@ Useful searches:
 - Quick wins: `is:pr is:open label:quick-win`
 - First-time contributors: `is:pr is:open label:first-time-contributor`
 
+## Slack
+
+The sweep can post the queue to Slack. Slack is optional.
+
+- **Bot token and channel set:** the channel gets one short message with the title, a count per section and a link to the run. Each section is a reply in its thread.
+- **Only the webhook set:** the channel gets the whole queue as one message.
+- **The bot post fails:** the sweep still finishes and logs a warning with the Slack error. If not even the summary was posted, the whole queue goes through the webhook when one is set. If only a thread reply fails, the sweep warns and keeps the rest, so the queue is not posted twice.
+- **Manual runs:** the "slack" box is ticked by default. Untick it to run without posting. Scheduled runs always post.
+
 ## Issues
 
-New issues get the `community` label, `needs-triage`, `first-time-contributor` for new authors and an `area:*` label. The area comes from the required "Component" dropdown in the bug and feature templates. The answer "Other / not sure" adds no `area:*` label. The sweep only handles PRs.
+New issues get the `community` label, `needs-triage`, `first-time-contributor` for new authors and an `area:*` label. The area comes from the required "Component" dropdown in the bug and feature templates. If there is no answer, for example "Other / not sure" or an issue that skips the form, a product name in the title is used instead. The sweep only handles PRs, so older issues get their labels when they are edited.
 
 ## Setup
 
@@ -188,7 +198,7 @@ New issues get the `community` label, `needs-triage`, `first-time-contributor` f
 | `COMMUNITY_TRIAGE_MEMBER_TOKEN` | Secret | No | Token with `read:org`. Finds private org members |
 | `COMMUNITY_TRIAGE_SLACK_TOKEN` | Secret | No | Slack bot token (`xoxb-`, scope `chat:write`). Posts a summary and threads the lists. The bot must be in the channel |
 | `COMMUNITY_TRIAGE_SLACK_CHANNEL` | Secret | No | Channel ID (`C...`) for the bot token |
-| `COMMUNITY_TRIAGE_SLACK_WEBHOOK` | Secret | No | Fallback. Posts the whole queue as one message. Not used when the bot token is set |
+| `COMMUNITY_TRIAGE_SLACK_WEBHOOK` | Secret | No | Posts the whole queue as one message. Used when there is no bot token, or when the bot post fails |
 
 Labels are created by the workflows. Run "Community sweep" once by hand after merge to create them and label the open PRs.
 
