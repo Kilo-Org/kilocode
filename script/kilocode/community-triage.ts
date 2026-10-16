@@ -280,7 +280,7 @@ export type Digest = { title: string; counts: string; blocks: string[] }
 
 // Split into a title, a one-line count summary and one block per section, so
 // Slack can show the summary and put the lists in a thread.
-export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: number): Digest {
+export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: number, limit = LIMIT): Digest {
   const link = (row: Row) => {
     const text = `#${row.number} ${row.title.replace(/[<>|]/g, "")}`
     return mode === "md" ? `[${text}](${row.url})` : `<${row.url}|${text}>`
@@ -291,8 +291,8 @@ export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: numb
   const found: { short: string; count: number; text: string }[] = []
   const section = (name: string, short: string, list: Row[], note: (row: Row) => string) => {
     if (list.length === 0) return
-    const shown = list.slice(0, LIMIT).map((row) => `- ${link(row)} (@${row.author}, ${note(row)})`)
-    const more = list.length > LIMIT ? [`- ...and ${list.length - LIMIT} more`] : []
+    const shown = list.slice(0, limit).map((row) => `- ${link(row)} (@${row.author}, ${note(row)})`)
+    const more = list.length > limit ? [`- ...and ${list.length - limit} more`] : []
     found.push({ short, count: list.length, text: [bold(`${name} (${list.length})`), ...shown, ...more].join("\n") })
   }
   const awaiting = (row: Row) => (row.state.state === "awaiting" ? row.state : undefined)
@@ -345,8 +345,8 @@ export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: numb
   }
 }
 
-export function digest(rows: Row[], mode: "md" | "slack", repo: string, now: number) {
-  const out = parts(rows, mode, repo, now)
+export function digest(rows: Row[], mode: "md" | "slack", repo: string, now: number, limit = LIMIT) {
+  const out = parts(rows, mode, repo, now, limit)
   return [out.title, ...out.blocks.flatMap((block) => ["", block])].join("\n")
 }
 
@@ -748,7 +748,7 @@ async function sweep() {
   }
 
   const out = process.env.GITHUB_STEP_SUMMARY
-  if (out) await Bun.write(out, digest(rows, "md", repo, now) + "\n")
+  if (out) await Bun.write(out, digest(rows, "md", repo, now, Infinity) + "\n")
   const payload = process.env.SLACK_PAYLOAD
   if (payload) await Bun.write(payload, JSON.stringify({ text: digest(rows, "slack", repo, now) }))
   // With a bot token and channel, post the summary and thread the lists.
@@ -766,7 +766,7 @@ async function sweep() {
       if (flag) appendFileSync(flag, "slack_failed=true\n")
     }
   }
-  console.log(digest(rows, "md", repo, now))
+  console.log(digest(rows, "md", repo, now, Infinity))
 }
 
 if (import.meta.main) {
