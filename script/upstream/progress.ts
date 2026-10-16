@@ -356,7 +356,163 @@ const bar = (done: number, total: number) => {
 }
 const ratio = (k: { done: number; total: number }) => (k.total ? `${k.done}/${k.total}` : "")
 
-function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispositions: Record<string, Disposition>) {
+// Treemap, after AnyPS5's tools/progress.py: squarified boxes per feature, a grid of cells inside each box,
+// green for done, grey for open, yellow for dropped. Boxes above CAP cells draw CAP cells that each stand for
+// several, so the file stays small enough to commit.
+const PANEL = 495
+const GAP = 10
+const HEADER = 30
+const MAP = 280
+const CAP = 200
+type Rect = [number, number, number, number]
+
+export function squarify(values: number[], x: number, y: number, w: number, h: number) {
+  const scale = (w * h) / values.reduce((a, b) => a + b, 0)
+  const areas = values.map((v) => v * scale)
+  const rects: Rect[] = []
+  const worst = (row: number[], side: number) => {
+    const area = row.reduce((a, b) => a + b, 0)
+    return Math.max(...row.map((r) => Math.max((side * side * r) / (area * area), (area * area) / (side * side * r))))
+  }
+  const place = (row: number[]) => {
+    const thickness = row.reduce((a, b) => a + b, 0) / Math.min(w, h)
+    let offset = 0
+    for (const area of row) {
+      const length = area / thickness
+      rects.push(w >= h ? [x, y + offset, thickness, length] : [x + offset, y, length, thickness])
+      offset += length
+    }
+    if (w >= h) {
+      x += thickness
+      w -= thickness
+    } else {
+      y += thickness
+      h -= thickness
+    }
+  }
+  let row: number[] = []
+  while (areas.length) {
+    const side = Math.min(w, h)
+    if (!row.length || worst([...row, areas[0]], side) <= worst(row, side)) {
+      row.push(areas.shift()!)
+      continue
+    }
+    place(row)
+    row = []
+  }
+  if (row.length) place(row)
+  return rects
+}
+
+export function grid(count: number, x: number, y: number, w: number, h: number) {
+  if (!count || w <= 0 || h <= 0) return [] as Rect[]
+  const rows = Math.max(1, Math.min(count, Math.round(Math.sqrt((count * h) / w))))
+  const result: Rect[] = []
+  for (let r = 0; r < rows; r++) {
+    const inRow = Math.floor(count / rows) + (r < count % rows ? 1 : 0)
+    const cw = w / inRow
+    for (let c = 0; c < inRow; c++) result.push([x + c * cw, y + (r * h) / rows, cw, h / rows])
+  }
+  return result
+}
+
+const n = (v: number) => v.toFixed(2)
+const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;")
+const label = (x: number, y: number, text: string, size: number) =>
+  `<text x="${n(x)}" y="${n(y)}" font-size="${size}">${esc(text)}</text>`
+
+function panel(title: string, items: Box[], left: number) {
+  const shown = items.filter((b) => b.total + b.dropped > 0).sort((a, b) => b.total + b.dropped - (a.total + a.dropped) || byName(a.feature, b.feature))
+  const done = shown.reduce((s, b) => s + b.done, 0)
+  const total = shown.reduce((s, b) => s + b.total, 0)
+  const parts = [label(left + 4, 21, `${title}: ${pct(done, total)}% (${done}/${total})`, 16)]
+  if (!shown.length) return parts
+  const rects = squarify(shown.map((b) => b.total + b.dropped), left, HEADER, PANEL, MAP)
+  shown.forEach((box, i) => {
+    const [x, y, w, h] = rects[i]
+    const all = box.total + box.dropped
+    const cells = Math.min(all, CAP)
+    const doneCells = Math.round((cells * box.done) / all)
+    const droppedCells = Math.round((cells * box.dropped) / all)
+    const name = box.feature.replace(/^unattributed:/, "")
+    parts.push(`<g><title>${esc(name)}: ${box.done}/${box.total} (${pct(box.done, box.total)}%)${box.dropped ? `, ${box.dropped} dropped` : ""}</title>`)
+    grid(cells, x + 1, y + 1, w - 2, h - 2).forEach(([cx, cy, cw, ch], j) => {
+      const cls = j < doneCells ? "d" : j >= cells - droppedCells ? "x" : "o"
+      parts.push(`<rect class="${cls}" x="${n(cx)}" y="${n(cy)}" width="${n(cw)}" height="${n(ch)}"/>`)
+    })
+    parts.push(`<rect class="b" x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}"/>`)
+    const text = name.slice(0, Math.max(0, Math.floor((w - 10) / 7)))
+    if ((text === name || text.length >= 3) && h > 22) parts.push(label(x + 5, y + 16, text, 12))
+    parts.push("</g>")
+  })
+  return parts
+}
+
+function svg(features: Box[], unattributed: Box[]) {
+  const width = 2 * PANEL + GAP
+  const height = HEADER + MAP
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">`,
+    `<style>rect{stroke:#0d1117;stroke-width:.5}.d{fill:#2ea043}.o{fill:#6e7681}.x{fill:#d29922}.b{fill:none;stroke-width:2}text{font-family:sans-serif;fill:#fff;stroke:#0d1117;stroke-width:3;paint-order:stroke}</style>`,
+    `<rect x="0" y="0" width="${width}" height="${height}" fill="#0d1117" stroke="none"/>`,
+    ...panel("Features", features, 0),
+    ...panel("Unattributed hooks by upstream area", unattributed, PANEL + GAP),
+    "</svg>",
+    "",
+  ].join("\n")
+}
+
+type Point = { date: string; done: number; total: number; percent: number }
+
+/**
+ * Past states from the committed progress.json files on the first-parent history, one point per day
+ * (the last commit of the day). A commit whose file equals the current output is skipped, so the result
+ * is the same before and after the commit that stores it, which keeps `--check` stable.
+ */
+async function history(current: string) {
+  const log = await git(["log", "--first-parent", "--format=%H %cs", "--", "migration-tracking/progress/progress.json"]).catch(() => "")
+  const points: Point[] = []
+  const seen = new Set<string>()
+  for (const line of log.split("\n").filter(Boolean)) {
+    const [sha, date] = line.split(" ")
+    if (seen.has(date)) continue
+    const text = await git(["show", `${sha}:migration-tracking/progress/progress.json`]).catch(() => "")
+    if (!text || text + "\n" === current) continue
+    const summary = (JSON.parse(text) as { summary: { done: number; total: number; percent: number } }).summary
+    seen.add(date)
+    points.push({ date, done: summary.done, total: summary.total, percent: summary.percent })
+  }
+  return points.reverse()
+}
+
+function chart(points: Point[]) {
+  const width = 2 * PANEL + GAP
+  const height = 200
+  const left = 40
+  const top = 20
+  const w = width - left - 10
+  const h = height - top - 30
+  const x = (i: number) => left + (points.length > 1 ? (i * w) / (points.length - 1) : w / 2)
+  const y = (p: number) => top + h - (h * p) / 100
+  const parts = [
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">`,
+    `<style>text{font-family:sans-serif;font-size:11px;fill:#8b949e}.l{stroke:#30363d;stroke-width:1}.p{fill:none;stroke:#2ea043;stroke-width:2}.m{fill:#2ea043}</style>`,
+    `<rect x="0" y="0" width="${width}" height="${height}" fill="#0d1117"/>`,
+    ...[0, 25, 50, 75, 100].map((v) => `<line class="l" x1="${left}" y1="${n(y(v))}" x2="${width - 10}" y2="${n(y(v))}"/><text x="4" y="${n(y(v) + 4)}">${v}%</text>`),
+  ]
+  if (points.length) {
+    parts.push(`<polyline class="p" points="${points.map((p, i) => `${n(x(i))},${n(y(p.percent))}`).join(" ")}"/>`)
+    const step = Math.max(1, Math.ceil(points.length / 12))
+    points.forEach((p, i) => {
+      parts.push(`<circle class="m" cx="${n(x(i))}" cy="${n(y(p.percent))}" r="3"><title>${p.date}: ${p.percent}% (${p.done}/${p.total})</title></circle>`)
+      if (i % step === 0 || i === points.length - 1) parts.push(`<text x="${n(x(i))}" y="${height - 8}" text-anchor="middle">${p.date}</text>`)
+    })
+  }
+  parts.push("</svg>", "")
+  return parts.join("\n")
+}
+
+function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispositions: Record<string, Disposition>, past: Point[] = []) {
   const all = boxes(data.cells, config)
   const features = all.filter((b) => !b.excluded && !b.feature.startsWith("unattributed:"))
   const unattributed = all.filter((b) => b.feature.startsWith("unattributed:")).sort((a, b) => b.total - a.total || byName(a.feature, b.feature))
@@ -386,6 +542,7 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     dropped: droppedCells.map((c) => c.id),
   }
 
+  const points = [...past, { date: "now", done, total, percent: pct(done, total) }]
   const row = (b: Box) =>
     `| ${b.feature} | ${ratio(b.kinds.module)} | ${ratio(b.kinds.api)} | ${ratio(b.kinds.hook)} | ${ratio(b.kinds.test)} | ${b.done}/${b.total} | ${pct(b.done, b.total)}% | \`${bar(b.done, b.total)}\` |`
   const md = [
@@ -394,6 +551,8 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     `Generated by \`bun script/upstream/progress.ts\`. Do not edit; edit \`features.json\` or \`dispositions.json\` and regenerate. CI fails when this file is stale.`,
     "",
     `Measures Kilo's v1 delta: Kilo \`main\` pinned at \`${config.pins.v1Target.slice(0, 12)}\` (the v1 target) compared with the upstream commit it was synced to, \`${config.pins.v1Base.slice(0, 12)}\` (pins in \`features.json\`). Every Kilo change becomes a cell; a cell is done when the tracked v2 working tree has it.`,
+    "",
+    `![Progress map: one box per feature sized by its cells, green done, grey open, yellow dropped](progress.svg)`,
     "",
     `## Summary`,
     "",
@@ -404,6 +563,16 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     ...kinds.map((k) => `| ${k.kind} | ${k.done} | ${k.total} | ${pct(k.done, k.total)}% |`),
     "",
     `Not counted: ${data.notCounted.branding} branding-only hunks (rename script territory), ${data.notCounted.marker} marker-only hunks (block boundaries), generated files. Hook attribution: ${data.attribution.tag} by tag, ${data.attribution.import} by import, ${data.attribution.identifier} by identifier, ${data.attribution.unattributed} unattributed (see below).`,
+    "",
+    `## History`,
+    "",
+    `![Progress history](history.svg)`,
+    "",
+    `One point per day from the committed \`progress.json\` on the first-parent history, plus the current state.`,
+    "",
+    `| Date | Done | Total | % |`,
+    `|---|---:|---:|---:|`,
+    ...points.slice(-30).map((p) => `| ${p.date} | ${p.done} | ${p.total} | ${p.percent}% |`),
     "",
     `## Features`,
     "",
@@ -454,7 +623,7 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     "",
   ].join("\n")
 
-  return { json: JSON.stringify(json, null, 2) + "\n", md }
+  return { json: JSON.stringify(json, null, 2) + "\n", md, svg: svg(features, unattributed), history: chart(points) }
 }
 
 async function main() {
@@ -472,8 +641,9 @@ async function main() {
     return
   }
 
-  const out = render(config, data, dispositions)
-  const files = { "progress.json": out.json, "README.md": out.md }
+  const past = await history(render(config, data, dispositions).json)
+  const out = render(config, data, dispositions, past)
+  const files = { "progress.json": out.json, "README.md": out.md, "progress.svg": out.svg, "history.svg": out.history }
   if (args.includes("--check")) {
     const stale = []
     for (const [name, content] of Object.entries(files)) {

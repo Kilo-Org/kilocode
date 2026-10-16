@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { areaOf, canon, classify, featureOf, hookId, importBindings, knownFeatures, parseHunks } from "./progress"
+import { areaOf, canon, classify, featureOf, grid, hookId, importBindings, knownFeatures, parseHunks, squarify } from "./progress"
 
 const split = { "session/steering": "steering", "kilo-ui": "ui", plugins: "plugin" }
 
@@ -77,4 +77,20 @@ test("parseHunks and classify: tag, import, identifier, branding, marker-only, u
   expect(results[3]).toEqual({ kind: "cell", feature: "steering", how: "identifier" })
   expect(results[4]).toEqual({ kind: "cell", feature: "sandbox", how: "tag" })
   expect(results[5]).toEqual({ kind: "cell", feature: "unattributed:session", how: "unattributed" })
+})
+
+test("squarify fills the panel with one rectangle per value, areas proportional to the values", () => {
+  const rects = squarify([6, 3, 1], 0, 0, 100, 50)
+  expect(rects).toHaveLength(3)
+  const areas = rects.map(([, , w, h]) => w * h)
+  expect(areas.reduce((a, b) => a + b, 0)).toBeCloseTo(5000, 6)
+  expect(areas[0] / areas[2]).toBeCloseTo(6, 6)
+  for (const [x, y, w, h] of rects) expect(x >= 0 && y >= 0 && x + w <= 100.000001 && y + h <= 50.000001).toBe(true)
+})
+
+test("grid returns exactly count cells inside the box", () => {
+  const cells = grid(7, 10, 10, 30, 20)
+  expect(cells).toHaveLength(7)
+  for (const [x, y, w, h] of cells) expect(x >= 10 && y >= 10 && x + w <= 40.000001 && y + h <= 30.000001).toBe(true)
+  expect(grid(0, 0, 0, 10, 10)).toEqual([])
 })
