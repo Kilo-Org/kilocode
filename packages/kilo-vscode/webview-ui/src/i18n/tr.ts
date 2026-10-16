@@ -1347,6 +1347,8 @@ export const dict = {
 
   "error.details.show": "Ayrıntılar",
 
+  "error.compaction.action": "Sıkıştırma modelini seç",
+
   "task.todos.progress": "{{total}} görevden {{done}} tanesi tamamlandı",
   "task.todos.allDone": "{{count}} görev tamamlandı",
   "task.todos.title": "Görevler",

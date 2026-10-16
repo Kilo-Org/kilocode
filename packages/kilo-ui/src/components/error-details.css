@@ -24,6 +24,13 @@
   overflow-wrap: anywhere;
 }
 
+.error-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-left: 24px;
+}
+
 .error-card [data-component="collapsible"] {
   margin-top: 0;
   padding-left: 24px;

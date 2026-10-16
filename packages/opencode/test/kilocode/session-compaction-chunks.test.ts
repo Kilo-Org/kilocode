@@ -20,6 +20,7 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { Snapshot } from "../../src/snapshot"
 import { KiloCompactionChunks } from "../../src/kilocode/session/compaction-chunks"
+import { KiloCompactionFailure } from "../../src/kilocode/session/compaction-failure"
 import { KiloSessionCompaction } from "../../src/kilocode/session/compaction"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -399,7 +400,7 @@ describe("KiloCompactionChunks", () => {
     expect(result.summary.info.error).toEqual(error)
     expect(
       result.summary.parts.some(
-        (part) => part.type === "text" && part.text.includes(KiloCompactionChunks.EMPTY_SUMMARY),
+        (part) => part.type === "text" && part.text.includes(KiloCompactionFailure.EMPTY_SUMMARY),
       ),
     ).toBe(false)
   })
@@ -432,11 +433,11 @@ describe("KiloCompactionChunks", () => {
     expect(result.summary.info.finish).toBe("error")
     expect(result.summary.info.error?.name).toBe("APIError")
     if (result.summary.info.error?.name !== "APIError") return
-    expect(result.summary.info.error.data.message).toBe(KiloCompactionChunks.EMPTY_SUMMARY)
+    expect(result.summary.info.error.data.message).toBe(KiloCompactionFailure.EMPTY_SUMMARY)
     expect(result.summary.info.error.data.isRetryable).toBe(true)
     expect(
       result.summary.parts.some(
-        (part) => part.type === "text" && part.text.includes(KiloCompactionChunks.EMPTY_SUMMARY),
+        (part) => part.type === "text" && part.text.includes(KiloCompactionFailure.EMPTY_SUMMARY),
       ),
     ).toBe(true)
   })

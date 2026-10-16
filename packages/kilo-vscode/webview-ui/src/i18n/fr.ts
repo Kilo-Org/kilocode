@@ -1413,6 +1413,8 @@ export const dict = {
 
   "error.details.show": "Détails",
 
+  "error.compaction.action": "Choisir le modèle de compactage",
+
   "task.todos.progress": "{{done}}/{{total}} tâches terminées",
   "task.todos.allDone": "{{count}} tâches terminées",
   "task.todos.title": "Tâches",

@@ -1373,6 +1373,8 @@ export const dict = {
 
   "error.details.show": "Detaljer",
 
+  "error.compaction.action": "Vælg komprimeringsmodel",
+
   "task.todos.progress": "{{done}}/{{total}} opgaver udført",
   "task.todos.allDone": "{{count}} opgaver udført",
   "task.todos.title": "Opgaver",

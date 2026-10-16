@@ -154,7 +154,17 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
       </Show>
 
       <Show when={props.row.type === "error" ? props.row : undefined}>
-        {(row) => <ErrorDisplay error={row().error as ErrorDisplayProps["error"]} onLogin={server.goToLogin} />}
+        {(row) => (
+          <ErrorDisplay
+            error={row().error as ErrorDisplayProps["error"]}
+            onLogin={server.goToLogin}
+            onCompactionModel={
+              row().message.mode === "compaction" || row().message.summary === true
+                ? () => vscode.postMessage({ type: "openSettingsPanel", tab: "models" })
+                : undefined
+            }
+          />
+        )}
       </Show>
     </div>
   )

@@ -1225,6 +1225,7 @@ export const dict = {
   "migration.sessionFormat.unknown": "Sconosciuto",
   "migration.sessionFormat.unknownError": "Errore sconosciuto",
   "error.details.show": "Dettagli",
+  "error.compaction.action": "Scegli il modello di compattazione",
   "task.todos.progress": "{{done}}/{{total}} to-do completati",
   "task.todos.allDone": "{{count}} to-do completati",
   "task.todos.title": "To-do",

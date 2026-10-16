@@ -374,6 +374,126 @@ describe("session compaction cap", () => {
     )
   }
 
+  for (const scenario of [
+    { name: "manual partial", auto: false, text: "please compact", partial: "I can't help summarize" },
+    { name: "manual empty", auto: false, text: "please compact", partial: "" },
+    { name: "automatic partial", auto: true, text: "please overflow", partial: "## Goal\nPartial summ" },
+    { name: "chunked partial", auto: true, text: "x".repeat(400_000), partial: "- partial chunk" },
+  ]) {
+    it.live(
+      `surfaces ${scenario.name} content-filtered compaction and keeps history`,
+      () =>
+        provideTmpdirServer(
+          Effect.fnUntraced(function* ({ llm }) {
+            const prompt = yield* SessionPrompt.Service
+            const sessions = yield* Session.Service
+            const compaction = yield* SessionCompaction.Service
+            const chat = yield* sessions.create({
+              permission: [{ permission: "*", pattern: "*", action: "allow" }],
+            })
+            const errors: Array<typeof Session.Event.Error.data.Type> = []
+            const off = yield* (yield* EventV2Bridge.Service).listen((evt) => {
+              if (evt.type !== Session.Event.Error.type) return Effect.void
+              const data = evt.data as typeof Session.Event.Error.data.Type
+              if (data.sessionID === chat.id && data.error?.name !== "ContextOverflowError") errors.push(data)
+              return Effect.void
+            })
+            yield* Effect.addFinalizer(() => off)
+            const closed = yield* Deferred.make<KiloSession.CloseReason>()
+            const unsub = Bus.subscribe(KiloSession.Event.TurnClose, (evt) => {
+              if (evt.properties.sessionID === chat.id)
+                Deferred.doneUnsafe(closed, Effect.succeed(evt.properties.reason))
+            })
+            yield* Effect.addFinalizer(() => Effect.sync(unsub))
+
+            if (scenario.auto) yield* llm.error(400, overflowBody)
+            const blocked = reply().contentFilter().usage({ input: 10, output: 5 })
+            yield* llm.push(scenario.partial ? blocked.text(scenario.partial) : blocked)
+            const user = yield* prompt.prompt({
+              sessionID: chat.id,
+              agent: "code",
+              noReply: true,
+              parts: [{ type: "text", text: scenario.text }],
+            })
+            if (!scenario.auto) yield* compaction.create({ sessionID: chat.id, agent: "code", model: ref, auto: false })
+
+            const result = yield* prompt.loop({ sessionID: chat.id })
+            expect(yield* Deferred.await(closed).pipe(Effect.timeout("2 seconds"))).toBe("error")
+            expect(yield* llm.calls).toBe(scenario.auto ? 2 : 1)
+            expect(result.info.role).toBe("assistant")
+            if (result.info.role !== "assistant") return
+            expect(result.info.summary).toBe(true)
+            expect(result.info.finish).toBeTruthy()
+            expect(result.info.error?.name).toBe("ContentFilterError")
+            if (result.info.error?.name !== "ContentFilterError") return
+            expect(result.info.error.data.message).toContain("content filter")
+            expect(result.info.error.data.message).toContain("history was kept")
+            expect(result.info.error.data.message).toContain("agent.compaction.model")
+            expect(errors).toEqual([{ sessionID: chat.id, error: result.info.error }])
+
+            const history = yield* sessions.messages({ sessionID: chat.id })
+            expect(
+              MessageV2.filterCompacted(yield* MessageV2.stream(chat.id)).some((msg) => msg.info.id === user.info.id),
+            ).toBe(true)
+            expect(KiloSessionPrompt.hasCompletedSummary(history)).toBe(false)
+            expect(
+              history.flatMap((msg) => msg.parts).some((part) => part.type === "compaction" && part.tail_start_id),
+            ).toBe(false)
+          }),
+          { git: true, config: providerCfg },
+        ),
+      30_000,
+    )
+  }
+
+  it.live(
+    "does not re-run a failed compaction before the next prompt",
+    () =>
+      provideTmpdirServer(
+        Effect.fnUntraced(function* ({ llm }) {
+          const prompt = yield* SessionPrompt.Service
+          const sessions = yield* Session.Service
+          const compaction = yield* SessionCompaction.Service
+          const chat = yield* sessions.create({
+            permission: [{ permission: "*", pattern: "*", action: "allow" }],
+          })
+
+          yield* llm.error(400, { type: "error", error: { type: "invalid_request_error", message: "Bad request" } })
+          yield* llm.text("next answer")
+          yield* prompt.prompt({
+            sessionID: chat.id,
+            agent: "code",
+            noReply: true,
+            parts: [{ type: "text", text: "first" }],
+          })
+          yield* compaction.create({ sessionID: chat.id, agent: "code", model: ref, auto: false })
+          const failed = yield* prompt.loop({ sessionID: chat.id })
+          expect(failed.info.role).toBe("assistant")
+          if (failed.info.role !== "assistant") return
+          expect(failed.info.summary).toBe(true)
+          expect(failed.info.error).toBeDefined()
+          expect(failed.info.finish).toBe("error")
+
+          yield* prompt.prompt({
+            sessionID: chat.id,
+            agent: "code",
+            noReply: true,
+            parts: [{ type: "text", text: "second" }],
+          })
+          const result = yield* prompt.loop({ sessionID: chat.id })
+          expect(yield* llm.calls).toBe(2)
+          expect(result.info.role).toBe("assistant")
+          if (result.info.role !== "assistant") return
+          expect(result.info.summary).toBeUndefined()
+          expect(result.parts.some((part) => part.type === "text" && part.text === "next answer")).toBe(true)
+          const history = yield* sessions.messages({ sessionID: chat.id })
+          expect(history.filter((msg) => msg.info.role === "assistant" && msg.info.summary)).toHaveLength(1)
+        }),
+        { git: true, config: providerCfg },
+      ),
+    30_000,
+  )
+
   it.live(
     "closes the turn with reason=error after MAX_COMPACTION_ATTEMPTS compactions",
     () =>
