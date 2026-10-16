@@ -74,7 +74,8 @@ export const KILO_FILE_PATH_MIME = "application/x-kilo-file-path"
  * Checks (in order):
  * 1. Internal relative-path drag (application/x-kilo-file-path)
  * 2. VS Code URI-list (application/vnd.code.uri-list)
- * 3. text/plain — only when every line looks like an absolute file path
+ * 3. Standard URI-list (text/uri-list) — only file URIs
+ * 4. text/plain — only when every line looks like an absolute file path
  *
  * Returns null if no file paths are found.
  */
@@ -90,6 +91,17 @@ export function extractDropPaths(dt: DataTransfer): string[] | null {
   const uri = dt.getData("application/vnd.code.uri-list")
   if (uri) {
     const paths = uri.split(/\r?\n/).filter((line) => line.trim() !== "")
+    if (paths.length > 0) return paths
+  }
+
+  // Standard URI list from other apps. Keep only file URIs: comment lines
+  // (RFC 2483) and web links do not point to files.
+  const list = dt.getData("text/uri-list")
+  if (list) {
+    const paths = list
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("file://") || line.startsWith("vscode-remote://"))
     if (paths.length > 0) return paths
   }
 
