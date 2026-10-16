@@ -4,6 +4,13 @@ import {
   classify,
   cleanup,
   easy,
+  hasPriority,
+  kind,
+  needMember,
+  parse,
+  labels,
+  sync,
+  priority,
   mention,
   newcomer,
   component,
@@ -101,9 +108,12 @@ describe("classify", () => {
     expect(classify([author(3)], [label.high], now)).toEqual({ state: "review" })
   })
 
-  test("a priority label counts as triaged", () => {
-    expect(classify([author(3)], ["priority:p2"], now)).toEqual({ state: "review" })
-    expect(classify([author(3)], ["priority:p9"], now)).toEqual({ state: "triage" })
+  test("a keep-open label counts as triaged", () => {
+    expect(classify([author(3)], [label.keep], now)).toEqual({ state: "review" })
+  })
+
+  test("a priority label does not count as triaged", () => {
+    expect(classify([author(3)], ["priority:p1"], now)).toEqual({ state: "triage" })
   })
 
   test("waits for the contributor after a maintainer reaction", () => {
@@ -121,22 +131,29 @@ describe("classify", () => {
 })
 
 describe("decide", () => {
+  test("needs-triage covers new PRs and contributor replies", () => {
+    expect(decide([], { state: "triage" })).toEqual({ add: [label.triage], remove: [] })
+    expect(decide([], { state: "review" })).toEqual({ add: [label.triage], remove: [] })
+    expect(decide([label.triage], { state: "review" })).toEqual({ add: [], remove: [] })
+  })
+
   test("swaps stale status labels", () => {
-    const plan = decide([label.community, label.triage, label.ci], { state: "review" }, false)
-    expect(plan.add).toEqual([label.review])
-    expect(plan.remove.sort()).toEqual([label.ci, label.triage].sort())
+    const plan = decide([label.community, label.triage], { state: "awaiting", since: 0, days: 1 })
+    expect(plan.add).toEqual([label.awaiting])
+    expect(plan.remove).toEqual([label.triage])
+    expect(decide([label.awaiting], { state: "approved" })).toEqual({ add: [], remove: [label.awaiting] })
   })
 
   test("never touches hand-set labels", () => {
-    const plan = decide([label.high, label.keep, label.adopt], { state: "approved" }, false)
+    const plan = decide([label.high, label.keep, "priority:p1"], { state: "approved" })
     expect(plan).toEqual({ add: [], remove: [] })
   })
 })
 
 describe("cleanup", () => {
   test("lists community and status labels", () => {
-    const tags = [label.community, label.triage, label.ci, label.adopt, "area:cli", label.high, label.keep]
-    expect(cleanup(tags).sort()).toEqual([label.adopt, label.ci, label.community, label.triage].sort())
+    const tags = [label.community, label.triage, label.awaiting, "area:cli", "priority:p1", label.high, label.keep]
+    expect(cleanup(tags).sort()).toEqual([label.awaiting, label.community, label.triage].sort())
   })
 
   test("returns nothing for a clean PR", () => {
@@ -358,5 +375,137 @@ describe("mention", () => {
     expect(mention("Desktop notifications in VS Code")).toEqual([])
     expect(mention("Anaconda Desktop integration")).toEqual([])
     expect(mention("fix: crash on start")).toEqual([])
+  })
+})
+
+describe("kind", () => {
+  test("conventional prefixes win", () => {
+    expect(kind("fix(cli): crash", [])).toBe("fix")
+    expect(kind("Fixes race in sync", [])).toBe("fix")
+    expect(kind("revert: bad change", [])).toBe("fix")
+    expect(kind("docs: update readme", [])).toBe("docs")
+    expect(kind("feat(vscode): dark mode", [])).toBe("feature")
+    expect(kind("fix: typo in docs", ["documentation"])).toBe("fix")
+  })
+
+  test("labels come next", () => {
+    expect(kind("Handle edge case", ["bug"])).toBe("fix")
+    expect(kind("Update guide", ["Documentation"])).toBe("docs")
+    expect(kind("Shiny thing", ["enhancement"])).toBe("feature")
+  })
+
+  test("docs by area needs docs to be the only area", () => {
+    expect(kind("Update guide", ["area:docs"])).toBe("docs")
+    expect(kind("Update guide", ["area:docs", "area:cli"])).toBe("other")
+  })
+
+  test("verbs and fallback", () => {
+    expect(kind("Add support for X", [])).toBe("feature")
+    expect(kind("Misc cleanup", [])).toBe("other")
+  })
+})
+
+describe("priority", () => {
+  test("maps the type to a level", () => {
+    expect(priority("fix: crash", [])).toBe("priority:p1")
+    expect(priority("feat: thing", [])).toBe("priority:p2")
+    expect(priority("Misc cleanup", [])).toBe("priority:p2")
+    expect(priority("docs: guide", [])).toBe("priority:p3")
+  })
+
+  test("never changes an existing priority", () => {
+    expect(priority("fix: crash", ["priority:p3"])).toBeUndefined()
+    expect(hasPriority(["priority:p0"])).toBe(true)
+    expect(hasPriority(["priority:p9", "bug"])).toBe(false)
+  })
+
+  test("is never P0", () => {
+    for (const title of ["fix: security crash", "feat: x", "docs: y", "other"]) {
+      expect(priority(title, [])).not.toBe("priority:p0")
+    }
+  })
+})
+
+describe("sync", () => {
+  const want = [
+    { name: "a", color: "ffffff", description: "First" },
+    { name: "b", color: "000000", description: "Second" },
+    { name: "c", color: "111111", description: "Third" },
+  ]
+
+  test("creates missing labels and updates changed ones", () => {
+    const have = [
+      { name: "A", color: "FFFFFF", description: "First" },
+      { name: "b", color: "000000", description: "Old text" },
+    ]
+    const out = sync(have, want)
+    expect(out.create.map((item) => item.name)).toEqual(["c"])
+    expect(out.update.map((item) => item.name)).toEqual(["b"])
+  })
+
+  test("a changed color counts, and a missing description is empty", () => {
+    const out = sync([{ name: "a", color: "123456", description: null }], [want[0]])
+    expect(out.update.map((item) => item.name)).toEqual(["a"])
+    expect(
+      sync([{ name: "a", color: "ffffff", description: null }], [{ name: "a", color: "ffffff", description: "" }]),
+    ).toEqual({
+      create: [],
+      update: [],
+    })
+  })
+
+  test("does nothing when the repo matches", () => {
+    expect(sync(want, want)).toEqual({ create: [], update: [] })
+  })
+})
+
+describe("label list", () => {
+  test("descriptions fit the 100 character GitHub limit", () => {
+    for (const item of labels) expect(item.description.length).toBeLessThanOrEqual(100)
+  })
+
+  test("names are unique", () => {
+    const names = labels.map((item) => item.name.toLowerCase())
+    expect(new Set(names).size).toBe(names.length)
+  })
+})
+
+describe("parse", () => {
+  test("reads logins in lower case", () => {
+    expect([...parse({ logins: ["Some-Login", "other"] })]).toEqual(["some-login", "other"])
+  })
+
+  test("rejects bad shapes", () => {
+    expect(() => parse(null)).toThrow()
+    expect(() => parse({})).toThrow()
+    expect(() => parse({ logins: "a" })).toThrow()
+    expect(() => parse({ logins: [1] })).toThrow()
+    expect(() => parse({ logins: ["has space"] })).toThrow()
+    expect(() => parse({ logins: ["-bad"] })).toThrow()
+    expect(() => parse({ logins: ["bot[bot]"] })).toThrow()
+  })
+})
+
+describe("community-maintainers.json", () => {
+  const file = new URL("../../.github/community-maintainers.json", import.meta.url)
+
+  test("parses", async () => {
+    expect(parse(await Bun.file(file).json()).size).toBeGreaterThan(0)
+  })
+
+  test("is sorted, lower case and without duplicates", async () => {
+    const list = ((await Bun.file(file).json()) as { logins: string[] }).logins
+    expect(list).toEqual([...new Set(list.map((item) => item.toLowerCase()))].sort())
+  })
+})
+
+describe("needMember", () => {
+  test("fails when the token is missing or empty", () => {
+    expect(() => needMember(undefined)).toThrow("COMMUNITY_TRIAGE_MEMBER_TOKEN is not set")
+    expect(() => needMember("")).toThrow("COMMUNITY_TRIAGE_MEMBER_TOKEN is not set")
+  })
+
+  test("accepts a token", () => {
+    expect(() => needMember("token")).not.toThrow()
   })
 })

@@ -16,45 +16,77 @@ const LIMIT = 15
 export const label = {
   community: "community",
   triage: "needs-triage",
-  review: "needs-review",
   awaiting: "awaiting-contributor",
-  ci: "ci-failing",
   high: "high-value",
-  low: "low-value",
-  adopt: "needs-reimplementation",
   keep: "keep-open",
   first: "first-time-contributor",
   quick: "quick-win",
 }
 
 // Labels the sweep owns. It adds and removes these on its own.
-const managed = [label.triage, label.review, label.awaiting, label.ci]
+const managed = [label.triage, label.awaiting]
 
 // Labels that only make sense on a community PR. A maintainer PR must not keep them.
 export const cleanup = (current: string[]) =>
-  [label.community, label.adopt, label.first, label.quick, ...managed].filter((name) => current.includes(name))
+  [label.community, label.first, label.quick, ...managed].filter((name) => current.includes(name))
 
-// Hand-set priority labels. One list feeds both label creation and the triage rule.
+// Priority labels. The label workflow and the sweep set one from the title when
+// a community PR has none. Maintainers change it by hand. One list feeds label
+// creation, the auto rule and the triage rule.
 const priorities = [
   { name: "priority:p0", color: "b60205", description: "Critical. Set by hand." },
-  { name: "priority:p1", color: "d93f0b", description: "High: important fixes, regressions. Set by hand." },
-  { name: "priority:p2", color: "fbca04", description: "Medium: normal fixes and valuable features. Set by hand." },
-  { name: "priority:p3", color: "c5def5", description: "Low: docs, polish, speculative features. Set by hand." },
+  {
+    name: "priority:p1",
+    color: "d93f0b",
+    description: "High: fixes and regressions. Set from the title. Change by hand.",
+  },
+  {
+    name: "priority:p2",
+    color: "fbca04",
+    description: "Medium: features and other work. Set from the title. Change by hand.",
+  },
+  { name: "priority:p3", color: "c5def5", description: "Low: docs. Set from the title. Change by hand." },
 ]
 
-const labels = [
+export const hasPriority = (tags: string[]) => priorities.some((item) => tags.includes(item.name))
+
+export type Kind = "fix" | "feature" | "docs" | "other"
+
+// The same rules the community dashboard used for its automatic priority.
+// A conventional title prefix wins over labels, and labels win over the area.
+// Docs by area only counts when docs is the only area.
+export function kind(title: string, tags: string[]): Kind {
+  const text = title.toLowerCase().trim()
+  const names = tags.map((tag) => tag.toLowerCase())
+  const scoped = names.filter((tag) => tag.startsWith("area:"))
+  if (/^(fix|fixes|bugfix|hotfix|revert)\b/.test(text)) return "fix"
+  if (/^(docs?|documentation)\b/.test(text)) return "docs"
+  if (/^(feat|feature)\b/.test(text)) return "feature"
+  if (names.includes("bug")) return "fix"
+  if (names.includes("documentation") || names.includes("docs")) return "docs"
+  if (names.includes("enhancement") || names.includes("feature")) return "feature"
+  if (scoped.length === 1 && scoped[0] === "area:docs") return "docs"
+  if (/^(add|adds|support|implement)\b/.test(text)) return "feature"
+  return "other"
+}
+
+const levels: Record<Kind, string> = {
+  fix: "priority:p1",
+  feature: "priority:p2",
+  other: "priority:p2",
+  docs: "priority:p3",
+}
+
+/** The priority label to add, or nothing when the PR already has one. P0 is never automatic. */
+export function priority(title: string, tags: string[]) {
+  return hasPriority(tags) ? undefined : levels[kind(title, tags)]
+}
+
+export const labels = [
   { name: label.community, color: "0e8a16", description: "Opened by someone outside the Kilo team" },
-  { name: label.triage, color: "fbca04", description: "Community PR no maintainer has looked at yet" },
-  { name: label.review, color: "1d76db", description: "Community PR waiting for a maintainer" },
+  { name: label.triage, color: "fbca04", description: "Waiting for a maintainer to look" },
   { name: label.awaiting, color: "d4c5f9", description: "Waiting for the contributor to reply" },
-  { name: label.ci, color: "b60205", description: "Community PR with failing checks" },
-  { name: label.high, color: "5319e7", description: "Maintainers want this change. Set by hand." },
-  { name: label.low, color: "cfd3d7", description: "Triaged and not a priority. Set by hand." },
-  {
-    name: label.adopt,
-    color: "e99695",
-    description: "High-value PR with no contributor reply. The team takes it over.",
-  },
+  { name: label.high, color: "5319e7", description: "We want this change. Never auto-closed. Set by hand." },
   { name: label.keep, color: "bfdadc", description: "Never auto-close this PR. Set by hand." },
   { name: label.first, color: "fef2c0", description: "First contribution to this repo. Say hello!" },
   { name: label.quick, color: "bfd4f2", description: "Small, low-risk change. Quick to review." },
@@ -201,8 +233,7 @@ export type State =
   | { state: "awaiting"; since: number; days: number }
 
 // A hand-set label means a maintainer already looked at the PR.
-const triaged = (tags: string[]) =>
-  tags.includes(label.high) || tags.includes(label.low) || priorities.some((item) => tags.includes(item.name))
+const triaged = (tags: string[]) => tags.includes(label.high) || tags.includes(label.keep)
 
 // Whose turn it is. The latest maintainer reaction decides, unless the author
 // answered (comment, review reply or new commit) after it.
@@ -220,12 +251,11 @@ export function classify(events: Event[], tags: string[], now: number): State {
   return { state: "awaiting", since: maintainer.at, days: Math.floor((now - maintainer.at) / DAY) }
 }
 
-export function decide(current: string[], state: State, failing: boolean) {
+// One label for "a maintainer should look": a new PR, or a reply from the contributor.
+export function decide(current: string[], state: State) {
   const want = new Set<string>()
-  if (state.state === "triage") want.add(label.triage)
-  if (state.state === "review") want.add(label.review)
+  if (state.state === "triage" || state.state === "review") want.add(label.triage)
   if (state.state === "awaiting") want.add(label.awaiting)
-  if (failing) want.add(label.ci)
   return {
     add: [...want].filter((name) => !current.includes(name)),
     remove: managed.filter((name) => !want.has(name) && current.includes(name)),
@@ -250,7 +280,7 @@ export type Digest = { title: string; counts: string; blocks: string[] }
 
 // Split into a title, a one-line count summary and one block per section, so
 // Slack can show the summary and put the lists in a thread.
-export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: number): Digest {
+export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: number, limit = LIMIT): Digest {
   const link = (row: Row) => {
     const text = `#${row.number} ${row.title.replace(/[<>|]/g, "")}`
     return mode === "md" ? `[${text}](${row.url})` : `<${row.url}|${text}>`
@@ -261,8 +291,8 @@ export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: numb
   const found: { short: string; count: number; text: string }[] = []
   const section = (name: string, short: string, list: Row[], note: (row: Row) => string) => {
     if (list.length === 0) return
-    const shown = list.slice(0, LIMIT).map((row) => `- ${link(row)} (@${row.author}, ${note(row)})`)
-    const more = list.length > LIMIT ? [`- ...and ${list.length - LIMIT} more`] : []
+    const shown = list.slice(0, limit).map((row) => `- ${link(row)} (@${row.author}, ${note(row)})`)
+    const more = list.length > limit ? [`- ...and ${list.length - limit} more`] : []
     found.push({ short, count: list.length, text: [bold(`${name} (${list.length})`), ...shown, ...more].join("\n") })
   }
   const awaiting = (row: Row) => (row.state.state === "awaiting" ? row.state : undefined)
@@ -315,8 +345,8 @@ export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: numb
   }
 }
 
-export function digest(rows: Row[], mode: "md" | "slack", repo: string, now: number) {
-  const out = parts(rows, mode, repo, now)
+export function digest(rows: Row[], mode: "md" | "slack", repo: string, now: number, limit = LIMIT) {
+  const out = parts(rows, mode, repo, now, limit)
   return [out.title, ...out.blocks.flatMap((block) => ["", block])].join("\n")
 }
 
@@ -370,12 +400,23 @@ const repo = process.env.REPO ?? "Kilo-Org/kilocode"
 const [owner, name] = repo.split("/")
 const bots = (login: string) => login.endsWith("[bot]")
 const trusted = new Set(["OWNER", "MEMBER", "COLLABORATOR"])
-const extra = new Set(
-  (process.env.MAINTAINERS ?? "")
-    .split(",")
-    .map((x) => x.trim().toLowerCase())
-    .filter(Boolean),
-)
+
+// Logins that count as maintainers although they are not in the org: bot and
+// agent accounts, and people outside the org. The file is shared with other
+// tools. Org members are found with the member token, not listed here.
+export function parse(data: unknown) {
+  const list = (data as { logins?: unknown } | null)?.logins
+  const valid = (item: unknown) => typeof item === "string" && /^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i.test(item)
+  if (!Array.isArray(list) || !list.every(valid))
+    throw new Error('.github/community-maintainers.json must look like { "logins": ["login", ...] }')
+  return new Set((list as string[]).map((item) => item.toLowerCase()))
+}
+
+const memo: { list?: Promise<Set<string>> } = {}
+const listed = () =>
+  (memo.list ??= Bun.file(new URL("../../.github/community-maintainers.json", import.meta.url))
+    .json()
+    .then(parse))
 const cache = new Map<string, boolean>()
 
 async function api(path: string, init?: RequestInit & { token?: string; ok?: number[] }) {
@@ -392,10 +433,19 @@ async function api(path: string, init?: RequestInit & { token?: string; ok?: num
   throw new Error(`${init?.method ?? "GET"} ${path} failed: ${res.status} ${await res.text()}`)
 }
 
+// Without MEMBER_TOKEN every private org member looks like a community author.
+// Fail the run, so a missing secret is seen at once and does not label team PRs.
+export function needMember(value: string | undefined) {
+  if (!value)
+    throw new Error(
+      "COMMUNITY_TRIAGE_MEMBER_TOKEN is not set. Without it, private org members are labeled as community authors.",
+    )
+}
+
 // GITHUB_TOKEN cannot see private org members, so they show up as plain
-// contributors. An optional MEMBER_TOKEN (read:org) or MAINTAINERS list fixes that.
+// contributors. MEMBER_TOKEN (read:org) fixes that.
 async function maintainer(login: string, assoc: string) {
-  if (trusted.has(assoc) || extra.has(login.toLowerCase())) return true
+  if (trusted.has(assoc) || (await listed()).has(login.toLowerCase())) return true
   const key = login.toLowerCase()
   const hit = cache.get(key)
   if (hit !== undefined) return hit
@@ -406,9 +456,38 @@ async function maintainer(login: string, assoc: string) {
   return found
 }
 
+type Have = { name: string; color: string; description: string | null }
+
+// Compare the labels on the repo with the list above. A label that exists with
+// another color or description is updated, so edits to the list reach the repo.
+export function sync(have: Have[], want: typeof labels) {
+  const known = new Map(have.map((item) => [item.name.toLowerCase(), item]))
+  const create: typeof labels = []
+  const update: typeof labels = []
+  for (const item of want) {
+    const hit = known.get(item.name.toLowerCase())
+    if (!hit) create.push(item)
+    else if (hit.color.toLowerCase() !== item.color.toLowerCase() || (hit.description ?? "") !== item.description)
+      update.push(item)
+  }
+  return { create, update }
+}
+
 async function ensure() {
-  for (const item of labels)
+  const have: Have[] = []
+  for (let page = 1; page <= 10; page++) {
+    const list: Have[] = await (await api(`/repos/${repo}/labels?per_page=100&page=${page}`)).json()
+    have.push(...list)
+    if (list.length < 100) break
+  }
+  const todo = sync(have, labels)
+  for (const item of todo.create)
     await api(`/repos/${repo}/labels`, { method: "POST", body: JSON.stringify(item), ok: [422] })
+  for (const item of todo.update)
+    await api(`/repos/${repo}/labels/${encodeURIComponent(item.name)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ color: item.color, description: item.description }),
+    })
 }
 
 const add = (num: number, list: string[]) =>
@@ -436,6 +515,7 @@ async function files(num: number) {
 }
 
 async function onevent() {
+  needMember(process.env.MEMBER_TOKEN)
   const event = await Bun.file(process.env.GITHUB_EVENT_PATH!).json()
   const pr = event.pull_request
   const item = pr ?? event.issue
@@ -456,6 +536,11 @@ async function onevent() {
     for (const name of tag ? [tag] : mention(item.title)) tags.add(name)
   }
   const have = new Set<string>(item.labels.map((l: { name: string }) => l.name))
+  // Priority is set upfront on community PRs. An existing label is never changed.
+  if (pr && community) {
+    const auto = priority(pr.title, [...have, ...tags])
+    if (auto) tags.add(auto)
+  }
   const next = [...tags].filter((tag) => !have.has(tag))
   console.log(`#${item.number} ${community ? "community" : "maintainer"}: adding [${next.join(", ")}]`)
   await ensure()
@@ -544,6 +629,7 @@ async function quick(pr: Pull, ready: boolean) {
 }
 
 async function sweep() {
+  needMember(process.env.MEMBER_TOKEN)
   const now = Date.now()
   const enabled = process.env.CLOSE_ENABLED === "true"
   const cap = Number(process.env.MAX_COMMENTS ?? 20)
@@ -610,11 +696,13 @@ async function sweep() {
           ? { state: "review" }
           : first
     const failing = ["FAILURE", "ERROR"].includes(commit?.statusCheckRollup?.state ?? "")
-    const plan = decide(tags, state, failing)
+    const plan = decide(tags, state)
     const more = [...(tags.includes(label.community) ? [] : [label.community])]
     if (!tags.some((tag) => tag.startsWith("area:"))) more.push(...areas(pr.title, await files(pr.number)))
     // Product names in the title cost no request, so they are checked on every run.
     more.push(...mention(pr.title).filter((tag) => !tags.includes(tag) && !more.includes(tag)))
+    const auto = priority(pr.title, [...tags, ...more])
+    if (auto) more.push(auto)
     const green = commit?.statusCheckRollup?.state === "SUCCESS"
     const kind = await quick(pr, green && ["triage", "review", "approved"].includes(state.state))
     const flags: [string, boolean][] = [
@@ -642,7 +730,6 @@ async function sweep() {
     if (state.state === "awaiting" && state.days >= WAIT_DAYS) {
       if (tags.includes(label.high)) {
         row.adopt = true
-        if (!tags.includes(label.adopt)) more.push(label.adopt)
       } else if (!tags.includes(label.keep)) {
         if (!enabled) console.log(`[dry-run] would close #${pr.number} (${state.days}d without reply)`)
         else if (spent < cap) {
@@ -665,17 +752,14 @@ async function sweep() {
       )
     }
 
-    if (state.state !== "awaiting" && tags.includes(label.adopt)) plan.remove.push(label.adopt)
-    console.log(
-      `#${pr.number} ${state.state}${failing ? " ci-failing" : ""} +[${[...plan.add, ...more]}] -[${plan.remove}]`,
-    )
+    console.log(`#${pr.number} ${state.state} +[${[...plan.add, ...more]}] -[${plan.remove}]`)
     await add(pr.number, [...plan.add, ...more])
     await drop(pr.number, row.closed ? [] : plan.remove)
     rows.push(row)
   }
 
   const out = process.env.GITHUB_STEP_SUMMARY
-  if (out) await Bun.write(out, digest(rows, "md", repo, now) + "\n")
+  if (out) await Bun.write(out, digest(rows, "md", repo, now, Infinity) + "\n")
   const payload = process.env.SLACK_PAYLOAD
   if (payload) await Bun.write(payload, JSON.stringify({ text: digest(rows, "slack", repo, now) }))
   // With a bot token and channel, post the summary and thread the lists.
@@ -693,7 +777,7 @@ async function sweep() {
       if (flag) appendFileSync(flag, "slack_failed=true\n")
     }
   }
-  console.log(digest(rows, "md", repo, now))
+  console.log(digest(rows, "md", repo, now, Infinity))
 }
 
 if (import.meta.main) {
