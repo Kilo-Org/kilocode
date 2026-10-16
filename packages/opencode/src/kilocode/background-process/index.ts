@@ -21,6 +21,7 @@ import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
 import { BackgroundProcessRunner } from "./runner"
 import { BackgroundProcessWindows } from "./windows"
+import * as WakeEngine from "./wake"
 import { chmod, mkdir, readFile, readdir, rm, stat } from "fs/promises"
 import { randomUUID } from "crypto"
 import { hostname } from "os"
@@ -81,6 +82,29 @@ export namespace BackgroundProcess {
     .pipe(withStatics((s) => ({ zod: zod(s) })))
   export type Ready = Types.DeepMutable<Schema.Schema.Type<typeof Ready>>
 
+  // kilocode_change start - wake detection for background processes
+  export const Wake = Schema.Struct({
+    pattern: Schema.String.annotate({
+      description:
+        "Regular expression matched against each stdout/stderr line; matching lines " +
+        "wake the owning session with the matched content",
+    }),
+    cooldownMs: optionalOmitUndefined(PositiveInt).annotate({
+      description:
+        "Minimum milliseconds between wake prompt batches (default 1000). Events " +
+        "received within this window are queued, never dropped.",
+    }),
+    batchMax: optionalOmitUndefined(PositiveInt).annotate({
+      description:
+        "Maximum events coalesced into a single wake prompt (default 50). Overflow " +
+        "is flushed on the next dispatch tick.",
+    }),
+  })
+    .annotate({ identifier: "BackgroundProcessWake" })
+    .pipe(withStatics((s) => ({ zod: zod(s) })))
+  export type Wake = Types.DeepMutable<Schema.Schema.Type<typeof Wake>>
+  // kilocode_change end - wake detection for background processes
+
   export const Info = Schema.Struct({
     id: ID,
     sessionID: SessionID,
@@ -115,6 +139,14 @@ export namespace BackgroundProcess {
     ready: optionalOmitUndefined(Ready),
     lifetime: optionalOmitUndefined(Lifetime),
     parentID: optionalOmitUndefined(SessionID),
+    // kilocode_change start - wake field on background process input
+    wake: optionalOmitUndefined(Wake).annotate({
+      description:
+        "Wake detection for this background process. Matching stdout/stderr lines " +
+        "trigger a SessionPrompt for the owning session. Events arriving within the " +
+        "configured cooldown are queued, never dropped.",
+    }),
+    // kilocode_change end - wake field on background process input
   })
     .annotate({ identifier: "BackgroundProcessStartInput" })
     .pipe(withStatics((s) => ({ zod: zod(s) })))
@@ -170,6 +202,9 @@ export namespace BackgroundProcess {
     saving?: Promise<void>
     forgetting?: Promise<void>
     disposed?: boolean
+    // kilocode_change start - wake detection state
+    wake?: WakeEngine.WakeState
+    // kilocode_change end - wake detection state
   }
 
   const Persisted = Schema.Struct({
@@ -492,9 +527,15 @@ export namespace BackgroundProcess {
     persist(active)
   }
 
-  function append(active: Active, chunk: string) {
+  function append(active: Active, chunk: string | Buffer, source?: "stdout" | "stderr") {
     if (active.disposed) return
-    active.info.output = clamp(active.info.output + chunk)
+    // The wake line buffer needs the raw byte chunks to apply incremental
+    // UTF-8 decoding safely. The display/output buffer remains string-based.
+    if (active.wake && chunk !== undefined && source) {
+      WakeEngine.feed(active.wake, source, chunk)
+    }
+    const text = typeof chunk === "string" ? chunk : chunk.toString("utf-8")
+    active.info.output = clamp(active.info.output + text)
     active.info.time.updated = Date.now()
     if (active.pattern?.test(active.info.output)) ready(active)
     schedule(active)
@@ -521,6 +562,15 @@ export namespace BackgroundProcess {
     active.resolve?.(false)
     active.resolve = undefined
     publish(active)
+    // kilocode_change start - flush wake buffers + force dispatch on exit so the
+    // final event (e.g. `{"type":"exit"}`) is not lost.
+    if (active.wake) {
+      WakeEngine.flush(active.wake)
+      if (active.wake.queue.length > 0 || active.wake.dispatching) {
+        void WakeEngine.flushDispatch(active.wake)
+      }
+    }
+    // kilocode_change end - flush wake buffers + force dispatch on exit
   }
 
   function failed(active: Active, err: unknown) {
@@ -537,6 +587,74 @@ export namespace BackgroundProcess {
       throw new Error(`Invalid ready pattern: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
+
+  // kilocode_change start - wake batch dispatch + test seam
+  type WakeBatch = {
+    info: Info
+    ctx: InstanceContext
+    lines: string[]
+  }
+
+  type WakeFire = (input: WakeBatch) => Promise<void>
+
+  let wakeFire: WakeFire = defaultWakeFire
+  export function _setWakeFireForTest(fn?: WakeFire) {
+    wakeFire = fn ?? defaultWakeFire
+  }
+  export function _getWakeFireForTest(): WakeFire {
+    return wakeFire
+  }
+
+  async function fireWakeBatch(active: Active, payload: WakeEngine.WakeFireInput): Promise<void> {
+    await wakeFire({
+      info: active.info,
+      ctx: active.ctx,
+      lines: payload.lines,
+    })
+  }
+
+  function formatWakeMessage(info: Info, lines: string[]): string {
+    const header =
+      `[background process wake] process ${info.id} ` +
+      `(${info.description ?? info.command}) matched ${lines.length} line(s).`
+    const body = lines.map((line, index) => `  ${index + 1}. ${line}`).join("\n")
+    return `${header}\n${body}\n\n` +
+      `These lines were streamed from a background process via wake detection. ` +
+      `Acknowledge each event and act on it. If the final line is an exit event, ` +
+      `stop polling; otherwise continue handling further events as they arrive.`
+  }
+
+  async function defaultWakeFire(input: WakeBatch): Promise<void> {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    const { SessionPrompt } = await import("@/session/prompt")
+    const { ctx } = input
+    const info = input.info
+    const sessionID = info.sessionID
+    const text = formatWakeMessage(info, input.lines)
+    // Fork so the firing promise never blocks on a busy session.
+    await AppRuntime.runPromise(
+      Instance.restore(ctx, () =>
+        Effect.gen(function* () {
+          const svc = yield* SessionPrompt.Service
+          yield* svc
+            .prompt({
+              sessionID,
+              parts: [
+                {
+                  type: "text",
+                  text,
+                  synthetic: true,
+                  metadata: { background: true, wake: true, backgroundProcessID: info.id },
+                },
+              ],
+            })
+            .pipe(Effect.catchCause((cause) => Effect.logError("background wake prompt failed", { cause, id: info.id })))
+            .pipe(Effect.forkDetach)
+        }),
+      ),
+    )
+  }
+  // kilocode_change end - wake batch dispatch + test seam
 
   function connected(port: number) {
     return new Promise<boolean>((resolve) => {
@@ -845,6 +963,10 @@ export namespace BackgroundProcess {
     active.resolve?.(false)
     active.resolve = undefined
     if (active.info.lifetime === "persistent") await forget(state.shared, active)
+    // kilocode_change start - dispose wake state when the process is removed so
+    // any queued timers do not fire after cleanup.
+    if (active.wake) WakeEngine.dispose(active.wake)
+    // kilocode_change end - dispose wake state when the process is removed
     if (opts.silent) return
     await Instance.restore(active.ctx, () =>
       Bus.publish(active.ctx, Event.Deleted, {
@@ -951,6 +1073,10 @@ export namespace BackgroundProcess {
     if (input.ready?.port && (await connected(input.ready.port))) {
       throw new Error(`Ready port is already in use: ${input.ready.port}`)
     }
+    // kilocode_change start - validate wake pattern before launching the process.
+    // The existing `pattern()` helper throws on invalid regex.
+    const wakePattern = pattern(input.wake?.pattern)
+    // kilocode_change end - validate wake pattern before launching the process
     const args = Shell.args(sh, input.command, cwd)
     const lifetime = input.lifetime ?? "session"
     const start = { ...input, cwd, lifetime }
@@ -1010,11 +1136,33 @@ export namespace BackgroundProcess {
       token,
       shared: lifetime === "persistent" ? state.shared : undefined,
       offset: 0,
+      // kilocode_change start - create the wake state up-front when configured
+      wake: wakePattern
+        ? WakeEngine.createWake({
+            pattern: wakePattern,
+            cooldownMs: input.wake?.cooldownMs,
+            batchMax: input.wake?.batchMax,
+            fire: (payload) => fireWakeBatch(active, payload),
+            log: (level, message, meta) =>
+              log[level === "debug" ? "debug" : level === "info" ? "info" : "warn"](message, { id, ...meta }),
+          })
+        : undefined,
+      // kilocode_change end - create the wake state up-front when configured
     }
     const processes = owner(state, lifetime)
     processes.set(id, active)
-    proc.stdout?.on("data", (chunk) => append(active, chunk.toString("utf-8")))
-    proc.stderr?.on("data", (chunk) => append(active, chunk.toString("utf-8")))
+    // kilocode_change start - stream listeners feed the wake line buffer with raw
+    // buffers so UTF-8 is decoded incrementally. They also fall back to the
+    // string-only path for the display output.
+    proc.stdout?.on("data", (chunk) => {
+      if (active.wake) append(active, chunk, "stdout")
+      else append(active, chunk.toString("utf-8"))
+    })
+    proc.stderr?.on("data", (chunk) => {
+      if (active.wake) append(active, chunk, "stderr")
+      else append(active, chunk.toString("utf-8"))
+    })
+    // kilocode_change end - stream listeners feed the wake line buffer
     proc.once("error", (err) => failed(active, err))
     proc.once("exit", (code, signal) => {
       if (processes.get(id) !== active || active.disposed) return
@@ -1124,6 +1272,7 @@ export namespace BackgroundProcess {
         continue
       }
       if (shared.processes.has(record.info.id)) continue
+      const wakePattern = pattern(record.start.wake?.pattern)
       const active: Active = {
         ctx: state.ctx,
         info: record.info,
@@ -1135,6 +1284,21 @@ export namespace BackgroundProcess {
         shared,
         offset: 0,
         saved: true,
+        // kilocode_change start - wake restored for re-adopted persistent process
+        wake: wakePattern
+? WakeEngine.createWake({
+              pattern: wakePattern,
+              cooldownMs: record.start.wake?.cooldownMs,
+              batchMax: record.start.wake?.batchMax,
+              fire: (payload) => fireWakeBatch(active, payload),
+              log: (level, message, meta) =>
+                log[level === "debug" ? "debug" : level === "info" ? "info" : "warn"](message, {
+                  id: record.info.id,
+                  ...meta,
+                }),
+            })
+          : undefined,
+        // kilocode_change end - wake restored for re-adopted persistent process
       }
       active.info.output = ""
       active.info.ports = []
@@ -1203,6 +1367,9 @@ export namespace BackgroundProcess {
                 if (active.watch) clearTimeout(active.watch)
                 if (active.retry) clearTimeout(active.retry)
                 if (active.drain) clearTimeout(active.drain)
+                // kilocode_change start - dispose wake state during shutdown
+if (active.wake) WakeEngine.dispose(active.wake)
+                // kilocode_change end - dispose wake state during shutdown
                 active.proc?.removeAllListeners()
                 active.proc?.stdout?.destroy()
                 active.proc?.stderr?.destroy()
