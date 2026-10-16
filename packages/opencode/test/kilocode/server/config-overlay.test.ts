@@ -500,6 +500,51 @@ describe("config overlay routes", () => {
     expect(response.status).toBe(200)
   })
 
+  test("saves global hooks even when project config defines hooks", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    const hook = { type: "command", command: "guard" }
+    // Project hooks are ignored at runtime, so they must not block writing the global ones.
+    await config(project.path, { hooks: { PreToolUse: [{ hooks: [{ ...hook, command: "project" }] }] } })
+    const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+
+    const response = await req(project.path, "/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        scope: "global",
+        expected: { path: before.targets.global.path, revision: before.targets.global.revision },
+        set: { hooks: { PreToolUse: [{ matcher: "bash", hooks: [hook] }] } },
+      }),
+    })
+
+    expect(response.status).toBe(200)
+    const saved = (await Bun.file(before.targets.global.path).json()) as Config.Info
+    expect(saved.hooks).toEqual({ PreToolUse: [{ matcher: "bash", hooks: [{ type: "command", command: "guard" }] }] })
+  })
+
+  test("lists the Claude Code hooks Kilo runs", async () => {
+    await using project = await tmpdir()
+    const file = path.join(Global.Path.home, ".claude", "settings.json")
+    const guard = { type: "command", command: "guard.sh" }
+    await Filesystem.write(
+      file,
+      JSON.stringify({ hooks: { PreToolUse: [{ matcher: "Bash", hooks: [guard] }], Stop: [{ hooks: [guard] }] } }),
+    )
+    try {
+      const body = await json<{ path: string; enabled: boolean; hooks?: Config.Info["hooks"] }>(
+        await req(project.path, "/config/claude-hooks"),
+      )
+      expect(body.path).toBe(file)
+      expect(body.hooks).toEqual({
+        PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: "guard.sh" }] }],
+      })
+    } finally {
+      await rm(file, { force: true })
+    }
+  })
+
   test("surfaces config validation errors as a typed 400 instead of an opaque 500", async () => {
     await using project = await tmpdir()
     const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))

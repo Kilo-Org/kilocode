@@ -4069,6 +4069,45 @@ export type ConfigSourcesResponse = {
   }>
 }
 
+export type ConfigClaudeHooks = {
+  path: string
+  enabled: boolean
+  hooks?: {
+    PreToolUse?: Array<{
+      /**
+       * Tool names to match: "*" or omitted matches all tools, "edit|write" matches exact names, anything else is a regular expression. Kilo tool ids and their Claude Code names (e.g. Edit, Bash) both match.
+       */
+      matcher?: string
+      hooks: Array<{
+        type: "command"
+        /**
+         * Command to run. Without args it runs through the shell; with args it is the program to spawn directly. It receives the hook input as JSON on stdin.
+         */
+        command: string
+        args?: Array<string>
+        timeout?: number
+        onFailure?: "block"
+      }>
+    }>
+    PostToolUse?: Array<{
+      /**
+       * Tool names to match: "*" or omitted matches all tools, "edit|write" matches exact names, anything else is a regular expression. Kilo tool ids and their Claude Code names (e.g. Edit, Bash) both match.
+       */
+      matcher?: string
+      hooks: Array<{
+        type: "command"
+        /**
+         * Command to run. Without args it runs through the shell; with args it is the program to spawn directly. It receives the hook input as JSON on stdin.
+         */
+        command: string
+        args?: Array<string>
+        timeout?: number
+        onFailure?: "block"
+      }>
+    }>
+  }
+}
+
 export type ConfigOverlayConflictError = {
   code: "target-changed" | "revision-conflict"
   message: string
@@ -15874,6 +15913,34 @@ export type ConfigSourcesResponses = {
 }
 
 export type ConfigSourcesResponse2 = ConfigSourcesResponses[keyof ConfigSourcesResponses]
+
+export type ConfigClaudeHooksData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/claude-hooks"
+}
+
+export type ConfigClaudeHooksErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type ConfigClaudeHooksError = ConfigClaudeHooksErrors[keyof ConfigClaudeHooksErrors]
+
+export type ConfigClaudeHooksResponses = {
+  /**
+   * Claude Code hooks
+   */
+  200: ConfigClaudeHooks
+}
+
+export type ConfigClaudeHooksResponse = ConfigClaudeHooksResponses[keyof ConfigClaudeHooksResponses]
 
 export type ConfigEffectiveData = {
   body?: never

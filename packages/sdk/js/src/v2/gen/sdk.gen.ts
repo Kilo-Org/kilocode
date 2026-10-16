@@ -47,6 +47,8 @@ import type {
   CommitMessageGenerateErrors,
   CommitMessageGenerateResponses,
   Config as Config4,
+  ConfigClaudeHooksErrors,
+  ConfigClaudeHooksResponses,
   ConfigEffectiveErrors,
   ConfigEffectiveResponses,
   ConfigGetErrors,
@@ -1899,6 +1901,36 @@ export class Config2 extends HeyApiClient {
     )
     return (options?.client ?? this.client).get<ConfigSourcesResponses, ConfigSourcesErrors, ThrowOnError>({
       url: "/config/sources",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get Claude Code hooks
+   *
+   * List the PreToolUse and PostToolUse hooks Kilo runs from ~/.claude/settings.json, and whether Claude Code hooks are enabled for this server.
+   */
+  public claudeHooks<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<ConfigClaudeHooksResponses, ConfigClaudeHooksErrors, ThrowOnError>({
+      url: "/config/claude-hooks",
       ...options,
       ...params,
     })

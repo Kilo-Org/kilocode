@@ -4,6 +4,7 @@ import { GlobalBus } from "@/bus/global"
 import { Config } from "@/config/config"
 import * as InstanceState from "@/effect/instance-state"
 import { KilocodeConfigOverlay } from "@/kilocode/config/overlay"
+import { KiloHooks } from "@/kilocode/hooks/hooks"
 import { KilocodeConfigWriter } from "@/kilocode/config/writer"
 import { KilocodeConfigSources } from "@/kilocode/config/sources"
 import { KilocodeModelState } from "@/kilocode/config/model-state"
@@ -142,7 +143,8 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
           new ConfigOverlayConflictError({ code: result.code, message: result.message, target: result.target }),
         )
       }
-      const hot = body.scope === "global" && Object.keys(patch).every((key) => key === "console")
+      // Keys read live on every use, so running sessions need not be restarted when they change.
+      const hot = body.scope === "global" && Object.keys(patch).every((key) => key === "console" || key === "hooks")
       if (body.scope === "global") {
         yield* config.invalidate()
         if (result.changed) {
@@ -195,6 +197,10 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
           account: active,
         }),
       )
+    })
+
+    const claudeHooks = Effect.fn("ConfigConsoleHttpApi.claudeHooks")(function* () {
+      return yield* Effect.promise(() => KiloHooks.claude())
     })
 
     const effective = Effect.fn("ConfigConsoleHttpApi.effective")(function* () {
@@ -270,6 +276,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
       .handle("overlay", overlay)
       .handle("overlayUpdate", overlayUpdate)
       .handle("sources", sources)
+      .handle("claudeHooks", claudeHooks)
       .handle("effective", effective)
       .handle("rules", rules)
       .handle("rulesUpdate", rulesUpdate)

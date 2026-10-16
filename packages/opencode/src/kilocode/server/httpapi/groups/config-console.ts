@@ -178,8 +178,15 @@ export const TuiKeybindListResponse = Schema.Struct({ keybinds: Schema.Array(Kil
   identifier: "TuiKeybindListResponse",
 })
 
+export const ConfigClaudeHooksResponse = Schema.Struct({
+  path: Schema.String,
+  enabled: Schema.Boolean,
+  hooks: Config.Info.fields.hooks,
+}).annotate({ identifier: "ConfigClaudeHooks" })
+
 export const ConfigConsolePaths = {
   sources: "/config/sources",
+  claudeHooks: "/config/claude-hooks",
   effective: "/config/effective",
   overlay: "/config/overlay",
   rules: "/config/rules",
@@ -211,6 +218,17 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
             identifier: "config.sources",
             summary: "List config sources",
             description: "List config source metadata in load order without exposing config contents or secrets.",
+          }),
+        ),
+        HttpApiEndpoint.get("claudeHooks", ConfigConsolePaths.claudeHooks, {
+          query: WorkspaceRoutingQuery,
+          success: described(ConfigClaudeHooksResponse, "Claude Code hooks"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "config.claudeHooks",
+            summary: "Get Claude Code hooks",
+            description:
+              "List the PreToolUse and PostToolUse hooks Kilo runs from ~/.claude/settings.json, and whether Claude Code hooks are enabled for this server.",
           }),
         ),
         HttpApiEndpoint.get("effective", ConfigConsolePaths.effective, {

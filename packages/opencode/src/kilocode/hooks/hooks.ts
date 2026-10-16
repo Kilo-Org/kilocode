@@ -143,6 +143,15 @@ export const load = Effect.fn("KiloHooks.load")(function* (cfg: { hooks?: Hooks 
   return concat(cfg.hooks, extra) ?? {}
 })
 
+/** Claude Code user hooks as Kilo runs them, for settings UIs. */
+export async function claude() {
+  return {
+    path: path.join(Global.Path.home, ".claude", "settings.json"),
+    enabled: !Flag.KILO_DISABLE_CLAUDE_CODE_HOOKS,
+    hooks: await read(Global.Path.home),
+  }
+}
+
 /** Reads the command hooks of Claude Code's user settings, skipping what Kilo cannot honor. */
 export async function read(home: string): Promise<Hooks | undefined> {
   const file = Bun.file(path.join(home, ".claude", "settings.json"))
