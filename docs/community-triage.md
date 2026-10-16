@@ -11,7 +11,7 @@ Background: [Slack discussion](https://anaconda.slack.com/archives/C0BJ2GQ40HM/p
 ```mermaid
 flowchart LR
     A[PR or issue opened] --> B[community-label.yml]
-    B --> C[Labels: community, needs-triage,<br/>first-time-contributor, area:*]
+    B --> C[Labels: community, needs-triage,<br/>priority:*, first-time-contributor, area:*]
     C --> D[community-sweep.yml<br/>Mon + Thu 17:00 UTC]
     D --> E[Status labels synced]
     D --> F[Queue posted to job summary and Slack]
@@ -26,8 +26,8 @@ Two workflows do the work. Both use `script/kilocode/community-triage.ts`. A thi
 
 | Workflow | Runs | Does |
 |---|---|---|
-| `community-label.yml` | When a PR or issue opens or is edited | Adds `community`, `needs-triage` (new items only, not reopened ones), `first-time-contributor` and `area:*` labels |
-| `community-sweep.yml` | Monday and Thursday, 17:00 UTC, or by hand | Syncs status labels, `first-time-contributor` and `quick-win`, closes stale PRs, posts the queue |
+| `community-label.yml` | When a PR or issue opens or is edited | Adds `community`, `needs-triage` (new items only, not reopened ones), `first-time-contributor`, `area:*` and, for PRs, `priority:*` labels |
+| `community-sweep.yml` | Monday and Thursday, 17:00 UTC, or by hand | Syncs status labels, `first-time-contributor` and `quick-win`, adds a missing priority, closes stale PRs, posts the queue |
 | `community-triage-test.yml` | On PRs that change the script, its tests or the community workflows | Runs the unit tests |
 
 The sweep runs the evening before each maintainer slot. Andrea starts Friday and Bruno starts Tuesday with a fresh queue.
@@ -54,20 +54,17 @@ Set by the workflows:
 | `area:vscode`, `area:cli`, `area:agent-manager`, `area:jetbrains`, `area:desktop`, `area:docs`, `area:gateway`, `area:sdk`, `area:ui`, `area:i18n` | Part of the repo. Comes from the title scope (`fix(vscode): ...`), a product name in the title ("Kilo Desktop", "Agent Manager" or "JetBrains"), the changed paths, or the issue "Component" dropdown |
 | `first-time-contributor` | First contribution to this repo. See [First-time contributors](#first-time-contributors) |
 | `quick-win` | Small, low-risk PR. See [Quick wins](#quick-wins) |
-| `needs-triage` | No maintainer has reacted yet |
-| `needs-review` | The contributor replied or pushed. A maintainer should look again |
+| `priority:p1`, `priority:p2`, `priority:p3` | Set from the title when a community PR opens. See [Priority](#priority) |
+| `needs-triage` | A maintainer should look: a new PR, or the contributor replied or pushed |
 | `awaiting-contributor` | A maintainer reacted last. The 14 day clock runs |
-| `ci-failing` | Checks on the last commit failed |
-| `needs-reimplementation` | `high-value` PR with no reply for 14 days. The team takes it over |
 
 Set by hand:
 
 | Label | Meaning |
 |---|---|
 | `high-value` | We want this change. The sweep never closes it |
-| `low-value` | Triaged. Not a priority |
 | `keep-open` | The sweep never closes this PR |
-| `priority:p0` to `priority:p3` | Optional priority: critical, high, medium, low. A PR with one counts as triaged. Tools that read GitHub labels can use it |
+| `priority:p0` to `priority:p3` | Change the priority by hand. P0 (critical) is only ever set by hand. The sweep never changes an existing priority |
 
 The sweep owns the status labels, `first-time-contributor` and `quick-win`. It adds and removes them on its own. Do not manage them by hand.
 
@@ -79,7 +76,7 @@ The sweep also removes `community`, `first-time-contributor`, `quick-win` and th
 
 The sweep reads the comments, reviews, review replies, commits and reopen events of each open community PR. Drafts are skipped. A reopen by the author counts as a reply. The sweep ignores commit dates more than 5 minutes in the future.
 
-The sweep reads only the latest events. If it finds no maintainer reaction on a PR with more events than it can read, it labels the PR `needs-review` so a person decides.
+The sweep reads only the latest events. If it finds no maintainer reaction on a PR with more events than it can read, it labels the PR `needs-triage` so a person decides.
 
 ```mermaid
 stateDiagram-v2
@@ -98,12 +95,27 @@ stateDiagram-v2
 
 | State | Label | Rule |
 |---|---|---|
-| triage | `needs-triage` | No maintainer reaction yet, and no `high-value`, `low-value` or `priority:*` label |
-| review | `needs-review` | The contributor acted after the last maintainer reaction, or a `high-value`, `low-value` or `priority:*` label exists |
+| triage | `needs-triage` | No maintainer reaction yet, and no `high-value` or `keep-open` label |
+| review | `needs-triage` | The contributor acted after the last maintainer reaction, or a `high-value` or `keep-open` label exists |
 | approved | none | The last maintainer reaction is an approval |
 | awaiting | `awaiting-contributor` | The last maintainer reaction asked for something and the contributor has not answered |
 
 The 14 day clock starts at the time of the last maintainer reaction.
+
+## Priority
+
+Every community PR gets a priority label when it opens, so the queue can be sorted at once. The label workflow sets it. The sweep adds it to PRs that have none. Other tools can read the same label.
+
+| Type | How it is detected | Label |
+|---|---|---|
+| Fix | Title starts with `fix`, `fixes`, `bugfix`, `hotfix` or `revert`, or the PR has the `bug` label | `priority:p1` |
+| Feature | Title starts with `feat`, `feature`, `add`, `adds`, `support` or `implement`, or the PR has the `enhancement` or `feature` label | `priority:p2` |
+| Other | Nothing above fits | `priority:p2` |
+| Docs | Title starts with `docs` or `documentation`, or the PR has a docs label, or `area:docs` is its only area | `priority:p3` |
+
+A title prefix wins over labels, and labels win over the area. P0 is never automatic.
+
+To change a priority, edit the label on GitHub. The sweep never changes an existing priority, even when the title changes. Priority does not mean the PR is triaged. A PR is triaged when a maintainer reacts, or when it has `high-value` or `keep-open`.
 
 ## First-time contributors
 
@@ -141,7 +153,7 @@ When a PR has been `awaiting-contributor` for 14 days:
 
 | PR | Result |
 |---|---|
-| Has `high-value` | Gets `needs-reimplementation` and shows in the digest under "Adopt". Add it to the standup doc and pick an owner |
+| Has `high-value` | Stays open and shows in the digest under "Adopt". Add it to the standup doc and pick an owner |
 | Has `keep-open` | Nothing happens |
 | Anything else | Closed with a comment |
 
@@ -159,7 +171,7 @@ Open the latest "Community sweep" run. The job summary has the queue. A copy goe
 
 1. **Adopt**: pick an owner and add the PR to the standup doc.
 2. **Quick wins**: review these first. They are the fastest way to clear the queue.
-3. **Needs triage**: decide. Add `high-value`, `low-value` or a `priority:*` label, or comment on it. Not sure? Put it in the standup doc.
+3. **Needs triage**: decide. Comment on it, or add `high-value` or `keep-open`. Change the priority if it is wrong. Not sure? Put it in the standup doc.
 4. **Needs review**: the contributor replied. Review again.
 5. **Approved**: merge.
 6. **Waiting for contributor**: nothing to do.
@@ -171,7 +183,7 @@ Friday and Tuesday are three to four days apart. This gives contributors time to
 Useful searches:
 
 - All community PRs: `is:pr is:open label:community`
-- Needs a maintainer: `is:pr is:open label:needs-triage,needs-review`
+- Needs a maintainer: `is:pr is:open label:needs-triage`
 - One area: `is:pr is:open label:community label:area:vscode`
 - Quick wins: `is:pr is:open label:quick-win`
 - First-time contributors: `is:pr is:open label:first-time-contributor`
@@ -187,7 +199,7 @@ The sweep can post the queue to Slack. Slack is optional.
 
 ## Issues
 
-New issues get the `community` label, `needs-triage`, `first-time-contributor` for new authors and an `area:*` label. The area comes from the required "Component" dropdown in the bug and feature templates. If there is no answer, for example "Other / not sure" or an issue that skips the form, a product name in the title is used instead. The sweep only handles PRs, so older issues get their labels when they are edited.
+New issues get the `community` label, `needs-triage`, `first-time-contributor` for new authors and an `area:*` label. The area comes from the required "Component" dropdown in the bug and feature templates. If there is no answer, for example "Other / not sure" or an issue that skips the form, a product name in the title is used instead. The sweep only handles PRs, so older issues get their labels when they are edited, and `needs-triage` on an issue stays until you remove it by hand.
 
 ## Setup
 
