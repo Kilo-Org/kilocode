@@ -55,7 +55,7 @@ Each event holds a list of groups. A group has an optional `matcher` and a list 
 | `hooks[].timeout` | Timeout in seconds. Defaults to 60. |
 | `hooks[].onFailure` | Optional. Set to `"block"` so a `PreToolUse` hook that fails (timeout, crash, unexpected exit code) blocks the call instead of letting it run. |
 
-All hooks that match a tool call run in parallel, up to 8 at a time. The same command runs only once per tool call, even if several groups match. When a hook times out, its whole process tree is stopped.
+All hooks that match a tool call run in parallel, up to 8 at a time. The same command runs only once, even if several groups match (for `apply_patch`, once per patched file). When a hook times out, its whole process tree is stopped.
 
 {% callout type="warning" %}
 Hooks are only read from your global config, managed config, and organization config. Hooks in a project's `kilo.json`, `kilo.jsonc`, or `.kilo/` folder are ignored, so a repository you clone cannot run commands on your machine.

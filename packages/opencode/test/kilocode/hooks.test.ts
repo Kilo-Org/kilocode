@@ -318,7 +318,7 @@ describe("running hooks", () => {
 
   test("passes the hook input on stdin", async () => {
     const handler = exec(
-      "Bun.stdin.text().then((text) => { const data = JSON.parse(text); console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: data.tool_name + ' ' + data.tool_input.file_path } })) })",
+      "let text = ''; process.stdin.on('data', (chunk) => (text += chunk)); process.stdin.on('end', () => { const data = JSON.parse(text); console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: data.tool_name + ' ' + data.tool_input.file_path } })) })",
     )
     const result = await Effect.runPromise(
       KiloHooks.before(hooks("PreToolUse", handler), call("write", { filePath: "a.txt" })),
@@ -349,6 +349,20 @@ describe("running hooks", () => {
       "empty command",
     )
     const outcome = await KiloHooks.run({ type: "command", command: "a\0b", args: [] }, {}, { cwd: process.cwd() })
+    expect(outcome.error).toBeDefined()
+  })
+
+  test("reports exit code 1 of a shell-form hook as an exit code", async () => {
+    const outcome = await KiloHooks.run(
+      { type: "command", command: script("process.exit(1)") },
+      {},
+      { cwd: process.cwd() },
+    )
+    expect(outcome).toEqual({ code: 1, stdout: "", stderr: "" })
+  })
+
+  test("reports input that cannot be serialized instead of throwing", async () => {
+    const outcome = await KiloHooks.run(exec("process.exit(0)"), { size: 1n }, { cwd: process.cwd() })
     expect(outcome.error).toBeDefined()
   })
 

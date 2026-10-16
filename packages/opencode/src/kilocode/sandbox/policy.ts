@@ -3,6 +3,7 @@ import os from "node:os"
 import path from "node:path"
 import { Effect, Semaphore } from "effect"
 import { Global } from "@opencode-ai/core/global"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { Database } from "@opencode-ai/core/database/database"
 import { backendSupport, run as runSandbox, unrestricted, type Profile } from "@kilocode/sandbox"
 import { Bus } from "@/bus"
@@ -251,8 +252,8 @@ export function profile(
   return {
     filesystem: {
       allowWrite: writable,
-      // Config that can make Kilo run commands outside the sandbox: global config, legacy global
-      // config dirs, and Claude Code settings (hooks).
+      // Config that can make Kilo run commands outside the sandbox: global config (including a
+      // KILO_CONFIG_DIR or KILO_CONFIG override), legacy global config dirs, and Claude Code settings (hooks).
       denyWrite: [
         root(SandboxStore.root),
         root(SandboxPreference.root),
@@ -260,6 +261,8 @@ export function profile(
         root(path.join(Global.Path.home, ".kilo")),
         root(path.join(Global.Path.home, ".kilocode")),
         root(path.join(Global.Path.home, ".claude")),
+        ...(Flag.KILO_CONFIG_DIR ? [root(path.resolve(Flag.KILO_CONFIG_DIR))] : []),
+        ...(Flag.KILO_CONFIG ? [{ path: path.resolve(Flag.KILO_CONFIG), kind: "literal" as const }] : []),
       ],
       denyNames: [".git"],
       temporaryDirectory: Global.Path.tmp,

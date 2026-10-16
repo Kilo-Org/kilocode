@@ -1,5 +1,6 @@
 import path from "path"
 import type { Readable } from "node:stream"
+import { spawn as native, type SpawnOptions } from "node:child_process"
 import launch from "cross-spawn"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -54,6 +55,7 @@ const MAX_TIMEOUT = 24 * 60 * 60 // seconds
 const LIMIT = 1024 * 1024 // captured bytes per output stream
 const FEEDBACK = 10_000 // characters of hook output shown to the model
 const DRAIN = 500 // ms to keep reading output after the hook exits
+const GRACE = 2_000 // ms to wait for a killed hook to exit before giving up on it
 const CONCURRENCY = 8 // hook processes run at once for one tool call
 // Kilo's built-in tools name these arguments in camelCase; Claude Code scripts read the snake_case names.
 const KEYS: Record<string, string> = {
@@ -306,68 +308,87 @@ function seconds(timeout: number | undefined) {
  */
 export function run(handler: Handler, payload: unknown, opts: { cwd: string; abort?: AbortSignal }) {
   const limit = seconds(handler.timeout)
-  if (opts.abort?.aborted) return Promise.resolve<Outcome>({ stdout: "", stderr: "", error: "aborted" })
-  if (!handler.command.trim()) return Promise.resolve<Outcome>({ stdout: "", stderr: "", error: "empty command" })
-  return new Promise<Outcome>((resolve) => {
-    const child = spawn(handler, opts.cwd)
-    if (child instanceof Error) return resolve({ stdout: "", stderr: "", error: errorMessage(child) })
-    if (child.pid !== undefined) live.add(child.pid)
-    // Set when the hook is stopped, and read at exit time so a late drain cannot change the outcome.
-    let stopped: "timeout" | "aborted" | undefined
-    let exited = false
-    const stop = (reason: "timeout" | "aborted") => {
-      if (stopped || exited) return
-      stopped = reason
-      kill(child.pid)
-    }
-    const timer = setTimeout(() => stop("timeout"), limit * 1000)
-    const abort = () => stop("aborted")
-    opts.abort?.addEventListener("abort", abort, { once: true })
-    const done = () => {
-      clearTimeout(timer)
-      opts.abort?.removeEventListener("abort", abort)
-      if (child.pid !== undefined) live.delete(child.pid)
-    }
-    const out = collect(child.stdout)
-    const err = collect(child.stderr)
-    child.stdin?.on("error", (error) => log.debug("hook closed stdin early", { err: errorMessage(error) }))
-    child.stdin?.end(JSON.stringify(payload))
-    child.on("error", (error) => {
-      done()
-      resolve({ stdout: "", stderr: "", error: errorMessage(error) })
-    })
-    child.on("exit", (code) => {
-      exited = true
-      done()
-      const reason = stopped
-      // A background process started by the hook can keep the pipes open; stop reading shortly after exit.
-      const drain = setTimeout(() => {
-        child.stdout?.destroy()
-        child.stderr?.destroy()
-      }, DRAIN)
-      void Promise.all([out, err]).then(([stdout, stderr]) => {
-        clearTimeout(drain)
-        if (reason === "timeout") return resolve({ stdout, stderr, error: `timed out after ${limit}s` })
-        if (reason === "aborted") return resolve({ stdout, stderr, error: "aborted" })
-        resolve({ code: code ?? 1, stdout, stderr })
-      })
+  const fail = (error: string) => Promise.resolve<Outcome>({ stdout: "", stderr: "", error })
+  if (opts.abort?.aborted) return fail("aborted")
+  if (!handler.command.trim()) return fail("empty command")
+  const input = attempt(() => JSON.stringify(payload))
+  if (input instanceof Error) return fail(errorMessage(input))
+  const child = attempt(() => spawn(handler, opts.cwd))
+  if (child instanceof Error) return fail(errorMessage(child))
+  const pid = child.pid
+  if (pid !== undefined) live.add(pid)
+  const result = Promise.withResolvers<Outcome>()
+  // Set when the hook is stopped, and read at exit time so a late drain cannot change the outcome.
+  let stopped: "timeout" | "aborted" | undefined
+  let exited = false
+  const reason = (stop: "timeout" | "aborted") => (stop === "timeout" ? `timed out after ${limit}s` : "aborted")
+  const stop = (why: "timeout" | "aborted") => {
+    if (stopped || exited) return
+    stopped = why
+    kill(pid)
+    // If the kill does not take effect, give up on the hook rather than hang the tool call. The pid
+    // stays in `live`, so Kilo tries again when it exits.
+    setTimeout(() => {
+      if (exited) return
+      child.stdout?.destroy()
+      child.stderr?.destroy()
+      result.resolve({ stdout: "", stderr: "", error: reason(why) })
+    }, GRACE).unref()
+  }
+  const timer = setTimeout(() => stop("timeout"), limit * 1000)
+  const abort = () => stop("aborted")
+  opts.abort?.addEventListener("abort", abort, { once: true })
+  const done = () => {
+    clearTimeout(timer)
+    opts.abort?.removeEventListener("abort", abort)
+    if (pid !== undefined) live.delete(pid)
+  }
+  const out = collect(child.stdout)
+  const err = collect(child.stderr)
+  child.stdin?.on("error", (error) => log.debug("hook closed stdin early", { err: errorMessage(error) }))
+  child.stdin?.end(input)
+  child.on("error", (error) => {
+    done()
+    result.resolve({ stdout: "", stderr: "", error: errorMessage(error) })
+  })
+  child.on("exit", (code) => {
+    exited = true
+    done()
+    const why = stopped
+    // A background process started by the hook can keep the pipes open; stop reading shortly after exit.
+    const drain = setTimeout(() => {
+      child.stdout?.destroy()
+      child.stderr?.destroy()
+    }, DRAIN)
+    void Promise.all([out, err]).then(([stdout, stderr]) => {
+      clearTimeout(drain)
+      if (why) return result.resolve({ stdout, stderr, error: reason(why) })
+      result.resolve({ code: code ?? 1, stdout, stderr })
     })
   })
+  return result.promise
 }
 
-function spawn(handler: Handler, cwd: string) {
+function attempt<T>(fn: () => T) {
   try {
-    return launch(handler.command, handler.args ?? [], {
-      shell: handler.args === undefined,
-      cwd,
-      env: modelEnv({ KILO_PROJECT_DIR: cwd, CLAUDE_PROJECT_DIR: cwd }), // hooks must not inherit backend credentials
-      stdio: ["pipe", "pipe", "pipe"],
-      windowsHide: true,
-      detached: process.platform !== "win32", // own process group, so a timeout can kill the whole tree
-    })
+    return fn()
   } catch (error) {
     return error instanceof Error ? error : new Error(String(error))
   }
+}
+
+function spawn(handler: Handler, cwd: string) {
+  const opts: SpawnOptions = {
+    cwd,
+    env: modelEnv({ KILO_PROJECT_DIR: cwd, CLAUDE_PROJECT_DIR: cwd }), // hooks must not inherit backend credentials
+    stdio: "pipe",
+    windowsHide: true,
+    detached: process.platform !== "win32", // own process group, so a timeout can kill the whole tree
+  }
+  // cross-spawn resolves programs the way a shell would (PATHEXT, shebangs on Windows), but it adds
+  // nothing to shell form and reports any exit code 1 there as ENOENT on Windows.
+  if (handler.args === undefined) return native(handler.command, { ...opts, shell: true })
+  return launch(handler.command, handler.args, opts)
 }
 
 // Hooks run in their own process group, which a kill of Kilo's group does not reach: stop any

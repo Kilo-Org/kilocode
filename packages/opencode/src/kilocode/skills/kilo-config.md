@@ -277,7 +277,7 @@ Skills are markdown files at `skills/<name>/SKILL.md` (or `skill/<name>/SKILL.md
 
 ## Hooks
 
-`hooks` runs shell commands before or after tool calls, using the Claude Code hooks format. Hooks are **only read from the global config** (`~/.config/kilo/kilo.jsonc`); hooks in project `kilo.json`, `kilo.jsonc` or `.kilo/` are ignored, so write them to the global file.
+`hooks` runs shell commands before or after tool calls, using the Claude Code hooks format. Hooks are **only read from trusted config**: the global config (`~/.config/kilo/kilo.jsonc`), managed config, and organization config. Hooks in project `kilo.json`, `kilo.jsonc` or `.kilo/` are ignored, so write them to the global file.
 
 ```jsonc
 {
