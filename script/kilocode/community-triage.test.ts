@@ -101,6 +101,11 @@ describe("classify", () => {
     expect(classify([author(3)], [label.high], now)).toEqual({ state: "review" })
   })
 
+  test("a priority label counts as triaged", () => {
+    expect(classify([author(3)], ["priority:p2"], now)).toEqual({ state: "review" })
+    expect(classify([author(3)], ["priority:p9"], now)).toEqual({ state: "triage" })
+  })
+
   test("waits for the contributor after a maintainer reaction", () => {
     expect(classify([author(5), maintainer(3)], [], now)).toEqual({ state: "awaiting", since: ago(3), days: 3 })
   })

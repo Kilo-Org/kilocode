@@ -34,6 +34,14 @@ const managed = [label.triage, label.review, label.awaiting, label.ci]
 export const cleanup = (current: string[]) =>
   [label.community, label.adopt, label.first, label.quick, ...managed].filter((name) => current.includes(name))
 
+// Hand-set priority labels. One list feeds both label creation and the triage rule.
+const priorities = [
+  { name: "priority:p0", color: "b60205", description: "Critical. Set by hand." },
+  { name: "priority:p1", color: "d93f0b", description: "High: important fixes, regressions. Set by hand." },
+  { name: "priority:p2", color: "fbca04", description: "Medium: normal fixes and valuable features. Set by hand." },
+  { name: "priority:p3", color: "c5def5", description: "Low: docs, polish, speculative features. Set by hand." },
+]
+
 const labels = [
   { name: label.community, color: "0e8a16", description: "Opened by someone outside the Kilo team" },
   { name: label.triage, color: "fbca04", description: "Community PR no maintainer has looked at yet" },
@@ -50,6 +58,7 @@ const labels = [
   { name: label.keep, color: "bfdadc", description: "Never auto-close this PR. Set by hand." },
   { name: label.first, color: "fef2c0", description: "First contribution to this repo. Say hello!" },
   { name: label.quick, color: "bfd4f2", description: "Small, low-risk change. Quick to review." },
+  ...priorities,
   { name: "area:vscode", color: "ededed", description: "VS Code extension" },
   { name: "area:cli", color: "ededed", description: "CLI, TUI and core engine" },
   { name: "area:agent-manager", color: "ededed", description: "Agent Manager" },
@@ -191,6 +200,10 @@ export type State =
   | { state: "approved" }
   | { state: "awaiting"; since: number; days: number }
 
+// A hand-set label means a maintainer already looked at the PR.
+const triaged = (tags: string[]) =>
+  tags.includes(label.high) || tags.includes(label.low) || priorities.some((item) => tags.includes(item.name))
+
 // Whose turn it is. The latest maintainer reaction decides, unless the author
 // answered (comment, review reply or new commit) after it.
 export function classify(events: Event[], tags: string[], now: number): State {
@@ -201,7 +214,7 @@ export function classify(events: Event[], tags: string[], now: number): State {
       .at(0)
   const maintainer = last("maintainer")
   const author = last("author")
-  if (!maintainer) return { state: tags.includes(label.high) || tags.includes(label.low) ? "review" : "triage" }
+  if (!maintainer) return { state: triaged(tags) ? "review" : "triage" }
   if (author && author.at > maintainer.at) return { state: "review" }
   if (maintainer.approve) return { state: "approved" }
   return { state: "awaiting", since: maintainer.at, days: Math.floor((now - maintainer.at) / DAY) }
