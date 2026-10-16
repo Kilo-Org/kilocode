@@ -7,6 +7,8 @@ import { Provider } from "@/provider/provider"
 import {
   AUTO_DECISION_HEADER,
   ClientCustomRouterEntrySchema,
+  CustomRouterEntryRefSchema,
+  parseCustomRouterCandidateModel,
   type CustomRouterListEntry,
   type CustomRouterListResponse,
   type FetchLike,
@@ -357,6 +359,21 @@ describe("KiloCustomRouter routed model", () => {
         providers: CATALOG,
       }),
     ).toBeUndefined()
+  })
+})
+
+describe("custom router contracts mirror", () => {
+  test("rejects a gateway entry that uses the reserved client prefix", () => {
+    expect(CustomRouterEntryRefSchema.safeParse({ kind: "gateway", model: "client:ollama/qwen3" }).success).toBe(false)
+    expect(parseCustomRouterCandidateModel("client:ollama/qwen3")).toEqual({
+      kind: "client",
+      provider: "ollama",
+      model: "qwen3",
+    })
+    expect(parseCustomRouterCandidateModel("anthropic/claude-sonnet-4")).toEqual({
+      kind: "gateway",
+      model: "anthropic/claude-sonnet-4",
+    })
   })
 })
 

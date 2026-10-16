@@ -71,14 +71,22 @@ export const ClientCustomRouterEntrySchema = z.object({
 })
 export type ClientCustomRouterEntry = z.infer<typeof ClientCustomRouterEntrySchema>
 
+export const CLIENT_CANDIDATE_PREFIX = "client:"
+
+const GatewayModelIdSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .refine((model) => !model.startsWith(CLIENT_CANDIDATE_PREFIX), "Gateway model ID must not start with the client prefix")
+
 export const CustomRouterEntryRefSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("gateway"), model: z.string().min(1) }),
+  z.object({ kind: z.literal("gateway"), model: GatewayModelIdSchema }),
   z.object({ kind: z.literal("client"), provider: z.string().min(1), model: z.string().min(1) }),
 ])
 export type CustomRouterEntryRef = z.infer<typeof CustomRouterEntryRefSchema>
 
 export const CustomRouterEntrySchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("gateway"), model: z.string().min(1) }),
+  z.object({ kind: z.literal("gateway"), model: GatewayModelIdSchema }),
   ClientCustomRouterEntrySchema,
 ])
 export type CustomRouterEntry = z.infer<typeof CustomRouterEntrySchema>
@@ -92,11 +100,11 @@ export function customRouterCandidateModel(entry: CustomRouterEntryRef): string 
 }
 
 export function parseCustomRouterCandidateModel(model: string): CustomRouterEntryRef | null {
-  if (!model.startsWith("client:")) {
+  if (!model.startsWith(CLIENT_CANDIDATE_PREFIX)) {
     const gateway = CustomRouterEntryRefSchema.safeParse({ kind: "gateway", model })
     return gateway.success ? gateway.data : null
   }
-  const id = model.slice("client:".length)
+  const id = model.slice(CLIENT_CANDIDATE_PREFIX.length)
   const separator = id.indexOf("/")
   if (separator === -1) return null
   const client = CustomRouterEntryRefSchema.safeParse({
