@@ -159,11 +159,22 @@ Grow the test surface with each PR.
 - Never delete or skip a test silently. List every skip in the PR with its reason.
 - Self-test each user-visible behavior you add, and record the scenario so the next PR can repeat it.
 
+## Progress map
+
+`migration-tracking/progress/README.md` is the generated map of Kilo's v1 delta: one cell per Kilo-owned file, `/kilocode/*` API operation and hook in a shared upstream file, grouped by feature. `bun script/upstream/progress.ts` regenerates it; CI fails when it is stale. Module and API cells turn done on their own when the file or path literal lands on v2. Hooks and decisions do not, so for every unit:
+
+- Before you start, run `bun script/upstream/progress.ts --list <feature>`. The open cells are the inventory of the feature; each hook cell names its v1 source line.
+- When you port a hook, put its ID on the marker of the v2 code that replaces it: `// kilocode_change(<feature>:<id>)`. Without the ID the hook stays open.
+- When a hook or module needs no port, add its cell ID to `migration-tracking/progress/dispositions.json` with `state` (`native` when v2 has the behavior built in, `facade` when the v1 compatibility layer serves it, `dropped` when the feature is not carried), a `note` with the reason, and `by`. Do not mark a cell `ported` by disposition when a marker or file can prove it.
+- A loose hook that lands in `unattributed:<area>` belongs to a feature. Tag its v1 marker on `main` as `kilocode_change(<feature>)` in a small follow-up PR; the next re-pin moves it.
+- Regenerate before you commit. CI posts one comment per PR with the delta (percent, changed features, closed and dropped cells) and the treemap of the head commit; the `progress.json` diff carries the same information. Mention the before and after count of the feature in the PR.
+
 ## Evidence
 
 In the PR and the final response, list:
 
 - The commands you ran, and the self-test scenarios with pass, fail or blocked.
 - Each shared upstream file you changed, with its option (1 to 5 above) and the missing seam.
+- The progress map delta: cells closed per feature, and every disposition you added with its reason.
 - The CI state. For each red check, the cause: your change (fix it), a flake (one rerun) or a known baseline failure.
 - The limits, for example a flow that needs credentials.
