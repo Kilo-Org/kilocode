@@ -16,7 +16,9 @@ import AgentBehaviourTab from "../components/settings/AgentBehaviourTab"
 import AutoApproveTab from "../components/settings/AutoApproveTab"
 import ModeEditView from "../components/settings/ModeEditView"
 import McpEditView from "../components/settings/McpEditView"
-import type { AgentConfig, CommandConfig, Config } from "../types/messages"
+import HooksTab from "../components/settings/agent-behaviour/HooksTab"
+import HookEditView from "../components/settings/agent-behaviour/HookEditView"
+import type { AgentConfig, ClaudeHooksLoadedMessage, CommandConfig, Config, HooksConfig } from "../types/messages"
 import IndexingTab from "../components/settings/IndexingTab"
 import CustomProviderDialog from "../components/settings/CustomProviderDialog"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
@@ -420,6 +422,86 @@ export const AgentBehaviourWorkflowsEmpty: Story = {
       </StoryProviders>
     )
   },
+}
+
+const MOCK_HOOKS: HooksConfig = {
+  PreToolUse: [
+    {
+      matcher: "bash",
+      hooks: [{ type: "command", command: "~/.config/kilo/hooks/guard-rm.sh", onFailure: "block" }],
+    },
+    { matcher: "edit|write|apply_patch", hooks: [{ type: "command", command: "~/.config/kilo/hooks/protect-env.sh" }] },
+  ],
+  PostToolUse: [
+    {
+      matcher: "edit|write",
+      hooks: [{ type: "command", command: "node", args: ["~/.config/kilo/hooks/lint.js", "--fix"], timeout: 30 }],
+    },
+  ],
+}
+
+const MOCK_MANAGED_HOOK = {
+  hooks: [{ type: "command" as const, command: "/opt/company/audit-log.sh", timeout: 5 }],
+}
+
+/** Seeds the Claude Code hooks the Hooks tab requests from the extension on mount. */
+function ClaudeHooksSeed(props: { message: ClaudeHooksLoadedMessage }) {
+  onMount(() => window.postMessage(props.message, "*"))
+  return null
+}
+
+export const AgentBehaviourHooks: Story = {
+  name: "AgentBehaviourTab — hooks",
+  render: () => (
+    <StoryProviders
+      sessionID="hooks-story"
+      status="idle"
+      config={{ hooks: { ...MOCK_HOOKS, PreToolUse: [...MOCK_HOOKS.PreToolUse!, MOCK_MANAGED_HOOK] } }}
+      globalConfig={{ hooks: MOCK_HOOKS }}
+    >
+      <HooksTab claude />
+      <ClaudeHooksSeed
+        message={{
+          type: "claudeHooksLoaded",
+          path: "/Users/dev/.claude/settings.json",
+          enabled: true,
+          hooks: {
+            PostToolUse: [{ matcher: "Edit|Write", hooks: [{ type: "command", command: "npx prettier --write" }] }],
+          },
+        }}
+      />
+    </StoryProviders>
+  ),
+}
+
+export const AgentBehaviourHooksEmpty: Story = {
+  name: "AgentBehaviourTab — hooks empty state",
+  render: () => (
+    <StoryProviders sessionID="hooks-empty-story" status="idle" config={{}} globalConfig={{}}>
+      <HooksTab claude={false} />
+    </StoryProviders>
+  ),
+}
+
+export const AgentBehaviourHookEdit: Story = {
+  name: "AgentBehaviourTab — edit hook",
+  render: () => (
+    <StoryProviders sessionID="hook-edit-story" status="idle" config={{}}>
+      <HookEditView
+        entry={{
+          event: "PreToolUse",
+          group: 0,
+          index: 0,
+          matcher: "bash",
+          handler: { type: "command", command: "~/.config/kilo/hooks/guard-rm.sh", timeout: 10, onFailure: "block" },
+        }}
+        event="PreToolUse"
+        onBack={noop}
+        onApply={noop}
+        onRemove={noop}
+      />
+    </StoryProviders>
+  ),
 }
 
 /** Skills subtab with seeded long paths/URLs in a narrow container — regression fixture for

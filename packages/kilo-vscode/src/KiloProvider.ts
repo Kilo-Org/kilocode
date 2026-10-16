@@ -79,6 +79,7 @@ import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
 import { interceptMessage } from "./kilo-provider/git-changes-request"
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 import { clearCommandsCache, loadCommands } from "./kilo-provider/commands"
+import { loadClaudeHooks } from "./kilo-provider/claude-hooks"
 import { fetchMessagePage, MESSAGE_PAGE_LIMIT } from "./kilo-provider/message-page"
 import { createSessionPageState, fetchSessionPage } from "./kilo-provider/session-page"
 import { editPaths } from "./kilo-provider/session-edits"
@@ -1642,6 +1643,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestClaudeCompatSetting":
           this.sendClaudeCompatSetting()
+          break
+        case "requestClaudeHooks":
+          this.fetchAndSendClaudeHooks().catch((e) => console.error("[Kilo New] fetchAndSendClaudeHooks failed:", e))
           break
         case "requestTimelineSetting":
           this.sendTimelineSetting()
@@ -5257,6 +5261,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Read the current Claude Code compatibility setting and push it to the webview.
    */
+  private async fetchAndSendClaudeHooks(): Promise<void> {
+    if (!this.client) return
+    this.postMessage(await loadClaudeHooks(this.client, this.getWorkspaceDirectory()))
+  }
+
   private sendClaudeCompatSetting(): void {
     const enabled = vscode.workspace.getConfiguration("kilo-code.new").get<boolean>("claudeCodeCompat", false)
     this.postMessage({

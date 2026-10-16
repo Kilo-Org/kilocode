@@ -56,6 +56,7 @@ import type {
   Config,
   ConfigCollections,
   FeatureFlags,
+  HooksConfig,
   IndexingStatus,
   KiloEmbeddingModelCatalog,
 } from "./config"
@@ -742,6 +743,15 @@ export interface BrowserSettingsLoadedMessage {
 export interface ClaudeCompatSettingLoadedMessage {
   type: "claudeCompatSettingLoaded"
   enabled: boolean
+}
+
+/** Claude Code user hooks (~/.claude/settings.json) as the running server would run them. */
+export interface ClaudeHooksLoadedMessage {
+  type: "claudeHooksLoaded"
+  path: string
+  /** False when the server was started with Claude Code hooks turned off. */
+  enabled: boolean
+  hooks?: HooksConfig
 }
 
 export interface ExtensionSettings {
@@ -1883,6 +1893,7 @@ export type ExtensionMessage =
   | SuggestionErrorMessage
   | BrowserSettingsLoadedMessage
   | ClaudeCompatSettingLoadedMessage
+  | ClaudeHooksLoadedMessage
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
   | ConfigUpdateFailedMessage
