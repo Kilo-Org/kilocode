@@ -866,6 +866,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "Agenti",
   "settings.agentBehaviour.subtab.mcpServers": "MCP serveri",
+  "settings.agentBehaviour.subtab.hooks": "Hookovi",
   "settings.agentBehaviour.subtab.rules": "Pravila",
   "settings.agentBehaviour.subtab.workflows": "Tokovi rada",
   "settings.agentBehaviour.subtab.skills": "Vještine",
@@ -1115,6 +1116,67 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.title": "Učitaj Claude Code datoteke",
   "settings.agentBehaviour.claudeCompat.description":
     "Učitajte CLAUDE.md instrukcije i vještine iz vašeg Claude Code konfiguracijskog direktorija u sesije. Omogućite ovo ako želite da Kilo koristi vaše Claude Code instrukcije i vještine. Zahtijeva ponovno pokretanje. Također pokreće PreToolUse i PostToolUse hook komande iz ~/.claude/settings.json s vašim korisničkim dozvolama.",
+  "settings.agentBehaviour.hooks.description":
+    "Pokrećite vlastite naredbe prije ili nakon što agent koristi alat, na primjer da provjerite svaku izmjenu linterom ili blokirate rizične naredbe. Koristi Claude Code format hookova.",
+  "settings.agentBehaviour.hooks.warning":
+    "Hookovi pokreću shell naredbe s vašim punim korisničkim dozvolama, izvan sandboxa. Dodajte samo naredbe kojima vjerujete.",
+  "settings.agentBehaviour.hooks.scope":
+    "Sprema se u vašu globalnu konfiguraciju. Hookovi u konfiguraciji projekta se zanemaruju.",
+  "settings.agentBehaviour.hooks.docs": "Saznajte više",
+  "settings.agentBehaviour.hooks.openConfig": "Otvori konfiguracijsku datoteku",
+  "settings.agentBehaviour.hooks.pre": "Prije pokretanja alata",
+  "settings.agentBehaviour.hooks.pre.help":
+    "Može blokirati poziv alata: završite s izlaznim kodom 2 i upišite razlog u stderr. Agent vidi razlog.",
+  "settings.agentBehaviour.hooks.post": "Nakon pokretanja alata",
+  "settings.agentBehaviour.hooks.post.help":
+    "Može poslati povratne informacije agentu, poput lint grešaka: završite s izlaznim kodom 2 i upišite ih u stderr.",
+  "settings.agentBehaviour.hooks.empty": "Još nema hookova.",
+  "settings.agentBehaviour.hooks.add": "Dodaj hook",
+  "settings.agentBehaviour.hooks.allTools": "Svi alati",
+  "settings.agentBehaviour.hooks.badge.timeout": "Istek vremena {{seconds}}s",
+  "settings.agentBehaviour.hooks.badge.block": "Blokira pri grešci",
+  "settings.agentBehaviour.hooks.badge.exec": "Bez shella",
+  "settings.agentBehaviour.hooks.inherited": "Iz druge konfiguracije",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "Ovi hookovi se također pokreću. Dolaze iz druge globalne konfiguracijske datoteke, upravljane konfiguracije ili vaše organizacije; uredite ih tamo gdje su definisani.",
+  "settings.agentBehaviour.hooks.claude": "Iz Claude Code",
+  "settings.agentBehaviour.hooks.claude.open": "Otvori datoteku",
+  "settings.agentBehaviour.hooks.claude.active":
+    "Ovi hookovi iz {{path}} se također pokreću, osim u sesijama sa sandboxom.",
+  "settings.agentBehaviour.hooks.claude.off":
+    'Ne pokreću se: uključite "Učitaj Claude Code datoteke" na kartici Pravila, zatim ponovo pokrenite Kilo.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "Još se ne pokreću: ponovo pokrenite Kilo da primijenite Claude Code kompatibilnost. Ako se i dalje ne pokreću, provjerite da KILO_DISABLE_CLAUDE_CODE_HOOKS nije postavljen.",
+  "settings.agentBehaviour.hooks.new": "Novi hook",
+  "settings.agentBehaviour.hooks.edit": "Uredi hook",
+  "settings.agentBehaviour.hooks.event": "Kada",
+  "settings.agentBehaviour.hooks.matcher": "Alati",
+  "settings.agentBehaviour.hooks.matcher.help":
+    "Ostavite prazno da odgovara svakom alatu. Odvojite nazive alata znakom | (edit|write). Sve ostalo je regularni izraz. Rade i Kilo i Claude Code nazivi (bash ili Bash); MCP alati izgledaju kao github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.all": "Odgovara svakom alatu",
+  "settings.agentBehaviour.hooks.matcher.names": "Odgovara tačno: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "Regularni izraz, traži se bilo gdje u nazivu alata",
+  "settings.agentBehaviour.hooks.matcher.invalid": "Nevažeći regularni izraz",
+  "settings.agentBehaviour.hooks.command": "Naredba",
+  "settings.agentBehaviour.hooks.command.help":
+    "Prima poziv alata kao JSON na stdin i pokreće se u direktoriju projekta.",
+  "settings.agentBehaviour.hooks.command.required": "Unesite naredbu",
+  "settings.agentBehaviour.hooks.exec": "Pokreni bez shella",
+  "settings.agentBehaviour.hooks.exec.help":
+    "Pokreće naredbu kao program s argumentima ispod, jedan po liniji. Shell se ne koristi, pa se ~ i $VARIABLES ne proširuju: koristite apsolutne putanje.",
+  "settings.agentBehaviour.hooks.args.placeholder": "Jedan argument po liniji",
+  "settings.agentBehaviour.hooks.timeout": "Istek vremena (sekunde)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "Podrazumijevano {{seconds}}. Hook kojem istekne vrijeme se zaustavlja, zajedno sa svim procesima koje je pokrenuo.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "Unesite cijeli broj sekundi, od 1 do 86400",
+  "settings.agentBehaviour.hooks.block": "Blokiraj poziv alata ako hook ne uspije",
+  "settings.agentBehaviour.hooks.block.help":
+    "Podrazumijevano, hook koji se sruši ili kojem istekne vrijeme dozvoljava pokretanje alata. Uključite ovo za zaštite koje ne smiju ništa propustiti kada ne uspiju.",
+  "settings.agentBehaviour.hooks.apply": "Primijeni",
+  "settings.agentBehaviour.hooks.remove.heading": "Ukloni hook",
+  "settings.agentBehaviour.hooks.remove.confirm":
+    'Ukloniti hook "{{command}}"? Kliknite Spremi da primijenite promjenu.',
+  "settings.agentBehaviour.hooks.remove.button": "Ukloni",
   "settings.agentBehaviour.mcpDetail.command": "Naredba",
   "settings.agentBehaviour.mcpDetail.args": "Argumenti",
   "settings.agentBehaviour.mcpDetail.env": "Okruženje",

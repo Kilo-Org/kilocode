@@ -847,6 +847,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "عوامل",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
+  "settings.agentBehaviour.subtab.hooks": "هوک‌ها",
   "settings.agentBehaviour.subtab.rules": "قوانین",
   "settings.agentBehaviour.subtab.workflows": "گردش‌های کاری",
   "settings.agentBehaviour.subtab.skills": "مهارت‌ها",
@@ -1028,6 +1029,65 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.title": "بارگذاری فایل‌های Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
     "دستورالعمل‌ها و مهارت‌های CLAUDE.md را از پوشه پیکربندی Claude Code شما در جلسات بارگذاری می‌کند. اگر می‌خواهید Kilo از دستورالعمل‌ها و مهارت‌های Claude Code شما استفاده کند، این گزینه را فعال کنید. نیاز به راه‌اندازی مجدد دارد. همچنین دستورهای هوک PreToolUse و PostToolUse را از ~/.claude/settings.json با مجوزهای کاربری شما اجرا می‌کند.",
+  "settings.agentBehaviour.hooks.description":
+    "دستورهای خودتان را پیش یا پس از استفاده عامل از یک ابزار اجرا کنید، مثلاً برای lint کردن هر ویرایش یا مسدود کردن دستورهای پرخطر. از قالب هوک‌های Claude Code استفاده می‌کند.",
+  "settings.agentBehaviour.hooks.warning":
+    "هوک‌ها دستورهای شل را با تمام مجوزهای کاربری شما و خارج از sandbox اجرا می‌کنند. فقط دستورهایی را اضافه کنید که به آن‌ها اعتماد دارید.",
+  "settings.agentBehaviour.hooks.scope":
+    "در پیکربندی سراسری شما ذخیره می‌شود. هوک‌های موجود در پیکربندی پروژه نادیده گرفته می‌شوند.",
+  "settings.agentBehaviour.hooks.docs": "بیشتر بدانید",
+  "settings.agentBehaviour.hooks.openConfig": "باز کردن فایل پیکربندی",
+  "settings.agentBehaviour.hooks.pre": "پیش از اجرای ابزار",
+  "settings.agentBehaviour.hooks.pre.help":
+    "می‌تواند فراخوانی ابزار را مسدود کند: با کد 2 خارج شوید و دلیل را در stderr بنویسید. عامل دلیل را می‌بیند.",
+  "settings.agentBehaviour.hooks.post": "پس از اجرای ابزار",
+  "settings.agentBehaviour.hooks.post.help":
+    "می‌تواند بازخوردی مانند خطاهای lint برای عامل بفرستد: با کد 2 خارج شوید و آن را در stderr بنویسید.",
+  "settings.agentBehaviour.hooks.empty": "هنوز هوکی وجود ندارد.",
+  "settings.agentBehaviour.hooks.add": "افزودن هوک",
+  "settings.agentBehaviour.hooks.allTools": "همه ابزارها",
+  "settings.agentBehaviour.hooks.badge.timeout": "زمان‌وقفه {{seconds}} ثانیه",
+  "settings.agentBehaviour.hooks.badge.block": "مسدودسازی در صورت خطا",
+  "settings.agentBehaviour.hooks.badge.exec": "بدون شل",
+  "settings.agentBehaviour.hooks.inherited": "از پیکربندی دیگر",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "این هوک‌ها نیز اجرا می‌شوند. آن‌ها از یک فایل پیکربندی سراسری دیگر، پیکربندی مدیریت‌شده یا سازمان شما می‌آیند؛ آن‌ها را در همان جایی که تعریف شده‌اند ویرایش کنید.",
+  "settings.agentBehaviour.hooks.claude": "از Claude Code",
+  "settings.agentBehaviour.hooks.claude.open": "باز کردن فایل",
+  "settings.agentBehaviour.hooks.claude.active": "این هوک‌ها از {{path}} نیز اجرا می‌شوند، به‌جز در جلسات sandbox.",
+  "settings.agentBehaviour.hooks.claude.off":
+    "اجرا نمی‌شوند: «بارگذاری فایل‌های Claude Code» را در تب «قوانین» روشن کنید، سپس Kilo را دوباره راه‌اندازی کنید.",
+  "settings.agentBehaviour.hooks.claude.restart":
+    "هنوز اجرا نشده‌اند: برای اعمال سازگاری با Claude Code، Kilo را دوباره راه‌اندازی کنید. اگر همچنان اجرا نشدند، بررسی کنید که KILO_DISABLE_CLAUDE_CODE_HOOKS تنظیم نشده باشد.",
+  "settings.agentBehaviour.hooks.new": "هوک جدید",
+  "settings.agentBehaviour.hooks.edit": "ویرایش هوک",
+  "settings.agentBehaviour.hooks.event": "چه زمانی",
+  "settings.agentBehaviour.hooks.matcher": "ابزارها",
+  "settings.agentBehaviour.hooks.matcher.help":
+    "برای تطبیق با همه ابزارها خالی بگذارید. نام ابزارها را با | جدا کنید (edit|write). هر چیز دیگری عبارت منظم در نظر گرفته می‌شود. نام‌های Kilo و Claude Code هر دو کار می‌کنند (bash یا Bash)؛ ابزارهای MCP شبیه github_create_issue هستند.",
+  "settings.agentBehaviour.hooks.matcher.all": "با همه ابزارها تطبیق دارد",
+  "settings.agentBehaviour.hooks.matcher.names": "تطبیق دقیق: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "عبارت منظم، در هر جای نام ابزار تطبیق داده می‌شود",
+  "settings.agentBehaviour.hooks.matcher.invalid": "عبارت منظم نامعتبر",
+  "settings.agentBehaviour.hooks.command": "دستور",
+  "settings.agentBehaviour.hooks.command.help":
+    "فراخوانی ابزار را به‌صورت JSON از stdin دریافت می‌کند و در پوشه پروژه اجرا می‌شود.",
+  "settings.agentBehaviour.hooks.command.required": "یک دستور وارد کنید",
+  "settings.agentBehaviour.hooks.exec": "اجرا بدون شل",
+  "settings.agentBehaviour.hooks.exec.help":
+    "دستور را به‌صورت یک برنامه با آرگومان‌های زیر، هر کدام در یک خط، اجرا می‌کند. از شل استفاده نمی‌شود، بنابراین ~ و $VARIABLES بسط داده نمی‌شوند: از مسیرهای مطلق استفاده کنید.",
+  "settings.agentBehaviour.hooks.args.placeholder": "هر آرگومان در یک خط",
+  "settings.agentBehaviour.hooks.timeout": "زمان‌وقفه (ثانیه)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "پیش‌فرض {{seconds}} است. هوکی که زمان‌وقفه‌اش تمام شود، همراه با همه فرآیندهایی که شروع کرده متوقف می‌شود.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "یک عدد صحیح ثانیه بین 1 تا 86400 وارد کنید",
+  "settings.agentBehaviour.hooks.block": "مسدود کردن فراخوانی ابزار در صورت شکست هوک",
+  "settings.agentBehaviour.hooks.block.help":
+    "به‌طور پیش‌فرض، هوکی که از کار بیفتد یا زمان‌وقفه‌اش تمام شود اجازه اجرای ابزار را می‌دهد. این گزینه را برای محافظ‌هایی روشن کنید که نباید در صورت خطا اجازه عبور بدهند.",
+  "settings.agentBehaviour.hooks.apply": "اعمال",
+  "settings.agentBehaviour.hooks.remove.heading": "حذف هوک",
+  "settings.agentBehaviour.hooks.remove.confirm": "هوک «{{command}}» حذف شود؟ برای اعمال تغییر، روی «ذخیره» کلیک کنید.",
+  "settings.agentBehaviour.hooks.remove.button": "حذف",
   "settings.agentBehaviour.removeMcp.title": "حذف سرور MCP",
   "settings.agentBehaviour.removeMcp.confirm": "سرور MCP «{{name}}» حذف شود؟ این کار آن را از پیکربندی شما حذف می‌کند.",
   "settings.agentBehaviour.removeMcp.bundleConfirm":

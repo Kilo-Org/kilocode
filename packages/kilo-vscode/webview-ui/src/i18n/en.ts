@@ -1079,7 +1079,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.command.required": "Enter a command",
   "settings.agentBehaviour.hooks.exec": "Run without a shell",
   "settings.agentBehaviour.hooks.exec.help":
-    "Run the command as a program with the arguments below, one per line, without shell quoting.",
+    "Run the command as a program with the arguments below, one per line. No shell is involved, so ~ and $VARIABLES are not expanded: use absolute paths.",
   "settings.agentBehaviour.hooks.args.placeholder": "One argument per line",
   "settings.agentBehaviour.hooks.timeout": "Timeout (seconds)",
   "settings.agentBehaviour.hooks.timeout.help":

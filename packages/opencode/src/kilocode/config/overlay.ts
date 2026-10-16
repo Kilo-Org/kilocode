@@ -242,12 +242,13 @@ export namespace KilocodeConfigOverlay {
     const at = paths.lastIndexOf(target)
     // A target that is not created yet is not listed; managed files still outrank it.
     const later = at < 0 ? files.filter((item) => item.kind === "managed-file") : files.slice(at + 1)
-    // Hooks from every trusted file run (and project hooks are ignored), so no file shadows them.
-    const patch = Object.fromEntries(Object.entries(input.patch).filter(([key]) => key !== "hooks"))
+    // Hooks from later layers run too (and project hooks are ignored), so only another global file,
+    // merged into the same layer, can shadow them.
+    const rest = Object.fromEntries(Object.entries(input.patch).filter(([key]) => key !== "hooks"))
     for (const item of later.reverse()) {
       if (!item.exists) continue
       const text = await Bun.file(item.path).text()
-      if (clashes(parse(text), patch)) return { target, path: item.path }
+      if (clashes(parse(text), item.kind === "global-file" ? input.patch : rest)) return { target, path: item.path }
     }
     return undefined
   }

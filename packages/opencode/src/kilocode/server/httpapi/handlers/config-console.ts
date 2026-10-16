@@ -143,8 +143,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
           new ConfigOverlayConflictError({ code: result.code, message: result.message, target: result.target }),
         )
       }
-      // Keys read live on every use, so running sessions need not be restarted when they change.
-      const hot = body.scope === "global" && Object.keys(patch).every((key) => key === "console" || key === "hooks")
+      const hot = body.scope === "global" && Object.keys(patch).every((key) => key === "console")
       if (body.scope === "global") {
         yield* config.invalidate()
         if (result.changed) {

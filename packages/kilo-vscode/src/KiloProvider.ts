@@ -457,6 +457,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedSkillsMessage: unknown = null
   /** Cached commandsLoaded payload so requestCommands can be served before client is ready */
   private cachedCommandsMessage: unknown = null
+  /** Cached claudeHooksLoaded payload so requestClaudeHooks can be served before client is ready */
+  private cachedClaudeHooksMessage: unknown = null
   /** Cached configLoaded payload so requestConfig can be served before client is ready */
   private cachedConfigMessage: unknown = null
   /** Directory the cached config payload was loaded for, so recovery is keyed to the active project. */
@@ -5258,14 +5260,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
+  /** Read the Claude Code hooks the server runs and push them to the webview. */
+  private async fetchAndSendClaudeHooks(): Promise<void> {
+    const client = this.client
+    if (!client) {
+      if (this.cachedClaudeHooksMessage) this.postMessage(this.cachedClaudeHooksMessage)
+      return
+    }
+    const message = await retry(() => loadClaudeHooks(client, this.getWorkspaceDirectory()))
+    this.cachedClaudeHooksMessage = message
+    this.postMessage(message)
+  }
+
   /**
    * Read the current Claude Code compatibility setting and push it to the webview.
    */
-  private async fetchAndSendClaudeHooks(): Promise<void> {
-    if (!this.client) return
-    this.postMessage(await loadClaudeHooks(this.client, this.getWorkspaceDirectory()))
-  }
-
   private sendClaudeCompatSetting(): void {
     const enabled = vscode.workspace.getConfiguration("kilo-code.new").get<boolean>("claudeCodeCompat", false)
     this.postMessage({

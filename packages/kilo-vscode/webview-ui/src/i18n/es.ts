@@ -874,6 +874,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "Agentes",
   "settings.agentBehaviour.subtab.mcpServers": "Servidores MCP",
+  "settings.agentBehaviour.subtab.hooks": "Hooks",
   "settings.agentBehaviour.subtab.rules": "Reglas",
   "settings.agentBehaviour.subtab.workflows": "Flujos de trabajo",
   "settings.agentBehaviour.subtab.skills": "Habilidades",
@@ -1128,6 +1129,68 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.title": "Cargar archivos de Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
     "Carga las instrucciones y habilidades de CLAUDE.md desde tu directorio de configuración de Claude Code en las sesiones. Activa esta opción si quieres que Kilo utilice tus instrucciones y habilidades de Claude Code. Requiere reiniciar. También ejecuta los comandos de hooks PreToolUse y PostToolUse de ~/.claude/settings.json con tus permisos de usuario.",
+  "settings.agentBehaviour.hooks.description":
+    "Ejecuta tus propios comandos antes o después de que el agente use una herramienta, por ejemplo para pasar el linter en cada edición o bloquear comandos peligrosos. Usa el formato de hooks de Claude Code.",
+  "settings.agentBehaviour.hooks.warning":
+    "Los hooks ejecutan comandos de shell con todos tus permisos de usuario, fuera de la sandbox. Añade solo comandos de confianza.",
+  "settings.agentBehaviour.hooks.scope":
+    "Se guarda en tu configuración global. Los hooks de la configuración del proyecto se ignoran.",
+  "settings.agentBehaviour.hooks.docs": "Más información",
+  "settings.agentBehaviour.hooks.openConfig": "Abrir archivo de configuración",
+  "settings.agentBehaviour.hooks.pre": "Antes de que se ejecute una herramienta",
+  "settings.agentBehaviour.hooks.pre.help":
+    "Puede bloquear la llamada a la herramienta: sal con el código 2 y escribe el motivo en stderr. El agente ve el motivo.",
+  "settings.agentBehaviour.hooks.post": "Después de que se ejecute una herramienta",
+  "settings.agentBehaviour.hooks.post.help":
+    "Puede enviar comentarios al agente, como errores de lint: sal con el código 2 y escríbelos en stderr.",
+  "settings.agentBehaviour.hooks.empty": "Aún no hay hooks.",
+  "settings.agentBehaviour.hooks.add": "Añadir hook",
+  "settings.agentBehaviour.hooks.allTools": "Todas las herramientas",
+  "settings.agentBehaviour.hooks.badge.timeout": "Tiempo de espera {{seconds}} s",
+  "settings.agentBehaviour.hooks.badge.block": "Bloquea si falla",
+  "settings.agentBehaviour.hooks.badge.exec": "Sin shell",
+  "settings.agentBehaviour.hooks.inherited": "De otra configuración",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "Estos hooks también se ejecutan. Proceden de otro archivo de configuración global, de una configuración administrada o de tu organización; edítalos donde estén definidos.",
+  "settings.agentBehaviour.hooks.claude": "De Claude Code",
+  "settings.agentBehaviour.hooks.claude.open": "Abrir archivo",
+  "settings.agentBehaviour.hooks.claude.active":
+    "Estos hooks de {{path}} también se ejecutan, excepto en sesiones con sandbox.",
+  "settings.agentBehaviour.hooks.claude.off":
+    'No se ejecutan: activa "Cargar archivos de Claude Code" en la pestaña Reglas y luego reinicia Kilo.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "Aún no se ejecutan: reinicia Kilo para aplicar la compatibilidad con Claude Code. Si siguen sin ejecutarse, comprueba que KILO_DISABLE_CLAUDE_CODE_HOOKS no esté definida.",
+  "settings.agentBehaviour.hooks.new": "Nuevo hook",
+  "settings.agentBehaviour.hooks.edit": "Editar hook",
+  "settings.agentBehaviour.hooks.event": "Cuándo",
+  "settings.agentBehaviour.hooks.matcher": "Herramientas",
+  "settings.agentBehaviour.hooks.matcher.help":
+    "Déjalo vacío para que coincida con todas las herramientas. Separa los nombres de herramientas con | (edit|write). Cualquier otro valor es una expresión regular. Funcionan tanto los nombres de Kilo como los de Claude Code (bash o Bash); las herramientas MCP tienen nombres como github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.all": "Coincide con todas las herramientas",
+  "settings.agentBehaviour.hooks.matcher.names": "Coincide exactamente con: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex":
+    "Expresión regular, buscada en cualquier parte del nombre de la herramienta",
+  "settings.agentBehaviour.hooks.matcher.invalid": "Expresión regular no válida",
+  "settings.agentBehaviour.hooks.command": "Comando",
+  "settings.agentBehaviour.hooks.command.help":
+    "Recibe la llamada a la herramienta como JSON por stdin y se ejecuta en la carpeta del proyecto.",
+  "settings.agentBehaviour.hooks.command.required": "Introduce un comando",
+  "settings.agentBehaviour.hooks.exec": "Ejecutar sin shell",
+  "settings.agentBehaviour.hooks.exec.help":
+    "Ejecuta el comando como un programa con los argumentos de abajo, uno por línea. No se usa ningún shell, así que ~ y $VARIABLES no se expanden: usa rutas absolutas.",
+  "settings.agentBehaviour.hooks.args.placeholder": "Un argumento por línea",
+  "settings.agentBehaviour.hooks.timeout": "Tiempo de espera (segundos)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "Valor predeterminado: {{seconds}}. Un hook que agota el tiempo de espera se detiene, junto con todos los procesos que inició.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "Introduce un número entero de segundos, de 1 a 86400",
+  "settings.agentBehaviour.hooks.block": "Bloquear la llamada a la herramienta si el hook falla",
+  "settings.agentBehaviour.hooks.block.help":
+    "De forma predeterminada, un hook que falla o agota el tiempo de espera deja que la herramienta se ejecute. Actívalo para protecciones que no deben dejar pasar la llamada cuando fallan.",
+  "settings.agentBehaviour.hooks.apply": "Aplicar",
+  "settings.agentBehaviour.hooks.remove.heading": "Eliminar hook",
+  "settings.agentBehaviour.hooks.remove.confirm":
+    '¿Eliminar el hook "{{command}}"? Haz clic en Guardar para aplicar el cambio.',
+  "settings.agentBehaviour.hooks.remove.button": "Eliminar",
   "settings.agentBehaviour.mcpDetail.command": "Comando",
   "settings.agentBehaviour.mcpDetail.args": "Argumentos",
   "settings.agentBehaviour.mcpDetail.env": "Entorno",

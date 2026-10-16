@@ -524,13 +524,48 @@ describe("config overlay routes", () => {
     expect(saved.hooks).toEqual({ PreToolUse: [{ matcher: "bash", hooks: [{ type: "command", command: "guard" }] }] })
   })
 
+  test("reports a shadowed global hooks write when another global file replaces the same event", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    // Global files are merged into one layer, where a later file's event list replaces an earlier one.
+    await Filesystem.write(path.join(global.path, "kilo.jsonc"), "{}")
+    await Filesystem.write(
+      path.join(global.path, "opencode.json"),
+      JSON.stringify({ hooks: { PreToolUse: [{ hooks: [{ type: "command", command: "legacy" }] }] } }),
+    )
+    const before = await json<Overlay>(await req(project.path, "/config/overlay?scope=global"))
+
+    const response = await req(project.path, "/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        scope: "global",
+        expected: { path: before.targets.global.path, revision: before.targets.global.revision },
+        set: { hooks: { PreToolUse: [{ hooks: [{ type: "command", command: "guard" }] }] } },
+      }),
+    })
+
+    expect(response.status).toBe(409)
+    const body = (await response.json()) as { shadowedBy?: string }
+    expect(body.shadowedBy).toBe(path.join(global.path, "opencode.json"))
+  })
+
   test("lists the Claude Code hooks Kilo runs", async () => {
     await using project = await tmpdir()
     const file = path.join(Global.Path.home, ".claude", "settings.json")
     const guard = { type: "command", command: "guard.sh" }
+    // Claude Code accepts timeouts the Kilo config schema does not; they must not break the listing.
+    const lint = { type: "command", command: "lint.sh", timeout: 0.5 }
     await Filesystem.write(
       file,
-      JSON.stringify({ hooks: { PreToolUse: [{ matcher: "Bash", hooks: [guard] }], Stop: [{ hooks: [guard] }] } }),
+      JSON.stringify({
+        hooks: {
+          PreToolUse: [{ matcher: "Bash", hooks: [guard] }],
+          PostToolUse: [{ hooks: [lint] }],
+          Stop: [{ hooks: [guard] }],
+        },
+      }),
     )
     try {
       const body = await json<{ path: string; enabled: boolean; hooks?: Config.Info["hooks"] }>(
@@ -539,6 +574,7 @@ describe("config overlay routes", () => {
       expect(body.path).toBe(file)
       expect(body.hooks).toEqual({
         PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: "guard.sh" }] }],
+        PostToolUse: [{ hooks: [{ type: "command", command: "lint.sh", timeout: 0.5 }] }],
       })
     } finally {
       await rm(file, { force: true })

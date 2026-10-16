@@ -435,7 +435,9 @@ const MOCK_HOOKS: HooksConfig = {
   PostToolUse: [
     {
       matcher: "edit|write",
-      hooks: [{ type: "command", command: "node", args: ["~/.config/kilo/hooks/lint.js", "--fix"], timeout: 30 }],
+      hooks: [
+        { type: "command", command: "node", args: ["/Users/dev/.config/kilo/hooks/lint.js", "--fix"], timeout: 30 },
+      ],
     },
   ],
 }

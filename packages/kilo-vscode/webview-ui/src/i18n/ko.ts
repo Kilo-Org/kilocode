@@ -858,6 +858,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "에이전트",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 서버",
+  "settings.agentBehaviour.subtab.hooks": "훅",
   "settings.agentBehaviour.subtab.rules": "규칙",
   "settings.agentBehaviour.subtab.workflows": "워크플로",
   "settings.agentBehaviour.subtab.skills": "스킬",
@@ -1102,6 +1103,64 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.title": "Claude Code 파일 로드",
   "settings.agentBehaviour.claudeCompat.description":
     "Claude Code 설정 디렉터리에서 세션으로 CLAUDE.md 지침 및 스킬을 로드합니다. Kilo가 Claude Code 지침 및 스킬을 사용하게 하려면 활성화하세요. 다시 시작해야 합니다. ~/.claude/settings.json의 PreToolUse 및 PostToolUse 훅 명령도 사용자 권한으로 실행합니다.",
+  "settings.agentBehaviour.hooks.description":
+    "에이전트가 도구를 사용하기 전이나 후에 직접 지정한 명령을 실행합니다. 예를 들어 모든 편집에 린트를 실행하거나 위험한 명령을 차단할 수 있습니다. Claude Code 훅 형식을 사용합니다.",
+  "settings.agentBehaviour.hooks.warning":
+    "훅은 샌드박스 밖에서 사용자의 전체 권한으로 셸 명령을 실행합니다. 신뢰할 수 있는 명령만 추가하세요.",
+  "settings.agentBehaviour.hooks.scope": "전역 구성에 저장됩니다. 프로젝트 구성의 훅은 무시됩니다.",
+  "settings.agentBehaviour.hooks.docs": "자세히 알아보기",
+  "settings.agentBehaviour.hooks.openConfig": "구성 파일 열기",
+  "settings.agentBehaviour.hooks.pre": "도구 실행 전",
+  "settings.agentBehaviour.hooks.pre.help":
+    "도구 호출을 차단할 수 있습니다. 코드 2로 종료하고 이유를 stderr에 작성하세요. 에이전트가 그 이유를 확인합니다.",
+  "settings.agentBehaviour.hooks.post": "도구 실행 후",
+  "settings.agentBehaviour.hooks.post.help":
+    "린트 오류 같은 피드백을 에이전트에 보낼 수 있습니다. 코드 2로 종료하고 내용을 stderr에 작성하세요.",
+  "settings.agentBehaviour.hooks.empty": "아직 훅이 없습니다.",
+  "settings.agentBehaviour.hooks.add": "훅 추가",
+  "settings.agentBehaviour.hooks.allTools": "모든 도구",
+  "settings.agentBehaviour.hooks.badge.timeout": "타임아웃 {{seconds}}초",
+  "settings.agentBehaviour.hooks.badge.block": "실패 시 차단",
+  "settings.agentBehaviour.hooks.badge.exec": "셸 없음",
+  "settings.agentBehaviour.hooks.inherited": "다른 구성에서",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "이 훅들도 실행됩니다. 다른 전역 구성 파일, 관리형 구성 또는 조직에서 가져온 것이므로 정의된 위치에서 편집하세요.",
+  "settings.agentBehaviour.hooks.claude": "Claude Code에서",
+  "settings.agentBehaviour.hooks.claude.open": "파일 열기",
+  "settings.agentBehaviour.hooks.claude.active": "{{path}}의 이 훅들도 실행됩니다(샌드박스 세션 제외).",
+  "settings.agentBehaviour.hooks.claude.off":
+    '실행되지 않음: 규칙 탭에서 "Claude Code 파일 로드"를 켠 다음 Kilo를 다시 시작하세요.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "아직 실행되지 않음: Claude Code 호환성을 적용하려면 Kilo를 다시 시작하세요. 그래도 실행되지 않으면 KILO_DISABLE_CLAUDE_CODE_HOOKS가 설정되어 있지 않은지 확인하세요.",
+  "settings.agentBehaviour.hooks.new": "새 훅",
+  "settings.agentBehaviour.hooks.edit": "훅 편집",
+  "settings.agentBehaviour.hooks.event": "시점",
+  "settings.agentBehaviour.hooks.matcher": "도구",
+  "settings.agentBehaviour.hooks.matcher.help":
+    "비워 두면 모든 도구와 일치합니다. 도구 이름은 |로 구분합니다(edit|write). 그 외의 값은 정규식으로 처리됩니다. Kilo와 Claude Code 이름 모두 사용할 수 있으며(bash 또는 Bash), MCP 도구 이름은 github_create_issue와 같은 형식입니다.",
+  "settings.agentBehaviour.hooks.matcher.all": "모든 도구와 일치",
+  "settings.agentBehaviour.hooks.matcher.names": "정확히 일치: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "정규식, 도구 이름의 어느 위치에서든 일치",
+  "settings.agentBehaviour.hooks.matcher.invalid": "잘못된 정규식",
+  "settings.agentBehaviour.hooks.command": "명령어",
+  "settings.agentBehaviour.hooks.command.help": "도구 호출을 stdin을 통해 JSON으로 받아 프로젝트 폴더에서 실행됩니다.",
+  "settings.agentBehaviour.hooks.command.required": "명령어를 입력하세요",
+  "settings.agentBehaviour.hooks.exec": "셸 없이 실행",
+  "settings.agentBehaviour.hooks.exec.help":
+    "아래 인수(한 줄에 하나)를 전달하여 명령어를 프로그램으로 실행합니다. 셸을 거치지 않으므로 ~ 및 $VARIABLES는 확장되지 않습니다. 절대 경로를 사용하세요.",
+  "settings.agentBehaviour.hooks.args.placeholder": "한 줄에 하나의 인수",
+  "settings.agentBehaviour.hooks.timeout": "타임아웃 (초)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "기본값은 {{seconds}}초입니다. 시간이 초과된 훅은 해당 훅이 시작한 모든 프로세스와 함께 중지됩니다.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "1에서 86400 사이의 정수로 초를 입력하세요",
+  "settings.agentBehaviour.hooks.block": "훅이 실패하면 도구 호출 차단",
+  "settings.agentBehaviour.hooks.block.help":
+    "기본적으로 충돌하거나 시간이 초과된 훅은 도구 실행을 허용합니다. 실패 시 통과되어서는 안 되는 보호 장치에는 이 옵션을 켜세요.",
+  "settings.agentBehaviour.hooks.apply": "적용",
+  "settings.agentBehaviour.hooks.remove.heading": "훅 제거",
+  "settings.agentBehaviour.hooks.remove.confirm":
+    '"{{command}}" 훅을 제거하시겠습니까? 변경 사항을 적용하려면 "저장"을 클릭하세요.',
+  "settings.agentBehaviour.hooks.remove.button": "제거",
   "settings.agentBehaviour.mcpDetail.command": "명령어",
   "settings.agentBehaviour.mcpDetail.args": "인수",
   "settings.agentBehaviour.mcpDetail.env": "환경",

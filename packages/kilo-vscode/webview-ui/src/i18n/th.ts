@@ -853,6 +853,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "ตัวแทน",
   "settings.agentBehaviour.subtab.mcpServers": "เซิร์ฟเวอร์ MCP",
+  "settings.agentBehaviour.subtab.hooks": "ฮุก",
   "settings.agentBehaviour.subtab.rules": "กฎ",
   "settings.agentBehaviour.subtab.workflows": "เวิร์กโฟลว์",
   "settings.agentBehaviour.subtab.skills": "ทักษะ",
@@ -1098,6 +1099,64 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.title": "โหลดไฟล์ Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
     "โหลดคำแนะนำและทักษะจาก CLAUDE.md ในไดเรกทอรีการกำหนดค่า Claude Code ของคุณลงในเซสชัน เปิดใช้งานตัวเลือกนี้หากคุณต้องการให้ Kilo ใช้คำแนะนำและทักษะจาก Claude Code ของคุณ จำเป็นต้องรีสตาร์ท และจะรันคำสั่งฮุก PreToolUse และ PostToolUse จาก ~/.claude/settings.json ด้วยสิทธิ์ผู้ใช้ของคุณด้วย",
+  "settings.agentBehaviour.hooks.description":
+    "รันคำสั่งของคุณเองก่อนหรือหลังจากที่เอเจนต์ใช้เครื่องมือ เช่น รัน lint กับทุกการแก้ไข หรือบล็อกคำสั่งที่มีความเสี่ยง ใช้รูปแบบฮุกของ Claude Code",
+  "settings.agentBehaviour.hooks.warning":
+    "ฮุกจะรันคำสั่งเชลล์ด้วยสิทธิ์ผู้ใช้เต็มรูปแบบของคุณ นอกแซนด์บ็อกซ์ เพิ่มเฉพาะคำสั่งที่คุณเชื่อถือเท่านั้น",
+  "settings.agentBehaviour.hooks.scope": "บันทึกลงในการตั้งค่าส่วนกลางของคุณ ฮุกในการตั้งค่าโปรเจกต์จะถูกละเว้น",
+  "settings.agentBehaviour.hooks.docs": "ดูข้อมูลเพิ่มเติม",
+  "settings.agentBehaviour.hooks.openConfig": "เปิดไฟล์การตั้งค่า",
+  "settings.agentBehaviour.hooks.pre": "ก่อนเครื่องมือทำงาน",
+  "settings.agentBehaviour.hooks.pre.help":
+    "สามารถบล็อกการเรียกใช้เครื่องมือได้: ออกด้วยรหัส 2 และเขียนเหตุผลลงใน stderr เอเจนต์จะเห็นเหตุผลนั้น",
+  "settings.agentBehaviour.hooks.post": "หลังเครื่องมือทำงาน",
+  "settings.agentBehaviour.hooks.post.help":
+    "สามารถส่งข้อเสนอแนะไปยังเอเจนต์ได้ เช่น ข้อผิดพลาดจาก lint: ออกด้วยรหัส 2 และเขียนข้อความนั้นลงใน stderr",
+  "settings.agentBehaviour.hooks.empty": "ยังไม่มีฮุก",
+  "settings.agentBehaviour.hooks.add": "เพิ่มฮุก",
+  "settings.agentBehaviour.hooks.allTools": "เครื่องมือทั้งหมด",
+  "settings.agentBehaviour.hooks.badge.timeout": "หมดเวลา {{seconds}} วินาที",
+  "settings.agentBehaviour.hooks.badge.block": "บล็อกเมื่อล้มเหลว",
+  "settings.agentBehaviour.hooks.badge.exec": "ไม่ใช้เชลล์",
+  "settings.agentBehaviour.hooks.inherited": "จากการตั้งค่าอื่น",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "ฮุกเหล่านี้จะทำงานด้วย โดยมาจากไฟล์การตั้งค่าส่วนกลางอื่น การตั้งค่าที่มีการจัดการ หรือองค์กรของคุณ ให้แก้ไขในตำแหน่งที่กำหนดไว้",
+  "settings.agentBehaviour.hooks.claude": "จาก Claude Code",
+  "settings.agentBehaviour.hooks.claude.open": "เปิดไฟล์",
+  "settings.agentBehaviour.hooks.claude.active":
+    "ฮุกเหล่านี้จาก {{path}} จะทำงานด้วย ยกเว้นในเซสชันที่อยู่ในแซนด์บ็อกซ์",
+  "settings.agentBehaviour.hooks.claude.off": 'ไม่ได้ทำงาน: เปิด "โหลดไฟล์ Claude Code" ในแท็บกฎ แล้วรีสตาร์ท Kilo',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "ยังไม่ได้ทำงาน: รีสตาร์ท Kilo เพื่อใช้ความเข้ากันได้กับ Claude Code หากยังไม่ทำงาน ให้ตรวจสอบว่าไม่ได้ตั้งค่า KILO_DISABLE_CLAUDE_CODE_HOOKS ไว้",
+  "settings.agentBehaviour.hooks.new": "ฮุกใหม่",
+  "settings.agentBehaviour.hooks.edit": "แก้ไขฮุก",
+  "settings.agentBehaviour.hooks.event": "เมื่อใด",
+  "settings.agentBehaviour.hooks.matcher": "เครื่องมือ",
+  "settings.agentBehaviour.hooks.matcher.help":
+    "เว้นว่างไว้เพื่อให้ตรงกับเครื่องมือทั้งหมด คั่นชื่อเครื่องมือด้วย | (edit|write) ค่าอื่นจะถือเป็นนิพจน์ทั่วไป ใช้ได้ทั้งชื่อของ Kilo และ Claude Code (bash หรือ Bash) ส่วนเครื่องมือ MCP จะมีชื่อลักษณะ github_create_issue",
+  "settings.agentBehaviour.hooks.matcher.all": "ตรงกับเครื่องมือทั้งหมด",
+  "settings.agentBehaviour.hooks.matcher.names": "ตรงกันทุกตัวอักษร: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "นิพจน์ทั่วไป ตรงกับส่วนใดก็ได้ของชื่อเครื่องมือ",
+  "settings.agentBehaviour.hooks.matcher.invalid": "นิพจน์ทั่วไปไม่ถูกต้อง",
+  "settings.agentBehaviour.hooks.command": "คำสั่ง",
+  "settings.agentBehaviour.hooks.command.help":
+    "รับการเรียกใช้เครื่องมือเป็น JSON ทาง stdin และทำงานในโฟลเดอร์โปรเจกต์",
+  "settings.agentBehaviour.hooks.command.required": "ป้อนคำสั่ง",
+  "settings.agentBehaviour.hooks.exec": "รันโดยไม่ใช้เชลล์",
+  "settings.agentBehaviour.hooks.exec.help":
+    "รันคำสั่งเป็นโปรแกรมพร้อมอาร์กิวเมนต์ด้านล่าง บรรทัดละหนึ่งรายการ ไม่มีการใช้เชลล์ จึงไม่มีการขยาย ~ และ $VARIABLES โปรดใช้พาธแบบสัมบูรณ์",
+  "settings.agentBehaviour.hooks.args.placeholder": "หนึ่งอาร์กิวเมนต์ต่อบรรทัด",
+  "settings.agentBehaviour.hooks.timeout": "หมดเวลา (วินาที)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "ค่าเริ่มต้นคือ {{seconds}} วินาที ฮุกที่หมดเวลาจะถูกหยุดพร้อมกับกระบวนการทั้งหมดที่ฮุกนั้นเริ่มไว้",
+  "settings.agentBehaviour.hooks.timeout.invalid": "ป้อนจำนวนวินาทีเป็นจำนวนเต็มตั้งแต่ 1 ถึง 86400",
+  "settings.agentBehaviour.hooks.block": "บล็อกการเรียกใช้เครื่องมือหากฮุกล้มเหลว",
+  "settings.agentBehaviour.hooks.block.help":
+    "โดยค่าเริ่มต้น ฮุกที่ขัดข้องหรือหมดเวลาจะปล่อยให้เครื่องมือทำงานต่อ เปิดตัวเลือกนี้สำหรับตัวป้องกันที่ต้องไม่ปล่อยผ่านเมื่อล้มเหลว",
+  "settings.agentBehaviour.hooks.apply": "นำไปใช้",
+  "settings.agentBehaviour.hooks.remove.heading": "ลบฮุก",
+  "settings.agentBehaviour.hooks.remove.confirm": 'ลบฮุก "{{command}}" หรือไม่? คลิก "บันทึก" เพื่อใช้การเปลี่ยนแปลง',
+  "settings.agentBehaviour.hooks.remove.button": "ลบ",
   "settings.agentBehaviour.mcpDetail.command": "คำสั่ง",
   "settings.agentBehaviour.mcpDetail.args": "อาร์กิวเมนต์",
   "settings.agentBehaviour.mcpDetail.env": "สภาพแวดล้อม",

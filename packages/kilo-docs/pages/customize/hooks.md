@@ -23,6 +23,16 @@ Hooks run with your full user permissions and outside the [sandbox](/docs/gettin
 
 ## Configuration
 
+### In VS Code
+
+Open **Settings → Agent Behaviour → Hooks** to see your hooks grouped by event, and to add, edit, or remove them. Changes are saved to your global config when you click **Save**. The tab also lists, read-only, the hooks that run from other config (managed or organization config) and from Claude Code.
+
+When you save a change, the list of hooks for that event is rewritten in your config file, so comments inside that list are not kept.
+
+{% image src="/docs/img/screenshot-tests/kilo-vscode/visual-regression/settings/agent-behaviour-hooks-chromium-linux.png" alt="Hooks tab in Kilo Code" width="420" caption="Hooks tab in Kilo Code" /%}
+
+### In the config file
+
 Add a `hooks` key to your **global** config file (`~/.config/kilo/kilo.jsonc`):
 
 ```json

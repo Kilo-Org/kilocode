@@ -59,12 +59,46 @@ function key(group: HookGroup) {
   ])
 }
 
+// The CLI substitutes {env:NAME} and {file:path} when it loads config, so the effective value of an
+// own hook can differ from the raw file; such a token matches any text.
+function like(raw: string | undefined, value: string | undefined) {
+  if (raw === undefined || value === undefined) return raw === value
+  const parts = raw.split(/\{(?:env|file):[^}]*\}/)
+  if (parts.length === 1) return raw === value
+  return new RegExp(`^${parts.map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[\\s\\S]*")}$`).test(
+    value,
+  )
+}
+
+function handlerLike(raw: HookHandler, value: HookHandler) {
+  return (
+    raw.type === value.type &&
+    raw.timeout === value.timeout &&
+    raw.onFailure === value.onFailure &&
+    like(raw.command, value.command) &&
+    (raw.args ?? []).length === (value.args ?? []).length &&
+    (raw.args ?? []).every((arg, index) => like(arg, value.args?.[index])) &&
+    (raw.args === undefined) === (value.args === undefined)
+  )
+}
+
+function groupLike(raw: HookGroup, value: HookGroup) {
+  return (
+    like(raw.matcher, value.matcher) &&
+    raw.hooks.length === value.hooks.length &&
+    raw.hooks.every((item, index) => {
+      const other = value.hooks.at(index)
+      return !!other && handlerLike(item, other)
+    })
+  )
+}
+
 /** Groups that run from other trusted config (other global files, managed, organization), not from the editable file. */
 export function inherited(effective: HooksConfig | null | undefined, own: HooksConfig | null | undefined): HooksConfig {
   return Object.fromEntries(
     HOOK_EVENTS.flatMap((event) => {
-      const mine = new Set((own?.[event] ?? []).map(key))
-      const groups = (effective?.[event] ?? []).filter((group) => !mine.has(key(group)))
+      const mine = own?.[event] ?? []
+      const groups = (effective?.[event] ?? []).filter((group) => !mine.some((item) => groupLike(item, group)))
       return groups.length ? [[event, groups]] : []
     }),
   )
@@ -141,37 +175,60 @@ function clone(hooks: HooksConfig | null | undefined): Record<HookEvent, HookGro
   }
 }
 
-function drop(next: Record<HookEvent, HookGroup[]>, target: HookEntry) {
-  const groups = next[target.event]
-  const item = groups[target.group]
-  if (!item) return
-  const hooks = item.hooks.filter((_, index) => index !== target.index)
-  next[target.event] = hooks.length
-    ? groups.map((entry, index) => (index === target.group ? { ...entry, hooks } : entry))
-    : groups.filter((_, index) => index !== target.group)
+const same = (a: HookHandler, b: HookHandler) => key({ hooks: [a] }) === key({ hooks: [b] })
+
+/**
+ * Where `target` is now. Positions go stale when the hooks change under an open editor (Discard, a
+ * reload), so they are only trusted if the hook there is still the same; otherwise it is searched.
+ */
+function locate(next: Record<HookEvent, HookGroup[]>, target: HookEntry) {
+  const fits = (item: HookGroup | undefined, index: number) =>
+    !!item && item.matcher === target.matcher && !!item.hooks[index] && same(item.hooks[index], target.handler)
+  if (fits(next[target.event][target.group], target.index)) return { group: target.group, index: target.index }
+  for (const [group, item] of next[target.event].entries()) {
+    const index = item.hooks.findIndex((entry) => same(entry, target.handler))
+    if (index >= 0 && fits(item, index)) return { group, index }
+  }
+  return undefined
 }
 
-/** Adds a hook, or replaces `target`, keeping the other hooks of its matcher group where they are. */
+function drop(next: Record<HookEvent, HookGroup[]>, event: HookEvent, at: { group: number; index: number }) {
+  const groups = next[event]
+  const item = groups.at(at.group)
+  if (!item) return
+  const hooks = item.hooks.filter((_, index) => index !== at.index)
+  next[event] = hooks.length
+    ? groups.map((entry, index) => (index === at.group ? { ...entry, hooks } : entry))
+    : groups.filter((_, index) => index !== at.group)
+}
+
+/**
+ * Adds a hook, or replaces `target`, keeping the other hooks of its matcher group where they are.
+ * A target that no longer exists is added as a new hook.
+ */
 export function save(hooks: HooksConfig | null | undefined, target: HookEntry | undefined, input: HookDraft) {
   const next = clone(hooks)
-  const item = target ? next[target.event][target.group] : undefined
+  const at = target ? locate(next, target) : undefined
+  const item = target && at ? next[target.event][at.group] : undefined
   const matcher = input.matcher.trim() || undefined
-  if (target && item && target.event === input.event && item.matcher === matcher) {
-    item.hooks[target.index] = handler(input)
+  if (target && at && item && target.event === input.event && item.matcher === matcher) {
+    item.hooks[at.index] = handler(input)
     return next
   }
-  if (target && item && target.event === input.event && item.hooks.length === 1) {
-    next[target.event][target.group] = group(input)
+  if (target && at && item && target.event === input.event && item.hooks.length === 1) {
+    next[target.event][at.group] = group(input)
     return next
   }
-  if (target) drop(next, target)
+  if (target && at) drop(next, target.event, at)
   next[input.event] = [...next[input.event], group(input)]
   return next
 }
 
+/** Removes `target`; does nothing if it no longer exists. */
 export function remove(hooks: HooksConfig | null | undefined, target: HookEntry) {
   const next = clone(hooks)
-  drop(next, target)
+  const at = locate(next, target)
+  if (at) drop(next, target.event, at)
   return next
 }
 
@@ -182,7 +239,7 @@ export function remove(hooks: HooksConfig | null | undefined, target: HookEntry)
  */
 export function patch(before: HooksConfig | null | undefined, next: Record<HookEvent, HookGroup[]>): Partial<Config> {
   const changed = HOOK_EVENTS.filter(
-    (event) => JSON.stringify(before?.[event] ?? []) !== JSON.stringify(next[event]),
+    (event) => (before?.[event] ?? []).map(key).join() !== next[event].map(key).join(),
   ).map((event) => [event, next[event].length ? next[event] : null])
   return changed.length ? { hooks: Object.fromEntries(changed) } : {}
 }

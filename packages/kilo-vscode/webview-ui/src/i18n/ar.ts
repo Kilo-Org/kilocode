@@ -846,6 +846,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "الوكلاء",
   "settings.agentBehaviour.subtab.mcpServers": "خوادم MCP",
+  "settings.agentBehaviour.subtab.hooks": "الخطافات",
   "settings.agentBehaviour.subtab.rules": "القواعد",
   "settings.agentBehaviour.subtab.workflows": "سير العمل",
   "settings.agentBehaviour.subtab.skills": "المهارات",
@@ -1090,6 +1091,64 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.title": "تحميل ملفات Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
     "تحميل تعليمات ومهارات CLAUDE.md من مجلد إعدادات Claude Code إلى الجلسات. قم بتمكين هذا الخيار إذا كنت ترغب في أن يستخدم Kilo مهارات وتعليمات Claude Code الخاصة بك. يتطلب إعادة التشغيل. يشغّل أيضًا أوامر خطافات PreToolUse وPostToolUse من ~/.claude/settings.json بصلاحيات المستخدم الخاصة بك.",
+  "settings.agentBehaviour.hooks.description":
+    "شغّل أوامرك الخاصة قبل أن يستخدم الوكيل أداة أو بعد ذلك، مثلًا لفحص كل تعديل باستخدام lint أو لحظر الأوامر الخطرة. يستخدم تنسيق خطافات Claude Code.",
+  "settings.agentBehaviour.hooks.warning":
+    "تشغّل الخطافات أوامر shell بكامل صلاحيات المستخدم الخاصة بك، خارج sandbox. لا تُضف إلا الأوامر التي تثق بها.",
+  "settings.agentBehaviour.hooks.scope":
+    "يُحفظ في التكوين العالمي الخاص بك. يتم تجاهل الخطافات الموجودة في تكوين المشروع.",
+  "settings.agentBehaviour.hooks.docs": "معرفة المزيد",
+  "settings.agentBehaviour.hooks.openConfig": "فتح ملف التكوين",
+  "settings.agentBehaviour.hooks.pre": "قبل تشغيل أداة",
+  "settings.agentBehaviour.hooks.pre.help":
+    "يمكنه حظر استدعاء الأداة: اخرج بالرمز 2 واكتب السبب في stderr. سيرى الوكيل السبب.",
+  "settings.agentBehaviour.hooks.post": "بعد تشغيل أداة",
+  "settings.agentBehaviour.hooks.post.help":
+    "يمكنه إرسال ملاحظات إلى الوكيل، مثل أخطاء lint: اخرج بالرمز 2 واكتبها في stderr.",
+  "settings.agentBehaviour.hooks.empty": "لا توجد خطافات بعد.",
+  "settings.agentBehaviour.hooks.add": "إضافة خطاف",
+  "settings.agentBehaviour.hooks.allTools": "كل الأدوات",
+  "settings.agentBehaviour.hooks.badge.timeout": "المهلة {{seconds}} ث",
+  "settings.agentBehaviour.hooks.badge.block": "يحظر عند الفشل",
+  "settings.agentBehaviour.hooks.badge.exec": "بدون shell",
+  "settings.agentBehaviour.hooks.inherited": "من تكوين آخر",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "تعمل هذه الخطافات أيضًا. وهي تأتي من ملف تكوين عالمي آخر، أو من تكوين مُدار، أو من مؤسستك؛ حرّرها حيث تم تعريفها.",
+  "settings.agentBehaviour.hooks.claude": "من Claude Code",
+  "settings.agentBehaviour.hooks.claude.open": "فتح الملف",
+  "settings.agentBehaviour.hooks.claude.active": "تعمل أيضًا هذه الخطافات من {{path}}، إلا في الجلسات المعزولة.",
+  "settings.agentBehaviour.hooks.claude.off":
+    'لا تعمل: فعّل "تحميل ملفات Claude Code" في علامة تبويب "القواعد"، ثم أعد تشغيل Kilo.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "لم تعمل بعد: أعد تشغيل Kilo لتطبيق التوافق مع Claude Code. إذا استمرت في عدم العمل، فتحقق من أن KILO_DISABLE_CLAUDE_CODE_HOOKS غير مُعيَّن.",
+  "settings.agentBehaviour.hooks.new": "خطاف جديد",
+  "settings.agentBehaviour.hooks.edit": "تحرير الخطاف",
+  "settings.agentBehaviour.hooks.event": "متى",
+  "settings.agentBehaviour.hooks.matcher": "الأدوات",
+  "settings.agentBehaviour.hooks.matcher.help":
+    "اتركه فارغًا ليطابق كل الأدوات. افصل أسماء الأدوات بـ | (edit|write). أي شيء آخر يُعامل كتعبير عادي. تعمل أسماء Kilo وClaude Code كلاهما (bash أو Bash)؛ وتبدو أدوات MCP مثل github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.all": "يطابق كل الأدوات",
+  "settings.agentBehaviour.hooks.matcher.names": "يطابق تمامًا: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "تعبير عادي، يُطابَق في أي موضع من اسم الأداة",
+  "settings.agentBehaviour.hooks.matcher.invalid": "تعبير عادي غير صالح",
+  "settings.agentBehaviour.hooks.command": "الأمر",
+  "settings.agentBehaviour.hooks.command.help": "يستقبل استدعاء الأداة بتنسيق JSON عبر stdin ويعمل في مجلد المشروع.",
+  "settings.agentBehaviour.hooks.command.required": "أدخل أمرًا",
+  "settings.agentBehaviour.hooks.exec": "التشغيل بدون shell",
+  "settings.agentBehaviour.hooks.exec.help":
+    "شغّل الأمر كبرنامج مع الوسائط أدناه، وسيط واحد في كل سطر. لا يُستخدم أي shell، لذا لا يتم توسيع ~ ولا $VARIABLES: استخدم مسارات مطلقة.",
+  "settings.agentBehaviour.hooks.args.placeholder": "وسيط واحد في كل سطر",
+  "settings.agentBehaviour.hooks.timeout": "المهلة (بالثواني)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "القيمة الافتراضية {{seconds}}. يتم إيقاف الخطاف الذي تنتهي مهلته مع كل العمليات التي بدأها.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "أدخل عددًا صحيحًا من الثواني، من 1 إلى 86400",
+  "settings.agentBehaviour.hooks.block": "حظر استدعاء الأداة إذا فشل الخطاف",
+  "settings.agentBehaviour.hooks.block.help":
+    "افتراضيًا، يسمح الخطاف الذي يتعطل أو تنتهي مهلته بتشغيل الأداة. فعّل هذا الخيار لعمليات الحماية التي يجب ألا تسمح بالمرور عند الفشل.",
+  "settings.agentBehaviour.hooks.apply": "تطبيق",
+  "settings.agentBehaviour.hooks.remove.heading": "إزالة الخطاف",
+  "settings.agentBehaviour.hooks.remove.confirm": 'هل تريد إزالة الخطاف "{{command}}"؟ انقر على "حفظ" لتطبيق التغيير.',
+  "settings.agentBehaviour.hooks.remove.button": "إزالة",
   "settings.agentBehaviour.mcpDetail.command": "الأمر",
   "settings.agentBehaviour.mcpDetail.args": "الوسائط",
   "settings.agentBehaviour.mcpDetail.env": "البيئة",

@@ -854,6 +854,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "Ajanlar",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Sunucuları",
+  "settings.agentBehaviour.subtab.hooks": "Hook'lar",
   "settings.agentBehaviour.subtab.rules": "Kurallar",
   "settings.agentBehaviour.subtab.workflows": "İş Akışları",
   "settings.agentBehaviour.subtab.skills": "Beceriler",
@@ -1043,6 +1044,66 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.title": "Claude Code Dosyalarını Yükle",
   "settings.agentBehaviour.claudeCompat.description":
     "Claude Code yapılandırma dizininizdeki CLAUDE.md talimatlarını ve becerilerini oturumlara yükleyin. Kilo'nun Claude Code talimatlarınızı ve becerilerinizi kullanmasını istiyorsanız bunu etkinleştirin. Yeniden başlatma gerektirir. Ayrıca ~/.claude/settings.json içindeki PreToolUse ve PostToolUse hook komutlarını kullanıcı izinlerinizle çalıştırır.",
+  "settings.agentBehaviour.hooks.description":
+    "Ajan bir araç kullanmadan önce veya sonra kendi komutlarınızı çalıştırın; örneğin her düzenlemeyi lint'ten geçirmek veya riskli komutları engellemek için. Claude Code hook biçimini kullanır.",
+  "settings.agentBehaviour.hooks.warning":
+    "Hook'lar, shell komutlarını sandbox dışında ve tam kullanıcı izinlerinizle çalıştırır. Yalnızca güvendiğiniz komutları ekleyin.",
+  "settings.agentBehaviour.hooks.scope":
+    "Küresel yapılandırmanıza kaydedilir. Proje yapılandırmasındaki hook'lar yok sayılır.",
+  "settings.agentBehaviour.hooks.docs": "Daha fazla bilgi",
+  "settings.agentBehaviour.hooks.openConfig": "Yapılandırma dosyasını aç",
+  "settings.agentBehaviour.hooks.pre": "Araç çalışmadan önce",
+  "settings.agentBehaviour.hooks.pre.help":
+    "Araç çağrısını engelleyebilir: 2 koduyla çıkın ve nedeni stderr'e yazın. Ajan nedeni görür.",
+  "settings.agentBehaviour.hooks.post": "Araç çalıştıktan sonra",
+  "settings.agentBehaviour.hooks.post.help":
+    "Ajana lint hataları gibi geri bildirimler gönderebilir: 2 koduyla çıkın ve bunu stderr'e yazın.",
+  "settings.agentBehaviour.hooks.empty": "Henüz hook yok.",
+  "settings.agentBehaviour.hooks.add": "Hook ekle",
+  "settings.agentBehaviour.hooks.allTools": "Tüm araçlar",
+  "settings.agentBehaviour.hooks.badge.timeout": "Zaman aşımı {{seconds}} sn",
+  "settings.agentBehaviour.hooks.badge.block": "Hata durumunda engeller",
+  "settings.agentBehaviour.hooks.badge.exec": "Shell yok",
+  "settings.agentBehaviour.hooks.inherited": "Diğer yapılandırmadan",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "Bu hook'lar da çalışır. Başka bir küresel yapılandırma dosyasından, yönetilen yapılandırmadan veya kuruluşunuzdan gelirler; onları tanımlandıkları yerde düzenleyin.",
+  "settings.agentBehaviour.hooks.claude": "Claude Code'dan",
+  "settings.agentBehaviour.hooks.claude.open": "Dosyayı aç",
+  "settings.agentBehaviour.hooks.claude.active": "{{path}} içindeki bu hook'lar da çalışır; sandbox oturumları hariç.",
+  "settings.agentBehaviour.hooks.claude.off":
+    'Çalıştırılmıyor: Kurallar sekmesinde "Claude Code Dosyalarını Yükle" seçeneğini açın, ardından Kilo uygulamasını yeniden başlatın.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "Henüz çalıştırılmadı: Claude Code uyumluluğunu uygulamak için Kilo'yu yeniden başlatın. Hâlâ çalışmıyorlarsa KILO_DISABLE_CLAUDE_CODE_HOOKS değişkeninin ayarlanmadığını kontrol edin.",
+  "settings.agentBehaviour.hooks.new": "Yeni hook",
+  "settings.agentBehaviour.hooks.edit": "Hook'u düzenle",
+  "settings.agentBehaviour.hooks.event": "Ne zaman",
+  "settings.agentBehaviour.hooks.matcher": "Araçlar",
+  "settings.agentBehaviour.hooks.matcher.help":
+    "Tüm araçlarla eşleşmesi için boş bırakın. Araç adlarını | ile ayırın (edit|write). Bunun dışındaki her şey normal ifade olarak değerlendirilir. Hem Kilo hem Claude Code adları çalışır (bash veya Bash); MCP araçları github_create_issue gibi görünür.",
+  "settings.agentBehaviour.hooks.matcher.all": "Tüm araçlarla eşleşir",
+  "settings.agentBehaviour.hooks.matcher.names": "Tam olarak eşleşir: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "Normal ifade; araç adının herhangi bir yerinde eşleşir",
+  "settings.agentBehaviour.hooks.matcher.invalid": "Geçersiz normal ifade",
+  "settings.agentBehaviour.hooks.command": "Komut",
+  "settings.agentBehaviour.hooks.command.help":
+    "Araç çağrısını stdin üzerinden JSON olarak alır ve proje klasöründe çalışır.",
+  "settings.agentBehaviour.hooks.command.required": "Bir komut girin",
+  "settings.agentBehaviour.hooks.exec": "Shell olmadan çalıştır",
+  "settings.agentBehaviour.hooks.exec.help":
+    "Komutu, aşağıdaki argümanlarla (her satıra bir tane) bir program olarak çalıştırır. Shell kullanılmaz, bu nedenle ~ ve $VARIABLES genişletilmez: mutlak yollar kullanın.",
+  "settings.agentBehaviour.hooks.args.placeholder": "Her satıra bir argüman",
+  "settings.agentBehaviour.hooks.timeout": "Zaman aşımı (saniye)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "Varsayılan: {{seconds}}. Zaman aşımına uğrayan bir hook, başlattığı tüm süreçlerle birlikte durdurulur.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "1 ile 86400 arasında tam sayı olarak saniye girin",
+  "settings.agentBehaviour.hooks.block": "Hook başarısız olursa araç çağrısını engelle",
+  "settings.agentBehaviour.hooks.block.help":
+    "Varsayılan olarak, çöken veya zaman aşımına uğrayan bir hook aracın çalışmasına izin verir. Hata durumunda geçişe izin vermemesi gereken korumalar için bunu açın.",
+  "settings.agentBehaviour.hooks.apply": "Uygula",
+  "settings.agentBehaviour.hooks.remove.heading": "Hook'u kaldır",
+  "settings.agentBehaviour.hooks.remove.confirm":
+    '"{{command}}" komutunu çalıştıran hook kaldırılsın mı? Değişikliği uygulamak için Kaydet düğmesine tıklayın.',
+  "settings.agentBehaviour.hooks.remove.button": "Kaldır",
   "settings.agentBehaviour.removeMcp.title": "MCP sunucusunu kaldır",
   "settings.agentBehaviour.removeMcp.confirm":
     '"{{name}}" MCP sunucusu kaldırılsın mı? Bu, yapılandırmanızdan kaldırılacak.',

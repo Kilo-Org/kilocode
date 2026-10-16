@@ -861,6 +861,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "エージェント",
   "settings.agentBehaviour.subtab.mcpServers": "MCPサーバー",
+  "settings.agentBehaviour.subtab.hooks": "フック",
   "settings.agentBehaviour.subtab.rules": "ルール",
   "settings.agentBehaviour.subtab.workflows": "ワークフロー",
   "settings.agentBehaviour.subtab.skills": "スキル",
@@ -1109,6 +1110,66 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.title": "Claude Code ファイルを読み込む",
   "settings.agentBehaviour.claudeCompat.description":
     "Claude Code の設定ディレクトリから CLAUDE.md のインストラクションとスキルをセッションに読み込みます。Kilo に Claude Code のインストラクションとスキルを使用させる場合は、これを有効にしてください。再起動が必要です。~/.claude/settings.json の PreToolUse と PostToolUse のフックコマンドもユーザー権限で実行します。",
+  "settings.agentBehaviour.hooks.description":
+    "エージェントがツールを使用する前後に独自のコマンドを実行します。たとえば、すべての編集に lint を実行したり、危険なコマンドをブロックしたりできます。Claude Code のフック形式を使用します。",
+  "settings.agentBehaviour.hooks.warning":
+    "フックはサンドボックスの外で、ユーザーの全権限を使ってシェルコマンドを実行します。信頼できるコマンドのみを追加してください。",
+  "settings.agentBehaviour.hooks.scope": "グローバル設定に保存されます。プロジェクト設定内のフックは無視されます。",
+  "settings.agentBehaviour.hooks.docs": "詳細を見る",
+  "settings.agentBehaviour.hooks.openConfig": "設定ファイルを開く",
+  "settings.agentBehaviour.hooks.pre": "ツールの実行前",
+  "settings.agentBehaviour.hooks.pre.help":
+    "ツール呼び出しをブロックできます。コード 2 で終了し、理由を stderr に書き込んでください。理由はエージェントに伝えられます。",
+  "settings.agentBehaviour.hooks.post": "ツールの実行後",
+  "settings.agentBehaviour.hooks.post.help":
+    "lint エラーなどのフィードバックをエージェントに送信できます。コード 2 で終了し、内容を stderr に書き込んでください。",
+  "settings.agentBehaviour.hooks.empty": "フックはまだありません。",
+  "settings.agentBehaviour.hooks.add": "フックを追加",
+  "settings.agentBehaviour.hooks.allTools": "すべてのツール",
+  "settings.agentBehaviour.hooks.badge.timeout": "タイムアウト {{seconds}}秒",
+  "settings.agentBehaviour.hooks.badge.block": "失敗時にブロック",
+  "settings.agentBehaviour.hooks.badge.exec": "シェルなし",
+  "settings.agentBehaviour.hooks.inherited": "他の設定から",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "これらのフックも実行されます。別のグローバル設定ファイル、管理対象の設定、または組織から読み込まれたものです。定義されている場所で編集してください。",
+  "settings.agentBehaviour.hooks.claude": "Claude Code から",
+  "settings.agentBehaviour.hooks.claude.open": "ファイルを開く",
+  "settings.agentBehaviour.hooks.claude.active":
+    "{{path}} のこれらのフックも実行されます（サンドボックス化されたセッションを除く）。",
+  "settings.agentBehaviour.hooks.claude.off":
+    "実行されません：ルールタブで「Claude Code ファイルを読み込む」をオンにしてから、Kilo を再起動してください。",
+  "settings.agentBehaviour.hooks.claude.restart":
+    "まだ実行されていません：Claude Code 互換性を適用するには Kilo を再起動してください。それでも実行されない場合は、KILO_DISABLE_CLAUDE_CODE_HOOKS が設定されていないことを確認してください。",
+  "settings.agentBehaviour.hooks.new": "新しいフック",
+  "settings.agentBehaviour.hooks.edit": "フックを編集",
+  "settings.agentBehaviour.hooks.event": "タイミング",
+  "settings.agentBehaviour.hooks.matcher": "ツール",
+  "settings.agentBehaviour.hooks.matcher.help":
+    "空欄にするとすべてのツールに一致します。ツール名は | で区切ります（edit|write）。それ以外は正規表現として扱われます。Kilo と Claude Code のどちらの名前も使用できます（bash または Bash）。MCP ツールは github_create_issue のような名前です。",
+  "settings.agentBehaviour.hooks.matcher.all": "すべてのツールに一致",
+  "settings.agentBehaviour.hooks.matcher.names": "完全一致：{{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "正規表現（ツール名のどの位置でも一致）",
+  "settings.agentBehaviour.hooks.matcher.invalid": "無効な正規表現です",
+  "settings.agentBehaviour.hooks.command": "コマンド",
+  "settings.agentBehaviour.hooks.command.help":
+    "ツール呼び出しを JSON として stdin で受け取り、プロジェクトフォルダーで実行されます。",
+  "settings.agentBehaviour.hooks.command.required": "コマンドを入力してください",
+  "settings.agentBehaviour.hooks.exec": "シェルを使わずに実行",
+  "settings.agentBehaviour.hooks.exec.help":
+    "以下の引数（1行に1つ）を渡してコマンドをプログラムとして実行します。シェルを介さないため、~ や $VARIABLES は展開されません。絶対パスを使用してください。",
+  "settings.agentBehaviour.hooks.args.placeholder": "1行に1つの引数",
+  "settings.agentBehaviour.hooks.timeout": "タイムアウト（秒）",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "デフォルトは {{seconds}} 秒です。タイムアウトしたフックは、それが開始したすべてのプロセスとともに停止されます。",
+  "settings.agentBehaviour.hooks.timeout.invalid": "1 から 86400 までの整数で秒数を入力してください",
+  "settings.agentBehaviour.hooks.block": "フックが失敗した場合はツール呼び出しをブロック",
+  "settings.agentBehaviour.hooks.block.help":
+    "デフォルトでは、クラッシュまたはタイムアウトしたフックはツールの実行を許可します。失敗時に素通りさせてはならないガードには、これをオンにしてください。",
+  "settings.agentBehaviour.hooks.apply": "適用",
+  "settings.agentBehaviour.hooks.remove.heading": "フックを削除",
+  "settings.agentBehaviour.hooks.remove.confirm":
+    'フック "{{command}}" を削除しますか？変更を適用するには「保存」をクリックしてください。',
+  "settings.agentBehaviour.hooks.remove.button": "削除",
   "settings.agentBehaviour.mcpDetail.command": "コマンド",
   "settings.agentBehaviour.mcpDetail.args": "引数",
   "settings.agentBehaviour.mcpDetail.env": "環境",

@@ -40318,8 +40318,7 @@
                   "type": "object",
                   "properties": {
                     "matcher": {
-                      "type": "string",
-                      "description": "Tool names to match: \"*\" or omitted matches all tools, \"edit|write\" matches exact names, anything else is a regular expression. Kilo tool ids and their Claude Code names (e.g. Edit, Bash) both match."
+                      "type": "string"
                     },
                     "hooks": {
                       "type": "array",
@@ -40331,8 +40330,7 @@
                             "enum": ["command"]
                           },
                           "command": {
-                            "type": "string",
-                            "description": "Command to run. Without args it runs through the shell; with args it is the program to spawn directly. It receives the hook input as JSON on stdin."
+                            "type": "string"
                           },
                           "args": {
                             "type": "array",
@@ -40341,8 +40339,7 @@
                             }
                           },
                           "timeout": {
-                            "type": "integer",
-                            "exclusiveMinimum": 0
+                            "type": "number"
                           },
                           "onFailure": {
                             "type": "string",
@@ -40364,8 +40361,7 @@
                   "type": "object",
                   "properties": {
                     "matcher": {
-                      "type": "string",
-                      "description": "Tool names to match: \"*\" or omitted matches all tools, \"edit|write\" matches exact names, anything else is a regular expression. Kilo tool ids and their Claude Code names (e.g. Edit, Bash) both match."
+                      "type": "string"
                     },
                     "hooks": {
                       "type": "array",
@@ -40377,8 +40373,7 @@
                             "enum": ["command"]
                           },
                           "command": {
-                            "type": "string",
-                            "description": "Command to run. Without args it runs through the shell; with args it is the program to spawn directly. It receives the hook input as JSON on stdin."
+                            "type": "string"
                           },
                           "args": {
                             "type": "array",
@@ -40387,8 +40382,7 @@
                             }
                           },
                           "timeout": {
-                            "type": "integer",
-                            "exclusiveMinimum": 0
+                            "type": "number"
                           },
                           "onFailure": {
                             "type": "string",

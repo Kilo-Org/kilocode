@@ -854,6 +854,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "Агенти",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-сервери",
+  "settings.agentBehaviour.subtab.hooks": "Хуки",
   "settings.agentBehaviour.subtab.rules": "Правила",
   "settings.agentBehaviour.subtab.workflows": "Робочі процеси",
   "settings.agentBehaviour.subtab.skills": "Навички",
@@ -1043,6 +1044,66 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.title": "Завантажувати файли Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
     "Завантажувати інструкції та навички CLAUDE.md з вашого каталогу конфігурації Claude Code у сесії. Увімкніть це, якщо ви хочете, щоб Kilo використовував ваші інструкції та навички Claude Code. Потребує перезапуску. Також виконує команди хуків PreToolUse і PostToolUse з ~/.claude/settings.json з вашими правами користувача.",
+  "settings.agentBehaviour.hooks.description":
+    "Запускайте власні команди до або після використання інструмента агентом, наприклад щоб перевіряти лінтером кожну зміну чи блокувати ризиковані команди. Використовує формат хуків Claude Code.",
+  "settings.agentBehaviour.hooks.warning":
+    "Хуки виконують команди оболонки з вашими повними правами користувача, поза пісочницею. Додавайте лише команди, яким довіряєте.",
+  "settings.agentBehaviour.hooks.scope":
+    "Зберігається у вашій глобальній конфігурації. Хуки з конфігурації проєкту ігноруються.",
+  "settings.agentBehaviour.hooks.docs": "Докладніше",
+  "settings.agentBehaviour.hooks.openConfig": "Відкрити файл конфігурації",
+  "settings.agentBehaviour.hooks.pre": "Перед запуском інструмента",
+  "settings.agentBehaviour.hooks.pre.help":
+    "Може заблокувати виклик інструмента: завершіться з кодом 2 і запишіть причину в stderr. Агент побачить причину.",
+  "settings.agentBehaviour.hooks.post": "Після запуску інструмента",
+  "settings.agentBehaviour.hooks.post.help":
+    "Може надіслати агенту зворотний зв'язок, наприклад помилки лінтера: завершіться з кодом 2 і запишіть його в stderr.",
+  "settings.agentBehaviour.hooks.empty": "Хуків ще немає.",
+  "settings.agentBehaviour.hooks.add": "Додати хук",
+  "settings.agentBehaviour.hooks.allTools": "Усі інструменти",
+  "settings.agentBehaviour.hooks.badge.timeout": "Тайм-аут {{seconds}} с",
+  "settings.agentBehaviour.hooks.badge.block": "Блокує в разі збою",
+  "settings.agentBehaviour.hooks.badge.exec": "Без оболонки",
+  "settings.agentBehaviour.hooks.inherited": "З іншої конфігурації",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "Ці хуки також виконуються. Вони задані в іншому глобальному файлі конфігурації, у керованій конфігурації або вашою організацією; редагуйте їх там, де їх визначено.",
+  "settings.agentBehaviour.hooks.claude": "З Claude Code",
+  "settings.agentBehaviour.hooks.claude.open": "Відкрити файл",
+  "settings.agentBehaviour.hooks.claude.active": "Ці хуки з {{path}} також виконуються, окрім сесій у пісочниці.",
+  "settings.agentBehaviour.hooks.claude.off":
+    'Не виконуються: увімкніть "Завантажувати файли Claude Code" на вкладці "Правила", а потім перезапустіть Kilo.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "Ще не виконуються: перезапустіть Kilo, щоб застосувати сумісність з Claude Code. Якщо вони й далі не виконуються, перевірте, що змінну KILO_DISABLE_CLAUDE_CODE_HOOKS не встановлено.",
+  "settings.agentBehaviour.hooks.new": "Новий хук",
+  "settings.agentBehaviour.hooks.edit": "Редагувати хук",
+  "settings.agentBehaviour.hooks.event": "Коли",
+  "settings.agentBehaviour.hooks.matcher": "Інструменти",
+  "settings.agentBehaviour.hooks.matcher.help":
+    "Залиште порожнім, щоб спрацьовувати для всіх інструментів. Розділяйте назви інструментів символом | (edit|write). Усе інше вважається регулярним виразом. Підходять назви як Kilo, так і Claude Code (bash або Bash); інструменти MCP мають вигляд github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.all": "Відповідає будь-якому інструменту",
+  "settings.agentBehaviour.hooks.matcher.names": "Точний збіг: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "Регулярний вираз, збіг у будь-якому місці назви інструмента",
+  "settings.agentBehaviour.hooks.matcher.invalid": "Недійсний регулярний вираз",
+  "settings.agentBehaviour.hooks.command": "Команда",
+  "settings.agentBehaviour.hooks.command.help":
+    "Отримує виклик інструмента у форматі JSON через stdin і виконується в каталозі проєкту.",
+  "settings.agentBehaviour.hooks.command.required": "Введіть команду",
+  "settings.agentBehaviour.hooks.exec": "Запускати без оболонки",
+  "settings.agentBehaviour.hooks.exec.help":
+    "Запускати команду як програму з аргументами нижче, по одному на рядок. Оболонка не використовується, тому ~ і $VARIABLES не розгортаються: використовуйте абсолютні шляхи.",
+  "settings.agentBehaviour.hooks.args.placeholder": "Один аргумент на рядок",
+  "settings.agentBehaviour.hooks.timeout": "Тайм-аут (секунди)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "За замовчуванням {{seconds}}. Хук, що перевищив тайм-аут, зупиняється разом з усіма запущеними ним процесами.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "Введіть ціле число секунд від 1 до 86400",
+  "settings.agentBehaviour.hooks.block": "Блокувати виклик інструмента в разі збою хука",
+  "settings.agentBehaviour.hooks.block.help":
+    "За замовчуванням, якщо хук аварійно завершується або перевищує тайм-аут, інструмент усе одно запускається. Увімкніть це для захисних перевірок, які в разі збою не повинні пропускати виклик.",
+  "settings.agentBehaviour.hooks.apply": "Застосувати",
+  "settings.agentBehaviour.hooks.remove.heading": "Видалити хук",
+  "settings.agentBehaviour.hooks.remove.confirm":
+    'Видалити хук "{{command}}"? Натисніть "Зберегти", щоб застосувати зміну.',
+  "settings.agentBehaviour.hooks.remove.button": "Видалити",
   "settings.agentBehaviour.removeMcp.title": "Видалити MCP-сервер",
   "settings.agentBehaviour.removeMcp.confirm": 'Видалити MCP-сервер "{{name}}"? Це видалить його з вашої конфігурації.',
   "settings.agentBehaviour.removeMcp.bundleConfirm":

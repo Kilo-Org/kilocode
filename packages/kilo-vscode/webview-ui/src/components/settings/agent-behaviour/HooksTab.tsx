@@ -1,4 +1,4 @@
-import { Component, For, Show, createMemo, createSignal, onCleanup } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
@@ -11,7 +11,17 @@ import { useLanguage } from "../../../context/language"
 import { useVSCode } from "../../../context/vscode"
 import type { ClaudeHooksLoadedMessage, ExtensionMessage, HookEvent, HooksConfig } from "../../../types/messages"
 import { configMessage } from "../../../utils/open-config"
-import { EVENT_LABELS, HOOK_EVENTS, entries, inherited, patch, remove, save, type HookEntry } from "../hooks-config"
+import {
+  EVENT_LABELS,
+  HOOK_EVENTS,
+  entries,
+  inherited,
+  matcherKind,
+  patch,
+  remove,
+  save,
+  type HookEntry,
+} from "../hooks-config"
 import HookEditView from "./HookEditView"
 
 interface Props {
@@ -36,11 +46,23 @@ const HooksTab: Component<Props> = (props) => {
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "claudeHooksLoaded") setClaude(message)
+    // Refresh after config changes, and once the backend connects if the first request found none.
+    if (message.type === "agentBehaviourInvalidated") vscode.postMessage({ type: "requestClaudeHooks" })
+    if (message.type === "connectionState" && message.state === "connected" && !claude())
+      vscode.postMessage({ type: "requestClaudeHooks" })
   })
   onCleanup(unsubscribe)
   vscode.postMessage({ type: "requestClaudeHooks" })
 
   const own = () => globalConfig().hooks
+  // The editor targets a hook by position; if the hooks change under it (Discard, a reload), close it.
+  createEffect(
+    on(
+      () => JSON.stringify(own() ?? {}),
+      () => setEditing(undefined),
+      { defer: true },
+    ),
+  )
   const others = createMemo(() => inherited(config().hooks, savedGlobalConfig().hooks))
   const claudeStatus = () => {
     const info = claude()
@@ -92,7 +114,25 @@ const HooksTab: Component<Props> = (props) => {
     >
       <div style={{ flex: 1, "min-width": 0 }}>
         <div style={{ display: "flex", "align-items": "center", gap: "6px", "min-width": 0 }}>
-          <Tag>{entry.matcher?.trim() || language.t("settings.agentBehaviour.hooks.allTools")}</Tag>
+          <Show
+            when={matcherKind(entry.matcher).kind !== "all"}
+            fallback={<Tag>{language.t("settings.agentBehaviour.hooks.allTools")}</Tag>}
+          >
+            <span
+              title={entry.matcher}
+              style={{
+                ...mono,
+                "font-weight": "600",
+                overflow: "hidden",
+                "text-overflow": "ellipsis",
+                "white-space": "nowrap",
+                "max-width": "40%",
+                "flex-shrink": 0,
+              }}
+            >
+              {entry.matcher}
+            </span>
+          </Show>
           <span
             title={[entry.handler.command, ...(entry.handler.args ?? [])].join(" ")}
             style={{ ...mono, overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap" }}

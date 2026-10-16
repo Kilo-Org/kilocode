@@ -858,6 +858,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
+  "settings.agentBehaviour.subtab.hooks": "Hooks",
   "settings.agentBehaviour.subtab.rules": "Regels",
   "settings.agentBehaviour.subtab.workflows": "Workflows",
   "settings.agentBehaviour.subtab.skills": "Skills",
@@ -1051,6 +1052,67 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.title": "Claude Code-bestanden laden",
   "settings.agentBehaviour.claudeCompat.description":
     "Laad CLAUDE.md instructies en vaardigheden uit je Claude Code configuratiemap in sessies. Schakel dit in als je wilt dat Kilo je Claude Code instructies en vaardigheden gebruikt. Herstart vereist. Voert ook de PreToolUse- en PostToolUse-hookopdrachten uit ~/.claude/settings.json uit met je gebruikersrechten.",
+  "settings.agentBehaviour.hooks.description":
+    "Voer je eigen opdrachten uit voordat of nadat de agent een tool gebruikt, bijvoorbeeld om elke bewerking te linten of riskante opdrachten te blokkeren. Gebruikt het hooks-formaat van Claude Code.",
+  "settings.agentBehaviour.hooks.warning":
+    "Hooks voeren shell-opdrachten uit met je volledige gebruikersrechten, buiten de sandbox. Voeg alleen opdrachten toe die je vertrouwt.",
+  "settings.agentBehaviour.hooks.scope":
+    "Opgeslagen in je globale configuratie. Hooks in de projectconfiguratie worden genegeerd.",
+  "settings.agentBehaviour.hooks.docs": "Meer informatie",
+  "settings.agentBehaviour.hooks.openConfig": "Configuratiebestand openen",
+  "settings.agentBehaviour.hooks.pre": "Voordat een tool wordt uitgevoerd",
+  "settings.agentBehaviour.hooks.pre.help":
+    "Kan de toolaanroep blokkeren: sluit af met code 2 en schrijf de reden naar stderr. De agent ziet de reden.",
+  "settings.agentBehaviour.hooks.post": "Nadat een tool is uitgevoerd",
+  "settings.agentBehaviour.hooks.post.help":
+    "Kan feedback naar de agent sturen, zoals lintfouten: sluit af met code 2 en schrijf deze naar stderr.",
+  "settings.agentBehaviour.hooks.empty": "Nog geen hooks.",
+  "settings.agentBehaviour.hooks.add": "Hook toevoegen",
+  "settings.agentBehaviour.hooks.allTools": "Alle tools",
+  "settings.agentBehaviour.hooks.badge.timeout": "Timeout {{seconds}}s",
+  "settings.agentBehaviour.hooks.badge.block": "Blokkeert bij fout",
+  "settings.agentBehaviour.hooks.badge.exec": "Geen shell",
+  "settings.agentBehaviour.hooks.inherited": "Uit andere configuratie",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "Deze hooks worden ook uitgevoerd. Ze komen uit een ander globaal configuratiebestand, beheerde configuratie of je organisatie; bewerk ze waar ze zijn gedefinieerd.",
+  "settings.agentBehaviour.hooks.claude": "Uit Claude Code",
+  "settings.agentBehaviour.hooks.claude.open": "Bestand openen",
+  "settings.agentBehaviour.hooks.claude.active":
+    "Deze hooks uit {{path}} worden ook uitgevoerd, behalve in sessies met sandbox.",
+  "settings.agentBehaviour.hooks.claude.off":
+    'Niet uitgevoerd: schakel "Claude Code-bestanden laden" in op het tabblad Regels en herstart daarna Kilo.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "Nog niet uitgevoerd: herstart Kilo om de Claude Code-compatibiliteit toe te passen. Worden ze daarna nog steeds niet uitgevoerd, controleer dan of KILO_DISABLE_CLAUDE_CODE_HOOKS niet is ingesteld.",
+  "settings.agentBehaviour.hooks.new": "Nieuwe hook",
+  "settings.agentBehaviour.hooks.edit": "Hook bewerken",
+  "settings.agentBehaviour.hooks.event": "Wanneer",
+  "settings.agentBehaviour.hooks.matcher": "Tools",
+  "settings.agentBehaviour.hooks.matcher.help":
+    "Laat leeg om elke tool te matchen. Scheid toolnamen met | (edit|write). Al het andere is een reguliere expressie. Namen van zowel Kilo als Claude Code werken (bash of Bash); MCP-tools zien eruit als github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.all": "Matcht elke tool",
+  "settings.agentBehaviour.hooks.matcher.names": "Matcht exact: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "Reguliere expressie, gematcht op elke plek in de toolnaam",
+  "settings.agentBehaviour.hooks.matcher.invalid": "Ongeldige reguliere expressie",
+  "settings.agentBehaviour.hooks.command": "Opdracht",
+  "settings.agentBehaviour.hooks.command.help":
+    "Ontvangt de toolaanroep als JSON via stdin en wordt uitgevoerd in de projectmap.",
+  "settings.agentBehaviour.hooks.command.required": "Voer een opdracht in",
+  "settings.agentBehaviour.hooks.exec": "Uitvoeren zonder shell",
+  "settings.agentBehaviour.hooks.exec.help":
+    "Voer de opdracht uit als programma met de onderstaande argumenten, één per regel. Er wordt geen shell gebruikt, dus ~ en $VARIABLES worden niet uitgebreid: gebruik absolute paden.",
+  "settings.agentBehaviour.hooks.args.placeholder": "Eén argument per regel",
+  "settings.agentBehaviour.hooks.timeout": "Timeout (seconden)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "Standaard {{seconds}}. Een hook met een timeout wordt gestopt, samen met alle processen die hij heeft gestart.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "Voer een geheel aantal seconden in, van 1 tot 86400",
+  "settings.agentBehaviour.hooks.block": "De toolaanroep blokkeren als de hook mislukt",
+  "settings.agentBehaviour.hooks.block.help":
+    "Standaard laat een hook die crasht of een timeout krijgt de tool gewoon uitvoeren. Schakel dit in voor controles die bij een fout niets mogen doorlaten.",
+  "settings.agentBehaviour.hooks.apply": "Toepassen",
+  "settings.agentBehaviour.hooks.remove.heading": "Hook verwijderen",
+  "settings.agentBehaviour.hooks.remove.confirm":
+    'De hook "{{command}}" verwijderen? Klik op Opslaan om de wijziging toe te passen.',
+  "settings.agentBehaviour.hooks.remove.button": "Verwijderen",
   "settings.agentBehaviour.removeMcp.title": "Verwijder MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'MCP-server "{{name}}" verwijderen? Dit zal deze uit je configuratie verwijderen.',
