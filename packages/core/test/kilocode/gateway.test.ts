@@ -342,6 +342,7 @@ describe("KiloGatewayPlugin", () => {
             const providers = yield* Provider.Service
             expect(yield* rpc.call("kilocode.gateway", "profile", {})).toEqual({
               email: "profile@example.test",
+              name: "Fixture",
               organizations: [
                 { id: "first", name: "First", role: "member" },
                 { id: "selected", name: "Selected", role: "owner" },
@@ -540,6 +541,108 @@ describe("KiloGatewayPlugin", () => {
                 ).toEqual({
                   routedModelID: "anthropic/claude-sonnet-4.6",
                   vercelID: "iad1::abc",
+                })
+              }),
+          ),
+        (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+      ),
+  )
+
+  it.live(
+    "serves enterprise account, balance, Kilo Pass, BYOK, coding plans, modes, notifications, media models, and FIM/edit targets over RPC",
+    () =>
+      Effect.acquireUseRelease(
+        Effect.sync(() => fixture()),
+        (backend) =>
+          withEnv(
+            {
+              ...env,
+              KILO_API_URL: backend.url,
+              KILO_API_KEY: "env-token",
+              KILO_ORG_ID: "selected",
+            },
+            () =>
+              Effect.gen(function* () {
+                yield* addPlugin()
+                const rpc = yield* Rpc.Service
+                expect(yield* rpc.call("kilocode.gateway", "authStatus", {})).toEqual({
+                  authenticated: true,
+                  organizationID: "selected",
+                  server: backend.url,
+                })
+                expect(yield* rpc.call("kilocode.gateway", "balance", {})).toEqual({
+                  balance: 42.5,
+                  isDepleted: false,
+                })
+                expect(yield* rpc.call("kilocode.gateway", "kiloPass", {})).toEqual({
+                  currentPeriodBaseCreditsUsd: 50,
+                  currentPeriodUsageUsd: 12.25,
+                  currentPeriodBonusCreditsUsd: 5,
+                  nextBillingAt: "2026-11-01T00:00:00Z",
+                })
+                expect(yield* rpc.call("kilocode.gateway", "byok", {})).toEqual([
+                  { id: "byok-1", provider_id: "anthropic", management_source: "user", is_enabled: true },
+                ])
+                expect(yield* rpc.call("kilocode.gateway", "codingPlans", {})).toEqual([
+                  {
+                    id: "sub-1",
+                    planId: "plan-pro",
+                    planName: "Kilo Coding Plan Pro",
+                    providerName: "Anthropic",
+                    providerId: "anthropic",
+                    canQueryUsage: true,
+                    hasInstalledByokKey: true,
+                    status: "active",
+                    cancelAtPeriodEnd: false,
+                  },
+                ])
+                expect(
+                  yield* rpc.call("kilocode.gateway", "codingPlanUsage", { subscriptionID: "sub-1" }),
+                ).toMatchObject({
+                  schemaVersion: 1,
+                  subscription: { id: "sub-1" },
+                })
+                expect(yield* rpc.call("kilocode.gateway", "modes", {})).toMatchObject([
+                  { id: "mode-1", slug: "security-reviewer", name: "Security Reviewer" },
+                ])
+                expect(yield* rpc.call("kilocode.gateway", "notifications", {})).toEqual([
+                  {
+                    id: "notif-1",
+                    title: "Kilo v2 Available",
+                    message: "Try the new v2 CLI.",
+                    action: { actionText: "Learn more", actionURL: "https://kilo.ai" },
+                    showIn: ["cli"],
+                  },
+                ])
+                expect(yield* rpc.call("kilocode.gateway", "models.images", {})).toEqual([
+                  {
+                    id: "google/gemini-2.5-flash-image",
+                    name: "Gemini 2.5 Flash Image",
+                    description: "Image generation model",
+                  },
+                ])
+                expect(yield* rpc.call("kilocode.gateway", "models.transcriptions", {})).toEqual([
+                  { id: "openai/gpt-4o-mini-transcribe", name: "GPT-4o Mini Transcribe" },
+                ])
+                expect(
+                  yield* rpc.call("kilocode.gateway", "autocomplete.fimTarget", {
+                    provider: "kilo",
+                    model: "mistralai/codestral-2508",
+                  }),
+                ).toEqual({
+                  provider: "kilo",
+                  model: "mistralai/codestral-2508",
+                  url: `${backend.url}/api/gateway/v1/fim/completions`,
+                })
+                expect(
+                  yield* rpc.call("kilocode.gateway", "autocomplete.editTarget", {
+                    provider: "kilo",
+                    model: "inception/mercury-next-edit",
+                  }),
+                ).toEqual({
+                  provider: "kilo",
+                  model: "inception/mercury-edit-2",
+                  url: `${backend.url}/api/gateway/v1/edit/completions`,
                 })
               }),
           ),

@@ -1,16 +1,20 @@
 import {
   KiloAccount,
+  KiloAutocomplete,
   KiloDefaults,
   KiloDevice,
   KiloErrors,
   KiloHeaders,
   KiloMachine,
   KiloModels,
+  KiloModes,
+  KiloNotifications,
   KiloProfile,
   KiloProject,
   KiloRequests,
   KiloServer,
   KiloStream,
+  KiloTrpc,
 } from "@kilocode/gateway-core"
 import type { ConnectionInfo } from "@opencode/client"
 import type { IntegrationOAuthMethodRegistration } from "@opencode/plugin/effect/integration"
@@ -503,6 +507,12 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
 
     yield* ctx.rpc
       .register(KiloGatewayRpc.Definition, {
+        authStatus: () =>
+          Effect.sync(() => ({
+            authenticated: Boolean(catalog.account),
+            organizationID: catalog.account?.organizationID ?? null,
+            server: catalog.account?.server ?? server,
+          })),
         profile: (_input, context) =>
           Effect.gen(function* () {
             const account = catalog.account
@@ -512,10 +522,61 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
             )
             return {
               email: profile.email,
+              ...(profile.name ? { name: profile.name } : {}),
               organizations: profile.organizations,
               hasPersonalAccount: profile.hasPersonalAccount !== false,
               organizationID: account.organizationID,
             }
+          }),
+        balance: (_input, context) =>
+          Effect.gen(function* () {
+            const account = catalog.account
+            if (!account) return yield* Effect.fail(context.error("unauthorized", "Not signed in to Kilo Gateway"))
+            const result = yield* KiloProfile.balance(account.server, account.token, account.organizationID)
+            return {
+              balance: result?.balance ?? null,
+              ...(result?.isDepleted !== undefined ? { isDepleted: result.isDepleted } : {}),
+            }
+          }),
+        kiloPass: (_input, context) =>
+          Effect.gen(function* () {
+            const account = catalog.account
+            if (!account) return yield* Effect.fail(context.error("unauthorized", "Not signed in to Kilo Gateway"))
+            return yield* KiloTrpc.kiloPass(account.server, account.token, ctx.app.version, account.organizationID)
+          }),
+        byok: (_input, context) =>
+          Effect.gen(function* () {
+            const account = catalog.account
+            if (!account) return yield* Effect.fail(context.error("unauthorized", "Not signed in to Kilo Gateway"))
+            return yield* KiloTrpc.byokEntries(
+              account.server,
+              account.token,
+              ctx.app.version,
+              account.organizationID,
+            ).pipe(Effect.mapError((error) => context.error("failed", error.message)))
+          }),
+        codingPlans: (_input, context) =>
+          Effect.gen(function* () {
+            const account = catalog.account
+            if (!account) return yield* Effect.fail(context.error("unauthorized", "Not signed in to Kilo Gateway"))
+            return yield* KiloTrpc.codingPlanSubscriptions(
+              account.server,
+              account.token,
+              ctx.app.version,
+              account.organizationID,
+            ).pipe(Effect.mapError((error) => context.error("failed", error.message)))
+          }),
+        codingPlanUsage: (input, context) =>
+          Effect.gen(function* () {
+            const account = catalog.account
+            if (!account) return yield* Effect.fail(context.error("unauthorized", "Not signed in to Kilo Gateway"))
+            return yield* KiloTrpc.codingPlanUsage(
+              account.server,
+              account.token,
+              input.subscriptionID,
+              ctx.app.version,
+              account.organizationID,
+            ).pipe(Effect.mapError((error) => context.error("failed", error.message)))
           }),
         "organization.set": (input, context) =>
           Effect.gen(function* () {
@@ -524,6 +585,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
             const key = envInput ? "organization:env" : connection ? organizationKey(connection) : undefined
             if (!key || !catalog.account)
               return yield* Effect.fail(context.error("unauthorized", "Not signed in to Kilo Gateway"))
+            KiloModes.clearCache()
             yield* ctx.storage.set(key, { organizationID: input.organizationID })
             yield* reload
             yield* bus.publish(
@@ -533,6 +595,24 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
             )
             return {}
           }),
+        modes: (_input, context) =>
+          Effect.gen(function* () {
+            const account = catalog.account
+            if (!account) return yield* Effect.fail(context.error("unauthorized", "Not signed in to Kilo Gateway"))
+            if (!account.organizationID) return []
+            return yield* KiloModes.get(account.server, account.token, account.organizationID, ctx.app.version)
+          }),
+        notifications: () =>
+          Effect.gen(function* () {
+            const account = catalog.account
+            if (!account) return []
+            return yield* KiloNotifications.get(
+              account.server,
+              account.token,
+              account.organizationID,
+              ctx.app.version,
+            )
+          }),
         models: (_input, context) =>
           Effect.gen(function* () {
             if (catalog.failed) {
@@ -540,6 +620,28 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
             }
             return KiloModels.entries(catalog.models)
           }),
+        "models.images": (_input, context) =>
+          KiloModels.imageModels({
+            server: catalog.account?.server ?? server,
+            token: catalog.account?.token,
+            organizationID: catalog.account?.organizationID,
+            version: ctx.app.version,
+          }).pipe(Effect.mapError(() => context.error("failed", "Unable to retrieve Kilo image models"))),
+        "models.transcriptions": (_input, context) =>
+          KiloModels.transcriptionModels({
+            server: catalog.account?.server ?? server,
+            token: catalog.account?.token,
+            organizationID: catalog.account?.organizationID,
+            version: ctx.app.version,
+          }).pipe(Effect.mapError(() => context.error("failed", "Unable to retrieve Kilo transcription models"))),
+        "autocomplete.fimTarget": (input) =>
+          Effect.sync(() =>
+            KiloAutocomplete.resolveFimTarget(input.provider, input.model, catalog.account?.server ?? server),
+          ),
+        "autocomplete.editTarget": (input) =>
+          Effect.sync(() =>
+            KiloAutocomplete.resolveEditTarget(input.provider, input.model, catalog.account?.server ?? server),
+          ),
         "session.metadata": (input) =>
           Effect.sync(() => sessionMetadata.get(input.sessionID) ?? {}),
       })
