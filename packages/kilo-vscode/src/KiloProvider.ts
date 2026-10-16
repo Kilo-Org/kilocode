@@ -79,6 +79,7 @@ import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
 import { interceptMessage } from "./kilo-provider/git-changes-request"
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 import { clearCommandsCache, loadCommands } from "./kilo-provider/commands"
+import { loadClaudeHooks } from "./kilo-provider/claude-hooks"
 import { fetchMessagePage, MESSAGE_PAGE_LIMIT } from "./kilo-provider/message-page"
 import { createSessionPageState, fetchSessionPage } from "./kilo-provider/session-page"
 import { editPaths } from "./kilo-provider/session-edits"
@@ -456,6 +457,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedSkillsMessage: unknown = null
   /** Cached commandsLoaded payload so requestCommands can be served before client is ready */
   private cachedCommandsMessage: unknown = null
+  /** Cached claudeHooksLoaded payload so requestClaudeHooks can be served before client is ready */
+  private cachedClaudeHooksMessage: unknown = null
   /** Cached configLoaded payload so requestConfig can be served before client is ready */
   private cachedConfigMessage: unknown = null
   /** Directory the cached config payload was loaded for, so recovery is keyed to the active project. */
@@ -1642,6 +1645,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestClaudeCompatSetting":
           this.sendClaudeCompatSetting()
+          break
+        case "requestClaudeHooks":
+          this.fetchAndSendClaudeHooks().catch((e) => console.error("[Kilo New] fetchAndSendClaudeHooks failed:", e))
           break
         case "requestTimelineSetting":
           this.sendTimelineSetting()
@@ -5252,6 +5258,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         headless: config.get<boolean>("headless", false),
       },
     })
+  }
+
+  /** Read the Claude Code hooks the server runs and push them to the webview. */
+  private async fetchAndSendClaudeHooks(): Promise<void> {
+    const client = this.client
+    if (!client) {
+      if (this.cachedClaudeHooksMessage) this.postMessage(this.cachedClaudeHooksMessage)
+      return
+    }
+    const message = await retry(() => loadClaudeHooks(client, this.getWorkspaceDirectory()))
+    this.cachedClaudeHooksMessage = message
+    this.postMessage(message)
   }
 
   /**

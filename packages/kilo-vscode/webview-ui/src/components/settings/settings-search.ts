@@ -37,7 +37,11 @@ export interface SettingsEntry {
 export const SETTINGS_TABS: SettingsTab[] = [
   { id: "models", titleKey: "settings.models.title", keywords: ["model", "llm", "default", "speech"] },
   { id: "providers", titleKey: "settings.providers.title", keywords: ["provider", "api key", "connect", "auth"] },
-  { id: "agentBehaviour", titleKey: "settings.agentBehaviour.title", keywords: ["agent", "mode", "mcp", "skill"] },
+  {
+    id: "agentBehaviour",
+    titleKey: "settings.agentBehaviour.title",
+    keywords: ["agent", "mode", "mcp", "skill", "hook"],
+  },
   { id: "autoApprove", titleKey: "settings.autoApprove.title", keywords: ["permission", "approve", "cost"] },
   {
     id: "agentManager",

@@ -721,6 +721,7 @@ export const dict = {
   "settings.aboutKiloCode.telemetry.openSettings": "Apri impostazioni telemetria",
   "settings.agentBehaviour.subtab.agents": "Agenti",
   "settings.agentBehaviour.subtab.mcpServers": "Server MCP",
+  "settings.agentBehaviour.subtab.hooks": "Hook",
   "settings.agentBehaviour.subtab.rules": "Regole",
   "settings.agentBehaviour.subtab.workflows": "Workflow",
   "settings.agentBehaviour.subtab.skills": "Skill",
@@ -898,7 +899,67 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Compatibilità Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Carica file Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "Carica istruzioni CLAUDE.md e skill dalla directory di configurazione Claude Code nelle sessioni. Abilitalo se vuoi che Kilo usi istruzioni e skill di Claude Code. Richiede riavvio.",
+    "Carica istruzioni CLAUDE.md e skill dalla directory di configurazione Claude Code nelle sessioni. Abilitalo se vuoi che Kilo usi istruzioni e skill di Claude Code. Richiede riavvio. Esegue anche i comandi hook PreToolUse e PostToolUse di ~/.claude/settings.json con i tuoi permessi utente.",
+  "settings.agentBehaviour.hooks.description":
+    "Esegui i tuoi comandi prima o dopo che l'agente usa un tool, ad esempio per eseguire il lint di ogni modifica o bloccare comandi rischiosi. Usa il formato hook di Claude Code.",
+  "settings.agentBehaviour.hooks.warning":
+    "Gli hook eseguono comandi shell con tutti i tuoi permessi utente, fuori dalla sandbox. Aggiungi solo comandi di cui ti fidi.",
+  "settings.agentBehaviour.hooks.scope":
+    "Salvato nella configurazione globale. Gli hook nella configurazione del progetto vengono ignorati.",
+  "settings.agentBehaviour.hooks.openConfig": "Apri file di configurazione",
+  "settings.agentBehaviour.hooks.pre": "Prima dell'esecuzione di un tool",
+  "settings.agentBehaviour.hooks.pre.help":
+    "Può bloccare la chiamata tool: esci con codice 2 e scrivi il motivo su stderr. L'agente vede il motivo.",
+  "settings.agentBehaviour.hooks.post": "Dopo l'esecuzione di un tool",
+  "settings.agentBehaviour.hooks.post.help":
+    "Può inviare feedback all'agente, come errori di lint: esci con codice 2 e scrivilo su stderr.",
+  "settings.agentBehaviour.hooks.empty": "Ancora nessun hook.",
+  "settings.agentBehaviour.hooks.add": "Aggiungi hook",
+  "settings.agentBehaviour.hooks.allTools": "Tutti i tool",
+  "settings.agentBehaviour.hooks.badge.timeout": "Timeout {{seconds}} s",
+  "settings.agentBehaviour.hooks.badge.block": "Blocca in caso di errore",
+  "settings.agentBehaviour.hooks.badge.exec": "Senza shell",
+  "settings.agentBehaviour.hooks.inherited": "Da un'altra configurazione",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "Anche questi hook vengono eseguiti. Provengono da un altro file di configurazione globale, da una configurazione gestita o dalla tua organizzazione; modificali dove sono definiti.",
+  "settings.agentBehaviour.hooks.claude": "Da Claude Code",
+  "settings.agentBehaviour.hooks.claude.open": "Apri file",
+  "settings.agentBehaviour.hooks.claude.active":
+    "Anche questi hook da {{path}} vengono eseguiti, tranne nelle sessioni in sandbox.",
+  "settings.agentBehaviour.hooks.claude.off":
+    'Non eseguiti: attiva "Carica file Claude Code" nella scheda Regole, poi riavvia Kilo.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "Non ancora eseguiti: riavvia Kilo per applicare la compatibilità Claude Code. Se ancora non vengono eseguiti, verifica che KILO_DISABLE_CLAUDE_CODE_HOOKS non sia impostata.",
+  "settings.agentBehaviour.hooks.new": "Nuovo hook",
+  "settings.agentBehaviour.hooks.edit": "Modifica hook",
+  "settings.agentBehaviour.hooks.event": "Quando",
+  "settings.agentBehaviour.hooks.matcher": "Tool",
+  "settings.agentBehaviour.hooks.matcher.help":
+    "Lascia vuoto per includere tutti i tool. Separa i nomi dei tool con | (edit|write). Qualsiasi altro valore è un'espressione regolare. Funzionano sia i nomi Kilo sia quelli Claude Code (bash o Bash); i tool MCP hanno nomi come github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.all": "Corrisponde a tutti i tool",
+  "settings.agentBehaviour.hooks.matcher.names": "Corrisponde esattamente a: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "Espressione regolare, cercata in qualsiasi punto del nome del tool",
+  "settings.agentBehaviour.hooks.matcher.invalid": "Espressione regolare non valida",
+  "settings.agentBehaviour.hooks.command": "Comando",
+  "settings.agentBehaviour.hooks.command.help":
+    "Riceve la chiamata tool come JSON su stdin e viene eseguito nella cartella del progetto.",
+  "settings.agentBehaviour.hooks.command.required": "Inserisci un comando",
+  "settings.agentBehaviour.hooks.exec": "Esegui senza shell",
+  "settings.agentBehaviour.hooks.exec.help":
+    "Esegue il comando come programma con gli argomenti qui sotto, uno per riga. Non viene usata alcuna shell, quindi ~ e $VARIABLES non vengono espansi: usa percorsi assoluti.",
+  "settings.agentBehaviour.hooks.args.placeholder": "Un argomento per riga",
+  "settings.agentBehaviour.hooks.timeout": "Timeout (secondi)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "Predefinito: {{seconds}}. Un hook che va in timeout viene interrotto, insieme a tutti i processi che ha avviato.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "Inserisci un numero intero di secondi, da 1 a 86400",
+  "settings.agentBehaviour.hooks.block": "Blocca la chiamata tool se l'hook fallisce",
+  "settings.agentBehaviour.hooks.block.help":
+    "Per impostazione predefinita, un hook che va in crash o in timeout lascia eseguire il tool. Attivalo per i controlli che non devono lasciar passare la chiamata in caso di errore.",
+  "settings.agentBehaviour.hooks.apply": "Applica",
+  "settings.agentBehaviour.hooks.remove.heading": "Rimuovi hook",
+  "settings.agentBehaviour.hooks.remove.confirm":
+    'Rimuovere l’hook "{{command}}"? Fai clic su Salva per applicare la modifica.',
+  "settings.agentBehaviour.hooks.remove.button": "Rimuovi",
   "settings.agentBehaviour.removeMcp.title": "Rimuovi server MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Rimuovere il server MCP "{{name}}"? Questo lo rimuoverà dalla configurazione.',

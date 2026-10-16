@@ -33,6 +33,7 @@ import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { McpApps } from "@/kilocode/mcp/apps"
 import { BoardEnabled } from "@/kilocode/board/enabled"
 import { KiloCodeMode } from "@/kilocode/tool/code-mode" // kilocode_change
+import { KiloHooks } from "@/kilocode/hooks/hooks"
 // kilocode_change end
 import { isRecord } from "@/util/record"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -81,6 +82,15 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const flags = yield* RuntimeFlags.Service
   const cfg = yield* config.get()
   const permissionOrigins = cfg.permission_origins
+  const call = (tool: string, args: unknown, opts: ToolExecutionOptions, aliases?: string[]): KiloHooks.Call => ({
+    tool,
+    aliases,
+    args,
+    callID: opts.toolCallId,
+    sessionID: input.session.id,
+    directory: input.session.directory,
+    abort: opts.abortSignal,
+  })
   const notify = BoardEnabled.on(cfg, flags) ? input.notify : undefined
   type Output = Parameters<SessionProcessor.Handle["completeToolCall"]>[1]
   const finish = <T extends Output>(name: string, output: T, opts: ToolExecutionOptions) =>
@@ -98,6 +108,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   // kilocode_change end
   const restricted = yield* SandboxPolicy.networkRestricted(input.session.id) // kilocode_change
   const sandboxed = (yield* SandboxPolicy.status(input.session.id)).enabled // kilocode_change
+  const hooks = yield* KiloHooks.load(cfg, !sandboxed) // kilocode_change - ~/.claude hooks run unsandboxed
   const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => {
     const extra = {
       model: input.model,
@@ -200,6 +211,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { args },
             )
             // kilocode_change start
+            const blocked = yield* KiloHooks.before(hooks, call(item.id, args, options))
+            if (blocked) throw new Error(blocked)
             const result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
             // kilocode_change end
             const output = {
@@ -218,6 +231,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args },
               output,
             )
+            yield* KiloHooks.after(hooks, call(item.id, args, options), output) // kilocode_change
             return yield* finish(item.id, output, options) // kilocode_change
           }),
         )
@@ -269,6 +283,10 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { tool: MCP_RESOURCE_TOOLS.list, sessionID: ctx.sessionID, callID: opts.toolCallId },
               { args },
             )
+            // kilocode_change start
+            const blocked = yield* KiloHooks.before(hooks, call(MCP_RESOURCE_TOOLS.list, args, opts))
+            if (blocked) throw new Error(blocked)
+            // kilocode_change end
             yield* ctx.ask({
               permission: "read",
               metadata: parsed.server ? { server: parsed.server } : {},
@@ -302,6 +320,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { tool: MCP_RESOURCE_TOOLS.list, sessionID: ctx.sessionID, callID: opts.toolCallId, args },
               output,
             )
+            yield* KiloHooks.after(hooks, call(MCP_RESOURCE_TOOLS.list, args, opts), output) // kilocode_change
             return yield* finish(MCP_RESOURCE_TOOLS.list, output, opts) // kilocode_change
           }),
         )
@@ -349,6 +368,10 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { tool: MCP_RESOURCE_TOOLS.listTemplates, sessionID: ctx.sessionID, callID: opts.toolCallId },
               { args },
             )
+            // kilocode_change start
+            const blocked = yield* KiloHooks.before(hooks, call(MCP_RESOURCE_TOOLS.listTemplates, args, opts))
+            if (blocked) throw new Error(blocked)
+            // kilocode_change end
             yield* ctx.ask({
               permission: "read",
               metadata: parsed.server ? { server: parsed.server } : {},
@@ -382,6 +405,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { tool: MCP_RESOURCE_TOOLS.listTemplates, sessionID: ctx.sessionID, callID: opts.toolCallId, args },
               output,
             )
+            yield* KiloHooks.after(hooks, call(MCP_RESOURCE_TOOLS.listTemplates, args, opts), output) // kilocode_change
             return yield* finish(MCP_RESOURCE_TOOLS.listTemplates, output, opts) // kilocode_change
           }),
         )
@@ -426,6 +450,10 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { tool: MCP_RESOURCE_TOOLS.read, sessionID: ctx.sessionID, callID: opts.toolCallId },
               { args },
             )
+            // kilocode_change start
+            const blocked = yield* KiloHooks.before(hooks, call(MCP_RESOURCE_TOOLS.read, args, opts))
+            if (blocked) throw new Error(blocked)
+            // kilocode_change end
             yield* ctx.ask({
               permission: "read",
               metadata: { server: parsed.server, uri: parsed.uri },
@@ -461,6 +489,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { tool: MCP_RESOURCE_TOOLS.read, sessionID: ctx.sessionID, callID: opts.toolCallId, args },
               output,
             )
+            yield* KiloHooks.after(hooks, call(MCP_RESOURCE_TOOLS.read, args, opts), output) // kilocode_change
             return yield* finish(MCP_RESOURCE_TOOLS.read, output, opts) // kilocode_change
           }),
         )
@@ -495,6 +524,9 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             { args },
           )
           // kilocode_change start
+          const names = [`mcp__${McpCatalog.sanitize(entry.clientName)}__${McpCatalog.sanitize(entry.def.name)}`]
+          const blocked = yield* KiloHooks.before(hooks, call(key, args, opts, names))
+          if (blocked) throw new Error(blocked)
           const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* SandboxPolicy.executeMcp(
             ctx.sessionID,
             entry, // kilocode_change - retain the native entry's local/remote network authority marker
@@ -577,6 +609,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             })),
             content: result.content,
           }
+          yield* KiloHooks.after(hooks, call(key, args, opts, names), output) // kilocode_change
           return yield* finish(key, output, opts) // kilocode_change
         }),
       )

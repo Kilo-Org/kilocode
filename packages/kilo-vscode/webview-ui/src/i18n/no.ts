@@ -827,6 +827,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "Agenter",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",
+  "settings.agentBehaviour.subtab.hooks": "Hooks",
   "settings.agentBehaviour.subtab.rules": "Regler",
   "settings.agentBehaviour.subtab.workflows": "Arbeidsflyter",
   "settings.agentBehaviour.subtab.skills": "Ferdigheter",
@@ -1113,7 +1114,65 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-kompatibilitet",
   "settings.agentBehaviour.claudeCompat.title": "Last inn Claude Code-filer",
   "settings.agentBehaviour.claudeCompat.description":
-    "Last inn CLAUDE.md-instruksjoner og ferdigheter fra Claude Code-konfigurasjonsmappen din i økter. Aktiver dette hvis du vil at Kilo skal bruke dine Claude Code-instruksjoner og ferdigheter. Krever omstart.",
+    "Last inn CLAUDE.md-instruksjoner og ferdigheter fra Claude Code-konfigurasjonsmappen din i økter. Aktiver dette hvis du vil at Kilo skal bruke dine Claude Code-instruksjoner og ferdigheter. Krever omstart. Kjører også PreToolUse- og PostToolUse-hookkommandoene fra ~/.claude/settings.json med dine brukerrettigheter.",
+  "settings.agentBehaviour.hooks.description":
+    "Kjør dine egne kommandoer før eller etter at agenten bruker et verktøy, for eksempel for å linte hver redigering eller blokkere risikable kommandoer. Bruker Claude Code-hookformatet.",
+  "settings.agentBehaviour.hooks.warning":
+    "Hooks kjører shell-kommandoer med dine fulle brukerrettigheter, utenfor sandboxen. Legg bare til kommandoer du stoler på.",
+  "settings.agentBehaviour.hooks.scope":
+    "Lagres i den globale konfigurasjonen din. Hooks i prosjektkonfigurasjonen ignoreres.",
+  "settings.agentBehaviour.hooks.openConfig": "Åpne konfigurasjonsfil",
+  "settings.agentBehaviour.hooks.pre": "Før et verktøy kjører",
+  "settings.agentBehaviour.hooks.pre.help":
+    "Kan blokkere verktøykallet: avslutt med kode 2 og skriv årsaken til stderr. Agenten ser årsaken.",
+  "settings.agentBehaviour.hooks.post": "Etter at et verktøy har kjørt",
+  "settings.agentBehaviour.hooks.post.help":
+    "Kan sende tilbakemelding til agenten, for eksempel lint-feil: avslutt med kode 2 og skriv den til stderr.",
+  "settings.agentBehaviour.hooks.empty": "Ingen hooks ennå.",
+  "settings.agentBehaviour.hooks.add": "Legg til hook",
+  "settings.agentBehaviour.hooks.allTools": "Alle verktøy",
+  "settings.agentBehaviour.hooks.badge.timeout": "Tidsavbrudd {{seconds}}s",
+  "settings.agentBehaviour.hooks.badge.block": "Blokkerer ved feil",
+  "settings.agentBehaviour.hooks.badge.exec": "Ingen shell",
+  "settings.agentBehaviour.hooks.inherited": "Fra annen konfigurasjon",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "Disse hookene kjører også. De kommer fra en annen global konfigurasjonsfil, administrert konfigurasjon eller organisasjonen din; rediger dem der de er definert.",
+  "settings.agentBehaviour.hooks.claude": "Fra Claude Code",
+  "settings.agentBehaviour.hooks.claude.open": "Åpne fil",
+  "settings.agentBehaviour.hooks.claude.active": "Disse hookene fra {{path}} kjører også, unntatt i økter med sandbox.",
+  "settings.agentBehaviour.hooks.claude.off":
+    'Kjøres ikke: slå på "Last inn Claude Code-filer" i fanen Regler, og start deretter Kilo på nytt.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "Kjøres ikke ennå: start Kilo på nytt for å ta i bruk Claude Code-kompatibilitet. Hvis de fortsatt ikke kjører, kontroller at KILO_DISABLE_CLAUDE_CODE_HOOKS ikke er satt.",
+  "settings.agentBehaviour.hooks.new": "Ny hook",
+  "settings.agentBehaviour.hooks.edit": "Rediger hook",
+  "settings.agentBehaviour.hooks.event": "Når",
+  "settings.agentBehaviour.hooks.matcher": "Verktøy",
+  "settings.agentBehaviour.hooks.matcher.help":
+    "La feltet stå tomt for å matche alle verktøy. Skill verktøynavn med | (edit|write). Alt annet er et regulært uttrykk. Både Kilo- og Claude Code-navn fungerer (bash eller Bash); MCP-verktøy ser ut som github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.all": "Matcher alle verktøy",
+  "settings.agentBehaviour.hooks.matcher.names": "Matcher nøyaktig: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "Regulært uttrykk som matches hvor som helst i verktøynavnet",
+  "settings.agentBehaviour.hooks.matcher.invalid": "Ugyldig regulært uttrykk",
+  "settings.agentBehaviour.hooks.command": "Kommando",
+  "settings.agentBehaviour.hooks.command.help": "Mottar verktøykallet som JSON på stdin og kjører i prosjektmappen.",
+  "settings.agentBehaviour.hooks.command.required": "Skriv inn en kommando",
+  "settings.agentBehaviour.hooks.exec": "Kjør uten shell",
+  "settings.agentBehaviour.hooks.exec.help":
+    "Kjør kommandoen som et program med argumentene nedenfor, ett per linje. Det brukes ingen shell, så ~ og $VARIABLES utvides ikke: bruk absolutte stier.",
+  "settings.agentBehaviour.hooks.args.placeholder": "Ett argument per linje",
+  "settings.agentBehaviour.hooks.timeout": "Tidsavbrudd (sekunder)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "Standard er {{seconds}}. En hook som får tidsavbrudd, stoppes sammen med alle prosessene den har startet.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "Angi et helt antall sekunder, fra 1 til 86400",
+  "settings.agentBehaviour.hooks.block": "Blokker verktøykallet hvis hooken feiler",
+  "settings.agentBehaviour.hooks.block.help":
+    "Som standard får verktøyet kjøre hvis en hook krasjer eller får tidsavbrudd. Slå på dette for kontroller som ikke skal slippe noe gjennom ved feil.",
+  "settings.agentBehaviour.hooks.apply": "Bruk",
+  "settings.agentBehaviour.hooks.remove.heading": "Fjern hook",
+  "settings.agentBehaviour.hooks.remove.confirm":
+    'Vil du fjerne hooken "{{command}}"? Klikk Lagre for å ta i bruk endringen.',
+  "settings.agentBehaviour.hooks.remove.button": "Fjern",
   "settings.agentBehaviour.mcpDetail.command": "Kommando",
   "settings.agentBehaviour.mcpDetail.args": "Argumenter",
   "settings.agentBehaviour.mcpDetail.env": "Miljø",

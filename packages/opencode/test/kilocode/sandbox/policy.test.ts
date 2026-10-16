@@ -190,10 +190,11 @@ describe("sandbox policy", () => {
     const dirs = tmp.extra
     const ctx = context(dirs.a, dirs.a, dirs)
     const policy = profile(ctx)
-    const [storeWrite, prefWrite] = await Effect.runPromise(
+    const [storeWrite, prefWrite, claudeWrite] = await Effect.runPromise(
       Effect.all([
         runSandbox(policy, assertWrite(SandboxStore.root)).pipe(Effect.exit),
         runSandbox(policy, assertWrite(SandboxPreference.root)).pipe(Effect.exit),
+        runSandbox(policy, assertWrite(path.join(Global.Path.home, ".claude", "settings.json"))).pipe(Effect.exit),
       ]),
     )
 
@@ -203,6 +204,9 @@ describe("sandbox policy", () => {
       { path: SandboxStore.root, kind: "subtree" },
       { path: SandboxPreference.root, kind: "subtree" },
       { path: Global.Path.config, kind: "subtree" },
+      { path: path.join(Global.Path.home, ".kilo"), kind: "subtree" },
+      { path: path.join(Global.Path.home, ".kilocode"), kind: "subtree" },
+      { path: path.join(Global.Path.home, ".claude"), kind: "subtree" },
     ])
     expect(policy.environment.deny).toEqual([
       "KILO_CONFIG",
@@ -215,6 +219,26 @@ describe("sandbox policy", () => {
     ])
     expect(Exit.isFailure(storeWrite)).toBe(true)
     expect(Exit.isFailure(prefWrite)).toBe(true)
+    expect(Exit.isFailure(claudeWrite)).toBe(true)
+  })
+
+  test("keeps a KILO_CONFIG_DIR override read-only", async () => {
+    await using tmp = await fixture()
+    const dirs = tmp.extra
+    const dir = path.join(dirs.a, "config")
+    const previous = process.env.KILO_CONFIG_DIR
+    process.env.KILO_CONFIG_DIR = dir
+    try {
+      const policy = profile(context(dirs.a, dirs.a, dirs))
+      expect(policy.filesystem.denyWrite).toContainEqual({ path: dir, kind: "subtree" })
+      const write = await Effect.runPromise(
+        runSandbox(policy, assertWrite(path.join(dir, "kilo.jsonc"))).pipe(Effect.exit),
+      )
+      expect(Exit.isFailure(write)).toBe(true)
+    } finally {
+      if (previous === undefined) delete process.env.KILO_CONFIG_DIR
+      else process.env.KILO_CONFIG_DIR = previous
+    }
   })
 
   test("uses deny-by-default and configurable network profiles", async () => {

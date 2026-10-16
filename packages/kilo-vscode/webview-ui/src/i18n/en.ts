@@ -839,6 +839,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "Agents",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
+  "settings.agentBehaviour.subtab.hooks": "Hooks",
   "settings.agentBehaviour.subtab.rules": "Rules",
   "settings.agentBehaviour.subtab.workflows": "Workflows",
   "settings.agentBehaviour.subtab.skills": "Skills",
@@ -1032,7 +1033,64 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Compatibility",
   "settings.agentBehaviour.claudeCompat.title": "Load Claude Code Files",
   "settings.agentBehaviour.claudeCompat.description":
-    "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into sessions. Enable this if you want Kilo to use your Claude Code instructions and skills. Requires restart.",
+    "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into sessions. Enable this if you want Kilo to use your Claude Code instructions and skills. Requires restart. Also runs the PreToolUse and PostToolUse hook commands from ~/.claude/settings.json with your user permissions.",
+  "settings.agentBehaviour.hooks.description":
+    "Run your own commands before or after the agent uses a tool, for example to lint every edit or block risky commands. Uses the Claude Code hooks format.",
+  "settings.agentBehaviour.hooks.warning":
+    "Hooks run shell commands with your full user permissions, outside the sandbox. Only add commands you trust.",
+  "settings.agentBehaviour.hooks.scope": "Saved to your global config. Hooks in project config are ignored.",
+  "settings.agentBehaviour.hooks.openConfig": "Open config file",
+  "settings.agentBehaviour.hooks.pre": "Before a tool runs",
+  "settings.agentBehaviour.hooks.pre.help":
+    "Can block the tool call: exit with code 2 and write the reason to stderr. The agent sees the reason.",
+  "settings.agentBehaviour.hooks.post": "After a tool runs",
+  "settings.agentBehaviour.hooks.post.help":
+    "Can send feedback to the agent, such as lint errors: exit with code 2 and write it to stderr.",
+  "settings.agentBehaviour.hooks.empty": "No hooks yet.",
+  "settings.agentBehaviour.hooks.add": "Add hook",
+  "settings.agentBehaviour.hooks.allTools": "All tools",
+  "settings.agentBehaviour.hooks.badge.timeout": "Timeout {{seconds}}s",
+  "settings.agentBehaviour.hooks.badge.block": "Blocks on failure",
+  "settings.agentBehaviour.hooks.badge.exec": "No shell",
+  "settings.agentBehaviour.hooks.inherited": "From other config",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "These hooks also run. They come from another global config file, managed config, or your organization; edit them where they are defined.",
+  "settings.agentBehaviour.hooks.claude": "From Claude Code",
+  "settings.agentBehaviour.hooks.claude.open": "Open file",
+  "settings.agentBehaviour.hooks.claude.active": "These hooks from {{path}} also run, except in sandboxed sessions.",
+  "settings.agentBehaviour.hooks.claude.off":
+    'Not run: turn on "Load Claude Code Files" in the Rules tab, then restart Kilo.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "Not run yet: restart Kilo to apply Claude Code compatibility. If they still do not run, check that KILO_DISABLE_CLAUDE_CODE_HOOKS is not set.",
+  "settings.agentBehaviour.hooks.new": "New hook",
+  "settings.agentBehaviour.hooks.edit": "Edit hook",
+  "settings.agentBehaviour.hooks.event": "When",
+  "settings.agentBehaviour.hooks.matcher": "Tools",
+  "settings.agentBehaviour.hooks.matcher.help":
+    "Leave empty to match every tool. Separate tool names with | (edit|write). Anything else is a regular expression. Kilo and Claude Code names both work (bash or Bash); MCP tools look like github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.all": "Matches every tool",
+  "settings.agentBehaviour.hooks.matcher.names": "Matches exactly: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "Regular expression, matched anywhere in the tool name",
+  "settings.agentBehaviour.hooks.matcher.invalid": "Invalid regular expression",
+  "settings.agentBehaviour.hooks.command": "Command",
+  "settings.agentBehaviour.hooks.command.help":
+    "Receives the tool call as JSON on stdin and runs in the project folder.",
+  "settings.agentBehaviour.hooks.command.required": "Enter a command",
+  "settings.agentBehaviour.hooks.exec": "Run without a shell",
+  "settings.agentBehaviour.hooks.exec.help":
+    "Run the command as a program with the arguments below, one per line. No shell is involved, so ~ and $VARIABLES are not expanded: use absolute paths.",
+  "settings.agentBehaviour.hooks.args.placeholder": "One argument per line",
+  "settings.agentBehaviour.hooks.timeout": "Timeout (seconds)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "Defaults to {{seconds}}. A hook that times out is stopped, with all the processes it started.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "Enter a whole number of seconds, from 1 to 86400",
+  "settings.agentBehaviour.hooks.block": "Block the tool call if the hook fails",
+  "settings.agentBehaviour.hooks.block.help":
+    "By default, a hook that crashes or times out lets the tool run. Turn this on for guards that must not fail open.",
+  "settings.agentBehaviour.hooks.apply": "Apply",
+  "settings.agentBehaviour.hooks.remove.heading": "Remove hook",
+  "settings.agentBehaviour.hooks.remove.confirm": 'Remove the hook "{{command}}"? Click Save to apply the change.',
+  "settings.agentBehaviour.hooks.remove.button": "Remove",
   "settings.agentBehaviour.removeMcp.title": "Remove MCP server",
   "settings.agentBehaviour.removeMcp.confirm": 'Remove MCP server "{{name}}"? This will remove it from your config.',
   "settings.agentBehaviour.removeMcp.bundleConfirm":

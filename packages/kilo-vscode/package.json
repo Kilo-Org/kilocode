@@ -1134,7 +1134,7 @@
         "kilo-code.new.claudeCodeCompat": {
           "type": "boolean",
           "default": false,
-          "description": "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into Kilo sessions. Enable this if you want Kilo to use your Claude Code instructions and skills."
+          "description": "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into Kilo sessions. Enable this if you want Kilo to use your Claude Code instructions and skills. Also runs the PreToolUse and PostToolUse hook commands from ~/.claude/settings.json with your user permissions."
         },
         "kilo-code.new.extraCaCerts": {
           "type": "string",

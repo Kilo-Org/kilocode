@@ -4,6 +4,7 @@ import { GlobalBus } from "@/bus/global"
 import { Config } from "@/config/config"
 import * as InstanceState from "@/effect/instance-state"
 import { KilocodeConfigOverlay } from "@/kilocode/config/overlay"
+import { KiloHooks } from "@/kilocode/hooks/hooks"
 import { KilocodeConfigWriter } from "@/kilocode/config/writer"
 import { KilocodeConfigSources } from "@/kilocode/config/sources"
 import { KilocodeModelState } from "@/kilocode/config/model-state"
@@ -197,6 +198,10 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
       )
     })
 
+    const claudeHooks = Effect.fn("ConfigConsoleHttpApi.claudeHooks")(function* () {
+      return yield* Effect.promise(() => KiloHooks.claude())
+    })
+
     const effective = Effect.fn("ConfigConsoleHttpApi.effective")(function* () {
       return yield* config.get()
     })
@@ -270,6 +275,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
       .handle("overlay", overlay)
       .handle("overlayUpdate", overlayUpdate)
       .handle("sources", sources)
+      .handle("claudeHooks", claudeHooks)
       .handle("effective", effective)
       .handle("rules", rules)
       .handle("rulesUpdate", rulesUpdate)

@@ -178,8 +178,33 @@ export const TuiKeybindListResponse = Schema.Struct({ keybinds: Schema.Array(Kil
   identifier: "TuiKeybindListResponse",
 })
 
+// Claude Code accepts any number as a timeout (the runner treats invalid ones as the default), so
+// unlike Config.Info hooks this does not require a positive integer.
+const ClaudeHookGroups = Schema.optional(
+  Schema.Array(
+    Schema.Struct({
+      matcher: Schema.optional(Schema.String),
+      hooks: Schema.Array(
+        Schema.Struct({
+          type: Schema.Literal("command"),
+          command: Schema.String,
+          args: Schema.optional(Schema.Array(Schema.String)),
+          timeout: Schema.optional(Schema.Finite),
+          onFailure: Schema.optional(Schema.Literal("block")),
+        }),
+      ),
+    }),
+  ),
+)
+export const ConfigClaudeHooksResponse = Schema.Struct({
+  path: Schema.String,
+  enabled: Schema.Boolean,
+  hooks: Schema.optional(Schema.Struct({ PreToolUse: ClaudeHookGroups, PostToolUse: ClaudeHookGroups })),
+}).annotate({ identifier: "ConfigClaudeHooks" })
+
 export const ConfigConsolePaths = {
   sources: "/config/sources",
+  claudeHooks: "/config/claude-hooks",
   effective: "/config/effective",
   overlay: "/config/overlay",
   rules: "/config/rules",
@@ -211,6 +236,17 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
             identifier: "config.sources",
             summary: "List config sources",
             description: "List config source metadata in load order without exposing config contents or secrets.",
+          }),
+        ),
+        HttpApiEndpoint.get("claudeHooks", ConfigConsolePaths.claudeHooks, {
+          query: WorkspaceRoutingQuery,
+          success: described(ConfigClaudeHooksResponse, "Claude Code hooks"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "config.claudeHooks",
+            summary: "Get Claude Code hooks",
+            description:
+              "List the PreToolUse and PostToolUse hooks Kilo runs from ~/.claude/settings.json, and whether Claude Code hooks are enabled for this server.",
           }),
         ),
         HttpApiEndpoint.get("effective", ConfigConsolePaths.effective, {

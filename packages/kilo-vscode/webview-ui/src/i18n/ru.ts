@@ -863,6 +863,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "Агенты",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-серверы",
+  "settings.agentBehaviour.subtab.hooks": "Хуки",
   "settings.agentBehaviour.subtab.rules": "Правила",
   "settings.agentBehaviour.subtab.workflows": "Рабочие процессы",
   "settings.agentBehaviour.subtab.skills": "Навыки",
@@ -1110,7 +1111,66 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Совместимость с Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Загружать файлы Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "Загружать инструкции CLAUDE.md и навыки из каталога конфигурации Claude Code в сессии. Включите эту опцию, если хотите, чтобы Kilo использовал ваши инструкции и навыки Claude Code. Требуется перезапуск.",
+    "Загружать инструкции CLAUDE.md и навыки из каталога конфигурации Claude Code в сессии. Включите эту опцию, если хотите, чтобы Kilo использовал ваши инструкции и навыки Claude Code. Требуется перезапуск. Также выполняет команды хуков PreToolUse и PostToolUse из ~/.claude/settings.json с вашими правами пользователя.",
+  "settings.agentBehaviour.hooks.description":
+    "Запускайте собственные команды до или после использования инструмента агентом, например чтобы проверять линтером каждое изменение или блокировать опасные команды. Используется формат хуков Claude Code.",
+  "settings.agentBehaviour.hooks.warning":
+    "Хуки выполняют команды оболочки с вашими полными правами пользователя, вне песочницы. Добавляйте только команды, которым доверяете.",
+  "settings.agentBehaviour.hooks.scope":
+    "Сохраняется в глобальную конфигурацию. Хуки из конфигурации проекта игнорируются.",
+  "settings.agentBehaviour.hooks.openConfig": "Открыть файл конфигурации",
+  "settings.agentBehaviour.hooks.pre": "Перед запуском инструмента",
+  "settings.agentBehaviour.hooks.pre.help":
+    "Может заблокировать вызов инструмента: завершитесь с кодом 2 и запишите причину в stderr. Агент увидит причину.",
+  "settings.agentBehaviour.hooks.post": "После запуска инструмента",
+  "settings.agentBehaviour.hooks.post.help":
+    "Может передать агенту обратную связь, например ошибки линтера: завершитесь с кодом 2 и запишите её в stderr.",
+  "settings.agentBehaviour.hooks.empty": "Хуков пока нет.",
+  "settings.agentBehaviour.hooks.add": "Добавить хук",
+  "settings.agentBehaviour.hooks.allTools": "Все инструменты",
+  "settings.agentBehaviour.hooks.badge.timeout": "Таймаут {{seconds}} с",
+  "settings.agentBehaviour.hooks.badge.block": "Блокирует при сбое",
+  "settings.agentBehaviour.hooks.badge.exec": "Без оболочки",
+  "settings.agentBehaviour.hooks.inherited": "Из другой конфигурации",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "Эти хуки тоже выполняются. Они заданы в другом глобальном файле конфигурации, в управляемой конфигурации или вашей организацией; редактируйте их там, где они определены.",
+  "settings.agentBehaviour.hooks.claude": "Из Claude Code",
+  "settings.agentBehaviour.hooks.claude.open": "Открыть файл",
+  "settings.agentBehaviour.hooks.claude.active": "Эти хуки из {{path}} тоже выполняются, кроме сессий в песочнице.",
+  "settings.agentBehaviour.hooks.claude.off":
+    'Не выполняются: включите "Загружать файлы Claude Code" на вкладке "Правила", затем перезапустите Kilo.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "Пока не выполняются: перезапустите Kilo, чтобы применить совместимость с Claude Code. Если они по-прежнему не выполняются, убедитесь, что переменная KILO_DISABLE_CLAUDE_CODE_HOOKS не задана.",
+  "settings.agentBehaviour.hooks.new": "Новый хук",
+  "settings.agentBehaviour.hooks.edit": "Редактировать хук",
+  "settings.agentBehaviour.hooks.event": "Когда",
+  "settings.agentBehaviour.hooks.matcher": "Инструменты",
+  "settings.agentBehaviour.hooks.matcher.help":
+    "Оставьте пустым, чтобы срабатывать для всех инструментов. Разделяйте имена инструментов символом | (edit|write). Всё остальное считается регулярным выражением. Подходят имена как Kilo, так и Claude Code (bash или Bash); инструменты MCP выглядят как github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.all": "Соответствует любому инструменту",
+  "settings.agentBehaviour.hooks.matcher.names": "Точное совпадение: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "Регулярное выражение, совпадение в любом месте имени инструмента",
+  "settings.agentBehaviour.hooks.matcher.invalid": "Недопустимое регулярное выражение",
+  "settings.agentBehaviour.hooks.command": "Команда",
+  "settings.agentBehaviour.hooks.command.help":
+    "Получает вызов инструмента в формате JSON через stdin и выполняется в каталоге проекта.",
+  "settings.agentBehaviour.hooks.command.required": "Введите команду",
+  "settings.agentBehaviour.hooks.exec": "Запускать без оболочки",
+  "settings.agentBehaviour.hooks.exec.help":
+    "Запускать команду как программу с аргументами ниже, по одному на строку. Оболочка не используется, поэтому ~ и $VARIABLES не раскрываются: используйте абсолютные пути.",
+  "settings.agentBehaviour.hooks.args.placeholder": "Один аргумент на строку",
+  "settings.agentBehaviour.hooks.timeout": "Таймаут (секунды)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "По умолчанию {{seconds}}. Хук, превысивший таймаут, останавливается вместе со всеми запущенными им процессами.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "Введите целое число секунд от 1 до 86400",
+  "settings.agentBehaviour.hooks.block": "Блокировать вызов инструмента при сбое хука",
+  "settings.agentBehaviour.hooks.block.help":
+    "По умолчанию, если хук аварийно завершается или превышает таймаут, инструмент всё равно запускается. Включите это для защитных проверок, которые при сбое не должны пропускать вызов.",
+  "settings.agentBehaviour.hooks.apply": "Применить",
+  "settings.agentBehaviour.hooks.remove.heading": "Удалить хук",
+  "settings.agentBehaviour.hooks.remove.confirm":
+    'Удалить хук "{{command}}"? Нажмите "Сохранить", чтобы применить изменение.',
+  "settings.agentBehaviour.hooks.remove.button": "Удалить",
   "settings.agentBehaviour.mcpDetail.command": "Команда",
   "settings.agentBehaviour.mcpDetail.args": "Аргументы",
   "settings.agentBehaviour.mcpDetail.env": "Окружение",
