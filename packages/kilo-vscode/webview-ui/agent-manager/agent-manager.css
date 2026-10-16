@@ -3544,13 +3544,6 @@ body.am-wt-dragging-active * {
   width: 100%;
 }
 
-/* Anchor the dialog near the top, so the header stays still when the tab
-   changes or the prompt grows. Height changes then only extend downward. */
-[data-component="dialog"]:has(.am-nv-header) {
-  align-items: flex-start;
-  padding-top: min(12vh, 120px);
-}
-
 /* Header: title, New/Import mode switch, close. */
 [data-component="dialog"]:has(.am-nv-header) [data-slot="dialog-header"] {
   gap: 14px;
