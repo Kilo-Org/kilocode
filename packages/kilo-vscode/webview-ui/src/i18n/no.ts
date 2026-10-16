@@ -280,6 +280,8 @@ export const dict = {
 
   "error.details.show": "Detaljer",
 
+  "error.compaction.action": "Velg komprimeringsmodell",
+
   "error.startup.title": "Servertilkobling mislyktes",
 
   "error.paidModel.title": "Du må logge inn for å bruke denne modellen",

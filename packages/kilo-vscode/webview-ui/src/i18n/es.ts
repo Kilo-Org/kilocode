@@ -1394,6 +1394,8 @@ export const dict = {
 
   "error.details.show": "Detalles",
 
+  "error.compaction.action": "Elegir modelo de compactación",
+
   "task.todos.progress": "{{done}}/{{total}} tareas completadas",
   "task.todos.allDone": "{{count}} tareas completadas",
   "task.todos.title": "Tareas",

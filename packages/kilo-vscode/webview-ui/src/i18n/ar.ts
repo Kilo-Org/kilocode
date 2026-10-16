@@ -1341,6 +1341,8 @@ export const dict = {
 
   "error.details.show": "التفاصيل",
 
+  "error.compaction.action": "اختيار نموذج الضغط",
+
   "task.todos.progress": "{{done}}/{{total}} مهام مكتملة",
   "task.todos.allDone": "{{count}} مهام مكتملة",
   "task.todos.title": "المهام",

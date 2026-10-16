@@ -272,6 +272,9 @@ export namespace KiloSessionPrompt {
     if (!tail.info.error) return
     // A user Stop is not a failure. Its record is what clients read back to show "Stopped", so it stays.
     if (MessageV2.AbortedError.isInstance(tail.info.error)) return
+    // A failed compaction summary closes its compaction request. Removing it would re-run that
+    // compaction (often with the same failing model) before the user's next prompt.
+    if (tail.info.summary) return
     if (!tail.parts.every((part) => part.type === "step-start" || part.type === "step-finish")) return
 
     const prev = msgs.at(-2)

@@ -1380,6 +1380,8 @@ export const dict = {
 
   "error.details.show": "Szczegóły",
 
+  "error.compaction.action": "Wybierz model kompakcji",
+
   "task.todos.progress": "{{done}}/{{total}} zadań ukończono",
   "task.todos.allDone": "{{count}} zadań ukończono",
   "task.todos.title": "Zadania",

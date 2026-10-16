@@ -12,6 +12,7 @@ import type { Session } from "@/session/session"
 import { Token } from "@/util/token"
 import * as Log from "@opencode-ai/core/util/log"
 import { Database } from "@opencode-ai/core/database/database"
+import { KiloCompactionFailure } from "./compaction-failure"
 
 type Update = <T extends MessageV2.Part>(part: T) => Effect.Effect<T>
 type UpdateMessage = <T extends MessageV2.Info>(msg: T) => Effect.Effect<T>
@@ -25,9 +26,6 @@ const DEPTH = 3
 const OUTPUT = 2_048
 
 export namespace KiloCompactionChunks {
-  export const EMPTY_SUMMARY =
-    "Compaction did not run: the model returned an empty summary. Retry with /compact. If it keeps failing, start a new session to continue."
-
   type Chunk = {
     index: number
     messages: MessageV2.WithParts[]
@@ -268,6 +266,7 @@ export namespace KiloCompactionChunks {
           result,
           output: text(worker.message, parts),
           error: worker.message.error ?? worker.compactError?.(),
+          finish: worker.message.finish,
         }
       }).pipe(
         Effect.ensuring(
@@ -277,16 +276,14 @@ export namespace KiloCompactionChunks {
       const result = out.result
       const output = out.output
       if (result !== "continue") return { result, output: undefined, error: out.error }
+      // A filtered or refused worker may still stream partial text; never merge it into the summary.
+      if (out.finish === "content-filter")
+        return { result: "stop" as const, output: undefined, error: KiloCompactionFailure.filtered(input.model) }
       if (!output)
         return {
           result: "stop" as const,
           output: undefined,
-          error:
-            out.error ??
-            new MessageV2.APIError({
-              message: EMPTY_SUMMARY,
-              isRetryable: true,
-            }).toObject(),
+          error: out.error ?? KiloCompactionFailure.empty(),
         }
       return { result, output, error: undefined }
     })

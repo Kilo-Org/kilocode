@@ -1368,6 +1368,8 @@ export const dict = {
 
   "error.details.show": "جزئیات",
 
+  "error.compaction.action": "انتخاب مدل فشرده‌سازی",
+
   "task.todos.progress": "{{done}}/{{total}} کار انجام شد",
   "task.todos.allDone": "{{count}} کار انجام شد",
   "task.todos.title": "کارها",
