@@ -121,7 +121,7 @@ When a PR first gets `awaiting-contributor`, the sweep also posts one comment th
 
 ## The maintainer routine
 
-Open the latest "Community sweep" run. The job summary has the queue. A copy goes to Slack when a Slack secret is set. With a bot token, the channel gets one short summary and the lists are posted in its thread. With only a webhook, the channel gets the whole queue as one message.
+Open the latest "Community sweep" run. The job summary has the queue. A copy goes to Slack when a Slack secret is set. With a bot token, the channel gets one short summary and the lists are posted in its thread. With only a webhook, the channel gets the whole queue as one message. If the bot post fails, the sweep still finishes and logs a warning with the Slack error. If not even the summary was posted, the whole queue goes through the webhook when one is set. If only a thread reply fails, the sweep warns and keeps the rest, so the queue is not posted twice.
 
 1. **Adopt**: pick an owner and add the PR to the standup doc.
 2. **Needs triage**: decide. Add `high-value` or `low-value`, or comment on it. Not sure? Put it in the standup doc.

@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 7.8.12
+
+### Minor Changes
+
+- [#15030](https://github.com/Kilo-Org/kilocode/pull/15030) [`d749650`](https://github.com/Kilo-Org/kilocode/commit/d7496501c6fcbe22efdbec353551ad511669ee6f) - Route Kilo Gateway traffic (chat, models, embeddings, autocomplete, transcription) through `https://ai-gateway.kilo.ai/api/v1` by default, and support a `KILO_AI_GATEWAY_URL` environment variable to override it. Setting only `KILO_API_URL` keeps routing gateway traffic through that server.
+
 ## 7.8.10
 
 ### Minor Changes

@@ -292,6 +292,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Meld je opnieuw aan bij ChatGPT en stuur je bericht nog een keer om Codex-modellen te blijven gebruiken.",
 
+  "provider.failure.unauthorized": "Inloggegevens geweigerd (HTTP {{status}}). Meld je opnieuw aan.",
+  "provider.failure.unauthorizedNoStatus": "Inloggegevens geweigerd. Meld je opnieuw aan.",
+  "provider.failure.unauthenticated": "Niet aangemeld.",
+  "provider.failure.network": "Kan de provider niet bereiken. Controleer je verbinding.",
+  "provider.failure.http": "Providerfout (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Providerfout.",
+  "provider.failure.schema": "Onverwacht antwoord van de provider.",
+
   "notification.permission.title": "Toestemming vereist",
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",
   "notification.permission.titleSkillShell": "Shell-opdrachten uit vaardigheid “{{skill}}” uitvoeren?",

@@ -1092,6 +1092,7 @@ describe("RemoteSender", () => {
           default: {},
           connected: [],
           failed: [],
+          failures: [],
           protocolVersion: 1,
           truncated: false,
         },
