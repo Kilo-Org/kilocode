@@ -161,9 +161,20 @@ function MentionRow(props: { item: MentionResult }) {
 /**
  * Last branch list per project. Listing branches runs git in the extension
  * host and can take a noticeable time in large repositories, so a reopened
- * dialog shows the cached list while it refreshes.
+ * dialog shows the cached list while it refreshes. Each refresh replaces the
+ * entry, and only the most recently used projects are kept.
  */
 const branchCache = new Map<string, { branches: BranchInfo[]; detected: string }>()
+const BRANCH_CACHE_LIMIT = 4
+
+function cacheBranches(id: string, branches: BranchInfo[], detected: string) {
+  // Map keeps insertion order, so re-inserting marks the entry most recent.
+  branchCache.delete(id)
+  branchCache.set(id, { branches, detected })
+  if (branchCache.size <= BRANCH_CACHE_LIMIT) return
+  const oldest = branchCache.keys().next().value
+  if (oldest !== undefined) branchCache.delete(oldest)
+}
 
 export const NewWorktreeDialog: Component<{
   onClose: () => void
@@ -711,7 +722,7 @@ export const NewWorktreeDialog: Component<{
     if (msg.type === "agentManager.branches") {
       const ev = msg as AgentManagerBranchesMessage
       if (ev.projectId !== project()) return
-      if (ev.projectId) branchCache.set(ev.projectId, { branches: ev.branches, detected: ev.defaultBranch })
+      if (ev.projectId) cacheBranches(ev.projectId, ev.branches, ev.defaultBranch)
       setBranches(ev.branches)
       setDetected(ev.defaultBranch)
       setBranchesLoading(false)
