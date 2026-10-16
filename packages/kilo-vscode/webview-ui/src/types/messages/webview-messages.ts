@@ -1287,6 +1287,12 @@ export interface EnhancePromptRequest {
   requestId: string
 }
 
+// Stop an in-flight enhance prompt request (webview → extension)
+export interface CancelEnhancePromptRequest {
+  type: "cancelEnhancePrompt"
+  requestId: string
+}
+
 // Open the standalone changes viewer tab from the sidebar
 export interface OpenChangesRequest {
   type: "openChanges"
@@ -1939,6 +1945,7 @@ export type WebviewMessage =
   | ApplyWorktreeDiffMessage
   | RevertWorktreeFileMessage
   | EnhancePromptRequest
+  | CancelEnhancePromptRequest
   | OpenChangesRequest
   | OpenDiffVirtualRequest
   | OpenPRCommentRequest
