@@ -4,6 +4,7 @@ import {
   classify,
   cleanup,
   easy,
+  mention,
   newcomer,
   component,
   pushedAt,
@@ -40,6 +41,11 @@ describe("areas", () => {
     expect(areas("fix(constructor): x", [])).toEqual([])
     expect(areas("fix(__proto__): x", [])).toEqual([])
     expect(areas("fix(toString): x", [])).toEqual([])
+  })
+
+  test("reads product names in the title", () => {
+    expect(areas("docs(kilo-docs): update Kilo Desktop docs for 0.1.12", [])).toEqual(["area:desktop", "area:docs"])
+    expect(areas("fix: Kilo Desktop blank screen", [])).toEqual(["area:desktop"])
   })
 
   test("maps the web UI package", () => {
@@ -333,5 +339,19 @@ describe("failure", () => {
   test("handles replies without scope details", () => {
     expect(failure({ error: "not_in_channel" })).toBe("Slack chat.postMessage failed: not_in_channel")
     expect(failure({})).toBe("Slack chat.postMessage failed: unknown error")
+  })
+})
+
+describe("mention", () => {
+  test("finds product names, ignoring case", () => {
+    expect(mention("Deleting a chat has no confirmation (Kilo Desktop)")).toEqual(["area:desktop"])
+    expect(mention("kilo desktop will not start")).toEqual(["area:desktop"])
+    expect(mention("JetBrains plugin and Agent Manager")).toEqual(["area:agent-manager", "area:jetbrains"])
+  })
+
+  test("ignores other titles", () => {
+    expect(mention("Desktop notifications in VS Code")).toEqual([])
+    expect(mention("Anaconda Desktop integration")).toEqual([])
+    expect(mention("fix: crash on start")).toEqual([])
   })
 })

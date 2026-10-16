@@ -145,7 +145,7 @@ When a PR has been `awaiting-contributor` for 14 days:
 
 Before the sweep closes or adopts a PR, it checks the full history for a contributor reply. This catches replies on long PRs.
 
-Closing is **off by default**. Until it is on, the sweep only logs what it would close. To turn it on, set the repo variable `COMMUNITY_AUTO_CLOSE_ENABLED` to `true`. To try it by hand, run the sweep from the Actions tab and tick "close".
+Closing is **off by default**. Until it is on, the sweep only logs what it would close. To turn it on, set the repo variable `COMMUNITY_AUTO_CLOSE_ENABLED` to `true`. To try it by hand, run the sweep from the Actions tab and tick "close". Manual runs also have a "slack" box, ticked by default. Untick it to run the sweep without posting to Slack. Scheduled runs always post.
 
 When a PR first gets `awaiting-contributor`, the sweep also posts one comment that gives the due date. That comment is also off until closing is on. The sweep posts at most 20 comments per run (`MAX_COMMENTS`).
 

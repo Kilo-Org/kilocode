@@ -114,11 +114,22 @@ const components: Record<string, string> = {
 // Plain objects inherit keys like "constructor". Only own keys are labels.
 const own = (map: Record<string, string>, key: string) => (Object.hasOwn(map, key) ? map[key] : undefined)
 
+// Product names in a title. Used when there is no scope or dropdown answer,
+// for example issues that skip the form: "Deleting a chat has no undo (Kilo Desktop)".
+const names: [RegExp, string][] = [
+  [/\bkilo desktop\b/i, "area:desktop"],
+  [/\bagent manager\b/i, "area:agent-manager"],
+  [/\bjetbrains\b/i, "area:jetbrains"],
+]
+
+export const mention = (title: string) => names.filter(([pattern]) => pattern.test(title)).map(([, tag]) => tag)
+
 export function areas(title: string, files: string[]) {
   const set = new Set<string>()
   const scope = title.match(/^\w+\(([^)]+)\)!?:/)?.[1]
   const hit = scope ? own(scopes, scope.toLowerCase()) : undefined
   if (hit) set.add(hit)
+  for (const tag of mention(title)) set.add(tag)
   for (const file of files) {
     const rule = paths.find(([prefix]) => file.startsWith(prefix))
     if (rule) set.add(rule[1])
@@ -427,8 +438,9 @@ async function onevent() {
   if (community && newcomer(item.author_association)) tags.add(label.first)
   if (pr) for (const tag of areas(pr.title, await files(pr.number))) tags.add(tag)
   if (!pr) {
+    // The form answer wins. Without one, fall back to product names in the title.
     const tag = component(item.body ?? "")
-    if (tag) tags.add(tag)
+    for (const name of tag ? [tag] : mention(item.title)) tags.add(name)
   }
   const have = new Set<string>(item.labels.map((l: { name: string }) => l.name))
   const next = [...tags].filter((tag) => !have.has(tag))
@@ -588,6 +600,8 @@ async function sweep() {
     const plan = decide(tags, state, failing)
     const more = [...(tags.includes(label.community) ? [] : [label.community])]
     if (!tags.some((tag) => tag.startsWith("area:"))) more.push(...areas(pr.title, await files(pr.number)))
+    // Product names in the title cost no request, so they are checked on every run.
+    more.push(...mention(pr.title).filter((tag) => !tags.includes(tag) && !more.includes(tag)))
     const green = commit?.statusCheckRollup?.state === "SUCCESS"
     const kind = await quick(pr, green && ["triage", "review", "approved"].includes(state.state))
     const flags: [string, boolean][] = [
