@@ -4064,6 +4064,28 @@ body.am-wt-dragging-active * {
 .am-nv-submit {
   width: auto;
   justify-content: center;
+  transition:
+    filter 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease;
+}
+
+/* Many themes set button.hoverBackground within a few percent of the base
+   color, so the theme hover alone is invisible. Lift the button as well. */
+.am-nv-submit:hover:not(:disabled) {
+  filter: brightness(1.12);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.am-nv-submit:active:not(:disabled) {
+  filter: brightness(0.94);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .am-nv-submit {
+    transition: none;
+  }
 }
 
 /* Branch selector */
