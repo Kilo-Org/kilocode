@@ -22,6 +22,11 @@ Git integration needs your system `git`. If the tools are missing or not working
 - Confirm `git` is installed and on your `PATH`. 
 - If the folder isn't a git repository, use **Initialize Git** in the Changes tab to create one. See [Git integration](/docs/desktop/features/git#set-up-git-for-a-folder).
 - For bare or unsafe repositories, the branch switcher is intentionally hidden. Kilo Desktop shows a short explanation instead of a broken control.
+- **macOS:** if git reports that you haven't agreed to the Xcode license, run `sudo xcodebuild -license` in Terminal, accept it, then try again.
+
+## The agent asks you to sign in
+
+Conda environments and notebooks require a Kilo account. When the agent needs one of these while you're signed out, it shows a sign-in card in the chat. If you select **Not now**, the agent stops using that feature's tools until you sign in or restart the app. Declining one feature doesn't affect the others.
 
 ## A local model isn't listed in a chat
 

@@ -288,6 +288,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Codex modellerini kullanmaya devam etmek için ChatGPT ile tekrar giriş yapın ve mesajınızı yeniden gönderin.",
 
+  "provider.failure.unauthorized": "Kimlik bilgileri reddedildi (HTTP {{status}}). Tekrar giriş yapın.",
+  "provider.failure.unauthorizedNoStatus": "Kimlik bilgileri reddedildi. Tekrar giriş yapın.",
+  "provider.failure.unauthenticated": "Giriş yapılmadı.",
+  "provider.failure.network": "Sağlayıcıya ulaşılamadı. Bağlantınızı kontrol edin.",
+  "provider.failure.http": "Sağlayıcı hatası (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Sağlayıcı hatası.",
+  "provider.failure.schema": "Sağlayıcıdan beklenmeyen bir yanıt alındı.",
+
   "notification.permission.title": "İzin gerekli",
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",
   "notification.permission.titleSkillShell": "“{{skill}}” becerisindeki kabuk komutları çalıştırılsın mı?",
@@ -747,6 +755,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code bir yapay zeka kodlama asistanıdır. Özellik geliştirmesini, hata düzeltmesini veya kod tabanınızı açıklamasını isteyin.",
+  "session.workspaceScope.description":
+    "Kilo sohbeti yalnızca bu çalışma alanındaki ilk klasör olan “{{folder}}” klasörünü kullanır.",
+  "session.workspaceScope.alternatives":
+    "Başka bir klasörde çalışmak için klasörü ayrı bir pencerede açın veya Agent Manager'a proje olarak ekleyin.",
+  "session.workspaceScope.dismiss": "Çalışma alanı kapsamı ipucunu kapat",
   "session.messages.scrollToBottom": "En alta kaydır",
   "session.messages.initializing": "Başlatılıyor...",
   "session.messages.taskStarting": "Başlıyor...",
