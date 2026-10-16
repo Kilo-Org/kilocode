@@ -1,4 +1,5 @@
 import {
+  AUTO_DECISION_HEADER,
   CustomRouterRequestError,
   decideCustomRouter,
   fetchCustomRouters,
@@ -171,14 +172,16 @@ export namespace KiloCustomRouter {
       return input.providers[ProviderV2.ID.make(input.pick.provider)]?.models[input.pick.model]
     }
     const known = input.providers[ProviderV2.ID.kilo]?.models[input.pick.model]
-    if (known) return known
     // The gateway catalog can omit a model the decision still names, for
     // example a direct-BYOK entry the owner key serves. Keep the router's
     // request shape and let the gateway resolve the concrete id.
-    return {
+    const model = known ?? {
       ...input.base,
       id: ModelV2.ID.make(input.pick.model),
       api: { ...input.base.api, id: input.pick.model },
     }
+    // ADR 0005: the gateway verifies the signed decision and records the custom
+    // router as the auto model, so the header travels with the request.
+    return { ...model, headers: { ...model.headers, [AUTO_DECISION_HEADER]: input.pick.decisionId } }
   }
 }

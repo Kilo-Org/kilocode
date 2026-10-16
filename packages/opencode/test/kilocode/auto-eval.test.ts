@@ -58,6 +58,7 @@ describe("host URL rewriting", () => {
     expect(hostUrl("http://localhost:11434/v1")).toBe("http://host.docker.internal:11434/v1")
     expect(hostUrl("http://127.0.0.1:1234/v1/")).toBe("http://host.docker.internal:1234/v1/")
     expect(hostUrl("http://0.0.0.0:8080/v1")).toBe("http://host.docker.internal:8080/v1")
+    expect(hostUrl("http://[::1]:11434/v1")).toBe("http://host.docker.internal:11434/v1")
   })
 
   test("keeps remote endpoints", () => {

@@ -45,7 +45,6 @@ export type EvalInput = {
   providers: Record<ProviderV2.ID, Provider.Info>
   auth: Record<string, Auth.Info>
   version?: string
-  baseUrl?: string
 }
 
 type Run = { fail: (message: string) => void; ok: (message: string) => void }
@@ -60,7 +59,6 @@ export namespace KiloAutoEval {
     const list = await fetchCustomRouters({
       token: input.token,
       organizationId: input.organizationId,
-      baseUrl: input.baseUrl,
     }).catch((error) => {
       throw wrap(error, "Could not load the router list")
     })
@@ -81,7 +79,7 @@ export namespace KiloAutoEval {
       await buildImage(image, version)
     }
 
-    const plan = await fetchClientEvalPlan({ token: input.token, organizationId: input.organizationId, baseUrl: input.baseUrl, routerId: router.id }).catch(
+    const plan = await fetchClientEvalPlan({ token: input.token, organizationId: input.organizationId, routerId: router.id }).catch(
       (error) => {
         throw wrap(error, "Could not load the eval plan")
       },
@@ -97,24 +95,20 @@ export namespace KiloAutoEval {
       const item = await resolveCase({ input, router, item: first, cases })
       UI.println("kilo auto eval would run:")
       UI.println(
-        JSON.stringify(
-          {
+        redactedConfig({
+          image,
+          args: evalDockerRunArgs({
             image,
-            args: evalDockerRunArgs({
-              image,
-              envFile: "<env-file>",
-              args: evalCliArgs({
-                provider: item.provider,
-                model: item.model,
-                variant: first.variant,
-                prompt: evalPrompt(item.case),
-              }),
+            envFile: "<env-file>",
+            args: evalCliArgs({
+              provider: item.provider,
+              model: item.model,
+              variant: first.variant,
+              prompt: evalPrompt(item.case),
             }),
-            config: item.config,
-          },
-          null,
-          2,
-        ),
+          }),
+          config: item.config,
+        }),
       )
       return 0
     }
@@ -205,11 +199,11 @@ async function worker(state: Worker): Promise<void> {
 
 async function runItem(state: Worker, item: ClientEvalPlanItem): Promise<void> {
   const resolved = await resolveCase({ input: state.input, router: state.router, item, cases: state.cases })
-  const envFile = await writeEnvFile({
+  const env = await writeEnvFile({
     KILO_CONFIG_CONTENT: JSON.stringify(resolved.config),
     KILO_AUTH_CONTENT: JSON.stringify(resolved.auth),
     KILO_DISABLE_SESSION_INGEST: "1",
-    KILO_API_URL: state.input.baseUrl ?? KILO_API_BASE,
+    KILO_API_URL: KILO_API_BASE,
     ...(process.env.KILO_AI_GATEWAY_URL ? { KILO_AI_GATEWAY_URL: process.env.KILO_AI_GATEWAY_URL } : {}),
     ...(state.input.organizationId ? { KILO_ORG_ID: state.input.organizationId } : {}),
     EVAL_TIMEOUT_MS: String(resolved.case.timeoutMs),
@@ -222,7 +216,7 @@ async function runItem(state: Worker, item: ClientEvalPlanItem): Promise<void> {
       variant: item.variant,
       prompt: evalPrompt(resolved.case),
     })
-    const result = await Process.text(["docker", ...evalDockerRunArgs({ image: state.image, envFile, args })], {
+    const result = await Process.text(["docker", ...evalDockerRunArgs({ image: state.image, envFile: env.file, args })], {
       nothrow: true,
       timeout: resolved.case.timeoutMs + 120_000,
     })
@@ -231,7 +225,6 @@ async function runItem(state: Worker, item: ClientEvalPlanItem): Promise<void> {
     const score = await uploadClientEvalResult({
       token: state.input.token,
       organizationId: state.input.organizationId,
-      baseUrl: state.input.baseUrl,
       body: {
         routerId: state.router.id,
         engineIdentity: state.plan.engineIdentity,
@@ -250,7 +243,7 @@ async function runItem(state: Worker, item: ClientEvalPlanItem): Promise<void> {
       `case ${item.caseId} rep ${item.rep} ${label(item.entry)} variant ${item.variant ?? "default"}: score ${score.score.toFixed(3)}`,
     )
   } finally {
-    await fs.rm(envFile, { force: true })
+    await fs.rm(env.dir, { recursive: true, force: true })
   }
 }
 
@@ -258,11 +251,11 @@ function label(entry: CustomRouterEntryRef): string {
   return entry.kind === "gateway" ? entry.model : `client:${entry.provider}/${entry.model}`
 }
 
-async function writeEnvFile(values: Record<string, string>): Promise<string> {
+async function writeEnvFile(values: Record<string, string>): Promise<{ dir: string; file: string }> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-auto-eval-env-"))
   const file = path.join(dir, "eval.env")
   await fs.writeFile(file, Object.entries(values).map(([key, value]) => `${key}=${value}`).join("\n"), { mode: 0o600 })
-  return file
+  return { dir, file }
 }
 
 function containerResult(stdout: string): EvalContainerResult {
@@ -283,7 +276,6 @@ async function resolveCase(input: {
     (await fetchClientEvalCase({
       token: input.input.token,
       organizationId: input.input.organizationId,
-      baseUrl: input.input.baseUrl,
       routerId: input.router.id,
       caseId: input.item.caseId,
     }))

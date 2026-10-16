@@ -51,7 +51,6 @@ export type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promis
 type RequestOptions = {
   token?: string
   organizationId?: string | null
-  baseUrl?: string
   signal?: AbortSignal
   fetch?: FetchLike
   timeoutMs?: number
@@ -129,17 +128,19 @@ function join(base: string, path: string): string {
   return `${base.replace(/\/+$/, "")}${path}`
 }
 
-function web(options: RequestOptions, path: string): string {
-  return join(options.baseUrl ?? KILO_API_BASE, path)
+// Two hosts: the web app REST routes live on the Kilo API base (KILO_API_URL),
+// the worker routes on the auto-routing base (KILO_AUTO_ROUTING_URL).
+function web(path: string): string {
+  return join(KILO_API_BASE, path)
 }
 
-function worker(options: RequestOptions, path: string): string {
-  return join(options.baseUrl ?? KILO_AUTO_ROUTING_BASE, path)
+function worker(path: string): string {
+  return join(KILO_AUTO_ROUTING_BASE, path)
 }
 
 export function fetchCustomRouters(options: RequestOptions): Promise<CustomRouterListResponse> {
   return request(options, {
-    url: web(options, AUTO_ROUTING_CUSTOM_ROUTERS_PATH),
+    url: web(AUTO_ROUTING_CUSTOM_ROUTERS_PATH),
     method: "GET",
     parse: (value) => CustomRouterListResponseSchema.parse(value),
   })
@@ -150,7 +151,7 @@ export function registerCustomRouterClientEntry(
 ): Promise<CustomRouterResponse> {
   const parsed = CustomRouterReferenceSchema.parse({ scope: input.scope, slug: input.slug })
   return request(input, {
-    url: web(input, customRouterClientEntriesPath(parsed.scope, parsed.slug)),
+    url: web(customRouterClientEntriesPath(parsed.scope, parsed.slug)),
     method: "POST",
     body: { entry: input.entry },
     parse: (value) => CustomRouterResponseSchema.parse(value),
@@ -163,7 +164,7 @@ export function removeCustomRouterClientEntry(
   const parsed = CustomRouterReferenceSchema.parse({ scope: input.scope, slug: input.slug })
   const query = new URLSearchParams({ provider: input.provider, model: input.model })
   return request(input, {
-    url: `${web(input, customRouterClientEntriesPath(parsed.scope, parsed.slug))}?${query.toString()}`,
+    url: `${web(customRouterClientEntriesPath(parsed.scope, parsed.slug))}?${query.toString()}`,
     method: "DELETE",
     parse: (value) => CustomRouterResponseSchema.parse(value),
   })
@@ -173,7 +174,7 @@ export function decideCustomRouter(
   input: RequestOptions & { body: CustomRouterDecideRequest },
 ): Promise<CustomRouterDecideResponse> {
   return request(input, {
-    url: worker(input, CUSTOM_ROUTER_DECIDE_PATH),
+    url: worker(CUSTOM_ROUTER_DECIDE_PATH),
     method: "POST",
     body: input.body,
     parse: (value) => CustomRouterDecideResponseSchema.parse(value),
@@ -184,7 +185,7 @@ export function fetchClientEvalPlan(
   input: RequestOptions & { routerId: string },
 ): Promise<ClientEvalPlanResponse> {
   return request(input, {
-    url: worker(input, CUSTOM_ROUTER_EVAL_PLAN_PATH),
+    url: worker(CUSTOM_ROUTER_EVAL_PLAN_PATH),
     method: "POST",
     body: { routerId: input.routerId },
     parse: (value) => ClientEvalPlanResponseSchema.parse(value),
@@ -195,7 +196,7 @@ export function fetchClientEvalCase(
   input: RequestOptions & { routerId: string; caseId: string },
 ): Promise<ClientEvalCaseResponse> {
   return request(input, {
-    url: worker(input, CUSTOM_ROUTER_EVAL_CASE_PATH),
+    url: worker(CUSTOM_ROUTER_EVAL_CASE_PATH),
     method: "POST",
     body: { routerId: input.routerId, caseId: input.caseId },
     parse: (value) => ClientEvalCaseResponseSchema.parse(value),
@@ -206,7 +207,7 @@ export function uploadClientEvalResult(
   input: RequestOptions & { body: unknown },
 ): Promise<ClientEvalResultResponse> {
   return request(input, {
-    url: worker(input, CUSTOM_ROUTER_EVAL_RESULT_PATH),
+    url: worker(CUSTOM_ROUTER_EVAL_RESULT_PATH),
     method: "POST",
     body: input.body,
     parse: (value) => ClientEvalResultResponseSchema.parse(value),

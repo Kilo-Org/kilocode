@@ -124,11 +124,12 @@ export function evalCliArgs(input: {
 }
 
 // Local model servers listen on the host loopback; the container reaches them
-// through the Docker host gateway.
+// through the Docker host gateway. WHATWG URL keeps IPv6 hosts bracketed, so
+// the loopback list carries both spellings.
 export function hostUrl(url: string): string {
   const parsed = URL.parse(url)
   if (!parsed) return url
-  if (!["localhost", "127.0.0.1", "0.0.0.0", "::1"].includes(parsed.hostname)) return url
+  if (!["localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"].includes(parsed.hostname)) return url
   parsed.hostname = HOST_ALIAS
   return parsed.toString()
 }

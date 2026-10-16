@@ -4,7 +4,13 @@ import { LLMEvent } from "@opencode-ai/llm"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { Provider } from "@/provider/provider"
-import { ClientCustomRouterEntrySchema, type CustomRouterListEntry, type CustomRouterListResponse, type FetchLike } from "@kilocode/kilo-gateway"
+import {
+  AUTO_DECISION_HEADER,
+  ClientCustomRouterEntrySchema,
+  type CustomRouterListEntry,
+  type CustomRouterListResponse,
+  type FetchLike,
+} from "@kilocode/kilo-gateway"
 import { KiloCustomRouter } from "@/kilocode/auto-routing/router"
 import { clientEntry } from "@/kilocode/auto-routing/entries"
 import { openaiMessages, openaiTools } from "@/kilocode/auto-routing/messages"
@@ -312,7 +318,7 @@ describe("KiloCustomRouter routed model", () => {
   })
 
   test("keeps the router request shape for a gateway model the catalog omits", () => {
-    const base = CATALOG[ProviderV2.ID.kilo]!.models["kilo-auto/custom/myrouter"]!
+    const base = CATALOG[KILO]!.models["kilo-auto/custom/myrouter"]!
     const known = KiloCustomRouter.routedModel({
       pick: { kind: "gateway", model: "anthropic/claude-sonnet-4", variant: null, decisionId: "d" },
       base,
@@ -330,8 +336,20 @@ describe("KiloCustomRouter routed model", () => {
     expect(String(unknown?.providerID)).toBe("kilo")
   })
 
+  test("carries the signed decision to the gateway and leaves the catalog model untouched", () => {
+    const base = CATALOG[KILO]!.models["kilo-auto/custom/myrouter"]!
+    const routed = KiloCustomRouter.routedModel({
+      pick: { kind: "gateway", model: "anthropic/claude-sonnet-4", variant: null, decisionId: "signed-token" },
+      base,
+      providers: CATALOG,
+    })
+    expect(routed?.headers[AUTO_DECISION_HEADER]).toBe("signed-token")
+    expect(base.headers[AUTO_DECISION_HEADER]).toBeUndefined()
+    expect(CATALOG[KILO]!.models["anthropic/claude-sonnet-4"]!.headers[AUTO_DECISION_HEADER]).toBeUndefined()
+  })
+
   test("returns undefined for a client pick that vanished from the catalog", () => {
-    const base = CATALOG[ProviderV2.ID.kilo]!.models["kilo-auto/custom/myrouter"]!
+    const base = CATALOG[KILO]!.models["kilo-auto/custom/myrouter"]!
     expect(
       KiloCustomRouter.routedModel({
         pick: { kind: "client", provider: "lmstudio", model: "qwen3", variant: null },
