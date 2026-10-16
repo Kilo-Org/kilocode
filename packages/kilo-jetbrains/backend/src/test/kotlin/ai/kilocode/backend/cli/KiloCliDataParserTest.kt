@@ -2,13 +2,18 @@ package ai.kilocode.backend.cli
 
 import ai.kilocode.backend.workspace.CommandInfo
 import ai.kilocode.backend.workspace.ProviderData
+import kotlinx.serialization.json.JsonPrimitive
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.RetentionPatchDto
+import ai.kilocode.rpc.dto.CustomModelDto
+import ai.kilocode.rpc.dto.CustomProviderSaveDto
 import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.McpConfigDto
+import ai.kilocode.rpc.dto.McpOAuthDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRuleDto
@@ -24,6 +29,7 @@ import ai.kilocode.rpc.dto.SkillsPatchDto
 import ai.kilocode.rpc.dto.WatcherPatchDto
 import org.junit.jupiter.api.Nested
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -731,7 +737,8 @@ class KiloCliDataParserTest {
                             "messageID": "msg_rollback",
                             "partID": "prt_rollback",
                             "snapshot": "snap_rollback",
-                            "diff": "diff --git a/src/A.kt b/src/A.kt\n--- a/src/A.kt\n+++ b/src/A.kt\n@@ -1 +1,2 @@\n-old\n+new\n+more\ndiff --git a/src/Old.kt b/src/Old.kt\ndeleted file mode 100644\n--- a/src/Old.kt\n+++ /dev/null\n@@ -1 +0,0 @@\n-gone"
+                            "diff": "diff --git a/src/A.kt b/src/A.kt\n--- a/src/A.kt\n+++ b/src/A.kt\n@@ -1 +1,2 @@\n-old\n+new\n+more\ndiff --git a/src/Old.kt b/src/Old.kt\ndeleted file mode 100644\n--- a/src/Old.kt\n+++ /dev/null\n@@ -1 +0,0 @@\n-gone",
+                            "workspace": "not-a-git-repo"
                         }
                     }
                 }
@@ -752,6 +759,7 @@ class KiloCliDataParserTest {
             assertEquals("modified", result.session.revert?.diffs?.get(0)?.status)
             assertEquals("src/Old.kt", result.session.revert?.diffs?.get(1)?.file)
             assertEquals("deleted", result.session.revert?.diffs?.get(1)?.status)
+            assertEquals("not-a-git-repo", result.session.revert?.workspace)
         }
 
         @Test
@@ -1291,6 +1299,43 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseConfig - mcp oauth absent`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"remote":{"type":"remote","url":"https://mcp.example.test"}}}"""
+            )
+
+            assertNull(cfg.mcp["remote"]?.oauth)
+        }
+
+        @Test
+        fun `parseConfig - mcp oauth disabled`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"remote":{"type":"remote","url":"https://mcp.example.test","oauth":false}}}"""
+            )
+            val oauth = cfg.mcp["remote"]?.oauth
+
+            assertNotNull(oauth)
+            assertEquals(false, oauth.enabled)
+            assertNull(oauth.clientId)
+        }
+
+        @Test
+        fun `parseConfig - mcp oauth custom client object`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"remote":{"type":"remote","url":"https://mcp.example.test","oauth":{"clientId":"abc","clientSecret":"shh","scope":"read","callbackPort":19999,"redirectUri":"http://127.0.0.1:19999/cb"}}}}"""
+            )
+            val oauth = cfg.mcp["remote"]?.oauth
+
+            assertNotNull(oauth)
+            assertEquals(true, oauth.enabled)
+            assertEquals("abc", oauth.clientId)
+            assertEquals("shh", oauth.clientSecret)
+            assertEquals("read", oauth.scope)
+            assertEquals(19999, oauth.callbackPort)
+            assertEquals("http://127.0.0.1:19999/cb", oauth.redirectUri)
+        }
+
+        @Test
         fun `parseConfig - scalars instructions and skills`() {
             val cfg = KiloCliDataParser.parseConfig(
                 """{
@@ -1378,6 +1423,47 @@ class KiloCliDataParserTest {
             val cfg = KiloCliDataParser.parseConfig("""{"model":"openai/gpt","shared_agent_board":{}}""")
             assertEquals("openai/gpt", cfg.model)
             assertNull(cfg.shared_agent_board)
+        }
+
+        @Test
+        fun `parseConfig - snapshot values preserve default resolution`() {
+            assertEquals(true, KiloCliDataParser.parseConfig("""{"snapshot":true}""").snapshot)
+            assertEquals(false, KiloCliDataParser.parseConfig("""{"snapshot":false}""").snapshot)
+            assertNull(KiloCliDataParser.parseConfig("""{"model":"openai/gpt"}""").snapshot)
+        }
+
+        @Test
+        fun `parseConfig - malformed snapshot does not discard config`() {
+            val cfg = KiloCliDataParser.parseConfig("""{"model":"openai/gpt","snapshot":{}}""")
+
+            assertEquals("openai/gpt", cfg.model)
+            assertNull(cfg.snapshot)
+        }
+
+        @Test
+        fun `parseConfig - retention reads valid values and normalizes invalid days`() {
+            val enabled = KiloCliDataParser.parseConfig(
+                """{"retention":{"enabled":true,"maxAgeDays":45}}""",
+            ).retention
+            val invalid = KiloCliDataParser.parseConfig(
+                """{"retention":{"enabled":false,"maxAgeDays":0}}""",
+            ).retention
+
+            assertEquals(true, enabled?.enabled)
+            assertEquals(45, enabled?.maxAgeDays)
+            assertEquals(false, invalid?.enabled)
+            assertNull(invalid?.maxAgeDays)
+        }
+
+        @Test
+        fun `parseConfig - malformed retention days do not discard other config`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"model":"openai/gpt","retention":{"enabled":true,"maxAgeDays":{}}}""",
+            )
+
+            assertEquals("openai/gpt", cfg.model)
+            assertEquals(true, cfg.retention?.enabled)
+            assertNull(cfg.retention?.maxAgeDays)
         }
 
         @Test
@@ -2147,6 +2233,163 @@ class KiloCliDataParserTest {
         }
     }
 
+    @Nested
+    inner class McpAuth {
+
+        // ---- parseMcpAuthResult ----
+
+        @Test
+        fun `parseMcpAuthResult - 200 with connected status`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(200, """{"status":"connected"}""")
+
+            assertEquals("connected", result.status)
+            assertNull(result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - 200 with failed status and error`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(200, """{"status":"failed","error":"denied"}""")
+
+            assertEquals("failed", result.status)
+            assertEquals("denied", result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - 400 maps to unsupported`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(400, """{"error":"UnsupportedOAuthError"}""")
+
+            assertEquals("unsupported", result.status)
+            assertEquals("UnsupportedOAuthError", result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - 404 maps to not_found`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(404, """{"message":"no such server"}""")
+
+            assertEquals("not_found", result.status)
+            assertEquals("no such server", result.error)
+        }
+
+        @Test
+        fun `parseMcpAuthResult - non-JSON body falls back to HTTP status`() {
+            val result = KiloCliDataParser.parseMcpAuthResult(500, "not json")
+
+            assertEquals("failed", result.status)
+            assertEquals("HTTP 500", result.error)
+        }
+
+        /**
+         * The CLI owns the "is this really a sign-in problem" decision and reports `needs_auth`
+         * itself, so the parser must pass the status through untouched rather than re-deriving it
+         * from the human-readable error text.
+         */
+        @Test
+        fun `parseMcpStatus - needs_auth is taken from the CLI status`() {
+            val result = KiloCliDataParser.parseMcpStatus(
+                """{"anaconda":{"status":"needs_auth","error":"Unauthorized: authentication required"}}""",
+            ).single()
+
+            assertEquals("needs_auth", result.status)
+            assertEquals("Unauthorized: authentication required", result.error)
+        }
+
+        @Test
+        fun `parseMcpStatus - needs_auth without an error is preserved`() {
+            val result = KiloCliDataParser.parseMcpStatus("""{"anaconda":{"status":"needs_auth"}}""").single()
+
+            assertEquals("needs_auth", result.status)
+            assertNull(result.error)
+        }
+
+        @Test
+        fun `parseMcpStatus - needs_client_registration is preserved`() {
+            val result = KiloCliDataParser.parseMcpStatus(
+                """{"anaconda":{"status":"needs_client_registration","error":"no dynamic registration"}}""",
+            ).single()
+
+            assertEquals("needs_client_registration", result.status)
+            assertEquals("no dynamic registration", result.error)
+        }
+
+        /**
+         * Auth-shaped error text on a `failed` status must NOT be upgraded to `needs_auth` here.
+         * The CLI already classifies those; re-doing it client-side would duplicate the rules and
+         * drift from them.
+         */
+        @Test
+        fun `parseMcpStatus - failed is never reclassified from its error text`() {
+            val reasons = listOf(
+                "Unauthorized: authentication required",
+                "Browser authorization failed: Authorization cancelled",
+                "Token exchange failed: invalid client",
+                "Error POSTing to endpoint (HTTP 401): missing bearer token",
+                "SSE error: Non-200 status code (403)",
+                "OAuth discovery failed",
+                "Server rejected the request: invalid_grant",
+                "Connection closed",
+                "spawn npx ENOENT",
+            )
+
+            for (reason in reasons) {
+                val json = """{"anaconda":{"status":"failed","error":${JsonPrimitive(reason)}}}"""
+                val result = KiloCliDataParser.parseMcpStatus(json).single()
+                assertEquals("failed", result.status, "must stay failed for: $reason")
+                assertEquals(reason, result.error, "the reason must survive parsing")
+            }
+        }
+
+        // ---- parseMcpAuthEvent ----
+
+        @Test
+        fun `parseMcpAuthEvent - wrapped payload shape`() {
+            val event = KiloCliDataParser.parseMcpAuthEvent(
+                """{"directory":"/test","payload":{"type":"mcp.browser.open.failed","properties":{"mcpName":"linear","url":"https://auth.example.test/authorize"}}}"""
+            )
+
+            assertNotNull(event)
+            assertEquals("linear", event.name)
+            assertEquals("https://auth.example.test/authorize", event.url)
+            assertFalse(event.external)
+        }
+
+        @Test
+        fun `parseMcpAuthEvent - flat payload shape`() {
+            val event = KiloCliDataParser.parseMcpAuthEvent(
+                """{"properties":{"mcpName":"linear","url":"https://auth.example.test/authorize"}}"""
+            )
+
+            assertNotNull(event)
+            assertEquals("linear", event.name)
+            assertEquals("https://auth.example.test/authorize", event.url)
+        }
+
+        /** `mcp.auth.url` means the client owns opening the URL, which the DTO has to carry. */
+        @Test
+        fun `parseMcpAuthEvent - external marks the client-owned variant`() {
+            val event = KiloCliDataParser.parseMcpAuthEvent(
+                """{"payload":{"type":"mcp.auth.url","properties":{"mcpName":"linear","url":"https://auth.example.test/authorize"}}}""",
+                external = true,
+            )
+
+            assertNotNull(event)
+            assertTrue(event.external)
+        }
+
+        @Test
+        fun `parseMcpAuthEvent - missing url returns null`() {
+            val event = KiloCliDataParser.parseMcpAuthEvent(
+                """{"properties":{"mcpName":"linear"}}"""
+            )
+
+            assertNull(event)
+        }
+
+        @Test
+        fun `parseMcpAuthEvent - malformed JSON returns null`() {
+            assertNull(KiloCliDataParser.parseMcpAuthEvent("not json"))
+        }
+    }
+
     // ================================================================
     // Group 3 — Request / body builders and local model state
     // ================================================================
@@ -2220,6 +2463,107 @@ class KiloCliDataParserTest {
             assertEquals("""{"method":0,"inputs":{"deploymentType":"github.com"}}""", result)
         }
 
+        // ---- buildCustomProviderPatch ----
+
+        @Test
+        fun `buildCustomProviderPatch - no removed models by default`() {
+            val input = CustomProviderSaveDto(
+                directory = "/test",
+                id = "my-openai",
+                name = "My OpenAI",
+                baseUrl = "https://api.example.com/v1",
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            )
+
+            val result = KiloCliDataParser.buildCustomProviderPatch(input)
+
+            assertEquals(
+                """{"provider":{"my-openai":{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://api.example.com/v1"},"models":{"gpt-4o":{"id":"gpt-4o","name":"gpt-4o","capabilities":{"reasoning":false}}}}}}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildCustomProviderPatch - deselected model becomes a null sentinel`() {
+            val input = CustomProviderSaveDto(
+                directory = "/test",
+                id = "my-openai",
+                name = "My OpenAI",
+                baseUrl = "https://api.example.com/v1",
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            )
+
+            val result = KiloCliDataParser.buildCustomProviderPatch(input, removedModelIds = setOf("gpt-3.5-turbo"))
+
+            assertEquals(
+                """{"provider":{"my-openai":{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://api.example.com/v1"},"models":{"gpt-3.5-turbo":null,"gpt-4o":{"id":"gpt-4o","name":"gpt-4o","capabilities":{"reasoning":false}}}}}}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildCustomProviderPatch - removed model never appears alongside a matching kept entry`() {
+            val input = CustomProviderSaveDto(
+                directory = "/test",
+                id = "my-openai",
+                name = "My OpenAI",
+                baseUrl = "https://api.example.com/v1",
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            )
+
+            // A removed ID that the caller mistakenly still lists among the kept models must not
+            // null out the entry the user is keeping: the kept model always wins.
+            val result = KiloCliDataParser.buildCustomProviderPatch(input, removedModelIds = setOf("gpt-4o"))
+
+            assertEquals(
+                """{"provider":{"my-openai":{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://api.example.com/v1"},"models":{"gpt-4o":{"id":"gpt-4o","name":"gpt-4o","capabilities":{"reasoning":false}}}}}}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildCustomProviderPatch - all models removed still writes a models object with only null sentinels`() {
+            val input = CustomProviderSaveDto(
+                directory = "/test",
+                id = "my-openai",
+                name = "My OpenAI",
+                baseUrl = "https://api.example.com/v1",
+                models = emptyList(),
+            )
+
+            val result = KiloCliDataParser.buildCustomProviderPatch(input, removedModelIds = setOf("gpt-4o"))
+
+            assertEquals(
+                """{"provider":{"my-openai":{"name":"My OpenAI","npm":"@ai-sdk/openai-compatible","options":{"baseURL":"https://api.example.com/v1"},"models":{"gpt-4o":null}}}}""",
+                result,
+            )
+        }
+
+        // ---- buildCustomProviderModelRemovalPatch ----
+
+        @Test
+        fun `buildCustomProviderModelRemovalPatch - nulls only the given models`() {
+            val result = KiloCliDataParser.buildCustomProviderModelRemovalPatch("my-openai", setOf("gpt-3.5-turbo"))
+
+            assertEquals(
+                """{"provider":{"my-openai":{"models":{"gpt-3.5-turbo":null}}}}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildCustomProviderModelRemovalPatch - leaves every other field untouched`() {
+            // No name, npm, or options keys should appear: a scope's other fields must survive
+            // this patch via the deep-merge, since this builder only ever targets "models".
+            val result = KiloCliDataParser.buildCustomProviderModelRemovalPatch("my-openai", setOf("a", "b"))
+
+            assertFalse(result.contains("\"name\""))
+            assertFalse(result.contains("\"npm\""))
+            assertFalse(result.contains("\"options\""))
+            assertTrue(result.contains("\"a\":null"))
+            assertTrue(result.contains("\"b\":null"))
+        }
+
         @Test
         fun `buildPromptJson - with agent`() {
             val prompt = PromptDto(
@@ -2260,6 +2604,24 @@ class KiloCliDataParserTest {
 
             assertEquals(
                 """{"parts":[{"type":"text","text":"see this"},{"type":"file","mime":"image/png","url":"file:///tmp/a.png","filename":"a.png"}]}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildPromptJson - synthetic selection marker precedes its ranged file part`() {
+            val prompt = PromptDto(
+                parts = listOf(
+                    PromptPartDto(type = "text", text = "Explain this selection"),
+                    PromptPartDto(type = "text", text = "Note: the user selected lines 2-3", synthetic = true),
+                    PromptPartDto(type = "file", mime = "text/plain", url = "file:///tmp/App.kt?start=2&end=3", filename = "App.kt"),
+                ),
+            )
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"text","text":"Explain this selection"},{"type":"text","text":"Note: the user selected lines 2-3","synthetic":true},{"type":"file","mime":"text/plain","url":"file:///tmp/App.kt?start=2&end=3","filename":"App.kt"}]}""",
                 result,
             )
         }
@@ -2496,6 +2858,28 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `buildConfigPatch - snapshot writes explicit booleans`() {
+            assertEquals(
+                "{\"snapshot\":true}",
+                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(snapshot = true)),
+            )
+            assertEquals(
+                "{\"snapshot\":false}",
+                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(snapshot = false)),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - retention writes nested policy`() {
+            assertEquals(
+                "{\"retention\":{\"enabled\":true,\"maxAgeDays\":30}}",
+                KiloCliDataParser.buildConfigPatch(ConfigPatchDto(
+                    retention = RetentionPatchDto(enabled = true, maxAgeDays = 30),
+                )),
+            )
+        }
+
+        @Test
         fun `buildConfigPatch - mcp upsert and delete`() {
             val patch = ConfigPatchDto(mcp = linkedMapOf(
                 "local" to McpConfigDto(
@@ -2513,6 +2897,118 @@ class KiloCliDataParserTest {
                 "{\"mcp\":{\"local\":{\"type\":\"local\",\"command\":[\"node\",\"server.js\"],\"environment\":{\"TOKEN\":\"x\"},\"headers\":{\"X-Test\":\"1\"},\"enabled\":false,\"timeout\":12000},\"old\":null}}",
                 KiloCliDataParser.buildConfigPatch(patch),
             )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp oauth disabled writes false`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(
+                    type = "remote",
+                    url = "https://mcp.example.test",
+                    oauth = McpOAuthDto(enabled = false),
+                ),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\",\"oauth\":false}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        /**
+         * Unset fields are emitted as explicit nulls, not omitted: the config schema deep-merges on
+         * PATCH, so an omitted key would keep whatever the user just cleared.
+         */
+        fun `buildConfigPatch - mcp oauth custom client writes object`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(
+                    type = "remote",
+                    url = "https://mcp.example.test",
+                    oauth = McpOAuthDto(enabled = true, clientId = "abc", scope = "read"),
+                ),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\"," +
+                    "\"oauth\":{\"clientId\":\"abc\",\"clientSecret\":null,\"scope\":\"read\"," +
+                    "\"callbackPort\":null,\"redirectUri\":null}}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp oauth clear writes null`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(
+                    type = "remote",
+                    url = "https://mcp.example.test",
+                    oauth = McpOAuthDto(clear = true),
+                ),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\",\"oauth\":null}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp without oauth omits the key`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "remote" to McpConfigDto(type = "remote", url = "https://mcp.example.test"),
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"remote\":{\"type\":\"remote\",\"url\":\"https://mcp.example.test\"}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildMcpOverlayPatch - sets a project MCP`() {
+            val result = KiloCliDataParser.buildMcpOverlayPatch(
+                "anaconda",
+                "workspace",
+                McpConfigDto(type = "remote", url = "https://anaconda.com/api/mcp"),
+            )
+
+            assertEquals(
+                "{\"scope\":\"project\",\"set\":{\"mcp\":{\"anaconda\":{\"type\":\"remote\",\"url\":\"https://anaconda.com/api/mcp\"}}}}",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildMcpOverlayPatch - unsets a project MCP`() {
+            assertEquals(
+                "{\"scope\":\"project\",\"unset\":[[\"mcp\",\"anaconda\"]]}",
+                KiloCliDataParser.buildMcpOverlayPatch("anaconda", "workspace", null),
+            )
+        }
+
+        /**
+         * The config schema deep-merges on PATCH, so an omitted key keeps its old value on disk. A
+         * field the user cleared has to go out as an explicit null or the previous client
+         * id/secret/scope survives and gets reused after a restart.
+         */
+        @Test
+        fun `buildMcpOverlayPatch - cleared oauth fields are written as explicit nulls`() {
+            val result = KiloCliDataParser.buildMcpOverlayPatch(
+                "anaconda",
+                "workspace",
+                McpConfigDto(
+                    type = "remote",
+                    url = "https://anaconda.com/api/mcp",
+                    oauth = McpOAuthDto(enabled = true, clientId = "abc"),
+                ),
+            )
+
+            assertContains(result, "\"clientId\":\"abc\"")
+            assertContains(result, "\"clientSecret\":null")
+            assertContains(result, "\"scope\":null")
+            assertContains(result, "\"callbackPort\":null")
+            assertContains(result, "\"redirectUri\":null")
         }
 
         @Test
@@ -2976,6 +3472,100 @@ class KiloCliDataParserTest {
         val text = "before\n\nCalled the Read tool with the following input: {\"filePath\":\"/tmp/a.kt\"}\n\nafter\n\n\nkeep"
 
         assertEquals("before\n\nafter\n\n\nkeep", KiloCliDataParser.sanitizeUserPromptText(text))
+    }
+
+    // ================================================================
+    // parseBackgroundJobs
+    // ================================================================
+
+    @Nested
+    inner class BackgroundJobs {
+        @Test
+        fun `parseBackgroundJobs - flattens metadata into typed fields`() {
+            val raw = """
+                [
+                    {
+                        "id": "job1",
+                        "type": "task",
+                        "status": "running",
+                        "title": "Explore",
+                        "started_at": 1700000000000,
+                        "metadata": {
+                            "sessionId": "ses_child1",
+                            "parentSessionId": "ses_parent",
+                            "background": true
+                        }
+                    }
+                ]
+            """.trimIndent()
+
+            val job = KiloCliDataParser.parseBackgroundJobs(raw).single()
+
+            assertEquals("job1", job.id)
+            assertEquals("task", job.type)
+            assertEquals("running", job.status)
+            assertEquals("Explore", job.title)
+            assertEquals(1700000000000L, job.startedAt)
+            assertNull(job.completedAt)
+            assertNull(job.error)
+            assertEquals("ses_child1", job.sessionId)
+            assertEquals("ses_parent", job.parentSessionId)
+            assertTrue(job.background)
+        }
+
+        @Test
+        fun `parseBackgroundJobs - defaults when metadata is absent`() {
+            val raw = """[{"id": "job1", "type": "task", "status": "completed"}]"""
+
+            val job = KiloCliDataParser.parseBackgroundJobs(raw).single()
+
+            assertEquals(0L, job.startedAt)
+            assertNull(job.completedAt)
+            assertNull(job.sessionId)
+            assertNull(job.parentSessionId)
+            assertFalse(job.background)
+        }
+
+        @Test
+        fun `parseBackgroundJobs - tolerates non-finite timestamps from the widened SDK types`() {
+            val raw = """
+                [
+                    {
+                        "id": "job1",
+                        "type": "task",
+                        "status": "error",
+                        "started_at": "NaN",
+                        "completed_at": "Infinity",
+                        "error": "boom"
+                    }
+                ]
+            """.trimIndent()
+
+            val job = KiloCliDataParser.parseBackgroundJobs(raw).single()
+
+            assertEquals(0L, job.startedAt)
+            assertNull(job.completedAt)
+            assertEquals("boom", job.error)
+        }
+
+        @Test
+        fun `parseBackgroundJobs - drops a row missing a required field instead of failing the list`() {
+            val raw = """
+                [
+                    {"id": "job1", "type": "task", "status": "running"},
+                    {"id": "job2", "type": "task"}
+                ]
+            """.trimIndent()
+
+            val jobs = KiloCliDataParser.parseBackgroundJobs(raw)
+
+            assertEquals(listOf("job1"), jobs.map { it.id })
+        }
+
+        @Test
+        fun `parseBackgroundJobs - malformed json returns an empty list`() {
+            assertEquals(emptyList(), KiloCliDataParser.parseBackgroundJobs("not json"))
+        }
     }
 
     // ================================================================

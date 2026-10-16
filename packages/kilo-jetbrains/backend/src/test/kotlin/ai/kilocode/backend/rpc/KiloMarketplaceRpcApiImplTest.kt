@@ -5,6 +5,8 @@ import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.rpc.dto.MarketplaceBundleDto
+import ai.kilocode.rpc.dto.MarketplaceSkillDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -13,10 +15,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.nio.file.Files
+import java.util.UUID
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -115,6 +117,41 @@ class KiloMarketplaceRpcApiImplTest {
         assertEquals("\"https://example.com/review-skill.tar.gz\"", skill.content)
 
         assertEquals("directory=%2Ftest+project", mock.lastMarketplaceListPath?.substringAfter("?"))
+    }
+
+    @Test
+    fun `bundles reads catalog independent companion ownership markers`() = runBlocking {
+        val root = Files.createTempDirectory("kilo-marketplace-bundles")
+        val project = root.resolve("project")
+        val local = project.resolve(".kilo/skills/docs/SKILL.md")
+        val global = root.resolve("global/skills/review/SKILL.md")
+        try {
+            Files.createDirectories(local.parent)
+            Files.createDirectories(global.parent)
+            Files.writeString(local, "# Docs")
+            Files.writeString(global, "# Review")
+            val token = UUID.randomUUID().toString()
+            Files.writeString(local.parent.resolve(".kilo-marketplace.json"), """{"version":1,"id":"context7","token":"$token"}""")
+            Files.writeString(global.parent.resolve(".kilo-marketplace.json"), """{"version":1,"id":"context7","token":"$token"}""")
+            mock.skills = """
+                [
+                  {"name":"docs","location":"$local"},
+                  {"name":"review","location":"$global"}
+                ]
+            """.trimIndent()
+
+            val result = rpc().bundles(project.toString())
+
+            assertEquals(
+                listOf(
+                    MarketplaceBundleDto("context7", "global", listOf(global.toString())),
+                    MarketplaceBundleDto("context7", "project", listOf(local.toString())),
+                ),
+                result,
+            )
+        } finally {
+            root.toFile().deleteRecursively()
+        }
     }
 
     @Test
@@ -255,16 +292,28 @@ class KiloMarketplaceRpcApiImplTest {
     }
 
     @Test
-    fun `install replays item content verbatim and forwards target and parameters`() = runBlocking {
+    fun `install preserves MCP companion skills and content through the catalog DTO and HTTP body`() = runBlocking {
         mock.marketplaceList = """
             {"items":[{
               "id":"context7","type":"mcp","name":"Context7","description":"Docs lookup","category":"tools",
-              "content":[{"name":"npx","content":"{\"command\":\"npx\"}"},{"name":"docker","content":"{\"command\":\"docker\"}"}]
+              "content":[{"name":"npx","content":"{\"command\":\"npx\"}"},{"name":"docker","content":"{\"command\":\"docker\"}"}],
+              "skills":[
+                {"id":"docs-lookup","content":"https://example.com/docs-lookup.tar.gz"},
+                {"id":"review","content":"https://example.com/review.tar.gz?ref=stable&source=mcp"}
+              ]
             }],"installed":{"project":{},"global":{}}}
         """.trimIndent()
         mock.marketplaceInstallResult = """{"success":true,"slug":"context7","filePath":"/tmp/kilo.json","line":1}"""
         val rpc = rpc()
         val item = rpc.list("/test").items.single()
+
+        assertEquals(
+            listOf(
+                MarketplaceSkillDto("docs-lookup", "https://example.com/docs-lookup.tar.gz"),
+                MarketplaceSkillDto("review", "https://example.com/review.tar.gz?ref=stable&source=mcp"),
+            ),
+            item.skills,
+        )
 
         val result = rpc.install("/test", item, "global", mapOf("apiKey" to "secret", "__method" to "npx"))
 
@@ -273,18 +322,23 @@ class KiloMarketplaceRpcApiImplTest {
         assertEquals("/tmp/kilo.json", result.filePath)
         assertEquals(1, result.line)
 
-        val payload = json.parseToJsonElement(mock.lastMarketplaceInstallBody!!).jsonObject
-        assertEquals("global", payload["target"]!!.jsonPrimitive.content)
-        val sentItem = payload["item"]!!.jsonObject
-        assertEquals("mcp", sentItem["type"]!!.jsonPrimitive.content)
-        assertEquals("context7", sentItem["id"]!!.jsonPrimitive.content)
-        val content = sentItem["content"]!!.jsonArray
-        assertEquals(2, content.size)
-        assertEquals("npx", content[0].jsonObject["name"]!!.jsonPrimitive.content)
-        assertEquals("docker", content[1].jsonObject["name"]!!.jsonPrimitive.content)
-        val params = payload["parameters"]!!.jsonObject
-        assertEquals("secret", params["apiKey"]!!.jsonPrimitive.content)
-        assertEquals("npx", params["__method"]!!.jsonPrimitive.content)
+        assertEquals(
+            json.parseToJsonElement("""
+                {
+                  "item": {
+                    "type":"mcp", "id":"context7",
+                    "content":[{"name":"npx","content":"{\"command\":\"npx\"}"},{"name":"docker","content":"{\"command\":\"docker\"}"}],
+                    "skills":[
+                      {"id":"docs-lookup","content":"https://example.com/docs-lookup.tar.gz"},
+                      {"id":"review","content":"https://example.com/review.tar.gz?ref=stable&source=mcp"}
+                    ]
+                  },
+                  "target":"global",
+                  "parameters":{"apiKey":"secret","__method":"npx"}
+                }
+            """.trimIndent()),
+            json.parseToJsonElement(mock.lastMarketplaceInstallBody!!),
+        )
     }
 
     @Test
@@ -312,6 +366,7 @@ class KiloMarketplaceRpcApiImplTest {
         mock.marketplaceInstallResult = """{"success":true,"slug":"context7"}"""
         val rpc = rpc()
         val item = rpc.list("/test").items.single()
+        assertTrue(item.skills.isEmpty())
 
         val result = rpc.install("/test", item, "project", emptyMap())
 
@@ -320,6 +375,10 @@ class KiloMarketplaceRpcApiImplTest {
         assertNull(result.error)
         assertNull(result.filePath)
         assertNull(result.line)
+        assertEquals(
+            json.parseToJsonElement("""{"item":{"type":"mcp","id":"context7","content":"{}"},"target":"project"}"""),
+            json.parseToJsonElement(mock.lastMarketplaceInstallBody!!),
+        )
     }
 
     @Test
@@ -346,6 +405,13 @@ class KiloMarketplaceRpcApiImplTest {
         val item = payload["item"]!!.jsonObject
         assertEquals("planner", item["id"]!!.jsonPrimitive.content)
         assertEquals("agent", item["type"]!!.jsonPrimitive.content)
+
+        mock.marketplaceRemoveResult = """{"success":true,"slug":"context7"}"""
+        assertTrue(rpc.remove("/test", "context7", "mcp", "global").success)
+        assertEquals(
+            json.parseToJsonElement("""{"item":{"id":"context7","type":"mcp"},"scope":"global"}"""),
+            json.parseToJsonElement(mock.lastMarketplaceRemoveBody!!),
+        )
     }
 
     private suspend fun rpc(): KiloMarketplaceRpcApiImpl = KiloMarketplaceRpcApiImpl(app())

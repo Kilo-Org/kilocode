@@ -274,6 +274,84 @@ describe("markdownCommentBlocks", () => {
     ])
   })
 
+  it("spans a multi-line item at the end of a list", () => {
+    const result = markdownCommentBlocks("- a\n- b\n  c\n")
+    expect(result).toEqual([
+      {
+        type: "list",
+        start: 1,
+        end: 3,
+        items: [
+          { start: 1, end: 1 },
+          { start: 2, end: 3 },
+        ],
+      },
+    ])
+  })
+
+  it("spans loose list items across the blank lines that separate them", () => {
+    const result = markdownCommentBlocks("- alpha\n\n- beta\n\n- gamma\n")
+    expect(result).toEqual([
+      {
+        type: "list",
+        start: 1,
+        end: 5,
+        items: [
+          { start: 1, end: 2 },
+          { start: 3, end: 4 },
+          { start: 5, end: 5 },
+        ],
+      },
+    ])
+  })
+
+  it("spans a multi-line loose list item across its trailing blank line", () => {
+    const result = markdownCommentBlocks("- alpha\n  continued\n\n- beta\n")
+    expect(result).toEqual([
+      {
+        type: "list",
+        start: 1,
+        end: 4,
+        items: [
+          { start: 1, end: 3 },
+          { start: 4, end: 4 },
+        ],
+      },
+    ])
+  })
+
+  it("spans a list item that holds several paragraphs", () => {
+    const result = markdownCommentBlocks("1. one\n\n2. two\n\n   more\n\n3. three\n")
+    expect(result).toEqual([
+      {
+        type: "list",
+        start: 1,
+        end: 7,
+        items: [
+          { start: 1, end: 2 },
+          { start: 3, end: 6 },
+          { start: 7, end: 7 },
+        ],
+      },
+    ])
+  })
+
+  it("keeps a loose list clear of the block that follows it", () => {
+    const result = markdownCommentBlocks("- alpha\n\n- beta\n\nAfter\n")
+    expect(result).toEqual([
+      {
+        type: "list",
+        start: 1,
+        end: 3,
+        items: [
+          { start: 1, end: 2 },
+          { start: 3, end: 3 },
+        ],
+      },
+      { type: "block", start: 5, end: 5 },
+    ])
+  })
+
   it("keeps blockquotes and paragraphs as rendered blocks", () => {
     const result = markdownCommentBlocks("> Quote\n> Continued\n\nParagraph line one\nparagraph line two")
     expect(result).toEqual([

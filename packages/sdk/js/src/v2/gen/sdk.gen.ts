@@ -211,6 +211,12 @@ import type {
   KilocodeResetSessionBoardResponses,
   KilocodeResumeSessionErrors,
   KilocodeResumeSessionResponses,
+  KilocodeRetentionCancelErrors,
+  KilocodeRetentionCancelResponses,
+  KilocodeRetentionRunErrors,
+  KilocodeRetentionRunResponses,
+  KilocodeRetentionStatusErrors,
+  KilocodeRetentionStatusResponses,
   KilocodeSessionBoardErrors,
   KilocodeSessionBoardResponses,
   KilocodeSessionImportMessageErrors,
@@ -257,6 +263,8 @@ import type {
   McpAuthAuthenticateResponses,
   McpAuthCallbackErrors,
   McpAuthCallbackResponses,
+  McpAuthCancelErrors,
+  McpAuthCancelResponses,
   McpAuthRemoveErrors,
   McpAuthRemoveResponses,
   McpAuthStartErrors,
@@ -3046,9 +3054,50 @@ export class Auth2 extends HeyApiClient {
   /**
    * Authenticate MCP OAuth
    *
-   * Start OAuth flow and wait for callback (opens browser).
+   * Start OAuth flow and wait for callback, optionally letting the client open the browser.
    */
   public authenticate<ThrowOnError extends boolean = false>(
+    parameters: {
+      name: string
+      directory?: string
+      workspace?: string
+      external?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "name" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "external" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<McpAuthAuthenticateResponses, McpAuthAuthenticateErrors, ThrowOnError>(
+      {
+        url: "/mcp/{name}/auth/authenticate",
+        ...options,
+        ...params,
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+          ...params.headers,
+        },
+      },
+    )
+  }
+
+  /**
+   * Cancel MCP OAuth
+   *
+   * Cancel an active OAuth flow without removing stored credentials.
+   */
+  public cancel<ThrowOnError extends boolean = false>(
     parameters: {
       name: string
       directory?: string
@@ -3068,13 +3117,11 @@ export class Auth2 extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).post<McpAuthAuthenticateResponses, McpAuthAuthenticateErrors, ThrowOnError>(
-      {
-        url: "/mcp/{name}/auth/authenticate",
-        ...options,
-        ...params,
-      },
-    )
+    return (options?.client ?? this.client).post<McpAuthCancelResponses, McpAuthCancelErrors, ThrowOnError>({
+      url: "/mcp/{name}/auth/cancel",
+      ...options,
+      ...params,
+    })
   }
 }
 
@@ -7333,7 +7380,7 @@ export class Marketplace extends HeyApiClient {
   /**
    * Install a marketplace item
    *
-   * Install a marketplace MCP server, agent, or skill into project or global Kilo config.
+   * Install a marketplace MCP server, agent, skill, or plugin into project or global Kilo config.
    */
   public install<ThrowOnError extends boolean = false>(
     parameters: {
@@ -7380,7 +7427,7 @@ export class Marketplace extends HeyApiClient {
   /**
    * Remove a marketplace item
    *
-   * Remove a marketplace MCP server, agent, or skill from project or global Kilo config.
+   * Remove a marketplace MCP server, agent, skill, or plugin from project or global Kilo config.
    */
   public remove<ThrowOnError extends boolean = false>(
     parameters: {
@@ -7845,6 +7892,117 @@ export class BackgroundJob extends HeyApiClient {
   }
 }
 
+export class Retention extends HeyApiClient {
+  /**
+   * Get session retention status
+   *
+   * Read the machine-wide session retention policy and the state of the most recent cleanup pass.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeRetentionStatusResponses,
+      KilocodeRetentionStatusErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/retention",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Run session retention
+   *
+   * Run one machine-wide session retention pass. Does nothing unless the retention policy is enabled in kilo.json; `force` bypasses the minimum spacing between scheduled passes, never the enable check.
+   */
+  public run<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      force?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "force" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeRetentionRunResponses,
+      KilocodeRetentionRunErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/retention/run",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Stop the active session retention pass
+   *
+   * Ask the machine-wide retention pass to stop before deleting more sessions. Already-deleted sessions stay deleted; the interrupted pass still records its partial result and honors the spacing window.
+   */
+  public cancel<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeRetentionCancelResponses,
+      KilocodeRetentionCancelErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/retention/cancel",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Migrate extends HeyApiClient {
   /**
    * Migrate external sessions into Kilo
@@ -8037,7 +8195,7 @@ export class SessionImport extends HeyApiClient {
         partID?: string
         snapshot?: string
         diff?: string
-        workspace?: "restored" | "snapshots-disabled" | "unavailable"
+        workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
       }
       permission?: {
         [key: string]: unknown
@@ -8870,6 +9028,11 @@ export class Kilocode extends HeyApiClient {
   private _backgroundJob?: BackgroundJob
   get backgroundJob(): BackgroundJob {
     return (this._backgroundJob ??= new BackgroundJob({ client: this.client }))
+  }
+
+  private _retention?: Retention
+  get retention(): Retention {
+    return (this._retention ??= new Retention({ client: this.client }))
   }
 
   private _migrate?: Migrate

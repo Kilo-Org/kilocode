@@ -69,6 +69,7 @@ export async function load(
       escapeJson: false,
       trusted,
       fileScope,
+      markdown: true,
     }).catch((err): string | undefined => {
       const message =
         (ConfigError.InvalidError.isInstance(err) ? err.data.message : undefined) ??

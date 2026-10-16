@@ -23,23 +23,36 @@ const mcp: MarketplaceItem = {
   suggest_for: { vscode_extension: ["ms-toolsai.jupyter"] },
 }
 
-const items = [agent, mcp]
+const plugin: MarketplaceItem = {
+  type: "plugin",
+  id: "@acme/deploy",
+  name: "Deploy Toolkit",
+  description: "Deployment helpers",
+  category: "devops",
+  content: "@acme/deploy",
+  url: "https://example.com/deploy",
+  suggest_for: { filename: ["deploy.yml"] },
+}
+
+const items = [agent, mcp, plugin]
 
 describe("Marketplace suggestion notification", () => {
   it("derives a stable discardable slug from type and id", () => {
     expect(suggestionSlug(agent)).toBe("agent:angular")
     expect(suggestionSlug(mcp)).toBe("mcp:jupyter")
+    expect(suggestionSlug(plugin)).toBe("plugin:@acme/deploy")
   })
 
   it("selects only relevant, non-dismissed items", () => {
     const relevance: MarketplaceRelevanceMetadata = {
       "agent:angular": { filename: ["*.component.ts"] },
       "mcp:jupyter": { vscodeExtension: ["ms-toolsai.jupyter"] },
+      "plugin:@acme/deploy": { filename: ["deploy.yml"] },
     }
 
-    expect(selectSuggestions(items, relevance, [])).toEqual([agent, mcp])
-    expect(selectSuggestions(items, relevance, ["agent:angular"])).toEqual([mcp])
-    expect(selectSuggestions(items, relevance, ["agent:angular", "mcp:jupyter"])).toEqual([])
+    expect(selectSuggestions(items, relevance, [])).toEqual([agent, mcp, plugin])
+    expect(selectSuggestions(items, relevance, ["agent:angular"])).toEqual([mcp, plugin])
+    expect(selectSuggestions(items, relevance, ["agent:angular", "mcp:jupyter", "plugin:@acme/deploy"])).toEqual([])
   })
 
   it("ignores items without a relevance match", () => {

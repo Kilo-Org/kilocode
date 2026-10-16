@@ -35,6 +35,9 @@ const ModelState = z
   .passthrough()
 
 export namespace KiloTask {
+  export const usageDescription =
+    "Subagents launched with this tool are internal to the current session and create no worktrees or interactive sessions. To start visible Agent Manager sessions, use `agent_manager` only when the user explicitly asks."
+
   export const ModelFields = {
     model: Schema.optional(Schema.NullOr(Schema.String)).annotate({
       description:
@@ -51,7 +54,7 @@ export namespace KiloTask {
   }
 
   export const modelDescription =
-    "Experimental subagent model selection is enabled. Omit these fields, or send null, to keep the normal subagent model and reasoning defaults. Only override model, provider, or variant when the user explicitly requests it. Do not choose overrides on your own based on task complexity, cost, or latency. Use agent_manager_models only when an override is requested to find available models, providers, and variants; do not guess names or use model knowledge from training. This does not create Agent Manager sessions. Resumed tasks keep their last model and variant unless overridden. A variant-only override keeps the resolved model. A model override does not inherit the parent's reasoning effort."
+    "Subagent model selection is enabled. Omit these fields, or send null, to keep the normal subagent model and reasoning defaults. Only override model, provider, or variant when the user explicitly requests it. Do not choose overrides on your own based on task complexity, cost, or latency. Use agent_manager_models only when an override is requested to find available models, providers, and variants; do not guess names or use model knowledge from training. This does not create Agent Manager sessions. Resumed tasks keep their last model and variant unless overridden. A variant-only override keeps the resolved model. A model override does not inherit the parent's reasoning effort."
 
   export const cancelForeground = Effect.fn("KiloTask.cancelForeground")(function* (
     jobs: Pick<BackgroundJob.Interface, "get">,
@@ -93,9 +96,13 @@ export namespace KiloTask {
    * overriding the selected subagent's own allowlist with parent ask/allow rules.
    *
    * OpenCode removed parent-agent inheritance entirely in anomalyco/opencode#31696.
-   * Kilo intentionally differs: parent edit/notebook/MCP denials remain hard ceilings
-   * for Plan Mode and MCP restrictions, while parent ask/allow rules must not replace
-   * the selected subagent's policy. Preserve this distinction during upstream merges.
+   * Kilo intentionally differs: native-agent edit denials and parent notebook/MCP denials
+   * remain hard ceilings for Plan Mode and MCP restrictions. A custom delegator's edit
+   * policy governs only that agent: it is not projected onto the subagents it starts, so
+   * even path-scoped denies such as `edit: { "secrets/**": "deny" }` stop there and no
+   * longer confine delegated writes. Session edit denials still constrain every descendant,
+   * so use a session-level edit restriction to confine a delegated workflow.
+   * Parent ask/allow rules must not replace the selected subagent's policy.
    *
    * Broad bash denies are deliberately NOT inherited from the calling agent. A read-only/delegating
    * agent (plan, ask, orchestrator) carries a `readOnlyBash` allowlist whose deny rules
@@ -116,18 +123,21 @@ export namespace KiloTask {
     session: Pick<Session.Info, "permission">
     mcp: Config.Info["mcp"]
   }): Permission.Ruleset {
-    const rules = Permission.merge(input.caller.permission ?? [], input.session.permission ?? [])
+    const session = input.session.permission ?? []
+    const rules = Permission.merge(input.caller.permission ?? [], session)
+    const edit = input.caller.native === false ? session : rules
     const prefixes = Object.keys(input.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))
     // `guarded` covers the tools a read-only mode may never regain from config; keeping
     // it here too stops a Plan-launched subagent from reaching them under a catch-all.
     // `bash` is intentionally excluded — see the doc comment above (#11523).
     const mutation = new Set(["edit", ...guarded.filter((p) => p !== "bash")])
-    const inherited = rules.filter(
-      (r: Permission.Rule) => r.action === "deny" && (mutation.has(r.permission) || isMcp(r.permission)),
-    )
+    const inherited = [
+      ...rules.filter((rule) => rule.permission !== "edit"),
+      ...edit.filter((rule) => rule.permission === "edit"),
+    ].filter((r: Permission.Rule) => r.action === "deny" && (mutation.has(r.permission) || isMcp(r.permission)))
     for (const permission of mutation) {
-      if (Permission.evaluate(permission, "*", rules).action !== "deny") continue
+      if (Permission.evaluate(permission, "*", permission === "edit" ? edit : rules).action !== "deny") continue
       inherited.push({ permission, pattern: "*", action: "deny" })
     }
     const scoped = rules.filter((rule) => rule.permission !== "*")
@@ -173,11 +183,59 @@ export namespace KiloTask {
   function parse(value: string | null | undefined): Model | undefined {
     if (!value) return undefined
     const [providerID, ...parts] = value.split("/")
+    const modelID = parts.join("/")
+    if (!providerID || !modelID) return undefined
     return {
       providerID: ProviderV2.ID.make(providerID),
-      modelID: ModelV2.ID.make(parts.join("/")),
+      modelID: ModelV2.ID.make(modelID),
     }
   }
+
+  /**
+   * Resolve a configured model reference. A value is matched against the
+   * provider catalog by qualified `provider/model` key, model ID, then display
+   * name, preferring the parent session's provider so a custom provider's
+   * display name (e.g. "codestral (latest)") resolves to that provider's model
+   * instead of failing with an empty model ID. A model ID or display name may
+   * itself contain `/`, so the catalog is consulted before a slash is treated
+   * as a provider separator. Unresolvable or ambiguous names log a warning and
+   * resolve to undefined, so the caller falls back to the next model source.
+   */
+  const resolve = Effect.fn("KiloTask.resolve")(function* (input: {
+    value: string
+    preferred: string
+    provider: Provider.Interface
+  }) {
+    const value = input.value.trim()
+    if (!value) return undefined
+    const providers = yield* input.provider.list()
+    const all = Object.values(providers).flatMap((provider) =>
+      Object.values(provider.models).map((model) => ({ providerID: provider.id, model })),
+    )
+    const query = value.toLowerCase()
+    const keys = all.filter((item) => `${item.providerID}/${item.model.id}`.toLowerCase() === query)
+    const ids = all.filter((item) => item.model.id.toLowerCase() === query)
+    const named = all.filter((item) => item.model.name.toLowerCase() === query)
+    const matched = keys.length ? keys : ids.length ? ids : named
+    if (matched.length === 0) {
+      if (value.includes("/")) return parse(value)
+      log.warn("task model name is not available", { value })
+      return undefined
+    }
+    const preferred = matched.filter((item) => item.providerID === input.preferred)
+    const pool = preferred.length ? preferred : matched
+    if (pool.length > 1) {
+      log.warn("task model name is ambiguous", {
+        value,
+        providers: pool.map((item) => item.providerID),
+      })
+      return undefined
+    }
+    return {
+      providerID: ProviderV2.ID.make(pool[0].providerID),
+      modelID: ModelV2.ID.make(pool[0].model.id),
+    }
+  })
 
   const saved = Effect.fn("KiloTask.savedModel")(function* (name: string) {
     if (Flag.KILO_CLIENT !== "cli") return undefined
@@ -209,7 +267,25 @@ export namespace KiloTask {
     provider: Provider.Interface
   }) {
     const state = yield* saved(input.name)
-    const cfg = parse(input.config.subagent_model)
+    const configured = input.config.subagent_model
+      ? yield* resolve({
+          value: input.config.subagent_model,
+          preferred: input.parent.providerID,
+          provider: input.provider,
+        })
+      : undefined
+    // A bare model name in the agent config is parsed by Provider.parseModel
+    // into an empty modelID (providerID holds the name); resolve it to a real
+    // provider/model pair instead of launching a child with an empty ID.
+    const agentModel = input.agent.model
+      ? input.agent.model.modelID
+        ? input.agent.model
+        : yield* resolve({
+            value: input.agent.model.providerID,
+            preferred: input.parent.providerID,
+            provider: input.provider,
+          })
+      : undefined
     const override = (model: Model) => input.config.subagent_variant_overrides?.[key(model)] ?? undefined
     const choices: Array<Choice | undefined> = [
       input.workflow ? { ...input.workflow, direct: true } : undefined,
@@ -220,8 +296,8 @@ export namespace KiloTask {
             sticky: true,
           }
         : undefined,
-      input.agent.model ? { model: input.agent.model, variant: input.agent.variant, direct: true } : undefined,
-      cfg ? { model: cfg, variant: input.config.subagent_variant ?? undefined } : undefined,
+      agentModel ? { model: agentModel, variant: input.agent.variant, direct: true } : undefined,
+      configured ? { model: configured, variant: input.config.subagent_variant ?? undefined } : undefined,
     ]
 
     for (const choice of choices) {
@@ -266,18 +342,12 @@ export namespace KiloTask {
 
   export const resolveModel = Effect.fn("KiloTask.resolveModel")(function* (
     input: Parameters<typeof defaults>[0] & {
-      enabled?: boolean
       selection?: { model?: string | null; provider?: string | null; variant?: string | null }
       resume?: Session.Info["model"]
     },
   ) {
     const selection = input.selection ?? {}
     const requested = Object.values(selection).some((value) => value != null)
-    if (requested && !input.enabled) {
-      return yield* Effect.fail(
-        new Error("Task model selection requires experimental.task_model_selection=true in Kilo config"),
-      )
-    }
     if (requested && Object.values(selection).some((value) => value != null && !value.trim())) {
       return yield* Effect.fail(new Error("Task model, provider, and variant must not be empty when specified"))
     }
@@ -286,7 +356,7 @@ export namespace KiloTask {
     }
     const source = selection.model
       ? undefined
-      : input.enabled && input.resume
+      : input.resume
         ? {
             model: { providerID: input.resume.providerID, modelID: input.resume.id },
             variant: input.resume.variant === "default" ? undefined : input.resume.variant,

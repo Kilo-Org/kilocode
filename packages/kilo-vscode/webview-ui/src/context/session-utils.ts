@@ -1,5 +1,13 @@
 import { reconcile } from "solid-js/store"
-import type { FileAttachment, Message, MessageLoadMode, Part, ToolPart } from "../types/messages"
+import type {
+  FileAttachment,
+  Message,
+  MessageLoadMode,
+  Part,
+  SessionInfo,
+  SessionModelUsage,
+  ToolPart,
+} from "../types/messages"
 import { Identifier } from "../utils/id"
 import {
   feedbackMetadata,
@@ -316,6 +324,23 @@ export function computeStatus(
  */
 export function calcTotalCost(messages: Array<{ role: string; cost?: number }>): number {
   return messages.reduce((sum, m) => sum + (m.role === "assistant" ? (m.cost ?? 0) : 0), 0)
+}
+
+export function sessionCost(
+  items: readonly { cost: number }[],
+  session: Pick<SessionInfo, "id" | "parentID"> | undefined,
+  usage: Pick<SessionModelUsage, "sessionIDs" | "sessionCost" | "totals"> | undefined,
+) {
+  const loaded = items.reduce((sum, item) => sum + item.cost, 0)
+  // Older backends report only the whole tree. Never use that for a child view.
+  const reported =
+    session && usage?.sessionIDs.includes(session.id)
+      ? (usage.sessionCost ?? (session.parentID == null ? usage.totals.cost : undefined))
+      : undefined
+  return {
+    total: Math.max(loaded, reported ?? 0),
+    partial: reported !== undefined && Math.abs(loaded - reported) > 0.000001,
+  }
 }
 
 /**

@@ -35,6 +35,23 @@ export function insideRect(rect: Rect, x: number, y: number): boolean {
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
 }
 
+/** The drag geometry needed to test whether a tab left the bar. */
+type TabDrag = {
+  draggable: {
+    transformed: { center: { y: number } }
+    layout: { bottom: number }
+  }
+}
+
+/**
+ * True once a dragged tab has moved below the tab bar, which means it left the
+ * bar on the way to the prompt. Reorder must stop at that point so the tabs do
+ * not keep animating under the pointer.
+ */
+export function outsideTabBar(event: TabDrag): boolean {
+  return event.draggable.transformed.center.y > event.draggable.layout.bottom
+}
+
 const inside = (x: number, y: number) => {
   const element = target?.element
   if (!element || !element.isConnected) return false

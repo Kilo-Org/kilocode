@@ -20,6 +20,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
 import { BackgroundProcessRunner } from "./runner"
+import { BackgroundProcessWindows } from "./windows"
 import { chmod, mkdir, readFile, readdir, rm, stat } from "fs/promises"
 import { randomUUID } from "crypto"
 import { hostname } from "os"
@@ -34,8 +35,13 @@ export namespace BackgroundProcess {
   const log = Log.create({ service: "background-process" })
   const MAX = 200 * 1024
   const KILL_MS = 3_000
+  const STOP_MS = 23_000
   const READY_MS = 30_000
   const PUBLISH_MS = 500
+  // How long after `exit` a non-persistent process waits for its stdio pipes
+  // to drain before finalizing, so a descendant holding them cannot keep it
+  // non-terminal.
+  const DRAIN_MS = 500
   const PORT_START_MS = 500
   const PORT_MS = 5_000
   const PORT_LIMIT_MS = 30_000
@@ -152,6 +158,7 @@ export namespace BackgroundProcess {
     poll?: ReturnType<typeof setTimeout>
     watch?: ReturnType<typeof setTimeout>
     retry?: ReturnType<typeof setTimeout>
+    drain?: ReturnType<typeof setTimeout>
     scan?: Promise<boolean>
     log?: string
     control?: string
@@ -161,6 +168,7 @@ export namespace BackgroundProcess {
     file?: string
     saved?: boolean
     saving?: Promise<void>
+    forgetting?: Promise<void>
     disposed?: boolean
   }
 
@@ -188,7 +196,7 @@ export namespace BackgroundProcess {
     shared: Shared
   }
 
-  type Probe = "owned" | "gone" | "foreign" | "unknown"
+  type Probe = "owned" | "gone" | "foreign" | "unknown" | "terminating"
 
   class StateService extends Context.Service<StateService, { readonly get: () => Effect.Effect<State> }>()(
     "@kilocode/BackgroundProcess.State",
@@ -307,6 +315,12 @@ export namespace BackgroundProcess {
   }
 
   async function forget(shared: Shared, active: Active) {
+    if (active.forgetting) return active.forgetting
+    active.forgetting = forgetArtifacts(shared, active)
+    return active.forgetting
+  }
+
+  async function forgetArtifacts(shared: Shared, active: Active) {
     active.saved = false
     await active.saving?.catch((err) =>
       log.warn("failed to finish persistent process metadata", { err, id: active.info.id }),
@@ -491,8 +505,10 @@ export namespace BackgroundProcess {
     if (terminal(active.info.status)) return
     if (active.notify) clearTimeout(active.notify)
     if (active.poll) clearTimeout(active.poll)
+    if (active.drain) clearTimeout(active.drain)
     active.notify = undefined
     active.poll = undefined
+    active.drain = undefined
     if (code === null) delete active.info.exitCode
     else active.info.exitCode = code
     if (signal === null) delete active.info.signal
@@ -664,10 +680,27 @@ export namespace BackgroundProcess {
     return members.some((command) => command.includes(token)) ? "owned" : "foreign"
   }
 
+  // Reasons already reported once, so a probe that keeps failing the same way logs one warning.
+  const reported = new Set<string>()
+
   async function windows(active: Active): Promise<Probe> {
     const pid = active.info.pid
     const token = active.token
     if (!pid || !token) return "unknown"
+    const found = await BackgroundProcessWindows.command(pid)
+    if ("terminating" in found) return "terminating"
+    if (found.live === false) return "gone"
+    if (found.live) return found.line.includes(token) ? "owned" : "foreign"
+    const key = found.reason.replace(/\(\d+\)/, "")
+    if (!reported.has(key)) {
+      reported.add(key)
+      log.warn("probing a persistent process with PowerShell instead of natively", {
+        id: active.info.id,
+        pid,
+        reason: found.reason,
+      })
+    }
+    log.debug("native process probe failed", { id: active.info.id, pid, reason: found.reason })
     const query = `$p=Get-CimInstance Win32_Process -Filter "ProcessId = ${pid}"; if ($p) { [Console]::Out.Write($p.CommandLine) }`
     const out = await Process.text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
       nothrow: true,
@@ -701,8 +734,8 @@ export namespace BackgroundProcess {
     })
   }
 
-  async function waitGone(active: Active) {
-    const end = Date.now() + KILL_MS
+  async function waitGone(active: Active, timeout = KILL_MS) {
+    const end = Date.now() + timeout
     while (Date.now() < end) {
       const status = await probe(active)
       if (status === "gone" || status === "foreign") return
@@ -716,11 +749,17 @@ export namespace BackgroundProcess {
     if (active.info.lifetime === "persistent") {
       const before = await probe(active)
       if (before === "gone" || before === "foreign") return
+      if (process.platform === "win32" && before === "terminating") {
+        await waitGone(active, STOP_MS)
+        const stopped = await probe(active)
+        if (stopped === "gone" || stopped === "foreign") return
+        throw new Error(`Persistent process runner did not stop safely: ${active.info.id}`)
+      }
       if (before !== "owned") throw new Error(`Cannot verify ownership of persistent process: ${active.info.id}`)
       if (process.platform === "win32") {
         if (!active.control) throw new Error(`Persistent process control path is missing: ${active.info.id}`)
         await Filesystem.write(active.control, "stop", 0o600)
-        await waitGone(active)
+        await waitGone(active, STOP_MS)
         const stopped = await probe(active)
         if (stopped === "gone" || stopped === "foreign") return
         throw new Error(`Persistent process runner did not stop safely: ${active.info.id}`)
@@ -802,6 +841,7 @@ export namespace BackgroundProcess {
     if (active.notify) clearTimeout(active.notify)
     if (active.poll) clearTimeout(active.poll)
     if (active.watch) clearTimeout(active.watch)
+    if (active.drain) clearTimeout(active.drain)
     active.resolve?.(false)
     active.resolve = undefined
     if (active.info.lifetime === "persistent") await forget(state.shared, active)
@@ -830,7 +870,14 @@ export namespace BackgroundProcess {
     const size = meta.size
     const offset = active.offset ?? 0
     const start = size < offset ? Math.max(0, size - MAX) : offset
-    const next = await Bun.file(active.log).slice(start, size).text()
+    const next = await Bun.file(active.log)
+      .slice(start, size)
+      .text()
+      .catch((err) => {
+        if (isRecord(err) && err.code === "ENOENT") return undefined
+        throw err
+      })
+    if (next === undefined) return
     active.offset = size
     if (next) append(active, next)
   }
@@ -842,7 +889,7 @@ export namespace BackgroundProcess {
       void output(active)
         .then(async () => {
           const status = await probe(active)
-          if (status === "owned" || status === "unknown") {
+          if (status === "owned" || status === "unknown" || status === "terminating") {
             if (status === "unknown") log.warn("failed to verify persistent process", { id: active.info.id })
             watch(shared, active)
             return
@@ -888,7 +935,7 @@ export namespace BackgroundProcess {
         if ((await probe(active)) === "owned") throw err
       }
     }
-    const end = Date.now() + KILL_MS
+    const end = Date.now() + (process.platform === "win32" && active.control ? STOP_MS : KILL_MS)
     while (Date.now() < end) {
       const status = await probe(active)
       if (status === "gone" || status === "foreign") return true
@@ -972,13 +1019,17 @@ export namespace BackgroundProcess {
     proc.once("exit", (code, signal) => {
       if (processes.get(id) !== active || active.disposed) return
       if (lifetime !== "persistent") {
-        exited(active, code, signal)
+        // `exit` can arrive before the stdio pipes hand over their final chunk,
+        // so `close` normally finalizes. A descendant that inherited the pipes
+        // can hold them open forever, so finalize after a bounded drain either
+        // way rather than leaving a dead process non-terminal.
+        if (!terminal(active.info.status)) active.drain = setTimeout(() => exited(active, code, signal), DRAIN_MS)
         return
       }
       void output(active)
         .then(async () => {
           const status = await probe(active)
-          if (status === "owned" || status === "unknown") {
+          if (status === "owned" || status === "unknown" || status === "terminating") {
             watch(state.shared, active)
             return
           }
@@ -986,6 +1037,14 @@ export namespace BackgroundProcess {
           await forget(state.shared, active)
         })
         .catch((err) => log.warn("failed to finalize persistent process", { err, id }))
+    })
+    // A non-persistent process normally finalizes on `close`, which fires after
+    // its stdio pipes drain; the exit handler's bounded drain covers a
+    // descendant that keeps the pipes open.
+    proc.once("close", (code, signal) => {
+      if (processes.get(id) !== active || active.disposed) return
+      if (lifetime === "persistent") return
+      exited(active, code, signal)
     })
     try {
       if (lifetime === "persistent") {
@@ -1005,6 +1064,7 @@ export namespace BackgroundProcess {
       if (active.notify) clearTimeout(active.notify)
       if (active.poll) clearTimeout(active.poll)
       if (active.watch) clearTimeout(active.watch)
+      if (active.drain) clearTimeout(active.drain)
       const stopped = await rollback(active).catch((cause) => {
         log.error("failed to roll back persistent process", { cause, id })
         return false
@@ -1080,8 +1140,8 @@ export namespace BackgroundProcess {
       active.info.ports = []
       const status = await probe(active)
       if (shared.processes.has(active.info.id)) continue
-      if (status === "unknown") {
-        log.warn("persistent process ownership is unknown", { id: active.info.id })
+      if (status === "unknown" || status === "terminating") {
+        if (status === "unknown") log.warn("persistent process ownership is unknown", { id: active.info.id })
         continue
       }
       if (status !== "owned") {
@@ -1142,6 +1202,7 @@ export namespace BackgroundProcess {
                 if (active.poll) clearTimeout(active.poll)
                 if (active.watch) clearTimeout(active.watch)
                 if (active.retry) clearTimeout(active.retry)
+                if (active.drain) clearTimeout(active.drain)
                 active.proc?.removeAllListeners()
                 active.proc?.stdout?.destroy()
                 active.proc?.stderr?.destroy()

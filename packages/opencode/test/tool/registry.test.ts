@@ -74,6 +74,7 @@ const registryLayer = (opts: RegistryLayerOptions = {}) => {
 
 const it = testEffect(registryLayer())
 const scout = testEffect(registryLayer({ flags: { experimentalScout: true } })) // kilocode_change
+const contextTools = testEffect(registryLayer({ flags: { experimentalContextTools: true } })) // kilocode_change
 const withBrokenPlugin = testEffect(registryLayer({ plugin: brokenPluginLayer }))
 // kilocode_change start
 const websearch = testEffect(
@@ -266,6 +267,28 @@ describe("tool.registry", () => {
       expect(ids).toContain("repo_overview")
     }),
   )
+
+  // kilocode_change start - self-context tools stay behind the experimental flag
+  it.instance("hides the self-context tools unless experimental", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+
+      expect(ids).not.toContain("get_context_info")
+      expect(ids).not.toContain("compact")
+    }),
+  )
+
+  contextTools.instance("shows the self-context tools when experimental context tools are enabled", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+
+      expect(ids).toContain("get_context_info")
+      expect(ids).toContain("compact")
+    }),
+  )
+  // kilocode_change end
 
   it.instance("does not expose task_status", () =>
     Effect.gen(function* () {

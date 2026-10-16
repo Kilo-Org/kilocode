@@ -4,6 +4,10 @@ import { NonNegativeInt, optionalOmitUndefined, withStatics } from "@opencode-ai
 import { zod, ZodOverride } from "@opencode-ai/core/effect-zod"
 import { Context, Effect, Schema, Types } from "effect"
 import z from "zod"
+import { jitter, next, validate } from "./cron"
+
+// The pure cron engine, re-exported so the service schedules through one module.
+export { jitter, next, validate }
 
 /** A `delay` under this is raised to it; an absolute `when` is honored as given. */
 export const MIN_DELAY_MS = 10_000
@@ -11,6 +15,10 @@ export const MIN_DELAY_MS = 10_000
 export const MAX_HORIZON_MS = 7 * 24 * 60 * 60 * 1000
 /** One session may hold at most this many pending wakeups. */
 export const MAX_PER_SESSION = 10
+/** One session may hold at most this many scheduled cron tasks. */
+export const MAX_CRON_PER_SESSION = 10
+/** A scheduled cron task expires seven days after it was created. */
+export const CRON_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 const idSchema = Schema.String.annotate({ [ZodOverride]: z.string().startsWith("wku") }).pipe(
   Schema.brand("WakeupID"),
@@ -40,6 +48,22 @@ export const Info = Schema.Struct({
   .pipe(withStatics((s) => ({ zod: zod(s) })))
 export type Info = Types.DeepMutable<Schema.Schema.Type<typeof Info>>
 
+export const CronInfo = Schema.Struct({
+  id: ID,
+  sessionID: SessionID,
+  directory: Schema.String,
+  prompt: Schema.String,
+  agent: optionalOmitUndefined(Schema.String),
+  schedule: Schema.String,
+  recurring: Schema.Boolean,
+  dueAt: NonNegativeInt,
+  expiresAt: NonNegativeInt,
+  created: NonNegativeInt,
+})
+  .annotate({ identifier: "WakeupCronInfo" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type CronInfo = Types.DeepMutable<Schema.Schema.Type<typeof CronInfo>>
+
 export const Input = Schema.Struct({
   sessionID: SessionID,
   directory: Schema.String,
@@ -52,6 +76,19 @@ export const Input = Schema.Struct({
   .annotate({ identifier: "WakeupInput" })
   .pipe(withStatics((s) => ({ zod: zod(s) })))
 export type Input = Types.DeepMutable<Schema.Schema.Type<typeof Input>>
+
+export const CronInput = Schema.Struct({
+  sessionID: SessionID,
+  directory: Schema.String,
+  prompt: Schema.String,
+  cron: optionalOmitUndefined(Schema.String),
+  when: optionalOmitUndefined(Schema.String),
+  delay: optionalOmitUndefined(Schema.String),
+  agent: optionalOmitUndefined(Schema.String),
+})
+  .annotate({ identifier: "WakeupCronInput" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type CronInput = Types.DeepMutable<Schema.Schema.Type<typeof CronInput>>
 
 /** Neither a usable `when` nor a usable `delay` was supplied. */
 export class InvalidTime extends Schema.TaggedErrorClass<InvalidTime>()("Wakeup.InvalidTime", {
@@ -68,10 +105,25 @@ export class TooMany extends Schema.TaggedErrorClass<TooMany>()("Wakeup.TooMany"
   message: Schema.String,
 }) {}
 
+/** The cron expression was not a valid 5-field schedule. */
+export class InvalidSchedule extends Schema.TaggedErrorClass<InvalidSchedule>()("Wakeup.InvalidSchedule", {
+  message: Schema.String,
+}) {}
+
+/** The session already holds the maximum number of scheduled cron tasks. */
+export class TooManyCron extends Schema.TaggedErrorClass<TooManyCron>()("Wakeup.TooManyCron", {
+  message: Schema.String,
+}) {}
+
 /** The resume boundary: the service fires through this so tests can stub it. */
 export class Fire extends Context.Service<
   Fire,
-  { readonly run: (info: Info, options?: { inPlace?: boolean }) => Effect.Effect<void> }
+  {
+    readonly run: (
+      info: Info,
+      options?: { inPlace?: boolean; kind?: "wakeup" | "cron" },
+    ) => Effect.Effect<void>
+  }
 >()("@kilocode/WakeupFire") {}
 
 // ISO-8601 date-time. The offset is optional; when present it is absolute, and

@@ -1,3 +1,5 @@
+<!-- Community PRs are triaged twice a week. If a maintainer asks for changes and we hear nothing for 14 days, the PR is closed. See docs/community-triage.md. -->
+
 ## Issue
 
 <!-- Reference an existing issue with `Fixes #123`, `Closes #123`, or equivalent linked issue wording. -->

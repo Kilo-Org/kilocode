@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.model
 
+import ai.kilocode.client.session.background.BackgroundAgent
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionRevertDto
@@ -53,6 +54,9 @@ sealed class SessionModelEvent {
     }
     data class TodosUpdated(val todos: List<TodoDto>) : SessionModelEvent() {
         override fun toString() = "TodosUpdated count=${todos.size}"
+    }
+    data class BackgroundAgentsUpdated(val agents: List<BackgroundAgent>) : SessionModelEvent() {
+        override fun toString() = "BackgroundAgentsUpdated count=${agents.size}"
     }
     data class SessionUpdated(val session: SessionDto) : SessionModelEvent() {
         override fun toString() = "SessionUpdated ${session.id}"

@@ -1,0 +1,225 @@
+/* Tool motion
+   The transcript marks a tool row with data-tool-enter on its first mount
+   after a streamed update, and with data-tool-live while the user watches it
+   change (see tool-motion.ts). Rows from history, session switches, and
+   remounts carry neither attribute, so they render without motion.
+
+   Keyframes move opacity and transform, so the compositor runs them without
+   repaints. The only exceptions are the to-do check draw and strike, which
+   repaint a 10px check and one line of text. Short timings keep new details
+   readable within about 200ms of their data. Row height is animated by
+   useToolSize. */
+
+:root {
+  --tool-motion-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --tool-motion-enter: 180ms;
+  --tool-motion-text: 160ms;
+  --tool-motion-fast: 120ms;
+  --tool-motion-step: 30ms;
+  --tool-motion-shift: 4px;
+  --tool-motion-nudge: -4px;
+  --tool-motion-scale: 0.75;
+  --tool-motion-breathe: tool-motion-breathe;
+  --tool-motion-pop: tool-motion-pop;
+  --tool-motion-tick: 0.6;
+  --tool-motion-draw: tool-motion-draw;
+}
+
+/* A new row rises into place. Rows that start in the same frame follow each other. */
+[data-component="tool-part-wrapper"][data-tool-enter] {
+  animation: tool-motion-enter var(--tool-motion-enter) var(--tool-motion-ease) backwards;
+  animation-delay: calc(var(--tool-stagger, 0) * var(--tool-motion-step));
+}
+
+/* Trigger details (file name, pattern, command description) slide in after
+   the title when the tool input arrives. */
+[data-tool-live]
+  [data-component="tool-trigger"]
+  :is([data-slot="basic-tool-tool-subtitle"], [data-slot="basic-tool-tool-arg"], [data-slot="message-part-meta-line"]) {
+  animation: tool-motion-slide var(--tool-motion-text) var(--tool-motion-ease) backwards;
+  animation-delay: calc(var(--tool-stagger, 0) * var(--tool-motion-step) + 30ms);
+}
+
+[data-tool-live] [data-component="tool-trigger"] [data-slot="basic-tool-tool-arg"] + [data-slot="basic-tool-tool-arg"] {
+  animation-delay: calc(var(--tool-stagger, 0) * var(--tool-motion-step) + 60ms);
+}
+
+/* Controls that appear when the tool completes. They follow the completion
+   beat, so parallel tools that finish together ripple in order. */
+[data-tool-live]
+  [data-component="tool-trigger"]
+  :is(
+    [data-slot="collapsible-arrow"],
+    [data-slot="basic-tool-tool-action"],
+    [data-component="icon-button"],
+    [data-component="tool-action"]
+  ) {
+  animation: tool-motion-fade var(--tool-motion-fast) var(--tool-motion-ease) backwards;
+  animation-delay: calc(var(--tool-beat, 0) * var(--tool-motion-step) + 40ms);
+}
+
+/* The diff count reveals as soon as its value arrives instead of waiting for
+   the completion beat: a streamed count appears while the tool still runs, and
+   the final count should not hide behind the icon pop and row settle. */
+[data-tool-live] [data-component="diff-changes"] {
+  animation: tool-motion-fade var(--tool-motion-fast) var(--tool-motion-ease) backwards;
+}
+
+/* Result rows under the trigger rise into place. */
+[data-tool-live]
+  :is(
+    [data-component="tool-loaded-file"],
+    [data-slot="tool-read-images"],
+    [data-component="diagnostics"],
+    [data-component="tool-hint"],
+    [data-component="card"][data-variant="error"]
+  ) {
+  animation: tool-motion-enter var(--tool-motion-enter) var(--tool-motion-ease) backwards;
+  animation-delay: calc(var(--tool-beat, 0) * var(--tool-motion-step) + 30ms);
+}
+
+/* Streaming lists (subagent tool calls, shell sections) sit in scroll boxes
+   that follow the bottom. They only fade: a moving item would change the
+   scroll height while the box pins to it. They animate only while the tool
+   runs, so a later toggle does not replay them. */
+[data-tool-live][data-tool-status="running"] :is([data-slot="task-tool-item"], [data-slot="bash-terminal"]) {
+  animation: tool-motion-appear var(--tool-motion-fast) var(--tool-motion-ease) backwards;
+}
+
+[data-tool-live] [data-component="tool-loaded-file"] + [data-component="tool-loaded-file"] {
+  animation-delay: calc(var(--tool-beat, 0) * var(--tool-motion-step) + 60ms);
+}
+
+/* The tool icon breathes while the tool works and gives a short beat when it
+   completes. The beat never grows past the icon box: the trigger clips its
+   content. It waits for the row entry so the growing row does not cut it off.
+   Avatars and participant stacks have their own motion. */
+[data-tool-live]:is([data-tool-status="pending"], [data-tool-status="running"])
+  [data-component="tool-trigger"]
+  [data-slot="basic-tool-icon"]:not(:has([data-component="agent-avatar"], [data-component="board-participant-stack"])) {
+  animation: var(--tool-motion-breathe) 1.8s ease-in-out infinite;
+}
+
+[data-tool-live]:not([data-tool-enter])[data-tool-status="completed"]
+  [data-component="tool-trigger"]
+  [data-slot="basic-tool-icon"]:not(:has([data-component="agent-avatar"], [data-component="board-participant-stack"])) {
+  animation: var(--tool-motion-pop) 320ms var(--tool-motion-ease);
+  animation-delay: calc(var(--tool-beat, 0) * var(--tool-motion-step));
+}
+
+/* A to-do that just got done ticks: its box pops, the check draws, and the
+   strike fades in. A to-do that just started lights up after it. The draw and
+   strike repaint only a 10px check and one line of text. */
+[data-tool-live] [data-component="todos"] [data-component="checkbox"][data-done] {
+  [data-slot="checkbox-checkbox-control"] {
+    animation: tool-motion-tick 260ms var(--tool-motion-ease) 120ms backwards;
+  }
+
+  [data-slot="checkbox-checkbox-indicator"] path {
+    stroke-dasharray: 1;
+    animation: var(--tool-motion-draw) 200ms var(--tool-motion-ease) 200ms backwards;
+  }
+
+  [data-slot="message-part-todo-content"] {
+    animation: tool-motion-strike 200ms ease-out 320ms backwards;
+  }
+}
+
+[data-tool-live]
+  [data-component="todos"]
+  [data-component="checkbox"][data-started]
+  [data-slot="message-part-todo-content"] {
+  animation: tool-motion-light 240ms ease-out 380ms backwards;
+}
+
+@keyframes tool-motion-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--tool-motion-shift));
+  }
+}
+
+@keyframes tool-motion-slide {
+  from {
+    opacity: 0;
+    transform: translateX(var(--tool-motion-nudge));
+  }
+}
+
+@keyframes tool-motion-fade {
+  from {
+    opacity: 0;
+    transform: scale(var(--tool-motion-scale));
+  }
+}
+
+@keyframes tool-motion-appear {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes tool-motion-breathe {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes tool-motion-pop {
+  0% {
+    transform: scale(1);
+  }
+
+  35% {
+    transform: scale(0.72);
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes tool-motion-tick {
+  from {
+    opacity: 0.4;
+    transform: scale(var(--tool-motion-tick));
+  }
+}
+
+@keyframes tool-motion-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes tool-motion-strike {
+  from {
+    text-decoration-color: transparent;
+  }
+}
+
+@keyframes tool-motion-light {
+  from {
+    opacity: 0.4;
+  }
+}
+
+/* The OS reduced motion setting keeps short fades and drops movement, loops,
+   and delays. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --tool-motion-shift: 0px;
+    --tool-motion-nudge: 0px;
+    --tool-motion-scale: 1;
+    --tool-motion-step: 0ms;
+    --tool-motion-breathe: none;
+    --tool-motion-pop: none;
+    --tool-motion-tick: 1;
+    --tool-motion-draw: none;
+  }
+}

@@ -22,6 +22,13 @@ import type { SidebarTarget } from "./project/route"
 import type { TerminalDestination } from "./terminal-destination"
 import type { ScriptTerminalView } from "./ScriptTerminalManager"
 import type { BrowserFeedbackData } from "../shared/browser-feedback"
+import type {
+  BrowserCursor,
+  BrowserFrame,
+  BrowserInteraction,
+  BrowserViewport,
+  BrowserViewIdentity,
+} from "../shared/browser-stream"
 
 export type { TerminalFont }
 export type { ProjectSnapshot }
@@ -104,7 +111,7 @@ export type {
 
 interface WorktreeStatsMessage {
   type: "agentManager.worktreeStats"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   stats: WorktreeStats[]
 }
@@ -122,14 +129,14 @@ interface WorktreeDeletedMessage {
 
 interface LocalStatsMessage {
   type: "agentManager.localStats"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   stats: LocalStats
 }
 
 interface WorktreeSetupMessage {
   type: "agentManager.worktreeSetup"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   status: "creating" | "starting" | "ready" | "error"
   message: string
@@ -150,6 +157,7 @@ interface StateMessage {
   /** Directories under `.kilo/worktrees/` that no worktree claims. Never removed automatically. */
   orphanDirectories?: OrphanDirectory[]
   tabOrder?: Record<string, string[]>
+  pinnedTabs?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   sidebarCollapsed?: boolean
@@ -160,7 +168,7 @@ interface StateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
-  /** Owning project for this state payload. Absent in legacy single-project payloads. */
+  /** Owning project for this state payload. Absent when no project is ready. */
   projectId?: string
   /** Last selected sidebar target for seamless project-switch restore. */
   activeTarget?: SidebarTarget
@@ -173,14 +181,19 @@ interface StateMessage {
 /** Project catalog pushed to the webview after registry or context changes. */
 interface ProjectsMessage {
   type: "agentManager.projects"
-  /** Whether the multi-project experiment is enabled. */
-  multiProject: boolean
   projects: ProjectSnapshot[]
 }
 
 interface SelectionActivatedMessage {
   type: "agentManager.selectionActivated"
   target: SidebarTarget
+}
+
+/** Default (or picked) parent folder for the new-project dialog. */
+interface ProjectParentMessage {
+  type: "agentManager.projectParent"
+  /** Omitted when the user cancelled the native folder picker. */
+  parent?: string
 }
 
 interface ProjectSessionsMessage {
@@ -285,7 +298,7 @@ interface SessionClosedMessage {
 
 interface MultiVersionProgressMessage {
   type: "agentManager.multiVersionProgress"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   status: "creating" | "done"
   total: number
@@ -295,7 +308,7 @@ interface MultiVersionProgressMessage {
 
 interface SetSessionModelMessage {
   type: "agentManager.setSessionModel"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   sessionId: string
   providerID: string
@@ -304,7 +317,7 @@ interface SetSessionModelMessage {
 
 interface SendInitialMessage {
   type: "agentManager.sendInitialMessage"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   sessionId: string
   worktreeId: string
@@ -424,7 +437,7 @@ interface DiffBranchesMessage {
 
 interface PRStatusOutMessage {
   type: "agentManager.prStatus"
-  /** Owning project; absent in single-project mode. */
+  /** Owning project, when available. */
   projectId?: string
   worktreeId: string
   pr: PRStatus | null
@@ -475,7 +488,10 @@ interface BrowserStateMessage {
   errors: number
   logs?: string[]
   error?: string
+  missing?: "chrome" | "chromium"
   frameError?: string
+  back?: boolean
+  forward?: boolean
 }
 
 interface BrowserInspectionMessage {
@@ -491,6 +507,18 @@ interface BrowserInspectionMessage {
   hover?: boolean
 }
 
+interface BrowserFrameMessage extends BrowserFrame {
+  type: "agentManager.browserFrame"
+  projectId?: string
+  sessionId: string
+}
+
+interface BrowserCursorMessage extends BrowserCursor {
+  type: "agentManager.browserCursor"
+  projectId?: string
+  sessionId: string
+}
+
 interface BrowserDevtoolsMessage {
   type: "agentManager.browserDevtools"
   browserId: string
@@ -501,7 +529,7 @@ interface BrowserDevtoolsMessage {
 
 interface RunStatusMessage extends RunStatus {
   type: "agentManager.runStatus"
-  /** Owning project for this status. Absent in legacy single-project mode. */
+  /** Owning project for this status, when available. */
   projectId?: string
 }
 
@@ -516,6 +544,7 @@ export type AgentManagerOutMessage =
   | StateMessage
   | ProjectsMessage
   | SelectionActivatedMessage
+  | ProjectParentMessage
   | ProjectSessionsMessage
   | ErrorOutMessage
   | SessionAddedMessage
@@ -544,6 +573,8 @@ export type AgentManagerOutMessage =
   | BrowserStateMessage
   | BrowserInspectionMessage
   | BrowserDevtoolsMessage
+  | BrowserFrameMessage
+  | BrowserCursorMessage
   | RunStatusMessage
   | TerminalCreatedMessage
   | TerminalRestartedMessage
@@ -573,6 +604,31 @@ interface RequestProjectsIn {
 /** Add a repository as a project via the host folder picker. */
 interface AddProjectIn {
   type: "agentManager.addProject"
+}
+
+/** Create a local project in the given parent folder. */
+interface CreateProjectIn {
+  type: "agentManager.createProject"
+  parent: string
+  name: string
+}
+
+/** Clone a repository into the given parent folder. */
+interface CloneProjectIn {
+  type: "agentManager.cloneProject"
+  url: string
+  parent: string
+}
+
+/** Request the default parent folder for a new project. */
+interface RequestProjectParentIn {
+  type: "agentManager.requestProjectParent"
+}
+
+/** Pick a parent folder through the native folder picker. */
+interface PickProjectParentIn {
+  type: "agentManager.pickProjectParent"
+  defaultPath?: string
 }
 
 /** Remove a project from the catalog. Never deletes repository data. */
@@ -606,6 +662,12 @@ interface SetProjectExpandedIn {
   type: "agentManager.setProjectExpanded"
   projectId: string
   expanded: boolean
+}
+
+/** Persist the sidebar order of the additional (not pinned) projects. */
+interface SetProjectOrderIn {
+  type: "agentManager.setProjectOrder"
+  order: string[]
 }
 
 interface DeleteWorktreeIn {
@@ -676,6 +738,7 @@ interface CloseSessionIn {
 /** Persist a non-worktree session to agent-manager.json (worktreeId = null). */
 interface PersistSessionIn {
   type: "agentManager.persistSession"
+  projectId?: string
   sessionId: string
   draftID?: string
 }
@@ -788,6 +851,12 @@ interface SetTabOrderIn {
   type: "agentManager.setTabOrder"
   key: string
   order: string[]
+}
+
+interface SetPinnedTabsIn {
+  type: "agentManager.setPinnedTabs"
+  key: string
+  ids: string[]
 }
 
 interface SetWorktreeOrderIn {
@@ -941,6 +1010,12 @@ interface OpenFileIn {
   filePath: string
   line?: number
   column?: number
+}
+
+interface CopyFilePathIn {
+  type: "agentManager.copyFilePath"
+  sessionId: string
+  filePath: string
 }
 
 interface RequestDocumentIn {
@@ -1118,6 +1193,13 @@ interface ToggleSectionCollapsedIn {
   sectionId: string
 }
 
+interface SetWorktreePinnedIn {
+  type: "agentManager.setWorktreePinned"
+  projectId?: string
+  worktreeId: string
+  pinned: boolean
+}
+
 interface MoveToSectionIn {
   type: "agentManager.moveToSection"
   projectId?: string
@@ -1180,14 +1262,25 @@ interface BrowserRequestIn {
   type:
     | "agentManager.browser.open"
     | "agentManager.browser.refresh"
+    | "agentManager.browser.back"
+    | "agentManager.browser.forward"
     | "agentManager.browser.close"
     | "agentManager.browser.state"
     | "agentManager.browser.inspect"
     | "agentManager.browser.input"
     | "agentManager.browser.devtools"
+    | "agentManager.browser.viewport"
+    | "agentManager.browser.interact"
+    | "agentManager.browser.acknowledge"
   sessionId: string
   requestId?: string
   projectId?: string
+  browserId?: string
+  navigation?: number
+  viewport?: BrowserViewport
+  identity?: BrowserViewIdentity
+  event?: BrowserInteraction
+  sequence?: number
   url?: string
   x?: number
   y?: number
@@ -1205,11 +1298,16 @@ export type AgentManagerInMessage =
   | CreateWorktreeIn
   | RequestProjectsIn
   | AddProjectIn
+  | CreateProjectIn
+  | CloneProjectIn
+  | RequestProjectParentIn
+  | PickProjectParentIn
   | RemoveProjectIn
   | SelectProjectIn
   | ActivateSelectionIn
   | RememberTargetIn
   | SetProjectExpandedIn
+  | SetProjectOrderIn
   | DeleteWorktreeIn
   | RemoveStaleWorktreeIn
   | RestoreWorktreeIn
@@ -1240,6 +1338,7 @@ export type AgentManagerInMessage =
   | RequestStateIn
   | RequestBranchesIn
   | SetTabOrderIn
+  | SetPinnedTabsIn
   | SetWorktreeOrderIn
   | SetSessionsCollapsedIn
   | SetSidebarCollapsedIn
@@ -1263,6 +1362,7 @@ export type AgentManagerInMessage =
   | OpenSessionsIn
   | VisibleSessionIn
   | OpenFileIn
+  | CopyFilePathIn
   | RequestDocumentIn
   | GenericOpenFileIn
   | PreviewImageIn
@@ -1284,6 +1384,7 @@ export type AgentManagerInMessage =
   | SetSectionColorIn
   | ToggleSectionCollapsedIn
   | MoveToSectionIn
+  | SetWorktreePinnedIn
   | MoveSectionIn
   | TerminalCreateIn
   | TerminalCloseIn

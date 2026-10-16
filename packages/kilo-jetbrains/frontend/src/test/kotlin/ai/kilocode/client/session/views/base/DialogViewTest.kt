@@ -7,6 +7,12 @@ import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.actionSystem.DataKey
+import com.intellij.openapi.actionSystem.DataMap
+import com.intellij.openapi.actionSystem.DataProvider
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.DataSnapshotProvider
+import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextArea
@@ -349,6 +355,42 @@ class DialogViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test data snapshot exposes enabled primary action`() {
+        edt {
+            var submitted = false
+            val panel = DialogView()
+            panel.setActions(listOf(
+                DialogView.Action("cancel", "Cancel", primary = false) {},
+                DialogView.Action("submit", "Submit", primary = true) { submitted = true },
+            ))
+            val sink = TestSink()
+
+            panel.uiDataSnapshot(sink)
+            val action = sink.action
+
+            assertNotNull(action)
+            assertTrue(action!!.enabled)
+            action.submit()
+            assertTrue(submitted)
+        }
+    }
+
+    fun `test default action follows primary button enabled and visible state`() {
+        edt {
+            val panel = DialogView()
+            panel.setActions(listOf(DialogView.Action("submit", "Submit", primary = true) {}))
+            val sink = TestSink()
+            panel.uiDataSnapshot(sink)
+            val action = sink.action!!
+
+            panel.setActionEnabled("submit", false)
+            assertFalse(action.enabled)
+            panel.setActionEnabled("submit", true)
+            panel.setActionVisible("submit", false)
+            assertFalse(action.enabled)
+        }
+    }
+
     fun `test action button click returns focus to session prompt`() {
         edt {
             var focused = false
@@ -470,6 +512,46 @@ class DialogViewTest : BasePlatformTestCase() {
             val footer = region(panel, BorderLayout.SOUTH) as JPanel
             val west = (footer.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST) as Container
             assertNotNull("action left should be in footer west", find(west, left))
+        }
+    }
+
+    fun `test standard left action uses shared button behavior`() {
+        edt {
+            var clicked = false
+            val panel = DialogView()
+            panel.setLeftAction(DialogView.Action("left", "Left", primary = false) { clicked = true })
+
+            val button = actionButton(panel, "Left")
+            val footer = region(panel, BorderLayout.SOUTH) as JPanel
+            val west = (footer.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST) as Container
+            assertNotNull(find(west, button))
+            assertNull(button.getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY))
+            button.doClick(0)
+            assertTrue(clicked)
+
+            val progress = JLabel("progress")
+            panel.setActionLeft(progress)
+            panel.setLeftAction(DialogView.Action("left", "Updated", primary = false) { clicked = true })
+            assertNotNull(find(west, progress))
+            panel.restoreLeftAction()
+            assertEquals("Updated", actionButton(panel, "Updated").text)
+        }
+    }
+
+    fun `test clearing retained left action does not replace temporary content`() {
+        edt {
+            val panel = DialogView()
+            panel.setLeftAction(DialogView.Action("left", "Left", primary = false) {})
+            val progress = JLabel("progress")
+            panel.setActionLeft(progress)
+
+            panel.setLeftAction(null)
+
+            val footer = region(panel, BorderLayout.SOUTH) as JPanel
+            val west = (footer.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST) as Container
+            assertNotNull(find(west, progress))
+            panel.restoreLeftAction()
+            assertNull(region(panel, BorderLayout.SOUTH))
         }
     }
 
@@ -625,5 +707,20 @@ class DialogViewTest : BasePlatformTestCase() {
     private class InspectDialogView : DialogView() {
         fun line() = outlineColor()
         fun fill() = contentColor()
+    }
+
+    private class TestSink : DataSink {
+        var action: DefaultDialogAction? = null
+
+        override fun <T : Any> set(key: DataKey<T>, data: T?) {
+            if (key == DialogDataKeys.DEFAULT_ACTION) action = data as? DefaultDialogAction
+        }
+
+        override fun <T : Any> setNull(key: DataKey<T>) = Unit
+        override fun <T : Any> lazyValue(key: DataKey<T>, data: (DataMap) -> T?) = Unit
+        override fun <T : Any> lazyNull(key: DataKey<T>) = Unit
+        override fun uiDataSnapshot(provider: UiDataProvider) = provider.uiDataSnapshot(this)
+        override fun dataSnapshot(provider: DataSnapshotProvider) = Unit
+        override fun uiDataSnapshot(provider: DataProvider) = Unit
     }
 }

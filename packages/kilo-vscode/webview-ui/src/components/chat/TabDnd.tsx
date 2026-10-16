@@ -6,18 +6,11 @@ declare module "solid-js" {
   }
 }
 
-import { createSortable, useDragDropContext, type Transformer, type DragEvent } from "@thisbeyond/solid-dnd"
+import { createSortable, useDragDropContext, type Transformer } from "@thisbeyond/solid-dnd"
 import { createRoot, onCleanup, type Component, type ParentComponent } from "solid-js"
-import { promptMentionDragging } from "../../utils/prompt-mention-drop"
+import { promptMentionDragging, outsideTabBar } from "../../utils/prompt-mention-drop"
 
-/**
- * True once a dragged tab has moved below the tab bar, which means it left the
- * bar on the way to the prompt. Reorder must stop at that point so the tabs do
- * not keep animating under the pointer.
- */
-export function outsideTabBar(event: DragEvent): boolean {
-  return event.draggable.transformed.center.y > event.draggable.layout.bottom
-}
+export { outsideTabBar }
 
 /**
  * Keep tab drags in the tab bar normally, but allow a session tab to move down

@@ -78,6 +78,15 @@ export const PermissionDock: Component<{
     command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
   )
 
+  // Dynamic MCP tools send their resolved input as metadata.mcpInput so the full
+  // request, including nested objects and arrays, is inspectable before approval.
+  const input = () => {
+    const value = props.request.args?.mcpInput
+    if (!value || typeof value !== "object") return undefined
+    if (Object.keys(value).length === 0) return undefined
+    return JSON.stringify(value, null, 2)
+  }
+
   const diffs = createMemo(() => permissionDiffs(props.request))
 
   // Pre-populate toggle states from existing config rules so previously
@@ -389,6 +398,17 @@ export const PermissionDock: Component<{
             >
               {/* Verbatim commands (args.commands), control-char/bidi-escaped so the displayed command matches execution. */}
               <For each={skillShellCommands()}>{(cmd) => <PermissionCommand command={displaySkillCommand(cmd)} />}</For>
+            </Show>
+
+            <Show when={input()}>
+              {(json) => (
+                <div data-slot="permission-input">
+                  <div data-slot="permission-input-label">{language.t("ui.messagePart.mcp.input")}</div>
+                  <div data-slot="permission-input-code">
+                    <code>{json()}</code>
+                  </div>
+                </div>
+              )}
             </Show>
 
             <Show when={diffs().length > 0}>

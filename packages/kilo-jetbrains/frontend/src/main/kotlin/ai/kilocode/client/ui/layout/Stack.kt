@@ -205,12 +205,12 @@ open class Stack(
             return items
         }
 
-        override fun minimumLayoutSize(parent: Container) = size(parent, MIN)
-        override fun preferredLayoutSize(parent: Container) = size(parent, PREF)
-        override fun maximumLayoutSize(target: Container) = size(target, MAX)
+        override fun minimumLayoutSize(parent: Container) = LayoutPass.size(parent, MIN) { size(parent, MIN) }
+        override fun preferredLayoutSize(parent: Container) = LayoutPass.size(parent, PREF) { size(parent, PREF) }
+        override fun maximumLayoutSize(target: Container) = LayoutPass.size(target, MAX) { size(target, MAX) }
         override fun getLayoutAlignmentX(target: Container) = 0.5f
         override fun getLayoutAlignmentY(target: Container) = 0.5f
-        override fun invalidateLayout(target: Container) = Unit
+        override fun invalidateLayout(target: Container) = LayoutPass.forget(target)
 
         private fun size(parent: Container, kind: Int): Dimension {
             val ins = parent.insets
@@ -290,10 +290,6 @@ private sealed class Entry {
 }
 
 private data class Item(val comp: Component, val gap: Int, val width: Int)
-
-private const val MIN = 0
-private const val PREF = 1
-private const val MAX = 2
 
 private fun safe(value: Int, extra: Int): Int {
     val next = value.toLong() + extra.toLong()

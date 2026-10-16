@@ -84,6 +84,32 @@ function stubFetch(fn: (input: string | URL | Request, init?: RequestInit) => Pr
   ;(globalThis as any).fetch = fn
 }
 
+for (const status of [408, 429, 503]) {
+  for (const [header, expected] of [
+    ["90", 90],
+    ["Thu, 01 Jan 1970 00:02:00 GMT", 120],
+    ["invalid", undefined],
+    [undefined, undefined],
+  ] as const) {
+    test(`preserves valid Retry-After from HTTP ${status}: ${header}`, async () => {
+      const clock = spyOn(Date, "now").mockReturnValue(0)
+      const fetch = spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response("Unavailable", { status, headers: header == null ? {} : { "retry-after": header } }),
+      )
+      try {
+        const result = await fetchKiloModels({ kilocodeOrganizationId: "org-a" })
+        expect(result.error?.kind).toBe("http")
+        expect(result.error?.status).toBe(status)
+        expect(result.error?.retryAfter).toBe(expected)
+        expect(fetch).toHaveBeenCalledTimes(1)
+      } finally {
+        fetch.mockRestore()
+        clock.mockRestore()
+      }
+    })
+  }
+}
+
 test("returns empty models and error when both auth and public requests return 401", async () => {
   const orig = globalThis.fetch
   stubFetch(async () => new Response("Unauthorized", { status: 401, statusText: "Unauthorized" }))
@@ -335,6 +361,25 @@ const MIXED_MODALITY_RESPONSE = JSON.stringify({
       },
       supported_parameters: ["tools", "temperature"],
     },
+    {
+      id: "typesafe/jev-router",
+      name: "Jev Router",
+      context_length: 128000,
+      architecture: {
+        input_modalities: ["text"],
+        output_modalities: ["text"],
+      },
+      supported_parameters: [],
+    },
+    {
+      id: "test/no-params",
+      name: "No Params Model",
+      context_length: 128000,
+      architecture: {
+        input_modalities: ["text"],
+        output_modalities: ["text"],
+      },
+    },
   ],
 })
 
@@ -358,6 +403,8 @@ test("keeps image-output models with tools and drops models without tools", asyn
   expect(result.models["black-forest-labs/flux-1.1-pro"]).toBeDefined()
   expect(result.models["test/model-a"]).toBeDefined()
   expect(result.models["test/no-tools"]).toBeUndefined()
+  expect(result.models["typesafe/jev-router"]?.tool_call).toBe(true)
+  expect(result.models["test/no-params"]?.tool_call).toBe(true)
 })
 
 test("fetches and filters the transcription catalog", async () => {
@@ -389,7 +436,7 @@ test("fetches and filters the transcription catalog", async () => {
       name: "Fish Audio: Transcribe 1",
     },
   ])
-  expect(calls[0]).toContain("/api/gateway/transcription-models")
+  expect(calls[0]).toBe("https://ai-gateway.kilo.ai/api/v1/transcription-models")
 })
 
 test("keeps organization catalog errors from silently falling back to personal models", async () => {
@@ -409,7 +456,7 @@ test("keeps organization catalog errors from silently falling back to personal m
   expect(result.models).toEqual([])
   expect(result.error?.kind).toBe("unauthorized")
   expect(calls).toHaveLength(1)
-  expect(calls[0]).toContain("/api/gateway/transcription-models")
+  expect(calls[0]).toBe("https://ai-gateway.kilo.ai/api/v1/transcription-models")
   expect(headers[0]?.get("X-KILOCODE-ORGANIZATIONID")).toBe("org-1")
 })
 

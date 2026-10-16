@@ -1,0 +1,36 @@
+# kilocode_change - new file
+name: Community triage test
+
+# Runs the unit tests for the community triage script. Only runs when the
+# script, its tests or the workflows that use it change.
+
+on:
+  pull_request:
+    paths:
+      - script/kilocode/community-triage*.ts
+      - .github/workflows/community-*.yml
+  workflow_dispatch:
+
+concurrency:
+  group: community-triage-test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Test
+        working-directory: script/kilocode
+        run: bun test community-triage.test.ts

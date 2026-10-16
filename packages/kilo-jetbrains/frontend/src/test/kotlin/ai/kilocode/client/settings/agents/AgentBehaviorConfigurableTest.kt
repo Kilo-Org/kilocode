@@ -17,7 +17,7 @@ class AgentBehaviorConfigurableTest : BasePlatformTestCase() {
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.agents", AgentsConfigurable.ID)
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.mcp", McpConfigurable.ID)
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.skills", SkillsConfigurable.ID)
-        assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.workflows", WorkflowsConfigurable.ID)
+        assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.commands", CommandsConfigurable.ID)
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.rules", RulesConfigurable.ID)
     }
 

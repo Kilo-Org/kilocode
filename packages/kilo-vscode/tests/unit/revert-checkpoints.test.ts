@@ -65,13 +65,16 @@ describe("revert session synchronization", () => {
 
 describe("revert workspace restoration status", () => {
   it("renders explicit conversation-only outcomes", () => {
-    expect(session).toContain('workspace?: "restored" | "snapshots-disabled" | "unavailable"')
-    expect(exported("Session")).toContain('workspace?: "restored" | "snapshots-disabled" | "unavailable"')
+    expect(session).toContain('workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"')
+    expect(exported("Session")).toContain(
+      'workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"',
+    )
     expect(exported("KilocodeSessionImportSessionData")).toContain(
-      'workspace?: "restored" | "snapshots-disabled" | "unavailable"',
+      'workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"',
     )
     expect(banner).toContain('"revert.banner.workspace.snapshotsDisabled"')
     expect(banner).toContain('"revert.banner.workspace.unavailable"')
+    expect(banner).toContain('"revert.banner.workspace.notAGitRepo"')
   })
 
   it("opens the checkpoints settings tab when snapshots are disabled", () => {

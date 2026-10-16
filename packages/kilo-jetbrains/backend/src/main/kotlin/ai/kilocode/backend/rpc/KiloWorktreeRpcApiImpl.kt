@@ -111,6 +111,14 @@ class KiloWorktreeRpcApiImpl(
         // short enough to notice the reset without waiting out a poll interval.
         private const val GH_LIMIT_TTL = 60_000L
         private const val PR_TTL = 90_000L
+        // A timed-out fan-out established nothing about these pull requests, so it must not be served
+        // as an answer for a full [PR_TTL] — doing that republished one `gh` overrun as a fresh verdict
+        // for up to a minute and a half after `gh` was demonstrably healthy again, which is what made
+        // the banner reappear on its own. Deliberately not zero: a spent entry is what stops the other
+        // attached projects, all polling the same root, from each paying their own fan-out the moment
+        // one of them times out. Sized below the frontend's own PR_THROTTLE floor so it can absorb that
+        // burst without ever surviving to the next poll.
+        private const val PR_TIMEOUT_TTL = 15_000L
         // The rename+prune path returns long before this ever matters; it only bounds the fallback
         // `git worktree remove --force`, which recursively deletes the checkout synchronously and
         // therefore needs far more headroom than the default query timeout.
@@ -385,9 +393,16 @@ class KiloWorktreeRpcApiImpl(
         probeGh(Path.of(directory).normalize(), "rpc", github, maxAge)
     }
 
-    override suspend fun prStatus(directory: String, maxAge: Long?): WorktreePrListDto = withContext(Dispatchers.IO) {
+    override suspend fun prStatus(directory: String, maxAge: Long?, fresh: List<String>): WorktreePrListDto = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        prs[directory]?.takeIf { usable(it.time, now, PR_TTL, maxAge) }?.let { return@withContext it.value }
+        val named = prPaths(fresh)
+        // A caller naming paths knows something about them this cache cannot: it was written before
+        // whatever prompted the call. Only the shared list is refused, though — every path it did
+        // not name still answers from the resolver's own caches below, which is what makes this
+        // cheaper than the `maxAge = 0` it replaces.
+        if (named.isEmpty()) {
+            prs[directory]?.takeIf { usable(it.time, now, prTtl(it.value.availability), maxAge) }?.let { return@withContext it.value }
+        }
         val root = Path.of(directory).normalize()
         // A gone directory reports nothing and is not cached, so a real availability problem found
         // from a live directory still reaches the UI.
@@ -409,7 +424,7 @@ class KiloWorktreeRpcApiImpl(
         var status = GhAvailability.OK
         val data = parallel(items) { item ->
             if (status != GhAvailability.OK) return@parallel null
-            val lookup = runCatching { resolver.resolve(item.path, item.branch, base) }.getOrElse { err ->
+            val lookup = runCatching { resolver.resolve(item.path, item.branch, base, prAge(item.path, named, maxAge)) }.getOrElse { err ->
                 if (err is CancellationException) throw err
                 LOG.warn("worktree poll failed: op=pr path=${item.path} message=${err.message}", err)
                 return@parallel null
@@ -446,7 +461,7 @@ class KiloWorktreeRpcApiImpl(
         val worktree = isLinkedWorktree(root)
         val availability = ghAvailable(root, github, maxAge)
         val lookup = if (github && availability == GhAvailability.OK && branch.isNotBlank()) {
-            resolver.resolve(directory, branch, baseBranch(root))
+            resolver.resolve(directory, branch, baseBranch(root), maxAge)
         } else {
             PrLookup()
         }
@@ -570,6 +585,10 @@ class KiloWorktreeRpcApiImpl(
     private fun invalidate() {
         prs.clear()
         branches.clear()
+        // A PR import is a mutation that gives a checkout the pull request the resolver may have just
+        // proven it did not have, and it can leave the head commit alone while doing it (importing onto
+        // an already-checked-out head). Nothing else would then dislodge that entry for PR_ABSENT_TTL.
+        resolver.clear()
     }
 
     /**
@@ -751,7 +770,7 @@ class KiloWorktreeRpcApiImpl(
                 if (nested.isNotEmpty()) {
                     val names = nested.joinToString("\n") { it.path }
                     LOG.warn("worktree remove rejected: reason=nested path=$path blockers=${nested.joinToString(", ") { it.path }}")
-                    return@lock RemoveWorktreeResultDto(error = "Delete nested worktrees first:\n$names")
+                    return@lock RemoveWorktreeResultDto(error = "Delete nested worktrees first:\n$names", nestedPaths = nested.map { it.path })
                 }
                 val store = worktreeNameStore(items) ?: base.resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
                 // A live IDE frame rooted at the worktree keeps rewriting project files into the
@@ -1350,6 +1369,13 @@ class KiloWorktreeRpcApiImpl(
     private fun ghTtl(value: GhAvailability): Long =
         if (value == GhAvailability.RATE_LIMITED) GH_LIMIT_TTL else GH_STATUS_TTL
 
+    /**
+     * How long a cached PR list may be served, by the verdict it carries. See [PR_TIMEOUT_TTL] for why
+     * a timed-out fan-out is kept far more briefly than an answered one.
+     */
+    internal fun prTtl(value: GhAvailability): Long =
+        if (value == GhAvailability.TIMEOUT) PR_TIMEOUT_TTL else PR_TTL
+
     private fun snippet(text: String): String {
         return text.trim().replace(Regex("\\s+"), " ").take(180)
     }
@@ -1791,6 +1817,24 @@ internal fun staleWorktrees(items: List<WorktreeDto>, trash: WorktreeTrash? = nu
  */
 internal fun prTargets(items: List<WorktreeDto>): List<WorktreeDto> {
     return items.filter { !it.prunable && it.branch != "(detached)" }
+}
+
+/**
+ * The paths a `prStatus` caller named as no longer covered by any cache, in the shape the worktree
+ * list reports them, so a trailing separator or a `..` segment on the way in still matches a row.
+ */
+internal fun prPaths(fresh: List<String>): Set<String> =
+    fresh.mapTo(HashSet()) { Path.of(it).normalize().toString() }
+
+/**
+ * The freshness ceiling one worktree's lookup runs under: nothing cached at all for a path the
+ * caller named, and whatever the caller allowed for the rest. Keeping this per path is the whole
+ * point of naming them — a repository with a dozen worktrees would otherwise re-run every
+ * PR-less checkout's full `gh` ladder to notice a pull request on one of them.
+ */
+internal fun prAge(path: String, fresh: Set<String>, maxAge: Long?): Long? {
+    if (fresh.isEmpty()) return maxAge
+    return if (Path.of(path).normalize().toString() in fresh) 0 else maxAge
 }
 
 /** Branch checked out in the main working tree, or null when it is missing or detached. */

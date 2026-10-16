@@ -69,6 +69,10 @@ const pendingAuths = new Map<string, PendingAuth>()
 // Reverse index: mcpName → oauthState, so cancelPending(mcpName) can
 // find the right entry in pendingAuths (which is keyed by oauthState).
 const mcpNameToState = new Map<string, string>()
+// kilocode_change start - set when a newer Kilo attempt takes this process's listener over,
+// so a flow that had not registered its callback yet fails by name instead of hanging
+let replaced = false
+// kilocode_change end
 
 const CALLBACK_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
 
@@ -90,6 +94,31 @@ function stopIfIdle() {
 
 function handleRequest(req: import("http").IncomingMessage, res: import("http").ServerResponse) {
   const url = new URL(req.url || "/", `http://localhost:${currentPort}`)
+
+  // kilocode_change start - a newer Kilo attempt takes the listener over: every flow waiting
+  // on it is rejected by name, the port is released, and the caller may bind it. Only a request
+  // at this listener's own path that carries the takeover header is honored, so a cross-origin
+  // page cannot abort an authorization that is in flight.
+  if (url.pathname === currentPath && KiloOAuthCallback.isTakeoverRequest(req, url)) {
+    replaced = true
+    const closing = server
+    server = undefined
+    for (const pending of pendingAuths.values()) {
+      clearTimeout(pending.timeout)
+      pending.reject(KiloOAuthCallback.replaced())
+    }
+    pendingAuths.clear()
+    mcpNameToState.clear()
+    res.writeHead(200, {
+      "Content-Type": "text/plain; charset=utf-8",
+      [KiloOAuthCallback.TAKEOVER_HEADER]: KiloOAuthCallback.TAKEOVER_VALUE,
+      Connection: "close",
+    })
+    // the listener is closed once the answer is flushed, so the newer attempt can bind the port
+    res.end("released", () => closing?.close())
+    return
+  }
+  // kilocode_change end
 
   if (url.pathname !== currentPath) {
     res.writeHead(404)
@@ -152,7 +181,9 @@ function handleRequest(req: import("http").IncomingMessage, res: import("http").
 }
 
 export async function ensureRunning(redirectUri?: string): Promise<void> {
-  // kilocode_change start - delegate Kilo-specific callback binding from here because OAuth state lives in this module
+  // kilocode_change start - this process starts a flow, so it owns the listener again;
+  // delegate Kilo-specific callback binding from here because OAuth state lives in this module
+  replaced = false
   await KiloOAuthCallback.ensureRunning({
     redirectUri,
     parse: parseRedirectUri,
@@ -171,6 +202,10 @@ export async function ensureRunning(redirectUri?: string): Promise<void> {
 }
 
 export function waitForCallback(oauthState: string, mcpName?: string): Promise<string> {
+  // kilocode_change start - a newer Kilo attempt took the listener over while this flow was
+  // starting, so no callback can arrive: name the step instead of waiting out the timeout
+  if (replaced) return Promise.reject(KiloOAuthCallback.replaced())
+  // kilocode_change end
   if (mcpName) mcpNameToState.set(mcpName, oauthState)
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
@@ -230,5 +265,9 @@ export async function stop(): Promise<void> {
 export function isRunning(): boolean {
   return server !== undefined
 }
+
+// kilocode_change start - a flow replaced by a newer attempt is reported by name
+export const isReplaced = KiloOAuthCallback.isReplaced
+// kilocode_change end
 
 export * as McpOAuthCallback from "./oauth-callback"

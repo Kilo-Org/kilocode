@@ -5,6 +5,7 @@ import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.SessionActivityDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.SessionStatusDto
+import ai.kilocode.rpc.dto.ToolRefDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,8 +30,18 @@ class KiloBackendActivityManager(
     private val cs: CoroutineScope,
     private val log: KiloLog,
 ) {
-    private val permissions = mutableMapOf<String, MutableSet<String>>()
-    private val questions = mutableMapOf<String, MutableMap<String, Boolean>>()
+    companion object {
+        private const val RESOLVED_LIMIT = 256
+    }
+
+    private data class Pending(
+        val tool: ToolRefDto?,
+        val plan: Boolean = false,
+    )
+
+    private val permissions = mutableMapOf<String, MutableMap<String, Pending>>()
+    private val questions = mutableMapOf<String, MutableMap<String, Pending>>()
+    private val resolved = LinkedHashSet<String>()
     private val errors = mutableSetOf<String>()
     private val lock = Any()
     private val _activity = MutableStateFlow<Map<String, SessionActivityDto>>(emptyMap())
@@ -70,6 +81,7 @@ class KiloBackendActivityManager(
         synchronized(lock) {
             permissions.clear()
             questions.clear()
+            resolved.clear()
             errors.clear()
         }
         _activity.value = emptyMap()
@@ -107,13 +119,40 @@ class KiloBackendActivityManager(
         }
     }
 
+    /** Remove a prompt once the CLI confirms it is no longer pending, without waiting for the SSE echo. */
+    fun resolve(id: String) {
+        synchronized(lock) {
+            val permission = permissions.entries.firstOrNull { id in it.value }
+            if (permission != null) remove(permissions, permission.key, id)
+            val question = questions.entries.firstOrNull { id in it.value }
+            if (question != null) remove(questions, question.key, id)
+            if (permission == null && question == null) {
+                resolved.add(id)
+                if (resolved.size > RESOLVED_LIMIT) resolved.remove(resolved.first())
+                return
+            }
+            recompute()
+        }
+    }
+
     private fun handle(event: ChatEventDto) {
         when (event) {
-            is ChatEventDto.PermissionAsked -> permissions.getOrPut(event.sessionID) { mutableSetOf() }.add(event.request.id)
-            is ChatEventDto.PermissionReplied -> removeSet(permissions, event.sessionID, event.requestID)
-            is ChatEventDto.QuestionAsked -> questions.getOrPut(event.sessionID) { mutableMapOf() }[event.request.id] = plan(event)
-            is ChatEventDto.QuestionReplied -> removeMap(questions, event.sessionID, event.requestID)
-            is ChatEventDto.QuestionRejected -> removeMap(questions, event.sessionID, event.requestID)
+            is ChatEventDto.PermissionAsked -> ask(
+                permissions,
+                event.sessionID,
+                event.request.id,
+                Pending(event.request.tool),
+            )
+            is ChatEventDto.PermissionReplied -> remove(permissions, event.sessionID, event.requestID)
+            is ChatEventDto.QuestionAsked -> ask(
+                questions,
+                event.sessionID,
+                event.request.id,
+                Pending(event.request.tool, plan(event)),
+            )
+            is ChatEventDto.QuestionReplied -> remove(questions, event.sessionID, event.requestID)
+            is ChatEventDto.QuestionRejected -> remove(questions, event.sessionID, event.requestID)
+            is ChatEventDto.PartUpdated -> advance(event)
             // A Stop publishes MessageAbortedError. That is a deliberate user action, not a failure, so
             // it must not badge the session list, worktree rows, or the Agents tab attention dot.
             is ChatEventDto.Error -> if (event.error?.aborted != true) event.sessionID?.let { errors.add(it) }
@@ -123,7 +162,11 @@ class KiloBackendActivityManager(
             // Not every failure publishes a session error — a turn whose provider ended the response in
             // error writes the failure onto the message and only reports it through this close reason. The
             // badge has to come from the close too, or such a session rests as if it finished cleanly.
-            is ChatEventDto.TurnClose -> if (event.reason == "error") errors.add(event.sessionID)
+            is ChatEventDto.TurnClose -> {
+                permissions.remove(event.sessionID)
+                close(event)
+                if (event.reason == "error") errors.add(event.sessionID)
+            }
             is ChatEventDto.SessionIdle -> clear(event.sessionID)
             is ChatEventDto.SessionStatusChanged -> when (event.status.type) {
                 "idle" -> clear(event.sessionID)
@@ -154,7 +197,7 @@ class KiloBackendActivityManager(
         if (permissions[id]?.isNotEmpty() == true) return SessionActivityKindDto.PERMISSION
         val pending = questions[id]
         if (pending?.isNotEmpty() == true) {
-            if (pending.values.any { it }) return SessionActivityKindDto.PLAN
+            if (pending.values.any { it.plan }) return SessionActivityKindDto.PLAN
             return SessionActivityKindDto.QUESTION
         }
         // Live work outranks a past error: the status stream and the chat events are separate
@@ -173,13 +216,43 @@ class KiloBackendActivityManager(
         questions.remove(id)
     }
 
-    private fun <T> removeSet(map: MutableMap<String, MutableSet<T>>, id: String, value: T) {
-        val set = map[id] ?: return
-        set.remove(value)
-        if (set.isEmpty()) map.remove(id)
+    private fun advance(event: ChatEventDto.PartUpdated) {
+        when (event.part.state) {
+            "completed", "error" -> {
+                finish(permissions, event)
+                finish(questions, event)
+            }
+            else -> Unit
+        }
     }
 
-    private fun <T> removeMap(map: MutableMap<String, MutableMap<T, Boolean>>, id: String, value: T) {
+    private fun close(event: ChatEventDto.TurnClose) {
+        if (event.reason != "completed") {
+            questions.remove(event.sessionID)
+            return
+        }
+        // Plan follow-ups are deliberately asked after the turn. Every ordinary question must be
+        // cleared, including one whose optional tool reference was absent from the event.
+        val items = questions[event.sessionID] ?: return
+        items.entries.removeIf { !it.value.plan }
+        if (items.isEmpty()) questions.remove(event.sessionID)
+    }
+
+    private fun finish(map: MutableMap<String, MutableMap<String, Pending>>, event: ChatEventDto.PartUpdated) {
+        val items = map[event.sessionID] ?: return
+        items.entries.removeIf { item ->
+            val tool = item.value.tool ?: return@removeIf false
+            tool.messageID == event.part.messageID && tool.callID == event.part.callID
+        }
+        if (items.isEmpty()) map.remove(event.sessionID)
+    }
+
+    private fun ask(map: MutableMap<String, MutableMap<String, Pending>>, id: String, request: String, pending: Pending) {
+        if (resolved.remove(request)) return
+        map.getOrPut(id) { mutableMapOf() }[request] = pending
+    }
+
+    private fun remove(map: MutableMap<String, MutableMap<String, Pending>>, id: String, value: String) {
         val items = map[id] ?: return
         items.remove(value)
         if (items.isEmpty()) map.remove(id)

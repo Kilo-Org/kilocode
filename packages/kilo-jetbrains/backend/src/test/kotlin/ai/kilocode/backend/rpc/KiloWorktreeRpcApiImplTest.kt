@@ -133,6 +133,28 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `a timed-out PR list is kept only long enough to spare the other pollers a fan-out`() {
+        // A fan-out that timed out learned nothing about these pull requests. Served for the full
+        // PR_TTL it republished one `gh` overrun as a fresh verdict long after gh recovered, which is
+        // what made the banner come back on its own with no gh process involved.
+        val timeout = api.prTtl(GhAvailability.TIMEOUT)
+        assertTrue(timeout < api.prTtl(GhAvailability.OK), "a non-answer must not outlive an answer: $timeout")
+
+        // Every other verdict is an answer and keeps the ordinary lifetime — including the ones that
+        // also mean "no pull requests", so a genuine auth problem is not re-probed per poll.
+        for (value in GhAvailability.entries.filter { it != GhAvailability.TIMEOUT }) {
+            assertEquals(api.prTtl(GhAvailability.OK), api.prTtl(value), "unexpected short TTL for $value")
+        }
+
+        // Not zero, and the reason is the other attached projects: they all poll the same root, so a
+        // spent entry is what stops each of them paying its own fan-out the moment one of them times
+        // out. It only has to outlive that burst, never reach the next poll — so it is a small fraction
+        // of the ordinary lifetime rather than merely shorter than it.
+        assertTrue(timeout > 0, "a dropped entry lets every other poller re-run the fan-out")
+        assertTrue(timeout * 4 <= api.prTtl(GhAvailability.OK), "not short enough to be a burst absorber: $timeout")
+    }
+
+    @Test
     fun `list reports leftover directories under the worktrees folder without removing them`() = runBlocking {
         initRepo()
         val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
@@ -353,6 +375,24 @@ class KiloWorktreeRpcApiImplTest {
         // the comparison into "always fresh".
         assertFalse(usable(time = 0, now = 0, ttl = 90_000, maxAge = 0))
         assertFalse(usable(time = 0, now = 0, ttl = 90_000, maxAge = -1))
+    }
+
+    @Test
+    fun `a named worktree resolves its pull request against nothing cached`() {
+        val fresh = prPaths(listOf("/repo/.kilo/worktrees/feature-x/"))
+
+        // The caller named this one because an agent just stopped in it, so no cached answer about it
+        // can have accounted for whatever that agent did.
+        assertEquals(0, prAge("/repo/.kilo/worktrees/feature-x", fresh, maxAge = null))
+        // A trailing separator, a `.` segment, or a `..` on the way in still names the same checkout.
+        assertEquals(0, prAge("/repo/.kilo/worktrees/./feature-x", fresh, maxAge = null))
+        assertEquals(0, prAge("/repo/.kilo/worktrees/other/../feature-x", fresh, maxAge = null))
+
+        // Every other row keeps the caller's own ceiling. Spending the fan-out on all of them is what
+        // naming paths exists to avoid: one row's news is not news about the rest of the repository.
+        assertEquals(90_000, prAge("/repo/.kilo/worktrees/other", fresh, maxAge = 90_000))
+        assertNull(prAge("/repo/.kilo/worktrees/other", fresh, maxAge = null))
+        assertNull(prAge("/repo/.kilo/worktrees/feature-x", emptySet(), maxAge = null))
     }
 
     @Test
@@ -1202,6 +1242,7 @@ class KiloWorktreeRpcApiImplTest {
 
         assertFalse(result.ok)
         assertTrue(result.error?.contains(old.toString()) == true, "error should name the blocker: ${result.error}")
+        assertEquals(listOf(old.toString()), result.nestedPaths)
         assertTrue(Files.isDirectory(Path.of(parent.path)))
         assertTrue(Files.isDirectory(old))
     }
