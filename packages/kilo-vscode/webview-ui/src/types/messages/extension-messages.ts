@@ -518,6 +518,7 @@ export interface IndexingSettingsLoadedMessage {
 export interface ChatSettingsLoadedMessage {
   type: "chatSettingsLoaded"
   settings: {
+    showSessionActions: boolean
     shiftTabCyclesVariant: boolean
     browserAutomation: boolean
     agentManagerBrowserOpenLinksIn: "external" | "integrated"

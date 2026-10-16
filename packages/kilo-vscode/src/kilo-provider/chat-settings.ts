@@ -8,6 +8,7 @@ export function buildChatSettingsMessage() {
   return {
     type: "chatSettingsLoaded" as const,
     settings: {
+      showSessionActions: vscode.workspace.getConfiguration("kilo-code.new").get<boolean>("showSessionActions", true),
       shiftTabCyclesVariant: config.get<boolean>("shiftTabCyclesVariant", true),
       browserAutomation: vscode.workspace
         .getConfiguration("kilo-code.new.experimental")
@@ -30,6 +31,7 @@ export function watchChatConfig(post: Post): vscode.Disposable {
   return vscode.workspace.onDidChangeConfiguration((event) => {
     if (
       event.affectsConfiguration("kilo-code.new.chat") ||
+      event.affectsConfiguration("kilo-code.new.showSessionActions") ||
       event.affectsConfiguration("kilo-code.new.experimental.browserAutomation") ||
       event.affectsConfiguration("kilo-code.new.agentManager.browser.openLinksIn")
     ) {
