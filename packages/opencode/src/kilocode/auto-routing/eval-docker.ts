@@ -151,10 +151,31 @@ export type EvalProviderConfigInput = {
   provider: Provider.Info
 }
 
+export type EvalModelConfig = {
+  id: string
+  name: string
+  reasoning: boolean
+  tool_call: boolean
+  attachment: boolean
+  temperature: boolean
+  modalities: { input: string[]; output: string[] }
+  cost: { input: number; output: number; cache_read: number; cache_write: number }
+  limit: { context: number; output: number }
+  variants?: Record<string, Record<string, unknown>>
+}
+
+export type EvalProviderConfig = {
+  provider: Record<
+    string,
+    { name: string; npm: string; options: Record<string, unknown>; models: Record<string, EvalModelConfig> }
+  >
+  enabled_providers: string[]
+}
+
 // The container only needs the provider that serves the entry model. Credentials
 // travel separately in KILO_AUTH_CONTENT, so the generated config never carries
 // a key.
-export function evalProviderConfig(input: EvalProviderConfigInput): Record<string, unknown> {
+export function evalProviderConfig(input: EvalProviderConfigInput): EvalProviderConfig {
   const options = { ...(input.provider.options ?? {}) } as Record<string, unknown>
   for (const key of ["apiKey", "kilocodeToken", "kilocodeOrganizationId", "headers"]) delete options[key]
   const base = options.baseURL ?? options.endpoint

@@ -4,10 +4,13 @@ import {
   fetchCustomRouters,
   parseCustomRouterModelId,
   type ClientCustomRouterEntry,
+  type CustomRouterEntryRef,
   type CustomRouterListResponse,
   type CustomRouterSummary,
+  type FetchLike,
 } from "@kilocode/kilo-gateway"
 import { Log } from "@opencode-ai/core/util/log"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import type { Provider } from "@/provider/provider"
 
@@ -31,7 +34,7 @@ type ResolveInput = {
   token?: string
   organizationId?: string | null
   providers: Catalog
-  fetch?: typeof fetch
+  fetch?: FetchLike
   now?: () => number
 }
 
@@ -64,7 +67,7 @@ export namespace KiloCustomRouter {
     )
   }
 
-  export function servable(entry: CustomRouterEntry, providers: Catalog): boolean {
+  export function servable(entry: CustomRouterEntryRef, providers: Catalog): boolean {
     if (entry.kind !== "client") return false
     const provider = providers[ProviderV2.ID.make(entry.provider)]
     return provider !== undefined && Object.hasOwn(provider.models, entry.model)
@@ -174,7 +177,7 @@ export namespace KiloCustomRouter {
     // request shape and let the gateway resolve the concrete id.
     return {
       ...input.base,
-      id: input.pick.model,
+      id: ModelV2.ID.make(input.pick.model),
       api: { ...input.base.api, id: input.pick.model },
     }
   }

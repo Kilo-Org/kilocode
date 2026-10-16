@@ -87,6 +87,8 @@ export {
   CustomRouterDecisionSchema,
   CustomRouterErrorCodeSchema,
   CustomRouterErrorResponseSchema,
+  CustomRouterEntryRefSchema,
+  CustomRouterEntrySchema,
   CustomRouterListEntrySchema,
   CustomRouterListResponseSchema,
   CustomRouterReferenceSchema,
@@ -106,6 +108,9 @@ export {
   type CustomRouterDecideRequest,
   type CustomRouterDecideResponse,
   type CustomRouterDecision,
+  type CustomRouterClientEntryId,
+  type CustomRouterEntry,
+  type CustomRouterEntryRef,
   type CustomRouterErrorCode,
   type CustomRouterListEntry,
   type CustomRouterListResponse,
@@ -121,6 +126,7 @@ export {
   registerCustomRouterClientEntry,
   removeCustomRouterClientEntry,
   uploadClientEvalResult,
+  type FetchLike,
 } from "./api/custom-router-api.js"
 export {
   fetchByokEntries,

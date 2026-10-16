@@ -46,12 +46,14 @@ export class CustomRouterRequestError extends Error {
   }
 }
 
+export type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+
 type RequestOptions = {
   token?: string
   organizationId?: string | null
   baseUrl?: string
   signal?: AbortSignal
-  fetch?: typeof fetch
+  fetch?: FetchLike
   timeoutMs?: number
 }
 
@@ -78,7 +80,15 @@ async function request<T>(
   const text = await response.text()
   const json = text.length > 0 ? safeJson(text) : undefined
   if (!response.ok) throw failure(response.status, json)
-  return input.parse(json)
+  try {
+    return input.parse(json)
+  } catch {
+    throw new CustomRouterRequestError({
+      code: "internal_error",
+      message: `Unexpected response from the custom router service (HTTP ${response.status})`,
+      status: response.status,
+    })
+  }
 }
 
 function safeJson(text: string): unknown {

@@ -63,11 +63,6 @@ function userContent(content: unknown): string | unknown[] {
     if (part.type === "image") {
       const url = imageUrl(part.image)
       if (url) parts.push({ type: "image_url", image_url: { url } })
-      continue
-    }
-    if (part.type === "file" && typeof part.data === "string") {
-      const media = typeof part.mediaType === "string" ? part.mediaType : "application/octet-stream"
-      parts.push({ type: "image_url", image_url: { url: `data:${media};base64,${part.data}` } })
     }
   }
   return parts.length > 0 ? parts : ""

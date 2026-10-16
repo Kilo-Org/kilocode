@@ -5,7 +5,7 @@ import { Provider } from "@/provider/provider"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { organization, token } from "@/kilocode/provider/catalog"
 import { cmd } from "@/cli/cmd/cmd"
-import { effectCmd, fail } from "@/cli/effect-cmd"
+import { CliError, effectCmd, fail } from "@/cli/effect-cmd"
 import { UI } from "@/cli/ui"
 import { errorMessage } from "@/util/error"
 import {
@@ -190,7 +190,7 @@ export const AutoEvalCommand = effectCmd({
     if (!creds) return
     const catalog = yield* providers()
     const auth = yield* Auth.Service
-    const all = yield* auth.all()
+    const all = yield* auth.all().pipe(Effect.mapError(credentialsFailure))
     const code = yield* Effect.promise(() =>
       KiloAutoEval.run({
         router: args.router,
@@ -238,6 +238,10 @@ function describeFailure(error: unknown, prefix: string): string {
   return `${prefix}: ${errorMessage(error)}`
 }
 
+function credentialsFailure(error: Auth.AuthError): CliError {
+  return new CliError({ message: `Could not read Kilo credentials: ${error.message}` })
+}
+
 const credentials = Effect.fn("Cli.auto.credentials")(function* () {
   const provider = yield* Provider.Service
   const auth = yield* Auth.Service
@@ -247,7 +251,7 @@ const credentials = Effect.fn("Cli.auto.credentials")(function* () {
     yield* fail("Sign in to Kilo to use custom auto routers. Run `kilo auth login`.")
     return undefined
   }
-  const info = yield* auth.get(ProviderV2.ID.kilo)
+  const info = yield* auth.get(ProviderV2.ID.kilo).pipe(Effect.mapError(credentialsFailure))
   return { token: token(kilo.options, info) ?? "", organizationId: organization(kilo.options, info) }
 })
 
