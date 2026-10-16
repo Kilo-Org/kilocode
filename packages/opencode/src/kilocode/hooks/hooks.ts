@@ -134,8 +134,8 @@ export function concat(a?: Hooks, b?: Hooks): Hooks | undefined {
 
 /**
  * Kilo config hooks plus Claude Code user hooks (~/.claude/settings.json) unless Claude Code
- * compatibility is off. Sandboxed sessions skip Claude Code hooks: the sandbox protects the Kilo
- * config directory from writes, but not ~/.claude.
+ * compatibility is off. Sandboxed sessions still skip Claude Code hooks: the Linux sandbox cannot
+ * protect a ~/.claude directory that does not exist yet.
  */
 export const load = Effect.fn("KiloHooks.load")(function* (cfg: { hooks?: Hooks }, claude: boolean) {
   const extra =
