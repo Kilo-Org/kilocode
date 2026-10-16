@@ -126,6 +126,27 @@ export interface Entry {
   readonly aiSDKProvider?: AISDKProvider
 }
 
+export interface ImageModel {
+  readonly id: string
+  readonly name: string
+  readonly description?: string
+}
+
+export interface TranscriptionModel {
+  readonly id: string
+  readonly name: string
+}
+
+const TranscriptionCatalog = Schema.Struct({
+  data: Schema.Array(
+    Schema.Struct({
+      id: Schema.String,
+      name: Schema.String,
+    }),
+  ),
+})
+const decodeTranscriptionCatalog = Schema.decodeUnknownOption(TranscriptionCatalog)
+
 export interface Failure {
   readonly kind: "unauthorized" | "network" | "schema" | "http"
   readonly status?: number
@@ -194,6 +215,76 @@ export function catalogModels(response: { readonly data: readonly unknown[] }, a
     .filter(supportsTools)
     .map(toModel)
     .filter((model) => !anonymous || model.free)
+}
+
+// Ported from v1 `fetchKiloImageModels` (`api/models.ts:137-154`):
+// fetches the Gateway catalog and keeps models whose `architecture.output_modalities` includes `"image"`.
+export function imageModels(scope: Scope): Effect.Effect<ImageModel[], Failure> {
+  return Effect.gen(function* () {
+    const server = KiloServer.normalize(scope.server)
+    const organizationID = scope.token ? (scope.organizationID ?? null) : null
+    const url = KiloServer.modelsUrl(server, organizationID)
+    const headers: Record<string, string> = {
+      ...KiloHeaders.provider({ version: scope.version ?? "unknown", organizationID }),
+      ...(scope.token ? { Authorization: `Bearer ${scope.token}` } : {}),
+    }
+    const response = yield* request(url, { headers }, "Image models fetch failed", TIMEOUT_MS).pipe(
+      Effect.mapError((): Failure => ({ kind: "network" })),
+    )
+    if (!response.ok) {
+      if (response.status === 401 && scope.token && !organizationID) {
+        return yield* imageModels({ server, version: scope.version })
+      }
+      const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"
+      return yield* Effect.fail({ kind, status: response.status } satisfies Failure)
+    }
+    const raw = yield* json(response, "Image models fetch failed").pipe(
+      Effect.mapError((): Failure => ({ kind: "schema" })),
+    )
+    const parsed = decodeEnvelope(raw)
+    if (Option.isNone(parsed)) return yield* Effect.fail({ kind: "schema" } satisfies Failure)
+    return parsed.value.data
+      .flatMap((entry) => Option.toArray(decodeRawModel(entry)))
+      .filter((model) => model.architecture?.output_modalities?.includes("image"))
+      .map((model) => ({
+        id: model.id,
+        name: model.name,
+        ...(typeof model.description === "string" && model.description.trim() !== ""
+          ? { description: model.description.trim() }
+          : {}),
+      }))
+  })
+}
+
+// Ported from v1 `fetchKiloTranscriptionModels` (`api/models.ts:156-190`):
+// fetches `/api/gateway/transcription-models` and validates `{ id, name }[]`.
+export function transcriptionModels(scope: Scope): Effect.Effect<TranscriptionModel[], Failure> {
+  return Effect.gen(function* () {
+    const server = KiloServer.normalize(scope.server)
+    const organizationID = scope.token ? (scope.organizationID ?? null) : null
+    const headers: Record<string, string> = {
+      ...KiloHeaders.provider({ version: scope.version ?? "unknown", organizationID }),
+      ...(scope.token ? { Authorization: `Bearer ${scope.token}` } : {}),
+    }
+    const response = yield* request(
+      `${KiloServer.gateway(server)}/transcription-models`,
+      { headers },
+      "Transcription models fetch failed",
+      TIMEOUT_MS,
+    ).pipe(Effect.mapError((): Failure => ({ kind: "network" })))
+    if (!response.ok) {
+      const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"
+      return yield* Effect.fail({ kind, status: response.status } satisfies Failure)
+    }
+    const raw = yield* json(response, "Transcription models fetch failed").pipe(
+      Effect.mapError((): Failure => ({ kind: "schema" })),
+    )
+    const parsed = decodeTranscriptionCatalog(raw)
+    if (Option.isNone(parsed) || parsed.value.data.length === 0) {
+      return yield* Effect.fail({ kind: "schema" } satisfies Failure)
+    }
+    return parsed.value.data.map((model) => ({ id: model.id, name: model.name }))
+  })
 }
 
 export function entries(models: readonly Model[]): Entry[] {

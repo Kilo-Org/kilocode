@@ -67,6 +67,18 @@ export function fixture() {
           supported_parameters: ["tools"],
           isFree: true,
         },
+        {
+          id: "google/gemini-2.5-flash-image",
+          name: "Gemini 2.5 Flash Image",
+          description: "Image generation model",
+          context_length: 64000,
+          supported_parameters: ["temperature"],
+          architecture: {
+            input_modalities: ["text", "image"],
+            output_modalities: ["text", "image"],
+          },
+          isFree: false,
+        },
       ],
     } as unknown,
     teamModelsStatus: 200,
@@ -92,6 +104,18 @@ export function fixture() {
           supported_parameters: ["tools"],
           isFree: false,
         },
+        {
+          id: "google/gemini-2.5-flash-image",
+          name: "Gemini 2.5 Flash Image",
+          description: "Image generation model",
+          context_length: 64000,
+          supported_parameters: ["temperature"],
+          architecture: {
+            input_modalities: ["text", "image"],
+            output_modalities: ["text", "image"],
+          },
+          isFree: false,
+        },
       ],
     } as unknown,
     defaultsStatus: 200,
@@ -103,6 +127,118 @@ export function fixture() {
     teamDefaults: {
       defaultModel: "anthropic/claude-sonnet-4.6",
       defaultFreeModel: null,
+    } as unknown,
+    balanceStatus: 200,
+    balance: { balance: 42.5, isDepleted: false } as unknown,
+    kiloPassStatus: 200,
+    kiloPass: [
+      {
+        result: {
+          data: {
+            json: {
+              subscription: {
+                status: "active",
+                currentPeriodBaseCreditsUsd: 50,
+                currentPeriodUsageUsd: 12.25,
+                currentPeriodBonusCreditsUsd: 5,
+                nextBillingAt: "2026-11-01T00:00:00Z",
+              },
+            },
+          },
+        },
+      },
+    ] as unknown,
+    modesStatus: 200,
+    modes: {
+      modes: [
+        {
+          id: "mode-1",
+          organization_id: "selected",
+          name: "Security Reviewer",
+          slug: "security-reviewer",
+          created_by: "user-1",
+          created_at: "2026-10-01T00:00:00Z",
+          updated_at: "2026-10-01T00:00:00Z",
+          config: {
+            roleDefinition: "Review code for security issues",
+            description: "Organization security mode",
+            groups: ["read", ["edit", { fileRegex: "\\.ts$" }]],
+          },
+        },
+      ],
+    } as unknown,
+    notificationsStatus: 200,
+    notifications: {
+      notifications: [
+        {
+          id: "notif-1",
+          title: "Kilo v2 Available",
+          message: "Try the new v2 CLI.",
+          action: { actionText: "Learn more", actionURL: "https://kilo.ai" },
+          showIn: ["cli"],
+        },
+      ],
+    } as unknown,
+    transcriptionModelsStatus: 200,
+    transcriptionModels: {
+      data: [
+        { id: "openai/gpt-4o-mini-transcribe", name: "GPT-4o Mini Transcribe" },
+      ],
+    } as unknown,
+    byokStatus: 200,
+    byok: {
+      result: {
+        data: {
+          json: [
+            { id: "byok-1", provider_id: "anthropic", management_source: "user", is_enabled: true },
+          ],
+        },
+      },
+    } as unknown,
+    codingPlansStatus: 200,
+    codingPlans: {
+      result: {
+        data: {
+          json: [
+            {
+              id: "sub-1",
+              planId: "plan-pro",
+              planName: "Kilo Coding Plan Pro",
+              providerName: "Anthropic",
+              providerId: "anthropic",
+              canQueryUsage: true,
+              hasInstalledByokKey: true,
+              status: "active",
+              cancelAtPeriodEnd: false,
+            },
+          ],
+        },
+      },
+    } as unknown,
+    codingPlanUsageStatus: 200,
+    codingPlanUsage: {
+      result: {
+        data: {
+          json: {
+            schemaVersion: 1,
+            fetchedAt: "2026-10-14T12:00:00Z",
+            subscription: {
+              id: "sub-1",
+              planName: "Kilo Coding Plan Pro",
+              providerId: "anthropic",
+              providerName: "Anthropic",
+              windows: [
+                {
+                  id: "five_hour",
+                  remainingPercent: 75,
+                  resetsAt: "2026-10-14T17:00:00Z",
+                  period: { unit: "hour", value: 5 },
+                },
+              ],
+            },
+          },
+        },
+      },
     } as unknown,
   }
   const requests: { method: string; path: string; authorization: string | null; organizationID?: string }[] = []
@@ -158,6 +294,43 @@ export function fixture() {
       if (/^\/api\/organizations\/[^/]+\/defaults$/.test(path)) {
         if (state.teamDefaultsStatus !== 200) return new Response(null, { status: state.teamDefaultsStatus })
         return Response.json(state.teamDefaults)
+      }
+      if (path === "/api/profile/balance") {
+        if (state.balanceStatus !== 200) return new Response(null, { status: state.balanceStatus })
+        return Response.json(state.balance)
+      }
+      if (/^\/api\/organizations\/[^/]+\/modes$/.test(path)) {
+        if (state.modesStatus !== 200) return new Response(null, { status: state.modesStatus })
+        return Response.json(state.modes)
+      }
+      if (path === "/api/users/notifications") {
+        if (state.notificationsStatus !== 200) return new Response(null, { status: state.notificationsStatus })
+        return Response.json(state.notifications)
+      }
+      if (
+        path === "/api/gateway/transcription-models" ||
+        path === "/api/gateway/v1/transcription-models" ||
+        path === "/api/v1/transcription-models"
+      ) {
+        if (state.transcriptionModelsStatus !== 200)
+          return new Response(null, { status: state.transcriptionModelsStatus })
+        return Response.json(state.transcriptionModels)
+      }
+      if (path === "/api/trpc/kiloPass.getState") {
+        if (state.kiloPassStatus !== 200) return new Response(null, { status: state.kiloPassStatus })
+        return Response.json(state.kiloPass)
+      }
+      if (path === "/api/trpc/byok.list") {
+        if (state.byokStatus !== 200) return new Response(null, { status: state.byokStatus })
+        return Response.json(state.byok)
+      }
+      if (path === "/api/trpc/codingPlans.listSubscriptions") {
+        if (state.codingPlansStatus !== 200) return new Response(null, { status: state.codingPlansStatus })
+        return Response.json(state.codingPlans)
+      }
+      if (path === "/api/trpc/codingPlans.getUsage") {
+        if (state.codingPlanUsageStatus !== 200) return new Response(null, { status: state.codingPlanUsageStatus })
+        return Response.json(state.codingPlanUsage)
       }
       return new Response(null, { status: 404 })
     },
