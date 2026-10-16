@@ -66,6 +66,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Board",
+  "task.swarm.open": "Board öffnen",
   "task.swarm.refresh": "Aktualisieren",
   "task.swarm.reset": "Board zurücksetzen",
   "task.swarm.resetTitle": "Dieses Board zurücksetzen?",
@@ -222,6 +223,7 @@ export const dict = {
   "prompt.action.stop.background": "Hauptagent stoppen. Hintergrund-Agenten laufen weiter.",
   "prompt.agents.show": "Hintergrund-Agenten anzeigen",
   "prompt.action.enhance": "Prompt verbessern",
+  "prompt.action.more": "Weitere Aktionen",
   "prompt.paste.expand": "Klicken, um eingefügten Text zu erweitern",
   "prompt.issues.title": "Sitzungsprobleme",
   "prompt.mcp.provider": "{{name}} MCP",
@@ -295,6 +297,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI hat Sie abgemeldet",
   "error.providerAuth.chatgpt.description":
     "Melden Sie sich erneut bei ChatGPT an und senden Sie Ihre Nachricht noch einmal, um weiterhin Codex-Modelle zu verwenden.",
+
+  "provider.failure.unauthorized": "Anmeldedaten abgelehnt (HTTP {{status}}). Melden Sie sich erneut an.",
+  "provider.failure.unauthorizedNoStatus": "Anmeldedaten abgelehnt. Melden Sie sich erneut an.",
+  "provider.failure.unauthenticated": "Nicht angemeldet.",
+  "provider.failure.network": "Anbieter nicht erreichbar. Überprüfen Sie Ihre Verbindung.",
+  "provider.failure.http": "Anbieterfehler (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Anbieterfehler.",
+  "provider.failure.schema": "Unerwartete Antwort vom Anbieter.",
 
   "notification.permission.title": "Berechtigung erforderlich",
   "notification.permission.titleSubagent": "Berechtigung erforderlich (Subagent)",
@@ -963,6 +973,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Native Notebook-Tools",
   "settings.experimental.nativeNotebookTools.description":
     "Experimentelle Tools zum Lesen, Bearbeiten und Ausführen von VS Code-Notebooks aktivieren",
+  "settings.experimental.globIncludeIgnored.title": "Ignorierte Pfade durchsuchen",
+  "settings.experimental.globIncludeIgnored.description":
+    "Ordner oder Dateien, die das Glob-Tool auch dann durchsuchen soll, wenn .gitignore oder andere Ignore-Dateien sie ausschließen. Verwende Muster im gitignore-Stil relativ zum Arbeitsbereich; darin enthaltene ignorierte Ordner werden weiterhin übersprungen.",
   "settings.experimental.continueOnDeny.title": "Bei Ablehnung fortfahren",
   "settings.experimental.continueOnDeny.description":
     "Agent-Schleife fortsetzen, wenn eine Berechtigung abgelehnt wird",
@@ -1413,6 +1426,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Alle stoppen ({{count}})",
   "task.backgroundAgents.finished": "Hintergrund-Agenten abgeschlossen",
   "task.stop": "Subagent stoppen",
+  "task.open.panel": "Subagent in Panel öffnen",
+  "task.open.tab": "Subagent in Tab öffnen",
   "settings.saveBar.unsavedChanges": "Nicht gespeicherte Änderungen",
   "settings.saveBar.discard": "Verwerfen",
   "settings.saveBar.save": "Speichern",
@@ -1477,6 +1492,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "System-Chrome verwenden",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Das installierte Google Chrome für den integrierten Browser verwenden. Nur deaktivieren, wenn bereits ein kompatibler Playwright-Chromium-Browser installiert ist.",
+  "settings.experimental.browserLinks.title": "Links öffnen in",
+  "settings.experimental.browserLinks.description":
+    "Wählen Sie, wo Weblinks aus Kilo-Chats geöffnet werden. Erfordert den integrierten Browser.",
+  "settings.experimental.browserLinks.external": "Systembrowser",
+  "settings.experimental.browserLinks.integrated": "Integrierter Browser",
   "chat.search.searchingHistory": "Frühere Nachrichten werden durchsucht…",
   "browserTab.noSession":
     "Öffne den Browser aus einer Sitzung, um eine lokale Anwendung oder eine öffentliche HTTPS-Seite anzuzeigen.",

@@ -676,6 +676,220 @@
   justify-self: end;
 }
 
+/* ============================================
+   Board button
+   ============================================ */
+
+/* The same quiet surface as the agent stack it follows. */
+[data-component="board-trigger"] {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--session-action-radius);
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  animation: board-trigger-in 200ms ease-out backwards;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+    color: var(--vscode-foreground);
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+  }
+}
+
+.session-actions-row > [data-component="board-trigger"] {
+  height: 22px;
+  overflow: visible;
+}
+
+/* At the end of an actions line nothing follows the button, so it drops its rule. */
+.session-actions-row > [data-component="board-trigger"][data-place="end"] {
+  margin-inline-end: 0;
+
+  &::after {
+    display: none;
+  }
+}
+
+/* The rule after the stack moves here when the button follows it. */
+[data-component="board-trigger"][data-rule] {
+  margin-inline-end: 4px;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: -3px;
+    top: 50%;
+    width: 1px;
+    height: 14px;
+    transform: translateY(-50%);
+    background: var(--border-weak-base, var(--vscode-panel-border));
+  }
+}
+
+/* With agents, the button joins the stack like the New Worktree split
+   button: the stack keeps its look, and the posts open from the narrow part
+   on its right, 2px apart. At rest nothing changes. Hovering either part
+   shades both, so they read as one control with two targets. */
+[data-component="agent-stack"]:not([data-idle]):has(+ [data-component="board-trigger"]) {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+[data-component="agent-stack"]:not([data-idle]) + [data-component="board-trigger"] {
+  width: 20px;
+  margin-inline-start: 2px;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+[data-component="agent-stack"]:not([data-idle]):is(:hover, :focus-visible, [aria-expanded="true"])
+  + [data-component="board-trigger"],
+[data-component="agent-stack"]:not([data-idle]):has(
+    + [data-component="board-trigger"]:is(:hover, :focus-visible, [aria-expanded="true"])
+  ) {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  color: var(--vscode-foreground);
+}
+
+/* The rows put a gap between their items. The split keeps only its 2px. */
+.session-actions-row > [data-component="agent-stack"]:not([data-idle]) + [data-component="board-trigger"] {
+  margin-inline-start: -2px;
+}
+
+.session-agents > [data-component="agent-stack"]:not([data-idle]) + [data-component="board-trigger"] {
+  margin-inline-start: -4px;
+}
+
+/* New posts since the user last looked. Blue, not the warning color of the
+   stack: posts are for the main agent, not a request to the user. */
+[data-component="board-trigger"][data-unread]::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  inset-inline-end: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vscode-activityBarBadge-background, var(--icon-info-base));
+}
+
+/* Same surface as the agent panel. */
+.board-panel[data-component="popover-content"] {
+  box-sizing: border-box;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  padding: 6px;
+  border-radius: var(--radius-xl);
+}
+
+[data-slot="board-panel"] {
+  display: grid;
+  gap: 4px;
+  font-size: var(--kilo-font-size-12);
+}
+
+[data-slot="board-panel-header"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-inline-start: 8px;
+}
+
+[data-slot="board-panel-actions"] {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+[data-slot="board-panel-title"] {
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-10);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Recent posts only, so each body stays short. The full board shows all. */
+[data-slot="board-panel-list"][data-component="board-messages"] {
+  gap: 10px;
+  max-height: min(360px, 50vh);
+  padding: 2px 8px 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  container-type: inline-size;
+
+  [data-slot="board-message"] {
+    gap: 4px;
+  }
+
+  [data-slot="board-message"] + [data-slot="board-message"] {
+    padding-top: 10px;
+  }
+
+  [data-slot="board-message-body"] {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+  }
+}
+
+/* The full board dialog, opened from the panel. */
+.task-board[data-slot="dialog-content"] {
+  height: 100%;
+  min-height: 0;
+}
+
+.task-board [data-slot="dialog-body"] {
+  min-height: 0;
+}
+
+.task-board-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.task-board-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 0 20px 20px;
+}
+
+.task-board-list {
+  container-type: inline-size;
+}
+
+.task-board [role="alert"] {
+  margin: 0 20px 12px;
+}
+
+@keyframes board-trigger-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @keyframes agent-stack-in {
   from {
     grid-template-columns: 0fr;

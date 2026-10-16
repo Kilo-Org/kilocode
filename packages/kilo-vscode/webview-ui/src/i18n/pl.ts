@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tablica",
+  "task.swarm.open": "Otwórz tablicę",
   "task.swarm.refresh": "Odśwież",
   "task.swarm.reset": "Zresetuj tablicę",
   "task.swarm.resetTitle": "Zresetować tę tablicę?",
@@ -216,6 +217,7 @@ export const dict = {
   "prompt.action.stop.background": "Zatrzymaj głównego agenta. Agenci w tle nadal działają.",
   "prompt.agents.show": "Pokaż agentów w tle",
   "prompt.action.enhance": "Ulepsz prompt",
+  "prompt.action.more": "Więcej akcji",
   "prompt.paste.expand": "Kliknij, aby rozwinąć wklejony tekst",
   "prompt.issues.title": "Problemy sesji",
   "prompt.mcp.provider": "MCP {{name}}",
@@ -288,6 +290,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI wylogowało Cię",
   "error.providerAuth.chatgpt.description":
     "Zaloguj się ponownie do ChatGPT, a następnie wyślij wiadomość jeszcze raz, aby kontynuować korzystanie z modeli Codex.",
+
+  "provider.failure.unauthorized": "Poświadczenia zostały odrzucone (HTTP {{status}}). Zaloguj się ponownie.",
+  "provider.failure.unauthorizedNoStatus": "Poświadczenia zostały odrzucone. Zaloguj się ponownie.",
+  "provider.failure.unauthenticated": "Nie jesteś zalogowany.",
+  "provider.failure.network": "Nie można połączyć się z dostawcą. Sprawdź swoje połączenie.",
+  "provider.failure.http": "Błąd dostawcy (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Błąd dostawcy.",
+  "provider.failure.schema": "Nieoczekiwana odpowiedź od dostawcy.",
 
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",
@@ -902,6 +912,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Natywne narzędzia notatników",
   "settings.experimental.nativeNotebookTools.description":
     "Włącz eksperymentalne narzędzia do odczytu, edycji i uruchamiania notatników VS Code",
+  "settings.experimental.globIncludeIgnored.title": "Przeszukuj ignorowane ścieżki",
+  "settings.experimental.globIncludeIgnored.description":
+    "Foldery lub pliki, które narzędzie glob ma przeszukiwać nawet wtedy, gdy .gitignore lub inne pliki ignorowania je wykluczają. Używaj wzorców w stylu gitignore względem obszaru roboczego; ignorowane foldery w ich wnętrzu nadal są pomijane.",
   "settings.experimental.continueOnDeny.title": "Kontynuuj przy odmowie",
   "settings.experimental.continueOnDeny.description": "Kontynuuj pętlę agenta po odmowie uprawnienia",
   "settings.sandboxing.title": "Izolacja w piaskownicy",
@@ -1389,6 +1402,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Zatrzymaj wszystkich ({{count}})",
   "task.backgroundAgents.finished": "Agenci w tle zakończyli pracę",
   "task.stop": "Zatrzymaj podagenta",
+  "task.open.panel": "Otwórz podagenta w panelu",
+  "task.open.tab": "Otwórz podagenta w karcie",
   "settings.saveBar.unsavedChanges": "Niezapisane zmiany",
   "settings.saveBar.discard": "Odrzuć",
   "settings.saveBar.save": "Zapisz",
@@ -1453,6 +1468,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Użyj systemowego Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Użyj zainstalowanej przeglądarki Google Chrome dla zintegrowanej przeglądarki. Wyłącz tylko wtedy, gdy zgodna przeglądarka Playwright Chromium jest już zainstalowana.",
+  "settings.experimental.browserLinks.title": "Otwieraj linki w",
+  "settings.experimental.browserLinks.description":
+    "Wybierz, gdzie otwierają się linki internetowe z czatów Kilo. Wymaga zintegrowanej przeglądarki.",
+  "settings.experimental.browserLinks.external": "Przeglądarka systemowa",
+  "settings.experimental.browserLinks.integrated": "Zintegrowana przeglądarka",
   "chat.search.searchingHistory": "Wyszukiwanie we wcześniejszych wiadomościach…",
   "browserTab.noSession":
     "Otwórz przeglądarkę z sesji, aby wyświetlić podgląd lokalnej aplikacji lub publicznej strony HTTPS.",

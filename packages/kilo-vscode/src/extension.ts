@@ -83,7 +83,9 @@ export async function activate(context: vscode.ExtensionContext) {
     trusted: () => vscode.workspace.isTrusted,
     useSystemChrome: () => integratedBrowserUseSystemChrome(),
     fallback: () => process.platform === "linux" && integratedBrowserFallback(),
+    theme: browserTheme,
   })
+  context.subscriptions.push(vscode.window.onDidChangeActiveColorTheme(() => browserBroker.retheme()))
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(
@@ -404,6 +406,9 @@ export async function activate(context: vscode.ExtensionContext) {
   provider.setCreateWorktreeHandler((baseBranch, branchName) =>
     agentManagerProvider.createFromSidebar(baseBranch, branchName),
   )
+  // Chat web links open in the Integrated Browser tab for the current session.
+  const openLink = (url: string, sessionId?: string) => (sessionId ? browserTabProvider.openUrl(sessionId, url) : false)
+  provider.setOpenLinkHandler(openLink)
 
   // Register toggle auto-approve shortcut (Ctrl+Alt+A / Cmd+Alt+A)
   const defaultDir = () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd()
@@ -497,6 +502,7 @@ export async function activate(context: vscode.ExtensionContext) {
     tabProvider.setCreateWorktreeHandler((baseBranch, branchName) =>
       agentManagerProvider.createFromSidebar(baseBranch, branchName),
     )
+    tabProvider.setOpenLinkHandler(openLink)
     tabProvider.setDiffVirtualProvider(diffVirtualProvider)
     tabProvider.setDiffViewerProvider(diffViewerProvider)
     tabProvider.setReviewCommentsHandler(deliver)
@@ -774,6 +780,9 @@ export async function activate(context: vscode.ExtensionContext) {
         subAgentViewerProvider.openPanel(sessionID, title, directory)
       },
     ),
+    // One shortcut pair serves the sidebar, Kilo editor tabs, and Agent Manager.
+    // Every surface receives the action and acts only while it has focus, matching
+    // cycleAgentMode, so one binding never depends on a shared focus context key.
     vscode.commands.registerCommand("kilo-code.new.agentManager.previousSession", () => {
       agentManagerProvider.postMessage({ type: "action", action: "sessionPrevious" })
     }),
@@ -781,9 +790,15 @@ export async function activate(context: vscode.ExtensionContext) {
       agentManagerProvider.postMessage({ type: "action", action: "sessionNext" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.previousTab", () => {
+      const tab = activeTabProvider()
+      if (tab) tab.postMessage({ type: "action", action: "tabPrevious" })
+      provider.postMessage({ type: "action", action: "tabPrevious" })
       agentManagerProvider.postMessage({ type: "action", action: "tabPrevious" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.nextTab", () => {
+      const tab = activeTabProvider()
+      if (tab) tab.postMessage({ type: "action", action: "tabNext" })
+      provider.postMessage({ type: "action", action: "tabNext" })
       agentManagerProvider.postMessage({ type: "action", action: "tabNext" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.previousTerminal", () => {
@@ -934,6 +949,12 @@ export async function deactivate() {
     if (result.status === "rejected") console.warn("[Kilo New] Extension shutdown failed:", result.reason)
   }
   TelemetryProxy.getInstance().shutdown()
+}
+
+/** Current IDE color scheme, so the Integrated Browser matches the editor theme. */
+function browserTheme(): "dark" | "light" {
+  const kind = vscode.window.activeColorTheme.kind
+  return kind === vscode.ColorThemeKind.Light || kind === vscode.ColorThemeKind.HighContrastLight ? "light" : "dark"
 }
 
 function openKiloInNewTab(
