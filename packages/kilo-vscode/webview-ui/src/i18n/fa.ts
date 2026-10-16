@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "برد",
+  "task.swarm.open": "باز کردن برد",
   "task.swarm.refresh": "تازه‌سازی",
   "task.swarm.reset": "بازنشانی برد",
   "task.swarm.resetTitle": "این برد بازنشانی شود؟",
@@ -217,6 +218,7 @@ export const dict = {
   "prompt.action.stop.background": "توقف عامل اصلی. عامل‌های پس‌زمینه به اجرا ادامه می‌دهند.",
   "prompt.agents.show": "نمایش عامل‌های پس‌زمینه",
   "prompt.action.enhance": "بهبود پرامپت",
+  "prompt.action.more": "اقدامات بیشتر",
   "prompt.paste.expand": "برای بازکردن متن جایگذاری‌شده کلیک کنید",
   "prompt.issues.title": "مشکلات نشست",
   "prompt.mcp.provider": "MCP {{name}}",
@@ -285,6 +287,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI شما را خارج کرد",
   "error.providerAuth.chatgpt.description":
     "دوباره با ChatGPT وارد شوید، سپس پیام خود را مجدداً ارسال کنید تا از مدل‌های Codex استفاده کنید.",
+
+  "provider.failure.unauthorized": "اعتبارنامه رد شد (HTTP {{status}}). دوباره وارد شوید.",
+  "provider.failure.unauthorizedNoStatus": "اعتبارنامه رد شد. دوباره وارد شوید.",
+  "provider.failure.unauthenticated": "وارد نشده‌اید.",
+  "provider.failure.network": "دسترسی به ارائه‌دهنده ممکن نشد. اتصال خود را بررسی کنید.",
+  "provider.failure.http": "خطای ارائه‌دهنده (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "خطای ارائه‌دهنده.",
+  "provider.failure.schema": "پاسخ غیرمنتظره از ارائه‌دهنده.",
 
   "notification.permission.title": "مجوز لازم است",
   "notification.permission.titleSubagent": "مجوز مورد نیاز است (زیرعامل)",
@@ -928,6 +938,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "ابزارهای بومی Notebook",
   "settings.experimental.nativeNotebookTools.description":
     "ابزارهای آزمایشی برای خواندن، ویرایش و اجرای VS Code notebooks را فعال کنید",
+  "settings.experimental.globIncludeIgnored.title": "جستجوی مسیرهای نادیده‌گرفته‌شده",
+  "settings.experimental.globIncludeIgnored.description":
+    "پوشه‌ها یا فایل‌هایی که ابزار glob باید حتی وقتی .gitignore یا سایر فایل‌های نادیده‌گیری آن‌ها را مستثنا می‌کنند، جستجو کند. از الگوهای سبک gitignore نسبت به فضای کاری استفاده کنید؛ پوشه‌های نادیده‌گرفته‌شده درون آن‌ها همچنان رد می‌شوند.",
   "settings.experimental.continueOnDeny.title": "ادامه در صورت رد",
   "settings.experimental.continueOnDeny.description": "حلقه عامل را هنگام رد شدن یک مجوز ادامه دهید",
   "settings.experimental.codeMode.title": "فراخوانی برنامه‌نویسی ابزارها",
@@ -1377,6 +1390,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "توقف همه ({{count}})",
   "task.backgroundAgents.finished": "عامل‌های پس‌زمینه به پایان رسیدند",
   "task.stop": "توقف زیرعامل",
+  "task.open.panel": "باز کردن زیرعامل در پنل",
+  "task.open.tab": "باز کردن زیرعامل در تب",
 
   "settings.saveBar.unsavedChanges": "تغییرات ذخیره‌نشده",
   "settings.saveBar.discard": "رد کردن",
@@ -1445,6 +1460,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "استفاده از Chrome سیستم",
   "settings.experimental.browserAutomation.systemChrome.description":
     "از Google Chrome نصب‌شده برای مرورگر یکپارچه استفاده کنید. فقط زمانی غیرفعال کنید که مرورگر Playwright Chromium سازگار از قبل نصب شده باشد.",
+  "settings.experimental.browserLinks.title": "باز کردن پیوندها در",
+  "settings.experimental.browserLinks.description":
+    "انتخاب کنید پیوندهای وب از گفتگوهای Kilo کجا باز شوند. به مرورگر یکپارچه نیاز دارد.",
+  "settings.experimental.browserLinks.external": "مرورگر سیستم",
+  "settings.experimental.browserLinks.integrated": "مرورگر یکپارچه",
   "chat.search.searchingHistory": "در حال جستجو در پیام‌های قبلی…",
   "browserTab.noSession": "مرورگر را از یک نشست باز کنید تا یک برنامه محلی یا یک صفحه HTTPS عمومی را پیش‌نمایش بگیرید.",
   "browserTab.disabled": "مرورگر یکپارچه غیرفعال است. آن را در تنظیمات Kilo > آزمایشی فعال کنید.",

@@ -29,8 +29,13 @@ const Toolbar: Component<{
   labels: BrowserLabels
   title?: string
   active: boolean
+  openExternal: (url: string) => void
 }> = (props) => {
   const ready = () => !!props.controller.state()?.url && props.controller.state()?.status !== "closed"
+  const external = () => {
+    const url = props.controller.state()?.url
+    if (url) props.openExternal(url)
+  }
   return (
     <div class="am-browser-toolbar">
       <Tooltip value={props.labels.back} placement="bottom">
@@ -81,8 +86,9 @@ const Toolbar: Component<{
           variant="ghost"
           value={props.controller.url()}
           onChange={props.controller.setUrl}
-          placeholder={props.labels.urlPlaceholder}
+          placeholder={props.active ? props.labels.urlPlaceholder : props.labels.noSession}
           aria-label={props.labels.url}
+          disabled={!props.active}
           spellcheck={false}
           autocomplete="off"
           onFocus={(event: FocusEvent & { currentTarget: HTMLInputElement }) => event.currentTarget.select()}
@@ -98,6 +104,16 @@ const Toolbar: Component<{
           />
         </Tooltip>
       </form>
+      <Tooltip value={props.labels.openExternal} placement="bottom">
+        <IconButton
+          icon="square-arrow-top-right"
+          size="small"
+          variant="ghost"
+          aria-label={props.labels.openExternal}
+          disabled={!ready() || props.controller.loading()}
+          onClick={external}
+        />
+      </Tooltip>
       <Tooltip value={props.labels.inspect} placement="bottom">
         <IconButton
           icon="window-cursor"
@@ -148,6 +164,7 @@ const Picker: Component<{
         class="am-browser-inspect"
         aria-label={props.labels.inspect}
         onMouseMove={(event) => props.controller.move(position(event))}
+        onMouseLeave={props.controller.leave}
         onClick={(event) => props.controller.select(position(event))}
       />
       <Show when={bounds()} keyed>
@@ -194,12 +211,22 @@ const Viewport: Component<{
         keyed
         fallback={
           <Show when={!issue()}>
-            <div class="am-browser-empty">
-              <div>{props.scope()?.sessionId ? props.labels.empty : props.labels.noSession}</div>
-              <Show when={props.scope()?.sessionId}>
+            <Show
+              when={props.scope()?.sessionId}
+              fallback={
+                <Card variant="warning" class="am-browser-error-overlay" role="alert">
+                  <div class="error-card-body">
+                    <Icon name="warning" size="small" />
+                    <div class="error-card-message">{props.labels.noSession}</div>
+                  </div>
+                </Card>
+              }
+            >
+              <div class="am-browser-empty">
+                <div>{props.labels.empty}</div>
                 <div>{props.labels.requirement}</div>
-              </Show>
-            </div>
+              </div>
+            </Show>
           </Show>
         }
       >
@@ -209,6 +236,8 @@ const Viewport: Component<{
             state={() => props.state}
             transport={props.transport}
             label={props.labels.screenshotAlt}
+            inspecting={() => props.controller.selecting() || props.controller.pointing()}
+            onScroll={props.controller.scroll}
           />
         )}
       </Show>
@@ -314,6 +343,7 @@ export interface BrowserPanelProps {
   labels: BrowserLabels
   download: () => void
   settings: () => void
+  openExternal: (url: string) => void
   onReference: (reference: BrowserReference) => void
   onClose: () => void
   theme?: Accessor<"dark" | "light">
@@ -340,6 +370,7 @@ export const BrowserPanel: Component<BrowserPanelProps> = (props) => {
         labels={props.labels}
         title={state()?.title}
         active={!!props.scope()?.sessionId}
+        openExternal={props.openExternal}
       />
       <div class="am-browser-workspace" classList={{ "am-browser-workspace-docked": !!controller.tools() }}>
         <Viewport

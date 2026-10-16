@@ -160,6 +160,93 @@ class ConfigSelectionTest : SessionControllerTestBase() {
 
         assertEquals("anthropic/claude", m.model.model)
         assertFalse(m.model.modelOverride)
+        assertEquals(listOf("code"), appRpc.cleared)
+        assertFalse("code" in app.models.value.model)
+    }
+
+    /**
+     * The reported bug: the persisted pick outranks every config default, so a reset that left it on
+     * disk looked like it worked until the next mode switch resurrected it.
+     */
+    fun `test clearModelOverride survives a mode switch`() {
+        appRpc.models = ModelStateDto(model = mapOf("plan" to ModelSelectionDto("openai", "gpt")))
+        appRpc.state.value = KiloAppStateDto(
+            KiloAppStatusDto.READY,
+            config = ConfigDto(model = "anthropic/claude"),
+        )
+        projectRpc.state.value = workspaceReady(
+            agents = listOf(
+                AgentDto(name = "code", displayName = "Code", mode = "code"),
+                AgentDto(name = "plan", displayName = "Plan", mode = "code"),
+            ),
+            providers = listOf(
+                ProviderDto(
+                    id = "anthropic",
+                    name = "Anthropic",
+                    models = mapOf("claude" to ModelDto(id = "claude", name = "Claude")),
+                ),
+                ProviderDto(
+                    id = "openai",
+                    name = "OpenAI",
+                    models = mapOf("gpt" to ModelDto(id = "gpt", name = "GPT")),
+                ),
+            ),
+            connected = listOf("anthropic", "openai"),
+            defaults = emptyMap(),
+        )
+        val m = controller()
+        collect(m)
+        flush()
+
+        edt { m.selectAgent("plan") }
+        flush()
+        assertEquals("openai/gpt", m.model.model)
+        assertTrue(m.model.modelOverride)
+
+        edt { m.clearModelOverride() }
+        flush()
+        assertEquals("anthropic/claude", m.model.model)
+
+        edt { m.selectAgent("code") }
+        flush()
+        edt { m.selectAgent("plan") }
+        flush()
+
+        assertEquals("anthropic/claude", m.model.model)
+        assertFalse(m.model.modelOverride)
+    }
+
+    fun `test clearModelOverride without a saved pick skips the RPC`() {
+        appRpc.state.value = KiloAppStateDto(
+            KiloAppStatusDto.READY,
+            config = ConfigDto(model = "kilo/gpt-5"),
+        )
+        projectRpc.state.value = workspaceReady(
+            providers = listOf(
+                ProviderDto(
+                    id = "kilo",
+                    name = "Kilo",
+                    models = mapOf(
+                        "gpt-5" to ModelDto(id = "gpt-5", name = "GPT-5"),
+                        "opus" to ModelDto(id = "opus", name = "Opus"),
+                    ),
+                ),
+            ),
+        )
+        val m = controller()
+        collect(m)
+        flush()
+
+        edt { m.selectModel("kilo", "opus") }
+        flush()
+        assertTrue(m.model.modelOverride)
+
+        edt { m.clearModelOverride() }
+        flush()
+
+        assertEquals("kilo/gpt-5", m.model.model)
+        assertFalse(m.model.modelOverride)
+        assertTrue(appRpc.cleared.isEmpty())
     }
 
     fun `test global config supplies computed default`() {

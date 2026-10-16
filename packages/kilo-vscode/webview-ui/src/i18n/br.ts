@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Quadro",
+  "task.swarm.open": "Abrir quadro",
   "task.swarm.refresh": "Atualizar",
   "task.swarm.reset": "Redefinir quadro",
   "task.swarm.resetTitle": "Redefinir este quadro?",
@@ -216,6 +217,7 @@ export const dict = {
   "prompt.action.stop.background": "Parar o agente principal. Os agentes em segundo plano continuam em execução.",
   "prompt.agents.show": "Mostrar agentes em segundo plano",
   "prompt.action.enhance": "Melhorar prompt",
+  "prompt.action.more": "Mais ações",
   "prompt.paste.expand": "Clique para expandir o texto colado",
   "prompt.issues.title": "Kudennoù estez",
   "prompt.mcp.provider": "MCP {{name}}",
@@ -290,6 +292,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI desconectou você",
   "error.providerAuth.chatgpt.description":
     "Faça login no ChatGPT novamente e envie sua mensagem de novo para continuar usando os modelos Codex.",
+
+  "provider.failure.unauthorized": "Credenciais rejeitadas (HTTP {{status}}). Faça login novamente.",
+  "provider.failure.unauthorizedNoStatus": "Credenciais rejeitadas. Faça login novamente.",
+  "provider.failure.unauthenticated": "Não conectado.",
+  "provider.failure.network": "Não foi possível acessar o provedor. Verifique sua conexão.",
+  "provider.failure.http": "Erro do provedor (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Erro do provedor.",
+  "provider.failure.schema": "Resposta inesperada do provedor.",
 
   "notification.permission.title": "Permissão necessária",
   "notification.permission.titleSubagent": "Permissão necessária (subagente)",
@@ -952,6 +962,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Ferramentas nativas de notebook",
   "settings.experimental.nativeNotebookTools.description":
     "Ativar ferramentas experimentais para ler, editar e executar notebooks do VS Code",
+  "settings.experimental.globIncludeIgnored.title": "Pesquisar caminhos ignorados",
+  "settings.experimental.globIncludeIgnored.description":
+    "Pastas ou arquivos que a ferramenta glob deve pesquisar mesmo quando o .gitignore ou outros arquivos de exclusão os ignoram. Use padrões no estilo gitignore relativos ao workspace; pastas ignoradas dentro deles continuam excluídas.",
   "settings.experimental.continueOnDeny.title": "Continuar ao negar",
   "settings.experimental.continueOnDeny.description": "Continuar o loop do agente quando uma permissão é negada",
   "settings.sandboxing.title": "Isolamento em sandbox",
@@ -1399,6 +1412,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Parar todos ({{count}})",
   "task.backgroundAgents.finished": "Agentes em segundo plano concluídos",
   "task.stop": "Parar subagente",
+  "task.open.panel": "Abrir subagente no painel",
+  "task.open.tab": "Abrir subagente em uma aba",
   "settings.saveBar.unsavedChanges": "Alterações não salvas",
   "settings.saveBar.discard": "Descartar",
   "settings.saveBar.save": "Salvar",
@@ -1463,6 +1478,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Usar Chrome do Sistema",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Use o Google Chrome instalado para o Navegador Integrado. Desative apenas quando um navegador Playwright Chromium compatível já estiver instalado.",
+  "settings.experimental.browserLinks.title": "Abrir links em",
+  "settings.experimental.browserLinks.description":
+    "Escolha onde os links da web abrem a partir das conversas do Kilo. Requer o Navegador Integrado.",
+  "settings.experimental.browserLinks.external": "Navegador do sistema",
+  "settings.experimental.browserLinks.integrated": "Navegador Integrado",
   "chat.search.searchingHistory": "Pesquisando mensagens anteriores…",
   "browserTab.noSession":
     "Abra o navegador de uma sessão para visualizar um aplicativo local ou uma página HTTPS pública.",

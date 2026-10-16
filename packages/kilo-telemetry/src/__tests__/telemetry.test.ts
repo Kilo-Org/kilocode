@@ -1,6 +1,9 @@
-import { arch, platform, release } from "node:os"
+import { arch, platform, release, tmpdir } from "node:os"
+import { chmod, mkdtemp, mkdir, rm } from "node:fs/promises"
+import { join } from "node:path"
 import { describe, test, expect, beforeEach, spyOn } from "bun:test"
 import { Client } from "../client.js"
+import { Conda } from "../conda.js"
 import { Identity } from "../identity.js"
 import { TelemetryEvent } from "../events.js"
 import { Telemetry } from "../telemetry.js"
@@ -114,6 +117,16 @@ describe("Telemetry", () => {
     capture.mockRestore()
   })
 
+  test("ignores a forwarded conda client ID", () => {
+    const capture = spyOn(Client, "capture").mockImplementation(() => {})
+    try {
+      Telemetry.track(TelemetryEvent.CLI_START, { aauClientToken: "supplied" })
+      expect(capture.mock.calls[0]?.[1]).not.toHaveProperty("aauClientToken")
+    } finally {
+      capture.mockRestore()
+    }
+  })
+
   test("indexing helpers are exposed", () => {
     expect(typeof Telemetry.trackIndexingStarted).toBe("function")
     expect(typeof Telemetry.trackIndexingCompleted).toBe("function")
@@ -132,9 +145,48 @@ describe("Telemetry", () => {
 
     try {
       Telemetry.trackToolUsed("chart", "session-123")
-      expect(capture).toHaveBeenCalledWith(TelemetryEvent.TOOL_USED, expect.objectContaining({ tool: "chart", sessionId: "session-123" }))
+      expect(capture).toHaveBeenCalledWith(
+        TelemetryEvent.TOOL_USED,
+        expect.objectContaining({ tool: "chart", sessionId: "session-123" }),
+      )
     } finally {
       capture.mockRestore()
     }
   })
+})
+
+const shell = process.platform === "win32" ? test.skip : test
+
+shell("uses conda's effective client ID in events", async () => {
+  const root = await mkdtemp(join(tmpdir(), "kilo-aau-"))
+  const home = process.env.HOME
+  const exe = process.env.CONDA_EXE
+  const token = "abcdefghijklmnopqrstuv"
+  const conda = join(root, "conda")
+  const capture = spyOn(Client, "capture").mockImplementation(() => {})
+
+  try {
+    await mkdir(join(root, ".conda"))
+    await Bun.write(join(root, ".conda", "aau_token"), token)
+    await Bun.write(conda, `#!/bin/sh\nprintf '%s\\n' '{"user_agent":"conda/26.1 c/${token}"}'\n`)
+    await chmod(conda, 0o755)
+    process.env.HOME = root
+    process.env.CONDA_EXE = conda
+
+    expect(await Conda.clientToken()).toBe(token)
+    await Telemetry.init({ dataPath: root, version: "test", enabled: true })
+    Telemetry.trackCliStart()
+    expect(capture).toHaveBeenCalledWith(TelemetryEvent.CLI_START, expect.objectContaining({ aauClientToken: token }))
+
+    await Bun.write(conda, "#!/bin/sh\nprintf '%s\\n' '{\"user_agent\":\"conda/26.1\"}'\n")
+    expect(await Conda.clientToken()).toBeUndefined()
+  } finally {
+    capture.mockRestore()
+    await Client.shutdown()
+    if (home === undefined) delete process.env.HOME
+    else process.env.HOME = home
+    if (exe === undefined) delete process.env.CONDA_EXE
+    else process.env.CONDA_EXE = exe
+    await rm(root, { recursive: true, force: true })
+  }
 })

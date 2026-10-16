@@ -34,6 +34,8 @@ import { McpOAuthPendingProvider, McpOAuthProvider, OAUTH_CALLBACK_PATH } from "
 import { McpOAuthCallback } from "./oauth-callback"
 import { McpAuth } from "./auth"
 import { probe } from "@/kilocode/mcp/sse-probe" // kilocode_change - normalize the optional GET stream probe
+import { oauthGuard } from "@/kilocode/mcp/oauth-fetch" // kilocode_change - bind automatic invalidation to the rejected credential
+import * as KiloMcpCleanup from "@/kilocode/mcp/cleanup" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { TuiEvent } from "@/server/tui-event"
 import { Cause, Effect, Exit, Layer, Context, Schema, Stream } from "effect"
@@ -342,13 +344,24 @@ const layer = Layer.effect(
         )
       }
 
+      // kilocode_change start - scope the stream probe to this endpoint and compose it with
+      // the OAuth refresh guard so a rejected refresh cannot wipe newer rotated credentials
+      const remoteFetch = authProvider
+        ? oauthGuard(probe(fetch, url.href), {
+            name: key,
+            serverUrl: mcp.url,
+            auth,
+            provider: authProvider,
+          })
+        : probe(fetch, url.href)
+
       const transports: Array<{ name: string; transport: TransportWithAuth }> = [
         {
           name: "StreamableHTTP",
           transport: new StreamableHTTPClientTransport(url, {
             authProvider,
             requestInit: mcp.headers ? { headers: mcp.headers } : undefined,
-            fetch: probe(), // kilocode_change - a non-SSE body on the GET probe must not start a reconnect loop
+            fetch: remoteFetch,
           }),
         },
         {
@@ -356,9 +369,11 @@ const layer = Layer.effect(
           transport: new SSEClientTransport(url, {
             authProvider,
             requestInit: mcp.headers ? { headers: mcp.headers } : undefined,
+            fetch: remoteFetch,
           }),
         },
       ]
+      // kilocode_change end
 
       const connectTimeout = mcp.timeout ?? DEFAULT_TIMEOUT
       let lastStatus: Status | undefined
@@ -589,6 +604,7 @@ const layer = Layer.effect(
           defs: {},
           instructions: {},
         }
+        yield* Effect.addFinalizer(() => KiloMcpCleanup.release(s, descendants)) // kilocode_change - close servers if this lookup is interrupted
 
         yield* Effect.forEach(
           Object.entries(config),

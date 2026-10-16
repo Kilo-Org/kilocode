@@ -1,5 +1,6 @@
 import { release } from "node:os"
 import { Client } from "./client.js"
+import { Conda } from "./conda.js"
 import { Identity } from "./identity.js"
 import { TelemetryEvent } from "./events.js"
 
@@ -12,6 +13,7 @@ export interface TelemetryProperties {
   os_arch: string
   editorName?: string
   vscodeVersion?: string
+  aauClientToken?: string
 }
 
 export type ReviewCommand = "review"
@@ -58,6 +60,7 @@ export interface IndexingErrorTelemetryProperties extends IndexingTelemetryPrope
 export namespace Telemetry {
   let initialized = false
   let startTime = 0
+  let probe = 0
   let props: TelemetryProperties = {
     appName: "kilo-cli",
     appVersion: "unknown",
@@ -90,14 +93,25 @@ export namespace Telemetry {
     const enabled = level ? level === "all" : options.enabled
     Client.setEnabled(enabled)
 
-    await Identity.getMachineId()
+    await Promise.all([Identity.getMachineId(), enabled ? refreshConda() : Promise.resolve()])
 
     initialized = true
     startTime = Date.now()
   }
 
   export function setEnabled(value: boolean) {
+    if (value === Client.isEnabled()) return
     Client.setEnabled(value)
+    delete props.aauClientToken
+    if (value) void refreshConda()
+    else probe++
+  }
+
+  async function refreshConda() {
+    const current = ++probe
+    const token = await Conda.clientToken()
+    if (current !== probe || !Client.isEnabled()) return
+    if (token) props.aauClientToken = token
   }
 
   export function isEnabled(): boolean {
@@ -119,9 +133,11 @@ export namespace Telemetry {
 
   export function track(event: TelemetryEvent, properties?: Record<string, unknown>) {
     const org = Identity.getOrganizationId()
+    const data = { ...properties }
+    delete data.aauClientToken
     Client.capture(event, {
       ...props,
-      ...properties,
+      ...data,
       ...(Identity.getUserId() &&
         (event === TelemetryEvent.CLI_START || event === TelemetryEvent.AUTH_SUCCESS) && {
           $set: {

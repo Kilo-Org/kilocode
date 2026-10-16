@@ -112,7 +112,29 @@ data class McpConfigDto(
     val headers: Map<String, String>? = null,
     val enabled: Boolean? = null,
     val timeout: Long? = null,
+    val oauth: McpOAuthDto? = null,
 )
+
+@Serializable
+data class McpOAuthDto(
+    val enabled: Boolean? = null,
+    val clientId: String? = null,
+    val clientSecret: String? = null,
+    val scope: String? = null,
+    val callbackPort: Int? = null,
+    val redirectUri: String? = null,
+    val clear: Boolean = false,
+) {
+    /**
+     * Redacts [clientSecret].
+     *
+     * The generated `toString` of a data class prints every field, and this DTO travels through RPC
+     * logging and exception messages, so the secret would otherwise end up in the IDE log.
+     */
+    override fun toString(): String =
+        "McpOAuthDto(enabled=$enabled, clientId=$clientId, clientSecret=${if (clientSecret == null) "null" else "***"}, " +
+            "scope=$scope, callbackPort=$callbackPort, redirectUri=$redirectUri, clear=$clear)"
+}
 
 typealias PermissionConfigDto = Map<String, PermissionRuleDto>
 

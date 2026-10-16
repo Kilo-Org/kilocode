@@ -25,6 +25,7 @@ import { LanceDBRuntime } from "../src/kilocode/lancedb"
 import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
 import * as KiloSbom from "./kilocode/sbom"
+import * as KiloRelease from "../../../script/kilocode/release"
 // kilocode_change end
 
 const singleFlag = process.argv.includes("--single")
@@ -478,7 +479,9 @@ if (Script.release) {
     release: { version: Script.version, channel: Script.channel },
     expected: targets.length,
   })
-  await $`gh release upload v${Script.version} ${[...archives, ...evidence.files]} --clobber`
+  // One `gh release upload` for the whole set cancels every in-flight upload as
+  // soon as a single transfer hiccups, so publish them one at a time instead.
+  await KiloRelease.upload({ tag: `v${Script.version}`, files: [...archives, ...evidence.files] })
   // kilocode_change end
 }
 
