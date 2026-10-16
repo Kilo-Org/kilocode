@@ -1070,7 +1070,7 @@ class SessionUi(
             // commands and client actions don't pay the editor-context cost or hit its failure modes.
             // Ignore-file VFS reads suspend on Dispatchers.IO before returning to the EDT.
             val editor = EditorContextGatherer.gather(project, workspace.directory)
-            if (project.isDisposed) return@launch
+            if (disposed || project.isDisposed) return@launch
             val allFiles = files + editor.selection
             LOG.debug {
                 val parts = buildList {
