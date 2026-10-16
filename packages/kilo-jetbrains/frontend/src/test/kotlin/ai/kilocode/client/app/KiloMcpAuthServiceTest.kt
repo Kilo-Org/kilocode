@@ -83,6 +83,38 @@ class KiloMcpAuthServiceTest : BasePlatformTestCase() {
         assertTrue(rpc.mcpCalls.isEmpty())
     }
 
+    fun `test refresh keeps last known needs_auth when the status read fails`() = runBlocking(Dispatchers.Default) {
+        rpc.mcps = listOf(McpStatusDto("linear", "needs_auth"))
+        val service = service()
+        service.refresh("/test")
+        assertEquals(setOf("linear"), service.needsAuth.value["/test"])
+
+        rpc.mcpStatusError = RuntimeException("boom")
+        val needs = service.refresh("/test")
+
+        // A failed read is not proof of sign-in: the badge must survive it.
+        assertEquals(setOf("linear"), needs)
+        assertEquals(setOf("linear"), service.needsAuth.value["/test"])
+    }
+
+    fun `test refreshAll updates every known directory and the origin`() = runBlocking(Dispatchers.Default) {
+        val service = service()
+        rpc.mcpsByDirectory = mapOf("/main" to listOf(McpStatusDto("linear", "needs_auth")))
+        rpc.mcps = listOf(McpStatusDto("linear", "needs_auth"))
+        service.refresh("/main")
+        service.refresh("/worktree")
+
+        // Signing in from the worktree clears the badge in main too.
+        rpc.mcpsByDirectory = mapOf(
+            "/main" to listOf(McpStatusDto("linear", "connected")),
+            "/worktree" to listOf(McpStatusDto("linear", "connected")),
+        )
+        service.refreshAll("/worktree")
+
+        assertTrue(service.needsAuth.value["/main"].orEmpty().isEmpty())
+        assertTrue(service.needsAuth.value["/worktree"].orEmpty().isEmpty())
+    }
+
     fun `test refresh bounds directory state`() = runBlocking(Dispatchers.Default) {
         val service = service()
         rpc.mcps = listOf(McpStatusDto("linear", "needs_auth"))
