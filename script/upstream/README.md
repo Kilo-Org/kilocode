@@ -85,6 +85,7 @@ bun script/check-workflows.ts
 bun run check                                   # or bun typecheck in packages/core, cli, server, tui, plugin
 bun script/check-opencode-annotations.ts
 bun script/check-shared-patches.ts
+bun script/upstream/progress.ts --check           # regenerate with `bun script/upstream/progress.ts` when it fails
 ```
 
 Then run focused tests in `packages/core`, `cli` and `server` with the test isolation from `.kilo/skills/v2-migration/SKILL.md`, run the same tests on `origin/v2`, and classify each failure as new or already failing. Self-test the CLI as the skill describes (`VERIFICATION_TEST.md`).
@@ -99,6 +100,10 @@ Both checks compare the tree with the pinned upstream release commit: the second
 - `bun script/check-shared-patches.ts [--worktree] [--json] [--pin <ref>]` (U-L3-01): prints each shared file that Kilo adds or changes, its marked and unmarked lines, and the shared files Kilo deleted. It fails when a shared file has no entry in `shared-patches.json` (rung and missing seam), or when a count grows above its limit. A PR that adds a shared patch adds the entry and raises the limit in the same diff. Deleted workflows are not counted: `script/check-workflows.ts` governs them. Generated files (`bun.lock`, listed in `utils/owned.ts`) are listed but not counted: they follow from the `package.json` files, so a new Kilo-owned package does not trip the checks.
 
 CI runs both in `.github/workflows/kilo-v2.yml` (job `shared upstream patches`), and the tests of this directory (job `upstream sync tooling tests`).
+
+## Progress map
+
+`bun script/upstream/progress.ts` generates `migration-tracking/progress/README.md`, `progress.json`, `progress.svg` (treemap: one box per feature, green done, grey open, yellow dropped) and `history.svg` (one point per day, read from the committed `progress.json` files on the first-parent history): Kilo's v1 delta as cells per feature (modules, API operations, hooks, tests), each checked against the v2 working tree. Inputs are `migration-tracking/progress/features.json` (pins, feature split, exclusions) and `dispositions.json` (decisions per cell). `--check` fails when the committed output is stale (CI job `migration progress map`); `--list <feature>` prints the open cells of one feature; `--compare <base.json> <head.json>` prints the markdown delta that the CI job `migration progress comment` posts on every same-repository pull request (one comment, updated per push, with the treemap of the head commit). `badge.svg` and the two charts are embedded in the root `README.md` inside a marked block. The pins name the v1 target (a `main` commit) and the upstream commit it was synced to. Move them together when the v1 reference moves, in a PR of their own, and expect hook IDs of changed hunks to change with them; `dispositions.json` entries that no longer resolve fail the run and must be cleaned up in the same PR. `.kilo/skills/v2-migration/SKILL.md` describes how a port closes cells.
 
 ## Per-file tools
 
