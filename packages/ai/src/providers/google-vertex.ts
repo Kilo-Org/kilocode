@@ -5,7 +5,6 @@ import { ProviderShared } from "../protocols/shared.js"
 import { Auth } from "../route/auth.js"
 import { Route, type RouteDefaultsInput } from "../route/client.js"
 import { Endpoint } from "../route/endpoint.js"
-import { Framing } from "../route/framing.js"
 import { ProviderConfigurationError, ProviderID, type LLMRequest, type ModelID } from "../schema/index.js"
 import { GoogleVertexShared } from "./google-vertex-shared.js"
 
@@ -69,7 +68,7 @@ const route = Route.make({
     const serviceTier = request.providerOptions?.serviceTier
     return typeof serviceTier === "string" ? { "x-vertex-ai-llm-shared-request-type": serviceTier } : {}
   },
-  framing: Framing.sse,
+  transport: Gemini.transport,
 })
 
 export const routes = [route]

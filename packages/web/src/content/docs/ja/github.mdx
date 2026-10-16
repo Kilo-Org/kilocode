@@ -69,7 +69,6 @@ opencode github install
              ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
            with:
              model: anthropic/claude-sonnet-4-20250514
-             # share: true
              # github_token: xxxx
 ```
 
@@ -83,7 +82,6 @@ opencode github install
 
 - `model`: OpenCode で使用するモデル。 `provider/model` の形式をとります。これは**必須**です。
 - `agent`: 使用するエージェント。プライマリエージェントである必要があります。見つからない場合は、設定から `default_agent` にフォールバックするか、`"build"` にフォールバックします。
-- `share`: OpenCode セッションを共有するかどうか。パブリックリポジトリのデフォルトは **true** です。
 - `prompt`: デフォルトの動作をオーバーライドするためのオプションのカスタムプロンプト。これを使用して、OpenCode がリクエストを処理する方法をカスタマイズします。
 - `token`: コメントの作成、変更のコミット、プルリクエストのオープンなどの操作を実行するためのオプションの GitHub アクセストークン。デフォルトでは、OpenCode は OpenCode GitHub アプリからのインストールアクセストークンを使用するため、コミット、コメント、プルリクエストはアプリからのものとして表示されます。
 

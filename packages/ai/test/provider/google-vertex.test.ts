@@ -539,6 +539,50 @@ describe("Google Vertex providers", () => {
     }),
   )
 
+  it.effect("continues split Gemini responses with the Vertex request body", () =>
+    Effect.gen(function* () {
+      const sent: Array<{ readonly authorization: string | null; readonly body: Record<string, unknown> }> = []
+      const responses = [
+        sseEvents({
+          candidates: [
+            {
+              content: { role: "model", parts: [{ text: "Hel" }] },
+              finishReason: "CONTINUATION",
+              continuationToken: "token-1",
+            },
+          ],
+        }),
+        sseEvents({ candidates: [{ content: { role: "model", parts: [{ text: "lo." }] }, finishReason: "STOP" }] }),
+      ]
+      const response = yield* LLMClient.generate(
+        LLM.request({
+          model: GoogleVertex.configure({
+            accessToken: "vertex-token",
+            project: "vertex-project",
+            providerOptions: { labels: { component: "opencode" }, serviceTier: "flex" },
+          }).model("gemini-test"),
+          prompt: "Say hello.",
+        }),
+      ).pipe(
+        Effect.provide(
+          dynamicResponse((input) =>
+            Effect.sync(() => {
+              sent.push({ authorization: input.request.headers.authorization ?? null, body: JSON.parse(input.text) })
+              return input.respond(responses[sent.length - 1], { headers: { "content-type": "text/event-stream" } })
+            }),
+          ),
+        ),
+      )
+
+      expect(response.text).toBe("Hello.")
+      expect(response.events.filter((event) => event.type === "text-start")).toHaveLength(1)
+      expect(sent.map((request) => request.authorization)).toEqual(["Bearer vertex-token", "Bearer vertex-token"])
+      expect(sent[0].body).toMatchObject({ labels: { component: "opencode" } })
+      expect(sent[0].body).not.toHaveProperty("serviceTier")
+      expect(sent[1].body).toEqual({ ...sent[0].body, continuationToken: "token-1" })
+    }),
+  )
+
   test("rejects tuned Gemini models in express mode", () => {
     expect(() => GoogleVertex.configure({ apiKey: "fixture" }).model("endpoints/1234567890")).toThrow(
       expect.objectContaining({

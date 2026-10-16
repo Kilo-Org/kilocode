@@ -38,7 +38,7 @@ test.skip("execute rejects filesystem fetches", async () => { // kilocode_change
   )
 
   expect(result.output.error).toBe(true)
-  expect(result.output.output).toContain("fetch cannot currently be used for filesystem access.")
+  expect(result.output.output).toContain("fetch cannot be used for filesystem access.")
 })
 
 test("canonical execution distinguishes declared, model-only, and raw schema outputs", async () => {

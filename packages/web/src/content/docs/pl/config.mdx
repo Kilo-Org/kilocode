@@ -353,27 +353,6 @@ Dotyczy to wszystkich interfejsów: TUI, CLI (`opencode run`), aplikacji desktop
 
 ---
 
-### Share (Udostępnianie)
-
-Możesz skonfigurować [udostępnianie](/docs/share) za pomocą opcji `share`.
-
-```json title="opencode.json"
-{
-  "$schema": "https://opencode.ai/config.json",
-  "share": "manual"
-}
-```
-
-Opcje:
-
-- `"manual"` – Zezwalaj na ręczne udostępnianie (domyślnie)
-- `"auto"` - Automatycznie udostępniaj nowe rozmowy
-- `"disabled"` - Całkowicie wyłącz udostępnianie
-
-Domyślnie ustawiony jest tryb ręczny, w którym należy jawnie udostępniać rozmowy za pomocą polecenia `/share`.
-
----
-
 ### Commands (Polecenia)
 
 Możesz zdefiniować niestandardowe polecenia dla powtarzalnych zadań za pomocą opcji `command`.

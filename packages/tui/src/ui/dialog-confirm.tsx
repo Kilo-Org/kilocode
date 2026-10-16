@@ -1,7 +1,6 @@
-import { TextAttributes } from "@opentui/core"
 import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
-import { useDialog } from "./dialog"
+import { DialogHeader, DialogLayout, useDialog } from "./dialog"
 import { createStore } from "solid-js/store"
 import { For } from "solid-js"
 import { Locale } from "../util/locale"
@@ -56,38 +55,32 @@ export function DialogConfirm(props: DialogConfirmProps) {
     ],
   }))
   return (
-    <box paddingLeft={2} paddingRight={2} gap={1}>
-      <box flexDirection="row" justifyContent="space-between">
-        <text attributes={TextAttributes.BOLD} fg={theme.text.base}>
-          {props.title}
-        </text>
-        <text fg={theme.text.muted} onMouseUp={() => dialog.clear()}>
-          esc
-        </text>
-      </box>
-      <box paddingBottom={1}>
-        <text fg={theme.text.muted}>{props.message}</text>
-      </box>
-      <box flexDirection="row" justifyContent="flex-end" paddingBottom={1}>
-        <For each={["cancel", "confirm"] as const}>
-          {(key) => (
-            <box
-              paddingLeft={1}
-              paddingRight={1}
-              backgroundColor={key === store.active ? theme.background.action.primary.focused : undefined}
-              onMouseUp={() => {
-                if (key === "confirm") props.onConfirm?.()
-                if (key === "cancel") props.onCancel?.()
-                dialog.clear()
-              }}
-            >
-              <text fg={key === store.active ? theme.text.action.primary.focused : theme.text.muted}>
-                {Locale.titlecase(props.label?.[key] ?? key)}
-              </text>
-            </box>
-          )}
-        </For>
-      </box>
-    </box>
+    <DialogLayout
+      header={<DialogHeader title={props.title} />}
+      footer={
+        <box flexDirection="row" justifyContent="flex-end">
+          <For each={["cancel", "confirm"] as const}>
+            {(key) => (
+              <box
+                paddingLeft={1}
+                paddingRight={1}
+                backgroundColor={key === store.active ? theme.background.action.primary.focused : undefined}
+                onMouseUp={() => {
+                  if (key === "confirm") props.onConfirm?.()
+                  if (key === "cancel") props.onCancel?.()
+                  dialog.clear()
+                }}
+              >
+                <text fg={key === store.active ? theme.text.action.primary.focused : theme.text.muted}>
+                  {Locale.titlecase(props.label?.[key] ?? key)}
+                </text>
+              </box>
+            )}
+          </For>
+        </box>
+      }
+    >
+      <text fg={theme.text.muted}>{props.message}</text>
+    </DialogLayout>
   )
 }

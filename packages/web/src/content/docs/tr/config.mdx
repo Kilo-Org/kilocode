@@ -358,27 +358,6 @@ Bu ayar tüm arayüzler için geçerlidir: TUI, CLI (`opencode run`), masaüstü
 
 ---
 
-### Paylaşma
-
-[share](/docs/share) özelliğini `share` seçeneği aracılığıyla yapılandırabilirsiniz.
-
-```json title="opencode.json"
-{
-  "$schema": "https://opencode.ai/config.json",
-  "share": "manual"
-}
-```
-
-Bu şunları gerektirir:
-
-- `"manual"` - Komutlar aracılığıyla manuel paylaşıma izin ver (varsayılan)
-- `"auto"` - Yeni konuşmaları otomatik olarak paylaş
-- `"disabled"` - Paylaşımı tamamen devre dışı bırak
-
-Varsayılan olarak paylaşım, `/share` komutunu kullanarak konuşmaları açıkça paylaşmanız gereken manuel moda ayarlanmıştır.
-
----
-
 ### Komutlar
 
 `command` seçeneği aracılığıyla tekrarlanan görevler için özel komutlar yapılandırabilirsiniz.

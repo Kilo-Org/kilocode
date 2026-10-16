@@ -87,7 +87,7 @@ Both options take an array of model IDs — the same IDs shown in the `/models` 
 ## OpenCode Zen
 
 OpenCode Zen is a list of models provided by the OpenCode team that have been
-tested and verified to work well with OpenCode. [Learn more](/docs/zen).
+tested and verified to work well with OpenCode. [Learn more](https://opencode.ai/v2/docs/console/).
 
 :::tip
 If you are new, we recommend starting with OpenCode Zen.
@@ -1042,13 +1042,12 @@ to store token in opencode auth storage.
 OpenCode uses a small model for some AI tasks like generating the session title.
 It is configured to use gpt-5-nano by default, hosted by Zen. To lock OpenCode
 to only use your own GitLab-hosted instance, add the following to your
-`opencode.json` file. It is also recommended to disable session sharing.
+`opencode.json` file.
 
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "small_model": "gitlab/duo-chat-haiku-4-5",
-  "share": "disabled"
+  "small_model": "gitlab/duo-chat-haiku-4-5"
 }
 ```
 
@@ -1810,7 +1809,7 @@ If you already have an API key, you can select **Manually enter API Key** and pa
 
 ### OpenCode Zen
 
-OpenCode Zen is a list of tested and verified models provided by the OpenCode team. [Learn more](/docs/zen).
+OpenCode Zen is a list of tested and verified models provided by the OpenCode team. [Learn more](https://opencode.ai/v2/docs/console/).
 
 1. Sign in to **<a href={console}>OpenCode Zen</a>** and click **Create API Key**.
 

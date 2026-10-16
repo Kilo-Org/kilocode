@@ -69,7 +69,6 @@ Or you can set it up manually.
              ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
            with:
              model: anthropic/claude-sonnet-4-20250514
-             # share: true
    ```
 
 3. **Store the API keys in secrets**
@@ -82,7 +81,6 @@ Or you can set it up manually.
 
 - `model`: The model to use with OpenCode. Takes the format of `provider/model`. This is **required**.
 - `agent`: The agent to use. Must be a primary agent. Falls back to `default_agent` from config or `"build"` if not found.
-- `share`: Whether to share the OpenCode session. Defaults to **true** for public repositories.
 - `prompt`: Optional custom prompt to override the default behavior. Use this to customize how OpenCode processes requests.
 - `mentions`: Comma-separated list of trigger phrases, case-insensitive. Defaults to `/opencode,/oc`.
 - `variant`: Model variant for provider-specific reasoning effort, for example `high`, `max`, or `minimal`.

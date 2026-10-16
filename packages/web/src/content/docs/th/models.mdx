@@ -58,7 +58,7 @@ OpenCode ใช้ [AI SDK](https://ai-sdk.dev/) และ [Models.dev](https://
 }
 ```
 
-ID แบบเต็มคือ `provider_id/model_id` ตัวอย่างเช่น หากคุณใช้ [OpenCode Zen](/docs/zen) คุณจะใช้ `opencode/gpt-5.1-codex` สำหรับ GPT 5.1 Codex
+ID แบบเต็มคือ `provider_id/model_id` ตัวอย่างเช่น หากคุณใช้ [OpenCode Zen](https://opencode.ai/v2/docs/console/) คุณจะใช้ `opencode/gpt-5.1-codex` สำหรับ GPT 5.1 Codex
 
 หากคุณได้กำหนดค่า [ผู้ให้บริการที่กำหนดเอง](/docs/providers#กำหนดเอง) `provider_id` จะเป็นคีย์จากส่วน `provider` ของการกำหนดค่าของคุณ และ `model_id` จะเป็นคีย์จาก `provider.models`
 

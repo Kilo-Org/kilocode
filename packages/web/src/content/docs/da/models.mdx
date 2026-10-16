@@ -58,7 +58,7 @@ OpenCode konfig.
 }
 ```
 
-Her er det fulde ID `provider_id/model_id`. For eksempel, hvis du bruger [OpenCode Zen](/docs/zen), vil du bruge `opencode/gpt-5.1-codex` til GPT 5.1 Codex.
+Her er det fulde ID `provider_id/model_id`. For eksempel, hvis du bruger [OpenCode Zen](https://opencode.ai/v2/docs/console/), vil du bruge `opencode/gpt-5.1-codex` til GPT 5.1 Codex.
 
 Hvis du har konfigureret en [custom provider](/docs/providers#custom), er `provider_id` nøglen fra `provider` delen af ​​din konfiguration, og `model_id` er nøglen fra `provider.models`.
 

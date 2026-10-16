@@ -117,6 +117,11 @@ const processEffect = Effect.fnUntraced(function* (options: Options) {
             project: !truthy(
               process.env.OPENCODE_CONFIG_PROJECT_DISABLE ?? process.env.OPENCODE_DISABLE_PROJECT_CONFIG,
             ),
+            // .claude is only read for skills, so both flags gate the same roots.
+            claude: !(
+              truthy(process.env.OPENCODE_DISABLE_CLAUDE_CODE) ||
+              truthy(process.env.OPENCODE_DISABLE_CLAUDE_CODE_SKILLS)
+            ),
             file: process.env.OPENCODE_CONFIG,
             content: process.env.OPENCODE_CONFIG_CONTENT,
           },

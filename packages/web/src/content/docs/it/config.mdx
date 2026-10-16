@@ -356,27 +356,6 @@ Questa impostazione si applica a tutte le interfacce: TUI, CLI (`opencode run`),
 
 ---
 
-### Condivisione
-
-Puoi configurare la funzione di [condivisione](/docs/share) tramite l'opzione `share`.
-
-```json title="opencode.json"
-{
-  "$schema": "https://opencode.ai/config.json",
-  "share": "manual"
-}
-```
-
-Valori supportati:
-
-- `"manual"` - Consenti la condivisione manuale tramite comandi (predefinito)
-- `"auto"` - Condividi automaticamente le nuove conversazioni
-- `"disabled"` - Disabilita completamente la condivisione
-
-Per impostazione predefinita, la condivisione e in modalita manuale e devi condividere esplicitamente le conversazioni usando il comando `/share`.
-
----
-
 ### Comandi
 
 Puoi configurare comandi personalizzati per task ripetitivi tramite l'opzione `command`.

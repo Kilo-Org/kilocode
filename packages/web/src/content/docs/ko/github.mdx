@@ -69,7 +69,6 @@ opencode github install
              ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
            with:
              model: anthropic/claude-sonnet-4-20250514
-             # share: true
              # github_token: xxxx
    ```
 
@@ -83,7 +82,6 @@ opencode github install
 
 - `model`: OpenCode에서 사용할 model입니다. `provider/model` 형식이며 **필수**입니다.
 - `agent`: 사용할 agent입니다. primary agent여야 합니다. 찾지 못하면 config의 `default_agent`를 사용하고, 그것도 없으면 `"build"`로 fallback합니다.
-- `share`: OpenCode 세션 공유 여부입니다. public repo에서는 기본값이 **true**입니다.
 - `prompt`: 기본 동작을 override하는 선택형 custom prompt입니다. OpenCode의 요청 처리 방식을 조정할 때 사용합니다.
 - `token`: 댓글 생성, 커밋, PR 생성 같은 작업을 수행할 때 사용하는 선택형 GitHub access token입니다. 기본적으로 OpenCode는 OpenCode GitHub App의 installation access token을 사용하므로, 커밋/댓글/PR 작성 주체가 app으로 표시됩니다.
 

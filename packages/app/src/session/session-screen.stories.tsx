@@ -142,6 +142,29 @@ export const QuestionRequest = {
   ),
 }
 
+export const QuestionAnswerCounts = {
+  render: () => (
+    <SessionPreview
+      title="Choose supporting surfaces"
+      description={description}
+      document={questionPendingDocument}
+      request={{
+        type: "question",
+        value: {
+          ...activeQuestionRequest,
+          fields: [
+            activeQuestionRequest.fields[0],
+            {
+              ...activeQuestionRequest.fields[1],
+              options: [...activeQuestionRequest.fields[1].options, { value: "diagnostics", label: "Diagnostics" }],
+            },
+          ],
+        },
+      }}
+    />
+  ),
+}
+
 export const WebSearchRequest = {
   render: () => (
     <SessionPreview

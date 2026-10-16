@@ -185,7 +185,7 @@ export const connect = Effect.fnUntraced(function* (
     const runFork = Effect.runForkWith(yield* Effect.context())
     const client = new Client(clientInfo, {
       capabilities: {
-        ...(elicitation ? { elicitation: { form: { applyDefaults: true }, url: {} } } : {}),
+        ...(elicitation ? { elicitation: { form: {}, url: {} } } : {}),
         // Legacy era only: roots are deprecated as of 2026-07-28 and modern servers cannot request them.
         // Some legacy servers refuse to run without one (https://github.com/anomalyco/opencode/issues/2308).
         roots: {},
@@ -265,7 +265,8 @@ export const connect = Effect.fnUntraced(function* (
     // Servers that bundle their own Code Mode (Cloudflare and others) expose raw tools when asked
     // with ?codemode=false, which is what our Code Mode wants. The configured URL stays the OAuth identity.
     const url = new URL(config.url)
-    const addedCodemode = config.codemode !== false && !url.searchParams.has("codemode")
+    const addedCodemode =
+      config.codemode !== false && !url.searchParams.has("codemode") && !rejectsUnknownQuery(url)
     if (addedCodemode) url.searchParams.set("codemode", "false")
     const open = Effect.fnUntraced(function* (url: URL) {
       session.transport = new StreamableHTTPClientTransport(url, {
@@ -326,19 +327,35 @@ export const connect = Effect.fnUntraced(function* (
         Effect.mapError(failure),
         Effect.tapError((error) => Effect.logWarning(`failed to ${what}`, { server, error: error.message })),
       )
+    // The SDK answers a list for an unadvertised capability with a console.debug line plus an empty
+    // result, so refreshing a tools-only server prints to stdout on every catalog load. Negotiate
+    // first and leave the request unmade; the result is the same empty list without the noise.
+    const advertised = (capability: "tools" | "prompts" | "resources") =>
+      Boolean(client.getServerCapabilities()?.[capability])
 
     return {
       modern: client.getProtocolEra() === "modern",
       instructions: client.getInstructions()?.trim() || undefined,
-      tools: () => list("list MCP tools", () => client.listTools(undefined, catalog)).pipe(Effect.map((r) => r.tools)),
+      tools: () =>
+        advertised("tools")
+          ? list("list MCP tools", () => client.listTools(undefined, catalog)).pipe(Effect.map((r) => r.tools))
+          : Effect.succeed([]),
       prompts: () =>
-        list("list MCP prompts", () => client.listPrompts(undefined, catalog)).pipe(Effect.map((r) => r.prompts)),
+        advertised("prompts")
+          ? list("list MCP prompts", () => client.listPrompts(undefined, catalog)).pipe(Effect.map((r) => r.prompts))
+          : Effect.succeed([]),
       resources: () =>
-        list("list MCP resources", () => client.listResources(undefined, catalog)).pipe(Effect.map((r) => r.resources)),
+        advertised("resources")
+          ? list("list MCP resources", () => client.listResources(undefined, catalog)).pipe(
+              Effect.map((r) => r.resources),
+            )
+          : Effect.succeed([]),
       resourceTemplates: () =>
-        list("list MCP resource templates", () => client.listResourceTemplates(undefined, catalog)).pipe(
-          Effect.map((r) => r.resourceTemplates),
-        ),
+        advertised("resources")
+          ? list("list MCP resource templates", () => client.listResourceTemplates(undefined, catalog)).pipe(
+              Effect.map((r) => r.resourceTemplates),
+            )
+          : Effect.succeed([]),
       readResource: (input) => {
         if (!client.getServerCapabilities()?.resources) return Effect.succeed(undefined)
         return request("read MCP resource", (signal) =>
@@ -388,6 +405,17 @@ export const connect = Effect.fnUntraced(function* (
     })
   return yield* new ConnectError({ server, message: explain(error) })
 })
+
+// These servers reject any unknown query parameter and have no Code Mode of their own, so adding
+// ?codemode=false only costs a failed request before the retry at the configured URL.
+function rejectsUnknownQuery(url: URL) {
+  // Google Workspace MCP (gmailmcp, drivemcp, calendarmcp, ...) returns 404.
+  if (url.hostname.endsWith(".googleapis.com")) return true
+  // Zoho MCP gateways (zohomcp.com, zohomcp.eu, ...) return 400.
+  if (/(^|\.)zohomcp\.[a-z.]+$/.test(url.hostname)) return true
+  // Loopback servers run on this machine (Figma Desktop's Dev Mode MCP returns 404), so they are not hosted Code Mode servers.
+  return url.hostname === "localhost" || url.hostname === "[::1]" || /^127(\.\d+){3}$/.test(url.hostname)
+}
 
 // Absent config is legacy: the SDK sends the plain initialize handshake with no discover probe.
 function negotiation(protocol: ConfigMCP.Protocol | undefined): VersionNegotiationOptions | undefined {

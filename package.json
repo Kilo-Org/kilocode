@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/package.json",
   "name": "opencode",
   "description": "AI-powered development tool",
-  "version": "2.0.26",
+  "version": "2.0.29",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.4.2",
@@ -38,6 +38,7 @@
   "workspaces": {
     "packages": [
       "packages/*",
+      "packages/plugins/*",
       "services/*",
       "packages/console/*",
       "packages/stats/*"
@@ -68,7 +69,6 @@
       "@tsconfig/node22": "22.0.2",
       "@tsconfig/bun": "1.0.9",
       "@cloudflare/workers-types": "4.20251008.0",
-      "@openauthjs/openauth": "0.0.0-20250322224806",
       "@pierre/diffs": "1.5.1",
       "opentui-spinner": "0.0.7",
       "@solid-primitives/event-listener": "2.4.6",

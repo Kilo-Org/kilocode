@@ -201,6 +201,10 @@ const layer = Layer.effect(
                     ...model,
                     ...(provider?.canonical === undefined ? {} : { canonical: provider.canonical }),
                     package: model.package ?? provider?.package,
+                    compatibility:
+                      provider?.compatibility === undefined
+                        ? model.compatibility
+                        : { ...provider.compatibility, ...model.compatibility },
                     settings: Provider.mergeOverlay(
                       Provider.modelSettings(provider?.settings),
                       Provider.modelSettings(model.settings),

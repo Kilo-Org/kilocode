@@ -3,6 +3,7 @@
 import { $ } from "bun"
 import { OpenCode } from "@opencode/client"
 import { Service } from "@opencode/client/service"
+import { parse } from "@opencode/script/highlights"
 import { rm } from "fs/promises"
 import path from "path"
 import { parseArgs } from "util"
@@ -86,6 +87,14 @@ if (!notes) throw new Error("Release review is missing its changelog markers")
 const releaseNotes = notes[1].trim()
 if (!releaseNotes) throw new Error("Release review has no changelog")
 await Bun.write(changelog, `${releaseNotes}\n`)
+
+const highlights = parse(releaseNotes)
+highlights.problems.forEach((problem) => console.warn(`Warning: ${problem}`))
+console.log(
+  highlights.items.length
+    ? `TUI highlights will show:\n${highlights.items.map((item) => `  - ${item.title}`).join("\n")}`
+    : "TUI highlights will not show for this release",
+)
 
 const answer = prompt(`Trigger the ${version} release? [y/N]`)
 if (answer?.trim().toLowerCase() !== "y" && answer?.trim().toLowerCase() !== "yes") {

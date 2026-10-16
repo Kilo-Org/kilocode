@@ -1,4 +1,4 @@
-import { For, Show, createMemo, onCleanup, type JSX } from "solid-js"
+import { For, Show, createEffect, createMemo, onCleanup, type JSX } from "solid-js"
 import { createMediaQuery } from "@solid-primitives/media"
 import { createEventListener } from "@solid-primitives/event-listener"
 import { DragDropProvider, PointerSensor } from "@dnd-kit/solid"
@@ -75,17 +75,30 @@ export function SideRegion(props: {
       .toSorted((a, b) => (a.order ?? 0) - (b.order ?? 0)),
   )
 
+  let root: HTMLElement | undefined
   let tabList: HTMLDivElement | undefined
   let selectionEvent: Event | undefined
+
+  createEffect(() => {
+    if (open()) return
+    const active = document.activeElement
+
+    if (!(active instanceof HTMLElement)) return
+
+    if (!root?.contains(active)) return
+    active.blur()
+  })
 
   return (
     <Show when={isDesktop() && !!params.id}>
       <aside
+        ref={root}
         id="review-panel"
+        tabIndex={-1}
         aria-label={language.t("session.panel.reviewAndFiles")}
         aria-hidden={!open()}
         inert={!open()}
-        class="relative min-w-0 flex overflow-hidden bg-v2-background-bg-base rounded-[10px] shadow-[var(--v2-elevation-raised)]"
+        class="relative min-w-0 flex overflow-hidden bg-v2-background-bg-base rounded-[10px] shadow-[var(--v2-elevation-raised)] outline-none"
         classList={{
           "h-full shrink-0": !props.stacked,
           "h-full min-h-0": props.stacked,

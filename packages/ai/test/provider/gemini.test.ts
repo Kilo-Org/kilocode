@@ -1,11 +1,12 @@
 import { describe, expect } from "bun:test"
-import { Effect } from "effect"
-import { LLM, AIError, LLMRequest, Message, ToolCallPart, ToolDefinition, Usage, Media } from "../../src/index.js"
+import { Deferred, Effect, Fiber } from "effect"
+import * as TestClock from "effect/testing/TestClock"
+import { LLM, AIError, LLMEvent, LLMRequest, Message, ToolCallPart, ToolDefinition, Usage, Media } from "../../src/index.js"
 import { Auth, LLMClient } from "../../src/route.js"
 import { compileRequest } from "../../src/route/client.js"
 import * as Gemini from "../../src/protocols/gemini.js"
 import { it } from "../lib/effect.js"
-import { fixedResponse } from "../lib/http.js"
+import { dynamicResponse, fixedResponse } from "../lib/http.js"
 import { sseEvents, sseRaw } from "../lib/sse.js"
 
 const model = Gemini.route
@@ -1829,6 +1830,319 @@ describe("Gemini route", () => {
           { inlineData: { mimeType: "image/png", data: "AAECAw==" }, thoughtSignature: "sig_1" },
         ],
       })
+    }),
+  )
+})
+
+describe("Gemini response continuation", () => {
+  const continuedRequest = LLM.request({
+    model: Gemini.route
+      .with({
+        endpoint: { baseURL: "https://generativelanguage.test/v1beta/" },
+        auth: Auth.header("x-goog-api-key", "test"),
+      })
+      .model({ id: "gemini-test" }),
+    prompt: "Count.",
+    tools: [ToolDefinition.make({ name: "lookup", description: "Lookup data", inputSchema: { type: "object" } })],
+  })
+
+  // Serves one scripted SSE body per request, or a body whose connection drops after it, and records every sent body.
+  const scripted = (responses: ReadonlyArray<string | { readonly dropped: string } | ReadableStream<Uint8Array>>) => {
+    const bodies: Array<Record<string, unknown>> = []
+    const layer = dynamicResponse((input) =>
+      Effect.sync(() => {
+        bodies.push(JSON.parse(input.text))
+        const response = responses[bodies.length - 1]
+        if (typeof response === "string" || response instanceof ReadableStream)
+          return input.respond(response, { headers: { "content-type": "text/event-stream" } })
+        let sent = false
+        return input.respond(
+          new ReadableStream({
+            pull(controller) {
+              if (sent) return controller.error(new Error("connection reset"))
+              sent = true
+              controller.enqueue(new TextEncoder().encode(response.dropped))
+            },
+          }),
+          { headers: { "content-type": "text/event-stream" } },
+        )
+      }),
+    )
+    return { bodies, layer }
+  }
+  const chunks = (...values: ReadonlyArray<unknown>) =>
+    values.map((value) => sseRaw(`data: ${JSON.stringify(value)}`)).join("")
+
+  const text = (value: string, extra: Record<string, unknown> = {}) => ({
+    candidates: [{ content: { role: "model", parts: [{ text: value }] }, ...extra }],
+  })
+  const continuation = (token?: string) => ({
+    candidates: [
+      { content: { role: "model", parts: [{ text: "" }] }, finishReason: "CONTINUATION", continuationToken: token },
+    ],
+  })
+
+  it.effect("stitches text split across three requests into one block", () =>
+    Effect.gen(function* () {
+      const server = scripted([
+        sseEvents(
+          {
+            candidates: [
+              { content: { role: "model", parts: [{ text: "plan", thought: true, thoughtSignature: "sig_1" }] } },
+            ],
+          },
+          text("THIRTEEN THOUSAND TWO"),
+          continuation("token-1"),
+        ),
+        sseEvents(
+          text(" HUNDRED SEVEN"),
+          // The finishing chunk's token supersedes an earlier checkpoint's.
+          text("TY-TWO", { continuationToken: "checkpoint" }),
+          continuation("token-2"),
+        ),
+        sseEvents(text(" DONE", { finishReason: "STOP" })),
+      ])
+      const response = yield* LLMClient.generate(continuedRequest).pipe(Effect.provide(server.layer))
+
+      expect(response.text).toBe("THIRTEEN THOUSAND TWO HUNDRED SEVENTY-TWO DONE")
+      expect(response.reasoning).toBe("plan")
+      expect(response.events.filter((event) => event.type !== "text-delta").map((event) => event.type)).toEqual([
+        "step-start",
+        "reasoning-start",
+        "reasoning-delta",
+        "reasoning-end",
+        "text-start",
+        "text-end",
+        "step-finish",
+        "finish",
+      ])
+      expect(response.events.find((event) => event.type === "reasoning-end")).toMatchObject({
+        providerMetadata: { google: { thoughtSignature: "sig_1" } },
+      })
+      expect(response.finishReason).toEqual({ normalized: "stop", raw: "STOP" })
+      expect(server.bodies).toHaveLength(3)
+      expect(server.bodies[0]).not.toHaveProperty("continuationToken")
+      expect(server.bodies[1]).toEqual({ ...server.bodies[0], continuationToken: "token-1" })
+      expect(server.bodies[2]).toEqual({ ...server.bodies[0], continuationToken: "token-2" })
+    }),
+  )
+
+  it.effect("finishes with a signed tool call from a later request", () =>
+    Effect.gen(function* () {
+      const server = scripted([
+        sseEvents(text("Looking"), continuation("token-1")),
+        sseEvents({
+          candidates: [
+            {
+              content: {
+                role: "model",
+                parts: [
+                  { text: " it up." },
+                  { functionCall: { id: "call_1", name: "lookup", args: {} }, thoughtSignature: "call_sig" },
+                ],
+              },
+              finishReason: "STOP",
+            },
+          ],
+        }),
+      ])
+      const response = yield* LLMClient.generate(continuedRequest).pipe(Effect.provide(server.layer))
+
+      expect(response.text).toBe("Looking it up.")
+      expect(response.events.filter((event) => event.type === "text-start")).toHaveLength(1)
+      expect(response.events.find((event) => event.type === "tool-call")).toMatchObject({
+        id: "call_1",
+        providerMetadata: { google: { thoughtSignature: "call_sig" } },
+      })
+      expect(response.finishReason).toEqual({ normalized: "tool-calls", raw: "STOP" })
+    }),
+  )
+
+  it.effect("forgets a block once the resumed request finishes", () =>
+    Effect.gen(function* () {
+      const server = scripted([
+        sseEvents(text("THIRTEEN", { continuationToken: "checkpoint-1" }), { promptFeedback: { blockReason: "OTHER" } }),
+        sseEvents(text(" THOUSAND", { finishReason: "STOP" })),
+      ])
+      const response = yield* LLMClient.generate(continuedRequest).pipe(Effect.provide(server.layer))
+
+      expect(response.text).toBe("THIRTEEN THOUSAND")
+      expect(response.finishReason).toEqual({ normalized: "stop", raw: "STOP" })
+      expect(response.events.filter(LLMEvent.is.finish).map((event) => event.providerMetadata)).toEqual([undefined])
+    }),
+  )
+
+  it.effect("resumes a dropped stream from its latest checkpoint", () =>
+    Effect.gen(function* () {
+      const server = scripted([
+        { dropped: chunks(text("THIRTEEN"), text(" THOUSAND", { continuationToken: "checkpoint-1" })) },
+        sseEvents(text(" TWO", { finishReason: "STOP" })),
+      ])
+      const response = yield* LLMClient.generate(continuedRequest).pipe(Effect.provide(server.layer))
+
+      expect(response.text).toBe("THIRTEEN THOUSAND TWO")
+      expect(response.finishReason).toEqual({ normalized: "stop", raw: "STOP" })
+      expect(server.bodies[1]).toEqual({ ...server.bodies[0], continuationToken: "checkpoint-1" })
+    }),
+  )
+
+  it.effect("counts the usage of a dropped request once resumed", () =>
+    Effect.gen(function* () {
+      const server = scripted([
+        {
+          dropped: chunks(
+            { ...text("THIRTEEN"), usageMetadata: { promptTokenCount: 120, candidatesTokenCount: 5 } },
+            {
+              ...text(" THOUSAND", { continuationToken: "checkpoint-1" }),
+              usageMetadata: { promptTokenCount: 142, candidatesTokenCount: 32768, totalTokenCount: 32910 },
+            },
+          ),
+        },
+        sseEvents({
+          ...text(" TWO", { finishReason: "STOP" }),
+          usageMetadata: { promptTokenCount: 32910, candidatesTokenCount: 100, totalTokenCount: 33010 },
+        }),
+      ])
+      const response = yield* LLMClient.generate(continuedRequest).pipe(Effect.provide(server.layer))
+
+      expect(response.usage).toEqual(
+        new Usage({
+          inputTokens: 142,
+          outputTokens: 32868,
+          nonCachedInputTokens: 142,
+          totalTokens: 33010,
+          providerMetadata: {
+            google: {
+              promptTokenCount: 33052,
+              candidatesTokenCount: 32868,
+              totalTokenCount: 65920,
+              requests: 2,
+            },
+          },
+        }),
+      )
+    }),
+  )
+
+  it.effect("continues a stream that ends at a checkpoint without finishing", () =>
+    Effect.gen(function* () {
+      const server = scripted([
+        sseEvents(text("THIRTEEN", { continuationToken: "checkpoint-1" })),
+        sseEvents(text(" THOUSAND", { finishReason: "STOP" })),
+      ])
+      const response = yield* LLMClient.generate(continuedRequest).pipe(Effect.provide(server.layer))
+
+      expect(response.text).toBe("THIRTEEN THOUSAND")
+      expect(server.bodies[1]).toEqual({ ...server.bodies[0], continuationToken: "checkpoint-1" })
+    }),
+  )
+
+  it.effect("fails a stream dropped before any checkpoint", () =>
+    Effect.gen(function* () {
+      const server = scripted([{ dropped: chunks(text("Partial")) }])
+      const error = yield* LLMClient.generate(continuedRequest).pipe(Effect.provide(server.layer), Effect.flip)
+
+      expect(error.reason._tag).toBe("Transport")
+      expect(server.bodies).toHaveLength(1)
+    }),
+  )
+
+  it.effect("does not resume a response cut off by its own timeout", () =>
+    Effect.gen(function* () {
+      const stalled = yield* Deferred.make<void>()
+      let sent = false
+      const server = scripted([
+        new ReadableStream({
+          pull(controller) {
+            if (sent) return new Promise<void>(() => Deferred.doneUnsafe(stalled, Effect.void))
+            sent = true
+            controller.enqueue(new TextEncoder().encode(chunks(text("THIRTEEN", { continuationToken: "checkpoint-1" }))))
+          },
+        }),
+      ])
+      const fiber = yield* LLMClient.generate(
+        LLMRequest.update(continuedRequest, { http: { timeout: 1_000 } }),
+      ).pipe(Effect.provide(server.layer), Effect.flip, Effect.forkChild({ startImmediately: true }))
+      yield* Deferred.await(stalled)
+      yield* TestClock.adjust("1 second")
+      const error = yield* Fiber.join(fiber)
+
+      expect(error.reason).toMatchObject({ _tag: "Transport", code: "Timeout" })
+      expect(server.bodies).toHaveLength(1)
+    }),
+  )
+
+  it.effect("fails a continuation without a token", () =>
+    Effect.gen(function* () {
+      const server = scripted([sseEvents(text("Partial"), continuation())])
+      const error = yield* LLMClient.generate(continuedRequest).pipe(Effect.provide(server.layer), Effect.flip)
+
+      expect(error).toMatchObject({
+        reason: { _tag: "InvalidProviderOutput", http: { status: 200 } },
+        message: "Gemini continued the response without a token",
+      })
+      expect(server.bodies).toHaveLength(1)
+    }),
+  )
+
+  it.effect("does not continue a length finish", () =>
+    Effect.gen(function* () {
+      const server = scripted([
+        sseEvents(text("Partial", { finishReason: "MAX_TOKENS", continuationToken: "token-1" })),
+      ])
+      const response = yield* LLMClient.generate(continuedRequest).pipe(Effect.provide(server.layer))
+
+      expect(response.finishReason).toEqual({ normalized: "length", raw: "MAX_TOKENS" })
+      expect(server.bodies).toHaveLength(1)
+    }),
+  )
+
+  it.effect("reports the first request's input with all output", () =>
+    Effect.gen(function* () {
+      const usage = [
+        { promptTokenCount: 142, candidatesTokenCount: 32768, totalTokenCount: 32910 },
+        { promptTokenCount: 32910, candidatesTokenCount: 32768, totalTokenCount: 65678 },
+        {
+          promptTokenCount: 65678,
+          cachedContentTokenCount: 32911,
+          candidatesTokenCount: 32768,
+          totalTokenCount: 98446,
+        },
+        {
+          promptTokenCount: 98446,
+          cachedContentTokenCount: 65679,
+          candidatesTokenCount: 7257,
+          totalTokenCount: 105703,
+        },
+      ]
+      const server = scripted([
+        sseEvents(
+          { ...text("a"), usageMetadata: { promptTokenCount: 120, candidatesTokenCount: 10, totalTokenCount: 130 } },
+          { ...continuation("token-1"), usageMetadata: usage[0] },
+        ),
+        sseEvents({ ...continuation("token-2"), usageMetadata: usage[1] }),
+        sseEvents({ ...continuation("token-3"), usageMetadata: usage[2] }),
+        sseEvents({ ...text("b", { finishReason: "STOP" }), usageMetadata: usage[3] }),
+      ])
+      const response = yield* LLMClient.generate(continuedRequest).pipe(Effect.provide(server.layer))
+
+      expect(response.usage).toEqual(
+        new Usage({
+          inputTokens: 142,
+          outputTokens: 105561,
+          nonCachedInputTokens: 142,
+          totalTokens: 105703,
+          providerMetadata: {
+            google: {
+              promptTokenCount: 197176,
+              cachedContentTokenCount: 98590,
+              candidatesTokenCount: 105561,
+              totalTokenCount: 302737,
+              requests: 4,
+            },
+          },
+        }),
+      )
     }),
   )
 })

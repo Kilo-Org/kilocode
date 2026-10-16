@@ -61,6 +61,7 @@ The `providers` object is keyed by the provider ID used in model references, suc
 | `env` | Ordered environment variable names that can provide the credential. |
 | `package` | Runtime provider package. |
 | `canonical` | Built-in provider ID whose catalog defaults this provider inherits. |
+| `compatibility` | Request and response compatibility overrides for every model of this provider. Model `compatibility` overrides individual fields. `supportsThinkingBlockBinding` and `supportsEffortUpdates` are model-only. |
 | `settings` | Typed OpenCode controls and JSON options passed to the runtime package. |
 | `headers` | String-valued HTTP headers added to requests. |
 | `body` | JSON fields merged into request bodies. |
@@ -155,6 +156,24 @@ WebSocket transport, `chunkTimeout` bounds the gap between frames instead and de
 
 A request that exceeds either limit fails with a transport error. OpenCode retries a timed-out request up to three
 times before giving up.
+
+## Request encoding
+
+`settings.encoding` compresses HTTP request bodies with `"zstd"` or `"gzip"`, or sends plain JSON with `"none"`. Set it
+on a provider, model, or variant; the most specific value wins. Only enable an encoding the endpoint decodes: most
+providers and gateways reject compressed bodies. OpenAI defaults to `"zstd"` when signed in with ChatGPT and no custom
+`baseURL` is configured; API keys send plain JSON. WebSocket messages are unaffected.
+
+```jsonc title="opencode.jsonc"
+{
+  "$schema": "https://opencode.ai/config.json",
+  "providers": {
+    "openai": {
+      "settings": { "encoding": "none" },
+    },
+  },
+}
+```
 
 ## Packages
 

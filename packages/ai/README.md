@@ -182,7 +182,7 @@ console.log(response.answers.department.choice)
 console.log(response.answers.refund.probability)
 ```
 
-`TypeSafeAI` reads `TYPESAFE_API_KEY`. `OpenCodeZen` exposes the same selector and reads
+`TypeSafeAI` reads `TYPESAFE_API_KEY`. `OpenCode` exposes the same selector and reads
 `OPENCODE_API_KEY`. OpenRouter and Vercel AI Gateway use the same provider shape:
 
 ```ts

@@ -2,6 +2,229 @@
 
 Release notes for OpenCode V2, newest first.
 
+## v2.0.29 — 2026-10-14
+
+### Highlights
+
+- **Remote Device Pairing**: In **Settings → Pairing**, select **Pair device** to enable OpenTunnel remote access and get a QR code or copyable link. ([#55306](https://github.com/anomalyco/opencode/pull/55306))
+- **Provider Account Management**: Use the connect dialog or **Settings → Providers** to switch, rename, remove, or add provider accounts. ([#54101](https://github.com/anomalyco/opencode/pull/54101))
+- **Automatic Response Continuation**: Responses that reach their output-token limit now continue automatically, preserving partial output instead of stopping abruptly. ([#53876](https://github.com/anomalyco/opencode/pull/53876))
+- **Trackpad Image Navigation**: Pinch to zoom and use two-finger scrolling to pan image and SVG previews. Select **Fit** to reset the view. ([#54590](https://github.com/anomalyco/opencode/pull/54590))
+
+### Core
+
+#### Improvements
+
+- Automatically continue responses after an output-token limit, with bounded retries and clearer recovery for truncated tool calls. ([#53876](https://github.com/anomalyco/opencode/pull/53876))
+- Stabilize access policies under the top-level `policies` configuration key while retaining compatibility with `experimental.policies`. ([#55297](https://github.com/anomalyco/opencode/pull/55297))
+
+#### Bug fixes
+
+- Give centrally managed configuration precedence over local and user configuration. ([#55267](https://github.com/anomalyco/opencode/pull/55267))
+- Allow migrated V1 npm provider configuration to target built-in provider routes. ([#55254](https://github.com/anomalyco/opencode/pull/55254))
+
+### TUI
+
+#### Improvements
+
+- Report working sessions and sessions awaiting permission or input through terminal program-status notifications. ([#55172](https://github.com/anomalyco/opencode/pull/55172))
+
+### Desktop
+
+#### Improvements
+
+- Pair devices from **Settings → Pairing** through OpenTunnel remote access, with a QR code and copyable link. ([#55306](https://github.com/anomalyco/opencode/pull/55306))
+- Manage provider accounts from the connect dialog and **Settings → Providers**, including switching, renaming, removal, and adding another account. ([#54101](https://github.com/anomalyco/opencode/pull/54101))
+- Show session context tokens and accumulated family cost in the session view. ([#53785](https://github.com/anomalyco/opencode/pull/53785))
+- Pinch to zoom and use two-finger scrolling to pan image and SVG previews; select **Fit** to reset. ([#54590](https://github.com/anomalyco/opencode/pull/54590))
+- Cycle side-panel tabs with the configured previous-tab and next-tab shortcuts while the side panel is focused. ([#54899](https://github.com/anomalyco/opencode/pull/54899))
+- Refresh the question composer and clarify timeline notices that apply only to a model variant. ([#54822](https://github.com/anomalyco/opencode/pull/54822), [#54880](https://github.com/anomalyco/opencode/pull/54880))
+- Refine diff colors and move unread indicators into session tabs. ([#52551](https://github.com/anomalyco/opencode/pull/52551), [#53570](https://github.com/anomalyco/opencode/pull/53570))
+
+#### Bug fixes
+
+- Show steered messages as pending immediately and render inline attachments before their server echo arrives. ([#55251](https://github.com/anomalyco/opencode/pull/55251), [#54650](https://github.com/anomalyco/opencode/pull/54650))
+- Preserve raw media data up to 256 MiB so artifact previews remain available. ([#55018](https://github.com/anomalyco/opencode/pull/55018))
+- Retain session model selections when the model catalog refreshes. ([#54481](https://github.com/anomalyco/opencode/pull/54481))
+- Close browser tabs from the address field and suppress incorrect missing-file notices for restored or already-open tabs. ([#54501](https://github.com/anomalyco/opencode/pull/54501), [#55022](https://github.com/anomalyco/opencode/pull/55022))
+- Prevent a project-store eviction loop during launch and remove hover gaps between vertical tabs. ([#55078](https://github.com/anomalyco/opencode/pull/55078), [#54866](https://github.com/anomalyco/opencode/pull/54866))
+
+### SDK
+
+#### Improvements
+
+- Export `lastAssistantWithUsage` from the Solid client to consistently locate the assistant step that determines current context usage. ([#53785](https://github.com/anomalyco/opencode/pull/53785))
+
+#### Bug fixes
+
+- Include all paginated child sessions when loading a session family for usage totals. ([#53785](https://github.com/anomalyco/opencode/pull/53785))
+- Admit inline data-URL files into optimistic pending messages so attachments render immediately. ([#54650](https://github.com/anomalyco/opencode/pull/54650))
+
+### Extensions
+
+#### Improvements
+
+- Add `ctx.permission.assert` for Effect and Promise plugins, allowing plugins to use configured permission rules and the native approval prompt. ([#54930](https://github.com/anomalyco/opencode/pull/54930))
+
+#### Bug fixes
+
+- Use Figma's public endpoint and default OAuth configuration, and support Git installations and development releases. ([#55252](https://github.com/anomalyco/opencode/pull/55252), [#55304](https://github.com/anomalyco/opencode/pull/55304))
+- Resolve the Figma plugin peer dependency from its workspace. ([#55269](https://github.com/anomalyco/opencode/pull/55269))
+- Associate each rejected Promise hook with its own tool call. Thanks [@1052326311](https://github.com/1052326311). ([#55263](https://github.com/anomalyco/opencode/pull/55263))
+
+## v2.0.28 — 2026-10-13
+
+### Highlights
+
+- **Per-Project Auto-Accept**: Set **Settings → Projects → Auto-accept permissions** to override the default for one project. You can also press `mod+shift+a` in a session. ([#54839](https://github.com/anomalyco/opencode/pull/54839))
+- **Release Highlights in the TUI**: After updating, the home screen shows the release highlights once. Run `/highlights` to reopen them, or disable automatic display with `highlights: false` in `cli.json`. ([#54969](https://github.com/anomalyco/opencode/pull/54969))
+- **Native Windows ARM64 Support**: Windows ARM64 downloads, CLI installs, and desktop updates now use native ARM64 builds instead of x64 emulation. ([#54689](https://github.com/anomalyco/opencode/pull/54689), [#54971](https://github.com/anomalyco/opencode/pull/54971))
+- **Continuous Gemini Responses**: Long Gemini and Vertex Gemini responses split by the provider now continue automatically as one response, including recovery from a dropped stream after a continuation checkpoint. ([#55056](https://github.com/anomalyco/opencode/pull/55056))
+- **Official WinGet Packages**: Install V2 with `winget install --id Anomaly.OpenCode -e` or `winget install --id Anomaly.OpenCode.Desktop -e`. OpenCode upgrades WinGet installations through WinGet. ([#54808](https://github.com/anomalyco/opencode/pull/54808))
+
+### Core
+
+#### Improvements
+
+- Continued split Gemini and Vertex Gemini responses automatically using provider continuation tokens. ([#55056](https://github.com/anomalyco/opencode/pull/55056))
+- Added `settings.encoding` with `zstd`, `gzip`, and `none` values for provider, model, and variant HTTP request bodies. ChatGPT authentication defaults to Zstandard compression when no custom `baseURL` is set. Thanks [@esafak](https://github.com/esafak). ([#54932](https://github.com/anomalyco/opencode/pull/54932))
+- Added provider-level compatibility defaults and `compatibility.cacheFormat` for Anthropic- and Alibaba-style prompt-cache markers. ([#54911](https://github.com/anomalyco/opencode/pull/54911), [#54945](https://github.com/anomalyco/opencode/pull/54945))
+- Added official WinGet packages and WinGet-aware upgrade and uninstall support. ([#54808](https://github.com/anomalyco/opencode/pull/54808))
+- Raised the default streamed-chunk timeout from 5 to 15 minutes for models that pause while reasoning. ([#55032](https://github.com/anomalyco/opencode/pull/55032))
+
+#### Bug fixes
+
+- Disabled Bun’s fetch idle timeout for provider requests, preventing long-running streams from ending early. ([#55007](https://github.com/anomalyco/opencode/pull/55007))
+- Preserved mixed CRLF and LF line endings when the edit tool changes files. ([#53166](https://github.com/anomalyco/opencode/pull/53166))
+- Preserved unknown V1 OpenAI-compatible model options in migrated request bodies. ([#54694](https://github.com/anomalyco/opencode/pull/54694))
+- Stopped querying Azure resources during startup; Azure connections now ask for the resource name directly. ([#54870](https://github.com/anomalyco/opencode/pull/54870))
+- Loaded the system configuration directory at the lowest precedence. Thanks [@rntdrts](https://github.com/rntdrts). ([#54921](https://github.com/anomalyco/opencode/pull/54921))
+- Installed the native CLI and extracted ripgrep without PowerShell on Windows ARM64. ([#54955](https://github.com/anomalyco/opencode/pull/54955), [#54981](https://github.com/anomalyco/opencode/pull/54981))
+
+### TUI
+
+#### Improvements
+
+- Added the post-update highlights dialog, `/highlights`, and the `highlights` alert setting. ([#54969](https://github.com/anomalyco/opencode/pull/54969))
+
+#### Bug fixes
+
+- Restricted slash-command autocomplete to the start of the prompt. Thanks [@OpeOginni](https://github.com/OpeOginni). ([#54857](https://github.com/anomalyco/opencode/pull/54857))
+- Reported x64 emulation correctly when the TUI runs on Windows ARM64. ([#54984](https://github.com/anomalyco/opencode/pull/54984))
+- Removed the stale `todowrite` label from tool output. ([#53966](https://github.com/anomalyco/opencode/pull/53966))
+
+### Desktop
+
+#### Improvements
+
+- Added per-project auto-accept permission overrides under **Settings → Projects**, with `mod+shift+a` controlling the current project. ([#54839](https://github.com/anomalyco/opencode/pull/54839))
+- Added a native **Windows (ARM64)** option to the download page. ([#54971](https://github.com/anomalyco/opencode/pull/54971))
+
+#### Bug fixes
+
+- Bundled native ARM64 terminal and CLI binaries in Windows ARM64 desktop builds, and moved emulated x64 installations to native ARM64 updates. Thanks [@mweinbach](https://github.com/mweinbach). ([#54689](https://github.com/anomalyco/opencode/pull/54689), [#54983](https://github.com/anomalyco/opencode/pull/54983))
+- Included subagent sessions in displayed session costs. ([#55052](https://github.com/anomalyco/opencode/pull/55052))
+- Loaded image and audio attachments in the review panel and opened video previews in an in-window theatre view. ([#55015](https://github.com/anomalyco/opencode/pull/55015), [#54696](https://github.com/anomalyco/opencode/pull/54696))
+- Showed submitted prompts immediately and kept the **Working** marker above undelivered steers. ([#54047](https://github.com/anomalyco/opencode/pull/54047), [#55023](https://github.com/anomalyco/opencode/pull/55023))
+- Fixed tab closing when collapsed side-panel tabs exist and restored focus correctly after stacked dialogs close. ([#54695](https://github.com/anomalyco/opencode/pull/54695), [#55038](https://github.com/anomalyco/opencode/pull/55038))
+
+### SDK
+
+#### Improvements
+
+- Added request-body encoding and model/provider cache-format fields to generated client types. ([#54932](https://github.com/anomalyco/opencode/pull/54932), [#54945](https://github.com/anomalyco/opencode/pull/54945))
+- Exported `CredentialApi` from the Promise client API. ([#52797](https://github.com/anomalyco/opencode/pull/52797))
+
+### Extensions
+
+#### Improvements
+
+- Added an optional official Figma plugin with its MCP connection and six bundled Figma skills. ([#55049](https://github.com/anomalyco/opencode/pull/55049), [#55061](https://github.com/anomalyco/opencode/pull/55061))
+- Exposed `credential.activate` to Effect and Promise server plugins. Thanks [@remorses](https://github.com/remorses). ([#52797](https://github.com/anomalyco/opencode/pull/52797))
+
+#### Bug fixes
+
+- Converted rejected Promise-based plugin tools into normal tool failures instead of crashing their execution path. ([#54913](https://github.com/anomalyco/opencode/pull/54913))
+- Fixed the VS Code extension launching the V2 CLI with the removed `--port` argument. Thanks [@uyencss](https://github.com/uyencss). ([#49084](https://github.com/anomalyco/opencode/pull/49084))
+
+## v2.0.27 — 2026-10-12
+
+### Highlights
+
+- **Built-In Worktree Tools**: Ask OpenCode to use `worktree_create`, `worktree_list`, and `worktree_remove` in Code Mode. You can create isolated worktrees, move sessions into them, and remove them with normal edit approval. ([#53981](https://github.com/anomalyco/opencode/pull/53981))
+- **Safer Remote Pairing**: The first `opencode pair --remote` now warns that it will expose your server and asks for confirmation. For non-interactive use, pass `opencode pair --remote --yes`. ([#54561](https://github.com/anomalyco/opencode/pull/54561))
+- **Installable Web App**: Use Chrome or Edge’s **Install** button to install the OpenCode web app, including when it runs behind an authenticating proxy. ([#53905](https://github.com/anomalyco/opencode/pull/53905))
+- **Clear Session Failures**: Desktop and TUI timelines now show execution errors that happen before or between model steps instead of ending without an explanation. ([#53826](https://github.com/anomalyco/opencode/pull/53826))
+- **Automatic Project Cleanup**: Projects whose directories no longer exist are automatically hidden from the project list. Opening the directory again restores the project. ([#54354](https://github.com/anomalyco/opencode/pull/54354))
+
+### Core
+
+#### Improvements
+
+- Added the built-in Code Mode tools `opencode.worktree_create`, `opencode.worktree_list`, and `opencode.worktree_remove`. Removing a worktree requires edit approval, and `force: true` can discard modified or untracked files. ([#53981](https://github.com/anomalyco/opencode/pull/53981))
+- Added confirmation before `opencode pair --remote` first enables internet access, plus `--yes`/`-y` for scripts and other non-interactive use. ([#54561](https://github.com/anomalyco/opencode/pull/54561))
+- Automatically archived projects when all known directories disappear. Reopening a project restores it, while surviving clones and linked worktrees keep it active. ([#54354](https://github.com/anomalyco/opencode/pull/54354))
+- Raised the ChatGPT OAuth input limit for `gpt-6.1-sol` and `gpt-6.1-sol-fast` to 500,000 tokens. ([#54668](https://github.com/anomalyco/opencode/pull/54668))
+- Added Vertex AI routes for Interactions and Mistral models. ([#54175](https://github.com/anomalyco/opencode/pull/54175), [#54058](https://github.com/anomalyco/opencode/pull/54058))
+
+#### Bug fixes
+
+- Fixed updater detection for symlinked home directories and package-manager installations, increased probe timeouts, and now report unavailable updates clearly when the installation method cannot be detected. ([#54609](https://github.com/anomalyco/opencode/pull/54609), [#54622](https://github.com/anomalyco/opencode/pull/54622), [#54672](https://github.com/anomalyco/opencode/pull/54672))
+- Fixed GitHub Copilot routing for Gemini, Anthropic, and Responses models when live model metadata is unavailable, and accepted interleaved Claude reasoning values. ([#54208](https://github.com/anomalyco/opencode/pull/54208), [#54210](https://github.com/anomalyco/opencode/pull/54210), [#54201](https://github.com/anomalyco/opencode/pull/54201))
+- Fixed Google Vertex Application Default Credentials when `CLOUDSDK_CONFIG` points to a custom gcloud configuration directory. Thanks [@H-Max](https://github.com/H-Max). ([#54164](https://github.com/anomalyco/opencode/pull/54164))
+- Prevented ChatGPT token-sharing sessions from sending unsupported mid-session reasoning-effort updates. ([#54085](https://github.com/anomalyco/opencode/pull/54085))
+- Blocked `file://` access through Code Mode’s `fetch`, which now returns a clear filesystem-access error. Thanks [@ferdinandyb](https://github.com/ferdinandyb). ([#54510](https://github.com/anomalyco/opencode/pull/54510))
+- Fixed remote workspace file operations so driver-provided filesystem overrides are used correctly.
+- Preserved subagent notifications when location services are evicted, and propagated well-known configuration updates across locations with bounded HTTP timeouts. ([#54072](https://github.com/anomalyco/opencode/pull/54072), [#53821](https://github.com/anomalyco/opencode/pull/53821))
+
+### TUI
+
+#### Bug fixes
+
+- Displayed session execution failures that occur before or between model steps directly in the timeline. ([#53826](https://github.com/anomalyco/opencode/pull/53826))
+- Preserved a saved session’s unavailable model selection instead of silently replacing it with a fallback. ([#53822](https://github.com/anomalyco/opencode/pull/53822))
+- Added syntax highlighting for C++ module interface files such as `.cppm`, `.ixx`, and `.cxxm`. ([#53853](https://github.com/anomalyco/opencode/pull/53853))
+- Summarized integrations with multiple credentials as a connection count, preventing long labels from crowding the integration name. ([#54054](https://github.com/anomalyco/opencode/pull/54054))
+
+### Desktop
+
+#### Improvements
+
+- Made the web app installable from Chrome and Edge, including deployments behind cookie-based authenticating proxies. ([#53905](https://github.com/anomalyco/opencode/pull/53905))
+- Updated the session column layout and text wrapping for clearer long content. ([#54020](https://github.com/anomalyco/opencode/pull/54020))
+
+#### Bug fixes
+
+- Displayed session execution failures that occur before or between model steps directly in the timeline. ([#53826](https://github.com/anomalyco/opencode/pull/53826))
+- Fixed command-palette selection so newly arriving higher-ranked results become active until you explicitly choose a result. ([#54275](https://github.com/anomalyco/opencode/pull/54275))
+- Preserved bold, code, emphasis, and strike-through formatting inside Markdown link labels. ([#54451](https://github.com/anomalyco/opencode/pull/54451))
+- Fixed timeline file links and complete patch rendering, including unusual filenames and patches whose original alignment can be reused. ([#53641](https://github.com/anomalyco/opencode/pull/53641), [#54017](https://github.com/anomalyco/opencode/pull/54017))
+- Showed complete tool error text when an error is expanded. ([#53816](https://github.com/anomalyco/opencode/pull/53816))
+- Fixed browser-panel controls, page visibility, corner masks, and closed side-region overlays. ([#53907](https://github.com/anomalyco/opencode/pull/53907), [#54038](https://github.com/anomalyco/opencode/pull/54038), [#52461](https://github.com/anomalyco/opencode/pull/52461), [#54052](https://github.com/anomalyco/opencode/pull/54052))
+- Made the third-party notices dialog scrollable. ([#53911](https://github.com/anomalyco/opencode/pull/53911))
+
+### SDK
+
+#### Improvements
+
+- Added startup plugin seeding to Effect embedded hosts and workerd through `OpenCode.create({ plugins })` and `OpenCodeWorkerd.create({ plugins })`.
+- Re-exported `WorkspaceDriver`, `EnvironmentDriver`, and `EnvironmentFiles` from `@opencode/sdk/effect`.
+
+#### Bug fixes
+
+- Ensured embedded hosts activate supplied plugins before model discovery, generation, and recovery begin. ([#54219](https://github.com/anomalyco/opencode/pull/54219))
+
+### Extensions
+
+#### Improvements
+
+- Extended `BridgeLayout` with viewport dimensions and optional border information so native extension surfaces can track window resizing and preserve rounded card borders.
+
+#### Bug fixes
+
+- Kept desktop browser-panel corner masks and borders aligned while resizing or using custom themes. ([#52461](https://github.com/anomalyco/opencode/pull/52461))
+- Kept the browser site button clickable after the embedded page takes focus. ([#53907](https://github.com/anomalyco/opencode/pull/53907))
+
 ## v2.0.26 — 2026-10-08
 
 ### Highlights

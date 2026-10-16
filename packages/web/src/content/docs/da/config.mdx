@@ -358,27 +358,6 @@ Denne indstilling gælder på tværs af alle grænseflader: TUI, CLI (`opencode 
 
 ---
 
-### Deling (`share`)
-
-Du kan konfigurere funktionen [share](/docs/share) gennem indstillingen `share`.
-
-```json title="opencode.json"
-{
-  "$schema": "https://opencode.ai/config.json",
-  "share": "manual"
-}
-```
-
-Dette kræver:
-
-- `"manual"` - Tillad manuel deling via kommandoer (standard)
-- `"auto"` - Del automatisk nye samtaler
-- `"disabled"` - Deaktiver deling helt
-
-Som standard er deling indstillet til manuel tilstand, hvor du eksplicit skal dele samtaler ved hjælp af kommandoen `/share`.
-
----
-
 ### Kommandoer (`command`)
 
 Du kan konfigurere brugerdefinerede kommandoer til gentagne opgaver gennem indstillingen `command`.

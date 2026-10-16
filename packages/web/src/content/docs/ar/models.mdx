@@ -57,7 +57,7 @@ description: تهيئة مزوّد LLM والنموذج.
 }
 ```
 
-المعرّف الكامل هنا يكون بالشكل `provider_id/model_id`. على سبيل المثال، إذا كنت تستخدم [OpenCode Zen](/docs/zen) فستستخدم `opencode/gpt-5.1-codex` لنموذج GPT 5.1 Codex.
+المعرّف الكامل هنا يكون بالشكل `provider_id/model_id`. على سبيل المثال، إذا كنت تستخدم [OpenCode Zen](https://opencode.ai/v2/docs/console/) فستستخدم `opencode/gpt-5.1-codex` لنموذج GPT 5.1 Codex.
 
 إذا كنت قد هيّأت [مزوّداً مخصّصاً](/docs/providers#custom)، فإن `provider_id` هو المفتاح الموجود ضمن قسم `provider` في إعداداتك، و`model_id` هو المفتاح الموجود ضمن `provider.models`.
 

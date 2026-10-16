@@ -366,7 +366,7 @@ Provide constructive feedback without making direct changes.
 }
 ```
 
-يستخدم معرّف النموذج في إعدادات OpenCode الصيغة `provider/model-id`. على سبيل المثال، إذا كنت تستخدم [OpenCode Zen](/docs/zen)، فستستخدم `opencode/gpt-5.1-codex` لـ GPT 5.1 Codex.
+يستخدم معرّف النموذج في إعدادات OpenCode الصيغة `provider/model-id`. على سبيل المثال، إذا كنت تستخدم [OpenCode Zen](https://opencode.ai/v2/docs/console/)، فستستخدم `opencode/gpt-5.1-codex` لـ GPT 5.1 Codex.
 
 ---
 

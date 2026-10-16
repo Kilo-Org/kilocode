@@ -19,11 +19,13 @@ OpenCode is an open source AI coding agent. It’s available as a terminal-based
     { label: "yarn", code: "yarn global add @opencode/cli" },
     { label: "vite+", code: "vp install -g @opencode/cli" },
     { label: "aur", code: "paru -S opencode-beta" },
+    { label: "mise", code: "mise use -g opencode" },
   ]}
 />
 
 The npm package uses a postinstall script to select the native `opencode` binary for your platform. The Bun and pnpm commands
-explicitly allow the required script; Vite+ requires no additional flag.
+explicitly allow the required script; Vite+ requires no additional flag. The mise command requires mise 2026.10.9 or later;
+older versions install OpenCode 1.
 
 Windows package managers are not supported.
 

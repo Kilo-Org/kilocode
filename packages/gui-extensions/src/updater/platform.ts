@@ -50,6 +50,18 @@ export const make = Effect.fn("Updater.platform")(function* (channel: string) {
         const result = await updateClient.checkForUpdates()
 
         if (!result?.isUpdateAvailable) return undefined
+        const files = result.updateInfo.files
+        // electron-updater picks the installer whose name contains process.arch, which emulation on Windows ARM64
+        // reports as x64. downloadUpdate() reads this same list, so keeping only the ARM64 installer moves the install
+        // to the native build. macOS needs nothing here: electron-updater already prefers arm64 under Rosetta.
+        const native = files.filter((file) => file.url.includes("arm64"))
+
+        if (process.platform === "win32" && app.runningUnderARM64Translation && native.length > 0) {
+          files.splice(0, files.length, ...native)
+          runFork(
+            Effect.logInfo("updating emulated x64 install to native ARM64", { urls: native.map((file) => file.url) }),
+          )
+        }
 
         return { mode: "restart", version: result.updateInfo.version } as const
       },
@@ -66,8 +78,10 @@ function stageUpdate(options: { readonly differential: boolean }) {
     return Effect.tryPromise({
       try: () => {
         // Only the NSIS cache goes stale: macOS refreshes its cached zip with every download and AppImage reads the
-        // blockmap embedded in the running file.
-        updateClient.disableDifferentialDownload = process.platform === "win32" && !options.differential
+        // blockmap embedded in the running file. An emulated x64 install updates to the ARM64 installer, which cannot
+        // be patched from the cached x64 one.
+        updateClient.disableDifferentialDownload =
+          process.platform === "win32" && (!options.differential || app.runningUnderARM64Translation)
 
         return updateClient.downloadUpdate()
       },

@@ -357,27 +357,6 @@ Diese Einstellung gilt für alle Schnittstellen: TUI, CLI (`opencode run`), Desk
 
 ---
 
-### Teilen
-
-Sie können die Funktion [share](/docs/share) über die Option `share` konfigurieren.
-
-```json title="opencode.json"
-{
-  "$schema": "https://opencode.ai/config.json",
-  "share": "manual"
-}
-```
-
-Dazu braucht es:
-
-- `"manual"` – Manuelles Teilen über Befehle zulassen (Standard)
-- `"auto"` – Neue Konversationen automatisch teilen
-- `"disabled"` – Teile vollständig deaktivieren
-
-Standardmäßig ist die Freigabe auf den manuellen Modus eingestellt, in dem Sie Konversationen explizit mit dem Befehl `/share` teilen müssen.
-
----
-
 ### Befehle
 
 Sie können benutzerdefinierte Befehle für sich wiederholende Aufgaben über die Option `command` konfigurieren.

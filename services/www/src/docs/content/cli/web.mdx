@@ -32,8 +32,23 @@ and open the printed link locally:
 $ ssh -L 49374:127.0.0.1:49374 my-server
 ```
 
-By default the server runs on port 49374 and listens only on localhost. You can
-change this config with the `opencode service` command.
+By default the server listens only on localhost. Its port depends on the
+platform:
+
+| Platform              | Default port |
+| --------------------- | ------------ |
+| macOS, Linux, and WSL | 49374        |
+| Windows               | 45278        |
+
+Windows reserves ports from 49152 up. Print the current address with
+`opencode service status`:
+
+```bash
+$ opencode service status
+http://127.0.0.1:49374
+```
+
+You can change this config with the `opencode service` command.
 
 ### Remote access
 

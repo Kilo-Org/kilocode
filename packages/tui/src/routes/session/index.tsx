@@ -692,11 +692,6 @@ export function Session(props: {
         footerHints={[{ title: "steer", label: "enter" }]}
       />
     ))
-  const unavailable = (feature: string) => {
-    toast.show({ message: `${feature} is not implemented for V2 sessions yet`, variant: "error", duration: 5000 })
-    dialog.clear()
-  }
-
   const alignMessage = (messageID: string, top: number) => {
     scroll.stickyScroll = false
     setNavigationMessage(messageID)
@@ -906,14 +901,6 @@ export function Session(props: {
   ]
 
   const baseCommands = createMemo(() => [
-    {
-      title: "Share session",
-      id: "session.share",
-      suggested: route.type === "session",
-      group: "Session",
-      slash: { name: "share" },
-      run: () => unavailable("Sharing"),
-    },
     {
       title: "Rename session",
       id: "session.rename",

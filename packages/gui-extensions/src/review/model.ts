@@ -1,6 +1,8 @@
 import type { FileDiffInfo } from "@opencode/client/promise"
 import type { SessionReviewLineComment } from "@opencode/session-ui/session-review"
 import { previewSelectedLines } from "@opencode/session-ui/pierre/selection-bridge"
+import { artifactMime } from "@opencode/util/artifact"
+import { bytesToBase64 } from "@opencode/util/base64"
 import { checksum } from "@opencode/util/encode"
 import { showToast } from "@opencode/ui/toast"
 import { createQuery, useQueryClient } from "@tanstack/solid-query"
@@ -388,6 +390,22 @@ export function createReviewModel(input: {
     })
   }
 
+  // Previews read files only to show images and audio, which need the raw bytes and their MIME type.
+  const readFile = (path: string) =>
+    view()
+      .server.client.file.read({ path, location: { directory: directory() } })
+      .then((bytes) => ({
+        type: "binary" as const,
+        content: bytesToBase64(bytes),
+        encoding: "base64" as const,
+        mimeType: artifactMime(path),
+      }))
+      .catch((error) => {
+        console.debug("[session-review] failed to read file", { path, error })
+
+        return undefined
+      })
+
   const selectionPreview = (path: string, selection: FileSelection): string | undefined => {
     const content = screen.file.get(path)?.content?.content
 
@@ -585,6 +603,7 @@ export function createReviewModel(input: {
     initializeGit,
     initializingGit: () => !!state.initializingGit[view().key],
     loadDiff,
+    readFile,
     mode,
     noGit: createMemo(() => {
       const project = view().project

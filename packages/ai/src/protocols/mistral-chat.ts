@@ -417,7 +417,9 @@ export const fromRequest = Effect.fn("MistralChat.fromRequest")(function* (reque
     frequency_penalty: request.generation?.frequencyPenalty,
     presence_penalty: request.generation?.presencePenalty,
     stop: request.generation?.stop,
-    prompt_cache_key: request.cache === "none" ? undefined : (options.promptCacheKey ?? request.promptCacheKey),
+    prompt_cache_key: ProviderShared.sendsPromptCacheKey(request)
+      ? (options.promptCacheKey ?? request.promptCacheKey)
+      : undefined,
     safe_prompt: options.safePrompt,
     document_image_limit: options.documentImageLimit,
     document_page_limit: options.documentPageLimit,

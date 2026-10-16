@@ -51,7 +51,7 @@ config.
 ## OpenCode Zen
 
 OpenCode Zen は、OpenCode チームが提供するモデルのリストです。
-OpenCode で適切に動作することがテストおよび検証されています。 [詳細はこちら](/docs/zen)。
+OpenCode で適切に動作することがテストおよび検証されています。 [詳細はこちら](https://opencode.ai/v2/docs/console/)。
 
 :::tip
 初めての方は、OpenCode Zen から始めることをお勧めします。
@@ -800,12 +800,11 @@ STACKIT AI Model Serving は、Llama、Mistral、Qwen などの LLM に焦点を
 OpenCode は、セッションタイトルの生成などの一部の AI タスクに小規模なモデルを使用します。
 デフォルトでは、Zen によってホストされる gpt-5-nano を使用するように構成されています。 OpenCode をロックするには
 自分の GitLab でホストされているインスタンスのみを使用するには、次の行を
-`opencode.json` ファイル。セッション共有を無効にすることもお勧めします。
+`opencode.json` ファイル。
 
 ```json
 {
-  "small_model": "gitlab/duo-chat-haiku-4-5",
-  "share": "disabled"
+  "small_model": "gitlab/duo-chat-haiku-4-5"
 }
 ```
 
@@ -1442,7 +1441,7 @@ OpenCode で Ollama Cloud を使用するには:
 
 ### OpenCode Zen
 
-OpenCode Zen は、OpenCode チームによって提供される、テストおよび検証されたモデルのリストです。 [詳細はこちら](/docs/zen)。
+OpenCode Zen は、OpenCode チームによって提供される、テストおよび検証されたモデルのリストです。 [詳細はこちら](https://opencode.ai/v2/docs/console/)。
 
 1. **<a href={console}>OpenCode Zen</a>** にサインインし、**API キーの作成** をクリックします。
 

@@ -1,5 +1,16 @@
-import { createEffect, createMemo, createSignal, For, onCleanup, Show, type ComponentProps, type JSX } from "solid-js"
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  Index,
+  onCleanup,
+  Show,
+  type ComponentProps,
+  type JSX,
+} from "solid-js"
 import { createStore } from "solid-js/store"
+import { createMediaQuery } from "@solid-primitives/media"
 import { useData } from "../context"
 import { useDialog } from "@opencode/ui/context/dialog"
 import { useI18n } from "@opencode/ui/context/i18n"
@@ -11,6 +22,7 @@ import { CommentCard } from "./comment-card"
 import { TimelineSeparator } from "../components/timeline-separator"
 import { Tooltip } from "@opencode/ui/tooltip"
 import { IconButton } from "@opencode/ui/icon-button"
+import { Menu } from "@opencode/ui/menu"
 import { Icon } from "@opencode/ui/icon"
 import { Button } from "@opencode/ui/button"
 import { TextReveal } from "@opencode/ui/text-reveal"
@@ -254,11 +266,14 @@ export function CurrentUserMessageDisplay(props: {
   actions?: SessionUserActions
   comments?: SessionUserComment[]
   references?: SessionUserAttachmentReference[]
+  voice?: boolean
 }) {
   const data = useData()
   const dialog = useDialog()
   const i18n = useI18n()
+
   const [state, setState] = createStore({ copied: false, reverting: false, updating: false })
+
   const status = createMemo(() => props.actions?.pending?.status(props.message.id))
   const pending = createMemo(() => status() !== undefined && status() !== "queued")
   const waiting = createMemo(() => status() === "steering" || status() === "stranded")
@@ -270,18 +285,24 @@ export function CurrentUserMessageDisplay(props: {
   const model = createMemo(() => modelLabel(data, i18n, props.model))
   const timefmt = createMemo(() => new Intl.DateTimeFormat(i18n.locale(), { timeStyle: "short" }))
 
+  // Mobile shows the current agent and model in the composer and switch notices, so repeating them per message is noise.
+  const mobile = createMediaQuery("(max-width: 767px)")
+
   const metaHead = createMemo(() => {
     const agent = props.agent
+    const pendingLabel = waiting() ? i18n.t("ui.message.pending") : ""
 
-    return [waiting() ? i18n.t("ui.message.pending") : "", agent ? agent[0]?.toUpperCase() + agent.slice(1) : "", model()]
+    if (mobile()) return pendingLabel
+
+    return [pendingLabel, agent ? agent[0]?.toUpperCase() + agent.slice(1) : "", model()]
       .filter(Boolean)
       .join("\u00A0\u00B7\u00A0")
   })
 
   const stamp = createMemo(() => timefmt().format(props.message.time.created))
 
-  const copy = async () => {
-    if (!props.text || !(await writeClipboard(props.text))) return
+  const copy = async (text: string) => {
+    if (!text || !(await writeClipboard(text))) return
     setState("copied", true)
     setTimeout(() => setState("copied", false), 2000)
   }
@@ -316,11 +337,16 @@ export function CurrentUserMessageDisplay(props: {
             </AttachmentCard>
           )}
         </For>
-        <For each={attachments()}>
+        <Index each={attachments()}>
           {(file) => {
-            const url = () => (file.source.type === "uri" ? file.source.uri : `data:${file.mime};base64,${file.data}`)
-            const name = () => file.name ?? i18n.t("ui.message.attachment.alt")
-            const image = () => file.mime.startsWith("image/")
+            const url = () => {
+              const source = file().source
+
+              return source.type === "uri" ? source.uri : `data:${file().mime};base64,${file().data}`
+            }
+
+            const name = () => file().name ?? i18n.t("ui.message.attachment.alt")
+            const image = () => file().mime.startsWith("image/")
 
             return (
               <Show
@@ -340,14 +366,14 @@ export function CurrentUserMessageDisplay(props: {
                   title={getFilename(name())}
                   hover={name()}
                   clickable={!!props.actions?.openAttachment}
-                  onClick={() => props.actions?.openAttachment?.(file)}
+                  onClick={() => props.actions?.openAttachment?.(file())}
                 >
-                  {typeLabel(name(), file.mime, i18n.t("ui.common.file"))}
+                  {typeLabel(name(), file().mime, i18n.t("ui.common.file"))}
                 </AttachmentCard>
               </Show>
             )
           }}
-        </For>
+        </Index>
       </div>
     </Show>
   )
@@ -358,6 +384,7 @@ export function CurrentUserMessageDisplay(props: {
       data-pending={waiting() ? "true" : undefined}
       data-timeline-part-id={props.text ? `${props.message.id}:text:0` : undefined}
     >
+      {renderAttachments()}
       <Show
         when={props.text}
         fallback={
@@ -366,7 +393,14 @@ export function CurrentUserMessageDisplay(props: {
           </Show>
         }
       >
-        <div data-slot="user-message-body">
+        <div data-slot="user-message-body" data-voice={props.voice ? "true" : undefined}>
+          <Show when={props.voice}>
+            <div data-slot="user-message-voice" role="img" aria-label={i18n.t("ui.message.voice")}>
+              <Tooltip appearance="compact" value={i18n.t("ui.message.voice")} placement="top" gutter={4}>
+                <Icon name="waveform" size="small" />
+              </Tooltip>
+            </div>
+          </Show>
           <div data-slot="user-message-text" dir="auto" data-comments={comments().length > 0 ? "true" : undefined}>
             <CurrentHighlightedText text={props.text} files={inlineFiles()} agents={agents()} />
             <Show when={comments().length > 0}>
@@ -375,7 +409,6 @@ export function CurrentUserMessageDisplay(props: {
           </div>
         </div>
       </Show>
-      {renderAttachments()}
       {/* Like the TUI, a pending steer of only attachments still offers its actions. */}
       <Show when={props.text || comments().length > 0 || pending()}>
         <div data-slot="user-message-copy-wrapper">
@@ -431,17 +464,53 @@ export function CurrentUserMessageDisplay(props: {
               aria-label={i18n.t("ui.message.revertMessage")}
             />
           </Show>
-          <Show when={props.text}>
-            <MessageActionButton
-              icon={state.copied ? "check" : "copy"}
-              label={state.copied ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={(event) => {
-                event.stopPropagation()
-                void copy()
-              }}
-              aria-label={state.copied ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
-            />
+          {/* Like the iOS app, a Voice message's copy also offers the full prompt the session received, on right click. */}
+          <Show
+            when={props.voice}
+            fallback={
+              <Show when={props.text}>
+                <MessageActionButton
+                  icon={state.copied ? "check" : "copy"}
+                  label={state.copied ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    void copy(props.text)
+                  }}
+                  aria-label={state.copied ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
+                />
+              </Show>
+            }
+          >
+            <Menu.Context modal={false}>
+              <Tooltip
+                appearance="compact"
+                value={state.copied ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
+                placement="top"
+                gutter={4}
+              >
+                <Menu.Context.Trigger
+                  as={IconButton}
+                  icon={<Icon name={state.copied ? "check" : "outline-copy"} size="small" />}
+                  size="normal"
+                  variant="ghost-muted"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    void copy(props.text)
+                  }}
+                  aria-label={state.copied ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
+                />
+              </Tooltip>
+              <Menu.Context.Portal>
+                <Menu.Context.Content>
+                  <Menu.Item onSelect={() => void copy(props.text)}>{i18n.t("ui.message.copyMessage")}</Menu.Item>
+                  <Menu.Item onSelect={() => void copy(props.message.text)}>
+                    {i18n.t("ui.message.copyFullMessage")}
+                  </Menu.Item>
+                </Menu.Context.Content>
+              </Menu.Context.Portal>
+            </Menu.Context>
           </Show>
         </div>
       </Show>
@@ -641,12 +710,14 @@ export function AssistantTextContent(props: {
     })
   })
 
+  // Mobile omits the per-response agent and model; see CurrentUserMessageDisplay.
+  const mobile = createMediaQuery("(max-width: 767px)")
+
   const meta = createMemo(() => {
     const agent = props.message.agent
 
     return [
-      agent ? agent[0]?.toUpperCase() + agent.slice(1) : "",
-      model(),
+      ...(mobile() ? [] : [agent ? agent[0]?.toUpperCase() + agent.slice(1) : "", model()]),
       duration(),
       interrupted() ? i18n.t("ui.message.interrupted") : "",
     ]

@@ -290,6 +290,15 @@ export const settings: Setting[] = [
     keywords: ["sound volume", "audio volume"],
   },
   {
+    title: "Release highlights",
+    category: "Alerts",
+    path: ["highlights"],
+    default: true,
+    values: [false, true],
+    labels: ["off", "on"],
+    keywords: ["what's new", "changelog", "release notes"],
+  },
+  {
     title: "Window title",
     category: "Terminal",
     path: ["terminal", "title"],
@@ -390,7 +399,7 @@ export function DialogConfig(props: { current?: string }) {
       filterThreshold={0.7}
       onMove={(option) => setSelected(option.value)}
       onSelect={(option) => void change(1, option.value)}
-      footerHints={[{ title: "←/→", label: "change" }]}
+      footerHints={[{ title: "change", label: "←/→" }]}
       bindings={[
         {
           bind: "left",

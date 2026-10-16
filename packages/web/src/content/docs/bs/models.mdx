@@ -53,7 +53,7 @@ OpenCode config.
 }
 ```
 
-Ovdje je puni ID `provider_id/model_id`. Na primjer, ako koristite [OpenCode Zen](/docs/zen), koristili biste `opencode/gpt-5.1-codex` za GPT 5.1 Codex.
+Ovdje je puni ID `provider_id/model_id`. Na primjer, ako koristite [OpenCode Zen](https://opencode.ai/v2/docs/console/), koristili biste `opencode/gpt-5.1-codex` za GPT 5.1 Codex.
 Ako ste konfigurirali [prilagođenog provajdera](/docs/providers#custom), `provider_id` je ključ iz `provider` dijela vaše konfiguracije, a `model_id` je ključ iz `provider.models`.
 
 ---

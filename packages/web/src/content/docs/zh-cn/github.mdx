@@ -69,7 +69,6 @@ opencode github install
              ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
            with:
              model: anthropic/claude-sonnet-4-20250514
-             # share: true
              # github_token: xxxx
    ```
 
@@ -83,7 +82,6 @@ opencode github install
 
 - `model`：OpenCode 使用的模型，格式为 `provider/model`。此项为**必填**。
 - `agent`：要使用的代理，必须是主代理。如果未找到，则回退到配置中的 `default_agent`，若仍未找到则使用 `"build"`。
-- `share`：是否共享 OpenCode 会话。对于公开仓库，默认为 **true**。
 - `prompt`：可选的自定义提示词，用于覆盖默认行为。可通过此项自定义 OpenCode 处理请求的方式。
 - `token`：可选的 GitHub 访问 Token，用于执行创建评论、提交变更和创建 Pull Request 等操作。默认情况下，OpenCode 使用 OpenCode GitHub App 的安装访问 Token，因此提交、评论和 Pull Request 会显示为来自该应用。
 
