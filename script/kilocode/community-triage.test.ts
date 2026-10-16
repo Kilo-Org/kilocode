@@ -330,6 +330,12 @@ describe("easy", () => {
     expect(easy(5, ["README.md", "AGENTS.md"])).toBeUndefined()
   })
 
+  test("docs pages that share a name with an agent file stay docs", () => {
+    expect(easy(60, ["packages/kilo-docs/pages/ai-providers/gemini.md"])).toBe("docs")
+    expect(easy(60, ["packages/kilo-docs/pages/agents.md", "packages/kilo-docs/pages/skill.md"])).toBe("docs")
+    expect(easy(60, ["docs/claude.md"])).toBe("docs")
+  })
+
   test("changesets are not docs", () => {
     expect(easy(100, [".changeset/a.md"])).toBeUndefined()
   })

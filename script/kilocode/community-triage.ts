@@ -214,11 +214,12 @@ const risky = [
 ]
 const riskyFiles = ["package.json", "bun.lock"]
 // Files that steer coding agents. A change there is a prompt change, not docs.
-const agentFiles = new Set(["agents.md", "claude.md", "gemini.md", "skill.md", ".cursorrules", ".windsurfrules"])
+// The names are exact and case-sensitive, so a docs page like ai-providers/gemini.md is not caught.
+const agentFiles = new Set(["AGENTS.md", "CLAUDE.md", "GEMINI.md", "SKILL.md", ".cursorrules", ".windsurfrules"])
 const isRisky = (file: string) =>
   risky.some((dir) => file.startsWith(dir)) ||
   riskyFiles.some((name) => file.endsWith(name)) ||
-  agentFiles.has(file.split("/").at(-1)?.toLowerCase() ?? "")
+  agentFiles.has(file.split("/").at(-1) ?? "")
 // Docs are Markdown, plus images under a docs directory. Code under a docs
 // directory (scripts, config, components) is not docs. Release notes in
 // .changeset/ are not docs either.
