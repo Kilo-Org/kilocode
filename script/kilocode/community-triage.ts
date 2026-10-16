@@ -280,7 +280,7 @@ export type Digest = { title: string; counts: string; blocks: string[] }
 
 // Split into a title, a one-line count summary and one block per section, so
 // Slack can show the summary and put the lists in a thread.
-export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: number): Digest {
+export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: number, limit = LIMIT): Digest {
   const link = (row: Row) => {
     const text = `#${row.number} ${row.title.replace(/[<>|]/g, "")}`
     return mode === "md" ? `[${text}](${row.url})` : `<${row.url}|${text}>`
@@ -291,8 +291,8 @@ export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: numb
   const found: { short: string; count: number; text: string }[] = []
   const section = (name: string, short: string, list: Row[], note: (row: Row) => string) => {
     if (list.length === 0) return
-    const shown = list.slice(0, LIMIT).map((row) => `- ${link(row)} (@${row.author}, ${note(row)})`)
-    const more = list.length > LIMIT ? [`- ...and ${list.length - LIMIT} more`] : []
+    const shown = list.slice(0, limit).map((row) => `- ${link(row)} (@${row.author}, ${note(row)})`)
+    const more = list.length > limit ? [`- ...and ${list.length - limit} more`] : []
     found.push({ short, count: list.length, text: [bold(`${name} (${list.length})`), ...shown, ...more].join("\n") })
   }
   const awaiting = (row: Row) => (row.state.state === "awaiting" ? row.state : undefined)
@@ -345,8 +345,8 @@ export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: numb
   }
 }
 
-export function digest(rows: Row[], mode: "md" | "slack", repo: string, now: number) {
-  const out = parts(rows, mode, repo, now)
+export function digest(rows: Row[], mode: "md" | "slack", repo: string, now: number, limit = LIMIT) {
+  const out = parts(rows, mode, repo, now, limit)
   return [out.title, ...out.blocks.flatMap((block) => ["", block])].join("\n")
 }
 
@@ -400,12 +400,23 @@ const repo = process.env.REPO ?? "Kilo-Org/kilocode"
 const [owner, name] = repo.split("/")
 const bots = (login: string) => login.endsWith("[bot]")
 const trusted = new Set(["OWNER", "MEMBER", "COLLABORATOR"])
-const extra = new Set(
-  (process.env.MAINTAINERS ?? "")
-    .split(",")
-    .map((x) => x.trim().toLowerCase())
-    .filter(Boolean),
-)
+
+// Logins that count as maintainers although they are not in the org: bot and
+// agent accounts, and people outside the org. The file is shared with other
+// tools. Org members are found with the member token, not listed here.
+export function parse(data: unknown) {
+  const list = (data as { logins?: unknown } | null)?.logins
+  const valid = (item: unknown) => typeof item === "string" && /^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i.test(item)
+  if (!Array.isArray(list) || !list.every(valid))
+    throw new Error('.github/community-maintainers.json must look like { "logins": ["login", ...] }')
+  return new Set((list as string[]).map((item) => item.toLowerCase()))
+}
+
+const memo: { list?: Promise<Set<string>> } = {}
+const listed = () =>
+  (memo.list ??= Bun.file(new URL("../../.github/community-maintainers.json", import.meta.url))
+    .json()
+    .then(parse))
 const cache = new Map<string, boolean>()
 
 async function api(path: string, init?: RequestInit & { token?: string; ok?: number[] }) {
@@ -422,10 +433,19 @@ async function api(path: string, init?: RequestInit & { token?: string; ok?: num
   throw new Error(`${init?.method ?? "GET"} ${path} failed: ${res.status} ${await res.text()}`)
 }
 
+// Without MEMBER_TOKEN every private org member looks like a community author.
+// Fail the run, so a missing secret is seen at once and does not label team PRs.
+export function needMember(value: string | undefined) {
+  if (!value)
+    throw new Error(
+      "COMMUNITY_TRIAGE_MEMBER_TOKEN is not set. Without it, private org members are labeled as community authors.",
+    )
+}
+
 // GITHUB_TOKEN cannot see private org members, so they show up as plain
-// contributors. An optional MEMBER_TOKEN (read:org) or MAINTAINERS list fixes that.
+// contributors. MEMBER_TOKEN (read:org) fixes that.
 async function maintainer(login: string, assoc: string) {
-  if (trusted.has(assoc) || extra.has(login.toLowerCase())) return true
+  if (trusted.has(assoc) || (await listed()).has(login.toLowerCase())) return true
   const key = login.toLowerCase()
   const hit = cache.get(key)
   if (hit !== undefined) return hit
@@ -495,6 +515,7 @@ async function files(num: number) {
 }
 
 async function onevent() {
+  needMember(process.env.MEMBER_TOKEN)
   const event = await Bun.file(process.env.GITHUB_EVENT_PATH!).json()
   const pr = event.pull_request
   const item = pr ?? event.issue
@@ -608,6 +629,7 @@ async function quick(pr: Pull, ready: boolean) {
 }
 
 async function sweep() {
+  needMember(process.env.MEMBER_TOKEN)
   const now = Date.now()
   const enabled = process.env.CLOSE_ENABLED === "true"
   const cap = Number(process.env.MAX_COMMENTS ?? 20)
@@ -737,7 +759,7 @@ async function sweep() {
   }
 
   const out = process.env.GITHUB_STEP_SUMMARY
-  if (out) await Bun.write(out, digest(rows, "md", repo, now) + "\n")
+  if (out) await Bun.write(out, digest(rows, "md", repo, now, Infinity) + "\n")
   const payload = process.env.SLACK_PAYLOAD
   if (payload) await Bun.write(payload, JSON.stringify({ text: digest(rows, "slack", repo, now) }))
   // With a bot token and channel, post the summary and thread the lists.
@@ -755,7 +777,7 @@ async function sweep() {
       if (flag) appendFileSync(flag, "slack_failed=true\n")
     }
   }
-  console.log(digest(rows, "md", repo, now))
+  console.log(digest(rows, "md", repo, now, Infinity))
 }
 
 if (import.meta.main) {

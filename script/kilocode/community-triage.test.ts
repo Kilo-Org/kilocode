@@ -6,6 +6,8 @@ import {
   easy,
   hasPriority,
   kind,
+  needMember,
+  parse,
   labels,
   sync,
   priority,
@@ -465,5 +467,45 @@ describe("label list", () => {
   test("names are unique", () => {
     const names = labels.map((item) => item.name.toLowerCase())
     expect(new Set(names).size).toBe(names.length)
+  })
+})
+
+describe("parse", () => {
+  test("reads logins in lower case", () => {
+    expect([...parse({ logins: ["Some-Login", "other"] })]).toEqual(["some-login", "other"])
+  })
+
+  test("rejects bad shapes", () => {
+    expect(() => parse(null)).toThrow()
+    expect(() => parse({})).toThrow()
+    expect(() => parse({ logins: "a" })).toThrow()
+    expect(() => parse({ logins: [1] })).toThrow()
+    expect(() => parse({ logins: ["has space"] })).toThrow()
+    expect(() => parse({ logins: ["-bad"] })).toThrow()
+    expect(() => parse({ logins: ["bot[bot]"] })).toThrow()
+  })
+})
+
+describe("community-maintainers.json", () => {
+  const file = new URL("../../.github/community-maintainers.json", import.meta.url)
+
+  test("parses", async () => {
+    expect(parse(await Bun.file(file).json()).size).toBeGreaterThan(0)
+  })
+
+  test("is sorted, lower case and without duplicates", async () => {
+    const list = ((await Bun.file(file).json()) as { logins: string[] }).logins
+    expect(list).toEqual([...new Set(list.map((item) => item.toLowerCase()))].sort())
+  })
+})
+
+describe("needMember", () => {
+  test("fails when the token is missing or empty", () => {
+    expect(() => needMember(undefined)).toThrow("COMMUNITY_TRIAGE_MEMBER_TOKEN is not set")
+    expect(() => needMember("")).toThrow("COMMUNITY_TRIAGE_MEMBER_TOKEN is not set")
+  })
+
+  test("accepts a token", () => {
+    expect(() => needMember("token")).not.toThrow()
   })
 })

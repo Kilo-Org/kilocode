@@ -41,7 +41,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          # Optional. Lets the job see private org members. See the docs.
+          # Lets the job see private org members. See the docs.
           MEMBER_TOKEN: ${{ secrets.COMMUNITY_TRIAGE_MEMBER_TOKEN }}
-          MAINTAINERS: ${{ vars.COMMUNITY_MAINTAINERS }}
         run: bun run script/kilocode/community-triage.ts label
