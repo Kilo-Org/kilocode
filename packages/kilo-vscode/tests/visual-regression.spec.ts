@@ -87,6 +87,8 @@ async function settle(page: Page) {
 // between runs, so its baseline flips by a few pixels even without source changes.
 // The Display session preview plays a continuous streaming loop, so captures land
 // on an indeterminate frame.
+// The New Worktree prompt story exists to drive the Enhance tests in
+// new-worktree-enhance.spec.ts, so it is not a meaningful appearance baseline.
 const SKIP = new Set<string>([
   "chat--chat-view-session-dock-stability",
   "labs-tool-call-lab--question-resolve-stability",
@@ -98,6 +100,7 @@ const SKIP = new Set<string>([
   "agentmanager--worktree-item-busy",
   "agentmanager--full-screen-diff-agent-edit-scroll",
   "agentmanager--side-terminal-panel-tabs",
+  "agentmanager--new-worktree-prompt",
   "composite-webview--permission-dock-config-preloaded",
   "settings--sandboxing-allowlist",
   "settings--sandboxing-panel",

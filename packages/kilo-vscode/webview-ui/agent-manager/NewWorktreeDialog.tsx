@@ -237,7 +237,9 @@ export const NewWorktreeDialog: Component<{
   const speechModel = () => selectedSpeechToTextModel(config(), speechModels.models())
   let prior: string | null = null
   let request: string | undefined
+  // Drop the running Enhance request. The host aborts it, so the model call stops too.
   const cancel = () => {
+    if (request) vscode.postMessage({ type: "cancelEnhancePrompt", requestId: request })
     prior = null
     request = undefined
     setEnhancing(false)
@@ -637,9 +639,15 @@ export const NewWorktreeDialog: Component<{
   }
   onCleanup(shortcut.reset)
 
-  const canEnhance = () => !starting() && !enhancing() && !speech.active() && server.isConnected()
+  const canEnhance = () => enhancing() || (!starting() && !speech.active() && server.isConnected())
+  const enhanceLabel = () => t(enhancing() ? "prompt.action.enhanceStop" : "prompt.action.enhance")
+  const enhanceIcon = () => (enhancing() ? "stop" : "wand-sparkles")
 
   const handleEnhance = () => {
+    if (enhancing()) {
+      cancel()
+      return
+    }
     if (!canEnhance()) return
     const draft = prompt().trim()
     if (!draft) {
@@ -654,7 +662,7 @@ export const NewWorktreeDialog: Component<{
       return
     }
     prior = prompt()
-    const id = `enhance-newworktree-${crypto.randomUUID()}`
+    const id = `enhance-${crypto.randomUUID().slice(0, 8)}`
     request = id
     setEnhancing(true)
     vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: id })
@@ -705,12 +713,20 @@ export const NewWorktreeDialog: Component<{
     }
     if (msg.type === "enhancePromptError") {
       const ev = msg as EnhancePromptErrorMessage
-      if (ev.requestId === request) cancel()
+      if (ev.requestId !== request) return
+      // The host already ended this request, so there is nothing to cancel.
+      request = undefined
+      cancel()
+      showToast({
+        variant: "error",
+        title: t(`prompt.enhance.status.${ev.reason}`, { error: ev.error }),
+        description: t("prompt.enhance.status.request", { id: ev.requestId }),
+      })
     }
   })
 
   onCleanup(() => {
-    request = undefined
+    cancel()
     importUnsub()
   })
 
@@ -1049,15 +1065,14 @@ export const NewWorktreeDialog: Component<{
                   }
                 />
                 <div class="prompt-input-hint-actions">
-                  <Tooltip value={t("prompt.action.enhance")} placement="top">
+                  <Tooltip value={enhanceLabel()} placement="top">
                     <IconButton
-                      icon="wand-sparkles"
+                      icon={enhanceIcon()}
                       variant="ghost"
                       size="small"
                       onClick={handleEnhance}
                       disabled={!canEnhance()}
-                      loading={enhancing()}
-                      aria-label={t("prompt.action.enhance")}
+                      aria-label={enhanceLabel()}
                     />
                   </Tooltip>
                   <Show when={sandboxVisible()}>
