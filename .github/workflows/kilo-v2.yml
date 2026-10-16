@@ -80,6 +80,58 @@ jobs:
       - name: Check that migration-tracking/progress is current
         run: bun script/upstream/progress.ts --check
 
+  progress-comment:
+    name: migration progress comment
+    # Same-repository pull requests only: a fork PR gets a read-only token and cannot comment.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - name: Compare the progress map with the base branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch --depth=1 --no-tags origin "$BASE_REF"
+          git show "FETCH_HEAD:migration-tracking/progress/progress.json" > base.json 2>/dev/null || echo '{}' > base.json
+          {
+            echo '<!-- migration-progress -->'
+            bun script/upstream/progress.ts --compare base.json migration-tracking/progress/progress.json
+            echo
+            echo '<details><summary>Map at this commit</summary>'
+            echo
+            echo "<img width=\"900\" alt=\"v2 migration progress map\" src=\"https://raw.githubusercontent.com/$REPO/$HEAD_SHA/migration-tracking/progress/progress.svg\" />"
+            echo
+            echo "</details>"
+            echo
+            echo "[Full map](https://github.com/$REPO/blob/$HEAD_SHA/migration-tracking/progress/README.md) · [how cells close](https://github.com/$REPO/blob/$HEAD_SHA/.kilo/skills/v2-migration/SKILL.md#progress-map)"
+          } > body.md
+
+      - name: Create or update the comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          id=$(gh api "repos/$REPO/issues/$NUMBER/comments" --paginate --jq '[.[] | select(.body | startswith("<!-- migration-progress -->"))][0].id // empty')
+          if [ -n "$id" ]; then
+            gh api --method PATCH "repos/$REPO/issues/comments/$id" -F body=@body.md > /dev/null
+          else
+            gh api --method POST "repos/$REPO/issues/$NUMBER/comments" -F body=@body.md > /dev/null
+          fi
+
   upstream-tooling:
     name: upstream sync tooling tests
     runs-on: ubuntu-24.04

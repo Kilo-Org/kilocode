@@ -22,6 +22,7 @@
  *   bun script/upstream/progress.ts                 regenerate progress.json and README.md
  *   bun script/upstream/progress.ts --check         exit 1 when the committed output is stale
  *   bun script/upstream/progress.ts --list <feature>  print the open cells of one feature
+ *   bun script/upstream/progress.ts --compare <base.json> <head.json>  markdown delta for a PR comment
  */
 
 import { $ } from "bun"
@@ -462,6 +463,71 @@ function svg(features: Box[], unattributed: Box[]) {
   ].join("\n")
 }
 
+function badge(label: string, percent: number) {
+  const value = `${percent}%`
+  const color = percent >= 90 ? "#4c1" : percent >= 60 ? "#97ca00" : percent >= 30 ? "#dfb317" : "#fe7d37"
+  const left = 10 + 7 * label.length
+  const right = 10 + 7 * value.length
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${left + right}" height="20" role="img" aria-label="${label}: ${value}">`,
+    `<rect width="${left}" height="20" fill="#555"/><rect x="${left}" width="${right}" height="20" fill="${color}"/>`,
+    `<g fill="#fff" font-family="Verdana,DejaVu Sans,sans-serif" font-size="11" text-anchor="middle">`,
+    `<text x="${left / 2}" y="14">${esc(label)}</text><text x="${left + right / 2}" y="14">${value}</text></g></svg>`,
+    "",
+  ].join("\n")
+}
+
+/** The committed progress.json shape that `--compare` reads. */
+export type Snapshot = {
+  summary?: { done: number; total: number; percent: number; dropped: number }
+  features?: { feature: string; done: number; total: number; dropped: number; kinds: Record<Kind, { done: number; total: number }> }[]
+  done?: string[]
+  dropped?: string[]
+}
+
+/** Markdown delta between two progress.json files, for the PR comment. Deterministic and self-contained. */
+export function compare(base: Snapshot, head: Snapshot) {
+  const b = base.summary ?? { done: 0, total: 0, percent: 0, dropped: 0 }
+  const h = head.summary ?? { done: 0, total: 0, percent: 0, dropped: 0 }
+  const sign = (v: number) => (v > 0 ? `+${v}` : `${v}`)
+  const before = new Map((base.features ?? []).map((f) => [f.feature, f]))
+  const after = new Map((head.features ?? []).map((f) => [f.feature, f]))
+  const names = [...new Set([...before.keys(), ...after.keys()])].sort(byName)
+  const kinds: Kind[] = ["module", "api", "hook", "test"]
+  const rows = names.flatMap((name) => {
+    const x = before.get(name)
+    const y = after.get(name)
+    if (x && y && x.done === y.done && x.total === y.total && x.dropped === y.dropped) return []
+    const changes = kinds
+      .map((k) => {
+        const d = (y?.kinds[k].done ?? 0) - (x?.kinds[k].done ?? 0)
+        const t = (y?.kinds[k].total ?? 0) - (x?.kinds[k].total ?? 0)
+        return [d ? `${sign(d)} ${k}${Math.abs(d) === 1 ? "" : "s"} done` : "", t ? `${sign(t)} ${k}${Math.abs(t) === 1 ? "" : "s"} total` : ""].filter(Boolean).join(", ")
+      })
+      .filter(Boolean)
+    const dropped = (y?.dropped ?? 0) - (x?.dropped ?? 0)
+    if (dropped) changes.push(`${sign(dropped)} dropped`)
+    const cell = (f?: { done: number; total: number }) => (f ? `${f.done}/${f.total}` : "")
+    return [`| ${name} | ${cell(x)} | ${cell(y)} | ${changes.join("; ") || "new box"} |`]
+  })
+  const baseDone = new Set(base.done ?? [])
+  const headDone = new Set(head.done ?? [])
+  const closed = [...headDone].filter((id) => !baseDone.has(id)).sort(byName)
+  const reopened = [...baseDone].filter((id) => !headDone.has(id)).sort(byName)
+  const baseDropped = new Set(base.dropped ?? [])
+  const dropped = (head.dropped ?? []).filter((id) => !baseDropped.has(id)).sort(byName)
+  const list = (title: string, ids: string[]) =>
+    ids.length ? ["", `<details><summary>${ids.length} ${title}</summary>`, "", ...ids.slice(0, 100).map((id) => `- \`${id}\``), ...(ids.length > 100 ? [`- ... ${ids.length - 100} more`] : []), "", "</details>"] : []
+  const icon = h.percent > b.percent ? "📈" : h.percent < b.percent ? "📉" : "➖"
+  const lines = [
+    `${icon} **v2 migration progress: ${b.percent}% → ${h.percent}%** (${sign(h.done - b.done)} done, ${sign(h.total - b.total)} total, ${sign(h.dropped - b.dropped)} dropped; ${h.done}/${h.total} cells)`,
+  ]
+  if (!rows.length && !closed.length && !reopened.length && !dropped.length) return [...lines, "", "No change to the progress map.", ""].join("\n")
+  if (rows.length) lines.push("", "| Feature | Before | After | Change |", "|---|---:|---:|---|", ...rows)
+  lines.push(...list("cells closed", closed), ...list("cells reopened (were done on the base)", reopened), ...list("cells dropped", dropped), "")
+  return lines.join("\n")
+}
+
 type Point = { date: string; done: number; total: number; percent: number }
 
 /**
@@ -623,11 +689,17 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     "",
   ].join("\n")
 
-  return { json: JSON.stringify(json, null, 2) + "\n", md, svg: svg(features, unattributed), history: chart(points) }
+  return { json: JSON.stringify(json, null, 2) + "\n", md, svg: svg(features, unattributed), history: chart(points), badge: badge("v2 migration", pct(done, total)) }
 }
 
 async function main() {
   const args = process.argv.slice(2)
+  const cmp = args.indexOf("--compare")
+  if (cmp >= 0) {
+    const read = async (file: string) => (await Bun.file(file).text().catch(() => "")) || "{}"
+    console.log(compare(JSON.parse(await read(args[cmp + 1])) as Snapshot, JSON.parse(await read(args[cmp + 2])) as Snapshot))
+    return
+  }
   const config = await readJson<Config>("features.json")
   const dispositions = await readJson<Record<string, Disposition>>("dispositions.json")
   const data = await collect(config, dispositions)
@@ -643,7 +715,7 @@ async function main() {
 
   const past = await history(render(config, data, dispositions).json)
   const out = render(config, data, dispositions, past)
-  const files = { "progress.json": out.json, "README.md": out.md, "progress.svg": out.svg, "history.svg": out.history }
+  const files = { "progress.json": out.json, "README.md": out.md, "progress.svg": out.svg, "history.svg": out.history, "badge.svg": out.badge }
   if (args.includes("--check")) {
     const stale = []
     for (const [name, content] of Object.entries(files)) {
