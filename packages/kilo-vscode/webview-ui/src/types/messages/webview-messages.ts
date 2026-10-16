@@ -1741,6 +1741,7 @@ export type WebviewMessage =
   | PRMergeRequest
   | { type: "sessionActivity"; state: Activity }
   | { type: "acknowledgeSession"; sessionID: string; eventID: string }
+  | { type: "requestWorkspaceScope" }
   | DocumentRequestMessage
   | DocumentOpenFileMessage
   | DocumentCopyPathMessage
