@@ -623,36 +623,23 @@
 ## [7.1.11] - 2026-10-16
 
 ### Added
-- feat: label first-time contributors and quick wins in community triage by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/15123
-- feat(agent-manager): redesign New Worktree dialog with inline base branch by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/15119
-- feat: add priority labels to community triage by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/15148
-- feat(cli): list remote agents for the mobile app by @iscekic in https://github.com/Kilo-Org/kilocode/pull/15159
-- feat(ci): track merged core PRs for the opencode v2 rewrite by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15134
+
+- List remote agents for the mobile app.
+- Bundle Kilo CLI v7.8.13.
 
 ### Fixed
-- fix: keep the sweep green when the Slack bot post fails by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/15126
-- fix(cli): make OpenAI-compatible tool content normalization opt-in by @waewoo in https://github.com/Kilo-Org/kilocode/pull/13260
-- fix(tui): restore Home/End text editing in dialog filter inputs by @maphew in https://github.com/Kilo-Org/kilocode/pull/13722
-- fix: label Kilo Desktop titles as area:desktop and make Slack posting optional by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/15150
-- fix(cli): preserve session status occurrence timing by @iscekic in https://github.com/Kilo-Org/kilocode/pull/15124
-- fix(agent-manager): keep new files with non-ASCII names when moving a chat to a worktree by @hdcodedev in https://github.com/Kilo-Org/kilocode/pull/15045
-- fix(vscode): send review comments from the Changes view while History is open by @hdcodedev in https://github.com/Kilo-Org/kilocode/pull/15041
-- fix(vscode): disclose first-folder chat scope in multi-root workspaces by @abdulhusainahk in https://github.com/Kilo-Org/kilocode/pull/14925
-- fix(cli): refresh expired MCP OAuth tokens automatically by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15131
-- fix(cli): persist late OpenRouter reasoning details for replay by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/15104
-- fix(jetbrains): load editor context ignores off EDT by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15179
-- fix(cli): keep worker console writes off the TUI frame by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15180
+
+- Prevent editor context ignore-file loading from blocking the JetBrains UI thread.
+- Guard deferred prompt dispatch.
+- Keep worker console writes off the TUI frame.
+- Refresh expired MCP OAuth tokens automatically.
+- Preserve session status occurrence timing.
+- Persist late OpenRouter reasoning details for replay.
+- Make OpenAI-compatible tool content normalization opt-in.
 
 ### Changed
-- release(jetbrains): v7.1.10 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15130
-- docs(kilo-docs): update Kilo Desktop docs for 0.1.12 by @MihaelaStoica in https://github.com/Kilo-Org/kilocode/pull/15115
-- docs: refresh community triage doc by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/15152
-- refactor: simplify community triage labels and set priority upfront by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/15156
-- refactor: read extra maintainers from a shared file by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/15158
-- docs: auto-sync other with merged PRs (through 2026-09-24) by @github-actions[bot] in https://github.com/Kilo-Org/kilocode/pull/14326
-- chore(jetbrains): bump gradle wrapper to 9.8.1 and openapi-generator to 7.26.0 by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/15166
-- chore(jetbrains): bump CLI pin to v7.8.13 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15184
 
+- Bump the Gradle wrapper to 9.8.1 and openapi-generator to 7.26.0.
 
 ## [7.1.10] - 2026-10-15
 
