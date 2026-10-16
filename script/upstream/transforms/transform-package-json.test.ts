@@ -13,17 +13,20 @@ import {
   transformDependencies,
 } from "./transform-package-json"
 
-test("fixScripts preserves Kilo's root dev script from base", () => {
-  const ours = { scripts: { dev: "bun script/dev-isolated.ts", build: "tsc" } }
-  const pkg: Record<string, unknown> = { scripts: { dev: "bun run script/dev.ts", test: "bun test" } }
+test("fixScripts preserves Kilo's root dev and lint scripts from base", () => {
+  const ours = { scripts: { dev: "bun script/dev-isolated.ts", lint: "oxlint", build: "tsc" } }
+  const pkg: Record<string, unknown> = {
+    scripts: { dev: "bun run script/dev.ts", lint: "oxlint && bun script/sdk-docs.ts", test: "bun test" },
+  }
   const changes: string[] = []
 
   fixScripts(pkg, "package.json", ours, changes)
 
   const scripts = pkg.scripts as Record<string, string>
   expect(scripts.dev).toBe("bun script/dev-isolated.ts")
+  expect(scripts.lint).toBe("oxlint")
   expect(scripts.test).toBe("bun test")
-  expect(changes).toEqual(["scripts.dev: preserved from base"])
+  expect(changes).toEqual(["scripts.dev: preserved from base", "scripts.lint: preserved from base"])
 })
 
 test("fixScripts leaves other packages untouched", () => {

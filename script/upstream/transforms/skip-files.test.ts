@@ -15,11 +15,27 @@ test("does not match files outside the patterns", () => {
 test("the v2 config does not skip live v2 packages", () => {
   for (const file of [
     "packages/cli/package.json",
-    "packages/web/src/content/docs/zen.mdx",
-    "packages/app/package.json",
-    "packages/desktop/package.json",
-    "packages/console/app/package.json",
+    "packages/core/src/index.ts",
+    "packages/tui/package.json",
+    "packages/ui/package.json",
+    "packages/kilo-plugin/package.json",
+    "packages/plugin-browser/package.json",
+    "script/dev-isolated.ts",
   ]) {
     expect(shouldSkip(file, defaultConfig.skipFiles)).toBe(false)
+  }
+})
+
+test("the v2 config skips the product areas Kilo removed", () => {
+  for (const file of [
+    "packages/desktop/package.json",
+    "packages/app/src/index.tsx",
+    "packages/console/app/package.json",
+    "packages/web/src/content/docs/zen.mdx",
+    "infra/app.ts",
+    "sst.config.ts",
+    "sdks/vscode/package.json",
+  ]) {
+    expect(shouldSkip(file, defaultConfig.skipFiles)).toBe(true)
   }
 })

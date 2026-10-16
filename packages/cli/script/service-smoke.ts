@@ -127,6 +127,7 @@ async function waitForRegistration() {
 // Reads the web UI from the binary's embedded archive: the shell, and the entry script it names.
 async function verifyWebUi(url: string) {
   const shell = await fetch(url, { signal: AbortSignal.timeout(5_000) })
+  if (shell.status === 404) return // kilocode_change - Kilo removed packages/app, so the binary embeds no web UI
   const html = await shell.text()
   if (shell.status !== 200 || !html.includes("<html")) throw new Error("Compiled service did not serve the web UI")
   const script = html.match(/<script[^>]*\bsrc="(\/_assets\/[^"]+\.js)"/)?.[1]

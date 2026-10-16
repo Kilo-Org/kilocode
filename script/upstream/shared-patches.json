@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 12,
-    "markedLines": 45,
-    "unmarkedLines": 17,
+    "files": 14,
+    "markedLines": 48,
+    "unmarkedLines": 18,
     "deletedFiles": 0
   },
   "files": {
@@ -13,7 +13,7 @@
     },
     ".github/workflows/test.yml": {
       "rung": 3,
-      "seam": "CI triggers: run the unit and e2e matrix on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`). No seam: workflow triggers cannot be extended from outside the file. Temporary: the `Run app component tests` step runs on Linux only, because the v2.0.30 desktop app component tests break on Windows CI (hoisted install, Storybook dev server crash). Upstream fixed it in 17229d24f56 (anomalyco/opencode#55866, after v2.0.30); remove the guard in the next sync."
+      "seam": "CI triggers: run the unit and e2e matrix on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`). Skip the `affected` job, and with it the e2e job that needs it: the e2e job tests only `packages/app` and `packages/session-ui`, which Kilo removed (`skipFiles` in script/upstream/utils/config.ts). One job-level line, so upstream changes to the e2e steps still merge cleanly. No seam: workflow triggers and job conditions cannot be extended from outside the file."
     },
     ".gitignore": {
       "rung": 3,
@@ -26,8 +26,16 @@
     },
     "package.json": {
       "rung": 3,
-      "seam": "Root `dev` script runs script/dev-isolated.ts, so `bun dev` never uses the installed OpenCode or Kilo data. Goes away when the Kilo host owns the dev entry (U-E0-01).",
+      "seam": "Root `dev` script runs script/dev-isolated.ts, so `bun dev` never uses the installed OpenCode or Kilo data. Goes away when the Kilo host owns the dev entry (U-E0-01). Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check `packages/gui-extensions`, which Kilo removed (`skipFiles`).",
       "unmarked": "JSON has no comments."
+    },
+    "packages/cli/script/app-assets.ts": {
+      "rung": 3,
+      "seam": "Build an empty web UI archive when `packages/app` does not exist, because Kilo removed it (`skipFiles` in script/upstream/utils/config.ts). One generic condition covers the release build (`build.ts`) and the Node build (`build-node.ts`). The server then answers non-API paths with 404, as on v1. No seam: the build scripts call `buildAppArchive` directly."
+    },
+    "packages/cli/script/service-smoke.ts": {
+      "rung": 3,
+      "seam": "Accept a 404 for the web UI shell in the compiled service smoke test, because the Kilo build embeds no web UI (`packages/app` removed). The API, authentication, and plugin checks still run. No seam: the smoke script has no option to skip the web UI check."
     },
     "packages/core/package.json": {
       "rung": 3,

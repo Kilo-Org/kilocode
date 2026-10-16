@@ -24,6 +24,7 @@ env:
 jobs:
   affected:
     name: affected packages
+    if: false # kilocode_change - Kilo removed packages/app and packages/session-ui, so the e2e job (needs: affected) has nothing to test
     runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
       app: ${{ steps.packages.outputs.app }}
@@ -253,7 +254,7 @@ jobs:
         timeout-minutes: 15
 
       - name: Run app component tests
-        if: ${{ !cancelled() && env.E2E_ENABLED == 'true' && runner.os == 'Linux' }} # kilocode_change - temporary: v2.0.30 desktop app component tests break on Windows CI (hoisted install, Storybook crash); upstream fix 17229d24f56, remove in the next sync
+        if: ${{ !cancelled() && env.E2E_ENABLED == 'true' }}
         run: bun --cwd packages/app test:components
         env:
           CI: true

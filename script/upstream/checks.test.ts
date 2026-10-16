@@ -78,6 +78,23 @@ test("a first Kilo package, Kilo dir and empty plugin do not affect the checks",
   expect(json.generated).toEqual(["bun.lock"])
 })
 
+test("product areas in skipFiles that Kilo removed are not counted", async () => {
+  const r = await repo()
+  await using _ = r
+  await r.write("src/a.ts", "export const a = 1\n")
+  await r.write("packages/desktop/src/main.ts", "export const desktop = 1\n")
+  await r.write("infra/app.ts", "export const app = 1\n")
+  const pin = await r.commit("upstream")
+  await r.remove("packages/desktop/src/main.ts")
+  await r.remove("infra/app.ts")
+  await baseline(r, empty)
+  await r.commit("kilo removes desktop and infra")
+
+  const json = JSON.parse((await run(r, counter, pin, "--json")).stdout)
+  expect(json.counts).toEqual({ files: 0, markedLines: 0, unmarkedLines: 0, deletedFiles: 0 })
+  expect(json.deleted).toEqual([])
+})
+
 test("a JSON change needs an unmarked reason in the baseline", async () => {
   const { r, pin } = await fixture()
   await using _ = r

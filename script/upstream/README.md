@@ -34,7 +34,8 @@ In an Agent Manager worktree that is already on a fresh branch from `origin/v2`,
 5. Creates `sync-v2-x-y` from `origin/v2` (or uses the current branch with `--base-branch HEAD`), enables rerere and trains it from earlier sync merges.
 6. Runs `git merge --no-ff --no-commit` with the sync message, then resolves what it can:
    - `bun script/check-workflows.ts --fix`: removes workflows that Kilo dropped. This also resolves their modify/delete conflicts.
-   - `skipFiles`, `keepOurs` and Kilo-owned paths (`utils/owned.ts`): keep Kilo's version.
+   - `skipFiles`: removes upstream changes and additions under the product areas Kilo removed (desktop, web app, hosted platform, see `utils/config.ts`). This also resolves their modify/delete conflicts.
+   - `keepOurs` and Kilo-owned paths (`utils/owned.ts`): keep Kilo's version.
    - mergiraf: syntax-aware resolution, staged only when no marker is left.
    - package.json: `transforms/transform-package-json.ts` (take upstream, re-apply Kilo's listed fields).
    - Branding transforms: only when `transforms.branding` is on.
@@ -97,7 +98,7 @@ The sync PR body gives: release and SHA, lag before and after, each conflict and
 Both checks compare the tree with the pinned upstream release commit: the second parent of the newest `chore(upstream): sync` merge in the history, or the initial base of `v2` (`5e73d5cb1f7`, release commit of v2.0.26) before the first sync. They need no network, only a full history.
 
 - `bun script/check-opencode-annotations.ts [--worktree] [--pin <ref>]`: fails on a Kilo line in a shared upstream file without a `kilocode_change` marker. A file that cannot carry markers (JSON) needs an `unmarked` reason in `shared-patches.json`.
-- `bun script/check-shared-patches.ts [--worktree] [--json] [--pin <ref>]` (U-L3-01): prints each shared file that Kilo adds or changes, its marked and unmarked lines, and the shared files Kilo deleted. It fails when a shared file has no entry in `shared-patches.json` (rung and missing seam), or when a count grows above its limit. A PR that adds a shared patch adds the entry and raises the limit in the same diff. Deleted workflows are not counted: `script/check-workflows.ts` governs them. Generated files (`bun.lock`, listed in `utils/owned.ts`) are listed but not counted: they follow from the `package.json` files, so a new Kilo-owned package does not trip the checks.
+- `bun script/check-shared-patches.ts [--worktree] [--json] [--pin <ref>]` (U-L3-01): prints each shared file that Kilo adds or changes, its marked and unmarked lines, and the shared files Kilo deleted. It fails when a shared file has no entry in `shared-patches.json` (rung and missing seam), or when a count grows above its limit. A PR that adds a shared patch adds the entry and raises the limit in the same diff. Deleted workflows are not counted: `script/check-workflows.ts` governs them. Paths in `skipFiles` are not shared files and are not counted. Generated files (`bun.lock`, listed in `utils/owned.ts`) are listed but not counted: they follow from the `package.json` files, so a new Kilo-owned package does not trip the checks.
 
 CI runs both in `.github/workflows/kilo-v2.yml` (job `shared upstream patches`), and the tests of this directory (job `upstream sync tooling tests`).
 
@@ -119,9 +120,9 @@ CI runs both in `.github/workflows/kilo-v2.yml` (job `shared upstream patches`),
 | Tool | v2 state |
 |---|---|
 | `transforms/keep-ours.ts` | On. Kilo-owned paths and `keepOurs` (empty on v2) |
-| `transforms/skip-files.ts` | On. `skipFiles` is empty on v2: workflows go through `script/check-workflows.ts` |
+| `transforms/skip-files.ts` | On. `skipFiles` lists the upstream product areas Kilo removed. Workflows go through `script/check-workflows.ts` |
 | `transforms/lock-files.ts` | On. Keep ours, regenerate with the pinned Bun |
-| `transforms/transform-package-json.ts` | On for conflicted package.json files. Re-applies Kilo's root `dev` script |
+| `transforms/transform-package-json.ts` | On for conflicted package.json files. Re-applies Kilo's root `dev` and `lint` scripts |
 | `transforms/package-names.ts` | Off until decision D-1 (`transforms.packageNames`). Package renames apply to Kilo-owned code too (for example `packages/kilo-plugin` imports `@opencode/plugin`), so Kilo imports follow the rename |
 | `transforms/preserve-versions.ts` | Off: v2 follows upstream version numbers (`transforms.versions`) |
 | `transforms/transform-i18n.ts`, `transform-take-theirs.ts`, `transform-scripts.ts`, `transform-extensions.ts`, `transform-web.ts` | Off until rebranding (`transforms.branding`) |

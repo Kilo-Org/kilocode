@@ -110,3 +110,12 @@ In-flight PRs do not wait. They merge with their marked registration and move to
 | D-2 | Sync cadence and target | Release by release (the parent of each `v2.x.y` tag), in order, and at least weekly |
 | D-3 | Owners of U-L1-01, U-L3-01 and U-E0-01 | To agree |
 | D-4 | Split of identity and branding | Identity PR 1 is store isolation and the `kilo2` app directory. Binary, user agent, theme and logo go with rebranding (Fabio, A11) |
+
+## 7. Removed upstream product areas (2026-10-16)
+
+This replaces "keep inert" for the hosted web properties (F-V2-055, U-E0-04) and records the desktop and web app part of Q-PROD-01 (U-E9-15): Kilo does not ship them, as on v1 (#253, #9845, #10381, #11450).
+
+- Removed: `packages/desktop`, `packages/app`, `packages/gui-extensions`, `packages/session-ui`, `packages/storybook`, `packages/console`, `packages/web`, `packages/posts`, `packages/function`, `packages/stats`, `infra/`, `sst.config.ts`, `salesforce/`, `sdks/vscode`. `packages/enterprise` was already removed upstream.
+- `skipFiles` in `script/upstream/utils/config.ts` lists these paths. The sync removes upstream changes and additions under them, and the shared-patch counter does not count them.
+- The CLI embeds no web UI. Non-API paths of the server return 404, as on v1. The TUI `/pair` command still exists and links to that 404; hiding it is part of U-E9-15.
+- Kept: `packages/ui` (TUI sounds, VS Code port), `services/`, `nix/`, `install`, `github/`. Their removal waits for the release lane (U-E3-06, U-E3-07).
