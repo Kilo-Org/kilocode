@@ -52,7 +52,7 @@ Skip in sync PRs: style, OpenCode branding in upstream code (a rename script han
 
 ### Do not duplicate CI
 
-Do not comment on what CI reports: workflow allowlist, `kilocode_change` markers and shared-patch counts (`kilo-v2.yml`), lint and typecheck (`check.yml`), unit and e2e tests and generated SDK freshness (`test.yml`). If a CI job did not run, or passed with all steps skipped, say so in the summary.
+Do not comment on what CI reports: workflow allowlist, `kilocode_change` markers, shared-patch counts and the migration progress map (`kilo-v2.yml`), lint and typecheck (`check.yml`), unit and e2e tests and generated SDK freshness (`test.yml`). If a CI job did not run, or passed with all steps skipped, say so in the summary.
 
 ### Flag (high confidence only)
 
