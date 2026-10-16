@@ -3,9 +3,12 @@ import {
   areas,
   classify,
   cleanup,
+  easy,
+  newcomer,
   component,
   pushedAt,
   decide,
+  failure,
   clip,
   digest,
   parts,
@@ -141,6 +144,7 @@ describe("digest", () => {
     failing: false,
     adopt: false,
     closed: false,
+    first: false,
     ...more,
   })
 
@@ -191,6 +195,7 @@ describe("parts", () => {
     failing: false,
     adopt: false,
     closed: false,
+    first: false,
   })
 
   test("splits a summary from one block per section", () => {
@@ -224,5 +229,109 @@ describe("clip", () => {
     expect(out.length).toBeLessThan(560)
     expect(out.endsWith("- ...list shortened")).toBe(true)
     expect(out).not.toContain("line 1 x".repeat(40))
+  })
+})
+
+describe("newcomer", () => {
+  test("detects first-time authors", () => {
+    expect(newcomer("FIRST_TIME_CONTRIBUTOR")).toBe(true)
+    expect(newcomer("FIRST_TIMER")).toBe(true)
+  })
+
+  test("ignores returning authors", () => {
+    expect(newcomer("CONTRIBUTOR")).toBe(false)
+    expect(newcomer("NONE")).toBe(false)
+    expect(newcomer(undefined)).toBe(false)
+  })
+})
+
+describe("easy", () => {
+  test("docs only", () => {
+    expect(easy(120, ["packages/kilo-docs/pages/a.md", "README.md"])).toBe("docs")
+    expect(easy(151, ["packages/kilo-docs/pages/a.md"])).toBeUndefined()
+  })
+
+  test("tests only", () => {
+    expect(easy(100, ["packages/opencode/test/a.test.ts", "packages/kilo-vscode/tests/unit/b.test.ts"])).toBe("tests")
+  })
+
+  test("small change", () => {
+    expect(easy(40, ["packages/opencode/src/a.ts", "packages/opencode/src/b.ts"])).toBe("small")
+    expect(easy(51, ["packages/opencode/src/a.ts"])).toBeUndefined()
+    expect(easy(10, ["a.ts", "b.ts", "c.ts", "d.ts"])).toBeUndefined()
+  })
+
+  test("risky paths are never quick wins", () => {
+    expect(easy(5, [".github/workflows/x.yml"])).toBeUndefined()
+    expect(easy(5, ["bun.lock"])).toBeUndefined()
+    expect(easy(5, ["package.json"])).toBeUndefined()
+    expect(easy(5, ["patches/x.patch"])).toBeUndefined()
+    expect(easy(5, ["packages/kilo-gateway/src/a.ts"])).toBeUndefined()
+    expect(easy(5, ["README.md", ".github/CODEOWNERS"])).toBeUndefined()
+  })
+
+  test("agent definitions and changesets are not docs", () => {
+    expect(easy(10, [".kilo/agent/a.md"])).toBeUndefined()
+    expect(easy(10, [".kilo/skills/x/SKILL.md"])).toBeUndefined()
+    expect(easy(100, [".changeset/a.md"])).toBeUndefined()
+  })
+
+  test("a small fix with a changeset is still small", () => {
+    expect(easy(20, ["packages/opencode/src/a.ts", ".changeset/a.md"])).toBe("small")
+  })
+
+  test("no files", () => {
+    expect(easy(0, [])).toBeUndefined()
+  })
+})
+
+describe("digest with quick wins and newcomers", () => {
+  const base: Row = {
+    number: 1,
+    title: "docs: fix typo",
+    url: "https://github.com/o/r/pull/1",
+    author: "new",
+    created: ago(2),
+    state: { state: "triage" },
+    failing: false,
+    adopt: false,
+    closed: false,
+    first: true,
+    quick: "docs",
+  }
+
+  test("lists quick wins and marks first-time contributors", () => {
+    const text = digest([base], "md", "o/r", now)
+    expect(text).toContain("**Quick wins: small and low-risk (1)**")
+    expect(text).toContain("docs only, first-time contributor")
+  })
+
+  test("counts show quick wins and newcomers", () => {
+    const out = parts([base], "slack", "o/r", now)
+    expect(out.counts).toBe("Quick: 1 · Triage: 1 · First-time: 1")
+  })
+
+  test("skips quick wins that wait for the contributor", () => {
+    const row: Row = { ...base, state: { state: "awaiting", since: ago(3), days: 3 } }
+    expect(digest([row], "md", "o/r", now)).not.toContain("Quick wins")
+  })
+})
+
+describe("cleanup of new labels", () => {
+  test("removes first-time and quick-win from maintainer PRs", () => {
+    expect(cleanup([label.first, label.quick, "area:cli"]).sort()).toEqual([label.first, label.quick].sort())
+  })
+})
+
+describe("failure", () => {
+  test("names the missing scope", () => {
+    expect(failure({ error: "missing_scope", needed: "chat:write", provided: "incoming-webhook" })).toBe(
+      "Slack chat.postMessage failed: missing_scope (needed: chat:write, provided: incoming-webhook)",
+    )
+  })
+
+  test("handles replies without scope details", () => {
+    expect(failure({ error: "not_in_channel" })).toBe("Slack chat.postMessage failed: not_in_channel")
+    expect(failure({})).toBe("Slack chat.postMessage failed: unknown error")
   })
 })

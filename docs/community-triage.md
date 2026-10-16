@@ -26,7 +26,7 @@ Two workflows do the work. Both use `script/kilocode/community-triage.ts`.
 
 | Workflow | Runs | Does |
 |---|---|---|
-| `community-label.yml` | When a PR or issue opens or is edited | Adds `community`, `needs-triage` (new items only, not reopened ones) and `area:*` labels |
+| `community-label.yml` | When a PR or issue opens or is edited | Adds `community`, `needs-triage` (new items only, not reopened ones), `first-time-contributor` and `area:*` labels |
 | `community-sweep.yml` | Monday and Thursday, 17:00 UTC | Syncs status labels, closes stale PRs, posts the queue |
 
 The sweep runs the evening before each maintainer slot. Andrea starts Friday and Bruno starts Tuesday with a fresh queue.
@@ -51,6 +51,8 @@ Set by the workflows:
 |---|---|
 | `community` | Author is not a maintainer |
 | `area:vscode`, `area:cli`, `area:agent-manager`, `area:jetbrains`, `area:desktop`, `area:docs`, `area:gateway`, `area:sdk`, `area:ui`, `area:i18n` | Part of the repo. Comes from the title scope, the changed paths, or the issue "Component" dropdown |
+| `first-time-contributor` | First contribution to this repo. See [First-time contributors](#first-time-contributors) |
+| `quick-win` | Small, low-risk PR. See [Quick wins](#quick-wins) |
 | `needs-triage` | No maintainer has reacted yet |
 | `needs-review` | The contributor replied or pushed. A maintainer should look again |
 | `awaiting-contributor` | A maintainer reacted last. The 14 day clock runs |
@@ -65,9 +67,9 @@ Set by hand:
 | `low-value` | Triaged. Not a priority |
 | `keep-open` | The sweep never closes this PR |
 
-The sweep owns the status labels. It adds and removes them on its own. Do not manage them by hand.
+The sweep owns the status labels, `first-time-contributor` and `quick-win`. It adds and removes them on its own. Do not manage them by hand.
 
-The sweep also removes `community` and the status labels from open PRs whose author is a maintainer. This fixes labels set before the maintainer list was known. It only handles PRs.
+The sweep also removes `community`, `first-time-contributor`, `quick-win` and the status labels from open PRs whose author is a maintainer. This fixes labels set before the maintainer list was known. It only handles PRs.
 
 `area:*` labels are only added, never removed. Fix a wrong one by hand.
 
@@ -101,6 +103,36 @@ stateDiagram-v2
 
 The 14 day clock starts at the time of the last maintainer reaction.
 
+## First-time contributors
+
+A warm first reply matters most for people who are new here.
+
+- GitHub marks an author as `FIRST_TIME_CONTRIBUTOR` or `FIRST_TIMER` until one of their PRs is merged. These PRs and issues get `first-time-contributor`.
+- The label is set when the item opens. The sweep keeps it in sync on PRs, and removes it after the first merge. Issues keep the label.
+- The digest adds "first-time contributor" next to these PRs, and the Slack summary shows how many there are.
+- First-time contributors often need a maintainer to approve their workflow runs before CI starts. Approve the runs early. Few checks on a PR can mean this.
+
+## Quick wins
+
+`quick-win` marks PRs that are small and low-risk, so a maintainer can review them in minutes. It does **not** mean "merge without review". The sweep sets it when all of these are true:
+
+- The PR is not a draft, its author is a community member, and it is not waiting for the contributor.
+- The last commit has passing checks, and GitHub reports the PR as mergeable.
+- No changed file is risky: `.github/`, `.kilo/`, `script/`, `patches/`, `packages/kilo-gateway/`, `package.json` or `bun.lock`.
+- One of these shapes fits:
+
+| Shape | Rule |
+|---|---|
+| Docs only | Every file is a `.md` or `.mdx` file, or is under `docs/` or `packages/kilo-docs/`. Files under `.kilo/` and `.changeset/` do not count as docs. At most 150 changed lines |
+| Tests only | Every file is a test file. At most 150 changed lines |
+| Small change | At most 50 changed lines in at most 3 files |
+
+The sweep removes the label when a PR stops fitting, for example after a new push or when checks fail. A PR that GitHub has not yet checked for conflicts misses the label until the next sweep.
+
+A quick win can still need a decision. A new provider docs page is small, but the team still has to keep it up to date.
+
+The digest lists quick wins in their own section, right after "Adopt".
+
 ## The 14 day rule
 
 When a PR has been `awaiting-contributor` for 14 days:
@@ -121,13 +153,16 @@ When a PR first gets `awaiting-contributor`, the sweep also posts one comment th
 
 ## The maintainer routine
 
-Open the latest "Community sweep" run. The job summary has the queue. A copy goes to Slack when a Slack secret is set. With a bot token, the channel gets one short summary and the lists are posted in its thread. With only a webhook, the channel gets the whole queue as one message.
+Open the latest "Community sweep" run. The job summary has the queue. A copy goes to Slack when a Slack secret is set. With a bot token, the channel gets one short summary and the lists are posted in its thread. With only a webhook, the channel gets the whole queue as one message. If the bot post fails, the sweep still finishes and logs a warning with the Slack error. If not even the summary was posted, the whole queue goes through the webhook when one is set. If only a thread reply fails, the sweep warns and keeps the rest, so the queue is not posted twice.
 
 1. **Adopt**: pick an owner and add the PR to the standup doc.
-2. **Needs triage**: decide. Add `high-value` or `low-value`, or comment on it. Not sure? Put it in the standup doc.
-3. **Needs review**: the contributor replied. Review again.
-4. **Approved**: merge.
-5. **Waiting for contributor**: nothing to do.
+2. **Quick wins**: review these first. They are the fastest way to clear the queue.
+3. **Needs triage**: decide. Add `high-value` or `low-value`, or comment on it. Not sure? Put it in the standup doc.
+4. **Needs review**: the contributor replied. Review again.
+5. **Approved**: merge.
+6. **Waiting for contributor**: nothing to do.
+
+Greet first-time contributors first, and approve their workflow runs.
 
 Friday and Tuesday are three to four days apart. This gives contributors time to reply between reviews.
 
@@ -136,10 +171,12 @@ Useful searches:
 - All community PRs: `is:pr is:open label:community`
 - Needs a maintainer: `is:pr is:open label:needs-triage,needs-review`
 - One area: `is:pr is:open label:community label:area:vscode`
+- Quick wins: `is:pr is:open label:quick-win`
+- First-time contributors: `is:pr is:open label:first-time-contributor`
 
 ## Issues
 
-New issues get the `community` label, `needs-triage` and an `area:*` label. The area comes from the required "Component" dropdown in the bug and feature templates. The answer "Other / not sure" adds no `area:*` label. The sweep only handles PRs.
+New issues get the `community` label, `needs-triage`, `first-time-contributor` for new authors and an `area:*` label. The area comes from the required "Component" dropdown in the bug and feature templates. The answer "Other / not sure" adds no `area:*` label. The sweep only handles PRs.
 
 ## Setup
 

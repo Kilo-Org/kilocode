@@ -7,6 +7,12 @@ import {
   providerOrderIndex,
 } from "../../../../src/shared/provider-model"
 
+export {
+  providerFailure,
+  providerFailureMessageKey,
+  providerFailureNeedsSignIn,
+} from "../../../../src/shared/provider-model"
+
 export const CUSTOM_PROVIDER_ID = "_custom"
 
 const fallback = new Set<string>(FALLBACK_PROVIDER_IDS)
