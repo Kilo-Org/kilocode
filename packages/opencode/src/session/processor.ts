@@ -645,7 +645,10 @@ const layer = Layer.effect(
                   messageID: ctx.assistantMessage.id,
                   sessionID: ctx.assistantMessage.sessionID,
                 }),
-                (part) => session.updatePart(part),
+                (part) =>
+                  session
+                    .getPart({ partID: part.id, messageID: part.messageID, sessionID: part.sessionID })
+                    .pipe(Effect.flatMap((stored) => session.updatePart(KiloReasoningReplay.restore(part, stored)))),
               )
             }
             // kilocode_change end

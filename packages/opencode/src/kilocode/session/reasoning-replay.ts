@@ -83,4 +83,16 @@ export namespace KiloReasoningReplay {
         },
       }))
   }
+
+  /**
+   * `reconcile` selects parts from the read model, which strips heavy tool
+   * `state.metadata` (diffs, file contents). Re-apply only the reconciled
+   * top-level metadata onto the stored, unstripped part so the write-back does
+   * not drop that data. A part with nothing stored is new and written as is.
+   */
+  export function restore(next: SessionV1.Part, stored: SessionV1.Part | undefined): SessionV1.Part {
+    if (next.type !== "reasoning" && next.type !== "tool") return next
+    if (stored?.type !== "reasoning" && stored?.type !== "tool") return next
+    return { ...stored, metadata: next.metadata }
+  }
 }

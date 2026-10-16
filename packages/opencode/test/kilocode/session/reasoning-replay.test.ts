@@ -128,6 +128,27 @@ describe("KiloReasoningReplay.reconcile", () => {
       [],
     )
   })
+
+  test("restores stripped tool state metadata from the stored part", () => {
+    const stored = call("edit", { openrouter: { reasoning_details: [text] } })
+    if (stored.state.status !== "completed") throw new Error("expected completed tool")
+    stored.state.metadata = { filediff: { file: "a.ts", before: "old", after: "new" } }
+    const read = { ...stored, state: { ...stored.state, metadata: { filediff: { file: "a.ts" } } } }
+    const [next] = KiloReasoningReplay.reconcile({
+      parts: [start(), read],
+      details: [text, encrypted],
+      messageID,
+      sessionID,
+    })
+
+    expect(KiloReasoningReplay.restore(next, stored)).toStrictEqual({
+      ...stored,
+      metadata: { openrouter: { reasoning_details: [text, encrypted] } },
+    })
+    // A newly created part has nothing stored yet.
+    const [created] = KiloReasoningReplay.reconcile({ parts: [start()], details: [encrypted], messageID, sessionID })
+    expect(KiloReasoningReplay.restore(created, undefined)).toBe(created)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -205,7 +226,12 @@ const tools = {
   lookup: tool({
     description: "Look up information",
     inputSchema: z.object({ query: z.string() }),
-    execute: async (input) => ({ title: "Lookup", output: `result:${input.query}`, metadata: { source: "test" } }),
+    // filediff before/after is stripped by the read model but must stay in storage.
+    execute: async (input) => ({
+      title: "Lookup",
+      output: `result:${input.query}`,
+      metadata: { source: "test", filediff: { file: "a.ts", before: "old", after: "new" } },
+    }),
   }),
 }
 
@@ -341,8 +367,17 @@ it.live("persists a signature that arrives after the tool call for the next requ
           ["call_2", "completed"],
         ])
         expect(calls[0].metadata?.openrouter?.reasoning_details).toStrictEqual([text, encrypted])
-        expect(calls[0].state.status === "completed" && calls[0].state.metadata).toEqual({ source: "test" })
         expect(calls[1].metadata?.openrouter).toBeUndefined()
+        const session = yield* Session.Service
+        const stored = yield* session.getPart({
+          partID: calls[0].id,
+          messageID: calls[0].messageID,
+          sessionID: calls[0].sessionID,
+        })
+        expect(stored?.type === "tool" && stored.state.status === "completed" && stored.state.metadata).toEqual({
+          source: "test",
+          filediff: { file: "a.ts", before: "old", after: "new" },
+        })
 
         const replayed = wire(out.body, "assistant")
         expect(replayed).toHaveLength(1)
