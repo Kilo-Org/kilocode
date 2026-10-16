@@ -38,6 +38,14 @@ class KiloAgentBehaviorService internal constructor(
 
     suspend fun agents(directory: String): List<AgentDetailDto> = safe(emptyList()) { call { agents(directory) } }
 
+    /**
+     * Re-reads the agent list after a write, keeping [fallback] when the read fails or comes back
+     * empty. Saving config can bounce the CLI, and the built-in agents mean an empty list is always a
+     * failed read rather than a real state, so returning one would blank the settings list.
+     */
+    suspend fun refreshAgents(directory: String, fallback: List<AgentDetailDto>): List<AgentDetailDto> =
+        safe(fallback) { call { agents(directory) } }.ifEmpty { fallback }
+
     suspend fun loadSkills(directory: String): List<SkillDto> = call { skills(directory) }
 
     suspend fun refreshSkills(directory: String, fallback: List<SkillDto>): List<SkillDto> = safe(fallback) { call { skills(directory) } }
@@ -49,13 +57,11 @@ class KiloAgentBehaviorService internal constructor(
     suspend fun refreshCommandFiles(directory: String, fallback: List<CommandFileDto>): List<CommandFileDto> =
         safe(fallback) { call { commandFiles(directory) } }
 
-    suspend fun mcpStatus(directory: String): List<McpStatusDto> = try {
-        LOG.info("mcp status: requesting dir=$directory")
-        call { mcpStatus(directory) }.also { LOG.info("mcp status: received dir=$directory count=${it.size}") }
-    } catch (e: Exception) {
-        LOG.warn("mcp status failed dir=$directory", e)
-        emptyList()
-    }
+    /**
+     * Loads MCP runtime status for [directory] as a strict read: a failed or cancelled RPC throws
+     * so callers can keep their last-known state instead of treating the failure as "no servers".
+     */
+    suspend fun mcpStatus(directory: String): List<McpStatusDto> = call { mcpStatus(directory) }
 
     suspend fun mcpConfig(directory: String): Map<String, McpServerConfigDto> = safe(emptyMap()) { call { mcpConfig(directory) } }
 

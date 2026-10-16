@@ -45,6 +45,11 @@ internal class PromptRailController(
     private val scroll: SessionScroll,
     parent: Disposable,
     timers: UiTimerSource = UiTimers,
+    /**
+     * Marks the prompt a navigator jump landed on, with the same cue the header timeline draws for a
+     * step. Called only when the prompt exists and the jump can target it.
+     */
+    private val onReveal: (String) -> Unit = {},
 ) : Disposable {
     val rail = PromptRail()
     private val popup = SidePopupController(timers, SessionUiStyle.PromptRail.OPEN_MS)
@@ -232,7 +237,7 @@ internal class PromptRailController(
 
     private fun jump(id: String?) {
         if (id == null) return
-        scroll.scrollMessageTop(id)
+        if (scroll.scrollMessageTop(id)) onReveal(id)
     }
 
     /**
@@ -315,7 +320,7 @@ internal class PromptRailController(
     /**
      * Puts the balloon entirely left of the ticks, so the body opens into the transcript instead of
      * covering the rail it was opened from. The body is capped to the room between the rail and the
-     * window edge, and its height to the visible session.
+     * window edge, and its height to the visible IDE frame.
      *
      * The point handed back is the balloon's intended center, not an edge: with the callout off the
      * platform ignores the position and the pointer distance and centers the box on the target (see
@@ -327,6 +332,8 @@ internal class PromptRailController(
         if (!rail.isShowing) return null
         val area = SwingUtilities.convertRectangle(root, root.visibleRect, pane)
         if (area.isEmpty) return null
+        val frame = pane.visibleRect
+        if (frame.isEmpty) return null
         val rect = SwingUtilities.convertRectangle(rail.parent, rail.bounds, pane)
         val margin = UiStyle.Gap.pad()
         val insets = UiStyle.Balloon.insets()
@@ -345,10 +352,12 @@ internal class PromptRailController(
             cap = JBUI.scale((SessionUiStyle.View.Popup.MAX_WIDTH * SessionUiStyle.PromptRail.WIDTH_SCALE).toInt()),
         )
         val maxHeight = PromptRailPlacement.maxHeight(
-            height = area.height,
+            height = frame.height,
             margin = margin,
             chrome = chromeHeight,
-            cap = JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT),
+            // Capped by the IDE frame rather than the session root or a fixed height. The balloon is
+            // hosted by this layered pane and can use its full vertical room.
+            cap = frame.height,
         )
         if (maxWidth <= 0 || maxHeight <= 0) return null
         built.fitWithin(maxWidth, maxHeight)
@@ -359,7 +368,7 @@ internal class PromptRailController(
         )
         val center = PromptRailPlacement.center(
             railX = rect.x,
-            area = area,
+            area = frame,
             inset = FLUSH,
             margin = margin,
             content = content,

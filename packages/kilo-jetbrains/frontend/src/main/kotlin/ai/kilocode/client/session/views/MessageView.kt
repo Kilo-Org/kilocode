@@ -6,11 +6,14 @@ import ai.kilocode.client.session.model.Compaction
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.Message
+import ai.kilocode.client.session.model.Notice
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.StepFinish
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolCallRef
+import ai.kilocode.client.session.settings.TranscriptDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplayTarget
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.RevertProgress
 import ai.kilocode.client.session.ui.SessionView
@@ -30,6 +33,7 @@ import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.ui.toolbarButton
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.layout.StackAxis
 import ai.kilocode.rpc.dto.MessageErrorDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
@@ -74,6 +78,8 @@ class MessageView(
     private val onPromoteBackgroundAgent: BackgroundPromote? = null,
     /** Sibling color slot for a child session's generated avatar. See [ai.kilocode.client.session.AgentAvatar]. */
     private val avatarColor: (String) -> Int? = { null },
+    /** Whether a block in this message may auto-expand from the transcript display settings. */
+    private val live: () -> Boolean = { true },
 ) : ai.kilocode.client.session.ui.SessionLayoutPanel(
     SessionUiStyle.SessionLayout.GAP,
 ), Disposable, SessionEditorStyleTarget, SessionView {
@@ -100,6 +106,9 @@ class MessageView(
     private var hidden: ToolCallRef? = null
     private var prompt: PromptView? = null
     private var promptBox: JPanel? = null
+    // Stacks the non-text content of a user prompt bubble: attachment chips and unreadable-attachment
+    // notices, so both read as part of the prompt rather than as separate rows beneath it.
+    private var promptSouth: Stack? = null
     private var wrap: PromptWrap? = null
     private var openDiff: SessionDiffOpener = { _, _, _ -> }
     private var sessionId: String? = null
@@ -185,6 +194,16 @@ class MessageView(
         return changed
     }
 
+    @RequiresEdt
+    fun syncTranscriptDisplay(display: TranscriptDisplay, force: Boolean = false): Boolean {
+        var changed = false
+        for (view in parts.values) {
+            if (view is TranscriptDisplayTarget) changed = view.syncTranscriptDisplay(display, force) || changed
+        }
+        if (changed) refresh()
+        return changed
+    }
+
     /** Add or update the renderer for [content]. */
     @RequiresEdt
     fun upsertPart(content: Content) {
@@ -212,6 +231,7 @@ class MessageView(
                 detach(stale)
                 remove(stale)
                 Disposer.dispose(stale)
+                syncPromptSouth()
                 syncBorder()
                 refresh()
                 return true
@@ -259,6 +279,10 @@ class MessageView(
             addAttachment(content)
             return
         }
+        if (content is Notice && role == SessionUiStyle.View.Message.USER_ROLE) {
+            addNotice(content)
+            return
+        }
         if (content is Reasoning) {
             val previous = parts.values.lastOrNull()
             if (previous is ReasoningView) {
@@ -283,12 +307,23 @@ class MessageView(
             it.hover = hover
             it.applyStyle(style)
             attachments = it
-            val node = ensurePromptWrap()
-            promptBox?.add(it, BorderLayout.SOUTH)
-            if (node.parent == null) add(node, tail())
+            ensurePromptSouth().add(it)
         }
         view.upsert(content)
         parts[content.id] = view
+    }
+
+    // A notice renders inside the prompt bubble, under the prompt text, next to any attachment chips.
+    @RequiresEdt
+    private fun addNotice(content: Notice) {
+        val view = NoticeView(content).also {
+            it.resize = resize
+            it.hover = hover
+            it.applyStyle(style)
+        }
+        parts[content.id] = view
+        ensurePromptSouth().add(view)
+        refresh()
     }
 
     @RequiresEdt
@@ -358,6 +393,7 @@ class MessageView(
         removeView(view)
         Disposer.dispose(view)
         if (view === prompt) prompt = null
+        syncPromptSouth()
         syncBorder()
         syncPromptWrap()
         refresh()
@@ -397,6 +433,7 @@ class MessageView(
         attachments = null
         prompt = null
         promptBox = null
+        promptSouth = null
         wrap = null
         for ((_, content) in msg.parts) {
             if (content is StepFinish) continue
@@ -417,13 +454,13 @@ class MessageView(
         ViewFactory.createUser(
             content, openFile, openUrl, selection, repo, promptMentions(msg),
             { openAttachment(msg.info.id, it) }, openDiff, sessionId,
-            onOpenSubagent = onOpenSubagent, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
+            onOpenSubagent = onOpenSubagent, live = live, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
         )
     } else {
         ViewFactory.create(
             content, openFile, openUrl, selection, repo,
             { openAttachment(msg.info.id, it) }, openDiff, sessionId,
-            onOpenSubagent = onOpenSubagent, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
+            onOpenSubagent = onOpenSubagent, live = live, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
         )
     }
 
@@ -481,6 +518,16 @@ class MessageView(
     @RequiresEdt
     fun promptToolbarActive() = promptToolbar?.active() == true
 
+    /**
+     * Prompt content without [PromptWrap]'s toolbar/footer. Historical prompts without a wrap paint
+     * their bubble on this message itself, so the message is the correct fallback for those.
+     */
+    @RequiresEdt
+    fun promptTarget(): JComponent? {
+        if (role != SessionUiStyle.View.Message.USER_ROLE || !isVisible) return null
+        return promptBox ?: this.takeIf { componentCount > 0 }
+    }
+
     @RequiresEdt
     fun setReverting(active: Boolean, text: String, onCancel: () -> Unit) {
         if (role != SessionUiStyle.View.Message.USER_ROLE) return
@@ -524,6 +571,7 @@ class MessageView(
         sources.clear()
         prompt = null
         promptBox = null
+        promptSouth = null
         wrap = null
         hidden = null
     }
@@ -621,6 +669,28 @@ class MessageView(
             promptBox = it
         }
         return PromptWrap(box).also { wrap = it }
+    }
+
+    // The bubble's SOUTH slot: a vertical stack the chips and notices both live in, so they sit
+    // inside the rounded prompt surface. Creates and attaches the prompt wrap when needed.
+    @RequiresEdt
+    private fun ensurePromptSouth(): Stack {
+        val existing = promptSouth
+        if (existing != null) return existing
+        val stack = Stack(StackAxis.VERTICAL)
+        val node = ensurePromptWrap()
+        promptBox?.add(stack, BorderLayout.SOUTH)
+        promptSouth = stack
+        if (node.parent == null) add(node, tail())
+        return stack
+    }
+
+    @RequiresEdt
+    private fun syncPromptSouth() {
+        val stack = promptSouth ?: return
+        if (stack.componentCount > 0) return
+        stack.parent?.remove(stack)
+        promptSouth = null
     }
 
     @RequiresEdt
