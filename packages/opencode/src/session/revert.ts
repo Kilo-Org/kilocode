@@ -102,18 +102,19 @@ const layer = Layer.effect(
       const earlier = session.revert
         ? yield* KiloSessionRevert.ordered(sessions, input.sessionID, session.revert, all, state.assertNotBusy, storage)
         : undefined
-      const previous = session.revert
-        ? ((yield* KiloSessionRevert.saved(storage, input.sessionID, session.revert))?.history ??
-          earlier?.patches ??
-          [])
-        : []
+      const record = session.revert
+        ? yield* KiloSessionRevert.saved(storage, input.sessionID, session.revert)
+        : undefined
+      const previous = record?.history ?? earlier?.patches ?? []
       const merged = KiloSessionRevert.merge(all, session.revert, rev, ordered.patches, previous)
       patches.length = 0
       patches.push(...merged.applied)
       if (patches.length > 0) rev.workspace = "restored"
       // Restore the previously reverted files from the pre-revert snapshot, then move each one to
-      // the baseline of the earliest checkpoint that is still inside the new range.
-      const prior = [...new Set(previous.flatMap((patch) => patch.files))]
+      // the baseline of the earliest checkpoint that is still inside the new range. Only the files
+      // of the still-undone suffix sit at the pre-revert state: a checkpoint an earlier move already
+      // restored keeps the content the workspace holds now, so an edit to it must survive.
+      const prior = [...new Set((record?.applied ?? earlier?.patches ?? []).flatMap((patch) => patch.files))]
       const files = [...new Set([...prior, ...patches.flatMap((patch) => patch.files)])]
       const baseline = session.revert?.snapshot && files.length > 0 ? yield* snap.track() : rev.snapshot
       if (files.length > 0 && !baseline) {
@@ -173,8 +174,10 @@ const layer = Layer.effect(
         state.assertNotBusy,
         storage,
       )
+      // A redo restores only the files the undo set currently holds. A checkpoint an earlier
+      // boundary move already dropped is live again, so its edits must survive the redo.
       const patches =
-        (yield* KiloSessionRevert.saved(storage, input.sessionID, session.revert))?.history ?? found.patches
+        (yield* KiloSessionRevert.saved(storage, input.sessionID, session.revert))?.applied ?? found.patches
       const files = [...new Set(patches.flatMap((patch) => patch.files))]
       const baseline = files.length > 0 ? yield* snap.track() : undefined
       if (files.length > 0 && !baseline) {

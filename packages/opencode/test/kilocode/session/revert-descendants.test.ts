@@ -675,4 +675,45 @@ describe("descendant revert regressions", () => {
     ),
     30_000,
   )
+
+  it.live(
+    "keeps an edit to a checkpoint a later boundary move already restored",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const one = path.join(dir, "one.txt")
+          const two = path.join(dir, "two.txt")
+          const three = path.join(dir, "three.txt")
+          yield* Effect.promise(() =>
+            Promise.all([fs.writeFile(one, "before"), fs.writeFile(two, "before"), fs.writeFile(three, "before")]),
+          )
+          const parent = yield* sessions.create({})
+          const first = yield* user(parent.id, 1)
+          yield* edit(yield* assistant(parent.id, first.id, 2), one, "one")
+          const second = yield* user(parent.id, 3)
+          yield* edit(yield* assistant(parent.id, second.id, 4), two, "two")
+          const third = yield* user(parent.id, 5)
+          yield* edit(yield* assistant(parent.id, third.id, 6), three, "three")
+          const tail = yield* user(parent.id, 7)
+
+          yield* revert.revert({ sessionID: parent.id, messageID: first.id })
+          expect(yield* read(one)).toBe("before")
+          // Moving the boundary later drops the first checkpoint; its file is live again.
+          yield* revert.revert({ sessionID: parent.id, messageID: second.id })
+          expect([yield* read(one), yield* read(two), yield* read(three)]).toEqual(["one", "before", "before"])
+          yield* Effect.promise(() => fs.writeFile(one, "edited"))
+          // The dropped checkpoint is no longer undone, so this move must keep the edit.
+          yield* revert.revert({ sessionID: parent.id, messageID: third.id })
+          expect([yield* read(one), yield* read(two), yield* read(three)]).toEqual(["edited", "two", "before"])
+          yield* revert.unrevert({ sessionID: parent.id })
+          expect([yield* read(one), yield* read(two), yield* read(three)]).toEqual(["edited", "two", "three"])
+          yield* revert.revert({ sessionID: parent.id, messageID: tail.id })
+          expect([yield* read(one), yield* read(two), yield* read(three)]).toEqual(["edited", "two", "three"])
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
 })
