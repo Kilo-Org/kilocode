@@ -1068,6 +1068,16 @@ export const dict = {
     "Dies ist ein integrierter Modus. Seine Basisdefinition kann nicht geändert werden, aber Sie können unten Überschreibungen konfigurieren.",
   "settings.agentBehaviour.editMode.promptOverride":
     "Benutzerdefinierte Prompt-Überschreibung für diesen eingebauten Modus",
+  "settings.agentBehaviour.mode.title": "Modus",
+  "settings.agentBehaviour.mode.description":
+    "Primäre Agents erscheinen im Modus-Umschalter des Chats. Subagents werden nur von anderen Agents über das Task-Tool aufgerufen, basierend auf ihrer Beschreibung.",
+  "settings.agentBehaviour.mode.primary": "Primär",
+  "settings.agentBehaviour.mode.subagent": "Subagent",
+  "settings.agentBehaviour.mode.all": "Primär und Subagent",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "Dies ist der Standard-Agent und kann daher nicht nur ein Subagent sein. Wählen Sie zuerst einen anderen Standard-Agent.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "Dieser Agent ist der Standard-Agent in der kilo.jsonc des Projekts und kann daher nicht nur ein Subagent sein. Ändern Sie dort zuerst default_agent.",
   "settings.agentBehaviour.badge.subagent": "Subagent",
   "settings.agentBehaviour.permissions.title": "Berechnete Berechtigungen",
   "settings.agentBehaviour.permissions.count": "{{count}} Regeln",

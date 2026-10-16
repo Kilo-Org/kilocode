@@ -1046,6 +1046,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "To jest wbudowany tryb. Jego podstawowa definicja nie może zostać zmieniona, ale poniżej możesz skonfigurować nadpisania.",
   "settings.agentBehaviour.editMode.promptOverride": "Niestandardowe nadpisanie promptu dla tego wbudowanego trybu",
+  "settings.agentBehaviour.mode.title": "Tryb",
+  "settings.agentBehaviour.mode.description":
+    "Agenci główni pojawiają się w przełączniku trybów czatu. Podagenci są wywoływani wyłącznie przez innych agentów za pomocą narzędzia Task, na podstawie ich opisu.",
+  "settings.agentBehaviour.mode.primary": "Główny",
+  "settings.agentBehaviour.mode.subagent": "Podagent",
+  "settings.agentBehaviour.mode.all": "Główny i podagent",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "To jest domyślny agent, więc nie może być wyłącznie podagentem. Najpierw wybierz innego domyślnego agenta.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "Ten agent jest domyślnym agentem w pliku kilo.jsonc projektu, więc nie może być wyłącznie podagentem. Najpierw zmień tam default_agent.",
   "settings.agentBehaviour.badge.subagent": "podagent",
   "settings.agentBehaviour.permissions.title": "Obliczone uprawnienia",
   "settings.agentBehaviour.permissions.count": "{{count}} reguł",

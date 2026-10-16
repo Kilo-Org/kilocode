@@ -1046,6 +1046,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Dette er en indbygget tilstand. Dens grundlæggende definition kan ikke ændres, men du kan konfigurere tilsidesættelser nedenfor.",
   "settings.agentBehaviour.editMode.promptOverride": "Tilpasset prompt-tilsidesættelse for denne indbyggede tilstand",
+  "settings.agentBehaviour.mode.title": "Tilstand",
+  "settings.agentBehaviour.mode.description":
+    "Primære agenter vises i chattens tilstandsvælger. Subagenter kaldes kun af andre agenter via Task-værktøjet, ud fra deres beskrivelse.",
+  "settings.agentBehaviour.mode.primary": "Primær",
+  "settings.agentBehaviour.mode.subagent": "Subagent",
+  "settings.agentBehaviour.mode.all": "Primær og subagent",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "Dette er standardagenten, så den kan ikke kun være en subagent. Vælg først en anden standardagent.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "Denne agent er standardagenten i projektets kilo.jsonc, så den kan ikke kun være en subagent. Ret default_agent der først.",
   "settings.agentBehaviour.badge.subagent": "subagent",
   "settings.agentBehaviour.permissions.title": "Beregnede tilladelser",
   "settings.agentBehaviour.permissions.count": "{{count}} regler",

@@ -28,6 +28,7 @@ import {
   removable,
   selectedDefaultAgentValue,
 } from "./agent-behaviour-patches"
+import { agentMode, candidates } from "./agent-mode"
 import { parseImport, MAX_IMPORT_SIZE } from "./mode-io"
 import type { ImportError } from "./mode-io"
 
@@ -187,9 +188,11 @@ const AgentBehaviourTab: Component<Props> = (props) => {
   })
 
   // Default-agent picker must only show visible primary agents (not subagents
-  // or hidden modes) since the CLI rejects those as default_agent values.
+  // or hidden modes) since the CLI rejects those as default_agent values. The
+  // draft mode is checked too, so an agent switched to subagent before saving
+  // cannot be picked.
   const defaultAgentOptions = createMemo<SelectOption[]>(() => {
-    const visible = session.agents().map((a) => a.name)
+    const visible = candidates(session.agents(), config().agent).map((a) => a.name)
     return [
       { value: "", label: language.t("common.default") },
       ...visible.map((name) => ({ value: name, label: name })),
@@ -525,7 +528,7 @@ const AgentBehaviourTab: Component<Props> = (props) => {
                             custom
                           </span>
                         </Show>
-                        <Show when={agent()?.mode === "subagent"}>
+                        <Show when={agentMode(agentCfg(), agent()) === "subagent"}>
                           <span
                             style={{
                               "font-size": "var(--kilo-font-size-10)",
