@@ -8,11 +8,11 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**8 / 9854 cells done (0.1%)**, 0 dropped. `░░░░░░░░░░░░░░░░`
+**12 / 9854 cells done (0.1%)**, 0 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 5 | 3557 | 0.1% |
+| module | 9 | 3557 | 0.3% |
 | api | 0 | 39 | 0% |
 | hook | 0 | 3459 | 0% |
 | test | 3 | 2799 | 0.1% |
@@ -27,7 +27,8 @@ One point per day from the committed `progress.json` on the first-parent history
 
 | Date | Done | Total | % |
 |---|---:|---:|---:|
-| now | 8 | 9854 | 0.1% |
+| 2026-10-16 | 8 | 9854 | 0.1% |
+| now | 12 | 9854 | 0.1% |
 
 ## Features
 
@@ -67,7 +68,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | fff | 0/1 |  | 0/4 | 0/1 | 0/6 | 0% | `░░░░░░░░░░░░░░░░` |
 | filesystem-containment |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |
 | fixture |  |  |  | 0/10 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |
-| gateway | 5/44 |  | 0/20 | 3/23 | 8/87 | 9.2% | `█░░░░░░░░░░░░░░░` |
+| gateway | 9/44 |  | 0/20 | 3/23 | 12/87 | 13.8% | `██░░░░░░░░░░░░░░` |
 | global | 0/2 |  | 0/4 | 0/1 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |
 | goals | 0/9 |  | 0/6 | 0/6 | 0/21 | 0% | `░░░░░░░░░░░░░░░░` |
 | i18n | 0/20 |  |  |  | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |

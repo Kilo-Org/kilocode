@@ -22,6 +22,21 @@ const TerminalBench = Schema.Struct({
 })
 const decodeTerminalBench = Schema.decodeUnknownOption(TerminalBench)
 
+// Same shape as `reasoning_options` in models.dev (`packages/core/src/models-dev.ts`).
+const ReasoningOption = Schema.Union([
+  Schema.Struct({
+    type: Schema.Literal("effort"),
+    values: Schema.optionalKey(Schema.Array(Schema.NullOr(Schema.String))),
+  }),
+  Schema.Struct({ type: Schema.Literal("toggle") }),
+  Schema.Struct({
+    type: Schema.Literal("budget_tokens"),
+    min: Schema.optionalKey(Schema.Finite),
+    max: Schema.optionalKey(Schema.Finite),
+  }),
+])
+const decodeReasoningOption = Schema.decodeUnknownOption(ReasoningOption)
+
 const PositiveInt = Schema.Int.check(Schema.isGreaterThan(0))
 
 const RawModel = Schema.Struct({
@@ -60,7 +75,7 @@ const RawModel = Schema.Struct({
   opencode: Schema.optionalKey(
     Schema.Struct({
       family: Schema.optionalKey(Schema.NullOr(Schema.String)),
-      variants: Schema.optionalKey(Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Unknown))),
+      reasoning_options: Schema.optionalKey(Schema.NullOr(Schema.Array(Schema.Unknown))),
       ai_sdk_provider: Schema.optionalKey(Schema.Unknown),
     }),
   ),
@@ -81,10 +96,10 @@ export interface Cost {
   readonly cacheWrite?: number
 }
 
-export interface Variant {
-  readonly id: string
-  readonly settings: Record<string, unknown>
-}
+export type ReasoningOption =
+  | { readonly type: "effort"; readonly values?: readonly string[] }
+  | { readonly type: "toggle" }
+  | { readonly type: "budget_tokens"; readonly min?: number; readonly max?: number }
 
 export interface Model {
   readonly id: string
@@ -108,7 +123,7 @@ export interface Model {
     readonly input: readonly ("text" | "audio" | "image" | "video" | "pdf")[]
     readonly output: readonly ("text" | "audio" | "image" | "video" | "pdf")[]
   }
-  readonly variants?: readonly Variant[]
+  readonly reasoningOptions?: readonly ReasoningOption[]
 }
 
 export interface Entry {
@@ -343,6 +358,19 @@ function toModel(model: RawModel): Model {
       ? model.opencode.family.trim()
       : undefined
   const family = explicitFamily ?? extractFamily(model.id)
+  // Decode each entry so one malformed option drops only itself, never the model or the catalog.
+  // Null effort values are dropped, as in models.dev.
+  const reasoningOptions = model.opencode?.reasoning_options?.flatMap((entry) =>
+    Option.toArray(decodeReasoningOption(entry)).map(
+      (option): ReasoningOption =>
+        option.type === "effort"
+          ? {
+              type: "effort",
+              values: option.values?.filter((value): value is string => value !== null && value !== "null"),
+            }
+          : option,
+    ),
+  )
   return {
     id: model.id,
     name: model.name,
@@ -389,14 +417,8 @@ function toModel(model: RawModel): Model {
       input: inputModalities,
       output: outputModalities,
     },
-    ...(model.opencode?.variants
-      ? {
-          variants: Object.entries(model.opencode.variants).map(([id, settings]) => ({
-            id,
-            settings,
-          })),
-        }
-      : {}),
+    // `[]` means reasoning is always on, so the model has no variants (same as models.dev).
+    ...(reasoningOptions ? { reasoningOptions } : {}),
   }
 }
 
