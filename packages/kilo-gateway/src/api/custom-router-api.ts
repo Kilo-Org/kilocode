@@ -37,12 +37,14 @@ const REQUEST_TIMEOUT_MS = 30_000
 export class CustomRouterRequestError extends Error {
   readonly code: string
   readonly status: number
+  readonly retryAt?: string
 
-  constructor(input: { code: string; message: string; status: number }) {
+  constructor(input: { code: string; message: string; status: number; retryAt?: string }) {
     super(input.message)
     this.name = "CustomRouterRequestError"
     this.code = input.code
     this.status = input.status
+    this.retryAt = input.retryAt
   }
 }
 
@@ -106,6 +108,7 @@ const STATUS_CODES: Record<number, CustomRouterErrorCode> = {
   404: "router_not_found",
   409: "stale_engine_identity",
   422: "custom_router_unavailable",
+  429: "quota_exceeded",
 }
 
 function failure(status: number, body: unknown): CustomRouterRequestError {

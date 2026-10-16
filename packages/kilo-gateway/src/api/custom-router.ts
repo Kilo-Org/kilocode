@@ -127,6 +127,7 @@ export const CustomRouterErrorCodeSchema = z.enum([
   "router_not_found",
   "invalid_request",
   "insufficient_balance",
+  "quota_exceeded",
   "custom_router_unavailable",
   "stale_engine_identity",
   "internal_error",
@@ -134,7 +135,8 @@ export const CustomRouterErrorCodeSchema = z.enum([
 export type CustomRouterErrorCode = z.infer<typeof CustomRouterErrorCodeSchema>
 
 export const CustomRouterErrorResponseSchema = z.object({
-  error: z.object({ code: CustomRouterErrorCodeSchema, message: z.string() }),
+  // retryAt is an ISO time; present when the limit has a known reset.
+  error: z.object({ code: CustomRouterErrorCodeSchema, message: z.string(), retryAt: z.string().optional() }),
 })
 export type CustomRouterErrorResponse = z.infer<typeof CustomRouterErrorResponseSchema>
 

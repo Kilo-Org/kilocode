@@ -84,7 +84,7 @@ export namespace KiloCustomRouter {
     return out
   }
 
-  export function errorMessage(code: string, detail?: string): string {
+  export function errorMessage(code: string, detail?: string, retryAt?: string): string {
     const suffix = detail ? ` (${detail})` : ""
     switch (code) {
       case "unauthorized":
@@ -95,6 +95,8 @@ export namespace KiloCustomRouter {
         return `Custom auto router ${detail ?? ""} was not found. Check the id with \`kilo auto router list\`.`
       case "insufficient_balance":
         return "Your Kilo balance is too low for auto routing. Top up your account and try again."
+      case "quota_exceeded":
+        return `Kilo's benchmark limit for this router owner is reached. Try again ${retryAt ? `after ${retryAt}` : "later"}.`
       case "custom_router_unavailable":
         return `No model in this custom auto router can serve this request${suffix}. Add a client model with \`kilo auto router add\`, or add a gateway model in the web editor.`
       case "stale_engine_identity":
@@ -107,7 +109,7 @@ export namespace KiloCustomRouter {
 
   export function failure(error: unknown, router?: string): Error {
     if (error instanceof CustomRouterRequestError) {
-      return new Error(errorMessage(error.code, error.message || router))
+      return new Error(errorMessage(error.code, error.message || router, error.retryAt))
     }
     const reason = error instanceof Error ? error.message : String(error)
     return new Error(`Kilo auto routing request failed: ${reason}`)

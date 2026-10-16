@@ -279,6 +279,7 @@ describe("KiloCustomRouter routing decision", () => {
   test("surfaces worker error codes with specific messages", async () => {
     const codes = [
       ["insufficient_balance", "balance is too low"],
+      ["quota_exceeded", "benchmark limit for this router owner is reached. Try again later"],
       ["unauthorized", "Sign in to Kilo"],
       ["forbidden", "do not have access"],
       ["router_not_found", "was not found"],
@@ -303,6 +304,28 @@ describe("KiloCustomRouter routing decision", () => {
     ])
     await expect(KiloCustomRouter.resolve(resolveInput(malformed.fetch, "token-g"))).rejects.toThrow(
       "Unexpected response from the custom router service",
+    )
+  })
+
+  test("reports the quota reset time when the worker sends one", async () => {
+    const limited = respond([
+      { path: "/api/auto-routing/custom-routers", body: listResponse([clientListing()]) },
+      {
+        path: "/v1/decide",
+        status: 429,
+        body: { error: { code: "quota_exceeded", message: "limit", retryAt: "2026-10-17T00:00:00.000Z" } },
+      },
+    ])
+    await expect(KiloCustomRouter.resolve(resolveInput(limited.fetch, "token-h"))).rejects.toThrow(
+      "Try again after 2026-10-17T00:00:00.000Z",
+    )
+
+    const bare = respond([
+      { path: "/api/auto-routing/custom-routers", body: listResponse([clientListing()]) },
+      { path: "/v1/decide", status: 429, body: "slow down" },
+    ])
+    await expect(KiloCustomRouter.resolve(resolveInput(bare.fetch, "token-i"))).rejects.toThrow(
+      "benchmark limit for this router owner is reached. Try again later",
     )
   })
 })

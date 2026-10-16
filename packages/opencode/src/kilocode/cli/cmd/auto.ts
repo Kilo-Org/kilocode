@@ -233,7 +233,7 @@ function resolveReference(value: string): CustomRouterReference | undefined {
 
 function describeFailure(error: unknown, prefix: string): string {
   if (error instanceof CustomRouterRequestError) {
-    return `${prefix}: ${KiloCustomRouter.errorMessage(error.code, error.message)}`
+    return `${prefix}: ${KiloCustomRouter.errorMessage(error.code, error.message, error.retryAt)}`
   }
   return `${prefix}: ${errorMessage(error)}`
 }

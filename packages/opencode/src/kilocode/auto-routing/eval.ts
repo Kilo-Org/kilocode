@@ -22,6 +22,7 @@ import {
   type CustomRouterSummary,
 } from "@kilocode/kilo-gateway"
 import { parseKiloRunEvents } from "./eval-events"
+import { KiloCustomRouter } from "./router"
 import {
   EVAL_ENTRYPOINT,
   EVAL_ENTRYPOINT_FILE,
@@ -140,9 +141,16 @@ function report(): Run {
 }
 
 function wrap(error: unknown, prefix: string): Error {
-  if (error instanceof CustomRouterRequestError) return new Error(`${prefix}: ${error.message}`)
-  return new Error(`${prefix}: ${errorMessage(error)}`)
+  return new Error(`${prefix}: ${describe(error)}`)
 }
+
+function describe(error: unknown): string {
+  return error instanceof CustomRouterRequestError ? KiloCustomRouter.failure(error).message : errorMessage(error)
+}
+
+// Balance and benchmark limits apply to the owner, not the case: every later
+// upload would fail the same way after spending local inference on it.
+const STOP_CODES: Record<string, true> = { insufficient_balance: true, quota_exceeded: true }
 
 // Accepts the full model id or a bare slug, with an optional org prefix.
 function parseRouter(value: string): string | undefined {
@@ -195,7 +203,11 @@ async function worker(state: Worker): Promise<void> {
       state.stats.uploaded += 1
     } catch (error) {
       state.stats.failed += 1
-      state.io.fail(`case ${item.caseId} rep ${item.rep}: ${errorMessage(error)}`)
+      state.io.fail(`case ${item.caseId} rep ${item.rep}: ${describe(error)}`)
+      if (error instanceof CustomRouterRequestError && STOP_CODES[error.code]) {
+        state.stats.failed += state.queue.length
+        state.queue.length = 0
+      }
     }
   }
 }
