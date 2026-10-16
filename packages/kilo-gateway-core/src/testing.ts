@@ -35,6 +35,7 @@ export function fixture() {
           supported_parameters: ["tools", "temperature"],
           isFree: true,
           preferredIndex: 1,
+          opencode: { reasoning_options: [] },
         },
         {
           id: "kilo-auto/frontier",
@@ -54,9 +55,8 @@ export function fixture() {
             family: "claude",
             ai_sdk_provider: "openrouter",
             prompt: "anthropic",
-            variants: {
-              high: { reasoningEffort: "high" },
-            },
+            // Malformed entries and null values must be dropped without losing the valid option.
+            reasoning_options: [null, { type: "unknown" }, { type: "effort", values: [null, "high"] }],
           },
         },
         {
@@ -94,6 +94,7 @@ export function fixture() {
           opencode: {
             family: "claude",
             ai_sdk_provider: "anthropic",
+            reasoning_options: [{ type: "effort", values: ["low", "medium", "high", "max"] }],
           },
         },
         {

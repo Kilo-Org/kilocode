@@ -30,10 +30,11 @@ describe("KiloModels", () => {
       temperature: true,
       limit: { context: 200000, output: 32000 },
       cost: { input: 3, output: 15, cacheRead: 0.3 },
-      variants: [{ id: "high", settings: { reasoningEffort: "high" } }],
+      reasoningOptions: [{ type: "effort", values: ["high"] }],
     })
     const small = result.models.find((model) => model.id === "kilo-auto/small")
     expect(small?.family).toBe("gpt-luna")
+    expect(result.models.find((model) => model.id === "kilo-auto/free")?.reasoningOptions).toEqual([])
     expect(KiloModels.entries(result.models)).toContainEqual({
       id: "kilo-auto/frontier",
       name: "Kilo Auto Frontier",
@@ -65,6 +66,9 @@ describe("KiloModels", () => {
     )
     expect(result.anonymous).toBe(false)
     expect(result.models.map((model) => model.id)).toEqual(["anthropic/claude-sonnet-4.6", "kilo-auto/small"])
+    expect(result.models[0]?.reasoningOptions).toEqual([
+      { type: "effort", values: ["low", "medium", "high", "max"] },
+    ])
     expect(backend.requests.at(-1)).toEqual({
       method: "GET",
       path: "/api/organizations/selected/models",

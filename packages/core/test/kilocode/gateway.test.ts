@@ -197,6 +197,19 @@ describe("KiloGatewayPlugin", () => {
                 .filter((item) => item.providerID === kilo)
                 .map((item) => item.id),
             ).toEqual([Model.ID.make("anthropic/claude-sonnet-4.6"), Model.ID.make("kilo-auto/small")])
+            const sonnet = (yield* models.available()).find(
+              (item) => item.providerID === kilo && item.id === Model.ID.make("anthropic/claude-sonnet-4.6"),
+            )
+            expect(sonnet?.variants.map((variant) => variant.id)).toEqual([
+              Model.VariantID.make("low"),
+              Model.VariantID.make("medium"),
+              Model.VariantID.make("high"),
+              Model.VariantID.make("max"),
+            ])
+            expect(sonnet?.variants.find((variant) => variant.id === Model.VariantID.make("high"))?.settings).toMatchObject({
+              thinking: { type: "adaptive", display: "summarized" },
+              effort: "high",
+            })
             expect(yield* models.default()).toMatchObject({
               providerID: kilo,
               id: Model.ID.make("anthropic/claude-sonnet-4.6"),
