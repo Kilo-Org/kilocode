@@ -3483,7 +3483,7 @@ body.am-wt-dragging-active * {
 
 /* Allow portal-based dropdowns to escape the dialog bounds.
    Wider than the kilo-ui default so the prompt stays readable for long input. */
-[data-component="dialog"]:has(.am-nv-dialog) [data-slot="dialog-content"] {
+[data-component="dialog"]:has(.am-nv-header) [data-slot="dialog-content"] {
   overflow: visible;
   max-height: 85vh;
   width: 640px;
@@ -3497,16 +3497,153 @@ body.am-wt-dragging-active * {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   padding: 0 20px;
 }
 
-/* Fixed footer for the submit button */
+/* Starting point group: origin and worktree name read as one unit. */
+.am-nv-start {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+/* Footer: run options on the left, the action on the right. Always visible. */
 .am-nv-dialog-footer {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
   flex-shrink: 0;
-  padding: 14px 20px 20px;
+  min-height: 64px;
+  margin-top: 16px;
+  padding: 14px 20px 16px;
+  border-top: 1px solid var(--border-weak-base);
+}
+
+.am-nv-dialog-footer .am-nv-submit {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Compare mode sits inline in the footer: label, picker, then the action. */
+.am-nv-dialog-footer .am-nv-compare-section {
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+}
+
+.am-nv-dialog-footer .am-nv-compare-section > [data-slot="popover-trigger"] {
+  flex: 1;
+  min-width: 0;
+  max-width: 280px;
+}
+
+.am-nv-dialog-footer .am-nv-compare-section .am-selector-trigger {
+  width: 100%;
+}
+
+/* Anchor the dialog near the top, so the header stays still when the tab
+   changes or the prompt grows. Height changes then only extend downward. */
+[data-component="dialog"]:has(.am-nv-header) {
+  align-items: flex-start;
+  padding-top: min(12vh, 120px);
+}
+
+/* Header: title, New/Import mode switch, close. */
+[data-component="dialog"]:has(.am-nv-header) [data-slot="dialog-header"] {
+  gap: 14px;
+  padding: 16px 14px 16px 20px;
+}
+
+.am-nv-header {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.am-nv-close {
+  margin-left: auto;
+}
+
+/* Segmented mode switch with a sliding indicator behind the active tab. */
+.am-nv-mode {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 2px;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-md, 6px);
+  background: var(--vscode-input-background, var(--surface-inset-base));
+  isolation: isolate;
+}
+
+.am-nv-mode::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc(50% - 2px);
+  border-radius: calc(var(--radius-md, 6px) - 2px);
+  background: var(--surface-interactive-base);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.am-nv-mode[data-tab="import"]::before {
+  transform: translateX(100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .am-nv-mode::before {
+    transition: none;
+  }
+}
+
+.am-nv-mode-tab {
+  padding: 3px 12px;
+  border: none;
+  border-radius: calc(var(--radius-md, 6px) - 2px);
+  background: transparent;
+  color: var(--text-weak);
+  font-family: inherit;
+  font-size: var(--kilo-font-size-12);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.am-nv-mode-tab:hover {
+  color: var(--text-base);
+}
+
+.am-nv-mode-tab-active,
+.am-nv-mode-tab-active:hover {
+  color: var(--text-on-interactive-base);
+}
+
+.am-nv-mode-tab:focus-visible {
+  outline: 1px solid var(--border-focus, #007fd4);
+  outline-offset: -1px;
+}
+
+/* Shortcut hint inside the primary button. */
+.am-nv-submit-kbd {
+  margin-left: 8px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.16);
+  color: inherit;
+  font-family: inherit;
+  font-size: var(--kilo-font-size-11);
+  font-weight: 500;
+  line-height: 16px;
+  opacity: 0.85;
 }
 
 .am-nv-name-input {
@@ -3520,6 +3657,11 @@ body.am-wt-dragging-active * {
   font-size: var(--kilo-font-size-13);
   outline: none;
   box-sizing: border-box;
+  transition: border-color 120ms ease;
+}
+
+.am-nv-name-input:hover {
+  border-color: var(--text-weaker);
 }
 
 .am-nv-name-input:focus {
@@ -3586,7 +3728,7 @@ body.am-wt-dragging-active * {
    resize); the textarea always fills it and is the only element that scrolls,
    so long prompts never produce nested scrollbars. */
 .am-nv-dialog .am-prompt-input-container {
-  margin: var(--prompt-min-gutter);
+  margin: 0;
   resize: vertical;
   overflow: hidden;
   min-height: 120px;
@@ -3686,7 +3828,11 @@ body.am-wt-dragging-active * {
   font-size: var(--kilo-font-size-12);
   font-weight: 500;
   cursor: pointer;
-  transition: all 100ms;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .am-nv-pill:hover {
@@ -3699,13 +3845,6 @@ body.am-wt-dragging-active * {
   background: var(--border-focus, #007fd4);
   color: var(--text-on-interactive-base);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-/* Version hint text */
-
-.am-nv-version-hint {
-  font-size: var(--kilo-font-size-12);
-  color: var(--text-weaker);
 }
 
 /* Compare mode pill in the version bar */
@@ -4323,53 +4462,16 @@ body.am-wt-dragging-active * {
   animation: am-skeleton-pulse 1.5s ease-in-out infinite;
 }
 
-/* Tab switcher for New/Import tabs in the dialog */
-
-.am-tab-switcher {
-  display: flex;
-  flex-shrink: 0;
-  gap: 2px;
-  padding: 0 20px;
-  margin-bottom: 4px;
-}
-
-.am-tab-switcher-pill {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 14px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-weak);
-  font-size: var(--kilo-font-size-12);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 100ms;
-}
-
-.am-tab-switcher-pill:hover {
-  background: var(--surface-inset-base-hover);
-  color: var(--text-base);
-}
-
-.am-tab-switcher-pill-active {
-  background: var(--surface-interactive-base) !important;
-  color: var(--text-on-interactive-base) !important;
-}
-
-/* Worktree origin: project and base branch as one segmented control,
-   inline with the New/Import tabs. Reads as "project / branch". It fills the
-   row and splits it in fixed shares, so the layout does not move with the
-   length of the project or branch name. */
+/* Worktree origin: project and base branch as one segmented control that
+   reads as "project / branch". It spans the dialog and splits it in fixed
+   shares, so the layout does not move with the length of either name. */
 
 .am-nv-origin {
   display: flex;
   align-items: center;
-  flex: 1 1 0;
+  flex: 0 0 auto;
   min-width: 0;
-  height: 30px;
-  margin-left: 12px;
+  height: 32px;
   border: 1px solid var(--border-weak-base);
   border-radius: var(--radius-sm);
   background: var(--vscode-input-background, var(--surface-inset-base));
@@ -4473,8 +4575,8 @@ body.am-wt-dragging-active * {
 .am-import-tab {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 0 16px 16px;
+  gap: 16px;
+  padding: 0 20px 20px;
   min-width: 460px;
   max-height: 350px;
   overflow-y: visible;
@@ -5538,7 +5640,7 @@ body.vscode-high-contrast-light {
 
   /* Version pills */
   .am-nv-pill,
-  .am-tab-switcher-pill {
+  .am-nv-mode-tab {
     border: 1px solid var(--vscode-contrastBorder, transparent);
   }
 
@@ -5546,8 +5648,8 @@ body.vscode-high-contrast-light {
     border-color: var(--vscode-contrastBorder, transparent) !important;
   }
 
-  .am-tab-switcher-pill-active {
-    border-color: var(--vscode-contrastBorder, transparent) !important;
+  .am-nv-mode-tab-active {
+    border-color: var(--vscode-contrastActiveBorder, var(--vscode-contrastBorder, transparent)) !important;
   }
 
   /* Diff toggle button */
@@ -5647,7 +5749,7 @@ body.vscode-high-contrast-light {
   .am-worktree-item:focus-visible,
   .am-tab:focus-visible,
   .am-nv-pill:focus-visible,
-  .am-tab-switcher-pill:focus-visible,
+  .am-nv-mode-tab:focus-visible,
   .am-diff-toggle-btn:focus-visible,
   .am-branch-item:focus-visible,
   .am-file-tree-dir:focus-visible,

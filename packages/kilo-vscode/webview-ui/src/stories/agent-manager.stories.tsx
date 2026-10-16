@@ -1642,32 +1642,36 @@ export const NewWorktreeProjectDropdown: Story = {
             <div data-slot="dialog-content">
               <div data-slot="dialog-header">
                 <div data-slot="dialog-title">New Worktree</div>
+                <div class="am-nv-header">
+                  <div class="am-nv-mode" role="tablist" data-tab="new">
+                    <button class="am-nv-mode-tab am-nv-mode-tab-active" role="tab" type="button">
+                      New
+                    </button>
+                    <button class="am-nv-mode-tab" role="tab" type="button">
+                      Import
+                    </button>
+                  </div>
+                </div>
               </div>
               <div data-slot="dialog-body">
-                <div class="am-tab-switcher">
-                  <button class="am-tab-switcher-pill am-tab-switcher-pill-active" type="button">
-                    New
-                  </button>
-                  <button class="am-tab-switcher-pill" type="button">
-                    Import
-                  </button>
-                  <WorktreeOrigin
-                    projects={projectPickerProjects}
-                    project="project-main"
-                    onProject={() => undefined}
-                    projectOpen
-                    onProjectOpen={() => undefined}
-                    branch
-                    branches={[]}
-                    loading={false}
-                    base="main"
-                    fallback="main"
-                    onBase={() => undefined}
-                    onDefault={() => undefined}
-                  />
-                </div>
                 <div class="am-nv-dialog" style={{ "max-height": "520px" }}>
                   <div class="am-nv-dialog-content">
+                    <div class="am-nv-start">
+                      <WorktreeOrigin
+                        projects={projectPickerProjects}
+                        project="project-main"
+                        onProject={() => undefined}
+                        projectOpen
+                        onProjectOpen={() => undefined}
+                        branch
+                        branches={[]}
+                        loading={false}
+                        base="main"
+                        fallback="main"
+                        onBase={() => undefined}
+                        onDefault={() => undefined}
+                      />
+                    </div>
                     <div style={{ height: "420px", "flex-shrink": 0 }} />
                     <div class="am-nv-version-bar">
                       <span class="am-nv-config-label">VERSIONS</span>
