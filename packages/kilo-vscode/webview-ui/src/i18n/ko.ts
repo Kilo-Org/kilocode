@@ -290,6 +290,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "ChatGPT에 다시 로그인한 후 메시지를 다시 보내 Codex 모델을 계속 사용하세요.",
 
+  "provider.failure.unauthorized": "자격 증명이 거부되었습니다 (HTTP {{status}}). 다시 로그인하세요.",
+  "provider.failure.unauthorizedNoStatus": "자격 증명이 거부되었습니다. 다시 로그인하세요.",
+  "provider.failure.unauthenticated": "로그인되어 있지 않습니다.",
+  "provider.failure.network": "공급자에 연결할 수 없습니다. 연결 상태를 확인하세요.",
+  "provider.failure.http": "공급자 오류 (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "공급자 오류.",
+  "provider.failure.schema": "공급자로부터 예기치 않은 응답을 받았습니다.",
+
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
   "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',
@@ -940,6 +948,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "네이티브 노트북 도구",
   "settings.experimental.nativeNotebookTools.description":
     "VS Code 노트북을 읽고, 편집하고, 실행하는 실험적 도구를 활성화합니다",
+  "settings.experimental.globIncludeIgnored.title": "무시된 경로 검색",
+  "settings.experimental.globIncludeIgnored.description":
+    ".gitignore 또는 기타 무시 파일에서 제외하더라도 glob 도구가 검색할 폴더 또는 파일입니다. 작업 공간 기준의 gitignore 스타일 패턴을 사용하세요. 그 안의 무시된 폴더는 계속 건너뜁니다.",
   "settings.experimental.continueOnDeny.title": "거부 시 계속",
   "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
   "settings.sandboxing.title": "샌드박스",

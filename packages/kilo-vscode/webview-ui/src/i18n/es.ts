@@ -293,6 +293,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Vuelve a iniciar sesión con ChatGPT y envía tu mensaje de nuevo para seguir usando los modelos Codex.",
 
+  "provider.failure.unauthorized": "Credenciales rechazadas (HTTP {{status}}). Vuelve a iniciar sesión.",
+  "provider.failure.unauthorizedNoStatus": "Credenciales rechazadas. Vuelve a iniciar sesión.",
+  "provider.failure.unauthenticated": "No has iniciado sesión.",
+  "provider.failure.network": "No se pudo conectar con el proveedor. Comprueba tu conexión.",
+  "provider.failure.http": "Error del proveedor (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Error del proveedor.",
+  "provider.failure.schema": "Respuesta inesperada del proveedor.",
+
   "notification.permission.title": "Permiso requerido",
   "notification.permission.titleSubagent": "Permiso requerido (subagente)",
   "notification.permission.titleSkillShell": "¿Ejecutar comandos de shell de la habilidad «{{skill}}»?",
@@ -961,6 +969,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Herramientas nativas de notebook",
   "settings.experimental.nativeNotebookTools.description":
     "Habilitar herramientas experimentales para leer, editar y ejecutar notebooks de VS Code",
+  "settings.experimental.globIncludeIgnored.title": "Buscar rutas ignoradas",
+  "settings.experimental.globIncludeIgnored.description":
+    "Carpetas o archivos que la herramienta glob debe buscar aunque .gitignore u otros archivos de exclusión los ignoren. Usa patrones de estilo gitignore relativos al espacio de trabajo; las carpetas ignoradas dentro de ellos se siguen omitiendo.",
   "settings.experimental.continueOnDeny.title": "Continuar al denegar",
   "settings.experimental.continueOnDeny.description": "Continuar el bucle del agente cuando se deniega un permiso",
   "settings.sandboxing.title": "Sandbox",

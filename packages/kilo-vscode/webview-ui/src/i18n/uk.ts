@@ -291,6 +291,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Увійдіть у ChatGPT знову, а потім надішліть повідомлення ще раз, щоб продовжити використання моделей Codex.",
 
+  "provider.failure.unauthorized": "Облікові дані відхилено (HTTP {{status}}). Увійдіть знову.",
+  "provider.failure.unauthorizedNoStatus": "Облікові дані відхилено. Увійдіть знову.",
+  "provider.failure.unauthenticated": "Вхід не виконано.",
+  "provider.failure.network": "Не вдалося з’єднатися з провайдером. Перевірте з’єднання.",
+  "provider.failure.http": "Помилка провайдера (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Помилка провайдера.",
+  "provider.failure.schema": "Неочікувана відповідь від провайдера.",
+
   "notification.permission.title": "Потрібен дозвіл",
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",
   "notification.permission.titleSkillShell": "Виконати команди оболонки з навички «{{skill}}»?",
@@ -942,6 +950,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Власні інструменти для блокнотів",
   "settings.experimental.nativeNotebookTools.description":
     "Увімкнути експериментальні інструменти для читання, редагування та виконання блокнотів VS Code",
+  "settings.experimental.globIncludeIgnored.title": "Пошук в ігнорованих шляхах",
+  "settings.experimental.globIncludeIgnored.description":
+    "Папки або файли, у яких інструмент glob має шукати, навіть якщо їх виключає .gitignore чи інші ignore-файли. Використовуйте шаблони у стилі gitignore відносно робочої області; ігноровані папки всередині них і далі пропускаються.",
   "settings.experimental.continueOnDeny.title": "Продовжувати при відхиленні",
   "settings.experimental.continueOnDeny.description": "Продовжувати цикл агента, коли дозвіл відхилено",
   "settings.sandboxing.title": "Пісочниця",

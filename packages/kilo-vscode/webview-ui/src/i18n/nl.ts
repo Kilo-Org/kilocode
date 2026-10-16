@@ -292,6 +292,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Meld je opnieuw aan bij ChatGPT en stuur je bericht nog een keer om Codex-modellen te blijven gebruiken.",
 
+  "provider.failure.unauthorized": "Inloggegevens geweigerd (HTTP {{status}}). Meld je opnieuw aan.",
+  "provider.failure.unauthorizedNoStatus": "Inloggegevens geweigerd. Meld je opnieuw aan.",
+  "provider.failure.unauthenticated": "Niet aangemeld.",
+  "provider.failure.network": "Kan de provider niet bereiken. Controleer je verbinding.",
+  "provider.failure.http": "Providerfout (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Providerfout.",
+  "provider.failure.schema": "Onverwacht antwoord van de provider.",
+
   "notification.permission.title": "Toestemming vereist",
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",
   "notification.permission.titleSkillShell": "Shell-opdrachten uit vaardigheid “{{skill}}” uitvoeren?",
@@ -947,6 +955,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Native notebooktools",
   "settings.experimental.nativeNotebookTools.description":
     "Experimentele tools inschakelen voor het lezen, bewerken en uitvoeren van VS Code-notebooks",
+  "settings.experimental.globIncludeIgnored.title": "Genegeerde paden doorzoeken",
+  "settings.experimental.globIncludeIgnored.description":
+    "Mappen of bestanden die de glob-tool moet doorzoeken, ook als .gitignore of andere ignore-bestanden ze uitsluiten. Gebruik patronen in gitignore-stijl relatief aan de werkruimte; genegeerde mappen daarbinnen worden nog steeds overgeslagen.",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",

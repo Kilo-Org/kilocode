@@ -282,6 +282,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "سجل الدخول باستخدام ChatGPT مرة أخرى، ثم أرسل رسالتك مرة أخرى لمواصلة استخدام نماذج Codex.",
 
+  "provider.failure.unauthorized": "تم رفض بيانات الاعتماد (HTTP {{status}}). سجل الدخول مرة أخرى.",
+  "provider.failure.unauthorizedNoStatus": "تم رفض بيانات الاعتماد. سجل الدخول مرة أخرى.",
+  "provider.failure.unauthenticated": "لم يتم تسجيل الدخول.",
+  "provider.failure.network": "تعذر الوصول إلى الموفر. تحقق من اتصالك.",
+  "provider.failure.http": "خطأ في الموفر (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "خطأ في الموفر.",
+  "provider.failure.schema": "استجابة غير متوقعة من الموفر.",
+
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
   "notification.permission.titleSkillShell": "هل تريد تشغيل أوامر الصدفة من المهارة «{{skill}}»؟",
@@ -926,6 +934,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "أدوات الدفاتر الأصلية",
   "settings.experimental.nativeNotebookTools.description":
     "تمكين الأدوات التجريبية لقراءة دفاتر VS Code وتحريرها وتنفيذها",
+  "settings.experimental.globIncludeIgnored.title": "البحث في المسارات المتجاهلة",
+  "settings.experimental.globIncludeIgnored.description":
+    "المجلدات أو الملفات التي يجب أن تبحث فيها أداة glob حتى عندما يستبعدها .gitignore أو ملفات التجاهل الأخرى. استخدم أنماطًا بأسلوب gitignore نسبةً إلى مساحة العمل؛ تبقى المجلدات المتجاهلة داخلها مستبعدة.",
   "settings.experimental.continueOnDeny.title": "المتابعة عند الرفض",
   "settings.experimental.continueOnDeny.description": "متابعة حلقة الوكيل عند رفض الإذن",
   "settings.sandboxing.title": "العزل",

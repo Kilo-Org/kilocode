@@ -284,6 +284,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Sign in with ChatGPT again, then send your message again to keep using Codex models.",
 
+  "provider.failure.unauthorized": "Credentials rejected (HTTP {{status}}). Sign in again.",
+  "provider.failure.unauthorizedNoStatus": "Credentials rejected. Sign in again.",
+  "provider.failure.unauthenticated": "Not signed in.",
+  "provider.failure.network": "Couldn't reach the provider. Check your connection.",
+  "provider.failure.http": "Provider error (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Provider error.",
+  "provider.failure.schema": "Unexpected response from the provider.",
+
   "notification.permission.title": "Permission required",
   "notification.permission.titleSubagent": "Permission required (subagent)",
   "notification.permission.titleSkillShell": 'Run shell commands from skill "{{skill}}"?',
@@ -927,6 +935,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Native Notebook Tools",
   "settings.experimental.nativeNotebookTools.description":
     "Enable experimental tools for reading, editing, and executing VS Code notebooks",
+  "settings.experimental.globIncludeIgnored.title": "Search Ignored Paths",
+  "settings.experimental.globIncludeIgnored.description":
+    "Folders or files the glob tool should search even when .gitignore or other ignore files exclude them. Use gitignore-style patterns relative to the workspace; ignored folders inside them stay skipped.",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.codeMode.title": "Programmatic Tool Calling",

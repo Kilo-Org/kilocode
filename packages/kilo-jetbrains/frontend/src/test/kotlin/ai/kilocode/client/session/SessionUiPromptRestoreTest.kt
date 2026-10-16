@@ -4,6 +4,9 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.MessageErrorDto
+import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.SessionRevertDto
+import com.intellij.icons.AllIcons
 import com.intellij.ui.EditorTextField
 
 /**
@@ -166,5 +169,162 @@ class SessionUiPromptRestoreTest : SessionUiTestBase() {
         )
 
         assertEquals("second message", find<PromptPanel>(ui).text())
+    }
+
+    /**
+     * An unreadable attachment makes the CLI publish session.error before it persists the user
+     * message and starts the turn anyway. The draft comes back first so nothing is lost, then clears
+     * again once the message lands -- it is a duplicate at that point -- leaving Stop on the button.
+     */
+    fun `test a restored draft clears once the message is persisted`() {
+        showMessages()
+        rpc.prompts.clear()
+
+        find<EditorTextField>(ui).text = "check this"
+        find<PromptPanel>(ui).send()
+        assertTrue("the send never reached the backend", pumpUntil { rpc.prompts.isNotEmpty() })
+
+        emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "unknown", message = "Cannot read binary file")))
+        assertTrue(
+            "the draft was never restored",
+            pumpUntil { find<PromptPanel>(ui).text() == "check this" },
+        )
+
+        emit(ChatEventDto.MessageUpdated("ses_test", message("restored_user_msg")), flush = false)
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        assertTrue(
+            "the turn never started",
+            pumpUntil { controller().model.state is SessionState.Busy },
+        )
+
+        val panel = find<PromptPanel>(ui)
+        assertEquals("", panel.text())
+        assertTrue(panel.isStopEnabled)
+        assertSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
+    }
+
+    /**
+     * The clearing above must not clobber a draft the user started editing while the failed-looking
+     * send was still landing.
+     */
+    fun `test an edited restored draft is kept once the message is persisted`() {
+        showMessages()
+        rpc.prompts.clear()
+
+        find<EditorTextField>(ui).text = "check this"
+        find<PromptPanel>(ui).send()
+        assertTrue("the send never reached the backend", pumpUntil { rpc.prompts.isNotEmpty() })
+
+        emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "unknown", message = "Cannot read binary file")))
+        assertTrue(
+            "the draft was never restored",
+            pumpUntil { find<PromptPanel>(ui).text() == "check this" },
+        )
+
+        find<EditorTextField>(ui).text = "check this, edited"
+        emit(ChatEventDto.MessageUpdated("ses_test", message("restored_user_msg")), flush = false)
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        assertTrue(
+            "the turn never started",
+            pumpUntil { controller().model.state is SessionState.Busy },
+        )
+
+        assertEquals("check this, edited", find<PromptPanel>(ui).text())
+    }
+
+    // Reverting puts the message back in the box (text + rebuilt attachment). Sending that draft
+    // again must behave like any send: it clears, and stays cleared once the message is persisted.
+    fun `test sending a reverted draft does not put it back`() {
+        showMessages()
+        rpc.prompts.clear()
+
+        val model = controller().model
+        model.upsertMessage(message("u1"))
+        model.updateContent("u1", part("p1", "u1", "text", "check this"))
+        model.updateContent(
+            "u1",
+            PartDto(
+                "n1",
+                "ses_test",
+                "u1",
+                "text",
+                text = "Read tool failed to read /tmp/trace.jfr with the following error: Cannot read binary file",
+                synthetic = true,
+            ),
+        )
+        model.setRevert(SessionRevertDto("u1"))
+
+        val prompt = find<PromptPanel>(ui)
+        assertTrue("revert never restored the draft", pumpUntil { prompt.text() == "check this" })
+        assertEquals(1, prompt.attachmentCountForTest())
+
+        prompt.send()
+        assertTrue("the send never reached the backend", pumpUntil { rpc.prompts.isNotEmpty() })
+        assertEquals("", prompt.text())
+
+        // Redoing the reverted message removes it, so the new user message does not raise the count.
+        emit(ChatEventDto.MessageRemoved("ses_test", "u1"), flush = false)
+        emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "unknown", message = "Cannot read binary file")))
+        emit(ChatEventDto.MessageUpdated("ses_test", message("u2")), flush = false)
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        assertTrue(
+            "the turn never started",
+            pumpUntil { controller().model.state is SessionState.Busy },
+        )
+
+        assertEquals("", prompt.text())
+        assertEquals(0, prompt.attachmentCountForTest())
+    }
+
+    // A send that genuinely failed keeps its restored draft even when an unrelated user message
+    // shows up afterwards (a redo re-adding a reverted message, or a reload). No turn opens for it,
+    // so it must not be treated as confirmation of the failed send.
+    fun `test an unrelated message does not drop a draft whose send failed`() {
+        showMessages()
+        rpc.prompts.clear()
+
+        find<EditorTextField>(ui).text = "don't lose this"
+        find<PromptPanel>(ui).send()
+        assertTrue("the send never reached the backend", pumpUntil { rpc.prompts.isNotEmpty() })
+
+        emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "unknown", message = "boom")))
+        assertTrue(
+            "the draft was never restored",
+            pumpUntil { find<PromptPanel>(ui).text() == "don't lose this" },
+        )
+
+        emit(ChatEventDto.MessageUpdated("ses_test", message("unrelated_user_msg")))
+        assertTrue(
+            "the unrelated message never arrived",
+            pumpUntil { controller().model.messages().any { it.info.id == "unrelated_user_msg" } },
+        )
+
+        assertEquals("don't lose this", find<PromptPanel>(ui).text())
+    }
+
+    // Busy alone does not prove the failed send landed: a retry (of an older failed turn), a login
+    // resume, or an auto-approval also enters Busy with no new user message. None may drop the draft.
+    fun `test a turn opening without this send's message keeps the failed draft`() {
+        showMessages()
+        rpc.prompts.clear()
+
+        find<EditorTextField>(ui).text = "don't lose this"
+        find<PromptPanel>(ui).send()
+        assertTrue("the send never reached the backend", pumpUntil { rpc.prompts.isNotEmpty() })
+
+        emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "unknown", message = "boom")))
+        assertTrue(
+            "the draft was never restored",
+            pumpUntil { find<PromptPanel>(ui).text() == "don't lose this" },
+        )
+
+        // A retry of an older failed turn moves Error -> Busy, with no user message for this send.
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        assertTrue(
+            "the turn never started",
+            pumpUntil { controller().model.state is SessionState.Busy },
+        )
+
+        assertEquals("don't lose this", find<PromptPanel>(ui).text())
     }
 }
