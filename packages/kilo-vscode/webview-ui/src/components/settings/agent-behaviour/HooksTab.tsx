@@ -210,9 +210,17 @@ const HooksTab: Component<Props> = (props) => {
         >
           {language.t("settings.agentBehaviour.hooks.warning")}
         </div>
-        <div style={{ display: "flex", "align-items": "center", "justify-content": "space-between", gap: "8px" }}>
+        <div
+          style={{
+            display: "flex",
+            "flex-wrap": "wrap",
+            "align-items": "center",
+            "justify-content": "space-between",
+            gap: "4px 8px",
+          }}
+        >
           <span style={weak}>{language.t("settings.agentBehaviour.hooks.scope")}</span>
-          <div style={{ display: "flex", gap: "4px", "flex-shrink": 0 }}>
+          <div style={{ display: "flex", gap: "4px", "margin-left": "auto" }}>
             <Button
               variant="ghost"
               size="small"
