@@ -15,6 +15,16 @@ Installed items are grouped by type, and you can search them or filter by **Agen
 
 Select **+ Add** to open the **Kilo Marketplace**, where you can browse specialized agents, skills, and MCPs by category and install them. See [Marketplace](/docs/customize/marketplace) for the full catalog and how installing works.
 
+Before an MCP is installed, Kilo shows exactly what it will add so you can review it:
+
+- For an MCP that runs on your computer, the **Command** it starts and any **Environment** variables.
+- For a remote MCP, the server **Address** and any **Headers**.
+- When an MCP offers more than one way to run, an **Install method** choice.
+
+A warning explains what kind of access you're granting (for example, *This MCP is started via a command on your computer*). If the MCP's configuration changes after you review it, Kilo refuses the install so you can check the new version first.
+
+If the program an MCP needs isn't installed (for example `npx`), you'll see **This MCP server won't start yet**, with install commands you can copy for your OS. Select **Fix in chat** to have the agent help you install it.
+
 ## AI providers
 
 The **AI Providers** section lists your enabled AI providers, and **Add AI Provider** (top-right) connects a new one.

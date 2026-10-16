@@ -9,7 +9,11 @@ Manage conda environments and their packages from within the app, so you can set
 
 {% callout type="info" %}
 Conda environments require a [Kilo account](/docs/desktop/settings/ai#ai-providers). Sign in to create and manage them.
+
+If you're signed out when the agent tries to use conda, the chat asks you to sign in (*Enable use of secure & governed Anaconda packages for Python environments?*). Select **Sign in** and the agent continues, or **Not now** to turn off the agent's conda tools until you sign in or restart the app. Other features still ask on their own.
 {% /callout %}
+
+While the conda backend starts up, the page shows *Starting the conda backend*. If loading fails, a **Try again** button appears.
 
 ## Why conda?
 
@@ -38,6 +42,10 @@ Managing a conda environment here doesn't automatically "activate" it — there'
 
 The most durable approach is to have the agent write an `environment.yml` into the workspace. The notebooks you already have, and any new ones you create there, then use that environment automatically. See [Notebooks](/docs/desktop/features/notebooks) for working with conda environments from a chat.
 
+## Working with the agent
+
+The agent can create environments and install, update, or remove packages for you. It asks you to approve each change and shows the channels it will use. It won't install packages from local files or from URL or local-path channels. When you're signed in, the agent prefers Anaconda's channels (`defaults` or your organization's channels) and uses `conda-forge` only when a package isn't available there.
+
 ## Browse your conda environments
 
 The page lists your conda environments by **name** and **prefix** (the full path on disk). Search by name or path, sort the list, and page through it. Click the {% svgIcon src="/docs/img/desktop/ellipsis.svg" /%} actions menu on an environment's row to **Clone** or **Delete** an environment. Select a row to open the environment and work with its packages.
@@ -51,6 +59,8 @@ On the Create environment page, configure your environment:
 - **Location** — where the environment is created.
 - **Name** — the environment's name.
 - **Python version** — a specific version, or **Latest**.
+
+As you type, Kilo checks that the name and location are available and that you can write there. **Create Environment** stays disabled until the check passes. If an environment already exists at that path, or you don't have permission, the dialog tells you.
 
 Under **Select packages**, search the list and check the packages to include. Each package has a version dropdown (defaulting to **latest**), and your choices collect in the **Selected Packages** panel. Use the {% svgIcon src="/docs/img/desktop/list-filter.svg" /%} **Channels** control to choose where packages come from (see [Choose a channel](#choose-a-channel)). Select **Create Environment** to build it.
 
@@ -72,7 +82,7 @@ Alternatively, on the packages table on the environment's details page, you can 
 
 From an open environment, select **+ Add Packages** to open the Add Packages dialog. Search for a package, and for each result pick a version (defaulting to **latest**). Your selections and their dependencies are added to the **Selected packages** list, and the {% svgIcon src="/docs/img/desktop/list-filter.svg" /%} **Channels** control sets where packages come from (see [Choose a channel](#choose-a-channel)).
 
-Before anything is applied, the **Dependency changes** panel previews the dependency changes the solver will make — packages that will be upgraded, downgraded, added, removed, or rebuilt — so there are no surprises. Select **Install** to apply the changes. A long-running install can be sent to **Run in background** so you can keep working while it finishes.
+Before anything is applied, the **Dependency changes** panel previews the dependency changes the solver will make — packages that will be upgraded, downgraded, added, removed, or rebuilt — so there are no surprises. **Install** stays disabled until the solver finds a working set of packages for your current selection and channels; changing either re-checks it. Select **Install** to apply the changes. A long-running install can be sent to **Run in background** so you can keep working while it finishes.
 
 ## Choose a channel
 

@@ -144,7 +144,7 @@ describe("KiloPlugin", () => {
         expect(updated?.api).toEqual({
           type: "aisdk",
           package: "@kilocode/kilo-gateway",
-          url: "https://api.kilo.ai/api/openrouter",
+          url: "https://ai-gateway.kilo.ai/api/v1",
         })
         expect(updated?.request.body.kilocodeToken).toBe("stored-token")
 
