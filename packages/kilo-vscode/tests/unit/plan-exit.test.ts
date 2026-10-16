@@ -55,6 +55,11 @@ describe("plan_exit renderer uses openFile not openDiff (source)", () => {
     expect(src).toContain("data.openFile")
   })
 
+  it("PlanExitCard scopes the file open to its message session", () => {
+    expect(src).toContain("data.openFile(i.plan, undefined, undefined, props.sessionID)")
+    expect(src).toContain("sessionID={props.message.sessionID}")
+  })
+
   it("uses a safe inert anchor href", () => {
     expect(src).toContain('href="#"')
     expect(src).not.toContain("href={display()}")

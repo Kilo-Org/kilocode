@@ -24,9 +24,9 @@ export const InstanceReloadApi = HttpApi.make("instance-reload")
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "instance.reload",
-            summary: "Reload instance",
+            summary: "Reload project",
             description:
-              "Atomically dispose and reboot the current Kilo instance, reloading config, skills, agents, commands, and MCP prompts from disk. Returns 409 if a session is actively running.",
+              "Atomically dispose and reboot every loaded instance of the project, reloading config, skills, agents, commands, and MCP prompts from disk. Returns 409 if any session in the project is actively running.",
           }),
         ),
       )

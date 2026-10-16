@@ -93,15 +93,6 @@ JetBrains Marketplace에서 [Kilo Code 플러그인](https://plugins.jetbrains.c
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-[app.kilo.ai/claw](https://app.kilo.ai/claw)에서 항상 켜져 있는 AI 에이전트를 시작하세요.
-
-</details>
-
-<details>
 <summary>GitHub Releases에서 CLI 설치하기(바이너리)</summary>
 
 [Releases 페이지](https://github.com/Kilo-Org/kilocode/releases)에서 최신 바이너리를 다운로드하세요.

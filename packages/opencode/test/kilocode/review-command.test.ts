@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Effect, Layer } from "effect"
 import { Command } from "../../src/command"
-import { legacyReviewMessage, parseReviewCommand, reviewCommand } from "../../src/kilocode/review/command"
+import { parseReviewCommand, reviewCommand } from "../../src/kilocode/review/command"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
@@ -32,8 +32,6 @@ describe("review command parsing", () => {
     expect(parseReviewCommand("/review a1b2c3d")).toBe("review")
     expect(parseReviewCommand("/review https://github.com/Kilo-Org/kilocode/pull/11084")).toBe("review")
     expect(parseReviewCommand("/review 11084")).toBe("review")
-    expect(parseReviewCommand("/local-review")).toBeUndefined()
-    expect(parseReviewCommand("/local-review-uncommitted")).toBeUndefined()
     expect(parseReviewCommand("/test")).toBeUndefined()
     expect(parseReviewCommand("review")).toBeUndefined()
   })
@@ -213,7 +211,7 @@ describe("review command", () => {
     expect(text).toContain("NO_FINDINGS")
   })
 
-  it.live("resolves review and deprecated review aliases", () =>
+  it.live("resolves the review command", () =>
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
@@ -221,21 +219,9 @@ describe("review command", () => {
           const list = yield* command.list()
           const names = list.map((item) => item.name)
           const review = yield* command.get("review")
-          const branch = yield* command.get("local-review")
-          const uncommitted = yield* command.get("local-review-uncommitted")
 
           expect(names).toContain("review")
-          expect(names).not.toContain("local-review")
-          expect(names).not.toContain("local-review-uncommitted")
           expect(review?.name).toBe("review")
-          expect(branch?.description).toBe("deprecated; use /review branch")
-          expect(branch?.template).toBe(legacyReviewMessage("local-review"))
-          expect(String(branch?.template)).not.toContain("$ARGUMENTS")
-          expect(branch?.hints).toEqual([])
-          expect(uncommitted?.description).toBe("deprecated; use /review uncommitted")
-          expect(uncommitted?.template).toBe(legacyReviewMessage("local-review-uncommitted"))
-          expect(String(uncommitted?.template)).not.toContain("$ARGUMENTS")
-          expect(uncommitted?.hints).toEqual([])
         }),
       { git: true },
     ),

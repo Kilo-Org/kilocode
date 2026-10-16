@@ -124,6 +124,7 @@ describe("project review routing", () => {
       const sent: unknown[] = []
       const review = createDiffReviewScope({
         ctx: () => "shared",
+        key: () => `${current()}\0shared`,
         session: () => undefined,
         panelOpen: () => false,
         reviewActive: () => false,

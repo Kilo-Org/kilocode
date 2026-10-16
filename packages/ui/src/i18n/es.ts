@@ -74,7 +74,7 @@ export const dict = {
 
   "dialog.usageExceeded.freeTier.title": "Límite gratuito alcanzado",
   "dialog.usageExceeded.freeTier.description":
-    "Suscríbete a Kilo Go para acceder de forma fiable a los mejores modelos de código abierto desde 5 USD al mes.", // kilocode_change
+    "Suscríbete a Kilo Go por 10 USD al mes para acceder de forma fiable a los mejores modelos de código abierto.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Suscribirse",
   "dialog.usageExceeded.accountRateLimit.title": "Límite de Go alcanzado",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -226,6 +226,10 @@ export const dict = {
   "ui.mermaid.copySvg": "Copiar SVG",
   "ui.mermaid.download": "Descargar",
   "ui.mermaid.downloadPng": "Descargar PNG",
+  "ui.mermaid.zoom": "Zoom",
+  "ui.mermaid.zoomIn": "Acercar",
+  "ui.mermaid.zoomOut": "Alejar",
+  "ui.mermaid.zoomReset": "Restablecer zoom",
   "ui.mermaid.downloadSvg": "Descargar SVG",
   "ui.mermaid.errorDefault": "No se puede renderizar el diagrama Mermaid.",
   "ui.mermaid.errorEmpty": "Mermaid renderizó un diagrama vacío.",

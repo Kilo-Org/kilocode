@@ -27,7 +27,6 @@ Use Kilo Code wherever you work:
 - [**Cloud Agent**](/docs/code-with-ai/platforms/cloud-agent) — Run Kilo in the cloud
 - [**Mobile Apps**](/docs/code-with-ai/platforms/mobile) — iOS and Android support
 - [**Slack**](/docs/code-with-ai/platforms/slack) — Chat with Kilo in your workspace
-- [**App Builder**](/docs/code-with-ai/app-builder) — Create full-stack applications with AI
 
 ## Working with Agents
 
@@ -37,6 +36,7 @@ Kilo uses specialized agents to help with different tasks:
 - [**Using Agents**](/docs/code-with-ai/agents/using-agents) — Switch between Code, Ask, Plan, Debug, and other agents
 - [**Model Selection**](/docs/code-with-ai/agents/model-selection) — Choose the right AI model for each task
 - [**Context Mentions**](/docs/code-with-ai/agents/context-mentions) — Reference files, functions, and symbols
+- [**Session Goals**](/docs/code-with-ai/agents/goals): Keep an agent working toward one objective
 - [**Orchestrator Mode**](/docs/code-with-ai/agents/orchestrator-mode) — Legacy orchestration (now built into all agents)
 
 ## Features

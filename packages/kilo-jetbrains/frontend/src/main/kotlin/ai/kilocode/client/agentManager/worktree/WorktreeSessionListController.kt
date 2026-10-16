@@ -4,12 +4,15 @@ import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.edt
 import ai.kilocode.log.KiloLog
+import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.SessionDto
 import com.intellij.ui.CollectionListModel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filter
@@ -19,6 +22,7 @@ class WorktreeSessionListController(
     private val service: KiloSessionService,
     private val dir: String,
     private val cs: CoroutineScope,
+    private val app: Flow<KiloAppStateDto>? = null,
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
 ) {
     val model = CollectionListModel<SessionDto>()
@@ -41,6 +45,22 @@ class WorktreeSessionListController(
             pings.collectLatest {
                 delay(COALESCE_MS)
                 reload()
+            }
+        }
+        val source = app
+        if (source != null) {
+            cs.launch {
+                // The list is fetched while the app is READY. A reload that failed during a CLI
+                // outage leaves the model empty, so refetch when the app reaches READY again after a
+                // non-READY status. The coalescing hop above keeps this from stacking with a changes
+                // reload.
+                var prev: KiloAppStatusDto? = null
+                source.collect { state ->
+                    if (state.status == KiloAppStatusDto.READY && prev != null && prev != KiloAppStatusDto.READY) {
+                        pings.emit(Unit)
+                    }
+                    prev = state.status
+                }
             }
         }
     }
@@ -92,8 +112,8 @@ class WorktreeSessionListController(
      * Forks [id] into this list's directory, optionally truncating at [messageId].
      *
      * The forked session is inserted at the head the same way [create] does. That optimistic insert
-     * is what lets the panel's own promotion rule react right away instead of waiting for the CLI's
-     * `session.created` to arrive through [COALESCE_MS]; the later reload is idempotent.
+     * is what lets the panel's row list and toggle badge react right away instead of waiting for the
+     * CLI's `session.created` to arrive through [COALESCE_MS]; the later reload is idempotent.
      *
      * Unlike the neighbours here this reports no telemetry of its own: fork is reachable from three
      * different surfaces, so the event belongs where the surface and the outcome are both known

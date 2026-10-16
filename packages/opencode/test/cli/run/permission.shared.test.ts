@@ -150,8 +150,13 @@ describe("run permission shared", () => {
       ),
     ).toEqual({
       icon: "!",
-      title: "Allow Git operation outside the sandbox",
-      lines: ["$ git add file.txt && git commit -m test", "This approval applies to this command only."],
+      title: "Run outside the sandbox",
+      lines: [
+        "$ git add file.txt && git commit -m test",
+        "This runs the whole command with filesystem and network restrictions removed, for this command only.",
+        "Git must write to .git, which is read-only in the sandbox and outside the worktree in a linked worktree.",
+        "Bash allow rules and auto-approve never approve this prompt automatically.",
+      ],
     })
     expect(permissionOptions("permission", true)).toEqual(["once", "reject"])
   })

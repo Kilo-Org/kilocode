@@ -93,15 +93,6 @@ Postavite automatske AI preglede koda na svojim pull requestovima na [app.kilo.a
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-Pokrenite svog uvijek aktivnog AI agenta na [app.kilo.ai/claw](https://app.kilo.ai/claw).
-
-</details>
-
-<details>
 <summary>Instalirajte CLI iz GitHub Releases (binarne datoteke)</summary>
 
 Preuzmite najnoviju binarnu datoteku sa [Releases stranice](https://github.com/Kilo-Org/kilocode/releases).

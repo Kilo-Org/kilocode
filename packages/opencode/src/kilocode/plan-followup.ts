@@ -325,7 +325,6 @@ export namespace PlanFollowup {
               labelKey: "plan.followup.answer.newSession",
               description: "Implement in a fresh session with a clean context",
               descriptionKey: "plan.followup.answer.newSession.description",
-              mode: "code",
             },
             {
               label: ANSWER_CONTINUE,

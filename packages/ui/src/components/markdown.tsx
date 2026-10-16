@@ -27,8 +27,15 @@ import {
 import { markdownBlockKey, type MarkdownToken } from "./markdown-worker-protocol"
 import { shouldResetCodeTokens, type RenderedCodeState } from "./markdown-code-state"
 // kilocode_change start: Mermaid rendering and morphdom guards for highlighted blocks
-import { hasMermaid, preserveMermaid, renderMermaid, type MermaidLabels } from "../kilocode/markdown-mermaid"
+import {
+  cleanupMermaidActions,
+  hasMermaid,
+  preserveMermaid,
+  renderMermaid,
+  type MermaidLabels,
+} from "../kilocode/mermaid/markdown-mermaid"
 import { preserveStreamingHighlight } from "../kilocode/markdown-stream-highlight"
+import { patchCodeTokens } from "../kilocode/markdown-code-tokens"
 // kilocode_change end
 
 type Entry = {
@@ -352,6 +359,7 @@ export function Markdown(
         text: local.text,
         key: local.cacheKey,
         projection: projection(),
+        streaming: local.streaming ?? false, // kilocode_change - recover failed worker highlights when unchanged text settles
       }
     },
     async (src) => {
@@ -397,8 +405,14 @@ export function Markdown(
             }
             // kilocode_change end
             const cached = completedCode.get(blockKey)
-            if (block.complete && cached?.raw === block.raw) return cached
+            if (block.complete && cached?.raw === block.raw && (src.streaming || cached.generation > 0)) return cached // kilocode_change - retry failed highlights only when the message settles
             const result = await code(block.src, block.language, blockKey, block.complete)
+            // kilocode_change start: defer failed worker highlights until the message settles.
+            if (!src.streaming && result.generation === 0) {
+              const html = sanitize(await Promise.resolve(marked.parse(block.raw)))
+              return { key: blockKey, mode: "full" as const, raw: block.raw, hash: checksum(block.raw) ?? "", html }
+            }
+            // kilocode_change end
             const rendered = {
               key: blockKey,
               mode: block.mode,
@@ -513,6 +527,11 @@ export function Markdown(
       copyPng: i18n.t("ui.mermaid.copyPng"),
       downloadSvg: i18n.t("ui.mermaid.downloadSvg"),
       downloadPng: i18n.t("ui.mermaid.downloadPng"),
+      zoom: i18n.t("ui.mermaid.zoom"),
+      zoomIn: i18n.t("ui.mermaid.zoomIn"),
+      zoomOut: i18n.t("ui.mermaid.zoomOut"),
+      zoomReset: i18n.t("ui.mermaid.zoomReset"),
+      close: i18n.t("ui.common.close"),
     }
     kickHighlight(container, labels)
     kickMermaid(container, local.streaming ?? false, mermaid)
@@ -713,6 +732,7 @@ function updateCodeBlock(
   // kilocode_change start: mermaid blocks render as a source <pre> for
   // kickMermaid to transform into SVG diagrams, not as Shiki-highlighted code.
   if (block.language === "mermaid") {
+    cleanupMermaidActions(next) // kilocode_change - dispose an open viewer before rebuilding the block
     next.replaceChildren()
     const wrapper = document.createElement("div")
     wrapper.setAttribute("data-component", "markdown-code")
@@ -746,11 +766,17 @@ function updateCodeBlock(
     const prior = reset ? [] : previous!.unstable
     const prefix = prior.findIndex((token, index) => !sameToken(token, tail[index]))
     const keep = stableCount + (prefix < 0 ? Math.min(prior.length, tail.length) : prefix)
-    while (code.children.length > keep) code.lastElementChild?.remove()
-    tail
-      .slice(keep - stableCount)
-      .map(createTokenSpan)
-      .forEach((span) => code.appendChild(span))
+    // kilocode_change start: a reset re-tokenizes the whole block; patch the
+    // spans in place instead of recreating them so a selection survives.
+    if (reset && previous) patchCodeTokens(code, tail, createTokenSpan)
+    else {
+      while (code.children.length > keep) code.lastElementChild?.remove()
+      tail
+        .slice(keep - stableCount)
+        .map(createTokenSpan)
+        .forEach((span) => code.appendChild(span))
+    }
+    // kilocode_change end
     renderedCodeTokens.set(next, {
       language: block.language,
       generation: block.generation,

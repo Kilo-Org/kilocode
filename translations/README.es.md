@@ -93,15 +93,6 @@ Configura revisiones automáticas de código con IA en tus pull requests en [app
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-Activa tu agente de IA siempre disponible en [app.kilo.ai/claw](https://app.kilo.ai/claw).
-
-</details>
-
-<details>
 <summary>Instalar la CLI desde GitHub Releases (binarios)</summary>
 
 Descarga el binario más reciente desde la [página de Releases](https://github.com/Kilo-Org/kilocode/releases).

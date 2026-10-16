@@ -11,6 +11,7 @@ import { getErrorMessage, sessionToWebview, mapCloudSessionMessageToWebviewMessa
 import type { MessageFile } from "../message-files"
 import { type ReviewMessageData } from "../../shared/review-comments"
 import { feedbackMetadata, type BrowserFeedbackData } from "../../shared/browser-feedback"
+import { mergeInjected } from "../../shared/injected-prompt"
 import { completesWithoutStatus } from "../command-completion"
 
 const TIMEOUT = 30_000
@@ -23,6 +24,7 @@ export interface CloudSessionContext {
     recordMessageSessionId(messageId: string, sessionId: string): void
   }
   postMessage(msg: unknown): void
+  notify?(message: string): void
   getWorkspaceDirectory(sessionId?: string): string
   gatherEditorContext(): Promise<EditorContext>
   runWithMessageConfirmation?<T>(
@@ -89,7 +91,11 @@ export async function handleRequestCloudSessionData(ctx: CloudSessionContext, se
       return
     }
 
-    const messages = (data.messages ?? []).filter((m) => m.info).map(mapCloudSessionMessageToWebviewMessage)
+    // The export can invert same-millisecond ties; order by time, then id, like the CLI DB.
+    const messages = (data.messages ?? [])
+      .filter((m) => m.info)
+      .sort((a, b) => (a.info.time?.created ?? 0) - (b.info.time?.created ?? 0) || (a.info.id < b.info.id ? -1 : 1))
+      .map(mapCloudSessionMessageToWebviewMessage)
 
     ctx.postMessage({
       type: "cloudSessionDataLoaded",
@@ -126,6 +132,7 @@ export async function handleImportAndSend(
   command?: string,
   commandArgs?: string,
   browserFeedback?: BrowserFeedbackData,
+  injectedTitle?: string,
 ): Promise<void> {
   if (!ctx.client) {
     ctx.postMessage({
@@ -195,7 +202,7 @@ export async function handleImportAndSend(
           filename: f.filename,
           source: f.source,
         }))
-        await client.session.command(
+        const result = await client.session.command(
           {
             sessionID: session.id,
             directory: dir,
@@ -209,6 +216,13 @@ export async function handleImportAndSend(
           },
           { throwOnError: true },
         )
+        if (command === "goal" && !commandArgs?.trim()) {
+          const message = result.data.parts
+            .filter((part) => part.type === "text")
+            .map((part) => part.text)
+            .join("\n")
+          if (message) ctx.notify?.(message)
+        }
         return
       }
 
@@ -218,7 +232,11 @@ export async function handleImportAndSend(
           parts.push({ type: "file", mime: f.mime, url: f.url, filename: f.filename, source: f.source })
         }
       }
-      parts.push({ type: "text", text, metadata: feedbackMetadata(review, browserFeedback) })
+      parts.push({
+        type: "text",
+        text,
+        metadata: mergeInjected(feedbackMetadata(review, browserFeedback), injectedTitle),
+      })
 
       const editorContext = await ctx.gatherEditorContext()
       await client.session.promptAsync(

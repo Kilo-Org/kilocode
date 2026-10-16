@@ -6,7 +6,7 @@ import * as path from "path"
 import * as vscode from "vscode"
 import { resolveLocalBwrapEnv, resolveTreeSitterEnv } from "./cli-resources"
 import { t } from "./i18n"
-import { scanServerPort } from "./server-utils"
+import { ensureServerCwd, scanServerPort } from "./server-utils"
 
 export interface ServerInstance {
   port: number
@@ -36,6 +36,10 @@ export function resolveManagedServerEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessE
     // VS Code does not consume the backend's file.watcher.updated events.
     KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true",
   }
+}
+
+export function resolveClaudeMigrationEnv(env: NodeJS.ProcessEnv, enabled: boolean): string {
+  return env.KILO_EXPERIMENTAL_CLAUDE_MIGRATION ?? String(enabled)
 }
 
 export class ServerManager {
@@ -96,11 +100,15 @@ export class ServerManager {
       console.log("[Kilo New] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
       const cfg = vscode.workspace.getConfiguration("kilo-code.new")
       const claudeCompat = cfg.get<boolean>("claudeCodeCompat", false)
+      const claudeMigration = resolveClaudeMigrationEnv(
+        { ...process.env, ...(extraEnv ?? {}) },
+        cfg.get<boolean>("experimental.claudeMigration", false),
+      )
       // Pin cwd so the CLI doesn't inherit the extension host's cwd ("/" under F5 debug)
       // or "$HOME" in empty VS Code windows.
       const folders = vscode.workspace.workspaceFolders
       const spawnCwd = resolveServerCwd(folders, this.context.globalStorageUri.fsPath)
-      fs.mkdirSync(spawnCwd, { recursive: true })
+      ensureServerCwd(spawnCwd)
       const indexingEnv = resolveIndexingEnv(folders)
       const localCli =
         this.context.extensionMode === vscode.ExtensionMode.Development ||
@@ -159,6 +167,7 @@ export class ServerManager {
           ...resolveTreeSitterEnv(this.context.extensionPath),
           ...bwrapEnv,
           ...extraEnv,
+          KILO_EXPERIMENTAL_CLAUDE_MIGRATION: claudeMigration,
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: true,

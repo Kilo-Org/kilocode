@@ -93,15 +93,6 @@ paru -S kilo-bin
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-Εκκινήστε τον πάντα ενεργό AI agent σας στο [app.kilo.ai/claw](https://app.kilo.ai/claw).
-
-</details>
-
-<details>
 <summary>Εγκατάσταση CLI από GitHub Releases (binaries)</summary>
 
 Κατεβάστε το πιο πρόσφατο binary από τη [σελίδα Releases](https://github.com/Kilo-Org/kilocode/releases).

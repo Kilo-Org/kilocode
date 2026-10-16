@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.WorktreeDirtyListDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import ai.kilocode.rpc.dto.WorktreePrListDto
 import ai.kilocode.rpc.dto.WorktreeStatsListDto
+import ai.kilocode.rpc.dto.orphans.RemoveOrphansResultDto
 import com.intellij.platform.rpc.RemoteApiProviderService
 import fleet.rpc.RemoteApi
 import fleet.rpc.Rpc
@@ -67,8 +68,14 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
      * a caller returning from a long absence can ask for `maxAge = <time away>`, which keeps
      * anything gathered while it was gone and rejects only what predates its departure, and several
      * callers asking at once still collapse onto one lookup instead of each forcing its own.
+     *
+     * [fresh] names worktree paths whose every cached answer is refused, however loose [maxAge] is.
+     * For a caller that learned something about one checkout — an agent working in it just stopped,
+     * so it may have opened a pull request — this is what `maxAge = 0` would otherwise cost: the
+     * named paths re-run their lookup while all the others still answer from cache, instead of the
+     * whole repository paying a fresh `gh` fan-out to refresh one row.
      */
-    suspend fun prStatus(directory: String, maxAge: Long? = null): WorktreePrListDto
+    suspend fun prStatus(directory: String, maxAge: Long? = null, fresh: List<String> = emptyList()): WorktreePrListDto
 
     /**
      * Single-directory branch status for the chat branch/PR dock: current branch, worktree flag,
@@ -124,4 +131,29 @@ interface KiloWorktreeRpcApi : RemoteApi<Unit> {
 
     /** Records the session-list visibility for [directory]. Returns true when written. */
     suspend fun setSessionList(directory: String, visible: Boolean): Boolean
+
+    /**
+     * Apparent size (sum of regular-file sizes, never following symlinks) of every [paths] entry
+     * under [directory]'s repository. A path that fails to walk (permission error, disappeared mid
+     * walk) is simply omitted from the result rather than failing the whole batch.
+     */
+    suspend fun orphanSizes(directory: String, paths: List<String>): Map<String, Long>
+
+    /**
+     * Removes every one of [paths] — directories under `.kilo/worktrees/` that git does not track
+     * (see [ai.kilocode.rpc.dto.orphans.OrphanDto]) — from [directory]'s repository. Each path is
+     * re-validated against a fresh scan immediately before it is touched and reported independently,
+     * so a stale selection or a path that is no longer an orphan is skipped rather than deleted.
+     * Deletion is a stage-rename followed by a background recursive delete, the same primitive
+     * [remove] uses for a managed worktree — this call returns as soon as every path has been
+     * staged, not after the background delete finishes.
+     */
+    suspend fun removeOrphans(directory: String, paths: List<String>): RemoveOrphansResultDto
+
+    /**
+     * Reveals [path] in the host OS's file manager. Backend-only: in split mode the frontend runs on
+     * the client machine while the worktree lives on the host, the same reason [open] is backend
+     * (see its doc). Returns false when reveal is unsupported on this OS or [path] does not exist.
+     */
+    suspend fun revealPath(path: String): Boolean
 }

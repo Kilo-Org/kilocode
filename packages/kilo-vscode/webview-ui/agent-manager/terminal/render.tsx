@@ -38,6 +38,7 @@ export interface TerminalTabRenderDeps {
   onMiddleClick: (id: string, e: MouseEvent) => void
   onClose: (id: string) => void
   onCloseOthers: (id: string) => void
+  onCloseToRight?: (id: string) => void
   role?: "tab"
   selected?: boolean
   tabIndex?: number
@@ -70,6 +71,7 @@ export function renderTerminalTab(deps: TerminalTabRenderDeps): JSX.Element {
       onMiddleClick={(e: MouseEvent) => deps.onMiddleClick(deps.id, e)}
       onClose={() => deps.onClose(deps.id)}
       onCloseOthers={() => deps.onCloseOthers(deps.id)}
+      onCloseToRight={deps.onCloseToRight ? () => deps.onCloseToRight!(deps.id) : undefined}
     />
   )
 }

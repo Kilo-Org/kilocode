@@ -21,6 +21,29 @@ describe("KiloConnectionService sandbox preference", () => {
   })
 })
 
+describe("KiloConnectionService visible sessions", () => {
+  test("reports a session as visible while any surface displays it", () => {
+    const service = new KiloConnectionService({} as any)
+
+    expect(service.isVisible("ses-1")).toBe(false)
+
+    service.registerVisible("sidebar", ["ses-1"])
+    service.registerVisible("agent-manager", ["ses-2"])
+    expect(service.isVisible("ses-1")).toBe(true)
+    expect(service.isVisible("ses-2")).toBe(true)
+    expect(service.isVisible("ses-3")).toBe(false)
+
+    // A hidden panel registers an empty set, which is what makes this usable as
+    // the notification suppression check.
+    service.registerVisible("sidebar", [])
+    expect(service.isVisible("ses-1")).toBe(false)
+    expect(service.isVisible("ses-2")).toBe(true)
+
+    service.unregisterVisible("agent-manager")
+    expect(service.isVisible("ses-2")).toBe(false)
+  })
+})
+
 describe("KiloConnectionService clients", () => {
   test("returns a connected client without a workspace folder", async () => {
     const service = new KiloConnectionService({} as any)

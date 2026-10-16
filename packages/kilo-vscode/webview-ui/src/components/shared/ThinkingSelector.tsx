@@ -7,7 +7,7 @@
  * ThinkingSelector     — thin wrapper wired to session context for chat usage.
  */
 
-import { type Accessor, Component, createSignal, For, onCleanup, Show } from "solid-js"
+import { type Accessor, Component, createEffect, createSignal, For, onCleanup, Show } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -15,6 +15,7 @@ import { useSession } from "../../context/session"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
+import { createTypeahead, isTypeaheadChar } from "../../utils/typeahead"
 
 // ---------------------------------------------------------------------------
 // Reusable base component
@@ -47,6 +48,10 @@ export interface ThinkingSelectorBaseProps {
   cycleHint?: boolean
   /** Accessible name for the selector trigger. */
   label?: string
+  /** Disable this prompt-scoped selector while a permission owns the prompt. */
+  blocked?: boolean
+  /** Short title shown above the options, so the list explains itself. */
+  heading?: string
 }
 
 export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props) => {
@@ -74,15 +79,25 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
     items[clamped]?.focus()
   }
 
+  const typeahead = createTypeahead(() => rows().map(display))
+
   function refocus() {
-    requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
+    requestAnimationFrame(() => {
+      // Another picker took focus (for example the prompt pill switched to the
+      // agent or model popover on hover). Do not pull focus back to the prompt.
+      const el = document.activeElement
+      if (el?.closest("[data-component='popover-content']") && !listRef?.contains(el)) return
+      window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } }))
+    })
   }
 
   function onOpen(val: boolean) {
     if (val) {
+      if (props.blocked) return
       const items = rows()
       const idx = items.findIndex((v) => v === props.value)
       setFocused(idx >= 0 ? idx : 0)
+      typeahead.reset()
       setOpen(true)
       return
     }
@@ -92,14 +107,19 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
 
   const onTrigger = (event: Event) => {
     const source = (event as CustomEvent<{ source?: string }>).detail?.source
-    if (source !== props.trigger) return
+    if (source !== props.trigger || props.blocked) return
     if (rows().length === 0) return
     onOpen(true)
   }
-  if (props.globalTrigger ?? true) {
+  createEffect(() => {
+    if (props.blocked) {
+      setOpen(false)
+      return
+    }
+    if (!(props.globalTrigger ?? true)) return
     window.addEventListener("openVariantPicker", onTrigger)
     onCleanup(() => window.removeEventListener("openVariantPicker", onTrigger))
-  }
+  })
 
   function pick(value: string | undefined) {
     if (value === undefined) {
@@ -136,6 +156,12 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
       focusItem(len - 1)
       return
     }
+    if (e.key === " " && typeahead.active()) {
+      e.preventDefault()
+      const idx = typeahead.type(e.key)
+      if (idx >= 0) focusItem(idx)
+      return
+    }
     if (e.key === " " || isEnterKeyCommitNotIme(e)) {
       e.preventDefault()
       if (cur >= 0 && cur < len) pick(items[cur])
@@ -145,6 +171,14 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
       e.preventDefault()
       e.stopPropagation()
       onOpen(false)
+      return
+    }
+    if (isTypeaheadChar(e)) {
+      const idx = typeahead.type(e.key)
+      if (idx >= 0) {
+        e.preventDefault()
+        focusItem(idx)
+      }
     }
   }
 
@@ -153,7 +187,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
       <Tooltip
         value={
           <div data-slot="tooltip-keybind">
-            <span>{language.t("prompt.thinking.tooltip")}</span>
+            <span>{`${language.t("prompt.thinking.tooltip")}: ${display(props.value)}`}</span>
             <Show when={props.cycleHint}>
               <span data-slot="tooltip-keybind-key">Shift+Tab</span>
             </Show>
@@ -172,11 +206,25 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
           open={open()}
           onOpenChange={onOpen}
           triggerAs={Button}
-          triggerProps={{ variant: "ghost", size: "small", "aria-label": props.label }}
+          triggerProps={{ variant: "ghost", size: "small", "aria-label": props.label, disabled: props.blocked }}
           trigger={
             <>
-              <span class="thinking-selector-trigger-label">{display(props.value)}</span>
-              <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" style={{ "flex-shrink": "0" }}>
+              {/* Keyed so the label remounts on change and the prompt pill can animate it. */}
+              <Show when={display(props.value)} keyed>
+                {(label) => (
+                  <span class="thinking-selector-trigger-label" data-unset={props.value ? undefined : ""}>
+                    {label}
+                  </span>
+                )}
+              </Show>
+              <svg
+                class="selector-trigger-chevron"
+                width="10"
+                height="10"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                style={{ "flex-shrink": "0" }}
+              >
                 <path d="M8 4l4 5H4l4-5z" />
               </svg>
             </>
@@ -186,10 +234,16 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
             <div
               class="thinking-selector-list"
               role="listbox"
+              aria-label={props.heading}
               ref={listRef}
               onKeyDown={onKeyDown}
               style={bodyH() !== undefined ? { "max-height": `${bodyH()}px` } : {}}
             >
+              <Show when={props.heading}>
+                <div class="thinking-selector-heading" aria-hidden="true">
+                  {props.heading}
+                </div>
+              </Show>
               <For each={rows()}>
                 {(v, i) => (
                   <div
@@ -219,6 +273,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
 
 interface ThinkingSelectorProps {
   sessionID?: Accessor<string | undefined>
+  blocked?: boolean
 }
 
 export const ThinkingSelector: Component<ThinkingSelectorProps> = (props) => {
@@ -231,10 +286,12 @@ export const ThinkingSelector: Component<ThinkingSelectorProps> = (props) => {
     <ThinkingSelectorBase
       variants={session.variantList(id())}
       value={session.currentVariant(id())}
+      blocked={props.blocked}
       onSelect={(value) => session.selectVariant(value, id())}
       onClear={() => session.selectVariant(undefined, id())}
       allowClear
       clearLabel={language.t("common.default")}
+      heading={language.t("prompt.thinking.tooltip")}
       cycleHint={settings()["chat.shiftTabCyclesVariant"] !== false}
     />
   )

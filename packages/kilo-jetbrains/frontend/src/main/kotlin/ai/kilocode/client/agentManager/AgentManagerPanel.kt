@@ -8,6 +8,7 @@ import ai.kilocode.client.agentManager.worktree.NewWorktreeDialog
 import ai.kilocode.client.agentManager.worktree.NewWorktreeHandle
 import ai.kilocode.client.agentManager.worktree.NewWorktreePlan
 import ai.kilocode.client.agentManager.worktree.GhBanner
+import ai.kilocode.client.agentManager.orphans.OrphanBanner
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
@@ -47,6 +48,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListConfig
@@ -68,6 +70,7 @@ import ai.kilocode.rpc.dto.WorktreeStatsDto
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.DeleteProvider
+import com.intellij.ide.actions.RevealFileAction
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionGroup
@@ -116,6 +119,7 @@ class AgentManagerPanel(
             controller.suggestName(),
             controller.defaultBranch,
             controller.branches,
+            controller.origin,
         )
     },
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
@@ -159,6 +163,7 @@ class AgentManagerPanel(
     private var dirty: Map<String, WorktreeDirtyDto> = emptyMap()
     private var running: Set<String> = emptySet()
     private var hovered: String? = null
+    private var orphanBanner: OrphanBanner? = null
 
     init {
         Disposer.register(parent, this)
@@ -167,7 +172,11 @@ class AgentManagerPanel(
         // busy list or a rebuilt model has already dropped the hover the popup was opened from.
         list.onScroll = { popup.hideAll() }
         isOpaque = true
-        project?.let { addToTop(GhBanner(it, this)) }
+        project?.let {
+            val orphan = OrphanBanner(it, controller, this)
+            orphanBanner = orphan
+            addToTop(Stack.vertical().next(GhBanner(it, this)).next(orphan))
+        }
         addToCenter(body())
         list.installPopup(group)
         sync()
@@ -186,7 +195,7 @@ class AgentManagerPanel(
             project?.service<WorktreeStatusService>()?.refreshPr(force = true, maxAge = 0)
             autoRunSetupScript(created)
         }
-        controller.onReload = { sync() }
+        controller.onReload = { sync(); orphanBanner?.refresh() }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
         controller.onMoveFailure = { err -> notifyMoveFailed(err) }
         controller.onRemoveSuccess = { item, index -> onRemoved(item, index) }
@@ -462,7 +471,10 @@ class AgentManagerPanel(
         KiloNotifications.error(project, KiloBundle.message("worktree.move.failed.title"), err)
     }
 
-    /** Surfaces a failed removal; offers a force-delete retry when git reported a lock. */
+    /**
+     * Surfaces a failed removal; offers a force-delete retry when git reported a lock, or
+     * copy-path/reveal actions for the blocking worktree(s) when a nested worktree is in the way.
+     */
     private fun notifyFailed(item: WorktreeDto, result: RemoveWorktreeResultDto, forced: Boolean) {
         val title = KiloBundle.message("worktree.delete.failed.title", item.name)
         if (result.locked && !forced) {
@@ -474,8 +486,36 @@ class AgentManagerPanel(
             ) { remove(item, force = true) }
             return
         }
+        if (result.nestedPaths.isNotEmpty()) {
+            KiloNotifications.error(project, title, result.error, nestedPathActions(result.nestedPaths))
+            return
+        }
         KiloNotifications.error(project, title, result.error)
     }
+
+    /**
+     * Copy/reveal actions for the worktree(s) blocking a delete, using the same primitives as the
+     * row context menu (copy) and the orphan-cleanup dialog (reveal, routed through the backend RPC
+     * since split mode runs the frontend on the client machine while the folder lives on the host).
+     * Copy captures every blocking path; reveal opens only the first — the common (and only tested)
+     * case is exactly one nested worktree. `revealPath` answers `false` instead of throwing when the
+     * host can't reveal it (unsupported platform, or the directory is already gone), so that failure
+     * is surfaced as a warning rather than silently doing nothing.
+     */
+    private fun nestedPathActions(paths: List<String>): List<Pair<String, () -> Unit>> = listOf(
+        KiloBundle.message("worktree.delete.nested.copyPath") to {
+            CopyPasteManager.getInstance().setContents(StringSelection(paths.joinToString("\n")))
+        },
+        RevealFileAction.getActionName() to {
+            controller.reveal(paths.first()) {
+                KiloNotifications.warning(
+                    project,
+                    KiloBundle.message("worktree.delete.nested.reveal.failed.title"),
+                    KiloBundle.message("worktree.delete.nested.reveal.failed.detail"),
+                )
+            }
+        },
+    )
 
     private fun bindEditorSelection() {
         val target = project ?: return

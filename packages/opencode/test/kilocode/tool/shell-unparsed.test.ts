@@ -91,6 +91,12 @@ describe("shell permission scanner fails closed on unparsed commands", () => {
     expect(requests[1]?.metadata?.sandboxEscalation).toBe(true)
   })
 
+  test("does not escalate read-only Git commands when the session sandbox is enabled", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const requests = await scan(tmp.path, "git remote -v && git stash list && git branch -v", "bash", true)
+    expect(requests.map((request) => request.permission)).toEqual(["bash"])
+  })
+
   test("pwsh: bare '--' git commands now produce a denied pattern", async () => {
     await using tmp = await tmpdir()
     for (const command of ["git checkout -- file", "git restore -- file", "git log -- file", "git checkout -- ."]) {

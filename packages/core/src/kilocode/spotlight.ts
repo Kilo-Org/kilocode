@@ -3,12 +3,12 @@ import path from "path"
 
 const marker = ".metadata_never_index"
 
-function exists(err: unknown): boolean {
+export function exists(err: unknown): boolean {
   if (typeof err !== "object" || err === null) return false
   return "code" in err && err.code === "EEXIST"
 }
 
-function message(err: unknown): string {
+export function message(err: unknown): string {
   if (err instanceof Error) return err.message
   return String(err)
 }

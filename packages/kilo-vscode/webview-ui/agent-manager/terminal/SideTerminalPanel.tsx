@@ -59,8 +59,9 @@ export const SideTerminalPanel: Component<Props> = (props) => {
   const ids = () => sides().map((term) => term.id)
   const active = () => props.state.sideActiveFor(props.contextKey())
   const pending = () => props.state.pendingSide(props.contextKey())
-  const close = (id: string, focus: { restore: () => void }) => {
+  const close = (id: string, focus: { restore: () => void }, release: () => void) => {
     props.onClose(id)
+    requestAnimationFrame(release)
     if (ids().length > 0) focus.restore()
   }
 
@@ -78,6 +79,7 @@ export const SideTerminalPanel: Component<Props> = (props) => {
         overlay={(id) => props.state.title(id) ?? t("agentManager.tab.terminal")}
         onSelect={props.onSelect}
         onReorder={(from, to) => props.state.reorderSideDrag(props.contextKey(), from, to)}
+        drag={() => ({ kind: "terminal" })}
         renderTab={(id, api) => {
           const term = sides().find((item) => item.id === id)
           if (!term) return null
@@ -102,9 +104,9 @@ export const SideTerminalPanel: Component<Props> = (props) => {
                 if (event.button !== 1) return
                 event.preventDefault()
                 event.stopPropagation()
-                close(term.id, api.focus)
+                close(term.id, api.focus, api.release)
               }}
-              onClose={() => close(term.id, api.focus)}
+              onClose={() => close(term.id, api.focus, api.release)}
               onCloseOthers={() => props.onCloseOthers(term.id)}
               onStop={(event) => {
                 event.stopPropagation()

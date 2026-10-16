@@ -4,6 +4,7 @@ import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.actions.CycleModeAction
 import ai.kilocode.client.actions.CycleModelAction
 import ai.kilocode.client.actions.CycleReasoningAction
+import ai.kilocode.client.actions.KiloSettingsAction
 import ai.kilocode.client.actions.ResetModelAction
 import ai.kilocode.client.actions.SendPromptAction
 import ai.kilocode.client.actions.StopSessionAction
@@ -20,8 +21,12 @@ import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.editor.EditorFolds
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
+import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.PromptPartDto
@@ -44,12 +49,14 @@ import com.intellij.openapi.actionSystem.ActionUiKind
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.ui.popup.PopupShowOptions
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
@@ -165,7 +172,17 @@ class PromptPanel(
         )
     }
     private val attachments = mutableListOf<PromptAttachment>()
+    // The most recently submitted text + attachments, kept around so a send that the server
+    // rejects or that fails after the client already got a 2xx (prompt_async's async
+    // session.error) can be put back in the editor. Without this, clear() on submit followed
+    // by a failure permanently loses whatever the user typed -- there is no draft store or
+    // prompt history to fall back on.
+    private var lastSubmission: Pair<String, List<PromptAttachment>>? = null
+    // What restoreLastSubmission() put back, so it can be dropped again if the send turns out to
+    // have been persisted after all -- but only while the user has not touched it.
+    private var restoredSubmission: Pair<String, List<PromptAttachment>>? = null
     private val highlighters = mutableListOf<RangeHighlighter>()
+    private val folds: EditorFolds = EditorFolds(live = { editor.getEditor(false) }, resize = ::syncEditorHeight)
     private val strip = PromptAttachmentStrip(project) { removeAttachment(it) }
     private var bus: MessageBusConnection? = null
     private var lookupBus: MessageBusConnection? = null
@@ -197,6 +214,7 @@ class PromptPanel(
             ed.settings.setBlockCursor(false)
             SpellCheckingEditorCustomizationProvider.getInstance().getDisabledCustomization()?.customize(ed)
             ed.putUserData(PROMPT_ATTACHMENT_PASTE_HANDLER_KEY, PromptAttachmentPasteHandler { processPaste(it) })
+            ed.putUserData(PROMPT_TEXT_PASTE_HANDLER_KEY, PromptTextPasteHandler { handlePastedText(ed, it) })
             ed.setHorizontalScrollbarVisible(false)
             ed.scrollPane.verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
             ed.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
@@ -205,6 +223,7 @@ class PromptPanel(
             installFileDrop(ed.contentComponent, "editor")
             installFileDrop(ed.scrollPane, "scroll")
             syncHighlights()
+            folds.install(ed)
             ed.caretModel.addCaretListener(object : CaretListener {
                 override fun caretPositionChanged(e: CaretEvent) {
                     val provider = completion ?: return
@@ -231,7 +250,7 @@ class PromptPanel(
         isFocusPainted = false
         addActionListener {
             syncTooltip()
-            val id = if (busy && !hasDraft()) StopSessionAction.ID else SendPromptAction.ID
+            val id = if (stopping()) StopSessionAction.ID else SendPromptAction.ID
             val action = ActionManager.getInstance().getAction(id)
                 ?: return@addActionListener
             val ctx = DataManager.getInstance().getDataContext(button)
@@ -254,8 +273,18 @@ class PromptPanel(
         addActionListener { onAutoApproveToggle(!autoApprove) }
     }
 
+    private var issues = emptyList<SessionIssue>()
+    private val issuesButton = HoverIcon().apply {
+        icon = AllIcons.General.Warning
+        toolTipText = KiloBundle.message("prompt.issues.title")
+        accessibleContext.accessibleName = toolTipText
+        isVisible = false
+        addActionListener { showIssues() }
+    }
+    private val issuesSlot = issuesButton.align(HAlign.RIGHT, VAlign.TOP).apply { isVisible = false }
+
     /**
-     * Opens the Kilo.Session.PromptMenu popup (auto-approve + sharing). Resolves its context from
+     * Opens the Kilo.Session.PromptMenu popup (auto-approve, sharing, Core). Resolves its context from
      * DataManager, so it reads live SessionActionsKeys.ACTIONS from the session ancestor chain rather
      * than needing SessionUi to wire anything through this panel directly.
      */
@@ -322,6 +351,7 @@ class PromptPanel(
                     onChange()
                     return
                 }
+                folds.sync()
                 syncEditorHeight()
                 triggerCompletion(e)
                 syncHighlights()
@@ -334,7 +364,12 @@ class PromptPanel(
             }
         })
         shell.add(strip, BorderLayout.NORTH)
-        shell.add(editor, BorderLayout.CENTER)
+        val input = BorderLayoutPanel().apply {
+            isOpaque = false
+            add(editor, BorderLayout.CENTER)
+            add(issuesSlot, BorderLayout.EAST)
+        }
+        shell.add(input, BorderLayout.CENTER)
 
         val bar = BorderLayoutPanel().apply {
             layout = BoxLayout(this, BoxLayout.X_AXIS)
@@ -499,7 +534,6 @@ class PromptPanel(
         busy = value
         if (value) invalidateEnhancement() else syncEnhance()
         syncButton()
-        syncTooltip()
     }
 
     @RequiresEdt
@@ -517,19 +551,42 @@ class PromptPanel(
     }
 
     @RequiresEdt
+    internal fun setIssues(value: List<SessionIssue>) {
+        issues = value
+        val visible = value.isNotEmpty()
+        issuesButton.isVisible = visible
+        issuesSlot.isVisible = visible
+        revalidate()
+        repaint()
+    }
+
+    @RequiresEdt
     fun text(): String = editor.text.trim()
 
     @RequiresEdt
     fun hasDraft(): Boolean = text().isNotEmpty() || attachments.isNotEmpty()
 
     @RequiresEdt
-    fun hasAttachments(): Boolean = attachments.isNotEmpty()
+    fun attachments(): List<PromptAttachment> = attachments.toList()
 
     @RequiresEdt
     fun setText(value: String) {
         editor.text = value
         syncEditorHeight()
         syncHighlights()
+    }
+
+    // Replaces the whole draft (text and attachments) at once, used to refill the box from a
+    // reverted message. Attachment chips are cleared first so the result is exactly [items].
+    @RequiresEdt
+    fun setDraft(text: String, items: List<PromptAttachment>) {
+        if (this.text() == text.trim() && attachments == items) return
+        setText(text)
+        attachments.clear()
+        strip.clear()
+        items.forEach(::addAttachment)
+        syncEditorHeight()
+        syncButton()
     }
 
     @RequiresEdt
@@ -548,6 +605,10 @@ class PromptPanel(
     internal fun resetVisibleForTest() = reset.isVisible
 
     internal fun resetForTest(): JComponent = reset
+
+    internal fun issuesForTest(): List<SessionIssue> = issues
+
+    internal fun issuesButtonForTest(): JComponent = issuesButton
 
     internal fun shellForTest(): JComponent = shell
 
@@ -581,17 +642,49 @@ class PromptPanel(
         syncHighlights()
     }
 
+    // Puts the most recently submitted prompt back in the editor after the server rejected it
+    // or the send failed, so the user doesn't lose what they typed. A no-op once consumed, or
+    // if the user already started a new draft in the meantime (we must not clobber that).
+    @RequiresEdt
+    fun restoreLastSubmission() {
+        val (text, items) = lastSubmission ?: return
+        lastSubmission = null
+        if (hasDraft()) return
+        setText(text)
+        items.forEach(::addAttachment)
+        restoredSubmission = text to items
+    }
+
+    // Drops a restored draft once the send is confirmed to have been persisted. Only clears while
+    // the draft still matches what was restored, so a user edit made in the meantime is kept.
+    @RequiresEdt
+    fun discardRestoredSubmission() {
+        val (text, items) = restoredSubmission ?: return
+        restoredSubmission = null
+        if (this.text() != text || attachments != items) return
+        clear()
+    }
+
+    // Drops the retained submission once the send is confirmed. A pasted image is held as a full
+    // base64 data URL, so keeping it past the point where it could still be restored would pin
+    // megabytes per send for the lifetime of the panel.
+    @RequiresEdt
+    fun clearLastSubmission() {
+        lastSubmission = null
+    }
+
     @RequiresEdt
     fun clear() {
         editor.text = ""
+        folds.clear()
         attachments.clear()
         completion?.clearMentions()
         completion?.prewarm()
         strip.clear()
+        restoredSubmission = null
         syncEditorHeight()
         syncHighlights()
         syncButton()
-        syncTooltip()
     }
 
     @RequiresEdt
@@ -675,12 +768,45 @@ class PromptPanel(
         val ctx = DataManager.getInstance().getDataContext(menu)
         val popup = JBPopupFactory.getInstance().createActionGroupPopup(
             null,
-            group,
+            // The nested Core submenu updates on the BGT (version/architecture footer), same as the
+            // tool window gear popup.
+            KiloSettingsAction.popupGroup(group),
             ctx,
             JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
             true,
         )
         popup.show(PopupShowOptions.aboveComponent(menu))
+    }
+
+    @RequiresEdt
+    private fun showIssues() {
+        if (issues.isEmpty()) return
+        val group = DefaultActionGroup()
+        issueActions().forEach(group::add)
+        JBPopupFactory.getInstance().createActionGroupPopup(
+            null,
+            group,
+            DataManager.getInstance().getDataContext(issuesButton),
+            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
+            true,
+        ).show(PopupShowOptions.aboveComponent(issuesButton))
+    }
+
+    @RequiresEdt
+    internal fun issueActions(): List<AnAction> = issues.map { issue ->
+        DefaultActionGroup(issue.title, true).apply {
+            for (item in issue.actions) {
+                add(object : DumbAwareAction(item.title, item.description, null) {
+                    override fun update(e: AnActionEvent) {
+                        e.presentation.isEnabled = item.enabled
+                    }
+
+                    override fun actionPerformed(e: AnActionEvent) {
+                        item.action()
+                    }
+                })
+            }
+        }
     }
 
     @RequiresEdt
@@ -736,9 +862,16 @@ class PromptPanel(
         }
     }
 
+    // A running session always offers Stop, even with a draft in the box: the turn is the thing the
+    // user may need to interrupt, and a draft (typed, or restored after a send) must not hide that.
+    // The draft can still be queued while busy through the Send shortcut, which the tooltip names.
+    // The click, icon, and tooltip all read this one decision so they cannot disagree.
+    private fun stopping() = busy
+
     @RequiresEdt
     private fun syncButton() {
-        button.icon = if (busy && !hasDraft()) STOP_ICON else SEND_ICON
+        button.icon = if (stopping()) STOP_ICON else SEND_ICON
+        syncTooltip()
     }
 
     @RequiresEdt
@@ -756,6 +889,7 @@ class PromptPanel(
                     if (project.isDisposed) return@withContext
                     val parts = files + mentioned
                     LOG.debug { "${ChatLogSummary.prompt(promptDto(txt, parts))} src=$src busy=$busy" }
+                    lastSubmission = txt to items
                     onSend(txt, parts)
                 }
             } catch (e: CancellationException) {
@@ -867,7 +1001,6 @@ class PromptPanel(
         LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} count=${attachments.size}" }
         syncEditorHeight()
         syncButton()
-        syncTooltip()
         onChange()
     }
 
@@ -877,7 +1010,6 @@ class PromptPanel(
         strip.remove(item)
         syncEditorHeight()
         syncButton()
-        syncTooltip()
         onChange()
     }
 
@@ -922,6 +1054,31 @@ class PromptPanel(
     private fun processPaste(transferable: Transferable): Future<*> {
         return processAttachments("prompt-paste", "editor", null, transferable, 0)
     }
+
+    /**
+     * Handles a paste large enough to collapse ([collapsible]) by inserting it and folding it behind
+     * a placeholder. Every such paste becomes its own fold, so a second one never disturbs the
+     * first even when the text is identical.
+     */
+    @RequiresEdt
+    private fun handlePastedText(ed: EditorEx, raw: String) {
+        val text = normalizePaste(raw)
+        val sel = ed.selectionModel
+        val start = if (sel.hasSelection()) sel.selectionStart else ed.caretModel.offset
+        val end = if (sel.hasSelection()) sel.selectionEnd else start
+        // Inserting can expand a neighbouring fold on its own; quiet keeps that from reading as the
+        // reader unfolding it.
+        folds.quiet {
+            WriteCommandAction.runWriteCommandAction(project) {
+                ed.document.replaceString(start, end, text)
+                ed.caretModel.moveToOffset(start + text.length)
+            }
+        }
+        folds.fold(ed, start, start + text.length, placeholder(text))
+        syncEditorHeight()
+    }
+
+    private fun normalizePaste(text: String): String = text.replace("\r\n", "\n").replace('\r', '\n')
 
     private fun processAttachments(
         kind: String,
@@ -1027,7 +1184,8 @@ class PromptPanel(
 
     @RequiresEdt
     private fun syncTooltip() {
-        button.toolTipText = tooltip()
+        val tip = tooltip()
+        if (button.toolTipText != tip) button.toolTipText = tip
     }
 
     private fun syncAutoApprove() {
@@ -1047,20 +1205,22 @@ class PromptPanel(
     }
 
     private fun tooltip(): String {
-        val stop = busy && !hasDraft()
-        val id = if (stop) StopSessionAction.ID else SendPromptAction.ID
-        val text = if (stop) {
-            KiloBundle.message("prompt.button.stop")
-        } else {
-            KiloBundle.message("prompt.button.send")
+        if (stopping()) {
+            val tip = KeymapUtil.createTooltipText(KiloBundle.message("prompt.button.stop"), StopSessionAction.ID)
+            if (!hasDraft()) return tip
+            return hint(tip, SendPromptAction.ID, "prompt.button.stop.tooltip.send")
         }
-        val tip = KeymapUtil.createTooltipText(text, id)
-        if (stop) return tip
-        val shortcut = KeymapUtil.getFirstKeyboardShortcutText(StopSessionAction.ID)
+        val tip = KeymapUtil.createTooltipText(KiloBundle.message("prompt.button.send"), SendPromptAction.ID)
+        return hint(tip, StopSessionAction.ID, "prompt.button.send.tooltip.stop")
+    }
+
+    /** Appends a second line naming the other action's shortcut, when it has one. */
+    private fun hint(tip: String, id: String, key: String): String {
+        val shortcut = KeymapUtil.getFirstKeyboardShortcutText(id)
         if (shortcut.isEmpty()) return tip
         return XmlStringUtil.wrapInHtml(
             XmlStringUtil.escapeString(tip) + "<br>" +
-                XmlStringUtil.escapeString(KiloBundle.message("prompt.button.send.tooltip.stop", shortcut))
+                XmlStringUtil.escapeString(KiloBundle.message(key, shortcut))
         )
     }
 
@@ -1121,6 +1281,7 @@ class PromptPanel(
         ApplicationManager.getApplication().invokeLater {
             deferred = false
             if (project.isDisposed || editor.document.isInBulkUpdate) return@invokeLater
+            folds.sync()
             syncEditorHeight()
             syncHighlights()
             syncButton()

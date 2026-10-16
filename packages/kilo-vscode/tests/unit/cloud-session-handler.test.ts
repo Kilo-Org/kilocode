@@ -34,6 +34,41 @@ function context(sent: unknown[]) {
 }
 
 describe("cloud session preview handler", () => {
+  it.each(["", "pause", "clear", "resume"])("only shows bare goal status after cloud import: %j", async (args) => {
+    const sent: unknown[] = []
+    const notices: string[] = []
+    const ctx: CloudSessionContext = {
+      ...context(sent),
+      client: {
+        kilo: {
+          cloud: {
+            session: { import: async () => ({ data: { id: "local", time: { created: 1, updated: 1 } } }) },
+          },
+        },
+        session: {
+          command: async () => ({ data: { parts: [{ type: "text", text: "Goal paused" }] } }),
+        },
+      } as unknown as CloudSessionContext["client"],
+      notify: (message) => notices.push(message),
+    }
+    await handleImportAndSend(
+      ctx,
+      "cloud",
+      "/goal",
+      "message",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      "goal",
+      args,
+    )
+    expect(notices).toEqual(args ? [] : ["Goal paused"])
+    expect(sent).toContainEqual({ type: "sessionCommandCompleted", messageID: "message" })
+  })
+
   it("reports a failure when the CLI preview request stalls", async () => {
     const timeout = AbortSignal.timeout
     AbortSignal.timeout = () => {
@@ -60,6 +95,47 @@ describe("cloud session preview handler", () => {
     } finally {
       AbortSignal.timeout = timeout
     }
+  })
+
+  it("sorts preview messages by time.created with id tiebreak and keeps parentID", async () => {
+    const sent: unknown[] = []
+    const msg = (id: string, role: "user" | "assistant", created: number, parentID?: string) => ({
+      info: { id, sessionID: "cloud-session", role, parentID, time: { created } },
+      parts: [],
+    })
+    const ctx: CloudSessionContext = {
+      ...context(sent),
+      client: {
+        kilo: {
+          cloud: {
+            session: {
+              get: async () => ({
+                data: {
+                  info: { id: "cloud-session", title: "Preview", time: { created: 1, updated: 1 } },
+                  // Assistant, User per turn with same-millisecond time ties —
+                  // the shape the cloud export can return.
+                  messages: [
+                    msg("m4", "assistant", 3000, "m3"),
+                    msg("m3", "user", 3000),
+                    msg("m2", "assistant", 2000, "m1"),
+                    msg("m1", "user", 2000),
+                  ],
+                },
+              }),
+            },
+          },
+        },
+      } as unknown as CloudSessionContext["client"],
+    }
+
+    await handleRequestCloudSessionData(ctx, "cloud-session")
+
+    const loaded = sent.find(
+      (m): m is { type: "cloudSessionDataLoaded"; messages: Array<{ id: string; parentID?: string }> } =>
+        (m as { type?: string }).type === "cloudSessionDataLoaded",
+    )
+    expect(loaded?.messages.map((m) => m.id)).toEqual(["m1", "m2", "m3", "m4"])
+    expect(loaded?.messages.map((m) => m.parentID)).toEqual([undefined, "m1", undefined, "m3"])
   })
 
   it("reports a failure when the CLI import request stalls", async () => {

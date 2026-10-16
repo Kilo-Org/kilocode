@@ -1,8 +1,9 @@
+import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
 import { InstanceState } from "@/effect/instance-state"
 import { AgentManagerEvent, type AgentManagerTask } from "@/kilocode/agent-manager/event"
 import { AgentManager, HostError } from "@/kilocode/agent-manager/service"
-import type { Result } from "@/kilocode/agent-manager/protocol"
+import { RequestID } from "@/kilocode/agent-manager/protocol"
 import * as SandboxInheritance from "@/kilocode/sandbox/inheritance"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { Provider } from "@/provider/provider"
@@ -11,6 +12,7 @@ import * as ToolJsonSchema from "@/tool/json-schema"
 import { Tool } from "@/tool/tool"
 import { Effect, Schema } from "effect"
 import { selectModel } from "./model-selection"
+import { runner } from "./host"
 import DESCRIPTION from "./agent-manager.txt"
 
 const Task = Schema.Struct({
@@ -22,6 +24,10 @@ const Task = Schema.Struct({
   }),
   branchName: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description: "Git branch name seed for worktree mode",
+  }),
+  agent: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description:
+      "Optional agent name to run the new session as (e.g. a custom agent configured with mode 'all'). Must be a selectable primary agent: not a mode: 'subagent' agent and not an internal/hidden one. Omit to use the workspace default agent; prefer the name the user asked for. A rejected name lists the selectable agents.",
   }),
   model: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:
@@ -92,12 +98,20 @@ const ListParams = Schema.Struct({
   }),
 })
 
+const ReplyTo = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200)).check(
+  Schema.makeFilter((value) => (value.trim() ? undefined : "replyTo must not be empty")),
+)
+
 const PromptParams = Schema.Struct({
   action: Schema.Literal("prompt"),
   sessionID: SessionID,
   prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)).check(
     Schema.makeFilter((value) => (value.trim() ? undefined : "Prompt must not be empty")),
   ),
+  replyTo: Schema.optional(Schema.NullOr(ReplyTo)).annotate({
+    description:
+      "Optional request ID from a peer-agent prompt. Use it only when replying to the session that sent the request.",
+  }),
 })
 
 const StopParams = Schema.Struct({
@@ -143,7 +157,8 @@ export const Params = Schema.Union([
   }).check(
     Schema.makeFilter((params) => {
       if (params.worktreeID == null) return undefined
-      if (params.mode !== "local") return "worktreeID requires mode local"
+      if (params.mode !== "local")
+        return `worktreeID ${JSON.stringify(params.worktreeID)} requires mode local. To start a new worktree, omit worktreeID or send JSON null`
       if (params.versions === true) return "worktreeID cannot be combined with versions true"
       if (params.tasks.some((task) => task.branchName != null)) return "worktreeID cannot be combined with branchName"
       return undefined
@@ -164,55 +179,45 @@ export const Params = Schema.Union([
 // the model is forced to invent a value, and an invented action wins over mode and
 // tasks, turning a start request into a list.
 const WireParams = Schema.Struct({
-  mode: Schema.optional(Schema.NullOr(StartParams.fields.mode)).annotate({
+  mode: Schema.NullOr(StartParams.fields.mode).annotate({
     description:
       "Start sessions only. Use worktree for isolated git worktrees, or local for same-directory Agent Manager sessions. Send null whenever action is set.",
   }),
-  versions: Schema.optional(Schema.NullOr(Schema.Boolean)).annotate({
+  versions: Schema.NullOr(Schema.Boolean).annotate({
     description:
       "Set true only when tasks are alternative versions of the same work to compare. Omit or false for independent sessions.",
   }),
-  tasks: Schema.optional(Schema.NullOr(StartParams.fields.tasks)).annotate({
+  tasks: Schema.NullOr(StartParams.fields.tasks).annotate({
     description: "Start sessions only. Agent Manager sessions to start. Send null whenever action is set.",
   }),
-  worktreeID: StartParams.fields.worktreeID,
-  action: Schema.optional(
-    Schema.NullOr(Schema.Literals(["list", "prompt", "stop", "move", "answer"])).annotate({
-      description:
-        "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Never edit .kilo/agent-manager.json for these operations. Send null when starting sessions with mode and tasks, otherwise the action is used instead of the start request.",
-    }),
-  ),
-  filter: ListParams.fields.filter,
-  sessionID: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+  worktreeID: Schema.NullOr(StartParams.fields.worktreeID),
+  action: Schema.NullOr(Schema.Literals(["list", "prompt", "stop", "move", "answer"])).annotate({
+    description:
+      "Use list first to discover IDs and assignments. Use move only after list, once per worktree. Never edit .kilo/agent-manager.json for these operations. Send null when starting sessions with mode and tasks, otherwise the action is used instead of the start request.",
+  }),
+  filter: Schema.NullOr(ListParams.fields.filter),
+  sessionID: Schema.NullOr(Schema.String).annotate({
     description:
       "For prompt, stop, move, and answer: a session ID returned by action=list (IDs start with ses_). Send null for every other operation.",
   }),
-  prompt: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+  prompt: Schema.NullOr(Schema.String).annotate({
     description:
       "For prompt: the instruction to send to that session. Start requests use tasks[].prompt instead, so send null.",
   }),
-  sectionID: Schema.optional(MoveParams.fields.sectionID),
-  questionID: AnswerParams.fields.questionID,
-  answers: Schema.optional(Schema.NullOr(AnswerParams.fields.answers)),
+  replyTo: Schema.NullOr(ReplyTo).annotate({
+    description:
+      "For prompt replies: the request ID included by Agent Manager in the peer-agent request. Send null otherwise.",
+  }),
+  sectionID: Schema.NullOr(MoveParams.fields.sectionID),
+  questionID: Schema.NullOr(Schema.String),
+  answers: Schema.NullOr(AnswerParams.fields.answers),
 })
 
 type Input = Schema.Schema.Type<typeof Task>
 type Selected = { task?: AgentManagerTask; error?: string }
 type Source = { model: NonNullable<AgentManagerTask["model"]>; variant?: string }
 
-function abort(signal: AbortSignal) {
-  return Effect.callback<never, HostError>((resume) => {
-    const err = () => new HostError({ code: "cancelled", detail: "The Agent Manager tool call was cancelled" })
-    if (signal.aborted) return resume(Effect.fail(err()))
-    const handler = () => resume(Effect.fail(err()))
-    signal.addEventListener("abort", handler, { once: true })
-    return Effect.sync(() => signal.removeEventListener("abort", handler))
-  })
-}
-
-function run(effect: Effect.Effect<Result, HostError>, signal: AbortSignal) {
-  return effect.pipe(Effect.raceFirst(abort(signal)), Effect.orDie)
-}
+const run = runner(() => new HostError({ code: "cancelled", detail: "The Agent Manager tool call was cancelled" }))
 
 function select(
   task: Input,
@@ -225,13 +230,20 @@ function select(
     ...(task.prompt != null ? { prompt: task.prompt } : {}),
     ...(task.name != null ? { name: task.name } : {}),
     ...(task.branchName != null ? { branchName: task.branchName } : {}),
+    ...(task.agent?.trim() ? { agent: task.agent.trim() } : {}),
   }
   if (!task.model?.trim() && !task.variant?.trim()) {
     return { task: task.prompt?.trim() && source ? { ...base, ...source } : base }
   }
   const selected = selectModel(task, providers, source, preferred)
   if ("error" in selected) return { error: `Task ${index + 1} ${selected.error}` }
-  return { task: { ...base, ...selected } }
+  // Naming the invoking model again must not drop the invoking reasoning variant.
+  const variant =
+    selected.variant ??
+    (source && selected.model.providerID === source.model.providerID && selected.model.modelID === source.model.modelID
+      ? source.variant
+      : undefined)
+  return { task: { ...base, ...selected, ...(variant ? { variant } : {}) } }
 }
 
 export const AgentManagerTool = Tool.define<
@@ -243,7 +255,7 @@ export const AgentManagerTool = Tool.define<
     sessionID?: string
     questionID?: string
   },
-  AgentManager.Service | Bus.Service | Provider.Service,
+  AgentManager.Service | Bus.Service | Provider.Service | Agent.Service,
   "agent_manager"
 >(
   "agent_manager",
@@ -251,6 +263,7 @@ export const AgentManagerTool = Tool.define<
     const bus = yield* Bus.Service
     const host = yield* AgentManager.Service
     const provider = yield* Provider.Service
+    const agents = yield* Agent.Service
     const wire = ToolJsonSchema.fromSchema(WireParams)
     const section = wire.properties?.sectionID
     if (section && typeof section === "object" && wire.properties) {
@@ -299,6 +312,8 @@ export const AgentManagerTool = Tool.define<
             }
             if (params.action === "prompt") {
               const prompt = params.prompt.trim()
+              const ref = params.replyTo?.trim()
+              const replyTo = ref && !["none", "null", "undefined"].includes(ref.toLowerCase()) ? ref : undefined
               yield* ctx.ask({
                 permission: "agent_manager",
                 patterns: ["prompt"],
@@ -306,6 +321,7 @@ export const AgentManagerTool = Tool.define<
                 metadata: {
                   action: "prompt",
                   sessionID: params.sessionID,
+                  ...(replyTo ? { replyTo } : {}),
                   description: `Send a prompt to Agent Manager session ${params.sessionID}:\n\n${prompt}`,
                 },
               })
@@ -316,15 +332,18 @@ export const AgentManagerTool = Tool.define<
                   targetSessionID: params.sessionID,
                   sourceSessionID: ctx.sessionID,
                   prompt,
+                  ...(replyTo ? { replyTo: RequestID.make(replyTo) } : {}),
                 }),
                 ctx.abort,
               )
               if (result.operation !== "prompt")
                 return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
               return {
-                title: "Prompt accepted",
-                output: `Agent Manager session ${result.sessionID} accepted the prompt. If the session is busy, the prompt is queued behind active work. This does not wait for completion.`,
-                metadata: { action: "prompt", sessionID: result.sessionID },
+                title: replyTo ? "Reply accepted" : "Prompt accepted",
+                output: replyTo
+                  ? `Reply accepted by Agent Manager session ${result.sessionID}. If the session is busy, the reply is queued behind active work. This does not wait for completion.`
+                  : `Agent Manager session ${result.sessionID} accepted the prompt. If the session is busy, the prompt is queued behind active work. This does not wait for completion.`,
+                metadata: { action: "prompt", sessionID: result.sessionID, ...(replyTo ? { replyTo } : {}) },
               }
             }
             if (params.action === "stop") {
@@ -409,6 +428,40 @@ export const AgentManagerTool = Tool.define<
                 ...(msg.model.variant ? { variant: msg.model.variant } : {}),
               }
             : undefined
+          const agentNames = params.tasks.flatMap((task) => (task.agent?.trim() ? [task.agent.trim()] : []))
+          const agentErrors: string[] = []
+          if (agentNames.length > 0) {
+            // The caller has no way to enumerate agents, so every rejection carries the
+            // selectable set. Matches Agent.defaultInfo and the extension's agent picker.
+            const selectable = (yield* agents.list())
+              .filter((item) => item.mode !== "subagent" && !item.hidden)
+              .map((item) => item.name)
+            const hint = selectable.length ? ` Available agents: ${selectable.join(", ")}` : ""
+            for (const name of agentNames) {
+              const info = yield* agents.get(name)
+              if (!info) {
+                agentErrors.push(`Agent "${name}" not found.${hint}`)
+                continue
+              }
+              if (info.mode === "subagent") {
+                agentErrors.push(
+                  `Agent "${name}" is a subagent (mode: "subagent") and cannot run as an Agent Manager session's primary agent. Set its mode to "all" in config, or use the task tool for subagent work instead.${hint}`,
+                )
+                continue
+              }
+              if (info.hidden) {
+                agentErrors.push(`Agent "${name}" is an internal agent and cannot run an Agent Manager session.${hint}`)
+              }
+            }
+          }
+          if (agentErrors.length > 0) {
+            return {
+              title: "Invalid Agent Manager agent selection",
+              output: ["No Agent Manager sessions were requested.", ...agentErrors].join("\n"),
+              metadata: { action: "start", count: 0 },
+            }
+          }
+
           const need = params.tasks.some((task) => task.model?.trim() || task.provider?.trim() || task.variant?.trim())
           const providers = need ? yield* provider.list() : undefined
           const preferred = need

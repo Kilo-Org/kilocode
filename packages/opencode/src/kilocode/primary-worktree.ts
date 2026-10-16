@@ -47,13 +47,29 @@ export const primaryWorktree = Effect.fn("PrimaryWorktree.find")(function* (dir:
   const resolve = (value: string) =>
     FSUtil.normalizePath(path.isAbsolute(value) ? path.normalize(value) : path.resolve(cwd, value))
   const line = (value: string | undefined) => value?.replace(/\r?\n$/, "")
-
-  if (line(yield* run(["rev-parse", "--is-inside-work-tree"])) !== "true") return undefined
-
-  const root = line(yield* run(["rev-parse", "--path-format=absolute", "--show-toplevel"]))
-  const gitdir = line(yield* run(["rev-parse", "--path-format=absolute", "--git-dir"]))
-  const common = line(yield* run(["rev-parse", "--path-format=absolute", "--git-common-dir"]))
-  if (!root || !gitdir || !common) return undefined
+  // One rev-parse answers all four questions, in argument order. Outside a
+  // work tree --show-toplevel fails, so the command fails as a whole.
+  const info = yield* run([
+    "rev-parse",
+    "--is-inside-work-tree",
+    "--path-format=absolute",
+    "--show-toplevel",
+    "--git-dir",
+    "--git-common-dir",
+  ])
+  if (info === undefined) return undefined
+  const lines = line(info)!.split(/\r?\n/)
+  // A path that contains a newline spreads over extra lines; fall back to one query per field.
+  const [inside, root, gitdir, common] =
+    lines.length === 4
+      ? lines
+      : [
+          line(yield* run(["rev-parse", "--is-inside-work-tree"])),
+          line(yield* run(["rev-parse", "--path-format=absolute", "--show-toplevel"])),
+          line(yield* run(["rev-parse", "--path-format=absolute", "--git-dir"])),
+          line(yield* run(["rev-parse", "--path-format=absolute", "--git-common-dir"])),
+        ]
+  if (inside !== "true" || !root || !gitdir || !common) return undefined
   if (resolve(gitdir) === resolve(common)) return resolve(root)
 
   const listing = yield* run(["worktree", "list", "--porcelain", "-z"])

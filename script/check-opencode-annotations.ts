@@ -114,7 +114,11 @@ function isUpstreamMerge() {
     if (!parents.includes(" ")) return false
     const s = subject.toLowerCase()
     return (
-      s.startsWith("merge: upstream ") || s.startsWith("merge: opencode ") || s.startsWith("resolve merge conflict")
+      s.startsWith("merge: upstream ") ||
+      s.startsWith("merge: opencode ") ||
+      s.startsWith("merge: record upstream ") ||
+      s.startsWith("resolve merge conflict") ||
+      /^merge (?:remote-tracking )?branch '(?:[^/']+\/)*opencode-v\d/.test(s)
     )
   })
 }
@@ -192,7 +196,15 @@ function addedLines(file: string): { added: Set<number>; revert: boolean } {
 // kilocode_change start
 function content(file: string) {
   const abs = path.join(ROOT, file)
-  if (existsSync(abs)) return readFileSync(abs, "utf8")
+  // The content must come from the SAME revision the added-line numbers come
+  // from. In `--worktree` mode that revision is the working tree; every other
+  // mode diffs `<base>...HEAD`, so it is HEAD. Reading the working tree while
+  // numbering its lines from HEAD mixes two revisions: a worktree dirty with the
+  // round's own edits (the driver commits the slice after the round) shifts the
+  // lines, and a properly marked added line then collides with an untouched
+  // upstream line and reports it as unannotated. Default mode is documented to
+  // ignore local edits; it must do so for the file content too.
+  if (worktree && existsSync(abs)) return readFileSync(abs, "utf8")
 
   const out = run("git", ["show", `HEAD:${file}`])
   const target = out.trim()
@@ -249,6 +261,24 @@ function coveredLines(text: string): { lines: string[]; covered: Set<number> } {
 }
 
 // --- main ---
+
+// CI only runs this check when a changed file matches the workflow's `paths:` filter, so a scope
+// missing there means PRs touching only that scope never get checked. Fail fast on that drift.
+const workflow = path.join(ROOT, ".github/workflows/check-opencode-annotations.yml")
+const filter = existsSync(workflow) ? readFileSync(workflow, "utf8") : undefined
+const unwatched = filter == null ? [] : SCOPES.filter((scope) => !filter.includes(`- "${scope}/**"`))
+if (unwatched.length > 0) {
+  console.error(
+    [
+      "Checked scopes missing from the `paths:` filter in .github/workflows/check-opencode-annotations.yml:",
+      "",
+      ...unwatched.map((scope) => `  - "${scope}/**"`),
+      "",
+      "Add them so pull requests touching these scopes run this check in CI.",
+    ].join("\n"),
+  )
+  process.exit(1)
+}
 
 if (!worktree && isUpstreamMerge()) {
   console.log("Skipping shared upstream annotation check — upstream merge detected.")

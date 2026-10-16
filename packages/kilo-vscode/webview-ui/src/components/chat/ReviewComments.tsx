@@ -10,6 +10,7 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import type { ReviewCommentEntry } from "../../types/messages"
 import { fileName } from "./prompt-input-utils"
+import { PromptShowMore } from "./PromptShowMore"
 import { openPRComment } from "../../utils/pr-review"
 
 interface ReviewCommentsProps {
@@ -243,13 +244,7 @@ function Group(props: ReviewCommentsProps & { source: "local" | "pr" | "ci" }) {
           </For>
         </div>
 
-        <Show when={hidden() > 0}>
-          <button type="button" class="prompt-review-more" onClick={() => setAll(!all())}>
-            {all()
-              ? language.t("agentManager.review.showLess")
-              : language.t("agentManager.review.showMore", { count: hidden() })}
-          </button>
-        </Show>
+        <PromptShowMore hidden={hidden()} all={all()} onToggle={() => setAll(!all())} />
       </Show>
     </div>
   )

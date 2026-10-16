@@ -38,7 +38,7 @@ document.body.append(root)
 const dispose = render(
   () => (
     <VSCodeProvider>
-      <CaffeinationButton t={() => "Keep computer awake"} />
+      <CaffeinationButton t={() => "Keep computer awake while Kilo agents work"} />
     </VSCodeProvider>
   ),
   root,
@@ -48,18 +48,23 @@ try {
   assert(messages.some((message) => message.type === "agentManager.requestCaffeination"))
   const button = root.querySelector("button")
   assert(button)
-  assert.equal(button.getAttribute("aria-label"), "Keep computer awake")
+  assert.equal(button.getAttribute("aria-label"), "Keep computer awake while Kilo agents work")
   assert.equal(button.getAttribute("aria-pressed"), "false")
   assert.equal(button.disabled, false)
+  assert.equal(button.getAttribute("data-icon"), "coffee")
   button.click()
   assert.deepEqual(messages.at(-1), { type: "agentManager.setCaffeination", enabled: true })
+  post({ type: "agentManager.caffeination", enabled: true, active: false, available: true })
+  assert.equal(button.getAttribute("data-icon"), "coffee")
+  assert.equal(button.getAttribute("aria-pressed"), "true")
   post({ type: "agentManager.caffeination", enabled: false, active: true, available: false, error: "Cleanup failed" })
-  assert.equal(button.classList.contains("am-caffeination-active"), true)
+  assert.equal(button.getAttribute("data-icon"), "coffee")
   assert.equal(button.getAttribute("aria-pressed"), "true")
   assert.equal(button.disabled, false)
   button.click()
   assert.deepEqual(messages.at(-1), { type: "agentManager.setCaffeination", enabled: false })
   post({ type: "agentManager.caffeination", enabled: false, active: false, available: false })
+  assert.equal(button.getAttribute("data-icon"), "coffee")
   assert.equal(button.disabled, true)
 } finally {
   dispose()

@@ -9,13 +9,15 @@ import { Integration } from "../integration"
 import { PluginV2 } from "../plugin"
 import { ProviderV2 } from "../provider"
 import * as Cloud from "./provider-usage/cloud"
+import * as Codex from "./provider-usage/codex"
 import { bindings, direct, type Candidate } from "./provider-usage/minimax/usage"
 
 const successTtl = 60_000
 const errorTtl = 10_000
 const readyPlugin = PluginV2.ID.make("config-provider")
 
-interface AdapterContext {
+export interface AdapterContext {
+  providers: readonly ProviderV2.Info[]
   candidates: readonly Candidate[]
   failedCandidates: readonly Candidate["providerID"][]
   cloud: (() => Promise<Cloud.CloudState>) | undefined
@@ -34,9 +36,10 @@ interface AdapterResult {
   items: ReadonlyArray<Contract.UsageSnapshot>
 }
 
-interface Adapter {
+export interface Adapter {
   cachePrefixes: readonly string[]
   cloudScoped?: boolean
+  valid?: () => boolean
   run(ctx: AdapterContext): Promise<AdapterResult>
 }
 
@@ -80,8 +83,6 @@ const minimax: Adapter = {
   },
 }
 
-const registry: readonly Adapter[] = [managed, minimax]
-
 export class ServiceError extends Schema.TaggedErrorClass<ServiceError>()("ProviderUsageServiceError", {
   message: Schema.String,
 }) {}
@@ -122,6 +123,7 @@ function scopeCloudCache(state: State, token: string | undefined) {
 
 function stale(next: Contract.UsageSnapshot, previous: Contract.UsageSnapshot | undefined) {
   if (next.fetchState !== "unavailable" && next.fetchState !== "error") return next
+  if (next.error?.retryable === false) return next
   if (!previous || (previous.fetchState !== "ready" && previous.fetchState !== "stale")) return next
   return {
     ...previous,
@@ -311,6 +313,7 @@ const inputs = Effect.fn("ProviderUsage.inputs")(function* (
   const token =
     kilo.ok && kilo.value?.type === "oauth" && !organization && kilo.value.access ? kilo.value.access : undefined
   return {
+    providers,
     candidates: candidates.filter((item): item is Candidate => item !== undefined),
     failedCandidates,
     token,
@@ -325,12 +328,14 @@ function makeService(
   ready: Effect.Effect<void>,
 ) {
   const state: State = { sources: new Map(), cloud: { expires: 0 } }
+  const codex = Codex.create(integrations)
 
   const evaluate = Effect.fn("ProviderUsage.evaluate")(function* (force: boolean) {
     yield* ready
     const current = yield* inputs(catalog, integrations)
     const cloudIdentity = current.cloudReliable ? scopeCloudCache(state, current.token) : state.cloudIdentity
     const ctx: AdapterContext = {
+      providers: current.providers,
       candidates: current.candidates,
       failedCandidates: current.failedCandidates,
       cloud:
@@ -347,19 +352,23 @@ function makeService(
       preserve: (prefix, identity) => preserve(state, prefix, identity),
       prune: (prefix, keep) => prune(state, prefix, keep),
     }
+    const registry: readonly Adapter[] = [managed, minimax, yield* codex(ctx)]
     const results = yield* Effect.promise(() =>
       Promise.all(
         registry.map((adapter) =>
           // Adapters are expected to be total (they absorb their own failures into
           // unavailable/stale snapshots). This catch is the containment boundary so a
           // faulty future adapter degrades to stale output instead of failing the endpoint.
-          adapter.run(ctx).catch(
-            (): AdapterResult => ({
-              items: adapter.cachePrefixes.flatMap((prefix) =>
-                ctx.preserve(prefix, adapter.cloudScoped ? ctx.cloudIdentity : undefined),
-              ),
-            }),
-          ),
+          adapter
+            .run(ctx)
+            .catch(
+              (): AdapterResult => ({
+                items: adapter.cachePrefixes.flatMap((prefix) =>
+                  ctx.preserve(prefix, adapter.cloudScoped ? ctx.cloudIdentity : undefined),
+                ),
+              }),
+            )
+            .then((result) => ({ ...result, valid: adapter.valid })),
         ),
       ),
     )
@@ -367,7 +376,8 @@ function makeService(
       (value): value is string => value !== undefined,
     )
     return {
-      items: results.flatMap((result) => result.items),
+      // An adapter can be invalidated while a slower sibling is still loading.
+      items: results.filter((result) => result.valid?.() !== false).flatMap((result) => result.items),
       generatedAt: stamps.toSorted().at(-1) ?? new Date().toISOString(),
     } satisfies Contract.Info
   })

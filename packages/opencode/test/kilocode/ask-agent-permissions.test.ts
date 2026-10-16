@@ -206,9 +206,9 @@ describe("Ask agent bash permissions", () => {
     }
   })
 
-  test("gh commands → ask", () => {
-    expect(Permission.evaluate("bash", "gh pr view 123", ruleset).action).toBe("ask")
-    expect(Permission.evaluate("bash", "gh issue list", ruleset).action).toBe("ask")
+  test("read-only gh commands allow while gh api asks", () => {
+    expect(Permission.evaluate("bash", "gh pr view 123", ruleset).action).toBe("allow")
+    expect(Permission.evaluate("bash", "gh issue list", ruleset).action).toBe("allow")
     expect(Permission.evaluate("bash", "gh api repos/org/repo", ruleset).action).toBe("ask")
   })
 })

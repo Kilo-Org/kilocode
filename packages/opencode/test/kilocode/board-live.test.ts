@@ -49,12 +49,14 @@ const mcp = Layer.succeed(
     add: () => Effect.succeed({ status: { status: "disabled" as const } }),
     connect: () => Effect.void,
     disconnect: () => Effect.void,
+    remove: () => Effect.void, // kilocode_change
     getPrompt: () => Effect.succeed(undefined),
     readResource: () => Effect.succeed(undefined),
     startAuth: () => Effect.die("unexpected MCP auth in board live test"),
     authenticate: () => Effect.die("unexpected MCP auth in board live test"),
     finishAuth: () => Effect.die("unexpected MCP auth in board live test"),
     removeAuth: () => Effect.void,
+    cancelAuth: () => Effect.void,
     supportsOAuth: () => Effect.succeed(false),
     hasStoredTokens: () => Effect.succeed(false),
     getAuthStatus: () => Effect.succeed("not_authenticated" as const),
@@ -134,7 +136,7 @@ const cfg = {
       },
     },
   },
-  experimental: { shared_agent_board: true },
+  shared_agent_board: true,
 }
 
 type Probe = { body: Record<string, unknown> }
@@ -229,9 +231,11 @@ for (const enabled of [false, true]) {
         expect(JSON.stringify(tools).includes("Cursor from your last board_read, not an ID from board_post")).toBe(
           enabled,
         )
-        expect(JSON.stringify(tools).includes("main is the board root, not necessarily your parent")).toBe(enabled)
+        expect(
+          JSON.stringify(tools).includes("your own row is flagged self: true (the main row is the board root)"),
+        ).toBe(enabled)
       }),
-      { config: (url) => ({ ...config(url), experimental: { shared_agent_board: enabled } }) },
+      { config: (url) => ({ ...config(url), shared_agent_board: enabled }) },
     ),
   )
 }
@@ -477,7 +481,7 @@ for (const failed of [false, true]) {
             type: "INFO",
             body: "Explicit read regression body",
           })
-          yield* llm.push(reply().tool("board_read", { since: failed ? "board_missing" : null, limit: null }))
+          yield* llm.push(reply().tool("board_read", { since: null, limit: failed ? 0 : null }))
           yield* llm.push(reply().tool("read", { filePath: "boundary.txt" }))
           yield* llm.push(reply().text("Done").stop())
           yield* prompt.prompt({

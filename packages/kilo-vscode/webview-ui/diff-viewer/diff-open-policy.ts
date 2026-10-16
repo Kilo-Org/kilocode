@@ -1,8 +1,11 @@
+import { EXTREME_DIFF_CHANGED_LINES, MAX_EAGER_DIFF_BYTES } from "@kilocode/kilo-ui/pierre"
 import type { WorktreeFileDiff } from "../src/types/messages"
 
+// Shared with the inline file diff viewer so both agree on what is too large
+// to render eagerly. See packages/kilo-ui/src/pierre/index.ts.
+export { EXTREME_DIFF_CHANGED_LINES }
+
 export const LONG_DIFF_MARKER_FILE_COUNT = 50
-export const EXTREME_DIFF_CHANGED_LINES = 2_000
-const MAX_EAGER_BYTES = 256 * 1024
 
 export function isLargeDiffFile(diff: WorktreeFileDiff): boolean {
   return diff.additions + diff.deletions > EXTREME_DIFF_CHANGED_LINES
@@ -12,7 +15,10 @@ export function isLargeDiffFile(diff: WorktreeFileDiff): boolean {
 // nested line virtualizer when a single file is extreme or lacks a hunk patch.
 export function shouldVirtualizeDiff(diff: WorktreeFileDiff): boolean {
   return (
-    !diff.patch || isLargeDiffFile(diff) || diff.before.length > MAX_EAGER_BYTES || diff.after.length > MAX_EAGER_BYTES
+    !diff.patch ||
+    isLargeDiffFile(diff) ||
+    diff.before.length > MAX_EAGER_DIFF_BYTES ||
+    diff.after.length > MAX_EAGER_DIFF_BYTES
   )
 }
 

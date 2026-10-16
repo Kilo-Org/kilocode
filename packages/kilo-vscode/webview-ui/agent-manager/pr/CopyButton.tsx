@@ -1,9 +1,10 @@
 /** @jsxImportSource solid-js */
 import { createSignal } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import type { IconProps } from "@kilocode/kilo-ui/icon"
 import { useVSCode } from "../../src/context/vscode"
 
-export function CopyButton(props: { text: string; label?: string; class?: string }) {
+export function CopyButton(props: { text: string; label?: string; class?: string; icon?: IconProps["name"] }) {
   const vscode = useVSCode()
   const [copied, setCopied] = createSignal(false)
   const copy = () => {
@@ -13,7 +14,7 @@ export function CopyButton(props: { text: string; label?: string; class?: string
   }
   return (
     <IconButton
-      icon={copied() ? "check" : "copy"}
+      icon={copied() ? "check" : (props.icon ?? "copy")}
       size="small"
       variant="ghost"
       aria-label={props.label ?? "Copy"}

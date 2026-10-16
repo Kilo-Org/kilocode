@@ -1,22 +1,19 @@
-import { Component, For, Show, createSignal } from "solid-js"
+import { Component, Show } from "solid-js"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
 
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useMemory } from "../../context/memory"
-import { parseModelString } from "../../../../src/shared/provider-model"
-import { ModelSelectorBase } from "../shared/ModelSelector"
 import SettingsRow from "./SettingsRow"
+import PatternList from "./PatternList"
 
-const ContextTab: Component = () => {
+const ContextTab: Component<{ onNavigateToModels?: () => void }> = (props) => {
   const { config, updateConfig } = useConfig()
   const memory = useMemory()
   const language = useLanguage()
-  const [newPattern, setNewPattern] = createSignal("")
 
   const patterns = () => config().watcher?.ignore ?? []
   const limit = () => {
@@ -35,23 +32,6 @@ const ContextTab: Component = () => {
     if (!Number.isFinite(percent)) return
     const next = Math.min(100, Math.max(1, percent))
     updateConfig({ compaction: { ...config().compaction, threshold_percent: next } })
-  }
-
-  const addPattern = () => {
-    const value = newPattern().trim()
-    if (!value) return
-    const current = [...patterns()]
-    if (!current.includes(value)) {
-      current.push(value)
-      updateConfig({ watcher: { ignore: current } })
-    }
-    setNewPattern("")
-  }
-
-  const removePattern = (index: number) => {
-    const current = [...patterns()]
-    current.splice(index, 1)
-    updateConfig({ watcher: { ignore: current } })
   }
 
   const memoryStats = () => {
@@ -142,24 +122,6 @@ const ContextTab: Component = () => {
           </Switch>
         </SettingsRow>
         <SettingsRow
-          title={language.t("settings.context.compactionModel.title")}
-          description={language.t("settings.context.compactionModel.description")}
-        >
-          <ModelSelectorBase
-            value={parseModelString(config().agent?.compaction?.model ?? undefined)}
-            onSelect={(providerID, modelID) =>
-              updateConfig({
-                agent: { compaction: { model: providerID && modelID ? `${providerID}/${modelID}` : null } },
-              })
-            }
-            placement="bottom-start"
-            allowClear
-            clearLabel={language.t("settings.context.compactionModel.useChatModel")}
-            label={language.t("settings.context.compactionModel.title")}
-            description={language.t("settings.context.compactionModel.description")}
-          />
-        </SettingsRow>
-        <SettingsRow
           title={language.t("settings.context.compactionLimit.title")}
           description={language.t("settings.context.compactionLimit.description")}
         >
@@ -192,71 +154,39 @@ const ContextTab: Component = () => {
           </Switch>
         </SettingsRow>
       </Card>
+      <p
+        data-slot="context-models-hint"
+        style={{
+          "margin-top": "8px",
+          "font-size": "var(--kilo-font-size-12)",
+          "text-align": "right",
+          color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+        }}
+      >
+        <a
+          href="#"
+          style={{
+            color: "var(--vscode-textLink-foreground)",
+            "text-decoration": "none",
+            cursor: "pointer",
+          }}
+          onClick={(e) => {
+            e.preventDefault()
+            props.onNavigateToModels?.()
+          }}
+        >
+          {language.t("settings.context.compactionModel.hint")}
+        </a>
+      </p>
 
       <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>{language.t("settings.context.watcherPatterns")}</h4>
 
-      <Card>
-        <div
-          style={{
-            "font-size": "var(--kilo-font-size-12)",
-            color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-            "padding-bottom": "8px",
-            "border-bottom": patterns().length > 0 || newPattern() ? "1px solid var(--border-weak-base)" : "none",
-          }}
-        >
-          {language.t("settings.context.watcherPatterns.description")}
-        </div>
-
-        {/* Add new pattern */}
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            "align-items": "center",
-            padding: "8px 0",
-            "border-bottom": patterns().length > 0 ? "1px solid var(--border-weak-base)" : "none",
-          }}
-        >
-          <div style={{ flex: 1 }}>
-            <TextField
-              value={newPattern()}
-              placeholder="e.g. **/node_modules/**"
-              onChange={(val) => setNewPattern(val)}
-              onKeyDown={(e: KeyboardEvent) => {
-                if (e.key === "Enter") addPattern()
-              }}
-            />
-          </div>
-          <Button variant="secondary" onClick={addPattern}>
-            {language.t("common.add")}
-          </Button>
-        </div>
-
-        {/* Pattern list */}
-        <For each={patterns()}>
-          {(pattern, index) => (
-            <div
-              style={{
-                display: "flex",
-                "align-items": "center",
-                "justify-content": "space-between",
-                padding: "6px 0",
-                "border-bottom": index() < patterns().length - 1 ? "1px solid var(--border-weak-base)" : "none",
-              }}
-            >
-              <span
-                style={{
-                  "font-family": "var(--vscode-editor-font-family, monospace)",
-                  "font-size": "var(--kilo-font-size-12)",
-                }}
-              >
-                {pattern}
-              </span>
-              <IconButton size="small" variant="ghost" icon="close" onClick={() => removePattern(index())} />
-            </div>
-          )}
-        </For>
-      </Card>
+      <PatternList
+        patterns={patterns()}
+        description={language.t("settings.context.watcherPatterns.description")}
+        placeholder="e.g. **/node_modules/**"
+        onChange={(ignore) => updateConfig({ watcher: { ignore } })}
+      />
     </div>
   )
 }

@@ -4,14 +4,10 @@ export interface SearchMatch {
   key: string
   /** Index (0-based) of this occurrence among all matches within the same row. */
   occurrence: number
-  /** id of the part (tool call/reasoning block/text) this occurrence falls
-   * within, if it could be attributed to one — lets navigation force a
-   * collapsed part open instead of just scrolling to the row. */
+  /** id of the message part this occurrence falls within, if it could be
+   * attributed to one — lets highlighting scan just that part's DOM subtree
+   * instead of every element in the row. */
   partId?: string
-  /** For a multi-file apply_patch part, the specific file path this
-   * occurrence falls within — lets navigation open just that file's nested
-   * accordion instead of every file in the patch. */
-  partFile?: string
 }
 
 interface TranscriptSearchContextValue {

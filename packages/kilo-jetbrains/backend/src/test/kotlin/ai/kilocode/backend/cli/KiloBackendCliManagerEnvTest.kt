@@ -46,6 +46,45 @@ class KiloBackendCliManagerEnvTest {
     }
 
     @Test
+    fun `pinned CLI - rc channel is forced onto the production database`() {
+        val env = manager.buildEnv("pwd123", emptyMap(), pinned = true)
+
+        assertEquals("true", env["KILO_DISABLE_CHANNEL_DB"])
+    }
+
+    @Test
+    fun `pinned CLI - inherited env cannot re-enable the channel database`() {
+        val env = manager.buildEnv("pwd123", mapOf("KILO_DISABLE_CHANNEL_DB" to "false"), pinned = true)
+
+        assertEquals("true", env["KILO_DISABLE_CHANNEL_DB"])
+    }
+
+    @Test
+    fun `local repo CLI - per-branch dev database is kept`() {
+        val env = manager.buildEnv("pwd123", emptyMap(), pinned = false)
+
+        assertFalse(env.containsKey("KILO_DISABLE_CHANNEL_DB"))
+    }
+
+    @Test
+    fun `local repo CLI - developer override is preserved`() {
+        val env = manager.buildEnv("pwd123", mapOf("KILO_DISABLE_CHANNEL_DB" to "true"), pinned = false)
+
+        assertEquals("true", env["KILO_DISABLE_CHANNEL_DB"])
+    }
+
+    @Test
+    fun `pinned CLI with isolation - production database name resolves under isolated data home`() {
+        System.setProperty("kilo.dev.storage.isolated", "true")
+        System.setProperty("kilo.dev.worktree.root", tmp.absolutePath)
+
+        val env = manager.buildEnv("pwd123", emptyMap(), pinned = true)
+
+        assertEquals("true", env["KILO_DISABLE_CHANNEL_DB"])
+        assertEquals(File(File(tmp, ".kilo-dev"), "data").absolutePath, env["XDG_DATA_HOME"])
+    }
+
+    @Test
     fun `dev mode disables CLI telemetry`() {
         System.setProperty("idea.plugin.in.sandbox.mode", "true")
 
@@ -64,11 +103,12 @@ class KiloBackendCliManagerEnvTest {
     }
 
     @Test
-    fun `isolation disabled - default CLI config asks for edit permissions without forcing bash`() {
+    fun `isolation disabled - no permission config is injected over user config`() {
+        // The plugin must not outrank the user's global/project kilo.json permission settings.
+        // The JetBrains edit-ask default now lives in the CLI's client-keyed defaults layer.
         val env = manager.buildEnv("pwd123", emptyMap())
 
-        assertEquals("""{"permission":{"edit":"ask"}}""", env["KILO_CONFIG_CONTENT"])
-        assertFalse(env["KILO_CONFIG_CONTENT"]?.contains("bash") == true)
+        assertFalse(env.containsKey("KILO_CONFIG_CONTENT"))
     }
 
     @Test
@@ -160,5 +200,52 @@ class KiloBackendCliManagerEnvTest {
         assertFalse(env.containsKey("XDG_CONFIG_HOME"), "XDG_CONFIG_HOME should not be set when root is missing")
         assertFalse(env.containsKey("XDG_STATE_HOME"), "XDG_STATE_HOME should not be set when root is missing")
         assertFalse(env.containsKey("XDG_CACHE_HOME"), "XDG_CACHE_HOME should not be set when root is missing")
+    }
+
+    @Test
+    fun `work dir is created under the provided root`() {
+        val dir = workDir(tmp)
+
+        assertEquals(File(tmp, "cwd"), dir)
+        assertTrue(dir!!.isDirectory, "work dir should be created")
+    }
+
+    @Test
+    fun `work dir is reused when it already exists`() {
+        val first = workDir(tmp)
+        val second = workDir(tmp)
+
+        assertEquals(first, second)
+        assertTrue(second!!.isDirectory, "work dir should still exist on reuse")
+    }
+
+    @Test
+    fun `work dir is returned when the directory was created concurrently`() {
+        // mkdirs() returns false for an already-existing directory; that must not fall back to
+        // the inherited IDE cwd, which is the $HOME resolution this helper exists to prevent.
+        File(tmp, "cwd").mkdirs()
+
+        val dir = workDir(tmp)
+
+        assertEquals(File(tmp, "cwd"), dir)
+    }
+
+    @Test
+    fun `work dir is never home or a filesystem root`() {
+        val dir = workDir(tmp)
+
+        assertTrue(dir != null)
+        assertFalse(dir!!.absolutePath == System.getProperty("user.home"), "work dir must not be the home directory")
+        assertFalse(dir.absolutePath == dir.toPath().root?.toString(), "work dir must not be a filesystem root")
+    }
+
+    @Test
+    fun `work dir returns null when the root cannot be created`() {
+        val blocker = File(tmp, "blocker")
+        blocker.writeText("not a directory")
+
+        val dir = workDir(blocker)
+
+        assertEquals(null, dir)
     }
 }

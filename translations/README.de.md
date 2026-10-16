@@ -93,15 +93,6 @@ Richte automatisierte KI-Code-Reviews für deine Pull Requests unter [app.kilo.a
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-Starte deinen ständig aktiven KI-Agenten unter [app.kilo.ai/claw](https://app.kilo.ai/claw).
-
-</details>
-
-<details>
 <summary>CLI aus GitHub Releases installieren (Binärdateien)</summary>
 
 Lade die neueste Binärdatei von der [Releases-Seite](https://github.com/Kilo-Org/kilocode/releases) herunter.

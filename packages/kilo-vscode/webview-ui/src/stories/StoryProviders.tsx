@@ -118,6 +118,8 @@ const MockProviderProvider: ParentComponent<{ kiloAuth?: boolean; training?: boo
     authMethods: () => ({}),
     authStates: () => (props.kiloAuth ? { kilo: "oauth" } : {}) as Record<string, ProviderAuthState>,
     isModelValid: () => true,
+    kiloUnavailable: () => false,
+    failures: () => [],
   }
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>
 }
@@ -199,7 +201,7 @@ export function mockSessionValue(overrides?: {
     statusInfo: () => ({ type: status }),
     closeReason: () => overrides?.closeReason,
     statusText: () => (status === "idle" ? undefined : "Thinking…"),
-    busySince: () => (status === "busy" ? Date.now() - 2000 : undefined),
+    busyTiming: () => (status === "busy" ? { active: 2000, since: Date.now() } : undefined),
     loading: () => false,
     loadingOlderMessages: () => false,
     hasOlderMessages: () => false,
@@ -237,6 +239,7 @@ export function mockSessionValue(overrides?: {
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     modelForAgent: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     selectModel: noop,
+    trackScopes: () => noop,
     costBreakdown: () => [],
     contextUsage: () => undefined,
     modelUsage: () => undefined,
@@ -246,6 +249,19 @@ export function mockSessionValue(overrides?: {
     refreshSkills: noop,
     removeSkill: noop,
     removeAgent: noop,
+    removeMcp: noop,
+    mcpStatus: () => ({}),
+    mcpLoading: () => null,
+    connectMcp: noop,
+    disconnectMcp: noop,
+    mcpAuth: () => ({ needsAuth: [], busy: [] }),
+    mcpRemoving: () => [],
+    signInMcp: noop,
+    cancelMcpSignIn: noop,
+    resetMcpAuth: noop,
+    mcpAuthResult: () => undefined,
+    mcpBundles: () => [],
+    refreshMcpBundles: noop,
     selectedAgent: () => "code",
     selectAgent: noop,
     getSessionAgent: () => "code",
@@ -265,6 +281,7 @@ export function mockSessionValue(overrides?: {
     variantList: () => [],
     currentVariant: () => undefined,
     variantForAgent: () => undefined,
+    variantPreference: () => undefined,
     selectVariant: noop,
     sendMessage: () => true,
     sendCommand: () => true,
@@ -279,8 +296,17 @@ export function mockSessionValue(overrides?: {
     createSession: noop,
     clearCurrentSession: noop,
     loadSessions: noop,
+    loadMoreSessions: noop,
+    sessionsHasMore: () => false,
+    keepSessions: () => noop,
+    sessionsLoadingMore: () => false,
     loadOlderMessages: () => false,
     selectSession: noop,
+    // MessageList reads both on mount: `scrollBottomID` must be an accessor
+    // because it is passed to `on(...)`. Omitting it throws and takes down
+    // every chat story in the visual regression suite.
+    scrollBottomID: () => undefined,
+    consumeScrollBottom: () => false,
     deleteSession: noop,
     renameSession: noop,
     syncSession: noop,
@@ -344,6 +370,7 @@ const ConfigWrapper: ParentComponent<{
         indexing: props.features?.indexing ?? hasIndexingPlugin(config.plugin ?? []),
         sandboxControls: props.features?.sandboxControls ?? false,
         backgroundSubagents: props.features?.backgroundSubagents ?? false,
+        speechToText: props.features?.speechToText ?? true,
       }
     })
 
@@ -354,6 +381,7 @@ const ConfigWrapper: ParentComponent<{
       projectConfig: createMemo(() => (scoped ? project() : cfg())),
       collections: () => ({}),
       settings,
+      shortcuts: () => ({ bindings: {}, selection: false }),
       features,
       loading: () => false,
       isDirty: dirty,

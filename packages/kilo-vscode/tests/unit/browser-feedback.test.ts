@@ -1,11 +1,9 @@
 import { describe, expect, it } from "bun:test"
 import {
   browserFeedbackData,
-  browserFeedbackMetadata,
   formatBrowserFeedback,
   mergeBrowserReferences,
   partFeedback,
-  parseBrowserFeedback,
   type BrowserReference,
 } from "../../src/shared/browser-feedback"
 import { formatReviewCommentsMarkdown } from "../../webview-ui/src/utils/review-comment-markdown"
@@ -75,16 +73,10 @@ describe("browser feedback metadata", () => {
   it("round-trips metadata while ignoring legacy content", () => {
     const data = browserFeedbackData([reference()])!
     const prefix = formatBrowserFeedback(data.references)
-    expect(parseBrowserFeedback(data, `${prefix}\n\nFix the save action`)).toEqual(data)
-    expect(partFeedback(browserFeedbackMetadata(data), `${prefix}\n\nFix the save action`)).toEqual({
+    expect(partFeedback({ kilo: { browserFeedback: data } }, `${prefix}\n\nFix the save action`)).toEqual({
       browserFeedback: data,
       body: "Fix the save action",
     })
-  })
-
-  it("rejects arbitrary text that does not match the metadata prefix", () => {
-    const data = browserFeedbackData([reference()])!
-    expect(parseBrowserFeedback(data, "unrelated text")).toBeUndefined()
   })
 
   it("coexists with local and PR review metadata", () => {

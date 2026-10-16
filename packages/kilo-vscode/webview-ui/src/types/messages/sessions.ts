@@ -18,6 +18,7 @@ export interface Message {
   model?: { providerID: string; modelID: string; variant?: string }
   providerID?: string
   modelID?: string
+  variant?: string
   mode?: string
   parentID?: string
   path?: { cwd: string; root: string }
@@ -46,12 +47,22 @@ export interface SessionInfo {
   title?: string
   createdAt: string
   updatedAt: string
+  /** Agent the server last ran this session with. */
+  agent?: string
+  /** Model and effort the server last ran this session with; no variant means Default. */
+  model?: { providerID: string; modelID: string; variant?: string }
+  goal?: {
+    text: string
+    active: boolean
+    status?: "active" | "complete" | "blocked" | "paused"
+    reason?: string
+  } | null
   revert?: {
     messageID: string
     partID?: string
     snapshot?: string
     diff?: string
-    workspace?: "restored" | "snapshots-disabled" | "unavailable"
+    workspace?: "restored" | "snapshots-disabled" | "unavailable" | "not-a-git-repo"
   } | null
   summary?: {
     additions: number

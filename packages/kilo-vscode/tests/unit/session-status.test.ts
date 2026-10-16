@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { seedSessionStatuses } from "../../src/session-status"
+import { seedSessionStatuses, seedSessionWakeups } from "../../src/session-status"
 import type { SessionStatus } from "@kilocode/sdk/v2/client"
 
 /**
@@ -48,6 +48,21 @@ describe("seedSessionStatuses", () => {
   })
 
   // ---- THE BUG: stale entries not cleared on reconnect ----
+
+  it("normalizes a derived scheduled session to idle so it is not rendered as working", async () => {
+    const client = createClient({
+      data: {
+        s1: { type: "scheduled", scheduledAt: "2026-09-24T15:00:00.000Z" } as unknown as SessionStatus,
+      },
+    })
+    const map = new Map<string, SessionStatus["type"]>()
+    const { msgs, post } = collect()
+
+    await seedSessionStatuses(client, "/repo", map, post)
+
+    expect(map.get("s1")).toBe("idle")
+    expect(msgs).toEqual([{ type: "sessionStatus", sessionID: "s1", status: "idle" }])
+  })
 
   it("clears stale busy entries absent from server response", async () => {
     const client = createClient({ data: {} })
@@ -194,5 +209,90 @@ describe("seedSessionStatuses", () => {
     // confirmed: updated to busy from server
     expect(map.get("confirmed")).toBe("busy")
     expect(msgs).toEqual([{ type: "sessionStatus", sessionID: "confirmed", status: "busy" }])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// seedSessionWakeups
+// ---------------------------------------------------------------------------
+
+type WakeupResult = { data: Array<{ sessionID: string; pending: number }> | null } | Error
+
+function createWakeupClient(byDirectory: Record<string, WakeupResult>) {
+  return {
+    kilocode: {
+      wakeups: async (params: { directory: string }) => {
+        const result = byDirectory[params.directory]
+        if (result === undefined) return { data: [] }
+        if (result instanceof Error) throw result
+        return result
+      },
+    },
+  } as unknown as Parameters<typeof seedSessionWakeups>[0]
+}
+
+describe("seedSessionWakeups", () => {
+  it("posts a wakeup per session and returns the seen sessions", async () => {
+    const client = createWakeupClient({
+      "/repo": {
+        data: [
+          { sessionID: "s1", pending: 1 },
+          { sessionID: "s2", pending: 3 },
+        ],
+      },
+    })
+    const { msgs, post } = collect()
+
+    const { seen, complete } = await seedSessionWakeups(client, ["/repo"], post)
+
+    expect(msgs).toEqual([
+      { type: "sessionWakeup", sessionID: "s1", pending: 1 },
+      { type: "sessionWakeup", sessionID: "s2", pending: 3 },
+    ])
+    expect([...seen]).toEqual(["s1", "s2"])
+    expect(complete).toBe(true)
+  })
+
+  it("reports an incomplete result when one directory fails", async () => {
+    const client = createWakeupClient({
+      "/bad": new Error("connection refused"),
+      "/good": { data: [{ sessionID: "s3", pending: 2 }] },
+    })
+    const { msgs, post } = collect()
+
+    const { seen, complete } = await seedSessionWakeups(client, ["/bad", "/good"], post)
+
+    expect(msgs).toEqual([{ type: "sessionWakeup", sessionID: "s3", pending: 2 }])
+    expect([...seen]).toEqual(["s3"])
+    expect(complete).toBe(false)
+  })
+
+  it("skips sessions rejected by the accept filter", async () => {
+    const client = createWakeupClient({
+      "/repo": {
+        data: [
+          { sessionID: "keep", pending: 1 },
+          { sessionID: "drop", pending: 1 },
+        ],
+      },
+    })
+    const { msgs, post } = collect()
+
+    const { seen, complete } = await seedSessionWakeups(client, ["/repo"], post, (sessionID) => sessionID === "keep")
+
+    expect(msgs).toEqual([{ type: "sessionWakeup", sessionID: "keep", pending: 1 }])
+    expect([...seen]).toEqual(["keep"])
+    expect(complete).toBe(true)
+  })
+
+  it("handles null data as no wakeups", async () => {
+    const client = createWakeupClient({ "/repo": { data: null } })
+    const { msgs, post } = collect()
+
+    const { seen, complete } = await seedSessionWakeups(client, ["/repo"], post)
+
+    expect(msgs).toEqual([])
+    expect([...seen]).toEqual([])
+    expect(complete).toBe(true)
   })
 })

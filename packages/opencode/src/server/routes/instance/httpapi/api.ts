@@ -35,7 +35,6 @@ import { ConfigConsoleApi } from "@/kilocode/server/httpapi/groups/config-consol
 import { EnhancePromptApi } from "@/kilocode/server/httpapi/groups/enhance-prompt"
 import { IndexingApi } from "@/kilocode/server/httpapi/groups/indexing"
 import { InstanceReloadApi } from "@/kilocode/server/httpapi/groups/instance-reload"
-import { InteractiveTerminalApi } from "@/kilocode/server/httpapi/groups/interactive-terminal"
 import { KiloGatewayApi } from "@/kilocode/server/httpapi/groups/kilo-gateway"
 import { KilocodeApi } from "@/kilocode/server/httpapi/groups/kilocode"
 import { MigrateApi } from "@/kilocode/server/httpapi/groups/migrate"
@@ -106,7 +105,6 @@ export const InstanceHttpApi = HttpApi.make("opencode-instance")
   .addHttpApi(EnhancePromptApi)
   .addHttpApi(IndexingApi)
   .addHttpApi(InstanceReloadApi)
-  .addHttpApi(InteractiveTerminalApi)
   .addHttpApi(KiloGatewayApi)
   .addHttpApi(KilocodeApi)
   .addHttpApi(MigrateApi)

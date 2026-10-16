@@ -53,6 +53,7 @@ internal class GhBanner(
             GhAvailability.MISSING -> KiloBundle.message("worktree.gh.missing.content")
             GhAvailability.UNAUTH -> KiloBundle.message("worktree.gh.unauth.content")
             GhAvailability.RATE_LIMITED -> KiloBundle.message("worktree.gh.limited.content")
+            GhAvailability.TIMEOUT -> KiloBundle.message("worktree.gh.timeout.content")
             GhAvailability.OK -> ""
         })
         createActionLabel(when (next) {
@@ -60,6 +61,7 @@ internal class GhBanner(
             GhAvailability.MISSING -> KiloBundle.message("worktree.gh.learnMore")
             GhAvailability.UNAUTH -> KiloBundle.message("worktree.gh.authorize")
             GhAvailability.RATE_LIMITED -> KiloBundle.message("worktree.gh.learnMore")
+            GhAvailability.TIMEOUT -> KiloBundle.message("worktree.gh.learnMore")
             GhAvailability.OK -> ""
         }) { runAction() }
         if (next == GhAvailability.UNAUTH) {
@@ -89,6 +91,10 @@ internal class GhBanner(
         }
         if (state == GhAvailability.RATE_LIMITED) {
             BrowserUtil.browse(GH_LIMIT_DOCS)
+            return
+        }
+        if (state == GhAvailability.TIMEOUT) {
+            BrowserUtil.browse("https://cli.github.com/")
             return
         }
         if (state == GhAvailability.UNAUTH) runGhAuthLogin(project)

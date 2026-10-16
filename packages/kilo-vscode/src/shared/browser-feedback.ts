@@ -262,14 +262,6 @@ export function mergeBrowserReferences(current: BrowserReference[], incoming: Br
   return [...kept, selected]
 }
 
-export function browserFeedbackMetadata(data: BrowserFeedbackData): Record<string, unknown> {
-  return { kilo: { browserFeedback: data } }
-}
-
-export function parseBrowserFeedback(value: unknown, content: string): BrowserFeedbackData | undefined {
-  return view(value, content)?.data
-}
-
 export function feedbackMetadata(
   review: ReviewMessageData | undefined,
   browserFeedback: BrowserFeedbackData | undefined,

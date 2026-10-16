@@ -52,7 +52,7 @@ export const dict: Record<Keys, string> = {
 
   "dialog.usageExceeded.freeTier.title": "Gratisgrensen er nådd",
   "dialog.usageExceeded.freeTier.description":
-    "Abonner på Kilo Go for pålitelig tilgang til de beste modellene med åpen kildekode, fra $5/måned.", // kilocode_change
+    "Abonner på Kilo Go for $10/måned for pålitelig tilgang til de beste modellene med åpen kildekode.", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "Abonner",
   "dialog.usageExceeded.accountRateLimit.title": "Go-grensen er nådd",
   "dialog.usageExceeded.accountRateLimit.description":
@@ -226,6 +226,10 @@ export const dict: Record<Keys, string> = {
   "ui.mermaid.copySvg": "Kopier SVG",
   "ui.mermaid.download": "Last ned",
   "ui.mermaid.downloadPng": "Last ned PNG",
+  "ui.mermaid.zoom": "Zoom",
+  "ui.mermaid.zoomIn": "Zoom inn",
+  "ui.mermaid.zoomOut": "Zoom ut",
+  "ui.mermaid.zoomReset": "Tilbakestill zoom",
   "ui.mermaid.downloadSvg": "Last ned SVG",
   "ui.mermaid.errorDefault": "Kan ikke gjengi Mermaid-diagram.",
   "ui.mermaid.errorEmpty": "Mermaid gjenga et tomt diagram.",

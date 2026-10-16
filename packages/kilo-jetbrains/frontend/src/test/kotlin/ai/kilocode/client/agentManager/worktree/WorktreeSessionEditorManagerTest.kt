@@ -294,9 +294,11 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
 
         // A hover icon or menu item is easy to hit twice before the RPC answers.
         edt { manager.forkSession(session.id) }
-        pump()
+        // The first fork's RPC is recorded on the background dispatcher, so pump() alone can return
+        // before it lands. Wait for the in-flight call before firing the duplicate.
+        waitUntil { rpc.forks.size == 1 }
         edt { manager.forkSession(session.id) }
-        pump()
+        flush()
 
         assertEquals(1, rpc.forks.size)
 

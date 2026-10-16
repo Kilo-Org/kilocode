@@ -14,7 +14,6 @@ import {
   untrack,
   useContext,
 } from "solid-js"
-import { Dynamic } from "solid-js/web"
 import path from "node:path"
 import { mkdir, writeFile } from "node:fs/promises"
 import { useRoute, useRouteData } from "../../context/route"
@@ -41,7 +40,7 @@ import type {
 import { useLocal } from "../../context/local"
 import { Locale } from "../../util/locale"
 import { webSearchProviderLabel } from "../../util/tool-display"
-import { useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
+import { Dynamic, useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import { useSDK } from "../../context/sdk"
 import { useEditorContext } from "../../context/editor"
 import { openEditor } from "../../editor"
@@ -59,12 +58,14 @@ import { SubagentFooter } from "./subagent-footer.tsx"
 import { filetype } from "../../util/filetype"
 import parsers from "../../parsers-config"
 import { errorMessage } from "../../util/error"
+import { running } from "../../util/session" // kilocode_change
 import { Toast, useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv.tsx"
 import stripAnsi from "strip-ansi"
 import { usePromptRef } from "../../context/prompt"
 import { ApprovalBadge, describeApproval, stateMetadata } from "../../kilocode/tool-approval" // kilocode_change
 import { BoardTool } from "../../kilocode/board-tool" // kilocode_change
+import { KiloSteer } from "../../kilocode/steer" // kilocode_change
 import { useEpilogue } from "../../context/epilogue"
 import { normalizePath } from "../../util/path"
 import { PermissionPrompt } from "./permission"
@@ -73,7 +74,6 @@ import { QuestionPrompt } from "./question"
 import { Suggest } from "@/kilocode/suggestion/tui/render"
 import { SuggestPrompt } from "@/kilocode/suggestion/tui/prompt"
 import { NetworkPrompt } from "./network"
-import { TerminalPrompt } from "./terminal"
 // kilocode_change end
 import { DialogExportOptions } from "../../ui/dialog-export-options"
 import * as Model from "../../util/model"
@@ -96,6 +96,7 @@ import { splitDiffHunks } from "@/kilocode/tui/diff"
 import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-model-meta"
 import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
 import { MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory"
+import { GoalRow } from "@/kilocode/cli/cmd/tui/component/goal"
 import { formatMarkdownTables } from "../../util/markdown"
 // kilocode_change end
 import { LocationProvider } from "../../context/location"
@@ -159,9 +160,6 @@ const sessionBindingCommands = [
   "session.copy",
   "session.export",
   "session.child.first",
-  "session.parent",
-  "session.child.next",
-  "session.child.previous",
 ] as const
 
 const sessionGlobalBindingCommands = [
@@ -232,6 +230,12 @@ export function Session() {
       .toSorted((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
   })
   const messages = createMemo(() => sync.data.message[route.sessionID] ?? [])
+  const messagesBeforeRevert = () => {
+    const messageID = session()?.revert?.messageID
+    if (!messageID) return messages()
+    const index = messages().findIndex((message) => message.id === messageID)
+    return index === -1 ? messages() : messages().slice(0, index)
+  }
   const foregroundTasks = createMemo(() =>
     sync.data.capabilities.experimentalBackgroundSubagents
       ? messages().flatMap((message) =>
@@ -262,11 +266,6 @@ export function Session() {
     if (session()?.parentID) return []
     return children().flatMap((x) => sync.data.network[x.id] ?? [])
   })
-  const terminals = createMemo(() => {
-    if (session()?.parentID) return []
-    return children().flatMap((x) => sync.data.interactive_terminal[x.id] ?? [])
-  })
-  const terminal = createMemo(() => terminals()[0])
   const blockingQuestions = createMemo(() => questions().filter((q) => q.blocking !== false))
   const nonBlockingQuestions = createMemo(() => questions().filter((q) => q.blocking === false))
   const question = createMemo(
@@ -277,19 +276,17 @@ export function Session() {
   const blockingSuggestion = createMemo(() => blockingSuggestions()[0])
   const visible = createMemo(
     () =>
-      !session()?.parentID &&
+      KiloSteer.open(session(), sync.data.session_status?.[route.sessionID]?.type) &&
       permissions().length === 0 &&
       blockingQuestions().length === 0 &&
       blockingSuggestions().length === 0 &&
-      network().length === 0 &&
-      terminals().length === 0,
+      network().length === 0,
   )
   const networkVisible = createMemo(
     () =>
       permissions().length === 0 &&
       blockingQuestions().length === 0 &&
       blockingSuggestions().length === 0 &&
-      terminals().length === 0 &&
       network().length > 0,
   )
   const disabled = createMemo(
@@ -297,15 +294,16 @@ export function Session() {
       permissions().length > 0 ||
       blockingQuestions().length > 0 ||
       blockingSuggestions().length > 0 ||
-      network().length > 0 ||
-      terminals().length > 0,
+      network().length > 0,
   )
   // kilocode_change end
 
   const pending = createMemo(() => {
-    const completed = messages().findLast((x) => x.role === "assistant" && x.time.completed)?.id
-    return messages().findLast((x) => x.role === "assistant" && !x.time.completed && (!completed || x.id > completed))
-      ?.id
+    const completed = messages().findLastIndex((message) => message.role === "assistant" && message.time.completed)
+    const pending = messages().findLastIndex(
+      (message, index) => index > completed && message.role === "assistant" && !message.time.completed,
+    )
+    return pending === -1 ? undefined : pending
   })
 
   const lastAssistant = createMemo(() => {
@@ -713,9 +711,11 @@ export function Session() {
       },
       run: async () => {
         const status = sync.data.session_status?.[route.sessionID]
-        if (status?.type !== "idle") await sdk.client.session.abort({ sessionID: route.sessionID }).catch(() => {})
-        const revert = session()?.revert?.messageID
-        const message = messages().findLast((x) => (!revert || x.id < revert) && x.role === "user")
+        // kilocode_change start - a scheduled session is asleep on a wakeup, with no turn to abort
+        if (status?.type !== "idle" && status?.type !== "scheduled")
+          await sdk.client.session.abort({ sessionID: route.sessionID }).catch(() => {})
+        // kilocode_change end
+        const message = messagesBeforeRevert().findLast((item) => item.role === "user")
         if (!message) return
         void sdk.client.session
           .revert({
@@ -981,10 +981,7 @@ export function Session() {
       },
       // kilocode_change end
       run: () => {
-        const revertID = session()?.revert?.messageID
-        const lastAssistantMessage = messages().findLast(
-          (msg) => msg.role === "assistant" && (!revertID || msg.id < revertID),
-        )
+        const lastAssistantMessage = messagesBeforeRevert().findLast((message) => message.role === "assistant")
         if (!lastAssistantMessage) {
           toast.show({ message: "No assistant messages found", variant: "error" })
           dialog.clear()
@@ -1254,13 +1251,22 @@ export function Session() {
 
   const revertInfo = createMemo(() => session()?.revert)
   const revertMessageID = createMemo(() => revertInfo()?.messageID)
+  const revertMessageIndex = createMemo(() => {
+    const messageID = revertMessageID()
+    if (!messageID) return -1
+    return messages().findIndex((message) => message.id === messageID)
+  })
 
   const revertDiffFiles = createMemo(() => getRevertDiffFiles(revertInfo()?.diff ?? ""))
 
   const revertRevertedMessages = createMemo(() => {
     const messageID = revertMessageID()
     if (!messageID) return []
-    return messages().filter((x) => x.id >= messageID && x.role === "user")
+    const index = revertMessageIndex()
+    if (index === -1) return []
+    return messages()
+      .slice(index)
+      .filter((message) => message.role === "user")
   })
 
   const revert = createMemo(() => {
@@ -1390,7 +1396,9 @@ export function Session() {
                           )
                         })()}
                       </Match>
-                      <Match when={revert()?.messageID && message.id >= revert()!.messageID}>
+                      <Match
+                        when={revert()?.messageID && revertMessageIndex() !== -1 && index() >= revertMessageIndex()}
+                      >
                         <></>
                       </Match>
                       <Match when={message.role === "user"}>
@@ -1423,17 +1431,15 @@ export function Session() {
                 </For>
               </scrollbox>
               <box flexShrink={0}>
-                {/* kilocode_change start - arbitrate Kilo terminal, question, suggestion, and network input */}
-                <Show when={!terminal() && permissions().length > 0}>
+                {/* kilocode_change start */}
+                <GoalRow sessionID={route.sessionID} />
+                <Show when={permissions().length > 0}>
                   <PermissionPrompt
                     request={permissions()[0]}
                     directory={sync.session.get(permissions()[0].sessionID)?.directory}
                   />
                 </Show>
-                <Show when={terminal()} keyed>
-                  {(value) => <TerminalPrompt sessionID={value.info.sessionID} terminalID={value.info.id} />}
-                </Show>
-                <Show when={!terminal() && permissions().length === 0 ? question() : undefined} keyed>
+                <Show when={permissions().length === 0 ? question() : undefined} keyed>
                   {(request) => (
                     <QuestionPrompt
                       request={request}
@@ -1443,7 +1449,7 @@ export function Session() {
                     />
                   )}
                 </Show>
-                <Show when={!terminal() && permissions().length === 0 && !question()}>
+                <Show when={permissions().length === 0 && !question()}>
                   <Show when={blockingSuggestion()} keyed>
                     {(request) => <SuggestPrompt request={request} />}
                   </Show>
@@ -1513,7 +1519,7 @@ function UserMessage(props: {
   parts: Part[]
   onMouseUp: () => void
   index: number
-  pending?: string
+  pending?: number
 }) {
   const ctx = use()
   const local = useLocal()
@@ -1531,7 +1537,7 @@ function UserMessage(props: {
   const files = createMemo(() => props.parts.flatMap((x) => (x.type === "file" ? [x] : [])))
   const { theme } = useTheme()
   const [hover, setHover] = createSignal(false)
-  const queued = createMemo(() => props.pending && props.message.id > props.pending)
+  const queued = createMemo(() => props.pending !== undefined && props.index > props.pending)
   const color = createMemo(() => local.agent.color(props.message.agent))
   const queuedFg = createMemo(() => selectedForeground(theme, color()))
   const metadataVisible = createMemo(() => queued() || ctx.showTimestamps())
@@ -1787,6 +1793,7 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
     // OpenRouter encrypts some reasoning blocks; drop the placeholder.
     return props.part.text.replace("[REDACTED]", "").trim()
   })
+  const opaque = createMemo(() => !content() && Boolean(props.part.metadata))
   // Reasoning is finalized when the server sets `time.end` (see processor.ts).
   // Flips independently of the parent message completing.
   const isDone = createMemo(() => props.part.time.end !== undefined)
@@ -1799,12 +1806,12 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
   const syntax = createSyntaxStyleMemo(() => generateSubtleSyntax(theme))
 
   const toggle = () => {
-    if (!inMinimal()) return
+    if (!inMinimal() || opaque()) return
     setExpanded((prev) => !prev)
   }
 
   return (
-    <Show when={content()}>
+    <Show when={content() || opaque()}>
       <box
         ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
         paddingLeft={3}
@@ -1817,14 +1824,15 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
             /* kilocode_change start */
             partID={props.part.id}
             /* kilocode_change end */
-            toggleable={inMinimal()}
+            toggleable={inMinimal() && !opaque()}
             open={!inMinimal() || expanded()}
             done={isDone()}
             title={summary().title}
             duration={isDone() ? Locale.duration(duration()) : undefined}
+            encrypted={opaque()}
           />
         </box>
-        <Show when={(!inMinimal() || expanded()) && summary().body}>
+        <Show when={!opaque() && (!inMinimal() || expanded()) && summary().body}>
           <box paddingLeft={inMinimal() ? 2 : 0} marginTop={1}>
             <code
               filetype="markdown"
@@ -1849,12 +1857,18 @@ function ReasoningHeader(props: {
   done: boolean
   title: string | null
   duration?: string
+  encrypted?: boolean
 }) {
   const { theme } = useTheme()
   const fg = () =>
     props.open
       ? RGBA.fromValues(theme.warning.r, theme.warning.g, theme.warning.b, theme.thinkingOpacity)
       : theme.warning
+  const completed = () => {
+    if (props.encrypted) return `Thought${props.duration ? ` · ${props.duration}` : ""}`
+    const detail = [props.title, props.duration].filter(Boolean).join(" · ")
+    return `${props.toggleable ? (props.open ? "- " : "+ ") : ""}Thought${detail ? `: ${detail}` : ""}`
+  }
 
   return (
     <Switch>
@@ -1865,22 +1879,7 @@ function ReasoningHeader(props: {
       </Match>
       <Match when={true}>
         <text fg={fg()} wrapMode="none">
-          <Show when={props.toggleable}>
-            <span>{props.open ? "- " : "+ "}</span>
-          </Show>
-          <span>Thought</span>
-          <Show when={props.title || props.duration}>
-            <span>: </span>
-          </Show>
-          <Show when={props.title}>
-            <span>{props.title}</span>
-          </Show>
-          <Show when={props.duration}>
-            <span>
-              {props.title ? " · " : ""}
-              {props.duration}
-            </span>
-          </Show>
+          {completed()}
           {/* kilocode_change start */}
           <RoutedModelMeta.View id={props.partID} />
           {/* kilocode_change end */}
@@ -1918,6 +1917,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
 
 function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMessage }) {
   const ctx = use()
+  const sync = useSync() // kilocode_change
   const display = createMemo(() => toolDisplay(props.part.tool))
 
   // Hide tool if showDetails is false and tool completed successfully
@@ -1967,11 +1967,18 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         <Match when={display() === "background_process"}>
           <BackgroundProcess {...toolprops} />
         </Match>
-        <Match when={display() === "interactive_terminal"}>
-          <InteractiveTerminal {...toolprops} />
-        </Match>
         <Match when={display() === "semantic_search"}>
           <SemanticSearch {...toolprops} />
+        </Match>
+        <Match when={display() === "suggest"}>
+          <Suggest
+            {...toolprops}
+            InlineTool={InlineTool}
+            BlockTool={BlockTool}
+            pendingRequest={sync.data.suggestion[props.part.sessionID]?.find(
+              (item) => item.tool?.callID === props.part.callID && item.tool?.messageID === props.part.messageID,
+            )}
+          />
         </Match>
         {/* kilocode_change end */}
         <Match when={display() === "webfetch"}>
@@ -2100,45 +2107,6 @@ function BackgroundProcess(props: ToolProps) {
       part={props.part}
     >
       {title()}
-      <Show when={dir()}> in {dir()}</Show>
-      <Show when={cmd()}> · $ {cmd()}</Show>
-      <Show when={status()}> ({status()})</Show>
-    </InlineTool>
-  )
-}
-
-function InteractiveTerminal(props: ToolProps) {
-  const sync = useSync()
-  const paths = usePathFormatter()
-  const running = createMemo(() => props.part.state.status === "running")
-  const cmd = createMemo(() => stringValue(props.input.command) ?? "")
-  const desc = createMemo(() => stringValue(props.input.description) || cmd() || "interactive command")
-  const dir = createMemo(() => {
-    const raw = stringValue(props.input.workdir)
-    if (!raw || raw === ".") return
-    const base = sync.path.directory
-    if (!base) return paths.format(raw)
-    const abs = path.resolve(base, raw)
-    if (abs === base) return
-    return paths.format(abs)
-  })
-  const status = createMemo(() => {
-    if (props.metadata.closedBy === "user") return "closed by user"
-    if (props.metadata.closedBy === "abort") return "cancelled"
-    if (props.metadata.closedBy !== "exit") return
-    const code = numberValue(props.metadata.exitCode)
-    return code === undefined ? "completed" : `exit ${code}`
-  })
-
-  return (
-    <InlineTool
-      icon="$"
-      pending="Opening interactive terminal..."
-      complete={desc()}
-      spinner={running()}
-      part={props.part}
-    >
-      Interactive terminal: {desc()}
       <Show when={dir()}> in {dir()}</Show>
       <Show when={cmd()}> · $ {cmd()}</Show>
       <Show when={status()}> ({status()})</Show>
@@ -2597,7 +2565,7 @@ function Task(props: ToolProps) {
     const value = status()
     return (
       props.part.state.status === "running" ||
-      (props.metadata.background === true && value !== undefined && value.type !== "idle")
+      (props.metadata.background === true && value !== undefined && running(value.type)) // kilocode_change
     )
   })
   const retry = createMemo(() => {
@@ -3062,8 +3030,8 @@ const toolDisplays = new Set([
   "board_read",
   "execute",
   "background_process",
-  "interactive_terminal",
   "semantic_search",
+  "suggest",
   // kilocode_change end
 ])
 

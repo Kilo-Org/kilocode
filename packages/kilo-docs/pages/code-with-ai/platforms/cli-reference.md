@@ -1028,16 +1028,17 @@ Options:
 start a Cloud Agent task
 
 Options:
-  --help       Show help  [boolean]
-  --version    Show version number  [boolean]
-  --prompt     prompt for the Cloud Agent  [string] [required]
-  --repo       repository shorthand or URL  [string]
-  --repo-type  repository provider type  [string] [choices: "github", "gitlab", "git"]
-  --branch     repository branch  [string]
-  --model      Cloud Agent model  [string]
-  --mode       Cloud Agent mode  [string]
-  --org-id     Kilo organization ID  [string]
-  --stream     connect to the WebSocket stream and print events as JSONL  [boolean]
+  --help          Show help  [boolean]
+  --version       Show version number  [boolean]
+  --prompt        prompt for the Cloud Agent  [string]
+  --prompt-stdin  read the prompt from standard input  [boolean] [default: false]
+  --repo          repository shorthand or URL  [string]
+  --repo-type     repository provider type  [string] [choices: "github", "gitlab", "git"]
+  --branch        repository branch  [string]
+  --model         Cloud Agent model  [string]
+  --mode          Cloud Agent mode  [string]
+  --org-id        Kilo organization ID  [string]
+  --stream        connect to the WebSocket stream and print events as JSONL  [boolean]
 ```
 
 ### kilo cloud send
@@ -1046,10 +1047,11 @@ Options:
 send a follow-up prompt to a Cloud Agent task
 
 Options:
-  --help        Show help  [boolean]
-  --version     Show version number  [boolean]
-  --session-id  Cloud Agent session ID  [string] [required]
-  --prompt      follow-up prompt for the Cloud Agent  [string] [required]
+  --help          Show help  [boolean]
+  --version       Show version number  [boolean]
+  --prompt        prompt for the Cloud Agent  [string]
+  --prompt-stdin  read the prompt from standard input  [boolean] [default: false]
+  --session-id    Cloud Agent session ID  [string] [required]
 ```
 
 ### kilo cloud status

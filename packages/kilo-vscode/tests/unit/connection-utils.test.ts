@@ -114,6 +114,16 @@ describe("resolveEventSessionId", () => {
     expect(resolveEventSessionId(event, noLookup)).toBe("s3")
   })
 
+  it("routes session.wakeup events", () => {
+    const event = {
+      id: "e6-wakeup",
+      type: "session.wakeup",
+      properties: { sessionID: "s12", pending: 2 },
+    } satisfies Payload
+
+    expect(resolveEventSessionId(event, noLookup)).toBe("s12")
+  })
+
   it("routes transient message deltas", () => {
     const event = {
       id: "e7",

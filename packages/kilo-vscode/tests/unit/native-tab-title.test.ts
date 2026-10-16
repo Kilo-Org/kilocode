@@ -40,10 +40,10 @@ describe("nativeTitle", () => {
         return { dispose: () => {} }
       },
     })
-    for (const state of ["busy", "waiting", "done", "error", "idle", "idle", "invalid", null]) {
+    for (const state of ["busy", "waiting", "done", "scheduled", "error", "idle", "idle", "invalid", null]) {
       await listener.current?.({ type: "sessionActivity", state })
     }
-    expect(titles).toEqual(["◔ Kilo Code", "⚠ Kilo Code", "✓ Kilo Code", "⚠ Kilo Code", "Kilo Code"])
+    expect(titles).toEqual(["◔ Kilo Code", "⚠ Kilo Code", "✓ Kilo Code", "◷ Kilo Code", "⚠ Kilo Code", "Kilo Code"])
     provider.dispose()
   })
 
@@ -53,6 +53,7 @@ describe("nativeTitle", () => {
     expect(nativeTitle(session("Greeting"), "waiting")).toBe("⚠ Greeting")
     expect(nativeTitle(session("Greeting"), "error")).toBe("⚠ Greeting")
     expect(nativeTitle(session("Greeting"), "done")).toBe("✓ Greeting")
+    expect(nativeTitle(session("Greeting"), "scheduled")).toBe("◷ Greeting")
     expect(nativeTitle(session("Greeting"), "idle")).toBe("Greeting")
     expect(nativeTitle(session("Greeting"), "waiting", "Agent Manager")).toBe("⚠ Agent Manager")
   })

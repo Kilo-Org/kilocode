@@ -7,6 +7,7 @@ import { completeKiloLogin, loadKiloProfile, startKiloLogin, type ProjectQuery }
 import { errMsg } from "../../shared/utils"
 import { markDisconnected, page, parseDeviceCode, safeReturn } from "./profile-utils"
 import { useProfileServer } from "./server"
+import "../../styles/profile.css"
 
 type Status = "idle" | "initiating" | "pending" | "success" | "error" | "cancelled"
 

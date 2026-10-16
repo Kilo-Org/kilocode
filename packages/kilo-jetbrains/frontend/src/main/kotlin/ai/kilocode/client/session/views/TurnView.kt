@@ -42,6 +42,11 @@ class TurnView(
     private val fork: ((String) -> Unit)? = null,
     private val deleteQueued: ((String) -> Unit)? = null,
     private val onOpenSubagent: ((String, String) -> Unit)? = null,
+    private val onPromoteBackgroundAgent: BackgroundPromote? = null,
+    /** Sibling color slot for a child session's generated avatar. See [ai.kilocode.client.session.AgentAvatar]. */
+    private val avatarColor: (String) -> Int? = { null },
+    /** Whether this turn's transcript is on screen. Combined with `!settled` to gate auto-expand. */
+    private val visible: () -> Boolean = { true },
 ) : SessionLayoutPanel(SessionUiStyle.SessionLayout.GAP), Disposable, SessionEditorStyleTarget, SessionView {
 
     private val messages = LinkedHashMap<String, MessageView>()
@@ -79,7 +84,10 @@ class TurnView(
 
     /** Add a new [MessageView] for [msg] at the end of this turn. */
     fun addMessage(msg: Message): MessageView {
-        val view = MessageView(msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover, revert, fork, onOpenSubagent).also {
+        val view = MessageView(
+            msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover, revert, fork,
+            onOpenSubagent, onPromoteBackgroundAgent, avatarColor, live = { visible() && !settled },
+        ).also {
             it.setDiffOpener(openDiff, sessionId)
         }
         messages[msg.info.id] = view

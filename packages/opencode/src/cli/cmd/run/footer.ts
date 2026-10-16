@@ -31,7 +31,6 @@ import { createComponent, createSignal, type Accessor, type Setter } from "solid
 import { createStore, reconcile } from "solid-js/store"
 import { OpencodeKeymapProvider } from "@opencode-ai/tui/keymap"
 import { RUN_COMMAND_PANEL_ROWS, RUN_SUBAGENT_PANEL_ROWS } from "./footer.command"
-import { RUN_INTERACTIVE_TERMINAL_ROWS } from "@/kilocode/cli/cmd/run/interactive-terminal" // kilocode_change
 import { SUBAGENT_INSPECTOR_ROWS } from "./footer.subagent"
 import { PROMPT_MAX_ROWS, TEXTAREA_MIN_ROWS } from "./footer.prompt"
 import { RunFooterView } from "./footer.view"
@@ -90,9 +89,6 @@ type RunFooterOptions = {
   onPermissionReply: (input: PermissionReply) => void | Promise<void>
   onQuestionReply: (input: QuestionReply) => void | Promise<void>
   onQuestionReject: (input: QuestionReject) => void | Promise<void>
-  onTerminalWrite: (input: { terminalID: string; data: string }) => Promise<void> // kilocode_change
-  onTerminalResize: (input: { terminalID: string; cols: number; rows: number }) => Promise<void> // kilocode_change
-  onTerminalClose: (terminalID: string) => Promise<void> // kilocode_change
   onCycleVariant?: () => CycleResult | void
   onModelSelect?: (model: NonNullable<RunInput["model"]>) => CycleResult | void | Promise<CycleResult | void>
   onVariantSelect?: (variant: string | undefined) => CycleResult | void | Promise<CycleResult | void>
@@ -331,11 +327,6 @@ export class RunFooter implements FooterApi {
               onPermissionReply: footer.handlePermissionReply,
               onQuestionReply: footer.handleQuestionReply,
               onQuestionReject: footer.handleQuestionReject,
-              // kilocode_change start
-              onTerminalWrite: options.onTerminalWrite,
-              onTerminalResize: options.onTerminalResize,
-              onTerminalClose: options.onTerminalClose,
-              // kilocode_change end
               onCycle: footer.handleCycle,
               onInterrupt: footer.handleInterrupt,
               onBackground: options.onBackground,
@@ -709,11 +700,7 @@ export class RunFooter implements FooterApi {
         ? this.base + PERMISSION_ROWS
         : type === "question"
           ? this.base + QUESTION_ROWS
-          // kilocode_change start
-          : type === "interactive_terminal"
-            ? this.base + RUN_INTERACTIVE_TERMINAL_ROWS
-            : this.promptRoute.type === "command"
-          // kilocode_change end
+          : this.promptRoute.type === "command"
             ? 1 + COMMAND_ROWS
             : this.promptRoute.type === "skill"
               ? 1 + SKILL_ROWS

@@ -1,8 +1,10 @@
 package ai.kilocode.backend.diff
 
 import ai.kilocode.backend.rpc.CmdOut
+import ai.kilocode.backend.rpc.badDir
 import ai.kilocode.backend.rpc.baseBranch
 import ai.kilocode.backend.rpc.parseWorktreeList
+import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
@@ -14,6 +16,8 @@ import java.nio.file.LinkOption
 import java.nio.file.Path
 import kotlin.io.path.fileSize
 import kotlin.io.path.inputStream
+
+private val LOG = KiloLog.create(GitComparison::class.java)
 
 internal class GitComparison private constructor(
     private val dir: Path,
@@ -39,6 +43,12 @@ internal class GitComparison private constructor(
             if (!Files.isDirectory(dir)) return null
             val inside = runGitCommand(dir, listOf("rev-parse", "--is-inside-work-tree"))
             if (inside.exit == 128 && inside.stderr.startsWith("fatal: not a git repository")) return null
+            // The directory can vanish between the isDirectory check above and this spawn (a
+            // concurrent worktree removal), which git or the process launcher reports in either of
+            // two message shapes — see badDir(). Treat that race as "no data" rather than a thrown
+            // failure: the caller isolates per-item failures anyway, but a race this narrow doesn't
+            // deserve a WARN-level stack trace every time it's hit.
+            if (badDir(inside.stderr)) return null
             if (inside.checked().trim() != "true") return null
             val head = revision(dir, "HEAD") ?: return null
             if (mode == Mode.Local) return GitComparison(dir, head, "", head, head, null)
@@ -141,24 +151,97 @@ internal class GitComparison private constructor(
     }
 }
 
-internal fun runGitCommand(dir: Path, args: List<String>): CmdOut {
+/**
+ * Watchdog budgets for git commands.
+ *
+ * One budget for everything meant a wedged `git --version` and a diff of a huge worktree waited the
+ * same 30 seconds, and a poll cycle could hold several of those at once. Metadata queries get a
+ * short budget so a stuck process is noticed quickly; content reads get a longer one because they
+ * legitimately scale with the diff. Destructive commands keep their own, much wider budget.
+ */
+internal const val GIT_PROBE_TIMEOUT_MS = 5_000
+internal const val GIT_READ_TIMEOUT_MS = 15_000
+
+/** Default watchdog for a git command. Cheap queries only — a destructive delete needs its own, wider budget. */
+internal const val GIT_COMMAND_TIMEOUT_MS = GIT_READ_TIMEOUT_MS
+
+/**
+ * Budget for commands that write a working tree or talk to a remote: `git worktree add` and the
+ * `worktree prune` that clears the way for a retried add, plus `git fetch`.
+ *
+ * These legitimately run for minutes on a large repository or a slow network, so the read budget
+ * would cut them off for reasons that have nothing to do with a wedged git — reporting a normal
+ * checkout as a failure, which is the opposite of what the tighter budgets are for.
+ *
+ * Not for the prune a poll runs: that one holds the repository's mutation lock, so its budget is the
+ * length of time a user-initiated create or remove can be made to wait. See [GIT_PRUNE_TIMEOUT_MS].
+ */
+internal const val GIT_WRITE_TIMEOUT_MS = 180_000
+
+/**
+ * Budget for the opportunistic `git worktree prune` a status poll runs.
+ *
+ * A prune only rewrites `$GIT_DIR/worktrees` bookkeeping — metadata, like the rest of the probe
+ * class — but unlike the other probes it runs while holding the repository's mutation lock, so this
+ * number is also the longest a create, import, or remove can be stuck behind a poll. A prune that
+ * does not finish in this budget is skipped; the entry is still stale on the next poll.
+ */
+internal const val GIT_PRUNE_TIMEOUT_MS = GIT_PROBE_TIMEOUT_MS
+
+/**
+ * Commands that only touch `.git` metadata and must answer almost immediately.
+ *
+ * `status` is deliberately absent: it scans the working tree, so its cost scales with the checkout,
+ * not with `.git`. On a large or cold worktree the probe budget turns a measurement that would have
+ * succeeded into an unavailable row — a self-inflicted version of the failure the budgets exist to
+ * report. `worktree` covers the `list` query; the writing forms pass [GIT_WRITE_TIMEOUT_MS].
+ */
+private val PROBES = setOf(
+    "--version",
+    "rev-parse",
+    "symbolic-ref",
+    "worktree",
+    "branch",
+    "config",
+    "remote",
+)
+
+/** Budget for `args`, by the kind of work the command performs. */
+internal fun gitBudget(args: List<String>): Int {
+    val head = args.firstOrNull() ?: return GIT_PROBE_TIMEOUT_MS
+    return if (head in PROBES) GIT_PROBE_TIMEOUT_MS else GIT_READ_TIMEOUT_MS
+}
+
+internal fun runGitCommand(dir: Path, args: List<String>, timeoutMs: Int = gitBudget(args)): CmdOut {
     return try {
         val cmd = GeneralCommandLine(listOf("git") + args).withWorkDirectory(dir.toFile())
             .withCharset(StandardCharsets.UTF_8).withEnvironment("LC_ALL", "C")
-        val out = CapturingProcessHandler(cmd).runProcess(30_000)
-        CmdOut(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr)
+        val out = CapturingProcessHandler(cmd).runProcess(timeoutMs)
+        if (out.isTimeout) {
+            LOG.warn("git command timed out: dir=$dir args=${args.joinToString(" ")} ms=$timeoutMs")
+        }
+        CmdOut(if (out.isTimeout) -1 else out.exitCode, out.stdout, out.stderr, out.isTimeout)
     } catch (err: CancellationException) {
         throw err
     } catch (err: ProcessCanceledException) {
         throw err
     } catch (err: Exception) {
+        // A launcher failure is not a timeout; keeping them apart is what lets callers report
+        // "git timed out" instead of an unexplained "exit=-1".
         CmdOut(-1, "", err.message ?: "git failed")
     }
 }
 
 private fun CmdOut.checked(): String {
-    check(ok) { "Git comparison failed (exit=$exit): ${stderr.trim()}" }
+    check(ok) { failure() }
     return stdout
+}
+
+/** Message that says what actually went wrong, including whether the watchdog fired. */
+internal fun CmdOut.failure(): String {
+    if (timeout) return "Git command timed out (no output within its budget)"
+    val detail = stderr.trim().ifEmpty { "no stderr output" }
+    return "Git comparison failed (exit=$exit): $detail"
 }
 
 internal fun capDiff(files: List<DiffFileDto>, cap: Int, fetch: (DiffFileDto, Int) -> DiffFileDto?): List<DiffFileDto> {

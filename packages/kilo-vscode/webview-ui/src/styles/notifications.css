@@ -54,6 +54,7 @@
   color: var(--vscode-descriptionForeground);
   font-size: var(--kilo-font-size-12);
   line-height: 1.5;
+  white-space: pre-line;
 }
 
 .kilo-notifications-footer {

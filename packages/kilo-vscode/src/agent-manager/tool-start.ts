@@ -6,6 +6,10 @@ import type { PanelContext } from "./host"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
 import { sameDirectory } from "../kilo-provider-utils"
 import { attribute } from "./prompt-attribution"
+import { beginBoot, prepareSession, type CreationBoot } from "./provider-lifecycle"
+import { Timing } from "./creation-timing"
+import { plan } from "./creation-plan"
+import { sessionCreateBody } from "./session-create"
 
 const LABEL_MAX = 28
 const PREFIX = new Set(["feat", "fix", "chore", "bug", "issue", "task", "branch"])
@@ -14,6 +18,7 @@ export interface ToolTask {
   prompt?: string
   name?: string
   branchName?: string
+  agent?: string
   model?: { providerID: string; modelID: string }
   variant?: string
 }
@@ -55,8 +60,17 @@ export interface ToolDeps {
   }) => Promise<WorktreeCreated | null>
   claimRequest?: (requestID: string) => boolean
   cleanupWorktree: (wid: string, dir: string) => Promise<void>
-  setup: (dir: string, branch?: string, id?: string) => Promise<void>
-  createSessionInWorktree: (dir: string, branch: string, id?: string, source?: ToolSource) => Promise<Session | null>
+  hasScript: () => boolean
+  setup: (dir: string, branch?: string, id?: string, early?: () => Promise<void>) => Promise<void>
+  createSessionInWorktree: (
+    dir: string,
+    branch: string,
+    id?: string,
+    source?: ToolSource,
+    boot?: CreationBoot,
+    timing?: Timing,
+    agent?: string,
+  ) => Promise<Session | null>
   sessionMetadata: (client: KiloClient, dir: string) => Promise<Record<string, unknown>>
   registerWorktreeSession: (sid: string, dir: string) => void
   notifyReady: (sid: string, result: CreateWorktreeResult, wid?: string) => void
@@ -119,6 +133,7 @@ async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTa
       parts: [{ type: "text", text: attribute(body, source?.sessionID) }],
       model: task.model,
       variant: task.variant,
+      agent: task.agent,
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
     },
     { throwOnError: true },
@@ -160,12 +175,12 @@ async function local(
   const target = wt?.path ?? root
   const metadata = await deps.sessionMetadata(client, target)
   const { data } = await client.session.create(
-    {
+    sessionCreateBody({
       directory: target,
-      platform: PLATFORM,
       metadata,
-      ...(source?.sandboxInheritanceToken ? { sandboxInheritanceToken: source.sandboxInheritanceToken } : {}),
-    },
+      agent: task.agent,
+      sandboxInheritanceToken: source?.sandboxInheritanceToken,
+    }),
     { throwOnError: true },
   )
   const session = data
@@ -198,42 +213,76 @@ async function worktree(
   const baseBranch = task.branchName ?? branch(task.name)
   const baseLabel = label(task.name) ?? label(task.branchName) ?? label(task.prompt)
   const version = versionedName(baseBranch, versions ? index : 0, versions ? total : 1)
+  const timing = Timing.start(`create ${version.branch ?? "worktree"}`, deps.log)
   const created = await deps.createWorktree({
     groupId,
     branchName: version.branch,
     name: version.branch,
     label: versionedLabel(baseLabel, versions ? index : 0, versions ? total : 1),
   })
-  if (!created) return false
+  timing.mark("create")
+  if (!created) {
+    timing.end()
+    return false
+  }
 
-  await deps.setup(created.result.path, created.result.branch, created.worktree.id)
-  const session = await deps.createSessionInWorktree(
-    created.result.path,
-    created.result.branch,
-    created.worktree.id,
-    source,
+  const prepared = await prepareSession(
+    plan({ setupScript: deps.hasScript() }),
+    async (early) => {
+      await deps.setup(created.result.path, created.result.branch, created.worktree.id, early)
+      timing.mark("setup")
+    },
+    () => {
+      const boot = beginBoot(() => deps.sessionMetadata(client, created.result.path), timing)
+      return deps.createSessionInWorktree(
+        created.result.path,
+        created.result.branch,
+        created.worktree.id,
+        source,
+        boot,
+        timing,
+        task.agent,
+      )
+    },
   )
+  const { session, ready } = prepared
   if (!session) {
+    await prepared.done
     await deps.cleanupWorktree(created.worktree.id, created.result.path)
+    timing.mark("cleanup")
+    timing.end()
     return false
   }
 
   const state = deps.getState()
   if (!state) {
+    await prepared.done
     await deps.cleanupWorktree(created.worktree.id, created.result.path)
+    timing.mark("cleanup")
+    timing.end()
     return false
   }
   state.addSession(session.id, created.worktree.id)
   deps.registerWorktreeSession(session.id, created.result.path)
+  timing.mark("state")
   deps.notifyReady(session.id, created.result, created.worktree.id)
   deps.getPanel()?.sessions.registerSession(session)
-  await prompt(client, session.id, created.result.path, task, source)
+  timing.mark("ready")
+  await ready
+  try {
+    await prompt(client, session.id, created.result.path, task, source)
+  } finally {
+    await prepared.done
+  }
+  const span = timing.end()
   deps.capture("Agent Manager Session Started", {
     source: PLATFORM,
     sessionId: session.id,
     worktreeId: created.worktree.id,
     branch: created.result.branch,
     tool: true,
+    durationMs: span.total,
+    ...span.phases,
   })
   return true
 }
@@ -313,9 +362,15 @@ function model(value: unknown): ToolTask["model"] {
   return { providerID, modelID }
 }
 
+// The server resolves the agent by exact key, so keep the canonical trimmed name.
+function agent(value: unknown): Pick<ToolTask, "agent"> {
+  if (typeof value !== "string" || !value.trim()) return {}
+  return { agent: value.trim() }
+}
+
 function task(value: unknown): ToolTask | undefined {
   if (!record(value)) return undefined
-  const out: ToolTask = {}
+  const out: ToolTask = { ...agent(value.agent) }
   for (const key of ["prompt", "name", "branchName"] as const) {
     if (Object.hasOwn(value, key) && typeof value[key] === "string" && value[key].trim()) out[key] = value[key]
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { ConfigBindings, type ConfigProject } from "../../src/kilo-provider/config-bindings"
+import { ConfigBindings, type ConfigBinding, type ConfigProject } from "../../src/kilo-provider/config-bindings"
 
 const { KiloProvider } = await import("../../src/KiloProvider")
 
@@ -54,5 +54,68 @@ describe("ConfigBindings", () => {
     provider.setProjectDirectory("/repo/b")
 
     expect(internal.configBindings.get(binding.id, internal.connectionGeneration, () => true)).toBeUndefined()
+  })
+
+  it("publishes valid save bindings after a concurrent refresh during capability loading", async () => {
+    const started = Promise.withResolvers<void>()
+    const capabilities = Promise.withResolvers<{ data: { backgroundSubagents: boolean } }>()
+    const global = { ...target, scope: "global" as const }
+    const client = {
+      config: {
+        overlayUpdate: async () => ({ data: { effective: {}, targets: { global, project: target } } }),
+      },
+      experimental: {
+        capabilities: {
+          get: () => {
+            started.resolve()
+            return capabilities.promise
+          },
+        },
+      },
+    }
+    const provider = new KiloProvider(
+      {} as never,
+      { getClient: () => client, drainPendingPrompts: async () => {} } as never,
+      undefined,
+      { projectDirectory: "/repo/a" },
+    )
+    const internal = provider as unknown as {
+      configBindings: ConfigBindings
+      connectionGeneration: number
+      connectionState: string
+      configSettings: () => Record<string, unknown>
+      fetchAndSendProviders: () => Promise<void>
+      handleUpdateConfig: (
+        config: { disabled_providers: string[] },
+        project: object,
+        globalUnset: string[][],
+        projectUnset: string[][],
+        binding: string,
+      ) => Promise<void>
+    }
+    internal.connectionState = "connected"
+    internal.configSettings = () => ({})
+    internal.fetchAndSendProviders = async () => {}
+    const input = {
+      connection: internal.connectionGeneration,
+      scope: "global" as const,
+      directory: "/repo/a",
+      target: global,
+    }
+    const binding = internal.configBindings.create(input)
+    const published: ConfigBinding[] = []
+    provider.postMessage = (message) => {
+      if (message.type === "configUpdated" && message.bindings?.global)
+        published.push(message.bindings.global as ConfigBinding)
+    }
+
+    const saving = internal.handleUpdateConfig({ disabled_providers: [] }, {}, [], [], binding.id)
+    await started.promise
+    internal.configBindings.create(input)
+    capabilities.resolve({ data: { backgroundSubagents: false } })
+    await saving
+
+    expect(published).toHaveLength(1)
+    expect(internal.configBindings.get(published.at(0)?.id, internal.connectionGeneration, () => true)).toBeDefined()
   })
 })

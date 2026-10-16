@@ -23,15 +23,17 @@ const original = {
   diagnostics: api.languages.getDiagnostics,
 }
 
-function setup(active = false, agentReady = true) {
+function setup(active = false, agentReady = true, last?: "sidebar" | "agent" | "tab") {
   const commands = new Map<string, Command>()
   const executed: unknown[][] = []
   const events: string[] = []
   const posts: unknown[] = []
   const waits: string[] = []
+  const recipients: string[] = []
   const context = { subscriptions: [] as Array<{ dispose(): void }> } as vscode.ExtensionContext
   const provider = {
     postMessage: (msg: unknown) => {
+      recipients.push("sidebar")
       events.push("post")
       posts.push(msg)
     },
@@ -43,6 +45,7 @@ function setup(active = false, agentReady = true) {
   const agent = {
     isActive: () => active,
     postMessage: (msg: unknown) => {
+      recipients.push("agent")
       events.push("post")
       posts.push(msg)
     },
@@ -52,6 +55,16 @@ function setup(active = false, agentReady = true) {
       return agentReady
     },
   }
+  const tab = {
+    postMessage: (msg: unknown) => {
+      recipients.push("tab")
+      posts.push(msg)
+    },
+    waitForReady: async () => {
+      waits.push("tab")
+    },
+  }
+  const focused = { current: last }
 
   api.commands.registerCommand = (command, callback) => {
     commands.set(command, callback)
@@ -74,9 +87,12 @@ function setup(active = false, agentReady = true) {
     },
   }
 
-  registerCodeActions(context, provider as never, agent as never)
+  const views = { sidebar: provider, agent, tab }
+  registerCodeActions(context, provider as never, agent as never, undefined, () =>
+    focused.current ? (views[focused.current] as never) : undefined,
+  )
 
-  return { commands, events, executed, posts, waits }
+  return { commands, events, executed, posts, waits, recipients, focused }
 }
 
 afterEach(() => {
@@ -86,7 +102,71 @@ afterEach(() => {
   api.languages.getDiagnostics = original.diagnostics
 })
 
+function expectContextPost(post: unknown) {
+  const value = post as { type: string; context: Record<string, unknown> }
+  expect(value.type).toBe("appendChatContext")
+  expect(value.context).toMatchObject({
+    filePath: "src/file.ts",
+    startLine: 3,
+    endLine: 5,
+    text: "const value = 1",
+  })
+  expect(typeof value.context.id).toBe("string")
+  expect(value.context.id).not.toHaveLength(0)
+}
+
 describe("registerCodeActions", () => {
+  it("keeps targeting Agent Manager after the code editor takes focus", async () => {
+    const state = setup(false, true, "agent")
+
+    await state.commands.get("kilo-code.new.addToContext")?.()
+
+    expect(state.recipients).toEqual(["agent"])
+    expect(state.executed).toEqual([])
+    expect(state.waits).toEqual(["agent"])
+    expectContextPost(state.posts.at(0))
+  })
+
+  it.each(["sidebar", "tab"] as const)("prefers the last focused %s over the active panel", async (last) => {
+    const state = setup(true, true, last)
+
+    await state.commands.get("kilo-code.new.addToContext")?.()
+
+    expect(state.recipients).toEqual([last])
+    expect(state.executed).toEqual(last === "sidebar" ? [["kilo-code.SidebarProvider.focus"]] : [])
+    expectContextPost(state.posts.at(0))
+  })
+
+  it("uses the latest focused chat and falls back after it closes", async () => {
+    const state = setup(false, true, "tab")
+    state.focused.current = "agent"
+    await state.commands.get("kilo-code.new.addToContext")?.()
+    state.focused.current = undefined
+    await state.commands.get("kilo-code.new.addToContext")?.()
+
+    expect(state.recipients).toEqual(["agent", "sidebar"])
+  })
+
+  it("does not reroute when the remembered Agent Manager closes while waiting", async () => {
+    const state = setup(false, false, "agent")
+
+    await state.commands.get("kilo-code.new.addToContext")?.()
+
+    expect(state.waits).toEqual(["agent"])
+    expect(state.recipients).toEqual([])
+    expect(state.executed).toEqual([])
+  })
+
+  it("keeps focus-only commands on their existing route", async () => {
+    const state = setup(false, true, "agent")
+
+    await state.commands.get("kilo-code.new.focusChatInput")?.()
+    await state.commands.get("kilo-code.new.toggleChatSearch")?.()
+
+    expect(state.recipients).toEqual(["sidebar", "sidebar"])
+    expect(state.waits).toEqual(["provider", "provider"])
+  })
+
   it("reveals the sidebar before adding selected code to context", async () => {
     const state = setup()
 
@@ -95,12 +175,8 @@ describe("registerCodeActions", () => {
     expect(state.events).toEqual(["focus", "wait", "post"])
     expect(state.executed).toEqual([["kilo-code.SidebarProvider.focus"]])
     expect(state.waits).toEqual(["provider"])
-    expect(state.posts).toEqual([
-      {
-        type: "appendChatBoxMessage",
-        text: "src/file.ts:3-5\n```\nconst value = 1\n```",
-      },
-    ])
+    expect(state.posts).toHaveLength(1)
+    expectContextPost(state.posts[0])
   })
 
   it("adds selected code to the active Agent Manager without revealing the sidebar", async () => {
@@ -111,12 +187,8 @@ describe("registerCodeActions", () => {
     expect(state.events).toEqual(["wait", "post"])
     expect(state.executed).toEqual([])
     expect(state.waits).toEqual(["agent"])
-    expect(state.posts).toEqual([
-      {
-        type: "appendChatBoxMessage",
-        text: "src/file.ts:3-5\n```\nconst value = 1\n```",
-      },
-    ])
+    expect(state.posts).toHaveLength(1)
+    expectContextPost(state.posts[0])
   })
 
   it("does not post to the Agent Manager when its readiness wait is cancelled", async () => {

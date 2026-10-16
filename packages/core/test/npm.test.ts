@@ -46,7 +46,9 @@ describe("Npm.add", () => {
     await Bun.write(path.join(tmp.path, "fixture-provider", "index.js"), "export const fixture = true\n")
 
     const spec = `fixture-provider@file:${path.join(tmp.path, "fixture-provider")}`
-    await fs.mkdir(path.join(tmp.path, "cache", "packages", Npm.sanitize(spec)), { recursive: true })
+    const dir = path.join(tmp.path, "cache", "packages", Npm.sanitize(spec)) // kilocode_change
+    await fs.mkdir(dir, { recursive: true }) // kilocode_change
+    await Bun.write(path.join(dir, ".npmrc"), "audit=false\n") // kilocode_change
 
     const entry = await Effect.gen(function* () {
       const npm = yield* Npm.Service
@@ -70,7 +72,7 @@ describe("Npm.install", () => {
         "dev-pkg": "file:./dev-pkg",
       },
     })
-    await Bun.write(path.join(tmp.path, ".npmrc"), "omit=dev\n")
+    await Bun.write(path.join(tmp.path, ".npmrc"), "omit=dev\naudit=false\n") // kilocode_change
     await fs.mkdir(path.join(tmp.path, "prod-pkg"))
     await fs.mkdir(path.join(tmp.path, "dev-pkg"))
     await writePackage(path.join(tmp.path, "prod-pkg"), { name: "prod-pkg" })

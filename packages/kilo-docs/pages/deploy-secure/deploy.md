@@ -5,6 +5,8 @@ description: "Deploy your applications with Kilo Code"
 
 # Deploy
 
+{% partial file="deploy-eol.md" /%}
+
 Kilo Deploy lets you ship **Next.js** and **static sites** directly from Kilo Code, with:
 
 - **One-click deployment** from the Kilo Code dashboard

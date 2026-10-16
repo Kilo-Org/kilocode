@@ -45,12 +45,21 @@ jobs:
     env:
       KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
       KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+      # kilo-bench's capture helper requires a Go toolchain >= 1.26. The runner
+      # image pins GOTOOLCHAIN=local, so allow Go to fetch the required toolchain.
+      GOTOOLCHAIN: auto
     steps:
       - name: Checkout kilo-bench
         uses: actions/checkout@v6 # kilocode_change
         with:
           repository: Kilo-Org/kilo-bench
           token: ${{ secrets.BENCH_GITHUB_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.26"
+          cache: false
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6

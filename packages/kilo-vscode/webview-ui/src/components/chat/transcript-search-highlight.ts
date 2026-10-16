@@ -125,7 +125,7 @@ export function applyTranscriptHighlights(
     // per search-scope instead would treat `active.occurrence` as local to
     // whichever part happened to be scanned first, misattributing which
     // occurrence is "current" for any row with more than one contributing
-    // part (e.g. a reasoning block followed by a tool call).
+    // part (e.g. an assistant reply split across several text parts).
     const ranges = resolveSearchScopes(scope, matchedParts).flatMap((searchScope) => scanScope(searchScope, pattern))
     if (ranges.length === 0) continue
     const isActiveRow = !!active && scope.dataset.rowKey === active.key

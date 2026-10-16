@@ -11,6 +11,7 @@ export interface DiffPRPoller {
   setActiveWorktreeId(id: string | undefined): void
   setEnabled(enabled: boolean): void
   setVisible(visible: boolean): void
+  refresh?(id?: string): void
   stop(): void
 }
 
@@ -85,6 +86,12 @@ export function createDiffPRPolling(opts: Options) {
     getStatus() {
       return status
     },
+    getBranch() {
+      return branch
+    },
+    refresh() {
+      poller?.refresh?.("diff")
+    },
     setVisible(visible: boolean) {
       poller?.setVisible(visible)
     },
@@ -100,7 +107,7 @@ export function createDiffPRPoller(opts: DiffPRPollerOptions): DiffPRPoller {
     parentBranch: "",
     createdAt: "",
   }
-  return new PRStatusPoller({
+  const poller = new PRStatusPoller({
     getWorktrees: () => [worktree],
     getWorkspaceRoot: () => opts.directory,
     getBranch: async (item) => {
@@ -114,4 +121,11 @@ export function createDiffPRPoller(opts: DiffPRPollerOptions): DiffPRPoller {
     onStatus: opts.onStatus,
     log: opts.log,
   })
+  return {
+    setActiveWorktreeId: (id) => poller.setActiveWorktreeId(id),
+    setEnabled: (enabled) => poller.setEnabled(enabled),
+    setVisible: (visible) => poller.setVisible(visible),
+    refresh: () => poller.refresh("diff"),
+    stop: () => poller.stop(),
+  }
 }

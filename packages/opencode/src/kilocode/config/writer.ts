@@ -1,11 +1,14 @@
 import { applyEdits, findNodeAtLocation, modify, parseTree } from "jsonc-parser"
 import { mkdir, stat } from "fs/promises"
 import path from "path"
+import { ConfigErrorV1 } from "@opencode-ai/core/v1/config/error"
 import { Config } from "@/config/config"
 import { ConfigParse } from "@/config/parse"
+import { ConfigV2Compat } from "@/config/v2-compat"
 import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
 import { KilocodeConfigOverlay } from "./overlay"
+import { Excess } from "./excess"
 
 export namespace KilocodeConfigWriter {
   export type Conflict = {
@@ -15,12 +18,14 @@ export namespace KilocodeConfigWriter {
     target: KilocodeConfigOverlay.Target
   }
 
-  export type Result = {
-    ok: true
-    target: KilocodeConfigOverlay.Target
-    changed: boolean
-    sandboxChanged: boolean
-  } | Conflict
+  export type Result =
+    | {
+        ok: true
+        target: KilocodeConfigOverlay.Target
+        changed: boolean
+        sandboxChanged: boolean
+      }
+    | Conflict
 
   export async function write(input: {
     directory: string
@@ -49,6 +54,13 @@ export namespace KilocodeConfigWriter {
       }
     }
 
+    const keys = Excess.keys(Config.Info, input.set)
+    if (keys.length) {
+      throw new ConfigErrorV1.InvalidError({
+        path: target.path,
+        issues: [{ message: Excess.issue(keys), path: [] }],
+      })
+    }
     const patch = KilocodeConfigOverlay.patch({ scope: input.scope, set: input.set, unset: input.unset })
     if (Object.keys(patch).length === 0) return { ok: true, target, changed: false, sandboxChanged: false }
     await mkdir(path.dirname(target.path), { recursive: true })
@@ -75,7 +87,9 @@ export namespace KilocodeConfigWriter {
       }
     }
     const updated = patchJsonc(before, patch)
-    ConfigParse.schema(Config.Info, ConfigParse.jsonc(updated, checked.path), checked.path)
+    // Validate the runtime representation, but write the original patched JSONC below.
+    const lowered = ConfigV2Compat.lower(ConfigParse.jsonc(updated, checked.path), checked.path)
+    ConfigParse.schema(Config.Info, lowered.value, checked.path)
     const mode = checked.exists
       ? await stat(checked.path).then((info) => info.mode & 0o777)
       : checked.scope === "global"

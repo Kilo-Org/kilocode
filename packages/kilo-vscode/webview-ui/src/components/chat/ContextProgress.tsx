@@ -19,27 +19,36 @@ export const ContextProgress: Component = () => {
   const session = useSession()
   const provider = useProvider()
 
+  const model = createMemo(() => {
+    const sel = session.selected()
+    return sel ? provider.findModel(sel) : undefined
+  })
+
+  const limit = createMemo(() => model()?.limit?.context ?? model()?.contextLength ?? 0)
+
   const data = createMemo(() => {
     const usage = session.contextUsage()
-    if (!usage || usage.tokens === 0) return undefined
+    const max = limit()
+    if (!usage || usage.tokens === 0 || max === 0) return undefined
 
-    const sel = session.selected()
-    const model = sel ? provider.findModel(sel) : undefined
-    const limit = model?.limit?.context ?? model?.contextLength ?? 0
-    const output = model?.limit?.output ?? 0
+    const output = model()?.limit?.output ?? 0
 
-    if (limit === 0) return undefined
+    const used = Math.min(usage.tokens, max)
+    const reserved = Math.min(output, max - used)
+    const available = Math.max(0, max - used - reserved)
 
-    const used = Math.min(usage.tokens, limit)
-    const reserved = Math.min(output, limit - used)
-    const available = Math.max(0, limit - used - reserved)
+    const pctUsed = (used / max) * 100
+    const pctReserved = (reserved / max) * 100
+    const pctAvail = (available / max) * 100
 
-    const pctUsed = (used / limit) * 100
-    const pctReserved = (reserved / limit) * 100
-    const pctAvail = (available / limit) * 100
-
-    return { used, reserved, available, limit, pctUsed, pctReserved, pctAvail, output }
+    return { used, reserved, available, limit: max, pctUsed, pctReserved, pctAvail, output }
   })
+
+  // The skeleton is a loading state, so it shows only while a turn is running
+  // and the context is not resolvable yet. The row itself is always rendered to
+  // keep the header height fixed. Without a context limit the row stays empty,
+  // as it did before, instead of pulsing forever.
+  const pending = createMemo(() => session.status() === "busy" && limit() > 0 && !data())
 
   const tip = createMemo(() => {
     const d = data()
@@ -51,7 +60,18 @@ export const ContextProgress: Component = () => {
   })
 
   return (
-    <Show when={data()}>
+    <Show
+      when={data()}
+      fallback={
+        <div class="context-progress" aria-hidden="true">
+          <Show when={pending()}>
+            <div class="task-header-skeleton" style={{ width: "32px" }} />
+            <div class="task-header-skeleton" style={{ flex: 1, height: "4px" }} />
+            <div class="task-header-skeleton" style={{ width: "32px" }} />
+          </Show>
+        </div>
+      }
+    >
       {(d) => (
         <div class="context-progress">
           <span class="context-progress-count">{fmt(d().used)}</span>

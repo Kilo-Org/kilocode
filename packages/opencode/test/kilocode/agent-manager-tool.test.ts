@@ -63,12 +63,50 @@ const agent: Agent.Info = {
   options: {},
 }
 
+const customAgent: Agent.Info = {
+  name: "candidate",
+  mode: "all",
+  permission: [],
+  options: {},
+}
+
+const subAgent: Agent.Info = {
+  name: "researcher",
+  mode: "subagent",
+  permission: [],
+  options: {},
+}
+
+// Mirrors the built-in title/summary/compaction utility agents: primary but hidden.
+const hiddenAgent: Agent.Info = {
+  name: "title",
+  mode: "primary",
+  hidden: true,
+  permission: [],
+  options: {},
+}
+
+const agentsByName: Record<string, Agent.Info> = {
+  build: agent,
+  candidate: customAgent,
+  researcher: subAgent,
+  title: hiddenAgent,
+}
+
 // Default provider is `test`, so resolution should prefer test, then kilo, then others.
-function makeRuntime(defaultProviderID = "test", host: Partial<AgentManager.Interface> = {}) {
+function makeRuntime(
+  defaultProviderID = "test",
+  host: Partial<AgentManager.Interface> = {},
+  agentSvc: Partial<Agent.Interface> = {},
+) {
   return ManagedRuntime.make(
     Layer.mergeAll(
       AppNodeBuilder.build(Truncate.node),
-      Layer.mock(Agent.Service, { get: () => Effect.succeed(agent) }),
+      Layer.mock(Agent.Service, {
+        get: (name: string) => Effect.succeed(agentsByName[name]),
+        list: () => Effect.succeed(Object.values(agentsByName)),
+        ...agentSvc,
+      }),
       AppNodeBuilder.build(Bus.node),
       AppNodeBuilder.build(CrossSpawnSpawner.node),
       Layer.mock(AgentManager.Service, host),
@@ -151,6 +189,13 @@ function publish(
 }
 
 describe("agent_manager tool", () => {
+  test("tells models to start sessions only on explicit user intent", async () => {
+    const tool = await init()
+
+    expect(tool.description).toContain("Start sessions only when the user explicitly asks")
+    expect(tool.description).toContain("Never start them on your own")
+  })
+
   test("uses an object-root input schema without combinators because more complex schemas break Claude models", async () => {
     const tool = await init()
     const schema = ToolJsonSchema.fromTool(tool)
@@ -186,6 +231,21 @@ describe("agent_manager tool", () => {
       "filter",
       "sessionID",
       "prompt",
+      "replyTo",
+      "sectionID",
+      "questionID",
+      "answers",
+    ])
+    expect(schema.required).toEqual([
+      "mode",
+      "versions",
+      "tasks",
+      "worktreeID",
+      "action",
+      "filter",
+      "sessionID",
+      "prompt",
+      "replyTo",
       "sectionID",
       "questionID",
       "answers",
@@ -208,6 +268,7 @@ describe("agent_manager tool", () => {
       "filter",
       "sessionID",
       "prompt",
+      "replyTo",
       "sectionID",
       "questionID",
       "answers",
@@ -321,6 +382,21 @@ describe("agent_manager tool", () => {
     )
   })
 
+  // Some models send the string "null" (#14725). The error must tell them how to recover.
+  test("explains how to recover from a worktreeID in worktree mode", async () => {
+    const tool: Tool.Def = await init()
+    const result = await runtime.runPromise(
+      tool.execute({ mode: "worktree", worktreeID: "null", tasks: [{ name: "test" }] }, ctx).pipe(Effect.exit),
+    )
+    expect(Exit.isFailure(result)).toBe(true)
+    if (Exit.isFailure(result)) {
+      const err = Cause.squash(result.cause)
+      expect(err).toBeInstanceOf(Tool.InvalidArgumentsError)
+      expect(String((err as Error).message)).toContain('worktreeID "null" requires mode local')
+      expect(String((err as Error).message)).toContain("omit worktreeID or send JSON null")
+    }
+  })
+
   test("keeps session ID validation local", () => {
     expect(Schema.is(Params)({ action: "stop", sessionID: "ses_target" })).toBe(true)
     expect(Schema.is(Params)({ action: "stop", sessionID: "invalid" })).toBe(false)
@@ -382,6 +458,14 @@ describe("agent_manager tool", () => {
       action: "prompt",
       sessionID: "ses_target",
       prompt: "go",
+    })
+    expect(
+      decode({ ...blanks, action: "prompt", sessionID: "ses_target", prompt: "done", replyTo: "amr_request" }),
+    ).toEqual({
+      action: "prompt",
+      sessionID: "ses_target",
+      prompt: "done",
+      replyTo: "amr_request",
     })
   })
 
@@ -612,6 +696,66 @@ describe("agent_manager tool", () => {
     await rt.dispose()
   })
 
+  test("forwards a peer reply reference to Agent Manager", async () => {
+    const requests: unknown[] = []
+    const rt = makeRuntime("test", {
+      request: (input) =>
+        Effect.sync(() => {
+          requests.push(input)
+          return { operation: "prompt" as const, sessionID: SessionID.make("ses_caller"), delivered: true as const }
+        }),
+    })
+    const tool = await rt.runPromise(
+      Effect.gen(function* () {
+        return yield* Tool.init(yield* AgentManagerTool)
+      }),
+    )
+    const permissions: unknown[] = []
+    const result = await rt.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          {
+            action: "prompt",
+            sessionID: SessionID.make("ses_caller"),
+            prompt: "The change is complete.",
+            replyTo: "amr_request",
+          },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(permissions).toEqual([
+      {
+        permission: "agent_manager",
+        patterns: ["prompt"],
+        always: ["prompt"],
+        metadata: {
+          action: "prompt",
+          sessionID: "ses_caller",
+          replyTo: "amr_request",
+          description: expect.any(String),
+        },
+      },
+    ])
+    expect(requests).toEqual([
+      {
+        operation: "prompt",
+        sessionID: ctx.sessionID,
+        sourceSessionID: ctx.sessionID,
+        targetSessionID: "ses_caller",
+        prompt: "The change is complete.",
+        replyTo: "amr_request",
+      },
+    ])
+    expect(result.title).toBe("Reply accepted")
+    expect(result.output).toContain("does not wait for completion")
+    expect(result.metadata).toEqual(
+      expect.objectContaining({ action: "prompt", sessionID: "ses_caller", replyTo: "amr_request" }),
+    )
+    await rt.dispose()
+  })
+
   test("stops one existing session with a separate mutation permission pattern", async () => {
     const requests: unknown[] = []
     const rt = makeRuntime("test", {
@@ -746,6 +890,16 @@ describe("agent_manager tool", () => {
     expect(String(task?.model?.providerID)).toBe("kilo")
     expect(String(task?.model?.modelID)).toBe("kilo/only")
     expect(task?.variant).toBeUndefined()
+  })
+
+  test("inherits the invoking variant when the model override resolves to the invoking model", async () => {
+    const task = await publish(runtime, { prompt: "Fix", model: "Shared" }, [
+      message("msg_current", "kilo", "kilo/shared", "low"),
+    ])
+
+    expect(String(task?.model?.providerID)).toBe("kilo")
+    expect(String(task?.model?.modelID)).toBe("kilo/shared")
+    expect(task?.variant).toBe("low")
   })
 
   test("overrides only the inherited variant when model is omitted", async () => {
@@ -999,5 +1153,145 @@ describe("agent_manager tool", () => {
         ).pipe(Effect.scoped),
       ),
     ).rejects.toThrow("Each task must include prompt, name, or branchName")
+  })
+
+  test("publishes a valid primary agent on the task without requiring a prompt", async () => {
+    const task = await publish(runtime, { name: "Prepared", agent: "candidate" })
+    expect(task?.agent).toBe("candidate")
+  })
+
+  test("omits agent from the published task when not specified", async () => {
+    const task = await publish(runtime, { name: "Prepared" })
+    expect(task?.agent).toBeUndefined()
+  })
+
+  // A padded name passes the trimmed fail-fast check, so it must be published
+  // canonical too. Agent.get resolves by exact key, so " candidate " would
+  // otherwise fail later at prompt time with "Agent not found".
+  test("publishes a padded agent name trimmed", async () => {
+    const task = await publish(runtime, { name: "Prepared", agent: "  candidate  " })
+    expect(task?.agent).toBe("candidate")
+  })
+
+  test("omits a blank agent from the published task", async () => {
+    const task = await publish(runtime, { name: "Prepared", agent: "   " })
+    expect(task?.agent).toBeUndefined()
+  })
+
+  test("rejects an unknown agent name before requesting permission", async () => {
+    const tool = await init()
+    const calls: unknown[] = []
+
+    const result = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { mode: "local", tasks: [{ prompt: "Fix", agent: "does-not-exist" }] },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => calls.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(calls).toEqual([])
+    expect(result.title).toBe("Invalid Agent Manager agent selection")
+    expect(result.output).toContain('Agent "does-not-exist" not found.')
+    expect(result.output).toContain("Available agents: build, candidate")
+    expect(result.metadata.count).toBe(0)
+  })
+
+  test("rejects a subagent-mode agent before requesting permission", async () => {
+    const tool = await init()
+    const calls: unknown[] = []
+
+    const result = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { mode: "local", tasks: [{ prompt: "Fix", agent: "researcher" }] },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => calls.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(calls).toEqual([])
+    expect(result.title).toBe("Invalid Agent Manager agent selection")
+    expect(result.output).toContain('Agent "researcher" is a subagent')
+    expect(result.output).toContain("task tool")
+    // The caller cannot enumerate agents, so the recoverable set must be on every
+    // rejection — a plausible wrong guess resolves and would otherwise get no list.
+    expect(result.output).toContain("Available agents: build, candidate")
+    expect(result.metadata.count).toBe(0)
+  })
+
+  // Hidden utility agents (title/summary/compaction) are primary, so a mode-only
+  // check accepted them and would have run a deny-only agent as a real session.
+  test("rejects a hidden internal agent before requesting permission", async () => {
+    const tool = await init()
+    const calls: unknown[] = []
+
+    const result = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { mode: "local", tasks: [{ prompt: "Fix", agent: "title" }] },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => calls.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(calls).toEqual([])
+    expect(result.title).toBe("Invalid Agent Manager agent selection")
+    expect(result.output).toContain('Agent "title" is an internal agent')
+    expect(result.output).toContain("Available agents: build, candidate")
+    expect(result.metadata.count).toBe(0)
+  })
+
+  test("never advertises subagent or hidden agents as selectable", async () => {
+    const tool = await init()
+    const result = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute({ mode: "local", tasks: [{ prompt: "Fix", agent: "nope" }] }, { ...ctx, ask: () => Effect.void }),
+      ).pipe(Effect.scoped),
+    )
+
+    const line = result.output.split("\n").find((item) => item.includes("Available agents:"))
+    expect(line).toBeDefined()
+    expect(line).not.toContain("researcher")
+    expect(line).not.toContain("title")
+  })
+
+  // `publish` waits on a queue, so a rejection proves nothing reached the bus.
+  // Asserting an array filled by subscribeCallback cannot fail: the callback runs
+  // on its own fiber and is still pending when the assertion executes.
+  test.each(["title", "researcher", "nope"])("starts no session for the rejected agent %s", async (name) => {
+    await expect(publish(runtime, { prompt: "Fix", agent: name })).rejects.toThrow()
+  })
+
+  test("does not publish any session when one task's agent is invalid", async () => {
+    const tool: Tool.Def = await init()
+    const events = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        Effect.gen(function* () {
+          const bus = yield* Bus.Service
+          const queue = yield* Queue.unbounded<AgentManagerStart>()
+          const off = yield* bus.subscribeCallback(AgentManagerEvent.Start, (item) =>
+            Queue.offerUnsafe(queue, item.properties),
+          )
+          yield* Effect.addFinalizer(() => Effect.sync(off))
+          yield* tool.execute(
+            {
+              mode: "local",
+              tasks: [
+                { prompt: "Fix one", agent: "candidate" },
+                { prompt: "Fix two", agent: "researcher" },
+              ],
+            },
+            { ...ctx, ask: () => Effect.void },
+          )
+          // Waiting on the queue is what makes this assertion real: reading an array
+          // filled by subscribeCallback passes even when an event was published,
+          // because that callback is still pending on its own fiber.
+          return yield* Queue.take(queue).pipe(Effect.timeout("1 second"), Effect.exit)
+        }),
+      ).pipe(Effect.scoped),
+    )
+    expect(Exit.isFailure(events)).toBe(true)
   })
 })

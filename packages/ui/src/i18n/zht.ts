@@ -76,7 +76,7 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "新增點數",
 
   "dialog.usageExceeded.freeTier.title": "已達免費額度上限",
-  "dialog.usageExceeded.freeTier.description": "訂閱 Kilo Go，可靠地使用最佳開源模型，每月 $5 起。", // kilocode_change
+  "dialog.usageExceeded.freeTier.description": "每月 $10 訂閱 Kilo Go，可靠地使用最佳開源模型。", // kilocode_change
   "dialog.usageExceeded.freeTier.actionLabel": "訂閱",
   "dialog.usageExceeded.accountRateLimit.title": "已達 Go 額度上限",
   "dialog.usageExceeded.accountRateLimit.description": "已達使用額度上限。若要立即繼續使用此模型，請啟用可用餘額計費",
@@ -239,6 +239,10 @@ export const dict = {
   "ui.mermaid.copyPng": "複製 PNG",
   "ui.mermaid.downloadSvg": "下載 SVG",
   "ui.mermaid.downloadPng": "下載 PNG",
+  "ui.mermaid.zoom": "縮放",
+  "ui.mermaid.zoomIn": "放大",
+  "ui.mermaid.zoomOut": "縮小",
+  "ui.mermaid.zoomReset": "重設縮放",
   "ui.message.deleteQueued": "刪除排隊中的訊息",
   "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.dismissed": "Dismissed",

@@ -2,7 +2,7 @@ import { fetchBalance, fetchProfile } from "../api/profile.js"
 import { fetchKiloPassState } from "../api/kilo-pass.js"
 import { fetchKilocodeNotifications } from "../api/notifications.js"
 import { clearModesCache } from "../api/modes.js"
-import { HEADER_ORGANIZATIONID, KILO_API_BASE, KILO_CHAT_URL, KILO_EVENT_SERVICE_URL } from "../api/constants.js"
+import { KILO_API_BASE } from "../api/constants.js"
 import type { KilocodeBalance, KilocodeProfile, KiloPassState } from "../types.js"
 import { buildKiloHeaders } from "../headers.js"
 
@@ -16,13 +16,6 @@ export interface KiloProfileResult {
   balance: KilocodeBalance | null
   kiloPass: KiloPassState | null
   currentOrgId: string | null
-}
-
-export interface ClawChatCredentials {
-  token: string
-  expiresAt: string
-  kiloChatUrl: string
-  eventServiceUrl: string
 }
 
 export interface AuthStore {
@@ -104,53 +97,6 @@ export async function setOrganization(deps: OrganizationDeps, organizationId: st
   clearModesCache()
   await deps.dispose()
   return true
-}
-
-export async function getClawStatus(auth: AuthStore) {
-  const info = await auth.get("kilo")
-  const token = getToken(info)
-  if (!token) throw new UnauthorizedError("No valid token found")
-
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  }
-  const org = getOrganizationId(info)
-  if (org) headers[HEADER_ORGANIZATIONID] = org
-
-  const response = await fetch(`${KILO_API_BASE}/api/kiloclaw/status`, { headers })
-  if (!response.ok) throw new GatewayError(await response.text(), response.status)
-  return normalizeClawStatus(await response.json())
-}
-
-function normalizeTime(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) return new Date(value).toISOString()
-  return value
-}
-
-export function normalizeClawStatus(input: unknown) {
-  if (!input || typeof input !== "object" || Array.isArray(input)) return input
-
-  const data = input as Record<string, unknown>
-  return {
-    ...data,
-    ...("lastStartedAt" in data ? { lastStartedAt: normalizeTime(data.lastStartedAt) } : {}),
-    ...("lastStoppedAt" in data ? { lastStoppedAt: normalizeTime(data.lastStoppedAt) } : {}),
-  }
-}
-
-export async function getClawChatCredentials(auth: AuthStore): Promise<ClawChatCredentials> {
-  const info = await auth.get("kilo")
-  const token = getToken(info)
-  if (!token) throw new UnauthorizedError("No valid token found")
-
-  const expires = info?.type === "oauth" ? info.expires : Date.now() + 365 * 24 * 60 * 60 * 1000
-  return {
-    token,
-    expiresAt: new Date(expires).toISOString(),
-    kiloChatUrl: KILO_CHAT_URL,
-    eventServiceUrl: KILO_EVENT_SERVICE_URL,
-  }
 }
 
 export async function getCloudSessions(token: string, input: CloudSessionsInput) {

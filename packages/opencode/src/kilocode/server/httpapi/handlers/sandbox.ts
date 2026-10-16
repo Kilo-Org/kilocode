@@ -7,7 +7,6 @@ import type { SessionID } from "@/session/schema"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import * as SessionError from "@/server/routes/instance/httpapi/handlers/session-errors"
 import { BackgroundProcess } from "@/kilocode/background-process"
-import { InteractiveTerminal } from "@/kilocode/interactive-terminal"
 import { Service as Notebook } from "@/kilocode/notebook/service"
 import { InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
 
@@ -41,7 +40,6 @@ export const sandboxHandlers = HttpApiBuilder.group(InstanceHttpApi, "sandbox", 
                       yield* Effect.all(
                         [
                           Effect.promise(() => BackgroundProcess.stopSession(ctx.params.sessionID)),
-                          Effect.promise(() => InteractiveTerminal.stopSession(ctx.params.sessionID)),
                           notebook.cancelSession(ctx.params.sessionID),
                         ],
                         { discard: true },

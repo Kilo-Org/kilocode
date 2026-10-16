@@ -83,6 +83,7 @@ export function PRPanelHost(props: Props) {
         worktree={props.worktree}
         worktreeId={props.worktreeId}
         activeTerminalId={props.activeTerminalId}
+        sessionId={props.sessionId}
         jump={props.jump}
         onJump={props.onJump}
         onClose={props.onClose}

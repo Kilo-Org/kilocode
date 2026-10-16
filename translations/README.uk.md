@@ -93,15 +93,6 @@ paru -S kilo-bin
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-Запустіть свого постійно активного AI-агента на [app.kilo.ai/claw](https://app.kilo.ai/claw).
-
-</details>
-
-<details>
 <summary>Встановити CLI з GitHub Releases (бінарні файли)</summary>
 
 Завантажте найновіший бінарний файл зі [сторінки Releases](https://github.com/Kilo-Org/kilocode/releases).

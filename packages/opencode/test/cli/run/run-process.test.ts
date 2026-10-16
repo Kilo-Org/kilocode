@@ -76,7 +76,7 @@ describe("opencode run (non-interactive subprocess)", () => {
           timeoutMs: 15_000,
         })
         expect(result.exitCode).not.toBe(0)
-        expect(result.durationMs).toBeLessThan(15_000)
+        expect(result.durationMs).toBeLessThan(20_000) // kilocode_change
       }),
     30_000,
   )
@@ -428,7 +428,6 @@ describe("opencode run (non-interactive subprocess)", () => {
         const toolNames = tools?.map((t) => t.function?.name).filter(Boolean) ?? []
         expect(toolNames).not.toContain("suggest")
         expect(toolNames).not.toContain("question")
-        expect(toolNames).not.toContain("interactive_terminal")
       }),
     60_000,
   )

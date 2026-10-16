@@ -93,15 +93,6 @@ paru -S kilo-bin
 </details>
 
 <details>
-<summary><strong>KiloClaw</strong></summary>
-
-<br>
-
-เริ่มเอเจนต์ AI ที่ทำงานตลอดเวลาของคุณที่ [app.kilo.ai/claw](https://app.kilo.ai/claw)
-
-</details>
-
-<details>
 <summary>ติดตั้ง CLI จาก GitHub Releases (ไบนารี)</summary>
 
 ดาวน์โหลดไบนารีล่าสุดจาก [หน้า Releases](https://github.com/Kilo-Org/kilocode/releases)

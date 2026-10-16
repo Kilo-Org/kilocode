@@ -1,5 +1,5 @@
 import { createEffect, createMemo, type Accessor } from "solid-js"
-import type { SessionInfo } from "../src/types/messages"
+import type { SessionInfo, WorktreeState } from "../src/types/messages"
 import type { useVSCode } from "../src/context/vscode"
 import type { WorktreeReference } from "../src/hooks/file-mention-utils"
 import type { ProjectStore } from "./project/store"
@@ -34,21 +34,40 @@ export function worktreeReferences(
         worktree.path,
         Math.max(Date.parse(worktree.createdAt) || 0, ...sessions.map((session) => updated.get(session.id) ?? 0)),
       )
-      return {
-        id: worktree.id,
-        name: worktree.label || firstOrderedTitle(sessions, state.tabOrder()[worktree.id], basename || worktree.branch),
-        branch: worktree.branch,
-        path: worktree.path,
-        base: worktree.parentBranch,
+      return worktreeDropReference(
+        worktree,
+        worktree.label || firstOrderedTitle(sessions, state.tabOrder()[worktree.id], basename || worktree.branch),
         sessions,
-        disabled: worktree.id === current || state.staleWorktreeIds().has(worktree.id) || state.busy().has(worktree.id),
-      }
+        worktree.id === current || state.staleWorktreeIds().has(worktree.id) || state.busy().has(worktree.id),
+      )
     })
     .sort(
       (a, b) =>
         (recency.get(a.path) ?? recent.length) - (recency.get(b.path) ?? recent.length) ||
         (activity.get(b.path) ?? 0) - (activity.get(a.path) ?? 0),
     )
+}
+
+/**
+ * Build the reference carried by a dragged worktree card. The sidebar already
+ * has the worktree state and its sessions, so the drop does not depend on the
+ * active project's mention list.
+ */
+export function worktreeDropReference(
+  worktree: WorktreeState,
+  name: string,
+  sessions: { id: string; title?: string }[],
+  disabled: boolean,
+): WorktreeReference {
+  return {
+    id: worktree.id,
+    name,
+    branch: worktree.branch,
+    path: worktree.path,
+    base: worktree.parentBranch,
+    sessions,
+    disabled,
+  }
 }
 
 export function createWorktreeReferences(
@@ -72,4 +91,27 @@ export function createWorktreeReferences(
     if (path) recency.visit(path)
   })
   return createMemo(() => worktreeReferences(state(), sessions(), selection(), recency.recent()))
+}
+
+/**
+ * The chat list disables the current, stale, and busy worktrees. The New
+ * Worktree dialog has no current worktree, so it re-enables the selected
+ * worktree when that worktree is neither stale nor busy. The list derives from
+ * the chat list so both share one recency signal; stale and busy worktrees stay
+ * disabled and are filtered out by the mention picker.
+ */
+export function createWorktreeMentionReferences(
+  vscode: Pick<ReturnType<typeof useVSCode>, "getState" | "setState">,
+  state: Accessor<ProjectStore>,
+  sessions: Accessor<Session[]>,
+  selection: Accessor<string | null>,
+) {
+  const references = createWorktreeReferences(vscode, state, sessions, selection)
+  const dialogRefs = createMemo(() => {
+    const store = state()
+    const id = selection()
+    if (!id || store.staleWorktreeIds().has(id) || store.busy().has(id)) return references()
+    return references().map((ref) => (ref.id === id ? { ...ref, disabled: false } : ref))
+  })
+  return { references, dialogRefs }
 }

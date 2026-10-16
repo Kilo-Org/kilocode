@@ -9,7 +9,7 @@ Object.defineProperty(window.document, "hasFocus", { value: () => focused.value 
 const sent: WebviewMessage[] = []
 const api = {
   postMessage: (message: WebviewMessage) => {
-    sent.push(message)
+    sent.push(message.type === "agentManager.updateFromBase" ? structuredClone(message) : message)
     if (message.type === "acknowledgeSession") {
       queueMicrotask(() => post({ ...message, type: "sessionAcknowledged" }))
     }
@@ -33,7 +33,6 @@ Object.assign(globalThis, {
   MutationObserver: window.MutationObserver,
   IntersectionObserver: window.IntersectionObserver,
   ResizeObserver: window.ResizeObserver,
-  IntersectionObserver: window.IntersectionObserver,
   CustomEvent: window.CustomEvent,
   customElements: window.customElements,
   Event: window.Event,
@@ -59,15 +58,20 @@ const { LanguageContext } = await import("../../webview-ui/src/context/language"
 const { NotificationsProvider } = await import("../../webview-ui/src/context/notifications")
 const { ProviderProvider } = await import("../../webview-ui/src/context/provider")
 const { SessionProvider, useSession, useSessionVisibility } = await import("../../webview-ui/src/context/session")
+const { LocalTabsProvider, useLocalTabs } = await import("../../webview-ui/src/context/local-tabs")
+const { createProjectRegistry } = await import("../../webview-ui/agent-manager/project/registry")
 const { initialMessage } = await import("../../webview-ui/agent-manager/initial-message")
 const { useBaseUpdate } = await import("../../webview-ui/agent-manager/update-from-base")
 const { post } = await import("../../webview-ui/src/utils/webview-message")
 const { terminal } = await import("../../webview-ui/src/context/session-outcome")
+const { active: elapsed } = await import("../../webview-ui/src/context/session-timing")
 const { PromptInput } = await import("../../webview-ui/src/components/chat/PromptInput")
 const { IndexingProvider } = await import("../../webview-ui/src/context/indexing")
 const { MemoryProvider } = await import("../../webview-ui/src/context/memory")
 const { SpeechToTextModelsProvider } = await import("../../webview-ui/src/context/speech-to-text-models")
-const { drafts, imageDrafts, savePromptDraft } = await import("../../webview-ui/src/utils/draft-store")
+const { drafts, imageDrafts, reviewDrafts, browserDrafts, savePromptDraft } = await import(
+  "../../webview-ui/src/utils/draft-store"
+)
 
 const [settings, setSettings] = createSignal<{
   model?: string
@@ -80,6 +84,7 @@ const config = {
   projectConfig: () => ({}),
   collections: () => ({}),
   settings: () => ({}),
+  shortcuts: () => ({ bindings: {}, selection: false }),
   features: () => ({ indexing: false, sandboxControls: false, backgroundSubagents: false }),
   loading: () => false,
   isDirty: () => false,
@@ -113,6 +118,12 @@ const [active, setActive] = createSignal("task-child")
 const [review, setReview] = createSignal(false)
 const [sharing, setSharing] = createSignal(false)
 const peer = { value: undefined as ReturnType<typeof useSession> | undefined }
+const [tabbed, setTabbed] = createSignal(false)
+const tabs = { value: undefined as ReturnType<typeof useLocalTabs> | undefined }
+const Tabs = () => {
+  tabs.value = useLocalTabs()
+  return null
+}
 const Peer = () => {
   peer.value = useSession()
   return null
@@ -135,6 +146,8 @@ const Probe = () => {
     visibleTabId: session.currentSessionID,
     activePendingId: () => undefined,
     isPending: () => false,
+    isPinned: () => false,
+    togglePinned: () => {},
     activityFor: session.activityFor,
     stateLabel: (state: string) => state,
     tabLookup: () => new Map(ids.map((id) => [id, { id, title: id }])),
@@ -142,6 +155,11 @@ const Probe = () => {
   } as Parameters<typeof renderTab>[1]
   return (
     <DragDropProvider>
+      <Show when={tabbed()}>
+        <LocalTabsProvider>
+          <Tabs />
+        </LocalTabsProvider>
+      </Show>
       <Show when={sharing()}>
         <SessionProvider>
           <Peer />
@@ -275,9 +293,16 @@ const check = async (id: string, expected: string) => {
   const actual = state(id)
   if (id === "root") card(expected)
   const tab = host.querySelector(`[data-tab-id="${id}"] [data-activity]`)
-  if (id === "root" || id === "background" || (inspector() && (id === "task-child" || id === "task-grand"))) {
+  if (id === "root" || id === "background") {
     assert(tab, `Missing rendered tab for ${id}`)
     assert.equal(!!tab.querySelector('[data-component="spinner"]'), expected === "busy" || expected === "retry")
+  }
+  if (inspector() && (id === "task-child" || id === "task-grand")) {
+    assert(tab, `Missing rendered subagent tab for ${id}`)
+    assert.equal(
+      !!tab.querySelector('[data-component="agent-avatar"]')?.getAttribute("data-status"),
+      expected === "busy" || expected === "retry",
+    )
   }
   if (tab && (id === "task-child" || id === "task-grand")) {
     assert.equal(tab.querySelector(".am-tab-icon")?.getAttribute("data-activity"), expected)
@@ -330,6 +355,66 @@ try {
 
   const value = ref.value
   assert(value)
+  {
+    const original = Date.now
+    const time = { now: 10_000 }
+    Date.now = () => time.now
+    const sid = "goal-timing"
+    const goal = { text: "Finish the task", active: true, status: "active" as const }
+    const error = { name: "UnknownError", data: { message: 'Command not found: "gaol".' } }
+    try {
+      await emit({ type: "sessionCreated", session: { ...info(sid), goal } })
+      value.setCurrentSessionID(sid)
+      await emit({ type: "sessionStatus", sessionID: sid, status: "busy" })
+      const clock = structuredClone(unwrap(value.busyTiming()))
+      assert.deepEqual(clock, { active: 0, since: 10_000 })
+      time.now = 20_000
+      for (const status of ["idle", "busy"] as const) {
+        await emit({ type: "sessionStatus", sessionID: sid, status })
+        assert.deepEqual(unwrap(value.busyTiming()), clock, `${status} preserves the goal clock`)
+        assert.equal(elapsed(value.busyTiming()!, time.now), 10_000)
+        const reason = value.closeReason()
+        await emit({ type: "sessionError", eventID: status, sessionID: sid, error, phase: "admission" })
+        assert.deepEqual(unwrap(value.messages().find((message) => message.sessionErrorID === status)?.error), error)
+        assert.deepEqual(unwrap(value.busyTiming()), clock, `${status} admission error preserves the goal clock`)
+        assert.equal(value.closeReason(), reason)
+        assert.equal(value.activityFor(sid), status)
+      }
+      await emit({ type: "sessionStatus", sessionID: sid, status: "offline" })
+      assert.deepEqual(unwrap(value.busyTiming()), { active: 10_000 }, "Offline keeps banked goal time")
+      await emit({ type: "sessionStatus", sessionID: sid, status: "busy" })
+      assert.equal(value.busyTiming()?.since, 20_000, "Reconnect resumes without resetting")
+      time.now = 30_000
+      await emit({
+        type: "permissionRequest",
+        permission: { id: "goal-permission", sessionID: sid, toolName: "bash", patterns: [], always: [], args: {} },
+      })
+      assert.equal(value.busyTiming()?.since, undefined, "Permission clears the running stretch")
+      assert.equal(value.busyTiming()?.active, 20_000)
+      time.now = 40_000
+      await emit({ type: "permissionResolved", permissionID: "goal-permission" })
+      assert.deepEqual(unwrap(value.busyTiming()), { active: 20_000, since: 40_000 })
+      await emit({ type: "sessionStatus", sessionID: sid, status: "idle" })
+      await emit({ type: "sessionUpdated", session: { id: sid, goal: { ...goal, active: false, status: "complete" } } })
+      assert.equal(value.busyTiming(), undefined, "Goal completion stops the clock without a status event")
+      await emit({ type: "sessionUpdated", session: { id: sid, goal } })
+      assert.deepEqual(unwrap(value.busyTiming()), { active: 0, since: 40_000 })
+      await emit({ type: "sessionStatus", sessionID: sid, status: "busy" })
+      await emit({ type: "sessionError", sessionID: sid, error, phase: "execution" })
+      assert.equal(value.busyTiming(), undefined, "Execution errors stop the goal clock")
+      assert.equal(value.closeReason(), "error")
+      await emit({ type: "sessionStatus", sessionID: sid, status: "idle" })
+      assert.equal(value.busyTiming(), undefined, "Idle does not restart an errored goal")
+      await emit({ type: "sessionUpdated", session: { id: sid, goal: null } })
+      await emit({ type: "sessionStatus", sessionID: sid, status: "busy" })
+      assert.deepEqual(unwrap(value.busyTiming()), { active: 0, since: 40_000 })
+      await emit({ type: "sessionStatus", sessionID: sid, status: "idle" })
+      assert.equal(value.busyTiming(), undefined, "Ordinary idle still clears turn timing")
+      await emit({ type: "sessionDeleted", sessionID: sid })
+    } finally {
+      Date.now = original
+    }
+  }
   const auto = { providerID: "kilo", modelID: "kilo-auto/free" }
   const personal = { providerID: "kilo", modelID: "personal" }
   const first = { providerID: "kilo", modelID: "z-first" }
@@ -339,10 +424,16 @@ try {
     assert.equal(actual?.providerID, expected.providerID)
     assert.equal(actual?.modelID, expected.modelID)
   }
-  const writes = () => sent.filter((item) => item.type === "persistModelSelection" || item.type === "persistRecents")
+  const writes = () => sent.filter((item) => item.type === "persistRecents")
   const requests = () =>
     sent.filter((item) => ["sendMessage", "sendCommand", "importAndSend", "compact"].includes(item.type))
-  const catalog = async (organizationId: string | null, ids: string[], model?: string, ready = true) => {
+  const catalog = async (
+    organizationId: string | null,
+    ids: string[],
+    model?: string,
+    ready = true,
+    variants = ["low", "high"],
+  ) => {
     await emit({
       type: "providersLoaded",
       organizationId,
@@ -351,7 +442,12 @@ try {
         kilo: {
           id: "kilo",
           name: "Kilo",
-          models: Object.fromEntries(ids.map((id) => [id, { id, name: id, variants: { low: {}, high: {} } }])),
+          models: Object.fromEntries(
+            ids.map((id) => [
+              id,
+              { id, name: id, variants: Object.fromEntries(variants.map((variant) => [variant, {}])) },
+            ]),
+          ),
         },
         openai: { id: "openai", name: "OpenAI", models: { external: { id: "external", name: "External" } } },
       },
@@ -472,34 +568,33 @@ try {
   choice(value.selected(), auto)
   value.selectModel(personal.providerID, personal.modelID)
   await settle()
-  assert.equal(writes().length, 2)
+  assert.equal(writes().length, 1)
   choice(value.selected(), personal)
   value.setSessionModel("selection", personal.providerID, personal.modelID)
   value.setCurrentSessionID("selection")
   const remembered = writes().slice()
-  await catalog("org-a", [first.modelID, recommended.modelID], recommended.modelID)
-  choice(value.selected(), recommended)
-  choice(value.selected("selection"), recommended)
+  await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
+  choice(value.selected(), personal)
+  choice(value.selected("selection"), personal)
   choice(value.modelForAgent("code"), recommended)
   await catalog(null, [auto.modelID, personal.modelID])
   choice(value.selected(), personal)
   choice(value.modelForAgent("code"), personal)
   assert.deepEqual(writes(), remembered)
 
-  await emit({ type: "modelSelectionsLoaded", selections: {} })
   await emit({ type: "recentsLoaded", recents: [auto] })
-  choice(value.selected(), personal)
-  setSettings({ model: "kilo/personal" })
+  setSettings({ agent: { code: { model: "kilo/personal" } } })
   await settle()
-  setSettings({ model: "kilo/a-recommended" })
-  await catalog("org-a", [first.modelID, recommended.modelID], recommended.modelID)
-  choice(value.selected(), recommended)
+  choice(value.modelForAgent("code"), personal)
+  choice(value.selected("fresh"), personal)
+  choice(value.selected(), personal)
   setSettings({})
-  await catalog(null, [auto.modelID, personal.modelID])
+  await settle()
+  choice(value.modelForAgent("code"), auto)
   choice(value.selected(), personal)
   assert.deepEqual(writes(), remembered)
 
-  await catalog("org-a", [first.modelID, recommended.modelID], recommended.modelID)
+  await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
   await emit({
     type: "messagesLoaded",
     sessionID: "history",
@@ -513,7 +608,7 @@ try {
       },
     ],
   })
-  choice(value.selected("history"), recommended)
+  choice(value.selected("history"), personal)
   await catalog(null, [auto.modelID, personal.modelID])
   choice(value.selected("history"), personal)
   assert.deepEqual(writes(), remembered)
@@ -639,21 +734,49 @@ try {
   assert.deepEqual(writes(), remembered)
 
   value.setCurrentSessionID(undefined)
-  await emit({ type: "modelSelectionsLoaded", selections: { code: personal } })
-  choice(value.selected(), recommended)
-  await catalog(null, [auto.modelID, personal.modelID])
+  // The composer keeps its own pick; config edits apply to scopes without picks.
+  await catalog(null, [auto.modelID, personal.modelID, first.modelID])
   choice(value.selected(), personal)
-  await catalog("org-a", [auto.modelID, first.modelID, recommended.modelID], recommended.modelID)
-  await emit({ type: "modelSelectionsLoaded", selections: { code: auto } })
-  choice(value.selected(), auto)
   setSettings({ agent: { code: { model: "kilo/z-first" } } })
   await settle()
-  choice(value.modelForAgent("code"), first)
-  choice(value.selected(), auto)
+  choice(value.selected(), personal)
+  choice(value.selected("fresh"), first)
   setSettings({})
-  await emit({ type: "modelSelectionsLoaded", selections: {} })
-  choice(value.selected(), recommended)
+  await settle()
+  choice(value.selected("fresh"), auto)
   assert.deepEqual(writes(), remembered)
+
+  // Mode switches re-resolve per agent; each agent keeps its own pick in the scope.
+  await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
+  setSettings({ agent: { ask: { model: "kilo/z-first", variant: "low" } } })
+  for (const effort of ["high", ""]) {
+    for (const scope of [`selection-${effort}`, `pending:${effort}`, `sidebar-pending:${effort}`]) {
+      value.setSessionAgent(scope, "code")
+      value.setSessionModel(scope, personal.providerID, personal.modelID)
+      value.selectVariant(effort, scope)
+      const before = writes().length
+      value.selectAgent("ask", scope)
+      await settle()
+      assert.deepEqual(value.submission(scope), { model: first, variant: "low", agent: "ask" })
+      value.selectAgent("code", scope)
+      await settle()
+      assert.deepEqual(value.submission(scope), { model: personal, variant: effort, agent: "code" })
+      assert.equal(writes().length, before, "Switching mode must not push recents")
+      await emit({ type: "providersLoading" })
+      value.selectAgent("code", scope)
+      await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
+      assert.deepEqual(value.submission(scope), { model: personal, variant: effort, agent: "code" })
+    }
+  }
+  setSettings({
+    agent: { code: { model: "kilo/personal", variant: "high" }, ask: { model: "kilo/z-first", variant: "low" } },
+  })
+  value.setSessionAgent("inherited-mode", "code")
+  await emit({ type: "messagesLoaded", sessionID: "inherited-mode", messages: [] })
+  assert.deepEqual(value.submission("inherited-mode"), { model: personal, variant: "high", agent: "code" })
+  value.selectAgent("ask", "inherited-mode")
+  assert.deepEqual(value.submission("inherited-mode"), { model: first, variant: "low", agent: "ask" })
+  setSettings({})
 
   const snapshot = (scope?: string) =>
     JSON.stringify({
@@ -675,9 +798,8 @@ try {
       cleared: value.userClearedSession(),
     })
   await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
-  await emit({ type: "modelSelectionsLoaded", selections: { code: first, ask: recommended } })
   value.selectAgent("ask")
-  value.selectVariant("low")
+  value.selectVariant("high")
   for (const scope of [undefined, "ses_command", "ses_background-command", "command-draft"]) {
     value.setCurrentSessionID(undefined)
     value.selectAgent("code")
@@ -728,13 +850,14 @@ try {
   }
 
   for (const configured of [false, true]) {
-    const scope = `ses_command-${configured ? "configured" : "preferred"}`
-    setSettings(configured ? { agent: { ask: { model: "kilo/z-first", variant: "high" } } } : {})
-    await emit({ type: "modelSelectionsLoaded", selections: { code: first, ask: recommended } })
+    const scope = `ses_command-${configured ? "configured" : "recommended"}`
+    setSettings(configured ? { agent: { ask: { model: "kilo/z-first", variant: "low" } } } : {})
     value.setCurrentSessionID(scope)
     value.setSessionAgent(scope, "code")
     value.setSessionModel(scope, personal.providerID, personal.modelID)
+    value.setSessionVariant(scope, personal.providerID, personal.modelID, "high")
     await settle()
+    assert.deepEqual(value.submission(scope), { model: personal, variant: "high", agent: "code" })
     assert.equal(
       value.sendCommand(
         "review-test",
@@ -754,21 +877,26 @@ try {
     assert.equal(request.sessionID, scope)
     assert.equal(request.agent, "ask")
     assert.equal(request.modelID, configured ? first.modelID : recommended.modelID)
-    assert.equal(request.variant, configured ? "high" : "low")
+    assert.equal(request.variant, configured ? "low" : "high")
     assert.equal(value.selectedAgent(scope), "ask")
     choice(value.selected(scope), configured ? first : recommended)
   }
   setSettings({})
   await catalog(null, [auto.modelID, personal.modelID, first.modelID, recommended.modelID])
-  await emit({ type: "modelSelectionsLoaded", selections: {} })
   value.setCurrentSessionID(undefined)
   value.selectAgent("ask")
   await settle()
   value.selectAgent("code")
   await settle()
-  setSettings({ agent: { ask: { model: "kilo/a-recommended", variant: "high" } } })
+  setSettings({
+    agent: { code: { model: "kilo/z-first", variant: "high" }, ask: { model: "kilo/a-recommended", variant: "low" } },
+  })
+  await emit({ type: "variantsLoaded", variants: { "agent/code/kilo/z-first": "high" } })
   value.setCurrentSessionID("ses_command-cached")
+  value.setSessionAgent("ses_command-cached", "code")
+  await emit({ type: "messagesLoaded", sessionID: "ses_command-cached", messages: [] })
   await settle()
+  assert.deepEqual(value.submission("ses_command-cached"), { model: first, variant: "high", agent: "code" })
   assert.equal(
     value.sendCommand(
       "review-test",
@@ -786,14 +914,35 @@ try {
   const configured = requests().at(-1)
   assert(configured?.type === "sendCommand")
   assert.equal(configured.modelID, recommended.modelID)
-  assert.equal(configured.variant, "high")
-  choice(value.selected(), recommended)
+  assert.equal(configured.variant, "low")
+  assert.deepEqual(value.submission("ses_command-cached"), { model: recommended, variant: "low", agent: "ask" })
+
+  assert.equal(
+    value.sendCommand(
+      "review-test",
+      "default effort",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { variant: "" },
+    ),
+    true,
+  )
+  const commandDefault = sent.findLast((item) => item.type === "sendCommand")
+  assert(commandDefault)
+  assert.equal(commandDefault.variant, "")
+  assert.equal(value.currentVariant("ses_command-cached"), undefined)
 
   setSettings({})
   await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
-  await emit({ type: "modelSelectionsLoaded", selections: { code: first, ask: recommended } })
+  await emit({ type: "variantsLoaded", variants: { "agent/ask/kilo/z-first": "high" } })
   value.setCurrentSessionID(undefined)
   value.selectAgent("ask")
+  choice(value.selected(), recommended)
+  assert.equal(value.variantForAgent("ask", first), "high")
   value.setCurrentSessionID("selection")
   assert.equal(
     value.sendCommand(
@@ -819,7 +968,7 @@ try {
   assert.equal(value.selectedAgent(pending.draftID), "ask")
   choice(value.selected(pending.draftID), recommended)
   assert.equal(value.currentVariant(pending.draftID), "high")
-  assert.equal(value.variantForAgent("ask", recommended), "low")
+  assert.equal(value.variantForAgent("ask", first), "high")
   const persisted = sent.length
   assert.equal(
     value.sendCommand(
@@ -848,11 +997,14 @@ try {
   assert.equal(value.selectedAgent(accepted.draftID), "ask")
   assert.equal(value.currentVariant(accepted.draftID), "high")
   choice(value.modelForAgent("ask"), recommended)
+  // Explicit picks push recents but never persist a shared per-agent model.
   assert.equal(
-    sent.slice(persisted).some((message) => message.type === "persistModelSelection"),
-    false,
+    sent.slice(persisted).some((message) => message.type === "persistRecents"),
+    true,
   )
   await emit({ type: "sessionCreated", session: info("ses_command-promoted"), draftID: accepted.draftID })
+  assert.equal(Object.hasOwn(value.allMessages(), accepted.draftID), false)
+  assert(value.allMessages()["ses_command-promoted"]?.some((message) => message.id === accepted.messageID))
   choice(value.selected("ses_command-promoted"), personal)
   assert.equal(value.selectedAgent("ses_command-promoted"), "ask")
   assert.equal(value.currentVariant("ses_command-promoted"), "high")
@@ -888,6 +1040,48 @@ try {
   assert.equal(value.currentSessionID(), "ses_command-promoted")
   value.setDraftSessionID(undefined)
 
+  {
+    value.clearCurrentSession()
+    value.selectAgent("ask")
+    assert.equal(value.selectedAgent(), "ask")
+    choice(value.selected(), recommended)
+    const usage = JSON.stringify(value.modelUsageHistory())
+    const recent = JSON.stringify(value.recentModels())
+    const start = sent.length
+    assert.equal(value.sendCommand("goal", ""), true)
+    const command = sent.at(-1)
+    assert(command?.type === "sendCommand")
+    assert(command.draftID)
+    assert.equal(command.sessionID, undefined)
+    assert.equal(command.providerID, undefined)
+    assert.equal(command.modelID, undefined)
+    assert.equal(command.agent, undefined)
+    assert.equal(command.variant, undefined)
+    assert.deepEqual(
+      sent.slice(start).map((message) => message.type),
+      ["sendCommand"],
+    )
+    assert.deepEqual(unwrap(value.allMessages()[command.draftID]), [])
+    await emit({ type: "sessionCreated", session: info("ses_goal-draft"), draftID: command.draftID })
+    assert.equal(
+      Object.hasOwn(value.allMessages(), command.draftID),
+      false,
+      "Promotion must remove empty goal draft caches",
+    )
+    assert.equal(value.currentSessionID(), "ses_goal-draft")
+    assert.equal(value.selectedAgent(), "ask")
+    choice(value.selected(), recommended)
+    await emit({ type: "sessionCommandCompleted", messageID: command.messageID })
+    assert.equal(value.submitting(), false)
+    assert.equal(JSON.stringify(value.modelUsageHistory()), usage)
+    assert.equal(JSON.stringify(value.recentModels()), recent)
+    assert.equal(
+      sent.slice(start).some((message) => message.type === "recordModelUsage"),
+      false,
+    )
+    value.setDraftSessionID(undefined)
+  }
+
   const key = "acceptance:session:composer"
   const image = { id: "image", filename: "image.png", mime: "image/png", dataUrl: "data:image/png;base64,cGl4ZWw=" }
   const input = () => {
@@ -895,12 +1089,12 @@ try {
     assert(element)
     return element
   }
-  const seed = async (text: string) => {
+  const seed = async (text: string, sid = "composer") => {
     setComposer(false)
     await settle()
-    value.setCurrentSessionID("composer")
-    await emit({ type: "sessionStatus", sessionID: "composer", status: "idle" })
-    savePromptDraft(key, text, [], [image])
+    value.setCurrentSessionID(sid)
+    await emit({ type: "sessionStatus", sessionID: sid, status: "idle" })
+    savePromptDraft(`acceptance:session:${sid}`, text, [], [image])
     setComposer(true)
     await settle()
     await emit({
@@ -917,7 +1111,9 @@ try {
       input().dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }))
       return
     }
-    const button = host.querySelector<HTMLButtonElement>('[aria-label="prompt.action.send"]')
+    const button = host.querySelector<HTMLButtonElement>(
+      '[aria-label="prompt.action.send"], [aria-label="prompt.goal.start"]',
+    )
     assert(button)
     button.click()
   }
@@ -969,6 +1165,187 @@ try {
     await emit({ type: "terminalContextResult", requestId: request.requestId, content: "terminal output" })
     retained(text, count)
   }
+  await catalog("org-a", [recommended.modelID], recommended.modelID)
+  for (const sid of ["composer", "cloud:preview"]) {
+    await seed("/goal", sid)
+    submit(false)
+    await settle()
+    assert(host.querySelector(".prompt-goal-header"))
+    const text = "Fix the failing tests"
+    input().value = text
+    input().dispatchEvent(new window.Event("input", { bubbles: true }))
+    await settle()
+    const scope = `acceptance:session:${sid}`
+    for (const success of [false, true]) {
+      const button = host.querySelector<HTMLButtonElement>('[aria-label="prompt.goal.start"]')
+      assert(button)
+      assert.equal(button.getAttribute("aria-disabled"), "false")
+      const count = requests().length
+      const messages = value.messages().length
+      button.click()
+      await settle()
+      assert.equal(requests().length, count + 1)
+      const request = requests().at(-1)
+      assert(request?.type === (sid.startsWith("cloud:") ? "importAndSend" : "sendCommand"))
+      assert.equal(request.command, "goal")
+      assert.equal(request.type === "sendCommand" ? request.arguments : request.commandArgs, `-- ${text}`)
+      assert.equal(request.modelID, recommended.modelID)
+      assert.deepEqual(request.files, [{ mime: image.mime, url: image.dataUrl, filename: image.filename }])
+      assert.equal(value.messages().length, messages, "Goal sends must not add optimistic chat messages")
+      assert.equal(input().value, text, "Keep the Goal draft until its acknowledgement")
+      assert.equal(button.getAttribute("aria-disabled"), "true")
+      assert.equal(input().readOnly, true)
+      assert.equal(input().getAttribute("aria-disabled"), "true")
+      input().value = "Rejected pending edit"
+      input().dispatchEvent(new window.Event("input", { bubbles: true }))
+      for (const key of ["ArrowUp", "ArrowDown", "Backspace", "Tab", "Enter"]) {
+        input().setSelectionRange(0, 0)
+        input().dispatchEvent(new window.KeyboardEvent("keydown", { key, bubbles: true }))
+      }
+      const clipboard = new window.DataTransfer()
+      clipboard.items.add(new window.File(["image"], "extra.png", { type: "image/png" }))
+      const paste = new window.ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData: clipboard })
+      input().dispatchEvent(paste)
+      assert.equal(paste.defaultPrevented, true)
+      const transfer = new window.DataTransfer()
+      transfer.setData("application/vnd.code.uri-list", "file:///test/extra.txt")
+      const drop = new window.DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: transfer })
+      input().dispatchEvent(drop)
+      assert.equal(drop.defaultPrevented, true)
+      const remove = host.querySelector<HTMLButtonElement>(".image-attachment-remove")
+      assert(remove?.disabled)
+      remove.dispatchEvent(new window.MouseEvent("click", { bubbles: true }))
+      await settle()
+      assert.equal(input().value, text)
+      assert.equal(requests().length, count + 1)
+      assert.deepEqual(imageDrafts.get(scope), [image])
+      assert(host.querySelector(`img[src="${image.dataUrl}"]`))
+      await emit({ type: "sessionCommandCompleted", messageID: "unrelated-command" })
+      assert.equal(button.getAttribute("aria-disabled"), "true")
+      await emit(
+        success
+          ? { type: "sessionCommandCompleted", messageID: request.messageID }
+          : { type: "sendMessageFailed", sessionID: sid, messageID: request.messageID, error: "Goal rejected" },
+      )
+      assert.equal(input().value, success ? "" : text)
+      assert.equal(input().readOnly, false)
+      assert.equal(!!host.querySelector(".prompt-goal-header"), !success)
+      assert.equal(drafts.has(scope), !success)
+      assert.equal(imageDrafts.has(scope), !success)
+      assert.equal(value.submitting(), false)
+    }
+  }
+  for (const success of [false, true]) {
+    for (const cancel of ["button", "escape"] as const) {
+      await seed("/goal")
+      submit(false)
+      await settle()
+      input().value = "Retain this objective"
+      input().dispatchEvent(new window.Event("input", { bubbles: true }))
+      submit(false)
+      await settle()
+      const request = requests().at(-1)
+      assert(request?.type === "sendCommand")
+      assert.equal(input().readOnly, true)
+      if (cancel === "escape")
+        input().dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }))
+      if (cancel === "button") host.querySelector<HTMLButtonElement>(".prompt-goal-header button")!.click()
+      await settle()
+      assert.equal(host.querySelector(".prompt-goal-header"), null)
+      assert.equal(input().readOnly, false)
+      assert.equal(input().getAttribute("aria-disabled"), "false")
+      assert.equal(input().value, "Retain this objective")
+      // Cancel must preserve even an unchanged draft when the accepted command later succeeds.
+      if (!success) {
+        input().value += " with a new edit"
+        input().dispatchEvent(new window.Event("input", { bubbles: true }))
+      }
+      const draft = input().value
+      await emit(
+        success
+          ? { type: "sessionCommandCompleted", messageID: request.messageID }
+          : { type: "sendMessageFailed", sessionID: "composer", messageID: request.messageID, error: "Rejected" },
+      )
+      assert.equal(input().value, draft)
+      value.setCurrentSessionID("other-composer")
+      await settle()
+      assert.equal(drafts.get(key), draft)
+      assert.deepEqual(imageDrafts.get(key), [image])
+      value.setCurrentSessionID("composer")
+      await settle()
+      assert.equal(input().value, draft)
+    }
+  }
+  for (const success of [false, true]) {
+    await seed("/goal")
+    submit(false)
+    await settle()
+    input().value = "Original session objective"
+    input().dispatchEvent(new window.Event("input", { bubbles: true }))
+    submit(false)
+    await settle()
+    const request = requests().at(-1)
+    assert(request?.type === "sendCommand")
+    await emit({ type: "appendChatBoxMessage", text: "New context from the editor" })
+    assert.equal(input().value, "Original session objective", "Host mutations must wait for admission")
+    savePromptDraft("acceptance:session:other-composer", "Other session draft", [], [{ ...image, id: "other" }])
+    value.setCurrentSessionID("other-composer")
+    await settle()
+    assert.equal(input().readOnly, false)
+    assert.equal(input().value, "Other session draft")
+    input().value += " edited"
+    input().dispatchEvent(new window.Event("input", { bubbles: true }))
+    await emit(
+      success
+        ? { type: "sessionCommandCompleted", messageID: request.messageID }
+        : { type: "sendMessageFailed", sessionID: "composer", messageID: request.messageID, error: "Rejected" },
+    )
+    assert.equal(input().value, "Other session draft edited")
+    assert.deepEqual(imageDrafts.get("acceptance:session:other-composer"), [{ ...image, id: "other" }])
+    value.setCurrentSessionID("composer")
+    await settle()
+    assert.equal(
+      input().value,
+      success ? "New context from the editor" : "Original session objective\n\nNew context from the editor",
+    )
+    assert.equal(input().readOnly, false)
+    assert.equal(imageDrafts.has(key), !success)
+  }
+  {
+    await seed("/goal")
+    submit(false)
+    await settle()
+    const comment = { id: "goal-review", file: "test.ts", line: 1, side: "additions", comment: "Keep this review" }
+    const browser = { id: "goal-browser", sessionId: "composer", selector: "button" }
+    await emit({ type: "setChatBoxMessage", text: "Retain attachments", review: [comment], browser: [browser] })
+    submit(false)
+    await settle()
+    assert.equal(input().readOnly, true)
+    const buttons = host.querySelectorAll<HTMLButtonElement>(
+      ".prompt-review-row-remove, .prompt-review-comments-header [data-component=button]",
+    )
+    assert.equal(buttons.length, 4)
+    buttons.forEach((button) => button.click())
+    assert.equal(host.querySelectorAll(".prompt-review-row").length, 2)
+    await emit({ type: "appendReviewComments", sessionID: "composer", comments: [{ ...comment, id: "later-review" }] })
+    await emit({
+      type: "appendChatBoxMessage",
+      text: "",
+      browser: { ...browser, id: "later-browser", selector: "#later" },
+    })
+    await emit({ type: "appendChatBoxMessage", text: "Retain delayed editor text" })
+    assert.equal(input().value, "Retain attachments")
+    assert.equal(host.querySelectorAll(".prompt-review-row").length, 2)
+    setComposer(false)
+    await settle()
+    assert.equal(drafts.get(key), "Retain attachments\n\nRetain delayed editor text")
+    assert.equal(reviewDrafts.get(key)?.length, 2)
+    assert.equal(browserDrafts.get(key)?.length, 2)
+    assert.deepEqual(imageDrafts.get(key), [image])
+    const request = requests().at(-1)
+    assert(request?.type === "sendCommand")
+    await emit({ type: "sessionCommandCompleted", messageID: request.messageID })
+  }
   setComposer(false)
   await settle()
   await catalog("org-a", [recommended.modelID], recommended.modelID)
@@ -982,6 +1359,171 @@ try {
   await emit({ type: "webviewActiveChanged", active: true })
   await check("root", "idle")
   await check("background", "idle")
+
+  const goal = { text: "Fix the failing tests", active: true }
+  await emit({ type: "sessionUpdated", session: { ...info("root"), goal } })
+  assert.equal(value.currentSession()?.goal?.text, goal.text)
+  assert.equal(value.currentSession()?.goal?.active, true)
+  value.setCurrentSessionID("background")
+  assert.equal(value.currentSession()?.goal, undefined)
+  value.setCurrentSessionID("root")
+  value.abort()
+  assert.deepEqual(sent.at(-1), { type: "abort", sessionID: "root", scope: "session" })
+  await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+  for (const active of [true, false]) {
+    await emit({ type: "sessionUpdated", session: { ...info("root"), goal: { ...goal, active } } })
+    assert.equal(value.sendMessage("Delayed human prompt"), true)
+    const start = sent.length
+    const stopped = () => sent.slice(start).filter((message) => message.type === "abort")
+    value.abort()
+    assert.equal(stopped().length, active ? 1 : 0)
+    if (active) {
+      await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+      await emit({ type: "sessionUpdated", session: { ...info("root"), goal: { ...goal, active: false } } })
+      await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+      assert.equal(stopped().length, 1)
+    }
+    value.setCurrentSessionID("background")
+    await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
+    assert.deepEqual(stopped().at(-1), { type: "abort", sessionID: "root", scope: "session" })
+    assert.equal(stopped().length, active ? 2 : 1)
+    await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
+    await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+    await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
+    assert.equal(stopped().length, active ? 2 : 1)
+    await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+    value.setCurrentSessionID("root")
+  }
+  await emit({ type: "sessionUpdated", session: { ...info("root"), goal } })
+  await emit({ type: "sessionStatus", sessionID: "root", status: "busy" })
+  await emit({ type: "questionRequest", question: { id: "goal-question", sessionID: "root", questions: [] } })
+  await emit({
+    type: "suggestionRequest",
+    suggestion: { id: "goal-suggestion", sessionID: "root", text: "Continue?", actions: [] },
+  })
+  const count = value.messages().length
+  for (const phase of ["ready", "loading", "empty"]) {
+    if (phase === "loading") await emit({ type: "providersLoading" })
+    if (phase === "empty")
+      await emit({
+        type: "providersLoaded",
+        ready: true,
+        providers: {},
+        connected: [],
+        defaults: {},
+        authMethods: {},
+        authStates: {},
+      })
+    for (const [args, control] of [
+      ["pause", true],
+      ["", true],
+      ["resume", false],
+      ["clear", true],
+      ["A new goal", false],
+    ] as const) {
+      const before = snapshot("root")
+      const start = sent.length
+      const accepted = value.sendCommand(
+        "goal",
+        args,
+        "kilo",
+        "unavailable",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        control ? { agent: "ask", model: "kilo/unavailable", variant: "high" } : undefined,
+      )
+      const posted = sent.slice(start)
+      if (!control && phase !== "ready") {
+        assert.equal(accepted, false)
+        assert.deepEqual(posted, [])
+        assert.equal(snapshot("root"), before)
+        continue
+      }
+      assert.equal(accepted, true)
+      const command = sent.at(-1)
+      assert(command?.type === "sendCommand")
+      assert.equal(posted.filter((message) => message.type === "sendCommand").length, 1)
+      assert.equal(
+        posted.some((message) =>
+          ["questionReply", "questionReject", "suggestionDismiss", "permissionResponse"].includes(message.type),
+        ),
+        false,
+      )
+      assert.equal(command.sessionID, "root")
+      assert.equal(command.arguments, args)
+      if (control) {
+        assert.deepEqual(
+          posted.map((message) => message.type),
+          ["sendCommand"],
+        )
+        assert.equal(command.providerID, undefined)
+        assert.equal(command.modelID, undefined)
+        assert.equal(command.agent, undefined)
+        assert.equal(command.variant, undefined)
+      }
+      assert.equal(value.messages().length, count)
+      assert.equal(value.submitting(), true)
+      await emit({ type: "sessionCommandCompleted", messageID: command.messageID })
+      assert.equal(value.submitting(), false)
+      if (control) assert.equal(snapshot("root"), before)
+      assert.equal(value.status(), "busy")
+      assert.equal(value.questions().length, 1)
+      assert.equal(value.suggestions().length, 1)
+    }
+    for (const args of ["", "pause", "clear", "resume", "A new goal"]) {
+      const control = ["", "pause", "clear"].includes(args)
+      const before = snapshot("cloud:preview")
+      const start = sent.length
+      const messageID = `goal-cloud-${phase}-${args}`
+      const accepted = value.sendCommand(
+        "goal",
+        args,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "cloud:preview",
+        { messageID },
+      )
+      if (!control && phase !== "ready") {
+        assert.equal(accepted, false)
+        assert.deepEqual(sent.slice(start), [])
+        continue
+      }
+      assert.equal(accepted, true)
+      const request = sent.at(-1)
+      assert(request?.type === "importAndSend")
+      assert.equal(request.cloudSessionId, "preview")
+      assert.equal(request.command, "goal")
+      assert.equal(request.commandArgs, args)
+      assert.equal(request.messageID, messageID)
+      if (control) {
+        assert.deepEqual(
+          sent.slice(start).map((message) => message.type),
+          ["importAndSend"],
+        )
+        assert.equal(request.providerID, undefined)
+        assert.equal(request.modelID, undefined)
+        assert.equal(request.agent, undefined)
+        assert.equal(request.variant, undefined)
+        assert.equal(snapshot("cloud:preview"), before)
+      }
+    }
+  }
+  await catalog("org-a", [recommended.modelID], recommended.modelID)
+  await emit({ type: "sessionUpdated", session: { ...info("root"), goal: { ...goal, active: false } } })
+  assert.equal(value.currentSession()?.goal?.active, false)
+  await emit({ type: "sessionUpdated", session: { ...info("root"), goal: null } })
+  assert.equal(value.currentSession()?.goal, null)
+  await emit({ type: "questionResolved", requestID: "goal-question" })
+  await emit({ type: "suggestionResolved", requestID: "goal-suggestion" })
+  await emit({ type: "sessionStatus", sessionID: "root", status: "idle" })
+  const idle = sent.length
+  value.abort()
+  assert.equal(sent.length, idle)
   for (const update of [setOperation, setRun]) {
     update(true)
     await settle()
@@ -1170,8 +1712,23 @@ try {
     assert.equal(value.currentSessionID(), "root")
   }
   assert.equal(loads().length, 3)
+  const marks = () =>
+    sent
+      .slice(start)
+      .filter(
+        (message) => message.type === "streamSessionVisible" && String(message.sessionID).startsWith("inspector-"),
+      )
+      .map((message) => [message.sessionID, message.visible])
+  assert.deepEqual(marks(), [
+    ["inspector-child", true],
+    ["inspector-child", false],
+    ["inspector-sibling", true],
+    ["inspector-sibling", false],
+    ["inspector-child", true],
+  ])
   setInspector(false)
   await settle()
+  assert.deepEqual(marks().at(-1), ["inspector-child", false])
 
   const family = createRoot((dispose) => {
     const state = { reads: 0 }
@@ -1604,6 +2161,350 @@ try {
       mode: "focus",
     },
   )
+  // Draft picks stay per scope and per agent; they never change other open scopes.
+  await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
+  setSettings({
+    agent: { code: { model: "kilo/z-first", variant: "low" }, ask: { model: "kilo/a-recommended", variant: "low" } },
+  })
+  value.setCurrentSessionID("preference-active")
+  value.setSessionAgent("preference-active", "ask")
+  await emit({ type: "messagesLoaded", sessionID: "preference-active", messages: [] })
+  const combo = value.submission("preference-active")
+  assert.deepEqual(combo, { model: recommended, variant: "low", agent: "ask" })
+  for (const scope of ["pending:preferred", "sidebar-pending:preferred"]) {
+    value.setSessionAgent(scope, "code")
+    value.selectModel(personal.providerID, personal.modelID, scope)
+    value.selectVariant("high", scope)
+    assert.deepEqual(value.submission("preference-active"), combo)
+    assert.deepEqual(value.submission(scope), { model: personal, variant: "high", agent: "code" })
+    assert(
+      sent.some(
+        (message) =>
+          message.type === "persistVariant" && message.key === "agent/code/kilo/personal" && message.value === "high",
+      ),
+    )
+    choice(value.modelForAgent("code"), first)
+    choice(value.modelForAgent("ask"), recommended)
+    value.selectAgent("ask", scope)
+    assert.deepEqual(value.submission(scope), { model: recommended, variant: "low", agent: "ask" })
+    value.selectAgent("code", scope)
+    assert.deepEqual(value.submission(scope), { model: personal, variant: "high", agent: "code" })
+    value.selectVariant(undefined, scope)
+    assert.equal(value.currentVariant(scope), undefined)
+    assert.equal(value.variantForAgent("code", personal), undefined)
+    await emit({ type: "providersLoading" })
+    value.selectAgent("code", scope)
+    await catalog("org-b", [first.modelID], first.modelID)
+    choice(value.selected(scope), first)
+    await catalog("org-a", [personal.modelID, first.modelID, recommended.modelID], recommended.modelID)
+    assert.deepEqual(value.submission(scope), { model: personal, variant: "", agent: "code" })
+    assert.deepEqual(value.submission("preference-active"), combo)
+  }
+  value.setSessionAgent("comparison-only", "code")
+  value.setSessionModel("comparison-only", personal.providerID, personal.modelID)
+  value.setSessionVariant("comparison-only", personal.providerID, personal.modelID, "low")
+  assert.deepEqual(value.submission("comparison-only"), { model: personal, variant: "low", agent: "code" })
+
+  // The no-session composer keeps its own per-agent pick. A model switch
+  // carries the effort it displayed (Code's configured "low"), not the
+  // remembered "high" that configuration shadows.
+  value.setCurrentSessionID(undefined)
+  value.selectAgent("code")
+  choice(value.selected(), first)
+  assert.equal(value.currentVariant(), "low")
+  value.selectModel(personal.providerID, personal.modelID)
+  choice(value.selected(), personal)
+  assert.equal(value.currentVariant(), "low")
+  assert.deepEqual(value.submission("preference-active"), combo)
+
+  // Retention must not assign picks to unopened or still-loading historical sessions.
+  await emit({
+    type: "sessionsLoaded",
+    sessions: [...unwrap(value.sessions()), info("unopened-preference"), info("loading-preference")],
+  })
+  value.setCurrentSessionID("loading-preference")
+  value.setSessionAgent("pending:retained", "code")
+  value.selectModel(personal.providerID, personal.modelID, "pending:retained")
+  for (const id of ["unopened-preference", "loading-preference"]) {
+    await emit({
+      type: "messagesLoaded",
+      sessionID: id,
+      messages: [
+        {
+          id: `${id}-message`,
+          sessionID: id,
+          role: "user",
+          agent: "ask",
+          model: { ...personal, variant: "high" },
+          createdAt: info(id).createdAt,
+        },
+      ],
+    })
+    assert.deepEqual(value.submission(id), { model: personal, variant: "high", agent: "ask" })
+  }
+
+  // Drafts resolve the remembered effort for their (agent, model) pair.
+  {
+    const id = "pending:effort"
+    value.setSessionAgent(id, "code")
+    value.selectVariant("high", id)
+    assert.equal(value.currentVariant(id), "high")
+    value.selectAgent("ask", id)
+    assert.equal(value.currentVariant(id), "low")
+    value.selectAgent("code", id)
+    assert.equal(value.currentVariant(id), "high")
+  }
+
+  // Unset effort defers to the new model; only a real choice can override its preference.
+  const outgoing = { providerID: "kilo", modelID: "unset-effort" }
+  await catalog("org-a", [outgoing.modelID, first.modelID], first.modelID)
+  for (const target of ["remembered", "configured"]) {
+    for (const effort of [undefined, "", "low"]) {
+      for (const scope of [undefined, "pending:carry", "session-carry"]) {
+        setSharing(false)
+        await settle()
+        setSharing(true)
+        await settle()
+        const instance = peer.value
+        assert(instance)
+        instance.selectAgent("code")
+        setSettings(target === "configured" ? { agent: { code: { model: "kilo/unset-effort", variant: "high" } } } : {})
+        await emit({
+          type: "variantsLoaded",
+          variants: target === "remembered" ? { "agent/code/kilo/z-first": "high" } : {},
+        })
+        if (scope) {
+          instance.setSessionAgent(scope, "code")
+          instance.setSessionModel(scope, outgoing.providerID, outgoing.modelID)
+        } else {
+          instance.selectModel(outgoing.providerID, outgoing.modelID)
+        }
+        if (effort !== undefined) instance.selectVariant(effort, scope)
+        choice(instance.selected(scope), outgoing)
+        instance.selectModel(first.providerID, first.modelID, scope)
+        const expected = effort ?? "high"
+        assert.deepEqual(
+          instance.submission(scope),
+          { model: first, variant: expected, agent: "code" },
+          `${target}/${effort}/${scope}`,
+        )
+      }
+    }
+  }
+
+  // Freezing another open draft preserves its displayed Default, without coercing model-switch carry.
+  {
+    setSharing(false)
+    await settle()
+    setSharing(true)
+    await settle()
+    const instance = peer.value
+    assert(instance)
+    setSettings({})
+    await emit({ type: "variantsLoaded", variants: {} })
+    const untrack = instance.trackScopes(() => ["pending:default-one", "pending:default-two"])
+    assert.equal(instance.currentVariant("pending:default-one"), undefined)
+    instance.selectVariant("high", "pending:default-two")
+    assert.equal(instance.currentVariant("pending:default-one"), undefined)
+    assert.equal(instance.submission("pending:default-one").variant, "")
+    assert.equal(instance.currentVariant("pending:default-two"), "high")
+    untrack()
+  }
+
+  // Generated command drafts resolve the target agent's config before sending.
+  {
+    setSharing(false)
+    await settle()
+    setSharing(true)
+    await settle()
+    const instance = peer.value
+    assert(instance)
+    setSettings({
+      agent: { code: { model: "kilo/z-first", variant: "high" }, ask: { model: "kilo/unset-effort", variant: "low" } },
+    })
+    await emit({ type: "variantsLoaded", variants: {} })
+    instance.selectAgent("code")
+    assert.equal(
+      instance.sendCommand(
+        "review-test",
+        "configured draft",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        null,
+        { agent: "ask" },
+      ),
+      true,
+    )
+    const request = sent.findLast((item) => item.type === "sendCommand")
+    assert(request)
+    assert.equal(request.modelID, outgoing.modelID)
+    assert.equal(request.variant, "low")
+    assert.equal(request.agent, "ask")
+    choice(instance.selected(request.draftID), outgoing)
+  }
+
+  // Real sidebar tab inventories keep per-tab picks; closed tabs are reclaimed.
+  setSharing(false)
+  await catalog("org-a", [personal.modelID, first.modelID, outgoing.modelID], first.modelID)
+  value.clearCurrentSession()
+  setSettings({})
+  await settle()
+  setTabbed(true)
+  await settle()
+  const sidebar = tabs.value
+  assert(sidebar)
+  const untouched = sidebar.ids().at(0)
+  assert(untouched)
+  const edited = sidebar.add()
+  value.selectModel(personal.providerID, personal.modelID, edited)
+  value.selectVariant("low", edited)
+  choice(value.selected(untouched), first)
+  assert.equal(value.currentVariant(untouched), "high")
+  assert.equal(value.currentVariant(edited), "low")
+  sidebar.close(untouched)
+  sidebar.close(edited)
+  await settle()
+  choice(value.selected(edited), first)
+  const reopened = sidebar.add()
+  value.selectModel(personal.providerID, personal.modelID, reopened)
+  choice(value.selected(reopened), personal)
+  assert.equal(value.currentVariant(reopened), "high")
+
+  // Closing a sending draft retains its combo through promotion.
+  {
+    const id = sidebar.add()
+    value.selectModel(first.providerID, first.modelID, id)
+    value.selectVariant("high", id)
+    assert.equal(value.sendMessage("in-flight preferences", first.providerID, first.modelID, undefined, id), true)
+    const request = sent.findLast((item) => item.type === "sendMessage")
+    assert(request)
+    sidebar.close(id)
+    await settle()
+    assert.equal(value.isSubmitting(id), true)
+    choice(value.selected(id), first)
+    assert.equal(value.currentVariant(id), "high")
+    await emit({ type: "sessionCreated", session: info("promoted-closed-draft"), draftID: id })
+    choice(value.selected("promoted-closed-draft"), first)
+    assert.equal(value.currentVariant("promoted-closed-draft"), "high")
+    await emit({ type: "sessionCommandCompleted", messageID: request.messageID })
+  }
+  setTabbed(false)
+  await settle()
+
+  // Agent Manager retains all projects; tracked tabs keep their own picks and pruning forgets closed ones.
+  {
+    value.clearCurrentSession()
+    const projects = createProjectRegistry({ persisted: {}, activeId: () => "one" })
+    projects.ensure("one").tabs.set(["pending:project-one"])
+    projects.ensure("two").tabs.set(["pending:project-two", "background-empty", "unknown-unloaded"])
+    const untrack = value.trackScopes(projects.scopes)
+    await emit({ type: "messagesLoaded", sessionID: "background-empty", messages: [] })
+    await emit({ type: "messagesLoaded", sessionID: "closed-history-cache", messages: [] })
+    value.selectModel(first.providerID, first.modelID, "pending:project-one")
+    value.selectVariant("high", "pending:project-one")
+    choice(value.selected("pending:project-one"), first)
+    assert.equal(value.currentVariant("pending:project-one"), "high")
+    // Retain pins the other open tabs so this pick cannot change what they display.
+    choice(value.selected("pending:project-two"), first)
+    assert.equal(value.currentVariant("pending:project-two"), "high")
+    choice(value.selected("background-empty"), first)
+    await emit({
+      type: "messagesLoaded",
+      sessionID: "unknown-unloaded",
+      messages: [
+        {
+          id: "unknown-message",
+          sessionID: "unknown-unloaded",
+          role: "user",
+          agent: "code",
+          model: { ...outgoing, variant: "high" },
+          createdAt: info("unknown-unloaded").createdAt,
+        },
+      ],
+    })
+    choice(value.selected("unknown-unloaded"), outgoing)
+    assert.equal(value.currentVariant("unknown-unloaded"), "high")
+    projects.prune(new Set(["one"]))
+    await settle()
+    choice(value.selected("pending:project-two"), first)
+    untrack()
+    await settle()
+    choice(value.selected("pending:project-one"), first)
+  }
+
+  // One agent resolver for every scope. With a session open, no-scope reads and
+  // writes both target it (QuestionDock, the worktree dialog). Drafts resolve the
+  // model and effort of the agent they send. Server session info shows a
+  // reopened session's agent and model before its history loads, without
+  // overriding a local choice. The worktree dialog's effort matches chat's.
+  {
+    setSettings({
+      agent: { code: { model: "kilo/z-first", variant: "high" }, ask: { model: "kilo/unset-effort", variant: "low" } },
+    })
+    await emit({ type: "variantsLoaded", variants: { "agent/code/kilo/z-first": "low" } })
+    value.clearCurrentSession()
+    value.selectAgent("ask")
+    value.setCurrentSessionID("ses_resolver")
+    value.setSessionAgent("ses_resolver", "code")
+    assert.equal(value.selectedAgent(), "code")
+    value.selectAgent("ask")
+    assert.equal(value.selectedAgent("ses_resolver"), "ask")
+    assert.deepEqual(value.submission("ses_resolver"), { model: outgoing, variant: "low", agent: "ask" })
+
+    value.setCurrentSessionID(undefined)
+    assert.equal(value.selectedAgent("pending:resolver"), "ask")
+    assert.deepEqual(value.submission("pending:resolver"), { model: outgoing, variant: "low", agent: "ask" })
+
+    await emit({
+      type: "sessionsLoaded",
+      sessions: [
+        ...unwrap(value.sessions()),
+        { ...info("ses_info"), agent: "ask", model: { ...first, variant: "high" } },
+      ],
+    })
+    assert.equal(value.selectedAgent("ses_info"), "ask")
+    choice(value.selected("ses_info"), first)
+    assert.equal(value.currentVariant("ses_info"), "high")
+    value.setSessionAgent("ses_info", "code")
+    await emit({ type: "sessionUpdated", session: { ...info("ses_info"), agent: "ask" } })
+    assert.equal(value.selectedAgent("ses_info"), "code")
+
+    assert.equal(value.variantForAgent("code", first), "high")
+    assert.equal(value.variantPreference("code", first), value.variantForAgent("code", first))
+    setSettings({})
+  }
+  // Repeated goal promotion removes empty draft caches without overwriting arriving session history.
+  for (const [index, args] of ["pause", "do X"].entries()) {
+    value.clearCurrentSession()
+    const size = Object.keys(value.allMessages()).length
+    assert.equal(value.sendCommand("goal", args), true)
+    const request = sent.findLast((message) => message.type === "sendCommand")
+    assert(request?.draftID)
+    assert.deepEqual(unwrap(value.allMessages()[request.draftID]), [])
+    const sid = `goal-cache-${index}`
+    const messages =
+      index === 0
+        ? []
+        : [
+            {
+              id: "goal-history",
+              sessionID: sid,
+              role: "user" as const,
+              agent: "code",
+              model: first,
+              createdAt: info(sid).createdAt,
+            },
+          ]
+    if (messages.length) await emit({ type: "messagesLoaded", sessionID: sid, messages })
+    await emit({ type: "sessionCreated", session: info(sid), draftID: request.draftID })
+    assert.equal(Object.hasOwn(value.allMessages(), request.draftID), false)
+    assert.deepEqual(unwrap(value.allMessages()[sid]), messages)
+    assert.equal(Object.keys(value.allMessages()).length, size + 1, "Only the promoted session cache should remain")
+    await emit({ type: "sessionCommandCompleted", messageID: request.messageID })
+  }
   assert.deepEqual(failures, [])
 } finally {
   const before = state("background")

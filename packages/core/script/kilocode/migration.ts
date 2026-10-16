@@ -1,5 +1,5 @@
 function board(name: string) {
-  return name === "kilocode_board" || name.endsWith("_kilocode_board")
+  return /(?:^|_)kilocode_board(?:_reset)?$/.test(name)
 }
 
 export function file(name: string, value: string) {
@@ -7,7 +7,8 @@ export function file(name: string, value: string) {
 }
 
 export function block(name: string | undefined, source: string, value: string) {
-  return (name !== undefined && board(name)) || /kilo_board(?:_message)?|part_session_step_finish_idx/.test(source)
+  return (name !== undefined && board(name)) ||
+    /kilo_board(?:_message)?|part_session_step_finish_idx|recall_(?:part_search|message_role)_idx/.test(source)
     ? `// kilocode_change start\n${value}\n// kilocode_change end`
     : value
 }

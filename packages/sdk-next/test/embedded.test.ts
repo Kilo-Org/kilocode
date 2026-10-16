@@ -181,9 +181,15 @@ test("independent embedded hosts do not share live notifications", async () => {
               : Effect.void,
         )
 
+      // kilocode_change start - subscribing both hosts at once races their first lazy layer
+      // build against the shared SQLite database (migrations and legacy credential imports),
+      // which can drop one host's server.connected and hang the readiness waits. Build the
+      // hosts sequentially instead.
       yield* first.events.subscribe().pipe(observe(firstReady, firstEvent), Effect.forkScoped)
+      yield* firstReady.await
       yield* second.events.subscribe().pipe(observe(secondReady, secondEvent), Effect.forkScoped)
-      yield* Effect.all([firstReady.await, secondReady.await], { discard: true })
+      yield* secondReady.await
+      // kilocode_change end
       yield* first.sessions.create({
         id: sessionID,
         location: Location.Ref.make({ directory: AbsolutePath.make(directory) }),

@@ -41,6 +41,7 @@ process.env["KILO_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtures",
 process.env["KILO_EXPERIMENTAL_EVENT_SYSTEM"] = "true"
 process.env["KILO_EXPERIMENTAL_WORKSPACES"] = "true"
 process.env["KILO_EXPERIMENTAL_DISABLE_FILEWATCHER"] ??= "true" // kilocode_change - see test.yml: per-instance watchers are too heavy/racy for unit tests; watcher tests opt back in
+process.env["KILO_SNAPSHOT_MATERIALIZE_IDLE_MS"] ??= "0" // kilocode_change - snapshot tests wait for materialization; the idle deferral test opts back in
 
 // Set test home directory to isolate tests from user's actual home directory
 // This prevents tests from picking up real user configs/skills from ~/.claude/skills

@@ -64,7 +64,7 @@ export class Handler {
     const title = skillShell
       ? SkillShellPrompt.title
       : temporary
-        ? "Allow Git operation outside the sandbox"
+        ? "Run outside the sandbox" // kilocode_change
         : undefined // kilocode_change
     const result = await this.input.connection
       .requestPermission({

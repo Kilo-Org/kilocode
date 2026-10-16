@@ -142,7 +142,6 @@ const layer = Layer.effect(
           },
           suggest: "deny", // kilocode_change
           question: "deny",
-          interactive_terminal: "deny", // kilocode_change - human-driven tools are primary-agent only
           plan_enter: "deny",
           plan_exit: "deny",
           // kilocode_change start
@@ -159,7 +158,7 @@ const layer = Layer.effect(
         })
 
         // kilocode_change start - patch defaults with bash allowlist and recall permission
-        const kilo = KiloAgent.prepare(cfg)
+        const kilo = KiloAgent.prepare(cfg, flags)
         const defaults = Permission.merge(baseDefaults, kilo.defaultsPatch)
         // kilocode_change end
 
@@ -174,10 +173,7 @@ const layer = Layer.effect(
               defaults,
               Permission.fromConfig({
                 question: "allow",
-                // kilocode_change start
-                interactive_terminal: "allow",
-                suggest: "allow",
-                // kilocode_change end
+                suggest: "allow", // kilocode_change
                 plan_enter: "allow",
               }),
               user,
@@ -329,7 +325,7 @@ const layer = Layer.effect(
         }
 
         // kilocode_change start - rename build→code, add debug/orchestrator/ask, patch plan/explore
-        KiloAgent.patchAgents(agents, defaults, user, cfg, kilo, ctx.worktree, whitelistedDirs)
+        KiloAgent.patchAgents(agents, defaults, user, kilo, ctx.worktree, whitelistedDirs)
 
         const agentConfigs = KiloAgent.preprocessConfig(cfg.agent ?? {})
         for (const [key, value] of Object.entries(agentConfigs)) {

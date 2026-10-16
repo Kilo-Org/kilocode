@@ -3,7 +3,7 @@ import type { KiloConnectionService } from "../services/cli-backend/connection-s
 import { getInitialWorkStyle, type WorkStyleState } from "../shared/work-style-presets"
 import { handleWorkStyleApplyMessage } from "./work-style-apply-handler"
 
-export const WORK_STYLE_SETTING_KEYS = ["showTaskTimeline"] as const
+export const WORK_STYLE_SETTING_KEYS = ["showTaskTimeline", "showAutoApprovalReason"] as const
 
 function getConfig() {
   return vscode.workspace.getConfiguration("kilo-code.new")

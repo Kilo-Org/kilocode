@@ -45,15 +45,21 @@ export const TerminalDestinationButton: Component<Props> = (props) => {
           size="small"
           variant="ghost"
           aria-label={t("agentManager.tab.openTerminal")}
-          class={props.active() ? "am-tab-diff-btn-active" : ""}
+          aria-pressed={props.active()}
+          data-active={props.active() ? "" : undefined}
           onClick={props.onOpen}
         />
       </TooltipKeybind>
       <DropdownMenu gutter={4} placement="bottom-end">
         <Tooltip value={t("agentManager.terminal.destination")} placement="bottom" openDelay={0}>
-          <DropdownMenu.Trigger class="am-split-arrow" aria-label={t("agentManager.terminal.destination")}>
-            <Icon name="chevron-down" size="small" />
-          </DropdownMenu.Trigger>
+          <DropdownMenu.Trigger
+            as={IconButton}
+            icon="chevron-down"
+            size="small"
+            variant="ghost"
+            class="am-split-arrow"
+            aria-label={t("agentManager.terminal.destination")}
+          />
         </Tooltip>
         <DropdownMenu.Portal>
           <DropdownMenu.Content class="am-split-menu">

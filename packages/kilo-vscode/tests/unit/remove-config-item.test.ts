@@ -6,17 +6,15 @@ function context(opts: {
   remove: ReturnType<typeof mock>
   refresh: ReturnType<typeof mock>
 }): RemoveConfigItemContext {
+  const client = { id: "client" }
   return {
     connection: {
-      getClientAsync: mock(async () => ({
-        global: { config: { update: mock(async () => {}) } },
-        instance: { dispose: mock(async () => {}) },
-      })),
+      getClientAsync: mock(async () => client),
     } as unknown as RemoveConfigItemContext["connection"],
+    marketplace: { remove: opts.remove } as unknown as RemoveConfigItemContext["marketplace"],
     project: () => opts.project,
     directory: () => "/repo",
     refresh: opts.refresh,
-    remove: opts.remove,
   }
 }
 
@@ -28,7 +26,9 @@ describe("remove config item adapter", () => {
 
     expect(await removeMcp(ctx, "memory")).toBe(true)
     expect(remove).toHaveBeenCalledTimes(1)
-    expect(remove).toHaveBeenCalledWith({ id: "memory", type: "mcp" }, "global", undefined)
+    expect(remove.mock.calls[0][1]).toEqual({ id: "memory", type: "mcp" })
+    expect(remove.mock.calls[0][2]).toBe("global")
+    expect(remove.mock.calls[0][3]).toBe("/repo")
     expect(refresh).toHaveBeenCalledTimes(1)
   })
 

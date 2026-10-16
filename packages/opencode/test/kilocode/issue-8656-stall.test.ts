@@ -146,6 +146,8 @@ describe("issue #8656: provider stalls after a tool call", () => {
         const messages = await api.messages(id)
         const assistant = messages.findLast((m) => m.info.role === "assistant")
         const text = (assistant?.parts ?? []).find((p) => p.type === "text")?.text
+        // the fixture mirrors its state to disk asynchronously; let the recovery write land
+        await until(async () => (await readStallState(tmp.extra.state)).recovered > 0, 10_000)
         const state = await readStallState(tmp.extra.state)
         console.log("[repro] bounded ->", JSON.stringify({ timeline: timeline(messages), text, state }))
 

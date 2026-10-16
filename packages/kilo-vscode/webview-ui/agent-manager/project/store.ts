@@ -1,4 +1,7 @@
 import { createSignal, type Accessor, type Setter } from "solid-js"
+import { isTerminalTabId } from "../../src/utils/terminal-tab-id"
+import { mergeTransientTabs } from "../tab-order"
+import { PENDING_PREFIX, REVIEW_TAB_ID } from "../tab-ids"
 import type {
   AgentManagerStateMessage,
   LocalGitStats,
@@ -15,6 +18,12 @@ export interface WorktreeBusyState {
   message?: string
   branch?: string
 }
+
+/** Why a worktree cannot be polled, as classified by the extension's health reconcile. */
+export type WorktreeHealthState = NonNullable<AgentManagerStateMessage["worktreeHealth"]>[string]
+
+/** A directory under `.kilo/worktrees/` that no worktree claims, and whether it still holds a checkout. */
+export type OrphanDirectory = NonNullable<AgentManagerStateMessage["orphanDirectories"]>[number]
 
 /** Local session tab ids owned by one project. */
 export function createStoreTabs(initial: string[] = []) {
@@ -63,7 +72,10 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
   const [managedSessions, setManagedSessions] = field<ManagedSessionState[]>([])
   const [sections, setSections] = field<SectionState[]>([])
   const [staleWorktreeIds, setStaleWorktreeIds] = field<Set<string>>(new Set())
+  const [worktreeHealth, setWorktreeHealth] = field<Record<string, WorktreeHealthState>>({})
+  const [orphanDirectories, setOrphanDirectories] = field<OrphanDirectory[]>([])
   const [tabOrder, setTabOrder] = field<Record<string, string[]>>({})
+  const [pinnedTabs, setPinnedTabs] = field<Record<string, string[]>>({})
   const [worktreeOrder, setWorktreeOrder] = field<string[]>([])
   const [sessionsCollapsed, setSessionsCollapsed] = field<boolean | undefined>(undefined)
   const [defaultBaseBranch, setDefaultBaseBranch] = field<string | undefined>(undefined)
@@ -79,8 +91,26 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
     setWorktrees(state.worktrees)
     setManagedSessions(state.sessions)
     setStaleWorktreeIds(new Set(state.staleWorktreeIds ?? []))
+    setWorktreeHealth(state.worktreeHealth ?? {})
+    setOrphanDirectories(state.orphanDirectories ?? [])
     setSections(state.sections ?? [])
-    if (state.tabOrder) setTabOrder(state.tabOrder)
+    if (state.tabOrder) {
+      const incoming = state.tabOrder
+      setTabOrder((previous) => ({
+        ...previous,
+        ...Object.fromEntries(
+          Object.entries(incoming).map(([key, order]) => [
+            key,
+            mergeTransientTabs(
+              previous[key] ?? [],
+              order,
+              (id) => id === REVIEW_TAB_ID || isTerminalTabId(id) || id.startsWith(PENDING_PREFIX),
+            ),
+          ]),
+        ),
+      }))
+    }
+    if (state.pinnedTabs) setPinnedTabs(state.pinnedTabs)
     if (state.worktreeOrder) setWorktreeOrder(state.worktreeOrder)
     if ("defaultBaseBranch" in state) setDefaultBaseBranch(state.defaultBaseBranch || undefined)
     setRunScriptConfigured(state.runScriptConfigured === true)
@@ -112,8 +142,14 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
     setSections,
     staleWorktreeIds,
     setStaleWorktreeIds,
+    worktreeHealth,
+    setWorktreeHealth,
+    orphanDirectories,
+    setOrphanDirectories,
     tabOrder,
     setTabOrder,
+    pinnedTabs,
+    setPinnedTabs,
     worktreeOrder,
     setWorktreeOrder,
     sessionsCollapsed,

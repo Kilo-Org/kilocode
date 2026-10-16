@@ -104,11 +104,6 @@
       stroke: var(--border-focus, var(--vscode-focusBorder, #007fd4));
     }
   }
-  [data-component="icon-button"] {
-    [data-slot="icon-svg"] {
-      color: var(--icon-base) !important;
-    }
-  }
 }
 
 /* Remove provider icons from prompt input toolbar until we have a good design for them in that context */

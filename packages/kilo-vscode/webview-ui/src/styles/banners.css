@@ -172,6 +172,24 @@
   flex-shrink: 1;
 }
 
+.diff-pr-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.diff-pr-context {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ============================================
    Inline diff toolbar controls (scope, base, diff style)
    ============================================

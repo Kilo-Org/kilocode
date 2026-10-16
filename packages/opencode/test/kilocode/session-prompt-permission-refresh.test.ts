@@ -94,12 +94,14 @@ const mcp = Layer.succeed(
     add: () => Effect.succeed({ status: { status: "disabled" as const } }),
     connect: () => Effect.void,
     disconnect: () => Effect.void,
+    remove: () => Effect.void, // kilocode_change
     getPrompt: () => Effect.succeed(undefined),
     readResource: () => Effect.succeed(undefined),
     startAuth: () => Effect.die("unexpected MCP auth in permission refresh tests"),
     authenticate: () => Effect.die("unexpected MCP auth in permission refresh tests"),
     finishAuth: () => Effect.die("unexpected MCP auth in permission refresh tests"),
     removeAuth: () => Effect.void,
+    cancelAuth: () => Effect.void,
     supportsOAuth: () => Effect.succeed(false),
     hasStoredTokens: () => Effect.succeed(false),
     getAuthStatus: () => Effect.succeed("not_authenticated" as const),
@@ -438,7 +440,7 @@ it.live(
 )
 
 it.live(
-  "stops a legacy command while an attachment read permission is pending",
+  "stops a command while an attachment read permission is pending",
   () =>
     provideTmpdirServer(
       Effect.fnUntraced(function* ({ dir }) {
@@ -453,7 +455,7 @@ it.live(
         const fiber = yield* prompt
           .command({
             sessionID: session.id,
-            command: "local-review",
+            command: "review",
             arguments: "",
             parts: [
               {
@@ -470,7 +472,7 @@ it.live(
             const requests = yield* permission.list()
             return requests.find((request) => request.sessionID === session.id && request.permission === "read")
           }),
-          "legacy command attachment permission was never requested",
+          "command attachment permission was never requested",
           "15 seconds",
         )
 
@@ -1210,6 +1212,101 @@ it.live("active tool calls use permissions changed after model streaming starts"
   ),
 )
 
+for (const [background, wildcard] of [
+  [false, false],
+  [false, true],
+  [true, false],
+  [true, true],
+] as const) {
+  it.live(
+    `custom delegated writer receives write and creates an allowed file (background=${background}, wildcard=${wildcard})`,
+    () =>
+      provideTmpdirServer(
+        Effect.fnUntraced(function* ({ dir, llm }) {
+          const prompt = yield* SessionPrompt.Service
+          const sessions = yield* Session.Service
+          const jobs = yield* BackgroundJob.Service
+          const file = path.join(dir, "candidate/profile.md")
+          const parent = (hit: { body: Record<string, unknown> }) =>
+            JSON.stringify(hit.body.tools).includes('"name":"task"')
+
+          yield* llm.toolMatch(parent, "task", {
+            description: "Write candidate profile",
+            prompt: "Write candidate/profile.md with the delegated profile.",
+            subagent_type: "career-consultant",
+            background,
+          })
+          yield* llm.toolMatch((hit) => !parent(hit), "write", { filePath: file, content: "Delegated profile\n" })
+          yield* llm.textMatch((hit) => !parent(hit), "Profile written.")
+          yield* llm.textMatch(parent, "Delegation completed.")
+          if (background) yield* llm.textMatch(parent, "Background result received.")
+
+          const root = yield* sessions.create({ title: "Custom delegation" })
+          yield* awaitWithTimeout(
+            prompt.prompt({
+              sessionID: root.id,
+              agent: "job-scout",
+              parts: [{ type: "text", text: "Delegate the profile to career-consultant." }],
+            }),
+            "delegated write did not finish",
+            "15 seconds",
+          )
+          const children = yield* sessions.children(root.id)
+          expect(children).toHaveLength(1)
+          const child = children.at(0)!
+          if (background) {
+            const result = yield* awaitWithTimeout(
+              jobs.wait({ id: child.id }),
+              "background writer did not finish",
+              "15 seconds",
+            )
+            expect(result.info?.status).toBe("completed")
+          }
+          expect(child.agent).toBe("career-consultant")
+          const messages = yield* sessions.messages({ sessionID: child.id })
+          const write = messages
+            .flatMap((message) => message.parts)
+            .find((part) => part.type === "tool" && part.tool === "write")
+          expect(write?.type === "tool" ? write.state.status : undefined).toBe("completed")
+          expect(yield* Effect.promise(() => Bun.file(file).text())).toBe("Delegated profile\n")
+
+          const requests = yield* llm.inputs
+          const writer = requests.find((input) => !parent({ body: input }))
+          expect(writer).toBeDefined()
+          expect(JSON.stringify(writer?.tools)).toContain('"name":"write"')
+          expect(JSON.stringify(writer?.tools)).toContain('"name":"edit"')
+        }),
+        {
+          git: true,
+          config: (url) => ({
+            ...providerCfg(url),
+            model: "test/test-model",
+            agent: {
+              "job-scout": {
+                mode: "primary",
+                permission: { [wildcard ? "*" : "edit"]: "deny", task: "allow" },
+              },
+              "career-consultant": {
+                mode: "subagent",
+                permission: {
+                  task: "deny",
+                  edit: {
+                    "*": "deny",
+                    "candidate/*/*.md": "allow",
+                    "candidate/_uploads/*": "deny",
+                    "candidate/profile.md": "allow",
+                    "candidate/jobs.db": "allow",
+                  },
+                },
+              },
+            },
+          }),
+        },
+      ),
+    30_000,
+  )
+}
+
 it.live(
   "subagent continues exploration and returns findings after a rejected read",
   () =>
@@ -1299,14 +1396,20 @@ for (const continued of [false, true]) {
           const fiber = yield* prompt
             .prompt({ sessionID: root.id, agent: "build", parts: [{ type: "text", text: "Read .env" }] })
             .pipe(Effect.forkScoped)
+          // Both waits cross a real prompt turn, so they carry the same 10-15s headroom as
+          // the sibling tests in this file instead of the helper defaults (5s poll, 2s
+          // join). This file shares one process with the rest of the fast-tier batch, so a
+          // starved host can push a whole turn past those defaults; the continued turn adds
+          // an extra model round trip after the rejection, which is the case that failed.
           const pending = yield* pollWithTimeout(
             Effect.gen(function* () {
               return (yield* permission.list()).find((item) => item.sessionID === root.id)
             }),
             "root never requested read permission",
+            "15 seconds",
           )
           yield* permission.reply({ requestID: pending.id, reply: "reject" })
-          const result = yield* awaitWithTimeout(Fiber.join(fiber), "root did not finish")
+          const result = yield* awaitWithTimeout(Fiber.join(fiber), "root did not finish", "15 seconds")
           expect(result.parts.some((part) => part.type === "text" && part.text === "Skipped the denied read.")).toBe(
             continued,
           )

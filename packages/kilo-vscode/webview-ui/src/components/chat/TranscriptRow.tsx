@@ -24,12 +24,8 @@ interface TranscriptRowViewProps {
   /** Part behind the currently hovered/focused task-timeline bar, if any. */
   highlight?: () => TimelineHighlight | undefined
   activeSearch?: boolean
-  /** id of the part (tool call/reasoning block) containing the current chat
-   * search match within this row, if any. */
-  activeSearchPartID?: string
-  /** For a multi-file apply_patch match, the specific file within that part. */
-  activeSearchPartFile?: string
   readonly?: boolean
+  interactivePrompts?: boolean
   queuedDisabled?: boolean
   editDisabled?: boolean
 }
@@ -67,6 +63,7 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
             <VscodeUserMessage
               message={row().message}
               parts={row().parts}
+              revertDisabled={row().answered && session.status() !== "idle"}
               onSelectSession={props.onSelectSession}
               isSessionOpen={props.isSessionOpen}
               interrupted={row().interrupted}
@@ -106,10 +103,10 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
               message={row().message as unknown as SDKAssistantMessage}
               parts={row().parts as unknown as SDKPart[]}
               showAssistantCopyPartID={row().copy}
-              forceOpenPartID={props.activeSearchPartID}
-              forceOpenFile={props.activeSearchPartFile}
+              timing={row().timing}
               highlight={props.highlight}
               readonly={props.readonly}
+              interactivePrompts={props.interactivePrompts}
               feedback={{
                 enabled: feedback.telemetryEnabled(),
                 rating: feedback.getRating(row().message.id),

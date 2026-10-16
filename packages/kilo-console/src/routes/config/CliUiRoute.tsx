@@ -5,6 +5,7 @@ import { CustomSelect, type SelectOption } from "../../components/CustomSelect"
 import { SearchField } from "../../components/SearchField"
 import { ConfigPage, ConfigToggle as Toggle } from "./ConfigPage"
 import { type Theme, themeTitle, useTuiUiSettings } from "./state/ui"
+import "../../styles/cli-ui.css"
 
 const diffs = [
   { value: "auto", label: "Auto" },

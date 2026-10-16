@@ -23,7 +23,6 @@ export namespace TestProfile {
           "kilocode/cli/install-artifact.test.ts",
           "kilocode/cli/tui/thread.test.ts",
           "kilocode/core-watcher.test.ts",
-          "kilocode/interactive-terminal.test.ts",
           "kilocode/startup-speed.test.ts",
           "tool/shell.test.ts",
           "util/{process,which}.test.ts",

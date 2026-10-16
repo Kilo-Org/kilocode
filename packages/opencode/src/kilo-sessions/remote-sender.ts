@@ -1,7 +1,10 @@
 import { RemoteCommand } from "@/kilo-sessions/remote-command"
 import { RemoteExit } from "@/kilo-sessions/remote-exit"
 import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
+import { RemoteSessionLog } from "@/kilo-sessions/remote-session-log"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
+// kilocode_change - set_pr_link: parse the app-supplied PR URL into a per-session link.
+import { enabled as prEnabled, parsePrUrl, type PrLink } from "@/kilo-sessions/pr-link"
 import { consumeRenameAdoption, markRenameAdopted } from "@/kilo-sessions/rename-adoptions"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { GlobalBus } from "@/bus/global"
@@ -56,6 +59,11 @@ const DropQueuedMessageData = z.object({
   messageID: z.string().startsWith("msg"),
 })
 
+// kilocode_change start - set_pr_link: the app-controlled per-session PR link.
+// `{ prUrl }` is parsed into a PrLink; `{ cleared: true }` withdraws the link.
+const SetPrLinkData = z.union([z.object({ prUrl: z.string() }), z.object({ cleared: z.literal(true) })])
+// kilocode_change end
+
 // kilocode_change start - create_session: strict v1 request with optional inheritance fields
 const CreateSessionModel = z.object({
   providerID: z.string().min(1),
@@ -73,8 +81,12 @@ const CreateSessionRequest = z
     // The old wire form omits this field and performs a fresh sessionCreate;
     // remove the fresh-create branch when every shipped CLI advertises sessionClone.
     cloneFromKiloSessionId: z.string().min(1).optional(),
+    // kilocode_change - cloneUpToMessageId: inclusive fork cut for a clone;
+    // only valid with cloneFromKiloSessionId. Advertised as sessionCloneAtMessage.
+    cloneUpToMessageId: z.string().min(1).max(RemoteCommand.MAX_STRING_LENGTH).optional(),
   })
   .strict()
+  .refine((data) => data.cloneUpToMessageId === undefined || data.cloneFromKiloSessionId !== undefined)
 
 type CreateSessionInput = {
   agent?: string
@@ -133,6 +145,7 @@ function resolveUnderLaunch(launchDir: string, relative: string | undefined): st
 function importErrorText(error: unknown): string {
   const value = error as { status?: unknown; _tag?: unknown } | null | undefined
   if (value?._tag === "CloudSessionImportUnauthorized") return "cloud session import unauthorized"
+  if (value?._tag === "CloudSessionImportCutNotFound") return "cloud session cut not found"
   if (value?.status === 404) return "cloud session not found"
   if (value?.status === 401) return "cloud session import unauthorized"
   if (value?.status === 403) return "cloud session import access denied"
@@ -173,7 +186,6 @@ function normalizePrompt(input: RemotePromptInput): SessionPrompt.PromptInput {
   return {
     ...input,
     model: normalizeModel(input.model),
-    ephemeralTools: { interactive_terminal: false },
   }
 }
 
@@ -221,7 +233,12 @@ export namespace RemoteSender {
     // these paths simply omit them and the defaults supply no-op-safe
     // shims so the production call sites stay the only places that
     // actually touch the AttachedState).
-    attachSession?: (sessionID: SessionID) => Promise<void>
+    //
+    // `attachSession`'s `requireShare` option belongs to the create_session
+    // command: it makes the attach fail unless the relay accepted the
+    // session's ingest bootstrap, so the command rolls the new session back
+    // instead of hosting one the relay refuses (KiloSessions.ensureSharedSession).
+    attachSession?: (sessionID: SessionID, opts?: { requireShare?: boolean }) => Promise<void>
     detachSession?: (sessionID: SessionID) => Promise<void>
     hasSession?: (sessionID: SessionID) => boolean
     ownedCount?: () => number
@@ -233,7 +250,11 @@ export namespace RemoteSender {
     // `finalize` only after a successful attach. Production wires this to the
     // in-process import helper (dynamic import + AppRuntime.runPromise); a
     // missing seam is a wiring bug, never a fallback to sessionCreate.
-    importFromCloud?: (cloneId: string) => Promise<{ session: Session.Info; finalize: () => Promise<void> }>
+    // An optional `upToMessageId` forks at that message (inclusive cut).
+    importFromCloud?: (
+      cloneId: string,
+      opts?: { upToMessageId?: string },
+    ) => Promise<{ session: Session.Info; finalize: () => Promise<void> }>
     catalog?: {
       readonly get: (sessionID: SessionID) => Promise<Session.Info>
       readonly messages: (sessionID: SessionID) => Promise<MessageV2.WithParts[]>
@@ -250,6 +271,10 @@ export namespace RemoteSender {
     // returns the input so the existing remote-sender suite continues to
     // exercise schema/ordering paths without touching the network.
     attachments?: (sessionID: SessionID) => RemoteAttachments.Result | undefined
+    // kilocode_change - set_pr_link: per-session PR link seam. `value` is the
+    // parsed link, or undefined to withdraw the link the session owns. The
+    // default records/clears the command session's own link; tests inject this.
+    setPrLink?: (value: PrLink | undefined, sessionId: SessionID) => Promise<void>
   }
 
   export type Sender = {
@@ -363,9 +388,9 @@ export namespace RemoteSender {
       })
     const attachSession =
       options.attachSession ??
-      (async (id: SessionID) => {
+      (async (id: SessionID, opts?: { requireShare?: boolean }) => {
         const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
-        await KiloSessions.attachRemoteSession(id)
+        await KiloSessions.attachRemoteSession(id, opts)
       })
     const detachSession =
       options.detachSession ??
@@ -385,6 +410,33 @@ export namespace RemoteSender {
     // kilocode_change start - injectable slash command discovery + execution
     const commands = options.commands ?? RemoteCommand.live()
     const remoteExit = options.remoteExit ?? RemoteExit
+    // kilocode_change end
+    // kilocode_change start - set_pr_link default: record the app-supplied link
+    // against the command's own session, never the worktree, so it can never fan
+    // out to another session in the same checkout. `recordSessionLink` refuses a
+    // link whose host/owner/repo is not the session worktree's remote (a fork or
+    // another repo never sticks); `clearSessionLink` withdraws only that session.
+    const setPrLink =
+      options.setPrLink ??
+      (async (value: PrLink | undefined, sessionId: SessionID) => {
+        // Resolve the session's own checkout, not the launch directory, so a
+        // session the CLI hosts in another directory is recorded against its
+        // own repository.
+        const info = await session.get(sessionId).catch(() => undefined)
+        const run = options.provide ?? provide
+        await run({
+          directory: info?.directory ?? options.directory,
+          fn: async () => {
+            const { clearSessionLink, recordSessionLink } = await import("@/kilo-sessions/pr-link")
+            if (!value) {
+              await clearSessionLink(sessionId)
+              return
+            }
+            const { Instance } = await import("@/kilocode/instance")
+            await recordSessionLink(sessionId, { link: value, evidence: "user" }, Instance.worktree)
+          },
+        })
+      })
     // kilocode_change end
 
     const sub =
@@ -900,6 +952,9 @@ export namespace RemoteSender {
             await cancelPrompt(target)
             // 2. Detach + await the negative-containment heartbeat.
             await detachSession(target)
+            // The session this run hosted has ended; log its end before the ACK
+            // so the trace exists even if a later step fails.
+            RemoteSessionLog.end(options.log, { sessionID: target, reason: "detached" })
             // 3. Snapshot remaining sessions AFTER detach. Headless hosts
             //    (`kilo remote`) never register a RemoteExit callback, so
             //    `exit` is undefined there and the host stays alive.
@@ -957,6 +1012,7 @@ export namespace RemoteSender {
           return
         }
         const cloneId = parsed.data.cloneFromKiloSessionId
+        const cut = parsed.data.cloneUpToMessageId
         const importFromCloud = options.importFromCloud
         if (cloneId && !importFromCloud) {
           options.conn.send({
@@ -1026,7 +1082,7 @@ export namespace RemoteSender {
                 fn: async (): Promise<{ id: string } | { error: string }> => {
                   let imported: { session: Session.Info; finalize: () => Promise<void> }
                   try {
-                    imported = await importFromCloud!(cloneId)
+                    imported = await importFromCloud!(cloneId, cut === undefined ? undefined : { upToMessageId: cut })
                   } catch (importError) {
                     return { error: importErrorText(importError) }
                   }
@@ -1049,6 +1105,11 @@ export namespace RemoteSender {
                   // Restore workspace files and write storage keys only after
                   // the attach succeeded. finalize never rejects.
                   await imported.finalize()
+                  RemoteSessionLog.start(options.log, {
+                    sessionID: imported.session.id,
+                    model: RemoteSessionLog.modelLabel(imported.session.model),
+                    directory: imported.session.directory ?? targetDirectory,
+                  })
                   return { id: imported.session.id }
                 },
               })
@@ -1071,14 +1132,20 @@ export namespace RemoteSender {
                 // attached set exactly once and fires conn.heartbeat() only
                 // when the set actually changes, so the relay learns about
                 // the new session before we respond.
+                //
+                // requireShare makes the attach wait for the relay's answer to
+                // the session's ingest bootstrap (POST /api/session). A relay
+                // that refuses the session leaves nothing to share, so the
+                // session is rolled back below and never logged as started.
                 try {
-                  await attachSession(created.id)
+                  await attachSession(created.id, { requireShare: true })
                 } catch (attachError) {
                   // Roll back the newly-created root session so the DB does
-                  // not keep an orphan the relay never learned about.
+                  // not keep an orphan the relay never accepted.
                   // Swallow the cleanup error here — the original attach
                   // failure is what the caller must see, so we re-throw it
                   // below.
+                  options.log.warn("create session rolled back", { id: msg.id, sessionID: created.id })
                   try {
                     await sessionRemove(created.id)
                   } catch (cleanupError) {
@@ -1089,6 +1156,13 @@ export namespace RemoteSender {
                   }
                   throw attachError
                 }
+                // The session is attached and this run hosts it; log its start
+                // with the model and directory already in hand.
+                RemoteSessionLog.start(options.log, {
+                  sessionID: created.id,
+                  model: RemoteSessionLog.modelLabel(created.model ?? createInput.model),
+                  directory: created.directory ?? targetDirectory,
+                })
                 return created
               },
             })
@@ -1168,7 +1242,7 @@ export namespace RemoteSender {
           })
           return
         }
-        const promptInput = { ...input.data, ephemeralTools: normalized.ephemeralTools } as SessionPrompt.PromptInput
+        const promptInput = input.data as SessionPrompt.PromptInput
         const remote = promptInput.parts.some((part) => part.type === "file" && RemoteAttachments.isFetchable(part.url))
         if (remote) {
           begin(promptInput.sessionID)
@@ -1309,6 +1383,44 @@ export namespace RemoteSender {
         })
         return
       }
+      // kilocode_change start - set_pr_link: the app (or the cloud) knows the PR.
+      // A link is per session, so the command must name the session that owns it:
+      // without one there is no owner, and we fail closed (write nothing) rather
+      // than pin the link to a worktree every session would inherit. A parsed URL
+      // is still checked against the session worktree's own repository.
+      if (msg.command === "set_pr_link") {
+        if (!prEnabled()) {
+          options.conn.send({ type: "response", id: msg.id, error: "set_pr_link is unsupported for this client" })
+          return
+        }
+        const parsed = SetPrLinkData.safeParse(msg.data)
+        const current = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (!parsed.success || Option.isNone(current)) {
+          options.conn.send({ type: "response", id: msg.id, error: "invalid set_pr_link command" })
+          return
+        }
+        const value = "cleared" in parsed.data ? undefined : parsePrUrl(parsed.data.prUrl)
+        if (!("cleared" in parsed.data) && !value) {
+          options.conn.send({ type: "response", id: msg.id, error: "invalid set_pr_link url" })
+          return
+        }
+        void (async () => {
+          try {
+            await setPrLink(value, current.value)
+            options.conn.send({ type: "response", id: msg.id, result: {} })
+            // Best-effort: let the cloud see the link immediately. Never await
+            // the heartbeat before responding (mirror setInstanceAdvertisement).
+            void options.conn
+              .heartbeat()
+              .catch((err) => options.log.warn("set_pr_link heartbeat failed", { id: msg.id, error: String(err) }))
+          } catch (error) {
+            options.log.error("set pr link failed", { id: msg.id, error: errorName(error) })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to set pr link" })
+          }
+        })()
+        return
+      }
+      // kilocode_change end
       options.conn.send({
         type: "response",
         id: msg.id,

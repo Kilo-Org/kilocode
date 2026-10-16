@@ -19,7 +19,6 @@ describe("test profiles", () => {
     expect(result.files).toContain("kilocode/core-watcher.test.ts")
     expect(result.files).toContain("kilocode/background-process.test.ts")
     expect(result.files).toContain("filesystem/filesystem.test.ts")
-    expect(result.files).toContain("kilocode/interactive-terminal.test.ts")
     const sandbox = all.filter((file) => file.startsWith("kilocode/sandbox/"))
     expect(result.files.filter((file) => file.startsWith("kilocode/sandbox/"))).toEqual(sandbox)
     expect(result.files).not.toContain("cli/run/footer.view.test.tsx")
