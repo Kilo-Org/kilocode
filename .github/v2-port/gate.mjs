@@ -16,15 +16,15 @@
  * file handed to the agent is capped.
  *
  * Env: GH_TOKEN, GITHUB_REPOSITORY, PR_NUMBER.
- * Uses the `gh` CLI for `gh pr diff` (the files API drops patches for large
- * files and caps at 300 files).
+ * Uses the `gh` CLI for complete PR metadata plus `gh pr diff` (the files API
+ * drops patches for large files and caps at 300 files).
  */
 
 import { spawnSync } from "node:child_process"
 import fs from "node:fs"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
-import { api, appendOutput, appendSummary, repo } from "../docs-sync/lib.mjs"
+import { appendOutput, appendSummary, repo } from "../docs-sync/lib.mjs"
 
 const OUT_DIR = "v2-port-out"
 const DIFF_CAP_BYTES = 200 * 1024
@@ -83,9 +83,9 @@ export function qualifyDiff(text) {
 /** Skip reason for PR metadata that should never reach the agent, or null. */
 export function skipReason(pr, labels = []) {
   if (!pr) return "PR not found"
-  if (pr.merged !== true) return "PR is not merged"
-  const login = pr.user?.login ?? "unknown"
-  if (pr.user?.type === "Bot") return `author ${login} is a bot`
+  if (!pr.mergedAt) return "PR is not merged"
+  const login = pr.author?.login ?? "unknown"
+  if (pr.author?.is_bot === true) return `author ${login} is a bot`
   if (labels.includes(SKIP_LABEL)) return `${SKIP_LABEL} label`
   if (labels.includes(TRACKED_LABEL)) return `${TRACKED_LABEL} label already applied`
   return null
@@ -105,16 +105,35 @@ export function truncateDiff(text, cap = DIFF_CAP_BYTES) {
   return { text: `${safe}\n\n[diff truncated: ${cap} of ${buf.length} bytes]\n`, truncated: true, bytes: buf.length }
 }
 
-function readDiff(number) {
-  const res = spawnSync("gh", ["pr", "diff", String(number), "--repo", repo(), "--patch"], {
-    encoding: "utf8",
-    maxBuffer: 64 * 1024 * 1024,
-  })
-  if (res.error) throw new Error(`gh pr diff could not start: ${res.error.message}`)
-  if (res.status !== 0) {
-    throw new Error(`gh pr diff #${number} failed (exit ${res.status}): ${String(res.stderr ?? "").trim()}`)
-  }
+function runGh(args, label) {
+  const res = spawnSync("gh", args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })
+  if (res.error) throw new Error(`${label} could not start: ${res.error.message}`)
+  if (res.status !== 0) throw new Error(`${label} failed (exit ${res.status}): ${String(res.stderr ?? "").trim()}`)
   return res.stdout ?? ""
+}
+
+function readPr(number) {
+  const fields = [
+    "number",
+    "url",
+    "title",
+    "body",
+    "state",
+    "mergedAt",
+    "mergeCommit",
+    "author",
+    "labels",
+    "files",
+    "commits",
+    "comments",
+    "reviews",
+    "closingIssuesReferences",
+  ].join(",")
+  return JSON.parse(runGh(["pr", "view", String(number), "--repo", repo(), "--json", fields], `gh pr view #${number}`))
+}
+
+function readDiff(number) {
+  return runGh(["pr", "diff", String(number), "--repo", repo(), "--patch"], `gh pr diff #${number}`)
 }
 
 async function main() {
@@ -122,10 +141,10 @@ async function main() {
   if (!Number.isInteger(number) || number <= 0) throw new Error(`PR_NUMBER is required, got ${process.env.PR_NUMBER}`)
 
   fs.mkdirSync(OUT_DIR, { recursive: true })
-  const pr = await api(`/repos/${repo()}/pulls/${number}`)
+  const pr = readPr(number)
   fs.writeFileSync(path.join(OUT_DIR, "pr.json"), JSON.stringify(pr, null, 2))
 
-  appendOutput("author", pr.user?.login ?? "")
+  appendOutput("author", pr.author?.login ?? "")
   appendOutput("title", pr.title ?? "")
 
   const labels = (pr.labels ?? []).map((l) => l.name)

@@ -56,7 +56,6 @@ this (from `packages/opencode/src`):
 | `.github/v2-port/issue.test.mjs` | New — unit tests for issue logic |
 | `.github/v2-port/README.md` | New — operator setup (secrets, repo variables, manual run) |
 | `.github/workflows/v2-port-tracker.yml` | New — the workflow |
-| `.github/docs-sync/lib.mjs` | Edit — add optional `outDir` to `runKilo` (currently hardcodes `docs-sync-out`, `lib.mjs:262`) |
 | `script/check-workflows.ts` | Edit — add `"v2-port-tracker.yml"` to the `active` set (`check-workflows.ts:29`) |
 
 ## Tasks
@@ -70,11 +69,12 @@ Do not rewrite it for CI — the prompt file carries the deltas, so the skill st
 
 Inputs: `GH_TOKEN`, `GITHUB_REPOSITORY`, `PR_NUMBER`. Steps:
 
-1. `GET /repos/{repo}/pulls/{n}` → write `v2-port-out/pr.json`. Reuse `api()` from
-   `.github/docs-sync/lib.mjs` (retry + rate-limit handling already there).
+1. `gh pr view <n> --repo <repo> --json number,url,title,body,state,mergedAt,mergeCommit,author,labels,files,commits,comments,reviews,closingIssuesReferences`
+   → write `v2-port-out/pr.json`. This is the complete behavior-oriented input the skill expects, including
+   linked issues and review discussion.
 2. Hard skips, each logged with its reason and `qualifies=false`:
-   - not `merged === true`
-   - `user.type === "Bot"` (dependabot, github-actions)
+   - `mergedAt` is absent
+   - `author.is_bot === true` (dependabot, github-actions)
    - labels include `no-v2-port`
    - labels include `core-v1-changes-port` (already processed by hand)
 3. Fetch the full diff with `gh pr diff <n> --repo <repo> --patch` → `v2-port-out/pr.diff`.
@@ -159,9 +159,9 @@ on:
   `docs-sync.yml:55-74`, keeping fork PRs that edit this workflow read-only and secretless.
 - Job `track`: `if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'`,
   `timeout-minutes: 20`, single job with `if:`-gated steps:
-  1. Checkout `github.event.pull_request.merge_commit_sha` (or the API-resolved value for
-     `workflow_dispatch`). This is base-branch history that already passed review — **never** the PR head
-     ref. Add that as a comment, same posture note as `auto-docs.yml:4-6`.
+  1. Checkout the base branch tip with `persist-credentials: false`. This is base-branch history that
+     already passed review — **never** the PR head ref — and the write-capable job token is not left in
+     `.git/config` where the PR-steered agent could read it.
   2. `actions/setup-node@v6` with `node-version: "24"`.
   3. `node .github/v2-port/gate.mjs` (id `gate`).
   4. All following steps `if: steps.gate.outputs.qualifies == 'true'`.
@@ -208,8 +208,6 @@ node .github/v2-port/issue.test.mjs
 bun run script/check-workflows.ts
 bun run script/check-opencode-annotations.ts --worktree
 bun run script/check-md-table-padding.ts        # only if md tables were added
-bun test .github/docs-sync/model-config.test.mjs   # runKilo outDir change must not regress docs-sync
-node .github/docs-sync/selftest.mjs
 ```
 
 Tests must exercise real logic, not mocks: `gate.test.mjs` feeds fixture diffs/PR JSON through the real

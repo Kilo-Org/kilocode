@@ -6,9 +6,9 @@ cannot work in CI.
 
 ## Inputs
 
-- `v2-port-out/pr.json` — the full merged PR metadata (`gh pr view --json` shape: number, url, title, body,
-  mergedAt, mergeCommit, author, labels, commits, closingIssuesReferences, reviews, and the issue comments
-  as `comments`).
+- `v2-port-out/pr.json` — the full merged PR metadata from `gh pr view --json`: number, URL, title, body,
+  state, merged date, merge commit, author, labels, changed files, commits, linked issues, reviews, and
+  issue comments.
 - `v2-port-out/pr.diff` — the PR diff. If it ends with a `[diff truncated: …]` line, you are seeing a
   prefix only; say so in the body where it affects your reading rather than guessing at the rest.
 - The repository checkout, for reading the current source when writing the `V1 Reference` section.

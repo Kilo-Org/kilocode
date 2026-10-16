@@ -213,8 +213,8 @@ async function main() {
   const title = readRequired("title.txt").split("\n").map((l) => l.trim()).find(Boolean) ?? ""
   const body = readRequired("body.md")
   const pr = JSON.parse(fs.readFileSync(path.join(OUT_DIR, "pr.json"), "utf8"))
-  const url = pr.html_url ?? `https://github.com/${repo()}/pull/${number}`
-  const author = pr.user?.login ?? ""
+  const url = pr.url ?? `https://github.com/${repo()}/pull/${number}`
+  const author = pr.author?.login ?? ""
 
   if (title.length > MAX_TITLE) {
     console.warn(`::warning::title is ${title.length} chars; the skill asks for under ${MAX_TITLE}`)

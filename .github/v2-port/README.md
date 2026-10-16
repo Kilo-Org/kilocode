@@ -35,7 +35,8 @@ The agent is steered by untrusted PR text — titles, bodies, diffs, and review 
 contributor. So:
 
 - The workflow runs on `pull_request_target` and checks out the **base branch tip**, never the PR head ref.
-  No contributor code is ever executed.
+  No contributor code is ever executed, and checkout uses `persist-credentials: false` so the workflow
+  token is not written into the agent's workspace.
 - The agent step receives **no `GH_TOKEN`**. `KILO_CONFIG_CONTENT` denies `bash`, `webfetch`, `websearch`,
   `task`, `external_directory`, and the memory/recall tools, and scopes writes to `v2-port-out/**`. The PR
   metadata is pre-fetched and attached, so the agent needs no network and no shell.
@@ -101,8 +102,8 @@ body, and the PR back-link is upserted rather than duplicated.
 | Draft fails validation (missing section, unresolved placeholder, bad title) | Red run, **nothing created** |
 | API error mid-way | Red run; re-run dedups and upserts |
 
-Artifacts (`pr.json`, `pr.diff`, `draft-log-*.txt`, `kilo-stderr-*.log`) are uploaded on every run for
-14 days.
+Artifacts (`pr.json`, `pr.diff`, the generated draft, and `draft-log-*.txt`) are uploaded on every run
+for 14 days.
 
 ## Tests
 

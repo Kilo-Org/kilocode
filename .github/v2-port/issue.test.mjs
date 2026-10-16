@@ -177,10 +177,10 @@ function writeDraft(dir, { title, body, skip, pr }) {
 function defaultPr(login = "octocat") {
   return {
     number: 1234,
-    html_url: "https://github.com/acme/repo/pull/1234",
+    url: "https://github.com/acme/repo/pull/1234",
     title: "fix(cli): keep queued messages on abort",
-    merged: true,
-    user: { login, type: "User" },
+    mergedAt: "2026-10-16T00:00:00Z",
+    author: { login, is_bot: false },
   }
 }
 

@@ -8,7 +8,6 @@
 import assert from "node:assert/strict"
 import { spawn } from "node:child_process"
 import fs from "node:fs"
-import http from "node:http"
 import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -146,27 +145,32 @@ test("does not qualify an empty diff", () => {
 })
 
 test("skipReason rejects unmerged PRs", () => {
-  assert.match(skipReason({ merged: false, user: { login: "a", type: "User" } }), /not merged/)
+  assert.match(skipReason({ mergedAt: null, author: { login: "a", is_bot: false } }), /not merged/)
 })
 
 test("skipReason rejects bot authors", () => {
-  const pr = { merged: true, user: { login: "dependabot[bot]", type: "Bot" } }
+  const pr = { mergedAt: "2026-10-16T00:00:00Z", author: { login: "dependabot[bot]", is_bot: true } }
   assert.match(skipReason(pr), /is a bot/)
 })
 
 test("skipReason honours the no-v2-port label", () => {
-  const pr = { merged: true, user: { login: "a", type: "User" } }
+  const pr = { mergedAt: "2026-10-16T00:00:00Z", author: { login: "a", is_bot: false } }
   assert.match(skipReason(pr, ["no-v2-port"]), /no-v2-port/)
 })
 
 test("skipReason skips a PR already carrying the tracking label", () => {
-  const pr = { merged: true, user: { login: "a", type: "User" } }
+  const pr = { mergedAt: "2026-10-16T00:00:00Z", author: { login: "a", is_bot: false } }
   assert.match(skipReason(pr, ["core-v1-changes-port"]), /already applied/)
 })
 
 test("skipReason passes a normal merged human PR", () => {
-  const pr = { merged: true, user: { login: "a", type: "User" } }
+  const pr = { mergedAt: "2026-10-16T00:00:00Z", author: { login: "a", is_bot: false } }
   assert.equal(skipReason(pr, ["core"]), null)
+})
+
+test("track checkout never persists the write-capable workflow token", () => {
+  const workflow = fs.readFileSync(path.join(HERE, "..", "workflows", "v2-port-tracker.yml"), "utf8")
+  assert.match(workflow, /- name: Checkout\n\s+uses: actions\/checkout@v6\n\s+with:[\s\S]*?persist-credentials: false/)
 })
 
 test("truncateDiff leaves a short diff untouched", () => {
@@ -195,7 +199,7 @@ test("truncateDiff counts bytes, not characters", () => {
 })
 
 // ---------------------------------------------------------------------------
-// End-to-end: real gate.mjs main() against a stubbed `gh` and a stubbed API
+// End-to-end: real gate.mjs main() against a stubbed `gh`
 // ---------------------------------------------------------------------------
 
 const temps = []
@@ -205,33 +209,24 @@ function mktemp() {
   return dir
 }
 
-/** Fake `gh` on PATH: logs its argv and prints the diff we hand it. */
-function makeFakeGh(dir, diffText) {
+/** Fake `gh` on PATH: logs argv and returns metadata or the diff by subcommand. */
+function makeFakeGh(dir, pr, diffText) {
   const bin = path.join(dir, "bin")
   fs.mkdirSync(bin, { recursive: true })
+  const prFile = path.join(dir, "fake-pr.json")
   const diffFile = path.join(dir, "fake.diff")
   const logFile = path.join(dir, "gh-log.txt")
+  fs.writeFileSync(prFile, JSON.stringify(pr))
   fs.writeFileSync(diffFile, diffText)
-  fs.writeFileSync(path.join(bin, "gh"), `#!/bin/sh\necho "$@" >> ${JSON.stringify(logFile)}\ncat ${JSON.stringify(diffFile)}\n`, {
-    mode: 0o755,
-  })
+  fs.writeFileSync(
+    path.join(bin, "gh"),
+    `#!/bin/sh\necho "$@" >> ${JSON.stringify(logFile)}\nif [ "$2" = "view" ]; then cat ${JSON.stringify(prFile)}; else cat ${JSON.stringify(diffFile)}; fi\n`,
+    { mode: 0o755 },
+  )
   return { bin, logFile }
 }
 
-function startPrStub(pr) {
-  const server = http.createServer((req, res) => {
-    if (new URL(req.url, "http://stub").pathname === `/repos/${REPO}/pulls/1234`) {
-      res.writeHead(200, { "content-type": "application/json" })
-      res.end(JSON.stringify(pr))
-      return
-    }
-    res.writeHead(404, { "content-type": "application/json" })
-    res.end(JSON.stringify({ message: "not found" }))
-  })
-  return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve({ server, port: server.address().port })))
-}
-
-function runGate(dir, { bin, port }) {
+function runGate(dir, { bin }) {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [SCRIPT], {
       cwd: dir,
@@ -240,7 +235,6 @@ function runGate(dir, { bin, port }) {
         PATH: `${bin}:${process.env.PATH}`,
         GH_TOKEN: "stub-token",
         GITHUB_REPOSITORY: REPO,
-        DOCS_SYNC_API_BASE: `http://127.0.0.1:${port}`,
         PR_NUMBER: "1234",
         GITHUB_OUTPUT: path.join(dir, "gh-output"),
         GITHUB_STEP_SUMMARY: path.join(dir, "gh-summary"),
@@ -257,11 +251,19 @@ function runGate(dir, { bin, port }) {
 function mergedPr(overrides = {}) {
   return {
     number: 1234,
-    html_url: `https://github.com/${REPO}/pull/1234`,
+    url: `https://github.com/${REPO}/pull/1234`,
     title: "fix(cli): keep queued messages on abort",
-    merged: true,
-    user: { login: "octocat", type: "User" },
+    body: "Preserve queued messages when a session aborts.",
+    state: "MERGED",
+    mergedAt: "2026-10-16T00:00:00Z",
+    mergeCommit: { oid: "abc123" },
+    author: { login: "octocat", is_bot: false },
     labels: [],
+    files: [{ path: "packages/opencode/src/kilocode/queue.ts", additions: 1, deletions: 0 }],
+    commits: [{ oid: "abc123", messageHeadline: "fix queued messages" }],
+    comments: [{ body: "Reproduces after abort.", author: { login: "reviewer" } }],
+    reviews: [{ body: "Ordering matters here.", author: { login: "reviewer" }, state: "APPROVED" }],
+    closingIssuesReferences: [{ number: 99, url: `https://github.com/${REPO}/issues/99` }],
     ...overrides,
   }
 }
@@ -279,13 +281,8 @@ function outputs(dir) {
 
 async function withStub(pr, diff, fn) {
   const dir = mktemp()
-  const { bin, logFile } = makeFakeGh(dir, diff)
-  const { server, port } = await startPrStub(pr)
-  try {
-    return await fn({ dir, bin, logFile, port })
-  } finally {
-    await new Promise((r) => server.close(r))
-  }
+  const { bin, logFile } = makeFakeGh(dir, pr, diff)
+  return fn({ dir, bin, logFile })
 }
 
 await (async () => {
@@ -298,6 +295,14 @@ await (async () => {
     assert.equal(out.author, "octocat")
     const written = JSON.parse(fs.readFileSync(path.join(ctx.dir, "v2-port-out/pr.json"), "utf8"))
     assert.equal(written.number, 1234)
+    assert.equal(written.mergedAt, "2026-10-16T00:00:00Z")
+    assert.equal(written.author.login, "octocat")
+    assert.equal(written.reviews[0].body, "Ordering matters here.")
+    assert.equal(written.comments[0].body, "Reproduces after abort.")
+    assert.equal(written.closingIssuesReferences[0].number, 99)
+    const calls = fs.readFileSync(ctx.logFile, "utf8")
+    assert.match(calls, /pr view 1234 --repo acme\/repo --json number,url,title,body,state,mergedAt,mergeCommit,author,labels,files,commits,comments,reviews,closingIssuesReferences/)
+    assert.match(calls, /pr diff 1234 --repo acme\/repo --patch/)
     assert.ok(fs.readFileSync(path.join(ctx.dir, "v2-port-out/pr.diff"), "utf8").includes("queue.ts"))
     assert.match(fs.readFileSync(path.join(ctx.dir, "gh-summary"), "utf8"), /qualifies/)
   })
@@ -319,13 +324,15 @@ await (async () => {
 })()
 
 await (async () => {
-  const pr = mergedPr({ user: { login: "dependabot[bot]", type: "Bot" } })
+  const pr = mergedPr({ author: { login: "dependabot[bot]", is_bot: true } })
   await withStub(pr, "diff --git a/x b/x\n", async (ctx) => {
     const result = await runGate(ctx.dir, ctx)
     assert.equal(result.status, 0, result.output)
     assert.equal(outputs(ctx.dir).qualifies, "false")
     assert.match(outputs(ctx.dir).skip_reason, /is a bot/)
-    assert.equal(fs.existsSync(ctx.logFile), false, "a metadata skip must not fetch the diff")
+    const calls = fs.readFileSync(ctx.logFile, "utf8")
+    assert.match(calls, /pr view/)
+    assert.doesNotMatch(calls, /pr diff/, "a metadata skip must not fetch the diff")
   })
   passed++
   console.log("ok - e2e: a bot-authored PR is skipped before any diff fetch")

@@ -79,6 +79,10 @@ jobs:
       # base repo's context and must not execute contributor code.
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          # Do not leave the write-capable workflow token in .git/config where
+          # the PR-steered agent could read it from the workspace.
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v6
