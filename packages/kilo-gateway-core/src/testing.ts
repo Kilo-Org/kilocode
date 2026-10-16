@@ -66,7 +66,6 @@ export function fixture() {
           max_completion_tokens: 8192,
           supported_parameters: ["tools"],
           isFree: true,
-          opencode: { reasoning_options: [] },
         },
         {
           id: "google/gemini-2.5-flash-image",
