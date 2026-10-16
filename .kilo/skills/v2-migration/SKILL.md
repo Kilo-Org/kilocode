@@ -167,7 +167,7 @@ Grow the test surface with each PR.
 - When you port a hook, put its ID on the marker of the v2 code that replaces it: `// kilocode_change(<feature>:<id>)`. Without the ID the hook stays open.
 - When a hook or module needs no port, add its cell ID to `migration-tracking/progress/dispositions.json` with `state` (`native` when v2 has the behavior built in, `facade` when the v1 compatibility layer serves it, `dropped` when the feature is not carried), a `note` with the reason, and `by`. Do not mark a cell `ported` by disposition when a marker or file can prove it.
 - A loose hook that lands in `unattributed:<area>` belongs to a feature. Tag its v1 marker on `main` as `kilocode_change(<feature>)` in a small follow-up PR; the next re-pin moves it.
-- Regenerate before you commit. The `progress.json` diff in the PR is the list of cells your change closed; mention the before and after count of the feature in the PR.
+- Regenerate before you commit. CI posts one comment per PR with the delta (percent, changed features, closed and dropped cells) and the treemap of the head commit; the `progress.json` diff carries the same information. Mention the before and after count of the feature in the PR.
 
 ## Evidence
 

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { areaOf, canon, classify, featureOf, grid, hookId, importBindings, knownFeatures, parseHunks, squarify } from "./progress"
+import { areaOf, canon, classify, compare, featureOf, grid, hookId, importBindings, knownFeatures, parseHunks, squarify } from "./progress"
 
 const split = { "session/steering": "steering", "kilo-ui": "ui", plugins: "plugin" }
 
@@ -93,4 +93,30 @@ test("grid returns exactly count cells inside the box", () => {
   expect(cells).toHaveLength(7)
   for (const [x, y, w, h] of cells) expect(x >= 10 && y >= 10 && x + w <= 40.000001 && y + h <= 30.000001).toBe(true)
   expect(grid(0, 0, 0, 10, 10)).toEqual([])
+})
+
+test("compare reports the delta per feature and the cells that closed, dropped or reopened", () => {
+  const kinds = (module: number, hook: number) => ({ module: { done: module, total: 10 }, api: { done: 0, total: 0 }, hook: { done: hook, total: 5 }, test: { done: 0, total: 0 } })
+  const base = {
+    summary: { done: 1, total: 30, percent: 3.3, dropped: 0 },
+    features: [{ feature: "gateway", done: 1, total: 15, dropped: 0, kinds: kinds(1, 0) }, { feature: "memory", done: 0, total: 15, dropped: 0, kinds: kinds(0, 0) }],
+    done: ["module:a", "module:gone"],
+    dropped: [],
+  }
+  const head = {
+    summary: { done: 4, total: 30, percent: 13.3, dropped: 1 },
+    features: [{ feature: "gateway", done: 4, total: 15, dropped: 1, kinds: kinds(3, 1) }, { feature: "memory", done: 0, total: 15, dropped: 0, kinds: kinds(0, 0) }],
+    done: ["module:a", "module:b", "hook:gateway:0123456789ab"],
+    dropped: ["hook:gateway:ffffffffffff"],
+  }
+  const out = compare(base, head)
+  expect(out).toContain("3.3% → 13.3%")
+  expect(out).toContain("| gateway | 1/15 | 4/15 | +2 modules done; +1 hook done; +1 dropped |")
+  expect(out).not.toContain("| memory |")
+  expect(out).toContain("2 cells closed")
+  expect(out).toContain("1 cells reopened")
+  expect(out).toContain("`module:gone`")
+  expect(out).toContain("`hook:gateway:ffffffffffff`")
+  expect(compare(head, head)).toContain("No change to the progress map.")
+  expect(compare({}, head)).toContain("0% → 13.3%")
 })
