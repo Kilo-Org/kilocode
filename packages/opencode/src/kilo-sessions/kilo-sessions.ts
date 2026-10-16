@@ -13,6 +13,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Auth } from "@/auth"
 import { makeRuntime } from "@/effect/run-service"
 import { IngestQueue } from "@/kilo-sessions/ingest-queue"
+import { StatusSync } from "@/kilo-sessions/status-sync"
 import { IngestDrain } from "@/kilo-sessions/ingest-drain"
 import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-cache"
 import type * as SDK from "@kilocode/sdk/v2"
@@ -22,6 +23,7 @@ import { KILO_API_BASE } from "@kilocode/kilo-gateway"
 import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
 import { Instance } from "@/kilocode/instance"
+import { iife } from "@/util/iife"
 import { Vcs } from "@/project/vcs"
 import { Git } from "@/git"
 import { simpleGit } from "simple-git"
@@ -410,47 +412,40 @@ export namespace KiloSessions {
     }
   }
 
-  const statusSyncs = new Map<string, { running: boolean; dirty: boolean }>()
-  const STATUS_TIMEOUT_MS = 3_000
+  const statuses = StatusSync.create()
 
   // Shared attention/status resolution for ingest sync and the remote heartbeat.
   // The precedence lives in kilocode/session/scheduled so the HTTP status
   // endpoint derives the same result.
   type DerivedStatus = { status: DerivedSessionStatus; scheduledAt?: string }
 
-  async function deriveStatus(sessionID: string): Promise<DerivedStatus> {
-    const { AppRuntime } = await import("@/effect/app-runtime")
-    const permissions = (await AppRuntime.runPromise(Permission.Service.use((svc) => svc.list()))).filter(
-      (p) => p.sessionID === sessionID,
-    )
-    if (permissions.length > 0) return { status: "permission" }
+  function deriveStatus(sessionID: string, override?: SessionStatus.Info) {
+    return Effect.gen(function* () {
+      const permissions = yield* Permission.Service.use((svc) => svc.list())
+      if (permissions.some((p) => p.sessionID === sessionID)) return { status: "permission" as const }
 
-    const questions = (await AppRuntime.runPromise(Question.Service.use((svc) => svc.list()))).filter(
-      (q) => q.sessionID === sessionID,
-    )
-    if (questions.length > 0) return { status: "question" }
+      const questions = yield* Question.Service.use((svc) => svc.list())
+      if (questions.some((q) => q.sessionID === sessionID)) return { status: "question" as const }
 
-    const id = SessionID.make(sessionID)
-    const status = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.get(id)))
-    // A live turn or a pending retry already won the precedence, so only an
-    // idle/absent status is worth scanning for a future wakeup.
-    const due =
-      status.type === "idle" ? await AppRuntime.runPromise(Wakeup.Service.use((svc) => svc.scheduled())) : undefined
-    const scheduledAt = due?.get(id)
-    const derived = resolveDerivedSessionStatus({
-      hasPermission: false,
-      hasQuestion: false,
-      statusType: status.type,
-      scheduledAt,
+      const id = SessionID.make(sessionID)
+      const status = override ?? (yield* SessionStatus.Service.use((svc) => svc.get(id)))
+      const due = status.type === "idle" ? yield* Wakeup.Service.use((svc) => svc.scheduled()) : undefined
+      const scheduledAt = due?.get(id)
+      const derived = resolveDerivedSessionStatus({
+        hasPermission: false,
+        hasQuestion: false,
+        statusType: status.type,
+        scheduledAt,
+      })
+      return derived === "scheduled" && scheduledAt !== undefined
+        ? { status: derived, scheduledAt: new Date(scheduledAt).toISOString() }
+        : { status: derived }
     })
-    return derived === "scheduled" && scheduledAt !== undefined
-      ? { status: derived, scheduledAt: new Date(scheduledAt).toISOString() }
-      : { status: derived }
   }
 
-  async function deriveAndSyncStatus(sessionID: string) {
-    const derived = await withTimeout(deriveStatus(sessionID), STATUS_TIMEOUT_MS)
-    await ingest.sync(sessionID, [{ type: "session_status", data: derived }])
+  function deriveAndSyncStatus(sessionID: string, derived: DerivedStatus, occurredAt: string) {
+    const data = statuses.record(sessionID, derived, occurredAt)
+    return ingest.sync(sessionID, [{ type: "session_status", data }])
   }
 
   // kilocode_change - PR link advertise: a PR is linked to a session only on
@@ -631,7 +626,7 @@ export namespace KiloSessions {
     )
   }
 
-  export const layer = Layer.effect(
+  export const layer: Layer.Layer<Service, never, Config.Service | Session.Service> = Layer.effect(
     Service,
     Effect.gen(function* () {
       const config = yield* Config.Service
@@ -667,15 +662,22 @@ export namespace KiloSessions {
           // rename (rename-before-prompt, or first rename after process restart)
           // is not treated as a seed-only sighting and dropped (Decision 8).
           const knownTitles = new Map<string, string>()
+          const tracked = new Set<string>()
           yield* sessions.list().pipe(
             Effect.map((list) => {
-              for (const s of list) knownTitles.set(s.id, s.title)
+              for (const s of list) {
+                knownTitles.set(s.id, s.title)
+                if (s.directory === ctx.directory) tracked.add(s.id)
+              }
             }),
             Effect.orElseSucceed(() => undefined),
           )
           watch(Session.Event.Created, (evt) => {
             const info = evt.properties.info
             const sessionID = info.id
+            tracked.add(sessionID)
+            const derived = sample(sessionID)
+            if (derived) statuses.record(sessionID, derived)
             if (typeof info.title === "string") knownTitles.set(sessionID, info.title)
             return create(sessionID).catch((error) => log.error("share init create failed", { sessionID, error }))
           })
@@ -753,6 +755,8 @@ export namespace KiloSessions {
           })
           watch(Session.Event.Deleted, (evt) => {
             const sessionID = evt.properties.sessionID
+            statuses.delete(sessionID)
+            tracked.delete(sessionID)
             knownTitles.delete(sessionID)
             if (prEnabled()) {
               lastPrLinkTriple.delete(sessionID)
@@ -812,36 +816,44 @@ export namespace KiloSessions {
             ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }]),
           )
 
-          const sync = (evt: { properties: { sessionID: string } }) => {
-            const sessionID = evt.properties.sessionID
-            const current = statusSyncs.get(sessionID)
-            if (current?.running) {
-              current.dirty = true
-              return
-            }
-
-            const entry = current ?? { running: false, dirty: false }
-            statusSyncs.set(sessionID, entry)
-
-            const fail = (error: unknown) => {
-              const dirty = entry.dirty
-              statusSyncs.delete(sessionID)
-              log.error("status sync failed", { sessionID, error: String(error) })
-              if (dirty) sync(evt)
-            }
-
-            const loop = async () => {
-              entry.running = true
-              entry.dirty = false
-              await deriveAndSyncStatus(sessionID)
-              if (entry.dirty) {
-                void loop().catch(fail)
-                return
+          const { AppRuntime } = yield* Effect.promise(() => import("@/effect/app-runtime"))
+          // Warm the instance caches so observing a transition never yields between its inputs.
+          yield* Effect.promise(() =>
+            AppRuntime.runPromise(
+              Effect.all([
+                Permission.Service.use((svc) => svc.list()),
+                Question.Service.use((svc) => svc.list()),
+                SessionStatus.Service.use((svc) => svc.list()),
+                Wakeup.Service.use((svc) => svc.scheduled()),
+              ]),
+            ),
+          )
+          // A read that cannot finish synchronously (e.g. a cache re-initialized after warm-up) has no
+          // event-time state; callers then leave the onset unknown instead of failing the dispatcher.
+          const sample = (sessionID: string, status?: SessionStatus.Info) =>
+            iife(() => {
+              try {
+                return AppRuntime.runSync(deriveStatus(sessionID, status))
+              } catch (error) {
+                log.warn("status not derivable synchronously", { sessionID, error: String(error) })
               }
-              statusSyncs.delete(sessionID)
-            }
+            })
+          for (const sessionID of tracked) {
+            const derived = sample(sessionID)
+            if (derived) statuses.record(sessionID, derived)
+          }
 
-            void loop().catch(fail)
+          const sync = (evt: { properties: { sessionID: string; status?: SessionStatus.Info } }) => {
+            const occurredAt = new Date().toISOString()
+            const sessionID = evt.properties.sessionID
+            tracked.add(sessionID)
+            // Status is published before busy/retry is stored; the event wins over that stale map entry.
+            const derived = sample(sessionID, evt.properties.status)
+            if (derived) return deriveAndSyncStatus(sessionID, derived, occurredAt)
+            // Without a same-tick read the event's onset is unknown, so only the live state is sent.
+            return statuses
+              .event(sessionID, () => AppRuntime.runPromise(deriveStatus(sessionID, evt.properties.status)))
+              .then((data) => ingest.sync(sessionID, [{ type: "session_status", data }]))
           }
           watch(SessionStatus.Event.Status, sync)
           watch(Question.Event.Asked, sync)
@@ -864,9 +876,11 @@ export namespace KiloSessions {
                 if (!fn) return
                 // Instance.restore: handlers run async work after the emitting fiber's
                 // synchronous window, where fiber-scoped InstanceRef is no longer visible.
-                Promise.resolve(Instance.restore(ctx, () => fn({ properties: event.payload!.properties }))).catch(
-                  (cause) => log.error("subscriber failed", { type, cause }),
-                )
+                // Promise.try-equivalent: a synchronous handler throw must not escape into GlobalBus.emit,
+                // where it would fail the publisher and skip later listeners.
+                new Promise((resolve) =>
+                  resolve(Instance.restore(ctx, () => fn({ properties: event.payload!.properties }))),
+                ).catch((cause) => log.error("subscriber failed", { type, cause }))
               }
               GlobalBus.on("event", handler)
               return handler
@@ -895,7 +909,7 @@ export namespace KiloSessions {
           }
           yield* Effect.addFinalizer(() =>
             Effect.sync(() => {
-              statusSyncs.clear()
+              for (const sessionID of tracked) statuses.delete(sessionID)
               disableRemote("shutdown")
             }),
           )
@@ -1351,6 +1365,7 @@ export namespace KiloSessions {
     const { AppRuntime } = await import("@/effect/app-runtime")
     await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(SessionID.make(id), { type: "idle" })))
     await attachedState.detach(id)
+    statuses.delete(id)
   }
 
   // kilocode_change - K1 W1: ownership probe used by the exit_cli handler
@@ -1764,7 +1779,7 @@ export namespace KiloSessions {
       },
       {
         type: "session_status",
-        data: await deriveStatus(sessionId),
+        data: await statuses.snapshot(sessionId, () => AppRuntime.runPromise(deriveStatus(sessionId))),
       },
     ])
   }
