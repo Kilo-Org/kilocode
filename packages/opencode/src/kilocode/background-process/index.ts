@@ -20,6 +20,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
 import { BackgroundProcessRunner } from "./runner"
+import { BackgroundProcessWindows } from "./windows"
 import { chmod, mkdir, readFile, readdir, rm, stat } from "fs/promises"
 import { randomUUID } from "crypto"
 import { hostname } from "os"
@@ -34,6 +35,7 @@ export namespace BackgroundProcess {
   const log = Log.create({ service: "background-process" })
   const MAX = 200 * 1024
   const KILL_MS = 3_000
+  const STOP_MS = 23_000
   const READY_MS = 30_000
   const PUBLISH_MS = 500
   // How long after `exit` a non-persistent process waits for its stdio pipes
@@ -166,6 +168,7 @@ export namespace BackgroundProcess {
     file?: string
     saved?: boolean
     saving?: Promise<void>
+    forgetting?: Promise<void>
     disposed?: boolean
   }
 
@@ -193,7 +196,7 @@ export namespace BackgroundProcess {
     shared: Shared
   }
 
-  type Probe = "owned" | "gone" | "foreign" | "unknown"
+  type Probe = "owned" | "gone" | "foreign" | "unknown" | "terminating"
 
   class StateService extends Context.Service<StateService, { readonly get: () => Effect.Effect<State> }>()(
     "@kilocode/BackgroundProcess.State",
@@ -312,6 +315,12 @@ export namespace BackgroundProcess {
   }
 
   async function forget(shared: Shared, active: Active) {
+    if (active.forgetting) return active.forgetting
+    active.forgetting = forgetArtifacts(shared, active)
+    return active.forgetting
+  }
+
+  async function forgetArtifacts(shared: Shared, active: Active) {
     active.saved = false
     await active.saving?.catch((err) =>
       log.warn("failed to finish persistent process metadata", { err, id: active.info.id }),
@@ -671,10 +680,27 @@ export namespace BackgroundProcess {
     return members.some((command) => command.includes(token)) ? "owned" : "foreign"
   }
 
+  // Reasons already reported once, so a probe that keeps failing the same way logs one warning.
+  const reported = new Set<string>()
+
   async function windows(active: Active): Promise<Probe> {
     const pid = active.info.pid
     const token = active.token
     if (!pid || !token) return "unknown"
+    const found = await BackgroundProcessWindows.command(pid)
+    if ("terminating" in found) return "terminating"
+    if (found.live === false) return "gone"
+    if (found.live) return found.line.includes(token) ? "owned" : "foreign"
+    const key = found.reason.replace(/\(\d+\)/, "")
+    if (!reported.has(key)) {
+      reported.add(key)
+      log.warn("probing a persistent process with PowerShell instead of natively", {
+        id: active.info.id,
+        pid,
+        reason: found.reason,
+      })
+    }
+    log.debug("native process probe failed", { id: active.info.id, pid, reason: found.reason })
     const query = `$p=Get-CimInstance Win32_Process -Filter "ProcessId = ${pid}"; if ($p) { [Console]::Out.Write($p.CommandLine) }`
     const out = await Process.text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
       nothrow: true,
@@ -708,8 +734,8 @@ export namespace BackgroundProcess {
     })
   }
 
-  async function waitGone(active: Active) {
-    const end = Date.now() + KILL_MS
+  async function waitGone(active: Active, timeout = KILL_MS) {
+    const end = Date.now() + timeout
     while (Date.now() < end) {
       const status = await probe(active)
       if (status === "gone" || status === "foreign") return
@@ -723,11 +749,17 @@ export namespace BackgroundProcess {
     if (active.info.lifetime === "persistent") {
       const before = await probe(active)
       if (before === "gone" || before === "foreign") return
+      if (process.platform === "win32" && before === "terminating") {
+        await waitGone(active, STOP_MS)
+        const stopped = await probe(active)
+        if (stopped === "gone" || stopped === "foreign") return
+        throw new Error(`Persistent process runner did not stop safely: ${active.info.id}`)
+      }
       if (before !== "owned") throw new Error(`Cannot verify ownership of persistent process: ${active.info.id}`)
       if (process.platform === "win32") {
         if (!active.control) throw new Error(`Persistent process control path is missing: ${active.info.id}`)
         await Filesystem.write(active.control, "stop", 0o600)
-        await waitGone(active)
+        await waitGone(active, STOP_MS)
         const stopped = await probe(active)
         if (stopped === "gone" || stopped === "foreign") return
         throw new Error(`Persistent process runner did not stop safely: ${active.info.id}`)
@@ -857,7 +889,7 @@ export namespace BackgroundProcess {
       void output(active)
         .then(async () => {
           const status = await probe(active)
-          if (status === "owned" || status === "unknown") {
+          if (status === "owned" || status === "unknown" || status === "terminating") {
             if (status === "unknown") log.warn("failed to verify persistent process", { id: active.info.id })
             watch(shared, active)
             return
@@ -903,7 +935,7 @@ export namespace BackgroundProcess {
         if ((await probe(active)) === "owned") throw err
       }
     }
-    const end = Date.now() + KILL_MS
+    const end = Date.now() + (process.platform === "win32" && active.control ? STOP_MS : KILL_MS)
     while (Date.now() < end) {
       const status = await probe(active)
       if (status === "gone" || status === "foreign") return true
@@ -997,7 +1029,7 @@ export namespace BackgroundProcess {
       void output(active)
         .then(async () => {
           const status = await probe(active)
-          if (status === "owned" || status === "unknown") {
+          if (status === "owned" || status === "unknown" || status === "terminating") {
             watch(state.shared, active)
             return
           }
@@ -1108,8 +1140,8 @@ export namespace BackgroundProcess {
       active.info.ports = []
       const status = await probe(active)
       if (shared.processes.has(active.info.id)) continue
-      if (status === "unknown") {
-        log.warn("persistent process ownership is unknown", { id: active.info.id })
+      if (status === "unknown" || status === "terminating") {
+        if (status === "unknown") log.warn("persistent process ownership is unknown", { id: active.info.id })
         continue
       }
       if (status !== "owned") {

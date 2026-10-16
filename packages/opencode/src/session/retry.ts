@@ -40,6 +40,7 @@ const RETRYABLE_MESSAGE_PATTERNS = [
   /\btry again (?:later|in\b)|\b(?:currently|temporarily) at capacity\b/i,
 ]
 
+// kilocode_change start
 function messageDelay(message?: string): number | null {
   if (!message) return null
 
@@ -55,6 +56,7 @@ function messageDelay(message?: string): number | null {
 
   return Math.round(milliseconds)
 }
+// kilocode_change end
 
 function cap(ms: number) {
   return Math.min(ms, RETRY_MAX_DELAY)
@@ -85,6 +87,7 @@ export function delay(attempt: number, error?: SessionV1.APIError, random = Math
           return cap(Math.ceil(parsed))
         }
       }
+    // kilocode_change start
     }
 
     const fromMessage =
@@ -98,6 +101,7 @@ export function delay(attempt: number, error?: SessionV1.APIError, random = Math
     if (headers) {
       return cap(exponential(attempt, random))
     }
+    // kilocode_change end
   }
 
   return cap(Math.min(exponential(attempt, random), RETRY_MAX_DELAY_NO_HEADERS))

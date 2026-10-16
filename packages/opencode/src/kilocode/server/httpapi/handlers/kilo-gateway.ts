@@ -9,7 +9,7 @@ import {
 } from "@kilocode/kilo-gateway"
 import {
   HEADER_FEATURE,
-  KILO_API_BASE,
+  resolveKiloGatewayUrl,
   clearModesCache,
   fetchBalance,
   fetchKilocodeNotifications,
@@ -296,7 +296,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       const request = yield* HttpServerRequest.HttpServerRequest
       const response = yield* Effect.tryPromise({
         try: () =>
-          fetch(`${KILO_API_BASE}/api/gateway/v1/audio/transcriptions`, {
+          fetch(resolveKiloGatewayUrl("audio/transcriptions"), {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -411,8 +411,8 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       // create_session test's module init. Run the helper's Effect on the
       // request Effect (yield*) so the request-scoped InstanceRef/WorkspaceRef
       // reach the persistence path instead of the AppRuntime default context.
-      const { CloudSessionImportInProcess } = yield* Effect.promise(() =>
-        import("@/kilocode/server/import-cloud-session-in-process"),
+      const { CloudSessionImportInProcess } = yield* Effect.promise(
+        () => import("@/kilocode/server/import-cloud-session-in-process"),
       )
       const outcome = yield* CloudSessionImportInProcess.importSession(ctx.payload.sessionId).pipe(
         Effect.provideService(Auth.Service, auth),

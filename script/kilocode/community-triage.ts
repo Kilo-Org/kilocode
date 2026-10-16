@@ -7,6 +7,8 @@
 //
 // Flow and rules: docs/community-triage.md
 
+import { appendFileSync } from "node:fs"
+
 export const DAY = 24 * 60 * 60 * 1000
 export const WAIT_DAYS = 14
 const LIMIT = 15
@@ -21,10 +23,24 @@ export const label = {
   low: "low-value",
   adopt: "needs-reimplementation",
   keep: "keep-open",
+  first: "first-time-contributor",
+  quick: "quick-win",
 }
 
 // Labels the sweep owns. It adds and removes these on its own.
 const managed = [label.triage, label.review, label.awaiting, label.ci]
+
+// Labels that only make sense on a community PR. A maintainer PR must not keep them.
+export const cleanup = (current: string[]) =>
+  [label.community, label.adopt, label.first, label.quick, ...managed].filter((name) => current.includes(name))
+
+// Hand-set priority labels. One list feeds both label creation and the triage rule.
+const priorities = [
+  { name: "priority:p0", color: "b60205", description: "Critical. Set by hand." },
+  { name: "priority:p1", color: "d93f0b", description: "High: important fixes, regressions. Set by hand." },
+  { name: "priority:p2", color: "fbca04", description: "Medium: normal fixes and valuable features. Set by hand." },
+  { name: "priority:p3", color: "c5def5", description: "Low: docs, polish, speculative features. Set by hand." },
+]
 
 const labels = [
   { name: label.community, color: "0e8a16", description: "Opened by someone outside the Kilo team" },
@@ -40,6 +56,9 @@ const labels = [
     description: "High-value PR with no contributor reply. The team takes it over.",
   },
   { name: label.keep, color: "bfdadc", description: "Never auto-close this PR. Set by hand." },
+  { name: label.first, color: "fef2c0", description: "First contribution to this repo. Say hello!" },
+  { name: label.quick, color: "bfd4f2", description: "Small, low-risk change. Quick to review." },
+  ...priorities,
   { name: "area:vscode", color: "ededed", description: "VS Code extension" },
   { name: "area:cli", color: "ededed", description: "CLI, TUI and core engine" },
   { name: "area:agent-manager", color: "ededed", description: "Agent Manager" },
@@ -104,11 +123,22 @@ const components: Record<string, string> = {
 // Plain objects inherit keys like "constructor". Only own keys are labels.
 const own = (map: Record<string, string>, key: string) => (Object.hasOwn(map, key) ? map[key] : undefined)
 
+// Product names in a title. Used when there is no scope or dropdown answer,
+// for example issues that skip the form: "Deleting a chat has no undo (Kilo Desktop)".
+const names: [RegExp, string][] = [
+  [/\bkilo desktop\b/i, "area:desktop"],
+  [/\bagent manager\b/i, "area:agent-manager"],
+  [/\bjetbrains\b/i, "area:jetbrains"],
+]
+
+export const mention = (title: string) => names.filter(([pattern]) => pattern.test(title)).map(([, tag]) => tag)
+
 export function areas(title: string, files: string[]) {
   const set = new Set<string>()
   const scope = title.match(/^\w+\(([^)]+)\)!?:/)?.[1]
   const hit = scope ? own(scopes, scope.toLowerCase()) : undefined
   if (hit) set.add(hit)
+  for (const tag of mention(title)) set.add(tag)
   for (const file of files) {
     const rule = paths.find(([prefix]) => file.startsWith(prefix))
     if (rule) set.add(rule[1])
@@ -128,6 +158,35 @@ export function component(body: string) {
 // Clocks differ a little between a contributor and GitHub. Allow a small skew.
 const SKEW = 5 * 60 * 1000
 
+// GitHub sets these when the author has no merged contribution here yet.
+const FIRST = new Set(["FIRST_TIME_CONTRIBUTOR", "FIRST_TIMER"])
+export const newcomer = (assoc: string | undefined) => FIRST.has(assoc ?? "")
+
+// Quick wins are small, low-risk changes that are fast to review.
+export const EASY_LINES = 150
+export const SMALL_LINES = 50
+const SMALL_FILES = 3
+// Never a quick win, even when small: CI, dependencies, scripts and account code.
+const risky = [".github/", ".kilo/", "script/", "patches/", "packages/kilo-gateway/"]
+const riskyFiles = ["package.json", "bun.lock"]
+// Markdown that steers agents or release notes is not documentation.
+const meta = (file: string) => file.startsWith(".kilo/") || file.startsWith(".changeset/")
+const docs = (file: string) =>
+  !meta(file) && (file.startsWith("packages/kilo-docs/") || file.startsWith("docs/") || /\.mdx?$/.test(file))
+const tests = (file: string) => /(^|\/)(tests?|__tests__)\//.test(file) || /\.(test|spec)\.[cm]?[jt]sx?$/.test(file)
+
+export type Quick = "docs" | "tests" | "small"
+
+export function easy(lines: number, files: string[]): Quick | undefined {
+  if (files.length === 0) return undefined
+  if (files.some((file) => risky.some((dir) => file.startsWith(dir)) || riskyFiles.some((x) => file.endsWith(x))))
+    return undefined
+  if (lines <= EASY_LINES && files.every(docs)) return "docs"
+  if (lines <= EASY_LINES && files.every(tests)) return "tests"
+  if (lines <= SMALL_LINES && files.length <= SMALL_FILES) return "small"
+  return undefined
+}
+
 export function pushedAt(date: string, now: number) {
   const at = Date.parse(date)
   return at > now + SKEW ? undefined : at
@@ -141,6 +200,10 @@ export type State =
   | { state: "approved" }
   | { state: "awaiting"; since: number; days: number }
 
+// A hand-set label means a maintainer already looked at the PR.
+const triaged = (tags: string[]) =>
+  tags.includes(label.high) || tags.includes(label.low) || priorities.some((item) => tags.includes(item.name))
+
 // Whose turn it is. The latest maintainer reaction decides, unless the author
 // answered (comment, review reply or new commit) after it.
 export function classify(events: Event[], tags: string[], now: number): State {
@@ -151,7 +214,7 @@ export function classify(events: Event[], tags: string[], now: number): State {
       .at(0)
   const maintainer = last("maintainer")
   const author = last("author")
-  if (!maintainer) return { state: tags.includes(label.high) || tags.includes(label.low) ? "review" : "triage" }
+  if (!maintainer) return { state: triaged(tags) ? "review" : "triage" }
   if (author && author.at > maintainer.at) return { state: "review" }
   if (maintainer.approve) return { state: "approved" }
   return { state: "awaiting", since: maintainer.at, days: Math.floor((now - maintainer.at) / DAY) }
@@ -179,9 +242,15 @@ export type Row = {
   failing: boolean
   adopt: boolean
   closed: boolean
+  first: boolean
+  quick?: Quick
 }
 
-export function digest(rows: Row[], mode: "md" | "slack", repo: string, now: number) {
+export type Digest = { title: string; counts: string; blocks: string[] }
+
+// Split into a title, a one-line count summary and one block per section, so
+// Slack can show the summary and put the lists in a thread.
+export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: number): Digest {
   const link = (row: Row) => {
     const text = `#${row.number} ${row.title.replace(/[<>|]/g, "")}`
     return mode === "md" ? `[${text}](${row.url})` : `<${row.url}|${text}>`
@@ -189,49 +258,109 @@ export function digest(rows: Row[], mode: "md" | "slack", repo: string, now: num
   const age = (row: Row) => Math.floor((now - row.created) / DAY)
   const bold = (text: string) => (mode === "md" ? `**${text}**` : `*${text}*`)
   const open = rows.filter((row) => !row.closed)
-  const section = (title: string, list: Row[], note: (row: Row) => string) => {
-    if (list.length === 0) return []
+  const found: { short: string; count: number; text: string }[] = []
+  const section = (name: string, short: string, list: Row[], note: (row: Row) => string) => {
+    if (list.length === 0) return
     const shown = list.slice(0, LIMIT).map((row) => `- ${link(row)} (@${row.author}, ${note(row)})`)
     const more = list.length > LIMIT ? [`- ...and ${list.length - LIMIT} more`] : []
-    return ["", bold(`${title} (${list.length})`), ...shown, ...more]
+    found.push({ short, count: list.length, text: [bold(`${name} (${list.length})`), ...shown, ...more].join("\n") })
   }
   const awaiting = (row: Row) => (row.state.state === "awaiting" ? row.state : undefined)
   const state = (name: State["state"]) => open.filter((row) => row.state.state === name)
   const oldest = (a: Row, b: Row) => a.created - b.created
+  const ci = (row: Row) => `${row.first ? ", first-time contributor" : ""}${row.failing ? ", CI failing" : ""}`
 
-  return [
-    bold(`Community PR queue for ${repo}: ${open.length} open`),
-    ...section(
-      "Adopt: high-value, no reply in 14 days",
-      open.filter((row) => row.adopt),
-      (row) => `${awaiting(row)?.days}d silent`,
+  section(
+    "Adopt: high-value, no reply in 14 days",
+    "Adopt",
+    open.filter((row) => row.adopt),
+    (row) => `${awaiting(row)?.days}d silent`,
+  )
+  const kind = { docs: "docs only", tests: "tests only", small: "small change" }
+  section(
+    "Quick wins: small and low-risk",
+    "Quick",
+    open.filter((row) => row.quick && row.state.state !== "awaiting").sort(oldest),
+    (row) => `${kind[row.quick!]}${ci(row)}`,
+  )
+  section("Needs triage", "Triage", state("triage").sort(oldest), (row) => `${age(row)}d old${ci(row)}`)
+  section(
+    "Contributor replied, needs review",
+    "Review",
+    state("review").sort(oldest),
+    (row) => `${age(row)}d old${ci(row)}`,
+  )
+  section("Approved, ready to merge", "Approved", state("approved"), (row) => `${age(row)}d old${ci(row)}`)
+  section(
+    "Waiting for contributor",
+    "Waiting",
+    state("awaiting").sort((a, b) => (awaiting(b)?.days ?? 0) - (awaiting(a)?.days ?? 0)),
+    (row) => `${awaiting(row)?.days}d of ${WAIT_DAYS}${ci(row)}`,
+  )
+  section(
+    "Closed in this run",
+    "Closed",
+    rows.filter((row) => row.closed),
+    () => `no reply in ${WAIT_DAYS} days`,
+  )
+
+  const firsts = open.filter((row) => row.first).length
+
+  return {
+    title: bold(`Community PR queue for ${repo}: ${open.length} open`),
+    counts: [...found.map((item) => `${item.short}: ${item.count}`), ...(firsts ? [`First-time: ${firsts}`] : [])].join(
+      " · ",
     ),
-    ...section(
-      "Needs triage",
-      state("triage").sort(oldest),
-      (row) => `${age(row)}d old${row.failing ? ", CI failing" : ""}`,
-    ),
-    ...section(
-      "Contributor replied, needs review",
-      state("review").sort(oldest),
-      (row) => `${age(row)}d old${row.failing ? ", CI failing" : ""}`,
-    ),
-    ...section(
-      "Approved, ready to merge",
-      state("approved"),
-      (row) => `${age(row)}d old${row.failing ? ", CI failing" : ""}`,
-    ),
-    ...section(
-      "Waiting for contributor",
-      state("awaiting").sort((a, b) => (awaiting(b)?.days ?? 0) - (awaiting(a)?.days ?? 0)),
-      (row) => `${awaiting(row)?.days}d of ${WAIT_DAYS}${row.failing ? ", CI failing" : ""}`,
-    ),
-    ...section(
-      "Closed in this run",
-      rows.filter((row) => row.closed),
-      () => `no reply in ${WAIT_DAYS} days`,
-    ),
-  ].join("\n")
+    blocks: found.map((item) => item.text),
+  }
+}
+
+export function digest(rows: Row[], mode: "md" | "slack", repo: string, now: number) {
+  const out = parts(rows, mode, repo, now)
+  return [out.title, ...out.blocks.flatMap((block) => ["", block])].join("\n")
+}
+
+// Slack rejects text over 40,000 characters, and long sections read badly.
+export function clip(text: string, max = 3500) {
+  if (text.length <= max) return text
+  const cut = text.slice(0, max).lastIndexOf("\n")
+  return text.slice(0, cut > 0 ? cut : max) + "\n- ...list shortened"
+}
+
+type SlackReply = { ok: boolean; ts?: string; error?: string; needed?: string; provided?: string }
+
+// Slack names the missing scope in `needed` and `provided`. Show them.
+export function failure(json: Pick<SlackReply, "error" | "needed" | "provided">) {
+  const scope = json.needed ? ` (needed: ${json.needed}, provided: ${json.provided ?? "none"})` : ""
+  return `Slack chat.postMessage failed: ${json.error ?? "unknown error"}${scope}`
+}
+
+const warn = (title: string, err: unknown) =>
+  console.log(`::warning title=${title}::${err instanceof Error ? err.message : String(err)}`)
+
+async function slack(out: Digest, url: string) {
+  const token = process.env.SLACK_TOKEN!
+  const channel = process.env.SLACK_CHANNEL!
+  const post = async (body: Record<string, unknown>) => {
+    const res = await fetch("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json; charset=utf-8" },
+      body: JSON.stringify({ channel, unfurl_links: false, ...body }),
+    })
+    const json = (await res.json()) as SlackReply
+    if (!json.ok) throw new Error(failure(json))
+    return json.ts!
+  }
+  const ts = await post({ text: [out.title, out.counts, url ? `<${url}|Full run>` : ""].filter(Boolean).join("\n") })
+  // The summary is out. A failed section must not trigger the webhook
+  // fallback, which would post the whole queue a second time.
+  for (const block of out.blocks) {
+    try {
+      await post({ thread_ts: ts, text: clip(block) })
+    } catch (err) {
+      warn("Slack thread post failed", err)
+    }
+  }
 }
 
 // ---- GitHub I/O ----
@@ -319,10 +448,12 @@ async function onevent() {
   const tags = new Set<string>()
   if (community) tags.add(label.community)
   if (community && fresh) tags.add(label.triage)
+  if (community && newcomer(item.author_association)) tags.add(label.first)
   if (pr) for (const tag of areas(pr.title, await files(pr.number))) tags.add(tag)
   if (!pr) {
+    // The form answer wins. Without one, fall back to product names in the title.
     const tag = component(item.body ?? "")
-    if (tag) tags.add(tag)
+    for (const name of tag ? [tag] : mention(item.title)) tags.add(name)
   }
   const have = new Set<string>(item.labels.map((l: { name: string }) => l.name))
   const next = [...tags].filter((tag) => !have.has(tag))
@@ -338,6 +469,9 @@ type Pull = {
   title: string
   url: string
   isDraft: boolean
+  additions: number
+  deletions: number
+  changedFiles: number
   createdAt: string
   authorAssociation: string
   author: Actor
@@ -375,7 +509,7 @@ query($owner: String!, $repo: String!, $cursor: String) {
     pullRequests(first: 25, states: OPEN, after: $cursor) {
       pageInfo { hasNextPage endCursor }
       nodes {
-        number title url isDraft createdAt
+        number title url isDraft additions deletions changedFiles createdAt
         authorAssociation
         author { login __typename }
         labels(first: 30) { nodes { name } }
@@ -399,6 +533,16 @@ async function graphql(cursor: string | null) {
   return json.data.repository.pullRequests
 }
 
+// Small and green PRs only. Merge state costs one request, so it runs last.
+async function quick(pr: Pull, ready: boolean) {
+  const lines = pr.additions + pr.deletions
+  if (!ready || lines > EASY_LINES || pr.changedFiles > 10) return undefined
+  const kind = easy(lines, await files(pr.number))
+  if (!kind) return undefined
+  const detail: { mergeable: boolean | null } = await (await api(`/repos/${repo}/pulls/${pr.number}`)).json()
+  return detail.mergeable === true ? kind : undefined
+}
+
 async function sweep() {
   const now = Date.now()
   const enabled = process.env.CLOSE_ENABLED === "true"
@@ -418,10 +562,16 @@ async function sweep() {
   const rows: Row[] = []
   for (const pr of prs) {
     const login = pr.author?.login
-    if (!login || pr.author?.__typename === "Bot" || bots(login) || pr.isDraft) continue
-    if (await maintainer(login, pr.authorAssociation)) continue
-
-    const tags: string[] = pr.labels.nodes.map((l: { name: string }) => l.name)
+    if (!login || pr.author?.__typename === "Bot" || bots(login)) continue
+    const tags = pr.labels.nodes.map((l) => l.name)
+    if (await maintainer(login, pr.authorAssociation)) {
+      // Heals labels set before the maintainer list was known.
+      const wrong = cleanup(tags)
+      if (wrong.length > 0) console.log(`#${pr.number} maintainer PR, removing [${wrong}]`)
+      await drop(pr.number, wrong)
+      continue
+    }
+    if (pr.isDraft) continue
     const nodes: Node[] = [
       ...pr.comments.nodes,
       ...pr.reviews.nodes.filter((r: Node) => r.state !== "PENDING" && r.state !== "DISMISSED"),
@@ -463,6 +613,18 @@ async function sweep() {
     const plan = decide(tags, state, failing)
     const more = [...(tags.includes(label.community) ? [] : [label.community])]
     if (!tags.some((tag) => tag.startsWith("area:"))) more.push(...areas(pr.title, await files(pr.number)))
+    // Product names in the title cost no request, so they are checked on every run.
+    more.push(...mention(pr.title).filter((tag) => !tags.includes(tag) && !more.includes(tag)))
+    const green = commit?.statusCheckRollup?.state === "SUCCESS"
+    const kind = await quick(pr, green && ["triage", "review", "approved"].includes(state.state))
+    const flags: [string, boolean][] = [
+      [label.first, newcomer(pr.authorAssociation)],
+      [label.quick, kind !== undefined],
+    ]
+    for (const [tag, on] of flags) {
+      if (on && !tags.includes(tag)) more.push(tag)
+      if (!on && tags.includes(tag)) plan.remove.push(tag)
+    }
     const row: Row = {
       number: pr.number,
       title: pr.title,
@@ -473,6 +635,8 @@ async function sweep() {
       failing,
       adopt: false,
       closed: false,
+      first: newcomer(pr.authorAssociation),
+      quick: kind,
     }
 
     if (state.state === "awaiting" && state.days >= WAIT_DAYS) {
@@ -512,8 +676,23 @@ async function sweep() {
 
   const out = process.env.GITHUB_STEP_SUMMARY
   if (out) await Bun.write(out, digest(rows, "md", repo, now) + "\n")
-  const slack = process.env.SLACK_PAYLOAD
-  if (slack) await Bun.write(slack, JSON.stringify({ text: digest(rows, "slack", repo, now) }))
+  const payload = process.env.SLACK_PAYLOAD
+  if (payload) await Bun.write(payload, JSON.stringify({ text: digest(rows, "slack", repo, now) }))
+  // With a bot token and channel, post the summary and thread the lists.
+  if (process.env.SLACK_TOKEN && process.env.SLACK_CHANNEL) {
+    const run = process.env.GITHUB_RUN_ID
+      ? `${process.env.GITHUB_SERVER_URL}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`
+      : ""
+    // Slack must not fail a sweep whose labels are already done. If not even
+    // the summary was posted, warn and tell the workflow to use the webhook.
+    try {
+      await slack(parts(rows, "slack", repo, now), run)
+    } catch (err) {
+      warn("Slack post failed", err)
+      const flag = process.env.GITHUB_OUTPUT
+      if (flag) appendFileSync(flag, "slack_failed=true\n")
+    }
+  }
   console.log(digest(rows, "md", repo, now))
 }
 

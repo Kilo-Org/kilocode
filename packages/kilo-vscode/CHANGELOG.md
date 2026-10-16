@@ -1,5 +1,65 @@
 # kilo-code
 
+## 7.8.12
+
+### Minor Changes
+
+- [#15030](https://github.com/Kilo-Org/kilocode/pull/15030) [`d749650`](https://github.com/Kilo-Org/kilocode/commit/d7496501c6fcbe22efdbec353551ad511669ee6f) - Route Kilo Gateway traffic (chat, models, embeddings, autocomplete, transcription) through `https://ai-gateway.kilo.ai/api/v1` by default, and support a `KILO_AI_GATEWAY_URL` environment variable to override it. Setting only `KILO_API_URL` keeps routing gateway traffic through that server.
+
+## 7.8.10
+
+### Minor Changes
+
+- [#14988](https://github.com/Kilo-Org/kilocode/pull/14988) [`9a55ea4`](https://github.com/Kilo-Org/kilocode/commit/9a55ea4f0fd9255d1c736882bf3aa804b5b9c172) Thanks [@WebReflection](https://github.com/WebReflection)! - Add an experimental Search Ignored Paths setting that lists ignored folders or files, such as build output, that the agent's glob tool should still search
+
+### Patch Changes
+
+- [#15017](https://github.com/Kilo-Org/kilocode/pull/15017) [`e48c978`](https://github.com/Kilo-Org/kilocode/commit/e48c9785c74940ff3318dc52e1b66346b764e8d4) Thanks [@WebReflection](https://github.com/WebReflection)! - Keep `.gitignore`d files and folders, such as `node_modules`, out of glob results and grep `include` searches, even when the pattern matches folder names, like `**/*`
+
+- [#15056](https://github.com/Kilo-Org/kilocode/pull/15056) [`0e6da31`](https://github.com/Kilo-Org/kilocode/commit/0e6da3104dd91d2c97bfe6fdc3e04bee6b811f43) - Fix grep failing with "Invalid ripgrep match output" when matched lines aren't valid UTF-8, such as in ISO-8859-1 / Windows-1252 encoded files
+
+## 7.8.9
+
+### Minor Changes
+
+- [#14928](https://github.com/Kilo-Org/kilocode/pull/14928) [`6522b4a`](https://github.com/Kilo-Org/kilocode/commit/6522b4a57c7e8128c64f1991608088e8b51b097e) - Reorder projects in the Agent Manager sidebar with drag and drop. The order is kept after a restart.
+
+- [#14919](https://github.com/Kilo-Org/kilocode/pull/14919) [`69ec588`](https://github.com/Kilo-Org/kilocode/commit/69ec588a5ba89ee0856d724255b6651d26963b0f) - Open chat links in the system browser with Shift-click when the Integrated Browser handles link clicks
+
+- [#14900](https://github.com/Kilo-Org/kilocode/pull/14900) [`9b8a58f`](https://github.com/Kilo-Org/kilocode/commit/9b8a58f2c01bc6b8f9a34ae3bb302d0fbddbbce9) - Support opening the current Integrated Browser page in the external default browser
+
+- [#14927](https://github.com/Kilo-Org/kilocode/pull/14927) [`a023122`](https://github.com/Kilo-Org/kilocode/commit/a023122851a2320826bb91b213e5ff9398c04931) - Show the agent, model, and reasoning selectors as one split control in the prompt toolbar and the Agent Manager New Worktree dialog. While one picker is open, move the pointer to another part to switch to it, or use the Left and Right arrow keys. The reasoning level shows only when it is set and there is room. Otherwise it collapses into the trailing arrow, and a changed level shows for a moment. On narrow sidebars, less used actions move into a "More actions" menu one at a time, while voice input and send stay visible. The toolbar always stays one row, so a long model name truncates and does not hide actions.
+
+### Patch Changes
+
+- [#14896](https://github.com/Kilo-Org/kilocode/pull/14896) [`064bb13`](https://github.com/Kilo-Org/kilocode/commit/064bb13fb9dbc45f960eab9326b2dc75bea33c8e) - Align the loading spinner with the subagent identicon. The spinner now uses the same 5x5 dot grid as subagent avatars, so loading and subagent indicators share one cell layout. The four corner cells stay empty and the same twinkle animation is kept.
+
+- [#14899](https://github.com/Kilo-Org/kilocode/pull/14899) [`7cf9fdc`](https://github.com/Kilo-Org/kilocode/commit/7cf9fdc0b8d542c213838d21d579b423d472fcae) - Move the agent board button next to the background agents above the prompt. It shows the latest posts and marks new ones, and stays available after agents are cleared or the window reloads.
+
+- [#14898](https://github.com/Kilo-Org/kilocode/pull/14898) [`5afa419`](https://github.com/Kilo-Org/kilocode/commit/5afa4197f9fad64ccd2741da13beb6c507017508) - Match the Integrated Browser color scheme to the current IDE theme so pages that support `prefers-color-scheme` render in dark or light to match the editor.
+
+- [#14893](https://github.com/Kilo-Org/kilocode/pull/14893) [`3249118`](https://github.com/Kilo-Org/kilocode/commit/32491185e9f9afcaf36a830718124162d22b2ce7) Thanks [@madrugado](https://github.com/madrugado)! - Retry provider connection resets (`Connection reset by server`) through the normal retry path with backoff instead of pausing the session waiting for network reconnection. Connection resets are transient server-side failures when the error is marked retryable; only genuine network disconnections still trigger the offline wait.
+
+- [#14738](https://github.com/Kilo-Org/kilocode/pull/14738) [`d9f9d72`](https://github.com/Kilo-Org/kilocode/commit/d9f9d72e58ad680bff9bd9dd1416d296ee5b09da) Thanks [@brunoagatao](https://github.com/brunoagatao)! - Fix permission prompts from subagents failing with "Failed to update permissions" and getting stuck
+
+- [#14519](https://github.com/Kilo-Org/kilocode/pull/14519) [`46428e7`](https://github.com/Kilo-Org/kilocode/commit/46428e7183cf9eabd0d1d8b2dc0430d5d8550bb5) Thanks [@jsilvermist](https://github.com/jsilvermist)! - Fix backend startup when a Windows drive root is opened as a workspace.
+
+- [#14932](https://github.com/Kilo-Org/kilocode/pull/14932) [`f852d17`](https://github.com/Kilo-Org/kilocode/commit/f852d1717dc3b2bedc1dd4959a1f41cfd7c9955a) - Show page cursor feedback in the Integrated Browser, including text fields, resize handles, and drag controls, without changing page scrolling or compositing.
+
+- [#14934](https://github.com/Kilo-Org/kilocode/pull/14934) [`6e033dc`](https://github.com/Kilo-Org/kilocode/commit/6e033dc593de472a1c547c27826ed068da2ec1b9) - Use the standard open-in-browser icon for the Agent Manager PR panel's external link button, so it matches the open-in-browser affordance used elsewhere in the app.
+
+- [#14734](https://github.com/Kilo-Org/kilocode/pull/14734) [`1ecce5a`](https://github.com/Kilo-Org/kilocode/commit/1ecce5a79371b496cdd25b9da8898acf3222891d) Thanks [@brunoagatao](https://github.com/brunoagatao)! - Label scheduled cron and wakeup prompts in the chat instead of showing them as user messages
+
+- [#14901](https://github.com/Kilo-Org/kilocode/pull/14901) [`2c25217`](https://github.com/Kilo-Org/kilocode/commit/2c252174913be4defd4e91aef350f517bbba10fc) - Fix a thin line of diff content showing above the sticky file header in the Agent Manager diff panel and review when VS Code is zoomed.
+
+- [#14930](https://github.com/Kilo-Org/kilocode/pull/14930) [`0988371`](https://github.com/Kilo-Org/kilocode/commit/0988371425927d97319d9bb07ceb5f0e1f964acc) - Add a tooltip to the subagent open button in the chat transcript. It shows whether the subagent opens in an editor tab (sidebar) or in the Agent Manager panel.
+
+- Updated dependencies [[`0a5c6df`](https://github.com/Kilo-Org/kilocode/commit/0a5c6df3486d897d142752173545a1d153b8cdaa)]:
+  - @kilocode/kilo-indexing@7.8.9
+  - @opencode-ai/core@7.8.9
+  - @kilocode/kilo-ui@7.8.9
+  - @opencode-ai/ui@7.8.9
+
 ## 7.8.8
 
 ### Minor Changes

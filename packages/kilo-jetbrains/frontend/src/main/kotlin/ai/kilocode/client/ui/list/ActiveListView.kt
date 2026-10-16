@@ -398,18 +398,22 @@ internal class ActiveListView(
         return model.items.firstOrNull { it.key == key }
     }
 
+    /**
+     * Anchor for a popup or balloon attached to [key]'s row, or to one [cell] of it. [leading] takes
+     * the target's bottom-left corner, which keeps a dropdown aligned with the cell it belongs to;
+     * the default takes its bottom middle for a balloon callout.
+     */
     @RequiresEdt
-    fun point(key: String, cell: String? = null): RelativePoint {
+    fun point(key: String, cell: String? = null, leading: Boolean = false): RelativePoint {
         checkEdt()
         val idx = activeListIndex(model.items, key)
         if (idx < 0) return RelativePoint(list, Point(0, 0))
         val bounds = list.getCellBounds(idx, idx) ?: return RelativePoint(list, Point(0, 0))
         val rect = cell?.let { activeListCellBounds(list, idx, list.isSelectedIndex(idx))[it] }
         val target = rect ?: bounds
-        // Horizontal middle of the target, anchored to its bottom edge: the balloon opens below, so
-        // a center anchor would bury the callout under the balloon body and cover the row instead of
-        // pointing at it.
-        val x = target.x + target.width / 2
+        // Anchored to the target's bottom edge: the balloon opens below, so a center anchor would
+        // bury the callout under the balloon body and cover the row instead of pointing at it.
+        val x = if (leading) target.x else target.x + target.width / 2
         val y = target.y + target.height
         return RelativePoint(list, Point(x.coerceIn(bounds.x, bounds.x + bounds.width), y))
     }
@@ -987,7 +991,46 @@ internal class ActiveListView(
         return preferredSize.height < view.height
     }
 
-    override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
+    /**
+     * Full rendered row height at [width], measured from every cell renderer.
+     *
+     * `JList.preferredSize` can be stale before the list enters a viewport: wrapped row height only
+     * becomes known once the final width reaches the renderer. Popup owners need this answer before
+     * building their balloon, so measure the same renderers the list will use and sum every cell.
+     */
+    @RequiresEdt
+    internal fun preferredRowsHeight(width: Int): Int {
+        checkEdt()
+        val old = list.size
+        list.setSize(width.coerceAtLeast(1), old.height.coerceAtLeast(1))
+        try {
+            val fixed = list.fixedCellHeight
+            val body = if (fixed > 0) {
+                fixed.toLong() * model.size
+            } else {
+                (0 until model.size).sumOf { idx ->
+                    list.cellRenderer.getListCellRendererComponent(
+                        list,
+                        model.getElementAt(idx),
+                        idx,
+                        false,
+                        false,
+                    ).preferredSize.height.toLong()
+                }
+            }
+            return (body + list.insets.top + list.insets.bottom)
+                .coerceAtMost(Int.MAX_VALUE.toLong())
+                .toInt()
+        } finally {
+            list.size = old
+        }
+    }
+
+    override fun getPreferredScrollableViewportSize(): Dimension {
+        val pref = super.getPreferredSize()
+        val width = width.takeIf { it > 0 } ?: pref.width
+        return Dimension(pref.width, preferredRowsHeight(width))
+    }
 
     override fun getScrollableUnitIncrement(
         visibleRect: Rectangle,

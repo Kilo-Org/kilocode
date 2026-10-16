@@ -94,6 +94,7 @@ describe("session.retry.delay", () => {
     expect(SessionRetry.delay(1, error)).toBe(SessionRetry.RETRY_MAX_DELAY)
   })
 
+  // kilocode_change start
   test("extracts delay from error message", () => {
     const error = new SessionV1.APIError({
       message: "Rate limited.\nPlease retry in 1.108170405s",
@@ -118,6 +119,7 @@ describe("session.retry.delay", () => {
     })
     expect(SessionRetry.delay(1, error)).toBe(416)
   })
+  // kilocode_change end
 
   it.instance("policy updates retry status and increments attempts", () =>
     Effect.gen(function* () {

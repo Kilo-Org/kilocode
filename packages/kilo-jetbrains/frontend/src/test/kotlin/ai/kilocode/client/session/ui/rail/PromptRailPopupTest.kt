@@ -8,6 +8,7 @@ import ai.kilocode.client.ui.list.ActiveListRowHeight
 import com.intellij.openapi.options.advanced.AdvancedSettings
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.JBUI
 import java.awt.Component
 import java.awt.Container
 import java.awt.Dimension
@@ -18,6 +19,7 @@ import java.awt.event.MouseEvent
 import javax.swing.JList
 import javax.swing.JScrollPane
 import javax.swing.KeyStroke
+import javax.swing.Scrollable
 import javax.swing.JViewport
 
 class PromptRailPopupTest : BasePlatformTestCase() {
@@ -119,6 +121,49 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         }
 
         Disposer.dispose(fix.popup.disposable)
+    }
+
+    /**
+     * With room to spare the body must be exactly as tall as the rows need, so the list does not clip
+     * a row in half. Capping at a fixed height instead left the last row cut off mid-line.
+     */
+    fun `test the body grows to the rows it has when the frame allows it`() {
+        val long = List(3) {
+            PromptRailItem(
+                id = "long_$it",
+                queued = false,
+                prompt = "Prompt $it",
+                answer = "A long answer whose wrapped height is only known after the popup assigns " +
+                    "the list its final width. ".repeat(5),
+            )
+        }
+        val popup = popup(long, hovered = 0)
+        popup.fitWithin(CAP_W, JBUI.scale(2000))
+        val root = popup.component
+        val rows = popup.list
+        val head = root.components.single { it !== rows }
+        assertEquals(
+            "preferred height must be the header plus every width-aware cell",
+            head.preferredSize.height + rows.preferredHeight(CAP_W),
+            root.preferredSize.height,
+        )
+        root.size = root.preferredSize
+        layoutAll(root)
+
+        val scroll = findScroll(root) ?: error("expected the row list to own a scroll pane")
+        val view = scroll.viewport.view
+        assertEquals(
+            "view ${view.height} must fit the extent ${scroll.viewport.extentSize.height}",
+            view.height,
+            scroll.viewport.extentSize.height,
+        )
+        assertEquals(
+            "the full cell sum must be exposed before the view enters a viewport",
+            view.preferredSize.height,
+            (view as Scrollable).preferredScrollableViewportSize.height,
+        )
+
+        Disposer.dispose(popup.disposable)
     }
 
     fun `test the body honors the width and height caps`() {

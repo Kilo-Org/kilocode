@@ -13,14 +13,14 @@ On first launch, a short setup wizard walks you through the setup steps.
 
 ### 1. Review the terms of service
 
-Review and accept Kilo's [terms of service](https://kilo.ai/terms).
+Review and accept Kilo's [terms of service](https://kilo.ai/terms). You need to accept them before you can use the app.
 
 ### 2. Connect to Kilo
 
 Sign in to your **Kilo account** to use frontier models, credits, and organization settings through the [Kilo Gateway](/docs/gateway). You can skip this step and connect later from [Settings](/docs/desktop/settings/ai#ai-providers). 
 
 {% callout type="note" %}
-A Kilo account is also required to use [conda environments](/docs/desktop/features/environments) and the [local model server](/docs/desktop/features/local-inference). You can sign in during onboarding or later from the **Account** section in [Settings](/docs/desktop/settings/general#account).
+A Kilo account is also required to use [conda environments](/docs/desktop/features/environments), the [local model server](/docs/desktop/features/local-inference), and [notebooks](/docs/desktop/features/notebooks). You can sign in during onboarding or later from the **Account** section in [Settings](/docs/desktop/settings/general#account).
 {% /callout %}
 
 ### 3. Choose an autonomy level
@@ -30,6 +30,10 @@ Choose whether you want Kilo to operate with high autonomy or review its work fi
 ### 4. Create a workspace
 
 A workspace scopes a chat to one or more folders on your machine. Add the folder(s) you want the agent to work in; the agent's file access, terminal, and git operations all run inside the workspace. You can add more workspaces anytime. 
+
+### 5. See what you can do
+
+A short tour of Kilo Desktop's features finishes setup.
 
 ## Navigate the home screen
 
@@ -60,7 +64,7 @@ The controls around the input let you:
 - **Add an attachment** with the **+** button.
 - **Choose an agent** to set how it approaches your request. Pick one of the default agents: Code, Plan, Ask, Debug, or Architect. See [Using agents](/docs/code-with-ai/agents/using-agents) for what each one does.
 - **Select autonomy level** for the agent. With **Manually approve**, Kilo asks before each file edit or command; with **Automatically approve**, it proceeds on its own without requesting permission.
-- **Pick a model** for the chat. The available models depend on how you're signed in and which providers you've connected. The list can include [Kilo Gateway](/docs/gateway) models, provider models you've added, or a [local model](/docs/desktop/features/local-inference) you've added.
+- **Pick a model** for the chat. The available models depend on how you're signed in and which providers you've connected. The list can include [Kilo Gateway](/docs/gateway) models, provider models you've added, or a [local model](/docs/desktop/features/local-inference) you've added. The picker labels free models **Free** and models that use your own API key **BYOK**. Use the filter to show only free models. Free models may use your data for training; see [Privacy](/docs/desktop/settings/general#privacy).
 - **Select a workspace** to scope the chat to a workspace, add a **New workspace**, or choose **No workspace** to chat without one.
 - **Set where changes go** with the git controls beside the workspace — work in your **Local** repository (switching or creating **branches** as needed), or run the session in a **new worktree**, an isolated copy created from a base branch. See [Git integration](/docs/desktop/features/git).
 
@@ -84,7 +88,7 @@ Then, pick a tab to open in it:
 
 - **[Files](/docs/desktop/features/files)** — browse and edit files in the workspace.
 - **[Changes](/docs/desktop/features/git)** — review uncommitted git changes.
-- **[Notebook](/docs/desktop/features/notebooks)** — analyze data in an interactive Python notebook.
+- **[Notebook](/docs/desktop/features/notebooks)** — analyze data in an interactive Python notebook. Requires a Kilo account; the entry stays grayed out until you sign in.
 - **[Browser](/docs/desktop/features/browser)** — open web pages without leaving the app.
 - **[Terminal](/docs/desktop/features/terminal)** — run commands in an interactive shell.
 

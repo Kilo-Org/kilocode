@@ -146,7 +146,7 @@ export default function Custom404() {
           }
 
           .prompt {
-            color: #f8f674;
+            color: var(--kilo-yellow);
           }
 
           .command {
@@ -171,7 +171,7 @@ export default function Custom404() {
           .error-bar {
             width: 4px;
             height: 80px;
-            background: #f8f674;
+            background: var(--kilo-yellow);
             margin-right: 1.5rem;
             border-radius: 2px;
           }
@@ -180,7 +180,7 @@ export default function Custom404() {
             font-family: "JetBrains Mono", monospace;
             font-size: 4.5rem;
             font-weight: 700;
-            color: #f8f674;
+            color: var(--kilo-yellow);
             line-height: 1;
           }
 

@@ -22,7 +22,7 @@ const terminalContent = {
       {"\n"}
       <span className="terminal-prompt">$</span> export KILO_API_KEY="YOUR_API_KEY"
       {"\n"}
-      <span className="terminal-prompt">$</span> curl https://api.kilo.ai/api/gateway/chat/completions \{"\n"}
+      <span className="terminal-prompt">$</span> curl https://ai-gateway.kilo.ai/api/v1/chat/completions \{"\n"}
       -H "Authorization: Bearer $KILO_API_KEY" \{"\n"}
       -H "Content-Type: application/json" \{"\n"}
       {`  -d '{"model":"anthropic/claude-sonnet-4.5","messages":[{"role":"user","content":"Say hi from Kilo Gateway"}]}'`}
@@ -463,14 +463,14 @@ export default function HomePage() {
         }
 
         .btn-primary {
-          background: #f8f674;
+          background: var(--kilo-yellow);
           color: #1a1a18;
-          border-color: #f8f674;
+          border-color: var(--kilo-yellow);
         }
 
         .btn-primary:hover {
-          background: #ffff8d;
-          border-color: #ffff8d;
+          background: var(--kilo-yellow-hover);
+          border-color: var(--kilo-yellow-hover);
           transform: translateY(-1px);
         }
 
@@ -491,8 +491,8 @@ export default function HomePage() {
         }
 
         :global(.dark) .btn-secondary:hover {
-          color: #f8f674;
-          border-color: #f8f674;
+          color: var(--kilo-yellow);
+          border-color: var(--kilo-yellow);
         }
 
         .btn-primary {

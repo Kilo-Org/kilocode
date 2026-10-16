@@ -274,6 +274,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI 已将您登出",
   "error.providerAuth.chatgpt.description": "请再次登录 ChatGPT，然后重新发送消息以继续使用 Codex 模型。",
 
+  "provider.failure.unauthorized": "凭据被拒绝（HTTP {{status}}）。请重新登录。",
+  "provider.failure.unauthorizedNoStatus": "凭据被拒绝。请重新登录。",
+  "provider.failure.unauthenticated": "尚未登录。",
+  "provider.failure.network": "无法连接到提供方。请检查您的网络连接。",
+  "provider.failure.http": "提供方错误（HTTP {{status}}）。",
+  "provider.failure.httpNoStatus": "提供方错误。",
+  "provider.failure.schema": "提供方返回了意外的响应。",
+
   "notification.permission.title": "需要权限",
   "notification.permission.titleSubagent": "需要权限（子代理）",
   "notification.permission.titleSkillShell": "要执行技能「{{skill}}」的 shell 命令吗？",
@@ -904,6 +912,9 @@ export const dict = {
   "settings.models.speechToTextModel.description": "选择用于语音输入的 Kilo Gateway 转录模型。",
   "settings.experimental.nativeNotebookTools.title": "原生笔记本工具",
   "settings.experimental.nativeNotebookTools.description": "启用用于读取、编辑和执行 VS Code 笔记本的实验性工具",
+  "settings.experimental.globIncludeIgnored.title": "搜索被忽略的路径",
+  "settings.experimental.globIncludeIgnored.description":
+    "即使被 .gitignore 或其他忽略文件排除，glob 工具仍应搜索的文件夹或文件。使用相对于工作区的 gitignore 风格模式；其中被忽略的子文件夹仍会被跳过。",
   "settings.experimental.continueOnDeny.title": "拒绝后继续",
   "settings.experimental.continueOnDeny.description": "权限被拒绝时继续智能体循环",
   "settings.sandboxing.title": "沙盒",

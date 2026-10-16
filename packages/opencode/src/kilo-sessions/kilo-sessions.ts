@@ -1178,13 +1178,13 @@ export namespace KiloSessions {
         // kilocode_change - K1 W1 clone: import a cloud session in-process. The
         // dynamic import keeps the HTTP handler graph out of the remote-sender
         // module graph, mirroring the lazy cancelPrompt pattern.
-        importFromCloud: async (cloneId) => {
+        importFromCloud: async (cloneId, opts) => {
           const [{ CloudSessionImportInProcess }, { AppRuntime }] = await Promise.all([
             import("@/kilocode/server/import-cloud-session-in-process"),
             import("@/effect/app-runtime"),
           ])
           const { session, diffs, directory } = await AppRuntime.runPromise(
-            CloudSessionImportInProcess.importSessionWithoutRestore(cloneId),
+            CloudSessionImportInProcess.importSessionWithoutRestore(cloneId, opts),
           )
           return {
             session,

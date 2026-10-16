@@ -287,6 +287,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "เข้าสู่ระบบ ChatGPT อีกครั้ง จากนั้นส่งข้อความของคุณใหม่เพื่อใช้งานโมเดล Codex ต่อไป",
 
+  "provider.failure.unauthorized": "ข้อมูลรับรองถูกปฏิเสธ (HTTP {{status}}) โปรดเข้าสู่ระบบอีกครั้ง",
+  "provider.failure.unauthorizedNoStatus": "ข้อมูลรับรองถูกปฏิเสธ โปรดเข้าสู่ระบบอีกครั้ง",
+  "provider.failure.unauthenticated": "ยังไม่ได้เข้าสู่ระบบ",
+  "provider.failure.network": "ไม่สามารถเชื่อมต่อผู้ให้บริการได้ โปรดตรวจสอบการเชื่อมต่อของคุณ",
+  "provider.failure.http": "เกิดข้อผิดพลาดของผู้ให้บริการ (HTTP {{status}})",
+  "provider.failure.httpNoStatus": "เกิดข้อผิดพลาดของผู้ให้บริการ",
+  "provider.failure.schema": "ได้รับการตอบกลับที่ไม่คาดคิดจากผู้ให้บริการ",
+
   "notification.permission.title": "ต้องการสิทธิ์",
   "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
   "notification.permission.titleSkillShell": 'เรียกใช้คำสั่งเชลล์จากสกิล "{{skill}}" หรือไม่?',
@@ -931,6 +939,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "เครื่องมือโน้ตบุ๊กดั้งเดิม",
   "settings.experimental.nativeNotebookTools.description":
     "เปิดใช้งานเครื่องมือทดลองสำหรับการอ่าน แก้ไข และเรียกใช้โน้ตบุ๊ก VS Code",
+  "settings.experimental.globIncludeIgnored.title": "ค้นหาพาธที่ถูกละเว้น",
+  "settings.experimental.globIncludeIgnored.description":
+    "โฟลเดอร์หรือไฟล์ที่เครื่องมือ glob ควรค้นหาแม้ว่า .gitignore หรือไฟล์ ignore อื่นๆ จะยกเว้นไว้ ใช้รูปแบบสไตล์ gitignore ที่อ้างอิงจากเวิร์กสเปซ โฟลเดอร์ที่ถูกละเว้นภายในจะยังคงถูกข้าม",
   "settings.experimental.continueOnDeny.title": "ดำเนินต่อเมื่อถูกปฏิเสธ",
   "settings.experimental.continueOnDeny.description": "ดำเนินลูปเอเจนต์ต่อเมื่อสิทธิ์ถูกปฏิเสธ",
   "settings.sandboxing.title": "การทำงานในแซนด์บ็อกซ์",
