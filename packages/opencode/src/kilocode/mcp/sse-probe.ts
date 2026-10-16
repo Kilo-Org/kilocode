@@ -9,14 +9,40 @@
  *
  * The spec already answers "this endpoint has no stream" with `405`, and the SDK returns from the
  * probe cleanly on it, so normalize the response instead of patching the SDK.
+ *
+ * Normalization is scoped to the optional stream request only: a GET to the MCP endpoint with an
+ * SSE `Accept` header. The same fetch wrapper also serves OAuth discovery, registration, and token
+ * requests, and rewriting any of those would break authentication. When [endpoint] is omitted the
+ * method and Accept checks still apply, which keeps the wrapper safe for other callers.
  */
 
 type Request = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
-export const probe = (base: Request = fetch) => {
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") return input
+  if (input instanceof URL) return input.href
+  return input.url
+}
+
+function acceptsEventStream(init: RequestInit | undefined, request: RequestInfo | URL): boolean {
+  const raw = init?.headers ?? (request instanceof Request ? request.headers : undefined)
+  if (!raw) return false
+  const accept =
+    raw instanceof Headers
+      ? raw.get("accept")
+      : Array.isArray(raw)
+        ? raw.find(([key]) => key.toLowerCase() === "accept")?.[1]
+        : ((raw as Record<string, string>).accept ?? (raw as Record<string, string>).Accept)
+  return !!accept && accept.toLowerCase().includes("text/event-stream")
+}
+
+export const probe = (base: Request = fetch, endpoint?: string) => {
   return async (input: RequestInfo | URL, init?: RequestInit) => {
     const response = await base(input, init)
-    if (init?.method !== "GET" || !response.ok) return response
+    if (endpoint && requestUrl(input) !== endpoint) return response
+    const method = init?.method ?? (input instanceof Request ? input.method : "GET")
+    if (method !== "GET" || !response.ok) return response
+    if (!acceptsEventStream(init, input)) return response
     const type = response.headers.get("content-type")?.toLowerCase()
     if (!type || type.includes("text/event-stream")) return response
     await response.body?.cancel()

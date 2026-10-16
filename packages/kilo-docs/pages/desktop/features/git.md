@@ -17,7 +17,7 @@ Controls at the top of the tab let you:
 
 - {% svgIcon src="/docs/img/desktop/list-chevrons-down-up.svg" /%} **Collapse all files** to their headers, then expand just the ones you want.
 - {% svgIcon src="/docs/img/desktop/settings.svg" /%} **Diff settings** control how diffs are displayed, such as switching between a unified and split layout.
-- {% svgIcon src="/docs/img/desktop/panel-right-close.svg" /%} **Hide file tree** to give the diff more room, and show it again when you need it. Select a file in the file tree to jump to it in the diff.
+- {% svgIcon src="/docs/img/desktop/panel-right-close.svg" /%} **Hide file tree** to give the diff more room, and show it again when you need it; Kilo Desktop remembers your choice. Select a file in the file tree to jump to it in the diff.
 
 The tab also handles the cases where there's nothing to show:
 
@@ -33,6 +33,8 @@ The commit control in the top toolbar turns your reviewed changes into commits a
 - **Push** — push your commits to the remote. Needs a checked-out branch with an `origin` remote and local commits to send.
 - **Create PR** — open a pull request for the current branch. Needs committed work on a feature branch (not the default branch) with a GitHub `origin` remote. When a pull request already exists, the menu links to it as **PR #N**, color-coded by its state.
 
+If a push fails, the error opens in a dialog where you can read the full git output. Select **Fix in chat** to add the error to your chat draft so the agent can help.
+
 ## Switch and create branches
 
 A branch switcher in the chat lets you move between branches for the workspace. The list is grouped into your **default**, **recent**, and **other** branches, and you can search it. Selecting a branch checks it out; choosing a remote branch creates a local tracking branch for it.
@@ -46,7 +48,7 @@ Beside the workspace in the chat, a mode control sets where a session's changes 
 - **Local repository** — work in the repository already on your machine, on whatever branch is checked out. This is the default.
 - **New worktree** — create a separate copy for the session, based on a branch you pick, so your main checkout stays untouched while the agent works.
 
-Kilo Desktop remembers your choice per workspace.
+Kilo Desktop remembers your choice per workspace. Worktree sessions created in Kilo Desktop also appear in the [VS Code extension](/docs/code-with-ai/platforms/vscode)'s Agent Manager.
 
 ## Set up git for a folder
 

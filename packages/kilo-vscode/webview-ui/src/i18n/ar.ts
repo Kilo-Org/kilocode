@@ -282,6 +282,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "سجل الدخول باستخدام ChatGPT مرة أخرى، ثم أرسل رسالتك مرة أخرى لمواصلة استخدام نماذج Codex.",
 
+  "provider.failure.unauthorized": "تم رفض بيانات الاعتماد (HTTP {{status}}). سجل الدخول مرة أخرى.",
+  "provider.failure.unauthorizedNoStatus": "تم رفض بيانات الاعتماد. سجل الدخول مرة أخرى.",
+  "provider.failure.unauthenticated": "لم يتم تسجيل الدخول.",
+  "provider.failure.network": "تعذر الوصول إلى الموفر. تحقق من اتصالك.",
+  "provider.failure.http": "خطأ في الموفر (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "خطأ في الموفر.",
+  "provider.failure.schema": "استجابة غير متوقعة من الموفر.",
+
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
   "notification.permission.titleSkillShell": "هل تريد تشغيل أوامر الصدفة من المهارة «{{skill}}»؟",
@@ -743,6 +751,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code هو مساعد ترميز بالذكاء الاصطناعي. اطلب منه بناء ميزات أو إصلاح أخطاء أو شرح قاعدة الشيفرة.",
+  "session.workspaceScope.description":
+    "تستخدم دردشة Kilo المجلد «{{folder}}» فقط، وهو المجلد الأول في مساحة العمل هذه.",
+  "session.workspaceScope.alternatives": "للعمل على مجلد آخر، افتحه في نافذة مستقلة أو أضفه كمشروع في Agent Manager.",
+  "session.workspaceScope.dismiss": "إغلاق تلميح نطاق مساحة العمل",
   "session.messages.scrollToBottom": "التمرير إلى الأسفل",
   "session.messages.initializing": "جاري التهيئة...",
   "session.messages.taskStarting": "جاري البدء...",

@@ -94,11 +94,54 @@ class KiloMcpAuthService internal constructor(
     private val lastEventUrl = AtomicReference<String?>(null)
     private val lastEventAt = AtomicLong(0)
 
-    /** Refreshes the needs-auth set for [dir] and returns it. Returns an empty set for a blank directory. */
+    /**
+     * Refreshes the needs-auth set for [dir] and returns it.
+     *
+     * A failed status read keeps the directory's last-known set rather than clearing it, so a
+     * transient backend hiccup cannot silently drop a sign-in badge. Returns an empty set only for
+     * a blank directory or a genuinely empty successful response.
+     */
     suspend fun refresh(dir: String): Set<String> {
         start()
         if (dir.isBlank()) return emptySet()
-        return sync(dir, attempt("mcp auth refresh failed dir=$dir", emptyList()) { svc().mcpStatus(dir) })
+        val names = try {
+            load(dir)
+        } catch (err: CancellationException) {
+            throw err
+        } catch (err: Exception) {
+            // Keep the last-known set: a failed read is not proof that a server became authenticated.
+            LOG.warn("mcp status refresh failed dir=$dir", err)
+            return _needsAuth.value[dir].orEmpty()
+        }
+        updateNeedsAuth(dir, names)
+        return names
+    }
+
+    /** Reads the needs-auth names for [dir], throwing when the RPC itself fails. */
+    private suspend fun load(dir: String): Set<String> {
+        LOG.info("mcp status: requesting dir=$dir")
+        val statuses = svc().mcpStatus(dir)
+        LOG.info("mcp status: received dir=$dir count=${statuses.size}")
+        return statuses.filter { it.status == "needs_auth" }.map { it.name }.toSet()
+    }
+
+    /**
+     * Refreshes the needs-auth set for every directory seen so far, plus [origin].
+     *
+     * Signing in or resetting a server for one directory changes the shared credentials, so the
+     * other open sessions must re-read their runtime status to drop or raise their badge. A failed
+     * read for one directory leaves that directory's last-known set intact.
+     */
+    suspend fun refreshAll(origin: String, skip: String? = null) {
+        start()
+        if (origin.isBlank()) return
+        val dirs = buildSet {
+            add(origin)
+            addAll(_needsAuth.value.keys)
+        } - setOfNotNull(skip)
+        coroutineScope {
+            for (dir in dirs) launch { refresh(dir) }
+        }
     }
 
     /** Records needs-auth state for [dir] from an already-fetched status list and returns the names. */
@@ -131,7 +174,7 @@ class KiloMcpAuthService internal constructor(
             release(key, pending)
             // A forgotten server is mid-removal, so re-reading its runtime status here would race the
             // removal RPC and put the name straight back into needsAuth.
-            if (!pending.forgotten) refresh(dir)
+            if (!pending.forgotten) refreshAll(dir)
         }
     }
 
@@ -214,8 +257,17 @@ class KiloMcpAuthService internal constructor(
             reconnected = disconnected && connected
             return reconnected
         } finally {
-            refresh(dir)
-            if (!reconnected) markNeedsAuth(dir, name)
+            // Force the needs-auth badge before any suspending refresh: `refreshAll` can propagate
+            // cancellation, and `_needsAuth` is app-level state, so a cancelled reset must not skip
+            // the badge for a failed reconnect. The origin is excluded from the refresh when the
+            // reconnect failed, because its runtime status may still read "connected" and would
+            // immediately drop the forced badge; sibling directories are still refreshed.
+            if (reconnected) {
+                refreshAll(dir)
+            } else {
+                markNeedsAuth(dir, name)
+                refreshAll(dir, skip = dir)
+            }
         }
     }
 
