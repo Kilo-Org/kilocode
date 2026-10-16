@@ -34,6 +34,11 @@ import { KiloMessageDiagnostics } from "@/kilocode/session/message-diagnostics"
 import { SessionExport } from "@/kilocode/session-export"
 import { getActiveOrg } from "@/kilocode/session-export/eligibility"
 import { normalizeUsageForExport, observeFullStreamForExport } from "@/kilocode/session-export/llm"
+import { KiloCustomRouter } from "@/kilocode/auto-routing/router"
+import { openaiMessages, openaiTools } from "@/kilocode/auto-routing/messages"
+import { organization, token } from "@/kilocode/provider/catalog"
+import { KiloRoutedModel } from "@/kilocode/session/routed-model"
+import { Identity } from "@kilocode/kilo-telemetry"
 // kilocode_change end
 import { EffectBridge } from "@/effect/bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -60,6 +65,7 @@ export type StreamInput = {
   toolChoice?: "auto" | "required" | "none"
   preflight?: boolean // kilocode_change - enable proactive threshold compaction for normal session turns
   reportedContextTokens?: number // kilocode_change - provider-reported context size from the last finished turn, source of truth for the output cap
+  route?: { current?: { providerID: string; modelID: string } } // kilocode_change - ADR 0005 client-served custom auto router identity
 }
 
 export type StreamRequest = StreamInput & {
@@ -107,6 +113,37 @@ const live: Layer.Layer<
         agent: input.agent.name,
         mode: input.agent.mode,
       })
+
+      // kilocode_change start - ADR 0005: a custom auto router that this CLI can
+      // serve asks the routing worker for a decision and dispatches it itself.
+      if (KiloCustomRouter.isCustomRouter({ providerID: input.model.providerID, modelID: input.model.id })) {
+        const item = yield* provider.getProvider(input.model.providerID)
+        const info = yield* auth.get(input.model.providerID)
+        const providers = yield* provider.list()
+        const machineId = yield* Effect.promise(() => Identity.getMachineId().catch(() => undefined))
+        const pick = yield* Effect.promise(async () =>
+          KiloCustomRouter.resolve({
+            modelID: input.model.id,
+            messages: openaiMessages(input.messages),
+            tools: await openaiTools(input.tools),
+            sessionID: input.sessionID,
+            requestID: input.user.id,
+            mode: input.agent.name,
+            machineId,
+            token: token(item.options, info),
+            organizationId: organization(item.options, info),
+            providers,
+          }),
+        )
+        if (pick) {
+          const model = KiloCustomRouter.routedModel({ pick, base: input.model, providers })
+          if (!model) throw new Error(KiloCustomRouter.errorMessage("custom_router_unavailable", input.model.id))
+          if (input.route) input.route.current = { providerID: model.providerID, modelID: model.id }
+          const user = pick.variant ? { ...input.user, model: { ...input.user.model, variant: pick.variant } } : input.user
+          return yield* run({ ...input, model, user })
+        }
+      }
+      // kilocode_change end
 
       const [language, cfg, item, info] = yield* Effect.all(
         [
@@ -466,24 +503,35 @@ const live: Layer.Layer<
               (ctrl) => Effect.sync(() => ctrl.abort()),
             )
 
-            const result = yield* run({ ...input, abort: ctrl.signal })
+            // kilocode_change start - ADR 0005: record the client-served model identity
+            const route: { current?: { providerID: string; modelID: string } } = {}
+            const mark = (events: Stream.Stream<LLMEvent, unknown>) => {
+              const current = route.current
+              if (!current) return events
+              return events.pipe(Stream.map((event) => KiloRoutedModel.stamp(event, current)))
+            }
+            // kilocode_change end
 
-            if (result.type === "native") return result.stream
+            const result = yield* run({ ...input, abort: ctrl.signal, route })
+
+            if (result.type === "native") return mark(result.stream)
 
             // Adapter seam: both runtimes expose the same LLMEvent stream. Native
             // already returns one; AI SDK streams are converted here.
             const state = LLMAISDK.adapterState()
-            return Stream.fromAsyncIterable(result.result.fullStream, (e) =>
-              e instanceof Error ? e : new Error(String(e)),
-            ).pipe(
-              Stream.mapEffect((event) => LLMAISDK.toLLMEvents(state, event)),
-              // kilocode_change start - emit structural diagnostics when the AI SDK
-              // rejects the assembled ModelMessage[] before dispatch (#13185)
-              Stream.tapError((e) =>
-                Effect.sync(() => KiloMessageDiagnostics.reportModelMessageError(e, result.messages)),
+            return mark(
+              Stream.fromAsyncIterable(result.result.fullStream, (e) =>
+                e instanceof Error ? e : new Error(String(e)),
+              ).pipe(
+                Stream.mapEffect((event) => LLMAISDK.toLLMEvents(state, event)),
+                // kilocode_change start - emit structural diagnostics when the AI SDK
+                // rejects the assembled ModelMessage[] before dispatch (#13185)
+                Stream.tapError((e) =>
+                  Effect.sync(() => KiloMessageDiagnostics.reportModelMessageError(e, result.messages)),
+                ),
+                // kilocode_change end
+                Stream.flatMap((events) => Stream.fromIterable(events)),
               ),
-              // kilocode_change end
-              Stream.flatMap((events) => Stream.fromIterable(events)),
             )
           }),
         ),
