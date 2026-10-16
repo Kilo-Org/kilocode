@@ -232,10 +232,12 @@ const STDERR_LOG_MAX_CHARS = 8 * 1024 * 1024
  * (triage parses it). stderr is always buffered.
  *
  * Always writes the full captured stderr to
- * docs-sync-out/kilo-stderr-<sanitized-label>.log (unconditional — success and
- * failure). The console return value still uses the short tailText.
+ * <outDir>/kilo-stderr-<sanitized-label>.log (unconditional — success and
+ * failure). `outDir` defaults to docs-sync-out; the v2-port tracker passes its
+ * own directory so the two bots do not share an artifact tree. The console
+ * return value still uses the short tailText.
  */
-export function runKilo({ args, timeoutMs, streamStdout = false, label = "kilo" }) {
+export function runKilo({ args, timeoutMs, streamStdout = false, label = "kilo", outDir = "docs-sync-out" }) {
   const result = spawnSync("kilo", args, {
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
@@ -259,10 +261,10 @@ export function runKilo({ args, timeoutMs, streamStdout = false, label = "kilo" 
   // generous (megabytes) so long batch dumps keep auto-rejecting lines; console
   // still uses the short tail above.
   try {
-    fs.mkdirSync("docs-sync-out", { recursive: true })
+    fs.mkdirSync(outDir, { recursive: true })
     const safe = label.replace(/[^A-Za-z0-9._-]/g, "-")
     const body = stderrSafe.length > STDERR_LOG_MAX_CHARS ? stderrSafe.slice(-STDERR_LOG_MAX_CHARS) : stderrSafe
-    fs.writeFileSync(`docs-sync-out/kilo-stderr-${safe}.log`, body)
+    fs.writeFileSync(`${outDir}/kilo-stderr-${safe}.log`, body)
   } catch (err) {
     console.warn(`${label}: failed to write kilo-stderr log: ${err.message}`)
   }
