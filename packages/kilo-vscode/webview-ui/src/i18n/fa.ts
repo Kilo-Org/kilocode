@@ -1035,7 +1035,6 @@ export const dict = {
     "هوک‌ها دستورهای شل را با تمام مجوزهای کاربری شما و خارج از sandbox اجرا می‌کنند. فقط دستورهایی را اضافه کنید که به آن‌ها اعتماد دارید.",
   "settings.agentBehaviour.hooks.scope":
     "در پیکربندی سراسری شما ذخیره می‌شود. هوک‌های موجود در پیکربندی پروژه نادیده گرفته می‌شوند.",
-  "settings.agentBehaviour.hooks.docs": "بیشتر بدانید",
   "settings.agentBehaviour.hooks.openConfig": "باز کردن فایل پیکربندی",
   "settings.agentBehaviour.hooks.pre": "پیش از اجرای ابزار",
   "settings.agentBehaviour.hooks.pre.help":

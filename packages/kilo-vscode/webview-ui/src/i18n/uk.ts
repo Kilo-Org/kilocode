@@ -1050,7 +1050,6 @@ export const dict = {
     "Хуки виконують команди оболонки з вашими повними правами користувача, поза пісочницею. Додавайте лише команди, яким довіряєте.",
   "settings.agentBehaviour.hooks.scope":
     "Зберігається у вашій глобальній конфігурації. Хуки з конфігурації проєкту ігноруються.",
-  "settings.agentBehaviour.hooks.docs": "Докладніше",
   "settings.agentBehaviour.hooks.openConfig": "Відкрити файл конфігурації",
   "settings.agentBehaviour.hooks.pre": "Перед запуском інструмента",
   "settings.agentBehaviour.hooks.pre.help":

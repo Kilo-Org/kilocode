@@ -1122,7 +1122,6 @@ export const dict = {
     "Hooki uruchamiają polecenia powłoki z pełnymi uprawnieniami Twojego użytkownika, poza sandboxem. Dodawaj tylko polecenia, którym ufasz.",
   "settings.agentBehaviour.hooks.scope":
     "Zapisywane w Twojej konfiguracji globalnej. Hooki z konfiguracji projektu są ignorowane.",
-  "settings.agentBehaviour.hooks.docs": "Dowiedz się więcej",
   "settings.agentBehaviour.hooks.openConfig": "Otwórz plik konfiguracji",
   "settings.agentBehaviour.hooks.pre": "Przed uruchomieniem narzędzia",
   "settings.agentBehaviour.hooks.pre.help":

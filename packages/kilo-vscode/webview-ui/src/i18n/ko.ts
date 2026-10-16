@@ -1108,7 +1108,6 @@ export const dict = {
   "settings.agentBehaviour.hooks.warning":
     "훅은 샌드박스 밖에서 사용자의 전체 권한으로 셸 명령을 실행합니다. 신뢰할 수 있는 명령만 추가하세요.",
   "settings.agentBehaviour.hooks.scope": "전역 구성에 저장됩니다. 프로젝트 구성의 훅은 무시됩니다.",
-  "settings.agentBehaviour.hooks.docs": "자세히 알아보기",
   "settings.agentBehaviour.hooks.openConfig": "구성 파일 열기",
   "settings.agentBehaviour.hooks.pre": "도구 실행 전",
   "settings.agentBehaviour.hooks.pre.help":

@@ -1118,7 +1118,6 @@ export const dict = {
     "Хуки выполняют команды оболочки с вашими полными правами пользователя, вне песочницы. Добавляйте только команды, которым доверяете.",
   "settings.agentBehaviour.hooks.scope":
     "Сохраняется в глобальную конфигурацию. Хуки из конфигурации проекта игнорируются.",
-  "settings.agentBehaviour.hooks.docs": "Подробнее",
   "settings.agentBehaviour.hooks.openConfig": "Открыть файл конфигурации",
   "settings.agentBehaviour.hooks.pre": "Перед запуском инструмента",
   "settings.agentBehaviour.hooks.pre.help":

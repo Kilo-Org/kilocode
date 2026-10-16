@@ -1122,7 +1122,6 @@ export const dict = {
     "Hookovi pokreću shell naredbe s vašim punim korisničkim dozvolama, izvan sandboxa. Dodajte samo naredbe kojima vjerujete.",
   "settings.agentBehaviour.hooks.scope":
     "Sprema se u vašu globalnu konfiguraciju. Hookovi u konfiguraciji projekta se zanemaruju.",
-  "settings.agentBehaviour.hooks.docs": "Saznajte više",
   "settings.agentBehaviour.hooks.openConfig": "Otvori konfiguracijsku datoteku",
   "settings.agentBehaviour.hooks.pre": "Prije pokretanja alata",
   "settings.agentBehaviour.hooks.pre.help":

@@ -1068,7 +1068,6 @@ export const dict = {
     "在代理使用工具之前或之后运行你自己的命令，例如对每次编辑运行 lint，或阻止有风险的命令。使用 Claude Code 钩子格式。",
   "settings.agentBehaviour.hooks.warning": "钩子会在沙盒之外以你的完整用户权限运行 shell 命令。请只添加你信任的命令。",
   "settings.agentBehaviour.hooks.scope": "保存到你的全局配置。项目配置中的钩子会被忽略。",
-  "settings.agentBehaviour.hooks.docs": "了解更多",
   "settings.agentBehaviour.hooks.openConfig": "打开配置文件",
   "settings.agentBehaviour.hooks.pre": "工具运行前",
   "settings.agentBehaviour.hooks.pre.help": "可以阻止工具调用：以代码 2 退出，并将原因写入 stderr。代理会看到该原因。",

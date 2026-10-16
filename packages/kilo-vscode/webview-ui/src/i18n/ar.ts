@@ -1097,7 +1097,6 @@ export const dict = {
     "تشغّل الخطافات أوامر shell بكامل صلاحيات المستخدم الخاصة بك، خارج sandbox. لا تُضف إلا الأوامر التي تثق بها.",
   "settings.agentBehaviour.hooks.scope":
     "يُحفظ في التكوين العالمي الخاص بك. يتم تجاهل الخطافات الموجودة في تكوين المشروع.",
-  "settings.agentBehaviour.hooks.docs": "معرفة المزيد",
   "settings.agentBehaviour.hooks.openConfig": "فتح ملف التكوين",
   "settings.agentBehaviour.hooks.pre": "قبل تشغيل أداة",
   "settings.agentBehaviour.hooks.pre.help":

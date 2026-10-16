@@ -1104,7 +1104,6 @@ export const dict = {
   "settings.agentBehaviour.hooks.warning":
     "ฮุกจะรันคำสั่งเชลล์ด้วยสิทธิ์ผู้ใช้เต็มรูปแบบของคุณ นอกแซนด์บ็อกซ์ เพิ่มเฉพาะคำสั่งที่คุณเชื่อถือเท่านั้น",
   "settings.agentBehaviour.hooks.scope": "บันทึกลงในการตั้งค่าส่วนกลางของคุณ ฮุกในการตั้งค่าโปรเจกต์จะถูกละเว้น",
-  "settings.agentBehaviour.hooks.docs": "ดูข้อมูลเพิ่มเติม",
   "settings.agentBehaviour.hooks.openConfig": "เปิดไฟล์การตั้งค่า",
   "settings.agentBehaviour.hooks.pre": "ก่อนเครื่องมือทำงาน",
   "settings.agentBehaviour.hooks.pre.help":

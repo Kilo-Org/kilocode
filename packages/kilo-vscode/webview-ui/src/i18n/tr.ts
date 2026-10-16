@@ -1050,7 +1050,6 @@ export const dict = {
     "Hook'lar, shell komutlarını sandbox dışında ve tam kullanıcı izinlerinizle çalıştırır. Yalnızca güvendiğiniz komutları ekleyin.",
   "settings.agentBehaviour.hooks.scope":
     "Küresel yapılandırmanıza kaydedilir. Proje yapılandırmasındaki hook'lar yok sayılır.",
-  "settings.agentBehaviour.hooks.docs": "Daha fazla bilgi",
   "settings.agentBehaviour.hooks.openConfig": "Yapılandırma dosyasını aç",
   "settings.agentBehaviour.hooks.pre": "Araç çalışmadan önce",
   "settings.agentBehaviour.hooks.pre.help":

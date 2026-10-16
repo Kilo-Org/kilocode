@@ -222,13 +222,6 @@ const HooksTab: Component<Props> = (props) => {
           <span style={weak}>{language.t("settings.agentBehaviour.hooks.scope")}</span>
           <div style={{ display: "flex", gap: "4px", "margin-left": "auto" }}>
             <Button
-              variant="ghost"
-              size="small"
-              onClick={() => vscode.postMessage({ type: "openExternal", url: "https://kilo.ai/docs/customize/hooks" })}
-            >
-              {language.t("settings.agentBehaviour.hooks.docs")}
-            </Button>
-            <Button
               variant="secondary"
               size="small"
               onClick={() => vscode.postMessage(configMessage("global", language.t))}

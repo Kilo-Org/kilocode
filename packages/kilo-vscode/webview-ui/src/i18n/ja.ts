@@ -1115,7 +1115,6 @@ export const dict = {
   "settings.agentBehaviour.hooks.warning":
     "フックはサンドボックスの外で、ユーザーの全権限を使ってシェルコマンドを実行します。信頼できるコマンドのみを追加してください。",
   "settings.agentBehaviour.hooks.scope": "グローバル設定に保存されます。プロジェクト設定内のフックは無視されます。",
-  "settings.agentBehaviour.hooks.docs": "詳細を見る",
   "settings.agentBehaviour.hooks.openConfig": "設定ファイルを開く",
   "settings.agentBehaviour.hooks.pre": "ツールの実行前",
   "settings.agentBehaviour.hooks.pre.help":

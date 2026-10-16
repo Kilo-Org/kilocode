@@ -1031,7 +1031,6 @@ export const dict = {
   "settings.agentBehaviour.hooks.warning":
     "鉤子會在沙盒之外以你的完整使用者權限執行 shell 命令。請只新增你信任的命令。",
   "settings.agentBehaviour.hooks.scope": "儲存至你的全域設定。專案設定中的鉤子會被忽略。",
-  "settings.agentBehaviour.hooks.docs": "了解更多",
   "settings.agentBehaviour.hooks.openConfig": "開啟設定檔",
   "settings.agentBehaviour.hooks.pre": "工具執行前",
   "settings.agentBehaviour.hooks.pre.help": "可以封鎖工具呼叫：以代碼 2 結束，並將原因寫入 stderr。代理會看到該原因。",

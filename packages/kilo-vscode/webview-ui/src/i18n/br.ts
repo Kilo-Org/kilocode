@@ -1133,7 +1133,6 @@ export const dict = {
     "Hooks executam comandos shell com todas as suas permissões de usuário, fora do sandbox. Adicione apenas comandos em que você confia.",
   "settings.agentBehaviour.hooks.scope":
     "Salvo na sua configuração global. Hooks na configuração do projeto são ignorados.",
-  "settings.agentBehaviour.hooks.docs": "Saiba mais",
   "settings.agentBehaviour.hooks.openConfig": "Abrir arquivo de configuração",
   "settings.agentBehaviour.hooks.pre": "Antes de uma ferramenta ser executada",
   "settings.agentBehaviour.hooks.pre.help":

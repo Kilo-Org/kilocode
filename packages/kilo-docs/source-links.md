@@ -133,8 +133,6 @@
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/InstallModal.tsx -->
 - <https://kilo.ai/docs/code-with-ai/platforms/github>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
-- <https://kilo.ai/docs/customize/hooks>
-  <!-- packages/kilo-vscode/webview-ui/src/components/settings/agent-behaviour/HooksTab.tsx -->
 - <https://kilo.ai/docs/customize/marketplace>
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/InstallModal.tsx -->
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/MarketplaceListView.tsx -->
