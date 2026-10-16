@@ -24,6 +24,7 @@ import ai.kilocode.client.session.board.SessionBoardDialog
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.Notice
 import ai.kilocode.client.session.model.PromptAttachment
+import ai.kilocode.client.session.model.PromptDraft
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.Text
@@ -314,6 +315,14 @@ class SessionUi(
 
     @RequiresEdt
     internal fun hasDraft(): Boolean = prompt.hasDraft()
+
+    @RequiresEdt
+    internal fun draft(): PromptDraft? = prompt.draft()
+
+    @RequiresEdt
+    internal fun restore(draft: PromptDraft) {
+        prompt.setDraft(draft.text, draft.attachments)
+    }
 
     override val id: String? get() = controller.id
 

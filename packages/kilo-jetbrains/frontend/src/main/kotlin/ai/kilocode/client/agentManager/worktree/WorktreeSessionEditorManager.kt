@@ -168,11 +168,11 @@ open class WorktreeSessionEditorManager(
         list.reload {
             val target = session
             if (target != null) {
-                openSession(SessionRef.Local(target), false)
+                recover(SessionRef.Local(target), false)
                 return@reload
             }
             val dto = latest()
-            if (dto != null) openSession(SessionRef.Local(dto), false) else newSession(false)
+            if (dto != null) recover(SessionRef.Local(dto), false) else newSession(false)
         }
     }
 
@@ -233,7 +233,7 @@ open class WorktreeSessionEditorManager(
         list.create { session ->
             pending = false
             if (session != null) {
-                openSession(SessionRef.Local(session), focus)
+                recover(SessionRef.Local(session), focus)
                 consumePendingPrompt()
             } else {
                 // The backend could not create a session yet (e.g. it is paused for legacy
