@@ -253,7 +253,7 @@ jobs:
         timeout-minutes: 15
 
       - name: Run app component tests
-        if: ${{ !cancelled() && env.E2E_ENABLED == 'true' }}
+        if: ${{ !cancelled() && env.E2E_ENABLED == 'true' && runner.os == 'Linux' }} # kilocode_change - temporary: v2.0.30 desktop app component tests break on Windows CI (hoisted install, Storybook crash); upstream fix 17229d24f56, remove in the next sync
         run: bun --cwd packages/app test:components
         env:
           CI: true
