@@ -104,7 +104,7 @@ These need a repo admin (or account credentials) and do not block work. Track th
 | Migration docs landed on `origin/v2` | Done 2026-10-13: #15038 |
 | This file | Done |
 | Branch protection | Deferred (admin task) |
-| Baseline health recorded (`bun install`, `bun run check`) | Done 2026-10-11: `technical-notes/baseline/pinned-v2-baseline.md` |
+| Baseline health recorded (`bun install`, `bun run check`) | Done 2026-10-11: `technical-notes/baseline/pinned-v2-baseline.md`; refreshed 2026-10-16 at `v2.0.30` |
 | Discovery report | Done 2026-10-12: `migration-tracking/discovery/` |
 | Migration plan | Done 2026-10-12: `migration-tracking/plans/kilo-v2-migration-plan.md` |
 
