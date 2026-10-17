@@ -66,7 +66,7 @@ Items that need user sign-off are listed in A10. None of them changes a decision
 - "The base" and BASE in this plan mean the current upstream base of `origin/v2` (`migration-context.md`, pinned refs), not the initial commit. Seam claims, donor reuse and acceptance are checked against it.
 - Each sync is its own PR with a merge commit. It resolves conflicts and new failures in Kilo packages before it merges.
 - After a sync, open PRs merge `origin/v2` into their branch and re-run their checks and self-tests.
-- Known upstream failures are compared against `origin/v2` before the change. `pinned-v2-baseline.md` describes the initial base until it is re-measured.
+- Known upstream failures are in `pinned-v2-baseline.md`, which each sync re-measures and which names the release it describes. When `origin/v2` has moved past it, compare against `origin/v2` before the change.
 
 **Re-land by unit.** Every Kilo v1 behavior and every upstream-only surface has exactly one unit (Part B). A unit is done only with code, tests, acceptance evidence recorded with a SHA, its Part B status updated, and docs. A local pass is never recorded as end to end.
 
