@@ -1,7 +1,9 @@
 import * as fs from "fs"
 import * as path from "path"
+import * as vscode from "vscode"
 import type { TuiAttentionSoundName } from "@kilocode/plugin/tui"
 import { exec } from "../../util/process"
+import { playWebviewSound } from "./webview-sound"
 
 export const CustomSoundIDs = [
   "alert-01",
@@ -139,6 +141,12 @@ function fileCommands(file: string): Array<{ cmd: string; args: string[]; env?: 
 }
 
 async function perform(name: TuiAttentionSoundName, selected: AttentionSoundID, dir: string) {
+  if (vscode.env.remoteName !== undefined) {
+    const id = selected === "system" ? files.default : selected === "default" ? files[name] : selected
+    const ok = await playWebviewSound(id)
+    if (!ok) console.warn("[Kilo New] notification sound has no ready local webview", { name, selected })
+    return ok
+  }
   if (selected === "system") return run(systemCommands())
   const id = selected === "default" ? files[name] : selected
   const file = path.resolve(dir, `${id}.wav`)

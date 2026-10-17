@@ -830,6 +830,11 @@ export interface OSNotificationTestResultMessage {
   error?: string
 }
 
+export interface PlayNotificationSoundMessage {
+  type: "playNotificationSound"
+  uri: string
+}
+
 export interface TimelineSettingLoadedMessage {
   type: "timelineSettingLoaded"
   visible: boolean
@@ -1896,6 +1901,7 @@ export type ExtensionMessage =
   | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
   | OSNotificationTestResultMessage
+  | PlayNotificationSoundMessage
   | TimelineSettingLoadedMessage
   | AutoCleanupStateLoadedMessage
   | ThroughputSettingLoadedMessage
