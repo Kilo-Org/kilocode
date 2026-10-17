@@ -400,8 +400,8 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(agentManagerProvider)
 
   // Wire "Continue in Worktree" from sidebar → Agent Manager
-  provider.setContinueInWorktreeHandler((sessionId, progress) =>
-    agentManagerProvider.continueFromSidebar(sessionId, progress),
+  provider.setContinueInWorktreeHandler((sessionId, progress, directory) =>
+    agentManagerProvider.continueFromSidebar(sessionId, progress, directory),
   )
   provider.setCreateWorktreeHandler((baseBranch, branchName) =>
     agentManagerProvider.createFromSidebar(baseBranch, branchName),
@@ -496,8 +496,8 @@ export async function activate(context: vscode.ExtensionContext) {
     })
     tabProvider.setRemoteService(remoteService)
     tabProvider.setAutoApproveController(autoApprove)
-    tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
-      agentManagerProvider.continueFromSidebar(sessionId, progress),
+    tabProvider.setContinueInWorktreeHandler((sessionId, progress, directory) =>
+      agentManagerProvider.continueFromSidebar(sessionId, progress, directory),
     )
     tabProvider.setCreateWorktreeHandler((baseBranch, branchName) =>
       agentManagerProvider.createFromSidebar(baseBranch, branchName),

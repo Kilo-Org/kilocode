@@ -47,6 +47,7 @@ import { createRunController, createScriptTerminalRuntime, clearScriptTerminals 
 import { forkSession } from "./fork-session"
 import { AgentManagerVisiblePresence } from "./am-visible-presence"
 import { continueInWorktree } from "./continue-in-worktree"
+import { continueSidebar } from "./project/sidebar"
 import { WorktreeDiffController } from "./worktree-diff-controller"
 import { createWorktreeActivity } from "./worktree-activity"
 import { sendDiffBranches as postDiffBranches } from "./project/diff-branches"
@@ -1774,44 +1775,43 @@ export class AgentManagerProvider implements Disposable {
   public async continueFromSidebar(
     sessionId: string,
     progress: (status: string, detail?: string, error?: string) => void,
+    directory?: string,
   ): Promise<void> {
-    const root = this.getRoot()
-    if (!root) {
-      progress("error", undefined, "No workspace folder open")
-      return
-    }
-
-    this.openPanel()
-    await this.waitForStateReady("continueFromSidebar")
-    await continueInWorktree(
-      {
-        root,
-        binary: this.gitOps.path,
-        getClient: () => this.connectionService.getClient(),
-        createWorktreeOnDisk: (opts) => this.createWorktreeOnDisk(opts),
-        runSetupScript: (p, b, id) => this.runSetupScriptForWorktree(p, b, id),
-        cleanupWorktree: async (id) => {
-          await this.onDeleteWorktree(id)
+    await continueSidebar(this.contexts, this.projectScope, directory, progress, async () => {
+      const root = this.getRoot()
+      if (!root) return progress("error", undefined, "No workspace folder open")
+      this.openPanel()
+      await this.waitForStateReady("continueFromSidebar")
+      await continueInWorktree(
+        {
+          root,
+          binary: this.gitOps.path,
+          getClient: () => this.connectionService.getClient(),
+          createWorktreeOnDisk: (opts) => this.createWorktreeOnDisk(opts),
+          runSetupScript: (p, b, id) => this.runSetupScriptForWorktree(p, b, id),
+          cleanupWorktree: async (id) => {
+            await this.onDeleteWorktree(id)
+          },
+          notifyError: (error, result, id) => {
+            this.postToWebview({
+              type: "agentManager.worktreeSetup",
+              status: "error",
+              message: error,
+              branch: result.branch,
+              worktreeId: id,
+            })
+          },
+          getStateManager: () => this.getStateManager(),
+          registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
+          registerSession: (session) => this.panel?.sessions.registerSession(session),
+          notifyReady: (sid, result, wid) => this.notifyWorktreeReady(sid, result, wid),
+          capture: (event, props) => this.host.capture(event, props),
+          log: (...args) => this.log(...args),
         },
-        notifyError: (error, result, id) => {
-          this.postToWebview({
-            type: "agentManager.worktreeSetup",
-            status: "error",
-            message: error,
-            branch: result.branch,
-            worktreeId: id,
-          })
-        },
-        getStateManager: () => this.getStateManager(),
-        registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
-        registerSession: (session) => this.panel?.sessions.registerSession(session),
-        notifyReady: (sid, result, wid) => this.notifyWorktreeReady(sid, result, wid),
-        capture: (event, props) => this.host.capture(event, props),
-        log: (...args) => this.log(...args),
-      },
-      sessionId,
-      progress,
-    )
+        sessionId,
+        progress,
+      )
+    })
   }
 
   public async createFromSidebar(baseBranch?: string, branchName?: string): Promise<void> {
