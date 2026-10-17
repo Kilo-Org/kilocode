@@ -418,9 +418,9 @@ flowchart LR
 |---|---|---|---|---|---|---|---|---|---|
 | U-E1-01 | Product identity and branding: app dir, binary, env prefix, UA, config filenames, default theme and logo | new | G1 | U-E0-01 | partial | SMALL | yes H paths / L theme | Binary, app dir, `KILO_*` env, UA and config filenames are Kilo; Kilo theme and logo render; each shared patch counted by L3 with its seam (donor theme files are deleted at BASE) | todo |
 | U-E1-02 | Customer v2 store and paths (D6): distinct dirs, fail-closed on v1/opencode stores, DB preflight, SQLite errors, log correlation | new | G1 | U-E1-01 | partial | SMALL | yes H | Filesystem-access test: a v2 boot never opens a seeded v1 store; boot fails closed on v1/opencode stores; upstream `V1Migration` is a no-op on an empty store; v1 WAL-recovery and interrupted-first-access behavior reproduced | todo |
-| U-E1-03 | Gateway auth, profile, orgs, teams, Pass, error codes, tRPC client on the integration/credential framework | new | G1 | U-E0-02 | partial | M | yes M | Device login, org switch, logout, Pass and balance pass against the deployed Gateway (SHA recorded); errors actionable; org default model and credential precedence match v1 | todo |
-| U-E1-04 | Gateway provider, catalog merge/refresh/recovery, Kilo Auto and routed model, provider options, Codex/cloud auth | new | G1 | U-E1-03 | partial | M | yes L-M | Request-capture test shows Kilo headers; Kilo models selectable; catalog recovery and malformed-entry tolerance match v1; signed-out Gateway disables the provider when the catalog is empty | todo |
-| U-E1-05 | System-prompt selectors (8), memory guidance, editor `<env>` context on BASE seams | new | G1 | U-E1-04 | partial | M | partial L | Wire test: all eight selectors resolve per model family; memory guidance and editor context present (donor seam deleted at BASE, re-seat) | todo |
+| U-E1-03 | Gateway auth, profile, orgs, teams, Pass, error codes, tRPC client on the integration/credential framework | #14991 | G1 | U-E0-02 | partial | M | yes M | Device login, org switch, logout, Pass and balance pass against the deployed Gateway (SHA recorded); errors actionable; org default model and credential precedence match v1 | active: #15111 (login, teams), #15072 (account RPCs) merged; acceptance not recorded |
+| U-E1-04 | Gateway provider, catalog merge/refresh/recovery, Kilo Auto and routed model, provider options, Codex/cloud auth | #14991 | G1 | U-E1-03 | partial | M | yes L-M | Request-capture test shows Kilo headers; Kilo models selectable; catalog recovery and malformed-entry tolerance match v1; signed-out Gateway disables the provider when the catalog is empty | active: #15111 (with #15065 catalog, #15067 headers and errors), #15116 (variants) merged; acceptance not recorded |
+| U-E1-05 | System-prompt selectors (8), memory guidance, editor `<env>` context on BASE seams | #15108 (aliased models) | G1 | U-E1-04 | partial | M | partial L | Wire test: all eight selectors resolve per model family; memory guidance and editor context present (donor seam deleted at BASE, re-seat) | todo |
 | U-E1-06 | Model usage, cost, throughput, provider usage and quotas (`/usage`) | new | G1 | U-E1-04 | needs-port | M | partial M | Session-family cost and throughput match v1 on fixture sessions incl. subagent propagation; Kilo, Codex and MiniMax provider usage shown | todo |
 | U-E1-07 | Kilo config layer: keys, `kilo.json`/`.kilo` discovery, overlay/sources/writer, references, managed policy | new | G1 | U-E1-01 | partial | M | partial M | Per-key test from `config-mapping-v2-gap.md`: each key folds or is refused with a diagnostic; writer keeps 0600 and revision checks; v1-era new keys (`memory_model`, swarm, PTC, cleanup) handled | todo |
 | U-E1-08 | Kilo server extension surface: route groups as plugin RPC, parent watchdog, reload, watcher policy, capability/version handshake (server side) | new | G1 | U-E0-02 | partial | M | yes M | Kilo groups served as plugin RPC; server exits when its parent dies (test); `/reload` reloads the project; minimal handshake reports Kilo version and capabilities (shape per Q-G2-02) | todo |
@@ -846,9 +846,9 @@ flowchart LR
 
 | Unit | Title | Issue | Gate | Deps | Delta | Stale | Donor | Acceptance | Status |
 |---|---|---|---|---|---|---|---|---|---|
-| U-L1-01 | Upstream sync: merge every `upstream/dev` release commit pinned by SHA; dry-run workflow; merge tooling (one child per merge) | new | continuous | U-E0-04 | needs-port | M | no | Each sync pinned by SHA and merged with a merge commit; failures diffed against `origin/v2` before the sync; lag in releases and days recorded | todo |
+| U-L1-01 | Upstream sync: merge every `upstream/dev` release commit pinned by SHA; dry-run workflow; merge tooling (one child per merge) | #15020 | continuous | U-E0-04 (dry-run workflow only) | needs-port | M | no | Each sync pinned by SHA and merged with a merge commit; failures diffed against `origin/v2` before the sync; lag in releases and days recorded | active: tooling #15026; syncs `v2.0.27` #15029, `v2.0.30` #15136 |
 | U-L2-01 | v1 delta sweep: advance the cutoff, refresh the experimental-flag list, re-run staleness (one child per sweep) | new | continuous | — | needs-port | n/a | no | First sweep starts at `d99662338`; zero unclassified Kilo-owned or marked files in range; touched units re-opened | todo |
-| U-L3-01 | Shared-patch ratchet and marker disposition sweep | #14381 | continuous | U-E0-01 | needs-port | n/a | no | Script counts the three L3 metrics; CI fails an increase without a stated seam | todo |
+| U-L3-01 | Shared-patch ratchet and marker disposition sweep | #14381 | continuous | U-E0-01 | needs-port | n/a | no | Script counts the three L3 metrics; CI fails an increase without a stated seam | active: shared-file counter #15026; import metrics not counted yet |
 | U-L4-01 | Rewrite test plans with gate tags and v1-derived expectations (G1 scenario set) | new | G1 | — | needs-port | n/a | no | Each scenario tagged G1/G2/G3; expectations quoted from v1; RT and UI IDs kept | todo |
 | U-L4-02 | Acceptance harness: simulation/http-recorder, isolated real-host runner | new | G1 | U-E0-01 | needs-port | n/a | no | Harness runs scenarios on BASE; every fixture isolates HOME/XDG itself | todo |
 | U-L4-03 | G2 scenario set (VS Code) | new | G2 | — | needs-port | n/a | no | Scenarios cover sidebar, tabs, Agent Manager, settings, terminals, reconnect, import, handshake, rollback | todo |
@@ -951,6 +951,9 @@ flowchart LR
 | #14430 | U-E10-02 | |
 | #14431 | U-E10-02 | |
 | #14432 | U-E10-02 | |
+| #14991 | Tracker → U-E1-03, U-E1-04 (+ server contracts for U-E1-08, U-E6-08) | Gateway epic; design in `kilo-gateway-v2-plan.md` |
+| #15020 | U-L1-01 (+ the shared-file counter of U-L3-01, the marker guard of U-E3-08) | |
+| #15108 | U-E1-05 | Aliased-model prompt overrides only |
 
 Issues that map to more than one unit (#14378, #14391, #14395, #14399, #14413, #14414, #14416, #14419) either become umbrellas with one child per unit, or are narrowed; that choice is the user's.
 
@@ -978,12 +981,12 @@ Issues that map to more than one unit (#14378, #14391, #14395, #14399, #14413, #
 | N16 JetBrains scenario set | U-L4-04 |
 | N17 preview release train | U-E3-10 |
 
-### Units that need a new issue (78)
+### Units that need a new issue (75)
 
 | Epic | Units |
 |---|---|
 | E0 | U-E0-01, -02, -03, -04, -05 |
-| E1 | U-E1-01 … -08 (all eight) |
+| E1 | U-E1-01, -02, -05 (beyond #15108), -06, -07, -08 |
 | E2 | U-E2-06 … -12, -14, -15, -16, -17 … -26, -28, -29, -30 (all except -01 … -05, -13, -27) |
 | E9 | U-E9-01 … -08, -13, -14, -15 |
 | E3 | U-E3-04, -05, -09, -10, -12 |
@@ -994,7 +997,7 @@ Issues that map to more than one unit (#14378, #14391, #14395, #14399, #14413, #
 | E7 | U-E7-05, -07 (child of #14414) |
 | E8 | U-E8-01 … -04 |
 | E11 | U-E11-05 |
-| L | U-L1-01, U-L2-01, U-L4-01 … -07, U-L5-01 |
+| L | U-L2-01, U-L4-01 … -07, U-L5-01 |
 
 ## B15. Divergences from discovery
 
