@@ -99,6 +99,9 @@ import {
   watchAutocompleteConfig,
 } from "./services/autocomplete/settings"
 import { routeEarlyMessage } from "./kilo-provider/early-message"
+import { createAnnotationHandler } from "./kilo-provider/annotations"
+import { createResponseLensHandler, responseLensDirectory } from "./kilo-provider/response-lens"
+import { responseLensSettings } from "./shared/response-lens"
 import * as Board from "./kilo-provider/session-board"
 import { handleModelUsageMessage } from "./kilo-provider/model-usage"
 import { handleForkSession } from "./kilo-provider/fork-session"
@@ -523,6 +526,32 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly visibleTaskStreams = new VisibleTaskStreams((id, visible) => this.streams.setVisible(id, visible))
   private readonly confirmations = new MessageConfirmation()
   private readonly costs = new MaxCostNudge()
+  private readonly annotations = createAnnotationHandler({
+    storage: () => this.extensionContext?.globalStorageUri.fsPath,
+    post: (message) => this.postMessage(message),
+  })
+  private readonly responseLens = createResponseLensHandler({
+    client: () => this.client,
+    confirmFile: async (file) =>
+      (await vscode.window.showWarningMessage(
+        "Include an excerpt from this selected file outside the original chat project?",
+        {
+          modal: true,
+          detail: `${file}\nA bounded excerpt will be sent to your selected explanation model.`,
+        },
+        "Include excerpt",
+      )) === "Include excerpt",
+    enabled: () =>
+      responseLensSettings(vscode.workspace.getConfiguration("kilo-code.new.chat").get("responseLens")).enabled,
+    directory: (id) =>
+      responseLensDirectory(
+        id,
+        this.routeSessionDirectory(id),
+        this.sessionDirectories.get(id) ?? this.owners.get(id)?.dir,
+        this.currentSession,
+      ),
+    post: (message) => this.postMessage(message),
+  })
   private readonly activeAlerts = new Map<string, number>() // sid -> limit currently shown in UI
   private readonly memory = new KiloProviderMemory({
     client: () => this.client ?? undefined,
@@ -1244,6 +1273,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private setupWebviewMessageHandler(webview: vscode.Webview): void {
+    this.responseLens.cancel()
     this.webviewMessageDisposable?.dispose()
     this.unsubscribeAcknowledged?.()
     this.unsubscribeAcknowledged = this.connectionService.onSessionAcknowledged((sessionID, eventID) => {
@@ -1255,7 +1285,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.indexingConfigDisposable?.dispose()
     this.indexingConfigDisposable = watchIndexingConfig(() => void this.sendIndexingSettings())
     this.chatConfigDisposable?.dispose()
-    this.chatConfigDisposable = watchChatConfig((msg) => this.postMessage(msg))
+    this.chatConfigDisposable = watchChatConfig((msg) => {
+      if (!responseLensSettings(vscode.workspace.getConfiguration("kilo-code.new.chat").get("responseLens")).enabled)
+        this.responseLens.cancel()
+      this.postMessage(msg)
+    })
     this.throughputConfigDisposable?.dispose()
     this.throughputConfigDisposable = watchThroughputConfig((msg) => this.postMessage(msg))
     this.autoApprovalReasonConfigDisposable?.dispose()
@@ -1283,6 +1317,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       if (
         await routeEarlyMessage(message, {
+          responseLens: (message) => this.annotations.handle(message) || this.responseLens.handle(message),
           question: this.questionCtx,
           client: this.client,
           connection: this.connectionService,
@@ -2389,6 +2424,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
     const dir = this.getWorkspaceDirectory(sessionID)
+    // Keep the directory used for this transcript, even before session metadata arrives.
+    this.sessionDirectories.set(sessionID, dir)
     if (mode === "focus") {
       this.refreshSessionDetails(sessionID, dir)
       // Reconcile tail so SSE drops self-heal. Throttled to skip rapid tab-switching bursts.
@@ -2688,6 +2725,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * a session the backend has already deleted.
    */
   private pruneDeletedSession(sessionID: string): void {
+    void this.annotations.deleteSession(sessionID)
     this.removedSessionIds.add(sessionID)
     this.trackedSessionIds.delete(sessionID)
     this.openSessionIds.delete(sessionID)
@@ -6317,6 +6355,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Does NOT kill the server — that's the connection service's job.
    */
   dispose(): void {
+    this.annotations.dispose()
+    this.responseLens.cancel()
     this.opts.onHidden?.()
     if (this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, false)

@@ -2816,7 +2816,8 @@ export const SessionProvider: ParentComponent = (props) => {
     // directly rather than re-deriving mentions from the text via regex, which
     // truncates at the first space in a filename (see PromptInput's
     // setChatBoxMessage handler).
-    window.postMessage({ type: "setChatBoxMessage", text, paths, sessions, images, review, browser }, window.origin)
+    const prompt = { type: "setChatBoxMessage", sessionID: id, text, paths, sessions, images, review, browser }
+    window.postMessage(prompt, window.origin)
     vscode.postMessage({ type: "revertSession", sessionID: id, messageID, partID })
   }
 
@@ -2824,7 +2825,8 @@ export const SessionProvider: ParentComponent = (props) => {
     const id = currentSessionID()
     if (!id) return
     // Clear the prompt input on full redo (matching TUI/desktop behavior)
-    window.postMessage({ type: "setChatBoxMessage", text: "", images: [], review: [], browser: [] }, window.origin)
+    const prompt = { type: "setChatBoxMessage", sessionID: id, text: "", images: [], review: [], browser: [] }
+    window.postMessage(prompt, window.origin)
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
   }
 

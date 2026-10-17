@@ -1,4 +1,5 @@
 import type { InstallMarketplaceItemOptions, MarketplaceItem } from "../marketplace"
+import type { ExplainBrieflyRequest, CancelExplainBrieflyRequest } from "../../../../src/shared/response-lens"
 import type { FileAttachment } from "./parts"
 import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
@@ -1737,6 +1738,7 @@ export interface DismissAgentMigrationBannerMessage {
 }
 
 export type WebviewMessage =
+  | import("../../../../src/shared/annotations").AnnotationRequest
   | import("./agent-manager").BaseUpdateRequest
   | PRMergeRequest
   | { type: "sessionActivity"; state: Activity }
@@ -1940,6 +1942,8 @@ export type WebviewMessage =
   | ApplyWorktreeDiffMessage
   | RevertWorktreeFileMessage
   | EnhancePromptRequest
+  | ExplainBrieflyRequest
+  | CancelExplainBrieflyRequest
   | OpenChangesRequest
   | OpenDiffVirtualRequest
   | OpenPRCommentRequest

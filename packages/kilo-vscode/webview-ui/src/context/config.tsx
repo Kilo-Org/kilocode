@@ -81,6 +81,7 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
   if (message.type === "chatSettingsLoaded") {
     return {
       "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
+      "chat.responseLens": message.settings.responseLens,
       browserAutomation: message.settings.browserAutomation,
       agentManagerBrowserOpenLinksIn: message.settings.agentManagerBrowserOpenLinksIn,
       workspaceTrusted: message.settings.workspaceTrusted,
@@ -310,12 +311,6 @@ export const ConfigProvider: ParentComponent = (props) => {
       "indexing.projectId": message.settings.projectId,
     })
   })
-  const unsubscribeChat = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type !== "chatSettingsLoaded") return
-    mergeSettings({
-      "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
-    })
-  })
 
   onCleanup(() => {
     unsubscribeSettings()
@@ -325,7 +320,6 @@ export const ConfigProvider: ParentComponent = (props) => {
     unsubscribeExpired()
     unsubscribeFailure()
     unsubscribeIndexing()
-    unsubscribeChat()
   })
 
   function mergeSettings(patch: Record<string, unknown>) {
