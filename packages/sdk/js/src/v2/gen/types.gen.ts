@@ -4145,6 +4145,10 @@ export type TuiKeybindListResponse = {
   keybinds: Array<TuiKeybindInfo>
 }
 
+export type EnhancePromptFailedError = {
+  message: string
+}
+
 export type KiloEmbeddingModelCatalog = {
   defaultModel: string
   models: Array<{
@@ -16130,6 +16134,10 @@ export type EnhancePromptEnhanceErrors = {
    * BadRequest | InvalidRequestError
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * EnhancePromptFailedError
+   */
+  422: EnhancePromptFailedError
 }
 
 export type EnhancePromptEnhanceError = EnhancePromptEnhanceErrors[keyof EnhancePromptEnhanceErrors]
