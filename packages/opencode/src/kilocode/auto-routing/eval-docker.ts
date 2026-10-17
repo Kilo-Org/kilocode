@@ -11,6 +11,10 @@ export const HOST_ALIAS = "host.docker.internal"
 // Runs one `kilo run --format json` case inside the container and reports the
 // same measurements the platform container reports: exit code, wall-clock
 // duration around the CLI process, timeout state, raw stdout lines, stderr tail.
+// The case prompt arrives on the container's stdin and passes straight to the CLI,
+// as the platform container sends it: a long-context prompt exceeds Linux's 128 KiB
+// limit on one argument, and `kilo run` re-quotes argument messages with spaces.
+// With no positional message the CLI reads stdin to EOF and uses it verbatim.
 export const EVAL_ENTRYPOINT = `import { spawn } from 'node:child_process';
 
 const STDOUT_CAP_BYTES = 2 * 1024 * 1024;
@@ -47,7 +51,7 @@ const finishAfterExit = exitCode => {
   finishTimer.unref();
 };
 
-const child = spawn('kilo', cliArgs, { stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+const child = spawn('kilo', cliArgs, { stdio: ['inherit', 'pipe', 'pipe'], detached: true });
 const killTimer = setTimeout(() => {
   timedOut = true;
   finishAfterExit(-1);
@@ -97,7 +101,10 @@ export function evalCliVersion(input: { flag?: string; installed: string }): Eva
   const flag = input.flag?.trim()
   if (flag !== undefined && flag !== "") {
     if (published(flag)) return { ok: true, version: flag }
-    return { ok: false, message: `--cli-version must be a published @kilocode/cli version such as 7.8.12, got "${flag}".` }
+    return {
+      ok: false,
+      message: `--cli-version must be a published @kilocode/cli version such as 7.8.12, got "${flag}".`,
+    }
   }
   if (published(input.installed)) return { ok: true, version: input.installed }
   return {
@@ -129,15 +136,9 @@ export function evalImageTag(version: string): string {
   return `${EVAL_IMAGE_PREFIX}:${hasher.digest("hex").slice(0, 12)}`
 }
 
-export function evalCliArgs(input: {
-  provider: string
-  model: string
-  variant: string | null
-  prompt: string
-}): string[] {
+export function evalCliArgs(input: { provider: string; model: string; variant: string | null }): string[] {
   const args = ["-m", `${input.provider}/${input.model}`]
   if (input.variant) args.push("--variant", input.variant)
-  args.push(input.prompt)
   return args
 }
 
@@ -152,10 +153,12 @@ export function hostUrl(url: string): string {
   return parsed.toString()
 }
 
+// `-i` keeps the container's stdin open so the caller can stream the case prompt.
 export function evalDockerRunArgs(input: { image: string; envFile: string; args: string[] }): string[] {
   return [
     "run",
     "--rm",
+    "-i",
     "--add-host",
     `${HOST_ALIAS}:host-gateway`,
     "--env-file",

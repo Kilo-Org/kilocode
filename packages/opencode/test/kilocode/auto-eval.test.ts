@@ -1,4 +1,8 @@
 import { describe, expect, test } from "bun:test"
+import fs from "node:fs/promises"
+import os from "node:os"
+import path from "node:path"
+import { Process } from "@/util/process"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import type { Provider } from "@/provider/provider"
@@ -148,11 +152,16 @@ describe("eval provider config", () => {
 })
 
 describe("docker invocation", () => {
-  test("runs one fresh container per case with the host gateway alias", () => {
-    const args = evalDockerRunArgs({ image: "kilo-auto-eval:abc", envFile: "/tmp/eval.env", args: ["-m", "ollama/qwen3"] })
+  test("runs one fresh container per case with stdin open and the host gateway alias", () => {
+    const args = evalDockerRunArgs({
+      image: "kilo-auto-eval:abc",
+      envFile: "/tmp/eval.env",
+      args: ["-m", "ollama/qwen3"],
+    })
     expect(args).toEqual([
       "run",
       "--rm",
+      "-i",
       "--add-host",
       "host.docker.internal:host-gateway",
       "--env-file",
@@ -163,31 +172,56 @@ describe("docker invocation", () => {
     ])
   })
 
-  test("passes the variant only when the case names one", () => {
-    expect(evalCliArgs({ provider: "ollama", model: "qwen3", variant: "high", prompt: "p" })).toEqual([
+  test("passes the variant only when the case names one, and never the prompt", () => {
+    expect(evalCliArgs({ provider: "ollama", model: "qwen3", variant: "high" })).toEqual([
       "-m",
       "ollama/qwen3",
       "--variant",
       "high",
-      "p",
     ])
-    expect(evalCliArgs({ provider: "ollama", model: "qwen3", variant: null, prompt: "p" })).toEqual([
-      "-m",
-      "ollama/qwen3",
-      "p",
-    ])
+    expect(evalCliArgs({ provider: "ollama", model: "qwen3", variant: null })).toEqual(["-m", "ollama/qwen3"])
   })
 
-  test("runs the case prompt from the eval service verbatim", async () => {
-    const prompt = 'System line\n\nUser task with `code` and "quotes"\n\nIMPORTANT: answer only.'
-    const served = await fetchClientEvalCase({
-      routerId: "00000000-0000-4000-8000-000000000001",
-      caseId: "case-1",
-      fetch: async () => Response.json({ caseId: "case-1", baseRouter: "efficient", prompt, timeoutMs: 180_000 }),
-    })
-    expect(evalCliArgs({ provider: "ollama", model: "qwen3", variant: null, prompt: served.prompt }).at(-1)).toBe(
-      prompt,
-    )
+  // The entrypoint runs inside a Linux container; a shebang stand-in for `kilo` needs a POSIX host.
+  test.skipIf(process.platform === "win32").each([
+    [
+      "an ordinary prompt with spaces and quotes",
+      'System line\n\nUser task with `code` and "quotes"\n\nIMPORTANT: answer only.',
+    ],
+    ["a long-context prompt over 128 KiB", 'workspace line with "quotes" and ünïcode\n'.repeat(4_000)],
+  ])("gives the CLI %s byte for byte on stdin, outside argv", async (_kind, prompt) => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-auto-eval-entry-"))
+    try {
+      await fs.writeFile(path.join(dir, "entry.mjs"), EVAL_ENTRYPOINT)
+      await fs.writeFile(
+        path.join(dir, "kilo"),
+        [
+          "#!/usr/bin/env node",
+          "const chunks = []",
+          "process.stdin.on('data', (c) => chunks.push(c))",
+          "process.stdin.on('end', () => console.log(JSON.stringify({ argv: process.argv.slice(2), stdin: Buffer.concat(chunks).toString('base64') })))",
+        ].join("\n"),
+        { mode: 0o755 },
+      )
+      const promptFile = path.join(dir, "prompt.txt")
+      await fs.writeFile(promptFile, prompt)
+      const input = await fs.open(promptFile, "r")
+      try {
+        const result = await Process.text(["node", path.join(dir, "entry.mjs"), "-m", "ollama/qwen3"], {
+          env: { PATH: `${dir}${path.delimiter}${process.env.PATH ?? ""}` },
+          stdin: input.fd,
+        })
+        const container = JSON.parse(result.text) as { exitCode: number; stdoutLines: string[] }
+        const seen = JSON.parse(container.stdoutLines[0] ?? "{}") as { argv: string[]; stdin: string }
+        expect(container.exitCode).toBe(0)
+        expect(seen.argv).toEqual(["run", "--format", "json", "--auto", "-m", "ollama/qwen3"])
+        expect(Buffer.from(seen.stdin, "base64").equals(Buffer.from(prompt))).toBe(true)
+      } finally {
+        await input.close()
+      }
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true })
+    }
   })
 
   test("rejects a case response without the exact prompt", async () => {

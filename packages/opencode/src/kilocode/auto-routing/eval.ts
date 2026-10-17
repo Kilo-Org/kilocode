@@ -85,11 +85,13 @@ export namespace KiloAutoEval {
       await buildImage(image, version)
     }
 
-    const plan = await fetchClientEvalPlan({ token: input.token, organizationId: input.organizationId, routerId: router.id }).catch(
-      (error) => {
-        throw wrap(error, "Could not load the eval plan")
-      },
-    )
+    const plan = await fetchClientEvalPlan({
+      token: input.token,
+      organizationId: input.organizationId,
+      routerId: router.id,
+    }).catch((error) => {
+      throw wrap(error, "Could not load the eval plan")
+    })
     if (plan.items.length === 0) {
       io.ok(`Nothing to evaluate for ${router.modelId}: every entry has a current result.`)
       return 0
@@ -110,7 +112,6 @@ export namespace KiloAutoEval {
               provider: item.provider,
               model: item.model,
               variant: first.variant,
-              prompt: item.case.prompt,
             }),
           }),
           config: item.config,
@@ -130,7 +131,9 @@ export namespace KiloAutoEval {
 
     const queue = [...plan.items]
     const stats = { uploaded: 0, failed: 0 }
-    const workers = Array.from({ length: Math.max(1, input.concurrency) }, () => worker({ input, router, plan, queue, cases, stats, image, io }))
+    const workers = Array.from({ length: Math.max(1, input.concurrency) }, () =>
+      worker({ input, router, plan, queue, cases, stats, image, io }),
+    )
     await Promise.all(workers)
     if (stats.failed > 0) {
       io.fail(`${stats.uploaded} case(s) uploaded, ${stats.failed} failed. Re-run to resume.`)
@@ -229,17 +232,23 @@ async function runItem(state: Worker, item: ClientEvalPlanItem): Promise<void> {
     EVAL_TIMEOUT_MS: String(resolved.case.timeoutMs),
     NO_COLOR: "1",
   })
+  const promptFile = path.join(env.dir, "prompt.txt")
+  await fs.writeFile(promptFile, resolved.case.prompt, { mode: 0o600 })
+  const prompt = await fs.open(promptFile, "r")
   try {
     const args = evalCliArgs({
       provider: resolved.provider,
       model: resolved.model,
       variant: item.variant,
-      prompt: resolved.case.prompt,
     })
-    const result = await Process.text(["docker", ...evalDockerRunArgs({ image: state.image, envFile: env.file, args })], {
-      nothrow: true,
-      timeout: resolved.case.timeoutMs + 120_000,
-    })
+    const result = await Process.text(
+      ["docker", ...evalDockerRunArgs({ image: state.image, envFile: env.file, args })],
+      {
+        nothrow: true,
+        stdin: prompt.fd,
+        timeout: resolved.case.timeoutMs + 120_000,
+      },
+    )
     const parsed = containerResult(result.stdout.toString())
     const events = parseKiloRunEvents(parsed.stdoutLines)
     const score = await uploadClientEvalResult({
@@ -263,6 +272,7 @@ async function runItem(state: Worker, item: ClientEvalPlanItem): Promise<void> {
       `case ${item.caseId} rep ${item.rep} ${label(item.entry)} variant ${item.variant ?? "default"}: score ${score.score.toFixed(3)}`,
     )
   } finally {
+    await prompt.close()
     await fs.rm(env.dir, { recursive: true, force: true })
   }
 }
@@ -274,7 +284,13 @@ function label(entry: CustomRouterEntryRef): string {
 async function writeEnvFile(values: Record<string, string>): Promise<{ dir: string; file: string }> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-auto-eval-env-"))
   const file = path.join(dir, "eval.env")
-  await fs.writeFile(file, Object.entries(values).map(([key, value]) => `${key}=${value}`).join("\n"), { mode: 0o600 })
+  await fs.writeFile(
+    file,
+    Object.entries(values)
+      .map(([key, value]) => `${key}=${value}`)
+      .join("\n"),
+    { mode: 0o600 },
+  )
   return { dir, file }
 }
 
@@ -338,7 +354,11 @@ function kiloAuth(input: EvalInput): Record<string, unknown> {
   if (entry && entry.type !== "wellknown") {
     return { ...entry, ...(input.organizationId ? { organizationId: input.organizationId } : {}) }
   }
-  return { type: "api", key: entry?.key ?? "", ...(input.organizationId ? { organizationId: input.organizationId } : {}) }
+  return {
+    type: "api",
+    key: entry?.key ?? "",
+    ...(input.organizationId ? { organizationId: input.organizationId } : {}),
+  }
 }
 
 // The container gets only the credential of the provider it runs. Keys resolved
