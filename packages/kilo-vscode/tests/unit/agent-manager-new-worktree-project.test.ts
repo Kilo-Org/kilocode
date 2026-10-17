@@ -35,9 +35,9 @@ describe("Agent Manager New Worktree project targeting", () => {
   })
 
   it("keeps the project picker aligned with the dialog selector system", () => {
-    expect(css).toContain(".am-nv-project-inline")
+    expect(css).toContain(".am-nv-origin")
     expect(css).toContain(".am-project-option")
-    expect(css).toContain('[data-component="dialog"]:has(.am-nv-project-inline [data-component="popover-content"])')
+    expect(css).toContain('[data-component="dialog"]:has(.am-nv-origin [data-component="popover-content"])')
   })
 
   it("keeps project activation separate from accordion expansion", () => {
