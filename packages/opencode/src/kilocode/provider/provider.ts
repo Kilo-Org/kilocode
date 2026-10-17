@@ -339,15 +339,31 @@ export function cheapestSmallModel(models: Provider.Model[]) {
 }
 
 /**
+ * Provider ids that always front a local model server (LM Studio, Ollama,
+ * Atomic Chat, Anaconda Desktop). Their catalogs list every known model, but
+ * the server only serves installed ones — regardless of which hostname the
+ * user points them at (localhost, a LAN ip, host.docker.internal, ...).
+ */
+const LOCAL_SERVER_IDS = new Set(["lmstudio", "ollama", "atomic-chat", "anaconda-desktop"])
+
+/**
  * True when the provider routes to a local server (LM Studio, Ollama, ...).
  * Local catalogs list every known model, but the server only serves installed
  * ones — the cheapest catalog entry can name a model the user never installed
  * (e.g. openai/gpt-oss-20b while the session uses Qwen). Callers fall back to
  * the session's own model when getSmallModel returns undefined, so the cheap
- * pick is skipped for loopback providers. An explicit non-loopback baseURL
- * means the provider points at a remote server and the cheap pick applies.
+ * pick is skipped for local providers. A hostname check alone is not enough:
+ * a local server remains local when reached over the LAN
+ * (192.168.x.x, host.docker.internal, ollama.local), so known local-server
+ * ids always take the safe fallback. Only an unrelated remote endpoint keeps
+ * the cheap pick.
  */
-export function isLoopbackProvider(provider: { options?: Record<string, any>; models: Record<string, Provider.Model> }) {
+export function isLoopbackProvider(provider: {
+  id?: unknown
+  options?: Record<string, any>
+  models: Record<string, Provider.Model>
+}) {
+  if (typeof provider.id === "string" && LOCAL_SERVER_IDS.has(provider.id)) return true
   const raw = provider.options?.baseURL ?? provider.options?.baseUrl
   if (typeof raw === "string" && raw !== "") return isLoopbackURL(raw)
   const urls = Object.values(provider.models).map((model) => model.api?.url).filter(Boolean)

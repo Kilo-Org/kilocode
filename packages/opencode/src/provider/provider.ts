@@ -2143,7 +2143,7 @@ const layer = Layer.effect(
         if (candidates[0]) return candidates[0]
       }
 
-      // kilocode_change start - skip loopback providers: their catalog lists
+      // kilocode_change start - skip local-server providers: their catalog lists
       // every known model but the server only serves installed ones, so the
       // cheapest entry can name a model the user never installed. Returning
       // undefined keeps the session-model fallback in the callers.

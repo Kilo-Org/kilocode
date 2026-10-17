@@ -321,4 +321,24 @@ describe("isLoopbackProvider", () => {
     expect(isLoopbackProvider({ options: {}, models: { a: { api: { url } } as any } })).toBe(true)
     expect(isLoopbackProvider({ options: {}, models: {} })).toBe(false)
   })
+
+  test("known local-server ids stay local on LAN and custom hostnames", () => {
+    // A local server remains install-gated when reached over the LAN: the
+    // catalog still lists models the user never installed.
+    for (const id of ["lmstudio", "ollama", "atomic-chat", "anaconda-desktop"]) {
+      for (const baseURL of [
+        "http://192.168.1.50:1234/v1",
+        "http://host.docker.internal:11434/v1",
+        "http://ollama.local:11434/v1",
+      ]) {
+        expect(isLoopbackProvider({ id, options: { baseURL }, models: {} })).toBe(true)
+      }
+    }
+  })
+
+  test("unknown ids on remote hosts keep the cheap catalog pick", () => {
+    expect(isLoopbackProvider({ id: "openai", options: { baseURL: "https://api.openai.com/v1" }, models: {} })).toBe(
+      false,
+    )
+  })
 })
