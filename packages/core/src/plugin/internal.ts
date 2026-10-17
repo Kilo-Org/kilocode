@@ -104,6 +104,7 @@ import { VcsGitPlugin } from "./vcs/git.js"
 import { VerbosityPlugin } from "./verbosity.js"
 import { WarmingPlugin } from "./warming.js"
 import { WellKnownPlugin } from "../wellknown/plugin.js"
+import { KiloAgentPlugin } from "../kilocode/agent.js" // kilocode_change - Kilo agent set
 
 const services = [
   Agent.Service,
@@ -222,6 +223,7 @@ const pre = [
   VcsGitPlugin.Plugin,
   AgentPlugin.Plugin,
   PlanPlugin.Plugin,
+  KiloAgentPlugin.Plugin, // kilocode_change - after native agents, before config agents so user agents win
   CommandPlugin.Plugin,
   SkillPlugin.Plugin,
   VcsHgPlugin.Plugin,
@@ -253,6 +255,7 @@ const post = [
   ConfigInstructionPlugin.Plugin,
   ConfigReferencePlugin.Plugin,
   ConfigAgentPlugin.Plugin,
+  KiloAgentPlugin.Ceiling, // kilocode_change - reapply Kilo read-only limits after config agents
   BrowserPlugin,
   ConfigCommandPlugin.Plugin,
   ConfigCompactionPlugin.Plugin,
