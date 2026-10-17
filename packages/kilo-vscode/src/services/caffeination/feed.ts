@@ -18,7 +18,7 @@ function key(dir: string): string {
 }
 
 function busy(status: Pick<SessionStatus, "type">): boolean {
-  return status.type === "busy" || status.type === "retry"
+  return status.type === "busy" || status.type === "retry" || status.type === "waiting" // a session waiting for permission should keep the machine awake
 }
 
 function apply(state: State, event: Update): void {
