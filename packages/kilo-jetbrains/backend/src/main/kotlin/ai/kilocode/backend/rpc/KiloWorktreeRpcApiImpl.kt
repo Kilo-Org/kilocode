@@ -7,6 +7,7 @@ import ai.kilocode.backend.diff.GIT_PRUNE_TIMEOUT_MS
 import ai.kilocode.backend.diff.GIT_WRITE_TIMEOUT_MS
 import ai.kilocode.backend.diff.GitComparison
 import ai.kilocode.backend.diff.runGitCommand
+import ai.kilocode.backend.repo.RepoGate
 import ai.kilocode.backend.worktree.WorktreeTrash
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
@@ -67,20 +68,14 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import java.awt.Frame
@@ -90,16 +85,17 @@ import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
-import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ConcurrentHashMap
 
-class KiloWorktreeRpcApiImpl(
+class KiloWorktreeRpcApiImpl internal constructor(
     // Resolved once at construction, matching every other worktree-scoped service accessed through
     // this class. Null exactly when there is no IntelliJ Application to resolve it from (a plain unit
     // test, same as every `service<...>()` call this file already makes) — every caller below treats
     // that as "nothing is ever being removed via the fast path", not as an error.
     private val trash: WorktreeTrash? = defaultTrash(),
+    /** Shared with the repo-catalog RPC so every jetbrains.json update uses one per-file mutex. */
+    private val states: WorktreeStateStore = defaultWorktreeStateStore(),
 ) : KiloWorktreeRpcApi {
 
     companion object {
@@ -123,9 +119,15 @@ class KiloWorktreeRpcApiImpl(
         // `git worktree remove --force`, which recursively deletes the checkout synchronously and
         // therefore needs far more headroom than the default query timeout.
         private const val REMOVE_TIMEOUT_MS = 600_000
-        // Total git/gh processes this service will run at once for one repository. Each poll used to
+        // Total git/gh processes this service will run at once **per repository**. Each poll used to
         // create its own Semaphore(4), so stats + dirty + PR polls could fan out three times that.
         private const val PROCESS_BUDGET = 4
+        // Ceiling across all repositories, so N repos cannot each admit PROCESS_BUDGET processes and
+        // reproduce the process storm the per-repo budget was introduced to stop. Three repositories
+        // running a full poll pass at once.
+        private const val GLOBAL_PROCESS_BUDGET = 12
+        // Above this many repository gates, a list poll prunes entries for repositories that are gone.
+        private const val GATE_EVICT_LIMIT = 64
         // Above this, a caller waiting on the per-repo mutation lock is worth a log line — most waits
         // are a few ms and would just be noise.
         private const val LOCK_WAIT_LOG_THRESHOLD_MS = 200L
@@ -136,17 +138,17 @@ class KiloWorktreeRpcApiImpl(
         }
     }
 
-    /** Shared across every polling path in this service; see [parallel]. */
-    private val budget = Semaphore(PROCESS_BUDGET)
+    /** Per-repository process budget under a global ceiling; see [parallel] and [RepoGate]. */
+    private val gate = RepoGate(PROCESS_BUDGET, GLOBAL_PROCESS_BUDGET)
     private val prs = ConcurrentHashMap<String, Timed<WorktreePrListDto>>()
     private val branches = ConcurrentHashMap<String, Timed<BranchStatusDto>>()
     private val resolver = PrResolver(gh = { dir, args, ms -> runGh(dir, args, ms) }, git = ::runGit)
     private val ghLock = Any()
-    // Serializes the git-mutating operations (create/import/remove/rename/adopt/reorder/session-list)
-    // for one repository, keyed by its main worktree's real path, so concurrent calls cannot interleave
-    // `worktree list` / `remove` / `branch -D` / `worktree prune` or race the read-modify-write of
-    // `.kilo/jetbrains.json`. Read paths (list/stats/dirty/prStatus/branchStatus/ghStatus/sessionList)
-    // are deliberately never locked — they must not queue behind a slow mutation.
+    // Serializes git-mutating operations (create/import/remove/rename/adopt/reorder/session-list) for
+    // one repository, keyed by its main worktree's real path, so concurrent calls cannot interleave
+    // `worktree list` / `remove` / `branch -D` / `worktree prune`. Read paths deliberately never take
+    // this potentially slow git lock. WorktreeStateStore has its own short per-file mutex for every
+    // `.kilo/jetbrains.json` read-modify-write, including list reconciliation and repo-catalog changes.
     private val locks = ConcurrentHashMap<String, Mutex>()
     @Volatile
     private var ghProbe: Timed<GhAvailability>? = null
@@ -155,12 +157,17 @@ class KiloWorktreeRpcApiImpl(
 
     override suspend fun list(directory: String): WorktreeListDto = withContext(Dispatchers.IO) {
         val base = Path.of(directory).normalize()
+        // Opportunistic cleanup of per-repo gate entries for repositories that no longer exist, so the
+        // gate map cannot grow without bound across a long session. Only runs once the map is large.
+        gate.evict(GATE_EVICT_LIMIT) { Files.isDirectory(Path.of(it)) }
         // Same reconcile the stats/dirty polls use, so the rows and their status can never disagree
         // about which worktrees exist.
         val reconciled = reconcile(base) ?: return@withContext WorktreeListDto()
         val alive = reconciled.items
         val store = worktreeNameStore(alive)
-        val state = store?.let { syncWorktreeState(it, worktreePaths(alive), livePaths(alive)) } ?: WorktreeState()
+        val state = store?.let { file ->
+            states.update(file) { it.reconcile(worktreePaths(alive), livePaths(alive)) }
+        } ?: WorktreeState()
         val named = overlayWorktreeNames(alive, state.names)
         // Cheap and non-blocking: sweeps orphaned `.kilo-delete-*` directories left by an interrupted
         // delete (this plugin's or the VS Code extension's) every time the list is polled, so they do
@@ -264,7 +271,7 @@ class KiloWorktreeRpcApiImpl(
         val root = Path.of(directory).normalize()
         val items = sync(root) ?: return@withContext WorktreeStatsListDto(unavailable = true)
         val fallback = baseBranch(items) ?: "HEAD"
-        WorktreeStatsListDto(parallel(items.filter { !it.main }) { item -> statsSafe(item, fallback) })
+        WorktreeStatsListDto(parallel(repoKey(root, items), items.filter { !it.main }) { item -> statsSafe(item, fallback) })
     }
 
     /**
@@ -276,7 +283,7 @@ class KiloWorktreeRpcApiImpl(
     override suspend fun dirty(directory: String): WorktreeDirtyListDto = withContext(Dispatchers.IO) {
         val root = Path.of(directory).normalize()
         val items = sync(root) ?: return@withContext WorktreeDirtyListDto(unavailable = true)
-        WorktreeDirtyListDto(parallel(items) { item -> dirtySafe(item) })
+        WorktreeDirtyListDto(parallel(repoKey(root, items), items) { item -> dirtySafe(item) })
     }
 
     /**
@@ -328,6 +335,9 @@ class KiloWorktreeRpcApiImpl(
 
     private fun main(all: List<WorktreeDto>): Path? =
         all.firstOrNull { it.main }?.let { Path.of(it.path).normalize() }
+
+    /** Gate key for a repository: its main working tree when the reconcile found it, else [root]. */
+    private fun repoKey(root: Path, items: List<WorktreeDto>): String = (main(items) ?: root).toString()
 
     /**
      * `git worktree prune`, on a budget short enough to bound how long a mutation waits for a poll.
@@ -422,7 +432,7 @@ class KiloWorktreeRpcApiImpl(
         val items = prTargets(all)
         val base = baseBranch(all)
         var status = GhAvailability.OK
-        val data = parallel(items) { item ->
+        val data = parallel(repoKey(root, all), items) { item ->
             if (status != GhAvailability.OK) return@parallel null
             val lookup = runCatching { resolver.resolve(item.path, item.branch, base, prAge(item.path, named, maxAge)) }.getOrElse { err ->
                 if (err is CancellationException) throw err
@@ -700,7 +710,7 @@ class KiloWorktreeRpcApiImpl(
         }
 
     /** Runs `git worktree add` under `<base>/.kilo/worktrees/<slug>` and records list bookkeeping. */
-    private fun addWorktree(base: Path, branch: String, existing: Boolean, baseRef: String?): CreateWorktreeResultDto {
+    private suspend fun addWorktree(base: Path, branch: String, existing: Boolean, baseRef: String?): CreateWorktreeResultDto {
         val root = mainWorktree(base)
         val storage = root.resolve(".kilo").resolve("worktrees").normalize()
         val parts = branch.split('/')
@@ -731,9 +741,14 @@ class KiloWorktreeRpcApiImpl(
         val path = dir.toRealPath().toString()
         val list = runGit(base, "worktree", "list", "--porcelain")
         val items = if (list.ok) managedWorktrees(parseWorktreeList(list.stdout)) else emptyList()
-        val store = worktreeNameStore(items) ?: base.resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
+        val store = worktreeNameStore(items) ?: worktreeStateFile(root)
         val paths = worktreePaths(items).ifEmpty { listOf(path) }
-        prependWorktreeOrder(store, path, paths)
+        states.update(store) { state ->
+            val set = paths.toSet()
+            val rest = state.worktreeOrder.filter { it in set && !samePath(it, path) } +
+                paths.filter { it !in state.worktreeOrder && !samePath(it, path) }
+            state.copy(worktreeOrder = (listOf(path) + rest).distinct())
+        }
         return CreateWorktreeResultDto(worktree = WorktreeDto(path, dir.fileName.toString(), branch, path))
     }
 
@@ -772,7 +787,7 @@ class KiloWorktreeRpcApiImpl(
                     LOG.warn("worktree remove rejected: reason=nested path=$path blockers=${nested.joinToString(", ") { it.path }}")
                     return@lock RemoveWorktreeResultDto(error = "Delete nested worktrees first:\n$names", nestedPaths = nested.map { it.path })
                 }
-                val store = worktreeNameStore(items) ?: base.resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
+                val store = worktreeNameStore(items) ?: base.resolve(".kilo").resolve(WORKTREE_STATE_FILE)
                 // A live IDE frame rooted at the worktree keeps rewriting project files into the
                 // checkout while it is being renamed/removed underneath it — the most likely source
                 // of leftover `.idea`-only directories. Close it before anything else touches disk.
@@ -796,7 +811,7 @@ class KiloWorktreeRpcApiImpl(
      * or the worktree is locked without [force] — a lock check has to go through git itself so
      * `locked` is reported correctly, and a filesystem rename cannot see or honor a git lock at all.
      */
-    private fun removeManaged(
+    private suspend fun removeManaged(
         base: Path,
         target: WorktreeDto,
         branch: String?,
@@ -873,7 +888,13 @@ class KiloWorktreeRpcApiImpl(
         staged?.let { temp -> trash?.reap(temp) { checkReappearance(target.path, temp) } }
         LOG.info("worktree removed: path=${target.path} branch=${branch ?: "(none)"} mode=$mode ms=${System.currentTimeMillis() - start}")
         invalidate()
-        removeWorktreeState(store, target.path)
+        states.update(store) { state ->
+            state.copy(
+                names = state.names.filterKeys { !samePath(it, target.path) },
+                worktreeOrder = state.worktreeOrder.filter { !samePath(it, target.path) },
+                sessionList = state.sessionList.filterKeys { !samePath(it, target.path) },
+            )
+        }
         runCatching { service<KiloBackendAppService>().workspaces.remove(target.path) }
             .onFailure { err -> LOG.info("workspace cache eviction skipped: path=${target.path} message=${err.message}") }
         storage?.let { trash?.sweep(it) }
@@ -1074,10 +1095,10 @@ class KiloWorktreeRpcApiImpl(
                 val target = items.firstOrNull { samePath(it.path, path) && !it.main }
                     ?: return@lock RenameWorktreeResultDto(error = "Worktree not found")
                 try {
-                    val state = readWorktreeState(store).reconcile(worktreePaths(items), livePaths(items))
-                    val names = state.names.toMutableMap()
-                    names[target.path] = title
-                    writeWorktreeState(store, state.copy(names = names))
+                    states.update(store) { current ->
+                        val state = current.reconcile(worktreePaths(items), livePaths(items))
+                        state.copy(names = state.names + (target.path to title))
+                    }
                     RenameWorktreeResultDto(worktree = target.copy(name = title))
                 } catch (e: Exception) {
                     LOG.warn("worktree rename failed: path=$path message=${e.message}", e)
@@ -1100,13 +1121,16 @@ class KiloWorktreeRpcApiImpl(
                 val target = items.firstOrNull { samePath(it.path, path) && !it.main }
                     ?: return@lock RenameWorktreeResultDto(error = "Worktree not found")
                 try {
-                    val state = readWorktreeState(store).reconcile(worktreePaths(items), livePaths(items))
-                    val names = state.names.toMutableMap()
-                    // Only adopt while the worktree is still default. A recorded name means the user (or a
-                    // prior adoption) already titled it, so leave it untouched and report a no-op.
-                    if (!names[target.path].isNullOrBlank()) return@lock RenameWorktreeResultDto()
-                    names[target.path] = title
-                    writeWorktreeState(store, state.copy(names = names))
+                    var adopted = false
+                    states.update(store) { current ->
+                        val state = current.reconcile(worktreePaths(items), livePaths(items))
+                        // Only adopt while the worktree is still default. A recorded name means the user
+                        // (or a prior adoption) already titled it, so leave it untouched.
+                        if (!state.names[target.path].isNullOrBlank()) return@update state
+                        adopted = true
+                        state.copy(names = state.names + (target.path to title))
+                    }
+                    if (!adopted) return@lock RenameWorktreeResultDto()
                     LOG.info("worktree name adopted: path=$path name=$title")
                     RenameWorktreeResultDto(worktree = target.copy(name = title))
                 } catch (e: Exception) {
@@ -1125,8 +1149,9 @@ class KiloWorktreeRpcApiImpl(
                 val items = managedWorktrees(parseWorktreeList(res.stdout))
                 val store = worktreeNameStore(items) ?: return@lock false
                 try {
-                    val state = readWorktreeState(store)
-                    writeWorktreeState(store, state.copy(worktreeOrder = paths).reconcile(worktreePaths(items), livePaths(items)))
+                    states.update(store) {
+                        it.copy(worktreeOrder = paths).reconcile(worktreePaths(items), livePaths(items))
+                    }
                     true
                 } catch (e: Exception) {
                     LOG.warn("worktree reorder failed: dir=$directory message=${e.message}", e)
@@ -1143,7 +1168,7 @@ class KiloWorktreeRpcApiImpl(
             val items = managedWorktrees(parseWorktreeList(res.stdout))
             val store = worktreeNameStore(items) ?: return@withContext null
             val target = items.firstOrNull { samePath(it.path, directory) } ?: return@withContext null
-            readWorktreeState(store).sessionList[target.path]
+            states.read(store).sessionList[target.path]
         }
 
     override suspend fun setSessionList(directory: String, visible: Boolean): Boolean =
@@ -1156,8 +1181,10 @@ class KiloWorktreeRpcApiImpl(
                 val store = worktreeNameStore(items) ?: return@lock false
                 val target = items.firstOrNull { samePath(it.path, directory) } ?: return@lock false
                 try {
-                    val state = readWorktreeState(store).reconcile(worktreePaths(items), livePaths(items))
-                    writeWorktreeState(store, state.copy(sessionList = state.sessionList + (target.path to visible)))
+                    states.update(store) { current ->
+                        val state = current.reconcile(worktreePaths(items), livePaths(items))
+                        state.copy(sessionList = state.sessionList + (target.path to visible))
+                    }
                     true
                 } catch (e: Exception) {
                     LOG.warn("worktree session list state failed: dir=$directory message=${e.message}", e)
@@ -1211,14 +1238,20 @@ class KiloWorktreeRpcApiImpl(
     }
 
     /**
-     * Run [block] for every item, bounded by one service-wide process budget.
+     * Run [block] for every item of the repository identified by [key], bounded by that repository's
+     * process budget under a shared global ceiling.
      *
-     * The budget is shared across stats, dirty, and PR polling on purpose: those loops run on the
-     * same cadence, and a per-call semaphore let them multiply into a process storm where even
-     * `git --version` timed out.
+     * [key] is the repository's main-worktree path, derived from the reconciled worktree list, so a call
+     * made against a linked worktree shares the same budget as one made against the main checkout.
+     *
+     * The budget is shared across stats, dirty, and PR polling on purpose: those loops run on the same
+     * cadence, and a per-call semaphore let them multiply into a process storm where even `git --version`
+     * timed out. It is now per repository rather than service-wide so a slow or worktree-heavy repo
+     * cannot occupy every slot while the others wait — see [RepoGate] for why the per-repo permit is
+     * taken before the global one.
      */
-    private suspend fun <T, R> parallel(items: List<T>, block: suspend (T) -> R): List<R> = coroutineScope {
-        items.map { item -> async { budget.withPermit { block(item) } } }.map { it.await() }
+    private suspend fun <T, R> parallel(key: String, items: List<T>, block: suspend (T) -> R): List<R> = coroutineScope {
+        items.map { item -> async { gate.withRepo(key) { block(item) } } }.map { it.await() }
     }
 
     /**
@@ -1707,36 +1740,7 @@ private fun recordPrBranch(run: (List<String>) -> CmdOut, branch: String, merge:
     }
 }
 
-private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
-private val codec = MapSerializer(String.serializer(), String.serializer())
-private const val WORKTREE_NAMES_FILE = "jetbrains.json"
-
-@Serializable
-private data class WorktreeNamesFile(
-    val names: Map<String, String> = emptyMap(),
-    val worktreeOrder: List<String> = emptyList(),
-    val sessionList: Map<String, Boolean> = emptyMap(),
-)
-
-internal data class WorktreeState(
-    val names: Map<String, String> = emptyMap(),
-    val worktreeOrder: List<String> = emptyList(),
-    val sessionList: Map<String, Boolean> = emptyMap(),
-) {
-    /**
-     * Drops state for worktrees git no longer reports. Names and order cover linked worktrees only
-     * ([paths]), while the session list is also kept for the main working tree, which has a worktree
-     * editor of its own — hence the wider [live] set.
-     */
-    fun reconcile(paths: List<String>, live: List<String>): WorktreeState {
-        val set = paths.toSet()
-        val all = live.toSet()
-        val order = (worktreeOrder.filter { it in set } + paths.filter { it !in worktreeOrder }).distinct()
-        val next = names.filterKeys { it in set }
-        val visible = sessionList.filterKeys { it in all }
-        return WorktreeState(next, order, visible)
-    }
-}
+private val json = Json { ignoreUnknownKeys = true }
 
 /** Parse `git worktree list --porcelain`. First entry is the main working tree. */
 internal fun parseWorktreeList(raw: String): List<WorktreeDto> {
@@ -1859,85 +1863,6 @@ internal fun orderWorktrees(items: List<WorktreeDto>, order: List<String>): List
     return main + extra
 }
 
-internal fun readWorktreeNames(file: Path): Map<String, String> {
-    return readWorktreeState(file).names
-}
-
-internal fun readWorktreeState(file: Path): WorktreeState {
-    if (!Files.exists(file)) return WorktreeState()
-    return try {
-        val raw = Files.readString(file)
-        val element = json.parseToJsonElement(raw)
-        if (element is JsonObject && ("names" in element || "worktreeOrder" in element || "sessionList" in element)) {
-            val data = json.decodeFromJsonElement<WorktreeNamesFile>(element)
-            return WorktreeState(
-                data.names.filterValues { it.isNotBlank() },
-                data.worktreeOrder.filter { it.isNotBlank() },
-                data.sessionList.filterKeys { it.isNotBlank() },
-            )
-        }
-        val names = json.decodeFromJsonElement(codec, element).filterValues { it.isNotBlank() }
-        WorktreeState(names, names.keys.toList())
-    } catch (e: Exception) {
-        KiloWorktreeRpcApiImpl.LOG.warn("worktree names read failed: file=$file message=${e.message}", e)
-        WorktreeState()
-    }
-}
-
-internal fun writeWorktreeNames(file: Path, names: Map<String, String>) {
-    val state = readWorktreeState(file)
-    writeWorktreeState(file, state.copy(names = names))
-}
-
-internal fun writeWorktreeState(file: Path, state: WorktreeState) {
-    Files.createDirectories(file.parent)
-    val data = WorktreeNamesFile(
-        names = state.names.filterValues { it.isNotBlank() },
-        worktreeOrder = state.worktreeOrder.filter { it.isNotBlank() }.distinct(),
-        sessionList = state.sessionList.filterKeys { it.isNotBlank() },
-    )
-    val tmp = Files.createTempFile(file.parent, ".worktree-names", ".tmp")
-    try {
-        Files.writeString(tmp, json.encodeToString(WorktreeNamesFile.serializer(), data))
-        try {
-            Files.move(tmp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-        } catch (_: Exception) {
-            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING)
-        }
-    } finally {
-        Files.deleteIfExists(tmp)
-    }
-}
-
-private fun syncWorktreeState(file: Path, paths: List<String>, live: List<String>): WorktreeState {
-    val state = readWorktreeState(file)
-    val next = state.reconcile(paths, live)
-    if (next == state) return next
-    try {
-        writeWorktreeState(file, next)
-    } catch (e: Exception) {
-        KiloWorktreeRpcApiImpl.LOG.warn("worktree state sync failed: file=$file message=${e.message}", e)
-    }
-    return next
-}
-
-private fun prependWorktreeOrder(file: Path, path: String, paths: List<String>) {
-    val state = readWorktreeState(file)
-    val set = paths.toSet()
-    val rest = state.worktreeOrder.filter { it in set && !samePath(it, path) } +
-        paths.filter { it !in state.worktreeOrder && !samePath(it, path) }
-    writeWorktreeState(file, state.copy(worktreeOrder = (listOf(path) + rest).distinct()))
-}
-
-private fun removeWorktreeState(file: Path, path: String) {
-    val state = readWorktreeState(file)
-    val names = state.names.filterKeys { !samePath(it, path) }
-    val order = state.worktreeOrder.filter { !samePath(it, path) }
-    val visible = state.sessionList.filterKeys { !samePath(it, path) }
-    if (names == state.names && order == state.worktreeOrder && visible == state.sessionList) return
-    writeWorktreeState(file, state.copy(names = names, worktreeOrder = order, sessionList = visible))
-}
-
 private fun worktreePaths(items: List<WorktreeDto>): List<String> {
     return items.filter { !it.main }.map { it.path }
 }
@@ -1948,14 +1873,14 @@ private fun livePaths(items: List<WorktreeDto>): List<String> {
 
 private fun worktreeNameStore(items: List<WorktreeDto>): Path? {
     val main = items.firstOrNull { it.main } ?: return null
-    return Path.of(main.path).normalize().resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
+    return worktreeStateFile(Path.of(main.path).normalize())
 }
 
-private fun samePath(a: String, b: String): Boolean {
+internal fun samePath(a: String, b: String): Boolean {
     return realPath(a) == realPath(b)
 }
 
-private fun realPath(path: String): Path {
+internal fun realPath(path: String): Path {
     val file = Path.of(path).normalize()
     return if (Files.exists(file)) file.toRealPath() else file
 }
