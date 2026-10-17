@@ -191,7 +191,7 @@ class NewWorktreeDialogTest : BasePlatformTestCase() {
     fun `test fetch base choice persists across dialogs`() {
         open()
         edt { fetch().isSelected = false }
-        submit()
+        edt { submit() }
         assertFalse((taken() as NewWorktreePlan.Create).fetchBase)
 
         open()
