@@ -1,7 +1,7 @@
 # Kilo OpenCode v2 fork conventions
 
 > [!WARNING]
-> **Partly stale; rewrite pending in U-E0-03 ([plan](../plans/kilo-v2-migration-plan.md)).** The pin `76dbaf20`, the `johnnyeric/` branch model, `packages/www` paths and companion links are wrong for Kilo's integration branch `origin/v2`. Where this file conflicts with `plans/migration-context.md` or `AGENTS.md`, those win. The substantive rules (merge forward, triage vocabulary, Kilo-owned placement, narrow hooks, markers, compact tables) still apply. Evidence: `discovery/doc-inventory.md` §4.
+> **Partly stale; rewrite pending in U-E0-03 ([plan](../plans/kilo-v2-migration-plan.md)).** The pin `76dbaf20`, the `johnnyeric/` branch model, `upstream/v2` as the merge source (it is frozen; syncs merge `upstream/dev`, D1), `packages/www` paths and companion links are wrong for Kilo's integration branch `origin/v2`. Where this file conflicts with `plans/migration-context.md` or `AGENTS.md`, those win. The substantive rules (merge forward, triage vocabulary, Kilo-owned placement, narrow hooks, markers, compact tables) still apply. Evidence: `discovery/doc-inventory.md` §4.
 
 Rules for working on the Kilo product line built on `upstream/v2`. Companion to
 `migration-tracking/plans/kilo-opencode-v2-plan-progress.md` (scope and phases) and

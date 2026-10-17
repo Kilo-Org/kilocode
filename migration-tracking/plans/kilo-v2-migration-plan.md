@@ -1,6 +1,6 @@
 # Kilo v1 → v2 migration plan
 
-Status: active, not started. Created 2026-10-12 by the planning session on `kilo-v2-clean-bootstrap`. Single writer per change: the coordinator, through micro-PRs (`migration-context.md`, Working model).
+Status: active. Created 2026-10-12 by the planning session. Single writer per change: the coordinator, through micro-PRs (`migration-context.md`, Working model).
 
 This file is the living index of the migration: epics, gates and sequencing (Part A), units, dependencies, acceptance and status (Part B). It replaces the previous execution plan and progress plan. Shared facts, refs, decisions and rules live in [`migration-context.md`](migration-context.md); per-feature evidence lives in the frozen discovery report under [`../discovery/`](../discovery/). This plan links to both and does not restate them.
 
@@ -16,7 +16,7 @@ This file is the living index of the migration: epics, gates and sequencing (Par
 
 ## A1. Objective
 
-Ship Kilo on the upstream v2 runtime, surface by surface, without breaking a v1 user. The target feature set is upstream v2 at the pinned base plus every Kilo v1 behavior at the pinned v1 target, minus what Decision 7 marks post-cutover or not-needed: feature parity, not code parity. The terminal product (CLI/TUI) ships first at G1; VS Code (G2) and JetBrains (G3) follow on their own go/no-go, and until then they keep running on v1 against untouched v1 data. The work ends when Kilo's integration branch, `origin/v2`, becomes `main` and v1 moves to a time-limited maintenance branch.
+Ship Kilo on the upstream v2 runtime, surface by surface, without breaking a v1 user. The target feature set is upstream v2 at its latest synced release (the base moves, A4) plus every Kilo v1 behavior at the pinned v1 target, minus what Decision 7 marks post-cutover or not-needed: feature parity, not code parity. The terminal product (CLI/TUI) ships first at G1; VS Code (G2) and JetBrains (G3) follow on their own go/no-go, and until then they keep running on v1 against untouched v1 data. The work ends when Kilo's integration branch, `origin/v2`, becomes `main` and v1 moves to a time-limited maintenance branch.
 
 ## A2. Why this plan replaces the previous one
 
@@ -24,7 +24,7 @@ The previous plan (finalized 2026-09-30, never started) was a sound plan for the
 
 | What the previous plan assumed or lacked | What we found | How this plan handles it |
 |---|---|---|
-| Work continues on the `kilo-v2` port; the first step is one large consolidation merge of upstream | The port never merged upstream and sits 1,454 upstream commits behind the new base. Upstream moves about 1,000 commits every few weeks | Start from a clean upstream base; upstream arrives through small SHA-pinned merges in a dedicated lane (L1) |
+| Work continues on the `kilo-v2` port; the first step is one large consolidation merge of upstream | The port never merged upstream and sits 1,454 upstream commits behind the new base. Upstream moves about 1,000 commits every few weeks | Start from a clean upstream base and keep it current: a dedicated lane (L1) merges every upstream release in small SHA-pinned syncs |
 | The port's behavior is close enough to v1 to finish from | Port behavior is an August snapshot. Since then v1 shipped 3,107 commits touching 4,104 files. Staleness was never measured per feature | Measure staleness per unit (D4). 80 of 137 units are MATERIAL: behavior is re-derived from current v1, and the port supplies only the v2 wiring |
 | Identity, Gateway, catalog, config, engines and most of the TUI were "implemented, full end-to-end pending", so they had no issues | On a clean base none of that code exists | Those areas are now explicit units (E0, E1, most of E2 and E9). This is the largest block of work and the main source of new issues |
 | Its own 17 new units (consolidation, ratchet, sync, fixtures, store, handshake, scenario sets, preview train) would be created as issues first | None was created | Every one is mapped to a unit in Part B; the obsolete ones (consolidation merge, old-branch imports, progress-plan alignment) are dropped with a reason |
@@ -45,7 +45,7 @@ The ten decisions in [`migration-context.md` §Decisions](migration-context.md#d
 
 | Decision | How this plan applies it |
 |---|---|
-| D1 New base | Every unit lands on Kilo's `origin/v2` by PR. opencode's `upstream/v2` arrives only through the L1 lane, pinned by SHA |
+| D1 New base, kept current | Every unit lands on Kilo's `origin/v2` by PR. The upstream base moves: the L1 lane merges every `upstream/dev` release, pinned by SHA (A4). `upstream/v2` is frozen and never merged |
 | D2 Freeze | The archived port is read through its tag; nothing merges from it |
 | D3 Donor rules | Each Part B row states donor reuse for mechanism only. Behavior acceptance is always written against v1 |
 | D4 Staleness gate | Each Part B row carries a staleness verdict. Non-EMPTY means behavior is re-derived from v1 |
@@ -60,7 +60,13 @@ Items that need user sign-off are listed in A10. None of them changes a decision
 
 ## A4. Approach
 
-**Clean base.** Kilo's integration branch, `origin/v2`, starts as pristine upstream and contains no Kilo package yet. Kilo is re-landed onto it in small units, each one a session, a branch and a PR, merged by the user. Nothing from the old port branch is merged.
+**Clean base.** Kilo's integration branch, `origin/v2`, started as pristine upstream with no Kilo package. Kilo is re-landed onto it in small units, each one a session, a branch and a PR, merged by the user. Nothing from the old port branch is merged.
+
+**Moving upstream base.** `origin/v2` does not stay on the commit it started from. Lane L1 merges every upstream release into it (D1), so the upstream base moves forward with each sync and units always build on recent upstream code. This is the strategy, not a maintenance chore. Upstream ships about five v2 releases a week and changes hundreds of harness files between them. The archived port shows the cost of waiting: after five weeks without a merge, 16 of its 21 remaining seam patches conflicted. Small, frequent syncs keep each merge cheap, expose a broken seam while the patch is still fresh, and keep Kilo aligned with the upstream code it will ship on. In practice:
+- "The base" and BASE in this plan mean the current upstream base of `origin/v2` (`migration-context.md`, pinned refs), not the initial commit. Seam claims, donor reuse and acceptance are checked against it.
+- Each sync is its own PR with a merge commit. It resolves conflicts and new failures in Kilo packages before it merges.
+- After a sync, open PRs merge `origin/v2` into their branch and re-run their checks and self-tests.
+- Known upstream failures are compared against `origin/v2` before the change. `pinned-v2-baseline.md` describes the initial base until it is re-measured.
 
 **Re-land by unit.** Every Kilo v1 behavior and every upstream-only surface has exactly one unit (Part B). A unit is done only with code, tests, acceptance evidence recorded with a SHA, its Part B status updated, and docs. A local pass is never recorded as end to end.
 
@@ -220,7 +226,7 @@ Epic IDs follow discovery so register rows stay traceable; they are presented in
 
 | Lane | Steady state |
 |---|---|
-| L1 Upstream sync | Each upstream merge pinned by SHA, baseline re-run, upstream lag recorded; no sync window missed without a note |
+| L1 Upstream sync | Every `upstream/dev` release merged, at least weekly, each sync pinned by SHA with a merge commit; baseline re-run, lag in releases and days recorded; no sync window missed without a note |
 | L2 v1 delta sweep | Zero unclassified Kilo-owned or marked v1 files at each gate; staleness re-run for touched units |
 | L3 Shared-patch ratchet | Marked shared files, client→Core/Server imports and Kilo imports of upstream internals at or below baseline; each increase states its seam |
 | L4 Acceptance | Gate-tagged scenarios with v1-derived expectations; one recorded run per gate |
@@ -284,7 +290,8 @@ G2 and G3 do not wait for the G1 go/no-go (D5). They do need the shared-runtime 
 
 | Risk | Effect | Mitigation | Owner |
 |---|---|---|---|
-| Upstream moves about 1,000 commits every few weeks; it was already 31 commits past the base at capture | Finished units drift; large merges late in a gate | L1 merges on a cadence, pinned by SHA, with a baseline re-run each time | L1 |
+| Upstream moves about 1,000 commits every few weeks; it was already 31 commits past the base at capture | Finished units drift; large merges late in a gate | L1 merges every upstream release, at least weekly, pinned by SHA, with a baseline re-run each time (A4) | L1 |
+| The moving base breaks a Kilo seam or an in-flight unit at a sync | Red `origin/v2`; rework in open PRs | Syncs stay small; the sync PR fixes what it breaks in Kilo packages; open PRs merge `origin/v2` and re-check after each sync | L1 |
 | v1 `main` releases 4–5 times a week | Staleness verdicts age; behavior lands after its unit is done | L2 sweeps before each gate and on a cadence; touched units re-open | L2 |
 | No owner is assigned to any epic, lane or issue | Nothing starts; no dates | Assign lane owners first (L1, L2), then E0 and E1 | User |
 | Donor seam claims were measured against the old upstream base | A "reusable" seam may be gone | Every donor reuse re-checks its seam at the base inside its unit | Each unit |
@@ -330,7 +337,7 @@ Metrics the coordinator reports at each gate review:
 |---|---|---|
 | Gate readiness | Done units / units tagged for the gate | Part B status |
 | Open work per gate | Units not done, by epic | Part B status |
-| Upstream lag | Commits on `upstream/v2` past the last merged pin | L1 |
+| Upstream lag | Releases and days behind the newest upstream release; commits on `upstream/dev` past the current base | L1 |
 | Unassessed v1 changes | Kilo-owned or marked v1 files changed past the assessment cutoff without a disposition | L2 |
 | Shared-file patches | Marked shared files; client→Core/Server imports; Kilo imports of upstream internals | L3 |
 | Units without an issue | Part B rows marked `new` | Part B |
@@ -839,7 +846,7 @@ flowchart LR
 
 | Unit | Title | Issue | Gate | Deps | Delta | Stale | Donor | Acceptance | Status |
 |---|---|---|---|---|---|---|---|---|---|
-| U-L1-01 | Upstream sync: merge `upstream/v2` pinned by SHA; dry-run workflow; merge tooling (one child per merge) | new | continuous | U-E0-04 | needs-port | M | no | Each merge pinned, baseline re-run, failures diffed against the baseline, lag recorded | todo |
+| U-L1-01 | Upstream sync: merge every `upstream/dev` release commit pinned by SHA; dry-run workflow; merge tooling (one child per merge) | new | continuous | U-E0-04 | needs-port | M | no | Each sync pinned by SHA and merged with a merge commit; failures diffed against `origin/v2` before the sync; lag in releases and days recorded | todo |
 | U-L2-01 | v1 delta sweep: advance the cutoff, refresh the experimental-flag list, re-run staleness (one child per sweep) | new | continuous | — | needs-port | n/a | no | First sweep starts at `d99662338`; zero unclassified Kilo-owned or marked files in range; touched units re-opened | todo |
 | U-L3-01 | Shared-patch ratchet and marker disposition sweep | #14381 | continuous | U-E0-01 | needs-port | n/a | no | Script counts the three L3 metrics; CI fails an increase without a stated seam | todo |
 | U-L4-01 | Rewrite test plans with gate tags and v1-derived expectations (G1 scenario set) | new | G1 | — | needs-port | n/a | no | Each scenario tagged G1/G2/G3; expectations quoted from v1; RT and UI IDs kept | todo |
@@ -1029,8 +1036,10 @@ No discovery epic or unit was dropped. Every discovery unit keeps its ID.
 | v1 | Kilo on `main`, built on opencode v1. The behavioral reference at the pinned v1 target |
 | v2 | Kilo running on the opencode v2 runtime (the product line this migration builds) |
 | `origin/v2` | Kilo's integration branch on Kilo-Org/kilocode. Every unit merges here; it becomes `main` at cutover |
-| `upstream/v2` | opencode's v2 branch on anomalyco/opencode. Kilo merges it in, pinned by SHA (L1) |
-| BASE | The pinned `upstream/v2` commit that Kilo's `origin/v2` started from |
+| `upstream/dev` | opencode's v2 line on anomalyco/opencode since 2026-10-10. Kilo merges its release commits in, pinned by SHA (L1) |
+| `upstream/v2` | opencode's former v2 branch, frozen since 2026-10-10 (tip `4617210822b`). The initial base is on it. Never merged |
+| BASE | The upstream release commit `origin/v2` is currently synced to. It moves with every L1 sync. The initial base was `5e73d5cb` (`v2.0.26`) |
+| Sync | An L1 PR that merges an `upstream/dev` release commit into `origin/v2` with a merge commit |
 | Donor | The archived old port (tag), used for mechanism only |
 | Snapshot / cutoff | The v1 commit up to which every Kilo change has a disposition. L2 advances it |
 | Staleness | v1 change to a unit's files between snapshot and v1 target (D4) |
