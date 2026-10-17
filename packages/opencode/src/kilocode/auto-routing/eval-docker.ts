@@ -86,6 +86,30 @@ export type EvalContainerResult = {
   stderrTail: string
 }
 
+// A source build reports "local" and a branch build "0.0.0-<branch>-<stamp>";
+// neither exists on npm. Results must come from a known published CLI, so the
+// eval never falls back to a dist-tag such as `latest`.
+const PUBLISHED_VERSION = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
+
+export type EvalCliVersion = { ok: true; version: string } | { ok: false; message: string }
+
+export function evalCliVersion(input: { flag?: string; installed: string }): EvalCliVersion {
+  const flag = input.flag?.trim()
+  if (flag !== undefined && flag !== "") {
+    if (published(flag)) return { ok: true, version: flag }
+    return { ok: false, message: `--cli-version must be a published @kilocode/cli version such as 7.8.12, got "${flag}".` }
+  }
+  if (published(input.installed)) return { ok: true, version: input.installed }
+  return {
+    ok: false,
+    message: `This CLI reports version "${input.installed}", which is not published on npm, so the eval image cannot install it. Pass --cli-version <version> with a published @kilocode/cli version.`,
+  }
+}
+
+function published(version: string): boolean {
+  return PUBLISHED_VERSION.test(version) && !version.startsWith("0.0.0-")
+}
+
 export function evalDockerfile(version: string): string {
   return `# Client eval runner for a custom auto router entry.
 FROM node:22-slim

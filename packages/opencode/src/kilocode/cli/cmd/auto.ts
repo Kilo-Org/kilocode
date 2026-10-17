@@ -176,6 +176,10 @@ export const AutoEvalCommand = effectCmd({
         default: 1,
         describe: "number of cases to run in parallel",
       })
+      .option("cli-version", {
+        type: "string",
+        describe: "published @kilocode/cli version to install in the eval image (default: this CLI's version)",
+      })
       .option("debug-config", {
         type: "boolean",
         default: false,
@@ -197,6 +201,7 @@ export const AutoEvalCommand = effectCmd({
         yes: args.yes,
         concurrency: args.concurrency,
         debugConfig: args.debugConfig,
+        cliVersion: args.cliVersion,
         token: creds.token,
         organizationId: creds.organizationId,
         providers: catalog,

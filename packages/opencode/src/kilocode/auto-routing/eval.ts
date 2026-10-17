@@ -27,6 +27,7 @@ import {
   EVAL_ENTRYPOINT,
   EVAL_ENTRYPOINT_FILE,
   evalCliArgs,
+  evalCliVersion,
   evalDockerfile,
   evalDockerRunArgs,
   evalImageTag,
@@ -44,7 +45,7 @@ export type EvalInput = {
   organizationId?: string | null
   providers: Record<ProviderV2.ID, Provider.Info>
   auth: Record<string, Auth.Info>
-  version?: string
+  cliVersion?: string
 }
 
 type Run = { fail: (message: string) => void; ok: (message: string) => void }
@@ -54,6 +55,11 @@ export namespace KiloAutoEval {
     const parsed = parseRouter(input.router)
     if (!parsed) {
       io.fail(`Not a custom router: "${input.router}". Use \`kilo-auto/custom/<slug>\` or a slug.`)
+      return 1
+    }
+    const cli = evalCliVersion({ flag: input.cliVersion, installed: InstallationVersion })
+    if (!cli.ok) {
+      io.fail(cli.message)
       return 1
     }
     const list = await fetchCustomRouters({
@@ -72,7 +78,7 @@ export namespace KiloAutoEval {
       return 1
     }
 
-    const version = input.version ?? InstallationVersion
+    const version = cli.version
     const image = evalImageTag(version)
     if (!(await docker("image", "inspect", image))) {
       UI.println(`Building the eval image ${image} (node:22-slim + @kilocode/cli@${version})...`)

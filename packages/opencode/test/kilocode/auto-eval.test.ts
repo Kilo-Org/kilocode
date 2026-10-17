@@ -5,6 +5,7 @@ import type { Provider } from "@/provider/provider"
 import {
   EVAL_ENTRYPOINT,
   evalCliArgs,
+  evalCliVersion,
   evalDockerfile,
   evalDockerRunArgs,
   evalImageTag,
@@ -80,6 +81,33 @@ describe("eval image", () => {
     expect(EVAL_ENTRYPOINT).toContain("STDOUT_CAP_BYTES = 2 * 1024 * 1024")
     expect(EVAL_ENTRYPOINT).toContain("STDERR_CAP_BYTES = 4 * 1024")
     expect(EVAL_ENTRYPOINT).toContain("EVAL_TIMEOUT_MS")
+  })
+})
+
+describe("eval CLI version", () => {
+  test("uses the installed version when it is published", () => {
+    expect(evalCliVersion({ installed: "7.8.12" })).toEqual({ ok: true, version: "7.8.12" })
+    expect(evalCliVersion({ installed: "7.9.0-rc.1" })).toEqual({ ok: true, version: "7.9.0-rc.1" })
+  })
+
+  test("refuses source and branch builds instead of falling back to latest", () => {
+    for (const installed of ["local", "0.0.0-feat-auto-custom-routers-202610161851", "latest", ""]) {
+      const result = evalCliVersion({ installed })
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.message).toContain("--cli-version")
+    }
+  })
+
+  test("lets an explicit published version override an unpublished build", () => {
+    expect(evalCliVersion({ flag: "7.8.12", installed: "local" })).toEqual({ ok: true, version: "7.8.12" })
+    expect(evalCliVersion({ flag: " ", installed: "7.8.12" })).toEqual({ ok: true, version: "7.8.12" })
+  })
+
+  test("rejects a dist-tag or range passed as --cli-version", () => {
+    for (const flag of ["latest", "^7.8.0", "7.8", "v7.8.12", "local"]) {
+      const result = evalCliVersion({ flag, installed: "7.8.12" })
+      expect(result.ok).toBe(false)
+    }
   })
 })
 

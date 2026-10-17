@@ -786,6 +786,7 @@ Options:
   --version       Show version number  [boolean]
   --yes           skip the plan confirmation  [boolean] [default: false]
   --concurrency   number of cases to run in parallel  [number] [default: 1]
+  --cli-version   published @kilocode/cli version to install in the eval image (default: this CLI's version)  [string]
   --debug-config  print the Docker command and the generated container config, then exit  [boolean] [default: false]
 ```
 
