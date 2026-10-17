@@ -11,6 +11,7 @@ import type {
   IndexingTelemetryEvent,
   IVectorStore,
   PointStruct,
+  StoreState,
   VectorStoreSearchResult,
 } from "../../../../src/indexing/interfaces"
 import {
@@ -76,8 +77,8 @@ class RetryStore implements IVectorStore {
   async collectionExists(): Promise<boolean> {
     return true
   }
-  async hasIndexedData(): Promise<boolean> {
-    return false
+  async state(): Promise<StoreState> {
+    return { status: "empty" }
   }
   async markIndexingComplete(): Promise<void> {}
   async markIndexingIncomplete(): Promise<void> {}
