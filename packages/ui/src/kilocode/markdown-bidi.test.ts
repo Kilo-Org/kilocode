@@ -161,4 +161,65 @@ describe("Markdown bidirectional rendering contract", () => {
       scope.HTMLPreElement = elem
     }
   })
+
+  test("renders tight and loose lists and blockquotes with automatic direction after an English introduction", async () => {
+    const parser = createMarkedParser({})
+
+    // Tight list and blockquote after English introduction
+    const tightMd = [
+      "Here is the summary:",
+      "",
+      "- آیتم اول",
+      "- آیتم دوم",
+      "",
+      "> نقل قول فارسی",
+    ].join("\n")
+    const tightHtml = await Promise.resolve(parser.parse(tightMd))
+
+    expect(tightHtml).toContain('<li dir="auto">آیتم اول</li>')
+    expect(tightHtml).toContain('<li dir="auto">آیتم دوم</li>')
+    expect(tightHtml).toContain('<blockquote dir="auto">')
+
+    // Loose list after English introduction
+    const looseMd = [
+      "Here is the list:",
+      "",
+      "- پاراگراف اول لیست",
+      "",
+      "  پاراگراف دوم همان آیتم",
+    ].join("\n")
+    const looseHtml = await Promise.resolve(parser.parse(looseMd))
+
+    expect(looseHtml).toContain('<li dir="auto"><p>پاراگراف اول لیست</p>')
+    expect(looseHtml).toContain('<p>پاراگراف دوم همان آیتم</p>')
+
+    // Verify DOM structure using happy-dom
+    const win = new Window()
+    const container = win.document.createElement("div")
+    container.innerHTML = tightHtml + looseHtml
+
+    const listItems = container.querySelectorAll("li")
+    expect(listItems.length).toBe(3)
+    for (const li of listItems) {
+      expect(li.getAttribute("dir")).toBe("auto")
+    }
+
+    const quotes = container.querySelectorAll("blockquote")
+    expect(quotes.length).toBe(1)
+    expect(quotes[0].getAttribute("dir")).toBe("auto")
+  })
+
+  test("renders mixed LTR and RTL list items each with isolated automatic direction", async () => {
+    const parser = createMarkedParser({})
+    const md = [
+      "English intro:",
+      "",
+      "- English item",
+      "- آیتم فارسی",
+    ].join("\n")
+    const html = await Promise.resolve(parser.parse(md))
+
+    expect(html).toContain('<li dir="auto">English item</li>')
+    expect(html).toContain('<li dir="auto">آیتم فارسی</li>')
+  })
 })
