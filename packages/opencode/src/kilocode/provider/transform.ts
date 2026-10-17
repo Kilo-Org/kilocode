@@ -20,3 +20,39 @@ const GPT5_FAMILY_PREFIX_RE = /(?:^|\/|\.|-)gpt-5(?:[.-]|$)/
 export function gpt5FamilyReasoningTiers(id: string) {
   return GPT5_FAMILY_PREFIX_RE.test(id.toLowerCase())
 }
+
+type EndpointModel = {
+  providerID: string
+  api: { url?: string }
+  options?: Record<string, unknown>
+}
+
+/**
+ * True when providerID "openai" genuinely serves first-party OpenAI models.
+ * A baseURL override to a third party (e.g. xAI) under that id serves
+ * non-OpenAI models that reject the rollout-gated tiers (issue #13342), so the
+ * exemption follows the effective endpoint, not the id alone. Model options
+ * shadow provider options, matching resolveSDK/getModel precedence; with no
+ * endpoint information the first-party default is preserved for forward
+ * compatibility.
+ */
+export function isFirstPartyOpenAIEndpoint(model: EndpointModel, options: Record<string, unknown>): boolean {
+  if (model.providerID !== "openai") return false
+  const override =
+    model.options?.["providerEndpointOverride"] ??
+    model.options?.["endpoint"] ??
+    model.options?.["baseURL"] ??
+    options["providerEndpointOverride"] ??
+    options["endpoint"] ??
+    options["baseURL"]
+  const endpoint = typeof override === "string" && override !== "" ? override : model.api.url
+  if (typeof endpoint !== "string" || endpoint === "") return true
+  let host: string
+  try {
+    host = new URL(endpoint).hostname.toLowerCase()
+  } catch {
+    // Unexpanded config placeholders ({env:...}, ${...}) cannot be judged.
+    return true
+  }
+  return host === "openai.com" || host.endsWith(".openai.com")
+}

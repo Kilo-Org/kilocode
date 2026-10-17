@@ -163,4 +163,56 @@ describe("ProviderTransform.variants - gpt-5 rollout-tier gate", () => {
     )
     expect(Object.keys(result)).toEqual(["low", "medium", "high"])
   })
+
+  test("openai id with an xAI baseURL override loses rollout tiers for non-GPT models", () => {
+    const result = ProviderTransform.variants(
+      model({
+        id: "grok-4.6",
+        providerID: "openai",
+        api: { id: "grok-4.6", url: "https://api.openai.com", npm: "@ai-sdk/openai" },
+        release_date: "2026-08-12",
+      }),
+      { baseURL: "https://api.x.ai/v1" },
+    )
+    expect(Object.keys(result)).toEqual(["low", "medium", "high"])
+  })
+
+  test("openai id with a first-party baseURL keeps rollout tiers", () => {
+    const result = ProviderTransform.variants(
+      model({
+        id: "gpt-6",
+        providerID: "openai",
+        api: { id: "gpt-6", url: "https://api.openai.com", npm: "@ai-sdk/openai" },
+        release_date: "2027-01-01",
+      }),
+      { baseURL: "https://api.openai.com/v1" },
+    )
+    expect(Object.keys(result)).toEqual(["none", "low", "medium", "high", "xhigh"])
+  })
+
+  test("openai id with a third-party catalog api url stays gated without an override", () => {
+    const result = ProviderTransform.variants(
+      model({
+        id: "grok-4.6",
+        providerID: "openai",
+        api: { id: "grok-4.6", url: "https://api.x.ai/v1", npm: "@ai-sdk/openai" },
+        release_date: "2026-08-12",
+      }),
+    )
+    expect(Object.keys(result)).toEqual(["low", "medium", "high"])
+  })
+
+  test("model-level baseURL shadows a first-party provider baseURL", () => {
+    const result = ProviderTransform.variants(
+      model({
+        id: "grok-4.6",
+        providerID: "openai",
+        api: { id: "grok-4.6", url: "https://api.openai.com", npm: "@ai-sdk/openai" },
+        options: { baseURL: "https://api.x.ai/v1" },
+        release_date: "2026-08-12",
+      }),
+      { baseURL: "https://api.openai.com/v1" },
+    )
+    expect(Object.keys(result)).toEqual(["low", "medium", "high"])
+  })
 })

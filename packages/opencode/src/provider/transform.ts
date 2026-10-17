@@ -7,7 +7,7 @@ import { iife } from "@/util/iife"
 import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 import { reasoningSummary } from "@/kilocode/provider/reasoning-summary" // kilocode_change
-import { gpt5FamilyReasoningTiers } from "@/kilocode/provider/transform" // kilocode_change
+import { gpt5FamilyReasoningTiers, isFirstPartyOpenAIEndpoint } from "@/kilocode/provider/transform" // kilocode_change
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -858,7 +858,7 @@ function googleThinkingVariants(model: Provider.Model): Record<string, Record<st
   )
 }
 
-export function variants(model: Provider.Model): Record<string, Record<string, any>> {
+export function variants(model: Provider.Model, options: Record<string, unknown> = {}): Record<string, Record<string, any>> {
   // kilocode_change start
   if (
     ["@kilocode/kilo-gateway", "@ai-sdk/openai-compatible"].includes(model.api.npm) &&
@@ -1111,8 +1111,10 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       }
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/openai
       // kilocode_change start - providerID "openai" serves first-party OpenAI models, so a post-cutoff
-      // id like gpt-6 keeps rollout tiers via release-date logic instead of collapsing to low/medium/high
-      const efforts = openaiReasoningEfforts(model.api.id, model.release_date, model.providerID === "openai")
+      // id like gpt-6 keeps rollout tiers via release-date logic instead of collapsing to low/medium/high.
+      // The exemption follows the effective endpoint: a baseURL override to a third party (xAI) serves
+      // non-OpenAI models that reject those tiers (issue #13342).
+      const efforts = openaiReasoningEfforts(model.api.id, model.release_date, isFirstPartyOpenAIEndpoint(model, options))
       return Object.fromEntries(
         efforts.map((effort) => [
           effort,
