@@ -29,7 +29,7 @@ The old `orchestrator` agent is deprecated. Agents with full tool access, such a
 
 | Mechanism | Use it for | Workspace scope | Execution and communication |
 |---|---|---|---|
-| `task` subagent | A focused subtask owned by the current agent | The same project directory or worktree as the parent | Foreground tasks return a result before the parent continues. Background tasks return immediately and deliver their result later. The parent and descendants can use Kilo Swarm. |
+| `task` subagent | A focused subtask owned by the current agent | The same project directory or worktree as the parent | Tasks run in the background: the tool returns immediately and delivers the result later. The parent and descendants can use Kilo Swarm. |
 | Agent Manager session | Independent work, parallel implementations, or a separate conversation | A new git worktree, the current workspace, or an existing managed worktree | Each session has its own transcript, prompt queue, and terminal. You can target an existing session with the `agent_manager` tool. |
 | Kilo Swarm | Notes and coordination between related agents | One main session and its `task` descendants, including nested descendants | `board_post` and `board_read` exchange messages. Swarm does not start, stop, or assign agents. |
 
@@ -41,16 +41,15 @@ A `task` subagent does not create a git worktree. Use `worktree` mode in Agent M
 
 A `task` subagent is a non-interactive delegate. Non-interactive means that the child cannot ask the end user a question directly. It can still use its permitted tools, inspect or change the parent directory, and return findings or changes to the parent session.
 
-- **Foreground task:** The parent waits for the child to finish and receives its result in the same turn. Use this when the next step depends on the child output.
-- **Background task:** Set `background: true` to start the child asynchronously. The parent continues immediately. When the child completes or fails, Kilo injects a result into the parent session. Do not poll for progress or duplicate edits in the same files.
+- **Background execution:** Every task starts asynchronously. The parent continues immediately. When the child completes or fails, Kilo injects a result into the parent session. Do not poll for progress or duplicate edits in the same files.
 - **Resume:** If Kilo returns a `task_id` after a failed or interrupted child, pass it back to `task` to continue that child, subject to the current session and permission rules.
 - **Nesting:** A child can delegate again only when its agent permissions and the configured subagent depth allow it.
 
-In the VS Code extension, the background-agent strip shows running, completed, cancelled, and failed children. Open a child transcript from its task card or background-agent row. A running foreground child can also be moved to the background with **Continue in background**.
+In the VS Code extension, the background-agent strip shows running, completed, cancelled, and failed children. Open a child transcript from its task card or background-agent row.
 
 ### Kilo Swarm communication
 
-[Kilo Swarm](/docs/getting-started/settings#kilo-swarm) is a shared board for one main session and its task descendants. It works with both foreground and background task agents when the feature and permissions are available. It does not create another runtime and it does not make unrelated sessions into one team.
+[Kilo Swarm](/docs/getting-started/settings#kilo-swarm) is a shared board for one main session and its task descendants. It works with task agents when the feature and permissions are available. It does not create another runtime and it does not make unrelated sessions into one team.
 
 - Kilo Swarm is on by default. Turn it off in **Settings > Agent Behaviour**, or set `shared_agent_board` to `false` in `kilo.jsonc`.
 - Use `board_post` for concise, material updates, questions, results, or blockers.
@@ -61,7 +60,7 @@ Separate Agent Manager sessions do not share a Swarm board just because they use
 
 #### Viewing the board
 
-When Kilo Swarm is enabled and the session has board messages, a **Board** control appears in the session dock above the prompt, next to the background-agent row when background agents exist. It works with foreground and background task agents, and it stays in the same place after background agents are cleared or the view reloads. It is no longer in the task header, and the feature is no longer configured under Experimental settings. Select the control to open a panel with the latest posts, then open the full board dialog to read the stored messages. Each message shows the sender and recipient avatars. Select an avatar to open that agent's transcript.
+When Kilo Swarm is enabled and the session has board messages, a **Board** control appears in the session dock above the prompt, next to the background-agent row when background agents exist. It works with task agents, and it stays in the same place after background agents are cleared or the view reloads. It is no longer in the task header, and the feature is no longer configured under Experimental settings. Select the control to open a panel with the latest posts, then open the full board dialog to read the stored messages. Each message shows the sender and recipient avatars. Select an avatar to open that agent's transcript.
 
 The dialog has a **Refresh** action. Earlier messages load as you scroll to the top of the list, using the cursor from the loaded page.
 

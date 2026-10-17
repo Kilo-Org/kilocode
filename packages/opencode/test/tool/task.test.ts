@@ -3,7 +3,7 @@ import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Database } from "@opencode-ai/core/database/database"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
-import { Cause, Deferred, Effect, Exit, Fiber, Layer } from "effect" // kilocode_change - Cause for resume-hint coverage
+import { Deferred, Effect, Exit, Layer } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { BackgroundJob } from "@/background/job"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -62,7 +62,6 @@ const layer = (flags: Partial<RuntimeFlags.Info> = {}) =>
 
 const it = testEffect(layer())
 const background = it // kilocode_change - background subagents are enabled by default
-const disabled = testEffect(layer({ experimentalBackgroundSubagents: false })) // kilocode_change
 
 function defer<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void
@@ -71,6 +70,11 @@ function defer<T>() {
   })
   return { promise, resolve }
 }
+
+const finish = Effect.fn("TaskToolTest.finish")(function* (sessionID: string) {
+  const jobs = yield* BackgroundJob.Service
+  return (yield* jobs.wait({ id: sessionID })).info
+})
 
 const seed = Effect.fn("TaskToolTest.seed")(function* (title = "Pinned") {
   const session = yield* Session.Service
@@ -267,7 +271,12 @@ describe("tool.task", () => {
       const tool = yield* TaskTool
       const def = yield* tool.init()
       let seen: SessionPrompt.PromptInput | undefined
-      const promptOps = stubOps({ text: "resumed", onPrompt: (input) => (seen = input) })
+      const promptOps = stubOps({
+        text: "resumed",
+        onPrompt: (input) => {
+          if (input.sessionID !== chat.id) seen = input
+        },
+      })
 
       const result = yield* def.execute(
         {
@@ -292,7 +301,8 @@ describe("tool.task", () => {
       expect(kids).toHaveLength(1)
       expect(kids[0]?.id).toBe(child.id)
       expect(result.metadata.sessionId).toBe(child.id)
-      expect(result.output).toContain(`<task id="${child.id}" state="completed">`)
+      const info = yield* finish(result.metadata.sessionId)
+      expect(info?.output).toContain("resumed")
       expect(seen?.sessionID).toBe(child.id)
       expect(seen?.variant).toBe("xhigh")
     }),
@@ -336,7 +346,7 @@ describe("tool.task", () => {
       const tool = yield* TaskTool
       const def = yield* tool.init()
       let seen: SessionPrompt.PromptInput | undefined
-      yield* def.execute(
+      const result = yield* def.execute(
         {
           description: "inspect bug",
           prompt: "continue from the fork",
@@ -348,12 +358,19 @@ describe("tool.task", () => {
           messageID: parent.info.id,
           agent: "build",
           abort: new AbortController().signal,
-          extra: { promptOps: stubOps({ onPrompt: (input) => (seen = input) }) },
+          extra: {
+            promptOps: stubOps({
+              onPrompt: (input) => {
+                if (input.sessionID !== forked.id) seen = input
+              },
+            }),
+          },
           messages: [],
           metadata: () => Effect.void,
           ask: () => Effect.void,
         },
       )
+      yield* finish(result.metadata.sessionId)
 
       expect(seen?.sessionID).toBe(SessionID.descending(id))
       expect((yield* sessions.get(SessionID.descending(id))).parentID).toBe(forked.id)
@@ -405,41 +422,36 @@ describe("tool.task", () => {
       const tool = yield* TaskTool
       const def = yield* tool.init()
 
-      const exit = yield* def
-        .execute(
-          {
-            description: "inspect bug",
-            prompt: "look into the cache key path",
-            subagent_type: "general",
+      const result = yield* def.execute(
+        {
+          description: "inspect bug",
+          prompt: "look into the cache key path",
+          subagent_type: "general",
+        },
+        {
+          sessionID: chat.id,
+          messageID: assistant.id,
+          agent: "build",
+          abort: new AbortController().signal,
+          extra: {
+            promptOps: stubOps({
+              text: "",
+              error: new SessionV1.APIError({ message: "Network connection lost", isRetryable: false }).toObject(),
+            }),
           },
-          {
-            sessionID: chat.id,
-            messageID: assistant.id,
-            agent: "build",
-            abort: new AbortController().signal,
-            extra: {
-              promptOps: stubOps({
-                text: "",
-                error: new SessionV1.APIError({ message: "Network connection lost", isRetryable: false }).toObject(),
-              }),
-            },
-            messages: [],
-            metadata: () => Effect.void,
-            ask: () => Effect.void,
-          },
-        )
-        .pipe(Effect.exit)
+          messages: [],
+          metadata: () => Effect.void,
+          ask: () => Effect.void,
+        },
+      )
 
-      expect(Exit.isFailure(exit)).toBe(true)
-      if (Exit.isSuccess(exit)) throw new Error("expected task failure")
+      const info = yield* finish(result.metadata.sessionId)
+      expect(info?.status).toBe("error")
       const child = (yield* sessions.children(chat.id))[0]
       expect(child).toBeDefined()
-      const failure = Cause.squash(exit.cause)
-      expect(failure).toBeInstanceOf(Error)
-      if (!(failure instanceof Error)) throw new Error("expected Error defect")
-      expect(failure.message).toContain("Network connection lost")
-      expect(failure.message).toContain(`task_id="${child?.id}"`)
-      expect(failure.message).toContain("can be resumed")
+      expect(info?.error).toContain("Network connection lost")
+      expect(info?.error).toContain(`task_id="${child?.id}"`)
+      expect(info?.error).toContain("can be resumed")
     }),
   )
 
@@ -450,40 +462,35 @@ describe("tool.task", () => {
       const tool = yield* TaskTool
       const def = yield* tool.init()
 
-      const exit = yield* def
-        .execute(
-          {
-            description: "inspect external directory",
-            prompt: "read the external directory",
-            subagent_type: "general",
+      const result = yield* def.execute(
+        {
+          description: "inspect external directory",
+          prompt: "read the external directory",
+          subagent_type: "general",
+        },
+        {
+          sessionID: chat.id,
+          messageID: assistant.id,
+          agent: "build",
+          abort: new AbortController().signal,
+          extra: {
+            promptOps: stubOps({
+              text: "I will inspect the directory.",
+              toolError: "The user rejected permission to use this specific tool call.",
+            }),
           },
-          {
-            sessionID: chat.id,
-            messageID: assistant.id,
-            agent: "build",
-            abort: new AbortController().signal,
-            extra: {
-              promptOps: stubOps({
-                text: "I will inspect the directory.",
-                toolError: "The user rejected permission to use this specific tool call.",
-              }),
-            },
-            messages: [],
-            metadata: () => Effect.void,
-            ask: () => Effect.void,
-          },
-        )
-        .pipe(Effect.exit)
+          messages: [],
+          metadata: () => Effect.void,
+          ask: () => Effect.void,
+        },
+      )
 
-      expect(Exit.isFailure(exit)).toBe(true)
-      if (Exit.isSuccess(exit)) throw new Error("expected task failure")
+      const info = yield* finish(result.metadata.sessionId)
+      expect(info?.status).toBe("error")
       const child = (yield* sessions.children(chat.id))[0]
-      const failure = Cause.squash(exit.cause)
-      expect(failure).toBeInstanceOf(Error)
-      if (!(failure instanceof Error)) throw new Error("expected Error defect")
-      expect(failure.message).toContain("The user rejected permission to use this specific tool call.")
-      expect(failure.message).toContain(`task_id="${child?.id}"`)
-      expect(failure.message).toContain("can be resumed")
+      expect(info?.error).toContain("The user rejected permission to use this specific tool call.")
+      expect(info?.error).toContain(`task_id="${child?.id}"`)
+      expect(info?.error).toContain("can be resumed")
     }),
   )
   // kilocode_change end
@@ -534,56 +541,6 @@ describe("tool.task", () => {
     }),
   )
 
-  it.instance("execute cancels child session when abort signal fires", () =>
-    Effect.gen(function* () {
-      const { chat, assistant } = yield* seed()
-      const tool = yield* TaskTool
-      const def = yield* tool.init()
-      const ready = defer<SessionPrompt.PromptInput>()
-      const cancelled = defer<SessionID>()
-      const abort = new AbortController()
-      const promptOps: TaskPromptOps = {
-        cancel: (sessionID) =>
-          Effect.sync(() => {
-            cancelled.resolve(sessionID)
-          }),
-        resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
-        prompt: (input) =>
-          Effect.promise(() => {
-            ready.resolve(input)
-            return cancelled.promise
-          }).pipe(Effect.as(reply(input, "cancelled"))),
-      }
-
-      const fiber = yield* def
-        .execute(
-          {
-            description: "inspect bug",
-            prompt: "look into the cache key path",
-            subagent_type: "general",
-          },
-          {
-            sessionID: chat.id,
-            messageID: assistant.id,
-            agent: "build",
-            abort: abort.signal,
-            extra: { promptOps },
-            messages: [],
-            metadata: () => Effect.void,
-            ask: () => Effect.void,
-          },
-        )
-        .pipe(Effect.forkChild)
-
-      const input = yield* Effect.promise(() => ready.promise)
-      abort.abort()
-      expect(yield* Effect.promise(() => cancelled.promise)).toBe(input.sessionID)
-
-      const exit = yield* Fiber.await(fiber)
-      expect(Exit.isSuccess(exit)).toBe(true)
-    }),
-  )
-
   it.instance("execute creates a child when task_id does not exist", () =>
     Effect.gen(function* () {
       const sessions = yield* Session.Service
@@ -591,7 +548,12 @@ describe("tool.task", () => {
       const tool = yield* TaskTool
       const def = yield* tool.init()
       let seen: SessionPrompt.PromptInput | undefined
-      const promptOps = stubOps({ text: "created", onPrompt: (input) => (seen = input) })
+      const promptOps = stubOps({
+        text: "created",
+        onPrompt: (input) => {
+          if (input.sessionID !== chat.id) seen = input
+        },
+      })
 
       const result = yield* def.execute(
         {
@@ -616,7 +578,8 @@ describe("tool.task", () => {
       expect(kids).toHaveLength(1)
       expect(kids[0]?.id).toBe(result.metadata.sessionId)
       expect(result.metadata.sessionId).not.toBe("ses_missing")
-      expect(result.output).toContain(`<task id="${result.metadata.sessionId}" state="completed">`)
+      const info = yield* finish(result.metadata.sessionId)
+      expect(info?.output).toContain("created")
       expect(seen?.sessionID).toBe(result.metadata.sessionId)
     }),
   )
@@ -678,9 +641,10 @@ describe("tool.task", () => {
         },
       )
 
-      expect(result.output).toContain("the actual answer")
-      expect(result.output).not.toContain("output limit hit")
-      expect(result.output).not.toContain("<task_result></task_result>")
+      const info = yield* finish(result.metadata.sessionId)
+      expect(info?.output).toContain("the actual answer")
+      expect(info?.output).not.toContain("output limit hit")
+      expect(info?.output).not.toContain("<task_result></task_result>")
     }),
   )
   // kilocode_change end
@@ -873,37 +837,34 @@ describe("tool.task", () => {
           }),
       }
 
-      const exit = yield* def
-        .execute(
-          {
-            description: "inspect bug",
-            prompt: "look into the cache key path",
-            subagent_type: "general",
-          },
-          {
-            sessionID: chat.id,
-            messageID: assistant.id,
-            agent: "build",
-            abort: new AbortController().signal,
-            extra: { promptOps },
-            messages: [],
-            metadata: () => Effect.void,
-            ask: () => Effect.void,
-          },
-        )
-        .pipe(Effect.exit)
+      const result = yield* def.execute(
+        {
+          description: "inspect bug",
+          prompt: "look into the cache key path",
+          subagent_type: "general",
+        },
+        {
+          sessionID: chat.id,
+          messageID: assistant.id,
+          agent: "build",
+          abort: new AbortController().signal,
+          extra: { promptOps },
+          messages: [],
+          metadata: () => Effect.void,
+          ask: () => Effect.void,
+        },
+      )
 
-      expect(Exit.isFailure(exit)).toBe(true)
+      const info = yield* finish(result.metadata.sessionId)
+      expect(info?.status).toBe("error")
 
       // the failure surfaces the resumable task_id so the parent can continue the subagent (#11620)
       const kids = yield* sessions.children(chat.id)
       const childId = kids[0]?.id
       expect(childId).toBeDefined()
-      const squashed = Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined
-      const message = squashed instanceof Error ? squashed.message : String(squashed)
-      expect(message).toContain("child prompt failed")
-      expect(message).toContain(`task_id="${childId}"`)
-      expect(message).toContain("can be resumed")
+      expect(info?.error).toContain("child prompt failed")
+      expect(info?.error).toContain(`task_id="${childId}"`)
+      expect(info?.error).toContain("can be resumed")
     }),
   )
   // kilocode_change end
@@ -923,7 +884,6 @@ describe("tool.task", () => {
           description: "inspect bug",
           prompt: "look into the cache key path",
           subagent_type: "general",
-          background: true,
         },
         {
           sessionID: chat.id,
@@ -964,40 +924,8 @@ describe("tool.task", () => {
     }),
   )
   // kilocode_change end
-  // kilocode_change start - preserve the disabled-background regression test
-  disabled.instance("rejects background execution when the experiment is disabled", () =>
-    Effect.gen(function* () {
-      const { chat, assistant } = yield* seed()
-      const tool = yield* TaskTool
-      const def = yield* tool.init()
 
-      const exit = yield* def
-        .execute(
-          {
-            description: "inspect bug",
-            prompt: "look into the cache key path",
-            subagent_type: "general",
-            background: true,
-          },
-          {
-            sessionID: chat.id,
-            messageID: assistant.id,
-            agent: "build",
-            abort: new AbortController().signal,
-            extra: { promptOps: stubOps() },
-            messages: [],
-            metadata: () => Effect.void,
-            ask: () => Effect.void,
-          },
-        )
-        .pipe(Effect.exit)
-
-      expect(Exit.isFailure(exit)).toBe(true)
-    }),
-  )
-  // kilocode_change end
-
-  it.instance("promotes a running foreground task without restarting it", () =>
+  it.instance("starts a task in the background without restarting it", () =>
     Effect.gen(function* () {
       const jobs = yield* BackgroundJob.Service
       const { chat, assistant } = yield* seed()
@@ -1023,37 +951,31 @@ describe("tool.task", () => {
         },
       }
 
-      const fiber = yield* def
-        .execute(
-          {
-            description: "inspect bug",
-            prompt: "look into the cache key path",
-            subagent_type: "general",
-          },
-          {
-            sessionID: chat.id,
-            messageID: assistant.id,
-            agent: "build",
-            abort: new AbortController().signal,
-            extra: { promptOps },
-            messages: [],
-            metadata: () => Effect.void,
-            ask: () => Effect.void,
-          },
-        )
-        .pipe(Effect.forkChild)
+      const result = yield* def.execute(
+        {
+          description: "inspect bug",
+          prompt: "look into the cache key path",
+          subagent_type: "general",
+        },
+        {
+          sessionID: chat.id,
+          messageID: assistant.id,
+          agent: "build",
+          abort: new AbortController().signal,
+          extra: { promptOps },
+          messages: [],
+          metadata: () => Effect.void,
+          ask: () => Effect.void,
+        },
+      )
 
-      yield* Deferred.await(ready)
-      const job = (yield* jobs.list())[0]
-      expect(job).toBeDefined()
-      if (!job) throw new Error("task job not found")
-      expect(job.metadata?.parentSessionId).toBe(chat.id)
-      yield* jobs.promote(job.id)
-
-      const result = yield* Fiber.join(fiber)
       expect(result.metadata.background).toBe(true)
       expect(result.output).toContain(`state="running"`)
-      expect((yield* jobs.get(result.metadata.sessionId))?.status).toBe("running")
+      const job = yield* jobs.get(result.metadata.sessionId)
+      expect(job?.metadata?.background).toBe(true)
+      expect(job?.status).toBe("running")
+
+      yield* Deferred.await(ready)
       expect(runs).toBe(1)
 
       yield* Deferred.succeed(done, undefined)
@@ -1075,7 +997,6 @@ describe("tool.task", () => {
           description: "inspect bug",
           prompt: "look into the cache key path",
           subagent_type: "general",
-          background: true,
         },
         {
           sessionID: chat.id,
@@ -1141,7 +1062,6 @@ describe("tool.task", () => {
           description: "inspect bug",
           prompt: "look into the cache key path",
           subagent_type: "general",
-          background: true,
         },
         context,
       )
@@ -1189,7 +1109,6 @@ describe("tool.task", () => {
           description: "inspect bug",
           prompt: "look into the cache key path",
           subagent_type: "general",
-          background: true,
         },
         {
           sessionID: chat.id,
@@ -1253,7 +1172,6 @@ describe("tool.task", () => {
           description: "inspect bug",
           prompt: "look into the cache key path",
           subagent_type: "general",
-          background: true,
         },
         context,
       )
@@ -1292,7 +1210,6 @@ describe("tool.task", () => {
           description: "inspect bug",
           prompt: "look into the cache key path",
           subagent_type: "general",
-          background: true,
         },
         {
           sessionID: chat.id,
@@ -1325,7 +1242,6 @@ describe("tool.task", () => {
           description: "inspect bug",
           prompt: "look into the cache key path",
           subagent_type: "general",
-          background: true,
         },
         {
           sessionID: chat.id,
@@ -1364,7 +1280,6 @@ describe("tool.task", () => {
           description: "inspect bug",
           prompt: "look into the cache key path",
           subagent_type: "general",
-          background: true,
         },
         {
           sessionID: chat.id,
@@ -1403,7 +1318,6 @@ describe("tool.task", () => {
           description: "inspect bug",
           prompt: "look into the cache key path",
           subagent_type: "general",
-          background: true,
         },
         {
           sessionID: chat.id,
@@ -1442,7 +1356,6 @@ describe("tool.task", () => {
           description: "inspect bug",
           prompt: "look into the cache key path",
           subagent_type: "general",
-          background: true,
         },
         {
           sessionID: chat.id,
@@ -1536,7 +1449,7 @@ describe("tool.task cost propagation", () => {
         const def = yield* tool.init()
         const promptOps = stubOps({ sessions, childCost: 0.25 })
 
-        yield* def.execute(
+        const result = yield* def.execute(
           {
             description: "inspect bug",
             prompt: "look into the cache key path",
@@ -1553,6 +1466,7 @@ describe("tool.task cost propagation", () => {
             ask: () => Effect.void,
           },
         )
+        yield* finish(result.metadata.sessionId)
         const parent = (yield* sessions.messages({ sessionID: chat.id })).find((item) => item.info.id === assistant.id)!
         expect(parent.info.role).toBe("assistant")
         if (parent.info.role !== "assistant") return
@@ -1588,7 +1502,7 @@ describe("tool.task cost propagation", () => {
         // Resuming into the same child via task_id and the stub tacks on another 0.15.
         const promptOps = stubOps({ sessions, childCost: 0.15 })
 
-        yield* def.execute(
+        const result = yield* def.execute(
           {
             description: "inspect bug",
             prompt: "look into the cache key path",
@@ -1606,6 +1520,7 @@ describe("tool.task cost propagation", () => {
             ask: () => Effect.void,
           },
         )
+        yield* finish(result.metadata.sessionId)
         const parent = (yield* sessions.messages({ sessionID: chat.id })).find((item) => item.info.id === assistant.id)!
         if (parent.info.role !== "assistant") return
         // Only the delta since the start of this invocation propagates.
@@ -1641,7 +1556,7 @@ describe("tool.task cost propagation", () => {
         const def = yield* tool.init()
         const promptOps = stubOps({ sessions, childCost: 0.05 })
 
-        yield* def.execute(
+        const result = yield* def.execute(
           {
             description: "inspect bug",
             prompt: "continue investigation",
@@ -1659,6 +1574,7 @@ describe("tool.task cost propagation", () => {
             ask: () => Effect.void,
           },
         )
+        yield* finish(result.metadata.sessionId)
         const parent = (yield* sessions.messages({ sessionID: chat.id })).find((item) => item.info.id === assistant.id)!
         if (parent.info.role !== "assistant") return
         // Delta-only: only the 0.05 from this run, not 0.15 including the pre-existing 0.10.
@@ -1701,25 +1617,24 @@ describe("tool.task cost propagation", () => {
             }),
         }
 
-        yield* def
-          .execute(
-            {
-              description: "partial",
-              prompt: "will abort",
-              subagent_type: "general",
-            },
-            {
-              sessionID: chat.id,
-              messageID: assistant.id,
-              agent: "build",
-              abort: abort.signal,
-              extra: { promptOps: ops },
-              messages: [],
-              metadata: () => Effect.void,
-              ask: () => Effect.void,
-            },
-          )
-          .pipe(Effect.exit)
+        const result = yield* def.execute(
+          {
+            description: "partial",
+            prompt: "will abort",
+            subagent_type: "general",
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: abort.signal,
+            extra: { promptOps: ops },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+        yield* finish(result.metadata.sessionId)
 
         const parent = (yield* sessions.messages({ sessionID: chat.id })).find((item) => item.info.id === assistant.id)!
         if (parent.info.role !== "assistant") return

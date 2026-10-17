@@ -1976,15 +1976,31 @@ it.instance(
             finish: "stop",
           }
           yield* sessions.updateMessage(childAssistant)
+          // kilocode_change start - task runs always report background metadata
           yield* ctx.metadata({
             title: "done",
-            metadata: { parentSessionId: ctx.sessionID, sessionId: child.id, model: ref, variant: undefined },
+            metadata: {
+              parentSessionId: ctx.sessionID,
+              sessionId: child.id,
+              model: ref,
+              variant: undefined,
+              background: true,
+              jobId: child.id,
+            },
           })
           return {
             title: "done",
-            metadata: { parentSessionId: ctx.sessionID, sessionId: child.id, model: ref, variant: undefined },
+            metadata: {
+              parentSessionId: ctx.sessionID,
+              sessionId: child.id,
+              model: ref,
+              variant: undefined,
+              background: true,
+              jobId: child.id,
+            },
             output: "done",
           }
+          // kilocode_change end
         })
       yield* Effect.addFinalizer(() => Effect.sync(() => void (task.execute = original)))
 

@@ -62,7 +62,6 @@ function environment(home: string, url: string, opts: { plugin?: string; resume?
     KILO_SERVER_USERNAME: "kilo",
     KILO_PURE: "false",
     KILO_DISABLE_DEFAULT_PLUGINS: "true",
-    KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS: "true",
     KILO_TELEMETRY_LEVEL: "off",
     KILO_AUTO_SHARE: "false",
     KILO_NO_DAEMON: opts.daemon ? "" : "1",
@@ -204,7 +203,6 @@ function scenario(
         description: "Produce background result",
         prompt: "Produce the requested result.",
         subagent_type: "general",
-        background: mode !== "foreground",
       }),
       ...(mode === "foreground"
         ? []
@@ -336,17 +334,16 @@ function scenario(
     expect(events.some((event) => event.type === "error")).toBe(false)
     const inputs = yield* llm.inputs
     const parents = inputs.filter((input) => input.model === "parent")
-    expect(parents).toHaveLength(mode === "foreground" ? 2 : 3)
+    expect(parents).toHaveLength(3)
     expect(inputs.filter((input) => input.model === "child")).toHaveLength(1)
     expect(JSON.stringify(parents.at(-1))).toContain("CHILD_RESULT_SENTINEL")
-    if (mode !== "foreground") expect(JSON.stringify(parents.at(-1))).toContain("Background task completed")
+    expect(JSON.stringify(parents.at(-1))).toContain("Background task completed")
     if (mode === "busy") expect(JSON.stringify(parents.at(-1))).toContain("PARENT_TOOL_DONE")
     expect(yield* llm.pending).toBe(0)
   })
 }
 
 for (const [name, mode, opts] of [
-  ["foreground Task completes before headless exit", "foreground", {}],
   ["headless run drains a child callback queued behind a busy parent", "busy", {}],
   ["headless run waits for a child after the parent becomes idle", "idle", {}],
   ["attached run drains a callback queued behind the parent", "busy", { attach: true }],

@@ -1360,7 +1360,6 @@ export const dict = {
   "task.backgroundAgents.open": "Відкрити фонового агента",
   "task.backgroundAgents.openAll": "Відкрити всіх фонових агентів",
   "task.backgroundAgents.cancel": "Зупинити",
-  "task.backgroundAgents.continueInBackground": "Продовжити у фоні",
   "task.backgroundAgents.waiting": "Фоновому агенту потрібен ваш ввід",
   "task.backgroundAgents.needsInput": "Потрібен ввід",
   "task.backgroundAgents.clearFinished": "Очистити завершені",

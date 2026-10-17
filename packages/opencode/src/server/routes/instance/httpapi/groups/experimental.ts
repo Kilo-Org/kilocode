@@ -302,7 +302,7 @@ export const ExperimentalApi = HttpApi.make("experimental")
             identifier: "experimental.session.background",
             summary: "Background subagents",
             description:
-              "Detach any synchronous subagents currently blocking the session and continue them in the background.",
+              "Promote a legacy synchronous subagent job to background if one is still running.", // kilocode_change
           }),
         ),
         HttpApiEndpoint.get("resource", ExperimentalPaths.resource, {

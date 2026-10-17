@@ -25,8 +25,7 @@ Use the smallest orchestration layer that matches the work:
 
 | Need | Use |
 |---|---|
-| Get a focused result before the current agent continues | A foreground `task` subagent |
-| Let independent research or implementation run while the current agent continues | A background `task` subagent with `background: true` |
+| Delegate a focused subtask that runs while the current agent continues | A `task` subagent |
 | Give an agent an isolated branch, checkout, terminal, and diff | An Agent Manager `worktree` session |
 | Start another conversation on the same branch | An Agent Manager Local session or `Cmd+T` / `Ctrl+T` |
 | Share material findings among one session and its task descendants | Kilo Swarm with `board_post` and `board_read` |

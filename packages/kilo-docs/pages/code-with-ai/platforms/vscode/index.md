@@ -39,7 +39,7 @@ Key features include:
 
 ## Background agents
 
-When Kilo starts an agent in the background, a collapsible status strip appears in the chat header. The strip stays visible while the transcript scrolls, so you can check background work without searching the conversation. Click the strip to expand it and see each agent.
+Every task subagent runs in the background. When Kilo starts an agent, a collapsible status strip appears in the chat header. The strip stays visible while the transcript scrolls, so you can check background work without searching the conversation. Click the strip to expand it and see each agent.
 
 Each agent shows one of these states:
 
@@ -58,7 +58,6 @@ Use these controls in the background-agent strip:
 - **Stop all (N)** cancels every running background agent for the current session without stopping the main session.
 - **Dismiss** hides one finished agent from the strip. It does not delete the transcript or the agent record.
 - **Clear finished** hides all agents that are no longer running.
-- **Continue in background** appears when a foreground subagent is running. It detaches that work so the parent session can continue while the subagent runs in the background.
 
 Stopping the main session with **Stop** or `Esc` ends its current response but leaves background agents running. Use **Stop all (N)** or an individual agent's **Stop** to cancel background work. Completed background results are available when you send the next message or use **Continue**.
 

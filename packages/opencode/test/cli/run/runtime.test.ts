@@ -197,7 +197,6 @@ describe("run interactive runtime", () => {
         variant: undefined,
         files: [],
         thinking: true,
-        backgroundSubagents: false,
       },
       {
         createRuntimeLifecycle: async () => ({

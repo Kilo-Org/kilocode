@@ -15,21 +15,8 @@ describe("RuntimeFlags", () => {
       const flags = yield* readFlags.pipe(Effect.provide(fromConfig({})))
 
       expect(flags.autoShare).toBe(false)
-      expect(flags.experimentalBackgroundSubagents).toBe(true) // kilocode_change
     }),
   )
-
-  // kilocode_change start - preserve the background-subagent kill switch
-  it.effect("allows disabling background subagents explicitly", () =>
-    Effect.gen(function* () {
-      const flags = yield* readFlags.pipe(
-        Effect.provide(fromConfig({ KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS: "false" })),
-      )
-
-      expect(flags.experimentalBackgroundSubagents).toBe(false)
-    }),
-  )
-  // kilocode_change end
 
   // kilocode_change start - shared agent board defaults on with a kill switch
   it.effect("enables the shared agent board by default", () =>

@@ -23,7 +23,7 @@ Key characteristics of subagents:
 - **Invocable by agents or users**: Primary agents invoke subagents via the Task tool, or you can invoke them manually with `@agent-name`
 - **Results flow back**: When a subagent completes, its result summary is returned to the parent agent
 
-When a primary agent invokes a subagent with `task`, the child is non-interactive: it cannot ask the end user a question directly. The child can still use its permitted tools and communicate through its result, shared files, or the [Kilo Swarm](/docs/getting-started/settings#kilo-swarm) board. Foreground tasks return before the parent continues. Background tasks use `background: true`, return immediately, and deliver their result to the parent when they finish.
+When a primary agent invokes a subagent with `task`, the child is non-interactive: it cannot ask the end user a question directly. The child can still use its permitted tools and communicate through its result, shared files, or the [Kilo Swarm](/docs/getting-started/settings#kilo-swarm) board. Every `task` invocation runs in the background: the tool returns immediately and delivers the child's result to the parent when the child finishes.
 
 ### Built-in Subagents
 

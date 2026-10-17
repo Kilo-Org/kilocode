@@ -13,11 +13,11 @@ type Settings = {
   "agentManager.worktreePool": boolean
 }
 export async function fetchSnapshot(client: Client, dir: string, settings: () => Settings) {
-  const [{ data: config }, { data: global }, { data: overlay }, capabilities] = await Promise.all([
+  const [{ data: config }, { data: global }, { data: overlay }] = await Promise.all([
     retry(() => client.config.get({ directory: dir }, { throwOnError: true })),
     client.global.config.get({ throwOnError: true }),
     client.config.overlay({ directory: dir, scope: "project" }, { throwOnError: true }),
-    retry(() => serverFeatures(client, dir)),
+    retry(() => serverFeatures()),
   ])
   return {
     config,
@@ -25,6 +25,6 @@ export async function fetchSnapshot(client: Client, dir: string, settings: () =>
     targets: overlay?.targets as { global: ConfigTarget; project: ConfigTarget } | undefined,
     collections: overlay?.collections,
     settings: settings(),
-    features: configFeatures(config, capabilities),
+    features: configFeatures(config),
   }
 }
