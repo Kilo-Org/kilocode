@@ -32,7 +32,7 @@ The `packages/cli` version at the current base is `2.0.29`, because the bump to 
 | `packages/protocol` `check:generated` | pass | No longer stale (it was at the initial base) |
 | `packages/cli` build + `service-smoke.ts` | pass | Smoke exits 0 |
 | Node build + `service-smoke --node` | not run | CI pins Node 26.4.0; this host has 24.13.0 |
-| Kilo CI on `origin/v2` | green | Push of `98ead1f27e`: `typecheck`, `unit (linux)`, `unit (windows)`, `shared upstream patches`, `upstream sync tooling tests`, `workflow allowlist`, `migration progress map` succeed; `e2e` skipped on push. On the sync PR #15136, `e2e (windows)` failed and `e2e (linux)` passed |
+| Kilo CI on `origin/v2` | green | Push of `98ead1f27e`: `typecheck`, `unit (linux)`, `unit (windows)`, `shared upstream patches`, `upstream sync tooling tests`, `workflow allowlist`, `migration progress map` succeed; `e2e` skipped. `e2e` is skipped on the fork since #15151 (`affected` in `test.yml` is `if: false`); it still ran on the sync PR #15136, where Windows failed and Linux passed |
 
 ### Current reds
 
@@ -73,7 +73,7 @@ Constraints:
 - Tests cannot run from the root (`bunfig.toml` test root `do-not-run-tests-from-root`). Run them from a package directory or through turbo.
 - Never run `tsc`. Packages use `tsgo` through `bun typecheck`.
 - `.husky/pre-push` checks the bun version, then runs `bun run check`.
-- `check.yml` runs on pushes to any branch named `dev` or `v2`, and on pull requests whose base branch has one of those names. Upstream wrote it for `upstream/dev` and `upstream/v2`. `test.yml` runs on every `pull_request`. **Changed 2026-10-12:** the Kilo integration branch was renamed to `v2`, so upstream's `check.yml` triggers now match pushes to `origin/v2` and pull requests that target it. **Verified 2026-10-16:** `check.yml` (`typecheck`) and `test.yml` (`unit`, `e2e`) run on the fork for pushes to `origin/v2` and pull requests that target it, next to Kilo's `kilo-v2.yml`; see the current capture. The 2026-10-11 capture had found no pull request targeting the integration branch or `kilo-v2-clean-bootstrap` (`gh pr list`).
+- `check.yml` and `test.yml` run on pushes to branches named `dev` or `v2`, and on every pull request. Upstream's `check.yml` filters pushes and pull requests by branch (`[dev, v2]` at the initial base, `[dev]` at `v2.0.30`). Kilo changed it on 2026-10-13 (#15016; `.github/workflows/check.yml:5-7`, marked): `v2` is in the push branches and the pull-request trigger is unfiltered, so a PR into `v2` or into a stacked PR branch is checked. `test.yml` already runs on every pull request upstream; Kilo added `v2` to its push branches. **Verified 2026-10-16:** `typecheck` (`check.yml`), `unit (linux)` and `unit (windows)` (`test.yml`) and the `kilo-v2.yml` jobs run on the fork; `typecheck` ran and passed on #15192, whose base is `fold-plan-delta`. `e2e` is skipped on the fork since #15151 (`affected` in `test.yml` is `if: false`); it still ran on #15136, where Windows failed and Linux passed. The 2026-10-11 capture had found no pull request targeting the integration branch or `kilo-v2-clean-bootstrap` (`gh pr list`).
 - `packages/www` no longer exists. Generated docs live in `services/www`, and `typecheck.yml` was replaced by `check.yml`.
 
 ## Previous capture: initial base (2026-10-11)
