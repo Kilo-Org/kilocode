@@ -789,3 +789,17 @@ describe("code mode permission visibility", () => {
     expect(Object.keys(visible)).toEqual(["b_tool", "c_tool"])
   })
 })
+
+// kilocode_change start - catalog origin must survive aliases and builtin permission collisions
+for (const name of ["read", "bash", "write"]) {
+  test(`code mode preserves MCP provenance for ${name}`, async () => {
+    const tool = await build({ [name]: mcpTool(name, () => ({ content: [] })) }, ["server"])
+    const requests: Parameters<Tool.Context["ask"]>[0][] = []
+    await Effect.runPromise(tool.execute({ code: `return await tools.${name}.${name}({})` }, {
+      ...ctx, ask: (request) => Effect.sync(() => { requests.push(request) }),
+    }))
+    expect(requests).toHaveLength(1)
+    expect(requests.at(0)).toMatchObject({ permission: name, source: "mcp" })
+  })
+}
+// kilocode_change end

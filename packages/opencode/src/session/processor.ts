@@ -26,6 +26,7 @@ import { Question } from "@/question"
 import { KiloSessionProcessor, type ReviewTelemetry } from "@/kilocode/session/processor"
 import { PermissionProvenance } from "@/kilocode/permission/provenance" // kilocode_change
 import { KiloToolInput } from "@/kilocode/session/tool-input" // kilocode_change
+import { SecurityContinuation } from "@/kilocode/security-decision/continuation" // kilocode_change
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model"
 import { KiloResponseMetadata } from "@/kilocode/session/response-metadata"
@@ -62,6 +63,10 @@ export interface Handle {
       attachments?: SessionV1.FilePart[]
     },
   ) => Effect.Effect<void>
+  // kilocode_change start
+  /** Whether this exact call was already stopped by the security layer earlier in the turn. */
+  readonly securityBlocked: (tool: string, input: unknown) => boolean
+  // kilocode_change end
   readonly process: (streamInput: LLM.StreamInput) => Effect.Effect<Result>
   readonly compactError?: () => ReturnType<typeof MessageV2.ContextOverflowError.prototype.toObject> | undefined // kilocode_change
 }
@@ -94,6 +99,7 @@ interface ProcessorContext extends Input {
   shouldBreak: boolean
   snapshot: string | undefined
   blocked: boolean
+  securityBlocks: SecurityContinuation.State // kilocode_change - identical blocked calls must not loop
   needsCompaction: boolean
   compactionError: ReturnType<typeof MessageV2.ContextOverflowError.prototype.toObject> | undefined // kilocode_change
   currentText: SessionV1.TextPart | undefined
@@ -147,6 +153,7 @@ const layer = Layer.effect(
         shouldBreak: false,
         snapshot: initialSnapshot,
         blocked: false,
+        securityBlocks: SecurityContinuation.turn(input.assistantMessage.parentID), // kilocode_change - per turn, not per step
         needsCompaction: false,
         compactionError: undefined, // kilocode_change
         currentText: undefined,
@@ -291,6 +298,9 @@ const layer = Layer.effect(
         if (match.part.tool === "suggest") {
           ctx.telemetry = KiloSessionProcessor.suggestionReviewTelemetry(output.metadata) ?? ctx.telemetry
         }
+        // A call that got through ends whatever run of security blocks preceded it: the model is
+        // making progress again rather than working around a refusal.
+        SecurityContinuation.succeeded(ctx.securityBlocks)
         // kilocode_change end
         yield* settleToolCall(toolCallID)
         KiloSessionProcessor.malformedToolGuard.reset(ctx.assistantMessage.parentID) // kilocode_change - a completed tool call is progress, so the failure streak ends
@@ -299,6 +309,7 @@ const layer = Layer.effect(
       const failToolCall = Effect.fn("SessionProcessor.failToolCall")(function* (toolCallID: string, error: unknown) {
         const match = yield* readToolCall(toolCallID)
         if (!match || match.part.state.status !== "running") return false
+        const call = { tool: match.part.tool, input: match.part.state.input } // kilocode_change
         yield* session.updatePart({
           ...match.part,
           state: {
@@ -311,13 +322,19 @@ const layer = Layer.effect(
           },
         })
         // kilocode_change start
-        if (
+        const security = SecurityContinuation.after(ctx.securityBlocks, error, call)
+        if (security) {
+          // The blocked call never ran, so the turn continues and the model may take another allowed
+          // path. Re-issuing the identical call is not another path, and neither is a run of fresh
+          // spellings of the same intent: both end the turn.
+          ctx.blocked ||= security !== "continue"
+        } else if (
           (error instanceof PermissionV1.RejectedError && !(yield* session.get(ctx.sessionID)).parentID) ||
           error instanceof Question.RejectedError ||
           error instanceof Suggestion.DismissedError
         ) {
           // kilocode_change end
-          ctx.blocked = ctx.shouldBreak
+          ctx.blocked ||= ctx.shouldBreak // kilocode_change - a stopped turn cannot be resumed by later settlements
         }
         // kilocode_change start - abort after repeated malformed tool calls instead of retrying forever (#14143)
         // The streak lives per user turn because each model step creates a new processor.
@@ -573,7 +590,7 @@ const layer = Layer.effect(
             yield* completeToolCall(value.id, output)
             // kilocode_change start - dismissed suggestions stop the turn after persisting normalized output
             if (output.metadata?.dismissed === true) {
-              ctx.blocked = ctx.shouldBreak
+              ctx.blocked ||= ctx.shouldBreak // kilocode_change - a stopped turn cannot be resumed by later settlements
             }
             // kilocode_change end
             return
@@ -1120,6 +1137,11 @@ const layer = Layer.effect(
         updateToolCall,
         metadata, // kilocode_change
         completeToolCall,
+        // kilocode_change start - the turn's blocked set is the processor's; the security layer
+        // reads it through here so a retry is recognised before the reviewer is consulted
+        securityBlocked: (tool: string, input: unknown) =>
+          SecurityContinuation.blocked(ctx.securityBlocks, tool, input),
+        // kilocode_change end
         ...output, // kilocode_change
         process,
       } satisfies Handle
