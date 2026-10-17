@@ -634,7 +634,27 @@ class KiloWorktreeRpcApiImpl(
             val base = Path.of(directory).normalize()
             val branch = request.branch.trim()
             if (branch.isEmpty()) return@withContext CreateWorktreeResultDto(error = "Branch name is required")
-            lock(base, "create") { addWorktree(base, branch, request.existingBranch, request.baseBranch) }
+            lock(base, "create") {
+                val ref = if (request.fetchBase && !request.existingBranch) {
+                    val target = request.baseBranch?.trim()?.takeIf { it.isNotEmpty() }
+                        ?: return@lock CreateWorktreeResultDto(error = "Base branch is required to fetch latest")
+                    val remote = runGit(base, "config", "--get", "branch.$target.remote")
+                        .stdout.trim().takeIf { it.isNotEmpty() } ?: "origin"
+                    val fetched = runGit(
+                        base,
+                        listOf("fetch", "--quiet", "--no-tags", remote, "+refs/heads/$target:refs/remotes/$remote/$target"),
+                        GIT_WRITE_TIMEOUT_MS,
+                    )
+                    if (!fetched.ok) {
+                        LOG.warn("base fetch failed: branch=$target remote=$remote exit=${fetched.exit} stderr=${fetched.stderr.trim()}")
+                        return@lock CreateWorktreeResultDto(error = reason(fetched, "Could not fetch $remote/$target"))
+                    }
+                    "$remote/$target"
+                } else {
+                    request.baseBranch
+                }
+                addWorktree(base, branch, request.existingBranch, ref)
+            }
         }
 
     override suspend fun importPr(directory: String, url: String): CreateWorktreeResultDto =

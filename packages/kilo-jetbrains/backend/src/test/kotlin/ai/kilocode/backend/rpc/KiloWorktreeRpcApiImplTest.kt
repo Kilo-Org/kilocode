@@ -2690,6 +2690,23 @@ class KiloWorktreeRpcApiImplTest {
         return Path.of(assertNotNull(result.worktree, "create failed: ${result.error}").path)
     }
 
+    fun `create fetches latest base branch when requested`() = runBlocking {
+        originWith(1, "feature/remote")
+        val base = output(remote, "branch", "--show-current").trim()
+        Files.writeString(remote.resolve("latest.txt"), "latest\n")
+        git(remote, "add", "latest.txt")
+        git(remote, "commit", "-m", "latest base")
+
+        val result = api.create(
+            repo.toString(),
+            CreateWorktreeRequestDto("feature/fresh", base, fetchBase = true),
+        )
+
+        val worktree = assertNotNull(result.worktree, result.error)
+        assertEquals("latest\n", Files.readString(Path.of(worktree.path).resolve("latest.txt")))
+        assertEquals(head(remote, base), head(Path.of(worktree.path), "HEAD"))
+    }
+
     private fun metadata(dir: Path, name: String): Path =
         Path.of(output(dir, "rev-parse", "--path-format=absolute", "--git-path", name).trimEnd('\r', '\n'))
 
