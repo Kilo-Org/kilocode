@@ -514,6 +514,10 @@ export const Assistant = Schema.Struct({
     root: Schema.String,
   }),
   summary: Schema.optional(Schema.Boolean),
+  /** Estimated context tokens after compaction. */ // kilocode_change
+  estimate: optional(NonNegativeInt), // kilocode_change
+  /** Estimated system and tool-schema tokens in the normal request. */ // kilocode_change
+  contextOverhead: optional(NonNegativeInt), // kilocode_change
   cost: Schema.Finite,
   tokens: Schema.Struct({
     total: Schema.optional(Schema.Finite),
