@@ -259,10 +259,11 @@ describe("tool parameters", () => {
       const parsed = parse(Task, { description: "d", prompt: "p", subagent_type: "general" })
       expect(parsed.subagent_type).toBe("general")
     })
-    test("accepts optional background flag", () => {
-      const parsed = parse(Task, { description: "d", prompt: "p", subagent_type: "general", background: true })
-      expect(parsed.background).toBe(true)
+    // kilocode_change start - background is no longer a task parameter
+    test("does not expose the removed background flag", () => {
+      expect("background" in (toJsonSchema(Task).properties ?? {})).toBe(false)
     })
+    // kilocode_change end
     test("rejects missing prompt", () => {
       expect(accepts(Task, { description: "d", subagent_type: "general" })).toBe(false)
     })

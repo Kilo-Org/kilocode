@@ -26,7 +26,7 @@ Now, **subagent support is built into agents that have full tool access** (Code,
 1. The agent analyzes a complex task and decides a subtask would benefit from isolation.
 2. It launches a subagent session using the `task` tool (e.g., `general` for autonomous work, `explore` for codebase research).
 3. The subagent has a separate conversation history but shares the parent's project directory or worktree. It does not isolate file edits.
-4. A foreground task returns its result before the parent continues. A background task lets the parent continue immediately and delivers its result later.
+4. Every task runs in the background: the parent continues immediately and receives the child's result when it finishes.
 
 Agents can launch multiple subagent sessions concurrently for parallel work.
 

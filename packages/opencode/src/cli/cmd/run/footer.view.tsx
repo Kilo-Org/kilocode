@@ -89,7 +89,6 @@ type RunFooterViewProps = {
   theme: () => RunTheme
   diffStyle?: RunDiffStyle
   tuiConfig: RunTuiConfig
-  backgroundSubagents: boolean
   history?: RunPrompt[]
   agent: string
   onSubmit: (input: RunPrompt) => boolean
@@ -98,7 +97,6 @@ type RunFooterViewProps = {
   onQuestionReject: (input: QuestionReject) => void | Promise<void>
   onCycle: () => void
   onInterrupt: () => boolean
-  onBackground?: () => void
   onEditorOpen: (input: { value: string }) => Promise<string | undefined>
   onInputClear: () => void
   onExitRequest?: () => boolean
@@ -168,9 +166,6 @@ export function RunFooterView(props: RunFooterViewProps) {
 
     return tabs().findIndex((item) => item.sessionID === sessionID) + 1
   })
-  const foregroundSubagents = createMemo(
-    () => props.backgroundSubagents && activeTabs().some((item) => !item.background),
-  )
   const model = createMemo(() => {
     const current = props.currentModel()
     return current ? modelInfo(props.providers(), current) : { model: props.state().model, provider: undefined }
@@ -203,15 +198,6 @@ export function RunFooterView(props: RunFooterViewProps) {
         keymap
           .getCommandBindings({ visibility: "registered", commands: ["session.queued_prompts"] })
           .get("session.queued_prompts")?.[0]?.sequence,
-        props.tuiConfig,
-      ) ?? "",
-  )
-  const backgroundShortcut = useKeymapSelector(
-    (keymap: OpenTuiKeymap) =>
-      formatKeySequence(
-        keymap
-          .getCommandBindings({ visibility: "registered", commands: ["session.background"] })
-          .get("session.background")?.[0]?.sequence,
         props.tuiConfig,
       ) ?? "",
   )
@@ -460,9 +446,6 @@ export function RunFooterView(props: RunFooterViewProps) {
     }
 
     const items: Array<{ kind: string; key: string; label: string }> = []
-    if (foregroundSubagents() && backgroundShortcut()) {
-      items.push({ kind: "background", key: backgroundShortcut(), label: "background" })
-    }
     if (queuedPrompts().length > 0 && queuedShortcut()) {
       items.push({ kind: "queued", key: queuedShortcut(), label: `${queue()} queued` })
     }
@@ -518,21 +501,6 @@ export function RunFooterView(props: RunFooterViewProps) {
       ...props.tuiConfig.keybinds.get("command.palette.show"),
       ...props.tuiConfig.keybinds.get("variant.cycle"),
     ],
-  }))
-
-  useBindings(() => ({
-    mode: KILO_BASE_MODE,
-    enabled: active().type === "prompt" && route().type === "composer" && foregroundSubagents(),
-    priority: 1,
-    commands: [
-      {
-        name: "session.background",
-        title: "Background subagents",
-        category: "Session",
-        run: () => props.onBackground?.(),
-      },
-    ],
-    bindings: props.tuiConfig.keybinds.get("session.background"),
   }))
 
   useBindings(() => ({

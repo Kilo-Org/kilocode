@@ -1,7 +1,7 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { afterEach, describe, expect, test } from "bun:test"
-import { Deferred, Effect, Exit, Fiber } from "effect"
+import { Deferred, Effect, Exit } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { Agent } from "../../src/agent/agent"
 import { BackgroundJob } from "../../src/background/job"
@@ -25,7 +25,6 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { Provider } from "../../src/provider/provider"
 import { Permission } from "../../src/permission"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
-import type { Context } from "../../src/tool/tool"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 import * as SandboxPolicy from "../../src/kilocode/sandbox/policy"
 import { Truncate } from "../../src/tool/truncate"
@@ -236,6 +235,7 @@ describe("Kilo task nesting", () => {
           ...base,
           prompt: (input) =>
             Effect.gen(function* () {
+              if (input.sessionID === chat.id) return yield* base.prompt(input)
               yield* Effect.promise(() =>
                 BackgroundProcess.start({
                   sessionID: input.sessionID,
@@ -268,6 +268,7 @@ describe("Kilo task nesting", () => {
         )
 
         const childID = SessionID.make(result.metadata.sessionId)
+        yield* (yield* BackgroundJob.Service).wait({ id: childID })
         expect(yield* Effect.promise(() => BackgroundProcess.list({ sessionID: childID }))).toEqual([])
         const inherited = yield* Effect.promise(() => BackgroundProcess.list({ sessionID: chat.id }))
         expect(inherited).toHaveLength(1)
@@ -286,7 +287,11 @@ describe("Kilo task nesting", () => {
           const tool = yield* TaskTool
           const def = yield* tool.init()
           let seen: SessionPrompt.PromptInput | undefined
-          const promptOps = stubOps({ onPrompt: (input) => (seen = input) })
+          const promptOps = stubOps({
+            onPrompt: (input) => {
+              if (input.sessionID !== chat.id) seen = input
+            },
+          })
 
           const result = yield* def.execute(
             {
@@ -307,6 +312,7 @@ describe("Kilo task nesting", () => {
           )
 
           const child = yield* sessions.get(result.metadata.sessionId)
+          yield* (yield* BackgroundJob.Service).wait({ id: result.metadata.sessionId })
           expect(seen?.tools?.task).toBe(false)
           expect(seen?.tools?.question).toBe(false)
           expect(child.permission).toEqual(
@@ -529,7 +535,7 @@ describe("Kilo task nesting", () => {
 })
 
 describe("Kilo task drain", () => {
-  function task(message: MessageV2.Assistant, ops: TaskPromptOps, metadata: Context["metadata"] = () => Effect.void) {
+  function task(message: MessageV2.Assistant, ops: TaskPromptOps) {
     return Effect.gen(function* () {
       const tool = yield* (yield* TaskTool).init()
       return yield* tool.execute(
@@ -537,7 +543,6 @@ describe("Kilo task drain", () => {
           description: "Drain child",
           prompt: "Return the completed result",
           subagent_type: "general",
-          background: false,
         },
         {
           sessionID: message.sessionID,
@@ -546,23 +551,27 @@ describe("Kilo task drain", () => {
           abort: new AbortController().signal,
           extra: { promptOps: ops },
           messages: [],
-          metadata,
+          metadata: () => Effect.void,
           ask: () => Effect.void,
         },
       )
     })
   }
 
-  it.instance("returns the child's final answer after nested background delivery drains", () =>
+  it.instance("delivers the child's final answer after nested background delivery drains", () =>
     Effect.gen(function* () {
       const sessions = yield* Session.Service
       const drain = yield* SessionDrain.Service
-      const { assistant } = yield* seed()
+      const { chat, assistant } = yield* seed()
       const entered = yield* Deferred.make<{ input: SessionPrompt.PromptInput; release: () => void }>()
+      const injected = yield* Deferred.make<SessionPrompt.PromptInput>()
       const ops: TaskPromptOps = {
         ...stubOps(),
-        prompt: (input) =>
-          Effect.gen(function* () {
+        prompt: (input) => {
+          if (input.sessionID === chat.id) {
+            return Deferred.succeed(injected, input).pipe(Effect.andThen(stubOps({ text: "ack" }).prompt(input)))
+          }
+          return Effect.gen(function* () {
             const grandchild = yield* sessions.create({ parentID: input.sessionID, title: "nested background" })
             yield* drain.link(grandchild.id, input.sessionID)
             const release = yield* drain.hold(grandchild.id)
@@ -571,77 +580,20 @@ describe("Kilo task drain", () => {
             for (const part of initial.parts) yield* sessions.updatePart(part)
             yield* Deferred.succeed(entered, { input, release })
             return initial
-          }),
+          })
+        },
       }
-      const running = yield* task(assistant, ops).pipe(Effect.forkChild)
+      const result = yield* task(assistant, ops)
+      expect(result.metadata.background).toBe(true)
       const pending = yield* Deferred.await(entered)
       const final = yield* stubOps({ text: "FINAL_NESTED_RESULT" }).prompt(pending.input)
       yield* sessions.updateMessage(final.info)
       for (const part of final.parts) yield* sessions.updatePart(part)
       pending.release()
-      const result = yield* Fiber.join(running)
-      expect(result.output).toContain("FINAL_NESTED_RESULT")
-      expect(result.output).not.toContain("WAITING_FOR_NESTED_CHILD")
-    }),
-  )
-
-  it.instance("promotion installs delivery cleanup even when its metadata hook fails", () =>
-    Effect.gen(function* () {
-      const background = yield* BackgroundJob.Service
-      const drain = yield* SessionDrain.Service
-      const { chat, assistant } = yield* seed()
-      const child = yield* Deferred.make<SessionID>()
-      const releaseChild = yield* Deferred.make<void>()
-      const metadata = yield* Deferred.make<void>()
-      const releaseMetadata = yield* Deferred.make<void>()
-      const notification = yield* Deferred.make<void>()
-      const releaseNotification = yield* Deferred.make<void>()
-      yield* Effect.addFinalizer(() =>
-        Effect.sync(() => {
-          for (const gate of [releaseChild, releaseMetadata, releaseNotification])
-            Deferred.doneUnsafe(gate, Effect.void)
-        }),
-      )
-      let notifications = 0
-      const ops: TaskPromptOps = {
-        ...stubOps(),
-        prompt: (input) =>
-          Effect.gen(function* () {
-            if (input.sessionID === chat.id) {
-              notifications++
-              yield* Deferred.succeed(notification, undefined)
-              yield* Deferred.await(releaseNotification)
-            } else {
-              yield* Deferred.succeed(child, input.sessionID)
-              yield* Deferred.await(releaseChild)
-            }
-            return yield* stubOps({ text: "completed" }).prompt(input)
-          }),
-      }
-      const running = yield* task(assistant, ops, (input) =>
-        input.metadata?.background === true
-          ? Effect.gen(function* () {
-              yield* Deferred.succeed(metadata, undefined)
-              yield* Deferred.await(releaseMetadata)
-              return yield* Effect.die(new Error("metadata hook failed"))
-            })
-          : Effect.void,
-      ).pipe(Effect.forkChild)
-      const childID = yield* Deferred.await(child)
-      const promotion = yield* background.promote(childID).pipe(Effect.exit, Effect.forkChild)
-      yield* Deferred.await(metadata)
-      const result = yield* Fiber.join(running)
-      expect(result.metadata.background).toBe(true)
-      const waiting = yield* drain.wait(chat.id).pipe(Effect.forkChild({ startImmediately: true }))
-      yield* Deferred.succeed(releaseChild, undefined)
-      yield* Deferred.await(notification)
-      expect(waiting.pollUnsafe()).toBeUndefined()
-      yield* Deferred.succeed(releaseNotification, undefined)
-      yield* Fiber.join(waiting)
-      yield* Deferred.succeed(releaseMetadata, undefined)
-      expect(Exit.isFailure(yield* Fiber.join(promotion))).toBe(true)
-      expect(notifications).toBe(1)
-      yield* drain.wait(chat.id)
+      const notice = yield* Deferred.await(injected).pipe(Effect.timeout("1 second"))
+      const text = (notice.parts ?? []).map((part) => (part.type === "text" ? part.text : "")).join("\n")
+      expect(text).toContain("FINAL_NESTED_RESULT")
+      expect(text).not.toContain("WAITING_FOR_NESTED_CHILD")
     }),
   )
 })

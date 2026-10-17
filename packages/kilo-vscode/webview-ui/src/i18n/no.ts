@@ -1384,7 +1384,6 @@ export const dict = {
   "task.backgroundAgents.open": "Åpne bakgrunnsagent",
   "task.backgroundAgents.openAll": "Åpne alle bakgrunnsagenter",
   "task.backgroundAgents.cancel": "Stopp",
-  "task.backgroundAgents.continueInBackground": "Fortsett i bakgrunnen",
   "task.backgroundAgents.waiting": "En bakgrunnsagent trenger innspill fra deg",
   "task.backgroundAgents.needsInput": "Innspill kreves",
   "task.backgroundAgents.clearFinished": "Fjern fullførte",

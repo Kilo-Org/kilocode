@@ -1,5 +1,4 @@
 import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
-import type { KiloClient } from "@kilocode/sdk/v2"
 import * as vscode from "vscode"
 
 type PluginSpec = string | [string, Record<string, unknown>]
@@ -17,24 +16,16 @@ export type Features = {
 
 export function configFeatures(
   config?: ConfigLike | null,
-  backgroundSubagents = false,
   remote = !!vscode.env.remoteName,
 ): Features {
   return {
     indexing: hasIndexingPlugin(config?.plugin ?? []),
     sandboxControls: process.platform !== "win32",
-    backgroundSubagents,
+    backgroundSubagents: true,
     speechToText: !remote,
   }
 }
 
-export async function serverFeatures(client: Pick<KiloClient, "experimental">, dir: string) {
-  if (!client.experimental?.capabilities?.get) return false
-  try {
-    const { data } = await client.experimental.capabilities.get({ directory: dir }, { throwOnError: true })
-    return data?.backgroundSubagents === true
-  } catch (error) {
-    console.warn("[Kilo New] Failed to fetch server capabilities:", error)
-    return false
-  }
+export async function serverFeatures() {
+  return true
 }

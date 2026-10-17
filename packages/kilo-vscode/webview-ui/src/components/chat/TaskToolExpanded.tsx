@@ -21,11 +21,9 @@ import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
-import { childID, latestTaskPart } from "../../context/session-utils"
-import { useConfig } from "../../context/config"
+import { childID } from "../../context/session-utils"
 import { openSubagent } from "./open-subagent"
 import {
-  showChildPromotion,
   taskAutoOpen,
   taskAvatarStatus,
   taskBackground,
@@ -39,7 +37,6 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
   const language = useLanguage()
   const session = useSession()
-  const { features } = useConfig()
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
 
@@ -50,22 +47,6 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       metadata: props.partMetadata as { sessionId?: string } | undefined,
       state: { metadata: props.metadata as { sessionId?: string } },
     })
-
-  const promotable = createMemo(() =>
-    showChildPromotion(
-      childSessionId(),
-      props.partMetadata as Record<string, unknown> | undefined,
-      props.metadata as Record<string, unknown> | undefined,
-      session.allStatusMap(),
-      features().backgroundSubagents,
-      props.readonly,
-      latestTaskPart(
-        props.partID,
-        childSessionId(),
-        session.currentSessionID() ? session.getSessionToolParts(session.currentSessionID()!) : [],
-      ),
-    ),
-  )
 
   const running = createMemo(() => taskRunning(props.status))
   // Background task cards stay collapsed: they must not auto-open or show the
@@ -217,13 +198,6 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     })
   }
 
-  const background = (e: MouseEvent) => {
-    e.stopPropagation()
-    const id = session.currentSessionID()
-    const child = childSessionId()
-    if (id && child) vscode.postMessage({ type: "promoteBackgroundJob", jobID: child, sessionID: id })
-  }
-
   // Stop only this sub-agent and anything it started. The parent keeps running
   // and receives the cancelled task result.
   const stop = (e: MouseEvent) => {
@@ -260,17 +234,6 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
               data-slot="task-tool-stop"
               aria-label={language.t("task.stop")}
               onClick={stop}
-            />
-          </Tooltip>
-        </Show>
-        <Show when={features().backgroundSubagents && promotable()}>
-          <Tooltip value={language.t("task.backgroundAgents.continueInBackground")} placement="top">
-            <IconButton
-              icon="arrow-down-to-line"
-              size="small"
-              variant="ghost"
-              aria-label={language.t("task.backgroundAgents.continueInBackground")}
-              onClick={background}
             />
           </Tooltip>
         </Show>
