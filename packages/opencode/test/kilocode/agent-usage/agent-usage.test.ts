@@ -528,6 +528,11 @@ describe("agent usage", () => {
       const [run] = yield* AgentUsage.runs()
       const encoded = AgentUsage.cursor.encode(run)
       expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/)
+      // Passing a whole run must still yield a token that carries only the paging key.
+      expect(JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"))).toEqual({
+        startedAt: 1_000,
+        id: run.id,
+      })
       expect(AgentUsage.cursor.decode(encoded)).toEqual({ startedAt: 1_000, id: run.id })
       expect(() => AgentUsage.cursor.decode("not-a-cursor")).toThrow()
       expect(() =>

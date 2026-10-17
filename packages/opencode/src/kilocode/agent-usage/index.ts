@@ -92,7 +92,8 @@ export namespace AgentUsage {
   /** Opaque `(startedAt, id)` paging token. Decoding throws on malformed input. */
   export const cursor = {
     encode(input: Cursor) {
-      return Buffer.from(JSON.stringify(input)).toString("base64url")
+      // Project the key so callers can pass a full run without leaking extra fields into the token.
+      return Buffer.from(JSON.stringify({ startedAt: input.startedAt, id: input.id })).toString("base64url")
     },
     decode(input: string) {
       return decodeCursor(JSON.parse(Buffer.from(input, "base64url").toString("utf8")))
