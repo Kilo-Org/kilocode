@@ -96,7 +96,6 @@ If a payment fails, we will notify you via email and automatically pause auto-to
 {% /callout %}
 
 - **Flexibility** — You can disable automatic top-ups at any time.
-- **No Expiration** — Any credits you purchase will never expire; they remain available in your account until used.
 
 ### Configuring Automatic Top-Up
 
@@ -115,7 +114,7 @@ Once saved, your initial top-up will be processed immediately to verify your pay
 
 ## Spend alerts
 
-Owners can set spend alerts in the spend view, on the web or in the mobile app, to be notified when spending crosses a limit or when an hour runs far above the usual rate. Alerts go to the owner's authorized billing contacts by email or mobile push. See [Spend alerts](/docs/getting-started/cost-controls-and-usage-safeguards#spend-alerts) for how to configure them.
+Owners can set spend alerts in the spend view, on the web or in the mobile app, to be notified when spending crosses a limit or when an hour runs far above the usual rate. Alerts go by email or mobile push to the scope's recipients: your billing contacts for a personal account, or the alert's creator, the organization's owners, and members holding the `billing_manager` role for an organization. See [Spend alerts](/docs/getting-started/cost-controls-and-usage-safeguards#spend-alerts) for how to configure them.
 
 ## Invoices
 
