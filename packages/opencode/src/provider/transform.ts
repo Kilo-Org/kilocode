@@ -858,7 +858,12 @@ function googleThinkingVariants(model: Provider.Model): Record<string, Record<st
   )
 }
 
-export function variants(model: Provider.Model, options: Record<string, unknown> = {}): Record<string, Record<string, any>> {
+// kilocode_change start - options carries the effective endpoint for reasoning-tier gating
+export function variants(
+  model: Provider.Model,
+  options: Record<string, unknown> = {},
+): Record<string, Record<string, any>> {
+// kilocode_change end
   // kilocode_change start
   if (
     ["@kilocode/kilo-gateway", "@ai-sdk/openai-compatible"].includes(model.api.npm) &&
