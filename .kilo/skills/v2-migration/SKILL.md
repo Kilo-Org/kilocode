@@ -14,7 +14,6 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
   - Context and decisions: `migration-tracking/plans/migration-context.md`. Plan: `migration-tracking/plans/kilo-v2-migration-plan.md`.
   - Known upstream test failures at the initial base: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`.
   - Fork conventions: `migration-tracking/technical-notes/v2-fork-conventions.md`.
-- Changes not yet folded into the plan: `migration-tracking/plans/v2-plan-delta-2026-10-13.md`. Where it differs from the context or the plan, it wins.
 - Epic #13750. Gateway, login and enterprise support: #14991. Upstream sync and merge tooling: #15020.
 
 ## Strategy

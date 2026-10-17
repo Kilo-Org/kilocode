@@ -137,6 +137,17 @@ Use the first rung that works. Prefer rungs 1–2 even when the donor has a work
 | 4 | Feature patch in a shared file | Last resort | `kilocode_change`, reason in the PR |
 | 5 | Branding and product strings | The rename script during each sync, never hand edits | None (script) |
 
+### Areas expected to need rung 3 or 4
+
+Measured 2026-10-13 (plan delta, #15021). Plugin first reduces shared patches but not to zero: v1 `origin/main` patched 609 upstream files with 5,246 markers; the archived port had 3,719 Kilo-owned paths and 24 shared production files (5 core, 1 plugin, 4 theme, 14 TUI). Seam patches age fast: after 1,462 upstream commits, 5 of those 24 still applied, 16 conflicted and 3 targets were deleted. Needing rung 3 or 4 here is expected, not a policy failure:
+
+- **TUI:** 14 of the archived port's 24 shared files. The busiest upstream file, `packages/tui/src/routes/session/index.tsx`, got 52 upstream commits in 5 weeks.
+- **Environment variables:** 123 `OPENCODE_*` variables in 364 files, with no central module in core. Host translation covers reads; Kilo-specific behavior needs patches.
+- **Cost tracking:** the plugin session API gives `tokens` but no cost. Gateway cost per request probably needs a provider-level seam (not verified in detail).
+- **Session format and remote ownership (E4):** probably core seams.
+- **Identity paths:** 11 static `Global.Path` references in 7 files bypass `Global.layerWith`.
+- **Branding:** about 4,100 `"opencode"` literals in about 790 files. Rung 5 (rename script), never a plugin.
+
 ## Narrow shared hooks
 
 When a Kilo capability genuinely needs upstream code to call it:
