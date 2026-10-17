@@ -234,8 +234,8 @@ export type ClientEvalPlanResponse = z.infer<typeof ClientEvalPlanResponseSchema
 export const ClientEvalCaseResponseSchema = z.object({
   caseId: z.string().min(1),
   baseRouter: AutoRouterSchema,
-  systemPrompt: z.string(),
-  userPrompt: z.string(),
+  // The exact `kilo run` prompt the platform container sends; pass it verbatim.
+  prompt: z.string().min(1),
   timeoutMs: z.number().int().positive(),
 })
 export type ClientEvalCaseResponse = z.infer<typeof ClientEvalCaseResponseSchema>

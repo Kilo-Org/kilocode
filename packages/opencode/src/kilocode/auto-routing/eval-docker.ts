@@ -105,12 +105,6 @@ export function evalImageTag(version: string): string {
   return `${EVAL_IMAGE_PREFIX}:${hasher.digest("hex").slice(0, 12)}`
 }
 
-// The case userPrompt already ends with the platform's final-answer
-// instruction, so the client folds prompts exactly like the platform container.
-export function evalPrompt(input: { systemPrompt: string; userPrompt: string }): string {
-  return `${input.systemPrompt}\n\n${input.userPrompt}`
-}
-
 export function evalCliArgs(input: {
   provider: string
   model: string

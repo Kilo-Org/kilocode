@@ -8,12 +8,12 @@ import {
   evalDockerfile,
   evalDockerRunArgs,
   evalImageTag,
-  evalPrompt,
   evalProviderConfig,
   hostUrl,
   redactedConfig,
 } from "@/kilocode/auto-routing/eval-docker"
 import { parseKiloRunEvents } from "@/kilocode/auto-routing/eval-events"
+import { fetchClientEvalCase } from "@kilocode/kilo-gateway"
 
 const MODEL: Provider.Model = {
   id: ModelV2.ID.make("qwen3"),
@@ -150,8 +150,33 @@ describe("docker invocation", () => {
     ])
   })
 
-  test("folds the system prompt into the case prompt like the platform runner", () => {
-    expect(evalPrompt({ systemPrompt: "S", userPrompt: "U" })).toBe("S\n\nU")
+  test("runs the case prompt from the eval service verbatim", async () => {
+    const prompt = 'System line\n\nUser task with `code` and "quotes"\n\nIMPORTANT: answer only.'
+    const served = await fetchClientEvalCase({
+      routerId: "00000000-0000-4000-8000-000000000001",
+      caseId: "case-1",
+      fetch: async () => Response.json({ caseId: "case-1", baseRouter: "efficient", prompt, timeoutMs: 180_000 }),
+    })
+    expect(evalCliArgs({ provider: "ollama", model: "qwen3", variant: null, prompt: served.prompt }).at(-1)).toBe(
+      prompt,
+    )
+  })
+
+  test("rejects a case response without the exact prompt", async () => {
+    await expect(
+      fetchClientEvalCase({
+        routerId: "00000000-0000-4000-8000-000000000001",
+        caseId: "case-1",
+        fetch: async () =>
+          Response.json({
+            caseId: "case-1",
+            baseRouter: "efficient",
+            systemPrompt: "S",
+            userPrompt: "U",
+            timeoutMs: 1,
+          }),
+      }),
+    ).rejects.toThrow("Unexpected response")
   })
 })
 

@@ -30,7 +30,6 @@ import {
   evalDockerfile,
   evalDockerRunArgs,
   evalImageTag,
-  evalPrompt,
   evalProviderConfig,
   redactedConfig,
   type EvalContainerResult,
@@ -105,7 +104,7 @@ export namespace KiloAutoEval {
               provider: item.provider,
               model: item.model,
               variant: first.variant,
-              prompt: evalPrompt(item.case),
+              prompt: item.case.prompt,
             }),
           }),
           config: item.config,
@@ -229,7 +228,7 @@ async function runItem(state: Worker, item: ClientEvalPlanItem): Promise<void> {
       provider: resolved.provider,
       model: resolved.model,
       variant: item.variant,
-      prompt: evalPrompt(resolved.case),
+      prompt: resolved.case.prompt,
     })
     const result = await Process.text(["docker", ...evalDockerRunArgs({ image: state.image, envFile: env.file, args })], {
       nothrow: true,
