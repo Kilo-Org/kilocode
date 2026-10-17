@@ -12,7 +12,7 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 - Behavior: v1 Kilo on `main`. Mechanism only: the old port, tag `kilo-v2-checkpoints-2026-09` (former `kilo-v2`). Never merge or copy it as a whole.
 - The migration docs are on `v2`:
   - Context and decisions: `migration-tracking/plans/migration-context.md`. Plan: `migration-tracking/plans/kilo-v2-migration-plan.md`.
-  - Known upstream test failures: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`.
+  - Known upstream test failures at the initial base: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`.
   - Fork conventions: `migration-tracking/technical-notes/v2-fork-conventions.md`.
 - Changes not yet folded into the plan: `migration-tracking/plans/v2-plan-delta-2026-10-13.md`. Where it differs from the context or the plan, it wins.
 - Epic #13750. Gateway, login and enterprise support: #14991. Upstream sync and merge tooling: #15020.
@@ -20,6 +20,7 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 ## Strategy
 
 - Order: CLI/TUI first (G1), then VS Code (G2), then JetBrains (G3). Cloud consumers follow a versioned release.
+- The upstream base moves: every upstream release is merged into `v2` (see Branches and PRs), so the migration keeps up with upstream. Build and check against the current `v2`, not the initial base.
 - Kilo code lives in Kilo-owned paths (`packages/kilo-*`, `src/kilocode/`). Plugin first: use the first option that works, and name it in the PR.
   1. A Kilo plugin on the public plugin API (`@opencode/plugin`).
   2. The Kilo host (unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry. The host does not exist yet. Until it lands, register a Kilo plugin in the upstream builtin list with one marked line.
@@ -155,7 +156,7 @@ Grow the test surface with each PR.
 
 - Run `bun typecheck` and focused `bun test` from each changed package directory (never from the repo root), with the test isolation above.
 - New Kilo code comes with tests for its behavior. Prefer real integration with the Kilo Gateway over mocks. Use small unit tests only for paths a live server cannot trigger (outage, malformed data).
-- Upstream failures listed in `pinned-v2-baseline.md` are known. Do not fix unrelated ones. A new failure in a package you touched blocks the PR.
+- Known upstream failures: compare against `origin/v2` before your change. `pinned-v2-baseline.md` lists them for the initial base only. Do not fix unrelated ones. A new failure in a package you touched blocks the PR.
 - Never delete or skip a test silently. List every skip in the PR with its reason.
 - Self-test each user-visible behavior you add, and record the scenario so the next PR can repeat it.
 

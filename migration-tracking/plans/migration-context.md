@@ -10,7 +10,8 @@ Status: active. The bootstrap docs landed on `origin/v2` (#15038). Lane L1 is ru
 |---|---|
 | Integration branch | `origin/v2` on Kilo-Org/kilocode (long-lived; becomes `main` at cutover). Not to be confused with opencode's `upstream/v2` |
 | Current working base | `origin/v2`. The migration docs landed there on 2026-10-13 (#15038). Every session branches from it |
-| Upstream base commit | `5e73d5cb1f788637b1b3d5cf1298ea694cbad0c5`: the parent of upstream release tag `v2.0.26` (`feat(core): add Google Cloud credential setup for Vertex (#53798)`). It is on `upstream/v2` and on `upstream/dev` |
+| Initial upstream base | `5e73d5cb1f788637b1b3d5cf1298ea694cbad0c5`: the parent of upstream release tag `v2.0.26` (`feat(core): add Google Cloud credential setup for Vertex (#53798)`). `origin/v2` started here. It is on `upstream/v2` and on `upstream/dev` |
+| Current upstream base | Moves with every sync (D1): the upstream parent of the newest `chore(upstream): sync v2.x.y (<sha>)` merge on `origin/v2`, as computed by `pinned()` in `script/upstream/utils/upstream.ts`. On 2026-10-16: `v2.0.30` = `775d1d0d713` (#15136) |
 | Upstream release tag | `v2.0.26` = `9b4ec5714d481559990db0a816d5dec19541a814` (reference marker only; not on upstream's v2 line, see note) |
 | Archived old port | tag `kilo-v2-checkpoints-2026-09` = `879b89e89034f0e9f4cfb7fd09a5323ef06f83c9` (former `kilo-v2` tip). Donor code only |
 | V1 target (behavioral reference) | `origin/main` pinned at `fb7e96eda5409517a05948b9efaf01c53997bf6e` (2026-10-09) |
@@ -31,7 +32,7 @@ Eventual end state: Kilo's `origin/v2` becomes `main`; today's `main` becomes `v
 
 Do not re-litigate these without new evidence. Proposed changes go to the user.
 
-1. **New base.** A clean branch from upstream v2 (see pinned refs). Never merge the old port branch into it. Upstream changes arrive by merging `upstream/dev` (upstream's v2 line since 2026-10-10), pinned by SHA each time. Syncs target release commits (the parent of a `v2.x.y` tag); a commit past a release is merged only when Kilo needs an unreleased fix. Release tags are markers, not merge targets. `upstream/v2` is frozen and never merged.
+1. **New base, kept current.** A clean branch from upstream v2 (see pinned refs). Never merge the old port branch into it. The upstream base is not fixed: Kilo merges every upstream release into `origin/v2`, so the migration keeps up with upstream while Kilo re-lands v1 behavior, instead of drifting and paying for one large merge later. Each sync merges a release commit of `upstream/dev` (upstream's v2 line since 2026-10-10; the release commit is the parent of a `v2.x.y` tag), pinned by SHA, in its own PR, with a merge commit, at least weekly. Several pending releases may go into one sync when the PR says why. A commit past a release is merged only when Kilo needs an unreleased fix. Release tags are markers, not merge targets. `upstream/v2` is frozen and never merged.
 2. **Freeze.** The old port branch is archived donor code. Current v1 `main` (pinned above) is the behavioral reference.
 3. **Donor rules.** The donor provides mechanism: how a Kilo feature is expressed on v2 (seams, RPC definitions, plugin shape, host-adapter pattern). Behavior and policy come from current v1.
 4. **Staleness gate.** For each feature, diff the v1 files it touches between the assessment snapshot and the v1 target. Empty delta: the donor is likely faithful. Non-empty: re-derive behavior from v1 and keep only the donor's v2 mapping.
