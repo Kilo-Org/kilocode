@@ -16,6 +16,7 @@ import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
 import { reasoningSummary } from "./reasoning-summary"
+import { gpt5FamilyReasoningTiers } from "./transform"
 import type { Provider } from "@/provider/provider"
 import type { Auth } from "@/auth"
 import type { Config } from "@/config/config"
@@ -102,6 +103,7 @@ export function patchConfigModel(cfg: any, existing: any) {
 
 const CUSTOM_PROVIDER_PACKAGES = new Set(["@ai-sdk/openai-compatible", "@ai-sdk/openai", "@ai-sdk/anthropic"])
 const FALLBACK_EFFORTS = ["none", "low", "medium", "high", "xhigh", "max"]
+const WIDELY_SUPPORTED_FALLBACK_EFFORTS = ["low", "medium", "high"]
 type Variants = NonNullable<Provider.Model["variants"]>
 type Generate = (model: Provider.Model) => Variants
 
@@ -113,8 +115,15 @@ export function customProviderVariants(model: Provider.Model, npm: unknown, gene
   if (Object.keys(variants).length > 0) return variants
   if (!model.capabilities.reasoning || !supported) return variants
 
+  // The gpt-5 rollout tiers (`none`, `xhigh`) are only accepted by gpt-5-family
+  // models. A custom provider id that never reaches openaiReasoningEfforts
+  // (e.g. qwen/deepseek/minimax/glm/kimi short-circuited to {} in variants())
+  // must not regain those tiers through this fallback (issue #13342).
+  const efforts =
+    npm === "@ai-sdk/openai" && !gpt5FamilyReasoningTiers(model.api.id) ? WIDELY_SUPPORTED_FALLBACK_EFFORTS : FALLBACK_EFFORTS
+
   return Object.fromEntries(
-    FALLBACK_EFFORTS.map((effort) => {
+    efforts.map((effort) => {
       if (npm === "@ai-sdk/anthropic") {
         return [effort, effort === "none" ? { thinking: { type: "disabled" } } : { effort }]
       }
