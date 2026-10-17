@@ -58,7 +58,7 @@ class SessionUiEditorSelectionTest : SessionUiTestBase() {
         )
         method.isAccessible = true
         edtWait { method.invoke(ui, "Explain this selection", listOf(attachment), null) }
-        settle()
+        assertTrue("prompt was not dispatched", pumpUntil { rpc.prompts.isNotEmpty() })
 
         val parts = rpc.prompts.single().third.parts
         assertEquals(4, parts.size)
