@@ -1,4 +1,5 @@
 import type { InstallMarketplaceItemOptions, MarketplaceItem } from "../marketplace"
+import type { ExplainBrieflyRequest, CancelExplainBrieflyRequest } from "../../../../src/shared/response-lens"
 import type { FileAttachment } from "./parts"
 import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
@@ -1742,6 +1743,7 @@ export type WebviewMessage =
   | PRMergeRequest
   | { type: "sessionActivity"; state: Activity }
   | { type: "acknowledgeSession"; sessionID: string; eventID: string }
+  | { type: "requestWorkspaceScope" }
   | DocumentRequestMessage
   | DocumentOpenFileMessage
   | DocumentCopyPathMessage

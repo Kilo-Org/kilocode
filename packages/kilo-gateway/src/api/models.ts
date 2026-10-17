@@ -1,8 +1,8 @@
 import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
 import { getDefaultHeaders, buildKiloHeaders } from "../headers.js"
-import { resolveKiloGatewayBaseUrl } from "./url.js"
-import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
+import { resolveKiloGatewayBaseUrl, resolveKiloGatewayUrl } from "./url.js"
+import { KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
 
 export type KiloModelsResult = {
   models: Record<string, any>
@@ -213,7 +213,9 @@ async function fetchRawKiloModels(options?: {
   const organizationId = options?.kilocodeOrganizationId
 
   // Construct base URL
-  const defaultBaseURL = organizationId ? `${KILO_API_BASE}/api/organizations/${organizationId}` : KILO_OPENROUTER_BASE
+  const defaultBaseURL = organizationId
+    ? resolveKiloGatewayUrl(`organizations/${organizationId}`)
+    : KILO_OPENROUTER_BASE
 
   const baseURL = options?.baseURL ?? defaultBaseURL
 
@@ -237,7 +239,7 @@ async function fetchRawKiloModels(options?: {
   }
 
   if (!response.ok) {
-    if (response.status === 401 && token && !organizationId && !finalBaseURL.includes("/api/organizations/")) {
+    if (response.status === 401 && token && !organizationId && !finalBaseURL.includes("/organizations/")) {
       return fetchRawKiloModels({})
     }
     const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"

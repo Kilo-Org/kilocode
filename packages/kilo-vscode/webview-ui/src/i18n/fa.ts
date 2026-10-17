@@ -288,6 +288,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "دوباره با ChatGPT وارد شوید، سپس پیام خود را مجدداً ارسال کنید تا از مدل‌های Codex استفاده کنید.",
 
+  "provider.failure.unauthorized": "اعتبارنامه رد شد (HTTP {{status}}). دوباره وارد شوید.",
+  "provider.failure.unauthorizedNoStatus": "اعتبارنامه رد شد. دوباره وارد شوید.",
+  "provider.failure.unauthenticated": "وارد نشده‌اید.",
+  "provider.failure.network": "دسترسی به ارائه‌دهنده ممکن نشد. اتصال خود را بررسی کنید.",
+  "provider.failure.http": "خطای ارائه‌دهنده (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "خطای ارائه‌دهنده.",
+  "provider.failure.schema": "پاسخ غیرمنتظره از ارائه‌دهنده.",
+
   "notification.permission.title": "مجوز لازم است",
   "notification.permission.titleSubagent": "مجوز مورد نیاز است (زیرعامل)",
   "notification.permission.titleSkillShell": "دستورهای شل از مهارت «{{skill}}» اجرا شود؟",
@@ -711,6 +719,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code یک دستیار هوش مصنوعی برای کدنویسی است. از آن بخواهید ویژگی‌ها بسازد، باگ‌ها را رفع کند یا کدبیس شما را توضیح دهد.",
+  "session.workspaceScope.description": "گفتگوی Kilo فقط از «{{folder}}»، اولین پوشه در این فضای کاری، استفاده می‌کند.",
+  "session.workspaceScope.alternatives":
+    "برای کار با پوشه‌ای دیگر، آن را در پنجره‌ای جداگانه باز کنید یا به‌عنوان پروژه به Agent Manager اضافه کنید.",
+  "session.workspaceScope.dismiss": "بستن راهنمای محدودهٔ فضای کاری",
   "session.messages.scrollToBottom": "رفتن به پایین",
   "session.messages.initializing": "در حال راه‌اندازی...",
   "session.messages.taskStarting": "در حال شروع...",
@@ -930,6 +942,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "ابزارهای بومی Notebook",
   "settings.experimental.nativeNotebookTools.description":
     "ابزارهای آزمایشی برای خواندن، ویرایش و اجرای VS Code notebooks را فعال کنید",
+  "settings.experimental.globIncludeIgnored.title": "جستجوی مسیرهای نادیده‌گرفته‌شده",
+  "settings.experimental.globIncludeIgnored.description":
+    "پوشه‌ها یا فایل‌هایی که ابزار glob باید حتی وقتی .gitignore یا سایر فایل‌های نادیده‌گیری آن‌ها را مستثنا می‌کنند، جستجو کند. از الگوهای سبک gitignore نسبت به فضای کاری استفاده کنید؛ پوشه‌های نادیده‌گرفته‌شده درون آن‌ها همچنان رد می‌شوند.",
   "settings.experimental.continueOnDeny.title": "ادامه در صورت رد",
   "settings.experimental.continueOnDeny.description": "حلقه عامل را هنگام رد شدن یک مجوز ادامه دهید",
   "settings.experimental.codeMode.title": "فراخوانی برنامه‌نویسی ابزارها",

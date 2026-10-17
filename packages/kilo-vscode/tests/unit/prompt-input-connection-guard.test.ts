@@ -19,7 +19,7 @@ describe("PromptInput connection guard", () => {
     const attachments = src.indexOf("const terminalFile = await terminal.resolveAttachment")
     const guard = src.indexOf("if (!server.isConnected() || finishPending(pendingId)) return", attachments)
     const send = src.indexOf("session.sendMessage(", guard)
-    const clear = src.indexOf("clearDraft(token.key, draft, owns)", send)
+    const clear = src.indexOf("clearDraft(token.key, draft, id, owns)", send)
     const release = src.indexOf("annotationSend.end(token)", clear)
 
     expect(lock).toBeGreaterThan(-1)

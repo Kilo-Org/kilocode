@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { integratedBrowserLinkDestination } from "../services/browser-automation/chrome-setting"
+import { responseLensSettings, validResponseLensSettings } from "../shared/response-lens"
 
 type Post = (msg: unknown) => void
 
@@ -9,6 +10,7 @@ export function buildChatSettingsMessage() {
     type: "chatSettingsLoaded" as const,
     settings: {
       shiftTabCyclesVariant: config.get<boolean>("shiftTabCyclesVariant", true),
+      responseLens: responseLensSettings(config.get("responseLens")),
       browserAutomation: vscode.workspace
         .getConfiguration("kilo-code.new.experimental")
         .get("browserAutomation", false),

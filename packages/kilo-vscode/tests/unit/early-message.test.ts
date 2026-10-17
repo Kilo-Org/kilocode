@@ -64,7 +64,7 @@ describe("routeEarlyMessage resume", () => {
 describe("routeEarlyMessage activity", () => {
   it("forwards authoritative webview presentation state without interpreting session events", async () => {
     const calls: unknown[] = []
-    const ctx = { activity: (state: unknown) => calls.push(state) } as Ctx
+    const ctx = { responseLens: () => false, activity: (state: unknown) => calls.push(state) } as Ctx
     for (const state of ["busy", "waiting", "done", "scheduled", "error", "idle"]) {
       expect(await routeEarlyMessage({ type: "sessionActivity", state }, ctx)).toBe(true)
     }
@@ -75,7 +75,7 @@ describe("routeEarlyMessage activity", () => {
 describe("routeEarlyMessage caffeination", () => {
   it("delegates keep-awake toggles to the host", async () => {
     const calls: string[] = []
-    const ctx = { caffeination: () => calls.push("toggle") } as Ctx
+    const ctx = { responseLens: () => false, caffeination: () => calls.push("toggle") } as Ctx
 
     expect(await routeEarlyMessage({ type: "toggleCaffeination" }, ctx)).toBe(true)
     expect(calls).toEqual(["toggle"])
@@ -86,6 +86,7 @@ describe("routeEarlyMessage background jobs", () => {
   it("forwards board requests without losing owner, project, or revision", async () => {
     const calls: unknown[] = []
     const ctx = {
+      responseLens: () => false,
       board: async (message: Record<string, unknown>) => {
         calls.push(message)
         return true

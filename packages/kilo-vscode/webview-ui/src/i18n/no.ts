@@ -296,6 +296,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Logg på ChatGPT igjen, og send meldingen din på nytt for å fortsette å bruke Codex-modeller.",
 
+  "provider.failure.unauthorized": "Påloggingsinformasjon ble avvist (HTTP {{status}}). Logg på igjen.",
+  "provider.failure.unauthorizedNoStatus": "Påloggingsinformasjon ble avvist. Logg på igjen.",
+  "provider.failure.unauthenticated": "Ikke pålogget.",
+  "provider.failure.network": "Fikk ikke kontakt med leverandøren. Sjekk tilkoblingen din.",
+  "provider.failure.http": "Leverandørfeil (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Leverandørfeil.",
+  "provider.failure.schema": "Uventet svar fra leverandøren.",
+
   "notification.permission.title": "Tillatelse påkrevd",
   "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",
   "notification.permission.titleSkillShell": "Kjøre skallkommandoer fra ferdigheten «{{skill}}»?",
@@ -721,6 +729,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code er en AI-kodingsassistent. Be den om å bygge funksjoner, fikse feil eller forklare kodebasen din.",
+  "session.workspaceScope.description":
+    "Kilo-chatten bruker bare «{{folder}}», den første mappen i dette arbeidsområdet.",
+  "session.workspaceScope.alternatives":
+    "For å jobbe med en annen mappe kan du åpne den i et eget vindu eller legge den til som et prosjekt i Agent Manager.",
+  "session.workspaceScope.dismiss": "Skjul hintet om arbeidsområdets avgrensning",
   "session.messages.scrollToBottom": "Rull til bunnen",
   "session.messages.initializing": "Initialiserer...",
   "session.messages.taskStarting": "Starter...",
@@ -907,6 +920,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Innebygde notatbok-verktøy",
   "settings.experimental.nativeNotebookTools.description":
     "Aktiver eksperimentelle verktøy for å lese, redigere og kjøre VS Code-notatbøker",
+  "settings.experimental.globIncludeIgnored.title": "Søk i ignorerte stier",
+  "settings.experimental.globIncludeIgnored.description":
+    "Mapper eller filer som glob-verktøyet skal søke i selv når .gitignore eller andre ignore-filer ekskluderer dem. Bruk mønstre i gitignore-stil relativt til arbeidsområdet; ignorerte mapper inni dem hoppes fortsatt over.",
   "settings.experimental.continueOnDeny.title": "Fortsett ved avvisning",
   "settings.experimental.continueOnDeny.description": "Fortsett agentløkken når en tillatelse avvises",
   "settings.sandboxing.title": "Kjøring i sandkasse",

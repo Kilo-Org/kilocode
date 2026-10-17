@@ -99,6 +99,7 @@ const config = {
   projectConfig: () => ({}),
   collections: () => ({}),
   settings: () => ({}),
+  shortcuts: () => ({ bindings: {}, selection: false }),
   features: () => ({ indexing: false, sandboxControls: false, backgroundSubagents: false }),
   loading: () => false,
   isDirty: () => false,
@@ -258,7 +259,7 @@ try {
       assert.equal(prompt(), input)
       assert.equal(prompt().value, "startup draft remains intact")
       assert.deepEqual(session.selected(session.currentSessionID()), model)
-      assert(host.querySelector(".prompt-input-hint-selectors")?.textContent?.includes("Test"))
+      assert(host.querySelector(".prompt-selectors")?.textContent?.includes("Test"))
       assert.equal(sends().length, 0)
     }
     intact()
@@ -503,7 +504,11 @@ try {
   await settle()
   assert.equal(drafts.get(key("ses_restore")), "offscreen replacement")
   assert.equal(prompt().value, "keep prompt text")
-  assert.equal(annotationEditorDrafts.get(key("ses_restore_other"))?.annotation.id, activeNote.id)
+  // Adding code context can move focus and save the editor; either state must retain the active note.
+  const activeEditor = annotationEditorDrafts.get(key("ses_restore_other"))
+  const activeDraft = annotationDrafts.get(key("ses_restore_other"))?.find((item) => item.id === activeNote.id)
+  assert.equal(activeEditor?.annotation.id ?? activeDraft?.id, activeNote.id)
+  assert.equal(activeEditor?.comment ?? activeDraft?.comment, "keep active pane annotation")
   assert.deepEqual(contextDrafts.get(key("ses_restore")), [offscreenContext])
 
   // Scope changes while a save is pending preserve the captured draft, never send the newer pane.

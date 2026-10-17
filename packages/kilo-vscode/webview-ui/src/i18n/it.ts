@@ -623,6 +623,10 @@ export const dict = {
   "settings.aboutKiloCode.title": "Informazioni su Kilo Code",
   "session.messages.welcome":
     "Kilo Code è un assistente AI per il coding. Chiedigli di creare feature, correggere bug o spiegare il codebase.",
+  "session.workspaceScope.description": "La chat di Kilo usa solo «{{folder}}», la prima cartella di questo workspace.",
+  "session.workspaceScope.alternatives":
+    "Per lavorare con un'altra cartella, aprila in una finestra separata o aggiungila come progetto in Agent Manager.",
+  "session.workspaceScope.dismiss": "Nascondi il suggerimento sull'ambito del workspace",
   "session.messages.scrollToBottom": "Scorri in fondo",
   "session.messages.initializing": "Inizializzazione...",
   "session.messages.taskStarting": "Avvio...",
@@ -793,6 +797,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Strumenti nativi per notebook",
   "settings.experimental.nativeNotebookTools.description":
     "Abilita strumenti sperimentali per leggere, modificare ed eseguire i notebook di VS Code",
+  "settings.experimental.globIncludeIgnored.title": "Cerca nei percorsi ignorati",
+  "settings.experimental.globIncludeIgnored.description":
+    "Cartelle o file in cui lo strumento glob deve cercare anche quando .gitignore o altri file di esclusione li escludono. Usa pattern in stile gitignore relativi all’area di lavoro; le cartelle ignorate al loro interno restano escluse.",
   "settings.experimental.continueOnDeny.title": "Continua dopo rifiuto",
   "settings.experimental.continueOnDeny.description": "Continua il loop agente quando un'autorizzazione viene negata",
   "settings.sandboxing.title": "Sandbox",
@@ -1407,6 +1414,15 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI ti ha disconnesso",
   "error.providerAuth.chatgpt.description":
     "Accedi di nuovo con ChatGPT, quindi invia di nuovo il tuo messaggio per continuare a usare i modelli Codex.",
+
+  // Provider failure
+  "provider.failure.unauthorized": "Credenziali rifiutate (HTTP {{status}}). Accedi di nuovo.",
+  "provider.failure.unauthorizedNoStatus": "Credenziali rifiutate. Accedi di nuovo.",
+  "provider.failure.unauthenticated": "Non hai effettuato l'accesso.",
+  "provider.failure.network": "Impossibile raggiungere il provider. Controlla la connessione.",
+  "provider.failure.http": "Errore del provider (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Errore del provider.",
+  "provider.failure.schema": "Risposta imprevista dal provider.",
 
   // Speech to Text tooltips and errors
   "speechToText.tooltip.start": "Avvia input vocale",

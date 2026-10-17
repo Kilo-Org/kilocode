@@ -194,6 +194,7 @@ function readTerminalContext(read: (() => string | undefined) | undefined): stri
 }
 
 interface PromptInputProps {
+  transcript?: () => HTMLElement | undefined
   blocked?: () => boolean
   edit?: { sessionID: string; messageID: string }
   onEditReady?: (ready: boolean) => void
@@ -403,7 +404,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           ],
     )
   const locked = () => !!props.edit && props.edit.sessionID === session.currentSessionID()
-  const readonly = () => locked() || (goal.active() && goal.pending())
+  const readonly = () => locked() || (goal.active() && goal.pending()) || annotationSend.locked(draftKey())
   // Host-supplied drafts and attachments must wait, not disappear during Goal admission.
   const deferred = new Map<string, ((key: string) => void)[]>()
   let flushing = false
@@ -1510,11 +1511,29 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const created = (message: Extract<ExtensionMessage, { type: "sessionCreated" }>) => {
     const raw = createdDraftKey(message.draftID, sandboxRequest(undefined) !== undefined)
     if (!raw) return
-    const source = scopeDraftKey(boxKey(), raw)
-    const target = scopeDraftKey(boxKey(), sessionDraftKey(message.session.id))
-    goal.move(source, target, message.session.id)
+    const box = boxKey()
+    const live = scopeDraftKey(box, raw)
+    if (live === draftKey()) {
+      saveDraft(
+        live,
+        text(),
+        reviewComments(),
+        imageAttach.images(),
+        undefined,
+        browsers(),
+        contexts(),
+        paste.pastes().map((item) => item.text),
+      )
+      if (annotations().length > 0) annotationDrafts.set(live, annotations())
+      annotationEditorState.persist(live)
+    }
+    const route = message.draftID
+      ? promptDraftPromotion(raw, message.session.id, box, promptDraftStores)
+      : { source: live, target: scopeDraftKey(box, sessionDraftKey(message.session.id)) }
+    const sourceActive = route.source === draftKey()
+    goal.move(route.source, route.target, message.session.id)
     if (message.draftID) history.move(message.draftID, message.session.id)
-    const queued = deferred.get(source)
+    const queued = deferred.get(route.source)
     if (queued) {
       deferred.set(route.target, [...queued, ...(deferred.get(route.target) ?? [])])
       deferred.delete(route.source)
@@ -2222,45 +2241,43 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         showToast({ variant: "error", title: "Terminal context unavailable", description: err.message })
         return undefined
       })
-    if (hasTerminalMention(message) && !terminalFile) {
-      finishPending(pendingId)
-      return
-    }
+      if (!annotationSend.held(token)) return
+      if (hasTerminalMention(draft) && !terminalFile) return
 
-    const gitFile = await git.resolveAttachment(message, id, context).catch((err: Error) => {
-      showToast({ variant: "error", title: "Git changes unavailable", description: err.message })
-      return undefined
-    })
-    if (hasGit() && hasGitChangesMention(message) && !gitFile) {
-      finishPending(pendingId)
-      return
-    }
-    if (isDisabled()) {
-      finishPending(pendingId)
-      return
-    }
-    if (finishPending(pendingId)) return
+      const gitFile = await git
+        .resolveAttachment(draft, id, {
+          captured: true,
+          ...(context === undefined ? {} : { agentManagerContext: context }),
+          available: gitAvailable,
+        })
+        .catch((err: Error) => {
+          showToast({ variant: "error", title: "Git changes unavailable", description: err.message })
+          return undefined
+        })
+      if (!annotationSend.held(token)) return
+      if (gitAvailable && hasGitChangesMention(draft) && !gitFile) return
+      if (!server.isConnected() || finishPending(pendingId)) return
 
-    const allFiles = [
-      ...mentionFiles,
-      ...imgFiles,
-      ...(terminalFile ? [terminalFile] : []),
-      ...(gitFile ? [gitFile] : []),
-    ]
-    const attachments = allFiles.length > 0 ? allFiles : undefined
-
-    if (objective) {
-      mention.closeMention()
-      slash.close()
-      ghost.dismiss()
-      goal.send(
-        key,
-        stamp,
-        ["goal", `-- ${message}`, sel?.providerID, sel?.modelID, attachments, pendingId, context, origin ?? null],
-        id,
-      )
-      return
-    }
+      const allFiles = [
+        ...mentionFiles,
+        ...imgFiles,
+        ...(terminalFile ? [terminalFile] : []),
+        ...(gitFile ? [gitFile] : []),
+      ]
+      const attachments = allFiles.length > 0 ? allFiles : undefined
+      const owns = annotationSendOwns(token, draftKey(), sid())
+      if (objective) {
+        mention.closeMention()
+        slash.close()
+        ghost.dismiss()
+        goal.send(
+          key,
+          stamp,
+          ["goal", `-- ${message}`, sel.providerID, sel.modelID, attachments, pendingId, context, origin ?? null],
+          id,
+        )
+        return
+      }
 
       // Server-side slash command (cmdMatch/matched already computed above)
       const accepted =
@@ -2293,19 +2310,23 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             )
       if (!accepted) return
 
-    // `id` was captured before the terminal/git attachment awaits above, so it still
-    // names the conversation this message was actually sent to even if the user has
-    // since switched to a different conversation.
-    clearDraft(key, draft, id)
+      clearDraft(token.key, draft, id, owns)
+    } catch (error) {
+      annotationFailure(error)
+    } finally {
+      finishPending(pendingId)
+      annotationSend.end(token)
+    }
   }
 
-  const clearDraft = (key: string, value?: string, historyKey?: string) => {
+  const clearDraft = (key: string, value?: string, historyKey?: string, owns = draftKey() === key) => {
     if (value === undefined) {
       const active = key === draftKey()
       const source = active ? text() : (drafts.get(key) ?? "")
       const backing = active ? paste.pastes().map((item) => item.text) : (pasteDrafts.get(key) ?? [])
       value = paste.plainTextFor(source, backing).trim()
     }
+    clearAcceptedAnnotationDraft(key, annotationDrafts, annotationEditorDrafts)
     history.append(value, historyKey)
     drafts.delete(key)
     reviewDrafts.delete(key)
@@ -2802,6 +2823,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           variant={<ThinkingSelector sessionID={sid} blocked={props.blocked?.() ?? false} />}
         />
         <div class="prompt-input-hint-actions">
+          <ResponseLensBoundary>
+            <ResponseLens
+              streamingMessageIDs={streamingMessageIDs}
+              transcript={() => props.transcript?.()}
+              disabled={() => annotationSend.active()}
+              editing={() => annotationEditor() !== undefined || locked()}
+              onAdd={addAnnotation}
+              focus={() => textareaRef}
+            />
+          </ResponseLensBoundary>
           <div class="prompt-action" data-folded={hidden().length === 0 ? "" : undefined}>
             <PromptOverflow items={hidden()} />
           </div>

@@ -287,6 +287,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Войдите в ChatGPT снова, затем отправьте сообщение еще раз, чтобы продолжить использование моделей Codex.",
 
+  "provider.failure.unauthorized": "Учетные данные отклонены (HTTP {{status}}). Войдите снова.",
+  "provider.failure.unauthorizedNoStatus": "Учетные данные отклонены. Войдите снова.",
+  "provider.failure.unauthenticated": "Вход не выполнен.",
+  "provider.failure.network": "Не удалось подключиться к провайдеру. Проверьте соединение.",
+  "provider.failure.http": "Ошибка провайдера (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Ошибка провайдера.",
+  "provider.failure.schema": "Неожиданный ответ от провайдера.",
+
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
   "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
@@ -757,6 +765,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code — это AI-помощник для программирования. Попросите его создать функции, исправить ошибки или объяснить вашу кодовую базу.",
+  "session.workspaceScope.description":
+    "Чат Kilo использует только «{{folder}}» — первую папку в этой рабочей области.",
+  "session.workspaceScope.alternatives":
+    "Чтобы работать с другой папкой, откройте её в отдельном окне или добавьте как проект в Agent Manager.",
+  "session.workspaceScope.dismiss": "Скрыть подсказку об ограничении рабочей области",
   "session.messages.scrollToBottom": "Прокрутить вниз",
   "session.messages.initializing": "Инициализация...",
   "session.messages.taskStarting": "Запуск...",
@@ -942,6 +955,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Нативные инструменты блокнотов",
   "settings.experimental.nativeNotebookTools.description":
     "Включить экспериментальные инструменты для чтения, редактирования и выполнения блокнотов VS Code",
+  "settings.experimental.globIncludeIgnored.title": "Поиск в игнорируемых путях",
+  "settings.experimental.globIncludeIgnored.description":
+    "Папки или файлы, в которых инструмент glob должен искать, даже если их исключает .gitignore или другие ignore-файлы. Используйте шаблоны в стиле gitignore относительно рабочей области; игнорируемые папки внутри них по-прежнему пропускаются.",
   "settings.experimental.continueOnDeny.title": "Продолжить при отказе",
   "settings.experimental.continueOnDeny.description": "Продолжить цикл агента при отказе в разрешении",
   "settings.sandboxing.title": "Изоляция в песочнице",

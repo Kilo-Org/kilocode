@@ -3,7 +3,6 @@ package ai.kilocode.client.session.ui.header
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.SessionHeaderSnapshot
 import ai.kilocode.client.session.model.SessionModelEvent
-import ai.kilocode.client.session.model.TimelineItem
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.controller.SessionController
@@ -48,7 +47,8 @@ class SessionHeaderPanel(
     private val onShowBoard: () -> Unit = {},
     /** Opens a background agent's read-only transcript. See [ai.kilocode.client.session.SessionUi.openSubagent]. */
     private val onOpenSubagent: (String, String) -> Unit = { _, _ -> },
-    onNavigate: (TimelineItem) -> Unit = {},
+    /** Scrolls the transcript to the step (message id, part id) behind a clicked timeline bar. */
+    private val onJumpTimeline: (String, String) -> Unit = { _, _ -> },
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
 
     companion object {
@@ -108,7 +108,7 @@ class SessionHeaderPanel(
             }
         })
     }
-    private val timeline = TimelinePanel(onNavigate)
+    private val timeline = TimelinePanel()
     private val viewport = JViewport().apply {
         isOpaque = false
         view = timeline
@@ -116,6 +116,7 @@ class SessionHeaderPanel(
     private var press: Point? = null
     private var origin = Point()
     private var rest = 0.0
+    private var panned = false
     private val bar = ContextBar()
     private val tokenTitle = JBLabel(KiloBundle.message("session.header.tokens"))
     private val input = JBLabel().apply {
@@ -196,10 +197,18 @@ class SessionHeaderPanel(
             override fun mousePressed(event: MouseEvent) {
                 press = event.point
                 origin = viewport.viewPosition
+                panned = false
             }
 
             override fun mouseReleased(event: MouseEvent) {
                 press = null
+            }
+
+            override fun mouseClicked(event: MouseEvent) {
+                if (!SwingUtilities.isLeftMouseButton(event)) return
+                if (panned) return
+                val item = timeline.itemAt(event) ?: return
+                onJumpTimeline(item.message, item.part.id)
             }
         })
         timeline.addMouseMotionListener(object : MouseMotionAdapter() {
@@ -511,7 +520,7 @@ class SessionHeaderPanel(
         val start = press ?: return
         val max = limit()
         val x = (origin.x - (event.x - start.x)).coerceIn(0, max)
-        move(x)
+        if (move(x)) panned = true
     }
 
     private fun endTimeline() {

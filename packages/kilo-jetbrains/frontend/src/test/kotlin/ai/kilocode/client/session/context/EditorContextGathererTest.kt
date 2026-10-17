@@ -6,6 +6,7 @@ import com.intellij.openapi.util.SystemInfo
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.EnvironmentUtil
 import com.intellij.util.ui.UIUtil
+import kotlinx.coroutines.runBlocking
 
 class EditorContextGathererTest : BasePlatformTestCase() {
     override fun tearDown() {
@@ -29,7 +30,7 @@ class EditorContextGathererTest : BasePlatformTestCase() {
         editor.selectionModel.setSelection(doc.getLineStartOffset(1), doc.getLineEndOffset(2))
         val root = psi.virtualFile.parent.parent.path
 
-        val result = EditorContextGatherer.gather(project, root)
+        val result = runBlocking { EditorContextGatherer.gather(project, root) }
 
         assertEquals("src/App.kt", result.context?.activeFile)
         assertEquals(listOf("src/App.kt"), result.context?.openTabs)
@@ -64,7 +65,7 @@ class EditorContextGathererTest : BasePlatformTestCase() {
         UIUtil.dispatchAllInvocationEvents()
         val root = app.virtualFile.parent.parent.path
 
-        val result = EditorContextGatherer.gather(project, root)
+        val result = runBlocking { EditorContextGatherer.gather(project, root) }
 
         assertEquals("src/App.kt", result.context?.activeFile)
         assertEquals(listOf("src/App.kt"), result.context?.openTabs)
@@ -82,7 +83,7 @@ class EditorContextGathererTest : BasePlatformTestCase() {
         editor.selectionModel.setSelection(doc.getLineStartOffset(0), doc.getLineEndOffset(0))
         val root = secret.virtualFile.parent.parent.path
 
-        val result = EditorContextGatherer.gather(project, root)
+        val result = runBlocking { EditorContextGatherer.gather(project, root) }
 
         assertNull(result.context?.activeFile)
         assertNull(result.context?.openTabs)
@@ -96,7 +97,7 @@ class EditorContextGathererTest : BasePlatformTestCase() {
         FileEditorManager.getInstance(project).openFile(psi.virtualFile, true)
         UIUtil.dispatchAllInvocationEvents()
 
-        val result = EditorContextGatherer.gather(project, psi.virtualFile.parent.parent.path)
+        val result = runBlocking { EditorContextGatherer.gather(project, psi.virtualFile.parent.parent.path) }
 
         assertNull(result.context)
         assertTrue(result.selection.isEmpty())
@@ -115,7 +116,7 @@ class EditorContextGathererTest : BasePlatformTestCase() {
         editor.selectionModel.setSelection(doc.getLineStartOffset(1), doc.getLineEndOffset(1))
         val root = psi.virtualFile.parent.parent.path
 
-        val result = EditorContextGatherer.gather(project, root)
+        val result = runBlocking { EditorContextGatherer.gather(project, root) }
 
         val marker = result.selection[0]
         assertTrue(marker.text, marker.text.orEmpty().contains("line 2"))

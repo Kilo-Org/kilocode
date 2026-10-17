@@ -431,9 +431,9 @@ describe("PromptInput send origin contract", () => {
     const end = source.indexOf("\n  return (", start)
     const body = source.slice(start, end)
     const send = Math.max(body.indexOf("session.sendMessage("), body.indexOf("session.sendCommand("))
-    const clear = body.indexOf("clearDraft(key, draft, id)")
+    const clear = body.indexOf("clearDraft(token.key, draft, id, owns)")
     const append = body.lastIndexOf("history.append(value, historyKey)")
-    const guard = body.indexOf("if (draftKey() !== key) return")
+    const guard = body.indexOf("if (!owns) return")
 
     expect(send).toBeGreaterThan(-1)
     expect(clear).toBeGreaterThan(send)
@@ -446,9 +446,9 @@ describe("PromptInput send origin contract", () => {
     // `id` (origin ?? pendingId) is captured before the terminal/git awaits, then
     // threaded through clearDraft into history.append so a completed send always
     // credits the conversation it was actually sent to.
-    expect(source).toMatch(/clearDraft\(key, draft, id\)/)
+    expect(source).toMatch(/clearDraft\(token.key, draft, id, owns\)/)
     expect(source).toMatch(
-      /const clearDraft = \(key: string, value\?: string, historyKey\?: string\) => \{[\s\S]*history\.append\(value, historyKey\)/,
+      /const clearDraft = \(key: string, value\?: string, historyKey\?: string, owns = draftKey\(\) === key\) => \{[\s\S]*history\.append\(value, historyKey\)/,
     )
   })
 })
@@ -742,7 +742,7 @@ describe("webview-local annotation send contract", () => {
   it("commits the open editor before formatting and clears only after an accepted send", () => {
     const send = source.indexOf("// Server-side slash command")
     const accepted = source.indexOf("if (!accepted) return", send)
-    const cleared = source.indexOf("clearDraft(token.key, draft, owns)", send)
+    const cleared = source.indexOf("clearDraft(token.key, draft, id, owns)", send)
     expect(source.indexOf("if (!commitOpenAnnotation()) return")).toBeLessThan(
       source.indexOf("formatAnnotationsMarkdown(pendingAnnotations)"),
     )
@@ -792,9 +792,8 @@ describe("webview-local annotation send contract", () => {
 
   it("prevents review and speech auto-send from pulling in unrelated annotations", () => {
     expect(source).toContain("const empty = !hasInput()")
-    expect(source).toMatch(
-      /const hasInput = \(\) =>[\s\S]*annotations\(\)\.length > 0[\s\S]*annotationEditor\(\) !== undefined/,
-    )
+    expect(source).toMatch(/const hasInput = \(\) =>[\s\S]*hasAnnotationDraft\(\)/)
+    expect(source).toContain("const hasAnnotationDraft = () => !canAutoSendAnnotations()")
     expect(source).toContain("message.autoSend && empty && canAutoSendAnnotations()")
     expect(source).toMatch(/const transcribeAndSend = \(\) => \{\s*if \(!canAutoSendAnnotations\(\)\)/)
     expect(source).toContain("annotationEditor() === undefined")

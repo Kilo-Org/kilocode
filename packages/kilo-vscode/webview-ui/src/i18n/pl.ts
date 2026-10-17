@@ -291,6 +291,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Zaloguj się ponownie do ChatGPT, a następnie wyślij wiadomość jeszcze raz, aby kontynuować korzystanie z modeli Codex.",
 
+  "provider.failure.unauthorized": "Poświadczenia zostały odrzucone (HTTP {{status}}). Zaloguj się ponownie.",
+  "provider.failure.unauthorizedNoStatus": "Poświadczenia zostały odrzucone. Zaloguj się ponownie.",
+  "provider.failure.unauthenticated": "Nie jesteś zalogowany.",
+  "provider.failure.network": "Nie można połączyć się z dostawcą. Sprawdź swoje połączenie.",
+  "provider.failure.http": "Błąd dostawcy (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Błąd dostawcy.",
+  "provider.failure.schema": "Nieoczekiwana odpowiedź od dostawcy.",
+
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",
   "notification.permission.titleSkillShell": "Uruchomić polecenia powłoki z umiejętności „{{skill}}”?",
@@ -717,6 +725,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code to asystent programowania AI. Poproś go o tworzenie funkcji, naprawę błędów lub wyjaśnienie bazy kodu.",
+  "session.workspaceScope.description":
+    "Czat Kilo używa tylko „{{folder}}”, pierwszego folderu w tym obszarze roboczym.",
+  "session.workspaceScope.alternatives":
+    "Aby pracować z innym folderem, otwórz go w osobnym oknie lub dodaj go jako projekt w Agent Manager.",
+  "session.workspaceScope.dismiss": "Ukryj wskazówkę dotyczącą zakresu obszaru roboczego",
   "session.messages.scrollToBottom": "Przewiń na dół",
   "session.messages.initializing": "Inicjalizacja...",
   "session.messages.taskStarting": "Uruchamianie...",
@@ -904,6 +917,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Natywne narzędzia notatników",
   "settings.experimental.nativeNotebookTools.description":
     "Włącz eksperymentalne narzędzia do odczytu, edycji i uruchamiania notatników VS Code",
+  "settings.experimental.globIncludeIgnored.title": "Przeszukuj ignorowane ścieżki",
+  "settings.experimental.globIncludeIgnored.description":
+    "Foldery lub pliki, które narzędzie glob ma przeszukiwać nawet wtedy, gdy .gitignore lub inne pliki ignorowania je wykluczają. Używaj wzorców w stylu gitignore względem obszaru roboczego; ignorowane foldery w ich wnętrzu nadal są pomijane.",
   "settings.experimental.continueOnDeny.title": "Kontynuuj przy odmowie",
   "settings.experimental.continueOnDeny.description": "Kontynuuj pętlę agenta po odmowie uprawnienia",
   "settings.sandboxing.title": "Izolacja w piaskownicy",

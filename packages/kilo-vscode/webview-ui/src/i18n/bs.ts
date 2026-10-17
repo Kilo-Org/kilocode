@@ -290,6 +290,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Ponovo se prijavite na ChatGPT, a zatim ponovo pošaljite poruku da nastavite koristiti Codex modele.",
 
+  "provider.failure.unauthorized": "Vjerodajnice su odbijene (HTTP {{status}}). Prijavite se ponovo.",
+  "provider.failure.unauthorizedNoStatus": "Vjerodajnice su odbijene. Prijavite se ponovo.",
+  "provider.failure.unauthenticated": "Niste prijavljeni.",
+  "provider.failure.network": "Nije moguće doći do provajdera. Provjerite svoju vezu.",
+  "provider.failure.http": "Greška provajdera (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Greška provajdera.",
+  "provider.failure.schema": "Neočekivan odgovor od provajdera.",
+
   "notification.permission.title": "Potrebna dozvola",
   "notification.permission.titleSubagent": "Potrebna dozvola (podagent)",
   "notification.permission.titleSkillShell": "Pokrenuti shell komande iz vještine „{{skill}}”?",
@@ -760,6 +768,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code je AI asistent za programiranje. Zatražite da gradi funkcionalnosti, ispravlja greške ili objasni vašu bazu koda.",
+  "session.workspaceScope.description": "Kilo razgovor koristi samo „{{folder}}“, prvi folder u ovom radnom prostoru.",
+  "session.workspaceScope.alternatives":
+    "Za rad s drugim folderom, otvorite ga u zasebnom prozoru ili ga dodajte kao projekt u Agent Manager.",
+  "session.workspaceScope.dismiss": "Zatvori savjet o opsegu radnog prostora",
   "session.messages.scrollToBottom": "Pomakni se na dno",
   "session.messages.initializing": "Inicijalizacija...",
   "session.messages.taskStarting": "Pokretanje...",
@@ -946,6 +958,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Izvorni alati za bilježnice",
   "settings.experimental.nativeNotebookTools.description":
     "Omogući eksperimentalne alate za čitanje, uređivanje i izvršavanje VS Code bilježnica",
+  "settings.experimental.globIncludeIgnored.title": "Pretraga ignorisanih putanja",
+  "settings.experimental.globIncludeIgnored.description":
+    "Direktoriji ili datoteke koje glob alat treba pretraživati čak i kada ih .gitignore ili druge ignore datoteke isključuju. Koristite obrasce u gitignore stilu relativne u odnosu na radni prostor; ignorisani direktoriji unutar njih ostaju preskočeni.",
   "settings.experimental.continueOnDeny.title": "Nastavi pri odbijanju",
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
   "settings.sandboxing.title": "Rad u izoliranom okruženju",

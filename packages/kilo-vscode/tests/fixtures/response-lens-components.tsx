@@ -102,6 +102,8 @@ const dispose = render(
             value={
               {
                 connected: () => ["test"],
+                failures: () => [],
+                kiloUnavailable: () => false,
                 models: () => models,
                 findModel: (value: { modelID: string } | null) => models.find((model) => model.id === value?.modelID),
               } as never
@@ -190,7 +192,7 @@ await settle()
 explain()
 await settle()
 assert.equal(selected, "original", "default model resolves by captured session at click")
-assert.ok(latest(), JSON.stringify(messages) + document.body.textContent)
+assert.ok(latest(), JSON.stringify({ messages, errors: errors.map((error) => String(error)) }))
 assert.equal(latest().model.modelID, "active")
 assert.equal(latest().level, "simple")
 assert.match(document.body.textContent ?? "", /Explaining/)

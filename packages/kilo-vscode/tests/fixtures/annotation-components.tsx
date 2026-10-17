@@ -243,6 +243,14 @@ async function editorLifecycle() {
   await settle()
   assert.equal(saved().length, 2, "cancelling a new editor must not remove existing notes")
   assert.equal(list.hidden, true)
+
+  open(newAnnotation({ sessionID: "session-1", messageID: "message-4", selectedText: "empty comment", comment: "" }))
+  await settle()
+  count.focus()
+  await settle()
+  assert.equal(document.querySelector("textarea"), null, "leaving an empty editor must cancel without trapping focus")
+  assert.equal(document.activeElement, count, "keyboard focus must remain on the destination control")
+  assert.equal(saved().length, 2, "leaving an empty editor must preserve saved annotations")
   dispose()
   host.remove()
 }
