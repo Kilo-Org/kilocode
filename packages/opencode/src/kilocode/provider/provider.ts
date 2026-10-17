@@ -14,7 +14,7 @@ import { optionalOmitUndefined } from "@opencode-ai/core/schema"
 import { ProviderError } from "@/provider/error"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
-import { mapValues, omit, pickBy } from "remeda"
+import { mapValues, omit, pickBy, sortBy } from "remeda"
 import { reasoningSummary } from "./reasoning-summary"
 import type { Provider } from "@/provider/provider"
 import type { Auth } from "@/auth"
@@ -297,6 +297,87 @@ export function patchCustomLoaderResult(
 export function kiloSmallModelPriority(providerID: string): string[] | undefined {
   if (providerID.startsWith("kilo")) return ["kilo-auto/small"]
   return undefined
+}
+
+/**
+ * Picks the cheapest chat-capable model from the provider's own catalog as the
+ * small model for auxiliary tasks (session titles, prompt enhance, commit
+ * messages, branch names). Keeps those calls on the provider the user
+ * configured instead of falling through to Kilo's auto small model, which
+ * draws Kilo credits in BYOK setups. Chat-capable means text in and text out;
+ * tool calling is not required (e.g. Perplexity sonar and morph chat models
+ * advertise tool_call false). Models with no text output (image, audio, video)
+ * are skipped, and so are embedding and rerank models: they also take text in
+ * and return text scores, but requests to them cannot produce titles or commit
+ * messages. Missing cost data sorts as free; ties break by release date and
+ * id, matching the catalog ordering in getSmallModel.
+ *
+ * Non-generative exclusion is a case-insensitive id/family/api-id heuristic:
+ * besides the obvious embed/rerank substrings it covers common embedding
+ * families (bge, gte, e5, uae, instructor, colbert, voyage,
+ * sentence-similarity) whose ids carry no embed/rerank token (e.g.
+ * intfloat/e5-mistral-7b-instruct, bge-m3, Qwen/Qwen3-Reranker-0.6B), plus
+ * safety/classification models (guard, safeguard, moderation, shield,
+ * llama-guard, shieldgemma) whose text output is a label rather than
+ * generated prose. The api id is checked alongside the alias/family so an
+ * alias like `vectors` pointing at `nomic-embed-text` cannot bypass the
+ * exclusion.
+ */
+const NON_GENERATIVE_RE =
+  /embed|rerank|sentence[-_ ]similarity|text-embedding|bge|gte-?(?:large|base|small)?|e5-|-e5\b|\buae\b|instructor|colbert|voyage(?![a-z])|guard|safeguard|moderation|shield|llama[-_]?guard|shieldgemma|toxic|harm|pii|nsfw/i
+
+export function cheapestSmallModel(models: Provider.Model[]) {
+  return sortBy(
+    models.filter((model) => {
+      if (!model.capabilities.input.text || !model.capabilities.output.text) return false
+      return !NON_GENERATIVE_RE.test(`${model.family} ${model.id} ${model.api?.id ?? ""}`)
+    }),
+    [(model) => model.cost.input + model.cost.output, "asc"],
+    [(model) => model.release_date, "desc"],
+    [(model) => model.id, "desc"],
+  ).at(0)
+}
+
+/**
+ * Provider ids that always front a local model server (LM Studio, Ollama,
+ * Atomic Chat, Anaconda Desktop). Their catalogs list every known model, but
+ * the server only serves installed ones — regardless of which hostname the
+ * user points them at (localhost, a LAN ip, host.docker.internal, ...).
+ */
+const LOCAL_SERVER_IDS = new Set(["lmstudio", "ollama", "atomic-chat", "anaconda-desktop"])
+
+/**
+ * True when the provider routes to a local server (LM Studio, Ollama, ...).
+ * Local catalogs list every known model, but the server only serves installed
+ * ones — the cheapest catalog entry can name a model the user never installed
+ * (e.g. openai/gpt-oss-20b while the session uses Qwen). Callers fall back to
+ * the session's own model when getSmallModel returns undefined, so the cheap
+ * pick is skipped for local providers. A hostname check alone is not enough:
+ * a local server remains local when reached over the LAN
+ * (192.168.x.x, host.docker.internal, ollama.local), so known local-server
+ * ids always take the safe fallback. Only an unrelated remote endpoint keeps
+ * the cheap pick.
+ */
+export function isLoopbackProvider(provider: {
+  id?: unknown
+  options?: Record<string, any>
+  models: Record<string, Provider.Model>
+}) {
+  if (typeof provider.id === "string" && LOCAL_SERVER_IDS.has(provider.id)) return true
+  const raw = provider.options?.baseURL ?? provider.options?.baseUrl
+  if (typeof raw === "string" && raw !== "") return isLoopbackURL(raw)
+  const urls = Object.values(provider.models).map((model) => model.api?.url).filter(Boolean)
+  if (urls.length === 0) return false
+  return urls.every(isLoopbackURL)
+}
+
+function isLoopbackURL(raw: string) {
+  try {
+    const host = new URL(raw).hostname.toLowerCase()
+    return host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]"
+  } catch {
+    return false
+  }
 }
 
 /**
