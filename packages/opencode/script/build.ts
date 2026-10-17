@@ -26,6 +26,7 @@ import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
 import * as KiloSbom from "./kilocode/sbom"
 import * as KiloRelease from "../../../script/kilocode/release"
+const packaged = Script.release || process.env.KILO_LOCAL_PACKAGE === "1"
 // kilocode_change end
 
 const singleFlag = process.argv.includes("--single")
