@@ -1,4 +1,5 @@
 import fs from "node:fs/promises"
+import type { FileHandle } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { UI } from "@/cli/ui"
@@ -232,10 +233,11 @@ async function runItem(state: Worker, item: ClientEvalPlanItem): Promise<void> {
     EVAL_TIMEOUT_MS: String(resolved.case.timeoutMs),
     NO_COLOR: "1",
   })
-  const promptFile = path.join(env.dir, "prompt.txt")
-  await fs.writeFile(promptFile, resolved.case.prompt, { mode: 0o600 })
-  const prompt = await fs.open(promptFile, "r")
+  let prompt: FileHandle | undefined
   try {
+    const promptFile = path.join(env.dir, "prompt.txt")
+    await fs.writeFile(promptFile, resolved.case.prompt, { mode: 0o600 })
+    prompt = await fs.open(promptFile, "r")
     const args = evalCliArgs({
       provider: resolved.provider,
       model: resolved.model,
@@ -272,7 +274,7 @@ async function runItem(state: Worker, item: ClientEvalPlanItem): Promise<void> {
       `case ${item.caseId} rep ${item.rep} ${label(item.entry)} variant ${item.variant ?? "default"}: score ${score.score.toFixed(3)}`,
     )
   } finally {
-    await prompt.close()
+    await prompt?.close()
     await fs.rm(env.dir, { recursive: true, force: true })
   }
 }
