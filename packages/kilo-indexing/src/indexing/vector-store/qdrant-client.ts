@@ -683,8 +683,8 @@ export class QdrantVectorStore implements IVectorStore {
     // The completion marker is itself a point, so subtract it before judging
     // emptiness: otherwise a scanned-then-cleared collection reports
     // points_count 1 and `empty` is unreachable after any scan.
-    const marker = (await this.getMetadataPayload()) ? 1 : 0
-    const indexed = Math.max(0, points - marker)
+    const payload = await this.getMetadataPayload()
+    const indexed = Math.max(0, points - (payload ? 1 : 0))
     if (indexed === 0) {
       log.info("Qdrant collection has no indexed data", {
         collection: this.collectionName,
@@ -693,7 +693,6 @@ export class QdrantVectorStore implements IVectorStore {
       return { status: "empty", points: indexed }
     }
 
-    const payload = await this.getMetadataPayload()
     if (payload) {
       const status = payload[KEY.complete] === true ? "complete" : "partial"
       log.info("Qdrant indexing metadata evaluated", {

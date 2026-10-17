@@ -30,6 +30,11 @@ export class CodeIndexOrchestrator {
   private _isProcessing = false
   private _cancelRequested = false
   private _active?: Promise<void>
+  // The session's writer lock, held from the first successful run until
+  // shutdown (or release on error/clear). The file watcher keeps writing the
+  // store after every scan, so releasing per-run would let a second session
+  // acquire the lock and scan concurrently — the corruption the lock targets.
+  private _writer?: Writer
 
   constructor(
     private readonly configManager: CodeIndexConfigManager,
@@ -153,9 +158,11 @@ export class CodeIndexOrchestrator {
    * Only one session may write a workspace's index. Without this, a second
    * session starts a scan against a store the first one is still filling,
    * clears it as unusable, and leaves both sessions committing to the same
-   * table.
+   * table. The lock is session-held (see _writer): once acquired, later runs
+   * reuse it instead of contending with themselves.
    */
   private async _acquire(): Promise<Writer | undefined> {
+    if (this._writer) return this._writer
     const dir = this.cacheManager.dir
     if (!dir) {
       log.warn("no cache directory for the writer lock, proceeding unlocked", {
@@ -164,9 +171,18 @@ export class CodeIndexOrchestrator {
       return { release: async () => {} }
     }
     const writer = await acquire(dir, this.workspacePath)
-    if (writer) return writer
+    if (writer) {
+      this._writer = writer
+      return writer
+    }
     log.info("writer lock is held elsewhere", { workspacePath: this.workspacePath })
     return undefined
+  }
+
+  private async _releaseWriter(): Promise<void> {
+    const writer = this._writer
+    this._writer = undefined
+    await writer?.release()
   }
 
   private async runIndexing(trigger: IndexingTelemetryTrigger): Promise<void> {
@@ -207,13 +223,14 @@ export class CodeIndexOrchestrator {
     let started = false
     let source: IndexingTelemetrySource = "watcher"
     let mode: IndexingTelemetryMode | undefined
-    let writer: Writer | undefined
 
     try {
-      // Acquired inside the try: a throw between acquire and the body (e.g.
-      // from state setup below) would otherwise skip the release and keep the
-      // lock fresh for STALE_MS, blocking every other session.
-      writer = await this._acquire()
+      // Acquired inside the try and session-held (see _writer): a throw between
+      // acquire and the body (e.g. from state setup below) releases below and
+      // must not leave the lock fresh for STALE_MS, blocking other sessions.
+      // The lock is NOT released on success: the file watcher keeps writing the
+      // store after the scan, so it stays held until shutdown or clearIndexData.
+      const writer = await this._acquire()
       if (!writer) {
         // Contention is worth observing, not a silent park: the manager
         // surfaces start events as activity, so emit an error event the manager
@@ -313,9 +330,11 @@ export class CodeIndexOrchestrator {
       const msg = err instanceof Error ? err.message : "Unknown error"
       this.stateManager.setSystemState("Error", `Failed during initial scan: ${msg}`)
       this.stopWatcher()
+      // The watcher is stopped, so this session no longer writes the store:
+      // hand the lock back instead of holding it while wedged in Error.
+      await this._releaseWriter()
     } finally {
       this._isProcessing = false
-      await writer?.release()
       log.info("indexing start flow finished", {
         workspacePath: this.workspacePath,
         state: this.stateManager.state,
@@ -408,10 +427,10 @@ export class CodeIndexOrchestrator {
     this.overlay?.reconcile(this.cacheManager.getAllHashes())
     await this.cacheManager.flush?.()
     await this.vectorStore.markIndexingComplete()
-    // The scan finished, but this session's file watcher still writes the
-    // store for every file change. Releasing the writer lock here would let a
-    // second session acquire it and scan concurrently — the corruption the
-    // lock targets — so the lock stays held until shutdown or clearIndexData.
+    // The scan finished, but this session's file watcher keeps writing the
+    // store for every file change, so the session-held writer lock stays
+    // acquired until shutdown or clearIndexData (see _writer). Releasing here
+    // would let a second session acquire it and scan concurrently.
     this.fileWatcher.setCollecting(true)
     this.stateManager.setSystemState("Indexed", "File watcher started. Index up-to-date.")
     log.info("workspace scan finalized", {
@@ -438,17 +457,20 @@ export class CodeIndexOrchestrator {
     this._cancelRequested = true
     this.scanner.cancel()
     // Stop the session's own watcher writes before releasing the writer lock:
-    // _active's release happens in runIndexing's finally, so the store must be
-    // quiet by then rather than still receiving file-watcher batches.
+    // the lock releases below, so the store must be quiet by then rather than
+    // still receiving file-watcher batches.
     if (this.fileWatcher.shutdown) await this.fileWatcher.shutdown()
     else this.fileWatcher.dispose()
     this.fileWatcher.setCollecting(false)
-    // Close the store before the writer lock releases in _active's finally:
-    // _active runs runIndexing, whose finally releases the lock, so closing
-    // here hands the next session a closed connection rather than one whose
-    // close is still in flight.
-    await this.vectorStore.close?.()
+    // Wait out the in-flight scan before closing the store: a scan that is
+    // still running would lazily reconnect on its next getDb()/getTable() call,
+    // reopening a connection close() just tore down and leaking it. Closing
+    // after _active settles keeps the guarantee without racing the scan. The
+    // next session cannot interleave here: it can only acquire the writer lock
+    // once _releaseWriter runs below.
     await this._active
+    await this.vectorStore.close?.()
+    await this._releaseWriter()
     for (const sub of this._fileWatcherSubscriptions) sub.dispose()
     this._fileWatcherSubscriptions = []
     this._isProcessing = false
@@ -482,13 +504,19 @@ export class CodeIndexOrchestrator {
   }
 
   public async clearIndexData(): Promise<void> {
-    const writer = await this._acquire()
+    // Reuse the session-held lock when this session owns it: acquiring again
+    // would contend with ourselves. A fresh lock is released below; the
+    // session-held one stays acquired for the watcher's ongoing writes.
+    const owned = this._writer !== undefined
+    const writer = this._writer ?? (await this._acquire())
     if (!writer) {
       // A user-requested clear must not vanish silently when another session
-      // holds the lock: record contention as an error event so the manager can
-      // retry or display it, instead of reporting Standby success.
+      // holds the lock: surface contention as an error event with a
+      // clear-specific location. The manager only auto-retries startIndexing
+      // locations, so this stays terminal: the user sees the failure and can
+      // retry the clear once the other session finishes.
       this.emitError(
-        "orchestrator:startIndexing",
+        "orchestrator:clearIndexData",
         new Error("Another session is indexing this workspace; index data was not cleared."),
         "scan",
       )
@@ -520,7 +548,7 @@ export class CodeIndexOrchestrator {
       }
     } finally {
       this._isProcessing = false
-      await writer.release()
+      if (!owned) await this._releaseWriter()
       log.info("finished clearing index data", {
         workspacePath: this.workspacePath,
         state: this.stateManager.state,

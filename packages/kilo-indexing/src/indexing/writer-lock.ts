@@ -186,7 +186,11 @@ async function reclaim(lockdir: string): Promise<boolean> {
   try {
     await fs.rename(lockdir, stale)
   } catch (err) {
-    return false
+    // ENOENT means the directory vanished between the reclaimable check and
+    // the rename — i.e. the lock is free, not lost to a rival. Claim it
+    // instead of reporting a lost race and wedging the session in Standby.
+    if (code(err) !== "ENOENT") return false
+    return claim(lockdir)
   }
   void fs.rm(stale, { recursive: true, force: true }).catch((err) => log.error("writer lock stale cleanup failed", { err }))
   return claim(lockdir)

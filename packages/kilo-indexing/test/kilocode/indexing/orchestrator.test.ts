@@ -503,4 +503,88 @@ describe("CodeIndexOrchestrator telemetry", () => {
     expect(store.deleteCount).toBe(0)
     expect(orchestrator.state).toBe("Error")
   })
+
+  test("holds the writer lock across runs until shutdown", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "indexing-lock-"))
+    const store = new Store("empty", false)
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { dir, async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("background")
+    expect(orchestrator.state).toBe("Indexed")
+    // The lock stays held after the scan for the watcher's ongoing writes: a
+    // rival session must still see contention instead of scanning concurrently.
+    expect(await acquire(dir, "/tmp/ws")).toBeUndefined()
+
+    // A second run reuses the session-held lock instead of contending with itself.
+    await orchestrator.startIndexing("background")
+    expect(orchestrator.state).toBe("Indexed")
+
+    await orchestrator.shutdown()
+    // Shutdown hands the lock back: a new session can now acquire it.
+    const next = await acquire(dir, "/tmp/ws")
+    expect(next).toBeDefined()
+    await next?.release()
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test("releases the writer lock when a run fails", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "indexing-lock-"))
+    const store = new Store("empty", false)
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { dir, async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      new FailScanner() as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("background")
+    expect(orchestrator.state).toBe("Error")
+    // The watcher is stopped on error, so the lock must not stay held while wedged.
+    const next = await acquire(dir, "/tmp/ws")
+    expect(next).toBeDefined()
+    await next?.release()
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test("contended clear reports a clear location that the manager does not retry", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "indexing-lock-"))
+    const held = await acquire(dir, "/tmp/ws")
+    expect(held).toBeDefined()
+
+    const events: IndexingTelemetryEvent[] = []
+    const store = new Store("complete", false)
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { dir, async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+      (event) => events.push(event),
+    )
+
+    await orchestrator.clearIndexData()
+
+    const error = events.find(
+      (event): event is Extract<IndexingTelemetryEvent, { type: "error" }> => event.type === "error",
+    )
+    // A clear-specific location keeps the manager's startIndexing auto-recovery
+    // from firing: recovery would rerun a scan, not the requested clear.
+    expect(error?.location).toBe("orchestrator:clearIndexData")
+
+    await held?.release()
+    await rm(dir, { recursive: true, force: true })
+  })
 })
