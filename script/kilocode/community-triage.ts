@@ -199,20 +199,40 @@ export const EASY_LINES = 150
 export const SMALL_LINES = 50
 const SMALL_FILES = 3
 // Never a quick win, even when small: CI, dependencies, scripts and account code.
-const risky = [".github/", ".kilo/", "script/", "patches/", "packages/kilo-gateway/"]
+const risky = [
+  ".github/",
+  ".kilo/",
+  ".kilocode/",
+  ".claude/",
+  ".cursor/",
+  ".windsurf/",
+  ".opencode/",
+  ".agents/",
+  "script/",
+  "patches/",
+  "packages/kilo-gateway/",
+]
 const riskyFiles = ["package.json", "bun.lock"]
-// Markdown that steers agents or release notes is not documentation.
-const meta = (file: string) => file.startsWith(".kilo/") || file.startsWith(".changeset/")
+// Files that steer coding agents. A change there is a prompt change, not docs.
+// The names are exact and case-sensitive, so a docs page like ai-providers/gemini.md is not caught.
+const agentFiles = new Set(["AGENTS.md", "CLAUDE.md", "GEMINI.md", "SKILL.md", ".cursorrules", ".windsurfrules"])
+const isRisky = (file: string) =>
+  risky.some((dir) => file.startsWith(dir)) ||
+  riskyFiles.some((name) => file.endsWith(name)) ||
+  agentFiles.has(file.split("/").at(-1) ?? "")
+// Docs are Markdown, plus images under a docs directory. Code under a docs
+// directory (scripts, config, components) is not docs. Release notes in
+// .changeset/ are not docs either.
+const inDocs = (file: string) => file.startsWith("packages/kilo-docs/") || file.startsWith("docs/")
 const docs = (file: string) =>
-  !meta(file) && (file.startsWith("packages/kilo-docs/") || file.startsWith("docs/") || /\.mdx?$/.test(file))
+  !file.startsWith(".changeset/") && (/\.mdx?$/i.test(file) || (inDocs(file) && /\.(png|jpe?g|gif|webp)$/i.test(file)))
 const tests = (file: string) => /(^|\/)(tests?|__tests__)\//.test(file) || /\.(test|spec)\.[cm]?[jt]sx?$/.test(file)
 
 export type Quick = "docs" | "tests" | "small"
 
 export function easy(lines: number, files: string[]): Quick | undefined {
   if (files.length === 0) return undefined
-  if (files.some((file) => risky.some((dir) => file.startsWith(dir)) || riskyFiles.some((x) => file.endsWith(x))))
-    return undefined
+  if (files.some(isRisky)) return undefined
   if (lines <= EASY_LINES && files.every(docs)) return "docs"
   if (lines <= EASY_LINES && files.every(tests)) return "tests"
   if (lines <= SMALL_LINES && files.length <= SMALL_FILES) return "small"
