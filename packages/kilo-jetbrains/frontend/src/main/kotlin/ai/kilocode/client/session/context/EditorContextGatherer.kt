@@ -45,7 +45,7 @@ internal object EditorContextGatherer {
         val selection: List<PromptPartDto>,
     )
 
-    fun gather(project: Project, root: String): Result {
+    suspend fun gather(project: Project, root: String): Result {
         if (!KiloPluginSettings.getAutoEditorContext()) {
             LOG.debug { "kind=editor-context enabled=false" }
             return Result(null, emptyList())
