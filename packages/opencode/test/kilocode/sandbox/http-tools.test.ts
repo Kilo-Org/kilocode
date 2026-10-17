@@ -7,6 +7,7 @@ import { Agent } from "@/agent/agent"
 import { Env } from "@/env"
 import * as ToolNetwork from "@/kilocode/sandbox/network"
 import { BrowserOpenTool } from "@/kilocode/tool/browser-open"
+import { BrowserProfileTool } from "@/kilocode/tool/browser-profile"
 import { MessageID, SessionID } from "@/session/schema"
 import * as McpWebSearch from "@/tool/mcp-websearch"
 import { Tool } from "@/tool/tool"
@@ -233,6 +234,113 @@ describe("model HTTP tool network policy", () => {
       )
       expect(patterns).toEqual(["navigate:http://localhost:3018"])
       expect(result.metadata.status).toBe("ready")
+    }).pipe(Effect.scoped)
+  })
+
+  it.instance("changes the Playwright browser profile through the authenticated broker", () => {
+    const bodies: unknown[] = []
+    return Effect.gen(function* () {
+      const server = yield* serve(async (request) => {
+        expect(new URL(request.url).pathname).toBe("/playwright/profile")
+        expect(request.headers.get("authorization")).toBe("Bearer browser-secret")
+        const body = (await request.json()) as {
+          browser?: string
+          device?: string
+          viewport?: string
+          headless?: boolean
+        }
+        bodies.push(body)
+        if (body.browser === "firefox") {
+          return Response.json({ error: "Another chat session is using the browser in this folder." }, { status: 400 })
+        }
+        // No browser runs until the agent names one.
+        if (!body.browser) return Response.json({ allowed: ["chrome", "webkit"], changed: false })
+        return Response.json({
+          browser: body.browser,
+          device: body.device,
+          viewport: body.viewport,
+          headless: body.headless === true,
+          allowed: ["chrome", "webkit"],
+          changed: true,
+        })
+      })
+      const env = yield* Env.Service
+      yield* env.set("KILO_BROWSER_BROKER_URL", server.url.origin)
+      yield* env.set("KILO_BROWSER_BROKER_TOKEN", "browser-secret")
+      const info = yield* BrowserProfileTool
+      const tool = yield* info.init()
+      const call = (params: Parameters<typeof tool.execute>[0]) =>
+        run(profile("deny"), ToolNetwork.tool(ToolNetwork.builtin({ id: "browser_profile" }), tool.execute(params, ctx)))
+
+      const current = yield* call({})
+      expect(current.title).toBe("No browser started")
+      expect(current.metadata).toMatchObject({ changed: false })
+      expect(current.output).toContain("Allowed browsers: chrome, webkit.")
+      expect(current.output).toContain("Call browser_profile with one of these browsers")
+
+      const switched = yield* call({ browser: "webkit", device: "iPhone 15", width: 390, height: 844 })
+      expect(bodies.at(-1)).toMatchObject({
+        sessionID: ctx.sessionID,
+        browser: "webkit",
+        device: "iPhone 15",
+        viewport: "390x844",
+      })
+      expect(bodies.at(-1)).not.toHaveProperty("headless")
+      expect(switched.title).toBe("Browser: webkit, iPhone 15, 390x844")
+      expect(switched.output).toContain("Window: visible.")
+      expect(switched.output).toContain("navigate again")
+
+      const hidden = yield* call({ browser: "chrome", headless: true })
+      expect(bodies.at(-1)).toMatchObject({ browser: "chrome", headless: true })
+      expect(hidden.title).toBe("Browser: chrome, headless")
+      expect(hidden.output).toContain("Window: headless (not visible).")
+
+      const refused = yield* call({ browser: "firefox" })
+      expect(refused.metadata.changed).toBe(false)
+      expect(refused.output).toContain("Another chat session is using the browser")
+
+      const partial = yield* call({ browser: "webkit", width: 390 })
+      expect(partial.title).toBe("Browser size invalid")
+      expect(bodies).toHaveLength(4)
+    }).pipe(Effect.scoped)
+  })
+
+  it.instance("forwards a requested screenshot viewport and requires both dimensions", () => {
+    const bodies: unknown[] = []
+    return Effect.gen(function* () {
+      const server = yield* serve(async (request) => {
+        bodies.push(await request.json())
+        return Response.json({
+          browserId: "browser-test",
+          sessionId: ctx.sessionID,
+          status: "ready",
+          url: "http://localhost:3018/",
+          screenshot: "data:image/jpeg;base64,anBlZw==",
+          mime: "image/jpeg",
+          errors: 0,
+        })
+      })
+      const env = yield* Env.Service
+      yield* env.set("KILO_BROWSER_BROKER_URL", server.url.origin)
+      yield* env.set("KILO_BROWSER_BROKER_TOKEN", "browser-secret")
+      const info = yield* BrowserOpenTool
+      const browser = yield* info.init()
+      const open = (params: Parameters<typeof browser.execute>[0]) =>
+        run(
+          profile("deny"),
+          ToolNetwork.tool(
+            ToolNetwork.builtin({ id: "browser_open" }),
+            browser.execute(params, { ...ctx, ask: () => Effect.void }),
+          ),
+        )
+      const sized = yield* open({ url: "http://localhost:3018/", width: 390, height: 844 })
+      expect(bodies).toEqual([
+        expect.objectContaining({ url: "http://localhost:3018/", viewport: { width: 390, height: 844 } }),
+      ])
+      expect(sized.output).toContain("Screenshot viewport: 390x844")
+      const partial = yield* open({ url: "http://localhost:3018/", width: 390 })
+      expect(partial.title).toBe("Browser size invalid")
+      expect(bodies).toHaveLength(1)
     }).pipe(Effect.scoped)
   })
 

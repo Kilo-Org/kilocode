@@ -1,26 +1,46 @@
 import * as vscode from "vscode"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../cli-backend"
-import { playwrightCommand } from "./settings"
+import { playwrightCommand, playwrightRequest, type PlaywrightBrowser, type PlaywrightProfile } from "./settings"
+import { automationBrowsers } from "./chrome-setting"
+import { installer, type BrowserStatus } from "./browser-install"
 import { canonicalizePath, samePath } from "../../agent-manager/project/paths"
+import { isRunningStatus } from "../../session-status"
+
+/** The active Playwright profile, as reported to the agent. It has no browser until an agent picks one. */
+interface Selection extends Partial<PlaywrightProfile> {
+  allowed: PlaywrightBrowser[]
+  changed: boolean
+}
 
 /**
  * Manages the built-in Playwright MCP browser server for ordinary Kilo sessions.
  *
  * This is independent from the Agent Manager browser broker. It must not read
  * Agent Manager settings, and Agent Manager must not read its settings.
+ *
+ * No server runs until an agent picks a browser, device, viewport, and window
+ * mode through the browser_profile tool, so the Playwright tools only take
+ * context once a session needs them. One server and one browser exist per
+ * workspace folder, so a change restarts the browser for every session in that
+ * folder. The session that uses or changes the browser owns it until its turn
+ * ends, and other sessions cannot change the profile meanwhile.
  */
 export class BrowserAutomationService implements vscode.Disposable {
   // MCP server name used when registering with the CLI backend
   private static readonly MCP_SERVER_NAME = "kilo-playwright"
   private readonly disposables: vscode.Disposable[] = []
   private readonly registered = new Set<string>()
+  private readonly profiles = new Map<string, PlaywrightProfile>()
+  private readonly owners = new Map<string, string>()
   private queue: Promise<void> = Promise.resolve()
   private disposed = false
 
   constructor(
     private readonly connectionService: KiloConnectionService,
     private readonly wait = 15_000,
+    private readonly check: (browser: PlaywrightBrowser) => Promise<BrowserStatus> = (browser) =>
+      installer.check(browser),
   ) {
     this.disposables.push(
       vscode.workspace.onDidChangeConfiguration((event) => {
@@ -29,7 +49,22 @@ export class BrowserAutomationService implements vscode.Disposable {
       }),
       vscode.workspace.onDidChangeWorkspaceFolders(() => this.enqueue(() => this.apply(true))),
       {
-        dispose: connectionService.onEvent((event) => {
+        dispose: connectionService.onEvent((event, directory) => {
+          if (event.type === "session.status") {
+            if (!isRunningStatus(event.properties.status.type)) this.release(event.properties.sessionID)
+            return
+          }
+          // A deleted session never reports idle again.
+          if (event.type === "session.deleted") {
+            this.release(event.properties.info.id)
+            return
+          }
+          if (event.type === "message.part.updated") {
+            const part = event.properties.part
+            if (part.type === "tool" && part.tool.startsWith(`${BrowserAutomationService.MCP_SERVER_NAME}_`))
+              this.claim(part.sessionID, directory)
+            return
+          }
           if (event.type !== "server.instance.disposed") return
           return this.enqueue(async () => {
             if (this.disposed) return
@@ -52,21 +87,133 @@ export class BrowserAutomationService implements vscode.Disposable {
    * Called on construction and when Playwright settings change.
    */
   syncWithSettings(): Promise<void> {
-    return this.enqueue(() => this.apply())
+    return this.enqueue(() => {
+      // The allowed browsers may have changed, so every browser stops until an agent picks a profile again.
+      this.profiles.clear()
+      this.owners.clear()
+      // The first lookup of a missing Playwright build is slow, so start it before an agent needs it.
+      if (!this.disposed && this.enabled()) {
+        for (const browser of automationBrowsers()) void this.check(browser).catch(() => undefined)
+      }
+      return this.apply()
+    })
   }
 
   /**
    * Re-register the MCP server after the CLI backend reconnects.
    */
   reregisterIfEnabled(): Promise<void> {
-    return this.enqueue(() => this.apply())
+    return this.enqueue(() => {
+      // Turns that owned a browser ended with the previous backend.
+      this.owners.clear()
+      return this.apply()
+    })
+  }
+
+  /** Handle agent requests that arrive through the local browser bridge. */
+  handle(path: string, body: Record<string, unknown>): Promise<unknown> | undefined {
+    if (path === "/playwright/status") {
+      const dir = typeof body.directory === "string" ? this.match(body.directory) : undefined
+      return Promise.resolve({ enabled: !this.disposed && this.enabled() && vscode.workspace.isTrusted && !!dir })
+    }
+    if (path === "/playwright/profile") return this.enqueue(() => this.select(body))
+    return undefined
+  }
+
+  private async select(body: Record<string, unknown>): Promise<Selection> {
+    const session = body.sessionID
+    if (typeof session !== "string" || typeof body.directory !== "string") {
+      throw new Error("sessionID and directory are required")
+    }
+    if (this.disposed || !this.enabled() || !vscode.workspace.isTrusted) {
+      throw new Error("Browser Automation is disabled. The user can enable it in Kilo Settings > Web Tools.")
+    }
+    const dir = this.match(body.directory)
+    if (!dir) throw new Error("Browser Automation is not available in this session's directory.")
+    const allowed = automationBrowsers()
+    const current = this.profiles.get(dir)
+    const next = playwrightRequest(body, current, allowed)
+    if (!next) return { ...current, allowed, changed: false }
+    const owner = this.owners.get(dir)
+    if (owner && owner !== session) {
+      throw new Error(
+        "Another chat session is using the browser in this folder. Wait until it finishes, then try again. Do not retry in a loop.",
+      )
+    }
+    if (this.registered.has(dir) && BrowserAutomationService.same(current, next)) {
+      this.owners.set(dir, session)
+      return { ...next, allowed, changed: false }
+    }
+    if ((await this.check(next.browser)) === "missing") {
+      // Chrome and Edge come from their vendors. A Playwright build downloads when the user allows it.
+      const fix =
+        next.browser === "chrome" || next.browser === "msedge"
+          ? "The user has to install it on this machine."
+          : "The user can download it in Kilo Settings > Web Tools by turning it off and on under Allowed Browsers."
+      throw new Error(`${next.browser} is not installed. ${fix} Use another allowed browser meanwhile.`)
+    }
+    this.owners.set(dir, session)
+    await this.restart(dir, next)
+    return { ...next, allowed, changed: true }
+  }
+
+  private async restart(dir: string, next: PlaywrightProfile): Promise<void> {
+    const prior = this.profiles.get(dir)
+    this.profiles.set(dir, next)
+    this.registered.delete(dir)
+    await this.register([dir])
+    if (this.registered.has(dir)) return
+    const label = `${next.browser}${next.device ? ` (${next.device})` : ""}`
+    if (!prior) {
+      this.profiles.delete(dir)
+      throw new Error(`The ${label} browser profile could not start.`)
+    }
+    // Keep the browser tools working with the profile that was running before.
+    this.profiles.set(dir, prior)
+    await this.register([dir])
+    if (this.registered.has(dir)) {
+      throw new Error(`The ${label} browser profile could not start. The previous profile was restored.`)
+    }
+    this.profiles.delete(dir)
+    throw new Error(
+      `The ${label} browser profile could not start, and the previous profile could not start again. Start a browser with browser_profile.`,
+    )
+  }
+
+  private static same(current: PlaywrightProfile | undefined, next: PlaywrightProfile): boolean {
+    return (
+      !!current &&
+      current.browser === next.browser &&
+      current.device === next.device &&
+      current.viewport === next.viewport &&
+      current.headless === next.headless
+    )
+  }
+
+  private match(directory: string): string | undefined {
+    const root = canonicalizePath(directory)
+    return this.directories().find((dir) => samePath(canonicalizePath(dir), root))
+  }
+
+  /** A session that uses the browser owns it until its turn ends, unless another session already does. */
+  private claim(session: string, directory?: string): void {
+    const dir = directory ? this.match(directory) : undefined
+    if (!dir || this.owners.has(dir)) return
+    this.owners.set(dir, session)
+  }
+
+  private release(session: string): void {
+    for (const [dir, owner] of this.owners) {
+      if (owner === session) this.owners.delete(dir)
+    }
   }
 
   ready(directory: string): Promise<void> {
     const task = this.enqueue(async () => {
       if (this.disposed || !this.enabled() || !vscode.workspace.isTrusted) return
-      const dir = this.directories().find((dir) => samePath(canonicalizePath(dir), canonicalizePath(directory)))
-      if (!dir) return
+      const dir = this.match(directory)
+      // Without a profile there is no server to wait for.
+      if (!dir || !this.profiles.has(dir)) return
       const client = this.getClient()
       if (!client) throw new Error("Playwright browser automation is waiting for the CLI connection.")
       // A prompt can arrive before the disposal event or before MCP startup finishes.
@@ -120,7 +267,7 @@ export class BrowserAutomationService implements vscode.Disposable {
    * Run one settings transition at a time. Each transition reads the current
    * settings when it runs, so a queued change cannot restore stale state.
    */
-  private enqueue(task: () => Promise<void>): Promise<void> {
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
     const next = this.queue.then(task, task)
     this.queue = next.then(
       () => undefined,
@@ -139,7 +286,14 @@ export class BrowserAutomationService implements vscode.Disposable {
       console.warn("[Kilo New] BrowserAutomationService: Workspace is not trusted, skipping Playwright MCP")
       return
     }
-    const dirs = this.directories()
+    const folders = this.directories()
+    for (const dir of [...this.profiles.keys(), ...this.owners.keys()]) {
+      if (folders.includes(dir)) continue
+      this.profiles.delete(dir)
+      this.owners.delete(dir)
+    }
+    // Only folders where an agent picked a profile have a server.
+    const dirs = folders.filter((dir) => this.profiles.has(dir))
     const removed = [...this.registered].filter((dir) => !dirs.includes(dir))
     if (removed.length) await this.unregister(removed)
     await this.register(reconcile ? dirs.filter((dir) => !this.registered.has(dir)) : dirs)
@@ -147,14 +301,6 @@ export class BrowserAutomationService implements vscode.Disposable {
 
   private enabled(): boolean {
     return vscode.workspace.getConfiguration("kilo-code.new.browserAutomation").get<boolean>("enabled", false) === true
-  }
-
-  private command(): string[] {
-    const config = vscode.workspace.getConfiguration("kilo-code.new.browserAutomation")
-    return playwrightCommand({
-      headless: config.get<boolean>("headless", false),
-      useSystemChrome: config.get<boolean>("useSystemChrome", true),
-    })
   }
 
   private directories(): string[] {
@@ -166,10 +312,12 @@ export class BrowserAutomationService implements vscode.Disposable {
   private async register(dirs: string[]): Promise<void> {
     const client = this.getClient()
     if (!client) return
-    const command = this.command()
     let failure: unknown
     for (const directory of dirs) {
+      const profile = this.profiles.get(directory)
+      if (!profile) continue
       try {
+        const command = playwrightCommand(profile)
         const { data: status } = await client.mcp.add(
           {
             name: BrowserAutomationService.MCP_SERVER_NAME,

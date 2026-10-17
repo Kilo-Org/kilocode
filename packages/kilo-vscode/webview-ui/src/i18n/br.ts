@@ -884,12 +884,25 @@ export const dict = {
     "Configure a automação de navegador integrada com tecnologia Playwright. O Kilo pode navegar, interagir e capturar telas de páginas da web nas suas sessões.",
   "settings.browser.enable.title": "Ativar Automação do Navegador",
   "settings.browser.enable.description":
-    "Ativar o navegador do Agent Manager específico de cada sessão para aplicações locais e páginas HTTPS públicas.",
-  "settings.browser.systemChrome.title": "Usar Chrome do Sistema",
-  "settings.browser.systemChrome.description":
-    "Usar o navegador Chrome instalado em vez de uma instância separada do Chromium.",
-  "settings.browser.headless.title": "Modo Headless",
-  "settings.browser.headless.description": "Executar em modo headless (sem janela do navegador visível).",
+    "Permite que o agente inicie um navegador Playwright quando uma tarefa precisar.",
+  "settings.browser.browsers.title": "Navegadores permitidos",
+  "settings.browser.browsers.description":
+    "Navegadores que o agente pode usar. Para cada tarefa, o agente escolhe o navegador, a emulação de dispositivo, o tamanho do viewport e se a janela fica visível. Chrome e Edge podem ser ativados quando estão instalados nesta máquina. Ao ativar uma versão do Playwright, ela é baixada se estiver faltando.",
+  "settings.browser.browsers.chrome": "Google Chrome",
+  "settings.browser.browsers.chromium": "Chromium (versão do Playwright)",
+  "settings.browser.browsers.msedge": "Microsoft Edge",
+  "settings.browser.browsers.firefox": "Firefox (versão do Playwright)",
+  "settings.browser.browsers.webkit": "WebKit (mecanismo do Safari, versão do Playwright)",
+  "settings.browser.status.installed": "Instalado",
+  "settings.browser.status.missing": "Não instalado",
+  "settings.browser.status.unknown": "Não foi possível verificar",
+  "settings.browser.status.checking": "Verificando…",
+  "settings.browser.status.preparing": "Preparando o download…",
+  "settings.browser.status.downloading": "Baixando {{name}}: {{percent}}%",
+  "settings.browser.status.unpacking": "Extraindo {{name}}…",
+  "settings.browser.status.failed": "Falha na instalação: {{message}}",
+  "settings.browser.size.download": "download de {{size}}",
+  "settings.browser.size.disk": "{{size}} em disco",
 
   "settings.language.description":
     'Escolha o idioma da interface do Kilo Code. "Auto" usa o idioma de exibição do VS Code.',

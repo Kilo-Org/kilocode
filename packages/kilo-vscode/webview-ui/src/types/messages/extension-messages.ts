@@ -52,6 +52,9 @@ import type { ModelSelection, ModelUsageMap, Provider, ProviderAuthState } from 
 import type { SpeechToTextModelDef } from "../../../../src/speech-to-text/models"
 import type { AgentInfo, SkillInfo, SlashCommandInfo } from "./agents"
 import type {
+  AutomationBrowser,
+  AutomationBrowserStatus,
+  AutomationBuild,
   BrowserSettings,
   Config,
   ConfigCollections,
@@ -742,6 +745,24 @@ export interface SuggestionErrorMessage {
 export interface BrowserSettingsLoadedMessage {
   type: "browserSettingsLoaded"
   settings: BrowserSettings
+}
+
+export interface BrowserStatusLoadedMessage {
+  type: "browserStatusLoaded"
+  /** Browsers that are missing here are still being checked. */
+  status: Partial<Record<AutomationBrowser, AutomationBrowserStatus>>
+  /** Playwright builds that are downloading right now. */
+  installing: AutomationBrowser[]
+  /**
+   * Where each install is. A build is several files. `name` and `step` of `total` identify the current one,
+   * `percent` is its download and `bytes` its size. At 100 percent the file is being unpacked.
+   */
+  progress?: Partial<
+    Record<AutomationBuild, { percent: number; bytes?: number; name?: string; step?: number; total?: number }>
+  >
+  /** Bytes a missing build downloads, or bytes an installed build takes on disk. Left out until measured. */
+  sizes?: Partial<Record<AutomationBuild, { download?: number; disk?: number }>>
+  failed?: { browser: AutomationBuild; message: string }
 }
 
 export interface ClaudeCompatSettingLoadedMessage {
@@ -1888,6 +1909,7 @@ export type ExtensionMessage =
   | SuggestionResolvedMessage
   | SuggestionErrorMessage
   | BrowserSettingsLoadedMessage
+  | BrowserStatusLoadedMessage
   | ClaudeCompatSettingLoadedMessage
   | ConfigLoadedMessage
   | ConfigUpdatedMessage

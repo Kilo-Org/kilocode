@@ -867,12 +867,25 @@ export const dict = {
     "Налаштуйте вбудовану автоматизацію браузера на основі Playwright. Kilo може переходити веб-сторінками, взаємодіяти з ними та робити знімки екрана у ваших сесіях.",
   "settings.browser.enable.title": "Увімкнути автоматизацію браузера",
   "settings.browser.enable.description":
-    "Увімкнути прив'язаний до сесії браузер Agent Manager для локальних програм і загальнодоступних HTTPS-сторінок.",
-  "settings.browser.systemChrome.title": "Використовувати системний Chrome",
-  "settings.browser.systemChrome.description":
-    "Використовувати встановлений браузер Chrome замість окремого екземпляра Chromium.",
-  "settings.browser.headless.title": "Безголовий режим",
-  "settings.browser.headless.description": "Запускати в безголовому режимі (без видимого вікна браузера).",
+    "Дозволити агенту запускати браузер Playwright, коли він потрібен для завдання.",
+  "settings.browser.browsers.title": "Дозволені браузери",
+  "settings.browser.browsers.description":
+    "Браузери, які може використовувати агент. Для кожного завдання агент обирає браузер, емуляцію пристрою, розмір області перегляду та видимість вікна. Chrome і Edge можна ввімкнути, якщо вони встановлені на цьому комп'ютері. Якщо ввімкнути збірку Playwright, вона завантажується, коли її немає.",
+  "settings.browser.browsers.chrome": "Google Chrome",
+  "settings.browser.browsers.chromium": "Chromium (збірка Playwright)",
+  "settings.browser.browsers.msedge": "Microsoft Edge",
+  "settings.browser.browsers.firefox": "Firefox (збірка Playwright)",
+  "settings.browser.browsers.webkit": "WebKit (рушій Safari, збірка Playwright)",
+  "settings.browser.status.installed": "Встановлено",
+  "settings.browser.status.missing": "Не встановлено",
+  "settings.browser.status.unknown": "Не вдалося перевірити",
+  "settings.browser.status.checking": "Перевірка…",
+  "settings.browser.status.preparing": "Підготовка завантаження…",
+  "settings.browser.status.downloading": "Завантаження {{name}}: {{percent}}%",
+  "settings.browser.status.unpacking": "Розпакування {{name}}…",
+  "settings.browser.status.failed": "Не вдалося встановити: {{message}}",
+  "settings.browser.size.download": "завантаження {{size}}",
+  "settings.browser.size.disk": "{{size}} на диску",
 
   "settings.language.description":
     '"Автоматично" використовує мову відображення VS Code. Виберіть мову для інтерфейсу Kilo Code.',
