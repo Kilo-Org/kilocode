@@ -10,11 +10,11 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 ## Sources of truth
 
 - Behavior: v1 Kilo on `main`. Mechanism only: the old port, tag `kilo-v2-checkpoints-2026-09` (former `kilo-v2`). Never merge or copy it as a whole.
-- The migration docs are still on `origin/kilo-v2-clean-bootstrap`. Until they land on `v2`, read them with `git show origin/kilo-v2-clean-bootstrap:<path>`:
+- The migration docs are on `v2`:
   - Context and decisions: `migration-tracking/plans/migration-context.md`. Plan: `migration-tracking/plans/kilo-v2-migration-plan.md`.
   - Known upstream test failures: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`.
   - Fork conventions: `migration-tracking/technical-notes/v2-fork-conventions.md`.
-- Changes not yet in the plan (merge source, plugin first, host package): `migration-tracking/plans/v2-plan-delta-2026-10-13.md` on `v2`. Where it differs from the bootstrap docs, it wins.
+- Changes not yet folded into the plan: `migration-tracking/plans/v2-plan-delta-2026-10-13.md`. Where it differs from the context or the plan, it wins.
 - Epic #13750. Gateway, login and enterprise support: #14991. Upstream sync and merge tooling: #15020.
 
 ## Strategy
@@ -32,7 +32,7 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 
 ## Branches and PRs
 
-- Integration branch: `origin/v2`. Branch from it and target it. Never target `main` or `kilo-v2-clean-bootstrap`.
+- Integration branch: `origin/v2`. Branch from it and target it. Never target `main`.
 - Upstream: `upstream/dev` is upstream's v2 line since 2026-10-10. `upstream/v2` is frozen; never merge it. Never merge upstream in a feature PR. An upstream sync is its own PR (#15020). It targets the next release that `v2` does not have yet (the release commit, which is the parent of the `v2.x.y` tag), and merges with a merge commit, never a squash. After a sync, open PRs merge `v2` into their branch and check and self-test again.
 - Stack on an open v2 PR when you depend on it, and target that PR's branch.
 - One plan unit per PR. Never push directly to `v2`. A human merges.
