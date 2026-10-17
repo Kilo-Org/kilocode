@@ -61,7 +61,7 @@ On the **General** tab:
 - **Default sandbox** — the sandbox for new sessions when a repository has no override. The dialog names the sandbox that **Platform default** resolves to, so you can see what a session uses when nothing else applies.
 - **Repository overrides** — set or clear a sandbox and an [agent environment profile](#agent-environment-profiles) for an individual repository.
 
-The **Profiles** tab hosts the full profile manager: the profile list on the left and a detail pane on the right with **Overview**, **Variables**, **Setup**, **Slash Cmds**, **MCP**, **Skills**, and **Agents**.
+The **Profiles** tab hosts the full profile manager: the profile list on the left and a detail pane on the right with **Overview**, **Variables**, **Setup**, **Slash Cmds**, **MCP**, **Skills**, **Agents**, **Instructions**, and **Import**.
 
 Each change saves as you make it. In an organization, members see the settings read-only; only owners and admins can change them.
 
@@ -149,6 +149,14 @@ Agent environment profiles are reusable bundles of environment settings for clou
 Profiles are owned by either a user or an organization. Names are unique per owner, and each owner can have a single default profile. This lets teams share standard environment setups across multiple sessions and triggers.
 
 In the web app, manage profiles from the **Profiles** tab of the [Cloud Agent settings dialog](#choosing-where-sessions-run).
+
+### Importing a local configuration
+
+You can import a local Kilo configuration ZIP into a profile to move your agents, slash commands, skills, and instructions into the cloud. Open the profile in the **Profiles** tab and use the **Import** tab.
+
+Kilo validates the archive and shows a preview of what it contains before anything is saved. Review the preview, then confirm to replace the profile's agents, slash commands, skills, and instructions. Definitions that match keep their IDs, and definitions missing from the archive are removed; variables, setup commands, and MCP servers are not changed. If the archive is invalid — for example, it uses a reserved built-in agent name — Kilo shows the validation error and disables the import.
+
+Imported instruction files appear on the profile's **Instructions** tab.
 
 ## Environment Variables & Secrets & Startup Commands
 
