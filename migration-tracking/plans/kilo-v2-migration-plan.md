@@ -355,7 +355,7 @@ Deferred decisions and their deadlines are canonical in [`migration-context.md` 
 | FIM as a G3 gate (Q-G3-01) and plugin RPC access (Q-G3-02) | JetBrains contract inventory | E7 |
 | Cloud-agent gate attachment (Q-EXT-01) | Cloud-agent unit | G1 scope |
 | Anaconda Desktop integration mode and gate (Q-EXT-02) | Anaconda unit | Gate scope |
-| Pairing disposition (Q-PROD-01). Desktop and web app are decided: not shipped, removed 2026-10-16 (#15151) | Upstream-surface disposition unit | E9 |
+| Pairing disposition (Q-PROD-01). Desktop and web app are decided: not shipped, removed 2026-10-16 (`migration-context.md`, Decision 7) | Upstream-surface disposition unit | E9 |
 | Other G2 and G3 questions (Q-G2-03…08, Q-G3-03…05) | Their trigger units in the register | Their units |
 
 Added by this plan (canonical here):
@@ -368,7 +368,7 @@ Added by this plan (canonical here):
 | D-3 | Owners of U-L1-01, U-L3-01 and U-E0-01 | Now | User |
 | D-4 | Identity and branding split. Proposal: the first identity PR is store isolation and the `kilo2` app directory; binary, user agent, theme and logo go with the rebranding work (Fabio) | U-E1-01 | User, rebranding owner |
 
-D-1, D-3 and D-4 keep the IDs from the 2026-10-13 plan delta (#15021), which the sync tooling cites. Its D-2 (sync cadence) is decided: D1.
+D-1, D-3 and D-4 keep the IDs from the 2026-10-13 plan delta, which the sync tooling cites. Its D-2 (sync cadence) is decided: D1.
 
 Sign-offs this plan asks for: the unit splits listed in Part B §B15 (no epic added or removed), the provisional G1 attachment of cloud agents and other CLI consumers, and Q-TEL-01.
 
