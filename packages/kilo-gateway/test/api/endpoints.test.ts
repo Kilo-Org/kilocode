@@ -3,6 +3,7 @@
 
 import { test, expect, afterEach } from "bun:test"
 import { fetchKiloModelEndpoints } from "../../src/api/endpoints.js"
+import { resolveKiloGatewayBaseUrl } from "../../src/api/url.js"
 
 const VALID_RESPONSE = JSON.stringify({
   data: {
@@ -57,7 +58,7 @@ test("parses endpoints, prefers tag as routing slug, drops unroutable entries", 
 
   const result = await fetchKiloModelEndpoints("test/model", { kilocodeToken: "token" })
 
-  expect(urls[0].endsWith("/api/gateway/models/test/model/endpoints")).toBe(true)
+  expect(urls[0]).toBe(`${resolveKiloGatewayBaseUrl()}models/test/model/endpoints`)
   expect(result.error).toBeUndefined()
   expect(result.endpoints).toHaveLength(2)
 
@@ -75,7 +76,7 @@ test("parses endpoints, prefers tag as routing slug, drops unroutable entries", 
 })
 
 test("parses the gateway response shape (no per-endpoint name, subset of metadata)", async () => {
-  // Mirrors the live /api/gateway/models/{model}/endpoints payload.
+  // Mirrors the live AI gateway /api/v1/models/{model}/endpoints payload.
   const body = JSON.stringify({
     data: {
       id: "test/model",
