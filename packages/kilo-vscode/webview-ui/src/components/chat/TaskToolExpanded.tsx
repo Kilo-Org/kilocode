@@ -171,12 +171,16 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     return id ? session.getSessionToolCount(id) : 0
   })
 
-  // Which model this stage delegated to, when it can be resolved: the child's
-  // own streamed transcript wins, otherwise the effective session selection.
+  // Which model this stage delegated to: the child's own streamed transcript
+  // wins, otherwise the subagent's configured model. There is no session-scope
+  // selection fallback — resolving against the child session's scope would
+  // render the primary agent's model under the stage's name, which this label
+  // exists to disambiguate.
   const modelLabel = createMemo(() => {
     const id = childSessionId()
     if (!id) return undefined
-    return taskModelLabel(sessionModel(session.allMessages()[id] ?? []), session.selected(id), provider.providers())
+    const configured = props.input.subagent_type ? session.modelForAgent(props.input.subagent_type) : null
+    return taskModelLabel(sessionModel(session.allMessages()[id] ?? []), configured, provider.providers())
   })
 
   const result = createMemo(() => taskResult(props.output, childSessionId()))
@@ -260,7 +264,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
             </Show>
             <Show when={modelLabel()}>
               <span data-slot="task-tool-model">
-                {" · "}
+                {description() || childToolCount() > 0 ? " · " : ""}
                 {modelLabel()}
               </span>
             </Show>
