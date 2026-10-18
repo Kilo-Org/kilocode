@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import {
+  adjacentTab,
+  adjacentTabHint,
   addPendingTab,
   addSessionTab,
   closeAllTabs,
@@ -393,5 +395,25 @@ describe("tabs for loaded sessions", () => {
       ids: ["kept", "created"],
       active: "kept",
     })
+  })
+})
+
+describe("adjacent session tabs", () => {
+  const ids = ["s1", "s2", "s3"]
+  const kb = { previousTab: "⌘⌥←", nextTab: "⌘⌥→" }
+
+  it("selects the neighbour without wrapping at the ends", () => {
+    expect(adjacentTab(ids, "s2", -1)).toBe("s1")
+    expect(adjacentTab(ids, "s2", 1)).toBe("s3")
+    expect(adjacentTab(ids, "s1", -1)).toBeUndefined()
+    expect(adjacentTab(ids, "s3", 1)).toBeUndefined()
+    expect(adjacentTab(ids, undefined, 1)).toBeUndefined()
+  })
+
+  it("shows the shortcut only on direct neighbours of the active tab", () => {
+    expect(adjacentTabHint(ids, "s2", "s1", kb)).toBe("⌘⌥←")
+    expect(adjacentTabHint(ids, "s2", "s3", kb)).toBe("⌘⌥→")
+    expect(adjacentTabHint(ids, "s2", "s2", kb)).toBe("")
+    expect(adjacentTabHint(ids, "s1", "s3", kb)).toBe("")
   })
 })

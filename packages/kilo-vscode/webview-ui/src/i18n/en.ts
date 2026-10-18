@@ -56,6 +56,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Board",
+  "task.swarm.open": "Open board",
   "task.swarm.refresh": "Refresh",
   "task.swarm.reset": "Reset board",
   "task.swarm.resetTitle": "Reset this board?",
@@ -230,6 +231,7 @@ export const dict = {
   "prompt.action.stop.background": "Stop main agent. Background agents keep running.",
   "prompt.agents.show": "Show background agents",
   "prompt.action.enhance": "Enhance prompt",
+  "prompt.action.more": "More actions",
   "prompt.paste.expand": "Click to expand pasted text",
   "prompt.issues.title": "Session issues",
   "prompt.mcp.provider": "{{name}} MCP",
@@ -299,6 +301,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI signed you out",
   "error.providerAuth.chatgpt.description":
     "Sign in with ChatGPT again, then send your message again to keep using Codex models.",
+
+  "provider.failure.unauthorized": "Credentials rejected (HTTP {{status}}). Sign in again.",
+  "provider.failure.unauthorizedNoStatus": "Credentials rejected. Sign in again.",
+  "provider.failure.unauthenticated": "Not signed in.",
+  "provider.failure.network": "Couldn't reach the provider. Check your connection.",
+  "provider.failure.http": "Provider error (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Provider error.",
+  "provider.failure.schema": "Unexpected response from the provider.",
 
   "notification.permission.title": "Permission required",
   "notification.permission.titleSubagent": "Permission required (subagent)",
@@ -718,6 +728,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code is an AI coding assistant. Ask it to build features, fix bugs, or explain your codebase.",
+  "session.workspaceScope.description": "Kilo chat uses only “{{folder}}”, the first folder in this workspace.",
+  "session.workspaceScope.alternatives":
+    "To work with another folder, open it in its own window or add it as a project in Agent Manager.",
+  "session.workspaceScope.dismiss": "Dismiss workspace scope hint",
   "session.messages.scrollToBottom": "Scroll to bottom",
   "session.messages.initializing": "Initializing...",
   "session.messages.taskStarting": "Starting...",
@@ -939,6 +953,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Native Notebook Tools",
   "settings.experimental.nativeNotebookTools.description":
     "Enable experimental tools for reading, editing, and executing VS Code notebooks",
+  "settings.experimental.globIncludeIgnored.title": "Search Ignored Paths",
+  "settings.experimental.globIncludeIgnored.description":
+    "Folders or files the glob tool should search even when .gitignore or other ignore files exclude them. Use gitignore-style patterns relative to the workspace; ignored folders inside them stay skipped.",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.codeMode.title": "Programmatic Tool Calling",
@@ -965,6 +982,11 @@ export const dict = {
     "Use installed Google Chrome for the Integrated Browser. Disable only when a compatible Playwright Chromium browser is already installed.",
   "browserTab.noSession": "Open the browser from a session to preview a local application or public HTTPS page.",
   "browserTab.disabled": "The Integrated Browser is disabled. Enable it in Kilo Settings > Experimental.",
+  "settings.experimental.browserLinks.title": "Open links in",
+  "settings.experimental.browserLinks.description":
+    "Choose where web links open from Kilo chats. Requires the Integrated Browser.",
+  "settings.experimental.browserLinks.external": "System browser",
+  "settings.experimental.browserLinks.integrated": "Integrated Browser",
   "settings.experimental.conversationPromptHistory.title": "Per-Conversation Prompt History",
   "settings.experimental.conversationPromptHistory.description":
     "Keep the prompt input history (ArrowUp/ArrowDown recall) separate for each conversation instead of sharing one history across all conversations.",
@@ -1392,6 +1414,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Stop all ({{count}})",
   "task.backgroundAgents.finished": "Background agents finished",
   "task.stop": "Stop sub-agent",
+  "task.open.panel": "Open sub-agent in panel",
+  "task.open.tab": "Open sub-agent in tab",
 
   "settings.saveBar.unsavedChanges": "Unsaved changes",
   "settings.saveBar.discard": "Discard",

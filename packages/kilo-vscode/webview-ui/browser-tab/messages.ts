@@ -1,5 +1,6 @@
 import type { ExtensionMessage, WebviewMessage } from "../src/types/messages"
 import {
+  browserCursorEvent,
   browserDevtoolsEvent,
   browserFrameEvent,
   browserInspectionEvent,
@@ -60,6 +61,9 @@ export function command(value: BrowserCommand): WebviewMessage {
 }
 
 export function event(message: ExtensionMessage): BrowserEvent | undefined {
+  if (message.type === "browserTab.cursor") {
+    return browserCursorEvent(browserScope(message.sessionId), message)
+  }
   if (message.type === "browserTab.frame") {
     return browserFrameEvent(browserScope(message.sessionId), message)
   }

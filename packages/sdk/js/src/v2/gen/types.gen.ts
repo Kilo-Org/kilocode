@@ -2718,6 +2718,7 @@ export type Config = {
     image_generation?: boolean
     image_generation_model?: string
     native_notebook_tools?: boolean
+    glob_include_ignored?: Array<string>
     code_mode?: boolean
     speech_to_text_model?: string
     speech_to_text_base_url?: string
@@ -3242,6 +3243,12 @@ export type PermissionNotFoundError = {
   _tag: "PermissionNotFoundError"
   requestID: string
   message: string
+}
+
+export type ProviderFailure = {
+  providerID: string
+  kind: "unauthorized" | "unauthenticated" | "network" | "schema" | "http"
+  status?: number
 }
 
 export type ProviderAuthMethod = {
@@ -4041,6 +4048,21 @@ export type ConfigOverlayConflictError = {
       [key: string]: unknown
     }
   }
+}
+
+export type ConfigOverlayShadowedError = {
+  message: string
+  path: string
+  shadowedBy?: string
+}
+
+export type ConfigOverlayWriteError = {
+  message: string
+  path?: string
+  issues?: Array<{
+    message: string
+    path: Array<string>
+  }>
 }
 
 export type ConfigRulesResponse = {
@@ -5273,6 +5295,7 @@ export type EventKilocodeAgentManagerStart = {
       prompt?: string
       name?: string
       branchName?: string
+      agent?: string
       model?: {
         providerID: string
         modelID: string
@@ -13387,6 +13410,7 @@ export type ProviderListResponses = {
     }
     connected: Array<string>
     failed: Array<string>
+    failures: Array<ProviderFailure>
   }
 }
 
@@ -15770,13 +15794,13 @@ export type ConfigOverlayUpdateData = {
 
 export type ConfigOverlayUpdateErrors = {
   /**
-   * Bad request
+   * ConfigOverlayWriteError | InvalidRequestError
    */
-  400: BadRequestError
+  400: ConfigOverlayWriteError | InvalidRequestError
   /**
-   * ConfigOverlayConflictError
+   * ConfigOverlayConflictError | ConfigOverlayShadowedError
    */
-  409: ConfigOverlayConflictError
+  409: ConfigOverlayConflictError | ConfigOverlayShadowedError
 }
 
 export type ConfigOverlayUpdateError = ConfigOverlayUpdateErrors[keyof ConfigOverlayUpdateErrors]

@@ -543,6 +543,218 @@
   min-width: 0;
 }
 
+/* Agent | Model | Reasoning as one split control, styled like the Agent
+   Manager terminal split button (.am-split-button): ghost segments sit flush,
+   only the outer corners are rounded, and the hovered segment fills up to its
+   square inner edge. Short separators and one trailing arrow show at rest that
+   these are controls, not status text. The toolbar stays one row at every
+   width: only the model label truncates, so a pick never changes the prompt
+   height. */
+.prompt-input-hint:has(> .prompt-selectors) {
+  align-items: center;
+}
+
+.prompt-selectors {
+  --prompt-selectors-ease: cubic-bezier(0.2, 0.9, 0.3, 1);
+  display: flex;
+  align-items: stretch;
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 24px;
+  border-radius: 5px;
+}
+
+.prompt-selector {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.prompt-selector:not(:has([data-slot="popover-trigger"])) {
+  display: none;
+}
+
+.prompt-selector[data-part="model"] {
+  flex: 0 1 auto;
+  min-width: 6em;
+}
+
+/* A long agent name truncates. It is capped, and it shrinks much slower than
+   the model, so the model gives up its room first and a short agent name like
+   "Code" stays readable. */
+.prompt-selector[data-part="agent"] {
+  flex: 0 0.1 auto;
+  min-width: 3em;
+}
+
+.prompt-selectors .prompt-selector[data-part="agent"] [data-slot="popover-trigger"] {
+  max-width: 10em;
+}
+
+.prompt-selector > [data-component="tooltip-trigger"] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Separator before every visible part that follows another. It hides next to
+   a filled part, so the fill reads as one clean segment. */
+.prompt-selector:has([data-slot="popover-trigger"]) ~ .prompt-selector:has([data-slot="popover-trigger"])::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  inset-inline-start: 0;
+  z-index: 1;
+  width: 1px;
+  background: color-mix(in srgb, var(--vscode-foreground) 22%, transparent);
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.prompt-selector:is(:hover, :has([data-slot="popover-trigger"]:is([data-expanded], :focus-visible)))::before,
+.prompt-selector:is(:hover, :has([data-slot="popover-trigger"]:is([data-expanded], :focus-visible)))
+  + .prompt-selector::before {
+  opacity: 0;
+}
+
+.prompt-selectors .prompt-selector [data-slot="popover-trigger"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  height: 24px;
+  min-height: 24px;
+  padding: 0 7px;
+  gap: 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-base, var(--vscode-foreground));
+  font-size: var(--kilo-font-size-12);
+  line-height: normal;
+  white-space: nowrap;
+  transition: background-color 120ms ease;
+}
+
+.prompt-selectors .prompt-selector [data-slot="popover-trigger"]:hover:not(:disabled) {
+  background: var(--button-ghost-hover, var(--surface-base-hover, rgba(128, 128, 128, 0.2)));
+}
+
+.prompt-selectors .prompt-selector [data-slot="popover-trigger"][data-expanded]:not(:disabled) {
+  background: var(--vscode-toolbar-activeBackground, var(--button-ghost-hover, var(--surface-base-hover)));
+}
+
+.prompt-selectors .prompt-selector [data-slot="popover-trigger"]:active:not(:disabled) {
+  opacity: 0.8;
+}
+
+/* Focus shows only the ring. The outer parts take the group radius, so the
+   ring and the fills follow the rounded corners instead of being clipped. */
+.prompt-selectors .prompt-selector [data-slot="popover-trigger"]:focus-visible {
+  position: relative;
+  z-index: 2;
+  outline: 1px solid var(--border-focus);
+  outline-offset: -1px;
+}
+
+.prompt-selector:not(.prompt-selector:has([data-slot="popover-trigger"]) ~ .prompt-selector)
+  [data-slot="popover-trigger"] {
+  border-start-start-radius: 5px;
+  border-end-start-radius: 5px;
+}
+
+.prompt-selector:not(:has(~ .prompt-selector [data-slot="popover-trigger"])) [data-slot="popover-trigger"] {
+  border-start-end-radius: 5px;
+  border-end-end-radius: 5px;
+}
+
+.prompt-selectors .prompt-selector[data-part="variant"] [data-slot="popover-trigger"] {
+  padding: 0 6px;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+}
+
+/* One trailing arrow: on the reasoning part, or on the model part when the
+   model has no reasoning levels. It turns while its popover is open. */
+.prompt-selectors .selector-trigger-chevron,
+.prompt-selectors .model-selector-trigger-chevron {
+  display: none;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  transition: transform 160ms var(--prompt-selectors-ease);
+}
+
+.prompt-selectors .prompt-selector[data-part="variant"] .selector-trigger-chevron,
+.prompt-selectors:not(:has([data-part="variant"] [data-slot="popover-trigger"])) .model-selector-trigger-chevron,
+.prompt-selectors:not(:has(:is([data-part="model"], [data-part="variant"]) [data-slot="popover-trigger"]))
+  [data-part="agent"]
+  .selector-trigger-chevron {
+  display: block;
+}
+
+.prompt-selectors
+  [data-slot="popover-trigger"][data-expanded]
+  :is(.selector-trigger-chevron, .model-selector-trigger-chevron) {
+  transform: rotate(180deg);
+}
+
+/* A changed value rises in, so a change made with a shortcut is easy to see. */
+.prompt-selectors :is(.mode-switcher-trigger-label, .model-selector-trigger-label, .thinking-selector-trigger-label) {
+  display: inline-block;
+  min-width: 0;
+  animation: prompt-selector-value-in 200ms var(--prompt-selectors-ease);
+}
+
+@keyframes prompt-selector-value-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+
+/* The reasoning label collapses into the arrow when it says nothing useful
+   ("Default"), or before the model name would truncate (data-tight, set by
+   PromptSelectors). A changed value, for example from Shift+Tab, peeks out for
+   a moment (data-peek). The label stays in the accessibility tree, and the
+   tooltip names the value. */
+.prompt-selectors .thinking-selector-trigger-label {
+  max-width: 8em;
+  transition:
+    max-width 200ms var(--prompt-selectors-ease),
+    opacity 160ms ease,
+    margin 200ms var(--prompt-selectors-ease);
+}
+
+.prompt-selectors[data-tight] .thinking-selector-trigger-label,
+.prompt-selectors .thinking-selector-trigger-label[data-unset] {
+  max-width: 0;
+  margin-inline-end: -4px;
+  opacity: 0;
+}
+
+.prompt-selectors[data-peek] .thinking-selector-trigger-label {
+  max-width: 8em;
+  margin-inline-end: 0;
+  opacity: 1;
+}
+
+body.vscode-reduce-motion .prompt-selectors,
+body.vscode-reduce-motion .prompt-selectors *,
+body.vscode-reduce-motion .prompt-selectors *::before,
+body.vscode-reduce-motion .prompt-action {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prompt-selectors,
+  .prompt-selectors *,
+  .prompt-selectors *::before,
+  .prompt-action {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 /* Remote Settings */
 [data-component="remote-settings"] {
   display: flex;
@@ -608,6 +820,164 @@
   gap: 4px;
   margin-left: auto;
   flex-shrink: 0;
+}
+
+.prompt-input-hint-pinned {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Foldable prompt action. Folding collapses the width, so the actions to the
+   right keep their place. The -4px margin removes the flex gap of a folded
+   action. Folded actions are hidden, so they leave the tab order. */
+.prompt-action {
+  display: flex;
+  flex-shrink: 0;
+  max-width: 24px;
+  overflow: clip;
+  overflow-clip-margin: 3px;
+  transition:
+    max-width 180ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    margin 180ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    opacity 140ms ease,
+    visibility 0s linear 0s;
+}
+
+.prompt-action[data-folded] {
+  max-width: 0;
+  margin-inline-start: -4px;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    max-width 180ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    margin 180ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    opacity 100ms ease,
+    visibility 0s linear 180ms;
+}
+
+.prompt-action:first-child[data-folded] {
+  margin-inline-start: 0;
+  margin-inline-end: -4px;
+}
+
+.prompt-more-button {
+  position: relative;
+}
+
+/* A folded action is on (auto-approve, sandbox). Same dot as the status buttons. */
+/* A folded action has state (a toggle that is on, indexing progress or an
+   error). Same dot as the status buttons, colored by the most important state. */
+.prompt-more-button:is([data-dot], [data-busy])::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--vscode-testing-iconPassed, #73c991);
+  box-shadow: 0 0 0 1px var(--surface-base, var(--vscode-editor-background));
+}
+
+.prompt-more-button[data-dot="warning"]::after {
+  background: var(--vscode-charts-yellow, #cca700);
+}
+
+.prompt-more-button[data-dot="error"]::after {
+  background: var(--vscode-errorForeground, #f48771);
+}
+
+/* A folded action is working (for example enhance). The dot pulses. */
+.prompt-more-button[data-busy]:not([data-dot])::after {
+  background: var(--border-focus, var(--vscode-focusBorder));
+}
+
+.prompt-more-button[data-busy]::after {
+  animation: prompt-more-pulse 1200ms ease-in-out infinite;
+}
+
+@keyframes prompt-more-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.prompt-more-menu[data-component="dropdown-menu-content"] {
+  min-width: 200px;
+  max-width: min(300px, calc(100vw - 16px));
+}
+
+.prompt-more-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"] {
+  gap: 8px;
+  padding: 6px 10px;
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-disabled] {
+  opacity: 0.5;
+}
+
+.prompt-more-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  color: var(--icon-base, var(--vscode-descriptionForeground));
+}
+
+.prompt-more-icon [data-component="icon"],
+.prompt-more-icon [data-slot="icon-svg"] {
+  width: 16px;
+  height: 16px;
+  color: inherit;
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-highlighted] .prompt-more-icon {
+  color: inherit;
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-tone="success"] .prompt-more-icon {
+  color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-tone="warning"] .prompt-more-icon {
+  color: var(--vscode-charts-yellow, #cca700);
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-tone="error"] .prompt-more-icon {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"] {
+  align-items: flex-start;
+}
+
+.prompt-more-icon {
+  margin-top: 1px;
+}
+
+.prompt-more-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* The tooltip text of the folded button, so the menu keeps its hint. */
+.prompt-more-menu [data-slot="dropdown-menu-item-description"] {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: var(--kilo-font-size-11);
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  white-space: normal;
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-highlighted] [data-slot="dropdown-menu-item-description"] {
+  color: inherit;
+  opacity: 0.8;
 }
 
 .prompt-indexing-button {

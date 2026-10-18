@@ -59,7 +59,10 @@ import { resolveProjectDirectory } from "./project-directory"
 import { seedSessionStatuses, seedSessionWakeups, clientSessionStatus } from "./session-status"
 import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
 import { retry } from "./services/cli-backend/retry"
-import { integratedBrowserUseSystemChrome } from "./services/browser-automation/chrome-setting"
+import {
+  integratedBrowserLinkDestination,
+  integratedBrowserUseSystemChrome,
+} from "./services/browser-automation/chrome-setting"
 import { removeAgent } from "./services/agent-removal"
 import { normalize, type SSEPayload, type SyncPayload, type WirePayload } from "./services/cli-backend/sdk-sse-adapter"
 import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
@@ -558,6 +561,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private autoApprovalReasonConfigDisposable: vscode.Disposable | null = null
   private pushFixesConfigDisposable: vscode.Disposable | null = null
   private shortcutHintsConfigDisposable: vscode.Disposable | null = null
+  private workspaceFoldersDisposable: vscode.Disposable | null = null
   private shortcutContextDisposable: vscode.Disposable | null = null
   private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
@@ -599,6 +603,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     | null = null
 
   private createWorktreeHandler: ((baseBranch?: string, branchName?: string) => Promise<void>) | null = null
+
+  private openLinkHandler: ((url: string, sessionID?: string) => boolean) | null = null
 
   private diffVirtualProvider: import("./DiffVirtualProvider").DiffVirtualProvider | undefined
   private diffViewerProvider: import("./diff/DiffViewerProvider").DiffViewerProvider | undefined
@@ -696,6 +702,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private sendRemoteStatus(): void {
     const s = this.remoteService?.getState()
     if (s) this.postMessage({ type: "remoteStatus", enabled: s.enabled, connected: s.connected })
+  }
+
+  private sendWorkspaceScope(): void {
+    const folders = vscode.workspace.workspaceFolders
+    const first = folders?.at(0)
+    // Explicit project hosts (including Agent Manager) do not use the sidebar fallback.
+    const scoped = this.projectDirectory != null || this.opts.rootDirectory != null
+    this.postMessage({
+      type: "workspaceScope",
+      folder:
+        !scoped && folders && folders.length > 1 && first ? { name: first.name, path: first.uri.fsPath } : undefined,
+    })
   }
   private focusSession(id?: string): void {
     this.streams.focus(id)
@@ -1207,6 +1225,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.createWorktreeHandler = handler
   }
 
+  public setOpenLinkHandler(handler: (url: string, sessionID?: string) => boolean): void {
+    this.openLinkHandler = handler
+  }
+
   public attachToWebview(
     webview: vscode.Webview,
     options?: { onBeforeMessage?: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null> },
@@ -1247,6 +1269,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.pushFixesConfigDisposable = watchPushFixesConfig((msg) => this.postMessage(msg))
     this.shortcutHintsConfigDisposable?.dispose()
     this.shortcutHintsConfigDisposable = watchShortcutHintsConfig((msg) => this.postMessage(msg))
+    this.workspaceFoldersDisposable?.dispose()
+    this.workspaceFoldersDisposable = vscode.workspace.onDidChangeWorkspaceFolders(() => this.sendWorkspaceScope())
     this.shortcutContextDisposable?.dispose()
     this.shortcutContextDisposable = watchShortcutContext(this.extensionContext, (msg) => this.postMessage(msg))
     this.telemetryStateDisposable?.dispose()
@@ -1337,6 +1361,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (this.handleMigrationMessage(message)) return
       if (this.handleNotificationSettingsMessage(message)) return
       switch (message.type) {
+        case "requestWorkspaceScope":
+          this.sendWorkspaceScope()
+          break
         case "webviewReady":
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
           this.isWebviewReady = true
@@ -1900,6 +1927,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       dir: (sessionID) => this.getWorkspaceDirectory(sessionID ?? this.currentSession?.id),
       diff: this.diffVirtualProvider,
       openPRComment: (comment, sessionID) => this.openChanges(sessionID, undefined, comment),
+      openLink: this.openLinkHandler ? (url) => this.openLinkHandler!(url, this.currentSession?.id) : undefined,
       openMarkdown: (file, sessionID) => {
         if (!this.documentViewerProvider) return false
         this.documentViewerProvider.openFromCommand({
@@ -2897,6 +2925,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             authMethods,
             authStates,
             kiloUnavailable: unavailable,
+            failures: response.failures,
           }
           this.cachedProvidersMessage = message
           this.cachedProvidersDirectory = this.settingsDirectory()
@@ -4531,6 +4560,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       browserAutomation: this.browserAutomationSetting(),
       conversationPromptHistory: this.conversationPromptHistorySetting(),
       agentManagerBrowserUseSystemChrome: integratedBrowserUseSystemChrome(),
+      agentManagerBrowserOpenLinksIn: integratedBrowserLinkDestination(),
       "agentManager.autoBranchNaming": naming.get<boolean>("autoBranchNaming", true),
       "agentManager.branchPrefix": naming.get<string>("branchPrefix", ""),
       "agentManager.worktreePool": naming.get<boolean>("worktreePool", true),
@@ -6401,6 +6431,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.autoApprovalReasonConfigDisposable?.dispose()
     this.pushFixesConfigDisposable?.dispose()
     this.shortcutHintsConfigDisposable?.dispose()
+    this.workspaceFoldersDisposable?.dispose()
     this.shortcutContextDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()

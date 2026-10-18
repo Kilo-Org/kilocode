@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Ploča",
+  "task.swarm.open": "Otvori ploču",
   "task.swarm.refresh": "Osvježi",
   "task.swarm.reset": "Resetuj ploču",
   "task.swarm.resetTitle": "Resetovati ovu ploču?",
@@ -235,6 +236,7 @@ export const dict = {
   "prompt.action.stop.background": "Zaustavi glavnog agenta. Agenti u pozadini nastavljaju raditi.",
   "prompt.agents.show": "Prikaži agente u pozadini",
   "prompt.action.enhance": "Poboljšaj prompt",
+  "prompt.action.more": "Više akcija",
   "prompt.paste.expand": "Kliknite da proširite zalijepljeni tekst",
   "prompt.issues.title": "Problemi sesije",
   "prompt.mcp.provider": "MCP {{name}}",
@@ -306,6 +308,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI vas je odjavio",
   "error.providerAuth.chatgpt.description":
     "Ponovo se prijavite na ChatGPT, a zatim ponovo pošaljite poruku da nastavite koristiti Codex modele.",
+
+  "provider.failure.unauthorized": "Vjerodajnice su odbijene (HTTP {{status}}). Prijavite se ponovo.",
+  "provider.failure.unauthorizedNoStatus": "Vjerodajnice su odbijene. Prijavite se ponovo.",
+  "provider.failure.unauthenticated": "Niste prijavljeni.",
+  "provider.failure.network": "Nije moguće doći do provajdera. Provjerite svoju vezu.",
+  "provider.failure.http": "Greška provajdera (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Greška provajdera.",
+  "provider.failure.schema": "Neočekivan odgovor od provajdera.",
 
   "notification.permission.title": "Potrebna dozvola",
   "notification.permission.titleSubagent": "Potrebna dozvola (podagent)",
@@ -780,6 +790,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code je AI asistent za programiranje. Zatražite da gradi funkcionalnosti, ispravlja greške ili objasni vašu bazu koda.",
+  "session.workspaceScope.description": "Kilo razgovor koristi samo „{{folder}}“, prvi folder u ovom radnom prostoru.",
+  "session.workspaceScope.alternatives":
+    "Za rad s drugim folderom, otvorite ga u zasebnom prozoru ili ga dodajte kao projekt u Agent Manager.",
+  "session.workspaceScope.dismiss": "Zatvori savjet o opsegu radnog prostora",
   "session.messages.scrollToBottom": "Pomakni se na dno",
   "session.messages.initializing": "Inicijalizacija...",
   "session.messages.taskStarting": "Pokretanje...",
@@ -966,6 +980,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Izvorni alati za bilježnice",
   "settings.experimental.nativeNotebookTools.description":
     "Omogući eksperimentalne alate za čitanje, uređivanje i izvršavanje VS Code bilježnica",
+  "settings.experimental.globIncludeIgnored.title": "Pretraga ignorisanih putanja",
+  "settings.experimental.globIncludeIgnored.description":
+    "Direktoriji ili datoteke koje glob alat treba pretraživati čak i kada ih .gitignore ili druge ignore datoteke isključuju. Koristite obrasce u gitignore stilu relativne u odnosu na radni prostor; ignorisani direktoriji unutar njih ostaju preskočeni.",
   "settings.experimental.continueOnDeny.title": "Nastavi pri odbijanju",
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
   "settings.sandboxing.title": "Rad u izoliranom okruženju",
@@ -1410,6 +1427,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Zaustavi sve ({{count}})",
   "task.backgroundAgents.finished": "Agenti u pozadini su završili",
   "task.stop": "Zaustavi podagenta",
+  "task.open.panel": "Otvori podagenta u panelu",
+  "task.open.tab": "Otvori podagenta u kartici",
   "settings.saveBar.unsavedChanges": "Nespremljene promjene",
   "settings.saveBar.discard": "Odbaci",
   "settings.saveBar.save": "Spremi",
@@ -1474,6 +1493,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Koristi sistemski Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Koristite instalirani Google Chrome za Integrirani preglednik. Onemogućite samo kada je kompatibilni Playwright Chromium preglednik već instaliran.",
+  "settings.experimental.browserLinks.title": "Otvori linkove u",
+  "settings.experimental.browserLinks.description":
+    "Odaberite gdje se web linkovi otvaraju iz Kilo razgovora. Zahtijeva Integrirani preglednik.",
+  "settings.experimental.browserLinks.external": "Sistemski preglednik",
+  "settings.experimental.browserLinks.integrated": "Integrirani preglednik",
   "chat.search.searchingHistory": "Pretraživanje ranijih poruka…",
   "browserTab.noSession": "Otvorite preglednik iz sesije da pregledate lokalnu aplikaciju ili javnu HTTPS stranicu.",
   "browserTab.disabled": "Integrirani preglednik je onemogućen. Omogućite ga u Kilo postavkama > Eksperimentalno.",

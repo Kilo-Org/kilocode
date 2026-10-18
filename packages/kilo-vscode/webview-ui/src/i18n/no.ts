@@ -63,6 +63,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tavle",
+  "task.swarm.open": "Åpne tavle",
   "task.swarm.refresh": "Oppdater",
   "task.swarm.reset": "Nullstill tavle",
   "task.swarm.resetTitle": "Nullstille denne tavlen?",
@@ -237,6 +238,7 @@ export const dict = {
   "prompt.action.stop.background": "Stopp hovedagenten. Bakgrunnsagenter fortsetter å kjøre.",
   "prompt.agents.show": "Vis bakgrunnsagenter",
   "prompt.action.enhance": "Forbedre prompt",
+  "prompt.action.more": "Flere handlinger",
   "prompt.paste.expand": "Klikk for å utvide den innlimte teksten",
   "prompt.issues.title": "Sesjonsproblemer",
   "prompt.mcp.provider": "{{name}} MCP",
@@ -312,6 +314,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI logget deg ut",
   "error.providerAuth.chatgpt.description":
     "Logg på ChatGPT igjen, og send meldingen din på nytt for å fortsette å bruke Codex-modeller.",
+
+  "provider.failure.unauthorized": "Påloggingsinformasjon ble avvist (HTTP {{status}}). Logg på igjen.",
+  "provider.failure.unauthorizedNoStatus": "Påloggingsinformasjon ble avvist. Logg på igjen.",
+  "provider.failure.unauthenticated": "Ikke pålogget.",
+  "provider.failure.network": "Fikk ikke kontakt med leverandøren. Sjekk tilkoblingen din.",
+  "provider.failure.http": "Leverandørfeil (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Leverandørfeil.",
+  "provider.failure.schema": "Uventet svar fra leverandøren.",
 
   "notification.permission.title": "Tillatelse påkrevd",
   "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",
@@ -741,6 +751,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code er en AI-kodingsassistent. Be den om å bygge funksjoner, fikse feil eller forklare kodebasen din.",
+  "session.workspaceScope.description":
+    "Kilo-chatten bruker bare «{{folder}}», den første mappen i dette arbeidsområdet.",
+  "session.workspaceScope.alternatives":
+    "For å jobbe med en annen mappe kan du åpne den i et eget vindu eller legge den til som et prosjekt i Agent Manager.",
+  "session.workspaceScope.dismiss": "Skjul hintet om arbeidsområdets avgrensning",
   "session.messages.scrollToBottom": "Rull til bunnen",
   "session.messages.initializing": "Initialiserer...",
   "session.messages.taskStarting": "Starter...",
@@ -927,6 +942,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Innebygde notatbok-verktøy",
   "settings.experimental.nativeNotebookTools.description":
     "Aktiver eksperimentelle verktøy for å lese, redigere og kjøre VS Code-notatbøker",
+  "settings.experimental.globIncludeIgnored.title": "Søk i ignorerte stier",
+  "settings.experimental.globIncludeIgnored.description":
+    "Mapper eller filer som glob-verktøyet skal søke i selv når .gitignore eller andre ignore-filer ekskluderer dem. Bruk mønstre i gitignore-stil relativt til arbeidsområdet; ignorerte mapper inni dem hoppes fortsatt over.",
   "settings.experimental.continueOnDeny.title": "Fortsett ved avvisning",
   "settings.experimental.continueOnDeny.description": "Fortsett agentløkken når en tillatelse avvises",
   "settings.sandboxing.title": "Kjøring i sandkasse",
@@ -1401,6 +1419,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Stopp alle ({{count}})",
   "task.backgroundAgents.finished": "Bakgrunnsagenter er ferdige",
   "task.stop": "Stopp underagent",
+  "task.open.panel": "Åpne underagent i panel",
+  "task.open.tab": "Åpne underagent i fane",
   "settings.saveBar.unsavedChanges": "Ulagrede endringer",
   "settings.saveBar.discard": "Forkast",
   "settings.saveBar.save": "Lagre",
@@ -1465,6 +1485,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Bruk system-Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Bruk den installerte Google Chrome for den integrerte nettleseren. Deaktiver bare når en kompatibel Playwright Chromium-nettleser allerede er installert.",
+  "settings.experimental.browserLinks.title": "Åpne lenker i",
+  "settings.experimental.browserLinks.description":
+    "Velg hvor nettlenker åpnes fra Kilo-samtaler. Krever Integrert nettleser.",
+  "settings.experimental.browserLinks.external": "Systemnettleser",
+  "settings.experimental.browserLinks.integrated": "Integrert nettleser",
   "chat.search.searchingHistory": "Søker i tidligere meldinger…",
   "browserTab.noSession":
     "Åpne nettleseren fra en økt for å forhåndsvise en lokal applikasjon eller en offentlig HTTPS-side.",

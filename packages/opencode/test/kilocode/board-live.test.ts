@@ -231,7 +231,9 @@ for (const enabled of [false, true]) {
         expect(JSON.stringify(tools).includes("Cursor from your last board_read, not an ID from board_post")).toBe(
           enabled,
         )
-        expect(JSON.stringify(tools).includes("main is the board root, not necessarily your parent")).toBe(enabled)
+        expect(
+          JSON.stringify(tools).includes("your own row is flagged self: true (the main row is the board root)"),
+        ).toBe(enabled)
       }),
       { config: (url) => ({ ...config(url), shared_agent_board: enabled }) },
     ),

@@ -61,11 +61,11 @@ Separate Agent Manager sessions do not share a Swarm board just because they use
 
 #### Viewing the board
 
-When Kilo Swarm is enabled and the main session has board messages, a **Board** icon appears in its task header. Select the icon to open the board dialog and read the stored messages. Each message shows the sender and recipient avatars. Select an avatar to open that agent's transcript.
+When Kilo Swarm is enabled and the session has board messages, a **Board** control appears in the session dock above the prompt, next to the background-agent row when background agents exist. It works with foreground and background task agents, and it stays in the same place after background agents are cleared or the view reloads. It is no longer in the task header, and the feature is no longer configured under Experimental settings. Select the control to open a panel with the latest posts, then open the full board dialog to read the stored messages. Each message shows the sender and recipient avatars. Select an avatar to open that agent's transcript.
 
 The dialog has a **Refresh** action. Earlier messages load as you scroll to the top of the list, using the cursor from the loaded page.
 
-Only the owning top-level session can open its board. Child sessions and cloud sessions do not show the Board icon. If the session ID exists in multiple projects, open its board from the owning project. Kilo rejects the reference instead of choosing a project.
+Only the owning top-level session can open its board. Child sessions and cloud sessions do not show the Board control. If the session ID exists in multiple projects, open its board from the owning project. Kilo rejects the reference instead of choosing a project.
 
 #### Resetting the board
 
@@ -541,7 +541,17 @@ Use **Select element** to attach an element reference to your next message. It i
 
 The agent can open the application with `browser_open`. Its automation browser accepts only HTTP URLs on `localhost` or `127.0.0.1` and blocks other origins, including external assets and APIs on separate ports. Serve the resources the agent needs from the same loopback origin. These restrictions apply to the automation browser, not the independent visible preview iframe.
 
-Google Chrome must be installed for the default runtime. To use an already-installed compatible Playwright Chromium browser instead, turn off **Use System Chrome** under **Settings > Web Tools**.
+Kilo uses system Google Chrome by default. In WSL, if Chrome is missing and you have not explicitly set a browser preference, Kilo tries an installed compatible Playwright Chromium browser. Set **Use System Chrome** under **Settings > Experimental** to choose Chrome (on) or Chromium (off). Chromium must match the extension's bundled `playwright-core` version.
+
+The Integrated Browser does not install browsers or operating system packages. To install Chromium manually, run the extension's bundled Playwright CLI with VS Code Server's Node inside WSL:
+
+```sh
+"<VS Code Server Node path>" "<Kilo extension path>/dist/node_modules/playwright-core/cli.js" install chromium
+```
+
+Use the paths for your active VS Code Server and Kilo extension. Linux system libraries may also need manual installation. Keep browser sandbox protection enabled.
+
+In a VS Code WSL window, the browser runs in the WSL extension host. Chrome installed on Windows is not Linux Chrome. Install Chrome inside WSL and keep **Use System Chrome** on, or use matching Chromium with the setting off. This setting is application-scoped, so configure it in Windows-side user settings, not WSL remote settings. `localhost` refers to the extension host, so keep your application's server running inside WSL.
 
 ## Terminals
 

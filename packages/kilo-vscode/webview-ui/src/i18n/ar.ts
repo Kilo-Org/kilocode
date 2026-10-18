@@ -59,6 +59,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "اللوحة",
+  "task.swarm.open": "فتح اللوحة",
   "task.swarm.refresh": "تحديث",
   "task.swarm.reset": "إعادة تعيين اللوحة",
   "task.swarm.resetTitle": "إعادة تعيين هذه اللوحة؟",
@@ -229,6 +230,7 @@ export const dict = {
   "prompt.action.stop.background": "إيقاف الوكيل الرئيسي. يستمر الوكلاء الخلفيون في العمل.",
   "prompt.agents.show": "إظهار الوكلاء الخلفيين",
   "prompt.action.enhance": "تحسين النص",
+  "prompt.action.more": "مزيد من الإجراءات",
   "prompt.paste.expand": "انقر لتوسيع النص الملصق",
   "prompt.issues.title": "مشكلات الجلسة",
   "prompt.mcp.provider": "خادم MCP لـ {{name}}",
@@ -297,6 +299,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "تسجيل الدخول باستخدام ChatGPT مرة أخرى",
   "error.providerAuth.chatgpt.description":
     "سجل الدخول باستخدام ChatGPT مرة أخرى، ثم أرسل رسالتك مرة أخرى لمواصلة استخدام نماذج Codex.",
+
+  "provider.failure.unauthorized": "تم رفض بيانات الاعتماد (HTTP {{status}}). سجل الدخول مرة أخرى.",
+  "provider.failure.unauthorizedNoStatus": "تم رفض بيانات الاعتماد. سجل الدخول مرة أخرى.",
+  "provider.failure.unauthenticated": "لم يتم تسجيل الدخول.",
+  "provider.failure.network": "تعذر الوصول إلى الموفر. تحقق من اتصالك.",
+  "provider.failure.http": "خطأ في الموفر (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "خطأ في الموفر.",
+  "provider.failure.schema": "استجابة غير متوقعة من الموفر.",
 
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
@@ -762,6 +772,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code هو مساعد ترميز بالذكاء الاصطناعي. اطلب منه بناء ميزات أو إصلاح أخطاء أو شرح قاعدة الشيفرة.",
+  "session.workspaceScope.description":
+    "تستخدم دردشة Kilo المجلد «{{folder}}» فقط، وهو المجلد الأول في مساحة العمل هذه.",
+  "session.workspaceScope.alternatives": "للعمل على مجلد آخر، افتحه في نافذة مستقلة أو أضفه كمشروع في Agent Manager.",
+  "session.workspaceScope.dismiss": "إغلاق تلميح نطاق مساحة العمل",
   "session.messages.scrollToBottom": "التمرير إلى الأسفل",
   "session.messages.initializing": "جاري التهيئة...",
   "session.messages.taskStarting": "جاري البدء...",
@@ -941,6 +955,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "أدوات الدفاتر الأصلية",
   "settings.experimental.nativeNotebookTools.description":
     "تمكين الأدوات التجريبية لقراءة دفاتر VS Code وتحريرها وتنفيذها",
+  "settings.experimental.globIncludeIgnored.title": "البحث في المسارات المتجاهلة",
+  "settings.experimental.globIncludeIgnored.description":
+    "المجلدات أو الملفات التي يجب أن تبحث فيها أداة glob حتى عندما يستبعدها .gitignore أو ملفات التجاهل الأخرى. استخدم أنماطًا بأسلوب gitignore نسبةً إلى مساحة العمل؛ تبقى المجلدات المتجاهلة داخلها مستبعدة.",
   "settings.experimental.continueOnDeny.title": "المتابعة عند الرفض",
   "settings.experimental.continueOnDeny.description": "متابعة حلقة الوكيل عند رفض الإذن",
   "settings.sandboxing.title": "العزل",
@@ -1371,6 +1388,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "إيقاف الكل ({{count}})",
   "task.backgroundAgents.finished": "انتهى الوكلاء الخلفيون",
   "task.stop": "إيقاف الوكيل الفرعي",
+  "task.open.panel": "فتح الوكيل الفرعي في اللوحة",
+  "task.open.tab": "فتح الوكيل الفرعي في علامة تبويب",
   "settings.saveBar.unsavedChanges": "تغييرات غير محفوظة",
   "settings.saveBar.discard": "تجاهل",
   "settings.saveBar.save": "حفظ",
@@ -1435,6 +1454,10 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "استخدام Chrome النظام",
   "settings.experimental.browserAutomation.systemChrome.description":
     "استخدام Google Chrome المثبّت للمتصفح المدمج. عطّله فقط عند تثبيت متصفح Playwright Chromium متوافق.",
+  "settings.experimental.browserLinks.title": "فتح الروابط في",
+  "settings.experimental.browserLinks.description": "اختر مكان فتح روابط الويب من محادثات Kilo. يتطلب المتصفح المدمج.",
+  "settings.experimental.browserLinks.external": "متصفح النظام",
+  "settings.experimental.browserLinks.integrated": "المتصفح المدمج",
   "chat.search.searchingHistory": "جارٍ البحث في الرسائل السابقة…",
   "browserTab.noSession": "افتح المتصفح من جلسة لمعاينة تطبيق محلي أو صفحة HTTPS عامة.",
   "browserTab.disabled": "المتصفح المدمج معطّل. فعّله من إعدادات Kilo > تجريبي.",

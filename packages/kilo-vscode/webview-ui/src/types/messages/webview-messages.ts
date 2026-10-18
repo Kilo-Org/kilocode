@@ -182,6 +182,11 @@ export interface OpenExternalRequest {
   url: string
 }
 
+export interface OpenWebLinkRequest {
+  type: "openWebLink"
+  url: string
+}
+
 export interface OpenFileRequest {
   type: "openFile"
   filePath: string
@@ -901,6 +906,12 @@ export interface SetProjectExpandedMessage {
   type: "agentManager.setProjectExpanded"
   projectId: string
   expanded: boolean
+}
+
+// Persist the sidebar order of the additional (not pinned) projects
+export interface SetProjectOrderMessage {
+  type: "agentManager.setProjectOrder"
+  order: string[]
 }
 
 // Configure worktree setup script
@@ -1718,6 +1729,13 @@ export interface MoveToSectionRequest {
   sectionId: string | null
 }
 
+export interface SetWorktreePinnedRequest {
+  type: "agentManager.setWorktreePinned"
+  projectId?: string
+  worktreeId: string
+  pinned: boolean
+}
+
 export interface MoveSectionRequest {
   type: "agentManager.moveSection"
   projectId?: string
@@ -1750,6 +1768,7 @@ export type WebviewMessage =
   | PRMergeRequest
   | { type: "sessionActivity"; state: Activity }
   | { type: "acknowledgeSession"; sessionID: string; eventID: string }
+  | { type: "requestWorkspaceScope" }
   | DocumentRequestMessage
   | DocumentOpenFileMessage
   | DocumentCopyPathMessage
@@ -1780,6 +1799,7 @@ export type WebviewMessage =
   | RequestProviderUsageMessage
   | RefreshProviderUsageMessage
   | OpenExternalRequest
+  | OpenWebLinkRequest
   | OpenSettingsPanelRequest
   | RequestAgentManagerSettingsMessage
   | RequestAgentManagerSettingsBranchesMessage
@@ -1899,6 +1919,7 @@ export type WebviewMessage =
   | ActivateSelectionMessage
   | RememberTargetMessage
   | SetProjectExpandedMessage
+  | SetProjectOrderMessage
   | ConfigureSetupScriptRequest
   | ConfigureRunScriptRequest
   | RunScriptRequest
@@ -2016,6 +2037,7 @@ export type WebviewMessage =
   | SetSectionColorRequest
   | ToggleSectionCollapsedRequest
   | MoveToSectionRequest
+  | SetWorktreePinnedRequest
   | MoveSectionRequest
   | OpenContentRequest
   | AgentManagerTerminalCreateRequest
