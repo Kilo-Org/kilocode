@@ -249,6 +249,19 @@ click("Retry explanation")
 assert.equal(latest().model.modelID, "active")
 post({ type: "explainBrieflyError", requestId: latest().requestId, error: "Provider unavailable" })
 assert.match(document.querySelector('[role="alert"]')?.textContent ?? "", /Provider unavailable/)
+click("Retry explanation")
+const superseded = latest().requestId
+post({
+  type: "explainBrieflyError",
+  requestId: superseded,
+  error: "Explanation cancelled because another explanation was started.",
+})
+await settle()
+assert.equal(document.querySelector("[aria-busy]")?.getAttribute("aria-busy"), "false")
+assert.equal(document.querySelector(".response-lens-loading"), null)
+assert.match(document.querySelector('[role="alert"]')?.textContent ?? "", /another explanation/)
+answer(superseded, "STALE_SUPERSEDED_EXPLANATION")
+assert.equal(document.querySelector(".response-lens-result"), null)
 const count = requests().length
 await settle()
 assert.equal(requests().length, count, "errors never auto retry")

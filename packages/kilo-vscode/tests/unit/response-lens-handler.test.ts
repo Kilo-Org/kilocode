@@ -71,7 +71,7 @@ describe("Response Lens host and generated SDK", () => {
     expect(JSON.stringify(replies)).not.toContain("test-only")
   })
 
-  it("cancels only matching requests, supersedes older work and ignores stale responses", async () => {
+  it.each(["two", "one"])("settles superseded requests and ignores stale responses (replacement %s)", async (id) => {
     const calls: Array<{
       signal: AbortSignal
       url: string
@@ -99,23 +99,34 @@ describe("Response Lens host and generated SDK", () => {
     directory = "C:/later-pane"
     handler.cancel("not-active")
     expect(calls[0]!.signal.aborted).toBe(false)
-    const second = handler.explain({ ...request, requestId: "two" })
+    const second = handler.explain({ ...request, requestId: id })
     await Bun.sleep(0)
     expect(calls[0]!.signal.aborted).toBe(true)
     expect(new URL(calls[0]!.url).searchParams.get("directory")).toBe("C:/original")
+    const cancelled: Reply[] =
+      id === request.requestId
+        ? []
+        : [
+            {
+              type: "explainBrieflyError",
+              requestId: request.requestId,
+              error: "Explanation cancelled because another explanation was started.",
+            },
+          ]
+    expect(replies).toEqual(cancelled)
     calls[0]!.pending.resolve(Response.json(result))
     await first
-    expect(replies).toEqual([])
+    expect(replies).toEqual(cancelled)
     calls[1]!.pending.resolve(Response.json(result))
     await second
-    expect(replies.map((reply) => reply.requestId)).toEqual(["two"])
+    expect(replies).toEqual([...cancelled, { type: "explainBrieflyResult", requestId: id, ...result }])
     const third = handler.explain({ ...request, requestId: "three" })
     await Bun.sleep(0)
     handler.cancel()
     expect(calls[2]!.signal.aborted).toBe(true)
     calls[2]!.pending.resolve(Response.json(result))
     await third
-    expect(replies).toHaveLength(1)
+    expect(replies).toHaveLength(cancelled.length + 1)
   })
 
   it.each([404, 405, 422, 500])("returns actionable HTTP %s errors once, never fallback or retry", async (status) => {

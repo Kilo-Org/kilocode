@@ -78,7 +78,15 @@ export function createResponseLensHandler(options: {
   const explain = async (message: unknown) => {
     const id = message && typeof message === "object" && "requestId" in message ? message.requestId : undefined
     if (typeof id !== "string" || !id || id.length > 512) return
+    const superseded = [...requests.keys()].filter((key) => key !== id)
     cancel()
+    superseded.forEach((key) =>
+      options.post({
+        type: "explainBrieflyError",
+        requestId: key,
+        error: "Explanation cancelled because another explanation was started.",
+      }),
+    )
     const controller = new AbortController()
     requests.set(id, controller)
     try {
