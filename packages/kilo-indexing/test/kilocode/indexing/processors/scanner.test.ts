@@ -433,11 +433,23 @@ describe("DirectoryScanner", () => {
 
   test("keeps capitalized source folders that only differ in case from ignored dirs", async () => {
     // The anchored ignore globs (e.g. **/build/**) must match case-sensitively
-    // like FileIgnore.match() does: on macOS glob defaults to nocase, which
-    // would prune valid sources such as src/Build/Main.ts. (Windows is exempt:
-    // its filesystem is case-insensitive, so Build and build cannot coexist
-    // there and the OS reports a single entry.)
+    // like FileIgnore.match() does: on glob platforms with a nocase default, this
+    // would prune valid sources such as src/Build/Main.ts. Windows is
+    // case-insensitive at the filesystem level, so Build and build cannot
+    // coexist there and the OS reports a single entry; the same holds for the
+    // default case-insensitive APFS volume on macOS runners, where creating
+    // both dirs silently merges them. Detect that at runtime instead of by
+    // platform so the test is meaningful wherever case-sensitive dirs exist.
     if (process.platform === "win32") return
+    const probe = await mkdtemp(join(tmpdir(), "scanner-case-probe-"))
+    try {
+      await mkdir(join(probe, "Build"), { recursive: true })
+      await mkdir(join(probe, "build"), { recursive: true })
+      const { readdirSync } = await import("fs")
+      if (readdirSync(probe).length < 2) return
+    } finally {
+      await rm(probe, { recursive: true, force: true })
+    }
     const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
     const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
     try {
