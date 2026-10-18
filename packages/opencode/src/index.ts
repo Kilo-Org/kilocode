@@ -10,6 +10,7 @@ import { EOL } from "os"
 import { errorMessage } from "./util/error"
 import { Heap } from "./cli/heap"
 import { KiloCli } from "@/kilocode/cli/setup" // kilocode_change
+import { KiloCompletion } from "@/kilocode/cli/completion" // kilocode_change
 import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process" // kilocode_change
 // kilocode_change start - defer heavy command implementations until yargs selects them
@@ -40,6 +41,7 @@ import {
 
 const args = hideBin(process.argv)
 const metadata = ensureProcessMetadata("main") // kilocode_change - correlate logs across the CLI and TUI worker
+KiloCompletion.intercept(args) // kilocode_change - yargs .completion() emits no PowerShell script
 
 if (await KiloCli.runner()) process.exit() // kilocode_change - run persistent process guardians before CLI bootstrap
 
