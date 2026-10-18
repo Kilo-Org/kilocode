@@ -1016,6 +1016,7 @@
   ],
   "patchedDependencies": {
     "@ai-sdk/openai-compatible@2.0.41": "patches/@ai-sdk%2Fopenai-compatible@2.0.41.patch",
+    "y18n@5.0.8": "patches/y18n@5.0.8.patch",
     "@ai-sdk/openai-compatible@2.0.48": "patches/@ai-sdk%2Fopenai-compatible@2.0.48.patch",
     "@ai-sdk/xai@3.0.102": "patches/@ai-sdk%2Fxai@3.0.102.patch",
     "bun-pty@0.4.8": "patches/bun-pty@0.4.8.patch",
