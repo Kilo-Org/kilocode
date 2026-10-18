@@ -27,38 +27,48 @@ describe("KiloCompletion", () => {
     delete process.env.SHELL
   })
 
-  test("emits the PowerShell script under PSModulePath", async () => {
-    const proc = spawn(["completion"], { PSModulePath: "/some/path/pwsh" })
+  test("emits the PowerShell script under a pwsh module path", async () => {
+    const proc = spawn(["completion"], { PSModulePath: "/opt/microsoft/powershell/7/Modules" })
     const stdout = await new Response(proc.stdout).text()
     await proc.exited
-    expect(stdout).toContain("Register-ArgumentCompleter -CommandName kilo -ScriptBlock")
+    expect(stdout).toContain("Register-ArgumentCompleter -CommandName kilo -Native -ScriptBlock")
     expect(stdout).toContain("--get-yargs-completions")
     expect(stdout).toContain("kilo completion >> $PROFILE")
     expect(stdout).toContain("###-end-kilo-completions-###")
+    // The bash builtin must not leak into the PowerShell script
+    expect(stdout).not.toContain("complete -o bashdefault")
   })
 
-  test("delegates to the yargs builtin outside PowerShell", async () => {
-    const proc = spawn(["completion"], { PSModulePath: undefined, SHELL: "/bin/bash" })
+  test("delegates to the yargs builtin for cmd-inherited legacy module paths", async () => {
+    const proc = spawn(["completion"], {
+      PSModulePath: "C:\\Windows\\system32\\WindowsPowerShell\\v1.0\\Modules",
+      SHELL: "/bin/bash",
+    })
     const stdout = await new Response(proc.stdout).text()
     await proc.exited
-    expect(stdout).toContain("###-begin-kilo-completions-###")
+    expect(stdout).toContain("complete -o bashdefault")
     expect(stdout).not.toContain("Register-ArgumentCompleter")
   })
 
-  test("detects PowerShell hosts by PSModulePath or a pwsh SHELL", () => {
-    expect(KiloCompletion.powerShell()).toBe(false)
-    process.env.SHELL = "/bin/zsh"
-    expect(KiloCompletion.powerShell()).toBe(false)
-    delete process.env.SHELL
-    process.env.PSModulePath = "/foo/bar/NaturalShell"
+  test("detects PowerShell hosts without trusting the machine-wide module path", () => {
+    // pwsh installs and per-user module directories are PowerShell parents
+    process.env.PSModulePath = "C:\\Program Files\\PowerShell\\7\\Modules"
     expect(KiloCompletion.powerShell()).toBe(true)
+    // The Windows Store install flavors the directory name with a version suffix
+    process.env.PSModulePath = "C:\\Program Files\\WindowsApps\\Microsoft.PowerShell_7.4.6_x64__8weky\\Modules"
+    expect(KiloCompletion.powerShell()).toBe(true)
+    delete process.env.PSModulePath
+    // The legacy machine-wide list is inherited by cmd.exe and Git Bash too
+    process.env.PSModulePath = "C:\\Windows\\system32\\WindowsPowerShell\\v1.0\\Modules"
+    expect(KiloCompletion.powerShell()).toBe(false)
+    // A pwsh login shell shows up in SHELL even without module paths
     delete process.env.PSModulePath
     process.env.SHELL = "/usr/bin/pwsh"
     expect(KiloCompletion.powerShell()).toBe(true)
   })
 
   test("intercepts only the completion command in PowerShell hosts", () => {
-    process.env.PSModulePath = "/foo/bar/NaturalShell"
+    process.env.PSModulePath = "C:\\Program Files\\PowerShell\\7\\Modules"
     expect(KiloCompletion.intercept(["serve"])).toBe(false)
     delete process.env.PSModulePath
     expect(KiloCompletion.intercept(["completion"])).toBe(false)
@@ -67,5 +77,8 @@ describe("KiloCompletion", () => {
   test("script mirrors the yargs bash word contract", () => {
     expect(KiloCompletion.script()).toContain("if ($raw -match '\\s$') { $words += '' }")
     expect(KiloCompletion.script()).toContain("kilo --get-yargs-completions @words")
+    // Literal, case-sensitive prefix matching instead of -like wildcards
+    expect(KiloCompletion.script()).toContain('StartsWith($wordToComplete, [System.StringComparison]::Ordinal)')
+    expect(KiloCompletion.script()).not.toContain("-like")
   })
 })
