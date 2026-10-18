@@ -2,42 +2,43 @@
 
 This file is the single source for the shared facts, decisions and rules of the Kilo v1 → v2 migration. Role prompts (discovery, planner, coordinator) and implementation session prompts point here instead of restating it. When a fact here changes, change it here first.
 
-Status: planned (bootstrap docs complete; no unit started). Last updated 2026-10-12. Plan: [`kilo-v2-migration-plan.md`](kilo-v2-migration-plan.md).
+Status: active. The bootstrap docs landed on `origin/v2` (#15038). Lane L1 is running: the upstream merge tooling (#15026) and the syncs to `v2.0.27` (#15029) and `v2.0.30` (#15136) are merged. No Part B unit is marked done yet. Last updated 2026-10-16. Plan: [`kilo-v2-migration-plan.md`](kilo-v2-migration-plan.md).
 
 ## Branches and pinned refs
 
 | Item | Value |
 |---|---|
 | Integration branch | `origin/v2` on Kilo-Org/kilocode (long-lived; becomes `main` at cutover). Not to be confused with opencode's `upstream/v2` |
-| Current working base | `kilo-v2-clean-bootstrap` (seeded docs on top of Kilo's `origin/v2`). Discovery, planner and coordinator branch from this until its PR is merged into `origin/v2` |
-| Upstream base commit | `5e73d5cb1f788637b1b3d5cf1298ea694cbad0c5`: the parent of upstream release tag `v2.0.26`, on `upstream/v2` (`feat(core): add Google Cloud credential setup for Vertex (#53798)`) |
-| Upstream release tag | `v2.0.26` = `9b4ec5714d481559990db0a816d5dec19541a814` (reference marker only; not on `upstream/v2`, see note) |
+| Current working base | `origin/v2`. The migration docs landed there on 2026-10-13 (#15038). Every session branches from it |
+| Initial upstream base | `5e73d5cb1f788637b1b3d5cf1298ea694cbad0c5`: the parent of upstream release tag `v2.0.26` (`feat(core): add Google Cloud credential setup for Vertex (#53798)`). `origin/v2` started here. It is on `upstream/v2` and on `upstream/dev` |
+| Current upstream base | Moves with every sync (D1): the upstream parent of the newest `chore(upstream): sync v2.x.y (<sha>)` merge on `origin/v2`, as computed by `pinned()` in `script/upstream/utils/upstream.ts`. On 2026-10-16: `v2.0.30` = `775d1d0d713` (#15136) |
+| Upstream release tag | `v2.0.26` = `9b4ec5714d481559990db0a816d5dec19541a814` (reference marker only; not on upstream's v2 line, see note) |
 | Archived old port | tag `kilo-v2-checkpoints-2026-09` = `879b89e89034f0e9f4cfb7fd09a5323ef06f83c9` (former `kilo-v2` tip). Donor code only |
 | V1 target (behavioral reference) | `origin/main` pinned at `fb7e96eda5409517a05948b9efaf01c53997bf6e` (2026-10-09) |
 | V1 assessment snapshot | `f7115470` (2026-08-12): where the existing 816-file source assessment stops. The assessment itself reviewed `d99662338e` (2026-08-10, 800 commits earlier); the first v1 delta sweep starts from `d99662338e` so the gap gets file-level dispositions. No unit verdict depends on the difference (discovery register, gap table) |
 
-Note on the base: upstream cuts each release as a separate version-bump commit (`release: vX`) on top of the `v2` tip, tags it, and does not merge it back into `v2`. The tag is therefore one commit off the branch. The base is the tag's parent: release-equivalent code, on `upstream/v2`, and free of the version-bump commit, so later merges of `upstream/v2` stay clean.
+Note on the base: upstream cuts each release as a separate version-bump commit (`release: vX`) on top of the tip of its v2 line, tags it, and does not merge it back. The tag is therefore one commit off the branch. The base is the tag's parent: release-equivalent code, on the branch, and free of the version-bump commit, so later merges of `upstream/dev` stay clean. Each sync targets a release commit the same way (D1).
 
 Eventual end state: Kilo's `origin/v2` becomes `main`; today's `main` becomes `v1`, maintained for critical fixes only, for a limited period.
 
 ## Repositories
 
 - Kilo repo: `Kilo-Org/kilocode` (remote `origin`). `main` is Kilo v1.
-- Upstream: `anomalyco/opencode` (remote `upstream`, fetch only), branch `v2`, always written `upstream/v2`. Published on npm as `@opencode/cli`. Upstream renamed its workspace scope from `@opencode-ai/*` to `@opencode/*` on 2026-09-07 (`a5312e16`); a few packages kept the old scope.
+- Upstream: `anomalyco/opencode` (remote `upstream`, fetch only). Its v2 line is branch `dev`, written `upstream/dev`, since upstream promoted v2 to `dev` on 2026-10-10 (`5caf1f9`). Before that the line was branch `v2`, written `upstream/v2`. Published on npm as `@opencode/cli`. Upstream renamed its workspace scope from `@opencode-ai/*` to `@opencode/*` on 2026-09-07 (`a5312e16`); a few packages kept the old scope.
 - The old port branch `kilo-v2` still exists but is frozen. Read it through the archive tag.
-- **Name collision:** since 2026-10-12 the Kilo integration branch is `v2` on `origin` (Kilo-Org/kilocode), the same name as upstream's `v2` (anomalyco/opencode). Always qualify the remote: write `origin/v2` for the Kilo integration branch and `upstream/v2` for upstream, in docs, commands and merge targets.
+- **Name collision:** since 2026-10-12 the Kilo integration branch is `v2` on `origin` (Kilo-Org/kilocode), the same name as upstream's `v2` (anomalyco/opencode). Always qualify the remote: write `origin/v2` for the Kilo integration branch and `upstream/v2` for upstream's branch, in docs, commands and merge targets. `upstream/v2` is frozen since 2026-10-10 (tip `4617210822b`) and must not be merged; the sync source is `upstream/dev`.
 
 ## Decisions (authoritative)
 
 Do not re-litigate these without new evidence. Proposed changes go to the user.
 
-1. **New base.** A clean branch from upstream v2 (see pinned refs). Never merge the old port branch into it. Upstream changes arrive by merging the `upstream/v2` branch, pinned by SHA each time; release tags are markers, not merge targets.
+1. **New base, kept current.** A clean branch from upstream v2 (see pinned refs). Never merge the old port branch into it. The upstream base is not fixed: Kilo merges every upstream release into `origin/v2`, so the migration keeps up with upstream while Kilo re-lands v1 behavior, instead of drifting and paying for one large merge later. Each sync merges a release commit of `upstream/dev` (upstream's v2 line since 2026-10-10; the release commit is the parent of a `v2.x.y` tag), pinned by SHA, in its own PR, with a merge commit, at least weekly. Several pending releases may go into one sync when the PR says why. A commit past a release is merged only when Kilo needs an unreleased fix. Release tags are markers, not merge targets. `upstream/v2` is frozen and never merged.
 2. **Freeze.** The old port branch is archived donor code. Current v1 `main` (pinned above) is the behavioral reference.
 3. **Donor rules.** The donor provides mechanism: how a Kilo feature is expressed on v2 (seams, RPC definitions, plugin shape, host-adapter pattern). Behavior and policy come from current v1.
 4. **Staleness gate.** For each feature, diff the v1 files it touches between the assessment snapshot and the v1 target. Empty delta: the donor is likely faithful. Non-empty: re-derive behavior from v1 and keep only the donor's v2 mapping.
 5. **Staged cutover.** G1 CLI/TUI → G2 VS Code → G3 JetBrains, each with its own go/no-go. G2 and G3 are independent client-surface tracks that run in parallel with G1 once their prerequisites land. Until their gate, the IDEs stay on v1: VS Code bundles the CLI from the same `main` build (no version pin); JetBrains pins a CLI version.
 6. **Storage.** A separate customer v2 data store. v1 files are never touched while any v1 surface ships. Import is opt-in and re-runnable. Path consolidation only after G3.
-7. **Scope.** Post-cutover (non-gating): voice, image generation, team and incremental sharing, legacy TUI extras, and features behind experimental flags on v1 that are off by default, unless explicitly made a gate. Features named experimental but on by default on v1 (for example background subagents and the shared agent board) are in scope like any shipped feature. KiloClaw is not needed. Hard gates: FIM/next-edit for G2; whether it gates G3 is pending Q-G3-01. Cloud agents and Anaconda Desktop gate whichever surface they consume.
+7. **Scope.** Post-cutover (non-gating): voice, image generation, team and incremental sharing, legacy TUI extras, and features behind experimental flags on v1 that are off by default, unless explicitly made a gate. Features named experimental but on by default on v1 (for example background subagents and the shared agent board) are in scope like any shipped feature. KiloClaw is not needed. Hard gates: FIM/next-edit for G2; whether it gates G3 is pending Q-G3-01. Cloud agents and Anaconda Desktop gate whichever surface they consume. Not shipped, as on v1: upstream's desktop app, web app and hosted platform packages, removed from `origin/v2` on 2026-10-16 (#15151). The sync skips upstream changes under them (`skipFiles` in `script/upstream/utils/config.ts`), and the shared-patch counter does not count them. The CLI embeds no web UI; non-API server paths return 404.
 8. **Gates override P-labels** for surface readiness. P-labels order work globally; gates define what a surface needs to ship.
 9. **Plan format.** One file with two parts: Part A high level (epics, gates, critical path, risks), Part B low level (per-epic units, dependencies, acceptance), plus appendices (facts, glossary, links).
 10. **Readability.** Separate why, what, when and how-to-verify. Progressive disclosure. No sub-numbered steps. Issue IDs only in Part B and the register. One canonical place per fact.
@@ -100,11 +101,10 @@ These need a repo admin (or account credentials) and do not block work. Track th
 |---|---|
 | Kilo integration branch `origin/v2` created from the upstream base | Done |
 | Old port archived as a tag | Done |
-| Migration docs seeded on `kilo-v2-clean-bootstrap` | Done |
-| `kilo-v2-clean-bootstrap` pushed to origin | Done |
+| Migration docs landed on `origin/v2` | Done 2026-10-13: #15038 |
 | This file | Done |
 | Branch protection | Deferred (admin task) |
-| Baseline health recorded (`bun install`, `bun run check`) | Done 2026-10-11: `technical-notes/baseline/pinned-v2-baseline.md` |
+| Baseline health recorded (`bun install`, `bun run check`) | Done 2026-10-11: `technical-notes/baseline/pinned-v2-baseline.md`; refreshed 2026-10-16 at `v2.0.30` |
 | Discovery report | Done 2026-10-12: `migration-tracking/discovery/` |
 | Migration plan | Done 2026-10-12: `migration-tracking/plans/kilo-v2-migration-plan.md` |
 

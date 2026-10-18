@@ -10,16 +10,16 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 ## Sources of truth
 
 - Behavior: v1 Kilo on `main`. Mechanism only: the old port, tag `kilo-v2-checkpoints-2026-09` (former `kilo-v2`). Never merge or copy it as a whole.
-- The migration docs are still on `origin/kilo-v2-clean-bootstrap`. Until they land on `v2`, read them with `git show origin/kilo-v2-clean-bootstrap:<path>`:
+- The migration docs are on `v2`:
   - Context and decisions: `migration-tracking/plans/migration-context.md`. Plan: `migration-tracking/plans/kilo-v2-migration-plan.md`.
-  - Known upstream test failures: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`.
+  - Known upstream test failures: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md` (re-measured after each sync; it names the release it describes).
   - Fork conventions: `migration-tracking/technical-notes/v2-fork-conventions.md`.
-- Changes not yet in the plan (merge source, plugin first, host package): `migration-tracking/plans/v2-plan-delta-2026-10-13.md` on `v2`. Where it differs from the bootstrap docs, it wins.
 - Epic #13750. Gateway, login and enterprise support: #14991. Upstream sync and merge tooling: #15020.
 
 ## Strategy
 
 - Order: CLI/TUI first (G1), then VS Code (G2), then JetBrains (G3). Cloud consumers follow a versioned release.
+- The upstream base moves: every upstream release is merged into `v2` (see Branches and PRs), so the migration keeps up with upstream. Build and check against the current `v2`, not the initial base.
 - Kilo code lives in Kilo-owned paths (`packages/kilo-*`, `src/kilocode/`). Plugin first: use the first option that works, and name it in the PR.
   1. A Kilo plugin on the public plugin API (`@opencode/plugin`).
   2. The Kilo host (unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry. The host does not exist yet. Until it lands, register a Kilo plugin in the upstream builtin list with one marked line.
@@ -32,7 +32,7 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 
 ## Branches and PRs
 
-- Integration branch: `origin/v2`. Branch from it and target it. Never target `main` or `kilo-v2-clean-bootstrap`.
+- Integration branch: `origin/v2`. Branch from it and target it. Never target `main`.
 - Upstream: `upstream/dev` is upstream's v2 line since 2026-10-10. `upstream/v2` is frozen; never merge it. Never merge upstream in a feature PR. An upstream sync is its own PR (#15020). It targets the next release that `v2` does not have yet (the release commit, which is the parent of the `v2.x.y` tag), and merges with a merge commit, never a squash. After a sync, open PRs merge `v2` into their branch and check and self-test again.
 - Stack on an open v2 PR when you depend on it, and target that PR's branch.
 - One plan unit per PR. Never push directly to `v2`. A human merges.
@@ -155,7 +155,7 @@ Grow the test surface with each PR.
 
 - Run `bun typecheck` and focused `bun test` from each changed package directory (never from the repo root), with the test isolation above.
 - New Kilo code comes with tests for its behavior. Prefer real integration with the Kilo Gateway over mocks. Use small unit tests only for paths a live server cannot trigger (outage, malformed data).
-- Upstream failures listed in `pinned-v2-baseline.md` are known. Do not fix unrelated ones. A new failure in a package you touched blocks the PR.
+- Known upstream failures are listed in `pinned-v2-baseline.md` for the release it names. When `v2` has moved past that release, compare against `origin/v2` before your change. Do not fix unrelated ones. A new failure in a package you touched blocks the PR.
 - Never delete or skip a test silently. List every skip in the PR with its reason.
 - Self-test each user-visible behavior you add, and record the scenario so the next PR can repeat it.
 
