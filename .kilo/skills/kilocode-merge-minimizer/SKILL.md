@@ -15,7 +15,7 @@ Do not use this as the primary guide for upstream sync resolution. Syncs have th
 
 The main goal on v2 is to move Kilo code out of shared upstream files, into a Kilo plugin or the Kilo host. Removing or narrowing markers is not enough: a marked patch still conflicts when upstream changes the same lines. The v2 line syncs every upstream release, and seam patches age fast (in the archived port, 16 of 21 seam patches conflicted after five weeks).
 
-Use the first option that works (`.kilo/skills/v2-migration/SKILL.md`, `migration-tracking/plans/v2-plan-delta-2026-10-13.md` section 3):
+Use the first option that works (`.kilo/skills/v2-migration/SKILL.md`, `migration-tracking/technical-notes/v2-fork-conventions.md`, "Plugin-first extension order"):
 
 1. **Kilo plugin** on the public plugin API (`@opencode/plugin`: agent, provider, model, session, event, tool, permission, command, skill, mcp, rpc, storage and more). No shared-file change.
 2. **Kilo host** (unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry. The host does not exist yet. Until it lands, register a Kilo plugin in the upstream builtin list with one marked line.

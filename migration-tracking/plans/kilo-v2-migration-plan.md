@@ -66,7 +66,7 @@ Items that need user sign-off are listed in A10. None of them changes a decision
 - "The base" and BASE in this plan mean the current upstream base of `origin/v2` (`migration-context.md`, pinned refs), not the initial commit. Seam claims, donor reuse and acceptance are checked against it.
 - Each sync is its own PR with a merge commit. It resolves conflicts and new failures in Kilo packages before it merges.
 - After a sync, open PRs merge `origin/v2` into their branch and re-run their checks and self-tests.
-- Known upstream failures are compared against `origin/v2` before the change. `pinned-v2-baseline.md` describes the initial base until it is re-measured.
+- Known upstream failures are in `pinned-v2-baseline.md`, which each sync re-measures and which names the release it describes. When `origin/v2` has moved past it, compare against `origin/v2` before the change.
 
 **Re-land by unit.** Every Kilo v1 behavior and every upstream-only surface has exactly one unit (Part B). A unit is done only with code, tests, acceptance evidence recorded with a SHA, its Part B status updated, and docs. A local pass is never recorded as end to end.
 
@@ -298,7 +298,7 @@ G2 and G3 do not wait for the G1 go/no-go (D5). They do need the shared-runtime 
 | Split history: v2 CLI and v1 IDEs keep separate stores from G1 to G3 | User confusion; support load | Opt-in, re-runnable import; documented split; consolidation only after G3 | E3, L5 |
 | A v1 IDE resolves the v2 binary | v1 users silently on v2 | Binary and channel decision; isolation test in E3 | E3 |
 | First-release risk | G1 becomes the first real v2 release | Preview train before G1 | E3 |
-| Shared-patch growth on upstream files | Expensive upstream merges | L3 ratchet; every patch states its missing seam | L3 |
+| Shared-patch growth on upstream files | Expensive upstream merges | Plugin first: use the first rung that works (rung table in `v2-fork-conventions.md`); L3 ratchet; every rung 3 or 4 patch states its missing seam. Expected rung 3–4 areas are listed there | L3 |
 | External services and repositories (Gateway, relay, share backend, viewer, cloud agents) | Gate acceptance blocked outside the team | Book owners at unit start; waivers only by the user, recorded | E4, E5, E10 |
 | Import not proven lossless | Data loss on first import | Re-run the schema audit at the current v1 target and base; byte-identical originals test | E3 |
 
@@ -355,7 +355,7 @@ Deferred decisions and their deadlines are canonical in [`migration-context.md` 
 | FIM as a G3 gate (Q-G3-01) and plugin RPC access (Q-G3-02) | JetBrains contract inventory | E7 |
 | Cloud-agent gate attachment (Q-EXT-01) | Cloud-agent unit | G1 scope |
 | Anaconda Desktop integration mode and gate (Q-EXT-02) | Anaconda unit | Gate scope |
-| Desktop, web app and pairing disposition (Q-PROD-01) | Upstream-surface disposition unit | E9 |
+| Pairing disposition (Q-PROD-01). Desktop and web app are decided: not shipped, removed 2026-10-16 (`migration-context.md`, Decision 7) | Upstream-surface disposition unit | E9 |
 | Other G2 and G3 questions (Q-G2-03…08, Q-G3-03…05) | Their trigger units in the register | Their units |
 
 Added by this plan (canonical here):
@@ -364,6 +364,11 @@ Added by this plan (canonical here):
 |---|---|---|---|
 | Q-HOST-01 | Host package shape on the base: a Kilo entry package that composes upstream packages through public seams (donor shape), or a thin wrapper over `@opencode/cli`. The donor chose its own package because upstream `packages/cli` exported no wrap surface; re-check at the base | U-E0-01 | Core owner |
 | Q-TEL-01 | Telemetry consent on v2: v1 ships PostHog on by default; the donor chose an opt-in, allowlisted OTLP exporter as a privacy decision (`technical-notes/baseline/telemetry-v2-overlap.md`). Which default ships at G1? | U-E2-21 | Product owner, privacy |
+| D-1 | Package names on `origin/v2`. Proposal: keep upstream's internal `@opencode/*` names; rename only published packages, the binary and user-visible strings (v1 renamed on every merge, a large share of its conflicts). The sync tooling keeps the package-name transform off until this is decided | Before the first rename transform is turned on (U-E1-01, rebranding) | Core owner, release owner |
+| D-3 | Owners of U-L1-01, U-L3-01 and U-E0-01 | Now | User |
+| D-4 | Identity and branding split. Proposal: the first identity PR is store isolation and the `kilo2` app directory; binary, user agent, theme and logo go with the rebranding work (Fabio) | U-E1-01 | User, rebranding owner |
+
+D-1, D-3 and D-4 keep the IDs from the 2026-10-13 plan delta, which the sync tooling cites. Its D-2 (sync cadence) is decided: D1.
 
 Sign-offs this plan asks for: the unit splits listed in Part B §B15 (no epic added or removed), the provisional G1 attachment of cloud agents and other CLI consumers, and Q-TEL-01.
 
@@ -390,13 +395,13 @@ Each epic section has workstream tables, one row per unit, and one dependency di
 
 **Tracking rules.** The GitHub issue is the public entry point for a unit; this file holds the versioned plan. The coordinator updates a unit's Status cell by micro-PR (`coord-status-<unit>`) with the PR link and acceptance evidence. Completing a unit changes only its own row; it never implies an adjacent row is done. Units copied from the donor apply the `@opencode/*` scope at copy time. Every unit follows the Definition of done in `migration-context.md`.
 
-**Mechanism.** Each unit picks its mechanism plugin-first: rung 1 plugin, then rung 2 host composition, then rung 3 seam patch, then rung 4 feature patch, then rung 5 branding script. Rungs 3 and 4 must state the missing seam. Prefer rungs 1–2 even when the donor has a working non-plugin solution. The rung table and the rule are in `../technical-notes/v2-fork-conventions.md` and `.kilo/skills/v2-migration/SKILL.md`.
+**Mechanism.** Each unit picks its mechanism plugin-first: rung 1 plugin, then rung 2 host composition, then rung 3 seam patch, then rung 4 feature patch, then rung 5 branding script. Rungs 3 and 4 must state the missing seam. Prefer rungs 1–2 even when the donor has a working non-plugin solution. The rung table and the rule are in `../technical-notes/v2-fork-conventions.md` and `.kilo/skills/v2-migration/SKILL.md`. Until the host (U-E0-01) lands, a Kilo plugin registers in the upstream builtin list (`packages/core/src/plugin/internal.ts` or `provider.ts`) with one marked line; it moves to host registration when U-E0-01 lands. In-flight PRs do not wait for the host.
 
 ## B1. E0 Foundation
 
 | Unit | Title | Issue | Gate | Deps | Delta | Stale | Donor | Mechanism | Acceptance | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| U-E0-01 | Kilo host and composition package (server overrides, Location service replacements, builtin plugin list) | #15172 | pre-gate | Q-HOST-01 | needs-port | n/a | yes H | 2 host | **Next foundation unit.** `bun dev` starts the Kilo host entry, and the host entry runs the upstream CLI and server; Kilo plugins register through `SdkPlugins.register`, not `internal.ts` or `provider.ts`; donor `packages/kilo-cli/src/host.ts` is the mechanism reference (delta §4). Host builds and starts an isolated server through public seams only; `service-smoke` passes with isolated HOME/XDG; Q-HOST-01 answer recorded | todo |
+| U-E0-01 | Kilo host and composition package (server overrides, Location service replacements, builtin plugin list) | #15172 | pre-gate | Q-HOST-01 | needs-port | n/a | yes H | 2 host | **Next foundation unit.** `bun dev` starts the Kilo host entry, and the host entry runs the upstream CLI and server; Kilo plugins register through `SdkPlugins.register`, not `internal.ts` or `provider.ts`; donor `packages/kilo-cli/src/host.ts` is the mechanism reference (plan delta §4, #15021). Host builds and starts an isolated server through public seams only; `service-smoke` passes with isolated HOME/XDG; Q-HOST-01 answer recorded | todo |
 | U-E0-02 | Kilo RPC and plugin scaffolding (`packages/schema/src/kilocode`, plugin `define`, generated client) | #15173 | pre-gate | U-E0-01 | native mechanism | n/a | yes H | 1 plugin | One sample Kilo RPC registered as a plugin round-trips through the generated client; `bun run generate` leaves no drift | todo |
 | U-E0-03 | Re-land Kilo `AGENTS.md`; rewrite `v2-fork-conventions.md` and `script/v2-baseline.ts` (README, banners and drops done by this plan, Appendix D) | #15175 | pre-gate | — | needs-port | n/a | no | n/a | `AGENTS.md` names the integration branch `origin/v2`, BASE and branch rules; conventions carry the base pin, no-prefix branches, `services/www`; `v2-baseline.ts` runs at BASE (pin-is-ancestor assertion, mirrors `check.yml`/`test.yml`); fork conventions carry the plugin-first rung table (landed with this change) | todo |
 | U-E0-04 | Kilo CI lane on Kilo's `origin/v2`; neutralize upstream publish/deploy workflows, `sdks/vscode` publishing, hosted web properties, CI images | #15176 | pre-gate | admin: Actions permissions | needs-port | n/a | no | n/a | Kilo workflow runs `bun run check` and package tests on PRs to `origin/v2`, compared with `pinned-v2-baseline.md`; each upstream publish/deploy workflow disabled or repository-guarded, verified by reading triggers | todo |
@@ -596,7 +601,7 @@ U-E9-05, -09, -10, -11 and -12 touch the same TUI files: run them in series.
 | U-E9-12 | Multiline alerts and default sound; display preferences; privacy mode and PII redaction | #14378 (part) | G1 | U-E9-05 | partial | M | partial L | Alerts and sound as v1; tool/reasoning collapse; privacy redaction | todo |
 | U-E9-13 | `kilo cloud` Cloud Agent CLI | new | G1 | U-E1-03 | needs-port | SMALL | yes H-M | `start/send/status/result` and stdin prompts against the deployed service (SHA recorded) | todo |
 | U-E9-14 | Embedded web UI decision: `kilo-web-ui` vs upstream `packages/app` | new | G1 | U-E9-15 | decision | M | no | Decision recorded and implemented | todo |
-| U-E9-15 | Disposition of upstream-only surfaces: desktop, web app, GUI extensions | new | G1 | Q-PROD-01 | decision | n/a | no | User decision per surface recorded and implemented (ship, hide or defer) | todo |
+| U-E9-15 | Disposition of upstream-only surfaces: desktop, web app, GUI extensions | new | G1 | Q-PROD-01 | decision | n/a | no | User decision per surface recorded and implemented (ship, hide or defer). Desktop, web app and GUI extensions: not shipped, removed (#15151); the TUI `/pair` command still links to the removed web UI and must be hidden | active: removal #15151; `/pair` open |
 
 ```mermaid
 flowchart LR
@@ -626,7 +631,7 @@ The chain 09 → 12 is the serialization rule for shared TUI files, not a functi
 | U-E3-04 | External transcript resume (Claude Code, Codex), migrate API, cloud session import and `--cloud-fork` | new | G1 | U-E3-01 | needs-port | M + NEW | partial L | Each import path as v1, incl. ambient discovery and the picker | todo |
 | U-E3-05 | Fork, move and portability diff verification | new | G1 | U-E2-06 | native/partial | M | no | Native-equivalence tests; cumulative diff and restore on move as v1 | todo |
 | U-E3-06 | Updater and installation detection under Kilo identity | #14410 | G1 | U-E1-01 | partial | M | yes M | Update and rollback on real artifacts; install method detected; overlap with BASE `services/update` decided | todo |
-| U-E3-07 | Build and release pipeline: platforms, npm/GHCR/AUR/Homebrew/nix/install script, SBOM, PTY smoke, payload format, clean install | #14409, #14412 | G1 | U-E0-04 | partial | M | partial M | Artifacts for every v1 platform; each channel dry-runs; SBOM; PTY smoke; clean install beside v1 | todo |
+| U-E3-07 | Build and release pipeline: platforms, npm/GHCR/AUR/Homebrew/nix/install script, SBOM, PTY smoke, payload format, clean install | #14409, #14412 | G1 | U-E0-04 | partial | M | partial M | Artifacts for every v1 platform; each channel dry-runs; SBOM; PTY smoke; clean install beside v1; removal of the kept upstream release paths (`services/`, `nix/`, `install`, `github/`) decided (U-E3-06 for `services/update`) | todo |
 | U-E3-13 | Signing and notarization (start early) | #14411 | G1 | U-E0-04, admin: signing credentials | partial | M | no | Signed and notarized macOS and Windows artifacts verify on clean hosts | todo |
 | U-E3-08 | CI and repository guards (forbidden strings, generated artifacts, markers, md tables, CodeQL, sharding, bots) | #14408 | G1 | U-E0-04 | partial | M | no | Each v1 guard ported or recorded not-needed; guards run on PRs to `origin/v2` | todo |
 | U-E3-09 | Publish `@kilocode/sdk` and `@kilocode/plugin` from BASE packages | new | G1 | U-E3-07 | partial | SMALL | no | Publish dry run passes `verify:package`; names and versions decided | todo |
@@ -848,7 +853,7 @@ flowchart LR
 |---|---|---|---|---|---|---|---|---|---|
 | U-L1-01 | Upstream sync: merge every `upstream/dev` release commit pinned by SHA; dry-run workflow; merge tooling (one child per merge) | #15020 | continuous | U-E0-04 (dry-run workflow only) | needs-port | M | no | Each sync pinned by SHA and merged with a merge commit; failures diffed against `origin/v2` before the sync; lag in releases and days recorded | active: tooling #15026; syncs `v2.0.27` #15029, `v2.0.30` #15136 |
 | U-L2-01 | v1 delta sweep: advance the cutoff, refresh the experimental-flag list, re-run staleness (one child per sweep) | new | continuous | — | needs-port | n/a | no | First sweep starts at `d99662338`; zero unclassified Kilo-owned or marked files in range; touched units re-opened | todo |
-| U-L3-01 | Shared-patch ratchet and marker disposition sweep | #14381 | continuous | U-E0-01 | needs-port | n/a | no | Script counts the three L3 metrics; CI fails an increase without a stated seam | active: shared-file counter #15026; import metrics not counted yet |
+| U-L3-01 | Shared-patch ratchet and marker disposition sweep | #14381 | continuous | U-E0-01 | needs-port | n/a | no | Script counts shared files (each with its rung and missing seam in `script/upstream/shared-patches.json`), marked lines and unmarked exceptions, plus the other two L3 metrics (client→Core/Server imports, Kilo imports of upstream internals); CI fails an increase without a stated seam | active: shared-file counter #15026; import metrics not counted yet |
 | U-L4-01 | Rewrite test plans with gate tags and v1-derived expectations (G1 scenario set) | new | G1 | — | needs-port | n/a | no | Each scenario tagged G1/G2/G3; expectations quoted from v1; RT and UI IDs kept | todo |
 | U-L4-02 | Acceptance harness: simulation/http-recorder, isolated real-host runner | new | G1 | U-E0-01 | needs-port | n/a | no | Harness runs scenarios on BASE; every fixture isolates HOME/XDG itself | todo |
 | U-L4-03 | G2 scenario set (VS Code) | new | G2 | — | needs-port | n/a | no | Scenarios cover sidebar, tabs, Agent Manager, settings, terminals, reconnect, import, handshake, rollback | todo |
