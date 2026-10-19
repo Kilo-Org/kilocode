@@ -20,6 +20,7 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 
 - Order: CLI/TUI first (G1), then VS Code (G2), then JetBrains (G3). Cloud consumers follow a versioned release.
 - The upstream base moves: every upstream release is merged into `v2` (see Branches and PRs), so the migration keeps up with upstream. Build and check against the current `v2`, not the initial base.
+- Before you place a change, load the skill `v2-feature-placement`. It decides the rung for one change (plugin hook, host, seam or patch), with the commands to find the upstream extension point and the done-proof the progress map needs. Reasoning and guarantees: `migration-tracking/plans/v2-host-strategy.md`.
 - Kilo code lives in Kilo-owned paths (`packages/kilo-*`, `src/kilocode/`). Plugin first: use the first option that works, and name it in the PR.
   1. A Kilo plugin on the public plugin API (`@opencode/plugin`).
   2. The Kilo host (unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry. The host does not exist yet. Until it lands, register a Kilo plugin in the upstream builtin list with one marked line.
@@ -164,7 +165,7 @@ Grow the test surface with each PR.
 `migration-tracking/progress/README.md` is the generated map of Kilo's v1 delta: one cell per Kilo-owned file, `/kilocode/*` API operation and hook in a shared upstream file, grouped by feature. `bun script/upstream/progress.ts` regenerates it; CI fails when it is stale. Module and API cells turn done on their own when the file or path literal lands on v2. Hooks and decisions do not, so for every unit:
 
 - Before you start, run `bun script/upstream/progress.ts --list <feature>`. The open cells are the inventory of the feature; each hook cell names its v1 source line.
-- When you port a hook, put its ID on the marker of the v2 code that replaces it: `// kilocode_change(<feature>:<id>)`. Without the ID the hook stays open.
+- When you port a patch cell (the map still calls the kind `hook`), put its ID on the v2 code that replaces it: `// kilocode_change(<feature>:<id>)` when that code is a marked line in a shared upstream file, `// kilo_port(<feature>:<id>)` when it is in a Kilo-owned file (rung 1 or 2). Until the generator recognises `kilo_port`, also record the cell in `dispositions.json` with `state: "ported"` and the v2 path in `note`. Without an ID the cell stays open.
 - When a hook or module needs no port, add its cell ID to `migration-tracking/progress/dispositions.json` with `state` (`native` when v2 has the behavior built in, `facade` when the v1 compatibility layer serves it, `dropped` when the feature is not carried), a `note` with the reason, and `by`. Do not mark a cell `ported` by disposition when a marker or file can prove it.
 - A loose hook that lands in `unattributed:<area>` belongs to a feature. Tag its v1 marker on `main` as `kilocode_change(<feature>)` in a small follow-up PR; the next re-pin moves it.
 - Regenerate before you commit. CI posts one comment per PR with the delta (percent, changed features, closed and dropped cells) and the treemap of the head commit; the `progress.json` diff carries the same information. Mention the before and after count of the feature in the PR.

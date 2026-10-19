@@ -127,7 +127,9 @@ checkout follow upstream's conventions and never find these rules.
 
 ## Plugin-first extension order
 
-Use the first rung that works. Prefer rungs 1–2 even when the donor has a working non-plugin solution. A PR that uses rung 3 or 4 says why rungs 1 and 2 do not work, and rungs 3 and 4 carry a `kilocode_change` marker. Branding and product strings are handled by the rename script (rung 5), never by hand edits. Source of truth: `.kilo/skills/v2-migration/SKILL.md`; the plan adds the per-unit `Mechanism` column (`../plans/kilo-v2-migration-plan.md` §B0).
+Use the first rung that works. Prefer rungs 1–2 even when the donor has a working non-plugin solution. A PR that uses rung 3 or 4 says why rungs 1 and 2 do not work, and rungs 3 and 4 carry a `kilocode_change` marker. Branding and product strings are handled by the rename script (rung 5), never by hand edits. Source of truth: `.kilo/skills/v2-migration/SKILL.md`; the plan adds the per-unit `Mechanism` column (`../plans/kilo-v2-migration-plan.md` §B0). The procedure for one change is the skill `.kilo/skills/v2-feature-placement/SKILL.md`; the reasoning and the guarantees are in `../plans/v2-host-strategy.md`.
+
+Vocabulary: a **plugin hook** is an extension point upstream exposes through `@opencode/plugin` (rung 1, no marker). A **seam** is a generic knob or dispatch point Kilo adds to an upstream file so a plugin hook becomes possible (rung 3, one to three marked lines that carry no Kilo value). A **patch** is a Kilo-specific line inside an upstream file (rung 4, one line thick, behavior in a Kilo module). Every marked line carries its feature: `kilocode_change(<feature>)`, or `kilocode_change(<feature>:<id>)` when it replaces a progress-map cell; a Kilo-owned file that replaces a v1 patch cell carries `kilo_port(<feature>:<id>)` instead. Logic packages (`packages/kilo-*-core`) import nothing from `@opencode/*`; adapters import core internals only when no public surface has it, and name each one in the PR.
 
 | Rung | What | v2 mechanism, examples | Marker |
 |---|---|---|---|
