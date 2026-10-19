@@ -347,6 +347,84 @@ describe("KiloGatewayPlugin", () => {
     ),
   )
 
+  // #15244: a later start does not wait for the network when the exact scope has a stored catalog.
+  it.live("starts from the stored personal catalog and default, then loads the fresh catalog in the background", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url }, () =>
+          Effect.gen(function* () {
+            const credentials = yield* Credential.Service
+            yield* credentials.create({
+              integrationID,
+              label: "a@example.test",
+              value: oauth({ server: backend.url, organizationID: null, email: "a@example.test" }),
+            })
+            // First start: no stored catalog, so the activation waits for the fetch and stores the result.
+            yield* Effect.scoped(addPlugin())
+
+            // Second start: the Kilo API is slow and its catalog changed.
+            backend.state.delay = 300
+            const catalog = backend.state.models as { data: unknown[] }
+            backend.state.models = { data: catalog.data.slice(0, 2) }
+            const requests = backend.requests.length
+            yield* addPlugin()
+            const models = yield* Model.Service
+            const providers = yield* Provider.Service
+            const kiloModels = Effect.map(models.available(), (list) =>
+              list.filter((item) => item.providerID === kilo).map((item) => item.id),
+            )
+            // The activation returned with the stored catalog and default, before the fetch answered.
+            expect(yield* kiloModels).toEqual([
+              Model.ID.make("kilo-auto/free"),
+              Model.ID.make("kilo-auto/frontier"),
+              Model.ID.make("kilo-auto/small"),
+            ])
+            expect(yield* models.default()).toMatchObject({ providerID: kilo, id: Model.ID.make("kilo-auto/frontier") })
+            expect((yield* providers.get(kilo))?.settings?.baseURL).toBe(`${backend.url}/api/gateway/v1`)
+
+            // The fresh catalog arrives in the background and replaces it.
+            expect(yield* eventually(kiloModels, (list) => list.length === 2)).toEqual([
+              Model.ID.make("kilo-auto/free"),
+              Model.ID.make("kilo-auto/frontier"),
+            ])
+            const fetched = backend.requests.slice(requests).filter((request) => request.path.endsWith("/models"))
+            expect(fetched).toHaveLength(1)
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
+  it.live("waits for the team catalog and never starts a team from a stored personal catalog", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url }, () =>
+          Effect.gen(function* () {
+            const credentials = yield* Credential.Service
+            const personal = yield* credentials.create({
+              integrationID,
+              label: "a@example.test",
+              value: oauth({ server: backend.url, organizationID: null, email: "a@example.test" }),
+            })
+            // The personal start stores a catalog for this token.
+            const host = yield* Effect.scoped(addPlugin())
+            yield* host.storage.set(`organization:${personal.id}`, { organizationID: "selected" })
+
+            // The team start with the same token waits for the team catalog.
+            backend.state.delay = 100
+            yield* addPlugin()
+            const models = yield* Model.Service
+            expect(
+              (yield* models.available()).filter((item) => item.providerID === kilo).map((item) => item.id),
+            ).toEqual([Model.ID.make("anthropic/claude-sonnet-4.6"), Model.ID.make("kilo-auto/small")])
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
   it.live("gives KILO_API_KEY and KILO_ORG_ID precedence over a stored credential like v1", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => fixture()),
