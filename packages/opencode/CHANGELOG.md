@@ -1,5 +1,31 @@
 # @kilocode/cli
 
+## 7.8.13
+
+### Minor Changes
+
+- [#15159](https://github.com/Kilo-Org/kilocode/pull/15159) [`7420e70`](https://github.com/Kilo-Org/kilocode/commit/7420e70bdcd2fe1d9d37fb8eacc7294f2ec096bd) - Share the agents a remote-controlled CLI can run, including project agents from `.kilo/agents`, so the Kilo mobile app can offer them when it starts or continues a session on that computer.
+
+### Patch Changes
+
+- [#15114](https://github.com/Kilo-Org/kilocode/pull/15114) [`f1927fb`](https://github.com/Kilo-Org/kilocode/commit/f1927fb3e5a17256276d64dfafe66c3959a3575f) - Use the Kilo brand yellow (#FFDD00) for the CLI logo and theme accent.
+
+- [#14866](https://github.com/Kilo-Org/kilocode/pull/14866) [`0c8849c`](https://github.com/Kilo-Org/kilocode/commit/0c8849c18dedd43b80ed4eccd079c358ae63de37) - Allow custom agents to delegate file edits to subagents without stripping the subagent's configured write permissions. A custom delegator's own `edit` rules, including path-scoped denies such as `edit: { "secrets/**": "deny" }`, now apply only to that agent and no longer constrain the subagents it starts, so use a session-level edit restriction to confine delegated writes. Built-in read-only modes (plan, ask, orchestrator) still block edits in their subagents, and child agents keep their own denials and approval requirements.
+
+- [#13722](https://github.com/Kilo-Org/kilocode/pull/13722) [`952d2d1`](https://github.com/Kilo-Org/kilocode/commit/952d2d1b7b6c752ea93fde406cd5fc3ad2158bb8) Thanks [@maphew](https://github.com/maphew)! - Restore Home and End cursor movement while typing in dialog filter inputs (e.g. the provider connect, session list, and model picker dialogs) instead of jumping the list, and keep the list-jump behavior when the filter is empty.
+
+- [#15131](https://github.com/Kilo-Org/kilocode/pull/15131) [`f9b632f`](https://github.com/Kilo-Org/kilocode/commit/f9b632fd6de9b5941603c1cf0adaacf7ad02b1cd) - Refresh an expired MCP OAuth token automatically. Servers that reject an expired access token with `403` (rather than `401`) no longer leave the connection stuck on "authentication required", so a new worktree or project session reconnects without asking you to sign in again.
+
+- [#13260](https://github.com/Kilo-Org/kilocode/pull/13260) [`8d5c126`](https://github.com/Kilo-Org/kilocode/commit/8d5c126dc5ed9626fcb861a3a51f3566b73addb6) Thanks [@waewoo](https://github.com/waewoo)! - Allow OpenAI-compatible providers that require string content for tool calls to opt in without changing the default request format.
+
+- [#15104](https://github.com/Kilo-Org/kilocode/pull/15104) [`0f4936d`](https://github.com/Kilo-Org/kilocode/commit/0f4936df112d1f4b6d1b319c8c9eb2fc55ed957c) - Keep Gemini thought signatures and other OpenRouter reasoning details that arrive late in a response, so later requests in the conversation replay them
+
+- [#14942](https://github.com/Kilo-Org/kilocode/pull/14942) [`b7672ae`](https://github.com/Kilo-Org/kilocode/commit/b7672ae502af111048191119d61cea62157291f5) - Show why a provider failed to load — such as rejected credentials or a network error — instead of silently hiding it from the provider list. The CLI, TUI, and VS Code model picker now surface the reason and offer to sign in again when credentials were rejected.
+
+- [#15124](https://github.com/Kilo-Org/kilocode/pull/15124) [`a85b9a8`](https://github.com/Kilo-Org/kilocode/commit/a85b9a8ba4b16f328ad624f20c7b6f6bb4ff95b8) - Preserve session status timing for accurate overnight activity and blocker reporting.
+
+- [#15180](https://github.com/Kilo-Org/kilocode/pull/15180) [`ec376c5`](https://github.com/Kilo-Org/kilocode/commit/ec376c55b35fd6d8cfb261909c5738c0b9a596e0) - Keep stray console output from dependencies out of the TUI. Warnings written straight to the terminal by libraries running in the session worker — for example the MCP SDK's notice about OAuth tokens saved without an `issuer` — used to land on top of the rendered screen and stay there until a redraw, leaving the splash screen or chat view shredded. Those writes now go to the log file instead.
+
 ## 7.8.12
 
 ### Minor Changes
