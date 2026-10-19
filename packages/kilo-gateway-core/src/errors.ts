@@ -67,7 +67,8 @@ export function parse(rawBody: string | unknown, status?: number): ParsedError |
 }
 
 // Rewrites a non-2xx HTTP `Response` from the Kilo Gateway so that the upstream error classifier
-// receives the formatted Kilo message and code while preserving status and headers.
+// receives the formatted Kilo message and code while preserving status and headers. A non-retryable
+// error also gets `x-should-retry: false`.
 export async function rewriteHttpResponse(response: Response): Promise<Response> {
   if (response.status < 400) return response
   const text = await response.clone().text().catch(() => "")
@@ -79,6 +80,9 @@ export async function rewriteHttpResponse(response: Response): Promise<Response>
   headers.set("content-type", "application/json")
   headers.delete("content-length")
   headers.delete("content-encoding")
+  // kilo_port(gateway:1995b11b5cdd) As in v1 retry.ts, Kilo errors that need user action are not retried, also on a
+  // 429 such as PROMOTION_MODEL_LIMIT_REACHED. The upstream retry policy reads this header.
+  if (!parsed.retryable) headers.set("x-should-retry", "false")
   const body = JSON.stringify({
     error: {
       code: parsed.code,

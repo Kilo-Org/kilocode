@@ -1,3 +1,4 @@
+// kilo_port(gateway:e8673ed1650b) v1 kilo.ts imported the Gateway SDK and base URL; v2 imports the Gateway logic.
 import {
   KiloAccount,
   KiloAutocomplete,
@@ -339,6 +340,8 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
 
     yield* lock.withPermit(loadCatalog(++epoch, 0))
 
+    // kilo_port(gateway:73ba28ce78a5) Gateway base URL, Kilo referer and title, team header, and the token or the
+    // anonymous key, which v1 kilo.ts set on the provider.
     yield* ctx.provider.transform((editor) => {
       if (!editor.get(id)) return
       const account = catalog.account
@@ -433,6 +436,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
 
     // Per-request attribution headers (`X-KILOCODE-TASKID`, `X-KILOCODE-PARENT-TASKID`, `X-KILOCODE-PROJECTID`,
     // `X-KILOCODE-MACHINEID`, `x-kilocode-mode`, `User-Agent`, plus provider headers).
+    // kilo_port(gateway:50352226b43c) v1 resolved the project ID, machine ID, and parent session in request.ts.
     yield* ctx.session.hook(
       "model.request",
       (event) =>
@@ -634,6 +638,11 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
             organizationID: catalog.account?.organizationID,
             version: ctx.app.version,
           }).pipe(Effect.mapError(() => context.error("failed", "Unable to retrieve Kilo transcription models"))),
+        "models.embeddings": (_input, context) =>
+          KiloModels.embeddingModels({
+            server: catalog.account?.server ?? server,
+            version: ctx.app.version,
+          }).pipe(Effect.mapError(() => context.error("failed", "Unable to retrieve Kilo embedding models"))),
         "autocomplete.fimTarget": (input) =>
           Effect.sync(() =>
             KiloAutocomplete.resolveFimTarget(input.provider, input.model, catalog.account?.server ?? server),
@@ -679,10 +688,12 @@ function snapshotKey(server: string, token?: string): string {
   return `catalog:personal:${hash}`
 }
 
+// kilo_port(gateway:742c02b40457) v1 kilo.ts created one Kilo SDK for all models; v2 picks the dialect per model.
 function packageFor(aiSDKProvider?: KiloModels.AISDKProvider): string {
   if (aiSDKProvider === "anthropic") return "@opencode/ai/providers/anthropic"
   if (aiSDKProvider === "openai") return "@opencode/ai/providers/openai"
   if (aiSDKProvider === "openai-compatible") return "@opencode/ai/providers/openai-compatible"
+  // kilo_port(gateway:0278ba0eb6aa) v1 sent Gateway provider options under the `openrouter` key.
   return "@opencode/ai/providers/openrouter"
 }
 
@@ -692,6 +703,7 @@ function toModelInfo(
   headers: Record<string, string>,
 ): Model.Info {
   const modelID = Model.ID.make(source.id)
+  // kilo_port(gateway:f983d8f993c8) v1 copied OpenRouter-shaped options to every SDK; v2 uses one dialect per model.
   const pkg = packageFor(source.aiSDKProvider)
   const settings = {
     baseURL,
@@ -734,6 +746,8 @@ function toModelInfo(
   }
   return {
     ...base,
+    // kilo_port(gateway:59f57027c538) v1 used the server `opencode.variants`; the Gateway sends the same set as
+    // `reasoning_options`.
     variants: source.reasoning ? Variant.resolve(base, source.reasoningOptions) : [],
   }
 }

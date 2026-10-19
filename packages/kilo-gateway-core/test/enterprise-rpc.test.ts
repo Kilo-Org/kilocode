@@ -61,6 +61,52 @@ describe("Enterprise account, tRPC, modes, notifications, media, and FIM/edit", 
     })
   })
 
+  test("keeps only live Kilo Pass states and returns null when the state is unavailable", async () => {
+    const pass = (subscription: Record<string, unknown>) => KiloTrpc.parseKiloPassState({ subscription })
+    expect(pass({ status: "expired", currentPeriodBaseCreditsUsd: 50, currentPeriodUsageUsd: 1 })).toBeNull()
+    expect(pass({ status: "active" })).toBeNull()
+    expect(pass({ status: "past_due", currentPeriodBaseCreditsUsd: 50, currentPeriodUsageUsd: 10 })).toEqual({
+      currentPeriodBaseCreditsUsd: 50,
+      currentPeriodUsageUsd: 10,
+      currentPeriodBonusCreditsUsd: 0,
+      nextBillingAt: null,
+    })
+    using backend = fixture()
+    backend.state.kiloPassStatus = 503
+    expect(await Effect.runPromise(KiloTrpc.kiloPass(backend.url, "token"))).toBeNull()
+  })
+
+  test("rejects tRPC procedure errors, malformed answers, and usage that does not match the subscription", async () => {
+    using backend = fixture()
+    const failure = <A>(effect: Effect.Effect<A, KiloTrpc.CloudTrpcError>) => Effect.runPromise(Effect.flip(effect))
+
+    backend.state.byok = { error: { message: "internal detail" } }
+    const procedure = await failure(KiloTrpc.byokEntries(backend.url, "token"))
+    expect(procedure.kind).toBe("procedure")
+    expect(procedure.message).not.toContain("internal detail")
+
+    backend.state.byok = "not an envelope"
+    expect((await failure(KiloTrpc.byokEntries(backend.url, "token"))).kind).toBe("protocol")
+
+    backend.state.codingPlans = { result: { data: { json: [{ id: "sub-1" }] } } }
+    expect((await failure(KiloTrpc.codingPlanSubscriptions(backend.url, "token"))).kind).toBe("schema")
+
+    expect((await failure(KiloTrpc.codingPlanUsage(backend.url, "token", "sub-2"))).kind).toBe("schema")
+    const window = { id: "five_hour", remainingPercent: 75, resetsAt: "2026-10-14T17:00:00Z", period: { unit: "hour", value: 5 } }
+    backend.state.codingPlanUsage = {
+      result: {
+        data: {
+          json: {
+            schemaVersion: 1,
+            fetchedAt: "2026-10-14T12:00:00Z",
+            subscription: { id: "sub-1", planName: "Pro", providerId: "a", providerName: "A", windows: [window, window] },
+          },
+        },
+      },
+    }
+    expect((await failure(KiloTrpc.codingPlanUsage(backend.url, "token", "sub-1"))).kind).toBe("schema")
+  })
+
   test("fetches organization modes, notifications, image models, and transcription models", async () => {
     using backend = fixture()
     KiloModes.clearCache()
