@@ -1,4 +1,4 @@
-<!-- Community PR reviews are paused during the opencode v2 migration. No PR is closed for silence. See docs/community-triage.md. -->
+<!-- Community PRs are triaged by maintainers. See docs/community-triage.md for what to expect. -->
 
 ## Issue
 

@@ -3,8 +3,8 @@ name: Community sweep
 
 # Twice a week, the evening before the maintainer triage slots (Friday and
 # Tuesday). Works out whose turn it is on each community PR, keeps the status
-# labels in sync and posts the queue. Closing is paused: it closes no PR
-# (opencode v2 migration). See docs/community-triage.md.
+# labels in sync and posts the queue. It closes nothing: kilo-auto-close.yml is
+# the only closer. See docs/community-triage.md.
 
 on:
   schedule:
@@ -45,8 +45,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           MEMBER_TOKEN: ${{ secrets.COMMUNITY_TRIAGE_MEMBER_TOKEN }}
-          # Closing is paused in the script. This variable has no effect while it is.
-          CLOSE_ENABLED: ${{ vars.COMMUNITY_AUTO_CLOSE_ENABLED }}
           SLACK_PAYLOAD: ${{ runner.temp }}/slack-payload.json
           # Optional. With both set, the sweep posts a short summary and puts
           # the lists in a thread. Without them, or if that post fails, the

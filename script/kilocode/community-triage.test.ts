@@ -7,7 +7,6 @@ import {
   hasPriority,
   kind,
   needMember,
-  PAUSED,
   parse,
   labels,
   sync,
@@ -19,7 +18,6 @@ import {
   decide,
   failure,
   clip,
-  closeEnabled,
   digest,
   parts,
   DAY,
@@ -106,11 +104,7 @@ describe("classify", () => {
     expect(classify([author(3)], [], now)).toEqual({ state: "triage" })
   })
 
-  test("a high-value label moves a PR to needs-review", () => {
-    expect(classify([author(3)], [label.high], now)).toEqual({ state: "review" })
-  })
-
-  test("a keep-open label counts as triaged", () => {
+  test("a keep-open label counts as triaged and moves a PR to needs-review", () => {
     expect(classify([author(3)], [label.keep], now)).toEqual({ state: "review" })
   })
 
@@ -147,19 +141,19 @@ describe("decide", () => {
   })
 
   test("never touches hand-set labels", () => {
-    const plan = decide([label.high, label.keep, "priority:p1"], { state: "approved" })
+    const plan = decide([label.keep, "priority:p1"], { state: "approved" })
     expect(plan).toEqual({ add: [], remove: [] })
   })
 })
 
 describe("cleanup", () => {
   test("lists community and status labels", () => {
-    const tags = [label.community, label.triage, label.awaiting, "area:cli", "priority:p1", label.high, label.keep]
+    const tags = [label.community, label.triage, label.awaiting, "area:cli", "priority:p1", label.keep]
     expect(cleanup(tags).sort()).toEqual([label.awaiting, label.community, label.triage].sort())
   })
 
   test("returns nothing for a clean PR", () => {
-    expect(cleanup(["area:cli", label.high])).toEqual([])
+    expect(cleanup(["area:cli", label.keep])).toEqual([])
   })
 })
 
@@ -173,7 +167,6 @@ describe("digest", () => {
     state,
     failing: false,
     adopt: false,
-    closed: false,
     first: false,
     ...more,
   })
@@ -188,24 +181,16 @@ describe("digest", () => {
     expect(text).toContain("2 open")
     expect(text).toContain("**Needs triage (1)**")
     expect(text).toContain("[#1 PR 1](https://github.com/o/r/pull/1)")
-    expect(text).toContain("9d waiting")
+    expect(text).toContain("9d of 14")
     expect(text).not.toContain("Approved")
   })
 
-  test("lists adopt candidates and closed PRs", () => {
-    const text = digest(
-      [
-        row(1, { state: "awaiting", since: ago(20), days: 20 }, { adopt: true }),
-        row(2, { state: "awaiting", since: ago(30), days: 30 }, { closed: true }),
-      ],
-      "slack",
-      "o/r",
-      now,
-    )
-    expect(text).toContain("*Adopt: high-value, no reply in 14 days (1)*")
+  test("lists adopt candidates", () => {
+    const text = digest([row(1, { state: "awaiting", since: ago(20), days: 20 }, { adopt: true })], "slack", "o/r", now)
+    expect(text).toContain("*Adopt: keep-open, no reply in 14 days (1)*")
     expect(text).toContain("<https://github.com/o/r/pull/1|#1 PR 1>")
-    expect(text).toContain("*Closed in this run (1)*")
     expect(text).toContain("1 open")
+    expect(text).not.toContain("Closed")
   })
 
   test("caps long lists", () => {
@@ -224,7 +209,6 @@ describe("parts", () => {
     state,
     failing: false,
     adopt: false,
-    closed: false,
     first: false,
   })
 
@@ -325,7 +309,6 @@ describe("digest with quick wins and newcomers", () => {
     state: { state: "triage" },
     failing: false,
     adopt: false,
-    closed: false,
     first: true,
     quick: "docs",
   }
@@ -512,23 +495,12 @@ describe("needMember", () => {
   })
 })
 
-describe("closing is paused", () => {
-  // Community reviews are paused during the opencode v2 migration. If you resume
-  // closing, set PAUSED to false in the script and update this test and the doc.
-  test("the pause is on", () => {
-    expect(PAUSED).toBe(true)
-  })
-
-  test("a paused sweep never closes, even when CLOSE_ENABLED is true", () => {
-    expect(closeEnabled("true")).toBe(false)
-    expect(closeEnabled("true", true)).toBe(false)
-    expect(closeEnabled(undefined, true)).toBe(false)
-  })
-
-  test("without the pause, only the exact value true turns closing on", () => {
-    expect(closeEnabled("true", false)).toBe(true)
-    expect(closeEnabled("TRUE", false)).toBe(false)
-    expect(closeEnabled("1", false)).toBe(false)
-    expect(closeEnabled(undefined, false)).toBe(false)
+describe("the sweep closes nothing", () => {
+  // kilo-auto-close.yml is the only closer. A close call in this script would
+  // bypass its KILO_AUTO_CLOSE_ENABLED switch.
+  test("the script has no call that closes a PR", async () => {
+    const source = await Bun.file(new URL("./community-triage.ts", import.meta.url)).text()
+    expect(source).not.toMatch(/state:\s*["']closed["']/)
+    expect(source).not.toContain("CLOSE_ENABLED")
   })
 })
