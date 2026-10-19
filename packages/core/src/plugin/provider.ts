@@ -11,7 +11,7 @@ import { DynamicProviderPlugin } from "./provider/dynamic.js"
 import { GithubCopilotPlugin } from "./provider/github-copilot.js"
 import { GitLabPlugin } from "./provider/gitlab.js"
 import { GoogleVertexPlugin } from "./provider/google-vertex.js"
-import { KiloGatewayPlugin } from "../kilocode/gateway.js" // kilocode_change - Kilo Gateway plugin replaces upstream KiloPlugin
+import { KiloPlugin } from "./provider/kilo.js"
 import { LLMGatewayPlugin } from "./provider/llmgateway.js"
 import { LMStudioPlugin } from "./provider/lmstudio.js"
 import { ModalPlugin } from "./provider/modal.js"
@@ -45,7 +45,7 @@ export const ProviderPlugins: PluginInternal.InternalPlugin[] = [
   GithubCopilotPlugin,
   GitLabPlugin,
   GoogleVertexPlugin,
-  KiloGatewayPlugin, // kilocode_change - replaces KiloPlugin, which sends the OpenCode referer and title
+  KiloPlugin,
   LLMGatewayPlugin,
   LMStudioPlugin,
   ModalPlugin,

@@ -18,7 +18,7 @@ The main goal on v2 is to move Kilo code out of shared upstream files, into a Ki
 Use the first option that works (`.kilo/skills/v2-migration/SKILL.md`, `migration-tracking/technical-notes/v2-fork-conventions.md`, "Plugin-first extension order"):
 
 1. **Kilo plugin** on the public plugin API (`@opencode/plugin`: agent, provider, model, session, event, tool, permission, command, skill, mcp, rpc, storage and more). No shared-file change.
-2. **Kilo host** (unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry. The host does not exist yet. Until it lands, register a Kilo plugin in the upstream builtin list with one marked line.
+2. **Kilo host** (`packages/kilo-cli`, unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry. List a server plugin in `packages/kilo-plugin/src/index.ts` (`KiloPlugins`); the host registers it. Replacements go in `overrides` in `packages/kilo-cli/src/host.ts`. A TUI plugin still needs one marked line in `packages/tui/src/plugin/builtins.ts`.
 3. **Seam patch** in a shared file: small and generic (widen an API, add a hook, export a value), marked `kilocode_change`, in a file that changes rarely. One generic seam is better than many small edits. Offer it upstream when it is generic.
 4. **Feature patch** in a shared file: last resort, marked, with the reason in the PR that options 1 to 3 do not work.
 5. **Branding and product strings**: the rename script (`script/upstream` codemods) during syncs, never hand edits.

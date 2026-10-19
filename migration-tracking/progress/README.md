@@ -21,7 +21,7 @@ Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only
 
 Landed by rung, for patch cells closed by a done-proof: 0 plugin, 0 host, 0 seam, 0 patch.
 
-Ratchets: 2 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/bus`, `@opencode/core/variant`); 14 shared patches by rung: 13 seam, 1 patch (`script/upstream/shared-patches.json`).
+Ratchets: 4 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/plugin/sdk`, `@opencode/core/variant`); 15 shared patches by rung: 14 seam, 1 patch (`script/upstream/shared-patches.json`).
 
 ## History
 

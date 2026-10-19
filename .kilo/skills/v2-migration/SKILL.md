@@ -23,7 +23,7 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 - Before you place a change, load the skill `v2-feature-placement`. It decides the rung for one change (plugin hook, host, seam or patch), with the commands to find the upstream extension point and the done-proof the progress map needs. Reasoning and guarantees: `migration-tracking/plans/v2-host-strategy.md`.
 - Kilo code lives in Kilo-owned paths (`packages/kilo-*`, `src/kilocode/`). Plugin first: use the first option that works, and name it in the PR.
   1. A Kilo plugin on the public plugin API (`@opencode/plugin`).
-  2. The Kilo host (unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry. The host does not exist yet. Until it lands, register a Kilo plugin in the upstream builtin list with one marked line.
+  2. The Kilo host (`packages/kilo-cli`, unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry. Add a server plugin to `KiloPlugins` in `packages/kilo-plugin/src/index.ts`; the host registers it. Service replacements go in `overrides` in `packages/kilo-cli/src/host.ts`, `KILO_*` names in `packages/kilo-cli/src/env.ts`. TUI plugins still register with one marked line in `packages/tui/src/plugin/builtins.ts` (the TUI list is in the TUI process, which the host does not reach).
   3. A small, generic seam patch in a shared upstream file: widen an API, add a hook, export a value. Prefer files that change rarely.
   4. A feature patch in a shared upstream file. Last resort. Say in the PR why options 1 to 3 do not work.
   5. Branding and product strings: the rename script during upstream syncs, never hand edits.
@@ -41,7 +41,7 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 
 ## Isolation: never touch the v1 setup
 
-- Run the CLI only through `bun dev` (`script/dev-isolated.ts`). It keeps all data in one profile directory. Never run `bun run --cwd packages/cli`, `dev:live` or `opencode` directly. They use the installed OpenCode data and service.
+- Run the CLI only through `bun dev` (`script/dev-isolated.ts`, which starts the Kilo host entry `packages/kilo-cli/src/index.ts`). It keeps all data in one profile directory. Never run `bun run --cwd packages/cli`, `dev:live` or `opencode` directly. They use the installed OpenCode data and service.
 - Use a fresh profile per test: `KILO_V2_PROFILE=/tmp/kilo-v2-<id>`. Add `--standalone` so parallel agents do not share the service port.
 - `bun dev` starts signed out and does not read the v1 login. Signed out, the Kilo Gateway serves its free models. Sign in with `/connect`, or start a signed-in test with `KILO_API_KEY` (and `KILO_ORG_ID` for a team) from the v1 auth file, so that no secret shows on screen.
 - Do not edit the main checkout, `~/.config/kilo`, `~/.local/share/kilo` or OpenCode directories. `bun run extension` does not exist on v2.
