@@ -4228,10 +4228,13 @@ export type McpParameter = {
 }
 
 export type McpInstallationMethod = {
+  id?: string
   name: string
   content: string
   parameters?: Array<McpParameter>
   prerequisites?: Array<string>
+  oauthRequirement?: string
+  authHandler?: string
 }
 
 export type McpSkill = {
@@ -4253,6 +4256,8 @@ export type McpMarketplaceItem = {
   content: string | Array<McpInstallationMethod>
   parameters?: Array<McpParameter>
   skills?: Array<McpSkill>
+  oauthRequirement?: string
+  authHandler?: string
 }
 
 export type AgentMarketplaceItem = {
