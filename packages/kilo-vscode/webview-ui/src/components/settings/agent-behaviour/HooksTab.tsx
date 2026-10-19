@@ -12,15 +12,18 @@ import { useVSCode } from "../../../context/vscode"
 import type { ExtensionMessage, HookEvent, HooksConfig, HooksInfoLoadedMessage } from "../../../types/messages"
 import { configMessage } from "../../../utils/open-config"
 import {
-  EVENT_LABELS,
-  HOOK_EVENTS,
+  GROUP_LABELS,
+  HOOK_INFO,
+  blocking,
   entries,
   inherited,
   matcherKind,
   patch,
-  unknown,
   remove,
   save,
+  sections,
+  skipped,
+  unknown,
   type HookEntry,
 } from "../hooks-config"
 import HookEditView from "./HookEditView"
@@ -70,7 +73,10 @@ const HooksTab: Component<Props> = (props) => {
       { defer: true },
     ),
   )
+  const mine = createMemo(() => sections(own()))
   const others = createMemo(() => inherited(config().hooks, savedGlobalConfig().hooks))
+  const imported = createMemo(() => sections(claude()?.hooks))
+  const ignored = createMemo(() => skipped(claude()?.skipped))
   const claudeStatus = () => {
     const data = claude()
     if (!data) return undefined
@@ -107,100 +113,160 @@ const HooksTab: Component<Props> = (props) => {
     ))
   }
 
-  const row = (entry: HookEntry, last: boolean, edit?: () => void) => (
-    <div
-      style={{
-        display: "flex",
-        "align-items": "center",
-        gap: "8px",
-        padding: "8px 0",
-        "border-bottom": last ? "none" : "1px solid var(--border-weak-base)",
-        cursor: edit ? "pointer" : "default",
-      }}
-      onClick={() => edit?.()}
-    >
-      <div style={{ flex: 1, "min-width": 0 }}>
-        <div style={{ display: "flex", "align-items": "center", gap: "6px", "min-width": 0 }}>
-          <Show
-            when={matcherKind(entry.matcher).kind !== "all"}
-            fallback={<Tag>{language.t("settings.agentBehaviour.hooks.allTools")}</Tag>}
-          >
+  const row = (entry: HookEntry, last: boolean, edit?: () => void) => {
+    const kind = matcherKind(entry.matcher, entry.event).kind
+    const line = [entry.handler.command, ...(entry.handler.args ?? [])].join(" ")
+    return (
+      <div
+        style={{
+          display: "flex",
+          "align-items": "center",
+          gap: "8px",
+          padding: "8px 0",
+          "border-bottom": last ? "none" : "1px solid var(--border-weak-base)",
+          cursor: edit ? "pointer" : "default",
+        }}
+        onClick={() => edit?.()}
+      >
+        <div style={{ flex: 1, "min-width": 0 }}>
+          <div style={{ display: "flex", "align-items": "center", gap: "6px", "min-width": 0 }}>
+            <Show when={kind === "all"}>
+              <Tag>{language.t("settings.agentBehaviour.hooks.allTools")}</Tag>
+            </Show>
+            <Show when={kind !== "all" && kind !== "none" && kind !== "dynamic"}>
+              <span
+                title={entry.matcher}
+                style={{
+                  ...mono,
+                  "font-weight": "600",
+                  overflow: "hidden",
+                  "text-overflow": "ellipsis",
+                  "white-space": "nowrap",
+                  "max-width": "40%",
+                  "flex-shrink": 0,
+                }}
+              >
+                {entry.matcher}
+              </span>
+            </Show>
             <span
-              title={entry.matcher}
-              style={{
-                ...mono,
-                "font-weight": "600",
-                overflow: "hidden",
-                "text-overflow": "ellipsis",
-                "white-space": "nowrap",
-                "max-width": "40%",
-                "flex-shrink": 0,
-              }}
+              title={line}
+              style={{ ...mono, overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap" }}
             >
-              {entry.matcher}
+              {line}
             </span>
-          </Show>
-          <span
-            title={[entry.handler.command, ...(entry.handler.args ?? [])].join(" ")}
-            style={{ ...mono, overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap" }}
-          >
-            {[entry.handler.command, ...(entry.handler.args ?? [])].join(" ")}
-          </span>
-        </div>
-        <Show when={unknown(entry.matcher, info()?.tools).join(", ")}>
-          {(names) => (
-            <div style={warning}>{language.t("settings.agentBehaviour.hooks.unmatched", { names: names() })}</div>
-          )}
-        </Show>
-        <Show when={entry.handler.timeout || entry.handler.onFailure === "block" || entry.handler.args}>
-          <div style={{ ...weak, display: "flex", gap: "8px", "flex-wrap": "wrap", "margin-top": "2px" }}>
-            <Show when={entry.handler.timeout}>
-              {(seconds) => (
-                <span>{language.t("settings.agentBehaviour.hooks.badge.timeout", { seconds: seconds() })}</span>
-              )}
-            </Show>
-            <Show when={entry.handler.onFailure === "block"}>
-              <span>{language.t("settings.agentBehaviour.hooks.badge.block")}</span>
-            </Show>
-            <Show when={entry.handler.args}>
-              <span>{language.t("settings.agentBehaviour.hooks.badge.exec")}</span>
-            </Show>
           </div>
+          <Show when={kind === "dynamic"}>
+            <div style={weak}>{language.t("settings.agentBehaviour.hooks.matcher.filesNone")}</div>
+          </Show>
+          <Show when={unknown(entry.matcher, info()?.tools, entry.event).join(", ")}>
+            {(names) => (
+              <div style={warning}>{language.t("settings.agentBehaviour.hooks.unmatched", { names: names() })}</div>
+            )}
+          </Show>
+          <Show
+            when={
+              entry.handler.timeout ||
+              blocking(entry) ||
+              entry.handler.args ||
+              entry.handler.async ||
+              entry.handler.if ||
+              entry.handler.shell
+            }
+          >
+            <div style={{ ...weak, display: "flex", gap: "8px", "flex-wrap": "wrap", "margin-top": "2px" }}>
+              <Show when={entry.handler.timeout}>
+                {(seconds) => (
+                  <span>{language.t("settings.agentBehaviour.hooks.badge.timeout", { seconds: seconds() })}</span>
+                )}
+              </Show>
+              {/* Only where the CLI honors it: an event that allows it, not in the background. */}
+              <Show when={blocking(entry)}>
+                <span>{language.t("settings.agentBehaviour.hooks.badge.block")}</span>
+              </Show>
+              <Show when={entry.handler.async}>
+                <span>{language.t("settings.agentBehaviour.hooks.badge.async")}</span>
+              </Show>
+              <Show when={entry.handler.args}>
+                <span>{language.t("settings.agentBehaviour.hooks.badge.exec")}</span>
+              </Show>
+              {/* Raw config values: the condition and shell the CLI applies, shown as written. */}
+              <Show when={entry.handler.if}>{(rule) => <span style={mono}>if: {rule()}</span>}</Show>
+              <Show when={entry.handler.shell}>{(shell) => <span style={mono}>shell: {shell()}</span>}</Show>
+            </div>
+          </Show>
+        </div>
+        <Show when={edit}>
+          <IconButton
+            size="small"
+            variant="ghost"
+            icon="close"
+            onClick={(e: MouseEvent) => {
+              e.stopPropagation()
+              confirmRemove(entry)
+            }}
+          />
+          <IconButton
+            size="small"
+            variant="ghost"
+            icon="chevron-right"
+            onClick={(e: MouseEvent) => {
+              e.stopPropagation()
+              edit?.()
+            }}
+          />
         </Show>
       </div>
-      <Show when={edit}>
-        <IconButton
-          size="small"
-          variant="ghost"
-          icon="close"
-          onClick={(e: MouseEvent) => {
-            e.stopPropagation()
-            confirmRemove(entry)
-          }}
-        />
-        <IconButton
-          size="small"
-          variant="ghost"
-          icon="chevron-right"
-          onClick={(e: MouseEvent) => {
-            e.stopPropagation()
-            edit?.()
-          }}
-        />
-      </Show>
-    </div>
-  )
+    )
+  }
 
-  const readonly = (hooks: HooksConfig | undefined) => (
-    <For each={HOOK_EVENTS.filter((event) => entries(hooks, event).length > 0)}>
-      {(event) => (
-        <div style={{ "margin-bottom": "4px" }}>
-          <div style={{ ...weak, "font-weight": "500", "margin-top": "4px" }}>
-            {language.t(EVENT_LABELS[event].label)}
-          </div>
-          <For each={entries(hooks, event)}>
-            {(entry, index) => row(entry, index() === entries(hooks, event).length - 1)}
-          </For>
+  // One event: its raw id (the config key), a "Kilo only" badge, its help line, then its hooks.
+  const segment = (hooks: HooksConfig | null | undefined, event: HookEvent, editable: boolean) => {
+    const items = entries(hooks, event)
+    const list = () => (
+      <For each={items}>
+        {(entry, index) =>
+          row(
+            entry,
+            index() === items.length - 1,
+            editable ? () => setEditing({ entry, event: entry.event }) : undefined,
+          )
+        }
+      </For>
+    )
+    return (
+      <div style={{ "margin-bottom": editable ? "12px" : "4px" }}>
+        <div style={{ display: "flex", "align-items": "center", gap: "6px", "margin-top": editable ? "0" : "6px" }}>
+          <span style={{ ...mono, "font-weight": "600" }}>{event}</span>
+          <Show when={HOOK_INFO[event].kilo}>
+            <Tag>{language.t("settings.agentBehaviour.hooks.kiloOnly")}</Tag>
+          </Show>
+        </div>
+        <Show when={editable}>
+          <div style={{ ...weak, "margin-bottom": "6px" }}>{language.t(HOOK_INFO[event].help)}</div>
+        </Show>
+        <Show when={editable} fallback={list()}>
+          <Card>{list()}</Card>
+        </Show>
+      </div>
+    )
+  }
+
+  const grouped = (hooks: HooksConfig | null | undefined, editable: boolean) => (
+    <For each={sections(hooks)}>
+      {(section) => (
+        <div style={{ "margin-bottom": editable ? "8px" : "0" }}>
+          <Show
+            when={editable}
+            fallback={
+              <div style={{ ...weak, "font-weight": "500", "margin-top": "4px" }}>
+                {language.t(GROUP_LABELS[section.group])}
+              </div>
+            }
+          >
+            <h4 style={{ margin: "0 0 8px" }}>{language.t(GROUP_LABELS[section.group])}</h4>
+          </Show>
+          <For each={section.events}>{(event) => segment(hooks, event, editable)}</For>
         </div>
       )}
     </For>
@@ -210,7 +276,7 @@ const HooksTab: Component<Props> = (props) => {
     <div>
       <div style={{ ...weak, "margin-bottom": "12px" }}>{language.t("settings.agentBehaviour.hooks.description")}</div>
 
-      <Card style={{ "margin-bottom": "16px" }}>
+      <Card style={{ "margin-bottom": "12px" }}>
         <div
           style={{
             "font-size": "var(--kilo-font-size-12)",
@@ -244,53 +310,34 @@ const HooksTab: Component<Props> = (props) => {
         </div>
       </Card>
 
-      <For each={HOOK_EVENTS}>
-        {(event) => {
-          const items = createMemo(() => entries(own(), event))
-          return (
-            <div style={{ "margin-bottom": "16px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  "align-items": "center",
-                  "justify-content": "space-between",
-                  "margin-bottom": "4px",
-                }}
-              >
-                <h4 style={{ margin: 0 }}>{language.t(EVENT_LABELS[event].label)}</h4>
-                <Button variant="ghost" size="small" icon="plus-small" onClick={() => setEditing({ event })}>
-                  {language.t("settings.agentBehaviour.hooks.add")}
-                </Button>
-              </div>
-              <div style={{ ...weak, "margin-bottom": "8px" }}>{language.t(EVENT_LABELS[event].help)}</div>
-              <Card>
-                <Show
-                  when={items().length > 0}
-                  fallback={<div style={weak}>{language.t("settings.agentBehaviour.hooks.empty")}</div>}
-                >
-                  <For each={items()}>
-                    {(entry, index) =>
-                      row(entry, index() === items().length - 1, () => setEditing({ entry, event: entry.event }))
-                    }
-                  </For>
-                </Show>
-              </Card>
-            </div>
-          )
-        }}
-      </For>
+      <div style={{ display: "flex", "justify-content": "flex-end", "margin-bottom": "12px" }}>
+        <Button variant="secondary" size="small" icon="plus-small" onClick={() => setEditing({ event: "PreToolUse" })}>
+          {language.t("settings.agentBehaviour.hooks.add")}
+        </Button>
+      </div>
 
-      <Show when={HOOK_EVENTS.some((event) => entries(others(), event).length > 0)}>
+      <Show
+        when={mine().length > 0}
+        fallback={
+          <Card style={{ "margin-bottom": "16px" }}>
+            <div style={weak}>{language.t("settings.agentBehaviour.hooks.empty")}</div>
+          </Card>
+        }
+      >
+        <div style={{ "margin-bottom": "8px" }}>{grouped(own(), true)}</div>
+      </Show>
+
+      <Show when={sections(others()).length > 0}>
         <div style={{ "margin-bottom": "16px" }}>
           <h4 style={{ margin: "0 0 4px" }}>{language.t("settings.agentBehaviour.hooks.inherited")}</h4>
           <div style={{ ...weak, "margin-bottom": "8px" }}>
             {language.t("settings.agentBehaviour.hooks.inherited.help")}
           </div>
-          <Card>{readonly(others())}</Card>
+          <Card>{grouped(others(), false)}</Card>
         </div>
       </Show>
 
-      <Show when={claude()?.hooks && HOOK_EVENTS.some((event) => entries(claude()?.hooks, event).length > 0)}>
+      <Show when={imported().length > 0 || ignored().length > 0}>
         <div style={{ "margin-bottom": "16px" }}>
           <div
             style={{
@@ -313,7 +360,14 @@ const HooksTab: Component<Props> = (props) => {
             </Button>
           </div>
           <div style={{ ...weak, "margin-bottom": "8px" }}>{claudeStatus()}</div>
-          <Card>{readonly(claude()?.hooks)}</Card>
+          <Show when={imported().length > 0}>
+            <Card>{grouped(claude()?.hooks, false)}</Card>
+          </Show>
+          <Show when={ignored().length > 0}>
+            <div style={{ ...weak, "margin-top": "8px" }}>
+              {language.t("settings.agentBehaviour.hooks.claude.skipped", { items: ignored().join(", ") })}
+            </div>
+          </Show>
         </div>
       </Show>
     </div>

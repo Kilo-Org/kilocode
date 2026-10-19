@@ -304,6 +304,9 @@ export const dict = {
   "notification.permission.titleSandboxEscalation": "샌드박스 외부에서 실행할까요?",
   "notification.permission.descriptionSandboxEscalation":
     "이 명령에만 적용되며, 파일 시스템 및 네트워크 제한을 해제하고 명령 전체를 실행합니다. Git은 .git에 기록해야 하며, 이 경로는 샌드박스에서 읽기 전용이고 연결된 worktree에서는 해당 worktree 밖에 있습니다. Bash 허용 규칙과 자동 승인은 이 프롬프트를 자동으로 승인하지 않습니다.",
+  "notification.permission.titleHookAsk": "훅이 확인을 요청합니다",
+  "notification.permission.descriptionHookAsk":
+    "훅이 이 호출을 실행하기 전에 확인을 요청했습니다. 자동 승인은 이 요청에 응답하지 않습니다.",
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
   "ui.permission.reject": "거부",
   "ui.permission.feedbackPlaceholder": "Kilo가 다르게 하길 원하는 내용을 알려주세요",
@@ -1102,22 +1105,16 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 호환성",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code 파일 로드",
   "settings.agentBehaviour.claudeCompat.description":
-    "Claude Code 설정 디렉터리에서 세션으로 CLAUDE.md 지침 및 스킬을 로드합니다. Kilo가 Claude Code 지침 및 스킬을 사용하게 하려면 활성화하세요. 다시 시작해야 합니다. ~/.claude/settings.json의 PreToolUse 및 PostToolUse 훅 명령도 사용자 권한으로 실행합니다.",
+    "Claude Code 설정 디렉터리에서 세션으로 CLAUDE.md 지침 및 스킬을 로드합니다. Kilo가 Claude Code 지침 및 스킬을 사용하게 하려면 활성화하세요. 다시 시작해야 합니다. ~/.claude/settings.json의 Claude Code 훅도 사용자 권한으로 실행합니다: 도구 이벤트, 프롬프트 및 세션 이벤트(UserPromptSubmit, SessionStart 등), Stop 및 하위 에이전트 이벤트, 압축 및 알림.",
   "settings.agentBehaviour.hooks.description":
-    "에이전트가 도구를 사용하기 전이나 후에 직접 지정한 명령을 실행합니다. 예를 들어 모든 편집에 린트를 실행하거나 위험한 명령을 차단할 수 있습니다. Claude Code 훅 형식을 사용합니다.",
+    "에이전트가 동작할 때 직접 지정한 명령을 실행합니다. 도구 호출 전후, 프롬프트를 보낼 때, 세션이 시작될 때, 에이전트가 멈출 때, 압축 전 등에 실행할 수 있습니다. Claude Code 훅 형식을 사용합니다.",
   "settings.agentBehaviour.hooks.warning":
     "훅은 샌드박스 밖에서 사용자의 전체 권한으로 셸 명령을 실행합니다. 신뢰할 수 있는 명령만 추가하세요.",
   "settings.agentBehaviour.hooks.scope": "전역 구성에 저장됩니다. 프로젝트 구성의 훅은 무시됩니다.",
   "settings.agentBehaviour.hooks.openConfig": "구성 파일 열기",
-  "settings.agentBehaviour.hooks.pre": "도구 실행 전",
-  "settings.agentBehaviour.hooks.pre.help":
-    "도구 호출을 차단할 수 있습니다. 코드 2로 종료하고 이유를 stderr에 작성하세요. 에이전트가 그 이유를 확인합니다.",
-  "settings.agentBehaviour.hooks.post": "도구 실행 후",
-  "settings.agentBehaviour.hooks.post.help":
-    "린트 오류 같은 피드백을 에이전트에 보낼 수 있습니다. 코드 2로 종료하고 내용을 stderr에 작성하세요.",
   "settings.agentBehaviour.hooks.empty": "아직 훅이 없습니다.",
   "settings.agentBehaviour.hooks.add": "훅 추가",
-  "settings.agentBehaviour.hooks.allTools": "모든 도구",
+  "settings.agentBehaviour.hooks.allTools": "전체",
   "settings.agentBehaviour.hooks.badge.timeout": "타임아웃 {{seconds}}초",
   "settings.agentBehaviour.hooks.badge.block": "실패 시 차단",
   "settings.agentBehaviour.hooks.badge.exec": "셸 없음",
@@ -1134,17 +1131,15 @@ export const dict = {
   "settings.agentBehaviour.hooks.new": "새 훅",
   "settings.agentBehaviour.hooks.edit": "훅 편집",
   "settings.agentBehaviour.hooks.event": "시점",
-  "settings.agentBehaviour.hooks.matcher": "도구",
-  "settings.agentBehaviour.hooks.matcher.help":
-    "비워 두면 모든 도구와 일치합니다. 도구 이름은 |로 구분합니다(edit|write). 그 외의 값은 정규식으로 처리됩니다. Kilo와 Claude Code 이름 모두 사용할 수 있으며(bash 또는 Bash), MCP 도구 이름은 github_create_issue와 같은 형식입니다.",
-  "settings.agentBehaviour.hooks.matcher.all": "모든 도구와 일치",
+  "settings.agentBehaviour.hooks.matcher": "매처",
+  "settings.agentBehaviour.hooks.matcher.all": "모든 항목과 일치",
   "settings.agentBehaviour.hooks.matcher.names": "정확히 일치: {{names}}",
-  "settings.agentBehaviour.hooks.matcher.regex": "정규식, 도구 이름의 어느 위치에서든 일치",
+  "settings.agentBehaviour.hooks.matcher.regex": "정규식, 값의 어느 위치에서든 일치",
   "settings.agentBehaviour.hooks.matcher.invalid": "잘못된 정규식",
   "settings.agentBehaviour.hooks.unmatched":
     "여기에는 이름이 {{names}}인 도구가 없으므로 이 훅은 해당 도구에 대해 실행되지 않습니다.",
   "settings.agentBehaviour.hooks.command": "명령어",
-  "settings.agentBehaviour.hooks.command.help": "도구 호출을 stdin을 통해 JSON으로 받아 프로젝트 폴더에서 실행됩니다.",
+  "settings.agentBehaviour.hooks.command.help": "이벤트를 stdin을 통해 JSON으로 받아 프로젝트 폴더에서 실행됩니다.",
   "settings.agentBehaviour.hooks.command.required": "명령어를 입력하세요",
   "settings.agentBehaviour.hooks.exec": "셸 없이 실행",
   "settings.agentBehaviour.hooks.exec.help":
@@ -1152,16 +1147,92 @@ export const dict = {
   "settings.agentBehaviour.hooks.args.placeholder": "한 줄에 하나의 인수",
   "settings.agentBehaviour.hooks.timeout": "타임아웃 (초)",
   "settings.agentBehaviour.hooks.timeout.help":
-    "기본값은 {{seconds}}초입니다. 시간이 초과된 훅은 해당 훅이 시작한 모든 프로세스와 함께 중지됩니다.",
+    "이 이벤트의 기본값은 {{seconds}}초입니다. 시간이 초과된 훅은 해당 훅이 시작한 모든 프로세스와 함께 중지됩니다.",
   "settings.agentBehaviour.hooks.timeout.invalid": "1에서 86400 사이의 정수로 초를 입력하세요",
-  "settings.agentBehaviour.hooks.block": "훅이 실패하면 도구 호출 차단",
+  "settings.agentBehaviour.hooks.block": "훅이 실패하면 차단",
   "settings.agentBehaviour.hooks.block.help":
-    "기본적으로 충돌하거나 시간이 초과된 훅은 도구 실행을 허용합니다. 실패 시 통과되어서는 안 되는 보호 장치에는 이 옵션을 켜세요.",
+    "기본적으로 충돌하거나 시간이 초과된 훅은 작업을 계속 진행하게 합니다. 실패 시 통과되어서는 안 되는 보호 장치에는 이 옵션을 켜세요.",
   "settings.agentBehaviour.hooks.apply": "적용",
   "settings.agentBehaviour.hooks.remove.heading": "훅 제거",
   "settings.agentBehaviour.hooks.remove.confirm":
     '"{{command}}" 훅을 제거하시겠습니까? 변경 사항을 적용하려면 "저장"을 클릭하세요.',
   "settings.agentBehaviour.hooks.remove.button": "제거",
+  "settings.agentBehaviour.hooks.kiloOnly": "Kilo 전용",
+  "settings.agentBehaviour.hooks.badge.async": "백그라운드",
+  "settings.agentBehaviour.hooks.group.tools": "도구",
+  "settings.agentBehaviour.hooks.group.prompt": "프롬프트",
+  "settings.agentBehaviour.hooks.group.session": "세션",
+  "settings.agentBehaviour.hooks.group.loop": "에이전트 루프",
+  "settings.agentBehaviour.hooks.group.compaction": "압축",
+  "settings.agentBehaviour.hooks.group.environment": "환경",
+  "settings.agentBehaviour.hooks.group.kilo": "Kilo 이벤트",
+  "settings.agentBehaviour.hooks.event.PreToolUse.help":
+    '도구가 실행되기 전. 종료 코드 2 또는 JSON deny로 호출을 차단합니다. "ask"를 사용하면 Kilo가 먼저 확인합니다.',
+  "settings.agentBehaviour.hooks.event.PostToolUse.help":
+    "도구가 성공한 후. 종료 코드 2의 stderr 또는 additionalContext(예: 린트 오류)가 에이전트에게 표시됩니다.",
+  "settings.agentBehaviour.hooks.event.PostToolUseFailure.help":
+    "도구가 실패한 후(0이 아닌 코드로 끝난 셸 명령 포함). additionalContext가 에이전트에게 표시됩니다.",
+  "settings.agentBehaviour.hooks.event.PostToolBatch.help":
+    "도구를 실행한 모델 단계 후, 다음 모델 호출 전. 차단하면 턴이 끝납니다.",
+  "settings.agentBehaviour.hooks.event.PermissionRequest.help":
+    "Kilo가 권한 확인을 표시할 때. JSON deny로 호출을 거부합니다. 훅은 승인할 수 없습니다.",
+  "settings.agentBehaviour.hooks.event.TaskCreated.help":
+    "에이전트가 할 일을 추가할 때. 차단하면 해당 할 일이 제거됩니다.",
+  "settings.agentBehaviour.hooks.event.TaskCompleted.help":
+    "에이전트가 할 일을 완료로 표시할 때. 차단하면 열린 상태로 유지됩니다.",
+  "settings.agentBehaviour.hooks.event.UserPromptSubmit.help":
+    "프롬프트나 명령을 보낼 때. 차단하면 거부되며, stdout은 프롬프트에 추가됩니다.",
+  "settings.agentBehaviour.hooks.event.UserPromptExpansion.help":
+    "사용자 지정 명령, 스킬 또는 MCP 프롬프트가 확장될 때. 차단하면 거부됩니다.",
+  "settings.agentBehaviour.hooks.event.PreModelSwitch.help":
+    '프롬프트가 세션을 다른 모델로 전환하기 전. 차단, "ask" 또는 시간 초과 시 프롬프트가 거부됩니다.',
+  "settings.agentBehaviour.hooks.event.PostModelSwitch.help": "세션 모델이 바뀐 후. stdout은 다음 요청에 추가됩니다.",
+  "settings.agentBehaviour.hooks.event.SessionStart.help":
+    "세션이 시작, 재개, 포크 또는 압축될 때. stdout은 대화에 추가됩니다.",
+  "settings.agentBehaviour.hooks.event.SessionEnd.help":
+    "세션이 삭제되거나 Kilo가 종료될 때. 모든 SessionEnd 훅이 짧은 제한 시간을 공유합니다.",
+  "settings.agentBehaviour.hooks.event.InstructionsLoaded.help": "AGENTS.md나 CLAUDE.md 같은 지침 파일이 로드될 때.",
+  "settings.agentBehaviour.hooks.event.Stop.help":
+    "에이전트가 응답을 마쳤을 때. 차단하면 계속 진행하게 합니다(연속 최대 8회).",
+  "settings.agentBehaviour.hooks.event.SubagentStop.help": "하위 에이전트가 끝났을 때. 차단하면 계속 진행하게 합니다.",
+  "settings.agentBehaviour.hooks.event.SubagentStart.help":
+    "하위 에이전트가 시작될 때. additionalContext가 첫 프롬프트에 추가됩니다.",
+  "settings.agentBehaviour.hooks.event.StopFailure.help": "속도 제한 같은 API 오류로 턴이 끝났을 때.",
+  "settings.agentBehaviour.hooks.event.PreCompact.help": "대화를 압축하기 전. 차단하면 압축을 건너뜁니다.",
+  "settings.agentBehaviour.hooks.event.PostCompact.help": "대화를 압축한 후.",
+  "settings.agentBehaviour.hooks.event.Notification.help":
+    "Kilo가 사용자를 기다릴 때: 권한 확인, 질문 또는 턴 이후 유휴 상태.",
+  "settings.agentBehaviour.hooks.event.ConfigChange.help": "Kilo가 설정을 변경한 후. 차단할 수 없습니다.",
+  "settings.agentBehaviour.hooks.event.FileChanged.help": "프로젝트 폴더의 감시 중인 파일이 변경될 때.",
+  "settings.agentBehaviour.hooks.event.CwdChanged.help": "셸 명령이 이전과 다른 폴더에서 실행될 때.",
+  "settings.agentBehaviour.hooks.event.GoalReport.help":
+    "/goal이 완료 또는 차단으로 표시되기 전. 차단하면 목표가 계속 진행됩니다.",
+  "settings.agentBehaviour.hooks.event.WakeupFire.help":
+    "예약된 깨우기나 cron 작업이 실행되기 전. 차단하면 건너뜁니다.",
+  "settings.agentBehaviour.hooks.event.WorktreeSetup.help":
+    "관리형 worktree가 생성되고 설정 스크립트가 실행된 후. 차단하면 설정이 실패로 표시됩니다.",
+  "settings.agentBehaviour.hooks.event.WorktreeTeardown.help": "관리형 worktree가 제거되기 전.",
+  "settings.agentBehaviour.hooks.event.CommitMessage.help":
+    "커밋 메시지가 생성된 후. hookSpecificOutput.commitMessage로 대체하며, 차단하면 거부됩니다.",
+  "settings.agentBehaviour.hooks.event.BranchName.help":
+    "worktree 브랜치 이름이 생성된 후. hookSpecificOutput.branchName으로 대체하며, 차단하면 현재 이름이 유지됩니다.",
+  "settings.agentBehaviour.hooks.matcher.values": "{{field}}와 비교합니다: {{values}}. 여러 값은 |로 구분하세요.",
+  "settings.agentBehaviour.hooks.matcher.kind.tool":
+    "비워 두면 모든 도구와 일치합니다. 도구 이름은 |로 구분합니다(edit|write). 그 외의 값은 정규식으로 처리됩니다. Kilo와 Claude Code 이름 모두 사용할 수 있으며(bash 또는 Bash), MCP 도구 이름은 github_create_issue와 같은 형식입니다.",
+  "settings.agentBehaviour.hooks.matcher.kind.file":
+    "감시할 프로젝트 폴더의 파일 이름을 |로 구분합니다(.envrc|.env). 각 이름은 그대로 사용됩니다.",
+  "settings.agentBehaviour.hooks.matcher.kind.model":
+    "|로 구분한 모델 이름 또는 정규식. 표준 이름(claude-sonnet-4-5), 모델 ID, 제공자/모델 모두와 일치합니다.",
+  "settings.agentBehaviour.hooks.matcher.kind.name":
+    "{{field}}와 비교합니다. 이름은 |로 구분하거나 정규식을 사용하세요. 비워 두면 모두와 일치합니다.",
+  "settings.agentBehaviour.hooks.matcher.files": "감시 대상: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.filesNone":
+    "자체적으로는 파일을 감시하지 않으며, 다른 훅이 watchPaths로 추가한 경로에 대해 실행됩니다.",
+  "settings.agentBehaviour.hooks.matcher.none": "이 이벤트에는 매처가 없으며, 훅이 매번 실행됩니다.",
+  "settings.agentBehaviour.hooks.async": "백그라운드에서 실행",
+  "settings.agentBehaviour.hooks.async.help": "Kilo는 훅을 기다리지 않으며, 출력과 종료 코드는 로그에만 기록됩니다.",
+  "settings.agentBehaviour.hooks.async.noBlock": "백그라운드 훅은 차단하거나 컨텍스트를 추가할 수 없습니다.",
+  "settings.agentBehaviour.hooks.claude.skipped": "Kilo에서 실행하지 않음: {{items}}",
   "settings.agentBehaviour.mcpDetail.command": "명령어",
   "settings.agentBehaviour.mcpDetail.args": "인수",
   "settings.agentBehaviour.mcpDetail.env": "환경",
@@ -1280,6 +1351,7 @@ export const dict = {
   "chat.memory.command.failed": "메모리 명령 실패",
   "chat.memory.updated": "Memory updated",
   "chat.memory.rebuild": "Memory index rebuilt",
+  "chat.hookFeedback": "훅 피드백({{event}})",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "사용자 지정 prompt 사용",

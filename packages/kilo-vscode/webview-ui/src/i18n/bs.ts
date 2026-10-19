@@ -304,6 +304,9 @@ export const dict = {
   "notification.permission.titleSandboxEscalation": "Pokrenuti izvan sandboxa?",
   "notification.permission.descriptionSandboxEscalation":
     "Ovo izvršava cijelu komandu bez ograničenja datotečnog sistema i mreže, samo za ovu komandu. Git mora pisati u .git, koji je samo za čitanje u sandboxu i nalazi se izvan radnog stabla u povezanom worktreeu. Bash pravila dozvola i automatsko odobravanje nikada ne odobravaju ovaj upit automatski.",
+  "notification.permission.titleHookAsk": "Hook traži potvrdu",
+  "notification.permission.descriptionHookAsk":
+    "Hook traži da potvrdite ovaj poziv prije nego što se pokrene. Automatsko odobravanje nikada ne odgovara na ovaj upit.",
   "ui.permission.manageAutoApprove": "Upravljanje pravilima automatskog odobravanja",
   "ui.permission.reject": "Odbij",
   "ui.permission.feedbackPlaceholder": "Recite Kilu šta da uradi drugačije",
@@ -1115,23 +1118,17 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code kompatibilnost",
   "settings.agentBehaviour.claudeCompat.title": "Učitaj Claude Code datoteke",
   "settings.agentBehaviour.claudeCompat.description":
-    "Učitajte CLAUDE.md instrukcije i vještine iz vašeg Claude Code konfiguracijskog direktorija u sesije. Omogućite ovo ako želite da Kilo koristi vaše Claude Code instrukcije i vještine. Zahtijeva ponovno pokretanje. Također pokreće PreToolUse i PostToolUse hook komande iz ~/.claude/settings.json s vašim korisničkim dozvolama.",
+    "Učitajte CLAUDE.md instrukcije i vještine iz vašeg Claude Code konfiguracijskog direktorija u sesije. Omogućite ovo ako želite da Kilo koristi vaše Claude Code instrukcije i vještine. Zahtijeva ponovno pokretanje. Također pokreće Claude Code hookove iz ~/.claude/settings.json s vašim korisničkim dozvolama: događaje alata, prompta i sesije (UserPromptSubmit, SessionStart, ...), Stop i događaje subagenata, sažimanje i obavještenja.",
   "settings.agentBehaviour.hooks.description":
-    "Pokrećite vlastite naredbe prije ili nakon što agent koristi alat, na primjer da provjerite svaku izmjenu linterom ili blokirate rizične naredbe. Koristi Claude Code format hookova.",
+    "Pokrećite vlastite naredbe kada agent djeluje: prije ili nakon poziva alata, kada pošaljete prompt, kada sesija počne, kada se agent zaustavi, prije sažimanja i još mnogo toga. Koristi Claude Code format hookova.",
   "settings.agentBehaviour.hooks.warning":
     "Hookovi pokreću shell naredbe s vašim punim korisničkim dozvolama, izvan sandboxa. Dodajte samo naredbe kojima vjerujete.",
   "settings.agentBehaviour.hooks.scope":
     "Sprema se u vašu globalnu konfiguraciju. Hookovi u konfiguraciji projekta se zanemaruju.",
   "settings.agentBehaviour.hooks.openConfig": "Otvori konfiguracijsku datoteku",
-  "settings.agentBehaviour.hooks.pre": "Prije pokretanja alata",
-  "settings.agentBehaviour.hooks.pre.help":
-    "Može blokirati poziv alata: završite s izlaznim kodom 2 i upišite razlog u stderr. Agent vidi razlog.",
-  "settings.agentBehaviour.hooks.post": "Nakon pokretanja alata",
-  "settings.agentBehaviour.hooks.post.help":
-    "Može poslati povratne informacije agentu, poput lint grešaka: završite s izlaznim kodom 2 i upišite ih u stderr.",
   "settings.agentBehaviour.hooks.empty": "Još nema hookova.",
   "settings.agentBehaviour.hooks.add": "Dodaj hook",
-  "settings.agentBehaviour.hooks.allTools": "Svi alati",
+  "settings.agentBehaviour.hooks.allTools": "Sve",
   "settings.agentBehaviour.hooks.badge.timeout": "Istek vremena {{seconds}}s",
   "settings.agentBehaviour.hooks.badge.block": "Blokira pri grešci",
   "settings.agentBehaviour.hooks.badge.exec": "Bez shella",
@@ -1149,18 +1146,15 @@ export const dict = {
   "settings.agentBehaviour.hooks.new": "Novi hook",
   "settings.agentBehaviour.hooks.edit": "Uredi hook",
   "settings.agentBehaviour.hooks.event": "Kada",
-  "settings.agentBehaviour.hooks.matcher": "Alati",
-  "settings.agentBehaviour.hooks.matcher.help":
-    "Ostavite prazno da odgovara svakom alatu. Odvojite nazive alata znakom | (edit|write). Sve ostalo je regularni izraz. Rade i Kilo i Claude Code nazivi (bash ili Bash); MCP alati izgledaju kao github_create_issue.",
-  "settings.agentBehaviour.hooks.matcher.all": "Odgovara svakom alatu",
+  "settings.agentBehaviour.hooks.matcher": "Filter",
+  "settings.agentBehaviour.hooks.matcher.all": "Odgovara svemu",
   "settings.agentBehaviour.hooks.matcher.names": "Odgovara tačno: {{names}}",
-  "settings.agentBehaviour.hooks.matcher.regex": "Regularni izraz, traži se bilo gdje u nazivu alata",
+  "settings.agentBehaviour.hooks.matcher.regex": "Regularni izraz, traži se bilo gdje u vrijednosti",
   "settings.agentBehaviour.hooks.matcher.invalid": "Nevažeći regularni izraz",
   "settings.agentBehaviour.hooks.unmatched":
     "Ovdje nijedan alat nema naziv {{names}}, pa se ovaj hook za njega nikad ne pokreće.",
   "settings.agentBehaviour.hooks.command": "Naredba",
-  "settings.agentBehaviour.hooks.command.help":
-    "Prima poziv alata kao JSON na stdin i pokreće se u direktoriju projekta.",
+  "settings.agentBehaviour.hooks.command.help": "Prima događaj kao JSON na stdin i pokreće se u direktoriju projekta.",
   "settings.agentBehaviour.hooks.command.required": "Unesite naredbu",
   "settings.agentBehaviour.hooks.exec": "Pokreni bez shella",
   "settings.agentBehaviour.hooks.exec.help":
@@ -1168,16 +1162,96 @@ export const dict = {
   "settings.agentBehaviour.hooks.args.placeholder": "Jedan argument po liniji",
   "settings.agentBehaviour.hooks.timeout": "Istek vremena (sekunde)",
   "settings.agentBehaviour.hooks.timeout.help":
-    "Podrazumijevano {{seconds}}. Hook kojem istekne vrijeme se zaustavlja, zajedno sa svim procesima koje je pokrenuo.",
+    "Podrazumijevano {{seconds}} za ovaj događaj. Hook kojem istekne vrijeme se zaustavlja, zajedno sa svim procesima koje je pokrenuo.",
   "settings.agentBehaviour.hooks.timeout.invalid": "Unesite cijeli broj sekundi, od 1 do 86400",
-  "settings.agentBehaviour.hooks.block": "Blokiraj poziv alata ako hook ne uspije",
+  "settings.agentBehaviour.hooks.block": "Blokiraj ako hook ne uspije",
   "settings.agentBehaviour.hooks.block.help":
-    "Podrazumijevano, hook koji se sruši ili kojem istekne vrijeme dozvoljava pokretanje alata. Uključite ovo za zaštite koje ne smiju ništa propustiti kada ne uspiju.",
+    "Podrazumijevano, hook koji se sruši ili kojem istekne vrijeme dozvoljava da se radnja nastavi. Uključite ovo za zaštite koje ne smiju ništa propustiti kada ne uspiju.",
   "settings.agentBehaviour.hooks.apply": "Primijeni",
   "settings.agentBehaviour.hooks.remove.heading": "Ukloni hook",
   "settings.agentBehaviour.hooks.remove.confirm":
     'Ukloniti hook "{{command}}"? Kliknite Spremi da primijenite promjenu.',
   "settings.agentBehaviour.hooks.remove.button": "Ukloni",
+  "settings.agentBehaviour.hooks.kiloOnly": "Samo Kilo",
+  "settings.agentBehaviour.hooks.badge.async": "Pozadina",
+  "settings.agentBehaviour.hooks.group.tools": "Alati",
+  "settings.agentBehaviour.hooks.group.prompt": "Promptovi",
+  "settings.agentBehaviour.hooks.group.session": "Sesije",
+  "settings.agentBehaviour.hooks.group.loop": "Petlja agenta",
+  "settings.agentBehaviour.hooks.group.compaction": "Sažimanje",
+  "settings.agentBehaviour.hooks.group.environment": "Okruženje",
+  "settings.agentBehaviour.hooks.group.kilo": "Kilo događaji",
+  "settings.agentBehaviour.hooks.event.PreToolUse.help":
+    'Prije nego što se alat pokrene. Izlazni kod 2 ili JSON deny blokira poziv; "ask" čini da vas Kilo prvo pita.',
+  "settings.agentBehaviour.hooks.event.PostToolUse.help":
+    "Nakon što alat uspije. stderr izlaznog koda 2 ili additionalContext prikazuje se agentu, npr. greške lintera.",
+  "settings.agentBehaviour.hooks.event.PostToolUseFailure.help":
+    "Nakon što alat ne uspije, uključujući shell naredbu koja završi s kodom različitim od nule. additionalContext se prikazuje agentu.",
+  "settings.agentBehaviour.hooks.event.PostToolBatch.help":
+    "Nakon koraka modela koji je pokrenuo alate, prije sljedećeg poziva modela. Blokada završava potez.",
+  "settings.agentBehaviour.hooks.event.PermissionRequest.help":
+    "Kada Kilo prikaže zahtjev za dozvolu. JSON deny odbija poziv; hookovi ne mogu odobriti.",
+  "settings.agentBehaviour.hooks.event.TaskCreated.help": "Kada agent doda zadatak. Blokada uklanja taj zadatak.",
+  "settings.agentBehaviour.hooks.event.TaskCompleted.help":
+    "Kada agent označi zadatak kao završen. Blokada ga ostavlja otvorenim.",
+  "settings.agentBehaviour.hooks.event.UserPromptSubmit.help":
+    "Kada pošaljete prompt ili naredbu. Blokada ih odbija; stdout se dodaje promptu.",
+  "settings.agentBehaviour.hooks.event.UserPromptExpansion.help":
+    "Kada se proširi prilagođena naredba, vještina ili MCP prompt. Blokada je odbija.",
+  "settings.agentBehaviour.hooks.event.PreModelSwitch.help":
+    'Prije nego što prompt prebaci sesiju na drugi model. Blokada, "ask" ili istek vremena odbija prompt.',
+  "settings.agentBehaviour.hooks.event.PostModelSwitch.help":
+    "Nakon što se model sesije promijeni. stdout se dodaje sljedećem zahtjevu.",
+  "settings.agentBehaviour.hooks.event.SessionStart.help":
+    "Kada sesija počne, nastavi se, račva ili sažme. stdout se dodaje razgovoru.",
+  "settings.agentBehaviour.hooks.event.SessionEnd.help":
+    "Kada se sesija izbriše ili se Kilo zatvori. Svi SessionEnd hookovi dijele kratko vrijeme.",
+  "settings.agentBehaviour.hooks.event.InstructionsLoaded.help":
+    "Kada se učita datoteka s instrukcijama kao što je AGENTS.md ili CLAUDE.md.",
+  "settings.agentBehaviour.hooks.event.Stop.help":
+    "Kada agent završi s odgovorom. Blokada ga tjera da nastavi, najviše 8 puta zaredom.",
+  "settings.agentBehaviour.hooks.event.SubagentStop.help": "Kada subagent završi. Blokada ga tjera da nastavi.",
+  "settings.agentBehaviour.hooks.event.SubagentStart.help":
+    "Kada subagent počne. additionalContext se dodaje njegovom prvom promptu.",
+  "settings.agentBehaviour.hooks.event.StopFailure.help": "Kada potez završi greškom API-ja, npr. ograničenjem brzine.",
+  "settings.agentBehaviour.hooks.event.PreCompact.help": "Prije sažimanja razgovora. Blokada preskače sažimanje.",
+  "settings.agentBehaviour.hooks.event.PostCompact.help": "Nakon što je razgovor sažet.",
+  "settings.agentBehaviour.hooks.event.Notification.help":
+    "Kada Kilo čeka na vas: zahtjev za dozvolu, pitanje ili neaktivnost nakon poteza.",
+  "settings.agentBehaviour.hooks.event.ConfigChange.help":
+    "Nakon što Kilo promijeni svoju konfiguraciju. Ne može blokirati.",
+  "settings.agentBehaviour.hooks.event.FileChanged.help": "Kada se promijeni praćena datoteka u direktoriju projekta.",
+  "settings.agentBehaviour.hooks.event.CwdChanged.help":
+    "Kada se shell naredba pokrene u drugom direktoriju od prethodne.",
+  "settings.agentBehaviour.hooks.event.GoalReport.help":
+    "Prije nego što se /goal označi kao završen ili blokiran. Blokada drži cilj aktivnim.",
+  "settings.agentBehaviour.hooks.event.WakeupFire.help":
+    "Prije nego što se pokrene zakazano buđenje ili cron zadatak. Blokada ga preskače.",
+  "settings.agentBehaviour.hooks.event.WorktreeSetup.help":
+    "Nakon što se kreira upravljani worktree i pokrene njegova skripta za postavljanje. Blokada označava postavljanje kao neuspješno.",
+  "settings.agentBehaviour.hooks.event.WorktreeTeardown.help": "Prije uklanjanja upravljanog worktreea.",
+  "settings.agentBehaviour.hooks.event.CommitMessage.help":
+    "Nakon generisanja commit poruke. hookSpecificOutput.commitMessage je zamjenjuje; blokada je odbija.",
+  "settings.agentBehaviour.hooks.event.BranchName.help":
+    "Nakon generisanja naziva grane za worktree. hookSpecificOutput.branchName ga zamjenjuje; blokada zadržava trenutni naziv.",
+  "settings.agentBehaviour.hooks.matcher.values":
+    "Provjerava {{field}}: {{values}}. Odvojite više vrijednosti znakom |.",
+  "settings.agentBehaviour.hooks.matcher.kind.tool":
+    "Ostavite prazno da odgovara svakom alatu. Odvojite nazive alata znakom | (edit|write). Sve ostalo je regularni izraz. Rade i Kilo i Claude Code nazivi (bash ili Bash); MCP alati izgledaju kao github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.kind.file":
+    "Nazivi datoteka u direktoriju projekta koje treba pratiti, odvojeni znakom | (.envrc|.env). Svaki naziv se uzima doslovno.",
+  "settings.agentBehaviour.hooks.matcher.kind.model":
+    "Nazivi modela odvojeni znakom | ili regularni izraz. Odgovaraju kanonski naziv (claude-sonnet-4-5), ID modela i provider/model.",
+  "settings.agentBehaviour.hooks.matcher.kind.name":
+    "Provjerava {{field}}. Odvojite nazive znakom | ili koristite regularni izraz. Ostavite prazno da odgovara svemu.",
+  "settings.agentBehaviour.hooks.matcher.files": "Prati: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.filesNone":
+    "Sam ne prati nijednu datoteku; pokreće se za putanje koje drugi hookovi dodaju preko watchPaths.",
+  "settings.agentBehaviour.hooks.matcher.none": "Ovaj događaj nema filter; hook se pokreće svaki put.",
+  "settings.agentBehaviour.hooks.async": "Pokreni u pozadini",
+  "settings.agentBehaviour.hooks.async.help": "Kilo ne čeka hook; njegov izlaz i izlazni kod se samo bilježe.",
+  "settings.agentBehaviour.hooks.async.noBlock": "Hook u pozadini ne može blokirati niti dodati kontekst.",
+  "settings.agentBehaviour.hooks.claude.skipped": "Kilo ne pokreće: {{items}}",
   "settings.agentBehaviour.mcpDetail.command": "Naredba",
   "settings.agentBehaviour.mcpDetail.args": "Argumenti",
   "settings.agentBehaviour.mcpDetail.env": "Okruženje",
@@ -1308,6 +1382,7 @@ export const dict = {
   "chat.memory.command.failed": "Komanda memorije nije uspjela",
   "chat.memory.updated": "Memory updated",
   "chat.memory.rebuild": "Memory index rebuilt",
+  "chat.hookFeedback": "Povratna informacija hooka ({{event}})",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Koristi prilagođeni prompt",

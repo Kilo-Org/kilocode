@@ -305,6 +305,9 @@ export const dict = {
   "notification.permission.titleSandboxEscalation": "Виконати поза пісочницею?",
   "notification.permission.descriptionSandboxEscalation":
     "Команда повністю виконується без обмежень файлової системи та мережі, лише для цієї команди. Git має записувати в .git, який доступний лише для читання в пісочниці та розташований поза робочим деревом у пов'язаному worktree. Правила дозволів Bash і автоматичне схвалення ніколи не схвалюють цей запит автоматично.",
+  "notification.permission.titleHookAsk": "Хук просить підтвердження",
+  "notification.permission.descriptionHookAsk":
+    "Хук просить вас підтвердити цей виклик перед виконанням. Автоматичне схвалення ніколи не відповідає на цей запит.",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
   "ui.permission.reject": "Відхилити",
   "ui.permission.feedbackPlaceholder": "Скажіть Kilo, що зробити інакше",
@@ -1043,23 +1046,17 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Сумісність з Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Завантажувати файли Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "Завантажувати інструкції та навички CLAUDE.md з вашого каталогу конфігурації Claude Code у сесії. Увімкніть це, якщо ви хочете, щоб Kilo використовував ваші інструкції та навички Claude Code. Потребує перезапуску. Також виконує команди хуків PreToolUse і PostToolUse з ~/.claude/settings.json з вашими правами користувача.",
+    "Завантажувати інструкції та навички CLAUDE.md з вашого каталогу конфігурації Claude Code у сесії. Увімкніть це, якщо ви хочете, щоб Kilo використовував ваші інструкції та навички Claude Code. Потребує перезапуску. Також виконує хуки Claude Code з ~/.claude/settings.json з вашими правами користувача: події інструментів, промптів і сесій (UserPromptSubmit, SessionStart, ...), Stop і події субагентів, стиснення та сповіщення.",
   "settings.agentBehaviour.hooks.description":
-    "Запускайте власні команди до або після використання інструмента агентом, наприклад щоб перевіряти лінтером кожну зміну чи блокувати ризиковані команди. Використовує формат хуків Claude Code.",
+    "Запускайте власні команди, коли агент діє: до або після виклику інструмента, коли ви надсилаєте промпт, коли починається сесія, коли агент зупиняється, перед стисненням тощо. Використовує формат хуків Claude Code.",
   "settings.agentBehaviour.hooks.warning":
     "Хуки виконують команди оболонки з вашими повними правами користувача, поза пісочницею. Додавайте лише команди, яким довіряєте.",
   "settings.agentBehaviour.hooks.scope":
     "Зберігається у вашій глобальній конфігурації. Хуки з конфігурації проєкту ігноруються.",
   "settings.agentBehaviour.hooks.openConfig": "Відкрити файл конфігурації",
-  "settings.agentBehaviour.hooks.pre": "Перед запуском інструмента",
-  "settings.agentBehaviour.hooks.pre.help":
-    "Може заблокувати виклик інструмента: завершіться з кодом 2 і запишіть причину в stderr. Агент побачить причину.",
-  "settings.agentBehaviour.hooks.post": "Після запуску інструмента",
-  "settings.agentBehaviour.hooks.post.help":
-    "Може надіслати агенту зворотний зв'язок, наприклад помилки лінтера: завершіться з кодом 2 і запишіть його в stderr.",
   "settings.agentBehaviour.hooks.empty": "Хуків ще немає.",
   "settings.agentBehaviour.hooks.add": "Додати хук",
-  "settings.agentBehaviour.hooks.allTools": "Усі інструменти",
+  "settings.agentBehaviour.hooks.allTools": "Усі",
   "settings.agentBehaviour.hooks.badge.timeout": "Тайм-аут {{seconds}} с",
   "settings.agentBehaviour.hooks.badge.block": "Блокує в разі збою",
   "settings.agentBehaviour.hooks.badge.exec": "Без оболонки",
@@ -1076,18 +1073,16 @@ export const dict = {
   "settings.agentBehaviour.hooks.new": "Новий хук",
   "settings.agentBehaviour.hooks.edit": "Редагувати хук",
   "settings.agentBehaviour.hooks.event": "Коли",
-  "settings.agentBehaviour.hooks.matcher": "Інструменти",
-  "settings.agentBehaviour.hooks.matcher.help":
-    "Залиште порожнім, щоб спрацьовувати для всіх інструментів. Розділяйте назви інструментів символом | (edit|write). Усе інше вважається регулярним виразом. Підходять назви як Kilo, так і Claude Code (bash або Bash); інструменти MCP мають вигляд github_create_issue.",
-  "settings.agentBehaviour.hooks.matcher.all": "Відповідає будь-якому інструменту",
+  "settings.agentBehaviour.hooks.matcher": "Фільтр",
+  "settings.agentBehaviour.hooks.matcher.all": "Відповідає всьому",
   "settings.agentBehaviour.hooks.matcher.names": "Точний збіг: {{names}}",
-  "settings.agentBehaviour.hooks.matcher.regex": "Регулярний вираз, збіг у будь-якому місці назви інструмента",
+  "settings.agentBehaviour.hooks.matcher.regex": "Регулярний вираз, збіг у будь-якому місці значення",
   "settings.agentBehaviour.hooks.matcher.invalid": "Недійсний регулярний вираз",
   "settings.agentBehaviour.hooks.unmatched":
     "Тут немає інструмента з назвою {{names}}, тому цей хук для нього ніколи не виконується.",
   "settings.agentBehaviour.hooks.command": "Команда",
   "settings.agentBehaviour.hooks.command.help":
-    "Отримує виклик інструмента у форматі JSON через stdin і виконується в каталозі проєкту.",
+    "Отримує подію у форматі JSON через stdin і виконується в каталозі проєкту.",
   "settings.agentBehaviour.hooks.command.required": "Введіть команду",
   "settings.agentBehaviour.hooks.exec": "Запускати без оболонки",
   "settings.agentBehaviour.hooks.exec.help":
@@ -1095,16 +1090,99 @@ export const dict = {
   "settings.agentBehaviour.hooks.args.placeholder": "Один аргумент на рядок",
   "settings.agentBehaviour.hooks.timeout": "Тайм-аут (секунди)",
   "settings.agentBehaviour.hooks.timeout.help":
-    "За замовчуванням {{seconds}}. Хук, що перевищив тайм-аут, зупиняється разом з усіма запущеними ним процесами.",
+    "За замовчуванням {{seconds}} для цієї події. Хук, що перевищив тайм-аут, зупиняється разом з усіма запущеними ним процесами.",
   "settings.agentBehaviour.hooks.timeout.invalid": "Введіть ціле число секунд від 1 до 86400",
-  "settings.agentBehaviour.hooks.block": "Блокувати виклик інструмента в разі збою хука",
+  "settings.agentBehaviour.hooks.block": "Блокувати в разі збою хука",
   "settings.agentBehaviour.hooks.block.help":
-    "За замовчуванням, якщо хук аварійно завершується або перевищує тайм-аут, інструмент усе одно запускається. Увімкніть це для захисних перевірок, які в разі збою не повинні пропускати виклик.",
+    "За замовчуванням, якщо хук аварійно завершується або перевищує тайм-аут, дія продовжується. Увімкніть це для захисних перевірок, які в разі збою не повинні нічого пропускати.",
   "settings.agentBehaviour.hooks.apply": "Застосувати",
   "settings.agentBehaviour.hooks.remove.heading": "Видалити хук",
   "settings.agentBehaviour.hooks.remove.confirm":
     'Видалити хук "{{command}}"? Натисніть "Зберегти", щоб застосувати зміну.',
   "settings.agentBehaviour.hooks.remove.button": "Видалити",
+  "settings.agentBehaviour.hooks.kiloOnly": "Лише Kilo",
+  "settings.agentBehaviour.hooks.badge.async": "У фоні",
+  "settings.agentBehaviour.hooks.group.tools": "Інструменти",
+  "settings.agentBehaviour.hooks.group.prompt": "Промпти",
+  "settings.agentBehaviour.hooks.group.session": "Сесії",
+  "settings.agentBehaviour.hooks.group.loop": "Цикл агента",
+  "settings.agentBehaviour.hooks.group.compaction": "Стиснення",
+  "settings.agentBehaviour.hooks.group.environment": "Середовище",
+  "settings.agentBehaviour.hooks.group.kilo": "Події Kilo",
+  "settings.agentBehaviour.hooks.event.PreToolUse.help":
+    'Перед запуском інструмента. Код виходу 2 або deny у JSON блокує виклик; "ask" змушує Kilo спершу запитати вас.',
+  "settings.agentBehaviour.hooks.event.PostToolUse.help":
+    "Після успішної роботи інструмента. stderr за коду виходу 2 або additionalContext показується агенту, наприклад помилки лінтера.",
+  "settings.agentBehaviour.hooks.event.PostToolUseFailure.help":
+    "Після збою інструмента, зокрема коли команда оболонки завершується з ненульовим кодом. additionalContext показується агенту.",
+  "settings.agentBehaviour.hooks.event.PostToolBatch.help":
+    "Після кроку моделі, що запускав інструменти, перед наступним викликом моделі. Блокування завершує хід.",
+  "settings.agentBehaviour.hooks.event.PermissionRequest.help":
+    "Коли Kilo показує запит дозволу. Deny у JSON відхиляє виклик; хуки не можуть схвалювати.",
+  "settings.agentBehaviour.hooks.event.TaskCreated.help": "Коли агент додає завдання. Блокування видаляє це завдання.",
+  "settings.agentBehaviour.hooks.event.TaskCompleted.help":
+    "Коли агент позначає завдання як виконане. Блокування залишає його відкритим.",
+  "settings.agentBehaviour.hooks.event.UserPromptSubmit.help":
+    "Коли ви надсилаєте промпт або команду. Блокування відхиляє їх; stdout додається до промпту.",
+  "settings.agentBehaviour.hooks.event.UserPromptExpansion.help":
+    "Коли розгортається власна команда, навичка або промпт MCP. Блокування відхиляє її.",
+  "settings.agentBehaviour.hooks.event.PreModelSwitch.help":
+    'Перед тим як промпт перемкне сесію на іншу модель. Блокування, "ask" або тайм-аут відхиляє промпт.',
+  "settings.agentBehaviour.hooks.event.PostModelSwitch.help":
+    "Після зміни моделі сесії. stdout додається до наступного запиту.",
+  "settings.agentBehaviour.hooks.event.SessionStart.help":
+    "Коли сесія починається, відновлюється, відгалужується або стискається. stdout додається до розмови.",
+  "settings.agentBehaviour.hooks.event.SessionEnd.help":
+    "Коли сесію видалено або Kilo завершує роботу. Усі хуки SessionEnd ділять короткий ліміт часу.",
+  "settings.agentBehaviour.hooks.event.InstructionsLoaded.help":
+    "Коли завантажується файл інструкцій, наприклад AGENTS.md або CLAUDE.md.",
+  "settings.agentBehaviour.hooks.event.Stop.help":
+    "Коли агент закінчує відповідати. Блокування змушує його продовжити, не більше 8 разів поспіль.",
+  "settings.agentBehaviour.hooks.event.SubagentStop.help":
+    "Коли субагент завершує роботу. Блокування змушує його продовжити.",
+  "settings.agentBehaviour.hooks.event.SubagentStart.help":
+    "Коли запускається субагент. additionalContext додається до його першого промпту.",
+  "settings.agentBehaviour.hooks.event.StopFailure.help":
+    "Коли хід завершується помилкою API, наприклад перевищенням ліміту запитів.",
+  "settings.agentBehaviour.hooks.event.PreCompact.help": "Перед стисненням розмови. Блокування пропускає стиснення.",
+  "settings.agentBehaviour.hooks.event.PostCompact.help": "Після стиснення розмови.",
+  "settings.agentBehaviour.hooks.event.Notification.help":
+    "Коли Kilo чекає на вас: запит дозволу, запитання або простій після ходу.",
+  "settings.agentBehaviour.hooks.event.ConfigChange.help":
+    "Після того як Kilo змінив свою конфігурацію. Не може блокувати.",
+  "settings.agentBehaviour.hooks.event.FileChanged.help": "Коли змінюється відстежуваний файл у каталозі проєкту.",
+  "settings.agentBehaviour.hooks.event.CwdChanged.help":
+    "Коли команда оболонки виконується в іншому каталозі, ніж попередня.",
+  "settings.agentBehaviour.hooks.event.GoalReport.help":
+    "Перед тим як /goal буде позначено як виконану або заблоковану. Блокування залишає ціль активною.",
+  "settings.agentBehaviour.hooks.event.WakeupFire.help":
+    "Перед запуском запланованого пробудження або завдання cron. Блокування пропускає його.",
+  "settings.agentBehaviour.hooks.event.WorktreeSetup.help":
+    "Після створення керованого worktree і виконання його скрипту налаштування. Блокування позначає налаштування як невдале.",
+  "settings.agentBehaviour.hooks.event.WorktreeTeardown.help": "Перед видаленням керованого worktree.",
+  "settings.agentBehaviour.hooks.event.CommitMessage.help":
+    "Після генерування повідомлення коміту. hookSpecificOutput.commitMessage замінює його; блокування відхиляє його.",
+  "settings.agentBehaviour.hooks.event.BranchName.help":
+    "Після генерування назви гілки для worktree. hookSpecificOutput.branchName замінює її; блокування зберігає поточну назву.",
+  "settings.agentBehaviour.hooks.matcher.values":
+    "Порівнює {{field}}: {{values}}. Розділяйте кілька значень символом |.",
+  "settings.agentBehaviour.hooks.matcher.kind.tool":
+    "Залиште порожнім, щоб спрацьовувати для всіх інструментів. Розділяйте назви інструментів символом | (edit|write). Усе інше вважається регулярним виразом. Підходять назви як Kilo, так і Claude Code (bash або Bash); інструменти MCP мають вигляд github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.kind.file":
+    "Назви файлів у каталозі проєкту для відстеження, через | (.envrc|.env). Кожна назва береться буквально.",
+  "settings.agentBehaviour.hooks.matcher.kind.model":
+    "Назви моделей через | або регулярний вираз. Підходять канонічна назва (claude-sonnet-4-5), id моделі та провайдер/модель.",
+  "settings.agentBehaviour.hooks.matcher.kind.name":
+    "Порівнює {{field}}. Розділяйте назви символом | або використовуйте регулярний вираз. Залиште порожнім, щоб спрацьовувати завжди.",
+  "settings.agentBehaviour.hooks.matcher.files": "Відстежує: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.filesNone":
+    "Сам не відстежує жодного файлу; запускається для шляхів, які інші хуки додають через watchPaths.",
+  "settings.agentBehaviour.hooks.matcher.none": "Ця подія не має фільтра; хук запускається щоразу.",
+  "settings.agentBehaviour.hooks.async": "Виконувати у фоні",
+  "settings.agentBehaviour.hooks.async.help":
+    "Kilo не чекає на хук; його вивід і код виходу лише записуються в журнал.",
+  "settings.agentBehaviour.hooks.async.noBlock": "Фоновий хук не може блокувати або додавати контекст.",
+  "settings.agentBehaviour.hooks.claude.skipped": "Не запускаються Kilo: {{items}}",
   "settings.agentBehaviour.removeMcp.title": "Видалити MCP-сервер",
   "settings.agentBehaviour.removeMcp.confirm": 'Видалити MCP-сервер "{{name}}"? Це видалить його з вашої конфігурації.',
   "settings.agentBehaviour.removeMcp.bundleConfirm":
@@ -1261,6 +1339,7 @@ export const dict = {
   "chat.memory.command.failed": "Команду пам’яті не виконано",
   "chat.memory.updated": "Memory updated",
   "chat.memory.rebuild": "Memory index rebuilt",
+  "chat.hookFeedback": "Відповідь хука ({{event}})",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Використовувати власний prompt",

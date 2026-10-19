@@ -302,6 +302,9 @@ export const dict = {
   "notification.permission.titleSandboxEscalation": "اجرا خارج از sandbox؟",
   "notification.permission.descriptionSandboxEscalation":
     "این کل فرمان را با حذف محدودیت‌های فایل‌سیستم و شبکه، فقط برای همین فرمان اجرا می‌کند. Git باید در .git بنویسد؛ این مسیر در sandbox فقط‌خواندنی است و در یک worktree مرتبط خارج از worktree قرار دارد. قواعد اجازه Bash و تأیید خودکار هرگز این درخواست را به‌صورت خودکار تأیید نمی‌کنند.",
+  "notification.permission.titleHookAsk": "یک هوک درخواست تأیید دارد",
+  "notification.permission.descriptionHookAsk":
+    "یک هوک از شما می‌خواهد این فراخوانی را پیش از اجرا تأیید کنید. تأیید خودکار هرگز به این درخواست پاسخ نمی‌دهد.",
   "ui.permission.manageAutoApprove": "مدیریت قوانین تأیید خودکار",
   "ui.permission.reject": "رد",
   "ui.permission.feedbackPlaceholder": "به Kilo بگویید چه کاری را متفاوت انجام دهد",
@@ -1028,23 +1031,17 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "سازگاری با Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "بارگذاری فایل‌های Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "دستورالعمل‌ها و مهارت‌های CLAUDE.md را از پوشه پیکربندی Claude Code شما در جلسات بارگذاری می‌کند. اگر می‌خواهید Kilo از دستورالعمل‌ها و مهارت‌های Claude Code شما استفاده کند، این گزینه را فعال کنید. نیاز به راه‌اندازی مجدد دارد. همچنین دستورهای هوک PreToolUse و PostToolUse را از ~/.claude/settings.json با مجوزهای کاربری شما اجرا می‌کند.",
+    "دستورالعمل‌ها و مهارت‌های CLAUDE.md را از پوشه پیکربندی Claude Code شما در جلسات بارگذاری می‌کند. اگر می‌خواهید Kilo از دستورالعمل‌ها و مهارت‌های Claude Code شما استفاده کند، این گزینه را فعال کنید. نیاز به راه‌اندازی مجدد دارد. همچنین هوک‌های Claude Code را از ~/.claude/settings.json با مجوزهای کاربری شما اجرا می‌کند: رویدادهای ابزار، رویدادهای پرامپت و جلسه (UserPromptSubmit، SessionStart، ...)، رویدادهای Stop و زیرعامل‌ها، فشرده‌سازی و اعلان‌ها.",
   "settings.agentBehaviour.hooks.description":
-    "دستورهای خودتان را پیش یا پس از استفاده عامل از یک ابزار اجرا کنید، مثلاً برای lint کردن هر ویرایش یا مسدود کردن دستورهای پرخطر. از قالب هوک‌های Claude Code استفاده می‌کند.",
+    "دستورهای خودتان را هنگام اقدام عامل اجرا کنید: پیش یا پس از فراخوانی ابزار، هنگام ارسال پرامپت، هنگام شروع جلسه، هنگام توقف عامل، پیش از فشرده‌سازی و موارد دیگر. از قالب هوک‌های Claude Code استفاده می‌کند.",
   "settings.agentBehaviour.hooks.warning":
     "هوک‌ها دستورهای شل را با تمام مجوزهای کاربری شما و خارج از sandbox اجرا می‌کنند. فقط دستورهایی را اضافه کنید که به آن‌ها اعتماد دارید.",
   "settings.agentBehaviour.hooks.scope":
     "در پیکربندی سراسری شما ذخیره می‌شود. هوک‌های موجود در پیکربندی پروژه نادیده گرفته می‌شوند.",
   "settings.agentBehaviour.hooks.openConfig": "باز کردن فایل پیکربندی",
-  "settings.agentBehaviour.hooks.pre": "پیش از اجرای ابزار",
-  "settings.agentBehaviour.hooks.pre.help":
-    "می‌تواند فراخوانی ابزار را مسدود کند: با کد 2 خارج شوید و دلیل را در stderr بنویسید. عامل دلیل را می‌بیند.",
-  "settings.agentBehaviour.hooks.post": "پس از اجرای ابزار",
-  "settings.agentBehaviour.hooks.post.help":
-    "می‌تواند بازخوردی مانند خطاهای lint برای عامل بفرستد: با کد 2 خارج شوید و آن را در stderr بنویسید.",
   "settings.agentBehaviour.hooks.empty": "هنوز هوکی وجود ندارد.",
   "settings.agentBehaviour.hooks.add": "افزودن هوک",
-  "settings.agentBehaviour.hooks.allTools": "همه ابزارها",
+  "settings.agentBehaviour.hooks.allTools": "همه",
   "settings.agentBehaviour.hooks.badge.timeout": "زمان‌وقفه {{seconds}} ثانیه",
   "settings.agentBehaviour.hooks.badge.block": "مسدودسازی در صورت خطا",
   "settings.agentBehaviour.hooks.badge.exec": "بدون شل",
@@ -1061,18 +1058,16 @@ export const dict = {
   "settings.agentBehaviour.hooks.new": "هوک جدید",
   "settings.agentBehaviour.hooks.edit": "ویرایش هوک",
   "settings.agentBehaviour.hooks.event": "چه زمانی",
-  "settings.agentBehaviour.hooks.matcher": "ابزارها",
-  "settings.agentBehaviour.hooks.matcher.help":
-    "برای تطبیق با همه ابزارها خالی بگذارید. نام ابزارها را با | جدا کنید (edit|write). هر چیز دیگری عبارت منظم در نظر گرفته می‌شود. نام‌های Kilo و Claude Code هر دو کار می‌کنند (bash یا Bash)؛ ابزارهای MCP شبیه github_create_issue هستند.",
-  "settings.agentBehaviour.hooks.matcher.all": "با همه ابزارها تطبیق دارد",
+  "settings.agentBehaviour.hooks.matcher": "تطبیق‌دهنده",
+  "settings.agentBehaviour.hooks.matcher.all": "با همه چیز تطبیق دارد",
   "settings.agentBehaviour.hooks.matcher.names": "تطبیق دقیق: {{names}}",
-  "settings.agentBehaviour.hooks.matcher.regex": "عبارت منظم، در هر جای نام ابزار تطبیق داده می‌شود",
+  "settings.agentBehaviour.hooks.matcher.regex": "عبارت منظم، در هر جای مقدار تطبیق داده می‌شود",
   "settings.agentBehaviour.hooks.matcher.invalid": "عبارت منظم نامعتبر",
   "settings.agentBehaviour.hooks.unmatched":
     "اینجا هیچ ابزاری با نام {{names}} وجود ندارد، بنابراین این هوک هرگز برای آن اجرا نمی‌شود.",
   "settings.agentBehaviour.hooks.command": "دستور",
   "settings.agentBehaviour.hooks.command.help":
-    "فراخوانی ابزار را به‌صورت JSON از stdin دریافت می‌کند و در پوشه پروژه اجرا می‌شود.",
+    "رویداد را به‌صورت JSON از stdin دریافت می‌کند و در پوشه پروژه اجرا می‌شود.",
   "settings.agentBehaviour.hooks.command.required": "یک دستور وارد کنید",
   "settings.agentBehaviour.hooks.exec": "اجرا بدون شل",
   "settings.agentBehaviour.hooks.exec.help":
@@ -1080,15 +1075,96 @@ export const dict = {
   "settings.agentBehaviour.hooks.args.placeholder": "هر آرگومان در یک خط",
   "settings.agentBehaviour.hooks.timeout": "زمان‌وقفه (ثانیه)",
   "settings.agentBehaviour.hooks.timeout.help":
-    "پیش‌فرض {{seconds}} است. هوکی که زمان‌وقفه‌اش تمام شود، همراه با همه فرآیندهایی که شروع کرده متوقف می‌شود.",
+    "پیش‌فرض برای این رویداد {{seconds}} است. هوکی که زمان‌وقفه‌اش تمام شود، همراه با همه فرآیندهایی که شروع کرده متوقف می‌شود.",
   "settings.agentBehaviour.hooks.timeout.invalid": "یک عدد صحیح ثانیه بین 1 تا 86400 وارد کنید",
-  "settings.agentBehaviour.hooks.block": "مسدود کردن فراخوانی ابزار در صورت شکست هوک",
+  "settings.agentBehaviour.hooks.block": "مسدود کردن در صورت شکست هوک",
   "settings.agentBehaviour.hooks.block.help":
-    "به‌طور پیش‌فرض، هوکی که از کار بیفتد یا زمان‌وقفه‌اش تمام شود اجازه اجرای ابزار را می‌دهد. این گزینه را برای محافظ‌هایی روشن کنید که نباید در صورت خطا اجازه عبور بدهند.",
+    "به‌طور پیش‌فرض، هوکی که از کار بیفتد یا زمان‌وقفه‌اش تمام شود اجازه ادامه کار را می‌دهد. این گزینه را برای محافظ‌هایی روشن کنید که نباید در صورت خطا اجازه عبور بدهند.",
   "settings.agentBehaviour.hooks.apply": "اعمال",
   "settings.agentBehaviour.hooks.remove.heading": "حذف هوک",
   "settings.agentBehaviour.hooks.remove.confirm": "هوک «{{command}}» حذف شود؟ برای اعمال تغییر، روی «ذخیره» کلیک کنید.",
   "settings.agentBehaviour.hooks.remove.button": "حذف",
+  "settings.agentBehaviour.hooks.kiloOnly": "فقط Kilo",
+  "settings.agentBehaviour.hooks.badge.async": "پس‌زمینه",
+  "settings.agentBehaviour.hooks.group.tools": "ابزارها",
+  "settings.agentBehaviour.hooks.group.prompt": "پرامپت‌ها",
+  "settings.agentBehaviour.hooks.group.session": "جلسات",
+  "settings.agentBehaviour.hooks.group.loop": "حلقه عامل",
+  "settings.agentBehaviour.hooks.group.compaction": "فشرده‌سازی",
+  "settings.agentBehaviour.hooks.group.environment": "محیط",
+  "settings.agentBehaviour.hooks.group.kilo": "رویدادهای Kilo",
+  "settings.agentBehaviour.hooks.event.PreToolUse.help":
+    'پیش از اجرای ابزار. کد خروج 2 یا یک deny در JSON فراخوانی را مسدود می‌کند؛ "ask" باعث می‌شود Kilo اول از شما بپرسد.',
+  "settings.agentBehaviour.hooks.event.PostToolUse.help":
+    "پس از موفقیت ابزار. stderr کد خروج 2 یا additionalContext، مثلاً خطاهای lint، به عامل نشان داده می‌شود.",
+  "settings.agentBehaviour.hooks.event.PostToolUseFailure.help":
+    "پس از شکست ابزار، از جمله دستور shell که با کدی غیر از صفر تمام شود. additionalContext به عامل نشان داده می‌شود.",
+  "settings.agentBehaviour.hooks.event.PostToolBatch.help":
+    "پس از گامی از مدل که ابزار اجرا کرده، پیش از فراخوانی بعدی مدل. مسدودسازی نوبت را تمام می‌کند.",
+  "settings.agentBehaviour.hooks.event.PermissionRequest.help":
+    "وقتی Kilo درخواست مجوز نشان می‌دهد. یک deny در JSON فراخوانی را رد می‌کند؛ هوک‌ها نمی‌توانند تأیید کنند.",
+  "settings.agentBehaviour.hooks.event.TaskCreated.help":
+    "وقتی عامل یک کار به فهرست اضافه می‌کند. مسدودسازی آن کار را حذف می‌کند.",
+  "settings.agentBehaviour.hooks.event.TaskCompleted.help":
+    "وقتی عامل یک کار را انجام‌شده علامت می‌زند. مسدودسازی آن را باز نگه می‌دارد.",
+  "settings.agentBehaviour.hooks.event.UserPromptSubmit.help":
+    "وقتی پرامپت یا دستوری می‌فرستید. مسدودسازی آن را رد می‌کند؛ stdout به پرامپت اضافه می‌شود.",
+  "settings.agentBehaviour.hooks.event.UserPromptExpansion.help":
+    "وقتی یک دستور سفارشی، مهارت یا پرامپت MCP گسترش می‌یابد. مسدودسازی آن را رد می‌کند.",
+  "settings.agentBehaviour.hooks.event.PreModelSwitch.help":
+    'پیش از آنکه پرامپت، جلسه را به مدل دیگری ببرد. مسدودسازی، "ask" یا پایان زمان‌وقفه پرامپت را رد می‌کند.',
+  "settings.agentBehaviour.hooks.event.PostModelSwitch.help":
+    "پس از تغییر مدل جلسه. stdout به درخواست بعدی اضافه می‌شود.",
+  "settings.agentBehaviour.hooks.event.SessionStart.help":
+    "وقتی جلسه شروع، از سر گرفته، منشعب یا فشرده می‌شود. stdout به گفتگو اضافه می‌شود.",
+  "settings.agentBehaviour.hooks.event.SessionEnd.help":
+    "وقتی جلسه حذف می‌شود یا Kilo بسته می‌شود. همه هوک‌های SessionEnd زمان کوتاهی را با هم تقسیم می‌کنند.",
+  "settings.agentBehaviour.hooks.event.InstructionsLoaded.help":
+    "وقتی فایل دستورالعملی مانند AGENTS.md یا CLAUDE.md بارگذاری می‌شود.",
+  "settings.agentBehaviour.hooks.event.Stop.help":
+    "وقتی پاسخ عامل تمام می‌شود. مسدودسازی آن را وادار به ادامه می‌کند، حداکثر 8 بار پشت سر هم.",
+  "settings.agentBehaviour.hooks.event.SubagentStop.help":
+    "وقتی یک زیرعامل تمام می‌کند. مسدودسازی آن را وادار به ادامه می‌کند.",
+  "settings.agentBehaviour.hooks.event.SubagentStart.help":
+    "وقتی یک زیرعامل شروع می‌شود. additionalContext به اولین پرامپت آن اضافه می‌شود.",
+  "settings.agentBehaviour.hooks.event.StopFailure.help": "وقتی نوبتی با خطای API، مثلاً محدودیت نرخ، تمام می‌شود.",
+  "settings.agentBehaviour.hooks.event.PreCompact.help": "پیش از فشرده‌سازی گفتگو. مسدودسازی فشرده‌سازی را رد می‌کند.",
+  "settings.agentBehaviour.hooks.event.PostCompact.help": "پس از فشرده‌سازی گفتگو.",
+  "settings.agentBehaviour.hooks.event.Notification.help":
+    "وقتی Kilo منتظر شماست: درخواست مجوز، یک پرسش، یا بیکاری پس از یک نوبت.",
+  "settings.agentBehaviour.hooks.event.ConfigChange.help":
+    "پس از آنکه Kilo پیکربندی خود را تغییر داد. نمی‌تواند مسدود کند.",
+  "settings.agentBehaviour.hooks.event.FileChanged.help": "وقتی فایلی تحت نظر در پوشه پروژه تغییر می‌کند.",
+  "settings.agentBehaviour.hooks.event.CwdChanged.help":
+    "وقتی دستور shell در پوشه‌ای متفاوت از دستور قبلی اجرا می‌شود.",
+  "settings.agentBehaviour.hooks.event.GoalReport.help":
+    "پیش از آنکه یک /goal انجام‌شده یا مسدود علامت بخورد. مسدودسازی هدف را در جریان نگه می‌دارد.",
+  "settings.agentBehaviour.hooks.event.WakeupFire.help":
+    "پیش از اجرای بیدارباش زمان‌بندی‌شده یا کار cron. مسدودسازی آن را رد می‌کند.",
+  "settings.agentBehaviour.hooks.event.WorktreeSetup.help":
+    "پس از ایجاد یک worktree مدیریت‌شده و اجرای اسکریپت راه‌اندازی آن. مسدودسازی راه‌اندازی را ناموفق علامت می‌زند.",
+  "settings.agentBehaviour.hooks.event.WorktreeTeardown.help": "پیش از حذف یک worktree مدیریت‌شده.",
+  "settings.agentBehaviour.hooks.event.CommitMessage.help":
+    "پس از تولید پیام commit. hookSpecificOutput.commitMessage آن را جایگزین می‌کند؛ مسدودسازی آن را رد می‌کند.",
+  "settings.agentBehaviour.hooks.event.BranchName.help":
+    "پس از تولید نام شاخه برای یک worktree. hookSpecificOutput.branchName آن را جایگزین می‌کند؛ مسدودسازی نام فعلی را نگه می‌دارد.",
+  "settings.agentBehaviour.hooks.matcher.values": "با {{field}} تطبیق می‌دهد: {{values}}. چند مقدار را با | جدا کنید.",
+  "settings.agentBehaviour.hooks.matcher.kind.tool":
+    "برای تطبیق با همه ابزارها خالی بگذارید. نام ابزارها را با | جدا کنید (edit|write). هر چیز دیگری عبارت منظم در نظر گرفته می‌شود. نام‌های Kilo و Claude Code هر دو کار می‌کنند (bash یا Bash)؛ ابزارهای MCP شبیه github_create_issue هستند.",
+  "settings.agentBehaviour.hooks.matcher.kind.file":
+    "نام فایل‌هایی در پوشه پروژه که باید زیر نظر باشند، جداشده با | (.envrc|.env). هر نام به‌صورت حرفی در نظر گرفته می‌شود.",
+  "settings.agentBehaviour.hooks.matcher.kind.model":
+    "نام مدل‌ها جداشده با | یا یک عبارت منظم. نام استاندارد (claude-sonnet-4-5)، شناسه مدل و ارائه‌دهنده/مدل همگی تطبیق دارند.",
+  "settings.agentBehaviour.hooks.matcher.kind.name":
+    "با {{field}} تطبیق می‌دهد. نام‌ها را با | جدا کنید یا از عبارت منظم استفاده کنید. برای تطبیق با همه خالی بگذارید.",
+  "settings.agentBehaviour.hooks.matcher.files": "زیر نظر: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.filesNone":
+    "به‌تنهایی هیچ فایلی را زیر نظر ندارد؛ برای مسیرهایی اجرا می‌شود که هوک‌های دیگر با watchPaths اضافه می‌کنند.",
+  "settings.agentBehaviour.hooks.matcher.none": "این رویداد تطبیق‌دهنده ندارد؛ هوک هر بار اجرا می‌شود.",
+  "settings.agentBehaviour.hooks.async": "اجرا در پس‌زمینه",
+  "settings.agentBehaviour.hooks.async.help": "Kilo منتظر هوک نمی‌ماند؛ خروجی و کد خروج آن فقط ثبت می‌شود.",
+  "settings.agentBehaviour.hooks.async.noBlock": "هوک پس‌زمینه نمی‌تواند مسدود کند یا زمینه اضافه کند.",
+  "settings.agentBehaviour.hooks.claude.skipped": "توسط Kilo اجرا نمی‌شوند: {{items}}",
   "settings.agentBehaviour.removeMcp.title": "حذف سرور MCP",
   "settings.agentBehaviour.removeMcp.confirm": "سرور MCP «{{name}}» حذف شود؟ این کار آن را از پیکربندی شما حذف می‌کند.",
   "settings.agentBehaviour.removeMcp.bundleConfirm":
@@ -1285,6 +1361,7 @@ export const dict = {
   "chat.memory.command.failed": "دستور حافظه ناموفق بود",
   "chat.memory.updated": "حافظه به‌روزرسانی شد",
   "chat.memory.rebuild": "ایندکس حافظه بازسازی شد",
+  "chat.hookFeedback": "بازخورد هوک ({{event}})",
 
   "settings.commitMessage.title": "پیام Commit",
   "settings.commitMessage.override.title": "استفاده از Prompt سفارشی",

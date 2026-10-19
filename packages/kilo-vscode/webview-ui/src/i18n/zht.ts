@@ -286,6 +286,8 @@ export const dict = {
   "notification.permission.titleSandboxEscalation": "要在沙盒外執行嗎？",
   "notification.permission.descriptionSandboxEscalation":
     "這會移除檔案系統和網路限制，執行整條命令，且僅限此命令。Git 必須寫入 .git，該路徑在沙盒中為唯讀，且在連結的 worktree 中位於該 worktree 之外。Bash 允許規則和自動核准永遠不會自動核准此提示。",
+  "notification.permission.titleHookAsk": "鉤子要求確認",
+  "notification.permission.descriptionHookAsk": "鉤子要求你在此呼叫執行之前進行確認。自動核准永遠不會回應此提示。",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
   "ui.permission.reject": "拒絕",
   "ui.permission.feedbackPlaceholder": "告訴 Kilo 應該如何修改",
@@ -1025,20 +1027,16 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 相容性",
   "settings.agentBehaviour.claudeCompat.title": "載入 Claude Code 檔案",
   "settings.agentBehaviour.claudeCompat.description":
-    "從您的 Claude Code 設定目錄將 CLAUDE.md 指示與技能載入至工作階段中。如果您希望 Kilo 使用您的 Claude Code 指示與技能，請啟用此選項。需要重新啟動。也會以你的使用者權限執行 ~/.claude/settings.json 中的 PreToolUse 和 PostToolUse 鉤子命令。",
+    "從您的 Claude Code 設定目錄將 CLAUDE.md 指示與技能載入至工作階段中。如果您希望 Kilo 使用您的 Claude Code 指示與技能，請啟用此選項。需要重新啟動。也會以你的使用者權限執行 ~/.claude/settings.json 中的 Claude Code 鉤子：工具事件、提示詞與工作階段事件（UserPromptSubmit、SessionStart 等）、Stop 與子代理事件、壓縮與通知。",
   "settings.agentBehaviour.hooks.description":
-    "在代理使用工具之前或之後執行你自己的命令，例如對每次編輯執行 lint，或封鎖有風險的命令。使用 Claude Code 鉤子格式。",
+    "在代理執行動作時執行你自己的命令：工具呼叫之前或之後、送出提示詞時、工作階段開始時、代理停止時、壓縮之前等。使用 Claude Code 鉤子格式。",
   "settings.agentBehaviour.hooks.warning":
     "鉤子會在沙盒之外以你的完整使用者權限執行 shell 命令。請只新增你信任的命令。",
   "settings.agentBehaviour.hooks.scope": "儲存至你的全域設定。專案設定中的鉤子會被忽略。",
   "settings.agentBehaviour.hooks.openConfig": "開啟設定檔",
-  "settings.agentBehaviour.hooks.pre": "工具執行前",
-  "settings.agentBehaviour.hooks.pre.help": "可以封鎖工具呼叫：以代碼 2 結束，並將原因寫入 stderr。代理會看到該原因。",
-  "settings.agentBehaviour.hooks.post": "工具執行後",
-  "settings.agentBehaviour.hooks.post.help": "可以向代理傳送回饋，例如 lint 錯誤：以代碼 2 結束，並將其寫入 stderr。",
   "settings.agentBehaviour.hooks.empty": "尚無鉤子。",
   "settings.agentBehaviour.hooks.add": "新增鉤子",
-  "settings.agentBehaviour.hooks.allTools": "所有工具",
+  "settings.agentBehaviour.hooks.allTools": "全部",
   "settings.agentBehaviour.hooks.badge.timeout": "逾時 {{seconds}} 秒",
   "settings.agentBehaviour.hooks.badge.block": "失敗時封鎖",
   "settings.agentBehaviour.hooks.badge.exec": "不使用 shell",
@@ -1054,31 +1052,97 @@ export const dict = {
   "settings.agentBehaviour.hooks.new": "新鉤子",
   "settings.agentBehaviour.hooks.edit": "編輯鉤子",
   "settings.agentBehaviour.hooks.event": "時機",
-  "settings.agentBehaviour.hooks.matcher": "工具",
-  "settings.agentBehaviour.hooks.matcher.help":
-    "留空則比對所有工具。以 | 分隔工具名稱（edit|write）。其他內容皆視為正規表示式。Kilo 與 Claude Code 的名稱皆可使用（bash 或 Bash）；MCP 工具的名稱形如 github_create_issue。",
-  "settings.agentBehaviour.hooks.matcher.all": "比對所有工具",
+  "settings.agentBehaviour.hooks.matcher": "比對器",
+  "settings.agentBehaviour.hooks.matcher.all": "比對所有內容",
   "settings.agentBehaviour.hooks.matcher.names": "完全比對：{{names}}",
-  "settings.agentBehaviour.hooks.matcher.regex": "正規表示式，可比對工具名稱中的任意位置",
+  "settings.agentBehaviour.hooks.matcher.regex": "正規表示式，可比對值中的任意位置",
   "settings.agentBehaviour.hooks.matcher.invalid": "無效的正規表示式",
   "settings.agentBehaviour.hooks.unmatched": "這裡沒有名為 {{names}} 的工具，因此此鉤子永遠不會對其執行。",
   "settings.agentBehaviour.hooks.command": "命令",
-  "settings.agentBehaviour.hooks.command.help": "透過 stdin 以 JSON 格式接收工具呼叫，並在專案資料夾中執行。",
+  "settings.agentBehaviour.hooks.command.help": "透過 stdin 以 JSON 格式接收事件，並在專案資料夾中執行。",
   "settings.agentBehaviour.hooks.command.required": "請輸入命令",
   "settings.agentBehaviour.hooks.exec": "不透過 shell 執行",
   "settings.agentBehaviour.hooks.exec.help":
     "將命令作為程式執行，並傳入下方的引數（每行一個）。不透過 shell，因此 ~ 和 $VARIABLES 不會被展開：請使用絕對路徑。",
   "settings.agentBehaviour.hooks.args.placeholder": "每行一個引數",
   "settings.agentBehaviour.hooks.timeout": "逾時（秒）",
-  "settings.agentBehaviour.hooks.timeout.help": "預設為 {{seconds}} 秒。逾時的鉤子及其啟動的所有處理程序都會被停止。",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "此事件預設為 {{seconds}} 秒。逾時的鉤子及其啟動的所有處理程序都會被停止。",
   "settings.agentBehaviour.hooks.timeout.invalid": "請輸入 1 到 86400 之間的整數秒數",
-  "settings.agentBehaviour.hooks.block": "鉤子失敗時封鎖工具呼叫",
+  "settings.agentBehaviour.hooks.block": "鉤子失敗時封鎖",
   "settings.agentBehaviour.hooks.block.help":
-    "根據預設，當機或逾時的鉤子會讓工具繼續執行。對於失敗時不得放行的防護措施，請開啟此選項。",
+    "根據預設，當機或逾時的鉤子會讓動作繼續進行。對於失敗時不得放行的防護措施，請開啟此選項。",
   "settings.agentBehaviour.hooks.apply": "套用",
   "settings.agentBehaviour.hooks.remove.heading": "移除鉤子",
   "settings.agentBehaviour.hooks.remove.confirm": '要移除鉤子 "{{command}}" 嗎？點擊 "儲存" 以套用變更。',
   "settings.agentBehaviour.hooks.remove.button": "移除",
+  "settings.agentBehaviour.hooks.kiloOnly": "僅限 Kilo",
+  "settings.agentBehaviour.hooks.badge.async": "背景",
+  "settings.agentBehaviour.hooks.group.tools": "工具",
+  "settings.agentBehaviour.hooks.group.prompt": "提示詞",
+  "settings.agentBehaviour.hooks.group.session": "工作階段",
+  "settings.agentBehaviour.hooks.group.loop": "代理迴圈",
+  "settings.agentBehaviour.hooks.group.compaction": "壓縮",
+  "settings.agentBehaviour.hooks.group.environment": "環境",
+  "settings.agentBehaviour.hooks.group.kilo": "Kilo 事件",
+  "settings.agentBehaviour.hooks.event.PreToolUse.help":
+    '工具執行之前。結束代碼 2 或 JSON deny 會封鎖呼叫；"ask" 會讓 Kilo 先詢問你。',
+  "settings.agentBehaviour.hooks.event.PostToolUse.help":
+    "工具成功之後。結束代碼 2 的 stderr 或 additionalContext（例如 lint 錯誤）會顯示給代理。",
+  "settings.agentBehaviour.hooks.event.PostToolUseFailure.help":
+    "工具失敗之後，包括以非零代碼結束的 shell 命令。additionalContext 會顯示給代理。",
+  "settings.agentBehaviour.hooks.event.PostToolBatch.help":
+    "在執行了工具的模型步驟之後、下一次模型呼叫之前。封鎖會結束本輪。",
+  "settings.agentBehaviour.hooks.event.PermissionRequest.help":
+    "Kilo 顯示權限要求時。JSON deny 會拒絕呼叫；鉤子無法核准。",
+  "settings.agentBehaviour.hooks.event.TaskCreated.help": "代理新增待辦事項時。封鎖會移除該待辦事項。",
+  "settings.agentBehaviour.hooks.event.TaskCompleted.help": "代理將待辦事項標記為完成時。封鎖會使其保持未完成。",
+  "settings.agentBehaviour.hooks.event.UserPromptSubmit.help":
+    "你送出提示詞或命令時。封鎖會拒絕它；stdout 會加入提示詞中。",
+  "settings.agentBehaviour.hooks.event.UserPromptExpansion.help": "自訂命令、技能或 MCP 提示詞展開時。封鎖會拒絕它。",
+  "settings.agentBehaviour.hooks.event.PreModelSwitch.help":
+    '提示詞將工作階段切換到其他模型之前。封鎖、"ask" 或逾時會拒絕該提示詞。',
+  "settings.agentBehaviour.hooks.event.PostModelSwitch.help": "工作階段模型變更之後。stdout 會加入下一個要求中。",
+  "settings.agentBehaviour.hooks.event.SessionStart.help": "工作階段開始、繼續、分支或被壓縮時。stdout 會加入對話中。",
+  "settings.agentBehaviour.hooks.event.SessionEnd.help":
+    "工作階段被刪除或 Kilo 結束時。所有 SessionEnd 鉤子共用一段很短的時間。",
+  "settings.agentBehaviour.hooks.event.InstructionsLoaded.help": "載入 AGENTS.md 或 CLAUDE.md 等指示檔案時。",
+  "settings.agentBehaviour.hooks.event.Stop.help": "代理完成回覆時。封鎖會讓它繼續，最多連續 8 次。",
+  "settings.agentBehaviour.hooks.event.SubagentStop.help": "子代理完成時。封鎖會讓它繼續。",
+  "settings.agentBehaviour.hooks.event.SubagentStart.help":
+    "子代理啟動時。additionalContext 會加入它的第一個提示詞中。",
+  "settings.agentBehaviour.hooks.event.StopFailure.help": "本輪因 API 錯誤（例如速率限制）結束時。",
+  "settings.agentBehaviour.hooks.event.PreCompact.help": "壓縮對話之前。封鎖會略過壓縮。",
+  "settings.agentBehaviour.hooks.event.PostCompact.help": "對話壓縮之後。",
+  "settings.agentBehaviour.hooks.event.Notification.help": "Kilo 等待你時：權限要求、提問，或一輪結束後的閒置。",
+  "settings.agentBehaviour.hooks.event.ConfigChange.help": "Kilo 變更其設定之後。無法封鎖。",
+  "settings.agentBehaviour.hooks.event.FileChanged.help": "專案資料夾中受監看的檔案變更時。",
+  "settings.agentBehaviour.hooks.event.CwdChanged.help": "shell 命令在與上一個命令不同的資料夾中執行時。",
+  "settings.agentBehaviour.hooks.event.GoalReport.help": "/goal 被標記為完成或受阻之前。封鎖會讓目標繼續進行。",
+  "settings.agentBehaviour.hooks.event.WakeupFire.help": "排程的喚醒或 cron 工作執行之前。封鎖會略過它。",
+  "settings.agentBehaviour.hooks.event.WorktreeSetup.help":
+    "受管理的 worktree 建立完成且其設定指令碼執行之後。封鎖會將設定標記為失敗。",
+  "settings.agentBehaviour.hooks.event.WorktreeTeardown.help": "受管理的 worktree 被移除之前。",
+  "settings.agentBehaviour.hooks.event.CommitMessage.help":
+    "產生提交訊息之後。hookSpecificOutput.commitMessage 會取代它；封鎖會拒絕它。",
+  "settings.agentBehaviour.hooks.event.BranchName.help":
+    "產生 worktree 分支名稱之後。hookSpecificOutput.branchName 會取代它；封鎖會保留目前的名稱。",
+  "settings.agentBehaviour.hooks.matcher.values": "比對 {{field}}：{{values}}。多個值以 | 分隔。",
+  "settings.agentBehaviour.hooks.matcher.kind.tool":
+    "留空則比對所有工具。以 | 分隔工具名稱（edit|write）。其他內容皆視為正規表示式。Kilo 與 Claude Code 的名稱皆可使用（bash 或 Bash）；MCP 工具的名稱形如 github_create_issue。",
+  "settings.agentBehaviour.hooks.matcher.kind.file":
+    "要監看的專案資料夾中的檔案名稱，以 | 分隔（.envrc|.env）。每個名稱皆按字面處理。",
+  "settings.agentBehaviour.hooks.matcher.kind.model":
+    "以 | 分隔的模型名稱，或正規表示式。標準名稱（claude-sonnet-4-5）、模型 ID 與 提供者/模型 皆可比對。",
+  "settings.agentBehaviour.hooks.matcher.kind.name":
+    "比對 {{field}}。以 | 分隔名稱，或使用正規表示式。留空則比對全部。",
+  "settings.agentBehaviour.hooks.matcher.files": "監看：{{names}}",
+  "settings.agentBehaviour.hooks.matcher.filesNone": "本身不監看任何檔案；為其他鉤子透過 watchPaths 新增的路徑執行。",
+  "settings.agentBehaviour.hooks.matcher.none": "此事件沒有比對器；鉤子每次都會執行。",
+  "settings.agentBehaviour.hooks.async": "在背景執行",
+  "settings.agentBehaviour.hooks.async.help": "Kilo 不會等待該鉤子；其輸出與結束代碼只會記錄到日誌中。",
+  "settings.agentBehaviour.hooks.async.noBlock": "背景鉤子無法封鎖動作，也無法加入內容。",
+  "settings.agentBehaviour.hooks.claude.skipped": "Kilo 不執行：{{items}}",
   "settings.agentBehaviour.mcpDetail.command": "指令",
   "settings.agentBehaviour.mcpDetail.args": "引數",
   "settings.agentBehaviour.mcpDetail.env": "環境",
@@ -1187,6 +1251,7 @@ export const dict = {
   "chat.memory.command.failed": "記憶命令失敗",
   "chat.memory.updated": "Memory updated",
   "chat.memory.rebuild": "Memory index rebuilt",
+  "chat.hookFeedback": "鉤子回饋（{{event}}）",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "使用自訂 prompt",

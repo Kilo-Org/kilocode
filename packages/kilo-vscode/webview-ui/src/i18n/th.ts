@@ -301,6 +301,9 @@ export const dict = {
   "notification.permission.titleSandboxEscalation": "เรียกใช้ภายนอกแซนด์บ็อกซ์หรือไม่?",
   "notification.permission.descriptionSandboxEscalation":
     "การดำเนินการนี้จะรันคำสั่งทั้งหมดโดยไม่มีการจำกัดระบบไฟล์และเครือข่าย สำหรับคำสั่งนี้เท่านั้น Git ต้องเขียนลงใน .git ซึ่งเป็นแบบอ่านอย่างเดียวในแซนด์บ็อกซ์ และอยู่นอก worktree สำหรับ worktree ที่เชื่อมโยง กฎอนุญาตของ Bash และการอนุมัติอัตโนมัติจะไม่อนุมัติพร้อมท์นี้โดยอัตโนมัติ",
+  "notification.permission.titleHookAsk": "ฮุกขอการยืนยัน",
+  "notification.permission.descriptionHookAsk":
+    "ฮุกขอให้คุณยืนยันการเรียกใช้นี้ก่อนที่จะทำงาน การอนุมัติอัตโนมัติจะไม่ตอบคำขอนี้",
   "ui.permission.manageAutoApprove": "จัดการกฎการอนุมัติอัตโนมัติ",
   "ui.permission.reject": "ปฏิเสธ",
   "ui.permission.feedbackPlaceholder": "บอก Kilo ว่าควรทำต่างออกไปอย่างไร",
@@ -1098,22 +1101,16 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "ความเข้ากันได้กับ Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "โหลดไฟล์ Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "โหลดคำแนะนำและทักษะจาก CLAUDE.md ในไดเรกทอรีการกำหนดค่า Claude Code ของคุณลงในเซสชัน เปิดใช้งานตัวเลือกนี้หากคุณต้องการให้ Kilo ใช้คำแนะนำและทักษะจาก Claude Code ของคุณ จำเป็นต้องรีสตาร์ท และจะรันคำสั่งฮุก PreToolUse และ PostToolUse จาก ~/.claude/settings.json ด้วยสิทธิ์ผู้ใช้ของคุณด้วย",
+    "โหลดคำแนะนำและทักษะจาก CLAUDE.md ในไดเรกทอรีการกำหนดค่า Claude Code ของคุณลงในเซสชัน เปิดใช้งานตัวเลือกนี้หากคุณต้องการให้ Kilo ใช้คำแนะนำและทักษะจาก Claude Code ของคุณ จำเป็นต้องรีสตาร์ท และจะรันฮุกของ Claude Code จาก ~/.claude/settings.json ด้วยสิทธิ์ผู้ใช้ของคุณด้วย ได้แก่ เหตุการณ์ของเครื่องมือ เหตุการณ์ของพรอมต์และเซสชัน (UserPromptSubmit, SessionStart, ...) เหตุการณ์ Stop และเอเจนต์ย่อย การบีบอัด และการแจ้งเตือน",
   "settings.agentBehaviour.hooks.description":
-    "รันคำสั่งของคุณเองก่อนหรือหลังจากที่เอเจนต์ใช้เครื่องมือ เช่น รัน lint กับทุกการแก้ไข หรือบล็อกคำสั่งที่มีความเสี่ยง ใช้รูปแบบฮุกของ Claude Code",
+    "รันคำสั่งของคุณเองเมื่อเอเจนต์ทำงาน: ก่อนหรือหลังการเรียกใช้เครื่องมือ เมื่อคุณส่งพรอมต์ เมื่อเซสชันเริ่ม เมื่อเอเจนต์หยุด ก่อนการบีบอัด และอื่น ๆ ใช้รูปแบบฮุกของ Claude Code",
   "settings.agentBehaviour.hooks.warning":
     "ฮุกจะรันคำสั่งเชลล์ด้วยสิทธิ์ผู้ใช้เต็มรูปแบบของคุณ นอกแซนด์บ็อกซ์ เพิ่มเฉพาะคำสั่งที่คุณเชื่อถือเท่านั้น",
   "settings.agentBehaviour.hooks.scope": "บันทึกลงในการตั้งค่าส่วนกลางของคุณ ฮุกในการตั้งค่าโปรเจกต์จะถูกละเว้น",
   "settings.agentBehaviour.hooks.openConfig": "เปิดไฟล์การตั้งค่า",
-  "settings.agentBehaviour.hooks.pre": "ก่อนเครื่องมือทำงาน",
-  "settings.agentBehaviour.hooks.pre.help":
-    "สามารถบล็อกการเรียกใช้เครื่องมือได้: ออกด้วยรหัส 2 และเขียนเหตุผลลงใน stderr เอเจนต์จะเห็นเหตุผลนั้น",
-  "settings.agentBehaviour.hooks.post": "หลังเครื่องมือทำงาน",
-  "settings.agentBehaviour.hooks.post.help":
-    "สามารถส่งข้อเสนอแนะไปยังเอเจนต์ได้ เช่น ข้อผิดพลาดจาก lint: ออกด้วยรหัส 2 และเขียนข้อความนั้นลงใน stderr",
   "settings.agentBehaviour.hooks.empty": "ยังไม่มีฮุก",
   "settings.agentBehaviour.hooks.add": "เพิ่มฮุก",
-  "settings.agentBehaviour.hooks.allTools": "เครื่องมือทั้งหมด",
+  "settings.agentBehaviour.hooks.allTools": "ทั้งหมด",
   "settings.agentBehaviour.hooks.badge.timeout": "หมดเวลา {{seconds}} วินาที",
   "settings.agentBehaviour.hooks.badge.block": "บล็อกเมื่อล้มเหลว",
   "settings.agentBehaviour.hooks.badge.exec": "ไม่ใช้เชลล์",
@@ -1130,18 +1127,15 @@ export const dict = {
   "settings.agentBehaviour.hooks.new": "ฮุกใหม่",
   "settings.agentBehaviour.hooks.edit": "แก้ไขฮุก",
   "settings.agentBehaviour.hooks.event": "เมื่อใด",
-  "settings.agentBehaviour.hooks.matcher": "เครื่องมือ",
-  "settings.agentBehaviour.hooks.matcher.help":
-    "เว้นว่างไว้เพื่อให้ตรงกับเครื่องมือทั้งหมด คั่นชื่อเครื่องมือด้วย | (edit|write) ค่าอื่นจะถือเป็นนิพจน์ทั่วไป ใช้ได้ทั้งชื่อของ Kilo และ Claude Code (bash หรือ Bash) ส่วนเครื่องมือ MCP จะมีชื่อลักษณะ github_create_issue",
-  "settings.agentBehaviour.hooks.matcher.all": "ตรงกับเครื่องมือทั้งหมด",
+  "settings.agentBehaviour.hooks.matcher": "ตัวจับคู่",
+  "settings.agentBehaviour.hooks.matcher.all": "ตรงกับทุกอย่าง",
   "settings.agentBehaviour.hooks.matcher.names": "ตรงกันทุกตัวอักษร: {{names}}",
-  "settings.agentBehaviour.hooks.matcher.regex": "นิพจน์ทั่วไป ตรงกับส่วนใดก็ได้ของชื่อเครื่องมือ",
+  "settings.agentBehaviour.hooks.matcher.regex": "นิพจน์ทั่วไป ตรงกับส่วนใดก็ได้ของค่า",
   "settings.agentBehaviour.hooks.matcher.invalid": "นิพจน์ทั่วไปไม่ถูกต้อง",
   "settings.agentBehaviour.hooks.unmatched":
     "ไม่มีเครื่องมือชื่อ {{names}} ที่นี่ ฮุกนี้จึงไม่ทำงานกับเครื่องมือดังกล่าวเลย",
   "settings.agentBehaviour.hooks.command": "คำสั่ง",
-  "settings.agentBehaviour.hooks.command.help":
-    "รับการเรียกใช้เครื่องมือเป็น JSON ทาง stdin และทำงานในโฟลเดอร์โปรเจกต์",
+  "settings.agentBehaviour.hooks.command.help": "รับเหตุการณ์เป็น JSON ทาง stdin และทำงานในโฟลเดอร์โปรเจกต์",
   "settings.agentBehaviour.hooks.command.required": "ป้อนคำสั่ง",
   "settings.agentBehaviour.hooks.exec": "รันโดยไม่ใช้เชลล์",
   "settings.agentBehaviour.hooks.exec.help":
@@ -1149,15 +1143,91 @@ export const dict = {
   "settings.agentBehaviour.hooks.args.placeholder": "หนึ่งอาร์กิวเมนต์ต่อบรรทัด",
   "settings.agentBehaviour.hooks.timeout": "หมดเวลา (วินาที)",
   "settings.agentBehaviour.hooks.timeout.help":
-    "ค่าเริ่มต้นคือ {{seconds}} วินาที ฮุกที่หมดเวลาจะถูกหยุดพร้อมกับกระบวนการทั้งหมดที่ฮุกนั้นเริ่มไว้",
+    "ค่าเริ่มต้นของเหตุการณ์นี้คือ {{seconds}} วินาที ฮุกที่หมดเวลาจะถูกหยุดพร้อมกับกระบวนการทั้งหมดที่ฮุกนั้นเริ่มไว้",
   "settings.agentBehaviour.hooks.timeout.invalid": "ป้อนจำนวนวินาทีเป็นจำนวนเต็มตั้งแต่ 1 ถึง 86400",
-  "settings.agentBehaviour.hooks.block": "บล็อกการเรียกใช้เครื่องมือหากฮุกล้มเหลว",
+  "settings.agentBehaviour.hooks.block": "บล็อกหากฮุกล้มเหลว",
   "settings.agentBehaviour.hooks.block.help":
-    "โดยค่าเริ่มต้น ฮุกที่ขัดข้องหรือหมดเวลาจะปล่อยให้เครื่องมือทำงานต่อ เปิดตัวเลือกนี้สำหรับตัวป้องกันที่ต้องไม่ปล่อยผ่านเมื่อล้มเหลว",
+    "โดยค่าเริ่มต้น ฮุกที่ขัดข้องหรือหมดเวลาจะปล่อยให้การดำเนินการทำต่อ เปิดตัวเลือกนี้สำหรับตัวป้องกันที่ต้องไม่ปล่อยผ่านเมื่อล้มเหลว",
   "settings.agentBehaviour.hooks.apply": "นำไปใช้",
   "settings.agentBehaviour.hooks.remove.heading": "ลบฮุก",
   "settings.agentBehaviour.hooks.remove.confirm": 'ลบฮุก "{{command}}" หรือไม่? คลิก "บันทึก" เพื่อใช้การเปลี่ยนแปลง',
   "settings.agentBehaviour.hooks.remove.button": "ลบ",
+  "settings.agentBehaviour.hooks.kiloOnly": "เฉพาะ Kilo",
+  "settings.agentBehaviour.hooks.badge.async": "เบื้องหลัง",
+  "settings.agentBehaviour.hooks.group.tools": "เครื่องมือ",
+  "settings.agentBehaviour.hooks.group.prompt": "พรอมต์",
+  "settings.agentBehaviour.hooks.group.session": "เซสชัน",
+  "settings.agentBehaviour.hooks.group.loop": "ลูปของเอเจนต์",
+  "settings.agentBehaviour.hooks.group.compaction": "การบีบอัด",
+  "settings.agentBehaviour.hooks.group.environment": "สภาพแวดล้อม",
+  "settings.agentBehaviour.hooks.group.kilo": "เหตุการณ์ของ Kilo",
+  "settings.agentBehaviour.hooks.event.PreToolUse.help":
+    'ก่อนที่เครื่องมือจะทำงาน รหัสออก 2 หรือ deny ใน JSON จะบล็อกการเรียกใช้ ส่วน "ask" จะให้ Kilo ถามคุณก่อน',
+  "settings.agentBehaviour.hooks.event.PostToolUse.help":
+    "หลังจากเครื่องมือทำงานสำเร็จ stderr ของรหัสออก 2 หรือ additionalContext จะแสดงให้เอเจนต์เห็น เช่น ข้อผิดพลาดจาก lint",
+  "settings.agentBehaviour.hooks.event.PostToolUseFailure.help":
+    "หลังจากเครื่องมือล้มเหลว รวมถึงคำสั่ง shell ที่จบด้วยรหัสที่ไม่ใช่ศูนย์ additionalContext จะแสดงให้เอเจนต์เห็น",
+  "settings.agentBehaviour.hooks.event.PostToolBatch.help":
+    "หลังจากขั้นตอนของโมเดลที่รันเครื่องมือ และก่อนการเรียกโมเดลครั้งถัดไป การบล็อกจะจบเทิร์น",
+  "settings.agentBehaviour.hooks.event.PermissionRequest.help":
+    "เมื่อ Kilo แสดงคำขอสิทธิ์ deny ใน JSON จะปฏิเสธการเรียกใช้ ฮุกไม่สามารถอนุมัติได้",
+  "settings.agentBehaviour.hooks.event.TaskCreated.help": "เมื่อเอเจนต์เพิ่มรายการสิ่งที่ต้องทำ การบล็อกจะลบรายการนั้น",
+  "settings.agentBehaviour.hooks.event.TaskCompleted.help":
+    "เมื่อเอเจนต์ทำเครื่องหมายว่ารายการสิ่งที่ต้องทำเสร็จแล้ว การบล็อกจะคงรายการนั้นไว้",
+  "settings.agentBehaviour.hooks.event.UserPromptSubmit.help":
+    "เมื่อคุณส่งพรอมต์หรือคำสั่ง การบล็อกจะปฏิเสธ ส่วน stdout จะถูกเพิ่มลงในพรอมต์",
+  "settings.agentBehaviour.hooks.event.UserPromptExpansion.help":
+    "เมื่อคำสั่งที่กำหนดเอง ทักษะ หรือพรอมต์ MCP ถูกขยาย การบล็อกจะปฏิเสธ",
+  "settings.agentBehaviour.hooks.event.PreModelSwitch.help":
+    'ก่อนที่พรอมต์จะเปลี่ยนเซสชันไปใช้โมเดลอื่น การบล็อก "ask" หรือการหมดเวลาจะปฏิเสธพรอมต์',
+  "settings.agentBehaviour.hooks.event.PostModelSwitch.help":
+    "หลังจากโมเดลของเซสชันเปลี่ยน stdout จะถูกเพิ่มลงในคำขอถัดไป",
+  "settings.agentBehaviour.hooks.event.SessionStart.help":
+    "เมื่อเซสชันเริ่ม กลับมาทำต่อ แยกสาขา หรือถูกบีบอัด stdout จะถูกเพิ่มลงในการสนทนา",
+  "settings.agentBehaviour.hooks.event.SessionEnd.help":
+    "เมื่อเซสชันถูกลบหรือ Kilo ปิดลง ฮุก SessionEnd ทั้งหมดใช้เวลาจำกัดสั้น ๆ ร่วมกัน",
+  "settings.agentBehaviour.hooks.event.InstructionsLoaded.help": "เมื่อโหลดไฟล์คำแนะนำ เช่น AGENTS.md หรือ CLAUDE.md",
+  "settings.agentBehaviour.hooks.event.Stop.help":
+    "เมื่อเอเจนต์ตอบเสร็จ การบล็อกจะทำให้ทำต่อ ได้สูงสุด 8 ครั้งติดต่อกัน",
+  "settings.agentBehaviour.hooks.event.SubagentStop.help": "เมื่อเอเจนต์ย่อยทำงานเสร็จ การบล็อกจะทำให้ทำต่อ",
+  "settings.agentBehaviour.hooks.event.SubagentStart.help":
+    "เมื่อเอเจนต์ย่อยเริ่ม additionalContext จะถูกเพิ่มลงในพรอมต์แรกของมัน",
+  "settings.agentBehaviour.hooks.event.StopFailure.help": "เมื่อเทิร์นจบด้วยข้อผิดพลาดของ API เช่น ขีดจำกัดอัตรา",
+  "settings.agentBehaviour.hooks.event.PreCompact.help": "ก่อนบีบอัดการสนทนา การบล็อกจะข้ามการบีบอัด",
+  "settings.agentBehaviour.hooks.event.PostCompact.help": "หลังจากบีบอัดการสนทนาแล้ว",
+  "settings.agentBehaviour.hooks.event.Notification.help":
+    "เมื่อ Kilo กำลังรอคุณ: คำขอสิทธิ์ คำถาม หรือว่างหลังจบเทิร์น",
+  "settings.agentBehaviour.hooks.event.ConfigChange.help": "หลังจาก Kilo เปลี่ยนการกำหนดค่าของตน ไม่สามารถบล็อกได้",
+  "settings.agentBehaviour.hooks.event.FileChanged.help": "เมื่อไฟล์ที่เฝ้าดูในโฟลเดอร์โปรเจกต์เปลี่ยนแปลง",
+  "settings.agentBehaviour.hooks.event.CwdChanged.help": "เมื่อคำสั่ง shell ทำงานในโฟลเดอร์ที่ต่างจากคำสั่งก่อนหน้า",
+  "settings.agentBehaviour.hooks.event.GoalReport.help":
+    "ก่อนที่ /goal จะถูกทำเครื่องหมายว่าเสร็จหรือติดขัด การบล็อกจะทำให้เป้าหมายดำเนินต่อ",
+  "settings.agentBehaviour.hooks.event.WakeupFire.help":
+    "ก่อนที่การปลุกตามกำหนดหรืองาน cron จะทำงาน การบล็อกจะข้ามงานนั้น",
+  "settings.agentBehaviour.hooks.event.WorktreeSetup.help":
+    "หลังจากสร้าง worktree ที่จัดการแล้วและรันสคริปต์ตั้งค่าแล้ว การบล็อกจะทำเครื่องหมายว่าการตั้งค่าล้มเหลว",
+  "settings.agentBehaviour.hooks.event.WorktreeTeardown.help": "ก่อนลบ worktree ที่จัดการ",
+  "settings.agentBehaviour.hooks.event.CommitMessage.help":
+    "หลังจากสร้างข้อความ commit แล้ว hookSpecificOutput.commitMessage จะแทนที่ข้อความ การบล็อกจะปฏิเสธข้อความ",
+  "settings.agentBehaviour.hooks.event.BranchName.help":
+    "หลังจากสร้างชื่อ branch ของ worktree แล้ว hookSpecificOutput.branchName จะแทนที่ชื่อ การบล็อกจะคงชื่อปัจจุบันไว้",
+  "settings.agentBehaviour.hooks.matcher.values": "จับคู่กับ {{field}}: {{values}} คั่นหลายค่าด้วย |",
+  "settings.agentBehaviour.hooks.matcher.kind.tool":
+    "เว้นว่างไว้เพื่อให้ตรงกับเครื่องมือทั้งหมด คั่นชื่อเครื่องมือด้วย | (edit|write) ค่าอื่นจะถือเป็นนิพจน์ทั่วไป ใช้ได้ทั้งชื่อของ Kilo และ Claude Code (bash หรือ Bash) ส่วนเครื่องมือ MCP จะมีชื่อลักษณะ github_create_issue",
+  "settings.agentBehaviour.hooks.matcher.kind.file":
+    "ชื่อไฟล์ในโฟลเดอร์โปรเจกต์ที่จะเฝ้าดู คั่นด้วย | (.envrc|.env) แต่ละชื่อถือตามตัวอักษร",
+  "settings.agentBehaviour.hooks.matcher.kind.model":
+    "ชื่อโมเดลที่คั่นด้วย | หรือนิพจน์ทั่วไป ตรงกับชื่อมาตรฐาน (claude-sonnet-4-5), ID ของโมเดล และ ผู้ให้บริการ/โมเดล",
+  "settings.agentBehaviour.hooks.matcher.kind.name":
+    "จับคู่กับ {{field}} คั่นชื่อด้วย | หรือใช้นิพจน์ทั่วไป เว้นว่างไว้เพื่อให้ตรงกับทั้งหมด",
+  "settings.agentBehaviour.hooks.matcher.files": "เฝ้าดู: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.filesNone":
+    "ไม่ได้เฝ้าดูไฟล์ใดด้วยตัวเอง จะทำงานกับพาธที่ฮุกอื่นเพิ่มผ่าน watchPaths",
+  "settings.agentBehaviour.hooks.matcher.none": "เหตุการณ์นี้ไม่มีตัวจับคู่ ฮุกจะทำงานทุกครั้ง",
+  "settings.agentBehaviour.hooks.async": "รันในเบื้องหลัง",
+  "settings.agentBehaviour.hooks.async.help": "Kilo จะไม่รอฮุก เอาต์พุตและรหัสออกจะถูกบันทึกลงล็อกเท่านั้น",
+  "settings.agentBehaviour.hooks.async.noBlock": "ฮุกที่ทำงานเบื้องหลังไม่สามารถบล็อกหรือเพิ่มบริบทได้",
+  "settings.agentBehaviour.hooks.claude.skipped": "Kilo ไม่รัน: {{items}}",
   "settings.agentBehaviour.mcpDetail.command": "คำสั่ง",
   "settings.agentBehaviour.mcpDetail.args": "อาร์กิวเมนต์",
   "settings.agentBehaviour.mcpDetail.env": "สภาพแวดล้อม",
@@ -1277,6 +1347,7 @@ export const dict = {
   "chat.memory.command.failed": "คำสั่งความจำล้มเหลว",
   "chat.memory.updated": "Memory updated",
   "chat.memory.rebuild": "Memory index rebuilt",
+  "chat.hookFeedback": "ความเห็นจากฮุก ({{event}})",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "ใช้ prompt แบบกำหนดเอง",

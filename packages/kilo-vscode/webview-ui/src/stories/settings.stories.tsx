@@ -18,11 +18,22 @@ import ModeEditView from "../components/settings/ModeEditView"
 import McpEditView from "../components/settings/McpEditView"
 import HooksTab from "../components/settings/agent-behaviour/HooksTab"
 import HookEditView from "../components/settings/agent-behaviour/HookEditView"
-import type { AgentConfig, CommandConfig, Config, HooksConfig, HooksInfoLoadedMessage } from "../types/messages"
+import type {
+  AgentConfig,
+  CommandConfig,
+  Config,
+  HooksConfig,
+  HooksInfoLoadedMessage,
+  Message,
+  Part,
+  PermissionRequest,
+} from "../types/messages"
 import IndexingTab from "../components/settings/IndexingTab"
 import CustomProviderDialog from "../components/settings/CustomProviderDialog"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { SidebarEmptyState } from "../components/chat/SidebarEmptyState"
+import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
+import { PermissionDock } from "../components/chat/PermissionDock"
 import { WorkStyleContext, type WorkStyleContextValue } from "../context/work-style"
 
 const meta: Meta = {
@@ -440,6 +451,23 @@ const MOCK_HOOKS: HooksConfig = {
       ],
     },
   ],
+  SessionStart: [{ matcher: "startup", hooks: [{ type: "command", command: "~/.config/kilo/hooks/context.sh" }] }],
+  Stop: [{ hooks: [{ type: "command", command: "~/.config/kilo/hooks/tests-pass.sh", timeout: 300 }] }],
+  PreCompact: [
+    { matcher: "auto", hooks: [{ type: "command", command: "~/.config/kilo/hooks/backup.sh", onFailure: "block" }] },
+  ],
+  Notification: [
+    {
+      matcher: "permission_prompt|idle_prompt",
+      hooks: [{ type: "command", command: "~/.config/kilo/hooks/notify.sh", async: true }],
+    },
+  ],
+  FileChanged: [
+    { matcher: ".envrc", hooks: [{ type: "command", command: "~/.config/kilo/hooks/direnv-reload.sh" }] },
+    // No matcher: watches nothing itself, runs for the paths a SessionStart hook adds with watchPaths.
+    { hooks: [{ type: "command", command: "~/.config/kilo/hooks/reload-watched.sh" }] },
+  ],
+  GoalReport: [{ matcher: "complete", hooks: [{ type: "command", command: "~/.config/kilo/hooks/verify-goal.sh" }] }],
 }
 
 const MOCK_MANAGED_HOOK = {
@@ -488,6 +516,42 @@ export const AgentBehaviourHooksEmpty: Story = {
   ),
 }
 
+/** Claude Code hooks the server runs from ~/.claude/settings.json, plus the ones it skips. */
+export const AgentBehaviourHooksClaude: Story = {
+  name: "AgentBehaviourTab — hooks from Claude Code",
+  render: () => (
+    <StoryProviders sessionID="hooks-claude-story" status="idle" config={{}} globalConfig={{}}>
+      <HooksTab claude />
+      <HooksInfoSeed
+        message={{
+          type: "hooksInfoLoaded",
+          claude: {
+            path: "/Users/dev/.claude/settings.json",
+            enabled: true,
+            hooks: {
+              PreToolUse: [
+                {
+                  matcher: "Bash",
+                  hooks: [{ type: "command", command: "~/.claude/hooks/guard.sh", if: "Bash(rm *)" }],
+                },
+              ],
+              UserPromptSubmit: [{ hooks: [{ type: "command", command: "~/.claude/hooks/prompt-context.sh" }] }],
+              Stop: [{ hooks: [{ type: "command", command: "~/.claude/hooks/notify-done.sh", async: true }] }],
+            },
+            skipped: [
+              { event: "Setup", reason: "not supported by Kilo" },
+              { event: "ConfigChange", reason: "Kilo config only" },
+              { event: "PreToolUse", command: "~/.claude/hooks/a.sh", reason: "asyncRewake" },
+              { event: "PreToolUse", command: "~/.claude/hooks/b.sh", reason: "asyncRewake" },
+            ],
+          },
+          tools: ["bash", "Bash", "edit", "Edit", "write", "Write", "read", "Read"],
+        }}
+      />
+    </StoryProviders>
+  ),
+}
+
 export const AgentBehaviourHookEdit: Story = {
   name: "AgentBehaviourTab — edit hook",
   render: () => (
@@ -505,6 +569,109 @@ export const AgentBehaviourHookEdit: Story = {
         onApply={noop}
         onRemove={noop}
       />
+    </StoryProviders>
+  ),
+}
+
+/** An event without a matcher that cannot block on failure: no matcher card, no onFailure switch. */
+export const AgentBehaviourHookEditLifecycle: Story = {
+  name: "AgentBehaviourTab — edit Stop hook",
+  render: () => (
+    <StoryProviders sessionID="hook-edit-lifecycle-story" status="idle" config={{}}>
+      <HookEditView
+        entry={{
+          event: "Stop",
+          group: 0,
+          index: 0,
+          handler: { type: "command", command: "~/.config/kilo/hooks/tests-pass.sh", timeout: 300 },
+        }}
+        event="Stop"
+        onBack={noop}
+        onApply={noop}
+        onRemove={noop}
+      />
+    </StoryProviders>
+  ),
+}
+
+// What hooks show outside the settings: hook notes in the chat and the prompt a PreToolUse `ask` opens.
+const HOOK_SESSION = "story-session-hooks-001"
+
+function hookMessage(id: string): Message {
+  return { id, sessionID: HOOK_SESSION, role: "user", createdAt: new Date(0).toISOString(), time: { created: 0 } }
+}
+
+function hookText(id: string, messageID: string, value: string, metadata?: Record<string, unknown>): Part {
+  return {
+    id,
+    sessionID: HOOK_SESSION,
+    messageID,
+    type: "text",
+    text: value,
+    ...(metadata ? { synthetic: true, metadata } : {}),
+  }
+}
+
+/** A Stop hook made the agent continue: the continuation message shows only a collapsed note. */
+export const HookFeedbackStop: Story = {
+  name: "AgentBehaviourTab — hooks: Stop feedback note in chat",
+  render: () => (
+    <StoryProviders sessionID={HOOK_SESSION} status="idle">
+      <div style={{ padding: "12px" }}>
+        <VscodeUserMessage
+          message={hookMessage("hook-stop-message")}
+          parts={[
+            hookText(
+              "hook-stop-part",
+              "hook-stop-message",
+              "Stop hook feedback:\n3 tests fail in packages/app. Fix them before finishing.",
+              { hook: { event: "Stop", streak: 1 } },
+            ),
+          ]}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+/** A PreToolUse hook blocked an @ attachment: the user's text plus a note explaining why the file is missing. */
+export const HookFeedbackAttachment: Story = {
+  name: "AgentBehaviourTab — hooks: blocked attachment note in chat",
+  render: () => (
+    <StoryProviders sessionID={HOOK_SESSION} status="idle">
+      <div style={{ padding: "12px" }}>
+        <VscodeUserMessage
+          message={hookMessage("hook-attach-message")}
+          parts={[
+            hookText("hook-attach-user", "hook-attach-message", "Why does @.env not load in dev?"),
+            hookText(
+              "hook-attach-part",
+              "hook-attach-message",
+              "A PreToolUse hook blocked attaching .env: secrets stay out of the conversation",
+              { hook: { event: "PreToolUse" } },
+            ),
+          ]}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+const HOOK_ASK: PermissionRequest = {
+  id: "perm-hook-ask",
+  sessionID: HOOK_SESSION,
+  toolName: "bash",
+  patterns: ["git push --force origin main"],
+  always: [],
+  args: { hookAsk: true, reason: "Force-pushing to main rewrites shared history." },
+}
+
+/** A PreToolUse hook answered "ask": a forced prompt with the hook's reason and no auto-approve rules. */
+export const PermissionDockHookAsk: Story = {
+  name: "AgentBehaviourTab — hooks: ask permission prompt",
+  render: () => (
+    <StoryProviders sessionID={HOOK_SESSION} status="busy" permissions={[HOOK_ASK]}>
+      <PermissionDock request={HOOK_ASK} responding={false} onDecide={noop} />
     </StoryProviders>
   ),
 }

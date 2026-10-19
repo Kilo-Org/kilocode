@@ -296,6 +296,9 @@ export const dict = {
   "notification.permission.titleSandboxEscalation": "التشغيل خارج البيئة المعزولة؟",
   "notification.permission.descriptionSandboxEscalation":
     "يُشغّل هذا الأمر بالكامل مع إزالة قيود نظام الملفات والشبكة، لهذا الأمر فقط. يجب أن يكتب Git في .git، وهو للقراءة فقط داخل البيئة المعزولة ويقع خارج شجرة العمل في worktree مرتبط. لا توافق قواعد سماح Bash والموافقة التلقائية على هذا الطلب تلقائياً أبداً.",
+  "notification.permission.titleHookAsk": "خطاف يطلب التأكيد",
+  "notification.permission.descriptionHookAsk":
+    "يطلب منك خطاف تأكيد هذا الاستدعاء قبل تشغيله. لا تجيب الموافقة التلقائية على هذا الطلب أبدًا.",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
   "ui.permission.reject": "رفض",
   "ui.permission.feedbackPlaceholder": "أخبر Kilo بما يجب فعله بشكل مختلف",
@@ -1090,23 +1093,17 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "توافق Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "تحميل ملفات Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "تحميل تعليمات ومهارات CLAUDE.md من مجلد إعدادات Claude Code إلى الجلسات. قم بتمكين هذا الخيار إذا كنت ترغب في أن يستخدم Kilo مهارات وتعليمات Claude Code الخاصة بك. يتطلب إعادة التشغيل. يشغّل أيضًا أوامر خطافات PreToolUse وPostToolUse من ~/.claude/settings.json بصلاحيات المستخدم الخاصة بك.",
+    "تحميل تعليمات ومهارات CLAUDE.md من مجلد إعدادات Claude Code إلى الجلسات. قم بتمكين هذا الخيار إذا كنت ترغب في أن يستخدم Kilo مهارات وتعليمات Claude Code الخاصة بك. يتطلب إعادة التشغيل. يشغّل أيضًا خطافات Claude Code من ~/.claude/settings.json بصلاحيات المستخدم الخاصة بك: أحداث الأدوات، وأحداث الموجّهات والجلسات (UserPromptSubmit وSessionStart و...)، وأحداث Stop والوكلاء الفرعيين، والضغط والإشعارات.",
   "settings.agentBehaviour.hooks.description":
-    "شغّل أوامرك الخاصة قبل أن يستخدم الوكيل أداة أو بعد ذلك، مثلًا لفحص كل تعديل باستخدام lint أو لحظر الأوامر الخطرة. يستخدم تنسيق خطافات Claude Code.",
+    "شغّل أوامرك الخاصة عندما يتصرف الوكيل: قبل استدعاء أداة أو بعده، وعند إرسال موجّه، وعند بدء جلسة، وعند توقف الوكيل، وقبل الضغط، وغير ذلك. يستخدم تنسيق خطافات Claude Code.",
   "settings.agentBehaviour.hooks.warning":
     "تشغّل الخطافات أوامر shell بكامل صلاحيات المستخدم الخاصة بك، خارج sandbox. لا تُضف إلا الأوامر التي تثق بها.",
   "settings.agentBehaviour.hooks.scope":
     "يُحفظ في التكوين العالمي الخاص بك. يتم تجاهل الخطافات الموجودة في تكوين المشروع.",
   "settings.agentBehaviour.hooks.openConfig": "فتح ملف التكوين",
-  "settings.agentBehaviour.hooks.pre": "قبل تشغيل أداة",
-  "settings.agentBehaviour.hooks.pre.help":
-    "يمكنه حظر استدعاء الأداة: اخرج بالرمز 2 واكتب السبب في stderr. سيرى الوكيل السبب.",
-  "settings.agentBehaviour.hooks.post": "بعد تشغيل أداة",
-  "settings.agentBehaviour.hooks.post.help":
-    "يمكنه إرسال ملاحظات إلى الوكيل، مثل أخطاء lint: اخرج بالرمز 2 واكتبها في stderr.",
   "settings.agentBehaviour.hooks.empty": "لا توجد خطافات بعد.",
   "settings.agentBehaviour.hooks.add": "إضافة خطاف",
-  "settings.agentBehaviour.hooks.allTools": "كل الأدوات",
+  "settings.agentBehaviour.hooks.allTools": "الكل",
   "settings.agentBehaviour.hooks.badge.timeout": "المهلة {{seconds}} ث",
   "settings.agentBehaviour.hooks.badge.block": "يحظر عند الفشل",
   "settings.agentBehaviour.hooks.badge.exec": "بدون shell",
@@ -1123,16 +1120,14 @@ export const dict = {
   "settings.agentBehaviour.hooks.new": "خطاف جديد",
   "settings.agentBehaviour.hooks.edit": "تحرير الخطاف",
   "settings.agentBehaviour.hooks.event": "متى",
-  "settings.agentBehaviour.hooks.matcher": "الأدوات",
-  "settings.agentBehaviour.hooks.matcher.help":
-    "اتركه فارغًا ليطابق كل الأدوات. افصل أسماء الأدوات بـ | (edit|write). أي شيء آخر يُعامل كتعبير عادي. تعمل أسماء Kilo وClaude Code كلاهما (bash أو Bash)؛ وتبدو أدوات MCP مثل github_create_issue.",
-  "settings.agentBehaviour.hooks.matcher.all": "يطابق كل الأدوات",
+  "settings.agentBehaviour.hooks.matcher": "المُطابِق",
+  "settings.agentBehaviour.hooks.matcher.all": "يطابق كل شيء",
   "settings.agentBehaviour.hooks.matcher.names": "يطابق تمامًا: {{names}}",
-  "settings.agentBehaviour.hooks.matcher.regex": "تعبير عادي، يُطابَق في أي موضع من اسم الأداة",
+  "settings.agentBehaviour.hooks.matcher.regex": "تعبير عادي، يُطابَق في أي موضع من القيمة",
   "settings.agentBehaviour.hooks.matcher.invalid": "تعبير عادي غير صالح",
   "settings.agentBehaviour.hooks.unmatched": "لا توجد أداة باسم {{names}} هنا، لذا لن يعمل هذا الخطاف معها أبدًا.",
   "settings.agentBehaviour.hooks.command": "الأمر",
-  "settings.agentBehaviour.hooks.command.help": "يستقبل استدعاء الأداة بتنسيق JSON عبر stdin ويعمل في مجلد المشروع.",
+  "settings.agentBehaviour.hooks.command.help": "يستقبل الحدث بتنسيق JSON عبر stdin ويعمل في مجلد المشروع.",
   "settings.agentBehaviour.hooks.command.required": "أدخل أمرًا",
   "settings.agentBehaviour.hooks.exec": "التشغيل بدون shell",
   "settings.agentBehaviour.hooks.exec.help":
@@ -1140,15 +1135,89 @@ export const dict = {
   "settings.agentBehaviour.hooks.args.placeholder": "وسيط واحد في كل سطر",
   "settings.agentBehaviour.hooks.timeout": "المهلة (بالثواني)",
   "settings.agentBehaviour.hooks.timeout.help":
-    "القيمة الافتراضية {{seconds}}. يتم إيقاف الخطاف الذي تنتهي مهلته مع كل العمليات التي بدأها.",
+    "القيمة الافتراضية لهذا الحدث {{seconds}}. يتم إيقاف الخطاف الذي تنتهي مهلته مع كل العمليات التي بدأها.",
   "settings.agentBehaviour.hooks.timeout.invalid": "أدخل عددًا صحيحًا من الثواني، من 1 إلى 86400",
-  "settings.agentBehaviour.hooks.block": "حظر استدعاء الأداة إذا فشل الخطاف",
+  "settings.agentBehaviour.hooks.block": "الحظر إذا فشل الخطاف",
   "settings.agentBehaviour.hooks.block.help":
-    "افتراضيًا، يسمح الخطاف الذي يتعطل أو تنتهي مهلته بتشغيل الأداة. فعّل هذا الخيار لعمليات الحماية التي يجب ألا تسمح بالمرور عند الفشل.",
+    "افتراضيًا، يسمح الخطاف الذي يتعطل أو تنتهي مهلته بمتابعة الإجراء. فعّل هذا الخيار لعمليات الحماية التي يجب ألا تسمح بالمرور عند الفشل.",
   "settings.agentBehaviour.hooks.apply": "تطبيق",
   "settings.agentBehaviour.hooks.remove.heading": "إزالة الخطاف",
   "settings.agentBehaviour.hooks.remove.confirm": 'هل تريد إزالة الخطاف "{{command}}"؟ انقر على "حفظ" لتطبيق التغيير.',
   "settings.agentBehaviour.hooks.remove.button": "إزالة",
+  "settings.agentBehaviour.hooks.kiloOnly": "Kilo فقط",
+  "settings.agentBehaviour.hooks.badge.async": "في الخلفية",
+  "settings.agentBehaviour.hooks.group.tools": "الأدوات",
+  "settings.agentBehaviour.hooks.group.prompt": "الموجّهات",
+  "settings.agentBehaviour.hooks.group.session": "الجلسات",
+  "settings.agentBehaviour.hooks.group.loop": "حلقة الوكيل",
+  "settings.agentBehaviour.hooks.group.compaction": "الضغط",
+  "settings.agentBehaviour.hooks.group.environment": "البيئة",
+  "settings.agentBehaviour.hooks.group.kilo": "أحداث Kilo",
+  "settings.agentBehaviour.hooks.event.PreToolUse.help":
+    'قبل تشغيل أداة. رمز الخروج 2 أو deny بتنسيق JSON يحظر الاستدعاء؛ و"ask" يجعل Kilo يسألك أولًا.',
+  "settings.agentBehaviour.hooks.event.PostToolUse.help":
+    "بعد نجاح أداة. يُعرض على الوكيل stderr لرمز الخروج 2 أو additionalContext، مثل أخطاء lint.",
+  "settings.agentBehaviour.hooks.event.PostToolUseFailure.help":
+    "بعد فشل أداة، بما في ذلك أمر shell ينتهي برمز غير صفري. يُعرض additionalContext على الوكيل.",
+  "settings.agentBehaviour.hooks.event.PostToolBatch.help":
+    "بعد خطوة نموذج شغّلت أدوات، وقبل استدعاء النموذج التالي. الحظر يُنهي الدور.",
+  "settings.agentBehaviour.hooks.event.PermissionRequest.help":
+    "عندما يعرض Kilo طلب إذن. deny بتنسيق JSON يرفض الاستدعاء؛ ولا يمكن للخطافات الموافقة.",
+  "settings.agentBehaviour.hooks.event.TaskCreated.help": "عندما يضيف الوكيل مهمة. الحظر يزيل تلك المهمة.",
+  "settings.agentBehaviour.hooks.event.TaskCompleted.help":
+    "عندما يضع الوكيل علامة الاكتمال على مهمة. الحظر يُبقيها مفتوحة.",
+  "settings.agentBehaviour.hooks.event.UserPromptSubmit.help":
+    "عندما ترسل موجّهًا أو أمرًا. الحظر يرفضه؛ ويُضاف stdout إلى الموجّه.",
+  "settings.agentBehaviour.hooks.event.UserPromptExpansion.help":
+    "عند توسيع أمر مخصص أو مهارة أو موجّه MCP. الحظر يرفضه.",
+  "settings.agentBehaviour.hooks.event.PreModelSwitch.help":
+    'قبل أن ينقل موجّه الجلسة إلى نموذج آخر. الحظر أو "ask" أو انتهاء المهلة يرفض الموجّه.',
+  "settings.agentBehaviour.hooks.event.PostModelSwitch.help": "بعد تغيّر نموذج الجلسة. يُضاف stdout إلى الطلب التالي.",
+  "settings.agentBehaviour.hooks.event.SessionStart.help":
+    "عند بدء جلسة أو استئنافها أو تفريعها أو ضغطها. يُضاف stdout إلى المحادثة.",
+  "settings.agentBehaviour.hooks.event.SessionEnd.help":
+    "عند حذف جلسة أو خروج Kilo. تتشارك كل خطافات SessionEnd مهلة قصيرة.",
+  "settings.agentBehaviour.hooks.event.InstructionsLoaded.help": "عند تحميل ملف تعليمات مثل AGENTS.md أو CLAUDE.md.",
+  "settings.agentBehaviour.hooks.event.Stop.help":
+    "عندما ينتهي الوكيل من الرد. الحظر يجعله يواصل، 8 مرات متتالية كحد أقصى.",
+  "settings.agentBehaviour.hooks.event.SubagentStop.help": "عندما ينتهي وكيل فرعي. الحظر يجعله يواصل.",
+  "settings.agentBehaviour.hooks.event.SubagentStart.help":
+    "عند بدء وكيل فرعي. يُضاف additionalContext إلى موجّهه الأول.",
+  "settings.agentBehaviour.hooks.event.StopFailure.help":
+    "عندما ينتهي دور بخطأ في الواجهة البرمجية، مثل تجاوز حد المعدل.",
+  "settings.agentBehaviour.hooks.event.PreCompact.help": "قبل ضغط المحادثة. الحظر يتخطى الضغط.",
+  "settings.agentBehaviour.hooks.event.PostCompact.help": "بعد ضغط المحادثة.",
+  "settings.agentBehaviour.hooks.event.Notification.help": "عندما ينتظرك Kilo: طلب إذن، أو سؤال، أو خمول بعد دور.",
+  "settings.agentBehaviour.hooks.event.ConfigChange.help": "بعد أن يغيّر Kilo إعداداته. لا يمكنه الحظر.",
+  "settings.agentBehaviour.hooks.event.FileChanged.help": "عندما يتغير ملف مراقَب في مجلد المشروع.",
+  "settings.agentBehaviour.hooks.event.CwdChanged.help": "عندما يعمل أمر shell في مجلد مختلف عن الأمر السابق.",
+  "settings.agentBehaviour.hooks.event.GoalReport.help":
+    "قبل وضع علامة الاكتمال أو الحظر على /goal. الحظر يُبقي الهدف قيد التنفيذ.",
+  "settings.agentBehaviour.hooks.event.WakeupFire.help": "قبل تشغيل تنبيه مجدول أو مهمة cron. الحظر يتخطاها.",
+  "settings.agentBehaviour.hooks.event.WorktreeSetup.help":
+    "بعد إنشاء worktree مُدار وتشغيل نص الإعداد الخاص به. الحظر يضع علامة الفشل على الإعداد.",
+  "settings.agentBehaviour.hooks.event.WorktreeTeardown.help": "قبل إزالة worktree مُدار.",
+  "settings.agentBehaviour.hooks.event.CommitMessage.help":
+    "بعد إنشاء رسالة commit. يستبدلها hookSpecificOutput.commitMessage؛ والحظر يرفضها.",
+  "settings.agentBehaviour.hooks.event.BranchName.help":
+    "بعد إنشاء اسم فرع لـ worktree. يستبدله hookSpecificOutput.branchName؛ والحظر يُبقي الاسم الحالي.",
+  "settings.agentBehaviour.hooks.matcher.values": "يطابق {{field}}: {{values}}. افصل بين عدة قيم بـ |.",
+  "settings.agentBehaviour.hooks.matcher.kind.tool":
+    "اتركه فارغًا ليطابق كل الأدوات. افصل أسماء الأدوات بـ | (edit|write). أي شيء آخر يُعامل كتعبير عادي. تعمل أسماء Kilo وClaude Code كلاهما (bash أو Bash)؛ وتبدو أدوات MCP مثل github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.kind.file":
+    "أسماء الملفات المراد مراقبتها في مجلد المشروع، مفصولة بـ | (.envrc|.env). يُؤخذ كل اسم حرفيًا.",
+  "settings.agentBehaviour.hooks.matcher.kind.model":
+    "أسماء نماذج مفصولة بـ | أو تعبير عادي. يطابق الاسم القياسي (claude-sonnet-4-5) ومعرّف النموذج والمزوّد/النموذج.",
+  "settings.agentBehaviour.hooks.matcher.kind.name":
+    "يطابق {{field}}. افصل بين الأسماء بـ | أو استخدم تعبيرًا عاديًا. اتركه فارغًا ليطابق الكل.",
+  "settings.agentBehaviour.hooks.matcher.files": "يراقب: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.filesNone":
+    "لا يراقب أي ملف بمفرده؛ يعمل للمسارات التي تضيفها خطافات أخرى عبر watchPaths.",
+  "settings.agentBehaviour.hooks.matcher.none": "ليس لهذا الحدث مُطابِق؛ يعمل الخطاف في كل مرة.",
+  "settings.agentBehaviour.hooks.async": "التشغيل في الخلفية",
+  "settings.agentBehaviour.hooks.async.help": "لا ينتظر Kilo الخطاف؛ تُسجَّل مخرجاته ورمز خروجه فقط.",
+  "settings.agentBehaviour.hooks.async.noBlock": "لا يمكن لخطاف يعمل في الخلفية أن يحظر أو يضيف سياقًا.",
+  "settings.agentBehaviour.hooks.claude.skipped": "لا يشغّلها Kilo: {{items}}",
   "settings.agentBehaviour.mcpDetail.command": "الأمر",
   "settings.agentBehaviour.mcpDetail.args": "الوسائط",
   "settings.agentBehaviour.mcpDetail.env": "البيئة",
@@ -1268,6 +1337,7 @@ export const dict = {
   "chat.memory.command.failed": "فشل أمر الذاكرة",
   "chat.memory.updated": "Memory updated",
   "chat.memory.rebuild": "Memory index rebuilt",
+  "chat.hookFeedback": "ملاحظات الخطاف ({{event}})",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "استخدام prompt مخصص",

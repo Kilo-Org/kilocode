@@ -304,6 +304,9 @@ export const dict = {
   "notification.permission.titleSandboxEscalation": "サンドボックス外で実行しますか？",
   "notification.permission.descriptionSandboxEscalation":
     "このコマンドに限り、ファイルシステムとネットワークの制限を外してコマンド全体を実行します。Git は .git に書き込む必要があります。.git はサンドボックス内では読み取り専用で、リンクされた worktree では worktree の外にあります。Bash の許可ルールと自動承認がこのプロンプトを自動で承認することはありません。",
+  "notification.permission.titleHookAsk": "フックが確認を求めています",
+  "notification.permission.descriptionHookAsk":
+    "フックが、この呼び出しを実行する前に確認するよう求めています。自動承認がこの確認に応答することはありません。",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
   "ui.permission.reject": "拒否",
   "ui.permission.feedbackPlaceholder": "Kilo にどう変更してほしいか伝える",
@@ -1109,22 +1112,16 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 互換性",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code ファイルを読み込む",
   "settings.agentBehaviour.claudeCompat.description":
-    "Claude Code の設定ディレクトリから CLAUDE.md のインストラクションとスキルをセッションに読み込みます。Kilo に Claude Code のインストラクションとスキルを使用させる場合は、これを有効にしてください。再起動が必要です。~/.claude/settings.json の PreToolUse と PostToolUse のフックコマンドもユーザー権限で実行します。",
+    "Claude Code の設定ディレクトリから CLAUDE.md のインストラクションとスキルをセッションに読み込みます。Kilo に Claude Code のインストラクションとスキルを使用させる場合は、これを有効にしてください。再起動が必要です。~/.claude/settings.json の Claude Code フックもユーザー権限で実行します: ツールイベント、プロンプトとセッションのイベント（UserPromptSubmit、SessionStart など）、Stop とサブエージェントのイベント、コンパクションと通知。",
   "settings.agentBehaviour.hooks.description":
-    "エージェントがツールを使用する前後に独自のコマンドを実行します。たとえば、すべての編集に lint を実行したり、危険なコマンドをブロックしたりできます。Claude Code のフック形式を使用します。",
+    "エージェントの動作に合わせて独自のコマンドを実行します。ツール呼び出しの前後、プロンプト送信時、セッション開始時、エージェント停止時、コンパクション前などに実行できます。Claude Code のフック形式を使用します。",
   "settings.agentBehaviour.hooks.warning":
     "フックはサンドボックスの外で、ユーザーの全権限を使ってシェルコマンドを実行します。信頼できるコマンドのみを追加してください。",
   "settings.agentBehaviour.hooks.scope": "グローバル設定に保存されます。プロジェクト設定内のフックは無視されます。",
   "settings.agentBehaviour.hooks.openConfig": "設定ファイルを開く",
-  "settings.agentBehaviour.hooks.pre": "ツールの実行前",
-  "settings.agentBehaviour.hooks.pre.help":
-    "ツール呼び出しをブロックできます。コード 2 で終了し、理由を stderr に書き込んでください。理由はエージェントに伝えられます。",
-  "settings.agentBehaviour.hooks.post": "ツールの実行後",
-  "settings.agentBehaviour.hooks.post.help":
-    "lint エラーなどのフィードバックをエージェントに送信できます。コード 2 で終了し、内容を stderr に書き込んでください。",
   "settings.agentBehaviour.hooks.empty": "フックはまだありません。",
   "settings.agentBehaviour.hooks.add": "フックを追加",
-  "settings.agentBehaviour.hooks.allTools": "すべてのツール",
+  "settings.agentBehaviour.hooks.allTools": "すべて",
   "settings.agentBehaviour.hooks.badge.timeout": "タイムアウト {{seconds}}秒",
   "settings.agentBehaviour.hooks.badge.block": "失敗時にブロック",
   "settings.agentBehaviour.hooks.badge.exec": "シェルなし",
@@ -1142,18 +1139,16 @@ export const dict = {
   "settings.agentBehaviour.hooks.new": "新しいフック",
   "settings.agentBehaviour.hooks.edit": "フックを編集",
   "settings.agentBehaviour.hooks.event": "タイミング",
-  "settings.agentBehaviour.hooks.matcher": "ツール",
-  "settings.agentBehaviour.hooks.matcher.help":
-    "空欄にするとすべてのツールに一致します。ツール名は | で区切ります（edit|write）。それ以外は正規表現として扱われます。Kilo と Claude Code のどちらの名前も使用できます（bash または Bash）。MCP ツールは github_create_issue のような名前です。",
-  "settings.agentBehaviour.hooks.matcher.all": "すべてのツールに一致",
+  "settings.agentBehaviour.hooks.matcher": "マッチャー",
+  "settings.agentBehaviour.hooks.matcher.all": "すべてに一致",
   "settings.agentBehaviour.hooks.matcher.names": "完全一致：{{names}}",
-  "settings.agentBehaviour.hooks.matcher.regex": "正規表現（ツール名のどの位置でも一致）",
+  "settings.agentBehaviour.hooks.matcher.regex": "正規表現（値のどの位置でも一致）",
   "settings.agentBehaviour.hooks.matcher.invalid": "無効な正規表現です",
   "settings.agentBehaviour.hooks.unmatched":
     "ここには {{names}} という名前のツールがないため、このフックがそのツールで実行されることはありません。",
   "settings.agentBehaviour.hooks.command": "コマンド",
   "settings.agentBehaviour.hooks.command.help":
-    "ツール呼び出しを JSON として stdin で受け取り、プロジェクトフォルダーで実行されます。",
+    "イベントを JSON として stdin で受け取り、プロジェクトフォルダーで実行されます。",
   "settings.agentBehaviour.hooks.command.required": "コマンドを入力してください",
   "settings.agentBehaviour.hooks.exec": "シェルを使わずに実行",
   "settings.agentBehaviour.hooks.exec.help":
@@ -1161,16 +1156,99 @@ export const dict = {
   "settings.agentBehaviour.hooks.args.placeholder": "1行に1つの引数",
   "settings.agentBehaviour.hooks.timeout": "タイムアウト（秒）",
   "settings.agentBehaviour.hooks.timeout.help":
-    "デフォルトは {{seconds}} 秒です。タイムアウトしたフックは、それが開始したすべてのプロセスとともに停止されます。",
+    "このイベントのデフォルトは {{seconds}} 秒です。タイムアウトしたフックは、それが開始したすべてのプロセスとともに停止されます。",
   "settings.agentBehaviour.hooks.timeout.invalid": "1 から 86400 までの整数で秒数を入力してください",
-  "settings.agentBehaviour.hooks.block": "フックが失敗した場合はツール呼び出しをブロック",
+  "settings.agentBehaviour.hooks.block": "フックが失敗した場合はブロック",
   "settings.agentBehaviour.hooks.block.help":
-    "デフォルトでは、クラッシュまたはタイムアウトしたフックはツールの実行を許可します。失敗時に素通りさせてはならないガードには、これをオンにしてください。",
+    "デフォルトでは、クラッシュまたはタイムアウトしたフックは処理の続行を許可します。失敗時に素通りさせてはならないガードには、これをオンにしてください。",
   "settings.agentBehaviour.hooks.apply": "適用",
   "settings.agentBehaviour.hooks.remove.heading": "フックを削除",
   "settings.agentBehaviour.hooks.remove.confirm":
     'フック "{{command}}" を削除しますか？変更を適用するには「保存」をクリックしてください。',
   "settings.agentBehaviour.hooks.remove.button": "削除",
+  "settings.agentBehaviour.hooks.kiloOnly": "Kilo のみ",
+  "settings.agentBehaviour.hooks.badge.async": "バックグラウンド",
+  "settings.agentBehaviour.hooks.group.tools": "ツール",
+  "settings.agentBehaviour.hooks.group.prompt": "プロンプト",
+  "settings.agentBehaviour.hooks.group.session": "セッション",
+  "settings.agentBehaviour.hooks.group.loop": "エージェントループ",
+  "settings.agentBehaviour.hooks.group.compaction": "コンパクション",
+  "settings.agentBehaviour.hooks.group.environment": "環境",
+  "settings.agentBehaviour.hooks.group.kilo": "Kilo イベント",
+  "settings.agentBehaviour.hooks.event.PreToolUse.help":
+    'ツールの実行前。終了コード 2 または JSON の deny で呼び出しをブロックします。"ask" にすると Kilo が先に確認します。',
+  "settings.agentBehaviour.hooks.event.PostToolUse.help":
+    "ツールの成功後。終了コード 2 の stderr や additionalContext（lint エラーなど）がエージェントに表示されます。",
+  "settings.agentBehaviour.hooks.event.PostToolUseFailure.help":
+    "ツールの失敗後（0 以外のコードで終了したシェルコマンドを含む）。additionalContext がエージェントに表示されます。",
+  "settings.agentBehaviour.hooks.event.PostToolBatch.help":
+    "ツールを実行したモデルステップの後、次のモデル呼び出しの前。ブロックするとターンが終了します。",
+  "settings.agentBehaviour.hooks.event.PermissionRequest.help":
+    "Kilo が権限の確認を表示したとき。JSON の deny で呼び出しを拒否します。フックは承認できません。",
+  "settings.agentBehaviour.hooks.event.TaskCreated.help":
+    "エージェントが Todo を追加したとき。ブロックするとその Todo が削除されます。",
+  "settings.agentBehaviour.hooks.event.TaskCompleted.help":
+    "エージェントが Todo を完了にしたとき。ブロックすると未完了のままになります。",
+  "settings.agentBehaviour.hooks.event.UserPromptSubmit.help":
+    "プロンプトまたはコマンドを送信したとき。ブロックすると拒否され、stdout はプロンプトに追加されます。",
+  "settings.agentBehaviour.hooks.event.UserPromptExpansion.help":
+    "カスタムコマンド、スキル、または MCP プロンプトが展開されたとき。ブロックすると拒否されます。",
+  "settings.agentBehaviour.hooks.event.PreModelSwitch.help":
+    'プロンプトによってセッションが別のモデルに切り替わる前。ブロック、"ask"、またはタイムアウトでプロンプトが拒否されます。',
+  "settings.agentBehaviour.hooks.event.PostModelSwitch.help":
+    "セッションのモデルが変わった後。stdout は次のリクエストに追加されます。",
+  "settings.agentBehaviour.hooks.event.SessionStart.help":
+    "セッションの開始、再開、フォーク、またはコンパクション時。stdout は会話に追加されます。",
+  "settings.agentBehaviour.hooks.event.SessionEnd.help":
+    "セッションが削除されたとき、または Kilo の終了時。すべての SessionEnd フックで短い制限時間を共有します。",
+  "settings.agentBehaviour.hooks.event.InstructionsLoaded.help":
+    "AGENTS.md や CLAUDE.md などのインストラクションファイルが読み込まれたとき。",
+  "settings.agentBehaviour.hooks.event.Stop.help":
+    "エージェントが応答を終えたとき。ブロックすると続行させます（連続 8 回まで）。",
+  "settings.agentBehaviour.hooks.event.SubagentStop.help":
+    "サブエージェントが終了したとき。ブロックすると続行させます。",
+  "settings.agentBehaviour.hooks.event.SubagentStart.help":
+    "サブエージェントの開始時。additionalContext が最初のプロンプトに追加されます。",
+  "settings.agentBehaviour.hooks.event.StopFailure.help": "レート制限などの API エラーでターンが終了したとき。",
+  "settings.agentBehaviour.hooks.event.PreCompact.help":
+    "会話のコンパクション前。ブロックするとコンパクションをスキップします。",
+  "settings.agentBehaviour.hooks.event.PostCompact.help": "会話のコンパクション後。",
+  "settings.agentBehaviour.hooks.event.Notification.help":
+    "Kilo があなたを待っているとき: 権限の確認、質問、またはターン後のアイドル状態。",
+  "settings.agentBehaviour.hooks.event.ConfigChange.help": "Kilo が設定を変更した後。ブロックはできません。",
+  "settings.agentBehaviour.hooks.event.FileChanged.help":
+    "プロジェクトフォルダー内の監視対象ファイルが変更されたとき。",
+  "settings.agentBehaviour.hooks.event.CwdChanged.help": "シェルコマンドが前回とは別のフォルダーで実行されたとき。",
+  "settings.agentBehaviour.hooks.event.GoalReport.help":
+    "/goal が完了またはブロックとしてマークされる前。ブロックするとゴールは継続します。",
+  "settings.agentBehaviour.hooks.event.WakeupFire.help":
+    "スケジュールされたウェイクアップまたは cron タスクの実行前。ブロックするとスキップします。",
+  "settings.agentBehaviour.hooks.event.WorktreeSetup.help":
+    "管理対象の worktree が作成され、そのセットアップスクリプトが実行された後。ブロックするとセットアップ失敗として扱われます。",
+  "settings.agentBehaviour.hooks.event.WorktreeTeardown.help": "管理対象の worktree が削除される前。",
+  "settings.agentBehaviour.hooks.event.CommitMessage.help":
+    "コミットメッセージの生成後。hookSpecificOutput.commitMessage で置き換え、ブロックすると拒否されます。",
+  "settings.agentBehaviour.hooks.event.BranchName.help":
+    "worktree のブランチ名の生成後。hookSpecificOutput.branchName で置き換え、ブロックすると現在の名前のままになります。",
+  "settings.agentBehaviour.hooks.matcher.values":
+    "{{field}} と照合します: {{values}}。複数指定する場合は | で区切ります。",
+  "settings.agentBehaviour.hooks.matcher.kind.tool":
+    "空欄にするとすべてのツールに一致します。ツール名は | で区切ります（edit|write）。それ以外は正規表現として扱われます。Kilo と Claude Code のどちらの名前も使用できます（bash または Bash）。MCP ツールは github_create_issue のような名前です。",
+  "settings.agentBehaviour.hooks.matcher.kind.file":
+    "監視するプロジェクトフォルダー内のファイル名を | で区切って指定します（.envrc|.env）。各名前はそのまま扱われます。",
+  "settings.agentBehaviour.hooks.matcher.kind.model":
+    "| で区切ったモデル名、または正規表現。正規名（claude-sonnet-4-5）、モデル ID、プロバイダー/モデルのいずれにも一致します。",
+  "settings.agentBehaviour.hooks.matcher.kind.name":
+    "{{field}} と照合します。名前は | で区切るか、正規表現を使用します。空欄にするとすべてに一致します。",
+  "settings.agentBehaviour.hooks.matcher.files": "監視対象: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.filesNone":
+    "単独ではファイルを監視しません。他のフックが watchPaths で追加したパスに対して実行されます。",
+  "settings.agentBehaviour.hooks.matcher.none": "このイベントにはマッチャーがありません。フックは毎回実行されます。",
+  "settings.agentBehaviour.hooks.async": "バックグラウンドで実行",
+  "settings.agentBehaviour.hooks.async.help":
+    "Kilo はフックの完了を待ちません。出力と終了コードはログに記録されるだけです。",
+  "settings.agentBehaviour.hooks.async.noBlock": "バックグラウンドのフックはブロックもコンテキストの追加もできません。",
+  "settings.agentBehaviour.hooks.claude.skipped": "Kilo では実行されません: {{items}}",
   "settings.agentBehaviour.mcpDetail.command": "コマンド",
   "settings.agentBehaviour.mcpDetail.args": "引数",
   "settings.agentBehaviour.mcpDetail.env": "環境",
@@ -1295,6 +1373,7 @@ export const dict = {
   "chat.memory.command.failed": "メモリコマンドに失敗しました",
   "chat.memory.updated": "Memory updated",
   "chat.memory.rebuild": "Memory index rebuilt",
+  "chat.hookFeedback": "フックのフィードバック（{{event}}）",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "カスタム prompt を使用",
