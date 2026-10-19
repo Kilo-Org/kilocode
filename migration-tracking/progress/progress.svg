@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 310" width="1000" height="310">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 334" width="1000" height="334">
 <style>rect{stroke:#0d1117;stroke-width:.5}.d{fill:#2ea043}.o{fill:#6e7681}.x{fill:#d29922}.b{fill:none;stroke-width:2}text{font-family:sans-serif;fill:#fff;stroke:#0d1117;stroke-width:3;paint-order:stroke}</style>
-<rect x="0" y="0" width="1000" height="310" fill="#0d1117" stroke="none"/>
+<rect x="0" y="0" width="1000" height="334" fill="#0d1117" stroke="none"/>
 <text x="4.00" y="21.00" font-size="16">Features: 0.2% (12/5691)</text>
 <g><title>vscode: 0/2057 (0%)</title>
 <rect class="o" x="1.00" y="31.00" width="14.74" height="15.44"/>
@@ -3051,7 +3051,7 @@
 <rect class="o" x="492.69" y="303.64" width="1.31" height="5.36"/>
 <rect class="b" x="491.69" y="302.64" width="3.31" height="7.36"/>
 </g>
-<text x="509.00" y="21.00" font-size="16">Unattributed hooks by upstream area: 0% (0/4163)</text>
+<text x="509.00" y="21.00" font-size="16">Unattributed patches by upstream area: 0% (0/4163)</text>
 <g><title>test: 0/821 (0%)</title>
 <rect class="o" x="506.00" y="31.00" width="11.46" height="11.19"/>
 <rect class="o" x="517.46" y="31.00" width="11.46" height="11.19"/>
@@ -6767,4 +6767,8 @@
 <rect class="o" x="996.90" y="302.89" width="2.10" height="6.11"/>
 <rect class="b" x="995.90" y="301.89" width="4.10" height="8.11"/>
 </g>
+<rect class="d" x="4" y="316" width="12" height="12"/><text x="20.00" y="327.00" font-size="12">done</text>
+<rect class="o" x="60" y="316" width="12" height="12"/><text x="76.00" y="327.00" font-size="12">open</text>
+<rect class="x" x="112" y="316" width="12" height="12"/><text x="128.00" y="327.00" font-size="12">dropped</text>
+<text x="190.00" y="327.00" font-size="12">Landed by rung: 0 plugin, 0 host, 0 seam, 0 patch</text>
 </svg>

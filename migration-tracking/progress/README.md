@@ -14,10 +14,14 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 |---|---:|---:|---:|
 | module | 9 | 3557 | 0.3% |
 | api | 0 | 39 | 0% |
-| hook | 0 | 3459 | 0% |
+| patch | 0 | 3459 | 0% |
 | test | 3 | 2799 | 0.1% |
 
-Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Hook attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
+Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
+
+Landed by rung, for patch cells closed by a done-proof: 0 plugin, 0 host, 0 seam, 0 patch.
+
+Ratchets: 2 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/bus`, `@opencode/core/variant`); 14 shared patches by rung: 13 seam, 1 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -27,120 +31,120 @@ One point per day from the committed `progress.json` on the first-parent history
 
 | Date | Done | Total | % |
 |---|---:|---:|---:|
-| 2026-10-16 | 8 | 9854 | 0.1% |
+| 2026-10-16 | 12 | 9854 | 0.1% |
 | now | 12 | 9854 | 0.1% |
 
 ## Features
 
-Cells per kind as done/total. A cell is done when it exists on v2 by the rules below, or has a disposition.
+Cells per kind as done/total. A cell is done when it exists on v2 by the rules below, or has a disposition. Landed: the rungs of the done-proofs.
 
-| Feature | Modules | API | Hooks | Tests | Done | % | |
-|---|---:|---:|---:|---:|---:|---:|---|
-| acp | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |
-| agent | 0/4 | 0/1 | 0/2 | 0/8 | 0/15 | 0% | `░░░░░░░░░░░░░░░░` |
-| agent-manager | 0/4 | 0/3 | 0/1 | 0/4 | 0/12 | 0% | `░░░░░░░░░░░░░░░░` |
-| anaconda-desktop | 0/7 | 0/3 |  | 0/7 | 0/17 | 0% | `░░░░░░░░░░░░░░░░` |
-| archive-security |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |
-| auth | 0/2 |  | 0/4 | 0/4 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |
-| background-jobs |  | 0/3 |  |  | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |
-| background-process | 0/3 |  | 0/1 | 0/4 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |
-| board | 0/6 |  |  | 0/8 | 0/14 | 0% | `░░░░░░░░░░░░░░░░` |
-| branch-name | 0/1 |  |  | 0/1 | 0/2 | 0% | `░░░░░░░░░░░░░░░░` |
-| caffeination | 0/1 |  |  |  | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |
-| cleanup |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |
-| cli | 0/72 |  | 0/25 | 0/51 | 0/148 | 0% | `░░░░░░░░░░░░░░░░` |
-| cloud | 0/16 |  | 0/2 | 0/9 | 0/27 | 0% | `░░░░░░░░░░░░░░░░` |
-| command | 0/3 | 0/2 |  | 0/3 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |
-| commit-message | 0/4 |  |  | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |
-| compaction-policy | 0/5 | 0/3 | 0/1 | 0/8 | 0/17 | 0% | `░░░░░░░░░░░░░░░░` |
-| components | 0/16 |  | 0/2 | 0/4 | 0/22 | 0% | `░░░░░░░░░░░░░░░░` |
-| config | 0/25 |  | 0/10 | 0/29 | 0/64 | 0% | `░░░░░░░░░░░░░░░░` |
-| console | 0/87 |  | 0/1 | 0/9 | 0/97 | 0% | `░░░░░░░░░░░░░░░░` |
-| core-watcher |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |
-| daemon | 0/2 |  |  | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |
-| database | 0/3 |  | 0/4 | 0/5 | 0/12 | 0% | `░░░░░░░░░░░░░░░░` |
-| db-preflight | 0/1 |  | 0/1 | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |
-| effect | 0/4 |  | 0/2 | 0/3 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |
-| enhance-prompt | 0/1 |  |  | 0/1 | 0/2 | 0% | `░░░░░░░░░░░░░░░░` |
-| event-service | 0/1 |  |  | 0/1 | 0/2 | 0% | `░░░░░░░░░░░░░░░░` |
-| event-storage | 0/5 |  | 0/8 | 0/3 | 0/16 | 0% | `░░░░░░░░░░░░░░░░` |
-| exit-code | 0/1 |  | 0/3 | 0/1 | 0/5 | 0% | `░░░░░░░░░░░░░░░░` |
-| fff | 0/1 |  | 0/4 | 0/1 | 0/6 | 0% | `░░░░░░░░░░░░░░░░` |
-| filesystem-containment |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |
-| fixture |  |  |  | 0/10 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |
-| gateway | 9/44 |  | 0/20 | 3/23 | 12/87 | 13.8% | `██░░░░░░░░░░░░░░` |
-| global | 0/2 |  | 0/4 | 0/1 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |
-| goals | 0/9 |  | 0/6 | 0/6 | 0/21 | 0% | `░░░░░░░░░░░░░░░░` |
-| i18n | 0/20 |  |  |  | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |
-| image-size | 0/1 |  | 0/2 | 0/1 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |
-| indexing | 0/99 |  | 0/6 | 0/44 | 0/149 | 0% | `░░░░░░░░░░░░░░░░` |
-| installation | 0/2 |  | 0/2 | 0/1 | 0/5 | 0% | `░░░░░░░░░░░░░░░░` |
-| instance | 0/3 |  | 0/8 | 0/8 | 0/19 | 0% | `░░░░░░░░░░░░░░░░` |
-| jetbrains | 0/800 |  |  | 0/432 | 0/1232 | 0% | `░░░░░░░░░░░░░░░░` |
-| markdown | 0/2 |  |  | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |
-| marketplace | 0/10 | 0/3 | 0/1 | 0/6 | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |
-| mcp | 0/7 |  | 0/7 | 0/9 | 0/23 | 0% | `░░░░░░░░░░░░░░░░` |
-| memory | 0/59 |  | 0/2 | 0/14 | 0/75 | 0% | `░░░░░░░░░░░░░░░░` |
-| mermaid | 0/7 |  | 0/1 | 0/2 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |
-| migration |  |  | 0/4 |  | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |
-| model-routing | 0/1 |  | 0/1 | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |
-| notebook | 0/2 | 0/3 | 0/2 | 0/3 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |
-| npm-publish |  |  | 0/2 | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |
-| oauth | 0/1 |  | 0/6 | 0/1 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |
-| permission | 0/12 |  | 0/6 | 0/16 | 0/34 | 0% | `░░░░░░░░░░░░░░░░` |
-| pii | 0/1 |  |  |  | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |
-| plan | 0/2 |  |  | 0/4 | 0/6 | 0% | `░░░░░░░░░░░░░░░░` |
-| plugin | 0/26 |  | 0/2 | 0/6 | 0/34 | 0% | `░░░░░░░░░░░░░░░░` |
-| presence | 0/3 |  | 0/1 | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |
-| process | 0/4 | 0/1 | 0/9 | 0/1 | 0/15 | 0% | `░░░░░░░░░░░░░░░░` |
-| project | 0/4 |  | 0/2 | 0/5 | 0/11 | 0% | `░░░░░░░░░░░░░░░░` |
-| provider | 0/16 |  | 0/14 | 0/38 | 0/68 | 0% | `░░░░░░░░░░░░░░░░` |
-| provider-usage | 0/6 | 0/2 | 0/2 |  | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |
-| pty | 0/6 |  | 0/14 | 0/7 | 0/27 | 0% | `░░░░░░░░░░░░░░░░` |
-| question | 0/1 |  | 0/2 | 0/4 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |
-| reference | 0/3 |  | 0/3 | 0/2 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |
-| release-publish-scope |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |
-| review | 0/4 |  | 0/3 | 0/2 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |
-| ripgrep-grep | 0/1 |  | 0/7 | 0/2 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |
-| sandbox | 0/29 |  | 0/12 | 0/25 | 0/66 | 0% | `░░░░░░░░░░░░░░░░` |
-| sbom |  |  | 0/3 | 0/1 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |
-| search-target | 0/1 |  | 0/17 | 0/1 | 0/19 | 0% | `░░░░░░░░░░░░░░░░` |
-| security | 0/1 |  | 0/1 | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |
-| server | 0/51 |  | 0/10 | 0/35 | 0/96 | 0% | `░░░░░░░░░░░░░░░░` |
-| session | 0/25 | 0/4 | 0/17 | 0/69 | 0/115 | 0% | `░░░░░░░░░░░░░░░░` |
-| session-export | 0/27 |  | 0/1 | 0/25 | 0/53 | 0% | `░░░░░░░░░░░░░░░░` |
-| session-fork | 0/2 |  |  | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |
-| session-import | 0/2 | 0/6 |  | 0/1 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |
-| session-message | 0/1 |  | 0/11 | 0/3 | 0/15 | 0% | `░░░░░░░░░░░░░░░░` |
-| session-portability | 0/2 |  | 0/1 | 0/1 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |
-| session-resume | 0/3 |  | 0/2 | 0/2 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |
-| session-revert | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |
-| session-title | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |
-| shell | 0/1 |  |  | 0/1 | 0/2 | 0% | `░░░░░░░░░░░░░░░░` |
-| skill | 0/8 | 0/1 | 0/4 | 0/9 | 0/22 | 0% | `░░░░░░░░░░░░░░░░` |
-| snapshot | 0/8 | 0/2 | 0/2 | 0/11 | 0/23 | 0% | `░░░░░░░░░░░░░░░░` |
-| stdio-tap | 0/1 |  | 0/3 |  | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |
-| steering | 0/5 |  | 0/1 | 0/4 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |
-| storage | 0/1 |  |  | 0/3 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |
-| suggestion | 0/7 |  | 0/3 | 0/3 | 0/13 | 0% | `░░░░░░░░░░░░░░░░` |
-| telemetry | 0/5 |  | 0/2 | 0/7 | 0/14 | 0% | `░░░░░░░░░░░░░░░░` |
-| tool | 0/61 |  | 0/7 | 0/43 | 0/111 | 0% | `░░░░░░░░░░░░░░░░` |
-| ts-check | 0/2 |  | 0/2 | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |
-| tui | 0/15 |  | 0/6 | 0/24 | 0/45 | 0% | `░░░░░░░░░░░░░░░░` |
-| tui-sync | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |
-| ui | 0/248 |  | 0/1 | 0/18 | 0/267 | 0% | `░░░░░░░░░░░░░░░░` |
-| usage-cost | 0/4 |  |  | 0/5 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |
-| util | 0/8 |  | 0/4 | 0/8 | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |
-| vscode | 0/1439 |  |  | 0/618 | 0/2057 | 0% | `░░░░░░░░░░░░░░░░` |
-| wakeup | 0/5 | 0/1 | 0/1 | 0/4 | 0/11 | 0% | `░░░░░░░░░░░░░░░░` |
-| web-ui | 0/154 |  |  |  | 0/154 | 0% | `░░░░░░░░░░░░░░░░` |
-| worktree | 0/4 | 0/1 | 0/1 | 0/6 | 0/12 | 0% | `░░░░░░░░░░░░░░░░` |
+| Feature | Modules | API | Patches | Tests | Done | % | | Landed |
+|---|---:|---:|---:|---:|---:|---:|---|---|
+| acp | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| agent | 0/4 | 0/1 | 0/2 | 0/8 | 0/15 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| agent-manager | 0/4 | 0/3 | 0/1 | 0/4 | 0/12 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| anaconda-desktop | 0/7 | 0/3 |  | 0/7 | 0/17 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| archive-security |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| auth | 0/2 |  | 0/4 | 0/4 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| background-jobs |  | 0/3 |  |  | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| background-process | 0/3 |  | 0/1 | 0/4 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| board | 0/6 |  |  | 0/8 | 0/14 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| branch-name | 0/1 |  |  | 0/1 | 0/2 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| caffeination | 0/1 |  |  |  | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| cleanup |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| cli | 0/72 |  | 0/25 | 0/51 | 0/148 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| cloud | 0/16 |  | 0/2 | 0/9 | 0/27 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| command | 0/3 | 0/2 |  | 0/3 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| commit-message | 0/4 |  |  | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| compaction-policy | 0/5 | 0/3 | 0/1 | 0/8 | 0/17 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| components | 0/16 |  | 0/2 | 0/4 | 0/22 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| config | 0/25 |  | 0/10 | 0/29 | 0/64 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| console | 0/87 |  | 0/1 | 0/9 | 0/97 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| core-watcher |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| daemon | 0/2 |  |  | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| database | 0/3 |  | 0/4 | 0/5 | 0/12 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| db-preflight | 0/1 |  | 0/1 | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| effect | 0/4 |  | 0/2 | 0/3 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| enhance-prompt | 0/1 |  |  | 0/1 | 0/2 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| event-service | 0/1 |  |  | 0/1 | 0/2 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| event-storage | 0/5 |  | 0/8 | 0/3 | 0/16 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| exit-code | 0/1 |  | 0/3 | 0/1 | 0/5 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| fff | 0/1 |  | 0/4 | 0/1 | 0/6 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| filesystem-containment |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| fixture |  |  |  | 0/10 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| gateway | 9/44 |  | 0/20 | 3/23 | 12/87 | 13.8% | `██░░░░░░░░░░░░░░` |  |
+| global | 0/2 |  | 0/4 | 0/1 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| goals | 0/9 |  | 0/6 | 0/6 | 0/21 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| i18n | 0/20 |  |  |  | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| image-size | 0/1 |  | 0/2 | 0/1 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| indexing | 0/99 |  | 0/6 | 0/44 | 0/149 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| installation | 0/2 |  | 0/2 | 0/1 | 0/5 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| instance | 0/3 |  | 0/8 | 0/8 | 0/19 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| jetbrains | 0/800 |  |  | 0/432 | 0/1232 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| markdown | 0/2 |  |  | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| marketplace | 0/10 | 0/3 | 0/1 | 0/6 | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| mcp | 0/7 |  | 0/7 | 0/9 | 0/23 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| memory | 0/59 |  | 0/2 | 0/14 | 0/75 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| mermaid | 0/7 |  | 0/1 | 0/2 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| migration |  |  | 0/4 |  | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| model-routing | 0/1 |  | 0/1 | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| notebook | 0/2 | 0/3 | 0/2 | 0/3 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| npm-publish |  |  | 0/2 | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| oauth | 0/1 |  | 0/6 | 0/1 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| permission | 0/12 |  | 0/6 | 0/16 | 0/34 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| pii | 0/1 |  |  |  | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| plan | 0/2 |  |  | 0/4 | 0/6 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| plugin | 0/26 |  | 0/2 | 0/6 | 0/34 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| presence | 0/3 |  | 0/1 | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| process | 0/4 | 0/1 | 0/9 | 0/1 | 0/15 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| project | 0/4 |  | 0/2 | 0/5 | 0/11 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| provider | 0/16 |  | 0/14 | 0/38 | 0/68 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| provider-usage | 0/6 | 0/2 | 0/2 |  | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| pty | 0/6 |  | 0/14 | 0/7 | 0/27 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| question | 0/1 |  | 0/2 | 0/4 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| reference | 0/3 |  | 0/3 | 0/2 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| release-publish-scope |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| review | 0/4 |  | 0/3 | 0/2 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| ripgrep-grep | 0/1 |  | 0/7 | 0/2 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| sandbox | 0/29 |  | 0/12 | 0/25 | 0/66 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| sbom |  |  | 0/3 | 0/1 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| search-target | 0/1 |  | 0/17 | 0/1 | 0/19 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| security | 0/1 |  | 0/1 | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| server | 0/51 |  | 0/10 | 0/35 | 0/96 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| session | 0/25 | 0/4 | 0/17 | 0/69 | 0/115 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| session-export | 0/27 |  | 0/1 | 0/25 | 0/53 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| session-fork | 0/2 |  |  | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| session-import | 0/2 | 0/6 |  | 0/1 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| session-message | 0/1 |  | 0/11 | 0/3 | 0/15 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| session-portability | 0/2 |  | 0/1 | 0/1 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| session-resume | 0/3 |  | 0/2 | 0/2 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| session-revert | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| session-title | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| shell | 0/1 |  |  | 0/1 | 0/2 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| skill | 0/8 | 0/1 | 0/4 | 0/9 | 0/22 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| snapshot | 0/8 | 0/2 | 0/2 | 0/11 | 0/23 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| stdio-tap | 0/1 |  | 0/3 |  | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| steering | 0/5 |  | 0/1 | 0/4 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| storage | 0/1 |  |  | 0/3 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| suggestion | 0/7 |  | 0/3 | 0/3 | 0/13 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| telemetry | 0/5 |  | 0/2 | 0/7 | 0/14 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| tool | 0/61 |  | 0/7 | 0/43 | 0/111 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| ts-check | 0/2 |  | 0/2 | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| tui | 0/15 |  | 0/6 | 0/24 | 0/45 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| tui-sync | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| ui | 0/248 |  | 0/1 | 0/18 | 0/267 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| usage-cost | 0/4 |  |  | 0/5 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| util | 0/8 |  | 0/4 | 0/8 | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| vscode | 0/1439 |  |  | 0/618 | 0/2057 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| wakeup | 0/5 | 0/1 | 0/1 | 0/4 | 0/11 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| web-ui | 0/154 |  |  |  | 0/154 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| worktree | 0/4 | 0/1 | 0/1 | 0/6 | 0/12 | 0% | `░░░░░░░░░░░░░░░░` |  |
 
-## Unattributed hooks
+## Unattributed patches
 
 Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo import and no Kilo identifier, grouped by upstream area. They count in the total. Tag them on `main` to move them into a feature box, or give them a disposition.
 
-| Area | Hooks | Tests | Done | % |
+| Area | Patches | Tests | Done | % |
 |---|---:|---:|---:|---:|
 | test |  | 0/821 | 0/821 | 0% |
 | session | 0/449 |  | 0/449 | 0% |
@@ -305,8 +309,10 @@ None.
 - Feature boxes come from the v1 target: directories under `src/kilocode/`, `packages/kilo-*`, and the split table in `features.json`.
 - module: a Kilo-owned v1 file. Done when a tracked Kilo-owned v2 file has the same feature and relative path, or the same feature and basename.
 - api: a `/kilocode/*` operation in the v1 OpenAPI document. Done when the path literal appears in `packages/protocol/src`, `packages/server/src` or a Kilo-owned v2 file.
-- hook: one Kilo hunk in a shared upstream file (`git diff -U0` of the v1 target over its upstream base). Its ID hashes the added lines without whitespace and comments. Done when a tracked v2 file carries `kilocode_change(<feature>:<id>)`.
-- test: a module or hook in a test file, same rules.
+- patch: one Kilo hunk in a shared upstream file (`git diff -U0` of the v1 target over its upstream base). Its ID hashes the added lines without whitespace and comments. Done when a tracked v2 file under `packages/` carries a done-proof with the ID: `kilocode_change(<feature>:<id>)` in a shared upstream file, `kilo_port(<feature>:<id>)` in a Kilo-owned file. A proof with an unknown ID, or in the wrong kind of file, fails the run.
+- test: a module or patch in a test file, same rules.
+- landed: the rung of the done-proof. `kilo_port` is rung 2 (host) in `packages/kilo-cli` and rung 1 (plugin) in other Kilo-owned files; a marker has the rung of its file in `script/upstream/shared-patches.json` (3 seam, 4 patch). A cell with more than one proof counts once, at the highest rung.
+- Ratchets: core-internal imports count the distinct modules in `packages/core/src` outside `kilocode/` that non-test files in `packages/kilo-*` and `packages/*/src/kilocode` import, as `@opencode/core/*` or by relative path. A logic package (`packages/kilo-*-core`) that imports anything from `@opencode/*` fails the run. Shared patches by rung count the entries in `shared-patches.json`.
 - A disposition in `dispositions.json` overrides: `ported`, `native` and `facade` count as done, `dropped` leaves the denominator and is listed above. Every disposition needs a note and an author.
 - Hunks whose only change is a brand rename, and hunks that contain only markers, are not cells.
 
@@ -314,11 +320,12 @@ None.
 
 - cell: one unit of Kilo's v1 delta (a file, an API operation or a hunk). open: not done and no disposition.
 - feature box: the cells of one feature. The feature comes from the v1 path or from `features.json`; a tag is always a feature name.
-- area: for unattributed hooks, the upstream directory of the shared file (`session`, `tui/component`); `<pkg>/pkg` means a file outside `src`, `test` and `script`, such as `package.json` or a Dockerfile.
-- re-pin: moving `pins.v1Target` in `features.json` to a newer `main` commit, normally in an upstream sync PR. Cells and hook IDs follow the new target.
+- area: for unattributed patches, the upstream directory of the shared file (`session`, `tui/component`); `<pkg>/pkg` means a file outside `src`, `test` and `script`, such as `package.json` or a Dockerfile.
+- re-pin: moving `pins.v1Target` in `features.json` to a newer `main` commit, normally in an upstream sync PR. Cells and patch IDs follow the new target.
+- rung: where Kilo code meets upstream (fork conventions): 1 plugin hook, 2 host composition, 3 seam, 4 patch.
 
 ## Working with the map
 
 - `bun script/upstream/progress.ts --list <feature>` prints the open cells of a feature with their IDs and v1 source lines.
-- To mark a hook ported, put `kilocode_change(<feature>:<id>)` on the marker line of the v2 code that replaces it. To record a decision instead, add the cell ID to `dispositions.json`.
-- To move an unattributed hook into a feature, tag its marker on `main` as `kilocode_change(<feature>)`; the next v1 re-pin picks it up.
+- To mark a patch ported, put its ID on the v2 code that replaces it: `kilocode_change(<feature>:<id>)` on a marked line in a shared upstream file, `kilo_port(<feature>:<id>)` in a Kilo-owned file. To record a decision instead, add the cell ID to `dispositions.json`.
+- To move an unattributed patch into a feature, tag its marker on `main` as `kilocode_change(<feature>)`; the next v1 re-pin picks it up.
