@@ -75,11 +75,13 @@ internal class ActiveListView(
     )
     // Hover tracking also drives the hover callback, so a consumer that only wants row hover does not
     // have to turn on the hover action bar to get it.
-    private val hover = cfg.hoverActions || menu != null || onHover != null
+    private val hover = cfg.hoverActions || menu != null || onHover != null || collapse != null
     internal val list: JBList<ActiveListItem> = object : JBList<ActiveListItem>(model), ActiveListActive {
         override fun active(): Boolean = popups > 0
 
         override fun hoveredIndex(): Int = hovered
+
+        override fun hoveredCell(): String? = hoveredCell
 
         override fun processMouseEvent(e: MouseEvent) {
             if (e.id == MouseEvent.MOUSE_PRESSED && UIUtil.isActionClick(e, MouseEvent.MOUSE_PRESSED, true)) {
@@ -131,6 +133,7 @@ internal class ActiveListView(
     private var press: Press? = null
     private var popups = 0
     private var hovered = -1
+    private var hoveredCell: String? = null
     private var heightKey: ActiveListHeightKey? = null
     // Sections [sync] folded in the rows it last built, so a drag can map a painted row back to the item
     // slot it stands for.
@@ -232,7 +235,7 @@ internal class ActiveListView(
                 // The separator chevron folds its section here rather than through [fire]: a band
                 // belongs to the run it heads, and an expanded run's band rides on a row that has no
                 // cell of its own to answer for. Same interception as the menu glyph's, above.
-                if (hit.id == ACTIVE_LIST_SECTION_CELL) {
+                if (hit.id == ACTIVE_LIST_SECTION_CELL || hit.id == ACTIVE_LIST_SECTION_TOGGLE_CELL) {
                     hit.item.section?.let(::flip)
                     e.consume()
                     return
@@ -253,7 +256,12 @@ internal class ActiveListView(
                     val idx = list.locationToIndex(e.point)
                         .takeIf { it >= 0 && list.getCellBounds(it, it)?.contains(e.point) == true }
                         ?: -1
-                    setHovered(idx)
+                    val cell = idx.takeIf { it >= 0 }?.let {
+                        activeListHits(list, it, list.isSelectedIndex(it))
+                            .firstOrNull { hit -> hit.hoverable && hit.bounds.contains(e.point) }
+                            ?.id
+                    }
+                    setHovered(idx, cell)
                 }
                 syncCursor(cursorAt(e.point))
             }
@@ -631,7 +639,7 @@ internal class ActiveListView(
         when (absent) {
             Absent.KEEP -> list.clearSelection()
             Absent.SLIDE -> {
-                val next = nearest(rows, mark, 1) ?: nearest(rows, mark, -1)
+                val next = nearest(rows, mark, 1)
                 if (anchor.isEmpty() || next < 0) {
                     list.clearSelection()
                     mark = -1
@@ -676,16 +684,22 @@ internal class ActiveListView(
     private fun identities(): Set<Any> = list.selectedValuesList.map { it.identity }.toSet()
 
     @RequiresEdt
-    private fun setHovered(idx: Int) {
+    private fun setHovered(idx: Int, cell: String? = null) {
         checkEdt()
-        if (hovered == idx) return
+        if (hovered == idx && hoveredCell == cell) return
         val old = hovered
+        val row = hovered != idx
         hovered = idx
-        repaintRow(old)
-        repaintRow(idx)
+        hoveredCell = cell
+        if (row) {
+            repaintRow(old)
+            repaintRow(idx)
+        } else {
+            repaintRow(idx)
+        }
         // Single funnel for every hover transition — mouse move, mouse exit, and the clear that setBusy
         // and a model rebuild perform — so a consumer cannot miss one and leave a popup behind.
-        onHover?.invoke(model.items.getOrNull(idx))
+        if (row) onHover?.invoke(model.items.getOrNull(idx))
     }
 
     /**
@@ -1048,7 +1062,7 @@ internal class ActiveListView(
             // blocking must key off whether the hit id is a real cell/region, not that field.
             val ids = activeListVisibleCells(item, selected, menu?.takeIf { it.available(item) } != null)
                 .map { it.id }
-                .toSet() + activeListRegions(item).keys + ACTIVE_LIST_SECTION_CELL
+                .toSet() + activeListRegions(item).keys + ACTIVE_LIST_SECTION_CELL + ACTIVE_LIST_SECTION_TOGGLE_CELL
             activeListHits(list, idx, selected)
                 .firstOrNull { (it.id in ids || it.id.startsWith("$ACTIVE_LIST_SECTION_CELL:action:")) && it.bounds.contains(e.point) }
                 ?.id

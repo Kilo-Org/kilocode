@@ -2,10 +2,12 @@ package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.plugin.KiloBundle
 import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ActionButtonComponent
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.ex.CustomComponentAction
+import com.intellij.openapi.actionSystem.ex.ActionButtonLook
 import com.intellij.openapi.actionSystem.impl.ActionButton
 import com.intellij.openapi.actionSystem.ActionToolbar
 import com.intellij.openapi.actionSystem.ActionUiKind
@@ -122,13 +124,14 @@ internal class ActiveListRenderer(
     private val sep = GroupHeaderSeparator(insets)
     /** Trailing indicator; the containing band owns the click target. */
     private val chevron = ActiveListActionCell()
+    private val toggle = SectionToggle(chevron)
     private val toolbar = Stack.horizontal()
 
     // Only a list that can fold gets this container; every other list keeps the platform separator
     // directly in the cell header, exactly as before.
     private val band: JPanel? = if (folding) {
-        BandPanel(chevron).apply {
-            add(chevron)
+        BandPanel(toggle).apply {
+            add(toggle)
             add(sep)
             add(toolbar)
         }
@@ -347,6 +350,7 @@ internal class ActiveListRenderer(
             glyph.isVisible = false
             wrap.update(list, false, false)
             wrap.setPreferredSize(Dimension(0, bodyHeight ?: value.height))
+            syncHover(list, index)
             activeListInvalidate(this)
             return this
         }
@@ -358,6 +362,7 @@ internal class ActiveListRenderer(
             pill.isVisible = false
             glyph.isVisible = false
             wrap.isVisible = false
+            syncHover(list, index)
             activeListInvalidate(this)
             return this
         }
@@ -454,8 +459,15 @@ internal class ActiveListRenderer(
         // Neither the content mutations above nor setPreferredSize invalidate reliably: a same-size
         // icon swap, an equal label text, or an explicit preferred size leave the tree valid, and a
         // valid subtree keeps the sizes it was measured with for another row.
+        syncHover(list, index)
         activeListInvalidate(this)
         return this
+    }
+
+    private fun syncHover(list: JList<out ActiveListItem>, index: Int) {
+        val state = list as? ActiveListActive
+        val id = state?.hoveredCell().takeIf { state?.hoveredIndex() == index }
+        activeListApplyHover(this, id)
     }
 
     private fun syncHeader(heading: String?, index: Int, folded: Boolean, collapse: (() -> Unit)?) {
@@ -628,6 +640,8 @@ internal interface ActiveListActive {
     fun active(): Boolean
 
     fun hoveredIndex(): Int = -1
+
+    fun hoveredCell(): String? = null
 }
 
 internal class ActiveListChangesCell @RequiresEdt constructor() : JPanel(BorderLayout()), ActiveListHitCell {
@@ -671,12 +685,12 @@ internal class ActiveListChangesCell @RequiresEdt constructor() : JPanel(BorderL
 }
 
 /** Full-width toggle target, with toolbar buttons immediately before the trailing indicator. */
-private class BandPanel(private val chevron: ActiveListActionCell) : JPanel(null), ActiveListHitCell {
+private class BandPanel(private val toggle: SectionToggle) : JPanel(null), ActiveListHitCell {
     override val cellId: String get() = ACTIVE_LIST_SECTION_CELL
-    override fun cellEnabled() = chevron.cellEnabled()
-    override fun cellCursor() = chevron.cellCursor()
-    override fun cellTooltip() = chevron.cellTooltip()
-    override fun cellAction() = chevron.cellAction()
+    override fun cellEnabled() = toggle.cellEnabled()
+    override fun cellCursor() = toggle.cellCursor()
+    override fun cellTooltip() = toggle.cellTooltip()
+    override fun cellAction() = toggle.cellAction()
 
     override fun getPreferredSize(): Dimension = Dimension(
         components.filter { it.isVisible }.sumOf { it.preferredSize.width },
@@ -686,25 +700,62 @@ private class BandPanel(private val chevron: ActiveListActionCell) : JPanel(null
     override fun doLayout() {
         val sep = components.getOrNull(1) ?: return
         sep.setBounds(0, 0, width, height)
-        val size = chevron.preferredSize
+        val size = toggle.preferredSize
         val insets = JBUI.CurrentTheme.Popup.separatorLabelInsets()
         val bottom = height - insets.bottom
-        chevron.setBounds(
+        toggle.setBounds(
             (width - size.width - insets.right).coerceAtLeast(0),
             (bottom - size.height).coerceAtLeast(0),
             size.width,
             size.height,
         )
         val toolbar = components.getOrNull(2) ?: return
-        val space = (chevron.x - UiStyle.Gap.sm()).coerceAtLeast(0)
+        val space = (toggle.x - UiStyle.Gap.sm()).coerceAtLeast(0)
         val width = toolbar.preferredSize.width.coerceAtMost(space)
         val height = toolbar.preferredSize.height.coerceAtMost(bottom.coerceAtLeast(0))
         toolbar.setBounds(space - width, bottom - height, width, height)
     }
 }
 
+/** Trailing expand/collapse control with the platform toolbar-button hover treatment. */
+private class SectionToggle(private val chevron: ActiveListActionCell) : JPanel(BorderLayout()),
+    ActiveListHitCell,
+    ActiveListHoverCell {
+    private var hovered = false
+
+    override val cellId = ACTIVE_LIST_SECTION_TOGGLE_CELL
+
+    init {
+        UiStyle.Components.transparent(this)
+        add(chevron, BorderLayout.CENTER)
+    }
+
+    override fun getPreferredSize(): Dimension = ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE
+
+    override fun cellEnabled() = chevron.cellEnabled()
+    override fun cellCursor() = chevron.cellCursor()
+    override fun cellTooltip() = chevron.cellTooltip()
+    override fun cellAction() = chevron.cellAction()
+
+    override fun cellHovered(hovered: Boolean) {
+        this.hovered = hovered
+    }
+
+    override fun paintComponent(g: Graphics) {
+        if (hovered && cellEnabled()) {
+            ActionButtonLook.SYSTEM_LOOK.paintBackground(g, this, ActionButtonComponent.POPPED)
+            ActionButtonLook.SYSTEM_LOOK.paintBorder(g, this, ActionButtonComponent.POPPED)
+        }
+        super.paintComponent(g)
+    }
+}
+
 /** Renderer buttons expose their platform presentation through the list's synthetic click path. */
-private class SectionAction @RequiresEdt constructor(val action: AnAction, private val context: () -> DataContext) : JPanel(BorderLayout()), ActiveListHitCell {
+private class SectionAction @RequiresEdt constructor(
+    val action: AnAction,
+    private val context: () -> DataContext,
+) : JPanel(BorderLayout()), ActiveListHitCell, ActiveListHoverCell {
+    private var hovered = false
     private val presentation = action.templatePresentation.clone()
     private val button = (action as? CustomComponentAction)?.createCustomComponent(presentation, ActionPlaces.TOOLWINDOW_TITLE)
         ?: ActionButton(action, presentation, ActionPlaces.TOOLWINDOW_TITLE, ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE)
@@ -728,6 +779,18 @@ private class SectionAction @RequiresEdt constructor(val action: AnAction, priva
     override fun cellCursor() = Cursor.HAND_CURSOR
     override fun cellTooltip() = presentation.description ?: presentation.text
     override fun cellAction(): () -> Unit = { action.actionPerformed(event()) }
+
+    override fun cellHovered(hovered: Boolean) {
+        this.hovered = hovered
+    }
+
+    override fun paintComponent(g: Graphics) {
+        if (hovered && cellEnabled()) {
+            ActionButtonLook.SYSTEM_LOOK.paintBackground(g, button, ActionButtonComponent.POPPED)
+            ActionButtonLook.SYSTEM_LOOK.paintBorder(g, button, ActionButtonComponent.POPPED)
+        }
+        super.paintComponent(g)
+    }
 }
 
 internal class ActiveListActionCell : JBLabel(), ActiveListHitCell {

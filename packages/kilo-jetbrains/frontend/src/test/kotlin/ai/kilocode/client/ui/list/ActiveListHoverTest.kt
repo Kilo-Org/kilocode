@@ -1,8 +1,12 @@
 package ai.kilocode.client.ui.list
 
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
+import java.awt.Point
 import java.awt.event.MouseEvent
+import java.awt.image.BufferedImage
 import javax.swing.JPanel
 
 /**
@@ -37,6 +41,49 @@ class ActiveListHoverTest : BasePlatformTestCase() {
 
         // The popup controller restarts its dwell on every report, so a repeat would keep it closed.
         assertEquals(listOf("a"), seen)
+    }
+
+    fun `test moving between hover-aware cells repaints state without repeating row hover`() {
+        val action = object : DumbAwareAction("Add") {
+            override fun actionPerformed(e: AnActionEvent) {}
+        }
+        val view = ActiveListView(
+            empty = "",
+            collapse = ActiveListCollapse(actions = { listOf(action) }),
+            onHover = { item -> seen.add(item?.key) },
+            onCell = { _, _ -> },
+        )
+        view.update(listOf(row("a", "wt")))
+        layout(view)
+        val hits = activeListHits(view.list, 0, false)
+        val button = hits.single { it.id.startsWith("$ACTIVE_LIST_SECTION_CELL:action:") }
+        val toggle = hits.single { it.id == ACTIVE_LIST_SECTION_TOGGLE_CELL }
+        val idle = paint(view)
+
+        move(view, center(button.bounds))
+        assertEquals(button.id, (view.list as ActiveListActive).hoveredCell())
+        assertEquals(listOf("a"), seen)
+        assertImagesDiffer(idle, paint(view))
+
+        move(view, center(toggle.bounds))
+        assertEquals(toggle.id, (view.list as ActiveListActive).hoveredCell())
+        assertEquals(listOf("a"), seen)
+        assertImagesDiffer(idle, paint(view))
+
+        val band = hits.single { it.id == ACTIVE_LIST_SECTION_CELL }.bounds
+        move(view, Point(band.x + 1, band.y + band.height / 2))
+        assertNull((view.list as ActiveListActive).hoveredCell())
+        assertEquals(listOf("a"), seen)
+        assertImagesEqual(idle, paint(view))
+
+        exit(view)
+        assertEquals(-1, (view.list as ActiveListActive).hoveredIndex())
+        assertNull((view.list as ActiveListActive).hoveredCell())
+        assertEquals(listOf("a", null), seen)
+    }
+
+    fun `test ordinary action cells do not opt into renderer hover`() {
+        assertFalse(ActiveListHoverCell::class.java.isInstance(ActiveListActionCell()))
     }
 
     fun `test going busy reports the hover as gone`() {
@@ -108,6 +155,12 @@ class ActiveListHoverTest : BasePlatformTestCase() {
         view.list.dispatchEvent(MouseEvent(view.list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, x, y, 0, false))
     }
 
+    private fun move(view: ActiveListView, point: Point) {
+        view.list.dispatchEvent(
+            MouseEvent(view.list, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, point.x, point.y, 0, false),
+        )
+    }
+
     private fun exit(view: ActiveListView) {
         view.list.dispatchEvent(MouseEvent(view.list, MouseEvent.MOUSE_EXITED, System.currentTimeMillis(), 0, 0, 0, 0, false))
     }
@@ -118,5 +171,51 @@ class ActiveListHoverTest : BasePlatformTestCase() {
             override val title = key
             override val search = key
         }
+    }
+
+    private fun row(key: String, section: String): ActiveListItem = object : ActiveListItem {
+        override val key = key
+        override val title = key
+        override val search = key
+        override val section = section
+    }
+
+    private fun center(bounds: java.awt.Rectangle) = Point(
+        bounds.x + bounds.width / 2,
+        bounds.y + bounds.height / 2,
+    )
+
+    private fun paint(view: ActiveListView): BufferedImage {
+        val bounds = view.list.getCellBounds(0, 0)
+        val value = view.list.model.getElementAt(0)
+        val component = view.list.cellRenderer.getListCellRendererComponent(view.list, value, 0, false, true)
+        component.setBounds(0, 0, bounds.width, bounds.height)
+        activeListLayout(component)
+        val image = BufferedImage(bounds.width, bounds.height, BufferedImage.TYPE_INT_ARGB)
+        val canvas = image.createGraphics()
+        try {
+            component.paint(canvas)
+        } finally {
+            canvas.dispose()
+        }
+        return image
+    }
+
+    private fun assertImagesDiffer(before: BufferedImage, after: BufferedImage) {
+        assertTrue(
+            "expected the hovered renderer button to paint platform hover chrome",
+            (0 until before.width).any { x ->
+                (0 until before.height).any { y -> before.getRGB(x, y) != after.getRGB(x, y) }
+            },
+        )
+    }
+
+    private fun assertImagesEqual(before: BufferedImage, after: BufferedImage) {
+        assertFalse(
+            "expected the renderer button to return to its idle pixels after hover exits",
+            (0 until before.width).any { x ->
+                (0 until before.height).any { y -> before.getRGB(x, y) != after.getRGB(x, y) }
+            },
+        )
     }
 }

@@ -31,11 +31,12 @@ class ActiveListCollapseTest : BasePlatformTestCase() {
             layout(view)
             val hits = activeListHits(view.list, 1, false)
             val button = hits.single { it.id.startsWith("$ACTIVE_LIST_SECTION_CELL:action:") }
+            val toggle = hits.single { it.id == ACTIVE_LIST_SECTION_TOGGLE_CELL }
             val band = hits.single { it.id == ACTIVE_LIST_SECTION_CELL }.bounds
             assertEquals(view.list.width, band.width)
             assertTrue(button.bounds.width > 0)
             assertTrue(button.bounds.x > band.width / 2)
-            assertTrue(button.bounds.x + button.bounds.width < band.x + band.width)
+            assertTrue(button.bounds.x + button.bounds.width < toggle.bounds.x)
             click(view, center(button.bounds))
             assertEquals(if (folded) 3 else 4, view.list.model.size)
             assertEquals("cur", view.selected()?.key)
@@ -224,6 +225,7 @@ class ActiveListCollapseTest : BasePlatformTestCase() {
         layout(view)
 
         assertTrue(activeListCellBounds(view.list, 1, selected = false)[ACTIVE_LIST_SECTION_CELL] == null)
+        assertTrue(activeListCellBounds(view.list, 1, selected = false)[ACTIVE_LIST_SECTION_TOGGLE_CELL] == null)
     }
 
     private fun view(collapse: ActiveListCollapse? = ActiveListCollapse(), moves: MutableList<ActiveListMove> = mutableListOf()): ActiveListView {

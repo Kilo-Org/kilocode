@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.DataContext
 
 internal const val ACTIVE_LIST_SECTION_CELL = "__section__"
+internal const val ACTIVE_LIST_SECTION_TOGGLE_CELL = "__section__:toggle"
 
 /**
  * Opt-in switch for collapsible section separators, supplied by a list's owner. Present — non-null on

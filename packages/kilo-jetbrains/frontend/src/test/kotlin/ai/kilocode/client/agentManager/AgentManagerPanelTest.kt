@@ -40,6 +40,7 @@ import ai.kilocode.client.ui.list.ActiveListMetrics
 import ai.kilocode.client.ui.list.ActiveListView
 import ai.kilocode.client.ui.list.ACTIVE_LIST_CHANGES_CELL
 import ai.kilocode.client.ui.list.ACTIVE_LIST_SECTION_CELL
+import ai.kilocode.client.ui.list.ACTIVE_LIST_SECTION_TOGGLE_CELL
 import ai.kilocode.client.ui.list.ActiveListSectionRow
 import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.client.ui.list.activeListHits
@@ -1625,7 +1626,8 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             val changes = areas.getValue(ACTIVE_LIST_CHANGES_CELL)
             // The section header also carries its create action, separate from the row's badges.
             assertEquals(1, areas.keys.count { it.startsWith("$ACTIVE_LIST_SECTION_CELL:action:") })
-            assertEquals(setOf("pull-request", ACTIVE_LIST_CHANGES_CELL, ACTIVE_LIST_SECTION_CELL),
+            assertEquals(setOf("pull-request", ACTIVE_LIST_CHANGES_CELL, ACTIVE_LIST_SECTION_CELL,
+                ACTIVE_LIST_SECTION_TOGGLE_CELL),
                 areas.keys.filterNot { it.startsWith("$ACTIVE_LIST_SECTION_CELL:action:") }.toSet())
             val renderer = list.cellRenderer.getListCellRendererComponent(list, row, 0, false, true)
             renderer.setSize(list.width, list.getCellBounds(0, 0).height)
