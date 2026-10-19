@@ -388,7 +388,17 @@ Options considered for v1 and v2 side by side; `kilo2` is the only one that is b
 | Renamed files in v1's directories (`kilo2.db`, ...) | Too many shared names (auth, logs, state, cache, `bin`, locks); one miss shares a file |
 | Profile only through an environment variable | Useful for power users, but the default still needs a name |
 
-How upstream handled it, for contrast: v2 upgrades v1 in place. It keeps the `opencode` directories and, on release channels, the same `opencode.db`; `V1Migration` (`packages/core/src/database/v1-migration.bun.ts`) converts the v1 tables on first boot, resumably, and imports the earlier v2 preview store `opencode-next.db` read-only. Other channels get `opencode-<channel>.db` (`packages/cli/src/database-path.ts`). v1 config keys are read through compatibility parsers (`packages/core/src/v1/config/`, `ConfigMigrateV1`). Upstream ships one product that users upgrade once; Kilo cannot, because the v1 IDEs keep running on v1 data until G2 and G3 (D5, D6). Reusable here: the compatibility parsers for U-E1-07 and U-E3-03, and the resumable one-time migration pattern for U-E8-02. `V1Migration` must never read a Kilo v1 store (U-E1-02). The archived port also used `kilo2` (`packages/kilo-cli/src/paths.ts` on the tag), as a preview identity with a `preview/` subdirectory and a `kilo2` binary.
+**Upstream's strategy: in-place upgrade, no coexistence.** v2 takes over v1's data on first boot:
+
+- Same `opencode` directories and, on release channels, the same `opencode.db` (`packages/cli/src/database-path.ts`; other channels get `opencode-<channel>.db`).
+- `V1Migration` (`packages/core/src/database/v1-migration.bun.ts`) converts the v1 tables in that database once, resumably, with a completion marker, and imports the earlier v2 preview store `opencode-next.db` read-only.
+- v1 config keys are read in place through compatibility parsers (`packages/core/src/v1/config/`, `ConfigMigrateV1`).
+
+It works for upstream because it ships one product, the CLI, that each user upgrades once and does not run beside v1.
+
+**Why Kilo cannot use it until the end of the migration.** Kilo ships v1 on three surfaces and cuts them over one at a time (D5): the CLI at G1, VS Code at G2, JetBrains at G3. Until G3, the v1 IDEs keep running on the v1 store (VS Code bundles the CLI built from `main`, JetBrains pins a v1 CLI). An in-place upgrade would convert or write the store those IDEs still use. Decision D6 forbids that while any v1 surface ships, and the split history between G1 and G3 is bridged by opt-in, re-runnable import (U-E3-01 to U-E3-03) instead. The in-place strategy becomes usable once every surface is on v2: storage consolidation (U-E8-02, after G3) is that step, and it should reuse upstream's pattern (one run, resumable, completion marker, backup first).
+
+Reusable before then: the v1 config compatibility parsers for U-E1-07 and U-E3-03. `V1Migration` must never read a Kilo v1 store (U-E1-02). The archived port also used `kilo2` (`packages/kilo-cli/src/paths.ts` on the tag), as a preview identity with a `preview/` subdirectory and a `kilo2` binary.
 
 D-1, D-3 and D-4 keep the IDs from the 2026-10-13 plan delta, which the sync tooling cites. Its D-2 (sync cadence) is decided: D1.
 
