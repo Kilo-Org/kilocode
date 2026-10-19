@@ -3,9 +3,9 @@
   "latency": 300,
   "runs": 5,
   "plugins": {
-    "kilocode.gateway": 360,
+    "kilocode.gateway": 50,
     "kilo.agent": 50,
     "kilo.agent.ceiling": 50
   },
-  "overhead": 370
+  "overhead": 60
 }
