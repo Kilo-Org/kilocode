@@ -10,11 +10,6 @@
     "note": "Scout prompt. Scout (experimental, default off) is not ported. U-E11-05 records the decision.",
     "by": "agents-plugin"
   },
-  "module:packages/opencode/test/kilocode/agent-config-metadata.test.ts": {
-    "state": "dropped",
-    "note": "Covers the Explore description (native Explore, U-E2-17) and typed `displayName`/`source` metadata (no v2 schema fields).",
-    "by": "agents-plugin"
-  },
   "module:packages/opencode/test/kilocode/agent-global-config-dirs.test.ts": {
     "state": "native",
     "v2": "packages/schema/src/agent.ts",
@@ -42,11 +37,6 @@
   "patch:agent:063e034b577a": {
     "state": "dropped",
     "note": "Scout prompt import. Scout (experimental, default off) is not ported. U-E11-05 records the decision.",
-    "by": "agents-plugin"
-  },
-  "patch:unattributed:agent:017970708865": {
-    "state": "dropped",
-    "note": "Typed `displayName` and `source` agent fields. The v2 agent schema has no fields for them (#14999, differences table).",
     "by": "agents-plugin"
   },
   "patch:unattributed:agent:09375914c157": {
@@ -102,11 +92,6 @@
   "patch:unattributed:agent:461dc96586d3": {
     "state": "dropped",
     "note": "Per-agent hardening after config: metadata lifting (no v2 schema fields), Explore shell limits (native Explore, U-E2-17), the Plan edit guard after per-agent rules (U-E2-13) and Scout reference agents (U-E11-05). Each part is a row of the differences table in #14999.",
-    "by": "agents-plugin"
-  },
-  "patch:unattributed:agent:4e3ac6d679a9": {
-    "state": "dropped",
-    "note": "Typed `displayName` and `source` agent fields. The v2 agent schema has no fields for them (#14999, differences table).",
     "by": "agents-plugin"
   },
   "patch:unattributed:agent:51a770bdc581": {

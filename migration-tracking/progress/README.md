@@ -8,14 +8,14 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**39 / 9838 cells done (0.4%)**, 16 dropped. `░░░░░░░░░░░░░░░░`
+**39 / 9841 cells done (0.4%)**, 13 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
 | module | 10 | 3556 | 0.3% |
 | api | 0 | 39 | 0% |
-| patch | 22 | 3445 | 0.6% |
-| test | 7 | 2798 | 0.3% |
+| patch | 22 | 3447 | 0.6% |
+| test | 7 | 2799 | 0.3% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
@@ -32,8 +32,8 @@ One point per day from the committed `progress.json` on the first-parent history
 | Date | Done | Total | % |
 |---|---:|---:|---:|
 | 2026-10-16 | 12 | 9854 | 0.1% |
-| 2026-10-19 | 12 | 9854 | 0.1% |
-| now | 39 | 9838 | 0.4% |
+| 2026-10-19 | 39 | 9838 | 0.4% |
+| now | 39 | 9841 | 0.4% |
 
 ## Features
 
@@ -42,7 +42,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | Feature | Modules | API | Patches | Tests | Done | % | | Landed |
 |---|---:|---:|---:|---:|---:|---:|---|---|
 | acp | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| agent | 1/3 | 0/1 | 1/1 | 4/7 | 6/12 | 50% | `████████░░░░░░░░` | 1 plugin |
+| agent | 1/3 | 0/1 | 1/1 | 4/8 | 6/13 | 46.2% | `███████░░░░░░░░░` | 1 plugin |
 | agent-manager | 0/4 | 0/3 | 0/1 | 0/4 | 0/12 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | anaconda-desktop | 0/7 | 0/3 |  | 0/7 | 0/17 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | archive-security |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -174,9 +174,9 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 | effect | 0/33 |  | 0/33 | 0% |
 | installation | 0/25 |  | 0/25 | 0% |
 | tui/app | 0/24 |  | 0/24 | 0% |
+| agent | 21/23 |  | 21/23 | 91.3% |
 | core/pty | 0/22 |  | 0/22 | 0% |
 | project | 0/22 |  | 0/22 | 0% |
-| agent | 21/21 |  | 21/21 | 100% |
 | sdk/pkg | 0/21 |  | 0/21 | 0% |
 | core/pkg | 0/20 |  | 0/20 | 0% |
 | core/plugin | 0/20 |  | 0/20 | 0% |
@@ -304,15 +304,12 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 ## Dropped
 
 - `module:packages/opencode/src/kilocode/agent/scout.txt`: Scout prompt. Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
-- `module:packages/opencode/test/kilocode/agent-config-metadata.test.ts`: Covers the Explore description (native Explore, U-E2-17) and typed `displayName`/`source` metadata (no v2 schema fields). (agents-plugin)
 - `patch:agent:063e034b577a`: Scout prompt import. Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
-- `patch:unattributed:agent:017970708865`: Typed `displayName` and `source` agent fields. The v2 agent schema has no fields for them (#14999, differences table). (agents-plugin)
 - `patch:unattributed:agent:09375914c157`: Rule for the `suggest` tool, which v2 does not have yet. The suggest unit (U-E2-16) adds the rule with the tool (#14999, differences table). (agents-plugin)
 - `patch:unattributed:agent:0faa6c731275`: Kilo `whenToUse` guidance in the LLM agent generation prompt (`kilo agent create`). v2 has no agent generation and no `generate.txt`. (agents-plugin)
 - `patch:unattributed:agent:1b8fe669272e`: Telemetry options for the LLM agent generation call (`kilo agent create`). v2 has no agent generation, so no call exists to configure. (agents-plugin)
 - `patch:unattributed:agent:2e2369fd59e1`: Orchestrator `deprecated` badge field. The v2 agent schema has no field for it (#14999, differences table). (agents-plugin)
 - `patch:unattributed:agent:461dc96586d3`: Per-agent hardening after config: metadata lifting (no v2 schema fields), Explore shell limits (native Explore, U-E2-17), the Plan edit guard after per-agent rules (U-E2-13) and Scout reference agents (U-E11-05). Each part is a row of the differences table in #14999. (agents-plugin)
-- `patch:unattributed:agent:4e3ac6d679a9`: Typed `displayName` and `source` agent fields. The v2 agent schema has no fields for them (#14999, differences table). (agents-plugin)
 - `patch:unattributed:agent:51a770bdc581`: RuntimeFlags in the agent service fed Scout and the shared agent board rules. The v2 agents plugin reads no runtime flags: Scout is not ported (U-E11-05), and the board unit adds its own rules. (agents-plugin)
 - `patch:unattributed:agent:6cdbea643f7d`: Default denies for the Scout repository tools (`repo_clone`, `repo_overview`). Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
 - `patch:unattributed:agent:7c1daa44f22c`: Kilo `whenToUse` guidance in the LLM agent generation prompt (`kilo agent create`). v2 has no agent generation and no `generate.txt`. (agents-plugin)

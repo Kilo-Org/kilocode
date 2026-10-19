@@ -5,9 +5,9 @@
   },
   "summary": {
     "done": 39,
-    "total": 9838,
+    "total": 9841,
     "percent": 0.4,
-    "dropped": 16,
+    "dropped": 13,
     "kinds": [
       {
         "kind": "module",
@@ -22,12 +22,12 @@
       {
         "kind": "patch",
         "done": 22,
-        "total": 3445
+        "total": 3447
       },
       {
         "kind": "test",
         "done": 7,
-        "total": 2798
+        "total": 2799
       }
     ],
     "landed": {
@@ -90,8 +90,8 @@
     {
       "feature": "agent",
       "done": 6,
-      "total": 12,
-      "dropped": 3,
+      "total": 13,
+      "dropped": 2,
       "kinds": {
         "module": {
           "done": 1,
@@ -107,7 +107,7 @@
         },
         "test": {
           "done": 4,
-          "total": 7
+          "total": 8
         }
       },
       "landed": {
@@ -2353,8 +2353,8 @@
     {
       "feature": "unattributed:agent",
       "done": 21,
-      "total": 21,
-      "dropped": 13,
+      "total": 23,
+      "dropped": 11,
       "kinds": {
         "module": {
           "done": 0,
@@ -2366,7 +2366,7 @@
         },
         "patch": {
           "done": 21,
-          "total": 21
+          "total": 23
         },
         "test": {
           "done": 0,
@@ -6106,15 +6106,12 @@
   ],
   "dropped": [
     "module:packages/opencode/src/kilocode/agent/scout.txt",
-    "module:packages/opencode/test/kilocode/agent-config-metadata.test.ts",
     "patch:agent:063e034b577a",
-    "patch:unattributed:agent:017970708865",
     "patch:unattributed:agent:09375914c157",
     "patch:unattributed:agent:0faa6c731275",
     "patch:unattributed:agent:1b8fe669272e",
     "patch:unattributed:agent:2e2369fd59e1",
     "patch:unattributed:agent:461dc96586d3",
-    "patch:unattributed:agent:4e3ac6d679a9",
     "patch:unattributed:agent:51a770bdc581",
     "patch:unattributed:agent:6cdbea643f7d",
     "patch:unattributed:agent:7c1daa44f22c",
