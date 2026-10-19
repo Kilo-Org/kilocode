@@ -430,4 +430,30 @@ describe("DirectoryScanner", () => {
     expect(retry?.maxRetries).toBe(2)
     expect(retry?.error).toContain("[REDACTED_PATH]")
   })
+
+  test("indexes supported dotfiles and preserves their cached hashes across scans", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    try {
+      const hidden = join(root, ".note.md")
+      await Bun.write(hidden, "# Hidden note with sufficient content to be indexed\n")
+
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+
+      const store = new Store()
+      const scan = new DirectoryScanner(new Emb(), store, new Parser(), cache, await loadIgnore(root), 1, 1)
+      const first = await scan.scanDirectory(root)
+
+      expect(first.stats.processed).toBe(1)
+      expect(cache.getHash(hidden)).toBeDefined()
+
+      const second = await scan.scanDirectory(root, undefined, undefined, undefined, "incremental")
+      expect(second.stats.skipped).toBe(1)
+      expect(cache.getHash(hidden)).toBeDefined()
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
+  })
 })

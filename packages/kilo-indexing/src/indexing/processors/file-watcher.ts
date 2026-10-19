@@ -1,7 +1,7 @@
 import type ParcelWatcher from "@parcel/watcher"
 // @ts-ignore - the wrapper subpath ships without type declarations
 import { createWrapper } from "@parcel/watcher/wrapper"
-import { stat, readFile } from "fs/promises"
+import { lstat, stat, readFile } from "fs/promises"
 import { createHash } from "crypto"
 import path from "path"
 import { glob } from "glob"
@@ -423,11 +423,18 @@ export class FileWatcher implements IFileWatcher {
         if (children.length || !this.shouldIndex(event.path)) events.delete(event.path)
         continue
       }
-      const info = await stat(event.path).catch((err: NodeJS.ErrnoException) => {
+      const info = await lstat(event.path).catch((err: NodeJS.ErrnoException) => {
         if (err.code === "ENOENT" || err.code === "ENOTDIR") return
         throw err
       })
       if (!info?.isDirectory()) {
+        if (info?.isSymbolicLink()) {
+          const target = await stat(event.path).catch(() => undefined)
+          if (target?.isDirectory()) {
+            events.delete(event.path)
+            continue
+          }
+        }
         if (!this.shouldIndex(event.path)) events.delete(event.path)
         continue
       }
@@ -915,12 +922,13 @@ export class FileWatcher implements IFileWatcher {
       }
 
       // Parse file
-      const blocks = await this.parser.parseFile(filePath, { content, fileHash: newHash })
+      const parsed = await this.parser.parseFile(filePath, { content, fileHash: newHash })
+      const blocks = parsed.filter((block) => block.content.trim().length > 0)
 
       // Prepare points for batch processing
       let pointsToUpsert: PointStruct[] = []
       if (this.embedder && blocks.length > 0) {
-        const texts = blocks.map((block) => block.content)
+        const texts = blocks.map((block) => block.content.trim())
         const { embeddings } = await this.embedder.createEmbeddings(texts)
         if (embeddings.length !== blocks.length) {
           return {
