@@ -48,6 +48,7 @@ import {
   mostUsedModels,
   rankModelSearch,
 } from "./model-selector-utils"
+import { providerFailure, providerFailureMessageKey } from "../../../../src/shared/provider-model"
 import { ModelPreview } from "./ModelPreview"
 
 // ---------------------------------------------------------------------------
@@ -150,7 +151,7 @@ export interface ModelSelectorBaseProps {
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
-  const { connected, models, findModel, kiloUnavailable } = useProvider()
+  const { connected, models, findModel, kiloUnavailable, failures } = useProvider()
   const language = useLanguage()
   const vscode = useVSCode()
   // Session context is optional — ModelSelectorBase is also used in Settings
@@ -813,6 +814,15 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     return m !== undefined && m.providerID === model.providerID && m.id === model.id
   }
 
+  const kiloModelFailure = createMemo(() => providerFailure(KILO_GATEWAY_ID, failures()))
+  const noProvidersLabel = () => {
+    const failure = kiloModelFailure()
+    if (failure) {
+      const { key, vars } = providerFailureMessageKey(failure)
+      return language.t(key, vars)
+    }
+    return kiloUnavailable() ? language.t("dialog.model.unavailable") : language.t("dialog.model.noProviders")
+  }
   const triggerLabel = () =>
     buildTriggerLabel(
       activeModel()?.name,
@@ -823,9 +833,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       hasProviders(),
       {
         select: language.t("dialog.model.select.title"),
-        noProviders: kiloUnavailable()
-          ? language.t("dialog.model.unavailable")
-          : language.t("dialog.model.noProviders"),
+        noProviders: noProvidersLabel(),
         notSet: language.t("dialog.model.notSet"),
       },
     )

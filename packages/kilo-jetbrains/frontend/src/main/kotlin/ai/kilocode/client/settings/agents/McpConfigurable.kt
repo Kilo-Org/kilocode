@@ -32,6 +32,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.UIUtil
 import javax.swing.JComponent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -102,16 +103,28 @@ internal class McpSettingsUi(
             servers = cfg
             bundles = owned
         }
-        val statuses = if (dir.isBlank()) {
+        // Null when the runtime read failed. A failed read must not replace the whole settings list
+        // with an error, so the configured servers still render without status pills; cancellation
+        // still propagates so a dismissed page stops its load.
+        val runtime = if (dir.isBlank()) {
             LOG.warn("mcp settings fetch skipped runtime status: missing project directory config=${cfg.size}")
-            emptyMap()
+            emptyList()
         } else {
-            behavior.mcpStatus(dir).associateBy { it.name }
+            try {
+                behavior.mcpStatus(dir)
+            } catch (err: CancellationException) {
+                throw err
+            } catch (err: Exception) {
+                LOG.warn("mcp settings fetch runtime status failed dir=$dir", err)
+                null
+            }
         }
+        val statuses = runtime.orEmpty().associateBy { it.name }
         // Reconciles the composer's needs-auth indicator with runtime truth on every visit to this
         // page, so a server removed outside the IDE (or whose removal RPC failed after an optimistic
-        // forget()) does not leave the indicator stuck.
-        service<KiloMcpAuthService>().sync(dir, statuses.values.toList())
+        // forget()) does not leave the indicator stuck. Only a successful read is runtime truth: a
+        // failed read keeps the last-known badge instead of clearing it.
+        if (runtime != null) service<KiloMcpAuthService>().sync(dir, runtime)
         val names = (cfg.keys + statuses.keys).sorted()
         LOG.info("mcp settings fetch dir=$dir config=${cfg.size} runtime=${statuses.size} total=${names.size}")
         if (names.isEmpty()) {

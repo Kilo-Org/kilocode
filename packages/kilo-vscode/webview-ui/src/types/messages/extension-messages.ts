@@ -1,4 +1,4 @@
-import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
+import type { ProviderAuthAuthorization, ProviderAuthMethod, ProviderFailure } from "@kilocode/sdk/v2/client"
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../../../src/diff/sources/types"
 import type { PRComment, PRReactionContent } from "../../../agent-manager/pr/pr-types"
 import type { PartBatch, PartRemove, PartUpdate } from "../../../../src/shared/stream-messages"
@@ -118,6 +118,11 @@ export interface GitStatusMessage {
 export interface WorkspaceDirectoryChangedMessage {
   type: "workspaceDirectoryChanged"
   directory: string
+}
+
+export interface WorkspaceScopeMessage {
+  type: "workspaceScope"
+  folder?: { name: string; path: string }
 }
 
 export interface LanguageChangedMessage {
@@ -556,6 +561,8 @@ export interface ProvidersLoadedMessage {
   authStates: Record<string, ProviderAuthState>
   /** The organization's Kilo catalog failed to load, so Kilo has no models to pick. */
   kiloUnavailable?: boolean
+  /** Typed reasons providers failed to load, so the UI can explain why instead of hiding them. */
+  failures?: ProviderFailure[]
 }
 
 export interface AgentsLoadedMessage {
@@ -1805,6 +1812,7 @@ export type ExtensionMessage =
   | BrowserTabFrameMessage
   | BrowserTabCursorMessage
   | ReadyMessage
+  | WorkspaceScopeMessage
   | FontSizeChangedMessage
   | GitStatusMessage
   | ConnectionStateMessage
