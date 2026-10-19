@@ -12,6 +12,20 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # kilocode_change start - Defender real-time scanning slows every file write and process spawn on Windows.
+    # Exclude the work, temp and Bun directories before the install. Best effort: without Defender, nothing changes.
+    - name: Exclude work directories from Defender scanning
+      if: runner.os == 'Windows'
+      continue-on-error: true
+      shell: pwsh
+      run: |
+        foreach ($dir in @($env:GITHUB_WORKSPACE, $env:RUNNER_TEMP, $env:TEMP, "$env:USERPROFILE\.bun")) {
+          if (-not $dir) { continue }
+          try { Add-MpPreference -ExclusionPath $dir -ErrorAction Stop; Write-Host "Defender exclusion: $dir" }
+          catch { Write-Host "Defender exclusion failed for ${dir}: $($_.Exception.Message)" }
+        }
+    # kilocode_change end
+
     # node-gyp@latest (invoked via bunx for native install scripts) requires Node >=22;
     # some runner images ship an older system Node on PATH
     - name: Setup Node
@@ -50,6 +64,7 @@ runs:
         echo "version=$(bun --version)" >> "$GITHUB_OUTPUT"
 
     - name: Restore Bun dependencies
+      if: runner.os != 'Windows' # kilocode_change - restoring the ~1 GB cache is slower on Windows than a fresh install
       id: bun-cache
       uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
@@ -73,7 +88,7 @@ runs:
       shell: bash
 
     - name: Save Bun dependencies
-      if: steps.bun-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target'
+      if: runner.os != 'Windows' && steps.bun-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' # kilocode_change
       uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: ${{ steps.cache.outputs.dir }}
