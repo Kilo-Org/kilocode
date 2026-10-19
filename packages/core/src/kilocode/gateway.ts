@@ -50,7 +50,12 @@ const Metadata = Schema.Struct({
 const decodeMetadata = Schema.decodeUnknownOption(Metadata)
 // The team choice in plugin storage. `null` is the personal account.
 const decodeSelection = Schema.decodeUnknownOption(Schema.Struct({ organizationID: Schema.NullOr(Schema.String) }))
-const decodeStoredModels = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))
+// The last good catalog of one personal or anonymous scope: its models and its default model.
+const decodeSnapshot = Schema.decodeUnknownOption(
+  Schema.fromJsonString(
+    Schema.Struct({ models: Schema.Array(Schema.Unknown), defaultModelID: Schema.optional(Schema.String) }),
+  ),
+)
 // Published on the global bus (`{ global: true }`), so plugin instances of other locations also reload.
 const OrganizationEvent = Bus.ephemeral({
   type: `rpc.${KiloGatewayRpc.Definition.id}.organization`,
@@ -59,6 +64,11 @@ const OrganizationEvent = Bus.ephemeral({
     source: Schema.optional(Schema.String),
   },
 })
+
+interface Snapshot {
+  readonly models: readonly KiloModels.Model[]
+  readonly defaultModelID?: string
+}
 
 interface CatalogState {
   readonly account?: KiloAccount.Info
@@ -86,7 +96,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
       failed: false,
       anonymous: true,
     }
-    const lastGood = new Map<string, readonly KiloModels.Model[]>()
+    const lastGood = new Map<string, Snapshot>()
     const sessionMetadata = new Map<string, KiloGatewayRpc.SessionMetadata>()
     let retryFiber: Fiber.Fiber<void, never> | undefined
     let cachedProjectID: string | null | undefined
@@ -142,13 +152,13 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
       }
     })
 
-    const saveSnapshot = (writeKey: string, models: readonly KiloModels.Model[]) =>
+    const saveSnapshot = (writeKey: string, snapshot: Snapshot) =>
       Effect.gen(function* () {
         if (!lastGood.has(writeKey) && lastGood.size >= MAX_SNAPSHOTS) {
           const oldest = lastGood.keys().next().value
           if (oldest) lastGood.delete(oldest)
         }
-        lastGood.set(writeKey, models)
+        lastGood.set(writeKey, snapshot)
         if (writeKey.startsWith("catalog:personal:")) {
           const scanned = yield* ctx.storage
             .scan({ prefix: "catalog:personal:" })
@@ -159,7 +169,22 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
             }
           }
         }
-        yield* ctx.storage.set(writeKey, JSON.stringify(models)).pipe(Effect.catch(() => Effect.void))
+        yield* ctx.storage.set(writeKey, JSON.stringify(snapshot)).pipe(Effect.catch(() => Effect.void))
+      })
+
+    const readSnapshot = (key: string) =>
+      Effect.gen(function* () {
+        const memory = lastGood.get(key)
+        if (memory) return memory
+        const value = yield* ctx.storage.get(key).pipe(Effect.orElseSucceed(() => undefined))
+        const decoded = typeof value === "string" ? Option.getOrUndefined(decodeSnapshot(value)) : undefined
+        if (!decoded || decoded.models.length === 0) return undefined
+        const snapshot: Snapshot = {
+          models: decoded.models as readonly KiloModels.Model[],
+          defaultModelID: decoded.defaultModelID,
+        }
+        lastGood.set(key, snapshot)
+        return snapshot
       })
 
     const loadCatalog = Effect.fn("KiloGatewayPlugin.loadCatalog")(function* (
@@ -243,7 +268,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
           ? undefined
           : snapshotKey(base, fetched.success.anonymous ? undefined : token)
         if (writeKey && models.length > 0) {
-          yield* saveSnapshot(writeKey, models)
+          yield* saveSnapshot(writeKey, { models, defaultModelID: resolvedDefault })
         }
         catalog = {
           account: current,
@@ -269,26 +294,17 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
 
       // Personal or anonymous scope: keep the last good Gateway catalog for this exact scope, if any.
       // Never fall back to models.dev.
-      const cacheKey = snapshotKey(base, token)
-      const memory = lastGood.get(cacheKey)
-      const stored =
-        memory ??
-        (yield* ctx.storage.get(cacheKey).pipe(
-          Effect.map((value) => {
-            const decoded = typeof value === "string" ? Option.getOrUndefined(decodeStoredModels(value)) : undefined
-            return Array.isArray(decoded) ? (decoded as readonly KiloModels.Model[]) : undefined
-          }),
-          Effect.orElseSucceed(() => undefined),
-        ))
+      const stored = yield* readSnapshot(snapshotKey(base, token))
       if (targetEpoch !== epoch) return
-      if (stored && stored.length > 0) {
-        lastGood.set(cacheKey, stored)
+      if (stored) {
         catalog = {
           account: current,
           connection,
           envActive,
-          models: stored,
-          defaultModelID,
+          models: stored.models,
+          // The stored default belongs to the stored models. `KiloDefaults.get` answers its static fallback when the
+          // Kilo API is down, so it must not replace the stored default.
+          defaultModelID: stored.defaultModelID ?? defaultModelID,
           failed: false,
           anonymous: !token,
         }
@@ -338,7 +354,25 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
 
     yield* ctx.integration.transform((editor) => editor.method.update(device(server)))
 
-    yield* lock.withPermit(loadCatalog(++epoch, 0))
+    // A later start in a personal or anonymous scope with a stored catalog for that exact scope starts with it, so
+    // activation does not wait for the network. The fresh catalog loads in the plugin scope and reloads the provider
+    // once, as a retry does. The first start (no stored catalog) and team scope, which fails closed, wait for it.
+    const start = yield* resolveCurrentAccount
+    const stored = start.account?.organizationID
+      ? undefined
+      : yield* readSnapshot(snapshotKey(start.account?.server ?? server, start.account?.token))
+    if (stored) {
+      catalog = {
+        account: start.account,
+        connection: start.connection,
+        envActive: start.envActive,
+        models: stored.models,
+        defaultModelID: stored.defaultModelID,
+        failed: false,
+        anonymous: !start.account?.token,
+      }
+    }
+    yield* stored ? Effect.forkIn(reload, scope) : lock.withPermit(loadCatalog(++epoch, 0))
 
     // kilo_port(gateway:73ba28ce78a5) Gateway base URL, Kilo referer and title, team header, and the token or the
     // anonymous key, which v1 kilo.ts set on the provider.

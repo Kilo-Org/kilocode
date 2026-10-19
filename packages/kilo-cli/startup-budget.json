@@ -4,10 +4,10 @@
   "runs": 5,
   "loadRuns": 9,
   "plugins": {
-    "kilocode.gateway": 360,
+    "kilocode.gateway": 50,
     "kilo.agent": 50,
     "kilo.agent.ceiling": 50
   },
-  "overhead": 370,
+  "overhead": 60,
   "modules": 100
 }
