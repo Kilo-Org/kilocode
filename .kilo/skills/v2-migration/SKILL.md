@@ -1,6 +1,6 @@
 ---
 name: v2-migration
-description: Use for any work on the Kilo v2 migration (branches v2, v2-*). Covers strategy, branches and PRs, the isolated test profile, how to self-test the v2 CLI yourself, and the test policy.
+description: Use for any work on the Kilo v2 migration (branches v2, v2-*). Covers strategy (plugin first), branches, PRs and upstream syncs, the isolated test profile, how to self-test the v2 CLI yourself, and the test policy.
 ---
 
 # Kilo v2 migration
@@ -10,32 +10,43 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 ## Sources of truth
 
 - Behavior: v1 Kilo on `main`. Mechanism only: the old port, tag `kilo-v2-checkpoints-2026-09` (former `kilo-v2`). Never merge or copy it as a whole.
-- Context and decisions: `migration-tracking/plans/migration-context.md`. Plan: `migration-tracking/plans/kilo-v2-migration-plan.md` (PR #14987).
-- Epic #13750. Gateway, login and enterprise support: #14991.
-- Known upstream test failures: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`.
-- Fork conventions: `migration-tracking/technical-notes/v2-fork-conventions.md`.
+- The migration docs are on `v2`:
+  - Context and decisions: `migration-tracking/plans/migration-context.md`. Plan: `migration-tracking/plans/kilo-v2-migration-plan.md`.
+  - Known upstream test failures: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md` (re-measured after each sync; it names the release it describes).
+  - Fork conventions: `migration-tracking/technical-notes/v2-fork-conventions.md`.
+- Epic #13750. Gateway, login and enterprise support: #14991. Upstream sync and merge tooling: #15020.
 
 ## Strategy
 
 - Order: CLI/TUI first (G1), then VS Code (G2), then JetBrains (G3). Cloud consumers follow a versioned release.
-- Kilo code lives in Kilo-owned paths (`packages/kilo-*`, `src/kilocode/`) and uses public upstream seams (`@opencode/plugin`). Keep changes to shared upstream files minimal and mark them `kilocode_change`.
+- The upstream base moves: every upstream release is merged into `v2` (see Branches and PRs), so the migration keeps up with upstream. Build and check against the current `v2`, not the initial base.
+- Before you place a change, load the skill `v2-feature-placement`. It decides the rung for one change (plugin hook, host, seam or patch), with the commands to find the upstream extension point and the done-proof the progress map needs. Reasoning and guarantees: `migration-tracking/plans/v2-host-strategy.md`.
+- Kilo code lives in Kilo-owned paths (`packages/kilo-*`, `src/kilocode/`). Plugin first: use the first option that works, and name it in the PR.
+  1. A Kilo plugin on the public plugin API (`@opencode/plugin`).
+  2. The Kilo host (`packages/kilo-cli`, unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry. Add a server plugin to `KiloPlugins` in `packages/kilo-plugin/src/index.ts`; the host registers it. Service replacements go in `overrides` in `packages/kilo-cli/src/host.ts`, `KILO_*` names in `packages/kilo-cli/src/env.ts`. TUI plugins still register with one marked line in `packages/tui/src/plugin/builtins.ts` (the TUI list is in the TUI process, which the host does not reach).
+  3. A small, generic seam patch in a shared upstream file: widen an API, add a hook, export a value. Prefer files that change rarely.
+  4. A feature patch in a shared upstream file. Last resort. Say in the PR why options 1 to 3 do not work.
+  5. Branding and product strings: the rename script during upstream syncs, never hand edits.
+- Mark every change in a shared upstream file with `kilocode_change` (options 3 and 4). One generic seam is better than many small edits.
 - Kilo logic packages (for example `kilo-gateway-core`) import nothing from `@opencode/*`. Only thin adapters do.
 - The Kilo Gateway is the only source of Kilo models (`models.set`, no models.dev fallback). Requests identify as Kilo (token, team header, `X-KILOCODE-*`). See #14991.
 
 ## Branches and PRs
 
-- Integration branch: `v2`. Use the working base named in `migration-context.md`. Never target `main`.
+- Integration branch: `origin/v2`. Branch from it and target it. Never target `main`.
+- Upstream: `upstream/dev` is upstream's v2 line since 2026-10-10. `upstream/v2` is frozen; never merge it. Never merge upstream in a feature PR. An upstream sync is its own PR (#15020). It targets the next release that `v2` does not have yet (the release commit, which is the parent of the `v2.x.y` tag), and merges with a merge commit, never a squash. After a sync, open PRs merge `v2` into their branch and check and self-test again.
 - Stack on an open v2 PR when you depend on it, and target that PR's branch.
 - One plan unit per PR. Never push directly to `v2`. A human merges.
 - Short hyphenated branch names, no slashes. Titles `type(scope): summary`.
 
 ## Isolation: never touch the v1 setup
 
-- Run the CLI only through `bun dev` (`script/dev-isolated.ts`). It keeps all data in one profile directory. Never run `bun run --cwd packages/cli`, `dev:live` or `opencode` directly. They use the installed OpenCode data and service.
+- Run the CLI only through `bun dev` (`script/dev-isolated.ts`, which starts the Kilo host entry `packages/kilo-cli/src/index.ts`). It keeps all data in one profile directory. Never run `bun run --cwd packages/cli`, `dev:live` or `opencode` directly. They use the installed OpenCode data and service.
 - Use a fresh profile per test: `KILO_V2_PROFILE=/tmp/kilo-v2-<id>`. Add `--standalone` so parallel agents do not share the service port.
-- `bun dev` reuses the v1 Kilo login (read only). For a signed-out test, start it with `XDG_DATA_HOME=/tmp/kilo-v2-empty`.
+- `bun dev` starts signed out and does not read the v1 login. Signed out, the Kilo Gateway serves its free models. Sign in with `/connect`, or start a signed-in test with `KILO_API_KEY` (and `KILO_ORG_ID` for a team) from the v1 auth file, so that no secret shows on screen.
 - Do not edit the main checkout, `~/.config/kilo`, `~/.local/share/kilo` or OpenCode directories. `bun run extension` does not exist on v2.
 - Models: `kilo/kilo-auto/free` by default. Use `kilo/deepseek/deepseek-v4.1-flash` only when a paid model is needed.
+- Isolate tests too. Upstream tests can write into the real home and leave servers running. Run them with `T=$(mktemp -d)` and `env OPENCODE_TEST_HOME=$T XDG_DATA_HOME=$T/data XDG_CONFIG_HOME=$T/config XDG_STATE_HOME=$T/state XDG_CACHE_HOME=$T/cache bun test ...`. After the run, stop any of your processes that `pgrep -fl 'opencode-test-|opencode-service-lifecycle'` lists.
 
 ## Self-test the CLI
 
@@ -90,7 +101,7 @@ st type --submit --value "env KILO_V2_PROFILE=$T/profile bun $V2/script/dev-isol
 st wait --text "ctrl+p commands" >/dev/null && screen
 ```
 
-The TUI is ready when the last command prints the home screen (about 15 seconds). To test signed out, start the CLI with `env XDG_DATA_HOME=$T/empty KILO_V2_PROFILE=...` instead.
+The TUI is ready when the last command prints the home screen (about 15 seconds). The CLI starts signed out. To test signed in, start it with `env KILO_API_KEY=$(jq -r .kilo.access ~/.local/share/kilo/auth.json) KILO_ORG_ID=$(jq -r '.kilo.accountId // empty' ~/.local/share/kilo/auth.json) KILO_V2_PROFILE=...` instead.
 
 ### 2. Test
 
@@ -143,12 +154,75 @@ The VS Code extension (G2) uses the same harness later, with `KILO_SELF_TEST_REP
 
 Grow the test surface with each PR.
 
-- Run `bun typecheck` and focused `bun test` from each changed package directory (never from the repo root).
+- Run `bun typecheck` and focused `bun test` from each changed package directory (never from the repo root), with the test isolation above.
 - New Kilo code comes with tests for its behavior. Prefer real integration with the Kilo Gateway over mocks. Use small unit tests only for paths a live server cannot trigger (outage, malformed data).
-- Upstream failures listed in `pinned-v2-baseline.md` are known. Do not fix unrelated ones. A new failure in a package you touched blocks the PR.
+- Known upstream failures are listed in `pinned-v2-baseline.md` for the release it names. When `v2` has moved past that release, compare against `origin/v2` before your change. Do not fix unrelated ones. A new failure in a package you touched blocks the PR.
 - Never delete or skip a test silently. List every skip in the PR with its reason.
 - Self-test each user-visible behavior you add, and record the scenario so the next PR can repeat it.
 
+## Progress map
+
+`migration-tracking/progress/README.md` is the generated map of Kilo's v1 delta: one cell per Kilo-owned file, `/kilocode/*` API operation and patch in a shared upstream file, grouped by feature. `bun script/upstream/progress.ts` regenerates it; CI fails when it is stale. Module and API cells turn done on their own only when the file name or path literal lands on v2. Renamed files, patch cells and decisions need a proof from you. Every port closes the cells it replaces in the same PR, so for every unit:
+
+- Before you start, run `bun script/upstream/progress.ts --list <feature>`. The open cells are the inventory of the feature; each patch cell names its v1 source line. Read a v1 hunk with `git show <v1Target>:<path> | sed -n '<line-10>,<line+15>p'` (the pin is `pins.v1Target` in `features.json`).
+- Close each cell with the first proof that applies:
+  1. The v2 code is a marked line in a shared upstream file: `// kilocode_change(<feature>:<id>)` on it.
+  2. The v2 code is in a Kilo-owned file (rung 1 or 2): `// kilo_port(<feature>:<id>)` on it. This includes a Kilo adapter that only selects or configures upstream code, and a Kilo-owned v2 test that carries the assertions of a v1 test patch cell.
+  3. A module or test ported under another name: give the new file the v1 name when that name fits the package (the cell then closes by name). Otherwise add a `ported` disposition with the v2 path and symbol in `note`.
+  4. Upstream v2 has the behavior and no Kilo code is involved: a `native` disposition with the v2 pointer.
+  5. The v1 compatibility layer serves it: a `facade` disposition.
+  6. The behavior is not carried: a `dropped` disposition with the evidence (see below).
+
+  Dispositions go in `migration-tracking/progress/dispositions.json` with `state`, `note` and `by` (your branch name). Without a proof the cell stays open. An unknown ID, or a proof in the wrong kind of file, fails the run. The map records the rung where the cell landed.
+- Verify before you close a cell. A proof or a disposition says that v2 has the behavior, not that a file exists:
+  - Compare the v1 hunk or file with the v2 code you name, behavior by behavior: defaults, precedence, retries, error paths and tests.
+  - Find the v1 callers: `git grep -n <symbol> <v1Target> -- packages`. Code with no caller on v1 is `dropped` (write that in the note), not `ported`.
+  - `dropped` means the feature is not carried: a shim, dead v1 code, or a decision that the plan records (the unit table in `kilo-v2-migration-plan.md`, Decision 7 in `migration-context.md`). When the plan has a unit that ports the behavior, the cell stays open and the PR names the unit. "Not ported yet" is never `dropped`.
+  - When part of the behavior is missing, port the gap if it is small and in scope. Otherwise leave the cell open and give the gap in the PR. Do not close a cell with a known gap.
+  - A hunk is attributed by its first Kilo import or identifier, so it can carry lines of other features (for example one plugin list with three plugins). Close it for your feature only when the other lines are tracked by their own cells, and say so in the PR.
+  - A v1 test cell closes only when the v2 tests carry its important assertions. Add the missing ones when they are cheap. When v2 does the opposite on purpose, use `dropped` with the reason.
+  - A classification in a task, a plan or a peer message is a claim. Verify it the same way, and report each one you found wrong.
+- Git must track a new file before the map sees it: `git add` new files before you regenerate.
+- A loose patch that lands in `unattributed:<area>` can be proved in place with `kilo_port(unattributed:<area>:<id>)`, which closes the cell. It still belongs to a feature: tag its v1 marker on `main` as `kilocode_change(<feature>)` in a small follow-up PR; the next re-pin moves it into the feature box.
+- Regenerate before you commit: run `bun script/upstream/progress.ts` twice (the output must be identical), then `--check`, then `--list <feature>` again. Every cell that stays open needs a reason in the PR. CI posts one comment per PR with the delta (percent, changed features, closed and dropped cells), the placement line (new marked lines in shared files by rung, new `kilo_port` annotations, new core-internal imports), the two ratchets and the treemap of the head commit; the `progress.json` diff carries the same information.
+
 ## Evidence
 
-In the PR and the final response, list the commands you ran, the self-test scenarios with pass, fail or blocked, and the limits (for example, a flow that needs credentials).
+In the PR and the final response, list:
+
+- The commands you ran, and the self-test scenarios with pass, fail or blocked.
+- Each shared upstream file you changed, with its option (1 to 5 above) and the missing seam.
+- The progress map delta, as the PR section below.
+- The CI state. For each red check, the cause: your change (fix it), a flake (one rerun) or a known baseline failure.
+- The limits, for example a flow that needs credentials.
+
+### PR section `## Progress map`
+
+Every PR that changes the map (a proof, a disposition, or a file that closes a cell by name) has this section. It tells the reviewer why each cell changed, so that the reviewer does not have to read `dispositions.json` or the CI comment. Keep it short: one line per cell or per group of cells with the same reason. The `note` in `dispositions.json` is the long form.
+
+```
+## Progress map
+
+`<feature>`: 12/87 to 59/75 (12 dropped). module 9/44 to 30/35, patch 0/20 to 12/18, test 3/23 to 17/22; landed 11 plugin.
+
+Done, and why:
+- kilo_port (11): v1 kilo.ts import, settings and SDK -> core/src/kilocode/gateway.ts provider transform and packageFor; ...
+- ported (30): renamed modules and tests, for example api/url.ts -> kilo-gateway-core/src/server.ts; ...
+- by file name (5): ported tests autocomplete, edit, fim, ...
+- native (1): 00d34e8d5cd7, upstream Variant.resolve.
+
+Dropped, and why it is not needed:
+- server/routes.ts, server/fim.ts, server/edit.ts: Hono routes with no caller on v1; the live routes are tracked in the server box.
+- types/jsx.d.ts, types/tui.d.ts: type shims for TUI code outside the TUI package.
+
+Still open:
+- cloud-sessions.ts and its test: cloud session import, U-E3-04.
+- 5 transform.ts cells: default request settings for Gateway models, needs its own unit.
+
+Corrections: <classifications from the task, plan or a peer that you changed, with the evidence>.
+```
+
+- "Done" names the v2 code that has the behavior. Name the gap you ported in the same PR, if any.
+- "Dropped" says what the code did on v1 and why v2 does not need it, with the evidence (no caller, shim, recorded decision). Name a behavior change that a drop causes for users.
+- "Still open" names what is missing and the unit or feature that owns it.
+- Leave out a block that has no entries. Do not repeat the cell lists of the CI comment.

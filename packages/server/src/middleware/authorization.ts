@@ -2,11 +2,12 @@ import { ServerAuth } from "../auth"
 import { UnauthorizedError } from "@opencode/protocol/errors"
 import { Authorization } from "@opencode/protocol/middleware/authorization"
 export { Authorization } from "@opencode/protocol/middleware/authorization"
-import { hasPtyConnectTicketURL } from "@opencode/protocol/groups/pty"
-import { hasPersistentPtyConnectTicketURL } from "@opencode/protocol/groups/persistent-pty"
-import { isPairingConnectURL } from "@opencode/protocol/groups/server"
-import { Effect, Encoding, Layer, Redacted } from "effect"
-import { HttpEffect, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
+import { PTY_CONNECT_PATH, PTY_CONNECT_TICKET_QUERY } from "@opencode/protocol/groups/pty"
+import { PERSISTENT_PTY_CONNECT_PATH } from "@opencode/protocol/groups/persistent-pty"
+import { PAIRING_CONNECT_PATH } from "@opencode/protocol/groups/server"
+import { Effect, Layer, Redacted } from "effect"
+import { Base64 } from "effect/encoding"
+import { HttpEffect, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
 
 const AUTH_TOKEN_QUERY = "auth_token"
 const WWW_AUTHENTICATE = 'Basic realm="Secure Area"'
@@ -16,7 +17,7 @@ function emptyCredential() {
 }
 
 function decodeCredential(input: string) {
-  return Effect.fromResult(Encoding.decodeBase64String(input)).pipe(
+  return Effect.fromResult(Base64.decodeString(input)).pipe(
     Effect.match({
       onFailure: emptyCredential,
       onSuccess: (header) => {
@@ -77,10 +78,16 @@ export const authorizationLayer = Layer.effect(
     return Authorization.of((effect) =>
       Effect.gen(function* () {
         const request = yield* HttpServerRequest.HttpServerRequest
+        const route = yield* HttpRouter.RouteContext
         // Ticketed PTY connects (browsers cannot set headers on WebSocket upgrades) and pairing links
-        // skip credential checks here; their handlers consume and validate the ticket or code.
+        // skip credential checks here; their handlers consume and validate the ticket or code. Use the
+        // route selected by Effect so authorization and dispatch cannot disagree about the request path.
         const url = new URL(request.url, "http://localhost")
-        if (hasPtyConnectTicketURL(url) || hasPersistentPtyConnectTicketURL(url) || isPairingConnectURL(url))
+        if (
+          ((route.route.path === PTY_CONNECT_PATH || route.route.path === PERSISTENT_PTY_CONNECT_PATH) &&
+            !!url.searchParams.get(PTY_CONNECT_TICKET_QUERY)) ||
+          route.route.path === PAIRING_CONNECT_PATH
+        )
           return yield* effect
         if (yield* authorizedRequest(request, config)) return yield* effect
         if (challengeRequest(request))

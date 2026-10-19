@@ -1,5 +1,6 @@
 import { createMemo, createSignal } from "solid-js"
 import { useConfig } from "../config"
+import { DIALOG_LIST_INSET } from "../ui/dialog"
 import { DialogSelect } from "../ui/dialog-select"
 import { useTheme } from "../context/theme"
 import { useToast } from "../ui/toast"
@@ -56,11 +57,11 @@ export function DialogExperiments() {
       onMove={(option) => setSelected(option.value)}
       onSelect={(option) => void change(option.value)}
       emptyView={
-        <box paddingLeft={4} paddingRight={4}>
+        <box paddingLeft={DIALOG_LIST_INSET} paddingRight={DIALOG_LIST_INSET}>
           <text fg={theme.text.muted}>No experiments available</text>
         </box>
       }
-      footerHints={experiments.length > 0 ? [{ title: "←/→", label: "change" }] : []}
+      footerHints={experiments.length > 0 ? [{ title: "change", label: "←/→" }] : []}
       bindings={
         experiments.length > 0
           ? [

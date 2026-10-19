@@ -52,7 +52,7 @@ export function statements(entries: readonly Entry[], organization: State) {
     ...entries
       .filter((entry): entry is Document => entry.type === "document")
       .toReversed()
-      .flatMap((entry) => entry.info.experimental?.policies ?? [])
+      .flatMap((entry) => entry.info.policies ?? [])
       .map((policy) => ({ ...policy, message: "Blocked by configuration policy" })),
     ...organization.statements.map((policy) => ({
       ...policy,

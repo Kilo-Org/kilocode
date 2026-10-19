@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/kilo-plugin",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Kilo plugins on the public OpenCode plugin API. The Kilo host (packages/kilo-cli) registers them through SdkPlugins.register.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@opencode/core": "workspace:*",
+    "@opencode/plugin": "workspace:*",
+    "@opencode/schema": "workspace:*",
+    "@opencode/util": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  }
+}

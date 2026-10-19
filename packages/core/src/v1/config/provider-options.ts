@@ -29,3 +29,30 @@ export function provider(options: Options): ProviderResult {
 export function model(options: Options) {
   return { ...options }
 }
+
+// Model options read before the request is built; v1's `@ai-sdk/openai-compatible` sent every other one verbatim
+// in the request body.
+const COMPATIBLE_KEYS = new Set([
+  "apiKey",
+  "baseURL",
+  "headers",
+  "body",
+  "extraBody",
+  "timeout",
+  "chunkTimeout",
+  "headerTimeout",
+  "disabled",
+  "reasoningEffort",
+  "textVerbosity",
+  "user",
+  "strictJsonSchema",
+])
+
+export function compatibleModel(options: Options) {
+  const entries = Object.entries(options)
+  const body = Object.fromEntries(entries.filter(([key]) => !COMPATIBLE_KEYS.has(key)))
+  return {
+    settings: Object.fromEntries(entries.filter(([key]) => COMPATIBLE_KEYS.has(key))),
+    body: Object.keys(body).length ? body : undefined,
+  }
+}

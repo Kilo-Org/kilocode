@@ -1,0 +1,6198 @@
+{
+  "pins": {
+    "v1Target": "fb7e96eda5409517a05948b9efaf01c53997bf6e",
+    "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
+  },
+  "summary": {
+    "done": 86,
+    "total": 9829,
+    "percent": 0.9,
+    "dropped": 25,
+    "kinds": [
+      {
+        "kind": "module",
+        "done": 31,
+        "total": 3547
+      },
+      {
+        "kind": "api",
+        "done": 0,
+        "total": 39
+      },
+      {
+        "kind": "patch",
+        "done": 34,
+        "total": 3445
+      },
+      {
+        "kind": "test",
+        "done": 21,
+        "total": 2798
+      }
+    ],
+    "landed": {
+      "plugin": 19,
+      "host": 0,
+      "seam": 0,
+      "patch": 0
+    },
+    "coreImports": 8,
+    "sharedPatches": {
+      "seam": 18,
+      "patch": 1
+    }
+  },
+  "notCounted": {
+    "marker": 561,
+    "branding": 1428
+  },
+  "attribution": {
+    "tag": 0,
+    "import": 261,
+    "identifier": 97,
+    "unattributed": 4163
+  },
+  "coreImports": [
+    "@opencode/core/app",
+    "@opencode/core/bus",
+    "@opencode/core/permission",
+    "@opencode/core/plugin/sdk",
+    "@opencode/core/shell",
+    "@opencode/core/tool-output",
+    "@opencode/core/util/wildcard",
+    "@opencode/core/variant"
+  ],
+  "features": [
+    {
+      "feature": "acp",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 2
+        }
+      }
+    },
+    {
+      "feature": "agent",
+      "done": 6,
+      "total": 13,
+      "dropped": 2,
+      "kinds": {
+        "module": {
+          "done": 1,
+          "total": 3
+        },
+        "api": {
+          "done": 0,
+          "total": 1
+        },
+        "patch": {
+          "done": 1,
+          "total": 1
+        },
+        "test": {
+          "done": 4,
+          "total": 8
+        }
+      },
+      "landed": {
+        "plugin": 1,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
+      }
+    },
+    {
+      "feature": "agent-manager",
+      "done": 0,
+      "total": 12,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 4
+        },
+        "api": {
+          "done": 0,
+          "total": 3
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 4
+        }
+      }
+    },
+    {
+      "feature": "anaconda-desktop",
+      "done": 0,
+      "total": 17,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 7
+        },
+        "api": {
+          "done": 0,
+          "total": 3
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 7
+        }
+      }
+    },
+    {
+      "feature": "archive-security",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "auth",
+      "done": 0,
+      "total": 10,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 2
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 4
+        }
+      }
+    },
+    {
+      "feature": "background-jobs",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 3
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "background-process",
+      "done": 0,
+      "total": 8,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 3
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 4
+        }
+      }
+    },
+    {
+      "feature": "board",
+      "done": 0,
+      "total": 14,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 6
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 8
+        }
+      }
+    },
+    {
+      "feature": "branch-name",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "caffeination",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "cleanup",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "cli",
+      "done": 0,
+      "total": 148,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 72
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 25
+        },
+        "test": {
+          "done": 0,
+          "total": 51
+        }
+      }
+    },
+    {
+      "feature": "cloud",
+      "done": 0,
+      "total": 27,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 16
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 9
+        }
+      }
+    },
+    {
+      "feature": "command",
+      "done": 0,
+      "total": 8,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 3
+        },
+        "api": {
+          "done": 0,
+          "total": 2
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 3
+        }
+      }
+    },
+    {
+      "feature": "commit-message",
+      "done": 0,
+      "total": 7,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 4
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 3
+        }
+      }
+    },
+    {
+      "feature": "compaction-policy",
+      "done": 0,
+      "total": 17,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 5
+        },
+        "api": {
+          "done": 0,
+          "total": 3
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 8
+        }
+      }
+    },
+    {
+      "feature": "components",
+      "done": 0,
+      "total": 22,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 16
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 4
+        }
+      }
+    },
+    {
+      "feature": "config",
+      "done": 0,
+      "total": 64,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 25
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 10
+        },
+        "test": {
+          "done": 0,
+          "total": 29
+        }
+      }
+    },
+    {
+      "feature": "console",
+      "done": 0,
+      "total": 97,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 87
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 9
+        }
+      }
+    },
+    {
+      "feature": "core-watcher",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "daemon",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 2
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "database",
+      "done": 0,
+      "total": 12,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 3
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 5
+        }
+      }
+    },
+    {
+      "feature": "db-preflight",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "docs",
+      "done": 0,
+      "total": 977,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 973
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 4
+        }
+      },
+      "excluded": "Documentation site (packages/kilo-docs). Not part of the runtime port."
+    },
+    {
+      "feature": "effect",
+      "done": 0,
+      "total": 9,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 4
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 3
+        }
+      }
+    },
+    {
+      "feature": "enhance-prompt",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "event-service",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "event-storage",
+      "done": 0,
+      "total": 16,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 5
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 8
+        },
+        "test": {
+          "done": 0,
+          "total": 3
+        }
+      }
+    },
+    {
+      "feature": "exit-code",
+      "done": 0,
+      "total": 5,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "fff",
+      "done": 0,
+      "total": 6,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "filesystem-containment",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "fixture",
+      "done": 0,
+      "total": 10,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 10
+        }
+      }
+    },
+    {
+      "feature": "gateway",
+      "done": 59,
+      "total": 75,
+      "dropped": 12,
+      "kinds": {
+        "module": {
+          "done": 30,
+          "total": 35
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 12,
+          "total": 18
+        },
+        "test": {
+          "done": 17,
+          "total": 22
+        }
+      },
+      "landed": {
+        "plugin": 11,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
+      }
+    },
+    {
+      "feature": "global",
+      "done": 0,
+      "total": 7,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 2
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "goals",
+      "done": 0,
+      "total": 21,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 9
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 6
+        },
+        "test": {
+          "done": 0,
+          "total": 6
+        }
+      }
+    },
+    {
+      "feature": "i18n",
+      "done": 0,
+      "total": 20,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 20
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "image-size",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "indexing",
+      "done": 0,
+      "total": 149,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 99
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 6
+        },
+        "test": {
+          "done": 0,
+          "total": 44
+        }
+      }
+    },
+    {
+      "feature": "installation",
+      "done": 0,
+      "total": 5,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 2
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "instance",
+      "done": 0,
+      "total": 19,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 3
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 8
+        },
+        "test": {
+          "done": 0,
+          "total": 8
+        }
+      }
+    },
+    {
+      "feature": "jetbrains",
+      "done": 0,
+      "total": 1232,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 800
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 432
+        }
+      }
+    },
+    {
+      "feature": "markdown",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 2
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 2
+        }
+      }
+    },
+    {
+      "feature": "marketplace",
+      "done": 0,
+      "total": 20,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 10
+        },
+        "api": {
+          "done": 0,
+          "total": 3
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 6
+        }
+      }
+    },
+    {
+      "feature": "mcp",
+      "done": 0,
+      "total": 23,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 7
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 7
+        },
+        "test": {
+          "done": 0,
+          "total": 9
+        }
+      }
+    },
+    {
+      "feature": "memory",
+      "done": 0,
+      "total": 75,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 59
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 14
+        }
+      }
+    },
+    {
+      "feature": "mermaid",
+      "done": 0,
+      "total": 10,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 7
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 2
+        }
+      }
+    },
+    {
+      "feature": "migration",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "model-routing",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "notebook",
+      "done": 0,
+      "total": 10,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 2
+        },
+        "api": {
+          "done": 0,
+          "total": 3
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 3
+        }
+      }
+    },
+    {
+      "feature": "npm-publish",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "oauth",
+      "done": 0,
+      "total": 8,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 6
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "permission",
+      "done": 0,
+      "total": 34,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 12
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 6
+        },
+        "test": {
+          "done": 0,
+          "total": 16
+        }
+      }
+    },
+    {
+      "feature": "pii",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "plan",
+      "done": 0,
+      "total": 6,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 2
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 4
+        }
+      }
+    },
+    {
+      "feature": "plugin",
+      "done": 0,
+      "total": 34,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 26
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 6
+        }
+      }
+    },
+    {
+      "feature": "presence",
+      "done": 0,
+      "total": 7,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 3
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 3
+        }
+      }
+    },
+    {
+      "feature": "process",
+      "done": 0,
+      "total": 15,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 4
+        },
+        "api": {
+          "done": 0,
+          "total": 1
+        },
+        "patch": {
+          "done": 0,
+          "total": 9
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "project",
+      "done": 0,
+      "total": 11,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 4
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 5
+        }
+      }
+    },
+    {
+      "feature": "provider",
+      "done": 0,
+      "total": 68,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 16
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 14
+        },
+        "test": {
+          "done": 0,
+          "total": 38
+        }
+      }
+    },
+    {
+      "feature": "provider-usage",
+      "done": 0,
+      "total": 10,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 6
+        },
+        "api": {
+          "done": 0,
+          "total": 2
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "pty",
+      "done": 0,
+      "total": 27,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 6
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 14
+        },
+        "test": {
+          "done": 0,
+          "total": 7
+        }
+      }
+    },
+    {
+      "feature": "question",
+      "done": 0,
+      "total": 7,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 4
+        }
+      }
+    },
+    {
+      "feature": "reference",
+      "done": 0,
+      "total": 8,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 3
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 2
+        }
+      }
+    },
+    {
+      "feature": "release-publish-scope",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "review",
+      "done": 0,
+      "total": 9,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 4
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 2
+        }
+      }
+    },
+    {
+      "feature": "ripgrep-grep",
+      "done": 0,
+      "total": 10,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 7
+        },
+        "test": {
+          "done": 0,
+          "total": 2
+        }
+      }
+    },
+    {
+      "feature": "sandbox",
+      "done": 0,
+      "total": 66,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 29
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 12
+        },
+        "test": {
+          "done": 0,
+          "total": 25
+        }
+      }
+    },
+    {
+      "feature": "sbom",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "search-target",
+      "done": 0,
+      "total": 19,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 17
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "security",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "server",
+      "done": 0,
+      "total": 96,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 51
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 10
+        },
+        "test": {
+          "done": 0,
+          "total": 35
+        }
+      }
+    },
+    {
+      "feature": "session",
+      "done": 0,
+      "total": 115,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 25
+        },
+        "api": {
+          "done": 0,
+          "total": 4
+        },
+        "patch": {
+          "done": 0,
+          "total": 17
+        },
+        "test": {
+          "done": 0,
+          "total": 69
+        }
+      }
+    },
+    {
+      "feature": "session-export",
+      "done": 0,
+      "total": 53,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 27
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 25
+        }
+      }
+    },
+    {
+      "feature": "session-fork",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 2
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "session-import",
+      "done": 0,
+      "total": 9,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 2
+        },
+        "api": {
+          "done": 0,
+          "total": 6
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "session-message",
+      "done": 0,
+      "total": 15,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 11
+        },
+        "test": {
+          "done": 0,
+          "total": 3
+        }
+      }
+    },
+    {
+      "feature": "session-portability",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 2
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "session-resume",
+      "done": 0,
+      "total": 7,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 3
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 2
+        }
+      }
+    },
+    {
+      "feature": "session-revert",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 2
+        }
+      }
+    },
+    {
+      "feature": "session-title",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 2
+        }
+      }
+    },
+    {
+      "feature": "shell",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "skill",
+      "done": 0,
+      "total": 22,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 8
+        },
+        "api": {
+          "done": 0,
+          "total": 1
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 9
+        }
+      }
+    },
+    {
+      "feature": "snapshot",
+      "done": 0,
+      "total": 23,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 8
+        },
+        "api": {
+          "done": 0,
+          "total": 2
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 11
+        }
+      }
+    },
+    {
+      "feature": "stdio-tap",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "steering",
+      "done": 0,
+      "total": 10,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 5
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 4
+        }
+      }
+    },
+    {
+      "feature": "storage",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 3
+        }
+      }
+    },
+    {
+      "feature": "suggestion",
+      "done": 0,
+      "total": 13,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 7
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 3
+        }
+      }
+    },
+    {
+      "feature": "telemetry",
+      "done": 0,
+      "total": 14,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 5
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 7
+        }
+      }
+    },
+    {
+      "feature": "tool",
+      "done": 0,
+      "total": 111,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 61
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 7
+        },
+        "test": {
+          "done": 0,
+          "total": 43
+        }
+      }
+    },
+    {
+      "feature": "ts-check",
+      "done": 0,
+      "total": 7,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 2
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 3
+        }
+      }
+    },
+    {
+      "feature": "tui",
+      "done": 0,
+      "total": 45,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 15
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 6
+        },
+        "test": {
+          "done": 0,
+          "total": 24
+        }
+      }
+    },
+    {
+      "feature": "tui-sync",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 2
+        }
+      }
+    },
+    {
+      "feature": "ui",
+      "done": 0,
+      "total": 267,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 248
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 18
+        }
+      }
+    },
+    {
+      "feature": "unattributed:acp",
+      "done": 0,
+      "total": 19,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 19
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:agent",
+      "done": 21,
+      "total": 23,
+      "dropped": 11,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 21,
+          "total": 23
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      },
+      "landed": {
+        "plugin": 7,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
+      }
+    },
+    {
+      "feature": "unattributed:auth",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:bus",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:cli",
+      "done": 0,
+      "total": 216,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 216
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:client/generated-effect",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:client/index",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:client/pkg",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:client/test",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 4
+        }
+      }
+    },
+    {
+      "feature": "unattributed:codemode/pkg",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:command",
+      "done": 0,
+      "total": 13,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 13
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:config",
+      "done": 0,
+      "total": 130,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 130
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:containers/pkg",
+      "done": 0,
+      "total": 9,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 9
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:containers/script",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:control-plane",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/aisdk",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/background-job",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/config",
+      "done": 0,
+      "total": 10,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 10
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/control-plane",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/credential",
+      "done": 0,
+      "total": 14,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 14
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/cross-spawn-spawner",
+      "done": 0,
+      "total": 8,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 8
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/database",
+      "done": 0,
+      "total": 5,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 5
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/effect",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/event",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/filesystem",
+      "done": 0,
+      "total": 18,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 18
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/flag",
+      "done": 0,
+      "total": 11,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 11
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/fs-util",
+      "done": 0,
+      "total": 5,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 5
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/global",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/image",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/installation",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/integration",
+      "done": 0,
+      "total": 9,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 9
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/location-services",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/models-dev",
+      "done": 0,
+      "total": 12,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 12
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/pkg",
+      "done": 0,
+      "total": 20,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 20
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/plugin",
+      "done": 0,
+      "total": 20,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 20
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/provider",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/pty",
+      "done": 0,
+      "total": 22,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 22
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/reference",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/repository-cache",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/ripgrep",
+      "done": 0,
+      "total": 20,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 20
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/schema",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/script",
+      "done": 0,
+      "total": 5,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 5
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/session",
+      "done": 0,
+      "total": 51,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 51
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/state",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/test",
+      "done": 0,
+      "total": 118,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 118
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/tool",
+      "done": 0,
+      "total": 54,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 54
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/util",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:core/v1",
+      "done": 0,
+      "total": 51,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 51
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:effect",
+      "done": 0,
+      "total": 33,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 33
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:effect-drizzle-sqlite/pkg",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:effect-drizzle-sqlite/sqlite-core",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:effect-drizzle-sqlite/test",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "unattributed:effect-sqlite-node/pkg",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:event-v2-bridge",
+      "done": 0,
+      "total": 9,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 9
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:format",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:http-recorder/pkg",
+      "done": 0,
+      "total": 9,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 9
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:http-recorder/test",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 3
+        }
+      }
+    },
+    {
+      "feature": "unattributed:http-recorder/websocket",
+      "done": 0,
+      "total": 7,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 7
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:httpapi-codegen/index",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:httpapi-codegen/pkg",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:httpapi-codegen/test",
+      "done": 0,
+      "total": 6,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 6
+        }
+      }
+    },
+    {
+      "feature": "unattributed:id",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:ide",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:image",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:index",
+      "done": 0,
+      "total": 6,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 6
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:installation",
+      "done": 0,
+      "total": 25,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 25
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:llm/pkg",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:llm/protocols",
+      "done": 0,
+      "total": 16,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 16
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:llm/provider-error",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:llm/providers",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:llm/schema",
+      "done": 0,
+      "total": 5,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 5
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:llm/script",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:llm/test",
+      "done": 0,
+      "total": 13,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 13
+        }
+      }
+    },
+    {
+      "feature": "unattributed:lsp",
+      "done": 0,
+      "total": 12,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 12
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:mcp",
+      "done": 0,
+      "total": 82,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 82
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:opencode/pkg",
+      "done": 0,
+      "total": 72,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 72
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:permission",
+      "done": 0,
+      "total": 36,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 36
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:plugin",
+      "done": 0,
+      "total": 51,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 51
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:plugin/index",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:plugin/pkg",
+      "done": 0,
+      "total": 6,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 6
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:plugin/script",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:plugin/tui",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:project",
+      "done": 0,
+      "total": 22,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 22
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:protocol/api",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:protocol/groups",
+      "done": 0,
+      "total": 10,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 10
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:protocol/pkg",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:provider",
+      "done": 0,
+      "total": 88,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 88
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:question",
+      "done": 0,
+      "total": 8,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 8
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:schema/command",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:schema/durable-event-manifest",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:schema/event-manifest",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:schema/file-diff",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:schema/llm",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:schema/mcp-event",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:schema/pkg",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:schema/pty",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:schema/revert",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:schema/server-event",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:schema/session-event",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:schema/session-status-event",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:schema/v1",
+      "done": 0,
+      "total": 11,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 11
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:schema/worktree-event",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:script",
+      "done": 0,
+      "total": 54,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 54
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:script/index",
+      "done": 0,
+      "total": 5,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 5
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:script/pkg",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:sdk-next/pkg",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:sdk-next/test",
+      "done": 0,
+      "total": 8,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 8
+        }
+      }
+    },
+    {
+      "feature": "unattributed:sdk/pkg",
+      "done": 0,
+      "total": 21,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 21
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:server",
+      "done": 0,
+      "total": 173,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 173
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:server/cors",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:server/handlers",
+      "done": 0,
+      "total": 7,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 7
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:server/location",
+      "done": 0,
+      "total": 5,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 5
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:server/pkg",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:server/routes",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:session",
+      "done": 0,
+      "total": 449,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 449
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:session-ui/components",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:session-ui/pkg",
+      "done": 0,
+      "total": 6,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 6
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:session-ui/v2",
+      "done": 0,
+      "total": 18,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 17
+        },
+        "test": {
+          "done": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "feature": "unattributed:share",
+      "done": 0,
+      "total": 6,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 6
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:skill",
+      "done": 0,
+      "total": 39,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 39
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:snapshot",
+      "done": 0,
+      "total": 67,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 67
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:storage",
+      "done": 0,
+      "total": 13,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 13
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:storybook/pkg",
+      "done": 0,
+      "total": 2,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 2
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:test",
+      "done": 0,
+      "total": 821,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 821
+        }
+      }
+    },
+    {
+      "feature": "unattributed:tool",
+      "done": 0,
+      "total": 237,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 237
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:tui/app",
+      "done": 0,
+      "total": 24,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 24
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:tui/component",
+      "done": 0,
+      "total": 142,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 142
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:tui/config",
+      "done": 0,
+      "total": 11,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 11
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:tui/context",
+      "done": 0,
+      "total": 101,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 101
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:tui/feature-plugins",
+      "done": 0,
+      "total": 16,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 16
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:tui/pkg",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:tui/plugin",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:tui/prompt",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:tui/routes",
+      "done": 0,
+      "total": 97,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 97
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:tui/runtime",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:tui/test",
+      "done": 0,
+      "total": 55,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 55
+        }
+      }
+    },
+    {
+      "feature": "unattributed:tui/theme",
+      "done": 0,
+      "total": 4,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:tui/ui",
+      "done": 0,
+      "total": 19,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 19
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:tui/util",
+      "done": 0,
+      "total": 3,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 3
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:ui/assets",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:ui/components",
+      "done": 0,
+      "total": 88,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 88
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:ui/context",
+      "done": 0,
+      "total": 11,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 11
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:ui/i18n",
+      "done": 0,
+      "total": 78,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 78
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:ui/pkg",
+      "done": 0,
+      "total": 16,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 16
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:ui/styles",
+      "done": 0,
+      "total": 7,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 7
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:ui/theme",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:ui/v2",
+      "done": 0,
+      "total": 1,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:util",
+      "done": 0,
+      "total": 15,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 15
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "unattributed:worktree",
+      "done": 0,
+      "total": 7,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 0
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 7
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "usage-cost",
+      "done": 0,
+      "total": 9,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 4
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 5
+        }
+      }
+    },
+    {
+      "feature": "util",
+      "done": 0,
+      "total": 20,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 8
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 4
+        },
+        "test": {
+          "done": 0,
+          "total": 8
+        }
+      }
+    },
+    {
+      "feature": "vscode",
+      "done": 0,
+      "total": 2057,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 1439
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 618
+        }
+      }
+    },
+    {
+      "feature": "wakeup",
+      "done": 0,
+      "total": 11,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 5
+        },
+        "api": {
+          "done": 0,
+          "total": 1
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 4
+        }
+      }
+    },
+    {
+      "feature": "web-ui",
+      "done": 0,
+      "total": 154,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 154
+        },
+        "api": {
+          "done": 0,
+          "total": 0
+        },
+        "patch": {
+          "done": 0,
+          "total": 0
+        },
+        "test": {
+          "done": 0,
+          "total": 0
+        }
+      }
+    },
+    {
+      "feature": "worktree",
+      "done": 0,
+      "total": 12,
+      "dropped": 0,
+      "kinds": {
+        "module": {
+          "done": 0,
+          "total": 4
+        },
+        "api": {
+          "done": 0,
+          "total": 1
+        },
+        "patch": {
+          "done": 0,
+          "total": 1
+        },
+        "test": {
+          "done": 0,
+          "total": 6
+        }
+      }
+    }
+  ],
+  "landed": {
+    "patch:agent:2e5632e7bfc6": "plugin",
+    "patch:gateway:0278ba0eb6aa": "plugin",
+    "patch:gateway:17e39e074eaf": "plugin",
+    "patch:gateway:1995b11b5cdd": "plugin",
+    "patch:gateway:50352226b43c": "plugin",
+    "patch:gateway:5187eb3f1516": "plugin",
+    "patch:gateway:59f57027c538": "plugin",
+    "patch:gateway:73ba28ce78a5": "plugin",
+    "patch:gateway:742c02b40457": "plugin",
+    "patch:gateway:d29cb22ad5f6": "plugin",
+    "patch:gateway:e8673ed1650b": "plugin",
+    "patch:gateway:f983d8f993c8": "plugin",
+    "patch:unattributed:agent:161afe543464": "plugin",
+    "patch:unattributed:agent:55cce67688d4": "plugin",
+    "patch:unattributed:agent:655072363498": "plugin",
+    "patch:unattributed:agent:6f9571fe6129": "plugin",
+    "patch:unattributed:agent:80e846e9fd1c": "plugin",
+    "patch:unattributed:agent:a91ca8efa1b6": "plugin",
+    "patch:unattributed:agent:b6727a425792": "plugin"
+  },
+  "done": [
+    "module:packages/kilo-gateway/src/api/constants.ts",
+    "module:packages/kilo-gateway/src/api/embedding-models.ts",
+    "module:packages/kilo-gateway/src/api/kilo-pass.ts",
+    "module:packages/kilo-gateway/src/api/models.ts",
+    "module:packages/kilo-gateway/src/api/modes.ts",
+    "module:packages/kilo-gateway/src/api/notifications.ts",
+    "module:packages/kilo-gateway/src/api/profile.ts",
+    "module:packages/kilo-gateway/src/api/trpc.ts",
+    "module:packages/kilo-gateway/src/api/url.ts",
+    "module:packages/kilo-gateway/src/auth/device-auth-tui.ts",
+    "module:packages/kilo-gateway/src/auth/device.ts",
+    "module:packages/kilo-gateway/src/auth/polling.ts",
+    "module:packages/kilo-gateway/src/auth/token.ts",
+    "module:packages/kilo-gateway/src/autocomplete.ts",
+    "module:packages/kilo-gateway/src/edit-prompt.ts",
+    "module:packages/kilo-gateway/src/edit.ts",
+    "module:packages/kilo-gateway/src/fim.ts",
+    "module:packages/kilo-gateway/src/headers.ts",
+    "module:packages/kilo-gateway/src/index.ts",
+    "module:packages/kilo-gateway/src/mistral-fim-endpoint.ts",
+    "module:packages/kilo-gateway/src/plugin.ts",
+    "module:packages/kilo-gateway/src/provider.ts",
+    "module:packages/kilo-gateway/src/responses.ts",
+    "module:packages/kilo-gateway/src/tui.ts",
+    "module:packages/kilo-gateway/src/tui/context.ts",
+    "module:packages/kilo-gateway/src/tui/helpers.ts",
+    "module:packages/kilo-gateway/src/tui/types.ts",
+    "module:packages/kilo-gateway/src/types.ts",
+    "module:packages/kilo-gateway/test/api/embedding-models.test.ts",
+    "module:packages/kilo-gateway/test/api/kilo-pass.test.ts",
+    "module:packages/kilo-gateway/test/api/models.test.ts",
+    "module:packages/kilo-gateway/test/api/profile.test.ts",
+    "module:packages/kilo-gateway/test/api/trpc.test.ts",
+    "module:packages/kilo-gateway/test/api/url.test.ts",
+    "module:packages/kilo-gateway/test/auth/device.test.ts",
+    "module:packages/kilo-gateway/test/autocomplete.test.ts",
+    "module:packages/kilo-gateway/test/edit-prompt.test.ts",
+    "module:packages/kilo-gateway/test/edit.test.ts",
+    "module:packages/kilo-gateway/test/fim.test.ts",
+    "module:packages/kilo-gateway/test/mistral-fim-endpoint.test.ts",
+    "module:packages/kilo-gateway/test/responses.test.ts",
+    "module:packages/opencode/src/kilocode/agent/index.ts",
+    "module:packages/opencode/src/kilocode/balance-refresh.ts",
+    "module:packages/opencode/src/kilocode/kilo-errors.ts",
+    "module:packages/opencode/test/kilocode/agent-global-config-dirs.test.ts",
+    "module:packages/opencode/test/kilocode/agent-permission-overrides.test.ts",
+    "module:packages/opencode/test/kilocode/agent-skill-permissions.test.ts",
+    "module:packages/opencode/test/kilocode/ask-agent-permissions.test.ts",
+    "module:packages/opencode/test/kilocode/kilo-errors.test.ts",
+    "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts",
+    "patch:agent:2e5632e7bfc6",
+    "patch:gateway:00d34e8d5cd7",
+    "patch:gateway:0278ba0eb6aa",
+    "patch:gateway:17e39e074eaf",
+    "patch:gateway:1995b11b5cdd",
+    "patch:gateway:50352226b43c",
+    "patch:gateway:5187eb3f1516",
+    "patch:gateway:59f57027c538",
+    "patch:gateway:6f5d1599021c",
+    "patch:gateway:73ba28ce78a5",
+    "patch:gateway:742c02b40457",
+    "patch:gateway:a120a4aeb745",
+    "patch:gateway:d29cb22ad5f6",
+    "patch:gateway:e8673ed1650b",
+    "patch:gateway:f983d8f993c8",
+    "patch:unattributed:agent:0a0c97da2c48",
+    "patch:unattributed:agent:161afe543464",
+    "patch:unattributed:agent:19ff1297ae1a",
+    "patch:unattributed:agent:1c5cb886bb38",
+    "patch:unattributed:agent:21c84cad48b3",
+    "patch:unattributed:agent:407e5d080313",
+    "patch:unattributed:agent:55cce67688d4",
+    "patch:unattributed:agent:655072363498",
+    "patch:unattributed:agent:6f9571fe6129",
+    "patch:unattributed:agent:6fd86cbf07a5",
+    "patch:unattributed:agent:80e846e9fd1c",
+    "patch:unattributed:agent:8558c7e71c33",
+    "patch:unattributed:agent:860878fa7bab",
+    "patch:unattributed:agent:8a47a5bd2127",
+    "patch:unattributed:agent:a46eaa33223b",
+    "patch:unattributed:agent:a91ca8efa1b6",
+    "patch:unattributed:agent:b6727a425792",
+    "patch:unattributed:agent:e4427a3d9c64",
+    "patch:unattributed:agent:e4427a3d9c64",
+    "patch:unattributed:agent:e4427a3d9c64",
+    "patch:unattributed:agent:fbbd4a8ba315"
+  ],
+  "dropped": [
+    "module:packages/kilo-gateway/src/auth/device-auth.ts",
+    "module:packages/kilo-gateway/src/auth/legacy-migration.ts",
+    "module:packages/kilo-gateway/src/loader.ts",
+    "module:packages/kilo-gateway/src/provider-debug.ts",
+    "module:packages/kilo-gateway/src/server/edit.ts",
+    "module:packages/kilo-gateway/src/server/fim.ts",
+    "module:packages/kilo-gateway/src/server/routes.ts",
+    "module:packages/kilo-gateway/src/types/jsx.d.ts",
+    "module:packages/kilo-gateway/src/types/tui.d.ts",
+    "module:packages/kilo-gateway/test/provider.test.ts",
+    "module:packages/opencode/src/kilocode/agent/scout.txt",
+    "patch:agent:063e034b577a",
+    "patch:gateway:0468bd6d3d9e",
+    "patch:gateway:d783ce7945b8",
+    "patch:unattributed:agent:09375914c157",
+    "patch:unattributed:agent:0faa6c731275",
+    "patch:unattributed:agent:1b8fe669272e",
+    "patch:unattributed:agent:2e2369fd59e1",
+    "patch:unattributed:agent:461dc96586d3",
+    "patch:unattributed:agent:51a770bdc581",
+    "patch:unattributed:agent:6cdbea643f7d",
+    "patch:unattributed:agent:7c1daa44f22c",
+    "patch:unattributed:agent:8c603298aa6d",
+    "patch:unattributed:agent:92890c7740e7",
+    "patch:unattributed:agent:d88711e4e0f0"
+  ]
+}

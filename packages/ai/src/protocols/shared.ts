@@ -1,6 +1,6 @@
 import { Tool } from "@opencode/schema/tool"
 import { Effect, Option, Schema } from "effect"
-import { Headers, HttpClientRequest } from "effect/unstable/http"
+import { Headers, HttpClientRequest } from "effect/http"
 import { Media } from "../media.js"
 import {
   InvalidProviderOutputError,
@@ -14,6 +14,7 @@ import {
   type MediaPart,
   type OpenString,
   type ProviderID,
+  type RequestEncoding,
   type TextPart,
   type ToolEntry,
   type ToolResultPart,
@@ -39,10 +40,15 @@ export const knownString = <Known extends string>() =>
 
 export const OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH = 64
 
+// Body-level `prompt_cache_key` is off when caching is disabled or the model
+// explicitly rejects the field. Header-based affinity is unaffected.
+export const sendsPromptCacheKey = (request: LLMRequest) =>
+  request.cache !== "none" && request.model.compatibility?.supportsPromptCacheKey !== false
+
 // OpenAI limits `prompt_cache_key` to 64 chars; DeepSeek and Zai inherit the same
 // limit via their OpenAI-compatible APIs. Clamp with unicode-aware slicing.
 export const promptCacheKey = (request: LLMRequest): string | undefined => {
-  if (request.cache === "none" || request.promptCacheKey === undefined) return undefined
+  if (!sendsPromptCacheKey(request) || request.promptCacheKey === undefined) return undefined
   const chars = Array.from(request.promptCacheKey)
   if (chars.length <= OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH) return request.promptCacheKey
   return chars.slice(0, OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH).join("")
@@ -373,11 +379,40 @@ export const validateWith =
  * send JSON with a stale content type. The body is passed pre-encoded so
  * routes can choose between
  * `Schema.encodeSync(payload)` and `ProviderShared.encodeJson(payload)`.
+ * A `zstd` or `gzip` encoding compresses the body and sets `content-encoding`;
+ * it falls back to plain JSON when the runtime has no zlib.
  */
-export const jsonPost = (input: { readonly url: string; readonly body: string; readonly headers?: Headers.Input }) =>
-  HttpClientRequest.post(input.url).pipe(
-    HttpClientRequest.setHeaders(Headers.set(Headers.fromInput(input.headers), "content-type", "application/json")),
-    HttpClientRequest.bodyText(input.body, "application/json"),
+export const jsonPost = (input: {
+  readonly url: string
+  readonly body: string
+  readonly headers?: Headers.Input
+  readonly encoding?: RequestEncoding
+}) => {
+  const headers = Headers.set(Headers.fromInput(input.headers), "content-type", "application/json")
+  const compressed = compressBody(input.body, input.encoding)
+  if (!compressed)
+    return HttpClientRequest.post(input.url).pipe(
+      HttpClientRequest.setHeaders(headers),
+      HttpClientRequest.bodyText(input.body, "application/json"),
+    )
+  return HttpClientRequest.post(input.url).pipe(
+    HttpClientRequest.setHeaders(Headers.set(headers, "content-encoding", compressed.encoding)),
+    HttpClientRequest.bodyUint8Array(compressed.body, "application/json"),
   )
+}
+
+function compressBody(text: string, encoding: RequestEncoding | undefined) {
+  if (encoding === undefined || encoding === "none") return undefined
+  // Looked up at call time instead of imported: a runtime without node:zlib or its zstd export
+  // (browsers, older Node, some workerd setups) sends plain JSON rather than failing to load this module.
+  const zlib = globalThis.process?.getBuiltinModule?.("node:zlib")
+  try {
+    const body = encoding === "zstd" ? zlib?.zstdCompressSync?.(text) : zlib?.gzipSync(text)
+    return body && { encoding, body }
+  } catch {
+    // Compression is an optimization, so a failure sends plain JSON instead of failing the request.
+    return undefined
+  }
+}
 
 export * as ProviderShared from "./shared.js"

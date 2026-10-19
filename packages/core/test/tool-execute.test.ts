@@ -32,6 +32,15 @@ test("execute describes invariant Code Mode behavior", () => {
   )
 })
 
+test("execute rejects filesystem fetches", async () => {
+  const result = await Effect.runPromise(
+    createCodeMode(new Map()).execute({ code: 'return await fetch("file:///blocked.txt")' }, context),
+  )
+
+  expect(result.output.error).toBe(true)
+  expect(result.output.output).toContain("fetch cannot be used for filesystem access.")
+})
+
 test("canonical execution distinguishes declared, model-only, and raw schema outputs", async () => {
   const declared: Info = {
     name: "declared",

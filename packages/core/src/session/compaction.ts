@@ -288,11 +288,17 @@ export const layer = Layer.effect(
       // template gets one reminder before it counts as a failure.
       const send = (request: LLMRequest) =>
         Effect.gen(function* () {
-          const prompted = LLMRequest.update(request, { messages: [...request.messages, Message.user(prompt)] })
+          const prompted = fitOutput(
+            LLMRequest.update(request, { messages: [...request.messages, Message.user(prompt)] }),
+            context.model.limit,
+          )
           const reply = yield* stream(context, prompted, prepared.options)
           if (filled(reply.text)) return { ...reply, recent: split.recent }
 
-          const nudged = LLMRequest.update(prompted, { messages: [...prompted.messages, Message.user(NUDGE)] })
+          const nudged = fitOutput(
+            LLMRequest.update(prompted, { messages: [...prompted.messages, Message.user(NUDGE)] }),
+            context.model.limit,
+          )
           const retry = yield* stream(context, nudged, prepared.options)
           if (filled(retry.text)) return { ...retry, recent: split.recent }
           return yield* Effect.fail<Failure>({
@@ -921,6 +927,25 @@ const hasMeasuredPrompt = (message: SessionMessage.Info, model: SessionContext.L
   !message.error &&
   message.tokens !== undefined &&
   message.tokens.input + message.tokens.cache.read + message.tokens.cache.write > 0
+
+/**
+ * `prepare` sizes the output limit for a request of `budget` tokens, but `deliver` can send a larger one when it
+ * cannot shrink the conversation further. Lower the limit to the room the request being sent leaves in the window,
+ * so the input and the requested output never exceed the window by our own estimate.
+ *
+ * Like `budget` in `prepare`, the estimate counts as measured, without the margin primary requests add for estimates:
+ * `deliver` aims at about 90% of the window, so that margin would cut every summary near its target to the minimum.
+ */
+const fitOutput = (request: LLMRequest, limit: SessionContext.Loaded["model"]["limit"]) => {
+  const current = request.generation?.maxTokens
+  if (current === undefined) return request
+  const maxTokens = Math.min(
+    current,
+    SessionModelRequest.outputLimit(limit, "compaction", { measured: estimateRequest(request), estimated: 0 }),
+  )
+  if (maxTokens === current) return request
+  return LLMRequest.update(request, { generation: { ...request.generation, maxTokens } })
+}
 
 const estimateRequest = (request: Pick<LLMRequest, "system" | "tools" | "messages">) =>
   request.system.reduce((sum, part) => sum + Token.estimate(part.text), 0) +

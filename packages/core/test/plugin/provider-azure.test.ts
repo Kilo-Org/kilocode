@@ -64,13 +64,13 @@ type AzureRequest = {
 type Route = (request: AzureRequest) => Response | Promise<Response>
 
 // Answers like Azure: the resource's own deployment list, Resource Graph, and the management API.
-const fakeAzure = (routes: { resource?: Route; management?: Route; resources?: () => unknown[] }) =>
+const fakeAzure = (routes: { resource?: Route; management?: Route }) =>
   Effect.acquireRelease(
     Effect.sync(() => {
       const requests: AzureRequest[] = []
       const server = Bun.serve({
         port: 0,
-        fetch: async (raw) => {
+        fetch: (raw) => {
           const url = new URL(raw.url)
           const request = {
             method: raw.method,
@@ -81,12 +81,8 @@ const fakeAzure = (routes: { resource?: Route; management?: Route; resources?: (
           }
           requests.push(request)
           if (request.path.startsWith("/openai/deployments")) return routes.resource?.(request) ?? notFound()
-          if (request.path.startsWith("/providers/Microsoft.ResourceGraph/")) {
-            // The connect form lists every resource; discovery looks up one resource's ID.
-            if ((await raw.text()).includes("project resourceName"))
-              return routes.resources ? Response.json({ data: routes.resources() }) : unauthorized()
+          if (request.path.startsWith("/providers/Microsoft.ResourceGraph/"))
             return Response.json({ data: [{ id: resourceID }] })
-          }
           return routes.management?.(request) ?? notFound()
         },
       })
@@ -125,7 +121,8 @@ const fakeAzureCli = Effect.fn(function* (respond: (args: readonly string[]) => 
   const executable = `${directory}/${windows ? "az.cmd" : "az"}`
   yield* Effect.promise(() => Bun.write(executable, windows ? "@exit /b 0\r\n" : "#!/bin/sh\nexit 0\n"))
   yield* Effect.promise(() => chmod(executable, 0o755))
-  // The CLI writes its profile with a byte order mark.
+  // A signed-in profile, so tests show that startup leaves Azure alone even when the CLI could reach it. The CLI
+  // writes it with a byte order mark.
   yield* Effect.promise(() =>
     Bun.write(`${directory}/azure/azureProfile.json`, `\uFEFF${JSON.stringify({ subscriptions: [{ id: "sub" }] })}`),
   )
@@ -245,31 +242,21 @@ describe("AzurePlugin connecting", () => {
     }),
   )
 
-  it.live("offers the resources the Azure CLI can reach and accepts a typed resource name", () =>
+  it.live("asks for the resource name as text without calling Azure", () =>
     Effect.gen(function* () {
       yield* setEnv(noResourceEnv)
       const cli = yield* fakeAzureCli()
-      const azure = yield* fakeAzure({
-        resources: () => [
-          { resourceName: "alpha", resourceGroup: "models", location: "eastus" },
-          { resourceName: "not a hostname", resourceGroup: "models", location: "eastus" },
-          { id: 42 },
-        ],
-      })
+      const azure = yield* fakeAzure({})
       yield* addPlugin(azure.endpoints).pipe(cli.provide)
       const integrations = yield* Integration.Service
-      const field = Effect.gen(function* () {
-        const method = required(yield* integrations.get(azureID)).methods.find((method) => method.type === "external")
-        const field = method?.type === "external" ? method.form?.[0] : undefined
-        return field?.type === "string" ? field : undefined
-      })
+      const method = required(yield* integrations.get(azureID)).methods.find((method) => method.type === "external")
+      const field = method?.type === "external" ? method.form?.[0] : undefined
+      expect(field).toMatchObject({ type: "string", key: "resourceName" })
+      expect(field?.type === "string" ? field.options : undefined).toBeUndefined()
 
-      const listed = required(yield* eventually(field, (field) => (field?.options?.length ?? 0) > 0))
-      expect(listed).toMatchObject({
-        key: "resourceName",
-        custom: true,
-        options: [{ value: "alpha", label: "alpha", description: "models · eastus" }],
-      })
+      yield* settle
+      expect(cli.commands).toEqual([])
+      expect(azure.requests).toEqual([])
 
       const external = (resourceName: string) =>
         integrations.connection.external({
@@ -290,24 +277,6 @@ describe("AzurePlugin connecting", () => {
     }),
   )
 
-  it.live("asks for the resource name as text when the Azure CLI lists no resources", () =>
-    Effect.gen(function* () {
-      yield* setEnv(noResourceEnv)
-      const cli = yield* fakeAzureCli()
-      const azure = yield* fakeAzure({ resources: () => [] })
-      yield* addPlugin(azure.endpoints).pipe(cli.provide)
-      const integrations = yield* Integration.Service
-      const field = Effect.gen(function* () {
-        const method = required(yield* integrations.get(azureID)).methods.find((method) => method.type === "external")
-        const field = method?.type === "external" ? method.form?.[0] : undefined
-        return field?.type === "string" ? field : undefined
-      })
-
-      const listed = required(yield* eventually(field, (field) => field?.description?.startsWith("No ") === true))
-      expect(listed.options).toBeUndefined()
-      expect(listed.custom).toBeUndefined()
-    }),
-  )
 })
 
 describe("AzurePlugin startup", () => {

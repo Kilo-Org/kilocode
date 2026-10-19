@@ -1,8 +1,8 @@
 export * as Project from "./project.js"
 
-import { Context, Effect, Layer, Schema } from "effect"
-import { ChildProcess } from "effect/unstable/process"
-import { and, asc, desc, eq, gte, isNull, lte, sql } from "drizzle-orm"
+import { Context, Duration, Effect, Layer, Schedule, Schema } from "effect"
+import { ChildProcess } from "effect/process"
+import { and, asc, desc, eq, gte, isNotNull, isNull, lt, lte, ne, sql } from "drizzle-orm"
 import path from "path"
 import { AbsolutePath } from "./schema.js"
 import { Bus } from "./bus.js"
@@ -58,14 +58,22 @@ export const root = Effect.fn("Project.root")(function* (
 })
 
 const ACTIVATE_INTERVAL = 60_000
+const SWEEP_INTERVAL = Duration.hours(1)
+
+export interface ListInput {
+  /** Includes archived Projects when true. */
+  readonly archived?: boolean
+}
 
 export interface Interface {
-  readonly list: () => Effect.Effect<ReadonlyArray<Info>>
+  readonly list: (input?: ListInput) => Effect.Effect<ReadonlyArray<Info>>
   readonly update: (input: UpdateInput) => Effect.Effect<Info, NotFoundError>
   /** Records Project activity for recency ordering, at most once per minute per Project. */
   readonly activate: (projectID: ID) => Effect.Effect<void>
   /** Resolves and persists the owning Project. */
   readonly resolve: (input: AbsolutePath) => Effect.Effect<Resolved>
+  /** Archives Projects whose known directories are all gone; resolving a Project unarchives it. */
+  readonly sweep: () => Effect.Effect<void>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Project") {}
@@ -90,6 +98,7 @@ function fromRow(row: typeof ProjectTable.$inferSelect): Info {
       created: row.time_created,
       updated: row.time_updated,
       active: row.time_active,
+      archived: row.time_archived ?? undefined,
     },
     sandboxes: row.sandboxes,
   }
@@ -113,21 +122,28 @@ const layer = Layer.effect(
         .get()
         .pipe(Effect.orDie)
       yield* upsertProject(db, project).pipe(Effect.orDie)
+      const unarchived = yield* db
+        .update(ProjectTable)
+        .set({ time_archived: null, time_updated: sql`${ProjectTable.time_updated}` })
+        .where(and(eq(ProjectTable.id, project.id), isNotNull(ProjectTable.time_archived)))
+        .returning()
+        .get()
+        .pipe(Effect.orDie)
       // Clones share a project ID; only replace a canonical directory that is gone.
-      if (
+      const replaced =
         previous &&
         previous.canonical !== project.canonical &&
         !(yield* fs.exists(previous.canonical).pipe(Effect.orElseSucceed(() => true)))
-      ) {
-        const row = yield* db
-          .update(ProjectTable)
-          .set({ worktree: project.canonical })
-          .where(eq(ProjectTable.id, project.id))
-          .returning()
-          .get()
-          .pipe(Effect.orDie)
-        if (row) yield* bus.publish(ProjectSchema.Event.Updated, fromRow(row))
-      }
+          ? yield* db
+              .update(ProjectTable)
+              .set({ worktree: project.canonical })
+              .where(eq(ProjectTable.id, project.id))
+              .returning()
+              .get()
+              .pipe(Effect.orDie)
+          : undefined
+      const changed = replaced ?? unarchived
+      if (changed) yield* bus.publish(ProjectSchema.Event.Updated, fromRow(changed))
       if (!project.vcs) return project
       const directories: Array<{ projectID: ID; directory: AbsolutePath; strategy?: string }> = [
         { projectID: project.id, directory: project.canonical },
@@ -202,10 +218,11 @@ const layer = Layer.effect(
       return project
     })
 
-    const list = Effect.fn("Project.list")(function* () {
+    const list = Effect.fn("Project.list")(function* (input?: ListInput) {
       const rows = yield* db
         .select()
         .from(ProjectTable)
+        .where(input?.archived ? undefined : isNull(ProjectTable.time_archived))
         .orderBy(desc(ProjectTable.time_active), asc(ProjectTable.id))
         .all()
         .pipe(Effect.orDie)
@@ -379,7 +396,53 @@ const layer = Layer.effect(
       })
     })
 
-    return Service.of({ list, update, activate, resolve })
+    const sweep = Effect.fn("Project.sweep")(function* () {
+      const cutoff = Date.now() - Duration.toMillis(SWEEP_INTERVAL)
+      // Projects touched since the cutoff are left alone. Checking again in the update means a
+      // resolve that moves the canonical directory mid-sweep bumps time_updated and wins.
+      const idle = and(
+        isNull(ProjectTable.time_archived),
+        lt(ProjectTable.time_updated, cutoff),
+        lt(ProjectTable.time_active, cutoff),
+      )
+      const projects = yield* db
+        .select({ id: ProjectTable.id, canonical: ProjectTable.worktree })
+        .from(ProjectTable)
+        .where(and(idle, ne(ProjectTable.id, ID.global)))
+        .all()
+        .pipe(Effect.orDie)
+      const worktrees = yield* db.select().from(WorktreeTable).all().pipe(Effect.orDie)
+      // Treat unreadable paths as present so transient filesystem errors never archive a Project.
+      const exists = (directory: AbsolutePath) => fs.exists(directory).pipe(Effect.orElseSucceed(() => true))
+      yield* Effect.forEach(
+        projects,
+        Effect.fnUntraced(function* (project) {
+          if (yield* exists(project.canonical)) return
+          const known = worktrees.filter(
+            (item) => item.project_id === project.id && item.directory !== project.canonical,
+          )
+          const surviving = yield* Effect.filter(known, (item) => exists(item.directory))
+          // Linked worktrees carry a strategy; only another main checkout can become the canonical directory.
+          const main = surviving.find((item) => !item.strategy)
+          if (!main && surviving.length) return
+          const row = yield* db
+            .update(ProjectTable)
+            .set(
+              main
+                ? { worktree: main.directory }
+                : { time_archived: Date.now(), time_updated: sql`${ProjectTable.time_updated}` },
+            )
+            .where(and(eq(ProjectTable.id, project.id), idle))
+            .returning()
+            .get()
+            .pipe(Effect.orDie)
+          if (row) yield* bus.publish(ProjectSchema.Event.Updated, fromRow(row))
+        }),
+        { concurrency: 8, discard: true },
+      )
+    })
+
+    return Service.of({ list, update, activate, resolve, sweep })
   }),
 )
 
@@ -387,4 +450,21 @@ export const node = makeGlobalNode({
   service: Service,
   layer: layer,
   deps: [Bus.node, Database.node, FSUtil.node, Git.node, AppProcess.node],
+})
+
+export const sweepNode = makeGlobalNode({
+  name: "project-archive-sweep",
+  layer: Layer.effectDiscard(
+    Effect.gen(function* () {
+      const project = yield* Service
+      yield* project
+        .sweep()
+        .pipe(
+          Effect.ignoreCause({ log: "Error", message: "Project archive sweep failed" }),
+          Effect.repeat(Schedule.spaced(SWEEP_INTERVAL)),
+          Effect.forkScoped,
+        )
+    }),
+  ),
+  deps: [node],
 })

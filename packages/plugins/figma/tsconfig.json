@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig.json",
+  "extends": "@tsconfig/bun/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["index.ts", "script"]
+}

@@ -8,8 +8,10 @@ import { hasPtyConnectTicketURL } from "@opencode/protocol/groups/pty"
 import { hasPersistentPtyConnectTicketURL } from "@opencode/protocol/groups/persistent-pty"
 import { isPairingConnectURL } from "@opencode/protocol/groups/server"
 import { Global } from "@opencode/util/global"
+import type { LayerNode } from "@opencode/util/effect/layer-node" // kilocode_change(host) seam - type of the overrides parameter
 import { Cause, Context, Effect, Exit, Latch, Layer, Option, Ref, Scope } from "effect"
-import { HttpMiddleware, HttpRouter, HttpServer, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
+import { HttpMiddleware, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
+import { NetAddress } from "effect/net"
 import { createServer } from "node:http"
 import { ServerAuth } from "./auth"
 import { isAllowedCorsOrigin } from "./cors"
@@ -22,7 +24,7 @@ import type { ServerOptions } from "./options"
 
 export interface Lifecycle<E = never, R = never> {
   readonly onListen: (
-    address: HttpServer.Address,
+    address: NetAddress.SocketAddress,
     shutdown: Effect.Effect<void>,
   ) => Effect.Effect<Effect.Effect<void>, E, R>
 }
@@ -48,6 +50,7 @@ export const start = Effect.fn("ServerProcess.start")(function* <E, R>(
   lifecycle?: Lifecycle<E, R>,
   transform?: Transform,
   remoteURLs?: () => ReadonlyArray<string>,
+  overrides?: LayerNode.Replacements, // kilocode_change(host) seam - service replacements for the routes, as createRoutes takes them
 ) {
   const password = options.password
   if (!password) return yield* Effect.fail(new Error("Missing server password"))
@@ -100,6 +103,7 @@ export const start = Effect.fn("ServerProcess.start")(function* <E, R>(
           password,
         },
         urls,
+        overrides, // kilocode_change(host) seam - pass the overrides through
       ).pipe(Layer.provideMerge(NodeHttpServer.layerHttpServices)),
       applicationScope,
     )

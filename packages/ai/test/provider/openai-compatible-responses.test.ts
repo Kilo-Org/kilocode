@@ -644,6 +644,27 @@ describe("Open Responses-compatible route", () => {
       }),
     )
 
+    it.effect("treats a null function call namespace as absent", () =>
+      Effect.gen(function* () {
+        const item = { type: "function_call", id: "fc_1", call_id: "call_1", name: "lookup", namespace: null }
+        const response = yield* LLMClient.generate(request).pipe(
+          Effect.provide(
+            fixedResponse(
+              sseEvents(
+                { type: "response.output_item.added", output_index: 0, item: { ...item, arguments: "" } },
+                { type: "response.function_call_arguments.done", item_id: "fc_1", output_index: 0, arguments: "{}" },
+                { type: "response.output_item.done", output_index: 0, item: { ...item, arguments: "{}" } },
+                { type: "response.completed", response: { id: "resp_1", output: [{ ...item, arguments: "{}" }] } },
+              ),
+            ),
+          ),
+        )
+
+        expect(response.toolCalls).toEqual([expect.objectContaining({ id: "call_1", name: "lookup", input: {} })])
+        expect(response.toolCalls[0]?.namespace).toBeUndefined()
+      }),
+    )
+
     it.effect("rejects missing, null, and non-string event IDs even with a registered output index", () =>
       Effect.gen(function* () {
         yield* Effect.forEach(

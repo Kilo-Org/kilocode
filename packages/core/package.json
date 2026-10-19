@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "2.0.25",
+  "version": "2.0.29",
   "name": "@opencode/core",
   "type": "module",
   "license": "MIT",
@@ -24,6 +24,7 @@
     "build": "bun run script/build.ts",
     "update-models-snapshot": "bun run script/update-models-snapshot.ts",
     "test": "bun run script/test.ts",
+    "test:ci": "bun ../../script/kilocode/test/test-runner.ts --ci",
     "typecheck": "tsgo -b tsconfig.json tsconfig.tests.json"
   },
   "exports": {
@@ -92,7 +93,8 @@
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@types/which": "3.0.4",
-    "drizzle-kit": "catalog:"
+    "drizzle-kit": "catalog:",
+    "fast-check": "catalog:"
   },
   "dependencies": {
     "@ai-sdk/cohere": "3.0.27",
@@ -102,6 +104,7 @@
     "@ai-sdk/vercel": "2.0.39",
     "@ff-labs/fff-bun": "0.10.5",
     "@ff-labs/fff-node": "0.10.5",
+    "@kilocode/gateway-core": "workspace:*",
     "@lydell/node-pty": "catalog:",
     "@modelcontextprotocol/client": "2.0.0",
     "@modelcontextprotocol/core": "2.0.0",
@@ -115,7 +118,7 @@
     "@parcel/watcher": "2.5.1",
     "@silvia-odwyer/photon-node": "0.3.4",
     "@standard-schema/spec": "catalog:",
-    "bun-pty": "0.4.9",
+    "bun-pty": "0.4.11",
     "diff": "catalog:",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",

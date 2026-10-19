@@ -1,12 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@opencode/tui",
-  "version": "2.0.25",
+  "version": "2.0.29",
   "private": true,
   "type": "module",
   "license": "MIT",
   "scripts": {
     "test": "bun test --timeout 30000 --only-failures",
+    "test:ci": "bun ../../script/kilocode/test/test-runner.ts --ci",
     "typecheck": "tsgo -b"
   },
   "exports": {

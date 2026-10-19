@@ -18,6 +18,8 @@ import { ConfigNormalize } from "./config/normalize.js"
 import { ConfigDiscovery } from "./config/discovery.js"
 import { ConfigWatch } from "./config/watch.js"
 import { WellKnown } from "./wellknown.js"
+import { AppProcess } from "@opencode/util/process"
+import { ChildProcess } from "effect/process"
 
 export function latest<K extends keyof Info>(entries: readonly Entry[], key: K): Info[K] | undefined {
   return entries.findLast((entry): entry is Document => entry.type === "document" && entry.info[key] !== undefined)
@@ -44,9 +46,12 @@ export interface Interface {
 
 export const Options = Schema.Struct({
   project: Schema.optional(Schema.Boolean),
-  // false skips the global config dir, ~/.claude, and ~/.agents; wellknown,
-  // file, and content entries still load.
+  // false skips the system and global config dirs, ~/.claude, and ~/.agents;
+  // wellknown, file, and content entries still load.
   global: Schema.optional(Schema.Boolean),
+  system: Schema.optional(Schema.Union([Schema.Boolean, Schema.String])),
+  // false skips ~/.claude and project .claude dirs.
+  claude: Schema.optional(Schema.Boolean),
   file: Schema.optional(Schema.String),
   content: Schema.optional(Schema.String),
 })
@@ -97,9 +102,10 @@ export const layer = (options?: Options) =>
       const credentials = yield* Credential.Service
       const globalService = yield* Global.Service
       const wellknown = yield* WellKnown.Service
+      const processes = yield* AppProcess.Service
       const reloadLock = Semaphore.makeUnsafe(1)
       const updateLock = Semaphore.makeUnsafe(1)
-      const decodeOptions = { errors: "all", onExcessProperty: "ignore", propertyOrder: "original" } as const
+      const decodeOptions = { errors: "all", onExcessProperty: "ignore" } as const
       const decodeInfo = Schema.decodeUnknownOption(Info, decodeOptions)
       const parseInfo = Effect.fn("Config.parseInfo")(function* (text: string, source: string) {
         const errors: ParseError[] = []
@@ -182,6 +188,26 @@ export const layer = (options?: Options) =>
         return yield* Effect.forEach(entries, loadWellknownEntry).pipe(Effect.map((documents) => documents.flat()))
       })
 
+      const loadPreferences = Effect.fn("Config.loadPreferences")(function* (plist: AbsolutePath) {
+        const result = yield* processes
+          .run(ChildProcess.make("plutil", ["-convert", "json", "-o", "-", plist], { stdin: "ignore" }), {
+            timeout: "10 seconds",
+          })
+          .pipe(Effect.flatMap(AppProcess.requireSuccess), Effect.option)
+        if (Option.isNone(result)) {
+          yield* Effect.logWarning("failed to convert managed preferences", { source: plist })
+          return []
+        }
+        const text = yield* ConfigVariable.substitute({
+          type: "virtual",
+          source: plist,
+          dir: path.dirname(plist),
+          text: ConfigDiscovery.stripPreferenceMetadata(result.value.stdout.toString()),
+        })
+        const info = yield* parseInfo(text, plist)
+        return info ? [new Document({ type: "document", path: plist, info })] : []
+      })
+
       const loadDirectory = Effect.fnUntraced(function* (directory: AbsolutePath) {
         return [
           ...(yield* Effect.forEach(ConfigDiscovery.names, (file) => loadFile(path.join(directory, file))).pipe(
@@ -217,8 +243,33 @@ export const layer = (options?: Options) =>
               )
             : []
 
-        // Global entries sit below explicit and direct files; project
-        // directories rank above them.
+        // Managed settings load last so they override everything, and MDM
+        // preferences outrank the system directory as in V1. Policies evaluate
+        // in reverse load order, so managed policies split off and load first
+        // to keep final file-based authority.
+        const managed = [
+          ...(sources.system?.present ? yield* loadDirectory(sources.system.path).pipe(Effect.orDie) : []),
+          ...(sources.preferences ? yield* loadPreferences(sources.preferences).pipe(Effect.orDie) : []),
+        ]
+        const managedPolicies = managed
+          .flatMap((entry) =>
+            entry.type === "document" && entry.info.policies
+              ? [
+                  new Document({
+                    type: "document",
+                    path: entry.path,
+                    info: new Info({ policies: entry.info.policies }),
+                  }),
+                ]
+              : [],
+          )
+          .toReversed()
+        const managedSettings = managed.map((entry) =>
+          entry.type === "document" && entry.info.policies
+            ? new Document({ ...entry, info: new Info({ ...entry.info, policies: undefined }) })
+            : entry,
+        )
+        // Global entries sit below explicit and direct files; project directories rank above them.
         const globalSupplementary = sources.global ? yield* loadDirectory(sources.global).pipe(Effect.orDie) : []
         const projectSupplementary = yield* Effect.forEach(
           sources.project.filter((root) => root.present),
@@ -228,12 +279,14 @@ export const layer = (options?: Options) =>
           Effect.map((entries) => entries.flat()),
         )
         return [
+          ...managedPolicies,
           ...(yield* loadWellknown().pipe(Effect.orDie)),
           ...globalSupplementary,
           ...explicit,
           ...direct,
           ...projectSupplementary,
           ...content,
+          ...managedSettings,
         ]
       })
 
@@ -330,7 +383,8 @@ export const layer = (options?: Options) =>
         function* (patch: Patch) {
           const directory = initial.global ?? AbsolutePath.make(globalService.config)
           const candidates = ConfigDiscovery.names.map((name) => path.join(directory, name))
-          const filepath = (yield* Effect.filter(candidates, fs.isFile)).at(-1) ?? path.join(directory, "opencode.jsonc")
+          const filepath =
+            (yield* Effect.filter(candidates, fs.isFile)).at(-1) ?? path.join(directory, "opencode.jsonc")
           const text = (yield* fs.readFileStringSafe(filepath)) ?? "{}\n"
           const updated = yield* Effect.try({
             try: () =>
@@ -367,7 +421,16 @@ export function configured(options?: Options) {
   return makeLocationNode({
     service: Service,
     layer: layer(options),
-    deps: [Watcher.node, Bus.node, FSUtil.node, Global.node, Location.node, Credential.node, WellKnown.node],
+    deps: [
+      Watcher.node,
+      Bus.node,
+      FSUtil.node,
+      Global.node,
+      Location.node,
+      Credential.node,
+      WellKnown.node,
+      AppProcess.node,
+    ],
   })
 }
 

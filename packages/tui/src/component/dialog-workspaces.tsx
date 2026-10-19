@@ -3,7 +3,7 @@ import { TextAttributes } from "@opentui/core"
 import { createEffect, createMemo, createResource, createSignal, onCleanup, onMount, Show } from "solid-js"
 import path from "path"
 import { DialogSelect, dialogSelectContentWidth, type DialogSelectOption } from "../ui/dialog-select"
-import { dialogWidth, useDialog } from "../ui/dialog"
+import { DIALOG_LIST_INSET, dialogWidth, useDialog } from "../ui/dialog"
 import { useClient } from "../context/client"
 import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
@@ -340,7 +340,7 @@ export function DialogWorkspaces(props: DialogWorkspacesProps) {
         options={options()}
         emptyView={
           showError() ? (
-            <box paddingLeft={4} paddingRight={4}>
+            <box paddingLeft={DIALOG_LIST_INSET} paddingRight={DIALOG_LIST_INSET}>
               <text fg={theme.text.feedback.error.base} attributes={TextAttributes.BOLD}>
                 Could not load worktrees
               </text>
@@ -348,17 +348,17 @@ export function DialogWorkspaces(props: DialogWorkspacesProps) {
               <text fg={theme.text.muted}>Close and reopen Worktrees to try again.</text>
             </box>
           ) : directories.loading || loadedProject.loading ? (
-            <box paddingLeft={4} paddingRight={4}>
+            <box paddingLeft={DIALOG_LIST_INSET} paddingRight={DIALOG_LIST_INSET}>
               <text fg={theme.text.muted}>Loading worktrees…</text>
             </box>
           ) : (
-            <box paddingLeft={4} paddingRight={4}>
+            <box paddingLeft={DIALOG_LIST_INSET} paddingRight={DIALOG_LIST_INSET}>
               <text fg={theme.text.muted}>No worktrees available</text>
             </box>
           )
         }
         noMatchView={
-          <box paddingLeft={4} paddingRight={4}>
+          <box paddingLeft={DIALOG_LIST_INSET} paddingRight={DIALOG_LIST_INSET}>
             <text fg={theme.text.muted}>No worktrees found</text>
           </box>
         }

@@ -241,10 +241,12 @@ const source = {
   "ui.message.collapse": "Collapse message",
   "ui.message.copy": "Copy",
   "ui.message.copyMessage": "Copy message",
+  "ui.message.copyFullMessage": "Copy full message",
   "ui.message.forkMessage": "Fork to new session",
   "ui.message.revertMessage": "Revert message",
   "ui.message.moveToQueue": "Move to queue",
   "ui.message.pending": "Pending",
+  "ui.message.voice": "Voice",
   "ui.message.deletePending": "Delete",
   "ui.message.copyResponse": "Copy response",
   "ui.message.copied": "Copied",
@@ -255,6 +257,8 @@ const source = {
   "ui.message.modelVariant": "{{model}} ({{variant}})",
   "ui.sessionTimeline.notice.model": "Model",
   "ui.sessionTimeline.notice.modelSwitched": "Switched to {{model}}",
+  "ui.sessionTimeline.notice.variantSwitched": "Switched variant to {{variant}}",
+  "ui.sessionTimeline.notice.variantDefault": "Switched variant to Default",
   "ui.sessionTimeline.notice.agentChanged": "Agent changed",
   "ui.sessionTimeline.notice.movedTo": "Moved to",
   "ui.sessionTimeline.notice.movedTooltip": "Session working directory changed",
@@ -277,6 +281,7 @@ const source = {
   "ui.question.multiHint": "Select all answers that apply",
   "ui.question.singleHint": "Select one answer",
   "ui.question.custom.placeholder": "Type your answer…",
+  "ui.question.custom.answerPlaceholder": "Type your own answer…",
 } satisfies Record<string, string>
 
 export type Key = keyof typeof source

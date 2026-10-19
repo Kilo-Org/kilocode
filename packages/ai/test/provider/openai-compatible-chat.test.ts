@@ -1,6 +1,6 @@
 import { describe, expect } from "bun:test"
 import { Effect, Schema } from "effect"
-import { HttpClientRequest } from "effect/unstable/http"
+import { HttpClientRequest } from "effect/http"
 import { LLM, LLMRequest, Message, ToolCallPart, ToolChoice, ToolDefinition } from "../../src/index.js"
 import { Auth, LLMClient } from "../../src/route.js"
 import { compileRequest } from "../../src/route/client.js"
@@ -96,6 +96,43 @@ describe("OpenAI-compatible Chat route", () => {
         max_tokens: 20,
         temperature: 0,
       })
+    }),
+  )
+
+  it.effect("places cache breakpoints only when compatibility declares the format", () =>
+    Effect.gen(function* () {
+      const prepare = (cacheFormat: "anthropic" | "alibaba" | undefined) =>
+        compileRequest(
+          LLM.request({
+            model: OpenAICompatibleChat.route
+              .with({ provider: "custom", endpoint: { baseURL: "https://api.custom.test/v1" } })
+              .model({ id: "claude-sonnet-5", compatibility: cacheFormat === undefined ? undefined : { cacheFormat } }),
+            system: "You are concise.",
+            prompt: "Say hello.",
+            tools: [ToolDefinition.make({ name: "lookup", description: "Lookup data", inputSchema: {} })],
+          }),
+        )
+
+      const declared = yield* prepare("anthropic")
+      expect(declared.body).toMatchObject({
+        messages: [
+          { role: "system", content: [{ type: "text", text: "You are concise.", cache_control: { type: "ephemeral" } }] },
+          { role: "user", content: [{ type: "text", text: "Say hello.", cache_control: { type: "ephemeral" } }] },
+        ],
+        tools: [{ function: { name: "lookup" }, cache_control: { type: "ephemeral" } }],
+      })
+      expect(JSON.stringify(declared.body)).not.toContain('"ttl"')
+
+      const alibaba = yield* prepare("alibaba")
+      expect(alibaba.body).toMatchObject({
+        messages: [
+          { role: "system", content: [{ type: "text", text: "You are concise.", cache_control: { type: "ephemeral" } }] },
+          { role: "user", content: [{ type: "text", text: "Say hello.", cache_control: { type: "ephemeral" } }] },
+        ],
+      })
+      expect(alibaba.body.tools?.[0]?.cache_control).toBeUndefined()
+
+      expect(JSON.stringify((yield* prepare(undefined)).body)).not.toContain("cache_control")
     }),
   )
 

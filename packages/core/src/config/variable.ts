@@ -19,7 +19,6 @@ type ParseSource =
 
 type SubstituteInput = ParseSource & {
   text: string
-  missing?: "error" | "empty"
   env?: Record<string, string>
 }
 
@@ -56,27 +55,24 @@ const substituteFiles = Effect.fnUntraced(function* (input: SubstituteInput, tex
     const filePath = token.slice("{file:".length, -1)
     const expandedPath = filePath.startsWith("~/") ? path.join(os.homedir(), filePath.slice(2)) : filePath
     const resolvedPath = path.isAbsolute(expandedPath) ? expandedPath : path.resolve(configDir, expandedPath)
-    const fileContent = yield* fs.readFileString(resolvedPath).pipe(
-      Effect.catch((error) => {
-        if (input.missing === "empty") return Effect.succeed("")
+    const fileContent = yield* fs
+      .readFileStringSafe(resolvedPath)
+      .pipe(
+        Effect.mapError(
+          (error) =>
+            new InvalidError({ path: configSource, message: `bad file reference: "${token}"` }, { cause: error }),
+        ),
+      )
+    // Like a missing {env:VAR}, a missing or unreadable file substitutes empty so one stale secret
+    // reference cannot take down every Location that loads this config.
+    if (fileContent === undefined)
+      yield* Effect.logWarning("config file reference is missing or unreadable", {
+        source: configSource,
+        reference: token,
+        path: resolvedPath,
+      })
 
-        const message = `bad file reference: "${token}"`
-        return Effect.fail(
-          new InvalidError(
-            {
-              path: configSource,
-              message:
-                error._tag === "PlatformError" && error.reason._tag === "NotFound"
-                  ? `${message} ${resolvedPath} does not exist`
-                  : message,
-            },
-            { cause: error },
-          ),
-        )
-      }),
-    )
-
-    out += JSON.stringify(fileContent.trim()).slice(1, -1)
+    out += JSON.stringify((fileContent ?? "").trim()).slice(1, -1)
     cursor = index + token.length
   }
 

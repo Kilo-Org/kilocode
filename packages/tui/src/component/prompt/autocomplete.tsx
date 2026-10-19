@@ -803,7 +803,7 @@ export function Autocomplete(props: {
         if (offset === 0) return
 
         const slash = slashTriggerIndex(value, offset)
-        if (slash !== undefined) {
+        if (slash === 0) {
           show("command")
           setStore("index", slash)
           return

@@ -76,3 +76,157 @@ jobs:
           if-no-files-found: error
           overwrite: true
           retention-days: 7
+  shared:
+    name: shared upstream patches
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # The checks compare with the pinned upstream release commit, which they find in the history.
+          # A blobless clone has all commits and trees, and fetches only the blobs that the diff reads.
+          fetch-depth: 0
+          filter: blob:none
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - name: Check kilocode_change markers in shared upstream files
+        run: bun script/check-opencode-annotations.ts
+
+      - name: Count shared upstream patches
+        run: bun script/check-shared-patches.ts
+
+  progress:
+    name: migration progress map
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          filter: blob:none
+
+      - name: Fetch the pinned v1 target
+        # The map measures the v1 delta from `main`, which the v2 checkout does not contain.
+        run: git fetch --filter=blob:none --no-tags origin main
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - name: Check that migration-tracking/progress is current
+        run: bun script/upstream/progress.ts --check
+
+  progress-comment:
+    name: migration progress comment
+    # Same-repository pull requests only: a fork PR gets a read-only token and cannot comment.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # The PR merge commit and its first parent (the base branch tip), for the base map and the PR diff.
+          fetch-depth: 2
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - name: Compare the progress map with the base branch
+        env:
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git show "HEAD^1:migration-tracking/progress/progress.json" > base.json 2>/dev/null || echo '{}' > base.json
+          git diff -U0 --no-color HEAD^1 HEAD > pr.diff
+          {
+            echo '<!-- migration-progress -->'
+            bun script/upstream/progress.ts --compare base.json migration-tracking/progress/progress.json pr.diff
+            echo
+            echo "<img width=\"900\" alt=\"v2 migration progress map at this commit\" src=\"https://raw.githubusercontent.com/$REPO/$HEAD_SHA/migration-tracking/progress/progress.svg\" />"
+            echo
+            echo "[Full map](https://github.com/$REPO/blob/$HEAD_SHA/migration-tracking/progress/README.md) · [how cells close](https://github.com/$REPO/blob/$HEAD_SHA/.kilo/skills/v2-migration/SKILL.md#progress-map)"
+          } > body.md
+
+      - name: Create or update the comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          id=$(gh api "repos/$REPO/issues/$NUMBER/comments" --paginate --jq '[.[] | select(.body | startswith("<!-- migration-progress -->"))][0].id // empty')
+          if [ -n "$id" ]; then
+            gh api --method PATCH "repos/$REPO/issues/comments/$id" -F body=@body.md > /dev/null
+          else
+            gh api --method POST "repos/$REPO/issues/$NUMBER/comments" -F body=@body.md > /dev/null
+          fi
+
+  upstream-tooling:
+    name: upstream sync tooling tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: script/upstream
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # placement.ts compares with the pinned upstream release commit, which it finds in the history.
+          fetch-depth: 0
+          filter: blob:none
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun test
+
+      # Fails when a logic package (packages/kilo-*-core) imports @opencode/*; prints the core-internal imports of adapters.
+      - name: Check the Kilo import rule
+        run: bun placement.ts --imports
+
+  kilo-packages:
+    name: kilo packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      # Turborepo runs only the package tests that turbo.json lists. The Kilo packages run here instead, so
+      # adding one needs no shared upstream patch. `@kilocode/gateway-core` stays in turbo.json.
+      - name: Test the Kilo plugin
+        working-directory: packages/kilo-plugin
+        run: bun test
+
+      - name: Test the Kilo host
+        working-directory: packages/kilo-cli
+        run: bun test
+
+      - name: Test the sharded test runner
+        working-directory: script/kilocode/test
+        run: bun test
