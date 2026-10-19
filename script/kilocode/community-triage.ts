@@ -323,7 +323,7 @@ export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: numb
     "Waiting for contributor",
     "Waiting",
     state("awaiting").sort((a, b) => (awaiting(b)?.days ?? 0) - (awaiting(a)?.days ?? 0)),
-    (row) => `${awaiting(row)?.days}d of ${WAIT_DAYS}${ci(row)}`,
+    (row) => `${awaiting(row)?.days}d waiting${ci(row)}`,
   )
 
   const firsts = open.filter((row) => row.first).length

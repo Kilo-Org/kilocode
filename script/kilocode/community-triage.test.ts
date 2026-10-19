@@ -181,7 +181,7 @@ describe("digest", () => {
     expect(text).toContain("2 open")
     expect(text).toContain("**Needs triage (1)**")
     expect(text).toContain("[#1 PR 1](https://github.com/o/r/pull/1)")
-    expect(text).toContain("9d of 14")
+    expect(text).toContain("9d waiting")
     expect(text).not.toContain("Approved")
   })
 
