@@ -2,7 +2,7 @@
 
 This file is the single source for the shared facts, decisions and rules of the Kilo v1 → v2 migration. Role prompts (discovery, planner, coordinator) and implementation session prompts point here instead of restating it. When a fact here changes, change it here first.
 
-Status: active. The bootstrap docs landed on `origin/v2` (#15038). Lane L1 is running: the upstream merge tooling (#15026) and the syncs to `v2.0.27` (#15029) and `v2.0.30` (#15136) are merged. No Part B unit is marked done yet. Last updated 2026-10-16. Plan: [`kilo-v2-migration-plan.md`](kilo-v2-migration-plan.md).
+Status: active. The bootstrap docs landed on `origin/v2` (#15038). Lane L1 is running: the upstream merge tooling (#15026) and the syncs to `v2.0.27` (#15029) and `v2.0.30` (#15136) are merged. The Kilo host (U-E0-01) merged in #15232; unit status lives in Part B of the plan. Last updated 2026-10-19. Plan: [`kilo-v2-migration-plan.md`](kilo-v2-migration-plan.md).
 
 ## Branches and pinned refs
 
