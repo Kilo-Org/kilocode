@@ -406,12 +406,14 @@ describe("CodeIndexOrchestrator telemetry", () => {
     await orchestrator.startIndexing("manual")
     expect(orchestrator.state).toBe("Indexed")
 
+    watcher.onDidStartBatchProcessing.fire(["/tmp/ws/a.ts"])
     watcher.onDidFinishBatchProcessing.fire({
       processedFiles: [],
       batchError: new Error("transient batch failure"),
     })
     expect(orchestrator.state).toBe("Error")
 
+    watcher.onDidStartBatchProcessing.fire(["/tmp/ws/a.ts"])
     watcher.onDidFinishBatchProcessing.fire({
       processedFiles: [{ path: "/tmp/ws/a.ts", status: "success" }],
       batchError: undefined,

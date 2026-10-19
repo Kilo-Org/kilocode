@@ -122,7 +122,7 @@ export class CodeIndexOrchestrator {
         }),
         this.fileWatcher.onDidFinishBatchProcessing.on((summary: BatchProcessingSummary) => {
           if (!summary.batchError) {
-            if (this.stateManager.state === "Error") {
+            if (this.stateManager.state === "Error" || this.stateManager.state === "Indexing") {
               this.stateManager.setSystemState("Indexed", "File changes processed. Index up-to-date.")
             }
             return
