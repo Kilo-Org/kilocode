@@ -162,13 +162,29 @@ Grow the test surface with each PR.
 
 ## Progress map
 
-`migration-tracking/progress/README.md` is the generated map of Kilo's v1 delta: one cell per Kilo-owned file, `/kilocode/*` API operation and patch in a shared upstream file, grouped by feature. `bun script/upstream/progress.ts` regenerates it; CI fails when it is stale. Module and API cells turn done on their own when the file or path literal lands on v2. Patch cells and decisions do not, so for every unit:
+`migration-tracking/progress/README.md` is the generated map of Kilo's v1 delta: one cell per Kilo-owned file, `/kilocode/*` API operation and patch in a shared upstream file, grouped by feature. `bun script/upstream/progress.ts` regenerates it; CI fails when it is stale. Module and API cells turn done on their own only when the file name or path literal lands on v2. Renamed files, patch cells and decisions need a proof from you. Every port closes the cells it replaces in the same PR, so for every unit:
 
-- Before you start, run `bun script/upstream/progress.ts --list <feature>`. The open cells are the inventory of the feature; each patch cell names its v1 source line.
-- When you port a patch cell, put its ID on the v2 code that replaces it: `// kilocode_change(<feature>:<id>)` when that code is a marked line in a shared upstream file, `// kilo_port(<feature>:<id>)` when it is in a Kilo-owned file (rung 1 or 2). Without an ID the cell stays open. An unknown ID, or a proof in the wrong kind of file, fails the run. The map records the rung where the cell landed.
-- When a patch or module needs no port, add its cell ID to `migration-tracking/progress/dispositions.json` with `state` (`native` when v2 has the behavior built in, `facade` when the v1 compatibility layer serves it, `dropped` when the feature is not carried), a `note` with the reason, and `by`. Do not mark a cell `ported` by disposition when a marker or file can prove it.
-- A loose patch that lands in `unattributed:<area>` belongs to a feature. Tag its v1 marker on `main` as `kilocode_change(<feature>)` in a small follow-up PR; the next re-pin moves it.
-- Regenerate before you commit. CI posts one comment per PR with the delta (percent, changed features, closed and dropped cells), the placement line (new marked lines in shared files by rung, new `kilo_port` annotations, new core-internal imports), the two ratchets and the treemap of the head commit; the `progress.json` diff carries the same information. Mention the before and after count of the feature in the PR.
+- Before you start, run `bun script/upstream/progress.ts --list <feature>`. The open cells are the inventory of the feature; each patch cell names its v1 source line. Read a v1 hunk with `git show <v1Target>:<path> | sed -n '<line-10>,<line+15>p'` (the pin is `pins.v1Target` in `features.json`).
+- Close each cell with the first proof that applies:
+  1. The v2 code is a marked line in a shared upstream file: `// kilocode_change(<feature>:<id>)` on it.
+  2. The v2 code is in a Kilo-owned file (rung 1 or 2): `// kilo_port(<feature>:<id>)` on it. This includes a Kilo adapter that only selects or configures upstream code, and a Kilo-owned v2 test that carries the assertions of a v1 test patch cell.
+  3. A module or test ported under another name: give the new file the v1 name when that name fits the package (the cell then closes by name). Otherwise add a `ported` disposition with the v2 path and symbol in `note`.
+  4. Upstream v2 has the behavior and no Kilo code is involved: a `native` disposition with the v2 pointer.
+  5. The v1 compatibility layer serves it: a `facade` disposition.
+  6. The behavior is not carried: a `dropped` disposition with the evidence (see below).
+
+  Dispositions go in `migration-tracking/progress/dispositions.json` with `state`, `note` and `by` (your branch name). Without a proof the cell stays open. An unknown ID, or a proof in the wrong kind of file, fails the run. The map records the rung where the cell landed.
+- Verify before you close a cell. A proof or a disposition says that v2 has the behavior, not that a file exists:
+  - Compare the v1 hunk or file with the v2 code you name, behavior by behavior: defaults, precedence, retries, error paths and tests.
+  - Find the v1 callers: `git grep -n <symbol> <v1Target> -- packages`. Code with no caller on v1 is `dropped` (write that in the note), not `ported`.
+  - `dropped` means the feature is not carried: a shim, dead v1 code, or a decision that the plan records (the unit table in `kilo-v2-migration-plan.md`, Decision 7 in `migration-context.md`). When the plan has a unit that ports the behavior, the cell stays open and the PR names the unit. "Not ported yet" is never `dropped`.
+  - When part of the behavior is missing, port the gap if it is small and in scope. Otherwise leave the cell open and give the gap in the PR. Do not close a cell with a known gap.
+  - A hunk is attributed by its first Kilo import or identifier, so it can carry lines of other features (for example one plugin list with three plugins). Close it for your feature only when the other lines are tracked by their own cells, and say so in the PR.
+  - A v1 test cell closes only when the v2 tests carry its important assertions. Add the missing ones when they are cheap. When v2 does the opposite on purpose, use `dropped` with the reason.
+  - A classification in a task, a plan or a peer message is a claim. Verify it the same way, and report each one you found wrong.
+- Git must track a new file before the map sees it: `git add` new files before you regenerate.
+- A loose patch that lands in `unattributed:<area>` belongs to a feature. A proof cannot name an `unattributed:<area>` cell. Tag its v1 marker on `main` as `kilocode_change(<feature>)` in a small follow-up PR; the next re-pin moves it.
+- Regenerate before you commit: run `bun script/upstream/progress.ts` twice (the output must be identical), then `--check`, then `--list <feature>` again. Every cell that stays open needs a reason in the PR. CI posts one comment per PR with the delta (percent, changed features, closed and dropped cells), the placement line (new marked lines in shared files by rung, new `kilo_port` annotations, new core-internal imports), the two ratchets and the treemap of the head commit; the `progress.json` diff carries the same information.
 
 ## Evidence
 
@@ -176,6 +192,6 @@ In the PR and the final response, list:
 
 - The commands you ran, and the self-test scenarios with pass, fail or blocked.
 - Each shared upstream file you changed, with its option (1 to 5 above) and the missing seam.
-- The progress map delta: cells closed per feature, and every disposition you added with its reason.
+- The progress map delta: the feature box before and after (done/total per kind, landed by rung), the dispositions you added by state with their reasons, and each cell that stays open with its reason.
 - The CI state. For each red check, the cause: your change (fix it), a flake (one rerun) or a known baseline failure.
 - The limits, for example a flow that needs credentials.
