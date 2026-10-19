@@ -24,6 +24,7 @@
 import os from "node:os"
 import path from "node:path"
 import fs from "node:fs/promises"
+import { attr } from "./test-durations"
 import { TestShard } from "./test-shard"
 
 const ROOT = path.resolve(import.meta.dir, "../../..")
@@ -317,7 +318,8 @@ async function failedMembers(item: string) {
     .text()
     .catch(() => "")
   return [...xml.matchAll(/<testsuite\b[^>]*>/g)]
-    .map((match) => ({ file: attr(match[0], "file"), failed: Number(attr(match[0], "failures")) > 0 }))
+    // Bun writes the path as `file` on every suite, with backslashes on Windows.
+    .map((match) => ({ file: attr(match[0], "file").replaceAll("\\", "/"), failed: Number(attr(match[0], "failures")) > 0 }))
     .filter((suite) => suite.failed && suite.file)
     .map((suite) => suite.file)
     .filter((file, i, all) => all.indexOf(file) === i)
@@ -446,10 +448,6 @@ function shutdown(code: number) {
     process.exit(code)
   })()
   return state.stopping
-}
-
-function attr(tag: string, name: string) {
-  return tag.match(new RegExp(`\\b${name}="([^"]*)"`))?.[1] ?? ""
 }
 
 function esc(text: string) {
