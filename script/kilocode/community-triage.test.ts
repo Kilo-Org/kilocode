@@ -7,6 +7,7 @@ import {
   hasPriority,
   kind,
   needMember,
+  PAUSED,
   parse,
   labels,
   sync,
@@ -18,6 +19,7 @@ import {
   decide,
   failure,
   clip,
+  closeEnabled,
   digest,
   parts,
   DAY,
@@ -186,7 +188,7 @@ describe("digest", () => {
     expect(text).toContain("2 open")
     expect(text).toContain("**Needs triage (1)**")
     expect(text).toContain("[#1 PR 1](https://github.com/o/r/pull/1)")
-    expect(text).toContain("9d of 14")
+    expect(text).toContain("9d waiting")
     expect(text).not.toContain("Approved")
   })
 
@@ -507,5 +509,26 @@ describe("needMember", () => {
 
   test("accepts a token", () => {
     expect(() => needMember("token")).not.toThrow()
+  })
+})
+
+describe("closing is paused", () => {
+  // Community reviews are paused during the opencode v2 migration. If you resume
+  // closing, set PAUSED to false in the script and update this test and the doc.
+  test("the pause is on", () => {
+    expect(PAUSED).toBe(true)
+  })
+
+  test("a paused sweep never closes, even when CLOSE_ENABLED is true", () => {
+    expect(closeEnabled("true")).toBe(false)
+    expect(closeEnabled("true", true)).toBe(false)
+    expect(closeEnabled(undefined, true)).toBe(false)
+  })
+
+  test("without the pause, only the exact value true turns closing on", () => {
+    expect(closeEnabled("true", false)).toBe(true)
+    expect(closeEnabled("TRUE", false)).toBe(false)
+    expect(closeEnabled("1", false)).toBe(false)
+    expect(closeEnabled(undefined, false)).toBe(false)
   })
 })

@@ -1,4 +1,4 @@
-<!-- Community PRs are triaged twice a week. If a maintainer asks for changes and we hear nothing for 14 days, the PR is closed. See docs/community-triage.md. -->
+<!-- Community PR reviews are paused during the opencode v2 migration. No PR is closed for silence. See docs/community-triage.md. -->
 
 ## Issue
 

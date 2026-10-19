@@ -11,6 +11,13 @@ import { appendFileSync } from "node:fs"
 
 export const DAY = 24 * 60 * 60 * 1000
 export const WAIT_DAYS = 14
+
+// Closing is paused: community reviews are on hold during the opencode v2
+// migration. While this is true the sweep never closes a PR and never posts
+// the due-date comment, whatever CLOSE_ENABLED says. Set it to false to bring
+// closing back. See "Closing is paused" in docs/community-triage.md.
+export const PAUSED = true
+export const closeEnabled = (value: string | undefined, paused = PAUSED) => !paused && value === "true"
 const LIMIT = 15
 
 export const label = {
@@ -325,7 +332,7 @@ export function parts(rows: Row[], mode: "md" | "slack", repo: string, now: numb
     "Waiting for contributor",
     "Waiting",
     state("awaiting").sort((a, b) => (awaiting(b)?.days ?? 0) - (awaiting(a)?.days ?? 0)),
-    (row) => `${awaiting(row)?.days}d of ${WAIT_DAYS}${ci(row)}`,
+    (row) => `${awaiting(row)?.days}d ${PAUSED ? "waiting" : `of ${WAIT_DAYS}`}${ci(row)}`,
   )
   section(
     "Closed in this run",
@@ -631,7 +638,8 @@ async function quick(pr: Pull, ready: boolean) {
 async function sweep() {
   needMember(process.env.MEMBER_TOKEN)
   const now = Date.now()
-  const enabled = process.env.CLOSE_ENABLED === "true"
+  const enabled = closeEnabled(process.env.CLOSE_ENABLED)
+  if (PAUSED) console.log("::notice title=Closing is paused::The sweep closes no PR and posts no due-date comment.")
   const cap = Number(process.env.MAX_COMMENTS ?? 20)
   let spent = 0
   await ensure()
@@ -731,7 +739,8 @@ async function sweep() {
       if (tags.includes(label.high)) {
         row.adopt = true
       } else if (!tags.includes(label.keep)) {
-        if (!enabled) console.log(`[dry-run] would close #${pr.number} (${state.days}d without reply)`)
+        if (!enabled)
+          console.log(`${PAUSED ? "[paused]" : "[dry-run]"} would close #${pr.number} (${state.days}d without reply)`)
         else if (spent < cap) {
           spent++
           await comment(
