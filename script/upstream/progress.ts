@@ -15,7 +15,7 @@
  * - patch: one Kilo hunk in a shared upstream file. Its ID is a hash of the added lines. Done when a
  *   v2 file carries a done-proof with the ID: `kilocode_change(<feature>:<id>)` in a shared upstream
  *   file, or `kilo_port(<feature>:<id>)` in a Kilo-owned file. The proof also records the rung where
- *   the cell landed.
+ *   the cell landed. An unattributed patch uses its box as the feature: `kilo_port(unattributed:<area>:<id>)`.
  * - test: a module or patch in a test file, same rules.
  * A disposition (`ported`, `native`, `facade`) also marks a cell done; `dropped` removes it from the
  * denominator and lists it.
@@ -60,6 +60,9 @@ type Cell = { id: string; kind: Kind; feature: string; source: string; v2?: stri
 type SharedRungs = Record<string, { rung: 3 | 4 }>
 
 const TAG = /kilocode_change\(([a-z0-9-]+)(?::([0-9a-f]{12}))?\)/g
+/** The feature of a done-proof: a feature name, or `unattributed:<area>` for an unattributed patch. Valid in JS and git grep -E. */
+const PROOF_FEATURE = "unattributed:[a-z0-9/._-]+|[a-z0-9-]+"
+const PROOF_LINE = new RegExp(`^([^:]+):(\\d+):((kilocode_change|kilo_port)\\((${PROOF_FEATURE}):([0-9a-f]{12})\\))$`)
 const MARKER = /^\s*(?:\/\/|\/\*|\{\/\*|<!--|#|\*)?\s*(?:\/\/|\/\*|\{\/\*)?\s*kilocode_change\b/
 const GENERATED = [/openapi\.json$/, /\/gen\//, /\/generated\//, /\.gen\.ts$/, /\.lock$/, /bun\.lock$/]
 /** Package scaffolding is not code to port, so it is not a module cell. */
@@ -212,7 +215,7 @@ export type Proof = { id: string; at: string; tag: string; rung: Rung; misplaced
  */
 export function parseProofs(grep: string, rungs: SharedRungs): Proof[] {
   return grep.split("\n").flatMap((line) => {
-    const m = line.match(/^([^:]+):(\d+):((kilocode_change|kilo_port)\(([a-z0-9-]+):([0-9a-f]{12})\))$/)
+    const m = line.match(PROOF_LINE)
     if (!m) return []
     const owned = isKiloOwned(m[1])
     // A shared file without a shared-patches.json entry fails script/check-shared-patches.ts; count it as rung 4 until then.
@@ -281,7 +284,7 @@ async function collect(config: Config, dispositions: Record<string, Disposition>
   }
   const baseline = await readBaseline(ROOT)
   // Done-proofs of patch cells, from the working tree like the files above.
-  const found = parseProofs(await git(["grep", "-n", "-o", "-E", "(kilocode_change|kilo_port)\\([a-z0-9-]+:[0-9a-f]{12}\\)", "--", "packages"]).catch(() => ""), baseline.files)
+  const found = parseProofs(await git(["grep", "-n", "-o", "-E", `(kilocode_change|kilo_port)\\((${PROOF_FEATURE}):[0-9a-f]{12}\\)`, "--", "packages"]).catch(() => ""), baseline.files)
   const proofs = proofByCell(found)
 
   // Ratchet: core-internal upstream modules imported by the non-test files of Kilo packages and adapters.
@@ -596,7 +599,7 @@ export function placement(diff: string, contents: Map<string, string>, rungs: Sh
   }
   const ports = hunks
     .filter((h) => h.file.startsWith("packages/") && isKiloOwned(h.file))
-    .reduce((s, h) => s + (h.added.join("\n").match(/kilo_port\([a-z0-9-]+:[0-9a-f]{12}\)/g)?.length ?? 0), 0)
+    .reduce((s, h) => s + (h.added.join("\n").match(new RegExp(`kilo_port\\((${PROOF_FEATURE}):[0-9a-f]{12}\\)`, "g"))?.length ?? 0), 0)
   return { marked, ports }
 }
 
@@ -821,7 +824,7 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     `- Feature boxes come from the v1 target: directories under \`src/kilocode/\`, \`packages/kilo-*\`, and the split table in \`features.json\`.`,
     `- module: a Kilo-owned v1 file. Done when a tracked Kilo-owned v2 file has the same feature and relative path, or the same feature and basename.`,
     `- api: a \`/kilocode/*\` operation in the v1 OpenAPI document. Done when the path literal appears in \`packages/protocol/src\`, \`packages/server/src\` or a Kilo-owned v2 file.`,
-    `- patch: one Kilo hunk in a shared upstream file (\`git diff -U0\` of the v1 target over its upstream base). Its ID hashes the added lines without whitespace and comments. Done when a tracked v2 file under \`packages/\` carries a done-proof with the ID: \`kilocode_change(<feature>:<id>)\` in a shared upstream file, \`kilo_port(<feature>:<id>)\` in a Kilo-owned file. A proof with an unknown ID, or in the wrong kind of file, fails the run.`,
+    `- patch: one Kilo hunk in a shared upstream file (\`git diff -U0\` of the v1 target over its upstream base). Its ID hashes the added lines without whitespace and comments. Done when a tracked v2 file under \`packages/\` carries a done-proof with the ID: \`kilocode_change(<feature>:<id>)\` in a shared upstream file, \`kilo_port(<feature>:<id>)\` in a Kilo-owned file. For an unattributed patch, the feature is its box, \`unattributed:<area>\`. A proof with an unknown ID, or in the wrong kind of file, fails the run.`,
     `- test: a module or patch in a test file, same rules.`,
     `- landed: the rung of the done-proof. \`kilo_port\` is rung 2 (host) in \`packages/kilo-cli\` and rung 1 (plugin) in other Kilo-owned files; a marker has the rung of its file in \`script/upstream/shared-patches.json\` (3 seam, 4 patch). A cell with more than one proof counts once, at the highest rung.`,
     `- Ratchets: core-internal imports count the distinct modules in \`packages/core/src\` outside \`kilocode/\` that non-test files in \`packages/kilo-*\` and \`packages/*/src/kilocode\` import, as \`@opencode/core/*\` or by relative path. A non-test file of a logic package (\`packages/kilo-*-core\`) that imports anything from \`@opencode/*\` fails the run. Shared patches by rung count the entries in \`shared-patches.json\`.`,

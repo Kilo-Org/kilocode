@@ -183,7 +183,7 @@ Grow the test surface with each PR.
   - A v1 test cell closes only when the v2 tests carry its important assertions. Add the missing ones when they are cheap. When v2 does the opposite on purpose, use `dropped` with the reason.
   - A classification in a task, a plan or a peer message is a claim. Verify it the same way, and report each one you found wrong.
 - Git must track a new file before the map sees it: `git add` new files before you regenerate.
-- A loose patch that lands in `unattributed:<area>` belongs to a feature. A proof cannot name an `unattributed:<area>` cell. Tag its v1 marker on `main` as `kilocode_change(<feature>)` in a small follow-up PR; the next re-pin moves it.
+- A loose patch that lands in `unattributed:<area>` can be proved in place with `kilo_port(unattributed:<area>:<id>)`, which closes the cell. It still belongs to a feature: tag its v1 marker on `main` as `kilocode_change(<feature>)` in a small follow-up PR; the next re-pin moves it into the feature box.
 - Regenerate before you commit: run `bun script/upstream/progress.ts` twice (the output must be identical), then `--check`, then `--list <feature>` again. Every cell that stays open needs a reason in the PR. CI posts one comment per PR with the delta (percent, changed features, closed and dropped cells), the placement line (new marked lines in shared files by rung, new `kilo_port` annotations, new core-internal imports), the two ratchets and the treemap of the head commit; the `progress.json` diff carries the same information.
 
 ## Evidence

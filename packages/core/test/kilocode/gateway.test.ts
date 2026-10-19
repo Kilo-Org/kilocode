@@ -1,5 +1,8 @@
 import { describe, expect } from "bun:test"
+import { KiloErrors } from "@kilocode/gateway-core"
 import { fixture } from "@kilocode/gateway-core/testing"
+import { isRetryable } from "@opencode/ai"
+import { httpFailure } from "@opencode/ai/route/executor"
 import { Effect } from "effect"
 import { Bus } from "@opencode/core/bus"
 import { Credential } from "@opencode/core/credential"
@@ -83,6 +86,25 @@ describe("KiloGatewayPlugin", () => {
   it.effect("is not in the upstream built-in provider list; the Kilo host registers it", () =>
     Effect.sync(() => {
       expect(ProviderPlugins.map((item) => item.id)).not.toContain(KiloGatewayPlugin.id)
+    }),
+  )
+
+  // v1 never retried PROMOTION_MODEL_LIMIT_REACHED, also when the Gateway sent it with HTTP 429.
+  it.effect("stops the upstream retry policy for Kilo errors that need user action", () =>
+    Effect.promise(async () => {
+      const failure = async (body: unknown, status: number) => {
+        const response = await KiloErrors.rewriteHttpResponse(Response.json(body, { status }))
+        return httpFailure({
+          message: "Provider request failed",
+          url: "https://ai-gateway.kilo.ai/api/v1/chat/completions",
+          status,
+          responseHeaders: Object.fromEntries(response.headers),
+          responseBody: await response.text(),
+        })
+      }
+      expect(isRetryable(await failure({ code: "PROMOTION_MODEL_LIMIT_REACHED" }, 429))).toBe(false)
+      expect(isRetryable(await failure({ error: { message: "Too Many Requests" } }, 429))).toBe(true)
+      expect(isRetryable(await failure({ error: { message: "Request Timeout" } }, 408))).toBe(true)
     }),
   )
 
@@ -199,9 +221,16 @@ describe("KiloGatewayPlugin", () => {
                 .filter((item) => item.providerID === kilo)
                 .map((item) => item.id),
             ).toEqual([Model.ID.make("anthropic/claude-sonnet-4.6"), Model.ID.make("kilo-auto/small")])
-            const sonnet = (yield* models.available()).find(
+            const available = yield* models.available()
+            const sonnet = available.find(
               (item) => item.providerID === kilo && item.id === Model.ID.make("anthropic/claude-sonnet-4.6"),
             )
+            // kilo_port(gateway:5187eb3f1516) Kilo models use the Gateway dialect of each model, as the v1 Kilo SDK did.
+            expect(sonnet?.package).toBe("@opencode/ai/providers/anthropic")
+            expect(
+              available.find((item) => item.providerID === kilo && item.id === Model.ID.make("kilo-auto/small"))?.package,
+            ).toBe("@opencode/ai/providers/openrouter")
+            // kilo_port(gateway:d29cb22ad5f6) Server-provided variants, now resolved from the Gateway reasoning_options.
             expect(sonnet?.variants.map((variant) => variant.id)).toEqual([
               Model.VariantID.make("low"),
               Model.VariantID.make("medium"),
@@ -564,7 +593,7 @@ describe("KiloGatewayPlugin", () => {
   )
 
   it.live(
-    "serves enterprise account, balance, Kilo Pass, BYOK, coding plans, modes, notifications, media models, and FIM/edit targets over RPC",
+    "serves enterprise account, balance, Kilo Pass, BYOK, coding plans, modes, notifications, media and embedding models, and FIM/edit targets over RPC",
     () =>
       Effect.acquireUseRelease(
         Effect.sync(() => fixture()),
@@ -639,6 +668,10 @@ describe("KiloGatewayPlugin", () => {
                 expect(yield* rpc.call("kilocode.gateway", "models.transcriptions", {})).toEqual([
                   { id: "openai/gpt-4o-mini-transcribe", name: "GPT-4o Mini Transcribe" },
                 ])
+                expect(yield* rpc.call("kilocode.gateway", "models.embeddings", {})).toMatchObject({
+                  defaultModel: "mistralai/mistral-embed-2312",
+                  models: [{ id: "mistralai/codestral-embed-2505", dimension: 1536, note: "code" }, { dimension: 1024 }],
+                })
                 expect(
                   yield* rpc.call("kilocode.gateway", "autocomplete.fimTarget", {
                     provider: "kilo",
