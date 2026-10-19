@@ -1,3 +1,4 @@
+// kilo_port(gateway:17e39e074eaf) v1 registered the Gateway auth plugin in the upstream plugin list.
 import { KiloGatewayPlugin } from "@opencode/core/kilocode/gateway"
 import { KiloAgentPlugin } from "./agent"
 

@@ -186,6 +186,21 @@ export function fixture() {
         { id: "openai/gpt-4o-mini-transcribe", name: "GPT-4o Mini Transcribe" },
       ],
     } as unknown,
+    embeddingModelsStatus: 200,
+    embeddingModels: {
+      defaultModel: "mistralai/mistral-embed-2312",
+      models: [
+        {
+          id: "mistralai/codestral-embed-2505",
+          name: "Codestral Embed 2505",
+          dimension: 1536,
+          scoreThreshold: 0.35,
+          note: "code",
+        },
+        { id: "mistralai/mistral-embed-2312", name: "Mistral Embed 2312", dimension: 1024, scoreThreshold: 0.35 },
+      ],
+      aliases: { "codestral-embed": "mistralai/codestral-embed-2505" },
+    } as unknown,
     byokStatus: 200,
     byok: {
       result: {
@@ -316,6 +331,14 @@ export function fixture() {
         if (state.transcriptionModelsStatus !== 200)
           return new Response(null, { status: state.transcriptionModelsStatus })
         return Response.json(state.transcriptionModels)
+      }
+      if (
+        path === "/api/gateway/embedding-models" ||
+        path === "/api/gateway/v1/embedding-models" ||
+        path === "/api/v1/embedding-models"
+      ) {
+        if (state.embeddingModelsStatus !== 200) return new Response(null, { status: state.embeddingModelsStatus })
+        return Response.json(state.embeddingModels)
       }
       if (path === "/api/trpc/kiloPass.getState") {
         if (state.kiloPassStatus !== 200) return new Response(null, { status: state.kiloPassStatus })

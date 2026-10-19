@@ -22,6 +22,14 @@ test("normalizes the server and resolves KILO_API_URL and KILO_AI_GATEWAY_URL li
     "http://localhost:3000/api/gateway/v1",
   )
   expect(KiloServer.gateway("https://staging.kilo.test", {})).toBe("https://staging.kilo.test/api/gateway")
+  // v1 url.test.ts: an existing `/api/...` route is replaced, a path prefix is kept, and search and hash are dropped.
+  expect(KiloServer.gateway("https://staging.kilo.test/api/openrouter", {})).toBe("https://staging.kilo.test/api/gateway")
+  expect(KiloServer.gateway("https://staging.kilo.test/proxy/api/openrouter/", {})).toBe(
+    "https://staging.kilo.test/proxy/api/gateway",
+  )
+  expect(KiloServer.apiUrl("https://staging.kilo.test/proxy?x=1#y", "gateway")).toBe(
+    "https://staging.kilo.test/proxy/api/gateway",
+  )
 })
 
 test("reads the server from a token like v1", () => {

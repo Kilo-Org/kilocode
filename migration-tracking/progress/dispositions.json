@@ -1,4 +1,174 @@
 {
+  "module:packages/kilo-gateway/src/api/constants.ts": {
+    "state": "ported",
+    "note": "The constants moved next to their use in packages/kilo-gateway-core/src: server.ts (API URL), headers.ts (header and env names, User-Agent), defaults.ts (default models), device.ts (poll interval, token lifetime), account.ts (anonymous key), models.ts (timeout, AI SDK providers). The event service URL goes with event-service/client.ts. PROMPTS is tracked by #15108. The signed-in fallback model in defaults.ts is kilo-auto/frontier, not kilo-auto/free as on v1.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/api/embedding-models.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/src/models.ts KiloModels.embeddingModels, served by the models.embeddings method of the kilocode.gateway RPC (packages/core/src/kilocode/gateway-rpc.ts).",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/api/kilo-pass.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/src/trpc.ts KiloTrpc.kiloPass and parseKiloPassState.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/api/url.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/src/server.ts KiloServer.gateway, apiUrl and modelsUrl. The default Gateway URL follows a later main (https://ai-gateway.kilo.ai/api/v1).",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/auth/device-auth-tui.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/src/device.ts with the device method in packages/core/src/kilocode/gateway.ts; the upstream integration dialog shows the code and packages/tui/src/kilocode/gateway.tsx asks for the account. The v2 dialog does not open the browser by itself.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/auth/device-auth.ts": {
+    "state": "dropped",
+    "note": "v1 marked it as a legacy console flow that is not used (spinner, team prompt). The live device flow, auth/device.ts, is ported to packages/kilo-gateway-core/src/device.ts.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/auth/legacy-migration.ts": {
+    "state": "dropped",
+    "note": "Import of the pre-v1 Kilo CLI login (~/.kilocode/cli/config.json) at CLI start. v1 ran it at each start; v2 signs in with the device method and imports v1 data through U-E3-01.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/auth/polling.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/src/device.ts KiloDevice.login (poll with backoff until the code expires).",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/auth/token.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/src/server.ts KiloServer.fromToken (server URL in a token) and account.ts KiloAccount.resolve; the token of a credential is read in packages/core/src/kilocode/gateway.ts toAccount.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/edit-prompt.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/src/autocomplete.ts buildMercuryEditPrompt and its blocks.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/edit.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/src/autocomplete.ts resolveEditTarget and extractFencedBody.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/fim.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/src/autocomplete.ts resolveFimTarget.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/loader.ts": {
+    "state": "dropped",
+    "note": "kiloCustomLoader had no caller on v1 (packages/opencode used its own kiloCustomLoaders). Activation and the anonymous key are in packages/core/src/kilocode/gateway.ts.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/mistral-fim-endpoint.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/src/autocomplete.ts requestMistralFim and clearMistralFimEndpointCache.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/plugin.ts": {
+    "state": "ported",
+    "note": "packages/core/src/kilocode/gateway.ts KiloGatewayPlugin: device method, account from the credential or the environment, provider settings.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/provider-debug.ts": {
+    "state": "dropped",
+    "note": "createKiloDebug had no caller on v1. It logged the v1 AI SDK provider for debugging.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/provider.ts": {
+    "state": "ported",
+    "note": "packages/core/src/kilocode/gateway.ts: provider transform (base URL, headers, key), packageFor and toModelInfo (dialect per model), and the model.request, http.request and http.response hooks. Kilo headers merge after other headers so that they replace the OpenCode referer and title of the upstream KiloPlugin.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/responses.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/src/requests.ts KiloRequests.transformBody and rewriteRequest.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/server/edit.ts": {
+    "state": "dropped",
+    "note": "Hono route of v1 createKiloRoutes, which had no caller on v1. The live v1 edit route is packages/opencode/src/kilocode/server/httpapi/handlers/kilo-gateway.ts (server box); v2 resolves the target through the kilocode.gateway RPC.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/server/fim.ts": {
+    "state": "dropped",
+    "note": "Hono route of v1 createKiloRoutes, which had no caller on v1. The live v1 FIM route is packages/opencode/src/kilocode/server/httpapi/handlers/kilo-gateway.ts (server box); v2 resolves the target through the kilocode.gateway RPC.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/server/routes.ts": {
+    "state": "dropped",
+    "note": "v1 createKiloRoutes (Hono) had no caller on v1. The live v1 routes are packages/opencode/src/kilocode/server/httpapi/handlers/kilo-gateway.ts (server box); v2 serves the Gateway contract through the kilocode.gateway RPC.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/tui.ts": {
+    "state": "ported",
+    "note": "Entry point of the v1 TUI exports. The v2 TUI code is packages/tui/src/kilocode/gateway.tsx.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/tui/context.ts": {
+    "state": "ported",
+    "note": "Dependency injection for the v1 TUI code. packages/tui/src/kilocode/gateway.tsx uses the TUI context and the plugin API directly.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/tui/helpers.ts": {
+    "state": "ported",
+    "note": "packages/tui/src/kilocode/gateway.tsx accountOptions (organization options), the default selection in DialogKiloAccount, and accountStatus (profile text).",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/tui/types.ts": {
+    "state": "ported",
+    "note": "Types of the v1 TUI dependency injection. packages/tui/src/kilocode/gateway.tsx uses the RPC types of packages/core/src/kilocode/gateway-rpc.ts.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/types.ts": {
+    "state": "ported",
+    "note": "The Gateway types are in packages/kilo-gateway-core/src: device.ts (device codes), profile.ts (profile, organization, balance), trpc.ts (Kilo Pass), headers.ts (request metadata). The AI SDK and loader types are not carried.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/types/jsx.d.ts": {
+    "state": "dropped",
+    "note": "JSX type shim that let the v1 package compile TUI code outside the TUI package. The v2 TUI code is in packages/tui.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/src/types/tui.d.ts": {
+    "state": "dropped",
+    "note": "Type shim for TUI runtime modules that let the v1 package compile TUI code outside the TUI package. The v2 TUI code is in packages/tui.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/test/api/embedding-models.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/test/models.test.ts (KiloModels.embeddingModels) and packages/core/test/kilocode/gateway.test.ts (models.embeddings RPC).",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/test/api/kilo-pass.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/test/enterprise-rpc.test.ts (Kilo Pass state and its failure cases).",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/test/api/trpc.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/test/enterprise-rpc.test.ts (tRPC queries, procedure errors, malformed answers, usage checks). v2 sends the team header on tRPC calls, which v1 did not.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/test/api/url.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/test/account.test.ts (KiloServer URL resolution).",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/test/provider.test.ts": {
+    "state": "dropped",
+    "note": "It tested v1 buildRequestHeaders, where request headers replace the defaults. v2 merges the Kilo headers last on purpose, so that they replace the OpenCode referer and title of the upstream KiloPlugin; packages/core/test/kilocode/gateway.test.ts checks the result.",
+    "by": "gateway-finish"
+  },
+  "module:packages/kilo-gateway/test/responses.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/test/requests-errors.test.ts (KiloRequests).",
+    "by": "gateway-finish"
+  },
   "module:packages/opencode/src/kilocode/agent/index.ts": {
     "state": "ported",
     "v2": "packages/kilo-plugin/src/agent/index.ts",
@@ -9,6 +179,16 @@
     "state": "dropped",
     "note": "Scout prompt. Scout (experimental, default off) is not ported. U-E11-05 records the decision.",
     "by": "agents-plugin"
+  },
+  "module:packages/opencode/src/kilocode/balance-refresh.ts": {
+    "state": "ported",
+    "note": "The organization event of the kilocode.gateway RPC (packages/core/src/kilocode/gateway-rpc.ts, published by organization.set in packages/core/src/kilocode/gateway.ts) tells clients to read the balance again; the balance comes from KiloProfile.balance in packages/kilo-gateway-core/src/profile.ts.",
+    "by": "gateway-finish"
+  },
+  "module:packages/opencode/src/kilocode/kilo-errors.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/src/errors.ts KiloErrors (codes, messages, retryable, x-should-retry: false for errors that need user action). The session shows the message instead of a v1 toast.",
+    "by": "gateway-finish"
   },
   "module:packages/opencode/test/kilocode/agent-global-config-dirs.test.ts": {
     "state": "native",
@@ -34,10 +214,45 @@
     "note": "Ask shell allowlist and blocklist, edit and subagent denied, unknown tools denied. MCP tools are denied by default instead of ask (follow-up, #14999 differences table).",
     "by": "agents-plugin"
   },
+  "module:packages/opencode/test/kilocode/kilo-errors.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/test/requests-errors.test.ts (KiloErrors) and packages/core/test/kilocode/gateway.test.ts (no retry for Kilo errors that need user action).",
+    "by": "gateway-finish"
+  },
+  "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/test/headers.test.ts (KiloHeaders.provider and KiloHeaders.request). The feature header falls back to cli on v2.",
+    "by": "gateway-finish"
+  },
   "patch:agent:063e034b577a": {
     "state": "dropped",
     "note": "Scout prompt import. Scout (experimental, default off) is not ported. U-E11-05 records the decision.",
     "by": "agents-plugin"
+  },
+  "patch:gateway:00d34e8d5cd7": {
+    "state": "native",
+    "note": "Variants from models.dev reasoning_options: packages/core/src/variant.ts Variant.resolve, including the OpenRouter effort shape that Gateway models use. The detailed summaries for gpt-5.6 on direct OpenAI in the same hunk are tracked by the provider box (kilocode/provider/reasoning-summary.ts).",
+    "by": "gateway-finish"
+  },
+  "patch:gateway:0468bd6d3d9e": {
+    "state": "dropped",
+    "note": "v1 config schema fields prompt, isFree and ai_sdk_provider for models. v2 does not read them from config: the Gateway catalog sets the dialect and isFree (models metadata RPC), and v2 has no prompt enum (#15108 tracks family overrides).",
+    "by": "gateway-finish"
+  },
+  "patch:gateway:6f5d1599021c": {
+    "state": "ported",
+    "note": "Dependency on the Gateway package: packages/core/package.json depends on @kilocode/gateway-core. The other lines of the hunk are dependencies of other features or upstream versions.",
+    "by": "gateway-finish"
+  },
+  "patch:gateway:a120a4aeb745": {
+    "state": "ported",
+    "note": "Dependency on the Gateway package: packages/kilo-cli/package.json and packages/core/package.json depend on @kilocode/gateway-core. The other lines of the hunk are dependencies of other features or upstream versions.",
+    "by": "gateway-finish"
+  },
+  "patch:gateway:d783ce7945b8": {
+    "state": "dropped",
+    "note": "Import for the v1 config schema fields prompt and ai_sdk_provider (see patch:gateway:0468bd6d3d9e).",
+    "by": "gateway-finish"
   },
   "patch:unattributed:agent:09375914c157": {
     "state": "dropped",

@@ -185,6 +185,101 @@ export function extractFencedBody(message: string): string {
   return body
 }
 
+// Mercury Next Edit prompt, ported from v1 `edit-prompt.ts`. The Gateway builds it so that every client sends only
+// structured editor context. The model defines the tags, so keep them verbatim:
+// https://docs.inceptionlabs.ai/capabilities/next-edit
+export interface MercuryRecentSnippet {
+  readonly filepath: string
+  readonly content: string
+}
+
+export interface MercuryEditContext {
+  readonly currentFilePath: string
+  readonly currentFileContent: string
+  readonly cursorLine: number
+  readonly cursorCharacter: number
+  readonly editableRegionStartLine: number
+  readonly editableRegionEndLine: number
+  readonly recentlyViewedSnippets: readonly MercuryRecentSnippet[]
+  readonly editDiffHistory: readonly string[]
+}
+
+export function buildMercuryEditPrompt(context: MercuryEditContext): string {
+  return [
+    recentlyViewedSnippetsBlock(context.recentlyViewedSnippets),
+    "",
+    currentFileContentBlock(
+      context.currentFilePath,
+      context.currentFileContent,
+      context.editableRegionStartLine,
+      context.editableRegionEndLine,
+      context.cursorLine,
+      context.cursorCharacter,
+    ),
+    "",
+    editDiffHistoryBlock(context.editDiffHistory),
+    "",
+    // Tells the model that this is a next-edit request, not a chat request.
+    "<|!@#IS_NEXT_EDIT!@#|>",
+  ].join("\n")
+}
+
+export function recentlyViewedSnippetsBlock(snippets: readonly MercuryRecentSnippet[]): string {
+  const inner = snippets
+    .map((snippet) =>
+      [
+        "<|recently_viewed_code_snippet|>",
+        `code_snippet_file_path: ${snippet.filepath}`,
+        snippet.content,
+        "<|/recently_viewed_code_snippet|>",
+      ].join("\n"),
+    )
+    .join("\n")
+  return ["<|recently_viewed_code_snippets|>", inner, "<|/recently_viewed_code_snippets|>"].join("\n")
+}
+
+export function currentFileContentBlock(
+  currentFilePath: string,
+  currentFileContent: string,
+  editableRegionStartLine: number,
+  editableRegionEndLine: number,
+  cursorLine: number,
+  cursorCharacter: number,
+): string {
+  const lines = insertCursor(currentFileContent.split("\n"), cursorLine, cursorCharacter)
+  const start = Math.max(0, Math.min(editableRegionStartLine, lines.length))
+  const end = Math.max(start, Math.min(editableRegionEndLine, lines.length - 1))
+  return [
+    "<|current_file_content|>",
+    `current_file_path: ${currentFilePath}`,
+    [
+      ...lines.slice(0, start),
+      "<|code_to_edit|>",
+      ...lines.slice(start, end + 1),
+      "<|/code_to_edit|>",
+      ...lines.slice(end + 1),
+    ].join("\n"),
+    "<|/current_file_content|>",
+  ].join("\n")
+}
+
+// Each unified diff from `diff.createPatch` starts with an `Index:` line and a separator, which are stripped. A blank
+// line separates the diffs so that the model reads them as distinct hunks.
+export function editDiffHistoryBlock(diffs: readonly string[]): string {
+  const trimmed = diffs.map((diff) => {
+    const lines = diff.split("\n")
+    return lines.length > 2 ? lines.slice(2).join("\n") : diff
+  })
+  return ["<|edit_diff_history|>", trimmed.join("\n\n"), "<|/edit_diff_history|>"].join("\n")
+}
+
+function insertCursor(lines: string[], cursorLine: number, cursorCharacter: number): string[] {
+  if (cursorLine < 0 || cursorLine >= lines.length) return lines
+  const line = lines[cursorLine]
+  const character = Math.min(Math.max(cursorCharacter, 0), line.length)
+  return lines.with(cursorLine, line.slice(0, character) + "<|cursor|>" + line.slice(character))
+}
+
 let preferredMistralEndpoint: string | undefined
 
 export function clearMistralFimEndpointCache() {

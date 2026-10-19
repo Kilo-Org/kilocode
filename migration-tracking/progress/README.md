@@ -8,18 +8,18 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**39 / 9841 cells done (0.4%)**, 13 dropped. `░░░░░░░░░░░░░░░░`
+**86 / 9829 cells done (0.9%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 10 | 3556 | 0.3% |
+| module | 31 | 3547 | 0.9% |
 | api | 0 | 39 | 0% |
-| patch | 22 | 3447 | 0.6% |
-| test | 7 | 2799 | 0.3% |
+| patch | 34 | 3445 | 1% |
+| test | 21 | 2798 | 0.8% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
-Landed by rung, for patch cells closed by a done-proof: 8 plugin, 0 host, 0 seam, 0 patch.
+Landed by rung, for patch cells closed by a done-proof: 19 plugin, 0 host, 0 seam, 0 patch.
 
 Ratchets: 8 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 17 shared patches by rung: 16 seam, 1 patch (`script/upstream/shared-patches.json`).
 
@@ -32,8 +32,8 @@ One point per day from the committed `progress.json` on the first-parent history
 | Date | Done | Total | % |
 |---|---:|---:|---:|
 | 2026-10-16 | 12 | 9854 | 0.1% |
-| 2026-10-19 | 12 | 9854 | 0.1% |
-| now | 39 | 9841 | 0.4% |
+| 2026-10-19 | 39 | 9841 | 0.4% |
+| now | 86 | 9829 | 0.9% |
 
 ## Features
 
@@ -73,7 +73,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | fff | 0/1 |  | 0/4 | 0/1 | 0/6 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | filesystem-containment |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | fixture |  |  |  | 0/10 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| gateway | 9/44 |  | 0/20 | 3/23 | 12/87 | 13.8% | `██░░░░░░░░░░░░░░` |  |
+| gateway | 30/35 |  | 12/18 | 17/22 | 59/75 | 78.7% | `█████████████░░░` | 11 plugin |
 | global | 0/2 |  | 0/4 | 0/1 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | goals | 0/9 |  | 0/6 | 0/6 | 0/21 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | i18n | 0/20 |  |  |  | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -303,8 +303,20 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 
 ## Dropped
 
+- `module:packages/kilo-gateway/src/auth/device-auth.ts`: v1 marked it as a legacy console flow that is not used (spinner, team prompt). The live device flow, auth/device.ts, is ported to packages/kilo-gateway-core/src/device.ts. (gateway-finish)
+- `module:packages/kilo-gateway/src/auth/legacy-migration.ts`: Import of the pre-v1 Kilo CLI login (~/.kilocode/cli/config.json) at CLI start. v1 ran it at each start; v2 signs in with the device method and imports v1 data through U-E3-01. (gateway-finish)
+- `module:packages/kilo-gateway/src/loader.ts`: kiloCustomLoader had no caller on v1 (packages/opencode used its own kiloCustomLoaders). Activation and the anonymous key are in packages/core/src/kilocode/gateway.ts. (gateway-finish)
+- `module:packages/kilo-gateway/src/provider-debug.ts`: createKiloDebug had no caller on v1. It logged the v1 AI SDK provider for debugging. (gateway-finish)
+- `module:packages/kilo-gateway/src/server/edit.ts`: Hono route of v1 createKiloRoutes, which had no caller on v1. The live v1 edit route is packages/opencode/src/kilocode/server/httpapi/handlers/kilo-gateway.ts (server box); v2 resolves the target through the kilocode.gateway RPC. (gateway-finish)
+- `module:packages/kilo-gateway/src/server/fim.ts`: Hono route of v1 createKiloRoutes, which had no caller on v1. The live v1 FIM route is packages/opencode/src/kilocode/server/httpapi/handlers/kilo-gateway.ts (server box); v2 resolves the target through the kilocode.gateway RPC. (gateway-finish)
+- `module:packages/kilo-gateway/src/server/routes.ts`: v1 createKiloRoutes (Hono) had no caller on v1. The live v1 routes are packages/opencode/src/kilocode/server/httpapi/handlers/kilo-gateway.ts (server box); v2 serves the Gateway contract through the kilocode.gateway RPC. (gateway-finish)
+- `module:packages/kilo-gateway/src/types/jsx.d.ts`: JSX type shim that let the v1 package compile TUI code outside the TUI package. The v2 TUI code is in packages/tui. (gateway-finish)
+- `module:packages/kilo-gateway/src/types/tui.d.ts`: Type shim for TUI runtime modules that let the v1 package compile TUI code outside the TUI package. The v2 TUI code is in packages/tui. (gateway-finish)
+- `module:packages/kilo-gateway/test/provider.test.ts`: It tested v1 buildRequestHeaders, where request headers replace the defaults. v2 merges the Kilo headers last on purpose, so that they replace the OpenCode referer and title of the upstream KiloPlugin; packages/core/test/kilocode/gateway.test.ts checks the result. (gateway-finish)
 - `module:packages/opencode/src/kilocode/agent/scout.txt`: Scout prompt. Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
 - `patch:agent:063e034b577a`: Scout prompt import. Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
+- `patch:gateway:0468bd6d3d9e`: v1 config schema fields prompt, isFree and ai_sdk_provider for models. v2 does not read them from config: the Gateway catalog sets the dialect and isFree (models metadata RPC), and v2 has no prompt enum (#15108 tracks family overrides). (gateway-finish)
+- `patch:gateway:d783ce7945b8`: Import for the v1 config schema fields prompt and ai_sdk_provider (see patch:gateway:0468bd6d3d9e). (gateway-finish)
 - `patch:unattributed:agent:09375914c157`: Rule for the `suggest` tool, which v2 does not have yet. The suggest unit (U-E2-16) adds the rule with the tool (#14999, differences table). (agents-plugin)
 - `patch:unattributed:agent:0faa6c731275`: Kilo `whenToUse` guidance in the LLM agent generation prompt (`kilo agent create`). v2 has no agent generation and no `generate.txt`. (agents-plugin)
 - `patch:unattributed:agent:1b8fe669272e`: Telemetry options for the LLM agent generation call (`kilo agent create`). v2 has no agent generation, so no call exists to configure. (agents-plugin)
