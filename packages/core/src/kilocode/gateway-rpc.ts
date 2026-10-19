@@ -1,5 +1,6 @@
 export * as KiloGatewayRpc from "./gateway-rpc.js"
 
+import { EmbeddingCatalog } from "@kilocode/gateway-core/embedding-catalog"
 import { Rpc } from "@opencode/schema/rpc"
 import { Schema } from "effect"
 
@@ -158,6 +159,8 @@ export const TranscriptionModel = Schema.Struct({
 
 export type TranscriptionModel = typeof TranscriptionModel.Type
 
+export type { EmbeddingCatalog } from "@kilocode/gateway-core/embedding-catalog"
+
 export const FimTarget = Schema.Struct({
   provider: Schema.Literals(["kilo", "inception", "mistral"]),
   model: Schema.String,
@@ -204,7 +207,7 @@ export const SessionMetadata = Schema.Struct({
 export type SessionMetadata = typeof SessionMetadata.Type
 
 // The TUI, VS Code, and JetBrains clients use this contract for account/profile, balance, Kilo Pass,
-// BYOK, coding plans, team modes, notifications, media models, and FIM/edit routing.
+// BYOK, coding plans, team modes, notifications, media and embedding models, and FIM/edit routing.
 export const Definition = Rpc.define({
   id: "kilocode.gateway",
   methods: {
@@ -271,6 +274,11 @@ export const Definition = Rpc.define({
     "models.transcriptions": {
       input: portable(Schema.Struct({})),
       output: portable(Schema.Array(TranscriptionModel)),
+      errors: Failure,
+    },
+    "models.embeddings": {
+      input: portable(Schema.Struct({})),
+      output: portable(EmbeddingCatalog),
       errors: Failure,
     },
     "autocomplete.fimTarget": {

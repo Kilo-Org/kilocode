@@ -2,8 +2,8 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 17,
-    "markedLines": 173,
-    "unmarkedLines": 51,
+    "markedLines": 52,
+    "unmarkedLines": 18,
     "deletedFiles": 0
   },
   "files": {
@@ -54,6 +54,14 @@
       "rung": 3,
       "seam": "Runtime dependency on `@kilocode/gateway-core` for the Gateway adapter (`packages/core/src/kilocode/gateway.ts`). The Kilo host registers the plugin through `SdkPlugins.register` since U-E0-01, but the adapter still lives in core. Goes away when the adapter moves into packages/kilo-plugin with the Gateway RPC (U-E0-02, #15173). Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments.",
       "unmarked": "JSON has no comments."
+    },
+    "packages/core/src/plugin/sdk.ts": {
+      "rung": 3,
+      "seam": "Registration phase for embedder plugins: `register(plugin, { phase: \"post\" })` and `all(phase)`. Without a phase, `all()` returns what it returned before. The Kilo agents use it: the agent ceiling must run after `ConfigAgentPlugin`, which is an internal post plugin (U-E2-12). Six lines, no Kilo value. Rungs 1 and 2 cannot supply it: the store had no phase, so every embedder plugin ran before the internal post plugins and a plugin could not act on the result of config."
+    },
+    "packages/core/src/plugin/supervisor.ts": {
+      "rung": 3,
+      "seam": "Appends the embedder plugins registered with phase `post` (`SdkPlugins.all(\"post\")`) after the internal post plugins, so they see the result of config. One line, no Kilo value. Rungs 1 and 2 cannot supply it: the supervisor builds the boot order itself and put every embedder plugin in the pre phase."
     },
     "packages/sdk/script/verify-package.ts": {
       "rung": 3,

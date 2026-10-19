@@ -158,6 +158,87 @@ describe("KiloModels", () => {
   })
 })
 
+describe("KiloModels.embeddingModels", () => {
+  test("reads the embedding catalog from the Gateway without a token", async () => {
+    using backend = fixture()
+    expect(await Effect.runPromise(KiloModels.embeddingModels({ server: backend.url }))).toEqual({
+      defaultModel: "mistralai/mistral-embed-2312",
+      models: [
+        {
+          id: "mistralai/codestral-embed-2505",
+          name: "Codestral Embed 2505",
+          dimension: 1536,
+          scoreThreshold: 0.35,
+          note: "code",
+        },
+        { id: "mistralai/mistral-embed-2312", name: "Mistral Embed 2312", dimension: 1024, scoreThreshold: 0.35 },
+      ],
+      aliases: { "codestral-embed": "mistralai/codestral-embed-2505" },
+    })
+    expect(backend.requests.at(-1)).toEqual({
+      method: "GET",
+      path: "/api/gateway/embedding-models",
+      authorization: null,
+    })
+  })
+
+  test("retries transient failures and stops after 3 attempts", async () => {
+    using backend = fixture()
+    const statuses = [503, 425]
+    const flaky = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch: () => {
+        const status = statuses.shift()
+        return status ? new Response(null, { status }) : Response.json(backend.state.embeddingModels)
+      },
+    })
+    try {
+      const catalog = await Effect.runPromise(KiloModels.embeddingModels({ server: flaky.url.origin }))
+      expect(catalog.models).toHaveLength(2)
+      expect(statuses).toEqual([])
+
+      backend.state.embeddingModelsStatus = 500
+      const failure = await Effect.runPromise(KiloModels.embeddingModels({ server: backend.url }).pipe(Effect.flip))
+      expect(failure).toEqual({ kind: "http", status: 500 })
+      expect(backend.requests.filter((request) => request.path.endsWith("/embedding-models"))).toHaveLength(3)
+    } finally {
+      flaky.stop(true)
+    }
+  })
+
+  test("does not retry client errors, refuses redirects, and rejects an invalid catalog", async () => {
+    using backend = fixture()
+    backend.state.embeddingModelsStatus = 404
+    expect(await Effect.runPromise(KiloModels.embeddingModels({ server: backend.url }).pipe(Effect.flip))).toEqual({
+      kind: "http",
+      status: 404,
+    })
+    expect(backend.requests).toHaveLength(1)
+
+    backend.state.embeddingModelsStatus = 200
+    backend.state.embeddingModels = { defaultModel: "a", models: [{ id: "a", name: "A", dimension: 0 }], aliases: {} }
+    expect(await Effect.runPromise(KiloModels.embeddingModels({ server: backend.url }).pipe(Effect.flip))).toEqual({
+      kind: "schema",
+    })
+
+    const redirect = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch: () => Response.redirect(`${backend.url}/api/gateway/embedding-models`, 302),
+    })
+    try {
+      const before = backend.requests.length
+      expect(
+        await Effect.runPromise(KiloModels.embeddingModels({ server: redirect.url.origin }).pipe(Effect.flip)),
+      ).toEqual({ kind: "network" })
+      expect(backend.requests).toHaveLength(before)
+    } finally {
+      redirect.stop(true)
+    }
+  })
+})
+
 describe("KiloDefaults", () => {
   test("reads personal, team, and anonymous defaults and strips optional kilo/ prefix", async () => {
     using backend = fixture()

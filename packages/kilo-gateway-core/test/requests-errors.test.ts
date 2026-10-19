@@ -97,6 +97,28 @@ describe("KiloRequests", () => {
       provider: { data_collection: "deny" },
     })
   })
+
+  test("keeps stored and non-JSON bodies and merges data_collection into existing provider options", () => {
+    const input = [
+      { type: "item_reference", id: "ref_1" },
+      { type: "message", id: "msg_1", role: "user", content: "hi" },
+    ]
+    const stored = JSON.stringify({ store: true, input })
+    expect(KiloRequests.transformBody("/responses?x=1", stored)).toBe(stored)
+    expect(KiloRequests.transformBody("/responses", "not json", { dataCollection: "deny" })).toBe("not json")
+    expect(JSON.parse(KiloRequests.transformBody("/responses?x=1", JSON.stringify({ input }))!)).toEqual({
+      input: [{ type: "message", role: "user", content: "hi" }],
+    })
+    expect(
+      JSON.parse(
+        KiloRequests.transformBody(
+          "https://ai-gateway.kilo.ai/api/v1/chat/completions",
+          JSON.stringify({ messages: [], provider: { order: ["a"] } }),
+          { dataCollection: "deny" },
+        )!,
+      ),
+    ).toEqual({ messages: [], provider: { order: ["a"], data_collection: "deny" } })
+  })
 })
 
 describe("KiloErrors", () => {
@@ -152,6 +174,18 @@ describe("KiloErrors", () => {
           "Credits exhausted: Your organization balance is depleted. (Balance: $0.00) Buy credits at https://app.kilo.ai/billing",
       },
     })
+  })
+
+  test("marks Kilo errors that need user action as not retryable, also on HTTP 429", async () => {
+    const rewrite = (body: unknown, status: number) => KiloErrors.rewriteHttpResponse(Response.json(body, { status }))
+    const promo = await rewrite({ code: "PROMOTION_MODEL_LIMIT_REACHED" }, 429)
+    expect(promo.status).toBe(429)
+    expect(promo.headers.get("x-should-retry")).toBe("false")
+    expect((await rewrite({ error: { message: "Too Many Requests" } }, 429)).headers.has("x-should-retry")).toBe(false)
+    // A generic Gateway 408 or 409 keeps the upstream retry decision.
+    expect((await rewrite({ error: { message: "Request Timeout" } }, 408)).headers.has("x-should-retry")).toBe(false)
+    expect((await rewrite({ error: { message: "Conflict" } }, 409)).headers.has("x-should-retry")).toBe(false)
+    expect((await rewrite({ error: "Auto top-up in progress", error_type: "top_up_in_progress" }, 503)).headers.has("x-should-retry")).toBe(false)
   })
 
   test("classifies top_up_in_progress as retryable and policy/allow-list errors as non-retryable", () => {

@@ -1,6 +1,7 @@
 export * as KiloModels from "./models.js"
 
-import { Effect, Option, Schema } from "effect"
+import { Effect, Option, Schedule, Schema } from "effect"
+import { EmbeddingCatalog } from "./embedding-catalog.js"
 import { KiloHeaders } from "./headers.js"
 import { json, request } from "./http.js"
 import { KiloServer } from "./server.js"
@@ -162,6 +163,9 @@ const TranscriptionCatalog = Schema.Struct({
 })
 const decodeTranscriptionCatalog = Schema.decodeUnknownOption(TranscriptionCatalog)
 
+export { EmbeddingCatalog } from "./embedding-catalog.js"
+const decodeEmbeddingCatalog = Schema.decodeUnknownOption(EmbeddingCatalog)
+
 export interface Failure {
   readonly kind: "unauthorized" | "network" | "schema" | "http"
   readonly status?: number
@@ -300,6 +304,34 @@ export function transcriptionModels(scope: Scope): Effect.Effect<TranscriptionMo
     }
     return parsed.value.data.map((model) => ({ id: model.id, name: model.name }))
   })
+}
+
+// v1 `fetchKiloEmbeddingModelCatalog` also retried HTTP 425, so keep that status for this endpoint only.
+const retryableEmbedding = (failure: Failure) =>
+  retryable(failure) || (failure.kind === "http" && failure.status === 425)
+
+// Ported from v1 `fetchKiloEmbeddingModelCatalog` (`api/embedding-models.ts`): the embedding model catalog for
+// codebase indexing. The route is public, so it sends no token. It refuses redirects, and it retries network
+// errors and transient statuses up to 3 attempts in total.
+export function embeddingModels(scope: Pick<Scope, "server" | "version">): Effect.Effect<EmbeddingCatalog, Failure> {
+  return Effect.gen(function* () {
+    const response = yield* request(
+      `${KiloServer.gateway(KiloServer.normalize(scope.server))}/embedding-models`,
+      { headers: KiloHeaders.provider({ version: scope.version ?? "unknown" }), redirect: "error" },
+      "Embedding models fetch failed",
+      TIMEOUT_MS,
+    ).pipe(Effect.mapError((): Failure => ({ kind: "network" })))
+    if (!response.ok) {
+      const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"
+      return yield* Effect.fail({ kind, status: response.status } satisfies Failure)
+    }
+    const raw = yield* json(response, "Embedding models fetch failed").pipe(
+      Effect.mapError((): Failure => ({ kind: "schema" })),
+    )
+    const parsed = decodeEmbeddingCatalog(raw)
+    if (Option.isNone(parsed)) return yield* Effect.fail({ kind: "schema" } satisfies Failure)
+    return parsed.value
+  }).pipe(Effect.retry({ times: 2, schedule: Schedule.exponential("200 millis"), while: retryableEmbedding }))
 }
 
 export function entries(models: readonly Model[]): Entry[] {
