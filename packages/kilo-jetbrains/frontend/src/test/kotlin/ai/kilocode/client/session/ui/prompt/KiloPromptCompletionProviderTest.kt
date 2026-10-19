@@ -64,6 +64,20 @@ class KiloPromptCompletionProviderTest : BasePlatformTestCase() {
         assertEquals(listOf("sfb"), rpc.searchQueries)
     }
 
+    fun `test mention completion preserves backend relevance order`() {
+        rpc.searchResult = FileSearchResultDto(files = listOf(
+            file("src/UserService.java"),
+            file("a/UserServiceTest.java"),
+            file("b/UserSettingsView.java"),
+        ))
+
+        complete("@UserService<caret>")
+
+        assertOrder("src/UserService.java", "a/UserServiceTest.java", "b/UserSettingsView.java")
+        myFixture.type('\n')
+        assertEquals("@src/UserService.java ", myFixture.editor.document.text)
+    }
+
     fun `test mention completion opens in middle of token`() {
         rpc.searchResult = FileSearchResultDto(files = listOf(file("src/deploy.ts")))
 
@@ -249,6 +263,17 @@ class KiloPromptCompletionProviderTest : BasePlatformTestCase() {
         val items = myFixture.lookupElementStrings.orEmpty()
         assertEquals(MentionAction.GIT_CHANGES.name, items.first())
         assertEquals(listOf(""), rpc.searchQueries)
+    }
+
+    fun `test blank mention completion keeps special items above backend ordered paths`() {
+        rpc.searchResult = FileSearchResultDto(
+            files = listOf(file("src", directory = true), file("README.md"), file("LICENSE")),
+            git = true,
+        )
+
+        complete("@<caret>")
+
+        assertOrder(MentionAction.GIT_CHANGES.name, "src", "README.md", "LICENSE")
     }
 
     fun `test prewarm serves blank mention completion from cache`() {
