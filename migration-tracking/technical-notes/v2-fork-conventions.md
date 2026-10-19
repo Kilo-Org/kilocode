@@ -1,99 +1,64 @@
 # Kilo OpenCode v2 fork conventions
 
-> [!WARNING]
-> **Partly stale; rewrite pending in U-E0-03 ([plan](../plans/kilo-v2-migration-plan.md)).** The pin `76dbaf20`, the `johnnyeric/` branch model, `upstream/v2` as the merge source (it is frozen; syncs merge `upstream/dev`, D1), `packages/www` paths and companion links are wrong for Kilo's integration branch `origin/v2`. Where this file conflicts with `plans/migration-context.md` or `AGENTS.md`, those win. The substantive rules (merge forward, triage vocabulary, Kilo-owned placement, narrow hooks, markers, compact tables) still apply. Evidence: `discovery/doc-inventory.md` §4.
+Rules for working on Kilo's v2 line: the integration branch `origin/v2` on Kilo-Org/kilocode, built on upstream OpenCode's v2 line. Kilo `origin/main` (v1) keeps its own conventions.
 
-Rules for working on the Kilo product line built on `upstream/v2`. Companion to
-`migration-tracking/plans/kilo-opencode-v2-plan-progress.md` (scope and phases) and
-`migration-tracking/technical-notes/baseline/pinned-v2-baseline.md` (refs, commands, known-red checks).
+This file holds the working rules. Facts and decisions live in one place each; this file links to them:
 
-These rules govern the v2 line only. Kilo `origin/main` keeps its own
-conventions.
+| Topic | Canonical place |
+|---|---|
+| Branches, pinned refs, decisions (D1 to D10), working model | [`../plans/migration-context.md`](../plans/migration-context.md) |
+| Units, gates, per-unit `Mechanism` column | [`../plans/kilo-v2-migration-plan.md`](../plans/kilo-v2-migration-plan.md) |
+| Placement strategy, vocabulary, shape rules | [`../plans/v2-host-strategy.md`](../plans/v2-host-strategy.md) |
+| How to place one change, done-proofs | `.kilo/skills/v2-feature-placement/SKILL.md` |
+| Branches and PRs, isolation, self-test, test policy, progress map | `.kilo/skills/v2-migration/SKILL.md` |
+| Sync procedure and shared-patch checks | `script/upstream/README.md` |
+| Known reds and validation commands | [`baseline/pinned-v2-baseline.md`](baseline/pinned-v2-baseline.md), reproduced by [`script/v2-baseline.ts`](script/v2-baseline.ts) |
 
-## Upstream snapshot tracking
+Where this file conflicts with `migration-context.md`, that file wins.
 
-- The v2 line is based on a **pinned `upstream/v2` SHA**, currently
-  `76dbaf20adbd43fd208a00ef3cda4a51e125a234`. `upstream` is
-  `https://github.com/anomalyco/opencode.git`.
-- Never treat "latest `upstream/v2`" as the base. Every slice records the SHA it
-  was validated against.
-- To adopt a newer upstream snapshot: fetch, record the new SHA and its merge
-  base in `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`, merge it into the
-  integration branch, re-run the baseline checks, and diff the failure list
-  against the previous baseline before declaring the bump clean.
-- After each upstream merge, run `bun script/check-workflows.ts --fix`. It removes
-  the upstream workflows that Kilo dropped (it also resolves their modify/delete
-  conflicts), then fails on any new upstream workflow. Review each new one and add
-  it to `active` or `removed` in `script/check-workflows.ts`. CI runs the same
-  check without `--fix`.
-- Snapshot every upstream SHA the branch has consumed. If a recorded SHA stops
-  being reachable from `upstream/v2`, upstream rewrote history: stop, assess a
-  new integration base, and do not force-push the Kilo branch to match.
-- `upstream/dev` is a sibling line, not an ancestor. `upstream/dev` and
-  `upstream/v2` diverged at `0e2dd4ad`; do not assume a dev fix reached v2.
+## Upstream base and syncs
 
-## Patched upstream dependencies
-
-- `virtua@0.49.1` is catalog-pinned for the preview packages (`kilo-vscode`,
-  `kilo-ide-ui`). `main` also carries `patches/virtua@0.49.1.patch`, which adds
-  `VirtualizerHandle.measure()` for the VS Code transcript handoff-flicker fix
-  (`fix(vscode): prevent transcript handoff flicker`). That fix is not in this v2
-  port, so the patch is intentionally not applied here. Do not bump `virtua`
-  without porting the patch and its `handle.measure()` call site together.
+- The base is not fixed (D1). Kilo merges every upstream release into `origin/v2`, so the base moves with each sync. The current base is the release commit that `pinned()` in `script/upstream/utils/upstream.ts` returns: the second parent of the newest `chore(upstream): sync v2.x.y (<sha>)` merge, computed offline. `migration-context.md` records it with its date. Do not copy the SHA into other documents.
+- The sync source is `upstream/dev`, upstream's v2 line since 2026-10-10. `upstream/v2` is frozen and never merged. `upstream` is `https://github.com/anomalyco/opencode.git`, fetch only.
+- Never treat the tip of `upstream/dev` as the base. Each sync merges one release commit (the parent of a `v2.x.y` tag), pinned by SHA, in its own PR, with a merge commit. A commit past a release is merged only when Kilo needs an unreleased fix, and the PR says why. Every PR is validated against the `origin/v2` it targets, which carries the base.
+- `bun script/upstream/merge.ts` runs a sync (it calls `bun script/check-workflows.ts --fix`, which removes the upstream workflows Kilo dropped and fails on a new one; add each new workflow to `active` or `removed` in `script/check-workflows.ts`). The procedure, conflict rules and the sync PR body are in `script/upstream/README.md`.
+- After a sync, re-run the baseline (`bun migration-tracking/technical-notes/script/v2-baseline.ts --checks`), diff the failure list against the previous capture in `baseline/pinned-v2-baseline.md`, and record the new capture there. The script reads the new pin by itself.
+- If a release commit that `origin/v2` merged stops being reachable from `upstream/dev`, upstream rewrote history: stop, assess a new integration base with the user, and never force-push `origin/v2` to match.
 
 ## Branches
 
-- **Integration branch:** `johnnyeric/kilo-opencode-v2`. Long-lived, based on
-  the pinned snapshot. One clean worktree owns it. It is not a feature
-  worktree.
-- **Slice branches:** `johnnyeric/v2-<slice>`, branched from the current
-  integration branch, one writing agent each. This slice is
-  `johnnyeric/v2-baseline`.
-- Slice work targets `johnnyeric/kilo-opencode-v2`. Never `main`, never
-  `upstream/v2`.
-- **Merge forward, never rebase the integration branch.** Merge `upstream/v2`
-  and merged slices into it; its history is shared and must stay stable. An
-  unmerged slice branch may be rebased or recreated freely.
-- Upstream's root `AGENTS.md` asks for short slash-free branch names such as
-  `session-recovery`. The Kilo fork overrides that: use the `johnnyeric/`
-  prefix so fork branches are distinguishable from upstream branches in a
-  shared checkout. Upstream's conventional-commit rule (`type(scope): summary`,
-  types `feat|fix|docs|chore|refactor|test`) does apply and matches Kilo's.
+- **Integration branch:** `origin/v2`. Long-lived; it becomes `main` at cutover. Every change reaches it through a PR, and a human merges. Never target `main` or upstream's `dev`.
+- **Work branches:** one per unit, branched from `origin/v2` (or from the open PR branch it stacks on, which it then targets). Names are short and hyphenated, at most three words, with no slashes and no prefixes (`reland-agents-md`, `kilo-rpc-scaffold`). Commits and PR titles use `type(scope): summary` with types `feat|fix|docs|chore|refactor|test`. No Changesets.
+- **Merge forward, never rebase the integration branch.** Its history is shared and must stay stable. Upstream syncs and PRs land on it as merge commits. An open PR takes a moved `origin/v2` with `git merge origin/v2`, not a rebase or a force-push, so reviewers keep their place.
+- Always qualify the remote: `origin/v2` is Kilo's integration branch, `upstream/v2` is upstream's frozen branch. Use `gh -R Kilo-Org/kilocode`; without it `gh` resolves to upstream.
 
 ## Dev-fix triage lane
 
-Fixes landing on `upstream/dev` or Kilo `origin/main` do not reach the v2 line
-automatically. Each candidate gets an explicit classification before any port:
+Fixes that land on Kilo `origin/main` do not reach the v2 line by themselves, and neither do unreleased fixes on `upstream/dev`. Each candidate gets an explicit classification before any port:
 
-- `not-applicable` — the v2 architecture removed the affected code path.
-- `already-fixed` — upstream v2 fixed it independently; record the v2 commit.
-- `port` — re-implement against v2. Cherry-pick only when the commit is
-  isolated and its provenance and dependencies are understood; re-implementing
-  is the default.
-- `defer` — real on v2 but out of the current phase; record why.
+- `not-applicable`: the v2 architecture removed the affected code path.
+- `already-fixed`: upstream v2 fixed it independently; record the upstream commit.
+- `port`: re-implement against v2. Cherry-pick only when the commit is isolated and its provenance and dependencies are understood; re-implementing is the default.
+- `defer`: real on v2 but outside the current gate; record why and the unit that owns it.
 
-Track these in the parity ledger's dev-line lane, not in commit messages.
+Record the result where the work is tracked, not in commit messages. v1 changes go through the v1 delta sweep (plan unit U-L2-01) and the progress map (`migration-tracking/progress/`, generated; the `v2-migration` skill says how a cell closes: a done-proof for `port`, a `native` disposition for `already-fixed`, `dropped` with evidence for `not-applicable`, an open cell with the owning unit for `defer`). An unreleased upstream fix that Kilo needs goes into a sync PR past the release commit (D1).
 
 ## Kilo-owned paths
 
-Prefer new Kilo-owned files over edits to upstream files. Conflicts on every
-upstream merge are the cost of shared-file edits.
+Prefer new Kilo-owned files over edits to upstream files: every shared-file edit is a potential conflict at every sync. The one list of Kilo-owned paths is `owned` in `script/upstream/utils/owned.ts`; the merge tooling keeps Kilo's version of them, and the marker check and the shared-patch counter skip them. The main ones:
 
 | Path | Purpose |
 |---|---|
-| `migration-tracking/technical-notes/` | Fork documentation and tooling that is not part of any package: this file, `baseline/`, `script/`. |
-| `packages/<pkg>/src/kilocode/` | Kilo modules inside an upstream package, following Kilo main's existing convention. |
-| `packages/<pkg>/test/kilocode/` | Their tests. |
-| `plans/` | Shared with upstream, but Kilo plan documents are new files only — never edit an upstream plan. |
+| `packages/kilo-*/` | Kilo packages: the host `kilo-cli`, the plugins `kilo-plugin`, logic packages `kilo-*-core` |
+| `packages/<pkg>/src/kilocode/`, `packages/<pkg>/test/kilocode/` | Kilo modules and tests inside an upstream package, when they cannot live in a Kilo package yet |
+| `migration-tracking/` | Migration docs and tooling outside any package: plans, discovery, this file, `baseline/`, `script/` |
+| `.kilo/`, `script/upstream/`, `script/kilocode/`, `script/check-*.ts`, `script/dev-isolated.ts`, `.github/workflows/kilo-v2.yml` | Kilo agent config and skills, sync and CI tooling |
 
-Do not fork or rename an upstream package to add Kilo behavior. Do not
-reconstruct the legacy `packages/opencode` tree; it does not exist on v2.
+A path that also exists in the pinned upstream release is shared even when it matches a pattern. Do not fork or rename an upstream package to add Kilo behavior. Do not reconstruct the v1 `packages/opencode` tree; it does not exist on v2.
 
 ### Markdown tables in Kilo-owned files
 
-Kilo main's `AGENTS.md` forbids padded markdown tables, and that rule carries to
-the v2 line. Use the compact form: a minimal separator row and exactly
-single-space-padded content cells.
+Use the compact form: a minimal separator row and exactly single-space-padded content cells.
 
 ```
 | Command | What it runs |
@@ -101,8 +66,7 @@ single-space-padded content cells.
 | `bun typecheck` | Every package, through turbo. |
 ```
 
-Not the padded form, which makes a one-cell edit rewrite every row and blows up
-the diff:
+Not the padded form, which makes a one-cell edit rewrite every row:
 
 ```
 | Command                       | What it runs                   |
@@ -110,20 +74,11 @@ the diff:
 | `bun typecheck`               | Every package, through turbo.  |
 ```
 
-Unlike Kilo main, this tree does **not** exclude markdown from prettier — its
-`.prettierignore` lists four generated paths and nothing else — so
-`prettier --write` over a Kilo-owned document will re-pad every table. Do not run
-it over `kilocode/` or Kilo plan documents. Nothing enforces this yet: no v2
-workflow runs prettier, and `script/check-md-table-padding.ts` is a Kilo main
-script with no v2 equivalent, so the rule is currently upheld by review.
+Unlike Kilo `main`, this tree does not exclude markdown from prettier: `.prettierignore` lists five generated or vendored paths and nothing else, so `prettier --write` over a Kilo-owned document re-pads every table. Do not run it over Kilo documents. Nothing enforces the rule yet: no v2 workflow runs prettier, and v1's `script/check-md-table-padding.ts` has no v2 equivalent, so review upholds it. Leave upstream documents formatted the way upstream formats them.
 
-This applies to Kilo-owned markdown only. Leave upstream documents formatted the
-way upstream formats them.
+### Root `AGENTS.md`
 
-The only shared upstream file this slice edits is the root `AGENTS.md`, which
-gains a marked two-line pointer to this document and to the baseline report.
-That is the intended shape of a shared hook: without it, agents in this
-checkout follow upstream's conventions and never find these rules.
+The root `AGENTS.md` is upstream's file. Kilo adds one marked block at its top (`kilocode_change start - agents-md` ... `kilocode_change end - agents-md`) with the rules that override upstream's on this line (integration branch, moving base, branch names, `bun dev` isolation instead of `dev:live`, placement, checks) and pointers to this file, the context brief and the skills. The upstream text below the block stays untouched. The block is a rung 4 entry in `script/upstream/shared-patches.json`. Keep it short: a new rule goes into the canonical document, and the block links to it.
 
 ## Plugin-first extension order
 
@@ -150,54 +105,34 @@ Measured 2026-10-13 (plan delta, #15021). Plugin first reduces shared patches bu
 - **Identity paths:** 11 static `Global.Path` references in 7 files bypass `Global.layerWith`.
 - **Branding:** about 4,100 `"opencode"` literals in about 790 files. Rung 5 (rename script), never a plugin.
 
-## Narrow shared hooks
+## Narrow shared seams
 
 When a Kilo capability genuinely needs upstream code to call it:
 
-- Add the smallest possible registration or dispatch point, and put the logic in
-  a Kilo-owned module the hook imports.
-- Do not refactor, reformat, or restructure surrounding upstream code in the
-  same change. A hook diff should be readable as a few added lines.
-- Respect v2's dependency direction — Schema to Core/Protocol to Server, then
-  generated clients. Client runtime code may depend on Schema and Protocol,
-  never on Core or Server.
-- Never hand-edit generated output (`packages/client/src/generated*`,
-  `packages/protocol/openapi.json`, `packages/www/openapi.json`). Regenerate
-  with `bun run generate` from `packages/client` and report generated diffs
-  separately from handwritten ones.
+- Add the smallest possible registration or dispatch point, and put the logic in a Kilo-owned module the seam imports or a plugin configures.
+- Do not refactor, reformat or restructure surrounding upstream code in the same change. A seam diff reads as a few added lines.
+- Respect v2's dependency direction: Schema to Core and Protocol, then Server; generated clients after. Client runtime code may depend on Schema and Protocol, never on Core or Server.
+- Never hand-edit generated output: `packages/client/src/promise/generated`, `packages/client/src/effect/generated`, `packages/client/src/effect/api`, `packages/protocol/openapi.json`, `services/www/openapi.json`. Regenerate with `bun run generate` in the owning package (`packages/client` after a Protocol or Server `HttpApi` change; `packages/protocol` and `services/www` for their OpenAPI documents; each has `check:generated`). Report generated diffs separately from handwritten ones.
 
 ## `kilocode_change` markers
 
-- Mark every Kilo edit inside a shared upstream file with a `kilocode_change`
-  comment saying what changed and why, so upstream merges show the intent.
-  Markers apply to plugin-first rungs 3 and 4 only (see Plugin-first extension
-  order above).
-- Do not mark Kilo-owned files. A file under `kilocode/` or `src/kilocode/` is
-  Kilo by construction; markers there are noise. This also applies to Kilo-owned
-  packages such as `packages/kilo-ide-ui`, including source relocated from a
-  shared v1 package. Record the destination package/file in the v1-to-v2 mapping
-  table and remove inherited markers, retaining useful explanatory comments.
-- Preserve existing markers when resolving an upstream merge. Resolve in favour
-  of the current v2 architecture first, then reapply the Kilo invariant through
-  its owned seam.
-- Removing a marker from a shared upstream file requires explaining whether its
-  behavior was removed or relocated. Removing redundant markers from Kilo-owned
-  files does not remove the behavior; record that distinction in the report.
+- Mark every Kilo edit inside a shared upstream file with a `kilocode_change` comment saying what changed and why, so upstream merges show the intent. Markers apply to plugin-first rungs 3 and 4 only. Forms: inline `// kilocode_change(<feature>) - <reason>` (add `seam` for rung 3), a block `kilocode_change start - <reason>` ... `kilocode_change end`, or `# kilocode_change` and `<!-- kilocode_change -->` in YAML, shell and Markdown. The counters recognize a block only when `start` or `end` follows `kilocode_change` directly (`script/upstream/utils/shared.ts`, `utils/markers.ts`), so a block names its feature after `start -`, not as `kilocode_change(<feature>) start`.
+- Every shared file Kilo changes has an entry in `script/upstream/shared-patches.json` with its rung and the missing seam; a PR that adds a patch raises `limits` in the same diff, and one that removes a patch lowers them. A file that cannot carry markers (JSON) states an `unmarked` reason. Check with `bun script/check-opencode-annotations.ts --worktree` and `bun script/check-shared-patches.ts --worktree` before a commit; CI runs both without `--worktree` (`kilo-v2.yml`, job `shared upstream patches`).
+- Do not mark Kilo-owned files. A file under a Kilo-owned path is Kilo by construction; markers there are noise. When source moves from a shared v1 file into a Kilo package (for example `packages/kilo-plugin`), drop the inherited markers, keep useful explanatory comments, and close the progress-map cell it replaces.
+- Preserve existing markers when resolving an upstream merge. Resolve in favour of the current v2 architecture first, then reapply the Kilo invariant through its owned seam.
+- Removing a marker from a shared upstream file requires explaining whether its behavior was removed or relocated. Removing redundant markers from Kilo-owned files does not remove the behavior; record that distinction in the PR.
+
+## Packages that are not on v2 yet
+
+Rules that apply once a package lands, kept here so the landing PR finds them:
+
+- **`kilo-vscode` (G2): `virtua` patch.** v1 `main` pins `virtua@0.49.1` and patches it (`patches/virtua@0.49.1.patch`, adds `VirtualizerHandle.measure()`), and `kilo-vscode/webview-ui/src/components/chat/MessageList.tsx` calls `handle.measure()` for the transcript handoff-flicker fix. v2 has neither the dependency nor the patch. Port the patch with its call site, or neither, and do not bump `virtua` without both.
 
 ## Validation
 
-The authoritative commands come from this v2 tree, not from Kilo main, and are
-listed in `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`. In short: `bun install`,
-`bun typecheck`, `GITHUB_ACTIONS=false bun turbo test`, `bun run check:generated`
-in `packages/client` and `packages/www`, and the `packages/cli` build plus
-service smoke.
+The commands come from this v2 tree and its CI (`.github/workflows/check.yml`, `test.yml`, `kilo-v2.yml`), not from Kilo `main`. `bun migration-tracking/technical-notes/script/v2-baseline.ts --checks` runs them in CI order, and `baseline/pinned-v2-baseline.md` lists them with the last result.
 
-- Tests cannot run from the repo root; use `bun turbo test` or a package
-  directory.
-- Use `bun typecheck`, never `tsc` directly.
-- Pristine upstream v2 is already red at the pinned SHA. Before attributing a
-  failure to a slice, check it against the failure inventory in
-  `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`, or re-run
-  `bun migration-tracking/technical-notes/script/v2-baseline.ts --checks` on a clean checkout of the pin.
-- Report handwritten and generated diffs separately, and never report a check as
-  passing without having run it.
+- `bun run check` from the root (lint and typecheck; the pre-push hook runs it). `bun typecheck` and `bun test` from package directories. Never run `tsc`, and never run tests from the root (`bunfig.toml` test root `do-not-run-tests-from-root`); `bun turbo test` runs each package's own tests.
+- Isolate tests from the real home as the `v2-migration` skill describes.
+- Pristine upstream is already red at each base. Before attributing a failure to a change, compare it with the current capture in `baseline/pinned-v2-baseline.md`, and with `origin/v2` before the change when `origin/v2` has moved past that capture.
+- Report handwritten and generated diffs separately, and never report a check as passing without having run it.

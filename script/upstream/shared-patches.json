@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 30,
-    "markedLines": 305,
+    "files": 31,
+    "markedLines": 316,
     "unmarkedLines": 51,
     "deletedFiles": 0
   },
@@ -23,6 +23,10 @@
       "rung": 3,
       "seam": "Ignore the v1 line's local dev profile (`.kilo-dev/`, left behind when one checkout switches between `main` and `v2`), `telemetry-id`, generated dependency installs, merge reports, and JetBrains state under `.kilo/`, and `packages/app/.artifacts/`. No seam: root gitignore rules cannot live in a Kilo-owned file. The v2 `bun dev` profile moved into the Kilo host package (packages/kilo-cli/.gitignore, U-E0-01); the remaining patterns are not host entries and stay. Reconciled by 3-way merge during upstream syncs.",
       "unmarked": "Eleven ignore patterns. A gitignore pattern line cannot carry an inline comment, so each pattern is preceded by a `# kilocode_change:` comment line."
+    },
+    "AGENTS.md": {
+      "rung": 4,
+      "seam": "One marked block at the top with the Kilo rules for the v2 line (integration branch `origin/v2`, moving base, branch names, `bun dev` isolation instead of `dev:live`, plugin-first placement, checks), pointing at migration-context.md, the plan, the fork conventions and the skills. It overrides the upstream rules it contradicts (default branch `dev`, `dev:live` against the installed service). Instructions only, no behavior. No seam: `AGENTS.md` is the only root instruction file that every agent used on this repository reads (v2 core loads only `AGENTS.md`, `core/src/config/plugin/instruction.ts`). A Kilo `instructions` entry in a root `kilo.json` would reach Kilo sessions only, and the contradicting upstream rules would still be in this file, so the override sits next to them. The upstream text below the block stays untouched, so syncs conflict only when upstream edits the first lines."
     },
     "README.md": {
       "rung": 4,
