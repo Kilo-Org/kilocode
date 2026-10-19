@@ -189,3 +189,6 @@ jobs:
         working-directory: packages/kilo-cli
         timeout-minutes: 2
         run: bun run startup
+      - name: Test the sharded test runner
+        working-directory: script/kilocode/test
+        run: bun test

@@ -11,6 +11,9 @@
   "globalPassThroughEnv": ["CI", "OPENCODE_DISABLE_SHARE"],
   "tasks": {
     "typecheck": {},
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
     "@opencode/cli#typecheck": {
       "dependsOn": ["@opencode/core#typecheck"]
     },
@@ -35,7 +38,7 @@
       "outputs": ["dist/**"]
     },
     "@opencode/ai#test": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^transit"],
       "outputs": []
     },
     "@opencode/codemode#test": {
@@ -43,7 +46,7 @@
       "outputs": []
     },
     "@opencode/core#test": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^transit"],
       "outputs": []
     },
     "@opencode/function#test": {
@@ -57,19 +60,19 @@
       "outputs": []
     },
     "@opencode/server#test": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^transit"],
       "outputs": []
     },
     "@opencode/cli#test": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^transit"],
       "outputs": []
     },
     "@opencode/tui#test": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^transit"],
       "outputs": []
     },
     "@opencode/latex#test": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^transit"],
       "outputs": []
     },
     "@opencode/app#test": {
@@ -85,6 +88,27 @@
       "outputs": []
     },
     "@kilocode/gateway-core#test": {
+      "outputs": []
+    },
+    "@opencode/core#test:ci": {
+      "dependsOn": ["^build", "^transit"],
+      "env": ["KILO_TEST_SHARD"],
+      "passThroughEnv": ["KILO_TEST_CONCURRENCY", "KILO_TEST_FILE_TIMEOUT"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/script/kilocode/test/**"],
+      "outputs": []
+    },
+    "@opencode/tui#test:ci": {
+      "dependsOn": ["^build", "^transit"],
+      "env": ["KILO_TEST_SHARD"],
+      "passThroughEnv": ["KILO_TEST_CONCURRENCY", "KILO_TEST_FILE_TIMEOUT"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/script/kilocode/test/**"],
+      "outputs": []
+    },
+    "@opencode/cli#test:ci": {
+      "dependsOn": ["^build", "^transit"],
+      "env": ["KILO_TEST_SHARD"],
+      "passThroughEnv": ["KILO_TEST_CONCURRENCY", "KILO_TEST_FILE_TIMEOUT"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/script/kilocode/test/**"],
       "outputs": []
     },
     "@opencode/sdk#verify:package": {

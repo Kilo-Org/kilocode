@@ -21,7 +21,7 @@ Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only
 
 Landed by rung, for patch cells closed by a done-proof: 19 plugin, 0 host, 0 seam, 0 patch.
 
-Ratchets: 8 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 17 shared patches by rung: 16 seam, 1 patch (`script/upstream/shared-patches.json`).
+Ratchets: 8 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 19 shared patches by rung: 18 seam, 1 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -32,7 +32,7 @@ One point per day from the committed `progress.json` on the first-parent history
 | Date | Done | Total | % |
 |---|---:|---:|---:|
 | 2026-10-16 | 12 | 9854 | 0.1% |
-| 2026-10-19 | 39 | 9841 | 0.4% |
+| 2026-10-19 | 86 | 9829 | 0.9% |
 | now | 86 | 9829 | 0.9% |
 
 ## Features
@@ -338,7 +338,8 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 - test: a module or patch in a test file, same rules.
 - landed: the rung of the done-proof. `kilo_port` is rung 2 (host) in `packages/kilo-cli` and rung 1 (plugin) in other Kilo-owned files; a marker has the rung of its file in `script/upstream/shared-patches.json` (3 seam, 4 patch). A cell with more than one proof counts once, at the highest rung.
 - Ratchets: core-internal imports count the distinct modules in `packages/core/src` outside `kilocode/` that non-test files in `packages/kilo-*` and `packages/*/src/kilocode` import, as `@opencode/core/*` or by relative path. A non-test file of a logic package (`packages/kilo-*-core`) that imports anything from `@opencode/*` fails the run. Shared patches by rung count the entries in `shared-patches.json`.
-- A disposition in `dispositions.json` overrides: `ported`, `native` and `facade` count as done, `dropped` leaves the denominator and is listed above. Every disposition needs a note and an author.
+- A disposition in `dispositions.json` overrides: `ported`, `native` and `facade` count as done, `dropped` leaves the denominator and is listed above. Every disposition needs a note and an author. A module ported under another name needs `ported` with the v2 path.
+- A proof or a disposition says that v2 has the behavior. Close a cell only after you compare the v1 code with v2; a cell with a known gap stays open. `dropped` is for behavior that is not carried (a shim, dead v1 code, or a decision the plan records), not for behavior that a later unit ports. Rules: `.kilo/skills/v2-migration/SKILL.md`, section "Progress map".
 - Hunks whose only change is a brand rename, and hunks that contain only markers, are not cells.
 
 ## Terms
