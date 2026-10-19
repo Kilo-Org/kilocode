@@ -362,11 +362,19 @@ Added by this plan (canonical here):
 
 | ID | Question | Trigger | Owners |
 |---|---|---|---|
-| Q-HOST-01 | Host package shape on the base: a Kilo entry package that composes upstream packages through public seams (donor shape), or a thin wrapper over `@opencode/cli`. The donor chose its own package because upstream `packages/cli` exported no wrap surface; re-check at the base | U-E0-01 | Core owner |
+| Q-HOST-01 (answered) | Host package shape on the base: a Kilo entry package that composes upstream packages through public seams (donor shape), or a thin wrapper over `@opencode/cli`. The donor chose its own package because upstream `packages/cli` exported no wrap surface; re-check at the base | U-E0-01 | Core owner |
 | Q-TEL-01 | Telemetry consent on v2: v1 ships PostHog on by default; the donor chose an opt-in, allowlisted OTLP exporter as a privacy decision (`technical-notes/baseline/telemetry-v2-overlap.md`). Which default ships at G1? | U-E2-21 | Product owner, privacy |
 | D-1 | Package names on `origin/v2`. Proposal: keep upstream's internal `@opencode/*` names; rename only published packages, the binary and user-visible strings (v1 renamed on every merge, a large share of its conflicts). The sync tooling keeps the package-name transform off until this is decided | Before the first rename transform is turned on (U-E1-01, rebranding) | Core owner, release owner |
 | D-3 | Owners of U-L1-01, U-L3-01 and U-E0-01 | Now | User |
 | D-4 | Identity and branding split. Proposal: the first identity PR is store isolation and the `kilo2` app directory; binary, user agent, theme and logo go with the rebranding work (Fabio) | U-E1-01 | User, rebranding owner |
+
+**Answered — Q-HOST-01 (host package shape).** Answer: A, a Kilo host entry package that composes upstream packages through their public seams. It runs upstream's CLI and server rather than reimplementing them, and registers Kilo plugins through `SdkPlugins.register`.
+
+- It is the only option that lets Kilo own its identity, config, paths and plugins today. A thin wrapper over upstream's CLI cannot supply those without patching upstream code.
+- It keeps our options open: because the host owns the wiring, a component can be replaced one at a time later. Wrapping would lock us to upstream's composition and force a top-level fork exactly when we would want to stop forking.
+- It is the direction the `kilo-v2` iteration already took: its own entry package, composing upstream packages the same way.
+- Revisit if upstream's entry points gain an options/override seam (that would make the wrapper small and capable), or if the L3 import metrics start rising toward a fork.
+- Keep the host thin: U-E0-01 starts an isolated server through public seams, it does not reimplement the CLI.
 
 D-1, D-3 and D-4 keep the IDs from the 2026-10-13 plan delta, which the sync tooling cites. Its D-2 (sync cadence) is decided: D1.
 
