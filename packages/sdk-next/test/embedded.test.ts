@@ -20,6 +20,9 @@ const cleanup = async (dir: string, retries = 30): Promise<void> => {
 }
 // kilocode_change end
 
+// kilocode_change start - the first embedded host boot pays the full global init
+// (credentials import, migrations, model catalog) which can exceed the 30s CI default
+// on a cold Windows runner, so allow a generous budget for this test only.
 test("embedded client uses the real router and handlers", async () => {
   const directory = await mkdtemp(join(tmpdir(), "opencode-embedded-"))
   const database = Flag.KILO_DB
@@ -116,7 +119,8 @@ test("embedded client uses the real router and handlers", async () => {
     Flag.KILO_DB = database
     await cleanup(directory) // kilocode_change
   }
-})
+}, 120_000)
+// kilocode_change end
 
 test("Location-owned runner events reach the ready global client", async () => {
   const directory = await mkdtemp(join(tmpdir(), "opencode-embedded-events-"))

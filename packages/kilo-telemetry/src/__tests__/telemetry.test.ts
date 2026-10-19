@@ -182,7 +182,11 @@ shell("uses conda's effective client ID in events", async () => {
     expect(await Conda.clientToken()).toBeUndefined()
   } finally {
     capture.mockRestore()
-    await Client.shutdown()
+    // telemetry-shutdown.test.ts mocks posthog-node process-wide with a shutdown that always rejects.
+    // When that file runs first (file order differs per platform), only this cleanup sees the mock.
+    await Client.shutdown().catch((err) => {
+      if (err !== "Timeout while shutting down PostHog. Some events may not have been sent.") throw err
+    })
     if (home === undefined) delete process.env.HOME
     else process.env.HOME = home
     if (exe === undefined) delete process.env.CONDA_EXE
