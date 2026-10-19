@@ -2,6 +2,8 @@
 // in the shape of the deployed Gateway and records each request.
 export function fixture() {
   const state = {
+    // Milliseconds each response waits before it is sent, to simulate network latency.
+    delay: 0,
     createStatus: 200,
     expiresIn: 60,
     verificationUrl: undefined as string | undefined,
@@ -261,7 +263,7 @@ export function fixture() {
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
-    fetch(request) {
+    async fetch(request) {
       const path = new URL(request.url).pathname
       const organizationID = request.headers.get("x-kilocode-organizationid")
       requests.push({
@@ -270,6 +272,7 @@ export function fixture() {
         authorization: request.headers.get("authorization"),
         ...(organizationID ? { organizationID } : {}),
       })
+      if (state.delay > 0) await Bun.sleep(state.delay)
       if (path === "/api/device-auth/codes") {
         return Response.json(
           {

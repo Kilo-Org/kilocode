@@ -10,6 +10,7 @@
   },
   "scripts": {
     "dev": "bun run src/index.ts",
+    "startup": "bun run script/startup.ts",
     "test": "bun test --timeout 30000",
     "typecheck": "tsgo --noEmit"
   },
