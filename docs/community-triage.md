@@ -51,7 +51,7 @@ Issues with no activity for 60 days are closed too. A close comment explains the
 
 ### Paused: opencode v2 migration
 
-The team is migrating to opencode v2, and community reviews are paused until further notice. A community PR must not be closed because nobody had time to answer it. So `KILO_AUTO_CLOSE_ENABLED` is set to `false`, and nothing is closed.
+The team is migrating to opencode v2, and community reviews are paused until further notice. A community PR must not be closed because nobody had time to answer it. So `KILO_AUTO_CLOSE_ENABLED` must be kept set to `false` while the pause lasts. If it is unset or `true`, `kilo-auto-close.yml` closes PRs, and the new `awaiting-contributor` rule closes them after 14 days with no warning.
 
 - Labels, priorities and the queue keep working.
 - To resume, set the variable to `true` (`gh variable set KILO_AUTO_CLOSE_ENABLED --body true`) and remove this note.
@@ -205,7 +205,7 @@ When a PR has been `awaiting-contributor` for 14 days with no activity:
 | Has `keep-open` | Stays open and shows in the digest under "Adopt". Add it to the standup doc and pick an owner |
 | Anything else | Closed by `kilo-auto-close.yml` with a comment, when closing is on. See [Closing](#closing) |
 
-The sweep itself closes nothing and posts no warning comment. The digest shows the days waiting, out of 14, so a maintainer can still reply in time.
+The sweep itself closes nothing and posts no warning comment. The digest shows the days waiting, so a maintainer can still reply before day 14.
 
 ## The digest
 
@@ -218,7 +218,7 @@ Each sweep writes a queue to the job summary, and to [Slack](#slack). It lists t
 | Needs triage | No maintainer has reacted yet |
 | Contributor replied, needs review | The contributor answered after the last maintainer reaction |
 | Approved, ready to merge | The last maintainer reaction is an approval |
-| Waiting for contributor | Days waiting. Longest wait first. With closing on, it shows the days out of 14 |
+| Waiting for contributor | Days waiting. Longest wait first |
 
 A PR can be in "Quick wins" and in its state section. The digest marks first-time contributors and PRs with failing checks next to the PR. Adopt and Quick wins follow the `keep-open` and `quick-win` rules. The other sections use the same state rules as the status labels. `needs-triage` covers both "Needs triage" and "Contributor replied, needs review", because a maintainer should look in both cases.
 
