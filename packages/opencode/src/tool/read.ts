@@ -19,6 +19,7 @@ import * as KiloConfiguredReference from "@/kilocode/reference"
 import { KiloReadObject } from "@/kilocode/tool/read-object"
 import * as Extract from "../kilocode/tool/read-extract"
 import * as TextStream from "../kilocode/text-stream"
+import { FilePermission } from "../kilocode/permission/file-pattern"
 // kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
@@ -228,7 +229,7 @@ export const ReadTool = Tool.define<
         ),
       )
       if (!info) {
-        return yield* miss(requested, instance.worktree, ctx)
+        return yield* miss(requested, FilePermission.root(instance), ctx) // kilocode_change
       }
       // kilocode_change end
 
@@ -245,7 +246,7 @@ export const ReadTool = Tool.define<
         yield* assertExternalDirectoryEffect(ctx, target, { bypass: referenced, kind: "directory" })
         yield* ctx.ask({
           permission: "read",
-          patterns: [...new Set([requested, target].map((item) => path.relative(instance.worktree, item)))],
+          patterns: [...new Set([requested, target].map((item) => path.relative(FilePermission.root(instance), item)))], // kilocode_change
           always: ["*"],
           metadata: {},
         })
@@ -306,7 +307,11 @@ export const ReadTool = Tool.define<
       yield* assertExternalDirectoryEffect(ctx, file.target, { bypass: referenced, kind: "file" })
       yield* ctx.ask({
         permission: "read",
-        patterns: [...new Set([requested, file.target].map((item) => path.relative(instance.worktree, item)))],
+        // kilocode_change start
+        patterns: [
+          ...new Set([requested, file.target].map((item) => path.relative(FilePermission.root(instance), item))),
+        ],
+        // kilocode_change end
         always: ["*"],
         metadata: {},
       })
