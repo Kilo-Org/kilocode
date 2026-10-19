@@ -192,6 +192,37 @@ In the PR and the final response, list:
 
 - The commands you ran, and the self-test scenarios with pass, fail or blocked.
 - Each shared upstream file you changed, with its option (1 to 5 above) and the missing seam.
-- The progress map delta: the feature box before and after (done/total per kind, landed by rung), the dispositions you added by state with their reasons, and each cell that stays open with its reason.
+- The progress map delta, as the PR section below.
 - The CI state. For each red check, the cause: your change (fix it), a flake (one rerun) or a known baseline failure.
 - The limits, for example a flow that needs credentials.
+
+### PR section `## Progress map`
+
+Every PR that changes the map (a proof, a disposition, or a file that closes a cell by name) has this section. It tells the reviewer why each cell changed, so that the reviewer does not have to read `dispositions.json` or the CI comment. Keep it short: one line per cell or per group of cells with the same reason. The `note` in `dispositions.json` is the long form.
+
+```
+## Progress map
+
+`<feature>`: 12/87 to 59/75 (12 dropped). module 9/44 to 30/35, patch 0/20 to 12/18, test 3/23 to 17/22; landed 11 plugin.
+
+Done, and why:
+- kilo_port (11): v1 kilo.ts import, settings and SDK -> core/src/kilocode/gateway.ts provider transform and packageFor; ...
+- ported (30): renamed modules and tests, for example api/url.ts -> kilo-gateway-core/src/server.ts; ...
+- by file name (5): ported tests autocomplete, edit, fim, ...
+- native (1): 00d34e8d5cd7, upstream Variant.resolve.
+
+Dropped, and why it is not needed:
+- server/routes.ts, server/fim.ts, server/edit.ts: Hono routes with no caller on v1; the live routes are tracked in the server box.
+- types/jsx.d.ts, types/tui.d.ts: type shims for TUI code outside the TUI package.
+
+Still open:
+- cloud-sessions.ts and its test: cloud session import, U-E3-04.
+- 5 transform.ts cells: default request settings for Gateway models, needs its own unit.
+
+Corrections: <classifications from the task, plan or a peer that you changed, with the evidence>.
+```
+
+- "Done" names the v2 code that has the behavior. Name the gap you ported in the same PR, if any.
+- "Dropped" says what the code did on v1 and why v2 does not need it, with the evidence (no caller, shim, recorded decision). Name a behavior change that a drop causes for users.
+- "Still open" names what is missing and the unit or feature that owns it.
+- Leave out a block that has no entries. Do not repeat the cell lists of the CI comment.

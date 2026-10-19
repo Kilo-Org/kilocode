@@ -123,7 +123,7 @@ Add a section `## Placement` to the PR body:
 | compaction toolOutput setting | 3 | no editor field, no hook reaches the transcript | core/src/session/compaction.ts, 3 lines, shared-patches.json |
 ```
 
-Plus: shared files touched with rung, core-internal imports added, mirrored files, and the progress map delta (the feature box before and after, dispositions added with reasons, open cells with reasons). Self-test per `v2-migration` skill; the user should not need to test for you.
+Plus: shared files touched with rung, core-internal imports added and mirrored files. When the PR changes the map, add the section `## Progress map` from the `v2-migration` skill (section "Evidence"): the box before and after, and one short line per cell or group on why it is done, why it is dropped, or why it stays open. Self-test per `v2-migration` skill; the user should not need to test for you.
 
 ## Decision in one table
 
