@@ -90,6 +90,13 @@
     "@kilocode/gateway-core#test": {
       "outputs": []
     },
+    "test:ci": {
+      "dependsOn": ["^build", "^transit"],
+      "env": ["KILO_TEST_SHARD"],
+      "passThroughEnv": ["KILO_TEST_CONCURRENCY", "KILO_TEST_FILE_TIMEOUT"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/script/kilocode/test/**"],
+      "outputs": []
+    },
     "@opencode/sdk#verify:package": {
       "outputs": []
     }
