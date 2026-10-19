@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { mkdtemp, mkdir, rename, rm, writeFile } from "fs/promises"
+import { mkdtemp, mkdir, rename, rm, symlink, writeFile } from "fs/promises"
 import { tmpdir } from "os"
 import path from "path"
 import { createHash } from "crypto"
@@ -701,5 +701,42 @@ describe("FileWatcher subscription", () => {
 
     await watcher.shutdown()
     expect(backend.unsubscribed).toBe(1)
+  })
+
+  test("skips dangling symlinks and files that exceed MAX_FILE_SIZE_BYTES without failing the batch", async () => {
+    const backend = createFakeBackend()
+    const { root, watcher, cache, drain } = await makeWatcher(backend.subscribe)
+    const broken = path.join(root, "broken.md")
+    const large = path.join(root, "large.md")
+    const overlay = new WorktreeOverlay(root, root, new Map([["large.md", "base-hash"]]))
+    watcher.setOverlay(overlay)
+
+    try {
+      await watcher.initialize()
+      await symlink(path.join(root, "missing-target.md"), broken)
+      await writeFile(large, "initial content ".repeat(20))
+      cache.updateHash(broken, "stale-broken")
+      cache.updateHash(large, "stale-large")
+
+      await writeFile(large, "x".repeat(1024 * 1024 + 16))
+      let summary: { batchError?: Error } | undefined
+      watcher.onDidFinishBatchProcessing.on((value) => {
+        summary = value
+      })
+
+      backend.emit([
+        { path: broken, type: "create" },
+        { path: large, type: "update" },
+      ])
+      await drain()
+
+      expect(summary?.batchError).toBeUndefined()
+      expect(cache.getHash(broken)).toBeUndefined()
+      expect(cache.getHash(large)).toBeUndefined()
+      expect(overlay.blocked.has("large.md")).toBe(false)
+    } finally {
+      await watcher.shutdown()
+      await rm(root, { recursive: true, force: true })
+    }
   })
 })

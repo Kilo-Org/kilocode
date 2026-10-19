@@ -121,7 +121,12 @@ export class CodeIndexOrchestrator {
           }
         }),
         this.fileWatcher.onDidFinishBatchProcessing.on((summary: BatchProcessingSummary) => {
-          if (!summary.batchError) return
+          if (!summary.batchError) {
+            if (this.stateManager.state === "Error") {
+              this.stateManager.setSystemState("Indexed", "File changes processed. Index up-to-date.")
+            }
+            return
+          }
           log.error("batch processing failed", { err: summary.batchError })
           this.overlay?.prepare()
           this.stateManager.setSystemState("Error", `Failed to process file changes: ${summary.batchError.message}`)

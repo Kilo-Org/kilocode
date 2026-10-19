@@ -390,4 +390,32 @@ describe("CodeIndexOrchestrator telemetry", () => {
     expect(store.deleteCount).toBe(0)
     expect(orchestrator.state).toBe("Error")
   })
+
+  test("recovers from watcher batch error state after a subsequent successful watcher batch", async () => {
+    const watcher = new Watcher()
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      new Store(false) as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      watcher as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("manual")
+    expect(orchestrator.state).toBe("Indexed")
+
+    watcher.onDidFinishBatchProcessing.fire({
+      processedFiles: [],
+      batchError: new Error("transient batch failure"),
+    })
+    expect(orchestrator.state).toBe("Error")
+
+    watcher.onDidFinishBatchProcessing.fire({
+      processedFiles: [{ path: "/tmp/ws/a.ts", status: "success" }],
+      batchError: undefined,
+    })
+    expect(orchestrator.state).toBe("Indexed")
+  })
 })

@@ -1,5 +1,5 @@
 import { createHash } from "crypto"
-import { mkdir, mkdtemp, rm } from "fs/promises"
+import { mkdir, mkdtemp, rm, symlink } from "fs/promises"
 import ignore from "ignore"
 import { tmpdir } from "os"
 import { join } from "path"
@@ -429,5 +429,30 @@ describe("DirectoryScanner", () => {
     expect(retry?.attempt).toBe(1)
     expect(retry?.maxRetries).toBe(2)
     expect(retry?.error).toContain("[REDACTED_PATH]")
+  })
+
+  test("skips dangling symlinks without reporting scan errors", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    try {
+      const valid = join(root, "valid.ts")
+      const broken = join(root, "broken.ts")
+      await Bun.write(valid, "export const valid = 1\n")
+      await symlink(join(root, "missing-target.ts"), broken)
+
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+
+      const errors: Error[] = []
+      const scan = new DirectoryScanner(new Emb(), new Store(), new Parser(), cache, ignore(), 1, 1)
+      const result = await scan.scanDirectory(root, (err) => errors.push(err))
+
+      expect(errors).toEqual([])
+      expect(result.stats.processed).toBe(1)
+      expect(cache.getHash(valid)).toBeDefined()
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
   })
 })
