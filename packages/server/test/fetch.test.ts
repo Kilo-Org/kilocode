@@ -559,11 +559,12 @@ it.live("routes pending requests through the Session's instance", () =>
       const body = Schema.decodeUnknownSync(Schema.Struct({ data: Schema.Array(Agent.Info) }))(
         yield* Effect.promise(() => response.json()),
       )
-      return body.data.some(
-        (agent) =>
-          agent.id === "build" &&
-          agent.permissions.some((rule) => rule.action === "shell" && rule.resource === "*" && rule.effect === "ask"),
-      )
+      // kilocode_change start - Kilo default shell rules already contain `* ask`; wait for the config rule to land last
+      return body.data.some((agent) => {
+        const rule = agent.permissions.findLast((rule) => rule.action === "shell")
+        return agent.id === "build" && rule?.resource === "*" && rule.effect === "ask"
+      })
+      // kilocode_change end
     }).pipe(
       Effect.filterOrFail((ready) => ready),
       Effect.retry(Schedule.spaced("10 millis")),
