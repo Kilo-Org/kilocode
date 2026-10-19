@@ -199,7 +199,7 @@ export const EASY_LINES = 150
 export const SMALL_LINES = 50
 const SMALL_FILES = 3
 // Never a quick win, even when small: CI, dependencies, scripts and account code.
-const risky = [
+const riskyFolders = [
   ".github/",
   ".kilo/",
   ".kilocode/",
@@ -213,12 +213,14 @@ const risky = [
   "packages/kilo-gateway/",
 ]
 const riskyFiles = ["package.json", "bun.lock"]
+// A whole file name, at the root or inside a folder. Not the end of another name, like foobun.lock.
+const isRiskyFile = (file: string, name: string) => file === name || file.endsWith(`/${name}`)
 // Files that steer coding agents. A change there is a prompt change, not docs.
 // The names are exact and case-sensitive, so a docs page like ai-providers/gemini.md is not caught.
 const agentFiles = new Set(["AGENTS.md", "CLAUDE.md", "GEMINI.md", "SKILL.md", ".cursorrules", ".windsurfrules"])
 const isRisky = (file: string) =>
-  risky.some((dir) => file.startsWith(dir)) ||
-  riskyFiles.some((name) => file.endsWith(name)) ||
+  riskyFolders.some((dir) => file.startsWith(dir)) ||
+  riskyFiles.some((name) => isRiskyFile(file, name)) ||
   agentFiles.has(file.split("/").at(-1) ?? "")
 // Docs are Markdown, plus images under a docs directory. Code under a docs
 // directory (scripts, config, components) is not docs. Release notes in

@@ -313,6 +313,13 @@ describe("easy", () => {
     expect(easy(150, ["packages/kilo-docs/public/a.svg"])).toBeUndefined()
   })
 
+  test("risky file names match whole names only", () => {
+    for (const file of ["package.json", "bun.lock", "packages/opencode/package.json", "packages/kilo-docs/bun.lock"])
+      expect(easy(5, [file])).toBeUndefined()
+    for (const file of ["whateverbun.lock", "my-package.json", "packages/x/foopackage.json", "packages/x/notbun.lock"])
+      expect(easy(5, [file])).toBe("small")
+  })
+
   test("agent files and agent directories are never quick wins", () => {
     for (const file of [
       "AGENTS.md",
