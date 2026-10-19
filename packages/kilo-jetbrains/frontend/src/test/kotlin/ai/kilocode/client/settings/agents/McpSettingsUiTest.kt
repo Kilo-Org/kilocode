@@ -239,6 +239,22 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         assertEquals(listOf(DIR, DIR), agentRpc.mcpCalls)
     }
 
+    /**
+     * A failed runtime status read still lists the configured servers, and it is not runtime truth,
+     * so it must keep the composer's needs-auth badge instead of clearing it.
+     */
+    fun `test failed runtime status keeps configured rows and the needs auth badge`() {
+        val panel = panel()
+        flushUntil { rows(panel).size == 3 }
+        assertTrue(service<KiloMcpAuthService>().needsAuth.value[DIR].orEmpty().contains("github"))
+
+        agentRpc.mcpStatusError = RuntimeException("backend offline")
+        edt { panel.reload(); true }
+
+        flushUntil { rows(panel).map { it.key } == listOf("filesystem", "github") }
+        assertTrue(service<KiloMcpAuthService>().needsAuth.value[DIR].orEmpty().contains("github"))
+    }
+
     fun `test panel reloads automatically when it becomes visible again`() {
         val panel = panel()
         flushUntil { rows(panel).size == 3 }

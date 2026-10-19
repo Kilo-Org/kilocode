@@ -293,6 +293,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Reconnectez-vous à ChatGPT, puis renvoyez votre message pour continuer à utiliser les modèles Codex.",
 
+  "provider.failure.unauthorized": "Identifiants refusés (HTTP {{status}}). Reconnectez-vous.",
+  "provider.failure.unauthorizedNoStatus": "Identifiants refusés. Reconnectez-vous.",
+  "provider.failure.unauthenticated": "Non connecté.",
+  "provider.failure.network": "Impossible de joindre le fournisseur. Vérifiez votre connexion.",
+  "provider.failure.http": "Erreur du fournisseur (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Erreur du fournisseur.",
+  "provider.failure.schema": "Réponse inattendue du fournisseur.",
+
   "notification.permission.title": "Permission requise",
   "notification.permission.titleSubagent": "Permission requise (sous-agent)",
   "notification.permission.titleSkillShell": "Exécuter les commandes shell de la compétence «\u00a0{{skill}}\u00a0» ?",
@@ -773,6 +781,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code est un assistant de programmation IA. Demandez-lui de créer des fonctionnalités, corriger des bugs ou expliquer votre code.",
+  "session.workspaceScope.description":
+    "Le chat Kilo utilise uniquement « {{folder}} », le premier dossier de cet espace de travail.",
+  "session.workspaceScope.alternatives":
+    "Pour travailler avec un autre dossier, ouvrez-le dans sa propre fenêtre ou ajoutez-le comme projet dans Agent Manager.",
+  "session.workspaceScope.dismiss": "Masquer l’indication sur la portée de l’espace de travail",
   "session.messages.scrollToBottom": "Défiler vers le bas",
   "session.messages.initializing": "Initialisation...",
   "session.messages.taskStarting": "Démarrage...",

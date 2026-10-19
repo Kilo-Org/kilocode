@@ -290,6 +290,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Codex モデルを引き続き使用するには、ChatGPT に再度ログインしてから、メッセージを再送信してください。",
 
+  "provider.failure.unauthorized": "認証情報が拒否されました (HTTP {{status}})。再度サインインしてください。",
+  "provider.failure.unauthorizedNoStatus": "認証情報が拒否されました。再度サインインしてください。",
+  "provider.failure.unauthenticated": "サインインしていません。",
+  "provider.failure.network": "プロバイダーに接続できませんでした。接続を確認してください。",
+  "provider.failure.http": "プロバイダーエラー (HTTP {{status}})。",
+  "provider.failure.httpNoStatus": "プロバイダーエラー。",
+  "provider.failure.schema": "プロバイダーから予期しない応答がありました。",
+
   "notification.permission.title": "権限が必要です",
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
   "notification.permission.titleSkillShell": "スキル「{{skill}}」のシェルコマンドを実行しますか？",
@@ -754,6 +762,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo CodeはAIコーディングアシスタントです。機能の構築、バグの修正、コードベースの説明を依頼できます。",
+  "session.workspaceScope.description":
+    "Kilo チャットは、このワークスペースの最初のフォルダー「{{folder}}」のみを使用します。",
+  "session.workspaceScope.alternatives":
+    "別のフォルダーで作業するには、そのフォルダーを別のウィンドウで開くか、Agent Manager にプロジェクトとして追加してください。",
+  "session.workspaceScope.dismiss": "ワークスペースの範囲に関するヒントを閉じる",
   "session.messages.scrollToBottom": "下にスクロール",
   "session.messages.initializing": "初期化中...",
   "session.messages.taskStarting": "開始中...",

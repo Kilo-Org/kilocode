@@ -290,6 +290,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "ChatGPT에 다시 로그인한 후 메시지를 다시 보내 Codex 모델을 계속 사용하세요.",
 
+  "provider.failure.unauthorized": "자격 증명이 거부되었습니다 (HTTP {{status}}). 다시 로그인하세요.",
+  "provider.failure.unauthorizedNoStatus": "자격 증명이 거부되었습니다. 다시 로그인하세요.",
+  "provider.failure.unauthenticated": "로그인되어 있지 않습니다.",
+  "provider.failure.network": "공급자에 연결할 수 없습니다. 연결 상태를 확인하세요.",
+  "provider.failure.http": "공급자 오류 (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "공급자 오류.",
+  "provider.failure.schema": "공급자로부터 예기치 않은 응답을 받았습니다.",
+
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
   "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',
@@ -754,6 +762,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code는 AI 코딩 어시스턴트입니다. 기능 구축, 버그 수정 또는 코드베이스 설명을 요청하세요.",
+  "session.workspaceScope.description": "Kilo 채팅은 이 작업 영역의 첫 번째 폴더인 “{{folder}}”만 사용합니다.",
+  "session.workspaceScope.alternatives":
+    "다른 폴더에서 작업하려면 해당 폴더를 별도 창에서 열거나 Agent Manager에 프로젝트로 추가하세요.",
+  "session.workspaceScope.dismiss": "작업 영역 범위 안내 닫기",
   "session.messages.scrollToBottom": "하단으로 스크롤",
   "session.messages.initializing": "초기화 중...",
   "session.messages.taskStarting": "시작 중...",

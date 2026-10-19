@@ -284,6 +284,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Sign in with ChatGPT again, then send your message again to keep using Codex models.",
 
+  "provider.failure.unauthorized": "Credentials rejected (HTTP {{status}}). Sign in again.",
+  "provider.failure.unauthorizedNoStatus": "Credentials rejected. Sign in again.",
+  "provider.failure.unauthenticated": "Not signed in.",
+  "provider.failure.network": "Couldn't reach the provider. Check your connection.",
+  "provider.failure.http": "Provider error (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Provider error.",
+  "provider.failure.schema": "Unexpected response from the provider.",
+
   "notification.permission.title": "Permission required",
   "notification.permission.titleSubagent": "Permission required (subagent)",
   "notification.permission.titleSkillShell": 'Run shell commands from skill "{{skill}}"?',
@@ -702,6 +710,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code is an AI coding assistant. Ask it to build features, fix bugs, or explain your codebase.",
+  "session.workspaceScope.description": "Kilo chat uses only “{{folder}}”, the first folder in this workspace.",
+  "session.workspaceScope.alternatives":
+    "To work with another folder, open it in its own window or add it as a project in Agent Manager.",
+  "session.workspaceScope.dismiss": "Dismiss workspace scope hint",
   "session.messages.scrollToBottom": "Scroll to bottom",
   "session.messages.initializing": "Initializing...",
   "session.messages.taskStarting": "Starting...",
