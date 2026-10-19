@@ -1,11 +1,12 @@
 import { describe, expect, spyOn, test } from "bun:test"
+import { createServer } from "http"
 import { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import { InvalidGrantError } from "@modelcontextprotocol/sdk/server/auth/errors.js"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
 import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Telemetry, type McpAuthCompletedProperties, type McpAuthStartedProperties } from "@kilocode/kilo-telemetry"
-import { Deferred, Effect, Fiber, Layer } from "effect"
+import { Cause, Deferred, Effect, Exit, Fiber, Layer } from "effect"
 import { Config } from "../../../src/config/config"
 import { EventV2Bridge } from "../../../src/event-v2-bridge"
 import * as KiloAuthTelemetry from "../../../src/kilocode/mcp/auth-telemetry"
@@ -123,6 +124,15 @@ function serveOAuthMcp(mode: Mode) {
     }),
     (server) => Effect.promise(server.close),
   )
+}
+
+async function freePort() {
+  const probe = createServer()
+  await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve))
+  const address = probe.address()
+  if (!address || typeof address === "string") throw new Error("missing probe address")
+  await new Promise<void>((resolve) => probe.close(() => resolve()))
+  return address.port
 }
 
 const stopCallback = Effect.addFinalizer(() => Effect.promise(() => McpOAuthCallback.stop()).pipe(Effect.ignore))
@@ -294,6 +304,42 @@ describe("MCP auth telemetry: real sign-in flows", () => {
     }),
   )
 
+  mcpTest.instance("a sign-in displaced by a newer flow on another callback port is superseded", () =>
+    Effect.gen(function* () {
+      yield* stopCallback
+      const rec = yield* record()
+      const first = yield* serveOAuthMcp("ok")
+      const second = yield* serveOAuthMcp("ok")
+      const mcp = yield* addServer("waiting-server", first.url)
+      const port = yield* Effect.promise(freePort)
+      yield* mcp.add("newer-server", { type: "remote", url: second.url, oauth: { callbackPort: port } })
+      const events = yield* EventV2Bridge.Service
+      const url = yield* Deferred.make<void>()
+      const unsubscribe = yield* events.listen((evt) => {
+        if (evt.type === MCP.AuthUrl.type) Deferred.doneUnsafe(url, Effect.void)
+        return Effect.void
+      })
+      yield* Effect.addFinalizer(() => unsubscribe)
+
+      const waiting = yield* mcp.authenticate("waiting-server", undefined, { external: true }).pipe(Effect.forkScoped)
+      yield* awaitWithTimeout(Deferred.await(url), "authorization URL was not published", "5 seconds")
+      // The newer flow restarts the callback listener on its own port.
+      const newer = yield* awaitWithTimeout(mcp.authenticate("newer-server"), "newer sign-in timed out", "5 seconds")
+      const status = yield* awaitWithTimeout(Fiber.join(waiting), "displaced sign-in timed out", "5 seconds")
+
+      expect(newer).toEqual({ status: "connected" })
+      // The user-facing result is unchanged; only the telemetry category differs.
+      expect(status).toEqual({ status: "failed", error: "Browser authorization failed: OAuth callback server stopped" })
+      expect(rec.completed.find((done) => done.external)).toMatchObject({
+        outcome: "superseded",
+        phase: "authorization",
+        oauthOutcome: "not_reached",
+        errorCode: "superseded",
+      })
+      expect(rec.completed.find((done) => !done.external)).toMatchObject({ outcome: "success" })
+    }),
+  )
+
   mcpTest.instance("a server removed during sign-in keeps the OAuth success it reached", () =>
     Effect.gen(function* () {
       yield* stopCallback
@@ -362,6 +408,50 @@ describe("MCP auth telemetry: real sign-in flows", () => {
   )
 })
 
+describe("MCP auth telemetry: config lookup", () => {
+  const run = () => Effect.succeed({ status: "connected" })
+
+  // The config lookup can end interrupted on its own, for example when the instance
+  // initialisation it waits on is interrupted. That must abort the sign-in, not record one.
+  mcpTest.instance("an interrupted lookup aborts before an attempt is recorded", () =>
+    Effect.gen(function* () {
+      const rec = yield* record()
+      const exit = yield* Effect.exit(KiloAuthTelemetry.observe(run, () => Effect.interrupt)("server"))
+
+      expect(Exit.isFailure(exit) && Cause.hasInterruptsOnly(exit.cause)).toBe(true)
+      expect(rec.started).toHaveLength(0)
+      expect(rec.completed).toHaveLength(0)
+    }),
+  )
+
+  mcpTest.instance("interrupting the caller during the lookup records no attempt", () =>
+    Effect.gen(function* () {
+      const rec = yield* record()
+      const ready = yield* Deferred.make<void>()
+      const lookup = () => Deferred.succeed(ready, undefined).pipe(Effect.andThen(Effect.never))
+      const fiber = yield* KiloAuthTelemetry.observe(run, lookup)("server").pipe(Effect.forkScoped)
+      yield* Deferred.await(ready)
+      yield* Fiber.interrupt(fiber)
+      const exit = yield* Fiber.await(fiber)
+
+      expect(Exit.isFailure(exit) && Cause.hasInterruptsOnly(exit.cause)).toBe(true)
+      expect(rec.started).toHaveLength(0)
+    }),
+  )
+
+  mcpTest.instance("a failed lookup only loses context; the sign-in still runs", () =>
+    Effect.gen(function* () {
+      const rec = yield* record()
+      const status = yield* KiloAuthTelemetry.observe(run, () => Effect.fail(new Error("config unavailable")))("server")
+      const done = yield* completion(rec)
+
+      expect(status).toEqual({ status: "connected" })
+      expect(rec.started).toHaveLength(1)
+      expect(done.outcome).toBe("success")
+    }),
+  )
+})
+
 describe("MCP auth telemetry: classification", () => {
   test("OAuth errors map to allowlisted protocol codes, never their text", () => {
     expect(KiloAuthTelemetry.classify(new InvalidGrantError("code abc123 expired"))).toBe("invalid_grant")
@@ -383,6 +473,9 @@ describe("MCP auth telemetry: classification", () => {
     expect(KiloOAuthCallback.isCancelled(KiloOAuthCallback.cancelled())).toBe(true)
     expect(KiloOAuthCallback.isExpired(KiloOAuthCallback.expired())).toBe(true)
     expect(KiloOAuthCallback.isStopped(KiloOAuthCallback.stopped())).toBe(true)
+    expect(KiloOAuthCallback.isDisplaced(KiloOAuthCallback.displaced())).toBe(true)
+    expect(KiloOAuthCallback.isStopped(KiloOAuthCallback.displaced())).toBe(false)
+    expect(KiloOAuthCallback.displaced().message).toBe(KiloOAuthCallback.stopped().message)
     expect(KiloOAuthCallback.isCancelled(new Error("Authorization cancelled"))).toBe(false)
   })
 

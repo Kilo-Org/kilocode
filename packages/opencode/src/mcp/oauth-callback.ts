@@ -194,7 +194,7 @@ export async function ensureRunning(redirectUri?: string): Promise<void> {
       currentPath = next.path
     },
     create: () => createServer(handleRequest),
-    stop,
+    stop: () => stop(KiloOAuthCallback.displaced()), // reconfiguring for a newer flow supersedes waiting ones
     info: (msg, data) => log.info(msg, data),
     error: (msg, data) => log.error(msg, data),
   })
@@ -248,7 +248,7 @@ export async function isPortInUse(port: number = OAUTH_CALLBACK_PORT): Promise<b
   })
 }
 
-export async function stop(): Promise<void> {
+export async function stop(reason?: Error): Promise<void> { // kilocode_change - reason for waiting flows
   if (server) {
     await new Promise<void>((resolve) => server!.close(() => resolve()))
     server = undefined
@@ -256,7 +256,7 @@ export async function stop(): Promise<void> {
 
   for (const [_name, pending] of pendingAuths) {
     clearTimeout(pending.timeout)
-    pending.reject(KiloOAuthCallback.stopped()) // kilocode_change
+    pending.reject(reason ?? KiloOAuthCallback.stopped()) // kilocode_change
   }
   pendingAuths.clear()
   mcpNameToState.clear()

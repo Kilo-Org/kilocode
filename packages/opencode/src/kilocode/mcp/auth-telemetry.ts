@@ -137,7 +137,7 @@ export function fail(code: string) {
 export function callback(result: Callback) {
   if (result.ok) return update({ phase: "token_exchange" })
   const error = result.error
-  if (KiloOAuthCallback.isReplaced(error)) return superseded()
+  if (KiloOAuthCallback.isReplaced(error) || KiloOAuthCallback.isDisplaced(error)) return superseded()
   if (KiloOAuthCallback.isCancelled(error))
     return update({ outcome: "cancelled", code: "user_cancelled", oauth: "not_reached" })
   if (KiloOAuthCallback.isExpired(error))
@@ -395,7 +395,11 @@ export function observe<A extends Result, E, R, R2>(
 ) {
   return (name: string, onAuthorization?: (url: string) => void, opts?: Options) =>
     Effect.gen(function* () {
-      const server = yield* lookup(name).pipe(Effect.catchCause(() => Effect.succeed(undefined)))
+      // A lookup failure only loses context, but an interrupt must still abort the sign-in
+      // before an attempt is recorded.
+      const server = yield* lookup(name).pipe(
+        Effect.catchCause((cause) => (Cause.hasInterruptsOnly(cause) ? Effect.interrupt : Effect.succeed(undefined))),
+      )
       const attempt: Attempt = {
         id: crypto.randomUUID(),
         started: Date.now(),

@@ -77,6 +77,7 @@ export function denied(message: string, code: string): Error & { oauthError: str
 const CANCELLED = "AuthorizationCancelledError"
 const EXPIRED = "AuthorizationTimeoutError"
 const STOPPED = "AuthorizationStoppedError"
+const DISPLACED = "AuthorizationDisplacedError"
 
 export function cancelled(): Error {
   return named(CANCELLED, "Authorization cancelled")
@@ -98,8 +99,20 @@ export function isExpired(error: unknown): boolean {
   return error instanceof Error && error.name === EXPIRED
 }
 
+/**
+ * A newer flow restarted the listener on another host, port, or path. The user sees the same
+ * message as a shutdown, but the waiting flow was superseded rather than interrupted.
+ */
+export function displaced(): Error {
+  return named(DISPLACED, "OAuth callback server stopped")
+}
+
 export function isStopped(error: unknown): boolean {
   return error instanceof Error && error.name === STOPPED
+}
+
+export function isDisplaced(error: unknown): boolean {
+  return error instanceof Error && error.name === DISPLACED
 }
 
 /**
