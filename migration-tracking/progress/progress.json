@@ -20,7 +20,7 @@
         "total": 39
       },
       {
-        "kind": "hook",
+        "kind": "patch",
         "done": 0,
         "total": 3459
       },
@@ -29,7 +29,18 @@
         "done": 3,
         "total": 2799
       }
-    ]
+    ],
+    "landed": {
+      "plugin": 0,
+      "host": 0,
+      "seam": 0,
+      "patch": 0
+    },
+    "coreImports": 4,
+    "sharedPatches": {
+      "seam": 14,
+      "patch": 1
+    }
   },
   "notCounted": {
     "marker": 561,
@@ -41,6 +52,12 @@
     "identifier": 97,
     "unattributed": 4163
   },
+  "coreImports": [
+    "@opencode/core/app",
+    "@opencode/core/bus",
+    "@opencode/core/plugin/sdk",
+    "@opencode/core/variant"
+  ],
   "features": [
     {
       "feature": "acp",
@@ -56,7 +73,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -80,7 +97,7 @@
           "done": 0,
           "total": 1
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -104,7 +121,7 @@
           "done": 0,
           "total": 3
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -128,7 +145,7 @@
           "done": 0,
           "total": 3
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -152,7 +169,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -176,7 +193,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -200,7 +217,7 @@
           "done": 0,
           "total": 3
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -224,7 +241,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -248,7 +265,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -272,7 +289,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -296,7 +313,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -320,7 +337,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -344,7 +361,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 25
         },
@@ -368,7 +385,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -392,7 +409,7 @@
           "done": 0,
           "total": 2
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -416,7 +433,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -440,7 +457,7 @@
           "done": 0,
           "total": 3
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -464,7 +481,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -488,7 +505,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 10
         },
@@ -512,7 +529,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -536,7 +553,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -560,7 +577,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -584,7 +601,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -608,7 +625,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -632,7 +649,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -657,7 +674,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -681,7 +698,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -705,7 +722,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -729,7 +746,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 8
         },
@@ -753,7 +770,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -777,7 +794,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -801,7 +818,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -825,7 +842,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -849,7 +866,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 20
         },
@@ -873,7 +890,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -897,7 +914,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 6
         },
@@ -921,7 +938,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -945,7 +962,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -969,7 +986,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 6
         },
@@ -993,7 +1010,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -1017,7 +1034,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 8
         },
@@ -1041,7 +1058,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -1065,7 +1082,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -1089,7 +1106,7 @@
           "done": 0,
           "total": 3
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -1113,7 +1130,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 7
         },
@@ -1137,7 +1154,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -1161,7 +1178,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -1185,7 +1202,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -1209,7 +1226,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -1233,7 +1250,7 @@
           "done": 0,
           "total": 3
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -1257,7 +1274,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -1281,7 +1298,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 6
         },
@@ -1305,7 +1322,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 6
         },
@@ -1329,7 +1346,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -1353,7 +1370,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -1377,7 +1394,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -1401,7 +1418,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -1425,7 +1442,7 @@
           "done": 0,
           "total": 1
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 9
         },
@@ -1449,7 +1466,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -1473,7 +1490,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 14
         },
@@ -1497,7 +1514,7 @@
           "done": 0,
           "total": 2
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -1521,7 +1538,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 14
         },
@@ -1545,7 +1562,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -1569,7 +1586,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -1593,7 +1610,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -1617,7 +1634,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -1641,7 +1658,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 7
         },
@@ -1665,7 +1682,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 12
         },
@@ -1689,7 +1706,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -1713,7 +1730,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 17
         },
@@ -1737,7 +1754,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -1761,7 +1778,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 10
         },
@@ -1785,7 +1802,7 @@
           "done": 0,
           "total": 4
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 17
         },
@@ -1809,7 +1826,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -1833,7 +1850,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -1857,7 +1874,7 @@
           "done": 0,
           "total": 6
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -1881,7 +1898,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 11
         },
@@ -1905,7 +1922,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -1929,7 +1946,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -1953,7 +1970,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -1977,7 +1994,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -2001,7 +2018,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -2025,7 +2042,7 @@
           "done": 0,
           "total": 1
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -2049,7 +2066,7 @@
           "done": 0,
           "total": 2
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -2073,7 +2090,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -2097,7 +2114,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -2121,7 +2138,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -2145,7 +2162,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -2169,7 +2186,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -2193,7 +2210,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 7
         },
@@ -2217,7 +2234,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -2241,7 +2258,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 6
         },
@@ -2265,7 +2282,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -2289,7 +2306,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -2313,7 +2330,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 19
         },
@@ -2337,7 +2354,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 34
         },
@@ -2361,7 +2378,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -2385,7 +2402,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -2409,7 +2426,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 216
         },
@@ -2433,7 +2450,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -2457,7 +2474,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -2481,7 +2498,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -2505,7 +2522,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -2529,7 +2546,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -2553,7 +2570,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 13
         },
@@ -2577,7 +2594,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 130
         },
@@ -2601,7 +2618,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 9
         },
@@ -2625,7 +2642,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -2649,7 +2666,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -2673,7 +2690,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -2697,7 +2714,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -2721,7 +2738,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 10
         },
@@ -2745,7 +2762,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -2769,7 +2786,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 14
         },
@@ -2793,7 +2810,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 8
         },
@@ -2817,7 +2834,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 5
         },
@@ -2841,7 +2858,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -2865,7 +2882,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -2889,7 +2906,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 18
         },
@@ -2913,7 +2930,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 11
         },
@@ -2937,7 +2954,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 5
         },
@@ -2961,7 +2978,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -2985,7 +3002,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -3009,7 +3026,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -3033,7 +3050,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 9
         },
@@ -3057,7 +3074,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -3081,7 +3098,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 12
         },
@@ -3105,7 +3122,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 20
         },
@@ -3129,7 +3146,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 20
         },
@@ -3153,7 +3170,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -3177,7 +3194,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 22
         },
@@ -3201,7 +3218,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -3225,7 +3242,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -3249,7 +3266,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 20
         },
@@ -3273,7 +3290,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -3297,7 +3314,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 5
         },
@@ -3321,7 +3338,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 51
         },
@@ -3345,7 +3362,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -3369,7 +3386,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -3393,7 +3410,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 54
         },
@@ -3417,7 +3434,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -3441,7 +3458,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 51
         },
@@ -3465,7 +3482,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 33
         },
@@ -3489,7 +3506,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -3513,7 +3530,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -3537,7 +3554,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -3561,7 +3578,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -3585,7 +3602,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 9
         },
@@ -3609,7 +3626,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -3633,7 +3650,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 9
         },
@@ -3657,7 +3674,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -3681,7 +3698,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 7
         },
@@ -3705,7 +3722,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -3729,7 +3746,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -3753,7 +3770,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -3777,7 +3794,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -3801,7 +3818,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -3825,7 +3842,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -3849,7 +3866,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 6
         },
@@ -3873,7 +3890,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 25
         },
@@ -3897,7 +3914,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -3921,7 +3938,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 16
         },
@@ -3945,7 +3962,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -3969,7 +3986,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -3993,7 +4010,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 5
         },
@@ -4017,7 +4034,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -4041,7 +4058,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -4065,7 +4082,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 12
         },
@@ -4089,7 +4106,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 82
         },
@@ -4113,7 +4130,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 72
         },
@@ -4137,7 +4154,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 36
         },
@@ -4161,7 +4178,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 51
         },
@@ -4185,7 +4202,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -4209,7 +4226,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 6
         },
@@ -4233,7 +4250,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -4257,7 +4274,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -4281,7 +4298,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 22
         },
@@ -4305,7 +4322,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -4329,7 +4346,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 10
         },
@@ -4353,7 +4370,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -4377,7 +4394,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 88
         },
@@ -4401,7 +4418,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 8
         },
@@ -4425,7 +4442,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -4449,7 +4466,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -4473,7 +4490,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -4497,7 +4514,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -4521,7 +4538,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -4545,7 +4562,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -4569,7 +4586,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -4593,7 +4610,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -4617,7 +4634,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -4641,7 +4658,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -4665,7 +4682,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -4689,7 +4706,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -4713,7 +4730,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 11
         },
@@ -4737,7 +4754,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -4761,7 +4778,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 54
         },
@@ -4785,7 +4802,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 5
         },
@@ -4809,7 +4826,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -4833,7 +4850,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -4857,7 +4874,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -4881,7 +4898,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 21
         },
@@ -4905,7 +4922,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 173
         },
@@ -4929,7 +4946,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -4953,7 +4970,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 7
         },
@@ -4977,7 +4994,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 5
         },
@@ -5001,7 +5018,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -5025,7 +5042,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -5049,7 +5066,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 449
         },
@@ -5073,7 +5090,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -5097,7 +5114,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 6
         },
@@ -5121,7 +5138,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 17
         },
@@ -5145,7 +5162,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 6
         },
@@ -5169,7 +5186,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 39
         },
@@ -5193,7 +5210,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 67
         },
@@ -5217,7 +5234,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 13
         },
@@ -5241,7 +5258,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 2
         },
@@ -5265,7 +5282,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -5289,7 +5306,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 237
         },
@@ -5313,7 +5330,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 24
         },
@@ -5337,7 +5354,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 142
         },
@@ -5361,7 +5378,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 11
         },
@@ -5385,7 +5402,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 101
         },
@@ -5409,7 +5426,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 16
         },
@@ -5433,7 +5450,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -5457,7 +5474,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -5481,7 +5498,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -5505,7 +5522,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 97
         },
@@ -5529,7 +5546,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -5553,7 +5570,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -5577,7 +5594,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -5601,7 +5618,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 19
         },
@@ -5625,7 +5642,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 3
         },
@@ -5649,7 +5666,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -5673,7 +5690,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 88
         },
@@ -5697,7 +5714,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 11
         },
@@ -5721,7 +5738,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 78
         },
@@ -5745,7 +5762,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 16
         },
@@ -5769,7 +5786,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 7
         },
@@ -5793,7 +5810,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -5817,7 +5834,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -5841,7 +5858,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 15
         },
@@ -5865,7 +5882,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 7
         },
@@ -5889,7 +5906,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -5913,7 +5930,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 4
         },
@@ -5937,7 +5954,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -5961,7 +5978,7 @@
           "done": 0,
           "total": 1
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -5985,7 +6002,7 @@
           "done": 0,
           "total": 0
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 0
         },
@@ -6009,7 +6026,7 @@
           "done": 0,
           "total": 1
         },
-        "hook": {
+        "patch": {
           "done": 0,
           "total": 1
         },
@@ -6020,6 +6037,7 @@
       }
     }
   ],
+  "landed": {},
   "done": [
     "module:packages/kilo-gateway/src/api/models.ts",
     "module:packages/kilo-gateway/src/api/modes.ts",
