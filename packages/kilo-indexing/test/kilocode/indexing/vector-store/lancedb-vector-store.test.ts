@@ -766,6 +766,21 @@ describe("LocalVectorStore", () => {
       expect(whereSpy).toHaveBeenCalledWith("(`filePath` = 'src/app' OR `filePath` LIKE 'src/app/%')")
     })
 
+    test("should treat current-directory prefix as unfiltered workspace search", async () => {
+      const whereSpy = mock().mockReturnThis()
+      mockTable.search.mockResolvedValue({
+        where: whereSpy,
+        distanceType: mock().mockReturnThis(),
+        distanceRange: mock().mockReturnThis(),
+        limit: mock().mockReturnThis(),
+        toArray: mock().mockResolvedValue([]),
+      })
+
+      await store.search([1, 2, 3], "./")
+
+      expect(whereSpy).not.toHaveBeenCalled()
+    })
+
     test("should prevent injection via file paths in deletePointsByFilePath", async () => {
       const maliciousPath = "file.ts' OR '1'='1"
       mockTable.delete.mockResolvedValue(undefined)
