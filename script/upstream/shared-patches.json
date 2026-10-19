@@ -73,7 +73,7 @@
     },
     "turbo.json": {
       "rung": 3,
-      "seam": "Register `@kilocode/gateway-core#test` in Turborepo so `bun turbo test --affected` runs the Gateway core unit and boundary tests in CI. Add a `transit` task and depend on `^transit` in the test tasks of packages with internal dependencies, so a test hash covers the files of every transitive workspace dependency. `^build` covers only direct dependencies (`build` has no `dependsOn`), so a cached `@opencode/cli#test` replayed after a change in `@opencode/core`. Upstream has no option for transitive input hashing; transit nodes are the documented Turborepo pattern.",
+      "seam": "Register `@kilocode/gateway-core#test` in Turborepo so `bun turbo test --affected` runs the Gateway core unit and boundary tests in CI. Add a `transit` task and depend on `^transit` in every test task that turbo.json defines for a package with workspace dependencies (ai, core, server, cli, tui, latex), so a test hash covers the files of every transitive workspace dependency. The other defined test tasks (gateway-core, codemode, httpapi-codegen, ui) have no workspace dependencies, and `turbo test` does not run a package that has no test task entry. `^build` covers only direct dependencies (`build` has no `dependsOn`), so a cached `@opencode/cli#test` replayed after a change in `@opencode/core`. Upstream has no option for transitive input hashing; transit nodes are the documented Turborepo pattern.",
       "unmarked": "JSON has no comments."
     }
   }
