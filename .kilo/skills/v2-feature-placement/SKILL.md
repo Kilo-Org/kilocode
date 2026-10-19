@@ -93,16 +93,21 @@ Only when a seam makes no sense (a defect fix, or a Kilo-specific decision no kn
 
 ### 7. Done-proof for the progress map
 
-Every v1 patch cell you replace gets its ID on the v2 code:
+Every v1 cell you replace gets a proof in the same PR:
 
 - In a shared upstream file (rung 3 or 4): `// kilocode_change(<feature>:<id>)`.
-- In a Kilo-owned file (rung 1 or 2): `// kilo_port(<feature>:<id>)` on the code that now provides the behavior.
-- Behavior v2 already provides: `dispositions.json`, `state: "native"`, with the v2 pointer. Behavior not carried: `state: "dropped"`, with the reason.
+- In a Kilo-owned file (rung 1 or 2): `// kilo_port(<feature>:<id>)` on the code that now provides the behavior, also when that code only selects or configures upstream behavior, and on the Kilo-owned v2 test that replaces a v1 test patch cell.
+- A Kilo-owned module or test ported under another name: the v1 file name when it fits, else `state: "ported"` in `dispositions.json` with the v2 path.
+- Behavior upstream v2 provides with no Kilo code: `state: "native"`, with the v2 pointer. Behavior not carried (a shim, dead v1 code, or a decision the plan records): `state: "dropped"`, with the evidence. Behavior that a later unit ports stays open.
+
+Close a cell only after you compared the v1 hunk with the v2 code behavior by behavior; a cell with a known gap stays open, with the gap in the PR. The full rules are in the `v2-migration` skill, section "Progress map".
 
 Then regenerate and verify:
 
 ```sh
-bun script/upstream/progress.ts && bun script/upstream/progress.ts --check
+git add <new files>   # the map counts only tracked files
+bun script/upstream/progress.ts && bun script/upstream/progress.ts && bun script/upstream/progress.ts --check   # identical output, then check
+bun script/upstream/progress.ts --list <feature>   # each open cell needs a reason in the PR
 bun script/check-shared-patches.ts --worktree && bun script/check-opencode-annotations.ts --worktree   # before the commit; CI runs both without --worktree on the commit
 bun typecheck      # from the affected package directory, never tsc
 ```
@@ -118,7 +123,7 @@ Add a section `## Placement` to the PR body:
 | compaction toolOutput setting | 3 | no editor field, no hook reaches the transcript | core/src/session/compaction.ts, 3 lines, shared-patches.json |
 ```
 
-Plus: shared files touched with rung, core-internal imports added, mirrored files, and the progress map delta (cells closed per feature, dispositions added with reasons). Self-test per `v2-migration` skill; the user should not need to test for you.
+Plus: shared files touched with rung, core-internal imports added and mirrored files. When the PR changes the map, add the section `## Progress map` from the `v2-migration` skill (section "Evidence"): the box before and after, and one short line per cell or group on why it is done, why it is dropped, or why it stays open. Self-test per `v2-migration` skill; the user should not need to test for you.
 
 ## Decision in one table
 
