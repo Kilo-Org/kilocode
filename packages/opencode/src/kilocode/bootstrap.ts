@@ -1,8 +1,9 @@
-import { Cause, Context, Effect, Layer } from "effect"
+import { Cause, Context, Effect, Layer, Option } from "effect"
 import { EffectBridge } from "@/effect/bridge"
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
 import * as Log from "@opencode-ai/core/util/log"
 import { Global } from "@opencode-ai/core/global"
+import { Database } from "@opencode-ai/core/database/database"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import path from "node:path"
 import { Bus } from "@/bus"
@@ -49,12 +50,14 @@ export namespace KilocodeBootstrap {
       const memory = yield* MemoryService.Service
       const watcher = yield* KilocodeWatcher.Service
       const wake = yield* Wakeup.Service
+      // Hook runs read session sandbox state; optional so lighter graphs (tests) still build.
+      const database = Option.getOrUndefined(yield* Effect.serviceOption(Database.Service))
 
       const init = Effect.fn("KilocodeBootstrap.init")(function* () {
         yield* watcher.init()
         yield* kilo.init()
         yield* MemoryLifecycle.subscribe({ bus, sessions, summary, provider, config, memory })
-        yield* KiloHookLifecycle.subscribe({ bus, sessions, config })
+        yield* KiloHookLifecycle.subscribe({ bus, sessions, config, database })
         // Invalidate enabled cache on every memory state mutation (properties.directory holds the memory root).
         yield* bus.subscribeCallback(MemoryEvents.Status, (evt) =>
           KiloToolRegistry.invalidateMemoryEnabled(evt.properties.directory),
@@ -143,6 +146,7 @@ export namespace KilocodeBootstrap {
         Bus.node,
         watcher,
         Wakeup.node,
+        Database.node,
       ],
     }),
   )
