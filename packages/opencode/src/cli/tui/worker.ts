@@ -17,6 +17,7 @@ import { createWorkerRemoteExit } from "@/kilocode/cli/cmd/tui/remote-exit-worke
 import { createWorkerShutdown } from "@/cli/tui/worker-shutdown" // kilocode_change
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
 import { KiloRpc } from "@/kilocode/util/rpc" // kilocode_change
+import { KiloHookSession } from "@/kilocode/hooks/session" // kilocode_change
 
 // kilocode_change start - queue parent requests before the await below; KiloRpc.listen replays them
 KiloRpc.arm()
@@ -54,6 +55,7 @@ let server: Awaited<ReturnType<typeof Server.listen>> | undefined
 const remoteExit = createWorkerRemoteExit(Rpc.emit) // kilocode_change
 // kilocode_change start - drain ingest before dispose so GlobalBus/remote stay live
 const runShutdown = createWorkerShutdown({
+  end: () => KiloHookSession.end("prompt_input_exit"),
   drain: () => KiloSessions.drainIngestForShutdown(),
   dispose: () => InstanceRuntime.disposeAllInstances(),
   stopServer: async () => {

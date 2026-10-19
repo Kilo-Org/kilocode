@@ -10,6 +10,7 @@ import { Permission } from "@/permission"
 import { Plugin } from "@/plugin"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { EffectBridge } from "@/effect/bridge" // kilocode_change
+import { KiloHookCode } from "@/kilocode/hooks/code" // kilocode_change
 
 export const CODE_MODE_TOOL = "execute"
 
@@ -146,6 +147,7 @@ const invokeChildTool = Effect.fn("CodeMode.invokeChildTool")(function* (input: 
     { tool: input.entry.key, sessionID: input.ctx.sessionID, callID: input.callID },
     { args: input.args },
   )
+  yield* KiloHookCode.before(input) // kilocode_change - PreToolUse for code-mode child calls
   const result: CallToolResult = yield* input.bridge
     .run(
       SandboxPolicy.executeMcp(
@@ -188,6 +190,7 @@ const invokeChildTool = Effect.fn("CodeMode.invokeChildTool")(function* (input: 
         },
       }),
     )
+  yield* KiloHookCode.after(input, result) // kilocode_change - PostToolUse for code-mode child calls
   yield* input.plugin.trigger(
     "tool.execute.after",
     { tool: input.entry.key, sessionID: input.ctx.sessionID, callID: input.callID, args: input.args },

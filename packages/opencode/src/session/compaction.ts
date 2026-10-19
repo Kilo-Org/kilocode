@@ -24,6 +24,7 @@ import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-pay
 import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks"
 import { SessionExport } from "@/kilocode/session-export"
 import { KiloSession } from "@/kilocode/session"
+import { KiloHookCompact } from "@/kilocode/hooks/compact"
 // kilocode_change end
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -781,6 +782,13 @@ const layer = Layer.effect(
             inputTokens: processor.message.tokens.input,
             outputTokens: processor.message.tokens.output,
           },
+        })
+        yield* KiloHookCompact.compacted({
+          sessionID: input.sessionID,
+          auto: input.auto,
+          summary: summary ?? "",
+          config,
+          database,
         })
         // kilocode_change end
         yield* prune({ sessionID: input.sessionID, reason: "post-compaction" })

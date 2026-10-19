@@ -87,6 +87,30 @@ export const TeardownWorktreeResult = Schema.Struct({
   disposed: Schema.Boolean,
 })
 
+/**
+ * Hook events that happen in a client (the Agent Manager) rather than in the server. Keyed by
+ * `event`, so each event has a typed payload and anything else fails decoding. The client never
+ * supplies commands: the hooks come from the server's trusted config.
+ */
+export const HooksDispatchPayload = Schema.Union([
+  Schema.Struct({
+    event: Schema.Literal("WorktreeSetup"),
+    /** Absolute path of the managed worktree (`<project>/.kilo/worktrees/<name>`). */
+    worktree: Schema.String,
+    branch: Schema.optional(Schema.String),
+    parentBranch: Schema.optional(Schema.String),
+    origin: Schema.Literals(["create", "promote", "import", "multi_version", "tool", "continue"]),
+    script: Schema.Literals(["none", "succeeded", "failed"]),
+    sessionID: Schema.optional(SessionID),
+  }),
+]).annotate({ identifier: "HooksDispatchPayload" })
+
+export const HooksDispatchResult = Schema.Struct({
+  /** True when a hook blocked the event (for WorktreeSetup: setup failed). */
+  blocked: Schema.Boolean,
+  reason: Schema.optional(Schema.String),
+}).annotate({ identifier: "HooksDispatchResult" })
+
 export const ResumeSessionPayload = Schema.Struct({
   messageID: MessageID,
   snapshotInitialization: Schema.optional(Schema.Literal("wait")),
@@ -153,6 +177,7 @@ export const KilocodePaths = {
   marketplaceRemove: `${root}/marketplace/remove`,
   removeSnapshot: `${root}/snapshot/remove`,
   teardownWorktree: `${root}/worktree/teardown`,
+  hooksDispatch: `${root}/hooks/dispatch`,
   prepareSnapshot: `${root}/snapshot/prepare`,
   providerUsage: `${root}/provider-usage`,
   providerUsageRefresh: `${root}/provider-usage/refresh`,
@@ -347,6 +372,19 @@ export const KilocodeApi = HttpApi.make("kilocode")
             summary: "Tear down backend state for a managed worktree",
             description:
               "Kill the PTYs rooted in an Agent Manager worktree and dispose its backend instance when one is loaded, without booting an instance for the directory.",
+          }),
+        ),
+        HttpApiEndpoint.post("hooksDispatch", KilocodePaths.hooksDispatch, {
+          query: WorkspaceRoutingQuery,
+          payload: HooksDispatchPayload,
+          success: described(HooksDispatchResult, "Hook result"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.hooksDispatch",
+            summary: "Run the hooks of a client-side event",
+            description:
+              "Run the configured hooks for an event that happens in a client, such as WorktreeSetup after the Agent Manager set up a managed worktree, and report whether a hook blocked it.",
           }),
         ),
         HttpApiEndpoint.post("prepareSnapshot", KilocodePaths.prepareSnapshot, {

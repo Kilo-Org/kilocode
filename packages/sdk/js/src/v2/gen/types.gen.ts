@@ -2303,6 +2303,28 @@ export type IndexingConfig = {
   fileExtensions?: Array<string>
 }
 
+export type HookHandlerConfig = {
+  type: "command"
+  /**
+   * Command to run. Without args it runs in bash (Git Bash on Windows) or the platform shell; with args it is the program to spawn directly. It receives the hook input as JSON on stdin.
+   */
+  command: string
+  args?: Array<string>
+  shell?: "bash" | "powershell"
+  if?: string
+  timeout?: number
+  onFailure?: "continue" | "block"
+  async?: boolean
+}
+
+export type HookGroupConfig = {
+  /**
+   * What it matches depends on the event (tool name, source, trigger, ...): "*" or omitted matches everything, "a|b" matches exact names, anything else is a regular expression. Ignored on events without a matcher.
+   */
+  matcher?: string
+  hooks: Array<HookHandlerConfig>
+}
+
 export type PermissionActionConfig = "ask" | "allow" | "deny"
 
 export type PermissionObjectConfig = {
@@ -2615,38 +2637,36 @@ export type Config = {
   memory_model?: string
   default_agent?: string
   hooks?: {
-    PreToolUse?: Array<{
-      /**
-       * Tool names to match: "*" or omitted matches all tools, "edit|write" matches exact names, anything else is a regular expression. Kilo tool ids and their Claude Code names (e.g. Edit, Bash) both match.
-       */
-      matcher?: string
-      hooks: Array<{
-        type: "command"
-        /**
-         * Command to run. Without args it runs through the shell; with args it is the program to spawn directly. It receives the hook input as JSON on stdin.
-         */
-        command: string
-        args?: Array<string>
-        timeout?: number
-        onFailure?: "continue" | "block"
-      }>
-    }>
-    PostToolUse?: Array<{
-      /**
-       * Tool names to match: "*" or omitted matches all tools, "edit|write" matches exact names, anything else is a regular expression. Kilo tool ids and their Claude Code names (e.g. Edit, Bash) both match.
-       */
-      matcher?: string
-      hooks: Array<{
-        type: "command"
-        /**
-         * Command to run. Without args it runs through the shell; with args it is the program to spawn directly. It receives the hook input as JSON on stdin.
-         */
-        command: string
-        args?: Array<string>
-        timeout?: number
-        onFailure?: "continue" | "block"
-      }>
-    }>
+    PreToolUse?: Array<HookGroupConfig>
+    PostToolUse?: Array<HookGroupConfig>
+    PostToolUseFailure?: Array<HookGroupConfig>
+    PostToolBatch?: Array<HookGroupConfig>
+    PermissionRequest?: Array<HookGroupConfig>
+    TaskCreated?: Array<HookGroupConfig>
+    TaskCompleted?: Array<HookGroupConfig>
+    UserPromptSubmit?: Array<HookGroupConfig>
+    UserPromptExpansion?: Array<HookGroupConfig>
+    PreModelSwitch?: Array<HookGroupConfig>
+    PostModelSwitch?: Array<HookGroupConfig>
+    SessionStart?: Array<HookGroupConfig>
+    SessionEnd?: Array<HookGroupConfig>
+    InstructionsLoaded?: Array<HookGroupConfig>
+    Stop?: Array<HookGroupConfig>
+    SubagentStop?: Array<HookGroupConfig>
+    SubagentStart?: Array<HookGroupConfig>
+    StopFailure?: Array<HookGroupConfig>
+    PreCompact?: Array<HookGroupConfig>
+    PostCompact?: Array<HookGroupConfig>
+    Notification?: Array<HookGroupConfig>
+    ConfigChange?: Array<HookGroupConfig>
+    FileChanged?: Array<HookGroupConfig>
+    CwdChanged?: Array<HookGroupConfig>
+    GoalReport?: Array<HookGroupConfig>
+    WakeupFire?: Array<HookGroupConfig>
+    WorktreeSetup?: Array<HookGroupConfig>
+    WorktreeTeardown?: Array<HookGroupConfig>
+    CommitMessage?: Array<HookGroupConfig>
+    BranchName?: Array<HookGroupConfig>
   }
   subagent_depth?: number
   username?: string
@@ -4069,32 +4089,54 @@ export type ConfigSourcesResponse = {
   }>
 }
 
+export type ClaudeHookGroup = {
+  matcher?: string
+  hooks: Array<{
+    type: "command"
+    command: string
+    args?: Array<string>
+    timeout?: number
+    onFailure?: "continue" | "block"
+    async?: boolean
+    shell?: "bash" | "powershell"
+    if?: string
+  }>
+}
+
 export type ConfigHooks = {
   claude: {
     path: string
     enabled: boolean
     hooks?: {
-      PreToolUse?: Array<{
-        matcher?: string
-        hooks: Array<{
-          type: "command"
-          command: string
-          args?: Array<string>
-          timeout?: number
-          onFailure?: "continue" | "block"
-        }>
-      }>
-      PostToolUse?: Array<{
-        matcher?: string
-        hooks: Array<{
-          type: "command"
-          command: string
-          args?: Array<string>
-          timeout?: number
-          onFailure?: "continue" | "block"
-        }>
-      }>
+      PreToolUse?: Array<ClaudeHookGroup>
+      PostToolUse?: Array<ClaudeHookGroup>
+      PostToolUseFailure?: Array<ClaudeHookGroup>
+      PostToolBatch?: Array<ClaudeHookGroup>
+      PermissionRequest?: Array<ClaudeHookGroup>
+      TaskCreated?: Array<ClaudeHookGroup>
+      TaskCompleted?: Array<ClaudeHookGroup>
+      UserPromptSubmit?: Array<ClaudeHookGroup>
+      UserPromptExpansion?: Array<ClaudeHookGroup>
+      PreModelSwitch?: Array<ClaudeHookGroup>
+      PostModelSwitch?: Array<ClaudeHookGroup>
+      SessionStart?: Array<ClaudeHookGroup>
+      SessionEnd?: Array<ClaudeHookGroup>
+      InstructionsLoaded?: Array<ClaudeHookGroup>
+      Stop?: Array<ClaudeHookGroup>
+      SubagentStop?: Array<ClaudeHookGroup>
+      SubagentStart?: Array<ClaudeHookGroup>
+      StopFailure?: Array<ClaudeHookGroup>
+      PreCompact?: Array<ClaudeHookGroup>
+      PostCompact?: Array<ClaudeHookGroup>
+      Notification?: Array<ClaudeHookGroup>
+      FileChanged?: Array<ClaudeHookGroup>
+      CwdChanged?: Array<ClaudeHookGroup>
     }
+    skipped: Array<{
+      event: string
+      command?: string
+      reason: string
+    }>
   }
   /**
    * Every tool name a hook matcher can use here: Kilo tool ids, their Claude Code names, MCP tools.
@@ -4474,6 +4516,21 @@ export type MarketplaceRemoveResult = {
   success: boolean
   slug: string
   error?: string
+}
+
+export type HooksDispatchPayload = {
+  event: "WorktreeSetup"
+  worktree: string
+  branch?: string
+  parentBranch?: string
+  origin: "create" | "promote" | "import" | "multi_version" | "tool" | "continue"
+  script: "none" | "succeeded" | "failed"
+  sessionID?: string
+}
+
+export type HooksDispatchResult = {
+  blocked: boolean
+  reason?: string
 }
 
 export type ProviderUsagePeriod = {
@@ -17400,6 +17457,34 @@ export type KilocodeTeardownWorktreeResponses = {
 
 export type KilocodeTeardownWorktreeResponse =
   KilocodeTeardownWorktreeResponses[keyof KilocodeTeardownWorktreeResponses]
+
+export type KilocodeHooksDispatchData = {
+  body?: HooksDispatchPayload
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/hooks/dispatch"
+}
+
+export type KilocodeHooksDispatchErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KilocodeHooksDispatchError = KilocodeHooksDispatchErrors[keyof KilocodeHooksDispatchErrors]
+
+export type KilocodeHooksDispatchResponses = {
+  /**
+   * Hook result
+   */
+  200: HooksDispatchResult
+}
+
+export type KilocodeHooksDispatchResponse = KilocodeHooksDispatchResponses[keyof KilocodeHooksDispatchResponses]
 
 export type KilocodeSnapshotPrepareData = {
   body?: never

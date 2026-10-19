@@ -749,7 +749,13 @@ export interface ClaudeCompatSettingLoadedMessage {
 export interface HooksInfoLoadedMessage {
   type: "hooksInfoLoaded"
   /** Claude Code user hooks (~/.claude/settings.json) as the server would run them; `enabled` is false when the server was started with them turned off. */
-  claude: { path: string; enabled: boolean; hooks?: HooksConfig }
+  claude: {
+    path: string
+    enabled: boolean
+    hooks?: HooksConfig
+    /** Claude Code events and handlers Kilo does not run, with the reason. */
+    skipped?: { event: string; command?: string; reason: string }[]
+  }
   /** Tool names hook matchers can use here: Kilo tool ids, their Claude Code names, MCP tools. */
   tools: string[]
 }

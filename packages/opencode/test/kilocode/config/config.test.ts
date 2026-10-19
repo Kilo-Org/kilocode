@@ -791,7 +791,10 @@ describe("kilocode hooks config", () => {
 
     try {
       const global = { matcher: "edit", hooks: [{ type: "command" as const, command: "echo global" }] }
-      await writeConfig(globalTmp.path, { $schema: "https://app.kilo.ai/config.json", hooks: { PostToolUse: [global] } })
+      await writeConfig(globalTmp.path, {
+        $schema: "https://app.kilo.ai/config.json",
+        hooks: { PostToolUse: [global] },
+      })
       await writeConfig(tmp.path, {
         hooks: { PreToolUse: [{ hooks: [{ type: "command", command: "echo project" }] }] },
       })
@@ -806,6 +809,39 @@ describe("kilocode hooks config", () => {
         fn: async () => {
           const config = await load()
           expect(config.hooks).toEqual({ PostToolUse: [global] })
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("keeps every hook event and the shell, if, async and onFailure fields through parsing and merging", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      const stop = { hooks: [{ type: "command" as const, command: "tests.sh", onFailure: "continue" as const }] }
+      const guard = {
+        matcher: "Bash",
+        hooks: [{ type: "command" as const, command: "guard.sh", shell: "bash" as const, if: "Bash(rm *)" }],
+      }
+      const goal = { matcher: "complete", hooks: [{ type: "command" as const, command: "goal.sh", async: true }] }
+      await writeConfig(globalTmp.path, { hooks: { Stop: [stop], PreToolUse: [guard] } })
+      await writeConfig(globalTmp.path, { hooks: { GoalReport: [goal] } }, "kilo.jsonc")
+
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const config = await load()
+          expect(config.hooks).toEqual({ PreToolUse: [guard], Stop: [stop], GoalReport: [goal] })
         },
       })
     } finally {

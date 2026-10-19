@@ -18,6 +18,7 @@ import { AppProcess } from "@opencode-ai/core/process"
 import { InstanceState } from "@/effect/instance-state"
 import { WorktreeCleanup } from "@/kilocode/worktree-cleanup" // kilocode_change
 import { clearPtys } from "@/kilocode/worktree/pty-cleanup" // kilocode_change
+import { KiloHookWorktree } from "@/kilocode/hooks/worktree" // kilocode_change
 import { WorktreeEvent } from "@opencode-ai/schema/worktree-event"
 
 export const Event = WorktreeEvent
@@ -280,6 +281,14 @@ const layer: Layer.Layer<
       yield* runStartScripts(info.directory, { projectID, extra })
 
       // kilocode_change start - signal full readiness once setup also completes
+      // WorktreeSetup hooks: the CLI has no setup UI, so a block is only logged.
+      yield* KiloHookWorktree.setup({
+        worktree: info.directory,
+        root: ctx.worktree,
+        branch: info.branch,
+        origin: "cli",
+        script: "none",
+      }).pipe(Effect.ignore)
       GlobalBus.emit("event", {
         directory: info.directory,
         project: ctx.project.id,
@@ -397,6 +406,10 @@ const layer: Layer.Layer<
       }
 
       const directory = yield* canonical(input.directory)
+      // kilocode_change start - WorktreeTeardown hooks run once, before either removal path
+      if (directory !== (yield* canonical(ctx.worktree)))
+        yield* KiloHookWorktree.teardown({ worktree: directory, root: ctx.worktree })
+      // kilocode_change end
 
       // Preserve the loaded path casing for the store cache; `directory` is lowercased on Windows.
       if (directory !== (yield* canonical(ctx.worktree))) yield* store.disposeDirectory(input.directory)

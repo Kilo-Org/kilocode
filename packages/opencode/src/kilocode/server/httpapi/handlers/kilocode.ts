@@ -55,6 +55,7 @@ import { SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { KiloSnapshotCleanup } from "@/kilocode/snapshot/cleanup"
 import { clearPtys } from "@/kilocode/worktree/pty-cleanup"
+import { KiloHookWorktree } from "@/kilocode/hooks/worktree"
 import { Snapshot } from "@/snapshot"
 import { KiloSnapshotPrepare } from "@/kilocode/snapshot/prepare"
 import { Global } from "@opencode-ai/core/global"
@@ -71,6 +72,7 @@ import {
   RemoveSkillPayload,
   RemoveSnapshotPayload,
   TeardownWorktreePayload,
+  HooksDispatchPayload,
   ResumeSessionPayload,
   DrainSessionPayload,
   BackgroundJobInfo,
@@ -452,6 +454,17 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return { disposed: loaded }
     })
 
+    // The client names the worktree, never the hooks: they come from trusted config, and the path
+    // must be a managed worktree of this project.
+    const hooksDispatch = Effect.fn("KilocodeHttpApi.hooksDispatch")(function* (ctx: {
+      payload: typeof HooksDispatchPayload.Type
+    }) {
+      const instance = yield* InstanceState.context
+      const worktree = yield* KiloHookWorktree.managed(instance, ctx.payload.worktree)
+      if (!worktree) return yield* Effect.fail(new HttpApiError.BadRequest({}))
+      return yield* KiloHookWorktree.dispatch({ ...ctx.payload, worktree, root: instance.worktree })
+    })
+
     const providerUsage = Effect.fn("KilocodeHttpApi.providerUsage")(function* () {
       return yield* located(ProviderUsage.Service.use((usage) => usage.get())).pipe(
         Effect.mapError(() => new HttpApiError.ServiceUnavailable({})),
@@ -605,6 +618,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("marketplaceRemove", marketplaceRemove)
       .handle("removeSnapshot", removeSnapshot)
       .handle("teardownWorktree", teardownWorktree)
+      .handle("hooksDispatch", hooksDispatch)
       .handle("prepareSnapshot", () =>
         Effect.gen(function* () {
           const started = performance.now()

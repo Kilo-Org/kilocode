@@ -16,6 +16,7 @@ import { Instance } from "@/kilocode/instance"
 import { InstanceRef } from "@/effect/instance-ref"
 import { Identity } from "@kilocode/kilo-telemetry"
 import { MemoryLifecycle } from "@/kilocode/memory/turn"
+import { KiloHookLifecycle } from "@/kilocode/hooks/lifecycle"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { MemoryEvents } from "@/kilocode/memory/events"
 import { installMemoryRuntime } from "@/kilocode/memory/runtime"
@@ -53,6 +54,7 @@ export namespace KilocodeBootstrap {
         yield* watcher.init()
         yield* kilo.init()
         yield* MemoryLifecycle.subscribe({ bus, sessions, summary, provider, config, memory })
+        yield* KiloHookLifecycle.subscribe({ bus, sessions, config })
         // Invalidate enabled cache on every memory state mutation (properties.directory holds the memory root).
         yield* bus.subscribeCallback(MemoryEvents.Status, (evt) =>
           KiloToolRegistry.invalidateMemoryEnabled(evt.properties.directory),

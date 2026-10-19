@@ -1,14 +1,20 @@
 import type { Config, HookEvent, HookGroup, HookHandler, HooksConfig } from "../../types/messages"
 
+/** The events the tab lists and edits; the CLI supports more (see `HookEvent`). */
 export const HOOK_EVENTS: HookEvent[] = ["PreToolUse", "PostToolUse"]
 
-export const EVENT_LABELS = {
+type Label = { label: string; help: string }
+
+const LABELS: Partial<Record<HookEvent, Label>> = {
   PreToolUse: { label: "settings.agentBehaviour.hooks.pre", help: "settings.agentBehaviour.hooks.pre.help" },
   PostToolUse: { label: "settings.agentBehaviour.hooks.post", help: "settings.agentBehaviour.hooks.post.help" },
-} as const satisfies Record<HookEvent, { label: string; help: string }>
+}
+
+/** Labels of the events in HOOK_EVENTS, the only ones the tab shows. */
+export const EVENT_LABELS = LABELS as Record<HookEvent, Label>
 
 /** Defaults and limits of the CLI hook runner (packages/opencode/src/kilocode/hooks/hooks.ts). */
-export const HOOK_TIMEOUT = 60
+export const HOOK_TIMEOUT = 600
 const MAX_TIMEOUT = 86_400
 
 /** One handler of one matcher group: the unit the settings list shows and edits. */
@@ -55,6 +61,9 @@ function key(group: HookGroup) {
       item.args ?? null,
       item.timeout ?? null,
       item.onFailure ?? null,
+      item.shell ?? null,
+      item.if ?? null,
+      item.async ?? null,
     ]),
   ])
 }
@@ -75,6 +84,9 @@ function handlerLike(raw: HookHandler, value: HookHandler) {
     raw.type === value.type &&
     raw.timeout === value.timeout &&
     raw.onFailure === value.onFailure &&
+    raw.shell === value.shell &&
+    raw.async === value.async &&
+    like(raw.if, value.if) &&
     like(raw.command, value.command) &&
     (raw.args ?? []).length === (value.args ?? []).length &&
     (raw.args ?? []).every((arg, index) => like(arg, value.args?.[index])) &&
@@ -159,7 +171,8 @@ export function validate(input: HookDraft): HookErrors {
   return errors
 }
 
-function handler(input: HookDraft): HookHandler {
+// `from` is the hook being edited: fields the editor does not show (shell, if, async) are kept.
+function handler(input: HookDraft, from?: HookHandler): HookHandler {
   const timeout = input.timeout.trim()
   return {
     type: "command",
@@ -167,19 +180,22 @@ function handler(input: HookDraft): HookHandler {
     ...(input.exec ? { args: input.args.split(/\r?\n/).filter((line) => line.length > 0) } : {}),
     ...(timeout ? { timeout: Number(timeout) } : {}),
     ...(input.block && input.event === "PreToolUse" ? { onFailure: "block" as const } : {}),
+    ...(from?.shell !== undefined ? { shell: from.shell } : {}),
+    ...(from?.if !== undefined ? { if: from.if } : {}),
+    ...(from?.async !== undefined ? { async: from.async } : {}),
   }
 }
 
-function group(input: HookDraft): HookGroup {
+function group(input: HookDraft, from?: HookHandler): HookGroup {
   const matcher = input.matcher.trim()
-  return { ...(matcher ? { matcher } : {}), hooks: [handler(input)] }
+  return { ...(matcher ? { matcher } : {}), hooks: [handler(input, from)] }
 }
 
+// Only HOOK_EVENTS are edited, so only they are copied.
 function clone(hooks: HooksConfig | null | undefined): Record<HookEvent, HookGroup[]> {
-  return {
-    PreToolUse: (hooks?.PreToolUse ?? []).map((item) => ({ ...item, hooks: [...item.hooks] })),
-    PostToolUse: (hooks?.PostToolUse ?? []).map((item) => ({ ...item, hooks: [...item.hooks] })),
-  }
+  return Object.fromEntries(
+    HOOK_EVENTS.map((event) => [event, (hooks?.[event] ?? []).map((item) => ({ ...item, hooks: [...item.hooks] }))]),
+  ) as Record<HookEvent, HookGroup[]>
 }
 
 const same = (a: HookHandler, b: HookHandler) => key({ hooks: [a] }) === key({ hooks: [b] })
@@ -219,15 +235,15 @@ export function save(hooks: HooksConfig | null | undefined, target: HookEntry | 
   const item = target && at ? next[target.event][at.group] : undefined
   const matcher = input.matcher.trim() || undefined
   if (target && at && item && target.event === input.event && item.matcher === matcher) {
-    item.hooks[at.index] = handler(input)
+    item.hooks[at.index] = handler(input, target.handler)
     return next
   }
   if (target && at && item && target.event === input.event && item.hooks.length === 1) {
-    next[target.event][at.group] = group(input)
+    next[target.event][at.group] = group(input, target.handler)
     return next
   }
   if (target && at) drop(next, target.event, at)
-  next[input.event] = [...next[input.event], group(input)]
+  next[input.event] = [...next[input.event], group(input, target?.handler)]
   return next
 }
 

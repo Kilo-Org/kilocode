@@ -100,6 +100,12 @@ import { KiloSessionSteering } from "@/kilocode/session/steering" // kilocode_ch
 import { Goal } from "@/kilocode/session/goal/runner" // kilocode_change
 import { GoalPolicy } from "@/kilocode/session/goal/policy" // kilocode_change
 import { GoalState } from "@/kilocode/session/goal/state" // kilocode_change
+// kilocode_change start - hook events
+import { KiloHookPrompt } from "@/kilocode/hooks/prompt"
+import { KiloHookSession } from "@/kilocode/hooks/session"
+import { KiloHookLoop } from "@/kilocode/hooks/loop"
+import { KiloHookCompact } from "@/kilocode/hooks/compact"
+// kilocode_change end
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -888,15 +894,25 @@ export const layer = Layer.effect(
           current.model?.id !== info.model.modelID ||
           (current.model?.variant === "default" ? undefined : current.model?.variant) !== info.model.variant
         ) {
-          yield* sessions.setAgentModel({
+          yield* KiloHookPrompt.model({
+            input,
             sessionID: input.sessionID,
+            from: current.model,
+            to: info.model,
             agent: info.agent,
-            model: {
-              id: info.model.modelID,
-              providerID: info.model.providerID,
-              variant: info.model.variant ?? "default",
-            },
-            time: info.time.created,
+            apply: sessions.setAgentModel({
+              sessionID: input.sessionID,
+              agent: info.agent,
+              model: {
+                id: info.model.modelID,
+                providerID: info.model.providerID,
+                variant: info.model.variant ?? "default",
+              },
+              time: info.time.created,
+            }),
+            config,
+            database,
+            events,
           })
         }
       })
@@ -944,6 +960,19 @@ export const layer = Layer.effect(
         "SessionPrompt.resolveUserPart",
       )(function* (part) {
         if (part.type === "file") {
+          // kilocode_change start - PreToolUse hooks guard prompt attachments like Read calls
+          const guard = yield* KiloHookPrompt.attachment({
+            part,
+            sessionID: input.sessionID,
+            messageID: info.id,
+            agent: ag.name,
+            defer,
+            config,
+            database,
+            events,
+          })
+          if (guard) return guard
+          // kilocode_change end
           if (part.source?.type === "resource") {
             const { clientName, uri } = part.source
             yield* Effect.logInfo("mcp resource", { clientName, uri, mime: part.mime })
@@ -1446,6 +1475,7 @@ export const layer = Layer.effect(
       prior?: KiloSessionControl.Ticket,
     ) => Effect.Effect<SessionV1.WithParts, Image.Error> = Effect.fn("SessionPrompt.prompt")(
       function* (input: PromptInput, prior?: KiloSessionControl.Ticket) {
+        input = yield* KiloHookPrompt.submit({ input, prior, sessions, status, config, database, events })
         const background = KiloSessionControl.background(input.parts)
         // kilocode_change - a real user message takes priority over an active goal
         // for its turn but must not pause the goal; the goal loop resumes after it.
@@ -1632,6 +1662,23 @@ export const layer = Layer.effect(
               callID: orphan.callID,
             })
           }
+          // kilocode_change start - Stop/SubagentStop hooks can continue the turn
+          if (
+            yield* KiloHookLoop.stop({
+              sessionID,
+              session,
+              step,
+              user: lastUser,
+              assistant: lastAssistantMsg,
+              msgs,
+              sessions,
+              config,
+              database,
+              events,
+            })
+          )
+            continue
+          // kilocode_change end
           yield* Effect.logInfo("exiting loop", { "session.id": sessionID })
           break
         }
@@ -1668,7 +1715,8 @@ export const layer = Layer.effect(
         if (
           lastFinished &&
           lastFinished.summary !== true &&
-          (yield* compaction.isOverflow({ tokens: lastFinished.tokens, model }))
+          (yield* compaction.isOverflow({ tokens: lastFinished.tokens, model })) && // kilocode_change
+          (yield* KiloHookCompact.allow({ sessionID, user: lastUser.id, trigger: "auto", config, database, events })) // kilocode_change - PreCompact hooks can veto auto compaction
         ) {
           // kilocode_change start
           const guard = KiloSessionPrompt.guardCompactionAttempt({
@@ -1807,6 +1855,18 @@ export const layer = Layer.effect(
           // kilocode_change start — ephemeral context injection + post-summary
           // media strip (keeps outgoing body under the gateway body-size limit
           // even when filterCompacted couldn't trim the pre-summary history).
+          yield* KiloHookSession.inject({
+            msgs,
+            lastUser,
+            session,
+            sessionID,
+            step,
+            instruction,
+            sessions,
+            config,
+            database,
+            events,
+          })
           KiloSessionPrompt.injectEditorContext({ msgs, session, sessionID, cache: envCache })
           msgs = KiloSessionPrompt.maybeStripHistoricalMedia(msgs)
           // kilocode_change end
@@ -1939,6 +1999,24 @@ export const layer = Layer.effect(
                 return "break" as const
               }
               compactionAttempts++
+              if (
+                !(yield* KiloHookCompact.allow({
+                  sessionID,
+                  user: lastUser.id,
+                  trigger: "auto",
+                  overflow: true,
+                  config,
+                  database,
+                  events,
+                }))
+              )
+                return yield* KiloHookCompact.overflow({
+                  sessionID,
+                  message: handle.message,
+                  closeReasons,
+                  sessions,
+                  events,
+                })
               yield* compaction.create({
                 sessionID,
                 agent: lastUser.agent,
@@ -1980,6 +2058,20 @@ export const layer = Layer.effect(
             handle.message.finish = "unknown"
             yield* sessions.updateMessage(handle.message)
           }
+          // kilocode_change end
+          // kilocode_change start - PostToolBatch hooks and tool-hook stops can end the turn
+          if (
+            yield* KiloHookLoop.batch({
+              sessionID,
+              message: handle.message,
+              result,
+              sessions,
+              config,
+              database,
+              events,
+            })
+          )
+            return "break" as const
           // kilocode_change end
           return "continue" as const
         }).pipe(
@@ -2317,6 +2409,7 @@ export const layer = Layer.effect(
     // kilocode_change end
 
     const command = Effect.fn("SessionPrompt.command")(function* (input: CommandInput) {
+      const hooked = yield* KiloHookPrompt.command({ input, sessions, status, config, database, events }) // kilocode_change - UserPromptSubmit runs before command expansion
       if (input.command === "goal") return yield* goals.command(input) // kilocode_change
       const ticket = yield* control.begin(input.sessionID, false) // kilocode_change
       yield* Effect.logInfo("command", {
@@ -2351,6 +2444,7 @@ export const layer = Layer.effect(
         return yield* handleResume({ cmdInput: input, format: fmt })
       }
       // kilocode_change end
+      hooked.push(...(yield* KiloHookPrompt.expand({ input, cmd, sessions, status, config, database, events }))) // kilocode_change - UserPromptExpansion runs before template shell commands
       const raw = input.arguments.match(argsRegex) ?? []
       const args = raw.map((arg) => arg.replace(quoteTrimRegex, ""))
       const templateCommand = yield* Effect.promise(async () => cmd.template)
@@ -2389,10 +2483,17 @@ export const layer = Layer.effect(
         const cfg = yield* config.get()
         const sh = Shell.preferred(cfg.shell)
         // kilocode_change start
-        const results = yield* CommandTimeout.texts(
-          shellMatches.map(([, cmd]) => cmd),
-          sh,
-        ).pipe(Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner))
+        const results = yield* KiloHookPrompt.template({
+          commands: shellMatches.map(([, cmd]) => cmd),
+          sessionID: input.sessionID,
+          agent: agentName,
+          run: (list) =>
+            CommandTimeout.texts(list, sh).pipe(
+              Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+            ),
+          config,
+          database,
+        })
         // kilocode_change end
         let index = 0
         template = template.replace(bashRegex, () => results[index++])
@@ -2453,7 +2554,7 @@ export const layer = Layer.effect(
               prompt: templateParts.find((y) => y.type === "text")?.text ?? "",
             },
           ]
-        : [...uniqueTemplateParts, ...(input.parts ?? [])]
+        : [...uniqueTemplateParts, ...(input.parts ?? []), ...hooked] // kilocode_change
 
       const userAgent = isSubtask ? (input.agent ?? (yield* agents.defaultInfo()).name) : agent.name
       const userModel = isSubtask

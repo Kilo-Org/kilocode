@@ -51,7 +51,7 @@ import { Git } from "@/git"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
 import { KilocodeGlobalConfigStamp } from "@/kilocode/config/global-stamp"
 import { SandboxConfig } from "@/kilocode/sandbox/config"
-import { KiloHooks } from "@/kilocode/hooks/hooks" // kilocode_change
+import { KiloHookConfig } from "@/kilocode/hooks/config" // kilocode_change
 import { ExternalMarkdown } from "@/kilocode/config/external-markdown"
 import { ClaudeMigration } from "@/kilocode/config/claude-migration" // kilocode_change
 import { ProviderModels } from "@/kilocode/config/provider-models"
@@ -657,12 +657,12 @@ const layer = Layer.effect(
         ) {
           const scope = kind ?? (yield* pluginScopeForSource(source))
           const trusted = sourceTrusted ?? scope === "global"
-          const scoped = KiloHooks.scope(
+          const scoped = KiloHookConfig.scope(
             KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope),
             trusted,
             source,
           )
-          const hooks = KiloHooks.concat(result.hooks, scoped.hooks)
+          const hooks = KiloHookConfig.concat(result.hooks, scoped.hooks)
           result = mergeConfigConcatArrays(result, scoped, trusted) // kilocode_change
           if (hooks) result.hooks = hooks
           if (scoped.agent) configuredAgents = mergeDeep(configuredAgents, scoped.agent)

@@ -563,20 +563,35 @@ describe("config overlay routes", () => {
         hooks: {
           PreToolUse: [{ matcher: "Bash", hooks: [guard] }],
           PostToolUse: [{ hooks: [lint] }],
-          Stop: [{ hooks: [guard] }],
+          // Every imported event must survive encoding, with the fields Kilo honors.
+          SessionStart: [{ matcher: "startup", hooks: [{ ...guard, async: true, shell: "bash" }] }],
+          BranchName: [{ hooks: [guard] }],
+          Setup: [{ hooks: [guard] }],
         },
       }),
     )
     try {
       const body = await json<{
-        claude: { path: string; enabled: boolean; hooks?: Config.Info["hooks"] }
+        claude: {
+          path: string
+          enabled: boolean
+          hooks?: Config.Info["hooks"]
+          skipped: { event: string; command?: string; reason: string }[]
+        }
         tools: string[]
       }>(await req(project.path, "/config/hooks"))
       expect(body.claude.path).toBe(file)
       expect(body.claude.hooks).toEqual({
         PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: "guard.sh" }] }],
         PostToolUse: [{ hooks: [{ type: "command", command: "lint.sh", timeout: 0.5 }] }],
+        SessionStart: [
+          { matcher: "startup", hooks: [{ type: "command", command: "guard.sh", async: true, shell: "bash" }] },
+        ],
       })
+      expect(body.claude.skipped).toEqual([
+        { event: "BranchName", reason: "Kilo-only event" },
+        { event: "Setup", reason: "not supported by Kilo" },
+      ])
       // Kilo tool ids and the Claude Code names matchers use for them.
       expect(body.tools).toEqual(expect.arrayContaining(["bash", "Bash", "edit", "Edit", "MultiEdit"]))
     } finally {

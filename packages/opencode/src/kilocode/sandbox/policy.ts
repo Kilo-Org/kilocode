@@ -348,6 +348,18 @@ export function fallback(config: Config.Info) {
   return SandboxConfig.resolve(config)
 }
 
+/**
+ * Whether a new session in `dir` would start sandboxed: the /sandbox preference for the directory,
+ * else the config default, and only where the sandbox backend is available. Used for work with no
+ * session (hooks for directory-scoped events).
+ */
+export const directory = Effect.fn("SandboxPolicy.directory")(function* (dir: string) {
+  const config = SandboxConfig.resolve(yield* (yield* Config.Service).get())
+  const pref = yield* Effect.promise(() => SandboxPreference.read(dir))
+  const state = initial(undefined, pref, config.enabled, config)
+  return state.enabled && backendSupport({ mode: state.mode, allowedHosts: state.allowedHosts }).available
+})
+
 export const status = Effect.fn("SandboxPolicy.status")(function* (sessionID: SessionID) {
   const active = yield* current(sessionID)
   const support = backendSupport({ mode: active.state.mode, allowedHosts: active.state.allowedHosts })

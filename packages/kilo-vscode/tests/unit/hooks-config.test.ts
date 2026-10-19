@@ -132,6 +132,17 @@ describe("save", () => {
     })
     expect(next.PostToolUse).toEqual([{ hooks: [{ type: "command", command: "node", args: ["lint.js", "--fix"] }] }])
   })
+
+  it("keeps shell, if and async, which the editor does not show, through an edit", () => {
+    const extra = { shell: "powershell" as const, if: "Bash(rm *)", async: true }
+    const config: HooksConfig = { PreToolUse: [{ matcher: "Bash", hooks: [{ ...guard, ...extra }] }] }
+    const entry = entries(config, "PreToolUse")[0]!
+    const edited = save(config, entry, { ...draft(entry, "PreToolUse"), command: "guard2.sh" })
+    expect(edited.PreToolUse).toEqual([{ matcher: "Bash", hooks: [{ ...guard, ...extra, command: "guard2.sh" }] }])
+    const moved = save(config, entry, { ...draft(entry, "PreToolUse"), matcher: "Edit" })
+    expect(moved.PreToolUse).toEqual([{ matcher: "Edit", hooks: [{ ...guard, ...extra }] }])
+    expect(patch(config, edited).hooks?.PreToolUse).toEqual(edited.PreToolUse)
+  })
 })
 
 describe("stale targets", () => {

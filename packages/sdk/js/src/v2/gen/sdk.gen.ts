@@ -141,6 +141,7 @@ import type {
   GlobalHealthResponses,
   GlobalUpgradeErrors,
   GlobalUpgradeResponses,
+  HooksDispatchPayload,
   IndexingConsentErrors,
   IndexingConsentResponses,
   IndexingModelsErrors,
@@ -181,6 +182,8 @@ import type {
   KilocodeDrainSessionResponses,
   KilocodeHeapSnapshotErrors,
   KilocodeHeapSnapshotResponses,
+  KilocodeHooksDispatchErrors,
+  KilocodeHooksDispatchResponses,
   KilocodeMarketplaceInstallErrors,
   KilocodeMarketplaceInstallResponses,
   KilocodeMarketplaceListErrors,
@@ -1909,7 +1912,7 @@ export class Config2 extends HeyApiClient {
   /**
    * Get hooks settings data
    *
-   * List the hooks Kilo runs from ~/.claude/settings.json and whether they are enabled for this server, and the tool names hook matchers can use, for settings UIs.
+   * List the hooks Kilo runs from ~/.claude/settings.json, the Claude Code events and handlers it skips with the reason, whether Claude Code hooks are enabled for this server, and the tool names hook matchers can use.
    */
   public hooks<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -8915,6 +8918,47 @@ export class Kilocode extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/worktree/teardown",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Run the hooks of a client-side event
+   *
+   * Run the configured hooks for an event that happens in a client, such as WorktreeSetup after the Agent Manager set up a managed worktree, and report whether a hook blocked it.
+   */
+  public hooksDispatch<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      hooksDispatchPayload?: HooksDispatchPayload
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "hooksDispatchPayload", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeHooksDispatchResponses,
+      KilocodeHooksDispatchErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/hooks/dispatch",
       ...options,
       ...params,
       headers: {

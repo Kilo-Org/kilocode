@@ -3,6 +3,7 @@ import type { Event } from "@kilocode/sdk/v2"
 import { createRoot, createSignal } from "solid-js"
 import { createStore } from "solid-js/store"
 import { KiloTerminalActivity as Activity } from "../../src/kilocode/cli/cmd/tui/terminal-activity"
+import { KiloSessionPhase } from "../../src/kilocode/session/phase"
 
 function data(input: Partial<Activity.Data> = {}): Activity.Data {
   return {
@@ -102,6 +103,16 @@ test("opt-in emitter sends transitions, heartbeat and cleanup independently of t
     emit({ id: "opened", type: "session.turn.open", properties: { sessionID: "parent" } })
     emit({ id: "completed", type: "session.turn.close", properties: { sessionID: "parent", reason: "completed" } })
     expect(output).toEqual(["idle", "busy", "waiting", "busy", "retry", "idle", "error", "idle", "done"])
+    // A hook notice or a rejected prompt (admission phase) is not the outcome of a turn.
+    const notice = {
+      id: "notice",
+      type: "session.error" as const,
+      properties: { sessionID: "parent" },
+      metadata: { phase: "admission" },
+    }
+    expect(KiloSessionPhase.admission(notice)).toBe(true)
+    emit(notice)
+    expect(output.at(-1)).toBe("done")
     await heartbeat.promise
     select(undefined)
     expect(output.slice(-3)).toEqual(["done", "done", "idle"])
@@ -115,3 +126,9 @@ test("opt-in emitter sends transitions, heartbeat and cleanup independently of t
   await Bun.sleep(5_100)
   expect(output).toHaveLength(count)
 }, 15_000)
+
+test("only admission-phase session errors count as admission errors", () => {
+  expect(KiloSessionPhase.admission({ type: "session.error", properties: {} })).toBe(false)
+  expect(KiloSessionPhase.admission({ type: "session.error", metadata: { phase: "execution" } })).toBe(false)
+  expect(KiloSessionPhase.admission({ type: "session.error", metadata: { phase: "admission" } })).toBe(true)
+})

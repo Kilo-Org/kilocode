@@ -60,7 +60,10 @@ export class Handler {
     }
 
     const skillShell = SkillShellPrompt.is(permission.metadata) // kilocode_change - skill batches list commands and never persist
-    const temporary = skillShell || permission.metadata?.["sandboxEscalation"] === true // kilocode_change
+    // kilocode_change start - sandbox escalations and PreToolUse hook asks are never remembered
+    const temporary =
+      skillShell || permission.metadata?.["sandboxEscalation"] === true || permission.metadata?.["hookAsk"] === true
+    // kilocode_change end
     const title = skillShell
       ? SkillShellPrompt.title
       : temporary

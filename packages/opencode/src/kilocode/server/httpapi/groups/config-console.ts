@@ -10,7 +10,8 @@ import {
   WorkspaceRoutingQueryFields,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
-import { Schema } from "effect"
+import { IMPORTED_EVENTS } from "@opencode-ai/core/kilocode/hooks-events"
+import { Record, Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 
 const Scope = Schema.Literals(["global", "project"])
@@ -180,27 +181,31 @@ export const TuiKeybindListResponse = Schema.Struct({ keybinds: Schema.Array(Kil
 
 // Claude Code accepts any number as a timeout (the runner treats invalid ones as the default), so
 // unlike Config.Info hooks this does not require a positive integer.
-const ClaudeHookGroups = Schema.optional(
-  Schema.Array(
+const ClaudeHookGroup = Schema.Struct({
+  matcher: Schema.optional(Schema.String),
+  hooks: Schema.Array(
     Schema.Struct({
-      matcher: Schema.optional(Schema.String),
-      hooks: Schema.Array(
-        Schema.Struct({
-          type: Schema.Literal("command"),
-          command: Schema.String,
-          args: Schema.optional(Schema.Array(Schema.String)),
-          timeout: Schema.optional(Schema.Finite),
-          onFailure: Schema.optional(Schema.Literals(["continue", "block"])),
-        }),
-      ),
+      type: Schema.Literal("command"),
+      command: Schema.String,
+      args: Schema.optional(Schema.Array(Schema.String)),
+      timeout: Schema.optional(Schema.Finite),
+      onFailure: Schema.optional(Schema.Literals(["continue", "block"])),
+      async: Schema.optional(Schema.Boolean),
+      shell: Schema.optional(Schema.Literals(["bash", "powershell"])),
+      if: Schema.optional(Schema.String),
     }),
   ),
-)
+}).annotate({ identifier: "ClaudeHookGroup" })
+const ClaudeHookGroups = Schema.optional(Schema.Array(ClaudeHookGroup))
 export const ConfigHooksResponse = Schema.Struct({
   claude: Schema.Struct({
     path: Schema.String,
     enabled: Schema.Boolean,
-    hooks: Schema.optional(Schema.Struct({ PreToolUse: ClaudeHookGroups, PostToolUse: ClaudeHookGroups })),
+    // Every event Kilo imports must be listed: encoding drops unlisted keys.
+    hooks: Schema.optional(Schema.Struct(Record.map(IMPORTED_EVENTS, () => ClaudeHookGroups))),
+    skipped: Schema.Array(
+      Schema.Struct({ event: Schema.String, command: Schema.optional(Schema.String), reason: Schema.String }),
+    ),
   }),
   tools: Schema.Array(Schema.String).annotate({
     description: "Every tool name a hook matcher can use here: Kilo tool ids, their Claude Code names, MCP tools.",
@@ -251,7 +256,7 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
             identifier: "config.hooks",
             summary: "Get hooks settings data",
             description:
-              "List the hooks Kilo runs from ~/.claude/settings.json and whether they are enabled for this server, and the tool names hook matchers can use, for settings UIs.",
+              "List the hooks Kilo runs from ~/.claude/settings.json, the Claude Code events and handlers it skips with the reason, whether Claude Code hooks are enabled for this server, and the tool names hook matchers can use.",
           }),
         ),
         HttpApiEndpoint.get("effective", ConfigConsolePaths.effective, {
