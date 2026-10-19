@@ -1,4 +1,4 @@
-import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
+import type { ProviderAuthAuthorization, ProviderAuthMethod, ProviderFailure } from "@kilocode/sdk/v2/client"
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../../../src/diff/sources/types"
 import type { PRComment, PRReactionContent } from "../../../agent-manager/pr/pr-types"
 import type { PartBatch, PartRemove, PartUpdate } from "../../../../src/shared/stream-messages"
@@ -19,7 +19,7 @@ import type { AgentManagerSidebarTarget } from "./webview-messages"
 import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { BrowserFeedbackData, BrowserReference } from "../../../../src/shared/browser-feedback"
-import type { BrowserFrame } from "../../../../src/shared/browser-stream"
+import type { BrowserCursor, BrowserFrame } from "../../../../src/shared/browser-stream"
 import type { CodeContext } from "../../../../src/shared/code-context"
 import type { PRMergeResult, PRReviewResult } from "../../../../src/shared/pr-comment-actions"
 
@@ -118,6 +118,11 @@ export interface GitStatusMessage {
 export interface WorkspaceDirectoryChangedMessage {
   type: "workspaceDirectoryChanged"
   directory: string
+}
+
+export interface WorkspaceScopeMessage {
+  type: "workspaceScope"
+  folder?: { name: string; path: string }
 }
 
 export interface LanguageChangedMessage {
@@ -519,6 +524,9 @@ export interface ChatSettingsLoadedMessage {
   type: "chatSettingsLoaded"
   settings: {
     shiftTabCyclesVariant: boolean
+    browserAutomation: boolean
+    agentManagerBrowserOpenLinksIn: "external" | "integrated"
+    workspaceTrusted: boolean
   }
 }
 
@@ -553,6 +561,8 @@ export interface ProvidersLoadedMessage {
   authStates: Record<string, ProviderAuthState>
   /** The organization's Kilo catalog failed to load, so Kilo has no models to pick. */
   kiloUnavailable?: boolean
+  /** Typed reasons providers failed to load, so the UI can explain why instead of hiding them. */
+  failures?: ProviderFailure[]
 }
 
 export interface AgentsLoadedMessage {
@@ -1732,6 +1742,11 @@ export interface BrowserTabFrameMessage extends BrowserFrame {
   sessionId: string
 }
 
+interface BrowserTabCursorMessage extends BrowserCursor {
+  type: "browserTab.cursor"
+  sessionId: string
+}
+
 export interface AgentManagerBrowserInspectionMessage {
   type: "agentManager.browserInspection"
   error?: string
@@ -1762,6 +1777,12 @@ interface AgentManagerBrowserFrameMessage extends BrowserFrame {
   sessionId: string
 }
 
+interface AgentManagerBrowserCursorMessage extends BrowserCursor {
+  type: "agentManager.browserCursor"
+  projectId?: string
+  sessionId: string
+}
+
 export interface AgentManagerBrowserDevtoolsMessage {
   type: "agentManager.browserDevtools"
   browserId: string
@@ -1788,12 +1809,15 @@ export type ExtensionMessage =
   | AgentManagerBrowserInspectionMessage
   | AgentManagerBrowserDevtoolsMessage
   | AgentManagerBrowserFrameMessage
+  | AgentManagerBrowserCursorMessage
   | BrowserTabScopeMessage
   | BrowserTabStateMessage
   | BrowserTabInspectionMessage
   | BrowserTabDevtoolsMessage
   | BrowserTabFrameMessage
+  | BrowserTabCursorMessage
   | ReadyMessage
+  | WorkspaceScopeMessage
   | FontSizeChangedMessage
   | GitStatusMessage
   | ConnectionStateMessage

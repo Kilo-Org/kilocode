@@ -459,6 +459,7 @@ describe("agent manager tool start", () => {
       },
       expect.any(Object),
       expect.any(Object),
+      undefined,
     )
     expect(c.registerWorktreeSession).toHaveBeenCalledWith("s-wt", "/repo/.kilo/worktrees/wt-1")
     expect(c.notifyReady).toHaveBeenCalled()
@@ -625,6 +626,100 @@ describe("agent manager tool start", () => {
       tasks: [{ name: "My Feature" }],
     })
     expect(c.createWorktree).toHaveBeenCalledWith(expect.objectContaining({ branchName: "my-feature" }))
+  })
+
+  it("parses the agent field and drops it when blank or non-string", () => {
+    expect(parseToolRequest({ mode: "local", tasks: [{ prompt: "Fix", agent: "candidate" }] })?.tasks).toEqual([
+      { prompt: "Fix", agent: "candidate" },
+    ])
+    expect(parseToolRequest({ mode: "local", tasks: [{ prompt: "Fix", agent: "  " }] })?.tasks).toEqual([
+      { prompt: "Fix" },
+    ])
+    // The server resolves the agent by exact key, so a padded name must not reach session.create.
+    expect(parseToolRequest({ mode: "local", tasks: [{ prompt: "Fix", agent: "  candidate  " }] })?.tasks).toEqual([
+      { prompt: "Fix", agent: "candidate" },
+    ])
+    expect(parseToolRequest({ mode: "local", tasks: [{ prompt: "Fix", agent: 42 }] })?.tasks).toEqual([
+      { prompt: "Fix" },
+    ])
+    expect(parseToolRequest({ mode: "local", tasks: [{ name: "Prepared", agent: "candidate" }] })?.tasks).toEqual([
+      { name: "Prepared", agent: "candidate" },
+    ])
+  })
+
+  it("forwards the task agent to session.create for local sessions", async () => {
+    const client = {
+      session: {
+        create: mock(async () => ({ data: session("s-local") })),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const c = deps({ getClient: () => client as never })
+
+    await startFromTool(c, {
+      requestID: "am-local-agent",
+      mode: "local",
+      tasks: [{ name: "Prepared", agent: "candidate" }],
+    })
+
+    expect(client.session.create).toHaveBeenCalledWith(expect.objectContaining({ agent: "candidate" }), {
+      throwOnError: true,
+    })
+  })
+
+  it("omits agent from session.create for local sessions when not specified", async () => {
+    const client = {
+      session: {
+        create: mock(async () => ({ data: session("s-local") })),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const c = deps({ getClient: () => client as never })
+
+    await startFromTool(c, { requestID: "am-local-no-agent", mode: "local", tasks: [{ name: "Prepared" }] })
+
+    expect(client.session.create).toHaveBeenCalledWith(expect.not.objectContaining({ agent: expect.anything() }), {
+      throwOnError: true,
+    })
+  })
+
+  it("forwards the task agent to promptAsync", async () => {
+    const client = {
+      session: {
+        create: mock(async () => ({ data: session("s-local") })),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const c = deps({ getClient: () => client as never })
+
+    await startFromTool(c, {
+      requestID: "am-prompt-agent",
+      mode: "local",
+      tasks: [{ prompt: "Do work", agent: "candidate" }],
+    })
+
+    expect(client.session.promptAsync).toHaveBeenCalledWith(expect.objectContaining({ agent: "candidate" }), {
+      throwOnError: true,
+    })
+  })
+
+  it("forwards the task agent to createSessionInWorktree for worktree sessions", async () => {
+    const c = deps()
+    await startFromTool(c, {
+      requestID: "am-worktree-agent",
+      mode: "worktree",
+      tasks: [{ prompt: "Fix", branchName: "fix/one", agent: "candidate" }],
+    })
+
+    expect(c.createSessionInWorktree).toHaveBeenCalledWith(
+      "/repo/.kilo/worktrees/wt-1",
+      "kilo/test",
+      "wt-1",
+      expect.any(Object),
+      expect.any(Object),
+      expect.any(Object),
+      "candidate",
+    )
   })
 
   it("rejects local sessions for unknown worktree directories", async () => {

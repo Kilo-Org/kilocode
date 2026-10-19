@@ -233,6 +233,8 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   }
   const stoppable = () => !props.readonly && !!childSessionId() && avatar() === "running"
 
+  const openLabel = createMemo(() => (worktree ? language.t("task.open.panel") : language.t("task.open.tab")))
+
   const trigger = () => (
     <div data-slot="basic-tool-tool-info-structured" data-component="task-tool-heading">
       <div data-slot="basic-tool-tool-info-main">
@@ -272,13 +274,15 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
             />
           </Tooltip>
         </Show>
-        <IconButton
-          icon="square-arrow-top-right"
-          size="small"
-          variant="ghost"
-          aria-label={worktree ? "Open sub-agent in panel" : "Open sub-agent in tab"}
-          onClick={openInTab}
-        />
+        <Tooltip value={openLabel()} placement="top">
+          <IconButton
+            icon="square-arrow-top-right"
+            size="small"
+            variant="ghost"
+            aria-label={openLabel()}
+            onClick={openInTab}
+          />
+        </Tooltip>
       </Show>
     </div>
   )
@@ -292,7 +296,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
             data-slot="task-agent-avatar"
             data-clickable={childSessionId() ? "true" : undefined}
             data-resolve={resolved() ? "true" : undefined}
-            title={childSessionId() ? (worktree ? "Open sub-agent in panel" : "Open sub-agent in tab") : undefined}
+            title={childSessionId() ? openLabel() : undefined}
             onClick={childSessionId() ? openInTab : undefined}
           >
             <AgentAvatar id={childSessionId() ?? ""} status={avatar()} />

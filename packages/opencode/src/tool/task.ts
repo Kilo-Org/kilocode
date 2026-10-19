@@ -526,6 +526,7 @@ export const TaskTool = Tool.define(
     return {
       description: [
         DESCRIPTION,
+        KiloTask.usageDescription,
         ...(flags.experimentalBackgroundSubagents ? [BACKGROUND_DESCRIPTION] : []),
         KiloTask.modelDescription,
       ].join("\n\n"),

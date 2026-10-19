@@ -64,6 +64,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "보드",
+  "task.swarm.open": "보드 열기",
   "task.swarm.refresh": "새로 고침",
   "task.swarm.reset": "보드 초기화",
   "task.swarm.resetTitle": "이 보드를 초기화할까요?",
@@ -218,6 +219,7 @@ export const dict = {
   "prompt.action.stop.background": "메인 에이전트를 중지합니다. 백그라운드 에이전트는 계속 실행됩니다.",
   "prompt.agents.show": "백그라운드 에이전트 표시",
   "prompt.action.enhance": "프롬프트 개선",
+  "prompt.action.more": "기타 작업",
   "prompt.paste.expand": "붙여넣은 텍스트를 확장하려면 클릭",
   "prompt.issues.title": "세션 문제",
   "prompt.mcp.provider": "{{name}} MCP",
@@ -288,6 +290,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "ChatGPT에 다시 로그인한 후 메시지를 다시 보내 Codex 모델을 계속 사용하세요.",
 
+  "provider.failure.unauthorized": "자격 증명이 거부되었습니다 (HTTP {{status}}). 다시 로그인하세요.",
+  "provider.failure.unauthorizedNoStatus": "자격 증명이 거부되었습니다. 다시 로그인하세요.",
+  "provider.failure.unauthenticated": "로그인되어 있지 않습니다.",
+  "provider.failure.network": "공급자에 연결할 수 없습니다. 연결 상태를 확인하세요.",
+  "provider.failure.http": "공급자 오류 (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "공급자 오류.",
+  "provider.failure.schema": "공급자로부터 예기치 않은 응답을 받았습니다.",
+
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
   "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',
@@ -321,6 +331,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "할 일 읽기",
   "ui.permission.toolLabel.todoWrite": "할 일 쓰기",
   "ui.permission.toolLabel.codeSearch": "코드 검색",
+  "ui.permission.toolLabel.browserOpen": "통합 브라우저",
   "ui.permission.copyCommand": "복사",
   "ui.approval.auto": "자동 승인됨",
   "ui.approval.manual": "사용자가 승인함",
@@ -555,6 +566,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "URL에서 콘텐츠 가져오기",
   "settings.permissions.tool.websearch.description": "웹 검색",
   "settings.permissions.tool.codesearch.description": "웹에서 코드 검색",
+  "settings.permissions.tool.browser_open.description": "통합 브라우저에서 페이지 열기",
   "settings.permissions.tool.external_directory.description": "프로젝트 디렉터리 외부의 파일에 액세스",
   "settings.permissions.tool.doom_loop.description": "동일한 입력으로 반복되는 도구 호출 감지",
 
@@ -752,6 +764,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code는 AI 코딩 어시스턴트입니다. 기능 구축, 버그 수정 또는 코드베이스 설명을 요청하세요.",
+  "session.workspaceScope.description": "Kilo 채팅은 이 작업 영역의 첫 번째 폴더인 “{{folder}}”만 사용합니다.",
+  "session.workspaceScope.alternatives":
+    "다른 폴더에서 작업하려면 해당 폴더를 별도 창에서 열거나 Agent Manager에 프로젝트로 추가하세요.",
+  "session.workspaceScope.dismiss": "작업 영역 범위 안내 닫기",
   "session.messages.scrollToBottom": "하단으로 스크롤",
   "session.messages.initializing": "초기화 중...",
   "session.messages.taskStarting": "시작 중...",
@@ -934,6 +950,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "네이티브 노트북 도구",
   "settings.experimental.nativeNotebookTools.description":
     "VS Code 노트북을 읽고, 편집하고, 실행하는 실험적 도구를 활성화합니다",
+  "settings.experimental.globIncludeIgnored.title": "무시된 경로 검색",
+  "settings.experimental.globIncludeIgnored.description":
+    ".gitignore 또는 기타 무시 파일에서 제외하더라도 glob 도구가 검색할 폴더 또는 파일입니다. 작업 공간 기준의 gitignore 스타일 패턴을 사용하세요. 그 안의 무시된 폴더는 계속 건너뜁니다.",
   "settings.experimental.continueOnDeny.title": "거부 시 계속",
   "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
   "settings.sandboxing.title": "샌드박스",
@@ -1145,6 +1164,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "작업 목록 관리. 내부 작업 목록을 읽고 업데이트할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.webfetch": "URL 가져오기. 특정 URL에서 콘텐츠를 검색할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.websearch": "웹 검색. 외부 웹 검색을 수행할 수 있도록 허용합니다.",
+  "settings.autoApprove.tool.browser_open":
+    "통합 브라우저에서 페이지를 엽니다. 앱 내 미리보기이며 Playwright 브라우저 자동화가 아닙니다.",
   "settings.autoApprove.tool.external_directory":
     "작업 공간 외부 파일 접근. 현재 프로젝트 디렉토리 외부의 파일에 접근할 때 트리거됩니다.",
   "settings.autoApprove.tool.doom_loop":
@@ -1359,6 +1380,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "모두 중지 ({{count}})",
   "task.backgroundAgents.finished": "백그라운드 에이전트 완료",
   "task.stop": "하위 에이전트 중지",
+  "task.open.panel": "패널에서 하위 에이전트 열기",
+  "task.open.tab": "탭에서 하위 에이전트 열기",
   "settings.saveBar.unsavedChanges": "저장되지 않은 변경 사항",
   "settings.saveBar.discard": "취소",
   "settings.saveBar.save": "저장",
@@ -1423,6 +1446,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "시스템 Chrome 사용",
   "settings.experimental.browserAutomation.systemChrome.description":
     "통합 브라우저에 설치된 Google Chrome을 사용합니다. 호환되는 Playwright Chromium 브라우저가 이미 설치된 경우에만 비활성화하세요.",
+  "settings.experimental.browserLinks.title": "링크 열기 위치",
+  "settings.experimental.browserLinks.description":
+    "Kilo 채팅에서 웹 링크를 여는 위치를 선택합니다. 통합 브라우저가 필요합니다.",
+  "settings.experimental.browserLinks.external": "시스템 브라우저",
+  "settings.experimental.browserLinks.integrated": "통합 브라우저",
   "chat.search.searchingHistory": "이전 메시지를 검색하는 중…",
   "browserTab.noSession": "세션에서 브라우저를 열어 로컬 애플리케이션이나 공개 HTTPS 페이지를 미리 보세요.",
   "browserTab.disabled": "통합 브라우저가 비활성화되어 있습니다. Kilo 설정 > 실험에서 활성화하세요.",

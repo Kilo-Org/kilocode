@@ -79,7 +79,12 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
     return { "indexing.showButtonWhenDisabled": message.settings.showButtonWhenDisabled }
   }
   if (message.type === "chatSettingsLoaded") {
-    return { "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant }
+    return {
+      "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
+      browserAutomation: message.settings.browserAutomation,
+      agentManagerBrowserOpenLinksIn: message.settings.agentManagerBrowserOpenLinksIn,
+      workspaceTrusted: message.settings.workspaceTrusted,
+    }
   }
   if (message.type === "throughputSettingLoaded") return { showTokenThroughput: message.visible }
   if (message.type === "autoApprovalReasonSettingLoaded") return { showAutoApprovalReason: message.visible }

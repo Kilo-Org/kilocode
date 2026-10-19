@@ -51,6 +51,10 @@ export function createBrowserLifecycle(input: {
     if (!frame.projectId) return
     input.post({ type: "agentManager.browserFrame", ...frame })
   })
+  const cursors = browser.cursors((cursor) => {
+    if (!cursor.projectId) return
+    input.post({ type: "agentManager.browserCursor", ...cursor })
+  })
   let current: Panel | undefined
   return {
     attach(panel: Panel): void {
@@ -91,6 +95,7 @@ export function createBrowserLifecycle(input: {
       current = undefined
       off()
       frames()
+      cursors()
       browser.unbind(owner)
       return browser.disposeAsync()
     },

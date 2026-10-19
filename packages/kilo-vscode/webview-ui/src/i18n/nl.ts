@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Bord",
+  "task.swarm.open": "Bord openen",
   "task.swarm.refresh": "Vernieuwen",
   "task.swarm.reset": "Bord resetten",
   "task.swarm.resetTitle": "Dit bord resetten?",
@@ -216,6 +217,7 @@ export const dict = {
   "prompt.action.stop.background": "Hoofdagent stoppen. Achtergrondagenten blijven actief.",
   "prompt.agents.show": "Achtergrondagenten tonen",
   "prompt.action.enhance": "Prompt verbeteren",
+  "prompt.action.more": "Meer acties",
   "prompt.paste.expand": "Klik om geplakte tekst uit te vouwen",
   "prompt.issues.title": "Sessieproblemen",
   "prompt.mcp.provider": "{{name}} MCP",
@@ -290,6 +292,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Meld je opnieuw aan bij ChatGPT en stuur je bericht nog een keer om Codex-modellen te blijven gebruiken.",
 
+  "provider.failure.unauthorized": "Inloggegevens geweigerd (HTTP {{status}}). Meld je opnieuw aan.",
+  "provider.failure.unauthorizedNoStatus": "Inloggegevens geweigerd. Meld je opnieuw aan.",
+  "provider.failure.unauthenticated": "Niet aangemeld.",
+  "provider.failure.network": "Kan de provider niet bereiken. Controleer je verbinding.",
+  "provider.failure.http": "Providerfout (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Providerfout.",
+  "provider.failure.schema": "Onverwacht antwoord van de provider.",
+
   "notification.permission.title": "Toestemming vereist",
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",
   "notification.permission.titleSkillShell": "Shell-opdrachten uit vaardigheid “{{skill}}” uitvoeren?",
@@ -323,6 +333,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Todo Lezen",
   "ui.permission.toolLabel.todoWrite": "Todo Schrijven",
   "ui.permission.toolLabel.codeSearch": "Code Zoeken",
+  "ui.permission.toolLabel.browserOpen": "Geïntegreerde browser",
   "ui.permission.copyCommand": "Kopiëren",
   "ui.approval.auto": "Automatisch goedgekeurd",
   "ui.approval.manual": "Door jou goedgekeurd",
@@ -552,6 +563,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Haal inhoud op van een URL",
   "settings.permissions.tool.websearch.description": "Zoek op het web",
   "settings.permissions.tool.codesearch.description": "Zoek code op het web",
+  "settings.permissions.tool.browser_open.description": "Een pagina openen in de geïntegreerde browser",
   "settings.permissions.tool.external_directory.description": "Krijg toegang tot bestanden buiten de projectmap",
   "settings.permissions.tool.doom_loop.description": "Detecteer herhaalde tool calls met identieke invoer",
 
@@ -747,6 +759,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code is een AI-codeerassistent. Vraag het om features te bouwen, bugs op te lossen of je codebase uit te leggen.",
+  "session.workspaceScope.description": "De Kilo-chat gebruikt alleen ‘{{folder}}’, de eerste map in deze werkruimte.",
+  "session.workspaceScope.alternatives":
+    "Om met een andere map te werken, open je deze in een eigen venster of voeg je deze als project toe in Agent Manager.",
+  "session.workspaceScope.dismiss": "Hint over het bereik van de werkruimte verbergen",
   "session.messages.scrollToBottom": "Scroll naar beneden",
   "session.messages.initializing": "Initialiseren...",
   "session.messages.taskStarting": "Starten...",
@@ -941,6 +957,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Native notebooktools",
   "settings.experimental.nativeNotebookTools.description":
     "Experimentele tools inschakelen voor het lezen, bewerken en uitvoeren van VS Code-notebooks",
+  "settings.experimental.globIncludeIgnored.title": "Genegeerde paden doorzoeken",
+  "settings.experimental.globIncludeIgnored.description":
+    "Mappen of bestanden die de glob-tool moet doorzoeken, ook als .gitignore of andere ignore-bestanden ze uitsluiten. Gebruik patronen in gitignore-stijl relatief aan de werkruimte; genegeerde mappen daarbinnen worden nog steeds overgeslagen.",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",
@@ -1133,6 +1152,8 @@ export const dict = {
     "Takenlijst beheren. Staat het lezen en bijwerken van de interne takenlijst toe.",
   "settings.autoApprove.tool.webfetch": "Een URL ophalen. Staat het ophalen van inhoud van een specifieke URL toe.",
   "settings.autoApprove.tool.websearch": "Zoek op het web. Staat het uitvoeren van externe web-zoekopdrachten toe.",
+  "settings.autoApprove.tool.browser_open":
+    "Pagina's openen in de geïntegreerde browser. Dit is de voorbeeldweergave in de app, niet de Playwright-browserautomatisering.",
   "settings.autoApprove.tool.doom_loop":
     "Voorkom herhaalde identieke acties. Geactiveerd wanneer dezelfde tool call herhaald wordt met identieke invoer.",
 
@@ -1370,6 +1391,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Alles stoppen ({{count}})",
   "task.backgroundAgents.finished": "Achtergrondagenten voltooid",
   "task.stop": "Subagent stoppen",
+  "task.open.panel": "Subagent openen in paneel",
+  "task.open.tab": "Subagent openen in tabblad",
 
   "settings.saveBar.unsavedChanges": "Niet-opgeslagen wijzigingen",
   "settings.saveBar.discard": "Verwerpen",
@@ -1476,6 +1499,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Gebruik Systeem Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Gebruik de geïnstalleerde Google Chrome voor de geïntegreerde browser. Schakel dit alleen uit als er al een compatibele Playwright Chromium-browser is geïnstalleerd.",
+  "settings.experimental.browserLinks.title": "Links openen in",
+  "settings.experimental.browserLinks.description":
+    "Kies waar weblinks openen vanuit Kilo-chats. Vereist de geïntegreerde browser.",
+  "settings.experimental.browserLinks.external": "Systeembrowser",
+  "settings.experimental.browserLinks.integrated": "Geïntegreerde browser",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
   "browserTab.noSession":
     "Open de browser vanuit een sessie om een lokale applicatie of een openbare HTTPS-pagina te bekijken.",

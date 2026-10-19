@@ -59,6 +59,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "اللوحة",
+  "task.swarm.open": "فتح اللوحة",
   "task.swarm.refresh": "تحديث",
   "task.swarm.reset": "إعادة تعيين اللوحة",
   "task.swarm.resetTitle": "إعادة تعيين هذه اللوحة؟",
@@ -211,6 +212,7 @@ export const dict = {
   "prompt.action.stop.background": "إيقاف الوكيل الرئيسي. يستمر الوكلاء الخلفيون في العمل.",
   "prompt.agents.show": "إظهار الوكلاء الخلفيين",
   "prompt.action.enhance": "تحسين النص",
+  "prompt.action.more": "مزيد من الإجراءات",
   "prompt.paste.expand": "انقر لتوسيع النص الملصق",
   "prompt.issues.title": "مشكلات الجلسة",
   "prompt.mcp.provider": "خادم MCP لـ {{name}}",
@@ -280,6 +282,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "سجل الدخول باستخدام ChatGPT مرة أخرى، ثم أرسل رسالتك مرة أخرى لمواصلة استخدام نماذج Codex.",
 
+  "provider.failure.unauthorized": "تم رفض بيانات الاعتماد (HTTP {{status}}). سجل الدخول مرة أخرى.",
+  "provider.failure.unauthorizedNoStatus": "تم رفض بيانات الاعتماد. سجل الدخول مرة أخرى.",
+  "provider.failure.unauthenticated": "لم يتم تسجيل الدخول.",
+  "provider.failure.network": "تعذر الوصول إلى الموفر. تحقق من اتصالك.",
+  "provider.failure.http": "خطأ في الموفر (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "خطأ في الموفر.",
+  "provider.failure.schema": "استجابة غير متوقعة من الموفر.",
+
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
   "notification.permission.titleSkillShell": "هل تريد تشغيل أوامر الصدفة من المهارة «{{skill}}»؟",
@@ -313,6 +323,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "قراءة المهام",
   "ui.permission.toolLabel.todoWrite": "كتابة المهام",
   "ui.permission.toolLabel.codeSearch": "بحث الكود",
+  "ui.permission.toolLabel.browserOpen": "المتصفح المدمج",
   "ui.permission.copyCommand": "نسخ",
   "ui.approval.auto": "تمت الموافقة تلقائيًا",
   "ui.approval.manual": "تمت الموافقة من قبلك",
@@ -547,6 +558,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "جلب محتوى من عنوان URL",
   "settings.permissions.tool.websearch.description": "البحث في الويب",
   "settings.permissions.tool.codesearch.description": "البحث عن كود على الويب",
+  "settings.permissions.tool.browser_open.description": "فتح صفحة في المتصفح المدمج",
   "settings.permissions.tool.external_directory.description": "الوصول إلى الملفات خارج دليل المشروع",
   "settings.permissions.tool.doom_loop.description": "اكتشاف استدعاءات الأدوات المتكررة بمدخلات متطابقة",
 
@@ -741,6 +753,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code هو مساعد ترميز بالذكاء الاصطناعي. اطلب منه بناء ميزات أو إصلاح أخطاء أو شرح قاعدة الشيفرة.",
+  "session.workspaceScope.description":
+    "تستخدم دردشة Kilo المجلد «{{folder}}» فقط، وهو المجلد الأول في مساحة العمل هذه.",
+  "session.workspaceScope.alternatives": "للعمل على مجلد آخر، افتحه في نافذة مستقلة أو أضفه كمشروع في Agent Manager.",
+  "session.workspaceScope.dismiss": "إغلاق تلميح نطاق مساحة العمل",
   "session.messages.scrollToBottom": "التمرير إلى الأسفل",
   "session.messages.initializing": "جاري التهيئة...",
   "session.messages.taskStarting": "جاري البدء...",
@@ -920,6 +936,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "أدوات الدفاتر الأصلية",
   "settings.experimental.nativeNotebookTools.description":
     "تمكين الأدوات التجريبية لقراءة دفاتر VS Code وتحريرها وتنفيذها",
+  "settings.experimental.globIncludeIgnored.title": "البحث في المسارات المتجاهلة",
+  "settings.experimental.globIncludeIgnored.description":
+    "المجلدات أو الملفات التي يجب أن تبحث فيها أداة glob حتى عندما يستبعدها .gitignore أو ملفات التجاهل الأخرى. استخدم أنماطًا بأسلوب gitignore نسبةً إلى مساحة العمل؛ تبقى المجلدات المتجاهلة داخلها مستبعدة.",
   "settings.experimental.continueOnDeny.title": "المتابعة عند الرفض",
   "settings.experimental.continueOnDeny.description": "متابعة حلقة الوكيل عند رفض الإذن",
   "settings.sandboxing.title": "العزل",
@@ -1134,6 +1153,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "إدارة قائمة المهام. يسمح بقراءة وتحديث قائمة المهام الداخلية.",
   "settings.autoApprove.tool.webfetch": "جلب رابط ويب. يسمح باسترداد المحتوى من رابط (URL) محدد.",
   "settings.autoApprove.tool.websearch": "البحث في الويب. يسمح بإجراء عمليات بحث خارجية في الويب.",
+  "settings.autoApprove.tool.browser_open":
+    "فتح صفحات في المتصفح المدمج. هذه معاينة داخل التطبيق، وليست أتمتة متصفح Playwright.",
   "settings.autoApprove.tool.external_directory":
     "الوصول للملفات خارج مساحة العمل. يتم تشغيله عند الوصول إلى ملفات خارج مسار المشروع الحالي.",
   "settings.autoApprove.tool.doom_loop":
@@ -1350,6 +1371,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "إيقاف الكل ({{count}})",
   "task.backgroundAgents.finished": "انتهى الوكلاء الخلفيون",
   "task.stop": "إيقاف الوكيل الفرعي",
+  "task.open.panel": "فتح الوكيل الفرعي في اللوحة",
+  "task.open.tab": "فتح الوكيل الفرعي في علامة تبويب",
   "settings.saveBar.unsavedChanges": "تغييرات غير محفوظة",
   "settings.saveBar.discard": "تجاهل",
   "settings.saveBar.save": "حفظ",
@@ -1414,6 +1437,10 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "استخدام Chrome النظام",
   "settings.experimental.browserAutomation.systemChrome.description":
     "استخدام Google Chrome المثبّت للمتصفح المدمج. عطّله فقط عند تثبيت متصفح Playwright Chromium متوافق.",
+  "settings.experimental.browserLinks.title": "فتح الروابط في",
+  "settings.experimental.browserLinks.description": "اختر مكان فتح روابط الويب من محادثات Kilo. يتطلب المتصفح المدمج.",
+  "settings.experimental.browserLinks.external": "متصفح النظام",
+  "settings.experimental.browserLinks.integrated": "المتصفح المدمج",
   "chat.search.searchingHistory": "جارٍ البحث في الرسائل السابقة…",
   "browserTab.noSession": "افتح المتصفح من جلسة لمعاينة تطبيق محلي أو صفحة HTTPS عامة.",
   "browserTab.disabled": "المتصفح المدمج معطّل. فعّله من إعدادات Kilo > تجريبي.",

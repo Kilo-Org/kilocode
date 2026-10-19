@@ -59,6 +59,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "กระดาน",
+  "task.swarm.open": "เปิดกระดาน",
   "task.swarm.refresh": "รีเฟรช",
   "task.swarm.reset": "รีเซ็ตกระดาน",
   "task.swarm.resetTitle": "รีเซ็ตกระดานนี้หรือไม่?",
@@ -214,6 +215,7 @@ export const dict = {
   "prompt.action.stop.background": "หยุดเอเจนต์หลัก เอเจนต์เบื้องหลังจะยังคงทำงานต่อ",
   "prompt.agents.show": "แสดงเอเจนต์เบื้องหลัง",
   "prompt.action.enhance": "ปรับปรุงพรอมต์",
+  "prompt.action.more": "การดำเนินการเพิ่มเติม",
   "prompt.paste.expand": "คลิกเพื่อขยายข้อความที่วาง",
   "prompt.issues.title": "ปัญหาของเซสชัน",
   "prompt.mcp.provider": "MCP {{name}}",
@@ -285,6 +287,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "เข้าสู่ระบบ ChatGPT อีกครั้ง จากนั้นส่งข้อความของคุณใหม่เพื่อใช้งานโมเดล Codex ต่อไป",
 
+  "provider.failure.unauthorized": "ข้อมูลรับรองถูกปฏิเสธ (HTTP {{status}}) โปรดเข้าสู่ระบบอีกครั้ง",
+  "provider.failure.unauthorizedNoStatus": "ข้อมูลรับรองถูกปฏิเสธ โปรดเข้าสู่ระบบอีกครั้ง",
+  "provider.failure.unauthenticated": "ยังไม่ได้เข้าสู่ระบบ",
+  "provider.failure.network": "ไม่สามารถเชื่อมต่อผู้ให้บริการได้ โปรดตรวจสอบการเชื่อมต่อของคุณ",
+  "provider.failure.http": "เกิดข้อผิดพลาดของผู้ให้บริการ (HTTP {{status}})",
+  "provider.failure.httpNoStatus": "เกิดข้อผิดพลาดของผู้ให้บริการ",
+  "provider.failure.schema": "ได้รับการตอบกลับที่ไม่คาดคิดจากผู้ให้บริการ",
+
   "notification.permission.title": "ต้องการสิทธิ์",
   "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
   "notification.permission.titleSkillShell": 'เรียกใช้คำสั่งเชลล์จากสกิล "{{skill}}" หรือไม่?',
@@ -318,6 +328,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "อ่านรายการงาน",
   "ui.permission.toolLabel.todoWrite": "เขียนรายการงาน",
   "ui.permission.toolLabel.codeSearch": "ค้นหาโค้ด",
+  "ui.permission.toolLabel.browserOpen": "เบราว์เซอร์ในตัว",
   "ui.permission.copyCommand": "คัดลอก",
   "ui.approval.auto": "อนุมัติอัตโนมัติ",
   "ui.approval.manual": "คุณเป็นผู้อนุมัติ",
@@ -592,6 +603,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "ดึงเนื้อหาจาก URL",
   "settings.permissions.tool.websearch.description": "ค้นหาบนเว็บ",
   "settings.permissions.tool.codesearch.description": "ค้นหาโค้ดบนเว็บ",
+  "settings.permissions.tool.browser_open.description": "เปิดหน้าในเบราว์เซอร์ในตัว",
   "settings.permissions.tool.external_directory.description": "เข้าถึงไฟล์นอกไดเรกทอรีโปรเจกต์",
   "settings.permissions.tool.doom_loop.description": "ตรวจจับการเรียกเครื่องมือซ้ำด้วยข้อมูลนำเข้าเหมือนกัน",
 
@@ -747,6 +759,10 @@ export const dict = {
   "settings.aboutKiloCode.title": "เกี่ยวกับ Kilo Code",
 
   "session.messages.welcome": "Kilo Code เป็นผู้ช่วยเขียนโค้ด AI ขอให้สร้างฟีเจอร์ แก้ไขบัก หรืออธิบายโค้ดเบสของคุณ",
+  "session.workspaceScope.description": "แชต Kilo ใช้เฉพาะ “{{folder}}” ซึ่งเป็นโฟลเดอร์แรกในพื้นที่ทำงานนี้",
+  "session.workspaceScope.alternatives":
+    "หากต้องการทำงานกับโฟลเดอร์อื่น ให้เปิดโฟลเดอร์นั้นในหน้าต่างแยกต่างหาก หรือเพิ่มเป็นโปรเจกต์ใน Agent Manager",
+  "session.workspaceScope.dismiss": "ปิดคำแนะนำเกี่ยวกับขอบเขตพื้นที่ทำงาน",
   "session.messages.scrollToBottom": "เลื่อนไปด้านล่าง",
   "session.messages.initializing": "กำลังเริ่มต้น...",
   "session.messages.taskStarting": "กำลังเริ่มทำงาน...",
@@ -929,6 +945,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "เครื่องมือโน้ตบุ๊กดั้งเดิม",
   "settings.experimental.nativeNotebookTools.description":
     "เปิดใช้งานเครื่องมือทดลองสำหรับการอ่าน แก้ไข และเรียกใช้โน้ตบุ๊ก VS Code",
+  "settings.experimental.globIncludeIgnored.title": "ค้นหาพาธที่ถูกละเว้น",
+  "settings.experimental.globIncludeIgnored.description":
+    "โฟลเดอร์หรือไฟล์ที่เครื่องมือ glob ควรค้นหาแม้ว่า .gitignore หรือไฟล์ ignore อื่นๆ จะยกเว้นไว้ ใช้รูปแบบสไตล์ gitignore ที่อ้างอิงจากเวิร์กสเปซ โฟลเดอร์ที่ถูกละเว้นภายในจะยังคงถูกข้าม",
   "settings.experimental.continueOnDeny.title": "ดำเนินต่อเมื่อถูกปฏิเสธ",
   "settings.experimental.continueOnDeny.description": "ดำเนินลูปเอเจนต์ต่อเมื่อสิทธิ์ถูกปฏิเสธ",
   "settings.sandboxing.title": "การทำงานในแซนด์บ็อกซ์",
@@ -1142,6 +1161,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "จัดการรายการงาน อนุญาตให้อ่านและอัปเดตรายการงานภายใน",
   "settings.autoApprove.tool.webfetch": "ดึงข้อมูลจาก URL อนุญาตให้ดึงเนื้อหาจาก URL ที่ระบุ",
   "settings.autoApprove.tool.websearch": "ค้นหาบนเว็บ อนุญาตให้ทำการค้นหาเว็บภายนอก",
+  "settings.autoApprove.tool.browser_open":
+    "เปิดหน้าในเบราว์เซอร์ในตัว นี่คือการแสดงตัวอย่างในแอป ไม่ใช่ระบบอัตโนมัติของเบราว์เซอร์ Playwright",
   "settings.autoApprove.tool.external_directory":
     "เข้าถึงไฟล์นอกพื้นที่ทำงาน (Workspace) ถูกเรียกเมื่อเข้าถึงไฟล์ภายนอกไดเรกทอรีโปรเจ็กต์ปัจจุบัน",
   "settings.autoApprove.tool.doom_loop":
@@ -1356,6 +1377,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "หยุดทั้งหมด ({{count}})",
   "task.backgroundAgents.finished": "เอเจนต์เบื้องหลังทำงานเสร็จแล้ว",
   "task.stop": "หยุดเอเจนต์ย่อย",
+  "task.open.panel": "เปิดเอเจนต์ย่อยในแผง",
+  "task.open.tab": "เปิดเอเจนต์ย่อยในแท็บ",
   "settings.saveBar.unsavedChanges": "การเปลี่ยนแปลงที่ยังไม่ได้บันทึก",
   "settings.saveBar.discard": "ยกเลิก",
   "settings.saveBar.save": "บันทึก",
@@ -1420,6 +1443,10 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "ใช้ Chrome ของระบบ",
   "settings.experimental.browserAutomation.systemChrome.description":
     "ใช้ Google Chrome ที่ติดตั้งไว้สำหรับเบราว์เซอร์ในตัว ปิดใช้งานเฉพาะเมื่อติดตั้งเบราว์เซอร์ Playwright Chromium ที่เข้ากันได้ไว้แล้วเท่านั้น",
+  "settings.experimental.browserLinks.title": "เปิดลิงก์ใน",
+  "settings.experimental.browserLinks.description": "เลือกว่าเว็บลิงก์จะเปิดจากแชท Kilo ที่ใด ต้องใช้เบราว์เซอร์ในตัว",
+  "settings.experimental.browserLinks.external": "เบราว์เซอร์ของระบบ",
+  "settings.experimental.browserLinks.integrated": "เบราว์เซอร์ในตัว",
   "chat.search.searchingHistory": "กำลังค้นหาข้อความก่อนหน้า…",
   "browserTab.noSession": "เปิดเบราว์เซอร์จากเซสชันเพื่อดูตัวอย่างแอปพลิเคชันในเครื่องหรือหน้า HTTPS สาธารณะ",
   "browserTab.disabled": "เบราว์เซอร์ในตัวถูกปิดใช้งาน เปิดใช้งานได้ในการตั้งค่า Kilo > ทดลอง",

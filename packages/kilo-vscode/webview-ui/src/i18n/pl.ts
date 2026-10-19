@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Tablica",
+  "task.swarm.open": "Otwórz tablicę",
   "task.swarm.refresh": "Odśwież",
   "task.swarm.reset": "Zresetuj tablicę",
   "task.swarm.resetTitle": "Zresetować tę tablicę?",
@@ -216,6 +217,7 @@ export const dict = {
   "prompt.action.stop.background": "Zatrzymaj głównego agenta. Agenci w tle nadal działają.",
   "prompt.agents.show": "Pokaż agentów w tle",
   "prompt.action.enhance": "Ulepsz prompt",
+  "prompt.action.more": "Więcej akcji",
   "prompt.paste.expand": "Kliknij, aby rozwinąć wklejony tekst",
   "prompt.issues.title": "Problemy sesji",
   "prompt.mcp.provider": "MCP {{name}}",
@@ -289,6 +291,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Zaloguj się ponownie do ChatGPT, a następnie wyślij wiadomość jeszcze raz, aby kontynuować korzystanie z modeli Codex.",
 
+  "provider.failure.unauthorized": "Poświadczenia zostały odrzucone (HTTP {{status}}). Zaloguj się ponownie.",
+  "provider.failure.unauthorizedNoStatus": "Poświadczenia zostały odrzucone. Zaloguj się ponownie.",
+  "provider.failure.unauthenticated": "Nie jesteś zalogowany.",
+  "provider.failure.network": "Nie można połączyć się z dostawcą. Sprawdź swoje połączenie.",
+  "provider.failure.http": "Błąd dostawcy (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Błąd dostawcy.",
+  "provider.failure.schema": "Nieoczekiwana odpowiedź od dostawcy.",
+
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",
   "notification.permission.titleSkillShell": "Uruchomić polecenia powłoki z umiejętności „{{skill}}”?",
@@ -322,6 +332,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Odczyt Todo",
   "ui.permission.toolLabel.todoWrite": "Zapis Todo",
   "ui.permission.toolLabel.codeSearch": "Wyszukiwanie kodu",
+  "ui.permission.toolLabel.browserOpen": "Zintegrowana przeglądarka",
   "ui.permission.copyCommand": "Kopiuj",
   "ui.approval.auto": "Zatwierdzono automatycznie",
   "ui.approval.manual": "Zatwierdzone przez Ciebie",
@@ -558,6 +569,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Pobieranie zawartości z adresu URL",
   "settings.permissions.tool.websearch.description": "Przeszukiwanie sieci",
   "settings.permissions.tool.codesearch.description": "Przeszukiwanie kodu w sieci",
+  "settings.permissions.tool.browser_open.description": "Otwórz stronę w zintegrowanej przeglądarce",
   "settings.permissions.tool.external_directory.description": "Dostęp do plików poza katalogiem projektu",
   "settings.permissions.tool.doom_loop.description": "Wykrywanie powtarzających się wywołań narzędzi (doom loop)",
 
@@ -715,6 +727,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code to asystent programowania AI. Poproś go o tworzenie funkcji, naprawę błędów lub wyjaśnienie bazy kodu.",
+  "session.workspaceScope.description":
+    "Czat Kilo używa tylko „{{folder}}”, pierwszego folderu w tym obszarze roboczym.",
+  "session.workspaceScope.alternatives":
+    "Aby pracować z innym folderem, otwórz go w osobnym oknie lub dodaj go jako projekt w Agent Manager.",
+  "session.workspaceScope.dismiss": "Ukryj wskazówkę dotyczącą zakresu obszaru roboczego",
   "session.messages.scrollToBottom": "Przewiń na dół",
   "session.messages.initializing": "Inicjalizacja...",
   "session.messages.taskStarting": "Uruchamianie...",
@@ -902,6 +919,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Natywne narzędzia notatników",
   "settings.experimental.nativeNotebookTools.description":
     "Włącz eksperymentalne narzędzia do odczytu, edycji i uruchamiania notatników VS Code",
+  "settings.experimental.globIncludeIgnored.title": "Przeszukuj ignorowane ścieżki",
+  "settings.experimental.globIncludeIgnored.description":
+    "Foldery lub pliki, które narzędzie glob ma przeszukiwać nawet wtedy, gdy .gitignore lub inne pliki ignorowania je wykluczają. Używaj wzorców w stylu gitignore względem obszaru roboczego; ignorowane foldery w ich wnętrzu nadal są pomijane.",
   "settings.experimental.continueOnDeny.title": "Kontynuuj przy odmowie",
   "settings.experimental.continueOnDeny.description": "Kontynuuj pętlę agenta po odmowie uprawnienia",
   "settings.sandboxing.title": "Izolacja w piaskownicy",
@@ -1168,6 +1188,8 @@ export const dict = {
   "settings.autoApprove.tool.webfetch": "Pobieranie URL. Pozwala na pobieranie zawartości z określonego adresu URL.",
   "settings.autoApprove.tool.websearch":
     "Przeszukiwanie sieci. Pozwala na wykonywanie zewnętrznych wyszukiwań w sieci.",
+  "settings.autoApprove.tool.browser_open":
+    "Otwieraj strony w zintegrowanej przeglądarce. To podgląd w aplikacji, a nie automatyzacja Playwright.",
   "settings.autoApprove.tool.external_directory":
     "Dostęp do plików poza obszarem roboczym. Uruchamiane przy dostępie do plików poza bieżącym katalogiem projektu.",
   "settings.autoApprove.tool.doom_loop":
@@ -1389,6 +1411,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Zatrzymaj wszystkich ({{count}})",
   "task.backgroundAgents.finished": "Agenci w tle zakończyli pracę",
   "task.stop": "Zatrzymaj podagenta",
+  "task.open.panel": "Otwórz podagenta w panelu",
+  "task.open.tab": "Otwórz podagenta w karcie",
   "settings.saveBar.unsavedChanges": "Niezapisane zmiany",
   "settings.saveBar.discard": "Odrzuć",
   "settings.saveBar.save": "Zapisz",
@@ -1453,6 +1477,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Użyj systemowego Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Użyj zainstalowanej przeglądarki Google Chrome dla zintegrowanej przeglądarki. Wyłącz tylko wtedy, gdy zgodna przeglądarka Playwright Chromium jest już zainstalowana.",
+  "settings.experimental.browserLinks.title": "Otwieraj linki w",
+  "settings.experimental.browserLinks.description":
+    "Wybierz, gdzie otwierają się linki internetowe z czatów Kilo. Wymaga zintegrowanej przeglądarki.",
+  "settings.experimental.browserLinks.external": "Przeglądarka systemowa",
+  "settings.experimental.browserLinks.integrated": "Zintegrowana przeglądarka",
   "chat.search.searchingHistory": "Wyszukiwanie we wcześniejszych wiadomościach…",
   "browserTab.noSession":
     "Otwórz przeglądarkę z sesji, aby wyświetlić podgląd lokalnej aplikacji lub publicznej strony HTTPS.",

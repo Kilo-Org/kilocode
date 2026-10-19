@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Pano",
+  "task.swarm.open": "Panoyu aç",
   "task.swarm.refresh": "Yenile",
   "task.swarm.reset": "Panoyu sıfırla",
   "task.swarm.resetTitle": "Bu pano sıfırlansın mı?",
@@ -215,6 +216,7 @@ export const dict = {
   "prompt.action.stop.background": "Ana ajanı durdur. Arka plan ajanları çalışmaya devam eder.",
   "prompt.agents.show": "Arka plan ajanlarını göster",
   "prompt.action.enhance": "Komutu geliştir",
+  "prompt.action.more": "Diğer eylemler",
   "prompt.paste.expand": "Yapıştırılan metni genişletmek için tıklayın",
   "prompt.issues.title": "Oturum sorunları",
   "prompt.mcp.provider": "{{name}} MCP",
@@ -286,6 +288,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Codex modellerini kullanmaya devam etmek için ChatGPT ile tekrar giriş yapın ve mesajınızı yeniden gönderin.",
 
+  "provider.failure.unauthorized": "Kimlik bilgileri reddedildi (HTTP {{status}}). Tekrar giriş yapın.",
+  "provider.failure.unauthorizedNoStatus": "Kimlik bilgileri reddedildi. Tekrar giriş yapın.",
+  "provider.failure.unauthenticated": "Giriş yapılmadı.",
+  "provider.failure.network": "Sağlayıcıya ulaşılamadı. Bağlantınızı kontrol edin.",
+  "provider.failure.http": "Sağlayıcı hatası (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Sağlayıcı hatası.",
+  "provider.failure.schema": "Sağlayıcıdan beklenmeyen bir yanıt alındı.",
+
   "notification.permission.title": "İzin gerekli",
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",
   "notification.permission.titleSkillShell": "“{{skill}}” becerisindeki kabuk komutları çalıştırılsın mı?",
@@ -319,6 +329,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Görev Oku",
   "ui.permission.toolLabel.todoWrite": "Görev Yaz",
   "ui.permission.toolLabel.codeSearch": "Kod Araması",
+  "ui.permission.toolLabel.browserOpen": "Entegre Tarayıcı",
   "ui.permission.copyCommand": "Kopyala",
   "ui.approval.auto": "Otomatik onaylandı",
   "ui.approval.manual": "Sizin tarafınızdan onaylandı",
@@ -547,6 +558,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Bir URL'den içerik getir",
   "settings.permissions.tool.websearch.description": "Web'de ara",
   "settings.permissions.tool.codesearch.description": "Web'de kod ara",
+  "settings.permissions.tool.browser_open.description": "Sayfayı Entegre Tarayıcıda aç",
   "settings.permissions.tool.external_directory.description": "Proje dizini dışındaki dosyalara eriş",
   "settings.permissions.tool.doom_loop.description": "Aynı girdiyle tekrarlanan araç çağrılarını algıla",
 
@@ -745,6 +757,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code bir yapay zeka kodlama asistanıdır. Özellik geliştirmesini, hata düzeltmesini veya kod tabanınızı açıklamasını isteyin.",
+  "session.workspaceScope.description":
+    "Kilo sohbeti yalnızca bu çalışma alanındaki ilk klasör olan “{{folder}}” klasörünü kullanır.",
+  "session.workspaceScope.alternatives":
+    "Başka bir klasörde çalışmak için klasörü ayrı bir pencerede açın veya Agent Manager'a proje olarak ekleyin.",
+  "session.workspaceScope.dismiss": "Çalışma alanı kapsamı ipucunu kapat",
   "session.messages.scrollToBottom": "En alta kaydır",
   "session.messages.initializing": "Başlatılıyor...",
   "session.messages.taskStarting": "Başlıyor...",
@@ -934,6 +951,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Yerel Not Defteri Araçları",
   "settings.experimental.nativeNotebookTools.description":
     "VS Code not defterlerini okumak, düzenlemek ve çalıştırmak için deneysel araçları etkinleştir",
+  "settings.experimental.globIncludeIgnored.title": "Yok sayılan yollarda ara",
+  "settings.experimental.globIncludeIgnored.description":
+    ".gitignore veya diğer yok sayma dosyaları hariç tutsa bile glob aracının araması gereken klasörler veya dosyalar. Çalışma alanına göre gitignore tarzı desenler kullanın; bunların içindeki yok sayılan klasörler atlanmaya devam eder.",
   "settings.experimental.continueOnDeny.title": "Reddetme Durumunda Devam Et",
   "settings.experimental.continueOnDeny.description": "Bir izin reddedildiğinde ajan döngüsüne devam et",
   "settings.sandboxing.title": "Sandbox",
@@ -1122,6 +1142,8 @@ export const dict = {
     "Görev listesini yönet. Dahili görev listesini okuma ve güncellemeye izin verir.",
   "settings.autoApprove.tool.webfetch": "URL getir. Belirli bir URL'den içerik almaya izin verir.",
   "settings.autoApprove.tool.websearch": "Web'de ara. Harici web aramaları yapmaya izin verir.",
+  "settings.autoApprove.tool.browser_open":
+    "Sayfaları Entegre Tarayıcıda aç. Bu, uygulama içi önizlemedir, Playwright tarayıcı otomasyonu değildir.",
   "settings.autoApprove.tool.doom_loop":
     "Tekrarlanan aynı eylemleri önle. Aynı araç çağrısı aynı girdiyle tekrarlandığında tetiklenir.",
 
@@ -1356,6 +1378,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Tümünü durdur ({{count}})",
   "task.backgroundAgents.finished": "Arka plan ajanları tamamlandı",
   "task.stop": "Alt ajanı durdur",
+  "task.open.panel": "Alt ajanı panelde aç",
+  "task.open.tab": "Alt ajanı sekmede aç",
 
   "settings.saveBar.unsavedChanges": "Kaydedilmemiş değişiklikler",
   "settings.saveBar.discard": "Geri Al",
@@ -1463,6 +1487,11 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Sistem Chrome'unu Kullan",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Entegre Tarayıcı için yüklü Google Chrome'u kullanın. Yalnızca uyumlu bir Playwright Chromium tarayıcısı zaten yüklüyse devre dışı bırakın.",
+  "settings.experimental.browserLinks.title": "Bağlantıların açılacağı yer",
+  "settings.experimental.browserLinks.description":
+    "Kilo sohbetlerindeki web bağlantılarının nerede açılacağını seçin. Entegre Tarayıcı gerektirir.",
+  "settings.experimental.browserLinks.external": "Sistem tarayıcısı",
+  "settings.experimental.browserLinks.integrated": "Entegre Tarayıcı",
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
   "browserTab.noSession":
     "Yerel bir uygulamayı veya genel bir HTTPS sayfasını önizlemek için tarayıcıyı bir oturumdan açın.",
