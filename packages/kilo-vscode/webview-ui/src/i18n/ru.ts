@@ -1151,6 +1151,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "Точное совпадение: {{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "Регулярное выражение, совпадение в любом месте имени инструмента",
   "settings.agentBehaviour.hooks.matcher.invalid": "Недопустимое регулярное выражение",
+  "settings.agentBehaviour.hooks.unmatched":
+    "Здесь нет инструмента с именем {{names}}, поэтому этот хук для него никогда не выполняется.",
   "settings.agentBehaviour.hooks.command": "Команда",
   "settings.agentBehaviour.hooks.command.help":
     "Получает вызов инструмента в формате JSON через stdin и выполняется в каталоге проекта.",

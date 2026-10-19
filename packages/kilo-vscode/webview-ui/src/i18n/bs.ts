@@ -1156,6 +1156,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "Odgovara tačno: {{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "Regularni izraz, traži se bilo gdje u nazivu alata",
   "settings.agentBehaviour.hooks.matcher.invalid": "Nevažeći regularni izraz",
+  "settings.agentBehaviour.hooks.unmatched":
+    "Ovdje nijedan alat nema naziv {{names}}, pa se ovaj hook za njega nikad ne pokreće.",
   "settings.agentBehaviour.hooks.command": "Naredba",
   "settings.agentBehaviour.hooks.command.help":
     "Prima poziv alata kao JSON na stdin i pokreće se u direktoriju projekta.",

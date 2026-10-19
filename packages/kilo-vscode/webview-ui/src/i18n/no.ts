@@ -1154,6 +1154,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "Matcher nøyaktig: {{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "Regulært uttrykk som matches hvor som helst i verktøynavnet",
   "settings.agentBehaviour.hooks.matcher.invalid": "Ugyldig regulært uttrykk",
+  "settings.agentBehaviour.hooks.unmatched": "Ingen verktøy heter {{names}} her, så denne hooken kjøres aldri for det.",
   "settings.agentBehaviour.hooks.command": "Kommando",
   "settings.agentBehaviour.hooks.command.help": "Mottar verktøykallet som JSON på stdin og kjører i prosjektmappen.",
   "settings.agentBehaviour.hooks.command.required": "Skriv inn en kommando",

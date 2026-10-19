@@ -1156,6 +1156,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "Pasuje dokładnie do: {{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "Wyrażenie regularne dopasowywane w dowolnym miejscu nazwy narzędzia",
   "settings.agentBehaviour.hooks.matcher.invalid": "Nieprawidłowe wyrażenie regularne",
+  "settings.agentBehaviour.hooks.unmatched":
+    "Żadne narzędzie nie nazywa się tutaj {{names}}, więc ten hook nigdy się dla niego nie uruchomi.",
   "settings.agentBehaviour.hooks.command": "Polecenie",
   "settings.agentBehaviour.hooks.command.help":
     "Otrzymuje wywołanie narzędzia jako JSON na stdin i działa w katalogu projektu.",

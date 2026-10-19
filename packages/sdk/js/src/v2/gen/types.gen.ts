@@ -2628,7 +2628,7 @@ export type Config = {
         command: string
         args?: Array<string>
         timeout?: number
-        onFailure?: "block"
+        onFailure?: "continue" | "block"
       }>
     }>
     PostToolUse?: Array<{
@@ -2644,7 +2644,7 @@ export type Config = {
         command: string
         args?: Array<string>
         timeout?: number
-        onFailure?: "block"
+        onFailure?: "continue" | "block"
       }>
     }>
   }
@@ -4069,31 +4069,37 @@ export type ConfigSourcesResponse = {
   }>
 }
 
-export type ConfigClaudeHooks = {
-  path: string
-  enabled: boolean
-  hooks?: {
-    PreToolUse?: Array<{
-      matcher?: string
-      hooks: Array<{
-        type: "command"
-        command: string
-        args?: Array<string>
-        timeout?: number
-        onFailure?: "block"
+export type ConfigHooks = {
+  claude: {
+    path: string
+    enabled: boolean
+    hooks?: {
+      PreToolUse?: Array<{
+        matcher?: string
+        hooks: Array<{
+          type: "command"
+          command: string
+          args?: Array<string>
+          timeout?: number
+          onFailure?: "continue" | "block"
+        }>
       }>
-    }>
-    PostToolUse?: Array<{
-      matcher?: string
-      hooks: Array<{
-        type: "command"
-        command: string
-        args?: Array<string>
-        timeout?: number
-        onFailure?: "block"
+      PostToolUse?: Array<{
+        matcher?: string
+        hooks: Array<{
+          type: "command"
+          command: string
+          args?: Array<string>
+          timeout?: number
+          onFailure?: "continue" | "block"
+        }>
       }>
-    }>
+    }
   }
+  /**
+   * Every tool name a hook matcher can use here: Kilo tool ids, their Claude Code names, MCP tools.
+   */
+  tools: Array<string>
 }
 
 export type ConfigOverlayConflictError = {
@@ -15902,33 +15908,33 @@ export type ConfigSourcesResponses = {
 
 export type ConfigSourcesResponse2 = ConfigSourcesResponses[keyof ConfigSourcesResponses]
 
-export type ConfigClaudeHooksData = {
+export type ConfigHooksData = {
   body?: never
   path?: never
   query?: {
     directory?: string
     workspace?: string
   }
-  url: "/config/claude-hooks"
+  url: "/config/hooks"
 }
 
-export type ConfigClaudeHooksErrors = {
+export type ConfigHooksErrors = {
   /**
    * Bad request
    */
   400: BadRequestError
 }
 
-export type ConfigClaudeHooksError = ConfigClaudeHooksErrors[keyof ConfigClaudeHooksErrors]
+export type ConfigHooksError = ConfigHooksErrors[keyof ConfigHooksErrors]
 
-export type ConfigClaudeHooksResponses = {
+export type ConfigHooksResponses = {
   /**
-   * Claude Code hooks
+   * Hooks settings data
    */
-  200: ConfigClaudeHooks
+  200: ConfigHooks
 }
 
-export type ConfigClaudeHooksResponse = ConfigClaudeHooksResponses[keyof ConfigClaudeHooksResponses]
+export type ConfigHooksResponse = ConfigHooksResponses[keyof ConfigHooksResponses]
 
 export type ConfigEffectiveData = {
   body?: never

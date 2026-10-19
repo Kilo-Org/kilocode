@@ -1141,6 +1141,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "정확히 일치: {{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "정규식, 도구 이름의 어느 위치에서든 일치",
   "settings.agentBehaviour.hooks.matcher.invalid": "잘못된 정규식",
+  "settings.agentBehaviour.hooks.unmatched":
+    "여기에는 이름이 {{names}}인 도구가 없으므로 이 훅은 해당 도구에 대해 실행되지 않습니다.",
   "settings.agentBehaviour.hooks.command": "명령어",
   "settings.agentBehaviour.hooks.command.help": "도구 호출을 stdin을 통해 JSON으로 받아 프로젝트 폴더에서 실행됩니다.",
   "settings.agentBehaviour.hooks.command.required": "명령어를 입력하세요",

@@ -125,6 +125,13 @@ export function matcherKind(value: string | undefined): MatcherKind {
   }
 }
 
+/** Names in an exact-list matcher that none of `tools` answers to: the hook never runs. */
+export function unknown(matcher: string | undefined, tools: readonly string[] | undefined) {
+  const kind = matcherKind(matcher)
+  if (!tools || kind.kind !== "names") return []
+  return kind.names.filter((name) => !tools.includes(name))
+}
+
 export function draft(entry: HookEntry | undefined, event: HookEvent): HookDraft {
   if (!entry) return { event, matcher: "", command: "", exec: false, args: "", timeout: "", block: false }
   return {

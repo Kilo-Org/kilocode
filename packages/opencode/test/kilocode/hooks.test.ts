@@ -72,6 +72,26 @@ describe("select", () => {
     expect(KiloHooks.select(config, "PostToolUse", call("edit"))).toEqual([])
   })
 
+  test("matches the older Claude Code tool names existing matchers still use", () => {
+    expect(KiloHooks.names(call("edit"))).toEqual(["edit", "Edit", "MultiEdit"])
+    expect(KiloHooks.names(call("apply_patch"))).toContain("MultiEdit")
+    expect(KiloHooks.names(call("notebook_edit"))).toEqual(["notebook_edit", "NotebookEdit"])
+    expect(KiloHooks.input("PreToolUse", call("edit")).tool_name).toBe("Edit")
+  })
+
+  test("finds matcher names that no tool answers to", () => {
+    const config: KiloHooks.Hooks = {
+      PreToolUse: [
+        { matcher: "Bash|LS", hooks: [{ type: "command", command: "guard" }] },
+        { matcher: "mcp__github__.*", hooks: [{ type: "command", command: "guard" }] },
+        { matcher: "MultiEdit, notebook_edit", hooks: [{ type: "command", command: "guard" }] },
+      ],
+    }
+    const names = KiloHooks.known(["bash", "edit", "notebook_edit"])
+    expect(names).toEqual(expect.arrayContaining(["Bash", "MultiEdit", "NotebookEdit", "read_mcp_resource"]))
+    expect(KiloHooks.unmatched(config, names)).toEqual(["LS"])
+  })
+
   test("matches Claude Code's current and legacy subagent tool names", () => {
     expect(KiloHooks.names(call("task"))).toEqual(["task", "Agent", "Task"])
   })
@@ -208,6 +228,14 @@ describe("blocked", () => {
     expect(KiloHooks.blocked({ stdout: "", stderr: "", error: "timed out after 1s" })).toBeUndefined()
   })
 
+  test("counts output that looks like JSON but does not parse as a failure", () => {
+    const outcome = { code: 0, stdout: '{"decision": ', stderr: "" }
+    expect(KiloHooks.blocked(outcome)).toBeUndefined()
+    expect(KiloHooks.blocked(outcome, { onFailure: "continue" })).toBeUndefined()
+    expect(KiloHooks.blocked(outcome, { onFailure: "block" })).toContain("invalid JSON")
+    expect(KiloHooks.blocked({ code: 0, stdout: "plain text", stderr: "" }, { onFailure: "block" })).toBeUndefined()
+  })
+
   test("blocks on failure when the handler sets onFailure: block", () => {
     expect(KiloHooks.blocked({ code: 1, stdout: "", stderr: "" }, { onFailure: "block" })).toContain("exit code 1")
     const timeout = { stdout: "", stderr: "", error: "timed out after 1s" }
@@ -243,7 +271,7 @@ describe("read Claude Code settings", () => {
             matcher: "Bash",
             hooks: [
               { type: "command", command: "guard.sh", timeout: 5, onFailure: "block" },
-              { type: "command", command: "bash", args: ["/path/guard.sh"] },
+              { type: "command", command: "bash", args: ["/path/guard.sh"], onFailure: "continue" },
               { type: "prompt", prompt: "is this safe?" },
             ],
           },
@@ -257,7 +285,7 @@ describe("read Claude Code settings", () => {
           matcher: "Bash",
           hooks: [
             { type: "command", command: "guard.sh", timeout: 5, onFailure: "block" },
-            { type: "command", command: "bash", args: ["/path/guard.sh"] },
+            { type: "command", command: "bash", args: ["/path/guard.sh"], onFailure: "continue" },
           ],
         },
       ],

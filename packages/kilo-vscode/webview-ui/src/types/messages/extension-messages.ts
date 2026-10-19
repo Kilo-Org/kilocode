@@ -745,13 +745,13 @@ export interface ClaudeCompatSettingLoadedMessage {
   enabled: boolean
 }
 
-/** Claude Code user hooks (~/.claude/settings.json) as the running server would run them. */
-export interface ClaudeHooksLoadedMessage {
-  type: "claudeHooksLoaded"
-  path: string
-  /** False when the server was started with Claude Code hooks turned off. */
-  enabled: boolean
-  hooks?: HooksConfig
+/** Data for the Hooks settings tab, from the running server. */
+export interface HooksInfoLoadedMessage {
+  type: "hooksInfoLoaded"
+  /** Claude Code user hooks (~/.claude/settings.json) as the server would run them; `enabled` is false when the server was started with them turned off. */
+  claude: { path: string; enabled: boolean; hooks?: HooksConfig }
+  /** Tool names hook matchers can use here: Kilo tool ids, their Claude Code names, MCP tools. */
+  tools: string[]
 }
 
 export interface ExtensionSettings {
@@ -1893,7 +1893,7 @@ export type ExtensionMessage =
   | SuggestionErrorMessage
   | BrowserSettingsLoadedMessage
   | ClaudeCompatSettingLoadedMessage
-  | ClaudeHooksLoadedMessage
+  | HooksInfoLoadedMessage
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
   | ConfigUpdateFailedMessage

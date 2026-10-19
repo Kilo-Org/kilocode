@@ -599,8 +599,8 @@ export interface RequestClaudeCompatSettingMessage {
   type: "requestClaudeCompatSetting"
 }
 
-export interface RequestClaudeHooksMessage {
-  type: "requestClaudeHooks"
+export interface RequestHooksInfoMessage {
+  type: "requestHooksInfo"
 }
 
 export interface RequestConfigMessage {
@@ -1846,7 +1846,7 @@ export type WebviewMessage =
   | StreamSessionVisibleMessage
   | RequestBrowserSettingsMessage
   | RequestClaudeCompatSettingMessage
-  | RequestClaudeHooksMessage
+  | RequestHooksInfoMessage
   | RequestConfigMessage
   | RequestGlobalConfigMessage
   | RequestIndexingStatusMessage

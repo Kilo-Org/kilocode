@@ -238,7 +238,7 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(404),
   http.protected.get("/config/sources", "config.sources").json(200, object),
-  http.protected.get("/config/claude-hooks", "config.claudeHooks").json(200, object),
+  http.protected.get("/config/hooks", "config.hooks").json(200, object),
   http.protected.get("/tui/config", "tui.config.get").json(200, object),
   http.protected.get("/tui/keybinds", "tui.keybind.list").json(200, object),
   http.protected

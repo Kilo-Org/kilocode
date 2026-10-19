@@ -1068,6 +1068,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "تطبیق دقیق: {{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "عبارت منظم، در هر جای نام ابزار تطبیق داده می‌شود",
   "settings.agentBehaviour.hooks.matcher.invalid": "عبارت منظم نامعتبر",
+  "settings.agentBehaviour.hooks.unmatched":
+    "اینجا هیچ ابزاری با نام {{names}} وجود ندارد، بنابراین این هوک هرگز برای آن اجرا نمی‌شود.",
   "settings.agentBehaviour.hooks.command": "دستور",
   "settings.agentBehaviour.hooks.command.help":
     "فراخوانی ابزار را به‌صورت JSON از stdin دریافت می‌کند و در پوشه پروژه اجرا می‌شود.",

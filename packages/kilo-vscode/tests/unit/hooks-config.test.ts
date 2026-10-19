@@ -7,6 +7,7 @@ import {
   patch,
   remove,
   save,
+  unknown,
   validate,
 } from "../../webview-ui/src/components/settings/hooks-config"
 import type { HooksConfig } from "../../webview-ui/src/types/messages"
@@ -64,6 +65,17 @@ describe("matcherKind", () => {
     expect(matcherKind("edit | write,bash")).toEqual({ kind: "names", names: ["edit", "write", "bash"] })
     expect(matcherKind("mcp__github__.*")).toEqual({ kind: "regex" })
     expect(matcherKind("edit(")).toEqual({ kind: "invalid" })
+  })
+})
+
+describe("unknown", () => {
+  it("lists exact names no tool answers to, and nothing for regexes or before tools load", () => {
+    const tools = ["bash", "Bash", "edit", "Edit", "MultiEdit"]
+    expect(unknown("Bash|LS", tools)).toEqual(["LS"])
+    expect(unknown("edit, MultiEdit", tools)).toEqual([])
+    expect(unknown("mcp__github__.*", tools)).toEqual([])
+    expect(unknown(undefined, tools)).toEqual([])
+    expect(unknown("LS", undefined)).toEqual([])
   })
 })
 

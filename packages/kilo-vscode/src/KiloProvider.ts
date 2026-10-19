@@ -79,7 +79,7 @@ import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
 import { interceptMessage } from "./kilo-provider/git-changes-request"
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 import { clearCommandsCache, loadCommands } from "./kilo-provider/commands"
-import { loadClaudeHooks } from "./kilo-provider/claude-hooks"
+import { loadHooksInfo } from "./kilo-provider/hooks-info"
 import { fetchMessagePage, MESSAGE_PAGE_LIMIT } from "./kilo-provider/message-page"
 import { createSessionPageState, fetchSessionPage } from "./kilo-provider/session-page"
 import { editPaths } from "./kilo-provider/session-edits"
@@ -457,8 +457,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedSkillsMessage: unknown = null
   /** Cached commandsLoaded payload so requestCommands can be served before client is ready */
   private cachedCommandsMessage: unknown = null
-  /** Cached claudeHooksLoaded payload so requestClaudeHooks can be served before client is ready */
-  private cachedClaudeHooksMessage: unknown = null
+  /** Cached hooksInfoLoaded payload so requestHooksInfo can be served before client is ready */
+  private cachedHooksInfoMessage: unknown = null
   /** Cached configLoaded payload so requestConfig can be served before client is ready */
   private cachedConfigMessage: unknown = null
   /** Directory the cached config payload was loaded for, so recovery is keyed to the active project. */
@@ -1646,8 +1646,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestClaudeCompatSetting":
           this.sendClaudeCompatSetting()
           break
-        case "requestClaudeHooks":
-          this.fetchAndSendClaudeHooks().catch((e) => console.error("[Kilo New] fetchAndSendClaudeHooks failed:", e))
+        case "requestHooksInfo":
+          this.fetchAndSendHooksInfo().catch((e) => console.error("[Kilo New] fetchAndSendHooksInfo failed:", e))
           break
         case "requestTimelineSetting":
           this.sendTimelineSetting()
@@ -5260,15 +5260,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
-  /** Read the Claude Code hooks the server runs and push them to the webview. */
-  private async fetchAndSendClaudeHooks(): Promise<void> {
+  /** Read the data the Hooks settings tab needs from the server and push it to the webview. */
+  private async fetchAndSendHooksInfo(): Promise<void> {
     const client = this.client
     if (!client) {
-      if (this.cachedClaudeHooksMessage) this.postMessage(this.cachedClaudeHooksMessage)
+      if (this.cachedHooksInfoMessage) this.postMessage(this.cachedHooksInfoMessage)
       return
     }
-    const message = await retry(() => loadClaudeHooks(client, this.getWorkspaceDirectory()))
-    this.cachedClaudeHooksMessage = message
+    const message = await retry(() => loadHooksInfo(client, this.getWorkspaceDirectory()))
+    this.cachedHooksInfoMessage = message
     this.postMessage(message)
   }
 

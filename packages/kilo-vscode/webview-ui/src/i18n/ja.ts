@@ -1149,6 +1149,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "完全一致：{{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "正規表現（ツール名のどの位置でも一致）",
   "settings.agentBehaviour.hooks.matcher.invalid": "無効な正規表現です",
+  "settings.agentBehaviour.hooks.unmatched":
+    "ここには {{names}} という名前のツールがないため、このフックがそのツールで実行されることはありません。",
   "settings.agentBehaviour.hooks.command": "コマンド",
   "settings.agentBehaviour.hooks.command.help":
     "ツール呼び出しを JSON として stdin で受け取り、プロジェクトフォルダーで実行されます。",

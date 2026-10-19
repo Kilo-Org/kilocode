@@ -5,6 +5,8 @@ import { Config } from "@/config/config"
 import * as InstanceState from "@/effect/instance-state"
 import { KilocodeConfigOverlay } from "@/kilocode/config/overlay"
 import { KiloHooks } from "@/kilocode/hooks/hooks"
+import { MCP } from "@/mcp"
+import { ToolRegistry } from "@/tool/registry"
 import { KilocodeConfigWriter } from "@/kilocode/config/writer"
 import { KilocodeConfigSources } from "@/kilocode/config/sources"
 import { KilocodeModelState } from "@/kilocode/config/model-state"
@@ -37,6 +39,8 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
     const auth = yield* Auth.Service
     const account = yield* Account.Service
     const flock = yield* EffectFlock.Service
+    const registry = yield* ToolRegistry.Service
+    const mcp = yield* MCP.Service
 
     const overlay = Effect.fn("ConfigConsoleHttpApi.overlay")(function* (ctx: {
       query: typeof ConfigOverlayQuery.Type
@@ -198,8 +202,14 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
       )
     })
 
-    const claudeHooks = Effect.fn("ConfigConsoleHttpApi.claudeHooks")(function* () {
-      return yield* Effect.promise(() => KiloHooks.claude())
+    const hooks = Effect.fn("ConfigConsoleHttpApi.hooks")(function* () {
+      const ids = yield* registry.ids()
+      const servers = yield* mcp.tools()
+      const names = Object.entries(servers).flatMap(([key, entry]) => [
+        key,
+        KiloHooks.mcp(entry.clientName, entry.def.name),
+      ])
+      return { claude: yield* Effect.promise(() => KiloHooks.claude()), tools: KiloHooks.known([...ids, ...names]) }
     })
 
     const effective = Effect.fn("ConfigConsoleHttpApi.effective")(function* () {
@@ -275,7 +285,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
       .handle("overlay", overlay)
       .handle("overlayUpdate", overlayUpdate)
       .handle("sources", sources)
-      .handle("claudeHooks", claudeHooks)
+      .handle("hooks", hooks)
       .handle("effective", effective)
       .handle("rules", rules)
       .handle("rulesUpdate", rulesUpdate)

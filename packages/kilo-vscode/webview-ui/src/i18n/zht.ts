@@ -1061,6 +1061,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "完全比對：{{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "正規表示式，可比對工具名稱中的任意位置",
   "settings.agentBehaviour.hooks.matcher.invalid": "無效的正規表示式",
+  "settings.agentBehaviour.hooks.unmatched": "這裡沒有名為 {{names}} 的工具，因此此鉤子永遠不會對其執行。",
   "settings.agentBehaviour.hooks.command": "命令",
   "settings.agentBehaviour.hooks.command.help": "透過 stdin 以 JSON 格式接收工具呼叫，並在專案資料夾中執行。",
   "settings.agentBehaviour.hooks.command.required": "請輸入命令",

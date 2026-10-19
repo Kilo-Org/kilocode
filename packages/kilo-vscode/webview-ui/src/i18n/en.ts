@@ -1072,6 +1072,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "Matches exactly: {{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "Regular expression, matched anywhere in the tool name",
   "settings.agentBehaviour.hooks.matcher.invalid": "Invalid regular expression",
+  "settings.agentBehaviour.hooks.unmatched": "No tool is named {{names}} here, so this hook never runs for it.",
   "settings.agentBehaviour.hooks.command": "Command",
   "settings.agentBehaviour.hooks.command.help":
     "Receives the tool call as JSON on stdin and runs in the project folder.",

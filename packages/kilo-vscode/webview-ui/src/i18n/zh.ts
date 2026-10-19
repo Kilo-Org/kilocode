@@ -1098,6 +1098,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "精确匹配：{{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "正则表达式，可匹配工具名称中的任意位置",
   "settings.agentBehaviour.hooks.matcher.invalid": "无效的正则表达式",
+  "settings.agentBehaviour.hooks.unmatched": "这里没有名为 {{names}} 的工具，因此此钩子永远不会对其运行。",
   "settings.agentBehaviour.hooks.command": "命令",
   "settings.agentBehaviour.hooks.command.help": "通过 stdin 以 JSON 格式接收工具调用，并在项目文件夹中运行。",
   "settings.agentBehaviour.hooks.command.required": "请输入命令",

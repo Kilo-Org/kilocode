@@ -551,7 +551,7 @@ describe("config overlay routes", () => {
     expect(body.shadowedBy).toBe(path.join(global.path, "opencode.json"))
   })
 
-  test("lists the Claude Code hooks Kilo runs", async () => {
+  test("lists the Claude Code hooks Kilo runs and the tool names matchers can use", async () => {
     await using project = await tmpdir()
     const file = path.join(Global.Path.home, ".claude", "settings.json")
     const guard = { type: "command", command: "guard.sh" }
@@ -568,14 +568,17 @@ describe("config overlay routes", () => {
       }),
     )
     try {
-      const body = await json<{ path: string; enabled: boolean; hooks?: Config.Info["hooks"] }>(
-        await req(project.path, "/config/claude-hooks"),
-      )
-      expect(body.path).toBe(file)
-      expect(body.hooks).toEqual({
+      const body = await json<{
+        claude: { path: string; enabled: boolean; hooks?: Config.Info["hooks"] }
+        tools: string[]
+      }>(await req(project.path, "/config/hooks"))
+      expect(body.claude.path).toBe(file)
+      expect(body.claude.hooks).toEqual({
         PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: "guard.sh" }] }],
         PostToolUse: [{ hooks: [{ type: "command", command: "lint.sh", timeout: 0.5 }] }],
       })
+      // Kilo tool ids and the Claude Code names matchers use for them.
+      expect(body.tools).toEqual(expect.arrayContaining(["bash", "Bash", "edit", "Edit", "MultiEdit"]))
     } finally {
       await rm(file, { force: true })
     }

@@ -1182,6 +1182,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "Correspond exactement à : {{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "Expression régulière, recherchée n'importe où dans le nom de l'outil",
   "settings.agentBehaviour.hooks.matcher.invalid": "Expression régulière non valide",
+  "settings.agentBehaviour.hooks.unmatched":
+    "Aucun outil ne s'appelle {{names}} ici, ce hook ne s'exécute donc jamais pour lui.",
   "settings.agentBehaviour.hooks.command": "Commande",
   "settings.agentBehaviour.hooks.command.help":
     "Reçoit l'appel d'outil en JSON sur stdin et s'exécute dans le dossier du projet.",

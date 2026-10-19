@@ -1130,6 +1130,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "يطابق تمامًا: {{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "تعبير عادي، يُطابَق في أي موضع من اسم الأداة",
   "settings.agentBehaviour.hooks.matcher.invalid": "تعبير عادي غير صالح",
+  "settings.agentBehaviour.hooks.unmatched": "لا توجد أداة باسم {{names}} هنا، لذا لن يعمل هذا الخطاف معها أبدًا.",
   "settings.agentBehaviour.hooks.command": "الأمر",
   "settings.agentBehaviour.hooks.command.help": "يستقبل استدعاء الأداة بتنسيق JSON عبر stdin ويعمل في مجلد المشروع.",
   "settings.agentBehaviour.hooks.command.required": "أدخل أمرًا",

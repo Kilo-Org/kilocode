@@ -18,7 +18,7 @@ import ModeEditView from "../components/settings/ModeEditView"
 import McpEditView from "../components/settings/McpEditView"
 import HooksTab from "../components/settings/agent-behaviour/HooksTab"
 import HookEditView from "../components/settings/agent-behaviour/HookEditView"
-import type { AgentConfig, ClaudeHooksLoadedMessage, CommandConfig, Config, HooksConfig } from "../types/messages"
+import type { AgentConfig, CommandConfig, Config, HooksConfig, HooksInfoLoadedMessage } from "../types/messages"
 import IndexingTab from "../components/settings/IndexingTab"
 import CustomProviderDialog from "../components/settings/CustomProviderDialog"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
@@ -446,8 +446,8 @@ const MOCK_MANAGED_HOOK = {
   hooks: [{ type: "command" as const, command: "/opt/company/audit-log.sh", timeout: 5 }],
 }
 
-/** Seeds the Claude Code hooks the Hooks tab requests from the extension on mount. */
-function ClaudeHooksSeed(props: { message: ClaudeHooksLoadedMessage }) {
+/** Seeds the data the Hooks tab requests from the extension on mount. */
+function HooksInfoSeed(props: { message: HooksInfoLoadedMessage }) {
   onMount(() => window.postMessage(props.message, "*"))
   return null
 }
@@ -462,14 +462,17 @@ export const AgentBehaviourHooks: Story = {
       globalConfig={{ hooks: MOCK_HOOKS }}
     >
       <HooksTab claude />
-      <ClaudeHooksSeed
+      <HooksInfoSeed
         message={{
-          type: "claudeHooksLoaded",
-          path: "/Users/dev/.claude/settings.json",
-          enabled: true,
-          hooks: {
-            PostToolUse: [{ matcher: "Edit|Write", hooks: [{ type: "command", command: "npx prettier --write" }] }],
+          type: "hooksInfoLoaded",
+          claude: {
+            path: "/Users/dev/.claude/settings.json",
+            enabled: true,
+            hooks: {
+              PostToolUse: [{ matcher: "Edit|Write", hooks: [{ type: "command", command: "npx prettier --write" }] }],
+            },
           },
+          tools: ["bash", "Bash", "edit", "Edit", "MultiEdit", "write", "Write", "apply_patch", "read", "Read"],
         }}
       />
     </StoryProviders>

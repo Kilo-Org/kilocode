@@ -524,7 +524,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             { args },
           )
           // kilocode_change start
-          const names = [`mcp__${McpCatalog.sanitize(entry.clientName)}__${McpCatalog.sanitize(entry.def.name)}`]
+          const names = [KiloHooks.mcp(entry.clientName, entry.def.name)]
           const blocked = yield* KiloHooks.before(hooks, call(key, args, opts, names))
           if (blocked) throw new Error(blocked)
           const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* SandboxPolicy.executeMcp(
@@ -616,6 +616,15 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     tools[key] = item
   }
 
+  // kilocode_change start - warn about hook matchers that name no tool, since those hooks never run
+  KiloHooks.warn(
+    hooks,
+    KiloHooks.known([
+      ...Object.keys(tools),
+      ...Object.values(mcpTools).map((entry) => KiloHooks.mcp(entry.clientName, entry.def.name)),
+    ]),
+  )
+  // kilocode_change end
   return tools
 })
 

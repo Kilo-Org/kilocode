@@ -47,12 +47,12 @@ import type {
   CommitMessageGenerateErrors,
   CommitMessageGenerateResponses,
   Config as Config4,
-  ConfigClaudeHooksErrors,
-  ConfigClaudeHooksResponses,
   ConfigEffectiveErrors,
   ConfigEffectiveResponses,
   ConfigGetErrors,
   ConfigGetResponses,
+  ConfigHooksErrors,
+  ConfigHooksResponses,
   ConfigModelStateErrors,
   ConfigModelStateResponses,
   ConfigModelStateUpdateErrors,
@@ -1907,11 +1907,11 @@ export class Config2 extends HeyApiClient {
   }
 
   /**
-   * Get Claude Code hooks
+   * Get hooks settings data
    *
-   * List the PreToolUse and PostToolUse hooks Kilo runs from ~/.claude/settings.json, and whether Claude Code hooks are enabled for this server.
+   * List the hooks Kilo runs from ~/.claude/settings.json and whether they are enabled for this server, and the tool names hook matchers can use, for settings UIs.
    */
-  public claudeHooks<ThrowOnError extends boolean = false>(
+  public hooks<ThrowOnError extends boolean = false>(
     parameters?: {
       directory?: string
       workspace?: string
@@ -1929,8 +1929,8 @@ export class Config2 extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<ConfigClaudeHooksResponses, ConfigClaudeHooksErrors, ThrowOnError>({
-      url: "/config/claude-hooks",
+    return (options?.client ?? this.client).get<ConfigHooksResponses, ConfigHooksErrors, ThrowOnError>({
+      url: "/config/hooks",
       ...options,
       ...params,
     })

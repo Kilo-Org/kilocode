@@ -1137,6 +1137,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "ตรงกันทุกตัวอักษร: {{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "นิพจน์ทั่วไป ตรงกับส่วนใดก็ได้ของชื่อเครื่องมือ",
   "settings.agentBehaviour.hooks.matcher.invalid": "นิพจน์ทั่วไปไม่ถูกต้อง",
+  "settings.agentBehaviour.hooks.unmatched":
+    "ไม่มีเครื่องมือชื่อ {{names}} ที่นี่ ฮุกนี้จึงไม่ทำงานกับเครื่องมือดังกล่าวเลย",
   "settings.agentBehaviour.hooks.command": "คำสั่ง",
   "settings.agentBehaviour.hooks.command.help":
     "รับการเรียกใช้เครื่องมือเป็น JSON ทาง stdin และทำงานในโฟลเดอร์โปรเจกต์",

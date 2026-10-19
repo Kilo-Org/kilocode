@@ -69,9 +69,9 @@ const HookHandler = Schema.Struct({
   timeout: Schema.optional(PositiveInt).annotate({
     description: "Timeout in seconds (default: 60). A hook that times out does not block the tool call.",
   }),
-  onFailure: Schema.optional(Schema.Literal("block")).annotate({
+  onFailure: Schema.optional(Schema.Literals(["continue", "block"])).annotate({
     description:
-      'Set to "block" so a PreToolUse hook that fails (timeout, crash, unexpected exit code) blocks the tool call instead of letting it run.',
+      'What happens when the hook fails (cannot start, times out, exits with a code other than 0 or 2, prints invalid JSON): "continue" (default) lets the tool call run, "block" blocks it.',
   }),
 })
 const HookGroup = Schema.Struct({

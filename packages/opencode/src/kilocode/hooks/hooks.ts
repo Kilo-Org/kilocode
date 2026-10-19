@@ -6,6 +6,7 @@ import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
+import { McpCatalog } from "@/mcp/catalog"
 import { Patch } from "@/patch"
 import { errorMessage } from "@/util/error"
 import { isRecord } from "@/util/record"
@@ -27,7 +28,13 @@ import { model as modelEnv } from "@/kilocode/process/env"
 const log = Log.create({ service: "hooks" })
 
 export type Event = "PreToolUse" | "PostToolUse"
-export type Handler = { type: "command"; command: string; args?: string[]; timeout?: number; onFailure?: "block" }
+export type Handler = {
+  type: "command"
+  command: string
+  args?: string[]
+  timeout?: number
+  onFailure?: "block" | "continue"
+}
 export type Group = { matcher?: string; hooks: Handler[] }
 export type Hooks = Partial<Record<Event, Group[]>>
 
@@ -74,8 +81,12 @@ const ALIASES: Record<string, string[]> = {
   bash: ["Bash"],
   read: ["Read"],
   write: ["Write"],
-  edit: ["Edit"],
-  apply_patch: ["Edit"],
+  // MultiEdit and NotebookRead are older Claude Code tools that existing matchers still name.
+  edit: ["Edit", "MultiEdit"],
+  apply_patch: ["Edit", "MultiEdit"],
+  notebook_edit: ["NotebookEdit"],
+  notebook_read: ["NotebookRead"],
+  plan_exit: ["ExitPlanMode"],
   glob: ["Glob"],
   grep: ["Grep"],
   webfetch: ["WebFetch"],
@@ -195,7 +206,7 @@ function handler(item: unknown): Handler[] {
       command: item.command,
       ...(args ? { args } : {}),
       ...(typeof item.timeout === "number" ? { timeout: item.timeout } : {}),
-      ...(item.onFailure === "block" ? { onFailure: "block" as const } : {}),
+      ...(item.onFailure === "block" || item.onFailure === "continue" ? { onFailure: item.onFailure } : {}),
     },
   ]
 }
@@ -213,6 +224,49 @@ export function matches(matcher: string | undefined, names: string[]): boolean {
   }
   const pattern = regex(matcher)
   return !!pattern && names.some((name) => pattern.test(name))
+}
+
+/** The Claude Code name of an MCP tool (`mcp__<server>__<tool>`), which hook matchers can use. */
+export function mcp(server: string, tool: string) {
+  return `mcp__${McpCatalog.sanitize(server)}__${McpCatalog.sanitize(tool)}`
+}
+
+// Added next to the MCP tools by session/tools.ts, so not in the tool registry.
+const RESOURCES = ["list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource"]
+
+/** Every name a hook matcher can use for these tool ids: the ids and their Claude Code names. */
+export function known(ids: string[]) {
+  return [...new Set([...ids, ...RESOURCES].flatMap((id) => [id, ...(ALIASES[id] ?? [])]))]
+}
+
+/** Names in exact-list matchers that none of `names` answers to: such hooks never run. */
+export function unmatched(hooks: Hooks, names: string[]) {
+  const set = new Set(names)
+  return [
+    ...new Set(
+      EVENTS.flatMap((event) =>
+        (hooks[event] ?? []).flatMap((group) => {
+          const matcher = group.matcher?.trim()
+          if (!matcher || matcher === "*" || !/^[\w\s,|-]+$/.test(matcher)) return []
+          return matcher
+            .split(/[|,]/)
+            .map((item) => item.trim())
+            .filter((name) => name && !set.has(name))
+        }),
+      ),
+    ),
+  ]
+}
+
+const warned = new Set<string>()
+
+/** Logs once per name the matcher names no available tool answers to, since those hooks silently never run. */
+export function warn(hooks: Hooks, names: string[]) {
+  for (const name of unmatched(hooks, names)) {
+    if (warned.has(name)) continue
+    warned.add(name)
+    log.warn("hook matcher names a tool that does not exist here, so the hook never runs", { name })
+  }
 }
 
 function regex(source: string) {
@@ -437,6 +491,16 @@ function collect(stream: Readable | null | undefined) {
   })
 }
 
+function invalid(stdout: string) {
+  const text = stdout.trim()
+  if (!text.startsWith("{")) return false
+  try {
+    return !isRecord(JSON.parse(text))
+  } catch {
+    return true
+  }
+}
+
 function json(stdout: string): Record<string, unknown> | undefined {
   const text = stdout.trim()
   if (!text.startsWith("{")) return undefined
@@ -456,10 +520,13 @@ function reason(value: unknown) {
 /** Why a PreToolUse outcome blocks the call, if it does. */
 export function blocked(outcome: Outcome, handler?: Pick<Handler, "onFailure">): string | undefined {
   if (outcome.code === 2) return reason(outcome.stderr)
+  const strict = handler?.onFailure === "block"
   if (outcome.code !== 0) {
-    if (handler?.onFailure !== "block") return undefined
+    if (!strict) return undefined
     return `The hook failed (${outcome.error ?? `exit code ${outcome.code}`}) and is set to block on failure.`
   }
+  // As in Claude Code, output that looks like JSON but does not parse is a failure.
+  if (strict && invalid(outcome.stdout)) return "The hook printed invalid JSON and is set to block on failure."
   const output = json(outcome.stdout)
   if (!output) return undefined
   const specific = isRecord(output.hookSpecificOutput) ? output.hookSpecificOutput : {}

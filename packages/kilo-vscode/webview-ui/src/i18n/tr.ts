@@ -1083,6 +1083,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "Tam olarak eşleşir: {{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "Normal ifade; araç adının herhangi bir yerinde eşleşir",
   "settings.agentBehaviour.hooks.matcher.invalid": "Geçersiz normal ifade",
+  "settings.agentBehaviour.hooks.unmatched":
+    "Burada {{names}} adında bir araç yok; bu nedenle bu hook onun için hiç çalışmaz.",
   "settings.agentBehaviour.hooks.command": "Komut",
   "settings.agentBehaviour.hooks.command.help":
     "Araç çağrısını stdin üzerinden JSON olarak alır ve proje klasöründe çalışır.",

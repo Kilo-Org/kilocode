@@ -63,7 +63,7 @@ Each event holds a list of groups. A group has an optional `matcher` and a list 
 | `hooks[].command` | Command to run. Without `args`, it runs through the shell (`sh` on macOS and Linux, `cmd.exe` on Windows). |
 | `hooks[].args` | Optional. When set, `command` is the program to run and `args` its arguments, with no shell involved. |
 | `hooks[].timeout` | Timeout in seconds. Defaults to 60. |
-| `hooks[].onFailure` | Optional. Set to `"block"` so a `PreToolUse` hook that fails (timeout, crash, unexpected exit code) blocks the call instead of letting it run. |
+| `hooks[].onFailure` | Optional. What happens when the hook fails: `"continue"` (default) lets the call run, `"block"` blocks it. Same field and values as Claude Code. See [Make guards fail closed](#make-guards-fail-closed). |
 
 All hooks that match a tool call run in parallel, up to 8 at a time. The same command runs only once, even if several groups match (for `apply_patch`, once per patched file). When a hook times out, its whole process tree is stopped.
 
@@ -86,7 +86,7 @@ Kilo Code tool ids and their Claude Code names both match, so `"edit|write"` and
 | `bash` | `Bash` |
 | `read` | `Read` |
 | `write` | `Write` |
-| `edit`, `apply_patch` | `Edit` |
+| `edit`, `apply_patch` | `Edit` (also `MultiEdit`) |
 | `glob` | `Glob` |
 | `grep` | `Grep` |
 | `webfetch` | `WebFetch` |
@@ -97,11 +97,15 @@ Kilo Code tool ids and their Claude Code names both match, so `"edit|write"` and
 | `skill` | `Skill` |
 | `list_mcp_resources` | `ListMcpResourcesTool` |
 | `read_mcp_resource` | `ReadMcpResourceTool` |
+| `plan_exit` | `ExitPlanMode` |
+| `notebook_edit`, `notebook_read` | `NotebookEdit`, `NotebookRead` |
 | MCP tool `<server>_<tool>` | `mcp__<server>__<tool>` |
 
 Some models edit files with `apply_patch` instead of `edit`. For an `apply_patch` call, hooks run once for each file in the patch, with that file as `file_path`, so a guard on file paths sees every file the patch touches, including deleted files and the old path of moved files.
 
 MCP tools are named `<server>_<tool>` in Kilo Code, e.g. `github_create_issue`. Claude Code's `mcp__github__.*` style also matches them. Characters other than letters, digits, `_` and `-` in server and tool names become `_`.
+
+Matchers are case-sensitive. When a matcher lists a tool name that no tool answers to, such as a typo or a Claude Code tool Kilo Code does not have, the hook never runs for it: Kilo Code logs a warning, and the VS Code Hooks tab shows it next to the hook.
 
 ## Hook input
 
@@ -125,9 +129,26 @@ Each hook receives a JSON object on stdin:
 }
 ```
 
-- `tool_input` holds the tool arguments. For built-in tools, Claude Code's names `file_path`, `old_string`, `new_string`, and `replace_all` are added next to Kilo Code's `filePath`, `oldString`, `newString`, and `replaceAll`, and `file_path` is absolute. MCP tool arguments are passed unchanged.
+- `tool_input` holds the tool arguments, exactly as the model sent them (see the table below). For built-in tools, Claude Code's names `file_path`, `old_string`, `new_string`, and `replace_all` are added next to Kilo Code's `filePath`, `oldString`, `newString`, and `replaceAll`, and `file_path` is absolute. MCP tool arguments are passed unchanged.
 - `tool_response` is the tool output as text and is only sent to `PostToolUse` hooks. Claude Code sends a structured object here, so scripts that read fields of `tool_response` need adapting.
 - The command runs in the project directory, with `KILO_PROJECT_DIR` and `CLAUDE_PROJECT_DIR` set to it.
+
+`tool_input` for the built-in tools:
+
+| Tool | `tool_input` fields |
+|---|---|
+| `bash` (`Bash`) | `command`, `description`, `timeout` (milliseconds), `workdir` |
+| `read` (`Read`) | `filePath`, `offset`, `limit`, plus `file_path` |
+| `write` (`Write`) | `filePath`, `content`, plus `file_path` |
+| `edit` (`Edit`) | `filePath`, `oldString`, `newString`, `replaceAll`, plus `file_path`, `old_string`, `new_string`, `replace_all` |
+| `apply_patch` (`Edit`) | `patchText`, plus `file_path` (the file this run is for) and `file_paths` (every file in the patch) |
+| `glob` (`Glob`) | `pattern`, `path` |
+| `grep` (`Grep`) | `pattern`, `path`, `include` |
+| `webfetch` (`WebFetch`) | `url`, `format`, `timeout` |
+| `websearch` (`WebSearch`) | `query`, `numResults`, `livecrawl`, `type`, `contextMaxCharacters` |
+| `task` (`Agent`) | `description`, `prompt`, `subagent_type`, `task_id`, `command`, `background` |
+
+Optional fields are left out when the model does not set them. A `bash` guard sees the whole `command` string, including quoted text and heredoc bodies, so match it carefully to avoid false positives.
 
 ## Hook output
 
@@ -153,6 +174,21 @@ For finer control, exit `0` and print a JSON object on stdout:
 | `continue: false` with `stopReason` | `PreToolUse`: blocks the call. |
 
 `permissionDecision: "allow"` and `"ask"` are ignored: hooks can only make tool use stricter, never skip a permission prompt.
+
+### Make guards fail closed
+
+By default, a hook that fails lets the tool call run, as in Claude Code. A guard with a wrong path, a missing interpreter, or a crash then protects nothing. For a hook that must stop a call when it cannot decide, set `"onFailure": "block"`. These count as failures:
+
+- The hook cannot start, for example because the script or its interpreter does not exist.
+- It runs longer than its `timeout`.
+- It exits with a code other than `0` or `2`.
+- It prints output that starts like JSON (`{`) but does not parse.
+
+Also:
+
+- Name the interpreter and the script by absolute path, or use `args` (for example `"command": "/usr/bin/python3", "args": ["/Users/me/.config/kilo/hooks/guard.py"]`), so a different `PATH` cannot turn the guard into a no-op.
+- Test the guard once by renaming its script: the tool call should be blocked with a message saying the hook failed.
+- `PostToolUse` hooks run after the tool, so use them for feedback, formatting, and logging, never to prevent an action.
 
 ## Example: lint after every edit
 

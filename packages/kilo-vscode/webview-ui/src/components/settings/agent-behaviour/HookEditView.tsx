@@ -14,6 +14,7 @@ import {
   HOOK_TIMEOUT,
   draft,
   matcherKind,
+  unknown,
   validate,
   type HookDraft,
   type HookEntry,
@@ -26,9 +27,16 @@ interface Props {
   onBack: () => void
   onApply: (input: HookDraft) => void
   onRemove?: () => void
+  /** Tool names matchers can use, to warn about names no tool answers to. */
+  tools?: readonly string[]
 }
 
 const error = { color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-11)", "margin-top": "4px" }
+const warning = {
+  "font-size": "var(--kilo-font-size-11)",
+  color: "var(--vscode-editorWarning-foreground, #cca700)",
+  "margin-top": "4px",
+}
 const hint = {
   "font-size": "var(--kilo-font-size-11)",
   color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
@@ -108,6 +116,11 @@ const HookEditView: Component<Props> = (props) => {
           fallback={<div style={error}>{language.t("settings.agentBehaviour.hooks.matcher.invalid")}</div>}
         >
           <div style={hint}>{summary()}</div>
+          <Show when={unknown(form().matcher, props.tools).join(", ")}>
+            {(names) => (
+              <div style={warning}>{language.t("settings.agentBehaviour.hooks.unmatched", { names: names() })}</div>
+            )}
+          </Show>
         </Show>
       </Card>
 

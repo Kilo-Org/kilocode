@@ -1092,6 +1092,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "Matcht exact: {{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "Reguliere expressie, gematcht op elke plek in de toolnaam",
   "settings.agentBehaviour.hooks.matcher.invalid": "Ongeldige reguliere expressie",
+  "settings.agentBehaviour.hooks.unmatched":
+    "Hier heet geen enkele tool {{names}}, dus deze hook wordt daarvoor nooit uitgevoerd.",
   "settings.agentBehaviour.hooks.command": "Opdracht",
   "settings.agentBehaviour.hooks.command.help":
     "Ontvangt de toolaanroep als JSON via stdin en wordt uitgevoerd in de projectmap.",

@@ -190,21 +190,26 @@ const ClaudeHookGroups = Schema.optional(
           command: Schema.String,
           args: Schema.optional(Schema.Array(Schema.String)),
           timeout: Schema.optional(Schema.Finite),
-          onFailure: Schema.optional(Schema.Literal("block")),
+          onFailure: Schema.optional(Schema.Literals(["continue", "block"])),
         }),
       ),
     }),
   ),
 )
-export const ConfigClaudeHooksResponse = Schema.Struct({
-  path: Schema.String,
-  enabled: Schema.Boolean,
-  hooks: Schema.optional(Schema.Struct({ PreToolUse: ClaudeHookGroups, PostToolUse: ClaudeHookGroups })),
-}).annotate({ identifier: "ConfigClaudeHooks" })
+export const ConfigHooksResponse = Schema.Struct({
+  claude: Schema.Struct({
+    path: Schema.String,
+    enabled: Schema.Boolean,
+    hooks: Schema.optional(Schema.Struct({ PreToolUse: ClaudeHookGroups, PostToolUse: ClaudeHookGroups })),
+  }),
+  tools: Schema.Array(Schema.String).annotate({
+    description: "Every tool name a hook matcher can use here: Kilo tool ids, their Claude Code names, MCP tools.",
+  }),
+}).annotate({ identifier: "ConfigHooks" })
 
 export const ConfigConsolePaths = {
   sources: "/config/sources",
-  claudeHooks: "/config/claude-hooks",
+  hooks: "/config/hooks",
   effective: "/config/effective",
   overlay: "/config/overlay",
   rules: "/config/rules",
@@ -238,15 +243,15 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
             description: "List config source metadata in load order without exposing config contents or secrets.",
           }),
         ),
-        HttpApiEndpoint.get("claudeHooks", ConfigConsolePaths.claudeHooks, {
+        HttpApiEndpoint.get("hooks", ConfigConsolePaths.hooks, {
           query: WorkspaceRoutingQuery,
-          success: described(ConfigClaudeHooksResponse, "Claude Code hooks"),
+          success: described(ConfigHooksResponse, "Hooks settings data"),
         }).annotateMerge(
           OpenApi.annotations({
-            identifier: "config.claudeHooks",
-            summary: "Get Claude Code hooks",
+            identifier: "config.hooks",
+            summary: "Get hooks settings data",
             description:
-              "List the PreToolUse and PostToolUse hooks Kilo runs from ~/.claude/settings.json, and whether Claude Code hooks are enabled for this server.",
+              "List the hooks Kilo runs from ~/.claude/settings.json and whether they are enabled for this server, and the tool names hook matchers can use, for settings UIs.",
           }),
         ),
         HttpApiEndpoint.get("effective", ConfigConsolePaths.effective, {

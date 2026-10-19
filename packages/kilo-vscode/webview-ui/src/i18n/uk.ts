@@ -1083,6 +1083,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "Точний збіг: {{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "Регулярний вираз, збіг у будь-якому місці назви інструмента",
   "settings.agentBehaviour.hooks.matcher.invalid": "Недійсний регулярний вираз",
+  "settings.agentBehaviour.hooks.unmatched":
+    "Тут немає інструмента з назвою {{names}}, тому цей хук для нього ніколи не виконується.",
   "settings.agentBehaviour.hooks.command": "Команда",
   "settings.agentBehaviour.hooks.command.help":
     "Отримує виклик інструмента у форматі JSON через stdin і виконується в каталозі проєкту.",

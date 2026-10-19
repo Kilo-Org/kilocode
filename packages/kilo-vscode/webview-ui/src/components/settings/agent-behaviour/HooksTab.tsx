@@ -9,7 +9,7 @@ import { Tag } from "@kilocode/kilo-ui/tag"
 import { useConfig } from "../../../context/config"
 import { useLanguage } from "../../../context/language"
 import { useVSCode } from "../../../context/vscode"
-import type { ClaudeHooksLoadedMessage, ExtensionMessage, HookEvent, HooksConfig } from "../../../types/messages"
+import type { ExtensionMessage, HookEvent, HooksConfig, HooksInfoLoadedMessage } from "../../../types/messages"
 import { configMessage } from "../../../utils/open-config"
 import {
   EVENT_LABELS,
@@ -18,6 +18,7 @@ import {
   inherited,
   matcherKind,
   patch,
+  unknown,
   remove,
   save,
   type HookEntry,
@@ -34,6 +35,11 @@ const weak = {
   color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
   "line-height": "1.5",
 }
+const warning = {
+  "font-size": "var(--kilo-font-size-12)",
+  color: "var(--vscode-editorWarning-foreground, #cca700)",
+  "margin-top": "2px",
+}
 const mono = { "font-family": "var(--vscode-editor-font-family, monospace)", "font-size": "var(--kilo-font-size-12)" }
 
 const HooksTab: Component<Props> = (props) => {
@@ -42,17 +48,18 @@ const HooksTab: Component<Props> = (props) => {
   const dialog = useDialog()
   const { config, globalConfig, savedGlobalConfig, updateGlobalConfig } = useConfig()
   const [editing, setEditing] = createSignal<{ entry?: HookEntry; event: HookEvent }>()
-  const [claude, setClaude] = createSignal<ClaudeHooksLoadedMessage>()
+  const [info, setInfo] = createSignal<HooksInfoLoadedMessage>()
+  const claude = () => info()?.claude
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type === "claudeHooksLoaded") setClaude(message)
+    if (message.type === "hooksInfoLoaded") setInfo(message)
     // Refresh after config changes, and once the backend connects if the first request found none.
-    if (message.type === "agentBehaviourInvalidated") vscode.postMessage({ type: "requestClaudeHooks" })
-    if (message.type === "connectionState" && message.state === "connected" && !claude())
-      vscode.postMessage({ type: "requestClaudeHooks" })
+    if (message.type === "agentBehaviourInvalidated") vscode.postMessage({ type: "requestHooksInfo" })
+    if (message.type === "connectionState" && message.state === "connected" && !info())
+      vscode.postMessage({ type: "requestHooksInfo" })
   })
   onCleanup(unsubscribe)
-  vscode.postMessage({ type: "requestClaudeHooks" })
+  vscode.postMessage({ type: "requestHooksInfo" })
 
   const own = () => globalConfig().hooks
   // The editor targets a hook by position; if the hooks change under it (Discard, a reload), close it.
@@ -65,9 +72,9 @@ const HooksTab: Component<Props> = (props) => {
   )
   const others = createMemo(() => inherited(config().hooks, savedGlobalConfig().hooks))
   const claudeStatus = () => {
-    const info = claude()
-    if (!info) return undefined
-    if (info.enabled) return language.t("settings.agentBehaviour.hooks.claude.active", { path: info.path })
+    const data = claude()
+    if (!data) return undefined
+    if (data.enabled) return language.t("settings.agentBehaviour.hooks.claude.active", { path: data.path })
     if (props.claude) return language.t("settings.agentBehaviour.hooks.claude.restart")
     return language.t("settings.agentBehaviour.hooks.claude.off")
   }
@@ -140,7 +147,12 @@ const HooksTab: Component<Props> = (props) => {
             {[entry.handler.command, ...(entry.handler.args ?? [])].join(" ")}
           </span>
         </div>
-        <Show when={entry.handler.timeout || entry.handler.onFailure || entry.handler.args}>
+        <Show when={unknown(entry.matcher, info()?.tools).join(", ")}>
+          {(names) => (
+            <div style={warning}>{language.t("settings.agentBehaviour.hooks.unmatched", { names: names() })}</div>
+          )}
+        </Show>
+        <Show when={entry.handler.timeout || entry.handler.onFailure === "block" || entry.handler.args}>
           <div style={{ ...weak, display: "flex", gap: "8px", "flex-wrap": "wrap", "margin-top": "2px" }}>
             <Show when={entry.handler.timeout}>
               {(seconds) => (
@@ -313,6 +325,7 @@ const HooksTab: Component<Props> = (props) => {
         const entry = state().entry
         return (
           <HookEditView
+            tools={info()?.tools}
             entry={entry}
             event={state().event}
             onBack={() => setEditing(undefined)}

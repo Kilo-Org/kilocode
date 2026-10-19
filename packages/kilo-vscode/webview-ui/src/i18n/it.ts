@@ -940,6 +940,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.names": "Corrisponde esattamente a: {{names}}",
   "settings.agentBehaviour.hooks.matcher.regex": "Espressione regolare, cercata in qualsiasi punto del nome del tool",
   "settings.agentBehaviour.hooks.matcher.invalid": "Espressione regolare non valida",
+  "settings.agentBehaviour.hooks.unmatched":
+    "Qui nessun tool si chiama {{names}}, quindi questo hook non viene mai eseguito per esso.",
   "settings.agentBehaviour.hooks.command": "Comando",
   "settings.agentBehaviour.hooks.command.help":
     "Riceve la chiamata tool come JSON su stdin e viene eseguito nella cartella del progetto.",

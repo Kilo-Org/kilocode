@@ -1179,6 +1179,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.regex":
     "Regulärer Ausdruck, der an beliebiger Stelle im Tool-Namen gesucht wird",
   "settings.agentBehaviour.hooks.matcher.invalid": "Ungültiger regulärer Ausdruck",
+  "settings.agentBehaviour.hooks.unmatched":
+    "Hier gibt es kein Tool namens {{names}}, daher wird dieser Hook dafür nie ausgeführt.",
   "settings.agentBehaviour.hooks.command": "Befehl",
   "settings.agentBehaviour.hooks.command.help":
     "Erhält den Tool-Aufruf als JSON über stdin und wird im Projektordner ausgeführt.",
