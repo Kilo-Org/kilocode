@@ -183,3 +183,7 @@ jobs:
       - name: Test the Kilo host
         working-directory: packages/kilo-cli
         run: bun test
+
+      - name: Test the sharded test runner
+        working-directory: script/kilocode/test
+        run: bun test

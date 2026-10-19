@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 16,
-    "markedLines": 129,
-    "unmarkedLines": 27,
+    "files": 17,
+    "markedLines": 173,
+    "unmarkedLines": 51,
     "deletedFiles": 0
   },
   "files": {
@@ -17,7 +17,7 @@
     },
     ".github/workflows/test.yml": {
       "rung": 3,
-      "seam": "CI triggers: run the unit and e2e matrix on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`). Skip the `affected` job, and with it the e2e job that needs it: the e2e job tests only `packages/app` and `packages/session-ui`, which Kilo removed (`skipFiles` in script/upstream/utils/config.ts). One job-level line, so upstream changes to the e2e steps still merge cleanly. CI speed: `Verify packed workerd SDK` runs in its own `sdk` job, and the compiled service and Node build checks run in a `build` matrix job, so they no longer wait for the unit tests in `unit` (the copies are next to the job they came from, so a sync that changes them shows the conflict in this file). The Turbo cache step uses `.turbo/cache` (where Turborepo 2.x writes; the old path never existed, so the cache never saved), keys on turbo.json and bun.lock instead of every package.json (that hash took up to 35 s per step on Windows), and restores without the commit SHA. Pull requests check out two commits, because `--affected` compares only with the merge's first parent. No seam: workflow triggers, job conditions, jobs, steps and cache keys cannot be extended from outside the file. Upstream has no job split or cache key input."
+      "seam": "CI triggers: run the unit and e2e matrix on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`). Skip the `affected` job, and with it the e2e job that needs it: the e2e job tests only `packages/app` and `packages/session-ui`, which Kilo removed (`skipFiles` in script/upstream/utils/config.ts). One job-level line, so upstream changes to the e2e steps still merge cleanly. CI speed: `Verify packed workerd SDK` runs in its own `sdk` job, and the compiled service and Node build checks run in a `build` matrix job, so they no longer wait for the unit tests in `unit` (the copies are next to the job they came from, so a sync that changes them shows the conflict in this file). The Turbo cache step uses `.turbo/cache` (where Turborepo 2.x writes; the old path never existed, so the cache never saved), keys on turbo.json and bun.lock instead of every package.json (that hash took up to 35 s per step on Windows), and restores without the commit SHA. Pull requests check out two commits, because `--affected` compares only with the merge's first parent. Test shards: a `shard` matrix dimension in `unit` (2 Linux, 3 Windows) sets `KILO_TEST_SHARD` and `KILO_TEST_CONCURRENCY`; core, tui and cli run `test:ci` (the Kilo runner, script/kilocode/test/test-runner.ts), the other packages run `test` once, in shard 1; the Turbo cache key carries the shard; failing cases from the runner's JUnit reports become annotations, and the reports are an artifact that refreshes the shard weights. No seam: workflow triggers, job conditions, jobs, steps, matrix dimensions and cache keys cannot be extended from outside the file. Upstream has no job split, cache key input or test shard option."
     },
     ".gitignore": {
       "rung": 3,
@@ -35,7 +35,7 @@
     },
     "packages/cli/package.json": {
       "rung": 3,
-      "seam": "Export `./*` (`./src/*.ts`) as `core`, `server` and `util` do, so the Kilo host (packages/kilo-cli, U-E0-01) can run the upstream command handlers and services. Generic: any embedding entry can use it. Rungs 1 and 2 cannot supply it: the CLI exported only `./run` and `./server-process`, so no entry outside the package could reach `Commands`, `Runtime` or a handler.",
+      "seam": "Export `./*` (`./src/*.ts`) as `core`, `server` and `util` do, so the Kilo host (packages/kilo-cli, U-E0-01) can run the upstream command handlers and services. Generic: any embedding entry can use it. Rungs 1 and 2 cannot supply it: the CLI exported only `./run` and `./server-process`, so no entry outside the package could reach `Commands`, `Runtime` or a handler. Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments.",
       "unmarked": "JSON has no comments."
     },
     "packages/cli/script/app-assets.ts": {
@@ -52,7 +52,7 @@
     },
     "packages/core/package.json": {
       "rung": 3,
-      "seam": "Runtime dependency on `@kilocode/gateway-core` for the Gateway adapter (`packages/core/src/kilocode/gateway.ts`). The Kilo host registers the plugin through `SdkPlugins.register` since U-E0-01, but the adapter still lives in core. Goes away when the adapter moves into packages/kilo-plugin with the Gateway RPC (U-E0-02, #15173).",
+      "seam": "Runtime dependency on `@kilocode/gateway-core` for the Gateway adapter (`packages/core/src/kilocode/gateway.ts`). The Kilo host registers the plugin through `SdkPlugins.register` since U-E0-01, but the adapter still lives in core. Goes away when the adapter moves into packages/kilo-plugin with the Gateway RPC (U-E0-02, #15173). Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments.",
       "unmarked": "JSON has no comments."
     },
     "packages/sdk/script/verify-package.ts": {
@@ -62,6 +62,11 @@
     "packages/server/src/process.ts": {
       "rung": 3,
       "seam": "`ServerProcess.start` takes `overrides` (service replacements) and passes them to `createRoutes`, which already takes them (as `ServerFetch.BootOptions.overrides` does for the embedded server). Three lines, no Kilo value. Rungs 1 and 2 cannot supply it: the process server built its routes without replacements, so a host could not register plugins (`SdkPlugins`) or replace services in the server the CLI spawns."
+    },
+    "packages/tui/package.json": {
+      "rung": 3,
+      "seam": "Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments.",
+      "unmarked": "JSON has no comments."
     },
     "packages/tui/src/component/dialog-integration.tsx": {
       "rung": 3,
@@ -73,7 +78,7 @@
     },
     "turbo.json": {
       "rung": 3,
-      "seam": "Register `@kilocode/gateway-core#test` in Turborepo so `bun turbo test --affected` runs the Gateway core unit and boundary tests in CI. Add a `transit` task and depend on `^transit` in every test task that turbo.json defines for a package with workspace dependencies (ai, core, server, cli, tui, latex), so a test hash covers the files of every transitive workspace dependency. The other defined test tasks (gateway-core, codemode, httpapi-codegen, ui) have no workspace dependencies, and `turbo test` does not run a package that has no test task entry. `^build` covers only direct dependencies (`build` has no `dependsOn`), so a cached `@opencode/cli#test` replayed after a change in `@opencode/core`. Upstream has no option for transitive input hashing; transit nodes are the documented Turborepo pattern.",
+      "seam": "Register `@kilocode/gateway-core#test` in Turborepo so `bun turbo test --affected` runs the Gateway core unit and boundary tests in CI. Add a `transit` task and depend on `^transit` in every test task that turbo.json defines for a package with workspace dependencies (ai, core, server, cli, tui, latex), so a test hash covers the files of every transitive workspace dependency. The other defined test tasks (gateway-core, codemode, httpapi-codegen, ui) have no workspace dependencies, and `turbo test` does not run a package that has no test task entry. `^build` covers only direct dependencies (`build` has no `dependsOn`), so a cached `@opencode/cli#test` replayed after a change in `@opencode/core`. Upstream has no option for transitive input hashing; transit nodes are the documented Turborepo pattern. Define `@opencode/core#test:ci`, `@opencode/tui#test:ci` and `@opencode/cli#test:ci` (a generic `test:ci` task adds a no-op node to every package, and the node of `@kilocode/kilo-cli` pulled in `@opencode/cli#build`, whose `bun install` broke node_modules on Windows): `env: [\"KILO_TEST_SHARD\"]` gives each shard its own cache key, `passThroughEnv` hands the runner its concurrency and deadline, and `inputs` add the runner and its durations from script/kilocode/test/. Upstream has no sharded test task.",
       "unmarked": "JSON has no comments."
     }
   }
