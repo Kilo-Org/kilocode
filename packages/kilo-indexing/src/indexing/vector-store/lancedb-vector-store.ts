@@ -436,11 +436,15 @@ export class LanceDBVectorStore implements IVectorStore {
       const actualMaxResults = maxResults ?? DEFAULT_MAX_SEARCH_RESULTS
 
       // Build filter condition
-      let filter = ""
-      if (directoryPrefix) {
-        const escapedPrefix = this.escapeSqlLikePattern(directoryPrefix)
-        filter = `\`filePath\` LIKE '${escapedPrefix}%'`
-      }
+      const trimmed = directoryPrefix?.replace(/[\\/]+$/, "")
+      const filter = trimmed
+        ? (() => {
+            const exact = this.escapeSqlString(trimmed)
+            const like = this.escapeSqlLikePattern(trimmed)
+            const sep = trimmed.includes("\\") && !trimmed.includes("/") ? "\\\\" : "/"
+            return `(\`filePath\` = '${exact}' OR \`filePath\` LIKE '${like}${sep}%')`
+          })()
+        : ""
 
       // Perform vector search with distance range filtering
       let searchQuery = (await table.search(queryVector)) as VectorQuery
