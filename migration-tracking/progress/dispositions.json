@@ -169,6 +169,17 @@
     "note": "packages/kilo-gateway-core/test/requests-errors.test.ts (KiloRequests).",
     "by": "gateway-finish"
   },
+  "module:packages/opencode/src/kilocode/agent/index.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/src/agent/index.ts",
+    "note": "Agent set (Code, hidden build copy, Ask, Debug, Orchestrator, Plan), shell defaults, read-only guards, the config ceiling and the agent-switch reminder. Not here: MCP ask rules (follow-up), Explore (U-E2-17), Scout (U-E11-05), rules for tools v2 does not have yet (tool units), agent remove (open API cell).",
+    "by": "agents-plugin"
+  },
+  "module:packages/opencode/src/kilocode/agent/scout.txt": {
+    "state": "dropped",
+    "note": "Scout prompt. Scout (experimental, default off) is not ported. U-E11-05 records the decision.",
+    "by": "agents-plugin"
+  },
   "module:packages/opencode/src/kilocode/balance-refresh.ts": {
     "state": "ported",
     "note": "The organization event of the kilocode.gateway RPC (packages/core/src/kilocode/gateway-rpc.ts, published by organization.set in packages/core/src/kilocode/gateway.ts) tells clients to read the balance again; the balance comes from KiloProfile.balance in packages/kilo-gateway-core/src/profile.ts.",
@@ -179,6 +190,30 @@
     "note": "packages/kilo-gateway-core/src/errors.ts KiloErrors (codes, messages, retryable, x-should-retry: false for errors that need user action). The session shows the message instead of a v1 toast.",
     "by": "gateway-finish"
   },
+  "module:packages/opencode/test/kilocode/agent-global-config-dirs.test.ts": {
+    "state": "native",
+    "v2": "packages/schema/src/agent.ts",
+    "note": "Code reads the global config directory without a prompt: v2 Code starts with `* allow` (`Agent.Info.default`).",
+    "by": "agents-plugin"
+  },
+  "module:packages/opencode/test/kilocode/agent-permission-overrides.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/agent.test.ts",
+    "note": "Read-only agents keep their limits under broad global allows, Plan keeps its per-agent opt-in, user denies stay. Not here: MCP rules (follow-up), the Plan edit guard after per-agent rules (U-E2-13), denies in delegated sessions (U-E2-17), system agents (native).",
+    "by": "agents-plugin"
+  },
+  "module:packages/opencode/test/kilocode/agent-skill-permissions.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/agent.test.ts",
+    "note": "Skill allowed for Code, Ask, Debug, Orchestrator, Plan and General. Native Explore denies skill (U-E2-17); system agents run without tools (native).",
+    "by": "agents-plugin"
+  },
+  "module:packages/opencode/test/kilocode/ask-agent-permissions.test.ts": {
+    "state": "ported",
+    "v2": "packages/kilo-plugin/test/agent.test.ts",
+    "note": "Ask shell allowlist and blocklist, edit and subagent denied, unknown tools denied. MCP tools are denied by default instead of ask (follow-up, #14999 differences table).",
+    "by": "agents-plugin"
+  },
   "module:packages/opencode/test/kilocode/kilo-errors.test.ts": {
     "state": "ported",
     "note": "packages/kilo-gateway-core/test/requests-errors.test.ts (KiloErrors) and packages/core/test/kilocode/gateway.test.ts (no retry for Kilo errors that need user action).",
@@ -188,6 +223,11 @@
     "state": "ported",
     "note": "packages/kilo-gateway-core/test/headers.test.ts (KiloHeaders.provider and KiloHeaders.request). The feature header falls back to cli on v2.",
     "by": "gateway-finish"
+  },
+  "patch:agent:063e034b577a": {
+    "state": "dropped",
+    "note": "Scout prompt import. Scout (experimental, default off) is not ported. U-E11-05 records the decision.",
+    "by": "agents-plugin"
   },
   "patch:gateway:00d34e8d5cd7": {
     "state": "native",
@@ -213,5 +253,132 @@
     "state": "dropped",
     "note": "Import for the v1 config schema fields prompt and ai_sdk_provider (see patch:gateway:0468bd6d3d9e).",
     "by": "gateway-finish"
+  },
+  "patch:unattributed:agent:09375914c157": {
+    "state": "dropped",
+    "note": "Rule for the `suggest` tool, which v2 does not have yet. The suggest unit (U-E2-16) adds the rule with the tool (#14999, differences table).",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:0a0c97da2c48": {
+    "state": "native",
+    "v2": "packages/core/src/config/plugin/agent.ts",
+    "note": "Rebuild the cached agents when config changes. v2 rebuilds the agent state on every config change: ConfigAgentPlugin reloads on `config.updated`, and the plugin supervisor reloads the generation.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:0faa6c731275": {
+    "state": "dropped",
+    "note": "Kilo `whenToUse` guidance in the LLM agent generation prompt (`kilo agent create`). v2 has no agent generation and no `generate.txt`.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:19ff1297ae1a": {
+    "state": "native",
+    "v2": "packages/core/src/config/plugin/agent.ts",
+    "note": "Rebuild the cached agents when config changes. v2 rebuilds the agent state on every config change: ConfigAgentPlugin reloads on `config.updated`, and the plugin supervisor reloads the generation.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:1b8fe669272e": {
+    "state": "dropped",
+    "note": "Telemetry options for the LLM agent generation call (`kilo agent create`). v2 has no agent generation, so no call exists to configure.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:1c5cb886bb38": {
+    "state": "native",
+    "v2": "packages/core/src/config/plugin/agent.ts",
+    "note": "Rebuild the cached agents when config changes. v2 rebuilds the agent state on every config change: ConfigAgentPlugin reloads on `config.updated`, and the plugin supervisor reloads the generation.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:21c84cad48b3": {
+    "state": "native",
+    "v2": "packages/core/src/config/plugin/agent.ts",
+    "note": "Rebuild the cached agents when config changes. v2 rebuilds the agent state on every config change: ConfigAgentPlugin reloads on `config.updated`, and the plugin supervisor reloads the generation.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:2e2369fd59e1": {
+    "state": "dropped",
+    "note": "Orchestrator `deprecated` badge field. The v2 agent schema has no field for it (#14999, differences table).",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:407e5d080313": {
+    "state": "native",
+    "v2": "packages/schema/src/agent.ts",
+    "note": "Agents read global config and reference directories without a prompt. v2 Code, Debug and General allow every external directory (`Agent.Info.default` starts with `* allow`), and configured references are native (ConfigReferencePlugin). Scout references are not ported (U-E11-05).",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:461dc96586d3": {
+    "state": "dropped",
+    "note": "Per-agent hardening after config: metadata lifting (no v2 schema fields), Explore shell limits (native Explore, U-E2-17), the Plan edit guard after per-agent rules (U-E2-13) and Scout reference agents (U-E11-05). Each part is a row of the differences table in #14999.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:51a770bdc581": {
+    "state": "dropped",
+    "note": "RuntimeFlags in the agent service fed Scout and the shared agent board rules. The v2 agents plugin reads no runtime flags: Scout is not ported (U-E11-05), and the board unit adds its own rules.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:6cdbea643f7d": {
+    "state": "dropped",
+    "note": "Default denies for the Scout repository tools (`repo_clone`, `repo_overview`). Scout (experimental, default off) is not ported. U-E11-05 records the decision.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:6fd86cbf07a5": {
+    "state": "native",
+    "v2": "packages/core/src/config/plugin/agent.ts",
+    "note": "Rebuild the cached agents when config changes. v2 rebuilds the agent state on every config change: ConfigAgentPlugin reloads on `config.updated`, and the plugin supervisor reloads the generation.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:7c1daa44f22c": {
+    "state": "dropped",
+    "note": "Kilo `whenToUse` guidance in the LLM agent generation prompt (`kilo agent create`). v2 has no agent generation and no `generate.txt`.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:8558c7e71c33": {
+    "state": "native",
+    "v2": "packages/core/src/config/plugin/agent.ts",
+    "note": "Rebuild the cached agents when config changes. v2 rebuilds the agent state on every config change: ConfigAgentPlugin reloads on `config.updated`, and the plugin supervisor reloads the generation.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:860878fa7bab": {
+    "state": "native",
+    "v2": "packages/core/src/config/plugin/agent.ts",
+    "note": "Rebuild the cached agents when config changes. v2 rebuilds the agent state on every config change: ConfigAgentPlugin reloads on `config.updated`, and the plugin supervisor reloads the generation.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:8a47a5bd2127": {
+    "state": "native",
+    "v2": "packages/core/src/session/title.ts",
+    "note": "Global config rules must not widen the compaction, title and summary agents. v2 runs these requests without tool execution (session/title.ts and session/compaction.ts stream text only), so their rules never gate a tool call.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:8c603298aa6d": {
+    "state": "dropped",
+    "note": "RuntimeFlags in the agent service fed Scout and the shared agent board rules. The v2 agents plugin reads no runtime flags: Scout is not ported (U-E11-05), and the board unit adds its own rules.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:92890c7740e7": {
+    "state": "dropped",
+    "note": "Scout agent. Scout (experimental, default off) is not ported. U-E11-05 records the decision.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:a46eaa33223b": {
+    "state": "native",
+    "v2": "packages/schema/src/agent.ts",
+    "note": "Agents read global config and reference directories without a prompt. v2 Code, Debug and General allow every external directory (`Agent.Info.default` starts with `* allow`), and configured references are native (ConfigReferencePlugin). Scout references are not ported (U-E11-05).",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:d88711e4e0f0": {
+    "state": "dropped",
+    "note": "Rule for the `suggest` tool, which v2 does not have yet. The suggest unit (U-E2-16) adds the rule with the tool (#14999, differences table).",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:e4427a3d9c64": {
+    "state": "native",
+    "v2": "packages/core/src/session/title.ts",
+    "note": "Global config rules must not widen the compaction, title and summary agents. v2 runs these requests without tool execution (session/title.ts and session/compaction.ts stream text only), so their rules never gate a tool call.",
+    "by": "agents-plugin"
+  },
+  "patch:unattributed:agent:fbbd4a8ba315": {
+    "state": "native",
+    "v2": "packages/core/src/config/plugin/agent.ts",
+    "note": "Rebuild the cached agents when config changes. v2 rebuilds the agent state on every config change: ConfigAgentPlugin reloads on `config.updated`, and the plugin supervisor reloads the generation.",
+    "by": "agents-plugin"
   }
 }
