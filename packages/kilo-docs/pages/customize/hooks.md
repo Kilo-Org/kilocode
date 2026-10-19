@@ -286,7 +286,7 @@ JSON fields:
 | `hookSpecificOutput.permissionDecision: "allow"` or `"defer"` | `PreToolUse` | Ignored: hooks cannot skip a permission prompt. |
 | `hookSpecificOutput.decision.behavior: "deny"` with `message` | `PermissionRequest` | Denies the call and closes the prompt. With `interrupt: true`, the turn stops too. `"allow"` is ignored. |
 | `hookSpecificOutput.updatedInput` | `PreToolUse` | Kilo Code does not rewrite tool input: when it differs from `tool_input`, the call is blocked. |
-| `hookSpecificOutput.updatedToolOutput`, `updatedMCPToolOutput` | `PostToolUse` | Replaces the output the agent sees (images and attachments are dropped). |
+| `hookSpecificOutput.updatedToolOutput`, `updatedMCPToolOutput` | `PostToolUse` | Replaces the output the agent sees (images and attachments are dropped). Only for calls that succeeded: a shell command that exits non-zero runs `PostToolUseFailure`, which cannot replace the output. |
 | `decision: "block"` with `reason` | Events that can block | Blocks with that reason. On `PostToolUse` and `PostToolUseFailure`, the reason is shown to the agent. |
 | `continue: false` with `stopReason` | Events that can block, and `PostToolUse`, `PostToolUseFailure` | Stops: rejects the prompt, model switch or compaction; skips the wakeup; pauses the goal on `GoalReport`; never continues on `Stop`. On tool events, the turn ends after the current step (`PreToolUse` also blocks the call). Ignored on `TaskCreated` and `TaskCompleted`. |
 | `hookSpecificOutput.additionalContext` | `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`, `UserPromptSubmit`, `UserPromptExpansion`, `PostModelSwitch`, `SessionStart`, `Stop`, `SubagentStop`, `SubagentStart`, `GoalReport`, `WakeupFire` | Adds context for the agent (see below). Ignored on other events. |
@@ -485,14 +485,18 @@ Claude Code compatibility is on by default in the CLI, and off by default in the
 | `PreToolUse` scope | Also runs for `@` file attachments, pasted text attachments, MCP resource attachments and `!` shell lines in command templates, so secret guards hold. `PostToolUse` does not run for them. |
 | `PreToolUse` `ask` | Never answered by rules, auto-approve or allow-everything, never remembered. Denies the call when nobody can answer. The tool's own permission rule can ask a second time. |
 | `updatedInput` | Not applied: a `PreToolUse` hook that rewrites the input blocks the call. |
-| `PostToolUseFailure` | Also runs when a shell command exits non-zero (then `PostToolUse` does not run). Not run for the MCP resource tools. |
+| `PostToolUseFailure` | Also runs when a shell command exits non-zero (then `PostToolUse` does not run). Not run for the MCP resource tools. It cannot replace the output: `updatedToolOutput` applies only to calls that succeeded. |
 | `TaskCreated`, `TaskCompleted` | Run for `todowrite`, the Kilo Code todo tool. A block rolls back only that todo. |
 | `UserPromptSubmit` | Not run for wakeups, background results, goal turns or messages from other sessions. |
 | `CwdChanged` | Means a shell command ran in a different folder than the previous one: Kilo Code's shell keeps no working directory between commands. |
 | `ConfigChange` | Observe only, read from Kilo Code config only, and runs for changes Kilo Code writes, not for edits made outside it. |
 | `Notification` | Sends 3 of Claude Code's 12 types: `permission_prompt`, `agent_needs_input` (with `kilo_notification_type: "question"`) and `idle_prompt`. |
 | `SessionStart`, `SessionEnd` | `SessionStart` sources are `startup`, `resume`, `fork` and `compact` (never `clear`). `SessionEnd` reasons are `other` and `prompt_input_exit`. |
+| `SessionStart` context | Added to the conversation after your first message, not before it. |
+| `SessionStart` for commands | `/goal`, `/resume-claude` and `/resume-codex` run it on their first model step, not when you send the command. |
 | `PreModelSwitch`, `PostModelSwitch` | Matchers are tested against the canonical name (`claude-sonnet-4-5`), the model id, and `provider/model`. A model no spelling matches does not run every hook. |
+| Model switch scope | `PreModelSwitch` and `PostModelSwitch` do not run for slash commands or `/goal` prompts. |
+| `PreCompact` | A block on an automatic compaction lets the turn go on without compacting, and holds for the rest of the turn. If the provider then rejects a request as too long, the turn ends with `Compaction was blocked by a PreCompact hook: <reason>`. With `compaction.threshold_percent` set, Kilo Code also estimates each request before sending it: while a block is in place, a request whose estimate reaches the threshold is not sent and the turn ends the same way. |
 | `WorktreeCreate`, `WorktreeRemove` | Not run: they would replace git worktree creation. Use `WorktreeSetup` and `WorktreeTeardown`. `WorktreeSetup` ignores `additionalContext`. |
 | Transcript | No `transcript_path`: sessions are stored in a database. |
 | Context | Cut at 10,000 characters, without saving the rest to a file. |
@@ -504,6 +508,7 @@ Claude Code compatibility is on by default in the CLI, and off by default in the
 - In the global config directory, hooks are read from one config file. Use a single file for your hooks.
 - A `PermissionRequest` hook for a call made inside code mode sees the code-mode tool, not the inner tool.
 - When `updatedToolOutput` replaces a tool's output, the chat can still show the original output.
+- `updatedToolOutput` replaces the output of a call that succeeded. A shell command that exits non-zero, or a tool that fails, runs `PostToolUseFailure`, which can add feedback but cannot replace or redact the output.
 
 ## Related
 

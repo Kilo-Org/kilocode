@@ -107,6 +107,7 @@ Fields each event adds to the [common fields](/docs/customize/hooks#hook-input):
 
 - `PreToolUse` runs before the permission prompt. For prompt attachments (`@file`, pasted text, MCP resources) the tool is `read` (`Read`) or `read_mcp_resource` (`ReadMcpResourceTool`); a block replaces the attachment with a note and its content is never read. For `` !`cmd` `` lines in command templates the tool is `bash`; a blocked line is replaced by the reason. `ask` cannot prompt for attachments, so it blocks them.
 - Code-mode tool calls run `PreToolUse` and `PostToolUse` with the inner tool's name. They cannot prompt, so `ask` blocks them.
+- `PostToolUse` runs for calls that succeeded, and only it can replace the output with `updatedToolOutput`. A tool that fails, or a shell command that exits non-zero, runs `PostToolUseFailure` instead, which can add feedback but cannot replace the output.
 - `PostToolUseFailure` does not run when you cancel a call, for permission rejections, or when a hook blocked the call.
 - `PermissionRequest` runs when a prompt is shown, including the prompts a `PreToolUse` `ask` opens. It does not run for calls rules allow or deny, for background subagents (which are denied without a prompt), or for sandbox network prompts.
 - `TaskCreated` and `TaskCompleted` compare the new todo list with the previous one, by todo text. A blocked todo is removed from (or kept open in) the list the tool saves; the agent sees the reason and is asked to resubmit later. The chat still shows the list the model sent.
@@ -117,12 +118,12 @@ Fields each event adds to the [common fields](/docs/customize/hooks#hook-input):
 - Prompts are admitted in the order they arrive, and the session shows as busy while these hooks run; **Stop** cancels them.
 - A blocked prompt is not saved. You see a notice with the reason and your prompt text, so you can copy it.
 - `UserPromptExpansion` runs before the template's `!` shell lines, so a block keeps them from running.
-- `PreModelSwitch` runs only when a prompt you send changes the session's provider or model. Goal turns, wakeups, subagents and the first model of a session apply their model without it.
+- `PreModelSwitch` runs only when a prompt you send changes the session's provider or model. Slash commands, `/goal` prompts, goal turns, wakeups, subagents and the first model of a session apply their model without it, and without `PostModelSwitch`.
 
 ### Sessions
 
-- `SessionStart` runs once per session in each Kilo Code process: before the first prompt's `UserPromptSubmit`, or before the first model call of a goal, wakeup or summarize. It runs again with `compact` after compaction. Subagents run `SubagentStart` instead.
-- Context from `SessionStart` starts with a note telling the model to treat it as information, not instructions.
+- `SessionStart` runs once per session in each Kilo Code process: before the first prompt's `UserPromptSubmit`, or on the first model step of `/goal`, `/resume-claude`, `/resume-codex`, a wakeup or a summarize. It runs again with `compact` after compaction. Subagents run `SubagentStart` instead.
+- Context from `SessionStart` starts with a note telling the model to treat it as information, not instructions. It is added to the conversation after your first message, not before it, and Kilo Code adds the last startup context again after compaction when no `SessionStart` hook matches `compact`.
 - `SessionEnd` runs when a session that ran `SessionStart` is deleted, and when `kilo serve`, the TUI or `kilo run` exits. All `SessionEnd` hooks of one exit share 1.5 seconds, raised to the largest `SessionEnd` `timeout` in your config (at most 60 seconds), and capped at 3 seconds under `kilo serve`. `KILO_SESSIONEND_HOOKS_TIMEOUT_MS` (or `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS`) overrides the budget.
 - `InstructionsLoaded` runs for each instruction file of the session when `SessionStart` runs, and when the agent reads a file in a folder with its own `AGENTS.md`. `memory_type` is `User` for files in your Kilo Code or Claude Code config folders, `Managed` for managed config, and `Project` otherwise.
 
@@ -139,8 +140,9 @@ Fields each event adds to the [common fields](/docs/customize/hooks#hook-input):
 |---|---|
 | `/compact` (`manual`) | Compaction does not happen and you see a notice. |
 | The model's context tool (`auto`, `kilo_trigger: "tool"`) | The tool tells the model compaction was blocked; the turn continues. |
-| Before a request that would not fit (`auto`) | The request is sent without compaction. The hook runs at most once per turn. |
-| After the provider rejected a request as too long (`auto`) | The turn ends with a context overflow error. |
+| Before a request, when the last response was large enough to trigger compaction (`auto`) | The request is sent without compaction. The block holds for the rest of the turn, so the hook runs at most once per turn. |
+| After the provider rejected a request as too long (`auto`) | The turn ends with a context overflow error: `Compaction was blocked by a PreCompact hook: <reason>`. |
+| With `compaction.threshold_percent` set, when Kilo Code's own estimate of the next request reaches the threshold (`auto`) | Kilo Code does not send a request it estimates to be too large, so the turn ends with the same error even though the provider has not rejected anything. |
 
 `PostCompact` runs in the background after compaction, and the next model call runs `SessionStart` with `source: "compact"`.
 
