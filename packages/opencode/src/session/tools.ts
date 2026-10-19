@@ -121,7 +121,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           : typeof subject.file_path === "string"
             ? subject.file_path
             : "*"
-      return context(toRecord(args), opts).ask({
+      return context(toRecord(args), opts, call(tool, args, opts, aliases, server)).ask({
         permission: tool,
         patterns: [pattern],
         always: [],

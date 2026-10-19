@@ -1986,7 +1986,10 @@ export const layer = Layer.effect(
             const tools = parts.some(
               (part) => part.type === "tool" && !part.metadata?.providerExecuted && !isOrphanedInterruptedTool(part),
             )
-            if (!handle.message.finish || ["tool-calls", "unknown"].includes(handle.message.finish) || tools) {
+            if (
+              (!handle.message.finish || ["tool-calls", "unknown"].includes(handle.message.finish) || tools) &&
+              !(yield* KiloHookCompact.skip(handle.message, lastUser.id, { config, database, events }))
+            ) {
               const guard = KiloSessionPrompt.guardCompactionAttempt({
                 sessionID,
                 attempts: compactionAttempts,

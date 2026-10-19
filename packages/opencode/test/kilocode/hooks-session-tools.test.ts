@@ -10,11 +10,15 @@ import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Database } from "@opencode-ai/core/database/database"
 import { ProjectV2 } from "@opencode-ai/core/project"
+import { ProjectTable } from "@opencode-ai/core/project/sql"
+import { SessionTable } from "@opencode-ai/core/session/sql"
+import { AbsolutePath } from "@opencode-ai/core/schema"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Cause, Effect, Exit, Fiber, Layer, Schema } from "effect"
 import { Agent } from "@/agent/agent"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import * as ConfigService from "@/config/config"
+import { KiloHooks } from "@/kilocode/hooks/hooks"
 import { KiloSession } from "@/kilocode/session"
 import { MCP } from "@/mcp"
 import { Permission } from "@/permission"
@@ -26,6 +30,8 @@ import { SessionTools } from "@/session/tools"
 import { Tool } from "@/tool/tool"
 import { ToolRegistry } from "@/tool/registry"
 import { Truncate } from "@/tool/truncate"
+import { TodoWriteTool } from "@/tool/todo"
+import { Todo } from "@/session/todo"
 import { Plugin } from "@/plugin"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { InstanceRef } from "@/effect/instance-ref"
@@ -110,6 +116,8 @@ const base: Config.Info["hooks"] = {
 const config: { hooks: Config.Info["hooks"] } = { hooks: base }
 
 const image = { type: "file" as const, mime: "image/png", url: "data:image/png;base64,AA==" }
+// Metadata a probe's next result carries (a bash exit code, the AGENTS.md files a read pulled in).
+const metadata: Record<string, Record<string, unknown>> = {}
 const probe = (id: string): Tool.Def => ({
   id,
   description: `records ${id} runs`,
@@ -119,11 +127,72 @@ const probe = (id: string): Tool.Def => ({
     Effect.sync(() => {
       runs.push(id)
       // read returns an image, as reading a picture does
-      return { title: id, metadata: {}, output: `${id} done`, ...(id === "read" ? { attachments: [image] } : {}) }
+      return {
+        title: id,
+        metadata: metadata[id] ?? {},
+        output: `${id} done`,
+        ...(id === "read" ? { attachments: [image] } : {}),
+      }
     }),
 })
+// A tool that starts and then fails with `error`.
+const failing = (id: string, error: () => unknown): Tool.Def => ({
+  ...probe(id),
+  execute: () =>
+    Effect.sync(() => {
+      runs.push(id)
+    }).pipe(Effect.andThen(Effect.die(error()))),
+})
+const agents = Layer.mock(Agent.Service)({ get: () => Effect.succeed(agent) })
+const truncate = Layer.succeed(
+  Truncate.Service,
+  Truncate.Service.of({
+    cleanup: () => Effect.void,
+    write: () => Effect.succeed("output.txt"),
+    output: (text: string) => Effect.succeed({ content: text, truncated: false }),
+    limits: () => Effect.succeed({ maxLines: 2000, maxBytes: 50 * 1024 }),
+  } satisfies Truncate.Interface),
+)
+// A tool that asks for its own permission before it runs, as most tools do.
+const asker: Tool.Def = {
+  ...probe("asker"),
+  execute: (_args, ctx) =>
+    ctx.ask({ permission: "asker", patterns: ["*"], always: ["*"], metadata: {} }).pipe(
+      Effect.andThen(
+        Effect.sync(() => {
+          runs.push("asker")
+          return { title: "asker", metadata: {}, output: "asker done" }
+        }),
+      ),
+    ),
+}
+// The real todo service and todowrite tool, so Task events roll back what is actually stored.
+const todos = AppNodeBuilder.build(Todo.node)
+const registry = Layer.effect(
+  ToolRegistry.Service,
+  Effect.gen(function* () {
+    const todowrite = yield* Tool.init(yield* TodoWriteTool)
+    const tools = [
+      probe("edit"),
+      probe("write"),
+      probe("bash"),
+      probe("read"),
+      todowrite,
+      failing("explode", () => new Error("explode failed")),
+      failing("reject", () => new PermissionV1.RejectedError()),
+      asker,
+    ]
+    return ToolRegistry.Service.of({
+      ids: () => Effect.succeed(tools.map((item) => item.id)),
+      all: () => Effect.succeed([]),
+      named: () => Effect.die("unused"),
+      tools: () => Effect.succeed(tools),
+    })
+  }),
+).pipe(Layer.provide(Layer.mergeAll(todos, agents, truncate)))
 
-const layer = Layer.mergeAll(
+// Everything but the permission service, the config and the database.
+const shared = Layer.mergeAll(
   Layer.succeed(
     Plugin.Service,
     Plugin.Service.of({
@@ -131,21 +200,6 @@ const layer = Layer.mergeAll(
       list: () => Effect.succeed([]),
       trigger: (_name, _input, output) => Effect.succeed(output),
     } satisfies Plugin.Interface),
-  ),
-  Layer.succeed(
-    Permission.Service,
-    Permission.Service.of({
-      ask: (input) =>
-        Effect.sync(() => {
-          asks.push(input)
-          return { manual: true }
-        }),
-      reply: () => Effect.void,
-      list: () => Effect.succeed([]),
-      saveAlwaysRules: () => Effect.void,
-      allowEverything: () => Effect.void,
-      pending: () => Effect.succeed(undefined),
-    } satisfies Permission.Interface),
   ),
   Layer.succeed(
     MCP.Service,
@@ -166,34 +220,39 @@ const layer = Layer.mergeAll(
       clients: () => Effect.succeed({}),
     } as Partial<MCP.Interface> as MCP.Interface),
   ),
-  Layer.succeed(
-    Truncate.Service,
-    Truncate.Service.of({
-      cleanup: () => Effect.void,
-      write: () => Effect.succeed("output.txt"),
-      output: (text: string) => Effect.succeed({ content: text, truncated: false }),
-      limits: () => Effect.succeed({ maxLines: 2000, maxBytes: 50 * 1024 }),
-    } satisfies Truncate.Interface),
-  ),
+  truncate,
   RuntimeFlags.layer(),
-  Layer.mock(Agent.Service)({ get: () => Effect.succeed(agent) }),
+  agents,
   Layer.mock(Session.Service)({
     get: (id: SessionID) => {
       const found = sessions.get(id)
       return found ? Effect.succeed(found) : Effect.die(new Error(`no session ${id}`))
     },
   }),
-  TestConfig.layer({ get: () => Effect.succeed({ hooks: config.hooks }) }),
-  AppNodeBuilder.build(Database.node),
+  todos,
+  registry,
+)
+const settings = TestConfig.layer({ get: () => Effect.succeed({ hooks: config.hooks }) })
+
+const layer = Layer.mergeAll(
+  shared,
   Layer.succeed(
-    ToolRegistry.Service,
-    ToolRegistry.Service.of({
-      ids: () => Effect.succeed(["edit", "write", "bash", "read"]),
-      all: () => Effect.succeed([]),
-      named: () => Effect.die("unused"),
-      tools: () => Effect.succeed([probe("edit"), probe("write"), probe("bash"), probe("read")]),
-    }),
+    Permission.Service,
+    Permission.Service.of({
+      ask: (input) =>
+        Effect.sync(() => {
+          asks.push(input)
+          return { manual: true }
+        }),
+      reply: () => Effect.void,
+      list: () => Effect.succeed([]),
+      saveAlwaysRules: () => Effect.void,
+      allowEverything: () => Effect.void,
+      pending: () => Effect.succeed(undefined),
+    } satisfies Permission.Interface),
   ),
+  settings,
+  AppNodeBuilder.build(Database.node),
 )
 
 const it = testEffect(layer)
@@ -256,14 +315,18 @@ const resolve = (input: { session?: Session.Info; messages?: SessionV1.WithParts
     memoryCache: {},
   }).pipe(Effect.provideService(InstanceRef, instance))
 
-const options = (id: string) => ({ toolCallId: id, abortSignal: new AbortController().signal, messages: [] })
+const options = (id: string, signal = new AbortController().signal) => ({
+  toolCallId: id,
+  abortSignal: signal,
+  messages: [],
+})
 
 // Runs a tool and returns its output text, or the error it failed with.
-const invoke = (tools: Record<string, unknown>, id: string, args = {}) =>
+const invoke = (tools: Record<string, unknown>, id: string, args = {}, signal?: AbortSignal) =>
   Effect.promise(() => {
     const tool = tools[id] as { execute?: (args: unknown, opts: unknown) => unknown }
     if (!tool.execute) throw new Error(`${id} tool is missing execute`)
-    return Promise.resolve(tool.execute(args, options(`call_${id}`))).then(
+    return Promise.resolve(tool.execute(args, options(`call_${id}`, signal))).then(
       (value) => ({
         output: (value as { output: string }).output,
         attachments: (value as { attachments?: unknown[] }).attachments,
@@ -289,6 +352,7 @@ const using = (hooks: Config.Info["hooks"]) =>
     () =>
       Effect.sync(() => {
         config.hooks = base
+        for (const key of Object.keys(metadata)) delete metadata[key]
       }),
   )
 
@@ -529,7 +593,9 @@ it.live("keeps the original attachments without updatedToolOutput and clips a lo
       PostToolUse: [
         {
           matcher: "Read",
-          hooks: [exec(`console.log(JSON.stringify({ hookSpecificOutput: { updatedToolOutput: 'x'.repeat(20000) } }))`)],
+          hooks: [
+            exec(`console.log(JSON.stringify({ hookSpecificOutput: { updatedToolOutput: 'x'.repeat(20000) } }))`),
+          ],
         },
       ],
     })
@@ -565,6 +631,295 @@ it.live("sends structured tool_response for bash and the text in kilo_tool_respo
     const [input] = yield* Effect.promise(() => lines(marker))
     expect(input?.tool_response).toEqual({ stdout: "bash done", stderr: "", interrupted: false })
     expect(input?.kilo_tool_response).toBe("bash done")
+  }),
+)
+
+// Waits for a detached hook to append `count` inputs to its marker, then a little longer, so a
+// test also sees runs it did not expect.
+const settle = (file: string, count: number) =>
+  Effect.gen(function* () {
+    while ((yield* Effect.promise(() => lines(file))).length < count) yield* Effect.sleep("20 millis")
+    yield* Effect.sleep("300 millis")
+    return yield* Effect.promise(() => lines(file))
+  }).pipe(Effect.timeoutOrElse({ duration: "10 seconds", orElse: () => Effect.promise(() => lines(file)) }))
+
+// A hook that records its input and exits 2 with `reason` when `field` equals `value`.
+const gate = (file: string, field: string, value: string, reason: string) =>
+  exec(
+    `const fs = require('fs'); const input = fs.readFileSync(0, 'utf8'); fs.appendFileSync(${JSON.stringify(file)}, input + '\\n'); if (JSON.parse(input)[${JSON.stringify(field)}] === ${JSON.stringify(value)}) { process.stderr.write(${JSON.stringify(reason)}); process.exit(2) }`,
+  )
+
+// Todos belong to a stored session: store the test session once, then replace its todo list.
+const seed = (list: Todo.Info[]) =>
+  Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    yield* db
+      .insert(ProjectTable)
+      .values({
+        id: instance.project.id,
+        worktree: AbsolutePath.make(process.cwd()),
+        vcs: "git",
+        time_created: 0,
+        time_updated: 0,
+        sandboxes: [],
+      })
+      .onConflictDoNothing()
+      .run()
+      .pipe(Effect.orDie)
+    yield* db
+      .insert(SessionTable)
+      .values({
+        id: sessionID,
+        project_id: instance.project.id,
+        slug: "hooks",
+        directory: process.cwd(),
+        title: "hooks",
+        version: "test",
+        time_created: 0,
+        time_updated: 0,
+      })
+      .onConflictDoNothing()
+      .run()
+      .pipe(Effect.orDie)
+    yield* Todo.Service.use((svc) => svc.update({ sessionID, todos: list }))
+  })
+const stored = Todo.Service.use((svc) => svc.get(sessionID))
+const item = (content: string, status: string, priority = "high") => ({ content, status, priority }) as Todo.Info
+
+it.live("appends PostToolUseFailure feedback to the error of a tool that failed", () =>
+  Effect.gen(function* () {
+    const dir = yield* scratch()
+    const marker = path.join(dir, "failure")
+    yield* using({
+      PostToolUseFailure: [
+        {
+          matcher: "explode",
+          hooks: [record(marker, reply({ hookSpecificOutput: { additionalContext: "check the input file" } }))],
+        },
+      ],
+    })
+    const result = yield* invoke(yield* resolve(), "explode")
+    expect(result.error?.message).toContain("explode failed")
+    expect(result.error?.message).toContain('<hook_feedback event="PostToolUseFailure">')
+    expect(result.error?.message).toContain("check the input file")
+    const [input] = yield* Effect.promise(() => lines(marker))
+    expect(input).toMatchObject({
+      hook_event_name: "PostToolUseFailure",
+      session_id: sessionID,
+      tool_name: "explode",
+      tool_use_id: "call_explode",
+      error: "explode failed",
+      is_interrupt: false,
+    })
+    expect(typeof input?.duration_ms).toBe("number")
+    expect(runs).toEqual(["explode"])
+  }),
+)
+
+it.live("passes a permission rejection through unchanged without running PostToolUseFailure", () =>
+  Effect.gen(function* () {
+    const dir = yield* scratch()
+    const marker = path.join(dir, "failure")
+    yield* using({ PostToolUseFailure: [{ hooks: [record(marker)] }] })
+    const result = yield* invoke(yield* resolve(), "reject")
+    expect(result.error).toBeInstanceOf(PermissionV1.RejectedError)
+    expect(yield* Effect.promise(() => lines(marker))).toEqual([])
+  }),
+)
+
+it.live("does not run PostToolUseFailure for a cancelled call", () =>
+  Effect.gen(function* () {
+    const dir = yield* scratch()
+    const marker = path.join(dir, "failure")
+    yield* using({ PostToolUseFailure: [{ hooks: [record(marker)] }] })
+    const abort = new AbortController()
+    abort.abort()
+    const result = yield* invoke(yield* resolve(), "explode", {}, abort.signal)
+    expect(result.error?.message).toBe("explode failed")
+    expect(yield* Effect.promise(() => lines(marker))).toEqual([])
+  }),
+)
+
+it.live("runs PostToolUseFailure instead of PostToolUse when bash exits non-zero", () =>
+  Effect.gen(function* () {
+    const dir = yield* scratch()
+    const failure = path.join(dir, "failure")
+    const success = path.join(dir, "success")
+    yield* using({
+      PostToolUseFailure: [
+        {
+          matcher: "Bash",
+          hooks: [record(failure, reply({ hookSpecificOutput: { additionalContext: "run the linter first" } }))],
+        },
+      ],
+      PostToolUse: [{ matcher: "Bash", hooks: [record(success)] }],
+    })
+    metadata.bash = { exit: 3 }
+    const result = yield* invoke(yield* resolve(), "bash", { command: "make" })
+    expect(result.output).toContain("bash done")
+    expect(result.output).toContain('<hook_feedback event="PostToolUseFailure">')
+    expect(result.output).toContain("run the linter first")
+    const [input] = yield* Effect.promise(() => lines(failure))
+    expect(String(input?.error)).toStartWith("Exit code 3")
+    expect(input?.tool_input).toEqual({ command: "make" })
+    expect(yield* Effect.promise(() => lines(success))).toEqual([])
+  }),
+)
+
+it.live("fires CwdChanged when a bash call runs in another workdir than the previous one", () =>
+  Effect.gen(function* () {
+    const dir = yield* scratch()
+    const marker = path.join(dir, "cwd")
+    yield* using({ CwdChanged: [{ hooks: [record(marker)] }] })
+    const tools = yield* resolve()
+    yield* invoke(tools, "bash", { command: "ls", workdir: dir })
+    yield* invoke(tools, "bash", { command: "ls", workdir: dir })
+    const inputs = yield* settle(marker, 1)
+    expect(inputs).toHaveLength(1)
+    expect(inputs[0]).toMatchObject({
+      hook_event_name: "CwdChanged",
+      session_id: sessionID,
+      old_cwd: process.cwd(),
+      new_cwd: dir,
+    })
+    // Back in the session directory: one more run.
+    yield* invoke(tools, "bash", { command: "ls" })
+    const next = yield* settle(marker, 2)
+    expect(next).toHaveLength(2)
+    expect(next[1]).toMatchObject({ old_cwd: dir, new_cwd: process.cwd() })
+  }),
+)
+
+it.live("fires InstructionsLoaded for the nested AGENTS.md files a read pulls in", () =>
+  Effect.gen(function* () {
+    const dir = yield* scratch()
+    const marker = path.join(dir, "instructions")
+    const file = path.join(dir, "sub", "main.ts")
+    const agents = path.join(dir, "sub", "AGENTS.md")
+    yield* using({ InstructionsLoaded: [{ matcher: "nested_traversal", hooks: [record(marker)] }] })
+    metadata.read = { loaded: [agents] }
+    yield* invoke(yield* resolve(), "read", { filePath: file })
+    const inputs = yield* settle(marker, 1)
+    expect(inputs).toHaveLength(1)
+    expect(inputs[0]).toMatchObject({
+      hook_event_name: "InstructionsLoaded",
+      load_reason: "nested_traversal",
+      file_path: agents,
+      memory_type: "Project",
+      trigger_file_path: file,
+    })
+  }),
+)
+
+it.live("rolls back the todo a TaskCreated hook blocks and keeps the rest of the update", () =>
+  Effect.gen(function* () {
+    const dir = yield* scratch()
+    const marker = path.join(dir, "created")
+    yield* using({ TaskCreated: [{ hooks: [gate(marker, "task_subject", "deploy to prod", "no deploys today")] }] })
+    yield* seed([])
+    const result = yield* invoke(yield* resolve(), "todowrite", {
+      todos: [item("write tests", "pending"), item("deploy to prod", "pending")],
+    })
+    expect((yield* stored).map((todo) => todo.content)).toEqual(["write tests"])
+    expect(result.output).toContain('<hook_feedback event="TaskCreated">')
+    expect(result.output).toContain('Task "deploy to prod" was not created: no deploys today')
+    const inputs = yield* Effect.promise(() => lines(marker))
+    expect(inputs.map((input) => input.task_subject)).toEqual(["write tests", "deploy to prod"])
+    expect(inputs[0]).toMatchObject({ hook_event_name: "TaskCreated", kilo_status: "pending", kilo_priority: "high" })
+    expect(String(inputs[0]?.task_id)).toMatch(/^[0-9a-f]{8}$/)
+  }),
+)
+
+it.live("keeps a todo open when a TaskCompleted hook blocks, while other changes land", () =>
+  Effect.gen(function* () {
+    const dir = yield* scratch()
+    const marker = path.join(dir, "completed")
+    yield* using({
+      TaskCompleted: [{ hooks: [gate(marker, "task_subject", "write tests", "the tests still fail")] }],
+    })
+    yield* seed([item("write tests", "in_progress"), item("update docs", "pending", "low")])
+    const result = yield* invoke(yield* resolve(), "todowrite", {
+      todos: [item("write tests", "completed"), item("update docs", "pending", "high")],
+    })
+    expect(yield* stored).toEqual([item("write tests", "in_progress"), item("update docs", "pending", "high")])
+    expect(result.output).toContain('Task "write tests" was kept open: the tests still fail')
+  }),
+)
+
+it.live("keeps a todo's task_id across reorders and runs no Task hook for an unchanged list", () =>
+  Effect.gen(function* () {
+    const dir = yield* scratch()
+    const created = path.join(dir, "created")
+    const completed = path.join(dir, "completed")
+    yield* using({ TaskCreated: [{ hooks: [record(created)] }], TaskCompleted: [{ hooks: [record(completed)] }] })
+    yield* seed([])
+    const tools = yield* resolve()
+    yield* invoke(tools, "todowrite", { todos: [item("a", "pending"), item("b", "pending")] })
+    yield* invoke(tools, "todowrite", { todos: [item("b", "pending"), item("a", "pending")] })
+    expect(yield* Effect.promise(() => lines(created))).toHaveLength(2)
+    expect(yield* Effect.promise(() => lines(completed))).toEqual([])
+    yield* invoke(tools, "todowrite", { todos: [item("b", "pending"), item("a", "completed")] })
+    const first = (yield* Effect.promise(() => lines(created))).find((input) => input.task_subject === "a")
+    const [done] = yield* Effect.promise(() => lines(completed))
+    expect(done?.task_subject).toBe("a")
+    expect(done?.task_id).toBe(first?.task_id)
+  }),
+)
+
+it.live("does not keep a todo open when a TaskCompleted hook's script is missing", () =>
+  Effect.gen(function* () {
+    yield* using({
+      TaskCompleted: [
+        {
+          hooks: [
+            exec(
+              `process.stderr.write("python3: can't open file '/nonexistent.py': [Errno 2] No such file or directory"); process.exit(2)`,
+            ),
+          ],
+        },
+      ],
+    })
+    yield* seed([item("ship", "pending")])
+    yield* invoke(yield* resolve(), "todowrite", { todos: [item("ship", "completed")] })
+    expect(yield* stored).toEqual([item("ship", "completed")])
+  }),
+)
+
+it.live("gives the permission prompt of a call a PermissionRequest review for that call", () =>
+  Effect.gen(function* () {
+    yield* using({})
+    yield* seed([])
+    yield* invoke(yield* resolve(), "todowrite", { todos: [] })
+    expect(asks.at(0)?.review).toBeUndefined()
+    yield* using({
+      PermissionRequest: [
+        {
+          matcher: "TodoWrite",
+          hooks: [
+            exec(
+              reply({
+                hookSpecificOutput: {
+                  hookEventName: "PermissionRequest",
+                  decision: { behavior: "deny", message: "no" },
+                },
+              }),
+            ),
+          ],
+        },
+      ],
+    })
+    yield* invoke(yield* resolve(), "todowrite", { todos: [] })
+    const review = asks.at(0)?.review
+    if (!review) throw new Error("no PermissionRequest review")
+    const verdict = yield* review({
+      id: PermissionV1.ID.ascending(),
+      sessionID,
+      permission: "todowrite",
+      patterns: ["*"],
+      metadata: {},
+      always: ["*"],
+    })
+    expect(verdict).toEqual({ deny: "A PermissionRequest hook denied this todowrite call: no" })
   }),
 )
 
@@ -664,6 +1019,80 @@ real.instance(
       if (!request) throw new Error("the hook ask was settled")
       yield* permission.reply({ requestID: request.id, reply: "once", interactive: true })
       expect(Exit.isSuccess(yield* Fiber.await(hooked))).toBe(true)
+    }),
+  { git: true },
+)
+
+// SessionTools with the real permission service: what a PermissionRequest hook's deny does to the
+// tool call the model made, for the tool's own ask and for a PreToolUse hook's forced ask.
+const live = testEffect(
+  Layer.mergeAll(
+    shared,
+    AppNodeBuilder.build(
+      LayerNode.group([Permission.node, ConfigService.node, CrossSpawnSpawner.node, EventV2Bridge.node, Database.node]),
+      [[ConfigService.node, settings]],
+    ),
+  ),
+)
+
+// A session whose rules ask before the `asker` tool runs.
+const asking = SessionID.make("ses_hooks_asking")
+const careful: Session.Info = { ...info(asking), permission: [{ permission: "asker", pattern: "*", action: "ask" }] }
+sessions.set(asking, careful)
+
+const deny = (message: string, extra: Record<string, unknown> = {}) =>
+  exec(
+    reply({
+      hookSpecificOutput: { hookEventName: "PermissionRequest", decision: { behavior: "deny", message, ...extra } },
+    }),
+  )
+
+live.instance(
+  "a PermissionRequest deny fails the tool call with the hook's message",
+  () =>
+    Effect.gen(function* () {
+      yield* using({ PermissionRequest: [{ matcher: "asker", hooks: [deny("no asking today")] }] })
+      const result = yield* invoke(yield* resolve({ session: careful }), "asker")
+      expect(result.error).toBeInstanceOf(KiloHooks.Denied)
+      expect(result.error?.message).toBe("A PermissionRequest hook denied this asker call: no asking today")
+      expect(runs).toEqual([])
+      expect(yield* (yield* Permission.Service).list()).toEqual([])
+    }),
+  { git: true },
+)
+
+live.instance(
+  "a PermissionRequest deny that asks to interrupt reaches the caller as a permission rejection",
+  () =>
+    Effect.gen(function* () {
+      yield* using({ PermissionRequest: [{ hooks: [deny("stop everything", { interrupt: true })] }] })
+      const result = yield* invoke(yield* resolve({ session: careful }), "asker")
+      expect(result.error).toBeInstanceOf(PermissionV1.RejectedError)
+      expect(runs).toEqual([])
+    }),
+  { git: true },
+)
+
+live.instance(
+  "a PermissionRequest hook denies the forced prompt of a PreToolUse ask",
+  () =>
+    Effect.gen(function* () {
+      yield* using({
+        PreToolUse: [
+          {
+            matcher: "Bash",
+            hooks: [
+              exec(reply({ hookSpecificOutput: { permissionDecision: "ask", permissionDecisionReason: "risky" } })),
+            ],
+          },
+        ],
+        PermissionRequest: [{ matcher: "Bash", hooks: [deny("not on this machine")] }],
+      })
+      const result = yield* invoke(yield* resolve({ messages: turn(false) }), "bash", { command: "rm -rf build" })
+      expect(result.error).toBeInstanceOf(KiloHooks.Denied)
+      expect(result.error?.message).toBe("A PermissionRequest hook denied this bash call: not on this machine")
+      expect(runs).toEqual([])
+      expect(yield* (yield* Permission.Service).list()).toEqual([])
     }),
   { git: true },
 )

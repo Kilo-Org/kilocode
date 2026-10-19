@@ -1,37 +1,98 @@
-import { Effect } from "effect"
-import type { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import path from "path"
+import { createHash } from "crypto"
+import { asc, eq } from "drizzle-orm"
+import { Cause, Effect, Option } from "effect"
+import { Database } from "@opencode-ai/core/database/database"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { Global } from "@opencode-ai/core/global"
+import { TodoTable } from "@opencode-ai/core/session/sql"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { ConfigManaged } from "@/config/managed"
+import { Suggestion } from "@/kilocode/suggestion"
+import { SessionID } from "@/session/schema"
+import { errorMessage } from "@/util/error"
+import { isRecord } from "@/util/record"
+import type { Event } from "./events"
 import { KiloHooks } from "./hooks"
+import { KiloHookLifecycle } from "./lifecycle"
 import { KiloHookLoop } from "./loop"
+import { KiloHookPayload } from "./payload"
 
 // Tool events: PreToolUse and PostToolUse around every tool call (session/tools.ts), plus the
-// PostToolUseFailure wrapper and the PermissionRequest review that races the permission prompt.
+// PostToolUseFailure wrapper, the PermissionRequest review that races the permission prompt, the
+// Task events for todowrite, CwdChanged for bash and InstructionsLoaded for nested AGENTS.md reads.
 
 const HOUR = 60 * 60 * 1000
+const SESSIONS = 4096 // sessions whose last bash workdir is remembered
 
-// PreToolUse context waiting for its call's result, keyed by tool call id.
-const pending = new Map<string, { time: number; context: string[] }>()
+type Note = { event: string; text: string }
 
-function keep(id: string, context: readonly string[]) {
-  const now = Date.now()
-  for (const [key, item] of pending) if (now - item.time > HOUR) pending.delete(key)
-  pending.set(id, { time: now, context: [...(pending.get(id)?.context ?? []), ...context] })
+// Feedback waiting for its call's result, keyed by tool call id: PreToolUse context and Task
+// event rollbacks, appended to the result (or error) the model sees.
+const pending = new Map<string, { time: number; notes: Note[] }>()
+// When each wrapped tool call started, for `duration_ms`.
+const started = new Map<string, number>()
+
+function prune<T extends { time: number } | number>(map: Map<string, T>, now: number) {
+  for (const [key, item] of map) if (now - (typeof item === "number" ? item : item.time) > HOUR) map.delete(key)
 }
 
+function keep(id: string, notes: readonly Note[]) {
+  if (!notes.length) return
+  const now = Date.now()
+  prune(pending, now)
+  pending.set(id, { time: now, notes: [...(pending.get(id)?.notes ?? []), ...notes] })
+}
+
+/** The feedback blocks waiting for a call, one per event in arrival order; removes them. */
 function take(id: string | undefined) {
   if (!id) return []
   const item = pending.get(id)
   pending.delete(id)
-  return item?.context ?? []
+  const events = [...new Set(item?.notes.map((note) => note.event))]
+  return events.map((event) =>
+    block(
+      event,
+      (item?.notes ?? []).filter((note) => note.event === event).map((note) => note.text),
+    ),
+  )
+}
+
+function mark(id: string | undefined) {
+  if (!id) return
+  const now = Date.now()
+  prune(started, now)
+  started.set(id, now)
+}
+
+function elapsed(id: string | undefined) {
+  const start = id ? started.get(id) : undefined
+  if (id) started.delete(id)
+  return start === undefined ? 0 : Date.now() - start
 }
 
 function block(event: string, notes: readonly string[]) {
   return `<hook_feedback event="${event}">\n${KiloHooks.clip(notes.join("\n\n"))}\n</hook_feedback>`
 }
 
+/** Common hook input fields for a tool call's session. */
+function base(event: Event, call: KiloHooks.Call, cwd = call.directory) {
+  return KiloHookPayload.base(event, {
+    sessionID: call.sessionID,
+    root: call.root,
+    parent: call.parent,
+    cwd,
+    agent: call.agent,
+    prompt: call.prompt,
+    mode: call.mode,
+  })
+}
+
 /**
  * Runs PreToolUse hooks. Returns the message to fail the tool call with when a hook blocks it,
  * stops the turn, or asks for a confirmation nobody can give. An `ask` on an attended turn shows a
- * forced permission prompt; a rejection fails like any user rejection.
+ * forced permission prompt; a rejection fails like any user rejection. For `todowrite`, the Task
+ * events then run and can roll back single items of the update.
  */
 export const before = Effect.fn("KiloHookTool.before")(function* (hooks: KiloHooks.Hooks, call: KiloHooks.Call) {
   const verdict = yield* KiloHooks.fire({
@@ -48,7 +109,7 @@ export const before = Effect.fn("KiloHookTool.before")(function* (hooks: KiloHoo
   if (verdict.ran && call.abort?.aborted) return "The tool call was aborted before it ran."
   if (verdict.block) return `A PreToolUse hook blocked this ${call.tool} call:\n${verdict.block}`
   if (verdict.stop !== undefined) {
-    KiloHookLoop.halt(call.sessionID, verdict.stop)
+    KiloHookLoop.halt(call.sessionID, verdict.stop, { event: "PreToolUse", prompt: call.prompt })
     return `A PreToolUse hook stopped the turn: ${verdict.stop.trim() || "No reason given."}`
   }
   if (verdict.ask !== undefined) {
@@ -56,75 +117,411 @@ export const before = Effect.fn("KiloHookTool.before")(function* (hooks: KiloHoo
       return `A PreToolUse hook asked for confirmation, but nobody can answer in this turn: ${verdict.ask}`
     yield* call.confirm(verdict.ask)
   }
-  if (verdict.context.length && call.callID) keep(call.callID, verdict.context)
+  if (call.callID)
+    keep(
+      call.callID,
+      verdict.context.map((text) => ({ event: "PreToolUse", text })),
+    )
+  if (call.tool === "todowrite") yield* tasks(hooks, call)
   return undefined
 })
 
 /**
- * Runs PostToolUse hooks: `updatedToolOutput` replaces the output the model sees (text and
- * attachments; the UI may still show the streamed original from metadata), then PreToolUse context
- * and PostToolUse feedback are appended to it.
+ * PostToolUse for a result: the replacement text a hook gave (`updatedToolOutput`), if any, and
+ * the feedback blocks to append (PreToolUse context, Task rollbacks, PostToolUse feedback).
  */
-export const after = Effect.fn("KiloHookTool.after")(function* (
+export const post = Effect.fn("KiloHookTool.post")(function* (
   hooks: KiloHooks.Hooks,
   call: KiloHooks.Call,
-  result: { output: string; metadata?: unknown; attachments?: unknown[] },
+  response: unknown,
+  text: string,
 ) {
   const verdict = yield* KiloHooks.fire({
     event: "PostToolUse",
     hooks,
     subjects: KiloHooks.names(call),
     call,
-    payloads: KiloHooks.inputs("PostToolUse", call, KiloHooks.response(call, result), result.output),
+    payloads: KiloHooks.inputs("PostToolUse", call, response, text),
     cwd: call.directory,
     sessionID: call.sessionID,
     signal: call.abort,
   })
+  if (verdict.stop !== undefined)
+    KiloHookLoop.halt(call.sessionID, verdict.stop, { event: "PostToolUse", prompt: call.prompt })
+  return {
+    output: verdict.output,
+    notes: [...take(call.callID), ...(verdict.context.length ? [block("PostToolUse", verdict.context)] : [])],
+  }
+})
+
+/**
+ * Runs PostToolUse hooks: `updatedToolOutput` replaces the output the model sees (text and
+ * attachments; the UI may still show the streamed original from metadata), then PreToolUse context
+ * and PostToolUse feedback are appended to it. A bash command that exited non-zero runs
+ * PostToolUseFailure instead, as Claude Code counts it as a failed call.
+ */
+export const after = Effect.fn("KiloHookTool.after")(function* (
+  hooks: KiloHooks.Hooks,
+  call: KiloHooks.Call,
+  result: { output: string; metadata?: unknown; attachments?: unknown[] },
+) {
+  const metadata = isRecord(result.metadata) ? result.metadata : {}
+  if (call.tool === "bash") yield* moved(hooks, call)
+  if (call.tool === "bash" && typeof metadata.exit === "number" && metadata.exit !== 0) {
+    const notes = [
+      ...take(call.callID),
+      ...(yield* failed(hooks, call, `Exit code ${metadata.exit}\n${result.output}`, false)),
+    ]
+    if (notes.length) result.output = `${result.output}\n\n${notes.join("\n\n")}`
+    return
+  }
+  elapsed(call.callID)
+  const verdict = yield* post(hooks, call, KiloHooks.response(call, result), result.output)
   if (verdict.output !== undefined) {
     // A replacement only narrows what the model sees: never longer than the tool's own output
     // (already truncated) or one hook output item, and without the original's images or files.
     result.output = KiloHooks.clip(verdict.output, Math.max(KiloHooks.FEEDBACK, result.output.length))
     if (result.attachments) result.attachments = []
   }
-  if (verdict.stop !== undefined) KiloHookLoop.halt(call.sessionID, verdict.stop)
-  const pre = take(call.callID)
-  const notes = [
-    ...(pre.length ? [block("PreToolUse", pre)] : []),
-    ...(verdict.context.length ? [block("PostToolUse", verdict.context)] : []),
-  ]
-  if (notes.length) result.output = `${result.output}\n\n${notes.join("\n\n")}`
+  if (verdict.notes.length) result.output = `${result.output}\n\n${verdict.notes.join("\n\n")}`
+  if (call.tool === "read" && Array.isArray(metadata.loaded)) yield* loaded(hooks, call, metadata.loaded)
+})
+
+// Errors that steer the agent loop (rejections, dismissals, hook blocks, malformed calls): rethrown
+// unchanged, so the checks that recognize them keep working, and never reported as tool failures.
+const CONTROL = new Set([
+  "PermissionRejectedError",
+  "PermissionCorrectedError",
+  "PermissionDeniedError",
+  "QuestionRejectedError",
+  "ToolInvalidArgumentsError",
+  "KiloHookBlocked",
+  "KiloHookDenied",
+])
+
+function control(error: unknown) {
+  if (error instanceof Suggestion.DismissedError) return true
+  return isRecord(error) && typeof error._tag === "string" && CONTROL.has(error._tag)
+}
+
+function aborted(error: unknown) {
+  return typeof error === "object" && error !== null && "name" in error && error.name === "AbortError"
+}
+
+/** Keeps the start and end of a long error, as Claude Code sends at most 10 000 characters. */
+function middle(text: string) {
+  if (text.length <= KiloHooks.FEEDBACK) return text
+  const half = KiloHooks.FEEDBACK / 2
+  return `${text.slice(0, half)}\n... (truncated) ...\n${text.slice(-half)}`
+}
+
+/** PostToolUseFailure for a failed call: the feedback blocks for the model. */
+const failed = Effect.fn("KiloHookTool.failed")(function* (
+  hooks: KiloHooks.Hooks,
+  call: KiloHooks.Call,
+  error: string,
+  interrupt: boolean,
+) {
+  const duration = elapsed(call.callID)
+  const verdict = yield* KiloHooks.fire({
+    event: "PostToolUseFailure",
+    hooks,
+    subjects: KiloHooks.names(call),
+    call,
+    payloads: KiloHooks.inputs("PostToolUseFailure", call).map((item) => ({
+      ...item,
+      error: middle(error),
+      is_interrupt: interrupt,
+      duration_ms: duration,
+    })),
+    cwd: call.directory,
+    sessionID: call.sessionID,
+    signal: call.abort,
+  })
+  if (verdict.stop !== undefined)
+    KiloHookLoop.halt(call.sessionID, verdict.stop, { event: "PostToolUseFailure", prompt: call.prompt })
+  return verdict.context.length ? [block("PostToolUseFailure", verdict.context)] : []
 })
 
 /**
  * Runs PostToolUseFailure hooks when the tool call fails, appending their feedback to the error
- * the model sees. Control-flow errors (rejections, hook blocks) pass through untouched.
+ * the model sees. Control-flow errors (rejections, hook blocks) and cancelled calls pass through
+ * untouched and run no hook.
  */
 export function failure<A, E, R>(
-  _hooks: KiloHooks.Hooks,
-  _call: KiloHooks.Call,
+  hooks: KiloHooks.Hooks,
+  call: KiloHooks.Call,
   effect: Effect.Effect<A, E, R>,
 ): Effect.Effect<A, E, R> {
-  return effect
+  return Effect.suspend(() => {
+    mark(call.callID)
+    return effect.pipe(
+      Effect.catchCause((cause) =>
+        Effect.gen(function* () {
+          const error = Cause.squash(cause)
+          if (Cause.hasInterruptsOnly(cause) || call.abort?.aborted || control(error)) {
+            take(call.callID)
+            elapsed(call.callID)
+            return yield* Effect.failCause(cause)
+          }
+          if (call.tool === "bash") yield* moved(hooks, call)
+          const message = errorMessage(error)
+          const notes = [...take(call.callID), ...(yield* failed(hooks, call, message, aborted(error)))]
+          if (!notes.length) return yield* Effect.failCause(cause)
+          return yield* Effect.die(new Error(`${message}\n\n${notes.join("\n\n")}`))
+        }),
+      ),
+    )
+  })
 }
 
 /** Decides a pending permission request; resolves with a deny when a hook denies it. */
 export type Review = (request: PermissionV1.Request) => Effect.Effect<{ deny?: string; interrupt?: boolean }>
 
-/** The PermissionRequest review for a tool call's permission asks, when the event has handlers. */
-export function review(_hooks: KiloHooks.Hooks, _call: KiloHooks.Call): Review | undefined {
-  return undefined
+/**
+ * The PermissionRequest review for a tool call's permission asks, when the event has handlers.
+ * Hooks can only deny: `allow`, `updatedInput` and `updatedPermissions` are ignored.
+ */
+export function review(hooks: KiloHooks.Hooks, call: KiloHooks.Call): Review | undefined {
+  if (!KiloHooks.select(hooks, "PermissionRequest", KiloHooks.names(call), call).length) return undefined
+  return (request) =>
+    KiloHooks.fire({
+      event: "PermissionRequest",
+      hooks,
+      subjects: KiloHooks.names(call),
+      call,
+      payloads: KiloHooks.inputs("PermissionRequest", call).map((item) => {
+        const { tool_use_id: _, ...rest } = item
+        return { ...rest, kilo_permission: request.permission, kilo_patterns: request.patterns }
+      }),
+      cwd: call.directory,
+      sessionID: call.sessionID,
+      signal: call.abort,
+    }).pipe(
+      Effect.map((verdict) =>
+        verdict.block
+          ? {
+              deny: `A PermissionRequest hook denied this ${call.tool} call: ${verdict.block}`,
+              ...(verdict.interrupt ? { interrupt: true } : {}),
+            }
+          : {},
+      ),
+    )
 }
 
 /**
  * Races a pending permission prompt: never settles unless a hook denies, in which case `closed`
- * dismisses the prompt and the call fails (a `Denied` defect, or a rejection on interrupt).
+ * dismisses the prompt and the call fails (a `Denied` defect, or a rejection on interrupt). A user
+ * reply that comes first interrupts the review, which kills the hooks.
  */
 export function contest(
-  _review: Review | undefined,
-  _info: PermissionV1.Request,
-  _closed: () => Effect.Effect<void>,
+  review: Review | undefined,
+  info: PermissionV1.Request,
+  closed: () => Effect.Effect<void>,
 ): Effect.Effect<never, PermissionV1.RejectedError> {
-  return Effect.never
+  if (!review) return Effect.never
+  return review(info).pipe(
+    Effect.flatMap((result) => {
+      if (result.deny === undefined) return Effect.never
+      const deny = result.deny
+      return closed().pipe(
+        Effect.andThen(
+          result.interrupt ? Effect.fail(new PermissionV1.RejectedError()) : Effect.die(new KiloHooks.Denied(deny)),
+        ),
+      )
+    }),
+  )
+}
+
+type Todo = { content: string; status: string; priority: string }
+
+function todo(value: unknown): value is Todo {
+  return (
+    isRecord(value) &&
+    typeof value.content === "string" &&
+    typeof value.status === "string" &&
+    typeof value.priority === "string"
+  )
+}
+
+/** The session's current todo list, when the database is available. */
+const todos = Effect.fn("KiloHookTool.todos")(function* (sessionID: string) {
+  const service = yield* Effect.serviceOption(Database.Service)
+  if (Option.isNone(service)) return undefined
+  return yield* service.value.db
+    .select()
+    .from(TodoTable)
+    .where(eq(TodoTable.session_id, SessionID.make(sessionID)))
+    .orderBy(asc(TodoTable.position))
+    .all()
+    .pipe(Effect.orDie)
+})
+
+/** A todo's stable id for hooks: todos have no id, so it hashes the content. */
+function id(content: string) {
+  return createHash("sha256").update(content).digest("hex").slice(0, 8)
+}
+
+/**
+ * TaskCreated and TaskCompleted for a todowrite call, diffing the stored list with the new one by
+ * content. A block rolls back that one item in `call.args.todos` (the object the tool receives):
+ * a blocked creation drops it, a blocked completion restores its previous status.
+ */
+const tasks = Effect.fn("KiloHookTool.tasks")(function* (hooks: KiloHooks.Hooks, call: KiloHooks.Call) {
+  const create = KiloHooks.select(hooks, "TaskCreated", []).length > 0
+  const complete = KiloHooks.select(hooks, "TaskCompleted", []).length > 0
+  if (!create && !complete) return
+  const args = isRecord(call.args) ? call.args : undefined
+  if (!args || !Array.isArray(args.todos)) return
+  const stored = yield* todos(call.sessionID)
+  if (!stored) return
+  const previous = new Map<string, Todo>()
+  for (const item of stored) if (!previous.has(item.content)) previous.set(item.content, item)
+  const run = (event: "TaskCreated" | "TaskCompleted", item: Todo) =>
+    KiloHooks.fire({
+      event,
+      hooks,
+      call,
+      payloads: [
+        {
+          ...base(event, call),
+          task_id: id(item.content),
+          task_subject: item.content,
+          kilo_status: item.status,
+          kilo_priority: item.priority,
+        },
+      ],
+      cwd: call.directory,
+      sessionID: call.sessionID,
+      signal: call.abort,
+    })
+  const notes: Note[] = []
+  const next: unknown[] = []
+  for (const item of args.todos) {
+    if (!todo(item)) {
+      next.push(item)
+      continue
+    }
+    const prior = previous.get(item.content)
+    if (!prior && create) {
+      const verdict = yield* run("TaskCreated", item)
+      if (verdict.block) {
+        notes.push({
+          event: "TaskCreated",
+          text: `Task "${item.content}" was not created: ${verdict.block}. Resubmit the list without that change once the hook's condition holds.`,
+        })
+        continue
+      }
+    }
+    if (item.status === "completed" && prior?.status !== "completed" && complete) {
+      const verdict = yield* run("TaskCompleted", item)
+      if (verdict.block) {
+        notes.push({
+          event: "TaskCompleted",
+          text: `Task "${item.content}" was kept open: ${verdict.block}. Resubmit the list without that change once the hook's condition holds.`,
+        })
+        next.push({ ...item, status: prior?.status ?? "pending" })
+        continue
+      }
+    }
+    next.push(item)
+  }
+  if (!notes.length) return
+  args.todos = next
+  if (call.callID) keep(call.callID, notes)
+})
+
+// The last bash workdir per session, for CwdChanged.
+const dirs = new Map<string, string>()
+
+/** The `watchPaths` a hook returned, if any hook returned the field (`[]` clears the list). */
+function watched(verdict: KiloHooks.Verdict) {
+  const lists = verdict.specific.flatMap((item) => (Array.isArray(item.watchPaths) ? [item.watchPaths] : []))
+  if (!lists.length) return undefined
+  return lists.flat().filter((item): item is string => typeof item === "string" && item.length > 0)
+}
+
+/**
+ * CwdChanged when a bash call runs in another directory than the session's previous one. Kilo's
+ * shell keeps no working directory, so this means "the agent ran a command somewhere else".
+ */
+function moved(hooks: KiloHooks.Hooks, call: KiloHooks.Call) {
+  const args = isRecord(call.args) ? call.args : {}
+  const next = path.resolve(call.directory, typeof args.workdir === "string" ? args.workdir : call.directory)
+  const prev = dirs.get(call.sessionID) ?? call.directory
+  dirs.delete(call.sessionID)
+  dirs.set(call.sessionID, next)
+  if (dirs.size > SESSIONS) {
+    const oldest = dirs.keys().next()
+    if (!oldest.done) dirs.delete(oldest.value)
+  }
+  if (prev === next || !KiloHooks.select(hooks, "CwdChanged", []).length) return Effect.void
+  return KiloHookLifecycle.detach(
+    KiloHooks.fire({
+      event: "CwdChanged",
+      hooks,
+      payloads: [{ ...base("CwdChanged", call, next), old_cwd: prev, new_cwd: next }],
+      cwd: call.directory,
+      sessionID: call.sessionID,
+    }).pipe(
+      Effect.tap((verdict) =>
+        Effect.sync(() => {
+          const paths = watched(verdict)
+          if (paths) KiloHookLifecycle.watch(call.directory, paths)
+        }),
+      ),
+    ),
+  )
+}
+
+function within(file: string, dir: string | undefined) {
+  if (!dir) return false
+  const root = path.resolve(dir)
+  return file === root || file.startsWith(root + path.sep)
+}
+
+/**
+ * Claude Code's `memory_type` for an instruction file: "User" for Claude Code and Kilo config
+ * directories, "Managed" for the managed config directory, else "Project" (repositories usually
+ * live under the home directory, so the home directory alone does not make a file a user file).
+ */
+export function memory(file: string) {
+  const full = path.resolve(file)
+  if (within(full, ConfigManaged.managedConfigDir())) return "Managed"
+  const home = Global.Path.home
+  const user = [
+    path.join(home, ".claude"),
+    Global.Path.config,
+    path.join(home, ".kilo"),
+    path.join(home, ".kilocode"),
+    Flag.KILO_CONFIG_DIR,
+  ]
+  if (user.some((dir) => within(full, dir))) return "User"
+  return "Project"
+}
+
+/** InstructionsLoaded (`nested_traversal`) for the AGENTS.md files a read pulled in. */
+function loaded(hooks: KiloHooks.Hooks, call: KiloHooks.Call, files: readonly unknown[]) {
+  const list = files.filter((item): item is string => typeof item === "string" && item.length > 0)
+  const subjects = ["nested_traversal"]
+  if (!list.length || !KiloHooks.select(hooks, "InstructionsLoaded", subjects).length) return Effect.void
+  const trigger = KiloHooks.compat(call.tool, call.args, call.directory).file_path
+  return KiloHookLifecycle.detach(
+    KiloHooks.fire({
+      event: "InstructionsLoaded",
+      hooks,
+      subjects,
+      payloads: list.map((file) => ({
+        ...base("InstructionsLoaded", call),
+        file_path: file,
+        memory_type: memory(file),
+        load_reason: "nested_traversal",
+        ...(typeof trigger === "string" ? { trigger_file_path: trigger } : {}),
+      })),
+      cwd: call.directory,
+      sessionID: call.sessionID,
+    }),
+  )
 }
 
 export * as KiloHookTool from "./tool"

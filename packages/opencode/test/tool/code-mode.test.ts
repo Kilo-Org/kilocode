@@ -779,6 +779,76 @@ describe("code mode permission visibility", () => {
     expect(asked).toEqual(["github_list_issues"])
   })
 
+  // kilocode_change start - PreToolUse and PostToolUse hooks run for code-mode child calls
+  test("a PreToolUse hook on the child's mcp__server__tool name blocks it before the MCP server is called", async () => {
+    const called: string[] = []
+    const tool = await build({
+      github_create_issue: {
+        ...mcpTool("create_issue", () => {
+          called.push("create_issue")
+          return { content: [{ type: "text", text: "created" }] }
+        }),
+        clientName: "github",
+      },
+    })
+    const hooks = {
+      PreToolUse: [
+        {
+          matcher: "mcp__github__.*",
+          hooks: [
+            {
+              type: "command",
+              command: process.execPath,
+              args: ["-e", "process.stderr.write('no GitHub writes'); process.exit(2)"],
+            },
+          ],
+        },
+      ],
+    }
+    const out = await Effect.runPromise(
+      tool.execute(
+        { code: "try { await tools.github.create_issue({}) } catch (e) { return 'blocked: ' + e.message }" },
+        { ...ctx, extra: { hooks } },
+      ),
+    )
+    expect(out.output).toContain("blocked: A PreToolUse hook blocked this github_create_issue call")
+    expect(out.output).toContain("no GitHub writes")
+    expect(called).toEqual([])
+  })
+
+  test("PostToolUse feedback for a child call reaches the script as an extra text item", async () => {
+    const tool = await build({
+      greeter_hello: {
+        ...mcpTool("hello", () => ({ content: [{ type: "text", text: "hi" }] })),
+        clientName: "greeter",
+      },
+    })
+    const hooks = {
+      PostToolUse: [
+        {
+          matcher: "mcp__greeter__hello",
+          hooks: [
+            {
+              type: "command",
+              command: process.execPath,
+              args: [
+                "-e",
+                `console.log(JSON.stringify({ hookSpecificOutput: { additionalContext: "say it louder" } }))`,
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const out = await Effect.runPromise(
+      tool.execute({ code: "return await tools.greeter.hello({})" }, { ...ctx, extra: { hooks } }),
+    )
+    expect(out.output).toContain("hi")
+    expect(out.output).toContain('<hook_feedback event="PostToolUse">')
+    expect(out.output).toContain("say it louder")
+  })
+  // kilocode_change end
+
   test("Permission.visibleTools hides only hard denies, matching Permission.disabled", () => {
     const tools = { a_tool: 1, b_tool: 2, c_tool: 3 }
     const visible = Permission.visibleTools(tools, [

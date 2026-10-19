@@ -5,6 +5,7 @@ import { Provider } from "@/provider/provider"
 import { SessionCompaction } from "@/session/compaction"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
+import { KiloHookCompact } from "@/kilocode/hooks/compact"
 
 const Parameters = Schema.Struct({})
 
@@ -105,6 +106,23 @@ export const CompactTool = Tool.define(
               : undefined
           if (!model) {
             return yield* Effect.fail(new Error("Cannot compact: this session has no model"))
+          }
+
+          // The model asked for this compaction: PreCompact sees it as `auto`, with `kilo_trigger: "tool"`.
+          // Hooks come from the tool context, so nothing resolves sandbox state inside the tool gate.
+          const allowed = yield* KiloHookCompact.allow({
+            sessionID: ctx.sessionID,
+            trigger: "auto",
+            kilo: "tool",
+            hooks: ctx.extra?.hooks,
+          })
+          if (!allowed) {
+            scheduled.delete(ctx.messages)
+            return {
+              title: "context compaction blocked",
+              metadata: { sessionID: ctx.sessionID, agent: ctx.agent, time: new Date().toISOString(), pending: false },
+              output: "A PreCompact hook blocked context compaction; continue without compacting.",
+            }
           }
 
           yield* compaction.create({ sessionID: ctx.sessionID, agent: ctx.agent, model, auto: false })
