@@ -129,17 +129,6 @@ class KiloBackendAppService private constructor(
     private val _appState = MutableStateFlow<KiloAppState>(KiloAppState.Disconnected)
     val appState: StateFlow<KiloAppState> = _appState.asStateFlow()
 
-    /**
-     * Whether the connected CLI allows background subagents, from `GET /experimental/capabilities`.
-     *
-     * Deliberately not part of [AppData]: it is a property of the connected CLI rather than loaded
-     * app data, it is probed off the load's critical path, and folding it into [AppData] would churn
-     * that object's identity — which `updateConfig` and [refreshConfigState] use to detect a
-     * concurrent reload, so a late probe would silently cancel a config write.
-     */
-    private val _capabilities = MutableStateFlow(false)
-    val capabilities: StateFlow<Boolean> = _capabilities.asStateFlow()
-
     val events: SharedFlow<SseEvent> get() = connection.events
     val api: DefaultApi? get() = connection.api
     val http: OkHttpClient? get() = connection.apiClient
@@ -354,7 +343,6 @@ class KiloBackendAppService private constructor(
                 }
                 when (next) {
                     ConnectionState.Disconnected -> {
-                        _capabilities.value = false
                         _appState.value = KiloAppState.Disconnected
                     }
                     is ConnectionState.Downloading -> _appState.value = KiloAppState.Downloading(next.percent, next.version, next.platform)
@@ -483,12 +471,6 @@ class KiloBackendAppService private constructor(
                             "notifications=${notifs.size} ${configSummary(cfg)}",
                     )
                     log.info("Application started — config, profile, notifications loaded")
-                    // Off the critical path on purpose: this is an optional probe, and the generated
-                    // client's call is blocking, so a timeout inside the load's coroutineScope could
-                    // not actually release it — structured concurrency would still wait for the
-                    // socket and fail an otherwise-successful load. Ready therefore starts with the
-                    // capability off and flips once the probe answers.
-                    cs.launch { refreshCapabilities() }
                 } catch (e: TimeoutCancellationException) {
                     val err = LoadError(
                         resource = "app",
@@ -681,37 +663,6 @@ class KiloBackendAppService private constructor(
         }
     }
 
-    /**
-     * Reads the CLI's background-subagent capability. Returns false when it cannot be read — an older
-     * CLI has no `/experimental/capabilities` route at all — which matches VS Code's
-     * `data?.backgroundSubagents === true` fallback and hides the affordance rather than offering one
-     * that would fail.
-     *
-     * Called off the load's critical path — see the call site in the start flow.
-     */
-    private suspend fun fetchCapabilities(): Boolean {
-        val client = connection.appLoadApi ?: return false
-        return try {
-            withContext(Dispatchers.IO) { client.experimentalCapabilitiesGet().backgroundSubagents }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            log.warn("Experimental capabilities fetch failed: ${e.message}", e)
-            false
-        }
-    }
-
-    /**
-     * Publishes the probe result into [capabilities], ignoring a late answer that arrives after the
-     * connection changed under us.
-     */
-    private suspend fun refreshCapabilities() {
-        val conn = connection.state.value as? ConnectionState.Connected ?: return
-        val enabled = fetchCapabilities()
-        if (connection.state.value != conn) return
-        _capabilities.value = enabled
-    }
-
     private suspend fun refreshConfigState() {
         val current = _appState.value as? KiloAppState.Ready ?: return
         val connection = connection.state.value as? ConnectionState.Connected ?: return
@@ -889,7 +840,6 @@ class KiloBackendAppService private constructor(
         profile = null
         config = null
         notifications = emptyList()
-        _capabilities.value = false
         _appState.value = KiloAppState.Disconnected
     }
 

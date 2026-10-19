@@ -13,7 +13,6 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.BackgroundPromote
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.MessageView
 import ai.kilocode.client.session.views.SessionOutcomeView
@@ -74,7 +73,6 @@ class SessionMessageListPanel(
     private val deleteQueued: ((String) -> Unit)? = null,
     private val banner: RevertBanner? = null,
     private val onOpenSubagent: ((String, String) -> Unit)? = null,
-    private val onPromoteBackgroundAgent: BackgroundPromote? = null,
     /** Whether the transcript is on screen. Feeds the per-turn live gate for auto-expand. */
     private val visible: () -> Boolean = { true },
     /** Schedules one drain slice. Tests pass an inline runner so drains complete synchronously. */
@@ -345,9 +343,9 @@ class SessionMessageListPanel(
     /**
      * Sibling color slot for a child session's generated avatar (see
      * [ai.kilocode.client.session.AgentAvatar]), recomputed from the model's current child spawn
-     * order on each lookup rather than cached, so a foreground task card and a promoted
-     * background-agent row read the same hue without any extra invalidation bookkeeping. Cheap: only
-     * called from task card `sync()`, never from icon paint or animation frames.
+     * order on each lookup rather than cached, so a task card and its background-agent row read the
+     * same hue without any extra invalidation bookkeeping. Cheap: only called from task card
+     * `sync()`, never from icon paint or animation frames.
      */
     private fun avatarColor(childSessionId: String): Int? =
         ai.kilocode.client.session.AgentAvatarIdentity.palette(model.childSessions())[childSessionId]
@@ -415,7 +413,7 @@ class SessionMessageListPanel(
     private fun createTurn(turn: ai.kilocode.client.session.model.Turn): TurnView =
         TurnView(
             turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert,
-            fork, deleteQueued, onOpenSubagent, onPromoteBackgroundAgent, ::avatarColor, visible = visible,
+            fork, deleteQueued, onOpenSubagent, ::avatarColor, visible = visible,
         ).also {
             it.setDiffOpener(openDiff, sessionId)
         }

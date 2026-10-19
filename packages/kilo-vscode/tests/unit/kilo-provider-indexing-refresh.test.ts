@@ -91,11 +91,6 @@ function createConnection() {
         return { data: snapshot }
       },
     },
-    experimental: {
-      capabilities: {
-        get: async () => ({ data: { backgroundSubagents: true } }),
-      },
-    },
   }
 
   return {

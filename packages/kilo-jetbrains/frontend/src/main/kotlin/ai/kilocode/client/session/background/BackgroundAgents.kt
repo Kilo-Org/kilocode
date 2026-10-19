@@ -15,9 +15,9 @@ object BackgroundAgents {
      *
      * The CLI's list route already filters by `parentSessionId == parent`; the check is repeated
      * here defensively, matching the VS Code webview. Only jobs with `type == "task"` and
-     * `metadata.background == true` count — a foreground task in progress is not a background
-     * agent yet. [waiting] is the set of child session ids with a pending permission request; a
-     * child session id with no matching job is ignored.
+     * `metadata.background == true` count; the latter guards against non-background job rows.
+     * [waiting] is the set of child session ids with a pending permission request; a child session
+     * id with no matching job is ignored.
      */
     fun rows(jobs: List<BackgroundJobDto>, parent: String, waiting: Set<String> = emptySet()): List<BackgroundAgent> =
         jobs

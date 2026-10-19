@@ -22,8 +22,6 @@ import { resumeHint } from "../kilocode/task-resume" // kilocode_change
 import { errorMessage } from "@/util/error" // kilocode_change
 import { Effect, Exit, Schema, Scope } from "effect"
 import { Cause } from "effect" // kilocode_change
-import { EffectBridge } from "@/effect/bridge"
-import { RuntimeFlags } from "@/effect/runtime-flags"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { Database } from "@opencode-ai/core/database/database"
 
@@ -35,9 +33,9 @@ export interface TaskPromptOps {
 
 const id = "task"
 const BACKGROUND_DESCRIPTION = [
-  "Background mode: background=true launches the subagent asynchronously and returns immediately.",
-  "Use foreground when you need the result before proceeding; otherwise use background for non-overlapping work, but do not give the final answer until all required background results have arrived.", // kilocode_change
-  "You will be notified automatically when it finishes.",
+  "Tasks always run asynchronously in the background and return immediately.",
+  "Do not give the final answer until all required background results have arrived.",
+  "You will be notified automatically when a task finishes.",
 ].join(" ")
 const BACKGROUND_STARTED = [
   "The task is working in the background. You will be notified automatically when it finishes.",
@@ -67,10 +65,6 @@ const BaseParameters = Schema.Struct(BaseParameterFields)
 export const Parameters = Schema.Struct({
   ...BaseParameterFields,
   ...KiloTask.ModelFields, // kilocode_change
-  background: Schema.optional(Schema.Boolean).annotate({
-    description:
-      "Run the agent in the background. You will be notified when it completes. DO NOT sleep, poll, or proactively check on its progress",
-  }),
 })
 
 function renderOutput(input: {
@@ -105,7 +99,6 @@ export const TaskTool = Tool.define(
     const drain = yield* SessionDrain.Service // kilocode_change
     const events = yield* EventV2Bridge.Service // kilocode_change
     const scope = yield* Scope.Scope
-    const flags = yield* RuntimeFlags.Service
     const database = yield* Database.Service
 
     const run = Effect.fn("TaskTool.execute")(function* (
@@ -113,10 +106,6 @@ export const TaskTool = Tool.define(
       ctx: Tool.Context,
     ) {
       const cfg = yield* config.get()
-      const runInBackground = params.background === true
-      if (runInBackground && !flags.experimentalBackgroundSubagents) {
-        return yield* Effect.fail(new Error("Background subagents require KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true"))
-      }
 
       const parent = yield* sessions.get(ctx.sessionID)
       let current = parent
@@ -242,7 +231,7 @@ export const TaskTool = Tool.define(
         sessionId: nextSession.id,
         model,
         ...(variant === undefined ? {} : { variant }), // kilocode_change
-        ...(runInBackground ? { background: true } : {}),
+        background: true,
       }
 
       yield* ctx.metadata({
@@ -328,6 +317,15 @@ export const TaskTool = Tool.define(
                 text,
               }),
             },
+            ...(params.command
+              ? [
+                  {
+                    type: "text" as const,
+                    synthetic: true,
+                    text: "Summarize the task tool output above and continue with your task.",
+                  },
+                ]
+              : []),
           ],
         })
       })
@@ -396,7 +394,6 @@ export const TaskTool = Tool.define(
           title: params.description,
           metadata: {
             ...metadata,
-            background: true,
             jobId: nextSession.id,
           },
           output: renderOutput({
@@ -408,133 +405,40 @@ export const TaskTool = Tool.define(
         }
       }
 
-      const foregroundCost = runInBackground
-        ? undefined
-        : yield* KiloCostPropagation.childCost(sessions, nextSession.id) // kilocode_change - snapshot before the foreground job starts
-      // kilocode_change start
-      const start = KiloTask.start(background, (id) => ops.cancel(id), runInBackground ? notify : undefined)
-      const info = yield* start({
-        // kilocode_change end
+      // kilocode_change start - every task runs in the background
+      const info = yield* KiloTask.start(background, notify)({
         id: nextSession.id,
         type: id,
         title: params.description,
         metadata,
-        // kilocode_change start
-        onPromote: notify(nextSession.id).pipe(
-          Effect.andThen(
-            ctx.metadata({
-              title: params.description,
-              metadata: { ...metadata, background: true, jobId: nextSession.id },
-            }),
-          ),
-        ),
-        // kilocode_change end
-        // kilocode_change - only the initial-background start needs its own cost bracket; the
-        // foreground/promoted path below is already wrapped by the acquireUseRelease at the bottom of run()
-        run: runInBackground ? backgroundRun : runTask().pipe(Effect.onInterrupt(() => ops.cancel(nextSession.id))),
+        run: backgroundRun,
       })
 
-      function backgroundResult() {
-        return {
-          title: params.description,
-          metadata: {
-            ...metadata,
-            background: true,
-            jobId: info.id,
-          },
-          output: renderOutput({
-            sessionID: nextSession.id,
-            state: "running",
-            summary: "Background task started",
-            text: BACKGROUND_STARTED,
-          }),
-        }
-      }
-
-      if (runInBackground) return backgroundResult() // kilocode_change
-
-      const runCancel = yield* EffectBridge.make()
-      const cancel = KiloTask.cancelForeground(background, nextSession.id, ops.cancel(nextSession.id)) // kilocode_change
-
-      function onAbort() {
-        runCancel.fork(cancel)
-      }
-
-      return yield* Effect.acquireUseRelease(
-        // kilocode_change start - snapshot child cost so we propagate only the delta on resume (#6321)
-        Effect.gen(function* () {
-          ctx.abort.addEventListener("abort", onAbort)
-          return foregroundCost ?? (yield* KiloCostPropagation.childCost(sessions, nextSession.id))
+      return {
+        title: params.description,
+        metadata: {
+          ...metadata,
+          jobId: info.id,
+        },
+        output: renderOutput({
+          sessionID: nextSession.id,
+          state: "running",
+          summary: "Background task started",
+          text: BACKGROUND_STARTED,
         }),
-        // kilocode_change end
-        () =>
-          Effect.gen(function* () {
-            const result = yield* Effect.raceFirst(
-              background.wait({ id: nextSession.id }).pipe(Effect.map((waited) => waited.info)),
-              background.waitForPromotion(nextSession.id),
-            )
-            // kilocode_change start
-            if (result?.metadata?.background === true) {
-              yield* notify(info.id)
-              return backgroundResult()
-            }
-            // kilocode_change end
-            if (result?.status === "error") return yield* Effect.fail(new Error(result.error ?? "Task failed"))
-            // kilocode_change start - only an explicit stop/delete cancels a task its parent still awaits;
-            // without that reason, models treat the result as a failure and start a new subagent right away
-            if (result?.status === "cancelled") return yield* Effect.fail(new Error("Task cancelled by the user"))
-            // kilocode_change end
-            return {
-              title: params.description,
-              metadata,
-              output: renderOutput({ sessionID: nextSession.id, state: "completed", text: result?.output ?? "" }),
-            }
-          }),
-        // kilocode_change start - propagate subagent cost delta to parent on every exit path (#6321)
-        (costBefore, exit) =>
-          Effect.gen(function* () {
-            if (Exit.hasInterrupts(exit))
-              yield* KiloTask.cancelForeground(
-                background,
-                nextSession.id,
-                Effect.all([cancel, background.cancel(nextSession.id)], { discard: true }),
-              )
-          }).pipe(
-            Effect.ensuring(
-              Effect.gen(function* () {
-                ctx.abort.removeEventListener("abort", onAbort)
-                const costAfter = yield* KiloCostPropagation.childCost(sessions, nextSession.id).pipe(
-                  Effect.catchTag("NotFoundError", () => Effect.succeed(costBefore)),
-                )
-                yield* KiloCostPropagation.propagate(
-                  sessions,
-                  ctx.sessionID,
-                  ctx.messageID,
-                  costAfter - costBefore,
-                ).pipe(
-                  Effect.provideService(Database.Service, database),
-                  Effect.catchTag("NotFoundError", () => Effect.void),
-                )
-              }),
-            ),
-          ),
-        // kilocode_change end
-      )
+      }
+      // kilocode_change end
     })
 
     // kilocode_change start
     return {
-      description: [
-        DESCRIPTION,
-        KiloTask.usageDescription,
-        ...(flags.experimentalBackgroundSubagents ? [BACKGROUND_DESCRIPTION] : []),
-        KiloTask.modelDescription,
-      ].join("\n\n"),
+      description: [DESCRIPTION, KiloTask.usageDescription, BACKGROUND_DESCRIPTION, KiloTask.modelDescription].join(
+        "\n\n",
+      ),
       parameters: Parameters,
       jsonSchema: ToolJsonSchema.fromSchema(
         Schema.Struct({
           ...BaseParameters.fields,
-          ...(flags.experimentalBackgroundSubagents ? { background: Parameters.fields.background } : {}),
           ...KiloTask.ModelFields,
         }),
       ),

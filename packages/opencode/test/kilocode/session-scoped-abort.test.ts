@@ -77,7 +77,7 @@ function matches(body: Record<string, unknown>, text: string) {
   return JSON.stringify(user?.content)?.includes(text) ?? false
 }
 
-const start = Effect.fn("ScopedAbortTest.start")(function* (foreground = false) {
+const start = Effect.fn("ScopedAbortTest.start")(function* () {
   const prompt = yield* SessionPrompt.Service
   const sessions = yield* Session.Service
   const status = yield* SessionStatus.Service
@@ -91,28 +91,20 @@ const start = Effect.fn("ScopedAbortTest.start")(function* (foreground = false) 
       description: "Background work",
       prompt: "CHILD_REQUEST",
       subagent_type: "general",
-      background: true,
     }),
-    foreground
-      ? reply().tool("task", {
-          description: "Foreground work",
-          prompt: "FOREGROUND_REQUEST",
-          subagent_type: "general",
-        })
-      : reply().hang(),
+    reply().hang(),
   )
   yield* llm.pushMatch(
     ({ body }) => matches(body, "CHILD_REQUEST"),
     reply().wait(done.promise).text("RETAINED_CHILD_RESULT").stop(),
   )
-  if (foreground) yield* llm.pushMatch(({ body }) => matches(body, "FOREGROUND_REQUEST"), reply().hang())
   const fiber = yield* prompt
     .prompt({
       sessionID: parent.id,
       parts: [{ type: "text", text: "PARENT_REQUEST" }],
     })
     .pipe(Effect.forkScoped)
-  yield* awaitWithTimeout(llm.wait(foreground ? 4 : 3), "parent and children did not start", "15 seconds")
+  yield* awaitWithTimeout(llm.wait(3), "parent and children did not start", "15 seconds")
   const child = (yield* jobs.list()).find(
     (job) => job.metadata?.parentSessionId === parent.id && job.metadata?.background,
   )
@@ -241,27 +233,3 @@ for (const scope of [undefined, "tree"] as const) {
     30000,
   )
 }
-
-it.live(
-  "session stop cancels foreground child work while its async sibling keeps running",
-  () =>
-    provideTmpdirServer(
-      () =>
-        Effect.gen(function* () {
-          const run = yield* start(true)
-          const foreground = (yield* run.jobs.list()).find(
-            (job) => job.metadata?.parentSessionId === run.parent.id && !job.metadata?.background,
-          )
-          if (!foreground) throw new Error("foreground child not found")
-          yield* run.prompt.cancel(run.parent.id, "session")
-          yield* Fiber.await(run.fiber)
-          expect((yield* run.jobs.get(foreground.id))?.status).toBe("cancelled")
-          expect((yield* run.status.get(SessionID.make(foreground.id))).type).toBe("idle")
-          expect((yield* run.jobs.get(run.child.id))?.status).toBe("running")
-          yield* run.prompt.cancel(run.parent.id)
-          run.done.resolve()
-        }),
-      { config },
-    ),
-  30000,
-)

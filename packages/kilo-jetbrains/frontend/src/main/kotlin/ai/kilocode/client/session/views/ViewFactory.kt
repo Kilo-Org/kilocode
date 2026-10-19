@@ -53,18 +53,16 @@ object ViewFactory {
         repo: String? = null,
         openAttachment: (FileAttachment) -> Unit = { AttachmentView.openDefault(it, openFile, openUrl) },
         openDiff: SessionDiffOpener = { _, _, _ -> },
-        sessionId: String? = null,
         onOpenSubagent: ((String, String) -> Unit)? = null,
         // Whether a block built here may auto-expand from the transcript display settings. False for
         // history/rebuild construction and for blocks outside the actively streaming turn; see
-        // SessionMessageListPanel/TurnView. Kept before avatarColor for the trailing-lambda rule below.
+        // SessionMessageListPanel/TurnView.
         live: () -> Boolean = { true },
-        // avatarColor sits before onPromoteBackgroundAgent (not after) so this overload's last
-        // parameter stays a non-function type: if a lambda type were last here, a trailing-lambda
-        // call meant for the exact-arity `create(content, openFile, openUrl)` overload above would
-        // also become applicable to this one, making every such call site ambiguous.
         avatarColor: (String) -> Int? = { null },
-        onPromoteBackgroundAgent: BackgroundPromote? = null,
+        // Kept last so this overload's final parameter is not a function type: a trailing-lambda
+        // call meant for the exact-arity `create(content, openFile, openUrl)` overload above would
+        // otherwise also become applicable to this one, making every such call site ambiguous.
+        sessionId: String? = null,
     ): PartView = when (content) {
         is Text -> TextView(content, openFile = openFile, openUrl = openUrl, selection = selection)
         is Reasoning -> ReasoningView(content, openFile = openFile, openUrl = openUrl, selection = selection, live = live)
@@ -82,7 +80,6 @@ object ViewFactory {
                 content,
                 selection = selection,
                 onOpenSubagent = onOpenSubagent,
-                onPromoteBackgroundAgent = onPromoteBackgroundAgent,
                 avatarColor = avatarColor,
             )
             BoardToolView.canRender(content) -> BoardToolView(content, selection = selection)
@@ -114,18 +111,16 @@ object ViewFactory {
         mentions: List<PromptMention> = emptyList(),
         openAttachment: (FileAttachment) -> Unit = { AttachmentView.openDefault(it, openFile, openUrl) },
         openDiff: SessionDiffOpener = { _, _, _ -> },
-        sessionId: String? = null,
         onOpenSubagent: ((String, String) -> Unit)? = null,
-        // See the matching comment on `create`: keep the live flag off the end.
         live: () -> Boolean = { true },
-        // See the matching comment on `create`: keep this last parameter a non-function type.
         avatarColor: (String) -> Int? = { null },
-        onPromoteBackgroundAgent: BackgroundPromote? = null,
+        // See the matching comment on `create`: sessionId stays last to avoid trailing-lambda ambiguity.
+        sessionId: String? = null,
     ): PartView = when (content) {
         is Text -> PromptView(content, openFile = openFile, openAttachment = openAttachment, openUrl = openUrl, selection = selection, mentions = mentions)
         else -> create(
-            content, openFile, openUrl, selection, repo, openAttachment, openDiff, sessionId,
-            onOpenSubagent = onOpenSubagent, live = live, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
+            content, openFile, openUrl, selection, repo, openAttachment, openDiff,
+            onOpenSubagent = onOpenSubagent, live = live, avatarColor = avatarColor, sessionId = sessionId,
         )
     }
 

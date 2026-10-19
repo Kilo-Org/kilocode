@@ -104,7 +104,6 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [features, setFeatures] = createSignal<FeatureFlags>({
     indexing: false,
     sandboxControls: false,
-    backgroundSubagents: false,
     speechToText: false,
   })
   const [loading, setLoading] = createSignal(true)

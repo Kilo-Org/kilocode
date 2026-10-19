@@ -172,7 +172,7 @@ import { createCatalogRetry } from "./kilo-provider/catalog-retry"
 import { AnacondaDesktopBridge } from "./anaconda-desktop/bridge"
 import { fetchOpenAIModels, FetchModelsError } from "./shared/fetch-models"
 import type { Agent } from "@kilocode/sdk/v2/client"
-import { configFeatures, serverFeatures } from "./features"
+import { configFeatures } from "./features"
 import { fetchSnapshot } from "./kilo-provider/config-snapshot"
 import { createAutoApproveBridge } from "./kilo-provider/auto-approve"
 import type { KiloProviderOptions } from "./kilo-provider/options"
@@ -1304,7 +1304,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           backgroundJobs: (sessionID, requestID) => this.fetchAndSendBackgroundJobs(sessionID, requestID),
           board: (msg) => this.handleBoardMessage(msg),
           cancelBackgroundJob: (jobID, sessionID, requestID) => this.cancelBackgroundJob(jobID, sessionID, requestID),
-          promoteBackgroundJob: (jobID, sessionID) => this.promoteBackgroundJob(jobID, sessionID),
           caffeination: () => void vscode.commands.executeCommand("kilo-code.new.toggleCaffeination"),
         })
       ) {
@@ -3485,19 +3484,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private async promoteBackgroundJob(jobID: string, sessionID: string): Promise<void> {
-    const client = this.client
-    if (!client || this.connectionState !== "connected") return
-    try {
-      await client.kilocode.backgroundJob.promote(
-        { jobID, directory: this.getWorkspaceDirectory(sessionID) },
-        { throwOnError: true },
-      )
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to promote background job:", error)
-    }
-  }
-
   private begin(dir: string): number {
     const key = [...this.requests.keys()].find((entry) => sameDirectory(entry, dir)) ?? dir
     const request = (this.requests.get(key) ?? 0) + 1
@@ -4118,7 +4104,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       if (!snapshot) throw new Error("Config update returned no authoritative snapshot")
-      const features = configFeatures(snapshot.effective, await serverFeatures(this.client, dir))
+      const features = configFeatures(snapshot.effective)
       // Issue bindings after async reads so a concurrent refresh cannot expire them before publication.
       const bindings = this.bindingsFor(dir, snapshot.targets)
       const global = snapshot.targets.global.raw as Config

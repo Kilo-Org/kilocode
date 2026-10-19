@@ -78,8 +78,8 @@ class SessionHeaderPanel(
         onCancel = controller::cancelBackgroundAgent,
         onCancelAll = { jobs -> jobs.forEach(controller::cancelBackgroundAgent) },
         onDismiss = controller::dismissBackgroundAgents,
-        // Same source as the foreground task card's palette (all child sessions, not just the
-        // currently visible background rows), so a promoted agent keeps its hue.
+        // Same source as the task card's palette (all child sessions, not just the currently
+        // visible background rows), so an agent keeps its hue across the card and the strip.
         avatarColor = { id -> ai.kilocode.client.session.AgentAvatarIdentity.palette(controller.model.childSessions())[id] },
     )
     private val todoStrip = TodoStrip()

@@ -44,7 +44,6 @@ import com.intellij.openapi.project.RootsChangeRescanningInfo
 import com.intellij.openapi.roots.ex.ProjectRootManagerEx
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -63,7 +62,7 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
     override suspend fun connect() = app.connect()
 
     override suspend fun state(): Flow<KiloAppStateDto> =
-        combine(app.appState, app.capabilities) { state, caps -> appStateDto(state, caps) }
+        app.appState.map { state -> appStateDto(state) }
             .distinctUntilChanged()
 
     override suspend fun health(): HealthDto = app.health()
@@ -107,7 +106,7 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
 
     override suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto {
         app.requireReady()
-        return appStateDto(app.updateConfig(patch), app.capabilities.value)
+        return appStateDto(app.updateConfig(patch))
     }
 
     override suspend fun retentionStatus(): RetentionStatusDto = app.retention.status()
@@ -156,7 +155,7 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
 
 }
 
-internal fun appStateDto(state: KiloAppState, backgroundSubagents: Boolean = false): KiloAppStateDto =
+internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
     when (state) {
         KiloAppState.Disconnected -> KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
         is KiloAppState.Downloading -> KiloAppStateDto(
@@ -184,7 +183,6 @@ internal fun appStateDto(state: KiloAppState, backgroundSubagents: Boolean = fal
             ),
             config = state.data.config,
             profile = state.data.profile?.let(::profileDto),
-            backgroundSubagents = backgroundSubagents,
         )
         is KiloAppState.Error -> KiloAppStateDto(
             status = KiloAppStatusDto.ERROR,

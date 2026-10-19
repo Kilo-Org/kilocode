@@ -124,27 +124,21 @@ These tools help manage the conversation and task flow:
 
 Full-tool primary agents can use `task` to delegate a focused subtask without switching to the deprecated `orchestrator` agent. A task child runs in a separate session and transcript, but it uses the same project directory or worktree as its parent. `task` does not create a git worktree.
 
-Task children are non-interactive delegates. They cannot ask the end user a question directly, but they can use the tools allowed by their agent and session permissions. Their result is returned to the parent session, and the child transcript can be inspected from its task card in VS Code.
+Task children are non-interactive delegates. They cannot ask the end user a question directly, but they can use the tools allowed by their agent and session permissions. Their result is delivered to the parent session when the child finishes, and the child transcript can be inspected from its task card in VS Code.
 
-There are two execution modes:
+Every task runs in the background. The tool returns immediately and Kilo delivers a completion or error result to the parent session when the child finishes, so the parent can continue with non-overlapping work in the meantime.
 
-| Mode | Behavior | Use it when |
-|---|---|---|
-| Foreground (default) | The parent waits for the child and receives its result before continuing. | Later work depends on the child output. |
-| Background (`background: true`) | The tool returns immediately. Kilo delivers a completion or error result to the parent session when the child finishes. | The work is independent and can run while the parent continues. |
-
-For example, a primary agent can start independent background research with a call shaped like this:
+For example, a primary agent can start independent research with a call shaped like this:
 
 ```json
 {
   "description": "Audit API routes",
   "prompt": "Inspect the API routes and report authentication risks. Do not edit files.",
-  "subagent_type": "explore",
-  "background": true
+  "subagent_type": "explore"
 }
 ```
 
-Background subagents are available when the server exposes the background capability. Do not poll for progress or duplicate work in the same files. If Kilo returns a `task_id` after a failed or interrupted child, use it to resume that child when the current session and permissions allow it. A child can create more task children only when its configured depth and `task` permission allow it.
+Do not poll for progress or duplicate work in the same files. If Kilo returns a `task_id` after a failed or interrupted child, use it to resume that child when the current session and permissions allow it. A child can create more task children only when its configured depth and `task` permission allow it.
 
 ### Kilo Swarm board tools
 

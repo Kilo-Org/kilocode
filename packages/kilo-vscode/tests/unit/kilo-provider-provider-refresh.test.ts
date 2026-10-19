@@ -140,7 +140,6 @@ describe("KiloProvider providers on reconnect", () => {
           overlay: async () => ({ data: { collections: [] } }),
         },
         global: { config: { get: async () => ({ data: {} }) } },
-        experimental: { capabilities: { get: async () => ({ data: { backgroundSubagents: false } }) } },
       }),
       () => dir,
     )

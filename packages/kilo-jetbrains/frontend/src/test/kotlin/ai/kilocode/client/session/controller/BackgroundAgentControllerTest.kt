@@ -40,27 +40,6 @@ class BackgroundAgentControllerTest : SessionControllerTestBase() {
         assertEquals(listOf("job1" to "/test"), rpc.cancelledBackgroundJobs)
     }
 
-    fun `test promote background agent calls the CLI and does not notify on success`() {
-        val (m, _, _) = prompted()
-
-        edt { m.promoteBackgroundAgent("ses_child1") }
-        flush()
-
-        assertEquals(listOf("ses_child1" to "/test"), rpc.promotedBackgroundJobs)
-        assertTrue(infoNotifications.isEmpty())
-    }
-
-    fun `test promote failure surfaces an info notification`() {
-        val (m, _, _) = prompted()
-        rpc.promoteBackgroundJobResult = false
-
-        edt { m.promoteBackgroundAgent("ses_child1") }
-        flush()
-
-        assertEquals(1, infoNotifications.size)
-        assertTrue(notifications.isEmpty())
-    }
-
     fun `test dismiss hides finished agents locally without calling the CLI`() {
         val (m, _, _) = prompted()
         pushJobs("ses_test", listOf(job("job1", "ses_child1", status = "completed")))

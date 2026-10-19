@@ -270,7 +270,6 @@ it.live(
             description: "launch worker A",
             prompt: "worker A assignment: inspect the parser edge",
             subagent_type: "general",
-            background: true,
           }),
         )
         yield* llm.pushMatch(
@@ -279,7 +278,6 @@ it.live(
             description: "launch worker B",
             prompt: "worker B assignment: inspect the serializer edge",
             subagent_type: "general",
-            background: true,
           }),
         )
         yield* llm.pushMatch(main, reply().wait(gate.promise).tool("bash", { command: "printf main-boundary" }))

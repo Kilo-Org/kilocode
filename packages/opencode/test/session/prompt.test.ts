@@ -65,7 +65,7 @@ import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { Format } from "../../src/format"
 import { TestInstance } from "../fixture/fixture"
 import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
-import { reply, TestLLMServer } from "../lib/llm-server"
+import { httpError, reply, TestLLMServer } from "../lib/llm-server" // kilocode_change
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache"
@@ -138,7 +138,7 @@ function makeMcp(instructions: MCP.ServerInstructions[] = []) {
       add: () => Effect.succeed({ status: { status: "disabled" as const } }),
       connect: () => Effect.void,
       disconnect: () => Effect.void,
-    remove: () => Effect.void, // kilocode_change
+      remove: () => Effect.void, // kilocode_change
       getPrompt: () => Effect.succeed(undefined),
       readResource: () => Effect.succeed(undefined),
       startAuth: () => Effect.die("unexpected MCP auth in prompt-effect tests"),
@@ -1214,49 +1214,66 @@ it.instance("loop continues when finish is stop but assistant has tool parts", (
   }),
 )
 
-it.instance("failed subtask preserves metadata on error tool state", () =>
-  Effect.gen(function* () {
-    const { llm } = yield* useServerConfig((url) => ({
-      ...providerCfg(url),
-      agent: {
-        general: {
-          model: "test/missing-model",
+// kilocode_change start - subtasks run in the background, so failures arrive as an injected parent result
+it.instance(
+  "failed subtask preserves metadata and reports the error to the parent",
+  () =>
+    Effect.gen(function* () {
+      const { llm } = yield* useServerConfig((url) => ({
+        ...providerCfg(url),
+        agent: {
+          general: {
+            model: "test/missing-model",
+          },
         },
-      },
-    }))
-    const prompt = yield* SessionPrompt.Service
-    const sessions = yield* Session.Service
-    const chat = yield* sessions.create({ title: "Pinned" })
-    yield* llm.tool("task", {
-      description: "inspect bug",
-      prompt: "look into the cache key path",
-      subagent_type: "general",
-    })
-    yield* llm.text("done")
-    const msg = yield* user(chat.id, "hello")
-    yield* addSubtask(chat.id, msg.id)
+      }))
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const jobs = yield* BackgroundJob.Service
+      const chat = yield* sessions.create({ title: "Pinned" })
+      yield* llm.text("launched")
+      yield* llm.text("saw failure")
+      const msg = yield* user(chat.id, "hello")
+      yield* addSubtask(chat.id, msg.id)
 
-    const result = yield* prompt.loop({ sessionID: chat.id })
-    expect(result.info.role).toBe("assistant")
-    expect(yield* llm.calls).toBe(2)
+      const result = yield* prompt.loop({ sessionID: chat.id })
+      expect(result.info.role).toBe("assistant")
 
-    const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
-    const taskMsg = msgs.find((item) => item.info.role === "assistant" && item.info.agent === "general")
-    expect(taskMsg?.info.role).toBe("assistant")
-    if (!taskMsg || taskMsg.info.role !== "assistant") return
+      const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
+      const taskMsg = msgs.find((item) => item.info.role === "assistant" && item.info.agent === "general")
+      expect(taskMsg?.info.role).toBe("assistant")
+      if (!taskMsg || taskMsg.info.role !== "assistant") return
 
-    const tool = errorTool(taskMsg.parts)
-    if (!tool) return
+      const tool = completedTool(taskMsg.parts)
+      if (!tool) return
 
-    expect(tool.state.error).toContain("Tool execution failed")
-    expect(tool.state.metadata).toBeDefined()
-    expect(tool.state.metadata?.sessionId).toBeDefined()
-    expect(tool.state.metadata?.model).toEqual({
-      providerID: ProviderV2.ID.make("test"),
-      modelID: ModelV2.ID.make("missing-model"),
-    })
-  }),
+      expect(tool.state.metadata?.background).toBe(true)
+      expect(typeof tool.state.metadata?.sessionId).toBe("string")
+      expect(tool.state.metadata?.model).toEqual({
+        providerID: ProviderV2.ID.make("test"),
+        modelID: ModelV2.ID.make("missing-model"),
+      })
+
+      const done = yield* awaitWithTimeout(
+        jobs.wait({ id: SessionID.make(tool.state.metadata.sessionId) }),
+        "subtask job did not finish",
+        "10 seconds",
+      )
+      expect(done.info?.status).toBe("error")
+      yield* pollWithTimeout(
+        llm.hits.pipe(
+          Effect.map((hits) =>
+            hits.some((hit) => JSON.stringify(hit.body).includes("Background task failed: inspect bug"))
+              ? true
+              : undefined,
+          ),
+        ),
+        "subtask failure was not delivered to the parent",
+      )
+    }),
+  15_000,
 )
+// kilocode_change end
 
 it.instance("subtask child inherits parent session external_directory allow", () =>
   Effect.gen(function* () {
@@ -1315,14 +1332,22 @@ noLLMServer.instance("prompt tools replace matching rules and preserve existing 
   }),
 )
 
+// kilocode_change start - subtasks and task tools run in the background and keep their metadata once started
+const parentRequest = (hit: { body: Record<string, unknown> }) =>
+  JSON.stringify(hit.body.tools).includes('"name":"task"')
+const childRequest = (hit: { body: Record<string, unknown> }) => !parentRequest(hit)
+
 it.instance(
-  "running subtask preserves metadata after tool-call transition",
+  "background subtask preserves metadata after tool-call transition",
   () =>
     Effect.gen(function* () {
       const { llm } = yield* useServerConfig(providerCfg)
       const prompt = yield* SessionPrompt.Service
       const sessions = yield* Session.Service
+      const status = yield* SessionStatus.Service
       const chat = yield* sessions.create({ title: "Pinned" })
+      // The parent's follow-up step and the background child both stay in flight.
+      yield* llm.hang
       yield* llm.hang
       const msg = yield* user(chat.id, "hello")
       yield* addSubtask(chat.id, msg.id)
@@ -1334,24 +1359,29 @@ it.instance(
           const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
           const taskMsg = msgs.find((item) => item.info.role === "assistant" && item.info.agent === "general")
           const tool = taskMsg?.parts.find((part): part is SessionV1.ToolPart => part.type === "tool")
-          if (tool?.state.status === "running" && tool.state.metadata?.sessionId) return tool
+          if (tool?.state.status === "completed" && tool.state.metadata?.sessionId) return tool
         }),
-        "timed out waiting for running subtask metadata",
+        "timed out waiting for background subtask metadata",
       )
 
-      if (tool.state.status !== "running") return
+      if (tool.state.status !== "completed") return
       expect(typeof tool.state.metadata?.sessionId).toBe("string")
+      expect(tool.state.metadata?.background).toBe(true)
+      expect(tool.state.metadata?.jobId).toBe(tool.state.metadata?.sessionId)
       expect(tool.state.title).toBeDefined()
       expect(tool.state.metadata?.model).toBeDefined()
+      expect(tool.state.output).toContain('state="running"')
+      yield* llm.wait(2)
+      expect((yield* status.get(SessionID.make(tool.state.metadata.sessionId))).type).toBe("busy")
 
       yield* prompt.cancel(chat.id)
       yield* Fiber.await(fiber)
     }),
-  5_000,
+  10_000,
 )
 
 it.instance(
-  "running task tool preserves metadata after tool-call transition",
+  "background task tool preserves metadata after tool-call transition",
   () =>
     Effect.gen(function* () {
       const { llm } = yield* useServerConfig(providerCfg)
@@ -1366,6 +1396,8 @@ it.instance(
         prompt: "look into the cache key path",
         subagent_type: "general",
       })
+      // The parent's follow-up step and the background child both stay in flight.
+      yield* llm.hang
       yield* llm.hang
       yield* user(chat.id, "hello")
 
@@ -1378,16 +1410,18 @@ it.instance(
           const tool = assistant?.parts.find(
             (part): part is SessionV1.ToolPart => part.type === "tool" && part.tool === "task",
           )
-          if (tool?.state.status === "running" && tool.state.metadata?.sessionId) return tool
+          if (tool?.state.status === "completed" && tool.state.metadata?.sessionId) return tool
         }),
-        "timed out waiting for running task metadata",
+        "timed out waiting for background task metadata",
         "10 seconds",
       )
 
-      if (tool.state.status !== "running") return
+      if (tool.state.status !== "completed") return
       expect(typeof tool.state.metadata?.sessionId).toBe("string")
+      expect(tool.state.metadata?.background).toBe(true)
       expect(tool.state.title).toBe("inspect bug")
       expect(tool.state.metadata?.model).toBeDefined()
+      expect(tool.state.output).toContain('state="running"')
 
       yield* prompt.cancel(chat.id)
       yield* Fiber.await(fiber)
@@ -1396,101 +1430,118 @@ it.instance(
 )
 
 it.instance(
-  "failed task tool preserves metadata and lets the parent follow up",
+  "failed background task preserves metadata and lets the parent follow up",
   () =>
     Effect.gen(function* () {
       const { llm } = yield* useServerConfig(providerCfg)
       const prompt = yield* SessionPrompt.Service
       const sessions = yield* Session.Service
+      const jobs = yield* BackgroundJob.Service
       const chat = yield* sessions.create({
         title: "Pinned",
         permission: [{ permission: "*", pattern: "*", action: "allow" }],
       })
-      yield* llm.tool("task", {
+      yield* llm.toolMatch(parentRequest, "task", {
         description: "inspect bug",
         prompt: "look into the cache key path",
         subagent_type: "general",
       })
-      yield* llm.error(400, { error: { message: "child prompt failed" } })
-      yield* llm.text("parent recovered")
+      yield* llm.textMatch(parentRequest, "launched")
+      yield* llm.textMatch(parentRequest, "parent recovered")
+      yield* llm.pushMatch(childRequest, httpError(400, { error: { message: "child prompt failed" } }))
       yield* user(chat.id, "hello")
 
-      const result = yield* prompt.loop({ sessionID: chat.id })
-      expect(yield* llm.calls).toBe(3)
-      expect(result.parts.some((part) => part.type === "text" && part.text === "parent recovered")).toBe(true)
+      yield* prompt.loop({ sessionID: chat.id })
 
-      const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
-      const part = msgs
+      const part = (yield* MessageV2.filterCompactedEffect(chat.id))
         .flatMap((msg) => msg.parts)
         .find(
-          (part): part is ErrorToolPart =>
-            part.type === "tool" && part.tool === "task" && part.state.status === "error",
+          (part): part is CompletedToolPart =>
+            part.type === "tool" && part.tool === "task" && part.state.status === "completed",
         )
       expect(part).toBeDefined()
       if (!part) return
-      expect(part.state.error).toContain("child prompt failed")
-      expect(part.state.metadata?.sessionId).toBeDefined()
+      expect(part.state.metadata?.background).toBe(true)
+      expect(typeof part.state.metadata?.sessionId).toBe("string")
 
+      const done = yield* awaitWithTimeout(
+        jobs.wait({ id: SessionID.make(part.state.metadata.sessionId) }),
+        "background task did not finish",
+        "10 seconds",
+      )
+      expect(done.info?.status).toBe("error")
+      expect(done.info?.error).toContain("child prompt failed")
+
+      // The failure is injected into the parent, which follows up with it.
+      yield* pollWithTimeout(
+        MessageV2.filterCompactedEffect(chat.id).pipe(
+          Effect.map((msgs) =>
+            msgs.some((msg) => msg.parts.some((part) => part.type === "text" && part.text === "parent recovered"))
+              ? true
+              : undefined,
+          ),
+        ),
+        "parent did not follow up on the failed task",
+      )
       const hits = yield* llm.hits
-      expect(hits).toHaveLength(3)
-      expect(JSON.stringify(hits.at(-1)?.body)).toContain("child prompt failed")
+      expect(hits).toHaveLength(4)
+      expect(JSON.stringify(hits.findLast(parentRequest)?.body)).toContain("child prompt failed")
     }),
-  10_000,
+  20_000,
 )
 
-// kilocode_change start - TUI subagent-view Esc and the VS Code task-card Stop both abort the child as a tree
+// TUI subagent-view Esc and the VS Code task-card Stop both abort the child as a tree
 it.instance(
-  "tree abort of a running subagent leaves the parent running and reports the task as cancelled",
+  "tree abort of a background subagent cancels only the child and does not wake the parent",
   () =>
     Effect.gen(function* () {
       const { llm } = yield* useServerConfig(providerCfg)
       const prompt = yield* SessionPrompt.Service
       const sessions = yield* Session.Service
       const status = yield* SessionStatus.Service
+      const jobs = yield* BackgroundJob.Service
       const chat = yield* sessions.create({
         title: "Pinned",
         permission: [{ permission: "*", pattern: "*", action: "allow" }],
       })
-      yield* llm.tool("task", {
+      yield* llm.toolMatch(parentRequest, "task", {
         description: "inspect bug",
         prompt: "look into the cache key path",
         subagent_type: "general",
       })
-      yield* llm.hang
-      yield* llm.text("parent recovered")
+      yield* llm.textMatch(parentRequest, "launched")
+      yield* llm.pushMatch(childRequest, reply().hang())
       yield* user(chat.id, "hello")
 
-      const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+      // The parent finishes its turn while the child keeps working in the background.
+      const result = yield* awaitWithTimeout(
+        prompt.loop({ sessionID: chat.id }),
+        "parent turn did not finish",
+        "15 seconds",
+      )
+      expect(result.parts.some((part) => part.type === "text" && part.text === "launched")).toBe(true)
       const child = yield* pollWithTimeout(
         Effect.gen(function* () {
           const id = (yield* sessions.children(chat.id))[0]?.id
           if (!id) return undefined
           if ((yield* status.get(id)).type !== "busy") return undefined
-          return (yield* llm.calls) >= 2 ? id : undefined
+          return (yield* llm.calls) >= 3 ? id : undefined
         }),
         "child task never started",
         "10 seconds",
       )
 
       yield* prompt.cancel(child, "tree")
-      const result = yield* awaitWithTimeout(
-        Fiber.join(fiber),
-        "parent did not continue after child abort",
-        "15 seconds",
-      )
-
-      // the parent was not aborted: it finished its step and made its next model call
-      expect(result.parts.some((part) => part.type === "text" && part.text === "parent recovered")).toBe(true)
+      const done = yield* awaitWithTimeout(jobs.wait({ id: child }), "child job did not stop", "10 seconds")
+      expect(done.info?.status).toBe("cancelled")
+      expect((yield* status.get(child)).type).toBe("idle")
+      expect((yield* status.get(chat.id)).type).toBe("idle")
+      // A user stop is not reported back, so the parent does not restart the work on its own.
+      expect((yield* llm.wait(4).pipe(Effect.timeoutOption("300 millis")))._tag).toBe("None")
       const part = (yield* MessageV2.filterCompactedEffect(chat.id))
         .flatMap((msg) => msg.parts)
-        .find(
-          (part): part is ErrorToolPart =>
-            part.type === "tool" && part.tool === "task" && part.state.status === "error",
-        )
-      expect(part?.state.error).toBe("Task cancelled by the user")
-      // the reason reaches the parent model, so it does not treat the stop as a failure to retry
-      expect(JSON.stringify((yield* llm.hits).at(-1)?.body)).toContain("Task cancelled by the user")
-      expect((yield* status.get(child)).type).toBe("idle")
+        .find((part) => part.type === "tool" && part.tool === "task")
+      expect(part?.type === "tool" ? part.state.status : undefined).toBe("completed")
     }),
   30_000,
 )
@@ -1976,15 +2027,31 @@ it.instance(
             finish: "stop",
           }
           yield* sessions.updateMessage(childAssistant)
+          // kilocode_change start - task runs always report background metadata
           yield* ctx.metadata({
             title: "done",
-            metadata: { parentSessionId: ctx.sessionID, sessionId: child.id, model: ref, variant: undefined },
+            metadata: {
+              parentSessionId: ctx.sessionID,
+              sessionId: child.id,
+              model: ref,
+              variant: undefined,
+              background: true,
+              jobId: child.id,
+            },
           })
           return {
             title: "done",
-            metadata: { parentSessionId: ctx.sessionID, sessionId: child.id, model: ref, variant: undefined },
+            metadata: {
+              parentSessionId: ctx.sessionID,
+              sessionId: child.id,
+              model: ref,
+              variant: undefined,
+              background: true,
+              jobId: child.id,
+            },
             output: "done",
           }
+          // kilocode_change end
         })
       yield* Effect.addFinalizer(() => Effect.sync(() => void (task.execute = original)))
 
@@ -2014,17 +2081,20 @@ it.instance(
       const sessions = yield* Session.Service
       const status = yield* SessionStatus.Service
       const chat = yield* sessions.create({ title: "Pinned" })
+      // kilocode_change start - the subtask runs in the background next to the parent's follow-up step
+      yield* llm.hang
       yield* llm.hang
       const msg = yield* user(chat.id, "hello")
       yield* addSubtask(chat.id, msg.id)
 
       const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-      yield* llm.wait(1)
+      yield* llm.wait(2)
 
       const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
       const taskMsg = msgs.find((item) => item.info.role === "assistant" && item.info.agent === "general")
       const tool = taskMsg ? toolPart(taskMsg.parts) : undefined
-      const sessionID = tool?.state.status === "running" ? tool.state.metadata?.sessionId : undefined
+      const sessionID = tool?.state.status === "completed" ? tool.state.metadata?.sessionId : undefined
+      // kilocode_change end
       expect(typeof sessionID).toBe("string")
       if (typeof sessionID !== "string") throw new Error("missing child session id")
       const childID = SessionID.make(sessionID)
@@ -2036,6 +2106,7 @@ it.instance(
 
       expect((yield* status.get(chat.id)).type).toBe("idle")
       expect((yield* status.get(childID)).type).toBe("idle")
+      expect((yield* (yield* BackgroundJob.Service).get(childID))?.status).toBe("cancelled") // kilocode_change
     }),
   10_000,
 )
@@ -2114,77 +2185,79 @@ it.instance(
   10_000,
 )
 
-it.instance("prompt submitted during an active run is included in the next LLM input", () =>
-  Effect.gen(function* () {
-    const { llm } = yield* useServerConfig(providerCfg)
-    const gate = yield* Deferred.make<void>()
-    const prompt = yield* SessionPrompt.Service
-    const sessions = yield* Session.Service
-    const chat = yield* sessions.create({ title: "Pinned" })
+it.instance(
+  "prompt submitted during an active run is included in the next LLM input",
+  () =>
+    Effect.gen(function* () {
+      const { llm } = yield* useServerConfig(providerCfg)
+      const gate = yield* Deferred.make<void>()
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "Pinned" })
 
-    yield* llm.hold("first", deferredAsPromise(gate))
-    yield* llm.text("second")
+      yield* llm.hold("first", deferredAsPromise(gate))
+      yield* llm.text("second")
 
-    const a = yield* prompt
-      .prompt({
-        sessionID: chat.id,
-        agent: "build",
-        model: ref,
-        parts: [{ type: "text", text: "first" }],
-      })
-      .pipe(Effect.forkChild)
+      const a = yield* prompt
+        .prompt({
+          sessionID: chat.id,
+          agent: "build",
+          model: ref,
+          parts: [{ type: "text", text: "first" }],
+        })
+        .pipe(Effect.forkChild)
 
-    yield* llm.wait(1)
-    yield* waitForBusy(chat.id)
+      yield* llm.wait(1)
+      yield* waitForBusy(chat.id)
 
-    const id = MessageID.ascending()
-    const b = yield* prompt
-      .prompt({
-        sessionID: chat.id,
-        messageID: id,
-        agent: "build",
-        model: ref,
-        parts: [{ type: "text", text: "second" }],
-      })
-      .pipe(Effect.forkChild)
+      const id = MessageID.ascending()
+      const b = yield* prompt
+        .prompt({
+          sessionID: chat.id,
+          messageID: id,
+          agent: "build",
+          model: ref,
+          parts: [{ type: "text", text: "second" }],
+        })
+        .pipe(Effect.forkChild)
 
-    yield* pollWithTimeout(
-      sessions
-        .messages({ sessionID: chat.id })
-        .pipe(
-          Effect.map((msgs) =>
-            msgs.some((msg) => msg.info.role === "user" && msg.info.id === id) ? true : undefined,
+      yield* pollWithTimeout(
+        sessions
+          .messages({ sessionID: chat.id })
+          .pipe(
+            Effect.map((msgs) =>
+              msgs.some((msg) => msg.info.role === "user" && msg.info.id === id) ? true : undefined,
+            ),
           ),
-        ),
-      "timed out waiting for second prompt to save",
-    )
+        "timed out waiting for second prompt to save",
+      )
 
-    yield* Deferred.succeed(gate, void 0)
+      yield* Deferred.succeed(gate, void 0)
 
-    const [ea, eb] = yield* Effect.all([Fiber.await(a), Fiber.await(b)])
-    expect(Exit.isSuccess(ea)).toBe(true)
-    expect(Exit.isSuccess(eb)).toBe(true)
-    expect(yield* llm.calls).toBe(2)
+      const [ea, eb] = yield* Effect.all([Fiber.await(a), Fiber.await(b)])
+      expect(Exit.isSuccess(ea)).toBe(true)
+      expect(Exit.isSuccess(eb)).toBe(true)
+      expect(yield* llm.calls).toBe(2)
 
-    const msgs = yield* sessions.messages({ sessionID: chat.id })
-    const assistants = msgs.filter((msg) => msg.info.role === "assistant")
-    expect(assistants).toHaveLength(2)
-    const last = assistants.at(-1)
-    if (!last || last.info.role !== "assistant") throw new Error("expected second assistant")
-    expect(last.info.parentID).toBe(id)
-    expect(last.parts.some((part) => part.type === "text" && part.text === "second")).toBe(true)
+      const msgs = yield* sessions.messages({ sessionID: chat.id })
+      const assistants = msgs.filter((msg) => msg.info.role === "assistant")
+      expect(assistants).toHaveLength(2)
+      const last = assistants.at(-1)
+      if (!last || last.info.role !== "assistant") throw new Error("expected second assistant")
+      expect(last.info.parentID).toBe(id)
+      expect(last.parts.some((part) => part.type === "text" && part.text === "second")).toBe(true)
 
-    const inputs = yield* llm.inputs
-    expect(inputs).toHaveLength(2)
-    const messages = inputs.at(-1)?.messages
-    if (!Array.isArray(messages)) throw new Error("expected LLM messages")
-    // kilocode_change start - Kilo appends environment details to queued user prompts
-    expect(messages.at(-1)).toMatchObject({
-      role: "user",
-      content: expect.arrayContaining([{ type: "text", text: "second" }]),
-    })
-    // kilocode_change end
-  }),
+      const inputs = yield* llm.inputs
+      expect(inputs).toHaveLength(2)
+      const messages = inputs.at(-1)?.messages
+      if (!Array.isArray(messages)) throw new Error("expected LLM messages")
+      // kilocode_change start - Kilo appends environment details to queued user prompts
+      expect(messages.at(-1)).toMatchObject({
+        role: "user",
+        content: expect.arrayContaining([{ type: "text", text: "second" }]),
+      })
+      // kilocode_change end
+    }),
   10_000,
 )
 
@@ -3317,6 +3390,8 @@ it.instance(
       })
 
       // child subagent's first LLM step needs non-zero usage so trackStep fires
+      // kilocode_change start - the review subtask runs in the background next to the parent's follow-up step
+      yield* llm.text("review done", { usage: { input: 100, output: 50 } })
       yield* llm.text("review done", { usage: { input: 100, output: 50 } })
 
       yield* prompt.command({
@@ -3325,6 +3400,15 @@ it.instance(
         arguments: "",
         agent: "general",
       })
+      const child = (yield* sessions.children(chat.id)).at(0)
+      if (!child) throw new Error("review did not create a child session")
+      const done = yield* awaitWithTimeout(
+        (yield* BackgroundJob.Service).wait({ id: child.id }),
+        "review child did not finish",
+        "10 seconds",
+      )
+      expect(done.info?.status).toBe("completed")
+      // kilocode_change end
 
       const tagged = trackSpy.mock.calls
         .map((args) => args[0] as Parameters<typeof Telemetry.trackLlmCompletion>[0])
@@ -3333,6 +3417,65 @@ it.instance(
     }),
   30_000,
 )
+
+// kilocode_change start - command subtasks request the summary only after the child result arrives
+it.instance(
+  "command subtask asks the parent to summarize only after the background child finishes",
+  () =>
+    Effect.gen(function* () {
+      const { llm } = yield* useServerConfig(providerCfg)
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const jobs = yield* BackgroundJob.Service
+      const gate = yield* Deferred.make<void>()
+      const lastRole = (body: Record<string, unknown>) => {
+        const messages = Array.isArray(body.messages) ? body.messages : []
+        const last = messages.at(-1)
+        return last && typeof last === "object" ? (last as { role?: string }).role : undefined
+      }
+      const chat = yield* sessions.create({
+        title: "Command subtask",
+        permission: [{ permission: "*", pattern: "*", action: "allow" }],
+      })
+
+      yield* llm.pushMatch(
+        (hit) => lastRole(hit.body) === "user",
+        reply().wait(deferredAsPromise(gate)).text("review findings").stop(),
+      )
+      yield* llm.pushMatch((hit) => lastRole(hit.body) !== "user", reply().text("continuing").stop())
+
+      yield* prompt.command({ sessionID: chat.id, command: "review", arguments: "", agent: "general" })
+      const child = yield* pollWithTimeout(
+        sessions.children(chat.id).pipe(Effect.map((items) => items[0])),
+        "review child session was not created",
+      )
+
+      const before = (yield* MessageV2.filterCompactedEffect(chat.id)).flatMap((item) => item.parts)
+      expect(
+        before.some((part) => part.type === "text" && part.text.includes("Summarize the task tool output above")),
+      ).toBe(false)
+
+      yield* Deferred.succeed(gate, void 0)
+      yield* jobs.wait({ id: child.id })
+
+      const notice = yield* pollWithTimeout(
+        Effect.gen(function* () {
+          const parts = (yield* MessageV2.filterCompactedEffect(chat.id)).flatMap((item) => item.parts)
+          return parts.find(
+            (part): part is SessionV1.TextPart =>
+              part.type === "text" &&
+              part.synthetic === true &&
+              part.text.includes("Summarize the task tool output above"),
+          )
+        }),
+        "background command result did not include the summary request",
+        "10 seconds",
+      )
+      expect(notice.text).toContain("Summarize the task tool output above")
+    }),
+  30_000,
+)
+// kilocode_change end
 
 it.instance(
   "accepted suggest tool marks following completion with review telemetry",

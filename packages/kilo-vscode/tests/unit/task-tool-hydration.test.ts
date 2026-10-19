@@ -17,33 +17,30 @@ import {
 describe("completed task hydration", () => {
   beforeEach(() => resetToolOpenState())
 
-  it("opens running tasks and collapses completed tasks by default", () => {
+  it("reports live task status and keeps completed cards collapsed by default", () => {
     expect(taskRunning("pending")).toBe(true)
     expect(taskRunning("running")).toBe(true)
     expect(taskRunning("completed")).toBe(false)
     expect(readToolOpen(toolOpenKey({ tool: "task", partID: "part-new" }), taskRunning("completed"))).toBe(false)
   })
 
-  it("keeps a pending or running background task collapsed", () => {
+  it("keeps every task card collapsed while it runs", () => {
     expect(taskAutoOpen("pending", true)).toBe(false)
     expect(taskAutoOpen("running", true)).toBe(false)
-    expect(taskAutoOpen("running", false)).toBe(true)
-    expect(taskAutoOpen("pending", false)).toBe(false)
-    expect(taskAutoOpen("completed", false)).toBe(false)
+    expect(taskAutoOpen("completed", true)).toBe(false)
   })
 
-  it("reads the background flag from the streamed input before metadata lands", () => {
+  it("treats task cards as background by default", () => {
+    expect(taskBackground(undefined, undefined, undefined)).toBe(true)
+    expect(taskBackground({}, {}, {})).toBe(true)
+    expect(taskBackground({ background: "yes" }, {}, {})).toBe(true)
     expect(taskBackground({ background: true }, undefined, undefined)).toBe(true)
-    expect(taskBackground({ background: true }, { background: false }, { background: false })).toBe(true)
     expect(taskBackground({}, { background: true }, undefined)).toBe(true)
     expect(taskBackground({}, undefined, { background: true })).toBe(true)
-    // partMetadata false shadows later state metadata, matching the original lookup
+    // Only an explicit legacy false flag opts a task out.
+    expect(taskBackground({ background: true }, { background: false }, { background: false })).toBe(false)
     expect(taskBackground({}, { background: false }, { background: true })).toBe(false)
-    expect(taskBackground({}, { background: true }, { background: false })).toBe(true)
-    expect(taskBackground({}, undefined, undefined)).toBe(false)
-    expect(taskBackground(undefined, undefined, undefined)).toBe(false)
-    expect(taskBackground({}, {}, {})).toBe(false)
-    expect(taskBackground({ background: "yes" }, {}, {})).toBe(false)
+    expect(taskBackground({}, { background: true }, { background: false })).toBe(false)
   })
 
   it("keeps expansion state isolated by copied part ID", () => {
@@ -55,34 +52,21 @@ describe("completed task hydration", () => {
     expect(readToolOpen(toolOpenKey(fork), fork.defaultOpen)).toBe(false)
   })
 
-  it("keeps an auto-opened card open when it remounts after completion", () => {
-    // The running card auto-opens and persists that decision.
-    expect(taskAutoOpen("running", false)).toBe(true)
-    const next = taskStoredOpen(taskAutoOpen("running", false), false, false)
-    expect(next).toBe(true)
-    const key = toolOpenKey({ tool: "task", partID: "part-live" })
-    if (next !== undefined) writeToolOpen(key, next)
-    // Handed to the virtualizer once completed: the remount must not collapse it.
-    expect(readToolOpen(key, taskAutoOpen("completed", false))).toBe(true)
-  })
-
-  it("stays collapsed when a promoted background card remounts", () => {
-    // A foreground card auto-opens, then is promoted to background and collapses.
-    writeToolOpen(toolOpenKey({ tool: "task", partID: "part-promoted" }), true)
+  it("keeps a background card collapsed when it remounts", () => {
+    // An earlier open value must not reopen a background card.
+    writeToolOpen(toolOpenKey({ tool: "task", partID: "part-background" }), true)
     const next = taskStoredOpen(false, true, false)
     expect(next).toBe(false)
-    const key = toolOpenKey({ tool: "task", partID: "part-promoted" })
+    const key = toolOpenKey({ tool: "task", partID: "part-background" })
     if (next !== undefined) writeToolOpen(key, next)
     // The stored false wins over an open fallback, so the remount stays shut.
     expect(readToolOpen(key, true)).toBe(false)
   })
 
-  it("leaves a user-controlled or settled card alone", () => {
+  it("leaves a user-controlled card alone", () => {
     // A manual toggle or search match owns the state.
-    expect(taskStoredOpen(true, false, true)).toBeUndefined()
+    expect(taskStoredOpen(true, true, true)).toBeUndefined()
     expect(taskStoredOpen(false, true, true)).toBeUndefined()
-    // A settled foreground card has nothing to store, so its state stands.
-    expect(taskStoredOpen(false, false, false)).toBeUndefined()
   })
 
   it("hydrates and streams a child only while expanded", () => {

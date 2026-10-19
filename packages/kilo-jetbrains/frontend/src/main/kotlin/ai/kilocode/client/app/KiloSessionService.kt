@@ -428,10 +428,6 @@ class KiloSessionService internal constructor(
     suspend fun cancelBackgroundJob(id: String, dir: String): Boolean =
         call { cancelBackgroundJob(id, dir) }
 
-    /** Continue one foreground subagent job in the background. Returns false when the CLI's background-subagent kill switch is off. */
-    suspend fun promoteBackgroundJob(id: String, dir: String): Boolean =
-        call { promoteBackgroundJob(id, dir) }
-
     // ------ permission / question resolution ------
 
     /** Reply to a pending permission request. */

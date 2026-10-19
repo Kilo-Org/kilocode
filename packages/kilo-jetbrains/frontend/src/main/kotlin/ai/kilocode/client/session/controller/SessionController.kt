@@ -113,7 +113,6 @@ class SessionController(
   private val openProfileAction: () -> Unit = {},
   private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
   private val notify: (String, String) -> Unit = { title, body -> KiloNotifications.error(title, body) },
-  private val notifyInfo: (String, String) -> Unit = { title, body -> KiloNotifications.info(title, body) },
   private val timers: UiTimerSource = UiTimers,
   private val log: KiloLog = LOG,
 ) : Disposable {
@@ -1580,37 +1579,6 @@ class SessionController(
         assertEdt()
         if (jobs.isEmpty()) return
         updateModel { model.dismissBackgroundAgents(jobs) }
-    }
-
-    /**
-     * Continue foreground task [job] (its child session id) in the background. Returns immediately;
-     * the strip picks up the promoted job on the next background-jobs poll. Surfaces a notification
-     * when the CLI's background-subagent kill switch is off, since the caller cannot tell from a
-     * fire-and-forget UI click.
-     */
-    @RequiresEdt
-    fun promoteBackgroundAgent(job: String) {
-        assertEdt()
-        val dir = directory
-        cs.launch {
-            val promoted = try {
-                sessions.promoteBackgroundJob(job, dir)
-            } catch (e: Exception) {
-                LOG.warn("${ChatLogSummary.sid(sid ?: "pending")} kind=background-agent promote=true job=$job failed message=${e.message}", e)
-                false
-            }
-            if (promoted) {
-                capture("Background Agent Promoted", mapOf("job" to job))
-                return@launch
-            }
-            edt {
-                if (disposed) return@edt
-                notifyInfo(
-                    KiloBundle.message("session.header.agents.disabledTitle"),
-                    KiloBundle.message("session.header.agents.disabledMessage"),
-                )
-            }
-        }
     }
 
     private suspend fun recoverChildPermissions(child: String) {

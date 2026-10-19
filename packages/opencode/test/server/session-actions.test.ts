@@ -1,31 +1,19 @@
 import { afterEach, describe, expect, mock } from "bun:test"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
-import { ConfigProvider, Effect, Fiber, Layer } from "effect" // kilocode_change
+import { Effect, Layer } from "effect" // kilocode_change
 import { BackgroundJob } from "@/background/job" // kilocode_change
 import { Session as SessionNs } from "@/session/session"
 import { disposeAllInstances, TestInstance } from "../fixture/fixture"
-import { pollWithTimeout, testEffect } from "../lib/effect" // kilocode_change
+import { testEffect } from "../lib/effect"
 import { httpApiLayer, requestInDirectory } from "./httpapi-layer"
 
-// kilocode_change start - provide the background-job service for promotion coverage
+// kilocode_change start - the experimental handler resolves the background-job service
 const it = testEffect(
   Layer.mergeAll(
     LayerNode.compile(SessionNs.node),
     LayerNode.compile(BackgroundJob.node),
     httpApiLayer,
   ), // kilocode_change
-)
-const disabled = testEffect(
-  Layer.mergeAll(LayerNode.compile(SessionNs.node), LayerNode.compile(BackgroundJob.node), httpApiLayer).pipe(
-    Layer.provide(
-      ConfigProvider.layer(
-        ConfigProvider.fromUnknown({
-          KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS: "false",
-          KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true",
-        }),
-      ),
-    ),
-  ),
 )
 // kilocode_change end
 
@@ -125,7 +113,7 @@ describe("session action routes", () => {
   )
 
   it.instance(
-    "experimental background route is a no-op without synchronous subagents",
+    "experimental background route is a no-op because tasks always run in the background",
     () =>
       Effect.gen(function* () {
         const test = yield* TestInstance
@@ -142,59 +130,4 @@ describe("session action routes", () => {
       }),
     { git: true },
   )
-
-  disabled.instance(
-    "background job promotion is disabled when the flag is off",
-    () =>
-      Effect.gen(function* () {
-        const test = yield* TestInstance
-        const jobs = yield* BackgroundJob.Service
-        const job = yield* jobs.start({ type: "task", metadata: { parentSessionId: "ses_parent" }, run: Effect.never })
-
-        const res = yield* requestInDirectory(`/kilocode/background-jobs/${job.id}/promote`, test.directory, {
-          method: "POST",
-        })
-
-        expect(res.status).toBe(200)
-        expect(yield* res.json).toBe(false)
-        expect((yield* jobs.get(job.id))?.metadata?.background).toBeUndefined()
-        yield* jobs.cancel(job.id)
-      }),
-    { git: true },
-  )
-
-  // kilocode_change start - verify HTTP promotion of a running task
-  it.instance(
-    "experimental background route backgrounds a synchronous subagent",
-    () =>
-      Effect.gen(function* () {
-        const test = yield* TestInstance
-        const session = yield* Effect.acquireRelease(SessionNs.use.create({}), (created) =>
-          SessionNs.use.remove(created.id).pipe(Effect.ignore),
-        )
-        const jobs = yield* BackgroundJob.Service
-        const job = yield* jobs.start({
-          type: "task",
-          metadata: { parentSessionId: session.id },
-          run: Effect.never,
-        })
-        const waiting = yield* jobs.waitForPromotion(job.id).pipe(Effect.forkChild)
-
-        const backgrounded = yield* pollWithTimeout(
-          requestInDirectory(`/experimental/session/${session.id}/background`, test.directory, {
-            method: "POST",
-          }).pipe(
-            Effect.flatMap((res) => res.json),
-            Effect.map((value) => (value === true ? true : undefined)),
-          ),
-          "background route never promoted the synchronous subagent",
-        )
-
-        expect(backgrounded).toBe(true)
-        expect((yield* Fiber.join(waiting)).metadata?.background).toBe(true)
-        yield* jobs.cancel(job.id)
-      }),
-    { git: true },
-  )
-  // kilocode_change end
 })

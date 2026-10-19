@@ -1,8 +1,8 @@
 /**
  * TaskToolExpanded component
  * Registers a custom "task" tool renderer with a compact scrollable list of
- * child tool calls. Running tasks open immediately; completed tasks load their
- * child details only when expanded.
+ * child tool calls. Task cards stay collapsed while the child runs; expanding
+ * a card loads its child details.
  *
  * Call registerExpandedTaskTool() once at app startup to activate.
  */
@@ -21,11 +21,9 @@ import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
-import { childID, latestTaskPart } from "../../context/session-utils"
-import { useConfig } from "../../context/config"
+import { childID } from "../../context/session-utils"
 import { openSubagent } from "./open-subagent"
 import {
-  showChildPromotion,
   taskAutoOpen,
   taskAvatarStatus,
   taskBackground,
@@ -39,7 +37,6 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
   const language = useLanguage()
   const session = useSession()
-  const { features } = useConfig()
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
 
@@ -51,27 +48,10 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       state: { metadata: props.metadata as { sessionId?: string } },
     })
 
-  const promotable = createMemo(() =>
-    showChildPromotion(
-      childSessionId(),
-      props.partMetadata as Record<string, unknown> | undefined,
-      props.metadata as Record<string, unknown> | undefined,
-      session.allStatusMap(),
-      features().backgroundSubagents,
-      props.readonly,
-      latestTaskPart(
-        props.partID,
-        childSessionId(),
-        session.currentSessionID() ? session.getSessionToolParts(session.currentSessionID()!) : [],
-      ),
-    ),
-  )
-
   const running = createMemo(() => taskRunning(props.status))
-  // Background task cards stay collapsed: they must not auto-open or show the
+  // Task cards stay collapsed: they must not auto-open or show the
   // "Starting..." status, which would flicker the transcript as the child runs.
-  // The input carries `background` from the first part update; promoted tasks
-  // only gain the state metadata flag later.
+  // Every task is background now, including parts without an explicit flag.
   const backgroundTask = createMemo(() => taskBackground(props.input, props.partMetadata, props.metadata))
   const avatar = createMemo(() => {
     const id = childSessionId()
@@ -91,9 +71,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       { defer: true },
     ),
   )
-  // Auto-open only once the call is running: a pending call cannot yet tell a
-  // background task from a foreground one, and a background card must never
-  // open on its own.
+  // A background card must never open on its own.
   const auto = () => taskAutoOpen(props.status, backgroundTask())
   // BasicTool's forceOpen effect only fires onOpenChange on a false->true
   // transition — a virtualized remount that starts with forceOpen already
@@ -217,13 +195,6 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     })
   }
 
-  const background = (e: MouseEvent) => {
-    e.stopPropagation()
-    const id = session.currentSessionID()
-    const child = childSessionId()
-    if (id && child) vscode.postMessage({ type: "promoteBackgroundJob", jobID: child, sessionID: id })
-  }
-
   // Stop only this sub-agent and anything it started. The parent keeps running
   // and receives the cancelled task result.
   const stop = (e: MouseEvent) => {
@@ -260,17 +231,6 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
               data-slot="task-tool-stop"
               aria-label={language.t("task.stop")}
               onClick={stop}
-            />
-          </Tooltip>
-        </Show>
-        <Show when={features().backgroundSubagents && promotable()}>
-          <Tooltip value={language.t("task.backgroundAgents.continueInBackground")} placement="top">
-            <IconButton
-              icon="arrow-down-to-line"
-              size="small"
-              variant="ghost"
-              aria-label={language.t("task.backgroundAgents.continueInBackground")}
-              onClick={background}
             />
           </Tooltip>
         </Show>

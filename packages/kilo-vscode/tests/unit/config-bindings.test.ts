@@ -56,20 +56,15 @@ describe("ConfigBindings", () => {
     expect(internal.configBindings.get(binding.id, internal.connectionGeneration, () => true)).toBeUndefined()
   })
 
-  it("publishes valid save bindings after a concurrent refresh during capability loading", async () => {
+  it("publishes valid save bindings after a concurrent refresh during config loading", async () => {
     const started = Promise.withResolvers<void>()
-    const capabilities = Promise.withResolvers<{ data: { backgroundSubagents: boolean } }>()
+    const config = Promise.withResolvers<{ data: Record<string, unknown> }>()
     const global = { ...target, scope: "global" as const }
     const client = {
       config: {
-        overlayUpdate: async () => ({ data: { effective: {}, targets: { global, project: target } } }),
-      },
-      experimental: {
-        capabilities: {
-          get: () => {
-            started.resolve()
-            return capabilities.promise
-          },
+        overlayUpdate: () => {
+          started.resolve()
+          return config.promise
         },
       },
     }
@@ -112,7 +107,7 @@ describe("ConfigBindings", () => {
     const saving = internal.handleUpdateConfig({ disabled_providers: [] }, {}, [], [], binding.id)
     await started.promise
     internal.configBindings.create(input)
-    capabilities.resolve({ data: { backgroundSubagents: false } })
+    config.resolve({ data: { effective: {}, targets: { global, project: target } } })
     await saving
 
     expect(published).toHaveLength(1)

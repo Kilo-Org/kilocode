@@ -375,9 +375,6 @@ class KiloSessionRpcApiImpl internal constructor(
     override suspend fun cancelBackgroundJob(id: String, directory: String): Boolean =
         ready { withContext(Dispatchers.IO) { sessions.cancelBackgroundJob(id, directory) } }
 
-    override suspend fun promoteBackgroundJob(id: String, directory: String): Boolean =
-        ready { withContext(Dispatchers.IO) { sessions.promoteBackgroundJob(id, directory) } }
-
     private suspend fun <T> ready(block: suspend () -> T): T {
         app.requireReady()
         return block()

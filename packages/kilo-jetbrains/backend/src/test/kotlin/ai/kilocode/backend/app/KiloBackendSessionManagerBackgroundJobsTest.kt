@@ -19,7 +19,6 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class KiloBackendSessionManagerBackgroundJobsTest {
@@ -161,29 +160,5 @@ class KiloBackendSessionManagerBackgroundJobsTest {
             app.sessions.cancelBackgroundJob("job1", "/repo")
         }
         assertTrue(err.message.orEmpty().contains("HTTP 500"))
-    }
-
-    @Test
-    fun `promoteBackgroundJob posts to the promote route`() = runBlocking {
-        mock.backgroundJobPromoteResult = "true"
-        val app = setup()
-        ready(app)
-
-        val result = app.sessions.promoteBackgroundJob("ses_child1", "/repo")
-
-        assertTrue(result)
-        val path = mock.lastBackgroundJobPromotePath ?: error("missing promote request")
-        assertTrue(path.startsWith("/kilocode/background-jobs/ses_child1/promote?"), "Expected promote path, got $path")
-    }
-
-    @Test
-    fun `promoteBackgroundJob returns false when the CLI kill switch is off`() = runBlocking {
-        mock.backgroundJobPromoteResult = "false"
-        val app = setup()
-        ready(app)
-
-        val result = app.sessions.promoteBackgroundJob("ses_child1", "/repo")
-
-        assertFalse(result)
     }
 }

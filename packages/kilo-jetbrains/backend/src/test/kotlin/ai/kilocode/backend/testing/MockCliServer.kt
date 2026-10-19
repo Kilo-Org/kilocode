@@ -90,16 +90,13 @@ class MockCliServer : AutoCloseable {
     @Volatile var backgroundJobsStatus = 200
     @Volatile var backgroundJobCancelResult = "true"
     @Volatile var backgroundJobCancelStatus = 200
-    @Volatile var backgroundJobPromoteResult = "true"
     @Volatile var retentionStatus = """{"policy":{"enabled":false,"maxAgeDays":30},"last":null,"progress":null}"""
     @Volatile var retentionRun = retentionStatus
     @Volatile var retentionStatusCode = 200
     @Volatile var retentionRunStatus = 200
     @Volatile var lastRetentionRunBody: String? = null
-    @Volatile var backgroundJobPromoteStatus = 200
     @Volatile var lastBackgroundJobsPath: String? = null
     @Volatile var lastBackgroundJobCancelPath: String? = null
-    @Volatile var lastBackgroundJobPromotePath: String? = null
     val backgroundJobsRequests = java.util.concurrent.CopyOnWriteArrayList<String>()
     @Volatile var lastCommandRemoveBody: String? = null
     @Volatile var lastSkillRemoveBody: String? = null
@@ -208,9 +205,6 @@ class MockCliServer : AutoCloseable {
     /** Optional gate for config warnings only. */
     @Volatile var warningsGate: CountDownLatch? = null
 
-    /** Holds `/experimental/capabilities` so a test can simulate a hung optional probe. */
-    @Volatile var capabilitiesGate: CountDownLatch? = null
-
     /** Request counts by bare path (e.g. "/session" or "/global/config"). Thread-safe. */
     private val counts = ConcurrentHashMap<String, AtomicInteger>()
     private val requests = Object()
@@ -248,9 +242,6 @@ class MockCliServer : AutoCloseable {
     }
 
     @Volatile var lastExperimentalSessionPath: String? = null
-    @Volatile var lastCapabilitiesPath: String? = null
-    @Volatile var capabilities = """{"backgroundSubagents":true}"""
-    @Volatile var capabilitiesStatus = 200
 
     /** Reset all request counters. */
     fun resetCounts() { counts.clear() }
@@ -382,7 +373,6 @@ class MockCliServer : AutoCloseable {
             if (delay > 0) Thread.sleep(delay)
             if (bare != "/global/event") responseGate?.await()
             if (bare.startsWith("/config/warnings")) warningsGate?.await()
-            if (bare == "/experimental/capabilities") capabilitiesGate?.await()
 
             when {
                 path == "/global/health" -> respond(output, 200, health)
@@ -493,10 +483,6 @@ class MockCliServer : AutoCloseable {
                     lastBackgroundJobCancelPath = path
                     respond(output, backgroundJobCancelStatus, backgroundJobCancelResult)
                 }
-                bare.matches(Regex("/kilocode/background-jobs/[^/]+/promote")) && method == "POST" -> {
-                    lastBackgroundJobPromotePath = path
-                    respond(output, backgroundJobPromoteStatus, backgroundJobPromoteResult)
-                }
                 bare == "/kilocode/retention" && method == "GET" ->
                     respond(output, retentionStatusCode, retentionStatus)
                 bare == "/kilocode/retention/run" && method == "POST" -> {
@@ -535,10 +521,6 @@ class MockCliServer : AutoCloseable {
                 bare == "/experimental/session" -> {
                     lastExperimentalSessionPath = path
                     respond(output, recentSessionsStatus, recentSessions)
-                }
-                bare == "/experimental/capabilities" -> {
-                    lastCapabilitiesPath = path
-                    respond(output, capabilitiesStatus, capabilities)
                 }
                 bare == "/kilo/cloud-sessions" -> {
                     lastCloudSessionsPath = path

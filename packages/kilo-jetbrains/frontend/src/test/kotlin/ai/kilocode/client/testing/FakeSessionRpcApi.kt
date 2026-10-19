@@ -405,9 +405,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val backgroundJobsFlow = mutableMapOf<String, MutableSharedFlow<List<BackgroundJobDto>>>()
     val backgroundJobsCalls = mutableListOf<Pair<String, String>>()
     val cancelledBackgroundJobs = mutableListOf<Pair<String, String>>()
-    val promotedBackgroundJobs = mutableListOf<Pair<String, String>>()
     var cancelBackgroundJobResult = true
-    var promoteBackgroundJobResult = true
 
     override suspend fun backgroundJobs(id: String, directory: String): Flow<List<BackgroundJobDto>> {
         assertNotEdt("backgroundJobs")
@@ -419,12 +417,6 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         assertNotEdt("cancelBackgroundJob")
         cancelledBackgroundJobs.add(id to directory)
         return cancelBackgroundJobResult
-    }
-
-    override suspend fun promoteBackgroundJob(id: String, directory: String): Boolean {
-        assertNotEdt("promoteBackgroundJob")
-        promotedBackgroundJobs.add(id to directory)
-        return promoteBackgroundJobResult
     }
 
     // ------ shared agent board ------

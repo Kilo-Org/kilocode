@@ -215,11 +215,6 @@ export function ancestry(
   return { parents, children }
 }
 
-export function latestTaskPart(partID: string | undefined, child: string | undefined, parts: readonly TaskPart[]) {
-  if (!partID || !child) return false
-  return parts.findLast((part) => childID(part) === child)?.id === partID
-}
-
 function stringField(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined
 }

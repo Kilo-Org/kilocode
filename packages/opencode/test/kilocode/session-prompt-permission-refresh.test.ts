@@ -1314,6 +1314,7 @@ it.live(
       Effect.fnUntraced(function* ({ dir, llm }) {
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
+        const jobs = yield* BackgroundJob.Service
         const permission = yield* Permission.Service
         const secret = "DENIED_ENV_SENTINEL"
         yield* Effect.promise(() =>
@@ -1323,16 +1324,44 @@ it.live(
             Bun.write(path.join(dir, "after.txt"), "Later findings"),
           ]),
         )
-        yield* llm.tool("task", {
-          description: "Explore project",
-          prompt: "Read before.txt, .env, and after.txt, then report the available findings.",
-          subagent_type: "explore",
-        })
-        yield* llm.tool("read", { filePath: path.join(dir, "before.txt") })
-        yield* llm.tool("read", { filePath: path.join(dir, ".env") })
-        yield* llm.tool("read", { filePath: path.join(dir, "after.txt") })
-        yield* llm.text("Earlier findings and later findings. Skipped the denied .env read.")
-        yield* llm.text("Received the exploration findings.")
+        // The root returns as soon as the background task starts, so each reply is
+        // keyed to the request that must consume it instead of relying on global order.
+        const text = (hit: { body: Record<string, unknown> }) => JSON.stringify(hit.body)
+        yield* llm.pushMatch(
+          (hit) => text(hit).includes("Explore with a subagent.") && !text(hit).includes("Background task started"),
+          reply().tool("task", {
+            description: "Explore project",
+            prompt: "Read before.txt, .env, and after.txt, then report the available findings.",
+            subagent_type: "explore",
+          }),
+        )
+        yield* llm.pushMatch(
+          (hit) => text(hit).includes("Background task started"),
+          reply().text("Delegation started.").stop(),
+        )
+        yield* llm.pushMatch(
+          (hit) =>
+            text(hit).includes("Read before.txt, .env, and after.txt") &&
+            !text(hit).includes("Earlier findings") &&
+            !text(hit).includes("The user rejected permission"),
+          reply().tool("read", { filePath: path.join(dir, "before.txt") }),
+        )
+        yield* llm.pushMatch(
+          (hit) => text(hit).includes("Earlier findings") && !text(hit).includes("The user rejected permission"),
+          reply().tool("read", { filePath: path.join(dir, ".env") }),
+        )
+        yield* llm.pushMatch(
+          (hit) => text(hit).includes("The user rejected permission") && !text(hit).includes("Later findings"),
+          reply().tool("read", { filePath: path.join(dir, "after.txt") }),
+        )
+        yield* llm.pushMatch(
+          (hit) => text(hit).includes("Later findings") && !text(hit).includes("Earlier findings and later findings."),
+          reply().text("Earlier findings and later findings. Skipped the denied .env read.").stop(),
+        )
+        yield* llm.pushMatch(
+          (hit) => text(hit).includes("Earlier findings and later findings."),
+          reply().text("Received the exploration findings.").stop(),
+        )
         const root = yield* sessions.create({ title: "Explore" })
         const fiber = yield* prompt
           .prompt({ sessionID: root.id, agent: "build", parts: [{ type: "text", text: "Explore with a subagent." }] })
@@ -1342,14 +1371,61 @@ it.live(
             return (yield* permission.list()).find((item) => item.permission === "read")
           }),
           "subagent never requested read permission",
+          "15 seconds",
         )
         expect(pending.sessionID).not.toBe(root.id)
         expect(pending.patterns).toEqual([".env"])
         yield* permission.reply({ requestID: pending.id, reply: "reject" })
-        yield* awaitWithTimeout(Fiber.join(fiber), "exploration did not finish", "10 seconds")
+        yield* awaitWithTimeout(Fiber.join(fiber), "root turn did not finish", "10 seconds")
 
-        const child = yield* sessions.messages({ sessionID: pending.sessionID })
-        const tools = child.flatMap((msg) => msg.parts).filter((part) => part.type === "tool")
+        const child = yield* pollWithTimeout(
+          sessions
+            .children(root.id)
+            .pipe(Effect.map((items) => items.find((item) => item.id === pending.sessionID))),
+          "delegated task child was not created",
+          "10 seconds",
+        )
+        const finished = yield* awaitWithTimeout(
+          jobs.wait({ id: child.id }),
+          "background exploration did not finish",
+          "20 seconds",
+        )
+        expect(finished.info?.status).toBe("completed")
+
+        const notice = yield* pollWithTimeout(
+          sessions.messages({ sessionID: root.id }).pipe(
+            Effect.map((messages) =>
+              messages
+                .flatMap((message) => message.parts)
+                .find(
+                  (part) =>
+                    part.type === "text" &&
+                    part.synthetic &&
+                    part.metadata?.background === true &&
+                    part.text.includes("Earlier findings and later findings."),
+                ),
+            ),
+          ),
+          "background result was not delivered to the parent",
+          "15 seconds",
+        )
+        expect(notice).toMatchObject({ type: "text", synthetic: true, metadata: { background: true } })
+        yield* pollWithTimeout(
+          sessions.messages({ sessionID: root.id }).pipe(
+            Effect.map((messages) =>
+              messages
+                .flatMap((message) => message.parts)
+                .some((part) => part.type === "text" && part.text === "Received the exploration findings.")
+                ? true
+                : undefined,
+            ),
+          ),
+          "background result notification did not finish",
+          "15 seconds",
+        )
+
+        const childMessages = yield* sessions.messages({ sessionID: pending.sessionID })
+        const tools = childMessages.flatMap((msg) => msg.parts).filter((part) => part.type === "tool")
         expect(tools.map((part) => part.state.status)).toEqual(["completed", "error", "completed"])
         expect(tools.at(1)?.state).toMatchObject({
           error: "The user rejected permission to use this specific tool call.",
@@ -1361,7 +1437,7 @@ it.live(
           .find((part) => part.tool === "task")
         expect(task?.state).toMatchObject({
           status: "completed",
-          output: expect.stringContaining("Earlier findings and later findings."),
+          output: expect.stringContaining('state="running"'),
         })
         const inputs = JSON.stringify(yield* llm.inputs)
         expect(inputs).toContain("The user rejected permission")

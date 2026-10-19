@@ -27,7 +27,6 @@ type Ctx = {
   backgroundJobs: (sessionID: string, requestID: string) => Promise<void>
   board: (message: Record<string, unknown>) => Promise<boolean>
   cancelBackgroundJob: (jobID: string, sessionID: string, requestID: string) => Promise<void>
-  promoteBackgroundJob: (jobID: string, sessionID: string) => Promise<void>
   caffeination: () => void
 }
 
@@ -53,12 +52,6 @@ async function routeBackgroundMessage(
       typeof message.requestID === "string"
     ) {
       await ctx.cancelBackgroundJob(message.jobID, message.sessionID, message.requestID)
-    }
-    return true
-  }
-  if (message.type === "promoteBackgroundJob") {
-    if (typeof message.jobID === "string" && typeof message.sessionID === "string") {
-      await ctx.promoteBackgroundJob(message.jobID, message.sessionID)
     }
     return true
   }

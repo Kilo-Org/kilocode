@@ -68,12 +68,6 @@ export interface CancelBackgroundJobMessage {
   requestID: string
 }
 
-export interface PromoteBackgroundJobMessage {
-  type: "promoteBackgroundJob"
-  jobID: string
-  sessionID: string
-}
-
 export interface RevertSessionRequest {
   type: "revertSession"
   sessionID: string
@@ -1754,7 +1748,6 @@ export type WebviewMessage =
   | RequestSessionBoardMessage
   | ResetSessionBoardMessage
   | CancelBackgroundJobMessage
-  | PromoteBackgroundJobMessage
   | RevertSessionRequest
   | UnrevertSessionRequest
   | DeleteMessageRequest

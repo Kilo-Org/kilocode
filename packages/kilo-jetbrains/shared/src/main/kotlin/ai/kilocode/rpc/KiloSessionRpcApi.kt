@@ -190,7 +190,4 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     /** Cancel one background subagent job and its child session tree. */
     suspend fun cancelBackgroundJob(id: String, directory: String): Boolean
-
-    /** Continue one foreground subagent job in the background. Returns false when the CLI's background-subagent kill switch is off. */
-    suspend fun promoteBackgroundJob(id: String, directory: String): Boolean
 }

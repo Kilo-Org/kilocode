@@ -2002,7 +2002,7 @@
             }
           }
         },
-        "description": "Detach any synchronous subagents currently blocking the session and continue them in the background.",
+        "description": "Promote a legacy synchronous subagent job to background if one is still running.",
         "summary": "Background subagents",
         "x-codeSamples": [
           {
@@ -16945,8 +16945,8 @@
             }
           }
         },
-        "description": "Continue one foreground subagent in the background.",
-        "summary": "Promote background job",
+        "description": "Promote a legacy synchronous subagent job to background if one is still running.",
+        "summary": "Promote legacy background job",
         "x-codeSamples": [
           {
             "lang": "js",

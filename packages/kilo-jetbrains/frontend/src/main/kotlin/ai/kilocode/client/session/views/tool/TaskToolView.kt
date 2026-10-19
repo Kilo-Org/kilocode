@@ -12,11 +12,9 @@ import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.BackgroundPromote
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.AbstractSessionPartView
 import ai.kilocode.client.session.views.base.HeaderOpenAction
-import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.PlainLabel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
@@ -45,7 +43,6 @@ class TaskToolView(
     tool: Tool,
     private val selection: SessionSelection? = null,
     private val onOpenSubagent: ((String, String) -> Unit)? = null,
-    private val onPromoteBackgroundAgent: BackgroundPromote? = null,
     /** Sibling color slot for the task's child session's generated avatar. See [AgentAvatar]. */
     private val avatarColor: (String) -> Int? = { null },
     private val parts: ToolParts = toolParts(tool),
@@ -73,22 +70,12 @@ class TaskToolView(
         ::openSubagent,
     )
 
-    // A plain inline button, not a hover overlay: SessionCopyTarget only reserves the hover-copy
-    // slot for one control (open.anchor), and this action only applies to a running foreground task.
-    private val promoteButton = HoverIcon().apply {
-        icon = CONTINUE_IN_BACKGROUND_ICON
-        isFocusable = false
-        isVisible = false
-        toolTipText = KiloBundle.message("session.part.tool.continueInBackground")
-        addActionListener { promoteBackgroundAgent() }
-    }
-
     init {
         // Mirror the edit/patch cards: move the summary and the open action into the non-fit left
         // group so the anchor always reserves its width right after the text. Left in the fill slot
         // (a fitHorizontal stack), a long summary would clip the trailing anchor to zero width and
         // the hover open control could fail to appear.
-        parts.header.left(parts.sub, promoteButton, open.anchor)
+        parts.header.left(parts.sub, open.anchor)
         applyStyle(style)
         sync()
         if (item.childTools.isNotEmpty()) expand()
@@ -183,7 +170,6 @@ class TaskToolView(
         changed = setForeground(parts.title, titleColor(item)) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
-        changed = setVisible(promoteButton, canPromote(item)) || changed
         changed = footer.update(item, approvalReasonsVisible()) || changed
         return changed
     }
@@ -208,25 +194,10 @@ class TaskToolView(
         return setIcon(parts.glyph, if (running) avatarRunning else avatarStatic)
     }
 
-    /**
-     * Visible only when the CLI allows background subagents and this is a running foreground task
-     * with a child session that is not already in the background. Without the capability check the
-     * button would be offered on a CLI whose kill switch is off, where promoting always fails.
-     */
-    private fun canPromote(tool: Tool): Boolean = onPromoteBackgroundAgent?.available() == true &&
-        tool.childSessionId != null &&
-        tool.state == ToolExecState.RUNNING &&
-        tool.metadata["background"] != "true"
-
     private fun openSubagent() {
         val id = item.childSessionId ?: return
         val title = listOf(agentTitle(item), summary(item)).filter { it.isNotBlank() }.joinToString(" - ")
         onOpenSubagent?.invoke(id, title)
-    }
-
-    private fun promoteBackgroundAgent() {
-        val id = item.childSessionId ?: return
-        onPromoteBackgroundAgent?.promote(id)
     }
 
     private fun syncRows(): Boolean {
@@ -418,7 +389,6 @@ class TaskToolView(
 
     companion object {
         private const val POPUP_MIN_CHARS = 60
-        private val CONTINUE_IN_BACKGROUND_ICON = IconLoader.getIcon("/icons/arrow-down-to-line.svg", TaskToolView::class.java)
         fun canRender(content: Tool): Boolean = content.name == "task"
     }
 }

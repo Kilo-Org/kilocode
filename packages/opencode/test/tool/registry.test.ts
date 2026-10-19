@@ -399,8 +399,8 @@ describe("tool.registry", () => {
   )
   // kilocode_change end
 
-  // kilocode_change start - background task parameters are available by default
-  it.instance("exposes the task background parameter by default", () =>
+  // kilocode_change start - every task runs in the background, so the schema has no switch
+  it.instance("omits the task background parameter and documents async execution", () =>
     Effect.gen(function* () {
       const registry = yield* ToolRegistry.Service
       const agent = yield* Agent.Service
@@ -414,7 +414,14 @@ describe("tool.registry", () => {
 
       if (!task) throw new Error("task tool not found")
       const jsonSchema = ToolJsonSchema.fromTool(task)
-      expect((jsonSchema.properties as Record<string, unknown> | undefined)?.background).toBeDefined()
+      const fields = (jsonSchema.properties ?? {}) as Record<string, unknown>
+      expect(fields.background).toBeUndefined()
+      expect(fields).toMatchObject({
+        model: expect.anything(),
+        provider: expect.anything(),
+        variant: expect.anything(),
+      })
+      expect(task.description).toContain("Tasks always run asynchronously in the background and return immediately.")
     }),
   )
   // kilocode_change end

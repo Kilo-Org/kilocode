@@ -75,7 +75,6 @@ class MessageView(
     // Forks the session at this message. Null on surfaces that cannot fork (sidebar, read-only tabs).
     private val fork: ((String) -> Unit)? = null,
     private val onOpenSubagent: ((String, String) -> Unit)? = null,
-    private val onPromoteBackgroundAgent: BackgroundPromote? = null,
     /** Sibling color slot for a child session's generated avatar. See [ai.kilocode.client.session.AgentAvatar]. */
     private val avatarColor: (String) -> Int? = { null },
     /** Whether a block in this message may auto-expand from the transcript display settings. */
@@ -453,14 +452,14 @@ class MessageView(
     private fun view(content: Content) = if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) {
         ViewFactory.createUser(
             content, openFile, openUrl, selection, repo, promptMentions(msg),
-            { openAttachment(msg.info.id, it) }, openDiff, sessionId,
-            onOpenSubagent = onOpenSubagent, live = live, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
+            { openAttachment(msg.info.id, it) }, openDiff,
+            onOpenSubagent = onOpenSubagent, live = live, avatarColor = avatarColor, sessionId = sessionId,
         )
     } else {
         ViewFactory.create(
             content, openFile, openUrl, selection, repo,
-            { openAttachment(msg.info.id, it) }, openDiff, sessionId,
-            onOpenSubagent = onOpenSubagent, live = live, avatarColor = avatarColor, onPromoteBackgroundAgent = onPromoteBackgroundAgent,
+            { openAttachment(msg.info.id, it) }, openDiff,
+            onOpenSubagent = onOpenSubagent, live = live, avatarColor = avatarColor, sessionId = sessionId,
         )
     }
 

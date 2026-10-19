@@ -471,7 +471,6 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
         )
 
         val RELEASE_7_1_7 = mapOf(
-            "session.part.tool.continueInBackground" to emptyList<String>(),
             "session.header.agents.toggle" to emptyList(),
             "session.header.agents.waiting" to emptyList(),
             "session.header.agents.needsInput" to emptyList(),
@@ -485,8 +484,6 @@ class KiloBundleLocaleTest : BasePlatformTestCase() {
             "session.header.agents.status.completed" to emptyList(),
             "session.header.agents.status.cancelled" to emptyList(),
             "session.header.agents.status.error" to emptyList(),
-            "session.header.agents.disabledTitle" to emptyList(),
-            "session.header.agents.disabledMessage" to emptyList(),
             "prompt.paste.collapsed" to listOf("PASTE_LINES"),
             "worktree.delete.nested.copyPath" to emptyList(),
             "worktree.delete.nested.reveal.failed.title" to emptyList(),

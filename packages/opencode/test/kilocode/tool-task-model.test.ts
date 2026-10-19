@@ -13,7 +13,6 @@ import { SessionStatus } from "../../src/session/status"
 import { SessionDrain } from "@/kilocode/session/drain"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Config } from "../../src/config/config"
-import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Global } from "@opencode-ai/core/global"
 import { Instance } from "../../src/kilocode/instance"
@@ -132,7 +131,6 @@ const it = testEffect(
       BackgroundJob.node,
       Bus.node,
       Config.node,
-      RuntimeFlags.node,
       SessionRunState.node,
       SessionStatus.node,
       SessionDrain.node,
@@ -249,7 +247,11 @@ function run(input: {
         const tool = yield* TaskTool
         const def = yield* tool.init()
         let seen: SessionPrompt.PromptInput | undefined
-        const promptOps = stubOps({ onPrompt: (value) => (seen = value) })
+        const promptOps = stubOps({
+          onPrompt: (value) => {
+            if (value.sessionID !== chat.id) seen = value
+          },
+        })
 
         const result = yield* def
           .execute(
@@ -279,6 +281,8 @@ function run(input: {
               }),
             ),
           )
+
+        yield* (yield* BackgroundJob.Service).wait({ id: result.metadata.sessionId })
 
         return {
           prompt: seen?.model,
@@ -394,32 +398,28 @@ describe("tool.task model resolution", () => {
     ),
   )
 
-  for (const background of [false, true]) {
-    it.live(`advertises selection fields independently of background ${background}`, () =>
-      provideTmpdirInstance(
-        () =>
-          Effect.gen(function* () {
-            const tool = yield* TaskTool.pipe(
-              Effect.provide(RuntimeFlags.layer({ experimentalBackgroundSubagents: background })),
-            )
-            const def = yield* tool.init()
-            const fields = def.jsonSchema?.properties ?? {}
-            for (const field of ["model", "provider", "variant"]) {
-              expect(field in fields).toBe(true)
-              expect(def.jsonSchema?.required).not.toContain(field)
-              expect(fields[field]).toMatchObject({ anyOf: [{ type: "string" }, { type: "null" }] })
-            }
-            expect("background" in fields).toBe(background)
-            expect(def.description.includes("Subagent model selection is enabled")).toBe(true)
-            expect(def.description).toContain(
-              "Only override model, provider, or variant when the user explicitly requests it",
-            )
-            expect(def.description).toContain("Omit these fields, or send null")
-          }),
-        { config: {} },
-      ),
-    )
-  }
+  it.live("advertises selection fields without a background switch", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const tool = yield* TaskTool
+          const def = yield* tool.init()
+          const fields = def.jsonSchema?.properties ?? {}
+          for (const field of ["model", "provider", "variant"]) {
+            expect(field in fields).toBe(true)
+            expect(def.jsonSchema?.required).not.toContain(field)
+            expect(fields[field]).toMatchObject({ anyOf: [{ type: "string" }, { type: "null" }] })
+          }
+          expect("background" in fields).toBe(false)
+          expect(def.description.includes("Subagent model selection is enabled")).toBe(true)
+          expect(def.description).toContain(
+            "Only override model, provider, or variant when the user explicitly requests it",
+          )
+          expect(def.description).toContain("Omit these fields, or send null")
+        }),
+      { config: {} },
+    ),
+  )
 
   for (const example of [
     { state: "completed", model: { ...cfg, variant: cfgVariant } },
@@ -435,9 +435,7 @@ describe("tool.task model resolution", () => {
             const sessions = yield* Session.Service
             const notified = yield* Deferred.make<SessionPrompt.PromptInput>()
             const calls: SessionPrompt.PromptInput[] = []
-            const tool = yield* TaskTool.pipe(
-              Effect.provide(RuntimeFlags.layer({ experimentalBackgroundSubagents: true })),
-            )
+            const tool = yield* TaskTool
             const def = yield* tool.init()
             const promptOps: TaskPromptOps = {
               ...stubOps(),
@@ -469,7 +467,6 @@ describe("tool.task model resolution", () => {
                 description: "background selection",
                 prompt: "inspect selection",
                 subagent_type: "general",
-                background: true,
                 model: "sub-model",
                 provider: "sub-provider",
                 variant: subVariant,

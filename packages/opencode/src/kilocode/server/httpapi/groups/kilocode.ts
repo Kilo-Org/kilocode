@@ -499,8 +499,8 @@ export const KilocodeApi = HttpApi.make("kilocode")
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "kilocode.backgroundJob.promote",
-            summary: "Promote background job",
-            description: "Continue one foreground subagent in the background.",
+            summary: "Promote legacy background job",
+            description: "Promote a legacy synchronous subagent job to background if one is still running.",
           }),
         ),
         HttpApiEndpoint.get("wakeups", KilocodePaths.wakeups, {

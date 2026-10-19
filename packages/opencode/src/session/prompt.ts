@@ -597,6 +597,9 @@ export const layer = Layer.effect(
       }
 
       if (!task.command) return
+      // kilocode_change start - background subtasks deliver their summary request with the result
+      if (result?.metadata?.background === true) return
+      // kilocode_change end
 
       const summaryUserMsg: SessionV1.User = {
         id: MessageID.ascending(),

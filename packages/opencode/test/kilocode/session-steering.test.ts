@@ -269,6 +269,8 @@ it.live("does not notify the parent when the task tool launches a subagent", () 
       expect(children).toHaveLength(1)
       const child = children.at(0)
       if (!child) throw new Error("task tool did not create a child session")
+      // The task runs in the background, so wait for the child before reading its transcript.
+      yield* (yield* BackgroundJob.Service).wait({ id: child.id })
       const users = (yield* sessions.messages({ sessionID: child.id })).filter((item) => item.info.role === "user")
       expect(JSON.stringify(users)).toContain("worker assignment: inspect the parser edge")
       expect((yield* BoardStore.read({ sessionID: chat.id })).messages).toEqual([])

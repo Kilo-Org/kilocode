@@ -1100,7 +1100,7 @@ export class Session extends HeyApiClient {
   /**
    * Background subagents
    *
-   * Detach any synchronous subagents currently blocking the session and continue them in the background.
+   * Promote a legacy synchronous subagent job to background if one is still running.
    */
   public background<ThrowOnError extends boolean = false>(
     parameters: {
@@ -7856,9 +7856,9 @@ export class BackgroundJob extends HeyApiClient {
   }
 
   /**
-   * Promote background job
+   * Promote legacy background job
    *
-   * Continue one foreground subagent in the background.
+   * Promote a legacy synchronous subagent job to background if one is still running.
    */
   public promote<ThrowOnError extends boolean = false>(
     parameters: {

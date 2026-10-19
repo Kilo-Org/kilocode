@@ -421,14 +421,6 @@ class KiloBackendSessionManager(
     fun cancelBackgroundJob(id: String, dir: String): Boolean =
         postBackgroundJobAction(id, dir, "cancel")
 
-    /**
-     * Continue background job [id] in the background via
-     * `POST /kilocode/background-jobs/{id}/promote?directory={dir}`. Returns `false` when the CLI's
-     * `KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS` kill switch is off — callers must not assume success.
-     */
-    fun promoteBackgroundJob(id: String, dir: String): Boolean =
-        postBackgroundJobAction(id, dir, "promote")
-
     private fun postBackgroundJobAction(id: String, dir: String, action: String): Boolean {
         val h = http ?: throw IllegalStateException("Session manager not started")
         val url = base ?: throw IllegalStateException("Session manager not started")

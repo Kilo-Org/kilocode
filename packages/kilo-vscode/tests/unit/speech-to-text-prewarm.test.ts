@@ -48,7 +48,6 @@ const SCRIPT = `
   const features = () => ({
     indexing: false,
     sandboxControls: false,
-    backgroundSubagents: false,
     speechToText: capture(),
   })
   const root = document.createElement("div")

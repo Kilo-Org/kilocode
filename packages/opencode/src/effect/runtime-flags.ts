@@ -44,11 +44,6 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
   enableQuestionTool: bool("KILO_ENABLE_QUESTION_TOOL"),
   experimentalScout: enabledByExperimental("KILO_EXPERIMENTAL_SCOUT"), // kilocode_change
   experimentalReferences: enabledByExperimental("KILO_EXPERIMENTAL_REFERENCES"),
-  // kilocode_change start - enabled by default, with an opt-out kill switch
-  experimentalBackgroundSubagents: Config.boolean("KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS").pipe(
-    Config.withDefault(true),
-  ),
-  // kilocode_change end
   experimentalLspTy: bool("KILO_EXPERIMENTAL_LSP_TY"),
   experimentalLspTool: enabledByExperimental("KILO_EXPERIMENTAL_LSP_TOOL"),
   // kilocode_change start - self-context tools

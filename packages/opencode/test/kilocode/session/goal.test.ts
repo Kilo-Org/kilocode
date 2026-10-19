@@ -506,31 +506,60 @@ for (const state of ["ordinary", "pause", "clear", "completed"] as const) {
 }
 
 it.instance(
-  "restricts foreground goal delegates without restricting independent child prompts",
+  "restricts delegated background goal work without restricting independent child prompts",
   Effect.gen(function* () {
     const run = yield* setup({ agent: { general: { model: "test/selected-model" } } })
+    const jobs = yield* BackgroundJob.Service
+    const text = (hit: { body: Record<string, unknown> }) => JSON.stringify(hit.body)
     yield* run.llm.pushMatch(
-      ({ body }) => body.model === "test-model",
+      (hit) => hit.body.model === "test-model" && !text(hit).includes("Inspect the scope"),
       reply().tool("task", { description: "Check scope", prompt: "Inspect the scope", subagent_type: "general" }),
     )
-    yield* run.llm.pushMatch(({ body }) => body.model === "selected-model", reply().hang(), reply().hang())
+    yield* run.llm.pushMatch((hit) => text(hit).includes("Inspect the scope"), reply().hang())
+    yield* run.llm.pushMatch(
+      (hit) => text(hit).includes("Independent work"),
+      reply().text("Independent work finished.").stop(),
+    )
     yield* run.command(objective)
-    yield* run.wait(2)
-    const child = (yield* run.sessions.children(run.session.id)).at(0)
-    if (!child) throw new Error("Goal did not create a child")
+    const job = yield* pollWithTimeout(
+      jobs.list().pipe(Effect.map((items) => items.find((item) => item.metadata?.parentSessionId === run.session.id))),
+      "goal did not start a delegated background task",
+      "10 seconds",
+    )
+    const childID = SessionID.make(job.id)
+    yield* pollWithTimeout(
+      run.status.get(childID).pipe(Effect.map((value) => (value.type === "busy" ? true : undefined))),
+      "delegated background task did not start",
+      "10 seconds",
+    )
+    const child = yield* run.sessions.get(childID)
+    expect(child.parentID).toBe(run.session.id)
     expect(GoalPolicy.available(child.id, "question")).toBe(false)
     expect(GoalPolicy.available(child.id, "goal_report")).toBe(false)
-    expect(toolNames((yield* run.llm.hits).at(1)?.body.tools)).toContain("goal_report")
+    const delegated = yield* pollWithTimeout(
+      run.llm.hits.pipe(Effect.map((hits) => hits.find((hit) => hit.body.model === "selected-model"))),
+      "delegated background task did not request its model",
+      "10 seconds",
+    )
+    expect(toolNames(delegated.body.tools)).toContain("goal_report")
+
     yield* run.command("pause")
     yield* run.idle
+    yield* jobs.cancel(job.id)
+    yield* pollWithTimeout(
+      run.status.get(childID).pipe(Effect.map((value) => (value.type === "idle" ? true : undefined))),
+      "delegated background task did not stop",
+      "10 seconds",
+    )
     const work = yield* run.prompt
       .prompt({ sessionID: child.id, parts: [{ type: "text", text: "Independent work" }] })
       .pipe(Effect.forkChild)
-    yield* run.wait(3)
+    const result = yield* awaitWithTimeout(Fiber.join(work), "independent child prompt did not finish", "15 seconds")
+    expect(result.parts).toEqual(
+      expect.arrayContaining([expect.objectContaining({ text: "Independent work finished." })]),
+    )
     expect(GoalPolicy.available(child.id, "question")).toBe(true)
     expect(GoalPolicy.available(child.id, "goal_report")).toBe(false)
-    yield* run.prompt.cancel(child.id)
-    yield* Fiber.await(work)
   }),
   30_000,
 )

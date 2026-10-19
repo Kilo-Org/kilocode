@@ -81,7 +81,6 @@ import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.controller.SessionControllerEvent
 import ai.kilocode.client.session.context.EditorContextGatherer
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.BackgroundPromote
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.SessionOutcomeView
 import ai.kilocode.client.session.views.permission.PermissionView
@@ -583,10 +582,6 @@ class SessionUi(
                 openSettingsAction = ::openCheckpointsSettings,
             ),
             onOpenSubagent = ::openSubagent,
-            onPromoteBackgroundAgent = if (readonly) null else BackgroundPromote(
-                available = { app.state.value.backgroundSubagents },
-                promote = controller::promoteBackgroundAgent,
-            ),
             visible = { isShowing },
         ).also {
             it.outcome = outcome

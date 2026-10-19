@@ -53,7 +53,6 @@ type RunRuntimeInput = {
   files: RunInput["files"]
   initialInput?: string
   thinking: boolean
-  backgroundSubagents: boolean
   replay?: boolean
   replayLimit?: number
   demo?: RunInput["demo"]
@@ -72,7 +71,6 @@ type RunLocalInput = {
   files: RunInput["files"]
   initialInput?: string
   thinking: boolean
-  backgroundSubagents: boolean
   replay?: boolean
   replayLimit?: number
   demo?: RunInput["demo"]
@@ -245,7 +243,6 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
     model: state.model,
     variant: state.activeVariant,
     tuiConfig,
-    backgroundSubagents: input.backgroundSubagents,
     onPermissionReply: async (next) => {
       if (state.demo?.permission(next)) {
         return
@@ -358,10 +355,6 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
         .finally(() => {
           state.aborting = false
         })
-    },
-    onBackground: () => {
-      if (!hasSession(input, state)) return
-      void ctx.sdk.experimental.session.background({ sessionID: state.sessionID }).catch(() => {})
     },
     onSubagentSelect: (sessionID) => {
       state.selectSubagent?.(sessionID)
@@ -755,7 +748,6 @@ export async function runInteractiveLocalMode(input: RunLocalInput): Promise<voi
     files: input.files,
     initialInput: input.initialInput,
     thinking: input.thinking,
-    backgroundSubagents: input.backgroundSubagents,
     replay: input.replay,
     replayLimit: input.replayLimit,
     demo: input.demo,
@@ -804,7 +796,6 @@ export async function runInteractiveMode(
       files: input.files,
       initialInput: input.initialInput,
       thinking: input.thinking,
-      backgroundSubagents: input.backgroundSubagents,
       replay: input.replay,
       replayLimit: input.replayLimit,
       demo: input.demo,
