@@ -6,7 +6,6 @@ import { Bus } from "@opencode/core/bus"
 import { Config } from "@opencode/core/config"
 import { ConfigAgentPlugin } from "@opencode/core/config/plugin/agent"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
-import { KiloAgentPlugin } from "@opencode/core/kilocode/agent"
 import { Permission } from "@opencode/core/permission"
 import { AgentPlugin } from "@opencode/core/plugin/agent"
 import { PlanPlugin } from "@opencode/core/plugin/plan"
@@ -19,8 +18,9 @@ import { Event } from "@opencode/schema/event"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
-import { testEffect } from "../lib/effect"
-import { agentHost, host } from "../plugin/host"
+import { agentHost, host } from "../../core/test/plugin/host"
+import { testEffect } from "../../core/test/lib/effect"
+import { KiloAgentPlugin } from "../src/agent"
 
 const it = testEffect(AppNodeBuilder.build(LayerNode.group([Agent.node, Bus.node, FSUtil.node, Global.node])))
 
@@ -62,15 +62,23 @@ const setup = Effect.fnUntraced(function* () {
   return { agents, context, events, persisted }
 })
 
-/** Runs the config agent plugin and the Kilo ceiling after the built-ins, as in the built-in list. */
+/**
+ * Runs the config agent plugin, then a later post plugin that appends a rule to every agent (as the browser
+ * plugin does), then the Kilo ceiling, which the host registers after the internal post plugins.
+ */
 const configure = Effect.fnUntraced(function* (info: unknown) {
   const result = yield* setup()
   yield* ConfigAgentPlugin.Plugin.effect(result.context).pipe(
     Effect.provide(Config.testLayer([new Document({ type: "document", info: Schema.decodeUnknownSync(Info)(info) })])),
   )
+  yield* result.agents.transform((editor) =>
+    editor.list().forEach((agent) => editor.update(agent.id, (item) => item.permissions.push({ ...browser }))),
+  )
   yield* KiloAgentPlugin.Ceiling.effect(result.context)
   return result
 })
+
+const browser = { action: "browser", resource: "*", effect: "deny" } as const
 
 const selected = (agent: string, previous?: string): SessionEvent.AgentSelected => ({
   id: Event.ID.create(),
@@ -168,6 +176,7 @@ describe("KiloAgentPlugin", () => {
       expect(effect("read", ".env")).toBe("ask")
       expect(effect("read", ".env.example")).toBe("allow")
       expect(effect("question", "*")).toBe("allow")
+      expect(effect("skill", "review")).toBe("allow")
       expect(effect("external_directory", path.join(global.data, "tool-output", "*"))).toBe("allow")
       expect(effect("external_directory", "/outside/*")).toBe("deny")
     }),
@@ -178,6 +187,7 @@ describe("KiloAgentPlugin", () => {
       yield* setup()
       const rules = yield* permissions("orchestrator")
       expect(Permission.evaluate("subagent", "general", rules).effect).toBe("allow")
+      expect(Permission.evaluate("skill", "review", rules).effect).toBe("allow")
       expect(Permission.evaluate("shell", "ls", rules).effect).toBe("deny")
       expect(Permission.evaluate("edit", "src/index.ts", rules).effect).toBe("deny")
     }),
@@ -197,6 +207,7 @@ describe("KiloAgentPlugin", () => {
       expect(effect("shell", "npm install")).toBe("deny")
       expect(effect("subagent", "explore")).toBe("allow")
       expect(effect("subagent", "general")).toBe("deny")
+      expect(effect("skill", "review")).toBe("allow")
       expect(effect("unknown_plugin_tool", "*")).toBe("deny")
     }),
   )
@@ -204,6 +215,8 @@ describe("KiloAgentPlugin", () => {
   it.effect("lets user agents with a built-in ID override the built-in", () =>
     Effect.gen(function* () {
       const { agents } = yield* configure({
+        // v1 resolved `build` to `code`. The hidden build copy is never the default, so Code is.
+        default_agent: "build",
         agents: {
           // v1 kept `agent.<id>.permission` as the opt-in for one read-only agent.
           ask: { system: "Custom ask.", permissions: [{ action: "edit", resource: "*", effect: "allow" }] },
@@ -215,6 +228,7 @@ describe("KiloAgentPlugin", () => {
       expect(ask?.description).toBe("Get answers and explanations without making changes to the codebase.")
       expect(Permission.evaluate("edit", "src/index.ts", ask?.permissions ?? []).effect).toBe("allow")
       expect(yield* agents.get(Agent.ID.make("debug"))).toBeUndefined()
+      expect((yield* agents.select()).id).toBe(Agent.ID.make("code"))
     }),
   )
 
@@ -250,6 +264,8 @@ describe("KiloAgentPlugin", () => {
       expect(yield* effect("plan", "edit", path.join(global.home, ".opencode", "plan", "cache.md"))).toBe("allow")
       expect(yield* effect("orchestrator", "shell", "ls")).toBe("deny")
       expect(yield* effect("code", "shell", "rm -rf src")).toBe("allow")
+      // A rule a later post plugin appends to every agent stays in place after the ceiling.
+      for (const id of ["ask", "plan", "orchestrator", "code"]) expect(yield* effect(id, "browser", "*")).toBe("deny")
       expect((yield* agents.list()).map((agent) => agent.id)).not.toContain(Agent.ID.make("kilo-config-permissions"))
     }),
   )

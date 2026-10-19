@@ -1,23 +1,27 @@
-export * as KiloAgentPlugin from "./agent.js"
+export * as KiloAgentPlugin from "./index"
 
+// Core internals with no public surface: upstream rule matching (`Permission.evaluate`,
+// `Wildcard.match`) and the directories where long tool and shell output is stored.
+import { Permission } from "@opencode/core/permission"
+import { Shell } from "@opencode/core/shell"
+import { ToolOutput } from "@opencode/core/tool-output"
+import { Wildcard } from "@opencode/core/util/wildcard"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Agent } from "@opencode/schema/agent"
 import type { SessionEvent } from "@opencode/schema/session-event"
 import { Global } from "@opencode/util/global"
 import { Effect, Option, Stream } from "effect"
 import path from "path"
-import { Permission } from "../permission.js"
-import { Shell } from "../shell.js"
-import { ToolOutput } from "../tool-output.js"
-import { Wildcard } from "../util/wildcard.js"
 
-import AGENT_SWITCH from "./agent/agent-switch.txt"
-import PROMPT_ASK from "./agent/ask.txt"
-import PROMPT_DEBUG from "./agent/debug.txt"
-import PROMPT_ORCHESTRATOR from "./agent/orchestrator.txt"
+import AGENT_SWITCH from "./agent-switch.txt"
+import PROMPT_ASK from "./ask.txt"
+import PROMPT_DEBUG from "./debug.txt"
+import PROMPT_ORCHESTRATOR from "./orchestrator.txt"
 
-// Kilo's v1 agent set on the v2 agent registry. This runs before the config plugins, so a user
-// agent with the same ID merges over these built-ins and its fields and rules win, as in v1.
+// Kilo's v1 agent set on the v2 agent registry. The Kilo host registers `Plugin` after the native
+// agent plugins and before the config plugins, so a user agent with the same ID merges over these
+// built-ins and its fields and rules win, as in v1. It registers `Ceiling` in the post phase, after
+// the config plugins.
 
 const build = Agent.ID.make("build")
 const code = Agent.ID.make("code")
@@ -58,7 +62,9 @@ const readable: Table = {
 }
 
 // Default shell rules for agents that may change the workspace: ask before a command unless it
-// only reads or does simple file housekeeping.
+// only reads or does simple file housekeeping. v1 merged them into the shared agent defaults.
+// kilo_port(unattributed:agent:655072363498)
+// kilo_port(unattributed:agent:161afe543464)
 const shell: Table = {
   "*": "ask",
   ...readable,
@@ -148,6 +154,8 @@ export const Plugin = define({
     // Agents that exist before user config. Only their catch-all edit rule describes them reliably.
     const builtins = new Set<string>()
 
+    // v1 patched the agent map in agent.ts: build renamed to code, debug, orchestrator and ask added, plan limited.
+    // kilo_port(unattributed:agent:b6727a425792)
     yield* ctx.agent.transform((editor) => {
       // v1 renamed the native build agent to code. The TUI shows the title-cased ID, so this shows "Code".
       const source = editor.get(build)
@@ -156,10 +164,15 @@ export const Plugin = define({
         item.name = Agent.Name.make("Code")
         item.permissions.push(...rules("shell", shell))
       })
+      // kilo_port(unattributed:agent:6f9571fe6129)
+      // kilo_port(unattributed:agent:a91ca8efa1b6)
       editor.default(code)
       const codeInfo = editor.get(code)
       // v1 resolved `build` to `code`. A hidden copy keeps sessions, commands and clients that still
-      // name `build` working as Code without a second Code entry in the agent list.
+      // name `build` working as Code without a second Code entry in the agent list. A hidden agent is
+      // never the default, so `default_agent: "build"` falls back to Code, the first selectable agent.
+      // kilo_port(unattributed:agent:55cce67688d4)
+      // kilo_port(unattributed:agent:80e846e9fd1c)
       editor.update(build, (item) => {
         if (codeInfo) Object.assign(item, structuredClone(codeInfo))
         item.hidden = true
@@ -243,26 +256,41 @@ export const Plugin = define({
   }),
 })
 
-// Runs after the config plugins. v1 reapplied the read-only limits after global config rules
-// (#12053), so a broad global allow cannot open shell, edit or delegation in Ask and Plan, or shell in
-// Orchestrator. Rules configured for one agent by ID still come last, which keeps them the opt-in.
+// Runs in the post phase, after the config plugins and the other upstream post plugins. v1 reapplied
+// the read-only limits after global config rules (#12053), so a broad global allow cannot open shell,
+// edit or delegation in Ask and Plan, or shell in Orchestrator. Rules configured for one agent by ID
+// still come after the limits, which keeps them the opt-in.
 export const Ceiling = define({
   id: "kilo.agent.ceiling",
   effect: Effect.fn(function* (ctx) {
     const guard = guards(yield* Global.Service)
     yield* ctx.agent.transform((editor) => {
-      const global = editor.get(probe)?.permissions ?? []
+      // The global config rules, then the rules that later post plugins append to every agent (the
+      // browser plugin's deny).
+      const appended = editor.get(probe)?.permissions ?? []
       editor.remove(probe)
       for (const [id, base, ceiling] of [
-        ["ask", guard.ask, seal(guard.ask, global)],
-        ["plan", guard.plan, seal(guard.plan, global)],
-        ["orchestrator", guard.orchestrator, [...guard.orchestrator, ...global, rule("shell", "*", "deny")]],
+        ["ask", guard.ask, (global: Permission.Rule[]) => seal(guard.ask, global)],
+        ["plan", guard.plan, (global: Permission.Rule[]) => seal(guard.plan, global)],
+        [
+          "orchestrator",
+          guard.orchestrator,
+          (global: Permission.Rule[]) => [...guard.orchestrator, ...global, rule("shell", "*", "deny")],
+        ],
       ] as const) {
         const agent = editor.get(id)
         // Leave an agent alone when config replaced the Kilo built-in with its own definition.
-        if (!agent || !starts(agent.permissions, [...base, ...global])) continue
+        if (!agent || !starts(agent.permissions, base)) continue
+        const own = agent.permissions.slice(base.length)
+        const split = boundary(own, appended)
+        if (split === undefined) continue
+        const tail = appended.slice(split)
         editor.update(id, (item) => {
-          item.permissions = [...structuredClone(ceiling), ...item.permissions.slice(base.length + global.length)]
+          item.permissions = structuredClone([
+            ...ceiling(appended.slice(0, split)),
+            ...own.slice(split, own.length - tail.length),
+            ...tail,
+          ])
         })
       }
     })
@@ -328,6 +356,20 @@ function seal(guard: Permission.Rule[], global: readonly Permission.Rule[]) {
     ...guard.filter((entry) => sealed(entry) || (entry.action === "subagent" && entry.effect === "deny")),
     ...global.filter((entry) => entry.effect === "deny"),
   ]
+}
+
+/**
+ * Where the global config rules end in the probe's rules. After its guard, a guarded agent holds the
+ * global rules, its own config rules, then the rules that later plugins appended to every agent, which
+ * also end the probe's rules. The global part is the longest probe prefix that fits.
+ */
+function boundary(own: readonly Permission.Rule[], appended: readonly Permission.Rule[]) {
+  if (own.length < appended.length) return undefined
+  return Array.from({ length: appended.length + 1 }, (_, index) => appended.length - index).find(
+    (split) =>
+      starts(own, appended.slice(0, split)) &&
+      starts(own.slice(own.length - appended.length + split), appended.slice(split)),
+  )
 }
 
 function starts(rules: readonly Permission.Rule[], prefix: readonly Permission.Rule[]) {
