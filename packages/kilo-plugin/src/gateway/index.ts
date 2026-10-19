@@ -18,22 +18,25 @@ import {
   KiloTrpc,
 } from "@kilocode/gateway-core"
 import type { ConnectionInfo } from "@opencode/client"
+// Core internals with no public surface: the global Bus (the organization event reaches the plugin instances of other
+// Locations) and the upstream reasoning variants of a model.
+import { Bus } from "@opencode/core/bus"
+import { Variant } from "@opencode/core/variant"
 import type { IntegrationOAuthMethodRegistration } from "@opencode/plugin/effect/integration"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Credential } from "@opencode/schema/credential"
 import { IntegrationID, IntegrationMethodID } from "@opencode/schema/integration-id"
+import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { Model } from "@opencode/schema/model"
 import { Money } from "@opencode/schema/money"
 import { Provider } from "@opencode/schema/provider"
 import { Global } from "@opencode/util/global"
 import { createHash, randomUUID } from "node:crypto"
 import { Clock, Duration, Effect, Fiber, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
-import { Bus } from "../bus.js"
-import { Variant } from "../variant.js"
-import { KiloGatewayRpc } from "./gateway-rpc.js"
 
 // v2 adapter for the Kilo Gateway (issue #14991, PRs 1-3: login, teams, catalog authority, requests, and errors).
-// Kilo logic lives in @kilocode/gateway-core; this file maps it onto the v2 plugin API.
+// Kilo logic lives in @kilocode/gateway-core; this file maps it onto the v2 plugin API. The `kilocode.gateway` RPC
+// contract lives in `@opencode/schema/kilocode/gateway`, so clients import it without Core or this package.
 const id = Provider.ID.make("kilo")
 const integrationID = IntegrationID.make("kilo")
 const methodID = IntegrationMethodID.make("device")

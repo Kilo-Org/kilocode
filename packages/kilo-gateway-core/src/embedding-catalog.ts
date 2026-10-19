@@ -1,7 +1,8 @@
 import { Schema } from "effect"
 
-// One definition for the Gateway embedding catalog, shared by the HTTP decoder in `models.ts` and the
-// `kilocode.gateway` RPC contract. Keep this module free of runtime imports so the RPC contract stays light.
+// The Gateway embedding catalog as the Kilo API sends it, decoded in `models.ts`. The `kilocode.gateway` RPC contract
+// (packages/schema/src/kilocode/gateway.ts) declares the same shape for its `models.embeddings` answer; this package
+// imports nothing from OpenCode, so packages/kilo-plugin/test/gateway.test.ts checks that the two stay equal.
 export const EmbeddingCatalog = Schema.Struct({
   defaultModel: Schema.String,
   models: Schema.Array(

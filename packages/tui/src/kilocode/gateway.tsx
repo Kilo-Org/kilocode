@@ -1,8 +1,8 @@
-// Kilo account choice in the TUI: the personal account or a team, as in v1. The `kilocode.gateway` core
+// Kilo account choice in the TUI: the personal account or a team, as in v1. The `kilocode.gateway` Kilo
 // plugin stores the choice and sends it as the team header.
 import type { LocationRef } from "@opencode/client"
-import { KiloGatewayRpc } from "@opencode/core/kilocode/gateway-rpc"
 import { Plugin } from "@opencode/plugin/tui"
+import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { createSignal, onMount, Show } from "solid-js"
 import { useClient } from "../context/client"
 import { useTheme } from "../context/theme"
