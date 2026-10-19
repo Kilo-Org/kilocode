@@ -88,7 +88,10 @@ const load = async (host: boolean) => {
   })
   const [output, code] = await Promise.all([new Response(child.stdout).text(), child.exited])
   if (code !== 0) throw new Error(`module load run exited with ${code}`)
-  return Number(output.trim())
+  // An import-time log or empty output must fail the ratchet, not turn into a passing NaN.
+  const value = Number(output.trim())
+  if (!Number.isFinite(value)) throw new Error(`module load run printed ${JSON.stringify(output)} instead of a number`)
+  return value
 }
 await load(false)
 await load(true)
@@ -115,6 +118,12 @@ const plugins = ids.map((id) => ({
 }))
 const overhead = median(samples.map((sample) => sample.host)) - median(samples.map((sample) => sample.upstream))
 const failures = [
+  // A plugin that misses one run must not pass on a lower median.
+  ...ids.flatMap((id) =>
+    samples.flatMap((sample, index) =>
+      sample.plugins.has(id) ? [] : [`${id}: did not activate in measured run ${index + 1}`],
+    ),
+  ),
   ...plugins.flatMap((plugin) => {
     if (plugin.budget === undefined) return [`${plugin.id}: no budget in startup-budget.json`]
     if (plugin.median > plugin.budget)
