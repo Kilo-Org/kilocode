@@ -191,10 +191,12 @@ export const {
     }
 
     // pending asks are one-shot events; refetch them so an evicted or missed ask cannot strand a session
-    // skill shell batches and sandbox escalations need an interactive human decision:
+    // skill shell batches, sandbox escalations and hook asks need an interactive human decision:
     // the server refuses machine replies for them, mirroring temporaryPermission in cli/cmd/run/permission.shared
     const temporaryPermission = (request: PermissionRequest) =>
-      request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true
+      request.metadata?.["skillShell"] === true ||
+      request.metadata?.["sandboxEscalation"] === true ||
+      request.metadata?.["hookAsk"] === true // kilocode_change - a PreToolUse hook ask is never machine-approved
     function mergePending<T extends PermissionRequest | QuestionRequest>(
       list: T[],
       current: Record<string, T[]>,

@@ -5,6 +5,7 @@ import { Effect, Fiber } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { Global } from "@opencode-ai/core/global"
 import { Config } from "@/config/config"
+import { disposeInstance } from "@/effect/instance-registry"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { KiloHooks } from "@/kilocode/hooks/hooks"
 import { KiloHookLifecycle } from "@/kilocode/hooks/lifecycle"
@@ -363,6 +364,58 @@ describe("ConfigChange", () => {
         event: "ConfigChange",
         reason: "Kilo config only",
       })
+    }),
+  )
+})
+
+describe("ConfigChange and instance disposal", () => {
+  it.instance("a global write that disposes the instance right after still runs it, once", () =>
+    Effect.gen(function* () {
+      const { directory } = yield* boot()
+      const file = marker()
+      // Slow enough to still be running when the instance goes away.
+      const slow = exec(
+        `const fs=require('fs');const input=fs.readFileSync(0,'utf8');setTimeout(()=>fs.appendFileSync(${JSON.stringify(file)},input.trim()+'\\n'),300)`,
+      )
+      yield* hooks({ ConfigChange: [{ hooks: [slow] }] })
+      yield* subscribe()
+      // What PATCH /global/config does: write, then dispose the instances.
+      yield* (yield* Config.Service).updateGlobal({ autoupdate: false }, { dispose: false })
+      yield* Effect.promise(() => disposeInstance(directory))
+      yield* until(() => lines(file).length === 1)
+      yield* settle()
+      expect(lines(file).map((item) => item.source)).toEqual(["user_settings"])
+    }),
+  )
+
+  it.instance("a global write that disposes the instance still runs the managed and the global hooks, once each", () =>
+    Effect.gen(function* () {
+      const { directory } = yield* boot()
+      const file = marker()
+      const other = marker()
+      // Trusted layers other than the global config files: the managed config directory.
+      const managed = temp()
+      fs.writeFileSync(
+        path.join(managed, "kilo.json"),
+        JSON.stringify({ hooks: { ConfigChange: [{ hooks: [record(file)] }] } }),
+      )
+      const previous = process.env.KILO_TEST_MANAGED_CONFIG_DIR
+      process.env.KILO_TEST_MANAGED_CONFIG_DIR = managed
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          if (previous === undefined) delete process.env.KILO_TEST_MANAGED_CONFIG_DIR
+          else process.env.KILO_TEST_MANAGED_CONFIG_DIR = previous
+          fs.rmSync(managed, { recursive: true, force: true })
+        }),
+      )
+      yield* hooks({ ConfigChange: [{ hooks: [record(other)] }] })
+      yield* subscribe()
+      yield* (yield* Config.Service).updateGlobal({ autoupdate: false }, { dispose: false })
+      yield* Effect.promise(() => disposeInstance(directory))
+      yield* until(() => lines(file).length === 1 && lines(other).length === 1)
+      yield* settle()
+      expect(lines(file).map((item) => item.source)).toEqual(["user_settings"])
+      expect(lines(other).map((item) => item.source)).toEqual(["user_settings"])
     }),
   )
 })

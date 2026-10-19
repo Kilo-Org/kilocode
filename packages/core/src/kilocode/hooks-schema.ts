@@ -20,11 +20,11 @@ const Handler = Schema.Struct({
   }),
   timeout: Schema.optional(PositiveInt).annotate({
     description:
-      "Timeout in seconds. Default: 600; 30 for UserPromptSubmit and the model-switch events; 10 for BranchName; see the docs for the rest. A hook that times out does not block, except PreModelSwitch.",
+      'Timeout in seconds. Default: 600; 30 for UserPromptSubmit and the model-switch events; 10 for BranchName; see the docs for the rest. A hook that times out does not block unless onFailure is "block"; on PreModelSwitch a timeout always blocks.',
   }),
   onFailure: Schema.optional(Schema.Literals(["continue", "block"])).annotate({
     description:
-      'What happens when the hook fails (cannot start, times out, exits with a code other than 0 or 2, prints invalid JSON): "continue" (default) lets the action proceed, "block" blocks it on events that can block.',
+      'What happens when the hook fails (cannot start, times out, exits with a code other than 0 or 2, prints invalid JSON): "continue" (default) lets the action proceed, "block" blocks it (on PermissionRequest: denies). Honored only on PreToolUse, PostToolBatch, PermissionRequest, TaskCreated, UserPromptSubmit, UserPromptExpansion, PreModelSwitch, PreCompact, WakeupFire, WorktreeSetup, CommitMessage and BranchName.',
   }),
   async: Schema.optional(Schema.Boolean).annotate({
     description: "Run in the background without waiting. Output, exit code and onFailure are ignored.",

@@ -406,10 +406,6 @@ const layer: Layer.Layer<
       }
 
       const directory = yield* canonical(input.directory)
-      // kilocode_change start - WorktreeTeardown hooks run once, before either removal path
-      if (directory !== (yield* canonical(ctx.worktree)))
-        yield* KiloHookWorktree.teardown({ worktree: directory, root: ctx.worktree })
-      // kilocode_change end
 
       // Preserve the loaded path casing for the store cache; `directory` is lowercased on Windows.
       if (directory !== (yield* canonical(ctx.worktree))) yield* store.disposeDirectory(input.directory)
@@ -421,6 +417,11 @@ const layer: Layer.Layer<
 
       const entries = parseWorktreeList(list.text)
       const entry = yield* locateWorktree(entries, directory)
+
+      // kilocode_change start - WorktreeTeardown hooks run once, for a worktree git lists, before it is removed
+      if (entry?.path && directory !== (yield* canonical(ctx.worktree)))
+        yield* KiloHookWorktree.teardown({ worktree: entry.path, root: ctx.worktree })
+      // kilocode_change end
 
       if (!entry?.path) {
         yield* clearPtys(directory, workspaceID) // kilocode_change

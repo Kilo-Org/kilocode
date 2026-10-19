@@ -1,7 +1,11 @@
+import path from "path"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { FSUtil } from "@opencode-ai/core/fs-util"
+import { Global } from "@opencode-ai/core/global"
 import type { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import type { SessionV1 } from "@opencode-ai/core/v1/session"
+import { ConfigManaged } from "@/config/managed"
 import { KiloSession } from "@/kilocode/session"
 import type { Session } from "@/session/session"
 import type { SessionID } from "@/session/schema"
@@ -96,6 +100,25 @@ export function mode(ruleset: readonly PermissionV1.Rule[] | undefined, agent?: 
   return "default"
 }
 
+/**
+ * Claude Code's `memory_type` for an instruction file: "Managed" for the managed config directory,
+ * "User" for Claude Code and Kilo config directories, else "Project" (repositories usually live
+ * under the home directory, so the home directory alone does not make a file a user file).
+ */
+export function memory(file: string) {
+  const full = path.resolve(file)
+  if (FSUtil.contains(ConfigManaged.managedConfigDir(), full)) return "Managed"
+  const home = Global.Path.home
+  const user = [
+    path.join(home, ".claude"),
+    Global.Path.config,
+    path.join(home, ".kilo"),
+    path.join(home, ".kilocode"),
+    ...(Flag.KILO_CONFIG_DIR ? [Flag.KILO_CONFIG_DIR] : []),
+  ]
+  return user.some((dir) => FSUtil.contains(dir, full)) ? "User" : "Project"
+}
+
 const CONTINUATIONS = new Set(["Stop", "SubagentStop"])
 
 function hook(part: SessionV1.Part) {
@@ -109,7 +132,7 @@ function hook(part: SessionV1.Part) {
  * not synthetic text and no background part. Goal ticks, wakeups, cron fires, background results
  * and plan follow-ups are unattended. Unknown turns count as attended.
  */
-export function attended(messages: readonly SessionV1.WithParts[], userID?: string): boolean {
+function attended(messages: readonly SessionV1.WithParts[], userID?: string): boolean {
   if (!userID) return true
   const users = messages.filter((msg) => msg.info.role === "user")
   const at = users.findIndex((msg) => msg.info.id === userID)
@@ -118,7 +141,47 @@ export function attended(messages: readonly SessionV1.WithParts[], userID?: stri
   if (!turn) return true
   if (turn.parts.some((part) => "metadata" in part && isRecord(part.metadata) && part.metadata.background === true))
     return false
-  return turn.parts.some((part) => part.type !== "text" || !part.synthetic)
+  return turn.parts.some((part) => part.type !== "text" || !part.synthetic || human(part))
+}
+
+/** Whether a synthetic text part is a human prompt that a compaction replay copied (see `replayed`). */
+function human(part: SessionV1.Part) {
+  return "metadata" in part && isRecord(part.metadata) && part.metadata.kilo_human === true
+}
+
+/**
+ * The metadata of a text part that a compaction replay copies from `part`: a part a human wrote (or
+ * a replay of one) is marked, since the replay makes every text part synthetic and the turn would
+ * otherwise count as unattended.
+ */
+export function replayed(part: SessionV1.Part) {
+  const metadata = "metadata" in part && isRecord(part.metadata) ? part.metadata : undefined
+  if (part.type === "text" && part.synthetic && !human(part)) return metadata
+  return { ...metadata, kilo_human: true }
+}
+
+/**
+ * The metadata of the one synthetic summary part that stands in for an oversized replayed prompt: it
+ * keeps the mark when a human wrote the prompt, since the summary carries no metadata of its own. A
+ * Stop hook continuation is not marked, as it never roots a turn.
+ */
+export function summary(message: SessionV1.WithParts) {
+  if (message.parts.some((part) => CONTINUATIONS.has(hook(part) ?? ""))) return undefined
+  return attended([message], message.info.id) ? { kilo_human: true } : undefined
+}
+
+/**
+ * The metadata of the auto-continue message of a compaction: it carries the attendance of the turn
+ * being compacted, since the message is synthetic text and would otherwise end the human's turn.
+ * `userID` is the compaction's own user message, which is skipped: it is not a prompt.
+ */
+export function continued(messages: readonly SessionV1.WithParts[], userID: string) {
+  const at = messages.findIndex((msg) => msg.info.id === userID)
+  const before = at < 0 ? messages : messages.slice(0, at)
+  const turn = before.findLast(
+    (msg) => msg.info.role === "user" && !msg.parts.some((part) => part.type === "compaction"),
+  )
+  return attended(before, turn?.info.id) ? { kilo_human: true } : {}
 }
 
 // The latest step's attendance per session, so subagents inherit their parent turn's (bounded).

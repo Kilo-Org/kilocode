@@ -40,14 +40,6 @@ type Lineage = {
   permission?: PermissionV1.Ruleset
 }
 
-function keep<T>(map: Map<string, T>, key: string, value: T, limit = LIMIT) {
-  map.delete(key)
-  map.set(key, value)
-  if (map.size <= limit) return
-  const oldest = map.keys().next()
-  if (!oldest.done) map.delete(oldest.value)
-}
-
 /** The session's hooks for an event (empty when none is configured anywhere); fails open. */
 function resolve(sessionID: SessionID, event: Event, input: Services) {
   return KiloHooks.resolve(sessionID, event).pipe(
@@ -136,7 +128,7 @@ const vetoes = new Map<string, string>()
 
 /** Remembers that a PreCompact hook vetoed auto-compaction for the turn of user message `user`. */
 export function veto(user: string, reason: string): void {
-  keep(vetoes, turn(user), reason, VETOES)
+  KiloHooks.keep(vetoes, turn(user), reason, VETOES)
 }
 
 /** The reason a PreCompact hook vetoed auto-compaction for the turn of `user`, if one did. */
@@ -316,7 +308,7 @@ export const stop = Effect.fn("KiloHookLoop.stop")(function* (input: {
     synthetic: true,
     metadata: { hook: { event, streak: streak + 1 } },
   } satisfies MessageV2.TextPart)
-  keep(turns, msg.id, turn(input.user.id))
+  KiloHooks.keep(turns, msg.id, turn(input.user.id), LIMIT)
   // Queued prompts hide later user messages from the running turn; this one belongs to it.
   KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
   return true
@@ -356,7 +348,7 @@ export const batch = Effect.fn("KiloHookLoop.batch")(function* (input: {
   if (held && (!held.prompt || held.prompt === input.message.parentID)) {
     const text = `A ${held.event} hook stopped the turn: ${held.reason.trim() || "No reason given."}`
     yield* KiloHooks.notice(input.events, input.sessionID, text)
-    keep(reasons, input.sessionID, text)
+    KiloHooks.keep(reasons, input.sessionID, text, LIMIT)
     return true
   }
   // A compaction step does not reach the next model call, unless a PreCompact hook vetoed the
@@ -419,7 +411,7 @@ export const batch = Effect.fn("KiloHookLoop.batch")(function* (input: {
   if (reason === undefined) return false
   const text = `PostToolBatch hook stopped the turn: ${reason}`
   yield* KiloHooks.notice(input.events, input.sessionID, text)
-  keep(reasons, input.sessionID, text)
+  KiloHooks.keep(reasons, input.sessionID, text, LIMIT)
   return true
 })
 
@@ -484,7 +476,7 @@ const halts = new Map<string, { reason: string; event: string; prompt?: string }
  * `prompt` is the turn's user message id, so a halt left by a turn that ended early is dropped.
  */
 export function halt(sessionID: string, reason: string, source?: { event?: string; prompt?: string }): void {
-  keep(halts, sessionID, { reason, event: source?.event ?? "tool", prompt: source?.prompt })
+  KiloHooks.keep(halts, sessionID, { reason, event: source?.event ?? "tool", prompt: source?.prompt }, LIMIT)
 }
 
 // Why a hook stopped a session's last turn, for the goal runner.

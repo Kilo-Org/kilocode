@@ -232,6 +232,21 @@ describe("condition", () => {
     ])
       expect(KiloHooks.condition("Bash(rm *)", bash(command))).toBe(true)
     expect(KiloHooks.condition("Bash(rm *)", bash("ls -la && git status | wc -l &"))).toBe(false)
+    // Extra spaces and a program given by path are the same command to the shell: the guard still runs.
+    expect(KiloHooks.condition("Bash(git push:*)", bash("git  push origin main"))).toBe(true)
+    expect(KiloHooks.condition("Bash(git push:*)", bash("/usr/bin/git push origin main"))).toBe(true)
+    expect(KiloHooks.condition("Bash(rm -rf:*)", bash("rm  -rf build"))).toBe(true)
+    // A rule written with extra spaces collapses the same way, so it still matches (and still skips).
+    expect(KiloHooks.condition("Bash(git  push:*)", bash("git push origin main"))).toBe(true)
+    expect(KiloHooks.condition("Bash(git  push:*)", bash("git  push origin main"))).toBe(true)
+    expect(KiloHooks.condition("Bash(rm  -rf *)", bash("rm  -rf /"))).toBe(true)
+    expect(KiloHooks.condition("Bash(git  push:*)", bash("git status"))).toBe(false)
+    // A glob or another letter case can name the same program too (`GIT` runs git on a case-insensitive filesystem).
+    expect(KiloHooks.condition("Bash(git push:*)", bash("GIT push origin main"))).toBe(true)
+    expect(KiloHooks.condition("Bash(git push:*)", bash("Git push origin main"))).toBe(true)
+    expect(KiloHooks.condition("Bash(git push:*)", bash("gi* push origin main"))).toBe(true)
+    expect(KiloHooks.condition("Bash(rm -rf:*)", bash("RM -rf build"))).toBe(true)
+    expect(KiloHooks.condition("Bash(git push:*)", bash("ls -la"))).toBe(false)
     expect(KiloHooks.condition("Bash(git push *)", bash("FOO=bar git push origin"))).toBe(true)
     expect(KiloHooks.condition("not a rule!", bash("ls"))).toBe(true)
     expect(KiloHooks.condition("Bash", bash("ls"))).toBe(true)
@@ -389,6 +404,23 @@ describe("payload", () => {
     expect(KiloHookPayload.alias("debug")).toBe("debug")
   })
 
+  test("marks the summary of an oversized replayed prompt only when a human wrote the prompt", () => {
+    const message = (part: Record<string, unknown>) =>
+      ({
+        info: { id: "msg_1", role: "user" },
+        parts: [{ id: "prt_1", messageID: "msg_1", type: "text", text: "run it", ...part }],
+      }) as unknown as Parameters<typeof KiloHookPayload.summary>[0]
+    expect(KiloHookPayload.summary(message({}))).toEqual({ kilo_human: true })
+    // A prompt that was already a marked replay keeps its mark.
+    expect(KiloHookPayload.summary(message({ synthetic: true, metadata: { kilo_human: true } }))).toEqual({
+      kilo_human: true,
+    })
+    // Goal ticks, wakeups and other synthetic prompts, background results and Stop continuations stay unattended.
+    expect(KiloHookPayload.summary(message({ synthetic: true }))).toBeUndefined()
+    expect(KiloHookPayload.summary(message({ metadata: { background: true } }))).toBeUndefined()
+    expect(KiloHookPayload.summary(message({ synthetic: true, metadata: { hook: { event: "Stop" } } }))).toBeUndefined()
+  })
+
   test("reports bypassPermissions only for the broad YOLO rule", () => {
     expect(KiloHookPayload.mode([{ permission: "*", pattern: "*", action: "allow" }], "code")).toBe("bypassPermissions")
     expect(KiloHookPayload.mode([{ permission: "bash", pattern: "*", action: "allow" }], "plan")).toBe("plan")
@@ -408,6 +440,23 @@ describe("payload", () => {
     expect(KiloHookPayload.model({ providerID: "a", modelID: "claude-opus-4-20250514" }).canonical).toBe(
       "claude-opus-4",
     )
+  })
+
+  test("tells where an instruction file comes from: Managed before User, else Project", () => {
+    const prev = process.env.KILO_TEST_MANAGED_CONFIG_DIR
+    const managed = path.join(Global.Path.config, "managed")
+    // A managed directory below a user config directory is Managed, not User.
+    process.env.KILO_TEST_MANAGED_CONFIG_DIR = managed
+    try {
+      expect(KiloHookPayload.memory(path.join(managed, "AGENTS.md"))).toBe("Managed")
+      expect(KiloHookPayload.memory(path.join(Global.Path.config, "AGENTS.md"))).toBe("User")
+      expect(KiloHookPayload.memory(path.join(Global.Path.home, ".claude", "CLAUDE.md"))).toBe("User")
+      expect(KiloHookPayload.memory(path.join(Global.Path.home, "repo", "AGENTS.md"))).toBe("Project")
+      expect(KiloHookPayload.memory(path.join(Global.Path.home, ".claude-other", "CLAUDE.md"))).toBe("Project")
+    } finally {
+      if (prev === undefined) delete process.env.KILO_TEST_MANAGED_CONFIG_DIR
+      else process.env.KILO_TEST_MANAGED_CONFIG_DIR = prev
+    }
   })
 
   test("maps assistant errors to StopFailure error types", () => {
@@ -810,18 +859,23 @@ describe("running hooks", () => {
     expect(value.stderr.trim()).toBe("bash-ok")
   })
 
-  test("tells hooks the event and nesting depth and hides an outer CLAUDE_ENV_FILE", async () => {
+  test("tells hooks the event and nesting depth, keeps them off the daemon and hides an outer CLAUDE_ENV_FILE", async () => {
     const prev = process.env.CLAUDE_ENV_FILE
     process.env.CLAUDE_ENV_FILE = "/tmp/outer-claude-env"
     try {
       const value = await KiloHooks.run(
         exec(
-          "process.stdout.write(JSON.stringify({ event: process.env.KILO_HOOK_EVENT, depth: process.env.KILO_HOOK_DEPTH, env: process.env.CLAUDE_ENV_FILE ?? null }))",
+          "process.stdout.write(JSON.stringify({ event: process.env.KILO_HOOK_EVENT, depth: process.env.KILO_HOOK_DEPTH, daemon: process.env.KILO_NO_DAEMON, env: process.env.CLAUDE_ENV_FILE ?? null }))",
         ),
         {},
         { cwd: process.cwd(), event: "Stop" },
       )
-      expect(JSON.parse(value.stdout)).toEqual({ event: "Stop", depth: String(KiloHooks.DEPTH + 1), env: null })
+      expect(JSON.parse(value.stdout)).toEqual({
+        event: "Stop",
+        depth: String(KiloHooks.DEPTH + 1),
+        daemon: "1",
+        env: null,
+      })
     } finally {
       if (prev === undefined) delete process.env.CLAUDE_ENV_FILE
       else process.env.CLAUDE_ENV_FILE = prev

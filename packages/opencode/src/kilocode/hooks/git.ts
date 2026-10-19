@@ -22,7 +22,7 @@ function resolve(event: KiloHooks.Event, services: Services, sessionID?: Session
 }
 
 /** The last non-empty string `key` in the hooks' `hookSpecificOutput`, in config order. */
-export function rewrite(specific: readonly Record<string, unknown>[], key: string) {
+function rewrite(specific: readonly Record<string, unknown>[], key: string) {
   return specific
     .map((item) => item[key])
     .filter((value): value is string => typeof value === "string" && value.trim() !== "")

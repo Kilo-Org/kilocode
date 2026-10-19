@@ -31,7 +31,7 @@ import { KiloHookSession } from "./session"
 type Parts = SessionPrompt.PromptInput["parts"]
 
 /** A message part before it has an id, as prompt preparation builds them. */
-export type Draft<T> = T extends SessionV1.Part ? Omit<T, "id"> & { id?: string } : never
+type Draft<T> = T extends SessionV1.Part ? Omit<T, "id"> & { id?: string } : never
 
 type Services = {
   config: Config.Interface
@@ -317,7 +317,7 @@ export function submit(
 }
 
 /** Whether `submit` admitted this prompt as a human prompt (the PreModelSwitch gate). */
-export function admitted(input: SessionPrompt.PromptInput): boolean {
+function admitted(input: SessionPrompt.PromptInput): boolean {
   return admissions.has(input)
 }
 
@@ -653,7 +653,7 @@ export function switched(
 }
 
 /** The tool call a prompt attachment counts as for PreToolUse, if it is one. */
-export function target(
+function target(
   part: Extract<SessionPrompt.PromptInput["parts"][number], { type: "file" }>,
   directory: string,
 ):

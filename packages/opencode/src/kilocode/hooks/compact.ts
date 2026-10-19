@@ -30,14 +30,6 @@ const tools = new Map<string, true>()
 // overflow recovery site does not run the hooks a second time.
 const granted = new Map<string, true>()
 
-function keep<T>(map: Map<string, T>, key: string, value: T) {
-  map.delete(key)
-  map.set(key, value)
-  if (map.size <= LIMIT) return
-  const oldest = map.keys().next()
-  if (!oldest.done) map.delete(oldest.value)
-}
-
 /** The session's hooks for a compaction event: the tool context's when given, else resolved; fails open. */
 function hooks(
   sessionID: SessionID,
@@ -131,15 +123,15 @@ export const allow = Effect.fn("KiloHookCompact.allow")(function* (input: {
   // A veto holds for the whole turn: later steps skip compaction without asking again.
   const vetoed = KiloHookLoop.vetoed(input.user)
   if (vetoed !== undefined) {
-    keep(reasons, input.sessionID, vetoed)
+    KiloHooks.keep(reasons, input.sessionID, vetoed, LIMIT)
     return false
   }
   const reason = yield* ask(input)
   if (reason === undefined) {
-    if (input.kilo === "tool") keep(tools, input.sessionID, true)
+    if (input.kilo === "tool") KiloHooks.keep(tools, input.sessionID, true, LIMIT)
     return true
   }
-  keep(reasons, input.sessionID, reason)
+  KiloHooks.keep(reasons, input.sessionID, reason, LIMIT)
   if (input.user && input.trigger === "auto") KiloHookLoop.veto(input.user, reason)
   if (input.manual && input.events)
     yield* KiloHooks.notice(input.events, input.sessionID, `PreCompact hook blocked compaction: ${reason}`)
@@ -162,7 +154,7 @@ export const skip = Effect.fn("KiloHookCompact.skip")(function* (
   granted.delete(message.sessionID)
   if (!message.finish || message.error) return false
   if (yield* allow({ sessionID: message.sessionID, user, trigger: "auto", ...input })) {
-    keep(granted, message.sessionID, true)
+    KiloHooks.keep(granted, message.sessionID, true, LIMIT)
     return false
   }
   log.info("a PreCompact veto keeps the turn going uncompacted", { sessionID: message.sessionID })

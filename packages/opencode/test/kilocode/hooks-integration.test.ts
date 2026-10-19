@@ -5,7 +5,7 @@
 import { describe, expect } from "bun:test"
 import fs from "fs"
 import path from "path"
-import { Effect, Layer } from "effect"
+import { Effect, Fiber, Layer } from "effect"
 import { NodeHttpServer, NodeServices } from "@effect/platform-node"
 import { HttpClient, HttpClientRequest, HttpRouter, type HttpServer } from "effect/unstable/http"
 import type { ConfigError } from "effect/Config"
@@ -229,6 +229,140 @@ describe("compaction hooks", () => {
           .at(-1)
         expect(latest?.parts.some((part) => part.type === "text" && part.text.includes("STARTUP-FACTS-42"))).toBe(true)
         expect(texts([latest!]).join("\n")).toContain("second")
+      }),
+    30_000,
+  )
+})
+
+describe("attendance after an overflow replay", () => {
+  it.instance(
+    "a human prompt that overflows on its first step and is replayed can still be asked by a PreToolUse hook",
+    () =>
+      Effect.gen(function* () {
+        const { llm, prompt, chat } = yield* boot()
+        yield* hooks({
+          PreToolUse: [
+            {
+              matcher: "Bash",
+              hooks: [
+                exec(reply({ hookSpecificOutput: { permissionDecision: "ask", permissionDecisionReason: "risky" } })),
+              ],
+            },
+          ],
+        })
+        yield* llm.text("one")
+        yield* prompt.prompt({ sessionID: chat.id, agent: "build", parts: [text("first")] })
+        // The provider rejects the next request as too large: compaction replays the prompt, and the
+        // replay (all synthetic text) is the user message of every later step of the turn.
+        yield* llm.error(400, overflow)
+        yield* llm.text("the summary")
+        yield* llm.tool("bash", { command: "true", description: "noop" })
+        yield* llm.text("done")
+        const fiber = yield* prompt
+          .prompt({ sessionID: chat.id, agent: "build", parts: [text("run it")] })
+          .pipe(Effect.forkChild)
+        const permission = yield* Permission.Service
+        // Unattended, the ask would be refused ("nobody can answer") and no prompt would ever appear.
+        const asked = yield* pollWithTimeout(
+          permission.list().pipe(Effect.map((list) => list.find((item) => item.metadata?.hookAsk === true))),
+          "no forced hook prompt after the replay",
+          "10 seconds",
+        )
+        expect(asked.metadata).toMatchObject({ hookAsk: true, reason: "risky" })
+        yield* permission.reply({ requestID: asked.id, reply: "reject" })
+        yield* Fiber.join(fiber)
+      }),
+    30_000,
+  )
+
+  it.instance(
+    "a human prompt too large to replay, replaced by its summary, can still be asked by a PreToolUse hook",
+    () =>
+      Effect.gen(function* () {
+        const { llm, prompt, sessions, chat } = yield* boot()
+        yield* hooks({
+          PreToolUse: [
+            {
+              matcher: "Bash",
+              hooks: [
+                exec(reply({ hookSpecificOutput: { permissionDecision: "ask", permissionDecisionReason: "risky" } })),
+              ],
+            },
+          ],
+        })
+        yield* llm.text("one")
+        yield* prompt.prompt({ sessionID: chat.id, agent: "build", parts: [text("first")] })
+        // The prompt is far over the replay budget, so the replay is one synthetic summary part
+        // instead of the prompt's own parts.
+        yield* llm.error(400, overflow)
+        yield* llm.text("the summary")
+        yield* llm.text("the replay summary")
+        yield* llm.tool("bash", { command: "true", description: "noop" })
+        yield* llm.text("done")
+        const fiber = yield* prompt
+          .prompt({ sessionID: chat.id, agent: "build", parts: [text("run it " + "x".repeat(400_000))] })
+          .pipe(Effect.forkChild)
+        const permission = yield* Permission.Service
+        // Unattended, the ask would be refused ("nobody can answer") and no prompt would ever appear.
+        const asked = yield* pollWithTimeout(
+          permission.list().pipe(Effect.map((list) => list.find((item) => item.metadata?.hookAsk === true))),
+          "no forced hook prompt after the oversized replay",
+          "10 seconds",
+        )
+        expect(asked.metadata).toMatchObject({ hookAsk: true, reason: "risky" })
+        // The replayed message is the summary, not the prompt.
+        const replay = (yield* sessions.messages({ sessionID: chat.id }))
+          .filter((msg) => msg.info.role === "user")
+          .at(-1)
+        const part = replay?.parts.find((item) => item.type === "text")
+        expect(part?.type === "text" ? part.text : "").toContain("the replay summary")
+        yield* permission.reply({ requestID: asked.id, reply: "reject" })
+        yield* Fiber.join(fiber)
+      }),
+    30_000,
+  )
+
+  it.instance(
+    "a human turn that overflows after a tool step, with no replay, can still be asked by a PreToolUse hook",
+    () =>
+      Effect.gen(function* () {
+        const { llm, prompt, chat } = yield* boot()
+        yield* hooks({
+          PreToolUse: [
+            {
+              matcher: "Bash",
+              hooks: [
+                {
+                  ...exec(
+                    reply({ hookSpecificOutput: { permissionDecision: "ask", permissionDecisionReason: "risky" } }),
+                  ),
+                  if: "Bash(echo risky*)",
+                },
+              ],
+            },
+          ],
+        })
+        // The turn makes progress (a tool step), then the provider rejects the next request as too
+        // large: the compaction does not replay the prompt, it writes an auto-continue message, which
+        // is the user message of every later step of the turn.
+        yield* llm.tool("bash", { command: "echo safe", description: "noop" })
+        yield* llm.error(400, overflow)
+        yield* llm.text("the summary")
+        yield* llm.tool("bash", { command: "echo risky", description: "noop" })
+        yield* llm.text("done")
+        const fiber = yield* prompt
+          .prompt({ sessionID: chat.id, agent: "build", parts: [text("run it")] })
+          .pipe(Effect.forkChild)
+        const permission = yield* Permission.Service
+        // Unattended, the ask would be refused ("nobody can answer") and no prompt would ever appear.
+        const asked = yield* pollWithTimeout(
+          permission.list().pipe(Effect.map((list) => list.find((item) => item.metadata?.hookAsk === true))),
+          "no forced hook prompt after the auto-continue",
+          "10 seconds",
+        )
+        expect(asked.metadata).toMatchObject({ hookAsk: true, reason: "risky" })
+        yield* permission.reply({ requestID: asked.id, reply: "reject" })
+        yield* Fiber.join(fiber)
       }),
     30_000,
   )

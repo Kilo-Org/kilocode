@@ -51,6 +51,17 @@ function protectedPermission(id: string, sessionID = childID): PermissionRequest
   }
 }
 
+function hookPermission(id: string, sessionID = childID): PermissionRequest {
+  return {
+    id,
+    sessionID,
+    permission: "bash",
+    patterns: ["rm -rf build"],
+    metadata: { hookAsk: true, reason: "risky" },
+    always: [],
+  }
+}
+
 function question(id: string, sessionID = childID): QuestionRequest {
   return {
     id,
@@ -304,7 +315,8 @@ test("auto mode settles recovered asks but keeps protected ones visible", async 
         replies.push(match.at(1) ?? "")
         return json(true)
       }
-      if (url.pathname === "/permission") return json([permission("per_normal"), protectedPermission("per_protected")])
+      if (url.pathname === "/permission")
+        return json([permission("per_normal"), protectedPermission("per_protected"), hookPermission("per_hook")])
       return serveSessions([parent, child], () => ({}))(url)
     },
     tmp.path,
@@ -321,6 +333,10 @@ test("auto mode settles recovered asks but keeps protected ones visible", async 
     // the server refuses non-interactive approvals, so it must stay visible.
     expect(sync.data.permission[childID]?.some((item) => item.id === "per_protected")).toBe(true)
     expect(replies).not.toContain("per_protected")
+
+    // A PreToolUse hook ask is protected the same way: nothing may machine-approve it.
+    expect(sync.data.permission[childID]?.some((item) => item.id === "per_hook")).toBe(true)
+    expect(replies).not.toContain("per_hook")
   } finally {
     app.renderer.destroy()
   }
@@ -349,6 +365,36 @@ test("auto mode stores a protected ask delivered by SSE instead of replying", as
 
     // The server refuses machine replies for skill shell batches, so auto mode
     // must not attempt one; the ask stays pending for a human decision.
+    expect(replies).toEqual([])
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("auto mode stores a hook ask delivered by SSE instead of replying", async () => {
+  await using tmp = await tmpdir()
+  await Bun.write(`${tmp.path}/kv.json`, "{}")
+  const replies: string[] = []
+  const { app, emit, sync } = await mount(
+    (url) => {
+      const match = url.pathname.match(/^\/permission\/([^/]+)\/reply$/)
+      if (match) {
+        replies.push(match.at(1) ?? "")
+        return json(true)
+      }
+      return serveSessions([parent, child], () => ({}))(url)
+    },
+    tmp.path,
+    { auto: true },
+  )
+
+  try {
+    emit(wrap({ id: "evt_ask", type: "permission.asked", properties: hookPermission("per_hook") }))
+    await wait(() => (sync.data.permission[childID] ?? []).length === 1)
+
+    // A hook ask needs a human decision: the server never auto-approves it, so auto mode
+    // must not attempt a reply and the ask stays pending.
+    expect(sync.data.permission[childID]?.at(0)?.id).toBe("per_hook")
     expect(replies).toEqual([])
   } finally {
     app.renderer.destroy()

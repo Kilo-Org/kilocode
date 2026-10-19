@@ -89,18 +89,23 @@ function quiet(cause: Cause.Cause<unknown>) {
 }
 
 /** The instance scope detached hook runs are forked into, when an instance is bootstrapped. */
-export function scope(): Effect.Effect<Scope.Scope | undefined> {
+function scope(): Effect.Effect<Scope.Scope | undefined> {
   return Effect.gen(function* () {
     const ctx = (yield* InstanceRef) ?? capture()
     return ctx ? instances.get(path.resolve(ctx.directory))?.scope : undefined
   })
 }
 
+// A detached hook run: behind the shared bound, and a failure is logged, never raised.
+function bound<A, E, R>(effect: Effect.Effect<A, E, R>) {
+  return gate.withPermits(1)(effect).pipe(Effect.asVoid, Effect.catchCause(quiet))
+}
+
 /** Runs an effect in the background, behind the shared bound of 8 detached hook runs. */
 export function detach<A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<void, never, R> {
   return Effect.gen(function* () {
     const target = yield* scope()
-    const work = gate.withPermits(1)(effect).pipe(Effect.asVoid, Effect.catchCause(quiet))
+    const work = bound(effect)
     if (target) {
       yield* work.pipe(Effect.forkIn(target))
       return
@@ -174,6 +179,8 @@ export const subscribe = Effect.fn("KiloHookLifecycle.subscribe")(function* (inp
   const files = { targets: new Set<string>(), present: new Set<string>(), version: 0 }
 
   const spawn = (effect: Effect.Effect<void>) => bridge.fork(detach(effect))
+  // Outside the instance scope, for a run that must outlive the instance's disposal.
+  const survive = (effect: Effect.Effect<void>) => bridge.fork(bound(effect))
   const hooks = (sessionID: SessionID | undefined, name: Event) =>
     KiloHookSession.find({ sessionID, events: [name], config: input.config, database: input.database })
 
@@ -267,7 +274,13 @@ export const subscribe = Effect.fn("KiloHookLifecycle.subscribe")(function* (inp
 
   const changed = (source: "user_settings" | "project_settings") =>
     Effect.gen(function* () {
-      const found = yield* hooks(undefined, "ConfigChange")
+      // The instance config: it merges the trusted layers (global, managed, org) and keeps only their
+      // hooks, concatenated. The write that raised this event disposes the instance right after it, so
+      // the read falls back to the global config. ConfigChange is never read from Claude Code settings.
+      const found = yield* KiloHooks.load(
+        yield* input.config.get().pipe(Effect.catchCause(() => input.config.getGlobal())),
+        false,
+      )
       if (!KiloHooks.select(found, "ConfigChange", [source]).length) return
       // Observe only: the write already happened, so a block is logged and ignored.
       yield* KiloHooks.fire({
@@ -328,7 +341,7 @@ export const subscribe = Effect.fn("KiloHookLifecycle.subscribe")(function* (inp
   }
 
   const observe = (dir: string) => {
-    const watcher = attempt(() => fs.watch(dir, { persistent: false }, (_, name) => event(dir, name)))
+    const watcher = KiloHooks.attempt(() => fs.watch(dir, { persistent: false }, (_, name) => event(dir, name)))
     if (watcher instanceof Error) {
       log.info("cannot watch directory for FileChanged hooks", { dir, err: watcher.message })
       return
@@ -378,7 +391,7 @@ export const subscribe = Effect.fn("KiloHookLifecycle.subscribe")(function* (inp
       rebuild()
       if (global && claims.has(item)) return
       if (global) claims.add(item)
-      spawn(changed(global ? "user_settings" : "project_settings"))
+      survive(changed(global ? "user_settings" : "project_settings"))
       return
     }
     const sessionID = typeof props.sessionID === "string" ? (props.sessionID as SessionID) : undefined
@@ -455,13 +468,5 @@ export const subscribe = Effect.fn("KiloHookLifecycle.subscribe")(function* (inp
   )
   rebuild()
 })
-
-function attempt<T>(fn: () => T) {
-  try {
-    return fn()
-  } catch (err) {
-    return err instanceof Error ? err : new Error(String(err))
-  }
-}
 
 export * as KiloHookLifecycle from "./lifecycle"

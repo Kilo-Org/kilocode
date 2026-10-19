@@ -297,14 +297,14 @@ describe("CLI worktrees", () => {
   const markerFor = (root: string, name: string) => path.join(root, "..", `${path.basename(root)}-${name}`)
 
   it.instance(
-    "runs WorktreeTeardown once for a worktree git no longer lists",
+    "runs WorktreeTeardown once for a worktree git lists, with the path git lists",
     () =>
       Effect.gen(function* () {
         const root = (yield* TestInstance).directory
         const marker = markerFor(root, "cli-teardown")
         yield* Effect.addFinalizer(() => Effect.promise(() => fs.rm(marker, { force: true })))
-        const dir = path.join(root, "..", `${path.basename(root)}-orphan`)
-        yield* Effect.promise(() => fs.mkdir(dir, { recursive: true }))
+        const dir = path.join(root, "..", `${path.basename(root)}-listed`)
+        yield* Effect.promise(() => $`git worktree add --no-checkout -b listed ${dir}`.cwd(root).quiet())
         const svc = yield* Worktree.Service
         expect(yield* svc.remove({ directory: dir })).toBe(true)
         const inputs = yield* Effect.promise(() => lines(marker))
@@ -313,7 +313,6 @@ describe("CLI worktrees", () => {
         expect(inputs.at(0)?.repo_path).toBe(root)
         // The hook ran while the directory still existed, inside it; removal then went ahead.
         expect(path.basename(String(inputs.at(0)?.pwd))).toBe(path.basename(dir))
-        expect(yield* Effect.promise(() => Bun.file(path.join(dir, "x")).exists())).toBe(false)
         expect(
           yield* Effect.promise(() =>
             fs.stat(dir).then(
@@ -324,6 +323,30 @@ describe("CLI worktrees", () => {
         ).toBe(false)
       }),
     hooks((root) => ({ WorktreeTeardown: [{ hooks: [record(markerFor(root, "cli-teardown"))] }] })),
+  )
+
+  it.instance(
+    "runs no WorktreeTeardown for a directory git does not list, which is still removed",
+    () =>
+      Effect.gen(function* () {
+        const root = (yield* TestInstance).directory
+        const marker = markerFor(root, "cli-unlisted")
+        yield* Effect.addFinalizer(() => Effect.promise(() => fs.rm(marker, { force: true })))
+        const dir = path.join(root, "..", `${path.basename(root)}-orphan`)
+        yield* Effect.promise(() => fs.mkdir(dir, { recursive: true }))
+        const svc = yield* Worktree.Service
+        expect(yield* svc.remove({ directory: dir })).toBe(true)
+        expect(yield* Effect.promise(() => lines(marker))).toHaveLength(0)
+        expect(
+          yield* Effect.promise(() =>
+            fs.stat(dir).then(
+              () => true,
+              () => false,
+            ),
+          ),
+        ).toBe(false)
+      }),
+    hooks((root) => ({ WorktreeTeardown: [{ hooks: [record(markerFor(root, "cli-unlisted"))] }] })),
   )
 
   it.instance(

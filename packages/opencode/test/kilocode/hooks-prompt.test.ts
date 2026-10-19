@@ -903,6 +903,29 @@ describe("PreModelSwitch and PostModelSwitch", () => {
     }),
   )
 
+  it.instance(
+    "a slow PostModelSwitch hook delays only the first model step of the turn",
+    () =>
+      Effect.gen(function* () {
+        const { llm, prompt, chat } = yield* boot()
+        // Outlasts the wait of one model step (5 s), and a second wait would end at 10 s.
+        yield* hooks({
+          PostModelSwitch: [{ matcher: "other-model", hooks: [exec("setTimeout(() => {}, 12000)")] }],
+        })
+        yield* llm.text("one")
+        yield* first({ prompt, sessionID: chat.id })
+        yield* llm.tool("bash", { command: "true", description: "noop" })
+        yield* llm.text("two")
+        const start = Date.now()
+        yield* prompt.prompt({ sessionID: chat.id, agent: "build", model: model(other), parts: [text("switch")] })
+        const took = Date.now() - start
+        expect(yield* llm.calls).toBe(3)
+        expect(took).toBeGreaterThan(4_500)
+        expect(took).toBeLessThan(8_000)
+      }),
+    30_000,
+  )
+
   it.instance("the same model runs neither hook", () =>
     Effect.gen(function* () {
       const { llm, prompt, chat } = yield* boot()
@@ -1279,7 +1302,7 @@ describe("InstructionsLoaded", () => {
         session_id: chat.id,
       })
       expect(input.find((item) => item.file_path === user)?.memory_type).toBe("User")
-      expect(KiloHookSession.memory(path.join(globalDir(), "x.md"))).toBe("User")
+      expect(KiloHookPayload.memory(path.join(globalDir(), "x.md"))).toBe("User")
     }),
   )
 

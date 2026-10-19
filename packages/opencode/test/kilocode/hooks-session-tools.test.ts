@@ -493,6 +493,53 @@ it.live("shows a forced permission prompt when a PreToolUse hook asks on an atte
   }),
 )
 
+it.live("names the tool and carries its input in the prompt of a PreToolUse ask on an MCP tool", () =>
+  Effect.gen(function* () {
+    yield* using({
+      PreToolUse: [
+        {
+          matcher: "mcp__github__.*",
+          hooks: [
+            exec(reply({ hookSpecificOutput: { permissionDecision: "ask", permissionDecisionReason: "writes" } })),
+          ],
+        },
+      ],
+    })
+    const tools = yield* resolve({ messages: turn(false) })
+    const args = { title: "Bug", labels: ["bug"] }
+    const result = yield* invoke(tools, "github_create_issue", args)
+    // The MCP tool asks for its own permission too: the hook's prompt is the one marked hookAsk.
+    const hookAsks = asks.filter((item) => item.metadata?.hookAsk === true)
+    expect(hookAsks).toHaveLength(1)
+    expect(hookAsks[0]).toMatchObject({
+      permission: "github_create_issue",
+      patterns: ["*"],
+      always: [],
+      // The tool as hooks see it, and the arguments they receive as tool_input.
+      metadata: { hookAsk: true, reason: "writes", tool: "mcp__github__create_issue", input: args },
+    })
+    expect(result.output).toContain("issue created")
+  }),
+)
+
+it.live("names a built-in tool by its Claude Code name in a PreToolUse ask", () =>
+  Effect.gen(function* () {
+    yield* using({
+      PreToolUse: [
+        {
+          matcher: "Bash",
+          hooks: [
+            exec(reply({ hookSpecificOutput: { permissionDecision: "ask", permissionDecisionReason: "risky" } })),
+          ],
+        },
+      ],
+    })
+    const tools = yield* resolve({ messages: turn(false) })
+    yield* invoke(tools, "bash", { command: "rm -rf build" })
+    expect(asks[0]?.metadata).toMatchObject({ tool: "Bash", input: { command: "rm -rf build" } })
+  }),
+)
+
 it.live("blocks a PreToolUse ask on an unattended turn instead of prompting", () =>
   Effect.gen(function* () {
     yield* using({

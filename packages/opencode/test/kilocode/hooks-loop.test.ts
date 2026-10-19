@@ -846,6 +846,57 @@ describe("subagents", () => {
   )
 })
 
+describe("SubagentStart for command subtasks", () => {
+  it.live(
+    "a command with subtask: true runs SubagentStart and its context reaches the subagent's first prompt",
+    () =>
+      provideTmpdirServer(
+        Effect.fnUntraced(function* ({ dir, llm }) {
+          const marker = path.join(dir, "start")
+          yield* configured({
+            SubagentStart: [
+              {
+                matcher: "Explore",
+                hooks: [hook(marker, print({ hookSpecificOutput: { additionalContext: "subtask notes" } }))],
+              },
+            ],
+          })
+          const chat = yield* create
+          yield* llm.text("mapped")
+          yield* llm.text("done")
+          yield* (yield* SessionPrompt.Service).command({
+            sessionID: chat.id,
+            command: "map",
+            arguments: "the repo",
+            model: `${ref.providerID}/${ref.modelID}`,
+          })
+          const sessions = yield* Session.Service
+          const children = yield* sessions.children(chat.id)
+          expect(children.map((child) => child.agent)).toEqual(["explore"])
+          const messages = yield* sessions.messages({ sessionID: children[0]!.id })
+          const note = messages
+            .find((msg) => msg.info.role === "user")
+            ?.parts.find(
+              (part): part is MessageV2.TextPart =>
+                part.type === "text" && part.metadata?.hook?.event === "SubagentStart",
+            )
+          expect(note?.synthetic).toBe(true)
+          expect(JSON.stringify(note)).toContain("subtask notes")
+          const runs = yield* lines(marker)
+          expect(runs.map((item) => [item.agent_type, item.session_id])).toEqual([["Explore", chat.id]])
+        }),
+        {
+          git: true,
+          config: (url) => ({
+            ...providerCfg(url),
+            command: { map: { template: "Map $ARGUMENTS", subtask: true, agent: "explore" } },
+          }),
+        },
+      ),
+    30_000,
+  )
+})
+
 describe("PreCompact", () => {
   const overflow = { type: "error", error: { code: "context_length_exceeded" } }
 

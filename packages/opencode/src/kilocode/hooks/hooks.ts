@@ -118,18 +118,18 @@ export interface Verdict {
 }
 
 /** What one hook run decided. */
-export type Decision = Omit<Verdict, "ran"> & { failure?: string }
+type Decision = Omit<Verdict, "ran"> & { failure?: string }
 
 /** Hook input for a tool event: the common fields plus the tool's. */
-export type Input = Record<string, unknown> & {
+type Input = Record<string, unknown> & {
   tool_name: string
   kilo_tool_name: string
   tool_input: Record<string, unknown>
   tool_use_id?: string
 }
 
-export type Skip = { event: string; command?: string; reason: string }
-export type Inspection = { hooks?: Hooks; skipped: Skip[] }
+type Skip = { event: string; command?: string; reason: string }
+type Inspection = { hooks?: Hooks; skipped: Skip[] }
 
 const MAX_TIMEOUT = 24 * 60 * 60 // seconds
 const LIMIT = 1024 * 1024 // captured bytes per output stream
@@ -507,14 +507,28 @@ export function condition(rule: string, call?: Call): boolean {
     // (substitutions, quotes, escapes, variables, redirects, groups, subshells, tabs, newlines,
     // comments) is beyond a simple split: run the hook.
     if (/[^\w .\/:@%+,=~*\-|;&]/.test(command)) return true
-    const glob = pattern.endsWith(":*") ? pattern.slice(0, -2) + "*" : pattern
+    // The rule's spaces collapse the same way, so a rule written with a double space still matches.
+    const glob = (pattern.endsWith(":*") ? pattern.slice(0, -2) + "*" : pattern).replace(/ +/g, " ")
     return (
       command
         .split(/[|;&]+/)
-        // Leading `NAME=value` assignments are stripped, as Claude Code does.
-        .map((item) => item.trim().replace(/^(?:\w+=\S*\s+)+/, ""))
+        // Leading `NAME=value` assignments are stripped, as Claude Code does. Runs of spaces collapse
+        // to one, which is what the shell sees as the same words.
+        .map((item) =>
+          item
+            .trim()
+            .replace(/ +/g, " ")
+            .replace(/^(?:\w+=\S*\s+)+/, ""),
+        )
         .filter(Boolean)
-        .some((item) => WRAPPERS.has(item.split(" ").at(0) ?? "") || Wildcard.match(item, glob))
+        .some((item) => {
+          const first = item.split(" ").at(0) ?? ""
+          // A path (`/usr/bin/git`), a glob (`gi*`) or another letter case (`GIT`, on a case-insensitive
+          // filesystem) can name the same program under another spelling.
+          return (
+            WRAPPERS.has(first) || /[\/*]/.test(first) || first !== first.toLowerCase() || Wildcard.match(item, glob)
+          )
+        })
     )
   }
   if (FILES.has(call.tool)) {
@@ -708,12 +722,22 @@ export function run(
   return result.promise
 }
 
-function attempt<T>(fn: () => T) {
+/** Runs `fn`, returning the error it throws instead of throwing. */
+export function attempt<T>(fn: () => T) {
   try {
     return fn()
   } catch (error) {
     return error instanceof Error ? error : new Error(String(error))
   }
+}
+
+/** Sets a key as the newest entry of a map kept in insertion order, evicting the oldest past `limit`. */
+export function keep<T>(map: Map<string, T>, key: string, value: T, limit: number) {
+  map.delete(key)
+  map.set(key, value)
+  if (map.size <= limit) return
+  const oldest = map.keys().next()
+  if (!oldest.done) map.delete(oldest.value)
 }
 
 const programs = new Map<string, string | undefined>()
@@ -729,6 +753,8 @@ function spawn(handler: Handler, opts: { cwd: string; event?: Event; env?: Recor
     CLAUDE_PROJECT_DIR: opts.cwd,
     ...(opts.event ? { KILO_HOOK_EVENT: opts.event } : {}),
     KILO_HOOK_DEPTH: String(DEPTH + 1),
+    // A hook that runs `kilo` must start its own backend: a daemon never sees KILO_HOOK_DEPTH.
+    KILO_NO_DAEMON: "1",
     ...opts.env,
   }) // hooks must not inherit backend credentials
   // A Kilo started inside a Claude Code session must never append to that session's env file.

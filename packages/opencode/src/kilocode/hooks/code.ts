@@ -14,7 +14,7 @@ import { KiloHookTool } from "./tool"
 // sandbox tool gate.
 
 /** The code-mode child call, as `invokeChildTool` receives it. */
-export type Child = {
+type Child = {
   entry: { key: string; server: string; tool: MCP.McpTool }
   args: Record<string, unknown>
   callID: string

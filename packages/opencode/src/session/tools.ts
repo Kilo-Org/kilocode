@@ -34,7 +34,6 @@ import { McpApps } from "@/kilocode/mcp/apps"
 import { BoardEnabled } from "@/kilocode/board/enabled"
 import { KiloCodeMode } from "@/kilocode/tool/code-mode" // kilocode_change
 import { KiloHooks } from "@/kilocode/hooks/hooks"
-import { KiloHookPayload } from "@/kilocode/hooks/payload"
 import { KiloHookTool } from "@/kilocode/hooks/tool"
 // kilocode_change end
 import { isRecord } from "@/util/record"
@@ -84,51 +83,9 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const flags = yield* RuntimeFlags.Service
   const cfg = yield* config.get()
   const permissionOrigins = cfg.permission_origins
-  const root = input.session.parentID ? yield* KiloHookPayload.root(input.session.id, sessions) : input.session.id
-  const attended = KiloHookPayload.attendance({
-    sessionID: input.session.id,
-    parent: input.session.parentID,
-    messages: input.messages,
-    user: input.processor.message.parentID,
-  })
-  const call = (
-    tool: string,
-    args: unknown,
-    opts: ToolExecutionOptions,
-    aliases?: string[],
-    server?: string,
-  ): KiloHooks.Call => ({
-    tool,
-    aliases,
-    args,
-    callID: opts.toolCallId,
-    sessionID: input.session.id,
-    directory: input.session.directory,
-    abort: opts.abortSignal,
-    agent: input.agent.name,
-    prompt: input.processor.message.parentID,
-    parent: input.session.parentID,
-    root,
-    mode: KiloHookPayload.mode(input.session.permission, input.agent.name),
-    attended,
-    server,
-    // A PreToolUse `ask` shows a forced prompt for this call: never auto-approved or remembered.
-    confirm: (reason) => {
-      const subject = KiloHooks.compat(tool, args, input.session.directory)
-      const pattern =
-        tool === "bash" && typeof subject.command === "string"
-          ? subject.command
-          : typeof subject.file_path === "string"
-            ? subject.file_path
-            : "*"
-      return context(toRecord(args), opts, call(tool, args, opts, aliases, server)).ask({
-        permission: tool,
-        patterns: [pattern],
-        always: [],
-        metadata: { hookAsk: true, reason },
-      })
-    },
-  })
+  const call = yield* KiloHookTool.caller(input, sessions, (hook, args, opts, req) =>
+    context(toRecord(args), opts, hook).ask(req),
+  )
   const notify = BoardEnabled.on(cfg, flags) ? input.notify : undefined
   type Output = Parameters<SessionProcessor.Handle["completeToolCall"]>[1]
   const finish = <T extends Output>(name: string, output: T, opts: ToolExecutionOptions) =>

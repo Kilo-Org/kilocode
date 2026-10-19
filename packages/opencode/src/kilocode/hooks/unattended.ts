@@ -21,10 +21,10 @@ type Services = {
 }
 
 /** GoalReport rejections in one goal run before the goal pauses instead of retrying (loop cap). */
-export const REJECTIONS = 3
+const REJECTIONS = 3
 
-export type Report = { retry?: string; pause?: string; context: string }
-export type Wake = { skip?: string; context: string }
+type Report = { retry?: string; pause?: string; context: string }
+type Wake = { skip?: string; context: string }
 
 function resolve(sessionID: SessionID, event: KiloHooks.Event, services: Services) {
   return KiloHooks.resolve(sessionID, event).pipe(

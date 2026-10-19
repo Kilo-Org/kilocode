@@ -484,6 +484,7 @@ export const layer = Layer.effect(
             bypassAgentCheck: true,
             promptOps,
             workflow, // kilocode_change
+            hooks: yield* KiloHookSession.find({ sessionID, events: ["SubagentStart"], config, database }), // command subtasks run SubagentStart too
           },
           // kilocode_change end
           messages: msgs,

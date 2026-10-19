@@ -15,9 +15,9 @@ import { KiloHookPayload } from "./payload"
 
 const log = Log.create({ service: "hooks" })
 
-export type Origin = "create" | "promote" | "import" | "multi_version" | "tool" | "continue" | "cli"
-export type Script = "none" | "succeeded" | "failed"
-export type Result = { blocked: boolean; reason?: string }
+type Origin = "create" | "promote" | "import" | "multi_version" | "tool" | "continue" | "cli"
+type Script = "none" | "succeeded" | "failed"
+type Result = { blocked: boolean; reason?: string }
 
 /** Config and database for hook resolution; taken from the context when the caller has none. */
 type Services = { config?: Config.Interface; database?: Database.Interface }

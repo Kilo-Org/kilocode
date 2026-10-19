@@ -1,13 +1,8 @@
-import path from "path"
 import { Deferred, Duration, Effect, Exit, Option } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import type { EventV2 } from "@opencode-ai/core/event"
-import { Flag } from "@opencode-ai/core/flag/flag"
-import { FSUtil } from "@opencode-ai/core/fs-util"
-import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
 import { Config } from "@/config/config"
-import { ConfigManaged } from "@/config/managed"
 import { KiloShutdown } from "@/kilocode/cli/shutdown"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
 import type { Instruction } from "@/session/instruction"
@@ -55,6 +50,8 @@ const forks = new Set<string>()
 const loads = new Map<string, "session_start" | "compact">()
 // PostModelSwitch runs whose context the next model step carries.
 const switches = new Map<string, Deferred.Deferred<string[]>[]>()
+// PostModelSwitch runs a model step already waited for.
+const waited = new WeakSet<object>()
 // Hook context waiting for the next model step: SessionStart context from the prompt path (kept
 // when that prompt is rejected) and PreToolUse context of a prompt attachment.
 const notes = new Map<string, Text[]>()
@@ -327,10 +324,15 @@ export const inject = Effect.fn("KiloHookSession.inject")(function* (input: {
   }
   const slots = switches.get(id) ?? []
   if (slots.length) {
-    yield* Effect.forEach(slots, (slot) => Effect.exit(Deferred.await(slot)), {
-      concurrency: "unbounded",
-      discard: true,
-    }).pipe(Effect.timeoutOption(SWITCH))
+    // Each run is waited for once: a run that outlasts the wait is collected by a later step only
+    // when it has finished, so a slow hook does not delay every step of the turn.
+    const fresh = slots.filter((slot) => !waited.has(slot))
+    for (const slot of fresh) waited.add(slot)
+    if (fresh.length)
+      yield* Effect.forEach(fresh, (slot) => Effect.exit(Deferred.await(slot)), {
+        concurrency: "unbounded",
+        discard: true,
+      }).pipe(Effect.timeoutOption(SWITCH))
     const done = slots.filter((slot) => Deferred.isDoneUnsafe(slot))
     const rest = slots.filter((slot) => !Deferred.isDoneUnsafe(slot))
     if (rest.length) switches.set(id, rest)
@@ -358,21 +360,6 @@ export const inject = Effect.fn("KiloHookSession.inject")(function* (input: {
     entry?.parts.push(part)
   }
 })
-
-/** Where an instruction file comes from, as Claude Code's `memory_type`. */
-export function memory(file: string) {
-  const home = Global.Path.home
-  const user = [
-    path.join(home, ".claude"),
-    Global.Path.config,
-    path.join(home, ".kilo"),
-    path.join(home, ".kilocode"),
-    ...(Flag.KILO_CONFIG_DIR ? [Flag.KILO_CONFIG_DIR] : []),
-  ]
-  if (user.some((root) => FSUtil.contains(root, file))) return "User"
-  if (FSUtil.contains(ConfigManaged.managedConfigDir(), file)) return "Managed"
-  return "Project"
-}
 
 /** InstructionsLoaded for the session's system instruction files, detached. */
 const loaded = Effect.fnUntraced(function* (input: {
@@ -404,7 +391,7 @@ const loaded = Effect.fnUntraced(function* (input: {
             agent: session.agent,
           }),
           file_path: file,
-          memory_type: memory(file),
+          memory_type: KiloHookPayload.memory(file),
           load_reason: input.reason,
         })),
         cwd: session.directory,

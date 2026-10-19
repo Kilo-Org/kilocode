@@ -3,13 +3,14 @@ import { createHash } from "crypto"
 import { asc, eq } from "drizzle-orm"
 import { Cause, Effect, Option } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
-import { Flag } from "@opencode-ai/core/flag/flag"
-import { Global } from "@opencode-ai/core/global"
 import { TodoTable } from "@opencode-ai/core/session/sql"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
-import { ConfigManaged } from "@/config/managed"
+import type { SessionV1 } from "@opencode-ai/core/v1/session"
+import type { ToolExecutionOptions } from "ai"
 import { Suggestion } from "@/kilocode/suggestion"
 import { SessionID } from "@/session/schema"
+import type { Session } from "@/session/session"
+import type { Tool } from "@/tool/tool"
 import { errorMessage } from "@/util/error"
 import { isRecord } from "@/util/record"
 import type { Event } from "./events"
@@ -74,6 +75,78 @@ function elapsed(id: string | undefined) {
 function block(event: string, notes: readonly string[]) {
   return `<hook_feedback event="${event}">\n${KiloHooks.clip(notes.join("\n\n"))}\n</hook_feedback>`
 }
+
+/**
+ * The hook view of the tool calls of one model step: `(tool, args, opts, aliases?, server?)` gives
+ * the `KiloHooks.Call` for a call, with the session's root, its permission mode and whether someone
+ * can answer a prompt in this turn. A PreToolUse `ask` shows a forced permission prompt for the call
+ * through `ask` (never auto-approved or remembered), which names the tool and carries its input,
+ * as hooks see them, for clients to show.
+ */
+export const caller = Effect.fn("KiloHookTool.caller")(function* (
+  input: {
+    session: Session.Info
+    agent: { name: string }
+    processor: { message: { parentID: string } }
+    messages: SessionV1.WithParts[]
+  },
+  sessions: Session.Interface,
+  ask: (
+    hook: KiloHooks.Call,
+    args: unknown,
+    opts: ToolExecutionOptions,
+    request: Parameters<Tool.Context["ask"]>[0],
+  ) => Effect.Effect<void>,
+) {
+  const root = input.session.parentID ? yield* KiloHookPayload.root(input.session.id, sessions) : input.session.id
+  const attended = KiloHookPayload.attendance({
+    sessionID: input.session.id,
+    parent: input.session.parentID,
+    messages: input.messages,
+    user: input.processor.message.parentID,
+  })
+  return (
+    tool: string,
+    args: unknown,
+    opts: ToolExecutionOptions,
+    aliases?: string[],
+    server?: string,
+  ): KiloHooks.Call => {
+    const hook: KiloHooks.Call = {
+      tool,
+      aliases,
+      args,
+      callID: opts.toolCallId,
+      sessionID: input.session.id,
+      directory: input.session.directory,
+      abort: opts.abortSignal,
+      agent: input.agent.name,
+      prompt: input.processor.message.parentID,
+      parent: input.session.parentID,
+      root,
+      mode: KiloHookPayload.mode(input.session.permission, input.agent.name),
+      attended,
+      server,
+      confirm: (reason) => {
+        // What hooks were shown: the Claude Code tool name and the arguments they received.
+        const shown = KiloHooks.input("PreToolUse", hook)
+        const pattern =
+          tool === "bash" && typeof shown.tool_input.command === "string"
+            ? shown.tool_input.command
+            : typeof shown.tool_input.file_path === "string"
+              ? shown.tool_input.file_path
+              : "*"
+        return ask(hook, args, opts, {
+          permission: tool,
+          patterns: [pattern],
+          always: [],
+          metadata: { hookAsk: true, reason, tool: shown.tool_name, input: shown.tool_input },
+        })
+      },
+    }
+    return hook
+  }
+})
 
 /** Common hook input fields for a tool call's session. */
 function base(event: Event, call: KiloHooks.Call, cwd = call.directory) {
@@ -449,12 +522,7 @@ function moved(hooks: KiloHooks.Hooks, call: KiloHooks.Call) {
   const args = isRecord(call.args) ? call.args : {}
   const next = path.resolve(call.directory, typeof args.workdir === "string" ? args.workdir : call.directory)
   const prev = dirs.get(call.sessionID) ?? call.directory
-  dirs.delete(call.sessionID)
-  dirs.set(call.sessionID, next)
-  if (dirs.size > SESSIONS) {
-    const oldest = dirs.keys().next()
-    if (!oldest.done) dirs.delete(oldest.value)
-  }
+  KiloHooks.keep(dirs, call.sessionID, next, SESSIONS)
   if (prev === next || !KiloHooks.select(hooks, "CwdChanged", []).length) return Effect.void
   return KiloHookLifecycle.detach(
     KiloHooks.fire({
@@ -474,32 +542,6 @@ function moved(hooks: KiloHooks.Hooks, call: KiloHooks.Call) {
   )
 }
 
-function within(file: string, dir: string | undefined) {
-  if (!dir) return false
-  const root = path.resolve(dir)
-  return file === root || file.startsWith(root + path.sep)
-}
-
-/**
- * Claude Code's `memory_type` for an instruction file: "User" for Claude Code and Kilo config
- * directories, "Managed" for the managed config directory, else "Project" (repositories usually
- * live under the home directory, so the home directory alone does not make a file a user file).
- */
-export function memory(file: string) {
-  const full = path.resolve(file)
-  if (within(full, ConfigManaged.managedConfigDir())) return "Managed"
-  const home = Global.Path.home
-  const user = [
-    path.join(home, ".claude"),
-    Global.Path.config,
-    path.join(home, ".kilo"),
-    path.join(home, ".kilocode"),
-    Flag.KILO_CONFIG_DIR,
-  ]
-  if (user.some((dir) => within(full, dir))) return "User"
-  return "Project"
-}
-
 /** InstructionsLoaded (`nested_traversal`) for the AGENTS.md files a read pulled in. */
 function loaded(hooks: KiloHooks.Hooks, call: KiloHooks.Call, files: readonly unknown[]) {
   const list = files.filter((item): item is string => typeof item === "string" && item.length > 0)
@@ -514,7 +556,7 @@ function loaded(hooks: KiloHooks.Hooks, call: KiloHooks.Call, files: readonly un
       payloads: list.map((file) => ({
         ...base("InstructionsLoaded", call),
         file_path: file,
-        memory_type: memory(file),
+        memory_type: KiloHookPayload.memory(file),
         load_reason: "nested_traversal",
         ...(typeof trigger === "string" ? { trigger_file_path: trigger } : {}),
       })),
