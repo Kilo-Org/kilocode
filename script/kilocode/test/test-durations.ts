@@ -4,25 +4,27 @@
  * Refreshes test-durations.json from the JUnit reports of a CI run (the `unit-reports-*` artifacts of `test`):
  *
  *   gh run download <run-id> --pattern 'unit-reports-*' --dir /tmp/unit-reports
- *   bun script/kilocode/test/test-durations.ts /tmp/unit-reports/*\/*.xml
+ *   bun script/kilocode/test/test-durations.ts linux /tmp/unit-reports/unit-reports-linux-*\/*.xml
+ *   bun script/kilocode/test/test-durations.ts win32 /tmp/unit-reports/unit-reports-windows-*\/*.xml
  *
+ * The first argument is the platform section to update (`process.platform` of the runner that reads it).
  * The weight of a file is the time of its test suite in the report. Files without a report keep their entry.
- * Use the reports of one platform: the split needs consistent relative times, not absolute ones.
  */
 
 import path from "node:path"
 
 const DURATIONS = path.join(import.meta.dir, "test-durations.json")
-const reports = process.argv.slice(2)
+const [platform, ...reports] = process.argv.slice(2)
 
-if (reports.length === 0) {
-  console.error("Usage: bun script/kilocode/test/test-durations.ts <junit.xml>...")
+if (!platform || !["linux", "win32", "darwin"].includes(platform) || reports.length === 0) {
+  console.error("Usage: bun script/kilocode/test/test-durations.ts <linux|win32|darwin> <junit.xml>...")
   process.exit(2)
 }
 
-const durations: Record<string, number> = await Bun.file(DURATIONS)
+const sections: Record<string, Record<string, number>> = await Bun.file(DURATIONS)
   .json()
   .catch(() => ({}))
+const durations = sections[platform] ?? {}
 const fresh = new Map<string, number>()
 
 for (const report of reports) {
@@ -43,8 +45,8 @@ for (const report of reports) {
 const merged = Object.fromEntries(
   Object.entries({ ...durations, ...Object.fromEntries(fresh) }).sort(([a], [b]) => a.localeCompare(b)),
 )
-await Bun.write(DURATIONS, JSON.stringify(merged, null, 1) + "\n")
-console.log(`Updated ${path.basename(DURATIONS)}: ${fresh.size} files from ${reports.length} reports`)
+await Bun.write(DURATIONS, JSON.stringify({ ...sections, [platform]: merged }, null, 1) + "\n")
+console.log(`Updated ${path.basename(DURATIONS)} (${platform}): ${fresh.size} files from ${reports.length} reports`)
 
 function attr(tag: string, name: string) {
   return tag.match(new RegExp(`\\b${name}="([^"]*)"`))?.[1] ?? ""

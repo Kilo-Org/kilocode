@@ -9,7 +9,9 @@
  * preload and timeouts.
  *
  * - Shards: `--shard N/M` or `KILO_TEST_SHARD` runs one part of the work items. The split is
- *   longest-processing-time over the measured durations in test-durations.json.
+ *   longest-processing-time over the measured durations in test-durations.json. Each platform has its
+ *   own section (`linux`, `win32`, `darwin`), because the suites skip different tests per platform; a
+ *   file without an entry for this platform uses its `linux` entry.
  * - Own process: heavy files (at least BATCH_MS) and files with process-wide state (bun module mocks,
  *   spies on globals, module-scope env writes) run alone.
  * - Fast tier: the other files share a process, in path order, in batches of about BATCH_MS. Upstream
@@ -47,7 +49,7 @@ if (argv.includes("--help") || argv.includes("-h")) {
       "  --file-timeout <ms>  Kill deadline per process (default: 300000, env: KILO_TEST_FILE_TIMEOUT)",
       "  --retries <N>        Extra attempts for a failing item (default: 1)",
       "  --shard <N/M>        Run one balanced shard (env: KILO_TEST_SHARD)",
-      "  --update-durations   Run every file alone and store its duration in test-durations.json",
+      "  --update-durations   Run every file alone and store its duration in test-durations.json (this platform)",
       "  --bail               Stop after the first failure",
       "  --verbose            Print the output of every item",
       "",
@@ -89,10 +91,11 @@ const candidates = discovered
   .filter((file) => patterns.length === 0 || patterns.some((pattern) => file.includes(pattern)))
   .sort()
 
-const durations: Record<string, number> = await Bun.file(DURATIONS)
+const sections: Record<string, Record<string, number>> = await Bun.file(DURATIONS)
   .json()
   .catch(() => ({}))
-const weight = (file: string) => durations[`${pkg}/${file}`] ?? DEFAULT_MS
+const durations = sections[process.platform] ?? {}
+const weight = (file: string) => durations[`${pkg}/${file}`] ?? sections.linux?.[`${pkg}/${file}`] ?? DEFAULT_MS
 
 // Batch only a full run: a filtered run is local debugging, and --update-durations measures each file alone.
 const batches = patterns.length === 0 && !update ? await batch(candidates) : new Map<string, string[]>()
@@ -393,8 +396,8 @@ async function store() {
       .filter(([key]) => !key.startsWith(`${pkg}/`) || current.has(key))
       .sort(([a], [b]) => a.localeCompare(b)),
   )
-  await Bun.write(DURATIONS, JSON.stringify(merged, null, 1) + "\n")
-  console.log(`Updated ${path.relative(ROOT, DURATIONS)}: ${Object.keys(fresh).length} measured in ${pkg}`)
+  await Bun.write(DURATIONS, JSON.stringify({ ...sections, [process.platform]: merged }, null, 1) + "\n")
+  console.log(`Updated ${path.relative(ROOT, DURATIONS)} (${process.platform}): ${Object.keys(fresh).length} measured in ${pkg}`)
 }
 
 function xmlOf(item: string) {

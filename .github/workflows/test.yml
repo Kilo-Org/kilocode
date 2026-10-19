@@ -148,9 +148,10 @@ jobs:
           include_time_in_summary: true
           fail_on_failure: false
 
-      # Input for script/kilocode/test/test-durations.ts, which refreshes the shard weights.
+      # Input for script/kilocode/test/test-durations.ts, which refreshes the shard weights. Not a test result.
       - name: Upload unit reports
         if: ${{ !cancelled() }}
+        continue-on-error: true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: unit-reports-${{ matrix.settings.name }}-${{ matrix.shard }}
