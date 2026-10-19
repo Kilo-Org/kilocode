@@ -56,7 +56,6 @@ The webview uses the Kilo-owned background-job API for authoritative lifecycle s
 | child session id, description, `background` flag | background-job metadata and `task` tool part metadata |
 | lifecycle state | `GET /kilocode/background-jobs` |
 | per-agent cancellation | `POST /kilocode/background-jobs/:jobID/cancel`, resolved in the owning parent directory and cancelling the child session tree |
-| foreground promotion | the existing `experimental.session.background` route |
 | child permission/question attention | scoped session permission and question state |
 | child sessions stay tracked while the card is closed | `KiloProvider` auto-adopts them from task parts |
 
@@ -77,7 +76,7 @@ An agent counts as running only when its child session status is `busy` or `retr
 5. `TaskHeader.tsx` renders `<BackgroundAgents />`.
 6. `styles/task-header.css` adds `[data-component="task-header-agents"]`.
 7. `i18n/*.ts` adds the localized `task.backgroundAgents.*` strings.
-8. `tests/unit/background-agents.test.ts` covers lifecycle derivation, attention attribution, and promotion discovery.
+8. `tests/unit/background-agents.test.ts` covers lifecycle derivation and attention attribution.
 
 ## Concurrency
 
