@@ -137,7 +137,7 @@ jobs:
           KILO_TEST_SHARD: ${{ matrix.shard }}/${{ matrix.settings.shards }} # kilocode_change
           KILO_TEST_CONCURRENCY: ${{ matrix.settings.concurrency }} # kilocode_change
 
-      # kilocode_change start - failing test cases as annotations, from the JUnit reports of test:ci
+      # kilocode_change start - JUnit reports of test:ci: failing cases as annotations, and the reports as an artifact
       - name: Publish unit reports
         if: ${{ !cancelled() }}
         uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6.4.0
@@ -147,6 +147,16 @@ jobs:
           detailed_summary: true
           include_time_in_summary: true
           fail_on_failure: false
+
+      # Input for script/kilocode/test/test-durations.ts, which refreshes the shard weights.
+      - name: Upload unit reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: unit-reports-${{ matrix.settings.name }}-${{ matrix.shard }}
+          path: artifacts/unit/*.xml
+          if-no-files-found: ignore
+          retention-days: 14
       # kilocode_change end
 
       - name: Verify published codemode package

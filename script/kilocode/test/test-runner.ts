@@ -244,8 +244,16 @@ async function batch(files: string[]) {
 
 async function run(item: string): Promise<Result> {
   const files = batches.get(item) ?? [item]
-  // `./` makes bun treat each argument as a path, not as a substring filter.
-  const cmd = [process.execPath, "run", "test", ...files.map((file) => `./${file}`), "--reporter=junit", `--reporter-outfile=${xmlOf(item)}`]
+  // `./` makes bun treat each argument as a path, not as a substring filter. The script shell gets the
+  // report path with forward slashes, which Windows accepts, so no backslash reads as an escape.
+  const cmd = [
+    process.execPath,
+    "run",
+    "test",
+    ...files.map((file) => `./${file}`),
+    "--reporter=junit",
+    `--reporter-outfile=${xmlOf(item).replaceAll("\\", "/")}`,
+  ]
   const begin = performance.now()
   const proc = Bun.spawn(cmd, {
     cwd,
