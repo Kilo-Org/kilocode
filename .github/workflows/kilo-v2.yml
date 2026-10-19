@@ -138,6 +138,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # placement.ts compares with the pinned upstream release commit, which it finds in the history.
+          fetch-depth: 0
+          filter: blob:none
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -151,4 +155,29 @@ jobs:
         run: bun run typecheck
 
       - name: Test
+        run: bun test
+
+      # Fails when a logic package (packages/kilo-*-core) imports @opencode/*; prints the core-internal imports of adapters.
+      - name: Check the Kilo import rule
+        run: bun placement.ts --imports
+
+  kilo-packages:
+    name: kilo packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      # Turborepo runs only the package tests that turbo.json lists. The Kilo packages run here instead, so
+      # adding one needs no shared upstream patch. `@kilocode/gateway-core` stays in turbo.json.
+      - name: Test the Kilo plugin
+        working-directory: packages/kilo-plugin
+        run: bun test
+
+      - name: Test the Kilo host
+        working-directory: packages/kilo-cli
         run: bun test

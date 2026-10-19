@@ -134,7 +134,7 @@ Vocabulary: a **plugin hook** is an extension point upstream exposes through `@o
 | Rung | What | v2 mechanism, examples | Marker |
 |---|---|---|---|
 | 1 | Kilo plugin on the public plugin API | `@opencode/plugin` domains: agent, provider, model, aisdk, session, event, tool, permission, command, skill, mcp, rpc, storage, worktree, shell, vcs, websearch, integration, reference | None (Kilo-owned path) |
-| 2 | Kilo host composition (unit U-E0-01) | Kilo's own entry point. Register Kilo plugins through `SdkPlugins.register` (`packages/core/src/plugin/sdk.ts`). Replace Effect services with layers, for example `Global.layerWith` for app directories. Translate `KILO_*` environment variables before boot | None |
+| 2 | Kilo host composition (unit U-E0-01) | Kilo's own entry point, `packages/kilo-cli`. Register Kilo plugins through `SdkPlugins.register` (`packages/core/src/plugin/sdk.ts`): list them in `packages/kilo-plugin/src/index.ts`, the host registers them. Replace Effect services with layers, for example `Global.layerWith` for app directories. Translate `KILO_*` environment variables before boot | None |
 | 3 | Seam patch in a shared file | Small and generic: widen an API, add a hook, export a value. Prefer files that change rarely. Offer it upstream when it is generic | `kilocode_change` |
 | 4 | Feature patch in a shared file | Last resort | `kilocode_change`, reason in the PR |
 | 5 | Branding and product strings | The rename script during each sync, never hand edits | None (script) |
