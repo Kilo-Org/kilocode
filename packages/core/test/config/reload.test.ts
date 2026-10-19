@@ -125,7 +125,7 @@ describe("config plugin reloads", () => {
     Effect.acquireDisposable(Effect.promise(() => tmpdir())).pipe(
       Effect.flatMap((tmp) =>
         Effect.gen(function* () {
-          const root = path.join(tmp.path, ".opencode")
+          const root = path.join(tmp.path, ".kilo") // kilocode_change - Kilo project directory
           const parent = yield* Deferred.make<(update: Watcher.Update) => void>()
           const starting = yield* Deferred.make<void>()
           const release = yield* Deferred.make<void>()
@@ -167,8 +167,10 @@ describe("config plugin reloads", () => {
   for (const input of [
     { file: "opencode.json", empty: false },
     { file: "../opencode.jsonc", empty: false },
-    { file: ".opencode/opencode.json", empty: false },
-    { file: "../.opencode/opencode.jsonc", empty: true },
+    // kilocode_change start - Kilo project directory
+    { file: ".kilo/opencode.json", empty: false },
+    { file: "../.kilo/opencode.jsonc", empty: true },
+    // kilocode_change end
   ]) {
     it.live(`loads references when ${input.file} is first created and keeps watching it`, () =>
       Effect.acquireDisposable(Effect.promise(() => tmpdir())).pipe(
@@ -212,8 +214,11 @@ describe("config plugin reloads", () => {
                 references.list().pipe(Effect.map((items) => items.length === 1 && items[0]?.name === "next")),
               )
 
+              // kilocode_change - Kilo project directory
               yield* Effect.promise(() =>
-                fs.rm(input.file.includes(".opencode/") ? path.dirname(target) : target, { recursive: true }),
+// kilocode_change start - Kilo config path
+                fs.rm(input.file.includes(".kilo/") ? path.dirname(target) : target, { recursive: true }),
+// kilocode_change end
               )
               yield* waitUntil(references.list().pipe(Effect.map((items) => items.length === 0)))
               yield* Effect.promise(async () => {

@@ -144,7 +144,10 @@ describe("PluginSupervisor reload", () => {
         yield* Effect.promise(async () => {
           await Bun.write(file, entry)
           await Bun.write(helper, source(1))
-          await Bun.write(path.join(directory.path, ".opencode/opencode.json"), JSON.stringify({ plugins: [root] }))
+          // kilocode_change - Kilo project directory
+// kilocode_change start - Kilo config file name
+          await Bun.write(path.join(directory.path, ".kilo/opencode.json"), JSON.stringify({ plugins: [root] }))
+// kilocode_change end
         })
         const watcher = yield* Watcher.Test
         const locations = yield* LocationServiceMap.Service
@@ -199,14 +202,14 @@ describe("PluginSupervisor reload", () => {
         const directory = yield* tmpdirScoped()
         const file = path.join(
           directory.path,
-          mode === "discovered" ? ".opencode/plugins/greeter.ts" : "external/greeter/index.ts",
+          mode === "discovered" ? ".kilo/plugins/greeter.ts" : "external/greeter/index.ts", // kilocode_change - Kilo project directory
         )
         yield* Effect.promise(async () => {
           await Bun.write(file, greeter("greet-v1"))
           await fs.utimes(file, new Date(0), new Date(0))
           if (mode === "configured") {
             await Bun.write(
-              path.join(directory.path, ".opencode/opencode.json"),
+              path.join(directory.path, ".kilo/opencode.json"), // kilocode_change - Kilo project directory
               JSON.stringify({ plugins: [path.dirname(file)] }),
             )
           }
@@ -251,7 +254,7 @@ describe("PluginSupervisor reload", () => {
   it.live("keeps the running generation when an updated local plugin fails to import", () =>
     Effect.gen(function* () {
       const directory = yield* tmpdirScoped()
-      const file = path.join(directory.path, ".opencode/plugins/greeter.ts")
+      const file = path.join(directory.path, ".kilo/plugins/greeter.ts") // kilocode_change - Kilo project directory
       // Local plugin revisions key on mtime, so give each rewrite a distinct timestamp.
       const write = (content: string, mtime: Date) =>
         Effect.promise(async () => {
@@ -301,8 +304,11 @@ describe("PluginSupervisor reload", () => {
         ),
       )
       yield* Effect.promise(() => Bun.write(path.join(npm.directory, "server.ts"), greeter("greet-pkg")))
+      // kilocode_change - Kilo project directory
       yield* Effect.promise(() =>
-        Bun.write(path.join(directory.path, ".opencode/opencode.json"), JSON.stringify({ plugins: ["fixture-pkg"] })),
+// kilocode_change start - Kilo config file name
+        Bun.write(path.join(directory.path, ".kilo/opencode.json"), JSON.stringify({ plugins: ["fixture-pkg"] })),
+// kilocode_change end
       )
       const bus = yield* Bus.Service
       const locations = yield* LocationServiceMap.Service
@@ -345,7 +351,7 @@ it.live("applies organization integration changes to running external plugins", 
     const directory = yield* tmpdirScoped()
     const root = path.join(directory.path, "external/policy-fixture")
     const entered = path.join(directory.path, "entered")
-    const configuration = path.join(directory.path, ".opencode/opencode.json")
+    const configuration = path.join(directory.path, ".kilo/opencode.json") // kilocode_change - Kilo project directory
     yield* Effect.promise(async () => {
       await Bun.write(
         path.join(root, "index.ts"),
