@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 28,
-    "markedLines": 299,
+    "files": 30,
+    "markedLines": 305,
     "unmarkedLines": 51,
     "deletedFiles": 0
   },
@@ -49,6 +49,14 @@
     "packages/cli/src/commands/handlers/mcp/add.ts": {
       "rung": 3,
       "seam": "Kilo config discovery: read `kilo.json`, `kilo.jsonc`, `.kilo` and `.kilocode` in Kilo v1 order (directory candidates before root files, `.kilocode` before `.kilo`), and keep writing `kilo.json`. Upstream discovery has fixed names and order and no plugin or host seam can change it, so the shared discovery file carries the difference. Test files mirror the same behavior."
+    },
+    "packages/cli/src/commands/handlers/plugin/add.ts": {
+      "rung": 3,
+      "seam": "Kilo config path for plugin commands: resolve `kilo.json`, `kilo.jsonc`, `.kilo` and `.kilocode`, and only root files in the global directory, like Kilo v1. Shared CLI handlers with no plugin seam for config path selection."
+    },
+    "packages/cli/src/commands/handlers/plugin/remove.ts": {
+      "rung": 3,
+      "seam": "Kilo config path for plugin commands: resolve `kilo.json`, `kilo.jsonc`, `.kilo` and `.kilocode`, and only root files in the global directory, like Kilo v1. Shared CLI handlers with no plugin seam for config path selection."
     },
     "packages/cli/src/server-process.ts": {
       "rung": 3,
