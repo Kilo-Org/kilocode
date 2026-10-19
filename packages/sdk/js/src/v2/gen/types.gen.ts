@@ -2612,6 +2612,7 @@ export type Config = {
   subagent_variant_overrides?: {
     [key: string]: string
   }
+  memory_model?: string
   default_agent?: string
   subagent_depth?: number
   username?: string
@@ -2717,6 +2718,7 @@ export type Config = {
     image_generation?: boolean
     image_generation_model?: string
     native_notebook_tools?: boolean
+    glob_include_ignored?: Array<string>
     code_mode?: boolean
     speech_to_text_model?: string
     speech_to_text_base_url?: string
@@ -3241,6 +3243,12 @@ export type PermissionNotFoundError = {
   _tag: "PermissionNotFoundError"
   requestID: string
   message: string
+}
+
+export type ProviderFailure = {
+  providerID: string
+  kind: "unauthorized" | "unauthenticated" | "network" | "schema" | "http"
+  status?: number
 }
 
 export type ProviderAuthMethod = {
@@ -4040,6 +4048,21 @@ export type ConfigOverlayConflictError = {
       [key: string]: unknown
     }
   }
+}
+
+export type ConfigOverlayShadowedError = {
+  message: string
+  path: string
+  shadowedBy?: string
+}
+
+export type ConfigOverlayWriteError = {
+  message: string
+  path?: string
+  issues?: Array<{
+    message: string
+    path: Array<string>
+  }>
 }
 
 export type ConfigRulesResponse = {
@@ -5272,6 +5295,7 @@ export type EventKilocodeAgentManagerStart = {
       prompt?: string
       name?: string
       branchName?: string
+      agent?: string
       model?: {
         providerID: string
         modelID: string
@@ -13386,6 +13410,7 @@ export type ProviderListResponses = {
     }
     connected: Array<string>
     failed: Array<string>
+    failures: Array<ProviderFailure>
   }
 }
 
@@ -15443,6 +15468,116 @@ export type AgentBuilderSaveResponses = {
 
 export type AgentBuilderSaveResponse = AgentBuilderSaveResponses[keyof AgentBuilderSaveResponses]
 
+export type AgentUsageSummaryData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    agent?: string
+    from?: string
+    to?: string
+  }
+  url: "/kilocode/agent-usage/summary"
+}
+
+export type AgentUsageSummaryErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type AgentUsageSummaryError = AgentUsageSummaryErrors[keyof AgentUsageSummaryErrors]
+
+export type AgentUsageSummaryResponses = {
+  /**
+   * Per-agent usage rollup for the project
+   */
+  200: Array<{
+    agent: string
+    runs: number
+    sessions: number
+    cost: number
+    activeMs: number
+    tokens: {
+      input: number
+      output: number
+      reasoning: number
+      cache: {
+        read: number
+        write: number
+      }
+    }
+    errors: number
+    lastRunAt: number
+  }>
+}
+
+export type AgentUsageSummaryResponse = AgentUsageSummaryResponses[keyof AgentUsageSummaryResponses]
+
+export type AgentUsageRunsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    agent?: string
+    from?: string
+    to?: string
+    limit?: string
+    cursor?: string
+  }
+  url: "/kilocode/agent-usage/runs"
+}
+
+export type AgentUsageRunsErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+}
+
+export type AgentUsageRunsError = AgentUsageRunsErrors[keyof AgentUsageRunsErrors]
+
+export type AgentUsageRunsResponses = {
+  /**
+   * One page of agent runs, newest first
+   */
+  200: {
+    items: Array<{
+      id: string
+      agent: string
+      sessionID: string
+      rootSessionID: string
+      parentSessionID: string
+      title: string
+      role: string
+      model: {
+        providerID: string
+        modelID: string
+      }
+      startedAt: number
+      completedAt: number
+      activeMs: number
+      cost: number
+      tokens: {
+        input: number
+        output: number
+        reasoning: number
+        cache: {
+          read: number
+          write: number
+        }
+      }
+      outcome: "completed" | "cancelled" | "errored" | "running"
+    }>
+    next?: string
+  }
+}
+
+export type AgentUsageRunsResponse = AgentUsageRunsResponses[keyof AgentUsageRunsResponses]
+
 export type BackgroundProcessListData = {
   body?: never
   path?: never
@@ -15769,13 +15904,13 @@ export type ConfigOverlayUpdateData = {
 
 export type ConfigOverlayUpdateErrors = {
   /**
-   * Bad request
+   * ConfigOverlayWriteError | InvalidRequestError
    */
-  400: BadRequestError
+  400: ConfigOverlayWriteError | InvalidRequestError
   /**
-   * ConfigOverlayConflictError
+   * ConfigOverlayConflictError | ConfigOverlayShadowedError
    */
-  409: ConfigOverlayConflictError
+  409: ConfigOverlayConflictError | ConfigOverlayShadowedError
 }
 
 export type ConfigOverlayUpdateError = ConfigOverlayUpdateErrors[keyof ConfigOverlayUpdateErrors]

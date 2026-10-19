@@ -154,6 +154,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // Consumed once by MessageList's restore effect, then cleared.
   const [scrollBottomID, setScrollBottomID] = createSignal<string>()
   const [agentProjectId, setAgentProjectId] = createSignal<string | undefined>()
+  const [sessionsProject, setSessionsProject] = createSignal<string | undefined>()
 
   const trackAgentProject = (message: ExtensionMessage): boolean => {
     if (message.type !== "agentManager.projects" && message.type !== "agentManager.selectionActivated") return false
@@ -947,7 +948,13 @@ export const SessionProvider: ParentComponent = (props) => {
         break
 
       case "sessionsLoaded":
-        handleSessionsLoaded(message.sessions, message.preserveSessionIds, message.append, message.hasMore)
+        handleSessionsLoaded(
+          message.sessions,
+          message.preserveSessionIds,
+          message.append,
+          message.hasMore,
+          message.projectId,
+        )
         break
 
       case "sessionUpdated":
@@ -1864,7 +1871,13 @@ export const SessionProvider: ParentComponent = (props) => {
     resetTodos(session.id, next)
   }
 
-  function handleSessionsLoaded(loaded: SessionInfo[], preserve?: string[], append?: boolean, hasMore?: boolean) {
+  function handleSessionsLoaded(
+    loaded: SessionInfo[],
+    preserve?: string[],
+    append?: boolean,
+    hasMore?: boolean,
+    projectId?: string,
+  ) {
     mergeSessionsLoaded({
       loaded,
       preserve,
@@ -1878,6 +1891,7 @@ export const SessionProvider: ParentComponent = (props) => {
       for (const info of loaded) if (store.sessions[info.id]) recoverInfo(info)
     })
     paging.finish(hasMore ?? false)
+    setSessionsProject(hasMore ? undefined : projectId)
   }
 
   function handleSessionDeleted(sessionID: string) {
@@ -2927,6 +2941,7 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   const value: SessionContextValue = {
+    sessionsProject,
     currentSessionID,
     currentSession,
     setCurrentSessionID,

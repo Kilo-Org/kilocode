@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Cause, Effect, Exit } from "effect"
 import { Image } from "@/image/image"
+import { KiloAttachment } from "@/kilocode/session/attachment" // kilocode_change - pin boundary/fallback agreement
 import { Config } from "@/config/config"
 import { MessageID, PartID, SessionID } from "@/session/schema"
 import { TestConfig } from "../fixture/config"
@@ -76,6 +77,38 @@ describe("Image", () => {
 
     expect(result).toBeInstanceOf(Image.SizeError)
     if (result instanceof Image.SizeError) expect(result.bytes).toBe(data.length)
+  })
+
+  // The HTTP-boundary precheck (kilocode/session/attachment.ts) waves an attachment through
+  // based on content. If this fallback disagreed, an attachment accepted at the boundary would
+  // later die as a defect inside resolvePart -- and on prompt_async that surfaces only after the
+  // route already returned 204, losing the typed message. These two pin the agreement.
+  test("accepts a line-wrapped payload without Photon, matching the boundary precheck", () => {
+    const flat = "UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA"
+    const wrapped = (flat.match(/.{1,16}/g) ?? []).join("\n")
+    expect(wrapped).toContain("\n")
+    const input = part("image/webp", wrapped)
+
+    expect(KiloAttachment.precheck({ mime: "image/webp", url: input.url })).toBeUndefined()
+    expect(Image.fallback(input, wrapped, { bytes: 1024, width: 2000, height: 2000 })).toEqual(input)
+  })
+
+  test("accepts a mislabelled but decodable image without Photon, matching the boundary precheck", () => {
+    // WebP bytes declared as image/png: Photon sniffs the real format, so both the boundary and
+    // this fallback must judge by content rather than by the declared mime.
+    const data = "UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA"
+    const input = part("image/png", data)
+
+    expect(KiloAttachment.precheck({ mime: "image/png", url: input.url })).toBeUndefined()
+    expect(Image.fallback(input, data, { bytes: 1024, width: 2000, height: 2000 })).toEqual(input)
+  })
+
+  test("rejects BMP bytes at both the boundary and the fallback", () => {
+    const bmp = Buffer.concat([Buffer.from([0x42, 0x4d]), Buffer.alloc(64, 1)]).toString("base64")
+    const input = part("image/png", bmp)
+
+    expect(KiloAttachment.precheck({ mime: "image/png", url: input.url })).toBeDefined()
+    expect(Image.fallback(input, bmp, { bytes: 1024, width: 2000, height: 2000 })).toBeInstanceOf(Image.DecodeError)
   })
 
   test("rejects an image with oversized header dimensions without Photon", () => {

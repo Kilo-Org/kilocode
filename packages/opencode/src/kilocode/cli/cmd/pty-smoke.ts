@@ -1,13 +1,35 @@
 import { cmd } from "@/cli/cmd/cmd"
-import { mkdir, mkdtemp, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, readdir, readFile, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { stripVTControlCharacters } from "node:util"
 import { VtScreen } from "./tui/vt/vt-screen"
 
 const OUTPUT_LIMIT = 20_000
+const LOG_TAIL = 80
+const IDLE_LIMIT = 25_000
 const DIAGNOSTIC =
-  /(?:TUI worker error\b|(?:^|[\r\n])\s*(?:panic|fatal(?: error)?|unhandled exception|uncaught exception)\b)/i
+  /(?:TUI worker error\b|worker (?:unhandledRejection|uncaughtException)\b|(?:^|[\r\n])\s*(?:panic|fatal(?: error)?|unhandled exception|uncaught exception)\b)/i
+
+/**
+ * Tail whatever the child wrote to the CLI log directory inside the harness home.
+ * Filenames vary (dev.log, opencode.log, a timestamped .log), so read the directory
+ * instead of guessing, and skip nested directories like background-process.
+ */
+async function logs(dataHome: string) {
+  const dir = path.join(dataHome, "kilo", "log")
+  const entries = await readdir(dir, { withFileTypes: true }).catch(() => [])
+  const files = entries.filter((entry) => entry.isFile())
+  if (files.length === 0) return `no CLI logs under ${dir}`
+  const parts = await Promise.all(
+    files.map(async (entry) => {
+      const text = await readFile(path.join(dir, entry.name), "utf8").catch((err) => `<unreadable: ${err}>`)
+      const lines = text.trimEnd().split("\n").slice(-LOG_TAIL)
+      return `--- ${entry.name} (last ${lines.length} lines) ---\n${lines.join("\n")}`
+    }),
+  )
+  return parts.join("\n")
+}
 
 export async function render(file: string, args: string[] = ["--pure"], timeout = 60_000) {
   const { spawn } = await import("@opencode-ai/core/pty/driver")
@@ -28,6 +50,12 @@ export async function render(file: string, args: string[] = ["--pure"], timeout 
     KILO_DISABLE_PROJECT_CONFIG: "1",
     KILO_DISABLE_DEFAULT_PLUGINS: "1",
     KILO_PURE: "1",
+    // A release binary logs at INFO, which is too coarse to locate a startup stall.
+    // KiloLog.init reads this, so the log tail attached on failure shows every step.
+    KILO_LOG_LEVEL: process.env.KILO_PTY_SMOKE_LOG_LEVEL ?? "DEBUG",
+    // Must stay below IDLE_LIMIT so an unanswered worker call is reported in the log tail
+    // instead of being cut off by the silence watchdog.
+    KILO_RPC_HANDSHAKE_TIMEOUT: "8000",
     KILO_CONFIG_CONTENT: JSON.stringify({ enabled_providers: ["anthropic"], experimental: { openTelemetry: false } }),
     KILO_AUTH_CONTENT: "{}",
     ANTHROPIC_API_KEY: "dummy",
@@ -44,6 +72,7 @@ export async function render(file: string, args: string[] = ["--pure"], timeout 
     TEMP: dir,
   })
 
+  const keep = process.env.KILO_PTY_SMOKE_KEEP === "1"
   try {
     const cwd = path.join(dir, "project")
     await mkdir(cwd)
@@ -54,7 +83,22 @@ export async function render(file: string, args: string[] = ["--pure"], timeout 
       phase: "screen",
       suffix: crypto.randomUUID().slice(0, 8),
       prefix: crypto.randomUUID().slice(0, 8),
+      bytes: 0,
+      chunks: 0,
+      last: Date.now(),
     }
+    const alive = () => {
+      if (!proc.pid) return false
+      try {
+        process.kill(proc.pid, 0)
+        return true
+      } catch {
+        return false
+      }
+    }
+    const detail = () =>
+      `phase=${state.phase} chunks=${state.chunks} bytes=${state.bytes} ` +
+      `idle=${Date.now() - state.last}ms pid=${proc.pid} alive=${alive()}`
     const ready = Promise.withResolvers<void>()
     const write = (value: string) => {
       try {
@@ -69,6 +113,9 @@ export async function render(file: string, args: string[] = ["--pure"], timeout 
       write(`\x05\x15${state.suffix}`)
     }
     const data = proc.onData((chunk) => {
+      state.bytes += chunk.length
+      state.chunks++
+      state.last = Date.now()
       const raw = state.output + chunk
       state.output = raw.slice(-OUTPUT_LIMIT)
       if (DIAGNOSTIC.test(stripVTControlCharacters(raw))) {
@@ -100,22 +147,44 @@ export async function render(file: string, args: string[] = ["--pure"], timeout 
       () =>
         ready.reject(
           new Error(
-            `TUI timed out during ${state.phase} after ${timeout}ms: screen=${JSON.stringify(screen.text())}, output=${JSON.stringify(state.output)}`,
+            `TUI timed out during ${state.phase} after ${timeout}ms: ${detail()}, ` +
+              `screen=${JSON.stringify(screen.text())}, output=${JSON.stringify(state.output)}`,
           ),
         ),
       timeout,
     )
-    try {
-      await ready.promise
-    } finally {
-      clearTimeout(timer)
-      clearInterval(retry)
-      data.dispose()
-      exit.dispose()
-      await KiloPtyTermination.terminate(proc)
-    }
+    // Fail fast on a silent-but-alive stream during the screen phase, the only phase
+    // observed to stall in CI. The input/edit phases are driven by the 1s probe above,
+    // so a global idle check there would risk new flakes; the overall timeout stays
+    // as the outer bound regardless of phase.
+    const watch = setInterval(() => {
+      if (state.phase !== "screen") return
+      if (Date.now() - state.last < IDLE_LIMIT) return
+      ready.reject(
+        new Error(
+          `TUI went silent during ${state.phase} after ${IDLE_LIMIT}ms with no output: ${detail()}, ` +
+            `screen=${JSON.stringify(screen.text())}, output=${JSON.stringify(state.output)}`,
+        ),
+      )
+    }, 1_000)
+    const outcome = await ready.promise.then(
+      () => undefined,
+      (err: unknown) => (err instanceof Error ? err : new Error(String(err))),
+    )
+    clearTimeout(timer)
+    clearInterval(retry)
+    clearInterval(watch)
+    data.dispose()
+    exit.dispose()
+    const failed = await KiloPtyTermination.terminate(proc).then(
+      () => undefined,
+      (err: unknown) => err,
+    )
+    if (outcome) throw new Error(`${outcome.message}\n${await logs(env.XDG_DATA_HOME!)}`, { cause: outcome })
+    if (failed) throw failed
   } finally {
-    await rm(dir, { recursive: true, force: true })
+    if (keep) console.error(`kept PTY smoke home: ${dir}`)
+    if (!keep) await rm(dir, { recursive: true, force: true })
   }
 }
 

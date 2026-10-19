@@ -149,6 +149,8 @@ interface Options {
   proxy: BrowserProxy
   approve: (url: URL) => Promise<boolean>
   blocked: (message: string) => void
+  /** Called when the main frame commits a new document. Same-document navigations, such as pushState, do not call it. */
+  committed?: () => void
   log: (...args: unknown[]) => void
 }
 
@@ -308,6 +310,7 @@ export class BrowserNetwork {
     if (this.root !== event.frame.id) this.removed({ frameId: this.root, reason: "remove" })
     this.root = event.frame.id
     this.documents.set(this.root, undefined)
+    if (this.active) this.opts.committed?.()
   }
 
   private readonly lost = () => {

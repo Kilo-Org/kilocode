@@ -86,7 +86,15 @@ The app follows your device language, with English as the fallback. Choose anoth
 
 For Kilo Pass pricing, billing, and account management details, use the [Kilo Pass pricing page](https://kilo.ai/pricing/kilo-pass).
 
-On Android, you can buy, restore, and change Kilo Pass tiers through Google Play. Tier changes take effect at the next renewal; your current tier and credits stay in place until then. Google manages cancellation and payment methods for passes purchased through Google Play.
+Kilo Pass is not sold inside the iOS or Android app. Subscribe to or change your Kilo Pass on the web instead. If you try to buy a Kilo Pass in the app, it shows **Kilo Pass purchase is not available right now.** The Android app can open the web to manage a Kilo Pass you already have; the iOS app does not offer that link.
+
+### Buying credits in the app
+
+The personal credits section shows an **Add credits** entry at any balance, which opens a **Buy credits** screen with your current balance and four preset packs: $10, $50, $100, and $500. The stores sell fixed products, not arbitrary amounts, so the app offers these preset packs rather than a custom amount. Each row shows the credit amount and the store's localized price; a pack the store cannot price is disabled and reads **Price unavailable**.
+
+Selecting a pack opens the store's own purchase sheet — StoreKit on iOS, Google Play Billing on Android. The app never grants credits itself: credits are added only after the backend validates the purchase with the store. A successful purchase shows a confirmation and refreshes your balance, and a cancelled purchase shows no error. If a purchase fails, the screen shows one inline message with a retry action; if the store is unreachable, it shows one banner naming that store while keeping the four packs visible. A purchase the backend has not yet credited is recovered the next time the app connects, and a refunded pack has its credits reversed.
+
+For other ways to add credits, see [Adding Credits](/docs/getting-started/adding-credits).
 
 {% imageGallery columns="3" width="220px" %}
 {% image src="/docs/img/mobile-apps/home.webp" alt="Kilo Code mobile home screen showing active agent sessions" caption="Start coding tasks and resume active sessions from the mobile home screen." /%}

@@ -11,7 +11,10 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { batch, createEffect, createSignal, onCleanup, onMount } from "solid-js"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
+import { Button } from "@kilocode/kilo-ui/button"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { ChatView } from "../components/chat/ChatView"
+import { SessionDock } from "../components/chat/SessionDock"
 import { ErrorDisplay } from "../components/chat/ErrorDisplay"
 import { AgentStack, useAgentStack } from "../components/chat/AgentStack"
 import { pollBackgroundJobs } from "../components/chat/background-jobs"
@@ -257,6 +260,93 @@ export const ChatViewSessionDockStability: Story = {
       </StoryProviders>
     )
   },
+}
+
+const dockTodoNames = [
+  "Read session dock layout",
+  "Add todo progress chip",
+  "Wire chip into the dock",
+  "Remove header todo tracker",
+  "Run typecheck and unit tests",
+]
+
+function dockTodos(done: number): TodoItem[] {
+  return dockTodoNames.map((content, i) => ({
+    content,
+    status: i < done ? "completed" : i === done ? "in_progress" : "pending",
+  }))
+}
+
+// The dock on its own, so the docs screenshot focuses on the chip instead of
+// the whole chat. Rendering ChatView here pulled in the welcome screen, the
+// account switcher, the feedback box, and busy header skeletons, none of which
+// belong in a picture of the todo chip.
+function dockRow(opts: { busy: boolean; goal: boolean; done: number; width: number; label: string }) {
+  const status = opts.busy ? "busy" : "idle"
+  const base = mockSessionValue({ id: SESSION_ID, status, closeReason: "completed" })
+  const session = {
+    ...base,
+    currentSession: () => ({
+      ...base.currentSession(),
+      goal: opts.goal ? { text: "Ship the todo chip in the session dock", active: opts.busy } : undefined,
+    }),
+    status: () => status,
+    statusInfo: () => ({ type: status }),
+    statusText: () => (opts.busy ? "Making edits" : undefined),
+    busyTiming: () => (opts.busy ? { active: 2000, since: Date.now() } : undefined),
+    submitting: () => false,
+    isSubmitting: () => false,
+    messages: () => [],
+    getParts: () => [],
+    todos: () => dockTodos(opts.done),
+  }
+  return (
+    <div style={{ width: `${opts.width}px` }}>
+      <div style={{ "font-size": "11px", opacity: 0.6, padding: "4px 8px" }}>{opts.label}</div>
+      <SessionContext.Provider value={session as any}>
+        <WorktreeModeProvider>
+          <div class="chat-input" style={{ padding: "4px 8px" }}>
+            <SessionDock
+              onScrollToBottom={() => undefined}
+              hasActions={() => !opts.busy}
+              actions={(goal, agents, todos) => (
+                <div class="new-task-button-wrapper">
+                  <div class="session-actions-row">
+                    {agents}
+                    <Button variant="secondary" size="small" class="session-new-button">
+                      New Session
+                    </Button>
+                    <Button variant="ghost" size="small">
+                      <Icon name="fork" size="small" />
+                      Fork Session
+                    </Button>
+                    {todos}
+                    {goal()}
+                  </div>
+                </div>
+              )}
+            />
+          </div>
+        </WorktreeModeProvider>
+      </SessionContext.Provider>
+    </div>
+  )
+}
+
+/** Static dock states for the docs and visual regression. */
+export const ChatViewSessionDockTodoStates: Story = {
+  name: "ChatView — session dock todo states",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+      <div style={{ display: "grid", gap: "16px" }}>
+        {dockRow({ busy: true, goal: false, done: 2, width: 420, label: "Working" })}
+        {dockRow({ busy: true, goal: true, done: 2, width: 420, label: "Working, with goal" })}
+        {dockRow({ busy: true, goal: true, done: 2, width: 300, label: "Working, narrow, with goal" })}
+        {dockRow({ busy: false, goal: true, done: 3, width: 420, label: "Idle" })}
+        {dockRow({ busy: false, goal: false, done: 5, width: 420, label: "Idle, all done" })}
+      </div>
+    </StoryProviders>
+  ),
 }
 
 /** Builds the user message a review-comment send produces: markdown prefix + review metadata. */
@@ -1228,7 +1318,7 @@ export const TurnOutcomeFailed: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// TaskHeader with todos
+// TaskHeader
 // ---------------------------------------------------------------------------
 
 const headerNow = 1_700_000_000_000
@@ -1358,26 +1448,8 @@ const headerParts: Record<string, Part[]> = {
   ],
 }
 
-const mockTodosInProgress: TodoItem[] = [
-  { id: "1", content: "Project setup and architecture backlog", status: "completed" },
-  { id: "2", content: "Configuration schema for target jobs", status: "completed" },
-  { id: "3", content: "Core scanning logic", status: "completed" },
-  { id: "4", content: "Build invocation and error handling", status: "completed" },
-  { id: "5", content: "CLI interface implementation", status: "in_progress" },
-  { id: "6", content: "Storage layer implementation", status: "pending" },
-  { id: "7", content: "Character profiles and prompt types", status: "pending" },
-  { id: "8", content: "Local tests and integration tests", status: "pending" },
-  { id: "9", content: "Migration guide", status: "pending" },
-  { id: "10", content: "Release validation", status: "pending" },
-]
-
-const mockTodosAllDone: TodoItem[] = [
-  { id: "1", content: "Create a haiku about Jan", status: "completed" },
-  { id: "2", content: "Create a poem about Henk", status: "completed" },
-]
-
-export const TaskHeaderWithTodos: Story = {
-  name: "TaskHeader — with todos (in progress)",
+export const TaskHeaderBusy: Story = {
+  name: "TaskHeader — busy session",
   render: () => {
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
@@ -1389,7 +1461,6 @@ export const TaskHeaderWithTodos: Story = {
         createdAt: new Date(headerNow - 12000).toISOString(),
         updatedAt: new Date(headerNow).toISOString(),
       }),
-      todos: () => mockTodosInProgress,
       getParts: (id: string) => headerParts[id] ?? [],
       contextUsage: () => ({ tokens: 34300, percentage: 17 }),
       costBreakdown: () => [{ label: "Session", cost: 0.64 }],
@@ -1531,34 +1602,6 @@ export const BackgroundAgentPanel: Story = {
         <SessionContext.Provider value={session as unknown as SessionContextValue}>
           <div style={{ padding: "160px 12px 12px" }}>
             <Stack />
-          </div>
-        </SessionContext.Provider>
-      </StoryProviders>
-    )
-  },
-}
-
-export const TaskHeaderWithTodosAllDone: Story = {
-  name: "TaskHeader — with todos (all done)",
-  render: () => {
-    const session = {
-      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
-      messages: () => [{ id: "msg-001" }] as any[],
-      visibleMessages: () => headerMessages,
-      getParts: (id: string) => headerParts[id] ?? [],
-      currentSession: () => ({
-        id: SESSION_ID,
-        title: "Writing poems about the team",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }),
-      todos: () => mockTodosAllDone,
-    }
-    return (
-      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
-        <SessionContext.Provider value={session as any}>
-          <div style={{ width: "380px" }}>
-            <TaskHeader />
           </div>
         </SessionContext.Provider>
       </StoryProviders>
@@ -1784,7 +1827,9 @@ function SwarmScene(props: { board?: SessionBoard; open?: boolean }) {
   onMount(() => {
     if (!props.open) return
     const observer = new MutationObserver(() => {
-      const button = document.querySelector<HTMLButtonElement>('[data-slot="task-header-stats"] [aria-label="Board"]')
+      const button = document.querySelector<HTMLButtonElement>(
+        '.session-dock-state[data-active] [data-component="board-trigger"]',
+      )
       if (!button) return
       observer.disconnect()
       button.click()
@@ -1808,13 +1853,31 @@ function SwarmScene(props: { board?: SessionBoard; open?: boolean }) {
   }
   return (
     <SessionContext.Provider value={session as unknown as SessionContextValue}>
-      <TaskHeader readonly={scene().readonly} projectId={scene().projectId} />
+      <WorktreeModeProvider>
+        <div class="chat-input" style={{ width: "420px", "padding-top": "360px" }}>
+          <SessionDock
+            readonly={scene().readonly}
+            projectId={scene().projectId}
+            hasActions={() => true}
+            actions={(_, agents) => (
+              <div class="new-task-button-wrapper">
+                <div class="session-actions-row">
+                  {agents}
+                  <Button variant="secondary" size="small" class="session-new-button">
+                    New Session
+                  </Button>
+                </div>
+              </div>
+            )}
+          />
+        </div>
+      </WorktreeModeProvider>
     </SessionContext.Provider>
   )
 }
 
 export const BoardClosed: Story = {
-  name: "Board, header button",
+  name: "Board, dock button",
   render: () => (
     <StoryProviders sessionID={SESSION_ID} config={{ shared_agent_board: true }} noPadding>
       <SwarmScene board={swarm} />
@@ -1832,7 +1895,7 @@ export const BoardEmpty: Story = {
 }
 
 export const BoardOpen: Story = {
-  name: "Board, messages",
+  name: "Board, recent posts",
   render: () => (
     <StoryProviders sessionID={SESSION_ID} config={{ shared_agent_board: true }} noPadding>
       <SwarmScene board={swarm} open />

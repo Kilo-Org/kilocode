@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Доска",
+  "task.swarm.open": "Открыть доску",
   "task.swarm.refresh": "Обновить",
   "task.swarm.reset": "Сбросить доску",
   "task.swarm.resetTitle": "Сбросить эту доску?",
@@ -214,6 +215,7 @@ export const dict = {
   "prompt.action.stop.background": "Остановить основного агента. Фоновые агенты продолжат работу.",
   "prompt.agents.show": "Показать фоновых агентов",
   "prompt.action.enhance": "Улучшить промпт",
+  "prompt.action.more": "Другие действия",
   "prompt.paste.expand": "Нажмите, чтобы развернуть вставленный текст",
   "prompt.issues.title": "Проблемы сессии",
   "prompt.mcp.provider": "MCP {{name}}",
@@ -285,6 +287,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Войдите в ChatGPT снова, затем отправьте сообщение еще раз, чтобы продолжить использование моделей Codex.",
 
+  "provider.failure.unauthorized": "Учетные данные отклонены (HTTP {{status}}). Войдите снова.",
+  "provider.failure.unauthorizedNoStatus": "Учетные данные отклонены. Войдите снова.",
+  "provider.failure.unauthenticated": "Вход не выполнен.",
+  "provider.failure.network": "Не удалось подключиться к провайдеру. Проверьте соединение.",
+  "provider.failure.http": "Ошибка провайдера (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Ошибка провайдера.",
+  "provider.failure.schema": "Неожиданный ответ от провайдера.",
+
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
   "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",
@@ -319,6 +329,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Чтение списка задач",
   "ui.permission.toolLabel.todoWrite": "Запись списка задач",
   "ui.permission.toolLabel.codeSearch": "Поиск кода",
+  "ui.permission.toolLabel.browserOpen": "Встроенный браузер",
   "ui.permission.copyCommand": "Копировать",
   "ui.approval.auto": "Одобрено автоматически",
   "ui.approval.manual": "Одобрено вами",
@@ -552,6 +563,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Дубликат",
   "settings.openLocalConfig": "Локальный конфиг",
   "settings.openGlobalConfig": "Глобальный конфиг",
+  "settings.search.placeholder": "Поиск параметров",
+  "settings.search.noResults": "Параметры не найдены",
+  "settings.search.clear": "Очистить поиск",
   "settings.config.scope.local": "Локальный",
   "settings.config.scope.global": "Глобальный",
   "settings.config.status.loaded": "загружено",
@@ -594,6 +608,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Получить содержимое по URL",
   "settings.permissions.tool.websearch.description": "Поиск в интернете",
   "settings.permissions.tool.codesearch.description": "Поиск кода в интернете",
+  "settings.permissions.tool.browser_open.description": "Открыть страницу во встроенном браузере",
   "settings.permissions.tool.external_directory.description": "Доступ к файлам вне директории проекта",
   "settings.permissions.tool.doom_loop.description": "Обнаружение повторных вызовов инструментов с одинаковым вводом",
 
@@ -613,6 +628,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Новая",
   "session.tabs.switcher.busy": "В работе",
   "session.tabs.switcher.scheduled": "Запланировано",
+  "session.tabs.pinHint": "Shift+щелчок, чтобы закрепить или открепить",
   "session.tab.local": "Локальный",
   "session.tab.cloud": "Облако",
   "session.tab.worktree": "Рабочее дерево",
@@ -751,6 +767,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code — это AI-помощник для программирования. Попросите его создать функции, исправить ошибки или объяснить вашу кодовую базу.",
+  "session.workspaceScope.description":
+    "Чат Kilo использует только «{{folder}}» — первую папку в этой рабочей области.",
+  "session.workspaceScope.alternatives":
+    "Чтобы работать с другой папкой, откройте её в отдельном окне или добавьте как проект в Agent Manager.",
+  "session.workspaceScope.dismiss": "Скрыть подсказку об ограничении рабочей области",
   "session.messages.scrollToBottom": "Прокрутить вниз",
   "session.messages.initializing": "Инициализация...",
   "session.messages.taskStarting": "Запуск...",
@@ -936,6 +957,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Нативные инструменты блокнотов",
   "settings.experimental.nativeNotebookTools.description":
     "Включить экспериментальные инструменты для чтения, редактирования и выполнения блокнотов VS Code",
+  "settings.experimental.globIncludeIgnored.title": "Поиск в игнорируемых путях",
+  "settings.experimental.globIncludeIgnored.description":
+    "Папки или файлы, в которых инструмент glob должен искать, даже если их исключает .gitignore или другие ignore-файлы. Используйте шаблоны в стиле gitignore относительно рабочей области; игнорируемые папки внутри них по-прежнему пропускаются.",
   "settings.experimental.continueOnDeny.title": "Продолжить при отказе",
   "settings.experimental.continueOnDeny.description": "Продолжить цикл агента при отказе в разрешении",
   "settings.sandboxing.title": "Изоляция в песочнице",
@@ -1158,6 +1182,8 @@ export const dict = {
   "settings.autoApprove.tool.webfetch": "Получение URL. Разрешает извлечение содержимого по указанному URL-адресу.",
   "settings.autoApprove.tool.websearch":
     "Поиск в интернете. Разрешает выполнение внешних поисковых запросов в интернете.",
+  "settings.autoApprove.tool.browser_open":
+    "Открывать страницы во встроенном браузере. Это встроенный предпросмотр, а не автоматизация Playwright.",
   "settings.autoApprove.tool.external_directory":
     "Доступ к файлам вне рабочей области. Срабатывает при доступе к файлам за пределами текущего каталога проекта.",
   "settings.autoApprove.tool.doom_loop":
@@ -1357,6 +1383,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} задач выполнено",
   "task.todos.allDone": "{{count}} задач выполнено",
+  "task.todos.title": "Задачи",
+  "task.todos.done": "Всё готово",
   "task.backgroundAgents.running.one": "1 фоновый агент",
   "task.backgroundAgents.running.many": "Фоновых агентов: {{count}}",
   "task.backgroundAgents.open": "Открыть фонового агента",
@@ -1375,6 +1403,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "Остановить всех ({{count}})",
   "task.backgroundAgents.finished": "Фоновые агенты завершили работу",
   "task.stop": "Остановить субагента",
+  "task.open.panel": "Открыть субагента на панели",
+  "task.open.tab": "Открыть субагента во вкладке",
   "settings.saveBar.unsavedChanges": "Несохранённые изменения",
   "settings.saveBar.discard": "Отменить",
   "settings.saveBar.save": "Сохранить",
@@ -1439,5 +1469,13 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Использовать системный Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Использовать установленный Google Chrome для встроенного браузера. Отключайте только если совместимый браузер Playwright Chromium уже установлен.",
+  "settings.experimental.browserLinks.title": "Открывать ссылки в",
+  "settings.experimental.browserLinks.description":
+    "Выберите, где открывать веб-ссылки из чатов Kilo. Требуется встроенный браузер.",
+  "settings.experimental.browserLinks.external": "Системный браузер",
+  "settings.experimental.browserLinks.integrated": "Встроенный браузер",
   "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
+  "browserTab.noSession":
+    "Откройте браузер из сеанса, чтобы просмотреть локальное приложение или публичную HTTPS-страницу.",
+  "browserTab.disabled": "Встроенный браузер отключён. Включите его в Настройках Kilo > Экспериментальные.",
 }

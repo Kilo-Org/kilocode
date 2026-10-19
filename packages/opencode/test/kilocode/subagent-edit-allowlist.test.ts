@@ -126,13 +126,12 @@ test("writable allowlist caller keeps edit tools available to a delegated subage
   expect(Permission.evaluate("edit", "src/index.ts", runtime).action).toBe("deny")
 })
 
-test("a caller's specific deny still reaches the child", async () => {
+test("a native caller's specific edit deny still reaches the child", async () => {
   const [lead, item] = await agents(
     {
       agent: {
-        lead: {
-          description: "Delegating lead",
-          mode: "primary",
+        // A native agent keeps its edit policy as a ceiling, so its specific deny is inherited.
+        code: {
           permission: {
             edit: { "*": "deny", "candidate/*/*.md": "allow", "secrets/*": "deny" },
           },
@@ -140,7 +139,7 @@ test("a caller's specific deny still reaches the child", async () => {
         worker: { ...worker, permission: { edit: "allow" as const } },
       },
     },
-    ["lead", "worker"],
+    ["code", "worker"],
   )
 
   const runtime = child(lead!, item!)
@@ -149,21 +148,78 @@ test("a caller's specific deny still reaches the child", async () => {
   expect(Permission.evaluate("edit", "notes/a.md", runtime).action).toBe("allow")
 })
 
-test("a caller's true blanket deny still hides edit tools", async () => {
+// Upstream semantics (custom delegator rules stay local): a custom agent's own edit
+// restrictions govern only that agent. Session-level denials are how a delegated workflow
+// is confined, and those still reach the child.
+test("a custom caller's edit policy does not confine its writer", async () => {
   const [lead, item] = await agents(
     {
       agent: {
-        lead: { description: "Read-write lead", mode: "primary", permission: { edit: "deny" } },
+        lead: {
+          description: "Delegating lead",
+          mode: "primary",
+          permission: { edit: { "*": "deny", "candidate/*/*.md": "allow", "secrets/*": "deny" } },
+        },
         worker: { ...worker, permission: { edit: "allow" as const } },
       },
     },
     ["lead", "worker"],
   )
 
-  const inherited = KiloTask.inherited({ caller: lead!, session: { permission: [] }, mcp: undefined })
+  expect(lead!.native).toBe(false)
+  const runtime = child(lead!, item!)
+  expect(Permission.disabled(["edit", "write", "apply_patch"], runtime)).toEqual(new Set())
+  expect(Permission.evaluate("edit", "secrets/a.txt", runtime).action).toBe("allow")
+})
+
+test("a session edit deny still constrains a custom caller's child", async () => {
+  const [lead, item] = await agents(
+    {
+      agent: {
+        lead: { description: "Delegating lead", mode: "primary", permission: scoped },
+        worker: { ...worker, permission: { edit: "allow" as const } },
+      },
+    },
+    ["lead", "worker"],
+  )
+
+  const session: Permission.Ruleset = [{ permission: "edit", pattern: "secrets/*", action: "deny" }]
+  const runtime = child(lead!, item!, session)
+  expect(Permission.disabled(["edit", "write", "apply_patch"], runtime)).toEqual(new Set())
+  expect(Permission.evaluate("edit", "secrets/a.txt", runtime).action).toBe("deny")
+  expect(Permission.evaluate("edit", "notes/a.md", runtime).action).toBe("allow")
+})
+
+// Upstream semantics: a custom delegator's edit denial is local to that agent, so only a
+// native agent's blanket deny, a session lockdown, or a read-only mode hides edit tools.
+test("a native caller's blanket edit deny still hides edit tools", async () => {
+  const [code, item] = await agents(
+    {
+      agent: {
+        code: { permission: { edit: "deny" } },
+        worker: { ...worker, permission: { edit: "allow" as const } },
+      },
+    },
+    ["code", "worker"],
+  )
+
+  const inherited = KiloTask.inherited({ caller: code!, session: { permission: [] }, mcp: undefined })
   expect(inherited).toContainEqual({ permission: "edit", pattern: "*", action: "deny" })
 
-  const runtime = child(lead!, item!)
+  const runtime = child(code!, item!)
+  expect(Permission.disabled(["edit", "write", "apply_patch"], runtime)).toEqual(
+    new Set(["edit", "write", "apply_patch"]),
+  )
+})
+
+test("a session edit lockdown hides edit tools for a custom caller", async () => {
+  const [lead, item] = await agents(
+    { agent: { lead: { description: "Lead", mode: "primary", permission: scoped }, worker } },
+    ["lead", "worker"],
+  )
+
+  const session: Permission.Ruleset = [{ permission: "edit", pattern: "*", action: "deny" }]
+  const runtime = child(lead!, item!, session)
   expect(Permission.disabled(["edit", "write", "apply_patch"], runtime)).toEqual(
     new Set(["edit", "write", "apply_patch"]),
   )
@@ -183,13 +239,16 @@ test("Plan delegation keeps the read-only ceiling", async () => {
   expect(Permission.evaluate("edit", "candidate/a/b.md", runtime).action).toBe("deny")
 })
 
-test("a user-level deny-all keeps the ceiling for a custom primary", async () => {
+test("a user-level deny-all keeps the ceiling for a native primary", async () => {
   const [lead, item] = await agents(
     {
       permission: { "*": "deny" },
-      agent: { lead: { description: "Delegating lead", mode: "primary", permission: scoped }, worker },
+      agent: {
+        code: { permission: { edit: { "*": "deny", "candidate/*/*.md": "allow" } } },
+        worker,
+      },
     },
-    ["lead", "worker"],
+    ["code", "worker"],
   )
 
   const runtime = child(lead!, item!)

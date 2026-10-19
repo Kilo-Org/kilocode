@@ -40,6 +40,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/CloneProjectDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectParentField.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ProjectSelect.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/WorktreeOrigin.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/BrowserPanel.tsx"),
@@ -1299,30 +1300,33 @@ describe("Shared webview provider shell", () => {
 
   it("owns the common provider order and bridges", () => {
     const source = fs.readFileSync(PROVIDER_SHELL_FILE, "utf-8")
-    ordered(source, [
+    const base = fs.readFileSync(path.join(ROOT, "webview-ui/src/context/provider-base.tsx"), "utf-8")
+    const rich = fs.readFileSync(path.join(ROOT, "webview-ui/src/context/rich-provider.tsx"), "utf-8")
+    const session = fs.readFileSync(path.join(ROOT, "webview-ui/src/context/provider-session.tsx"), "utf-8")
+    expect(source).toContain("<Base content={RichProvider}>")
+    ordered(base, [
       "ThemeProvider",
       "DialogProvider",
       "VSCodeProvider",
-      "MermaidDownloadBridge",
       "ServerProvider",
       "LanguageBridge",
-      "MarkedProvider",
-      "DiffComponentProvider",
-      "CodeComponentProvider",
-      "FileComponentProvider",
+      "Content",
       "ProviderProvider",
       "ConfigProvider",
       "SpeechToTextPrewarm",
       "DisplayProvider",
+    ])
+    ordered(rich, ["MarkedProvider", "DiffComponentProvider", "CodeComponentProvider", "FileComponentProvider"])
+    expect(rich).toContain('window.addEventListener("kilo:save-image", save)')
+    ordered(session, [
       "IndexingProvider",
       "KiloEmbeddingModelsProvider",
       "ImageModelsProvider",
       "NotificationsProvider",
       "SessionProvider",
-      "MemoryProvider",
-      "FeedbackProvider",
     ])
-    expect(source.indexOf("<Toast.Region")).toBeGreaterThan(source.indexOf("</VSCodeProvider>"))
+    ordered(source, ["MemoryProvider", "FeedbackProvider"])
+    expect(base.indexOf("<Toast.Region")).toBeGreaterThan(base.indexOf("</VSCodeProvider>"))
   })
 
   it("keeps sidebar-only providers in the sidebar root", () => {

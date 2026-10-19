@@ -1,6 +1,6 @@
 import { type Component, createMemo, createSignal, Show } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
+import { BRANCH_LIMIT, BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 import type { BranchInfo } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 
@@ -51,7 +51,7 @@ export const BaseBranchPicker: Component<BaseBranchPickerProps> = (props) => {
   // option; 0..n-1 is the branch list.
   const onKeyDown = (e: KeyboardEvent) => {
     const items = filtered()
-    const max = items.length - 1
+    const max = Math.min(items.length, BRANCH_LIMIT) - 1
     if (e.key === "ArrowDown") {
       e.preventDefault()
       const cur = highlight()

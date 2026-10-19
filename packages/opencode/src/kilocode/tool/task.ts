@@ -36,6 +36,9 @@ const ModelState = z
   .passthrough()
 
 export namespace KiloTask {
+  export const usageDescription =
+    "Subagents launched with this tool are internal to the current session and create no worktrees or interactive sessions. To start visible Agent Manager sessions, use `agent_manager` only when the user explicitly asks."
+
   export const ModelFields = {
     model: Schema.optional(Schema.NullOr(Schema.String)).annotate({
       description:
@@ -94,19 +97,19 @@ export namespace KiloTask {
    * overriding the selected subagent's own allowlist with parent ask/allow rules.
    *
    * OpenCode removed parent-agent inheritance entirely in anomalyco/opencode#31696.
-   * Kilo intentionally differs: a caller's *blanket* edit/notebook/MCP denies and
-   * read-only mode ceilings remain hard ceilings for delegated sessions, while
-   * parent ask/allow rules must not replace the selected subagent's policy.
+   * Kilo intentionally differs: native-agent edit denials and parent notebook/MCP denials
+   * remain hard ceilings for Plan Mode and MCP restrictions. A custom delegator's edit
+   * policy governs only that agent: it is not projected onto the subagents it starts, so
+   * even path-scoped denies such as `edit: { "secrets/**": "deny" }` stop there and no
+   * longer confine delegated writes. Session edit denials still constrain every descendant,
+   * so use a session-level edit restriction to confine a delegated workflow.
+   * Parent ask/allow rules must not replace the selected subagent's policy.
    *
-   * A catch-all deny followed by path allows is an allowlist baseline, not a
-   * blanket denial. Collapsing that shape into a `pattern: "*"` deny made
-   * delegated subagents lose edit/write entirely when the calling agent only
-   * scoped edits to selected paths. Those callers instead inherit only their
-   * specific denies, so the subagent's own allowlist governs.
-   *
-   * Read-only modes are detected by their own catch-all deny (plan, ask,
-   * orchestrator, or a user-level `"*": "deny"`). They always keep the hard
-   * ceiling, which is what stops Plan from writing source through a subagent.
+   * Edit is judged on the same `edit` ruleset as the rest of the loop: the session rules for a
+   * custom delegator, everything for a native or unknown-provenance caller. A catch-all deny
+   * followed by path allows is an allowlist baseline, not a blanket denial, so only its
+   * specific denies are inherited there. Before this, such a caller lost edit/write in every
+   * delegated subagent because the baseline was collapsed into a wildcard deny.
    *
    * Broad bash denies are deliberately NOT inherited from the calling agent. A read-only/delegating
    * agent (plan, ask, orchestrator) carries a `readOnlyBash` allowlist whose deny rules
@@ -127,26 +130,32 @@ export namespace KiloTask {
     session: Pick<Session.Info, "permission">
     mcp: Config.Info["mcp"]
   }): Permission.Ruleset {
-    const rules = Permission.merge(input.caller.permission ?? [], input.session.permission ?? [])
+    const session = input.session.permission ?? []
+    const rules = Permission.merge(input.caller.permission ?? [], session)
+    const edit = input.caller.native === false ? session : rules
     const prefixes = Object.keys(input.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))
     const mutation = mutations()
-    // Only `*`-permission rules can match the literal input "*", so this is true exactly
-    // for the modes whose guard sets `"*": "deny"` and for a global deny-all config.
-    const readonly = Permission.evaluate("*", "*", rules).action === "deny"
     // `guarded` covers the tools a read-only mode may never regain from config; keeping
     // it here too stops a Plan-launched subagent from reaching them under a catch-all.
     // `bash` is intentionally excluded — see the doc comment above (#11523).
-    const inherited = rules.filter(
+    // Only `*`-permission rules can match the literal input "*", so this is true exactly
+    // for the modes whose guard sets `"*": "deny"` and for a global deny-all config.
+    const readonly = Permission.evaluate("*", "*", rules).action === "deny"
+    const inherited = [
+      ...rules.filter((rule) => rule.permission !== "edit"),
+      ...edit.filter((rule) => rule.permission === "edit" && rule.action === "deny"),
+    ].filter(
       (r: Permission.Rule) =>
         r.action === "deny" &&
         (isMcp(r.permission) ||
-          (mutation.has(r.permission) &&
-            (readonly || r.pattern !== "*" || !PermissionAllowlist.exceptions(r.permission, rules)))),
+          (r.permission === "edit"
+            ? readonly || r.pattern !== "*" || !PermissionAllowlist.exceptions("edit", edit)
+            : mutation.has(r.permission))),
     )
     for (const permission of mutation) {
-      if (Permission.evaluate(permission, "*", rules).action !== "deny") continue
-      if (!readonly && PermissionAllowlist.exceptions(permission, rules)) continue
+      if (Permission.evaluate(permission, "*", permission === "edit" ? edit : rules).action !== "deny") continue
+      if (!readonly && PermissionAllowlist.exceptions(permission, permission === "edit" ? edit : rules)) continue
       inherited.push({ permission, pattern: "*", action: "deny" })
     }
     const scoped = rules.filter((rule) => rule.permission !== "*")
@@ -216,11 +225,59 @@ export namespace KiloTask {
   function parse(value: string | null | undefined): Model | undefined {
     if (!value) return undefined
     const [providerID, ...parts] = value.split("/")
+    const modelID = parts.join("/")
+    if (!providerID || !modelID) return undefined
     return {
       providerID: ProviderV2.ID.make(providerID),
-      modelID: ModelV2.ID.make(parts.join("/")),
+      modelID: ModelV2.ID.make(modelID),
     }
   }
+
+  /**
+   * Resolve a configured model reference. A value is matched against the
+   * provider catalog by qualified `provider/model` key, model ID, then display
+   * name, preferring the parent session's provider so a custom provider's
+   * display name (e.g. "codestral (latest)") resolves to that provider's model
+   * instead of failing with an empty model ID. A model ID or display name may
+   * itself contain `/`, so the catalog is consulted before a slash is treated
+   * as a provider separator. Unresolvable or ambiguous names log a warning and
+   * resolve to undefined, so the caller falls back to the next model source.
+   */
+  const resolve = Effect.fn("KiloTask.resolve")(function* (input: {
+    value: string
+    preferred: string
+    provider: Provider.Interface
+  }) {
+    const value = input.value.trim()
+    if (!value) return undefined
+    const providers = yield* input.provider.list()
+    const all = Object.values(providers).flatMap((provider) =>
+      Object.values(provider.models).map((model) => ({ providerID: provider.id, model })),
+    )
+    const query = value.toLowerCase()
+    const keys = all.filter((item) => `${item.providerID}/${item.model.id}`.toLowerCase() === query)
+    const ids = all.filter((item) => item.model.id.toLowerCase() === query)
+    const named = all.filter((item) => item.model.name.toLowerCase() === query)
+    const matched = keys.length ? keys : ids.length ? ids : named
+    if (matched.length === 0) {
+      if (value.includes("/")) return parse(value)
+      log.warn("task model name is not available", { value })
+      return undefined
+    }
+    const preferred = matched.filter((item) => item.providerID === input.preferred)
+    const pool = preferred.length ? preferred : matched
+    if (pool.length > 1) {
+      log.warn("task model name is ambiguous", {
+        value,
+        providers: pool.map((item) => item.providerID),
+      })
+      return undefined
+    }
+    return {
+      providerID: ProviderV2.ID.make(pool[0].providerID),
+      modelID: ModelV2.ID.make(pool[0].model.id),
+    }
+  })
 
   const saved = Effect.fn("KiloTask.savedModel")(function* (name: string) {
     if (Flag.KILO_CLIENT !== "cli") return undefined
@@ -252,7 +309,25 @@ export namespace KiloTask {
     provider: Provider.Interface
   }) {
     const state = yield* saved(input.name)
-    const cfg = parse(input.config.subagent_model)
+    const configured = input.config.subagent_model
+      ? yield* resolve({
+          value: input.config.subagent_model,
+          preferred: input.parent.providerID,
+          provider: input.provider,
+        })
+      : undefined
+    // A bare model name in the agent config is parsed by Provider.parseModel
+    // into an empty modelID (providerID holds the name); resolve it to a real
+    // provider/model pair instead of launching a child with an empty ID.
+    const agentModel = input.agent.model
+      ? input.agent.model.modelID
+        ? input.agent.model
+        : yield* resolve({
+            value: input.agent.model.providerID,
+            preferred: input.parent.providerID,
+            provider: input.provider,
+          })
+      : undefined
     const override = (model: Model) => input.config.subagent_variant_overrides?.[key(model)] ?? undefined
     const choices: Array<Choice | undefined> = [
       input.workflow ? { ...input.workflow, direct: true } : undefined,
@@ -263,8 +338,8 @@ export namespace KiloTask {
             sticky: true,
           }
         : undefined,
-      input.agent.model ? { model: input.agent.model, variant: input.agent.variant, direct: true } : undefined,
-      cfg ? { model: cfg, variant: input.config.subagent_variant ?? undefined } : undefined,
+      agentModel ? { model: agentModel, variant: input.agent.variant, direct: true } : undefined,
+      configured ? { model: configured, variant: input.config.subagent_variant ?? undefined } : undefined,
     ]
 
     for (const choice of choices) {

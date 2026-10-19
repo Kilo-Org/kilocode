@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "برد",
+  "task.swarm.open": "باز کردن برد",
   "task.swarm.refresh": "تازه‌سازی",
   "task.swarm.reset": "بازنشانی برد",
   "task.swarm.resetTitle": "این برد بازنشانی شود؟",
@@ -217,6 +218,7 @@ export const dict = {
   "prompt.action.stop.background": "توقف عامل اصلی. عامل‌های پس‌زمینه به اجرا ادامه می‌دهند.",
   "prompt.agents.show": "نمایش عامل‌های پس‌زمینه",
   "prompt.action.enhance": "بهبود پرامپت",
+  "prompt.action.more": "اقدامات بیشتر",
   "prompt.paste.expand": "برای بازکردن متن جایگذاری‌شده کلیک کنید",
   "prompt.issues.title": "مشکلات نشست",
   "prompt.mcp.provider": "MCP {{name}}",
@@ -286,6 +288,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "دوباره با ChatGPT وارد شوید، سپس پیام خود را مجدداً ارسال کنید تا از مدل‌های Codex استفاده کنید.",
 
+  "provider.failure.unauthorized": "اعتبارنامه رد شد (HTTP {{status}}). دوباره وارد شوید.",
+  "provider.failure.unauthorizedNoStatus": "اعتبارنامه رد شد. دوباره وارد شوید.",
+  "provider.failure.unauthenticated": "وارد نشده‌اید.",
+  "provider.failure.network": "دسترسی به ارائه‌دهنده ممکن نشد. اتصال خود را بررسی کنید.",
+  "provider.failure.http": "خطای ارائه‌دهنده (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "خطای ارائه‌دهنده.",
+  "provider.failure.schema": "پاسخ غیرمنتظره از ارائه‌دهنده.",
+
   "notification.permission.title": "مجوز لازم است",
   "notification.permission.titleSubagent": "مجوز مورد نیاز است (زیرعامل)",
   "notification.permission.titleSkillShell": "دستورهای شل از مهارت «{{skill}}» اجرا شود؟",
@@ -319,6 +329,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "خواندن Todo",
   "ui.permission.toolLabel.todoWrite": "نوشتن Todo",
   "ui.permission.toolLabel.codeSearch": "جستجوی کد",
+  "ui.permission.toolLabel.browserOpen": "مرورگر یکپارچه",
   "ui.permission.copyCommand": "کپی",
   "ui.approval.auto": "تأیید خودکار",
   "ui.approval.manual": "تأیید شده توسط شما",
@@ -472,6 +483,9 @@ export const dict = {
   "provider.custom.error.duplicate": "تکراری",
   "settings.openLocalConfig": "پیکربندی محلی",
   "settings.openGlobalConfig": "پیکربندی سراسری",
+  "settings.search.placeholder": "جست‌وجوی تنظیمات",
+  "settings.search.noResults": "تنظیمی یافت نشد",
+  "settings.search.clear": "پاک کردن جست‌وجو",
   "settings.config.scope.local": "محلی",
   "settings.config.scope.global": "سراسری",
   "settings.config.status.loaded": "بارگذاری شد",
@@ -512,6 +526,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "دریافت محتوا از یک URL",
   "settings.permissions.tool.websearch.description": "جستجو در وب",
   "settings.permissions.tool.codesearch.description": "جستجوی کد در وب",
+  "settings.permissions.tool.browser_open.description": "باز کردن صفحه در مرورگر یکپارچه",
   "settings.permissions.tool.external_directory.description": "دسترسی به فایل‌های خارج از پوشه پروژه",
   "settings.permissions.tool.doom_loop.description": "تشخیص فراخوانی‌های تکراری ابزار با ورودی یکسان",
 
@@ -531,6 +546,7 @@ export const dict = {
   "session.tabs.switcher.pending": "جدید",
   "session.tabs.switcher.busy": "در حال کار",
   "session.tabs.switcher.scheduled": "زمان‌بندی‌شده",
+  "session.tabs.pinHint": "Shift+کلیک برای سنجاق کردن یا لغو آن",
   "session.tab.local": "محلی",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Worktree",
@@ -705,6 +721,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code یک دستیار هوش مصنوعی برای کدنویسی است. از آن بخواهید ویژگی‌ها بسازد، باگ‌ها را رفع کند یا کدبیس شما را توضیح دهد.",
+  "session.workspaceScope.description": "گفتگوی Kilo فقط از «{{folder}}»، اولین پوشه در این فضای کاری، استفاده می‌کند.",
+  "session.workspaceScope.alternatives":
+    "برای کار با پوشه‌ای دیگر، آن را در پنجره‌ای جداگانه باز کنید یا به‌عنوان پروژه به Agent Manager اضافه کنید.",
+  "session.workspaceScope.dismiss": "بستن راهنمای محدودهٔ فضای کاری",
   "session.messages.scrollToBottom": "رفتن به پایین",
   "session.messages.initializing": "در حال راه‌اندازی...",
   "session.messages.taskStarting": "در حال شروع...",
@@ -924,6 +944,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "ابزارهای بومی Notebook",
   "settings.experimental.nativeNotebookTools.description":
     "ابزارهای آزمایشی برای خواندن، ویرایش و اجرای VS Code notebooks را فعال کنید",
+  "settings.experimental.globIncludeIgnored.title": "جستجوی مسیرهای نادیده‌گرفته‌شده",
+  "settings.experimental.globIncludeIgnored.description":
+    "پوشه‌ها یا فایل‌هایی که ابزار glob باید حتی وقتی .gitignore یا سایر فایل‌های نادیده‌گیری آن‌ها را مستثنا می‌کنند، جستجو کند. از الگوهای سبک gitignore نسبت به فضای کاری استفاده کنید؛ پوشه‌های نادیده‌گرفته‌شده درون آن‌ها همچنان رد می‌شوند.",
   "settings.experimental.continueOnDeny.title": "ادامه در صورت رد",
   "settings.experimental.continueOnDeny.description": "حلقه عامل را هنگام رد شدن یک مجوز ادامه دهید",
   "settings.experimental.codeMode.title": "فراخوانی برنامه‌نویسی ابزارها",
@@ -1144,6 +1167,8 @@ export const dict = {
     "مدیریت فهرست وظایف. اجازه خواندن و به‌روزرسانی فهرست وظایف داخلی را می‌دهد.",
   "settings.autoApprove.tool.webfetch": "دریافت یک URL. امکان بازیابی محتوا از یک URL مشخص را فراهم می‌کند.",
   "settings.autoApprove.tool.websearch": "جستجو در وب. امکان انجام جستجوهای خارجی در وب را فراهم می‌کند.",
+  "settings.autoApprove.tool.browser_open":
+    "باز کردن صفحه‌ها در مرورگر یکپارچه. این پیش‌نمایش درون‌برنامه‌ای است، نه خودکارسازی مرورگر Playwright.",
   "settings.autoApprove.tool.doom_loop":
     "جلوگیری از اقدامات تکراری یکسان. زمانی فعال می‌شود که همان فراخوانی ابزار با ورودی یکسان تکرار شود.",
 
@@ -1353,6 +1378,8 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} کار انجام شد",
   "task.todos.allDone": "{{count}} کار انجام شد",
+  "task.todos.title": "کارها",
+  "task.todos.done": "همه انجام شد",
   "task.backgroundAgents.running.one": "1 عامل پس‌زمینه",
   "task.backgroundAgents.running.many": "{{count}} عامل پس‌زمینه",
   "task.backgroundAgents.open": "باز کردن عامل پس‌زمینه",
@@ -1371,6 +1398,8 @@ export const dict = {
   "task.backgroundAgents.stopAll": "توقف همه ({{count}})",
   "task.backgroundAgents.finished": "عامل‌های پس‌زمینه به پایان رسیدند",
   "task.stop": "توقف زیرعامل",
+  "task.open.panel": "باز کردن زیرعامل در پنل",
+  "task.open.tab": "باز کردن زیرعامل در تب",
 
   "settings.saveBar.unsavedChanges": "تغییرات ذخیره‌نشده",
   "settings.saveBar.discard": "رد کردن",
@@ -1439,5 +1468,12 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "استفاده از Chrome سیستم",
   "settings.experimental.browserAutomation.systemChrome.description":
     "از Google Chrome نصب‌شده برای مرورگر یکپارچه استفاده کنید. فقط زمانی غیرفعال کنید که مرورگر Playwright Chromium سازگار از قبل نصب شده باشد.",
+  "settings.experimental.browserLinks.title": "باز کردن پیوندها در",
+  "settings.experimental.browserLinks.description":
+    "انتخاب کنید پیوندهای وب از گفتگوهای Kilo کجا باز شوند. به مرورگر یکپارچه نیاز دارد.",
+  "settings.experimental.browserLinks.external": "مرورگر سیستم",
+  "settings.experimental.browserLinks.integrated": "مرورگر یکپارچه",
   "chat.search.searchingHistory": "در حال جستجو در پیام‌های قبلی…",
+  "browserTab.noSession": "مرورگر را از یک نشست باز کنید تا یک برنامه محلی یا یک صفحه HTTPS عمومی را پیش‌نمایش بگیرید.",
+  "browserTab.disabled": "مرورگر یکپارچه غیرفعال است. آن را در تنظیمات Kilo > آزمایشی فعال کنید.",
 }

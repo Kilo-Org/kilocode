@@ -203,6 +203,10 @@ export const Info = Schema.Struct({
     description:
       "Model-specific variant overrides for task-tool subagents, keyed by provider/model. Valid overrides take precedence over saved, agent-specific, and inherited variants.",
   }),
+  memory_model: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description:
+      "Model for automatic project memory saves in the format of provider/model. If unset or unavailable, memory uses the session model.",
+  }),
   default_agent: Schema.optional(Schema.NullOr(Schema.String)).annotate({
     description:
       "Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.",
@@ -326,6 +330,10 @@ export const Info = Schema.Struct({
       }),
       native_notebook_tools: Schema.optional(Schema.Boolean).annotate({
         description: "Enable native tools for reading, editing, and executing VS Code notebooks",
+      }),
+      glob_include_ignored: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
+        description:
+          "Folders or files, as gitignore-style patterns relative to the workspace root, that the glob tool should search even when they are ignored (for example by .gitignore) or hidden. Patterns without a slash match folders at any depth; list a file inside an ignored folder by its path (for example build/report.json). Ignored or hidden folders nested inside a listed folder stay skipped.",
       }),
       code_mode: Schema.optional(Schema.Boolean).annotate({
         description:

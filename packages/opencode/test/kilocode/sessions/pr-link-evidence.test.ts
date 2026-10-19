@@ -8,7 +8,7 @@ import { Global } from "@opencode-ai/core/global"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import simpleGit from "simple-git"
+import { simpleGit } from "simple-git"
 
 const realProcess = await import("@/util/process")
 

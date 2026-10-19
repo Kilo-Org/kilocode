@@ -65,6 +65,7 @@ export interface ExperimentalConfig {
   image_generation_model?: string
   code_mode?: boolean
   native_notebook_tools?: boolean
+  glob_include_ignored?: string[]
   speech_to_text_model?: string
   speech_to_text_base_url?: string
   speech_to_text_api_key?: string
@@ -161,6 +162,7 @@ export interface Config {
   subagent_model?: string | null
   subagent_variant?: string | null
   subagent_variant_overrides?: Record<string, string | null> | null
+  memory_model?: string | null
   default_agent?: string | null
   agent?: Record<string, AgentConfig>
   provider?: Record<string, ProviderConfig>

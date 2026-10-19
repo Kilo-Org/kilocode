@@ -2,7 +2,7 @@
  * TaskHeader component
  * Sticky header above the chat messages showing session title,
  * cost, context usage, and a compact button.
- * Also shows todo progress when the session has todos.
+ * Todo progress lives in the session dock (see TodoChip).
  *
  * When expanded, shows the task timeline (colored bars representing
  * session activity) and a context window progress bar.
@@ -11,14 +11,11 @@
 import { Component, For, Show, createMemo, createSignal, createEffect, on, onMount, onCleanup } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { Icon } from "@kilocode/kilo-ui/icon"
-import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
 import { calcTokenUsage, collapseCostBreakdown, sessionCost } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
-import { SwarmBoard } from "./SwarmBoard"
 import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
 import { TranscriptSearch } from "./TranscriptSearch"
@@ -27,12 +24,10 @@ import { hasModelUsage, sessionModel, tokenSummary } from "../../context/model-u
 import { useProvider } from "../../context/provider"
 import { buildTriggerLabel, sanitizeName } from "../shared/model-selector-utils"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
-import { target as todoTarget } from "../../context/todo-revert"
-import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
+import type { ExtensionMessage } from "../../types/messages"
 
 interface TaskHeaderProps {
   readonly?: boolean
-  projectId?: string
 }
 
 export const TaskHeader: Component<TaskHeaderProps> = (props) => {
@@ -156,21 +151,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     vscode.postMessage({ type: "updateSetting", key: "showTaskTimeline", value: next })
   }
 
-  const todos = createMemo(() => session.todos())
-  const hasTodos = createMemo(() => todos().length > 0)
-  const doneCount = createMemo(() => todos().filter((t: TodoItem) => t.status === "completed").length)
-  const totalCount = createMemo(() => todos().length)
-  const allDone = createMemo(() => doneCount() === totalCount() && totalCount() > 0)
-
-  const todoSummary = createMemo(() => {
-    const done = doneCount()
-    const total = totalCount()
-    if (total === 0) return ""
-    if (done === total) return language.t("task.todos.allDone", { count: String(total) })
-    return language.t("task.todos.progress", { done: String(done), total: String(total) })
-  })
-
-  const [todosOpen, setTodosOpen] = createSignal(false)
   const [renaming, setRenaming] = createSignal<{ id: string; title: string }>()
 
   const startRename = () => {
@@ -196,17 +176,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     const info = renaming()
     if (info && session.currentSession()?.id !== info.id) setRenaming(undefined)
   })
-
-  const donePart = (idx: number): Part | undefined =>
-    todoTarget({ messages: session.messages(), parts: session.allParts() }, idx)
-
-  const revertTodo = (part: Part | undefined) => {
-    if (props.readonly) return
-    if (session.status() !== "idle") return
-    if (part?.type !== "tool") return
-    if (!part.messageID) return
-    session.revertSession(part.messageID, part.id)
-  }
 
   return (
     <Show when={hasMessages()}>
@@ -281,7 +250,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
               </Tooltip>
             )}
           </Show>
-          <SwarmBoard readonly={props.readonly} projectId={props.projectId} />
           <Show when={!props.readonly}>
             <Tooltip value={language.t("command.session.compact")} placement="bottom">
               <IconButton
@@ -364,51 +332,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 <div class="task-header-skeleton" style={{ width: "36px" }} />
                 <div class="task-header-skeleton" style={{ width: "28px" }} />
               </Show>
-            </div>
-          </Show>
-        </div>
-      </Show>
-      <Show when={hasTodos()}>
-        <div data-component="task-header-todos">
-          <button
-            data-slot="task-header-todos-trigger"
-            onClick={() => setTodosOpen((v) => !v)}
-            aria-expanded={todosOpen()}
-          >
-            <Icon name="checklist" size="small" />
-            <span data-slot="task-header-todos-summary" data-all-done={allDone() ? "" : undefined}>
-              {todoSummary()}
-            </span>
-            <Icon
-              name="chevron-down"
-              size="small"
-              data-slot="task-header-todos-arrow"
-              data-open={todosOpen() ? "" : undefined}
-            />
-          </button>
-          <Show when={todosOpen()}>
-            <div data-slot="task-header-todos-list">
-              <For each={todos()}>
-                {(todo: TodoItem, idx) => {
-                  const part = createMemo(() => (todo.status === "completed" ? donePart(idx()) : undefined))
-                  return (
-                    <Tooltip value={part() ? language.t("settings.checkpoints.title") : undefined} placement="bottom">
-                      <Checkbox
-                        readOnly
-                        checked={todo.status === "completed"}
-                        onClick={props.readonly ? undefined : () => revertTodo(part())}
-                      >
-                        <span
-                          data-slot="task-header-todo-content"
-                          data-completed={todo.status === "completed" ? "" : undefined}
-                        >
-                          {todo.content}
-                        </span>
-                      </Checkbox>
-                    </Tooltip>
-                  )
-                }}
-              </For>
             </div>
           </Show>
         </div>

@@ -1,6 +1,7 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Image } from "@/image/image"
+import { KiloAttachment } from "@/kilocode/session/attachment" // kilocode_change
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Cause, Deferred, Effect, Exit, Layer, Context, Scope, Schema } from "effect"
 import * as Stream from "effect/Stream"
@@ -28,6 +29,7 @@ import { KiloToolInput } from "@/kilocode/session/tool-input" // kilocode_change
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model"
 import { KiloResponseMetadata } from "@/kilocode/session/response-metadata"
+import { KiloReasoningReplay } from "@/kilocode/session/reasoning-replay"
 import { Suggestion } from "@/kilocode/suggestion"
 // kilocode_change end
 import { errorMessage } from "@/util/error"
@@ -547,7 +549,7 @@ const layer = Layer.effect(
             // existing message-v2 filter already strips them from model context.
             const skipNormalization = value.name === "send_file"
             const normalized = yield* Effect.forEach(rawOutput.attachments ?? [], (attachment) =>
-              attachment.mime.startsWith("image/") && !skipNormalization
+              KiloAttachment.classify(attachment.mime) === "raster" && !skipNormalization
                 ? image.normalize(attachment).pipe(
                     Effect.catchIf(
                       (error) => error instanceof Image.ResizerUnavailableError,
@@ -630,6 +632,26 @@ const layer = Layer.effect(
             })
             // kilocode_change end
             yield* Effect.forEach(Object.keys(ctx.reasoningMap), finishReasoning)
+            // kilocode_change start - persist late-arriving OpenRouter reasoning details for replay
+            const details = KiloReasoningReplay.details(value.providerMetadata)
+            if (details) {
+              const parts = yield* MessageV2.parts(ctx.assistantMessage.id).pipe(
+                Effect.provideService(Database.Service, database),
+              )
+              yield* Effect.forEach(
+                KiloReasoningReplay.reconcile({
+                  parts,
+                  details,
+                  messageID: ctx.assistantMessage.id,
+                  sessionID: ctx.assistantMessage.sessionID,
+                }),
+                (part) =>
+                  session
+                    .getPart({ partID: part.id, messageID: part.messageID, sessionID: part.sessionID })
+                    .pipe(Effect.flatMap((stored) => session.updatePart(KiloReasoningReplay.restore(part, stored)))),
+              )
+            }
+            // kilocode_change end
             // Anthropic reports thinking blocks it removed before the model saw the
             // prompt. Prefix mismatches mean opencode changed history behind a signed
             // block; log them so the churn can be tracked down.
@@ -918,7 +940,10 @@ const layer = Layer.effect(
             return
           }
           ctx.needsCompaction = true
-          yield* events.publish(Session.Event.Error, { sessionID: ctx.sessionID, error })
+          // kilocode_change start - let compaction publish overflow only after recovery is exhausted
+          if (!ctx.assistantMessage.summary)
+            yield* events.publish(Session.Event.Error, { sessionID: ctx.sessionID, error })
+          // kilocode_change end
           return
         }
         ctx.assistantMessage.error = error
@@ -1013,6 +1038,7 @@ const layer = Layer.effect(
                 (cause) => !Cause.hasInterruptsOnly(cause),
                 (cause) => Effect.fail(Cause.squash(cause)),
               ),
+              Effect.tapError(() => Effect.forEach(Object.keys(ctx.reasoningMap), finishReasoning)), // kilocode_change - close failed-attempt reasoning before retry resets tracking
               Effect.retry(
                 SessionRetry.policy({
                   provider: input.model.providerID,
