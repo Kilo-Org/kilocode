@@ -328,6 +328,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "อ่านรายการงาน",
   "ui.permission.toolLabel.todoWrite": "เขียนรายการงาน",
   "ui.permission.toolLabel.codeSearch": "ค้นหาโค้ด",
+  "ui.permission.toolLabel.browserOpen": "เบราว์เซอร์ในตัว",
   "ui.permission.copyCommand": "คัดลอก",
   "ui.approval.auto": "อนุมัติอัตโนมัติ",
   "ui.approval.manual": "คุณเป็นผู้อนุมัติ",
@@ -602,6 +603,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "ดึงเนื้อหาจาก URL",
   "settings.permissions.tool.websearch.description": "ค้นหาบนเว็บ",
   "settings.permissions.tool.codesearch.description": "ค้นหาโค้ดบนเว็บ",
+  "settings.permissions.tool.browser_open.description": "เปิดหน้าในเบราว์เซอร์ในตัว",
   "settings.permissions.tool.external_directory.description": "เข้าถึงไฟล์นอกไดเรกทอรีโปรเจกต์",
   "settings.permissions.tool.doom_loop.description": "ตรวจจับการเรียกเครื่องมือซ้ำด้วยข้อมูลนำเข้าเหมือนกัน",
 
@@ -1159,6 +1161,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "จัดการรายการงาน อนุญาตให้อ่านและอัปเดตรายการงานภายใน",
   "settings.autoApprove.tool.webfetch": "ดึงข้อมูลจาก URL อนุญาตให้ดึงเนื้อหาจาก URL ที่ระบุ",
   "settings.autoApprove.tool.websearch": "ค้นหาบนเว็บ อนุญาตให้ทำการค้นหาเว็บภายนอก",
+  "settings.autoApprove.tool.browser_open":
+    "เปิดหน้าในเบราว์เซอร์ในตัว นี่คือการแสดงตัวอย่างในแอป ไม่ใช่ระบบอัตโนมัติของเบราว์เซอร์ Playwright",
   "settings.autoApprove.tool.external_directory":
     "เข้าถึงไฟล์นอกพื้นที่ทำงาน (Workspace) ถูกเรียกเมื่อเข้าถึงไฟล์ภายนอกไดเรกทอรีโปรเจ็กต์ปัจจุบัน",
   "settings.autoApprove.tool.doom_loop":

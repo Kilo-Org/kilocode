@@ -1,5 +1,13 @@
 # Changelog
 
+## 7.8.13
+
+### Patch Changes
+
+- [#15112](https://github.com/Kilo-Org/kilocode/pull/15112) [`3cb7685`](https://github.com/Kilo-Org/kilocode/commit/3cb7685900ca5bc5adc337c797c18cc16cb8ebe6) - Use the primary brand yellow for the JetBrains plugin icon and in-app Kilo logos.
+
+- [#15179](https://github.com/Kilo-Org/kilocode/pull/15179) [`90791a0`](https://github.com/Kilo-Org/kilocode/commit/90791a055fd4108f5a042f16ba54771de089a96d) - Prevent editor context ignore-file loading from blocking the JetBrains UI thread.
+
 ## 7.8.10
 
 ### Patch Changes
@@ -611,6 +619,27 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.1.11] - 2026-10-16
+
+### Added
+
+- List remote agents for the mobile app.
+- Bundle Kilo CLI v7.8.13.
+
+### Fixed
+
+- Prevent editor context ignore-file loading from blocking the JetBrains UI thread.
+- Guard deferred prompt dispatch.
+- Keep worker console writes off the TUI frame.
+- Refresh expired MCP OAuth tokens automatically.
+- Preserve session status occurrence timing.
+- Persist late OpenRouter reasoning details for replay.
+- Make OpenAI-compatible tool content normalization opt-in.
+
+### Changed
+
+- Bump the Gradle wrapper to 9.8.1 and openapi-generator to 7.26.0.
 
 ## [7.1.10] - 2026-10-15
 
