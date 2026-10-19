@@ -234,7 +234,9 @@ describe("Config", () => {
           expect(
             // kilocode_change - Kilo project directory
             (yield* watcher.subscriptions()).filter((subscription) =>
+// kilocode_change start - Kilo config names and .kilo directory
               subscription.path.includes(`${path.sep}.kilo${path.sep}`),
+// kilocode_change end
             ),
           ).toEqual([])
         })
@@ -1277,6 +1279,7 @@ describe("Config", () => {
                 type: "entries",
                 path: tmp.path,
                 // kilocode_change - Kilo config names and directories
+// kilocode_change start - Kilo config names and .kilo directory
                 names: [
                   ".agents",
                   ".claude",
@@ -1287,6 +1290,7 @@ describe("Config", () => {
                   "opencode.json",
                   "opencode.jsonc",
                 ],
+// kilocode_change end
               },
             ])
           }).pipe(Effect.provide(testLayer(tmp.path, undefined, undefined, undefined, Watcher.testLayer)))
@@ -1870,6 +1874,7 @@ describe("Config", () => {
               path: tmp.path,
               type: "entries",
               // kilocode_change - Kilo config names and directories
+// kilocode_change start - Kilo config names and .kilo directory
               names: [
                 ".agents",
                 ".claude",
@@ -1880,6 +1885,7 @@ describe("Config", () => {
                 "opencode.json",
                 "opencode.jsonc",
               ],
+// kilocode_change end
             })
           }).pipe(Effect.provide(testLayer(tmp.path)))
         }),

@@ -145,7 +145,9 @@ describe("PluginSupervisor reload", () => {
           await Bun.write(file, entry)
           await Bun.write(helper, source(1))
           // kilocode_change - Kilo project directory
+// kilocode_change start - Kilo config file name
           await Bun.write(path.join(directory.path, ".kilo/opencode.json"), JSON.stringify({ plugins: [root] }))
+// kilocode_change end
         })
         const watcher = yield* Watcher.Test
         const locations = yield* LocationServiceMap.Service
@@ -304,7 +306,9 @@ describe("PluginSupervisor reload", () => {
       yield* Effect.promise(() => Bun.write(path.join(npm.directory, "server.ts"), greeter("greet-pkg")))
       // kilocode_change - Kilo project directory
       yield* Effect.promise(() =>
+// kilocode_change start - Kilo config file name
         Bun.write(path.join(directory.path, ".kilo/opencode.json"), JSON.stringify({ plugins: ["fixture-pkg"] })),
+// kilocode_change end
       )
       const bus = yield* Bus.Service
       const locations = yield* LocationServiceMap.Service

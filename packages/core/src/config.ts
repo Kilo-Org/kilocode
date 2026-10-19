@@ -209,7 +209,7 @@ export const layer = (options?: Options) =>
         return info ? [new Document({ type: "document", path: plist, info })] : []
       })
 
-      // kilocode_change - file order is a parameter: Kilo v1 reads .kilocode and .kilo in another order than the global directory
+      // kilocode_change start - file order is a parameter: Kilo v1 reads .kilocode and .kilo in another order than the global directory
       const loadDirectory = Effect.fnUntraced(function* (
         directory: AbsolutePath,
         names: readonly string[] = ConfigDiscovery.names,
@@ -217,6 +217,7 @@ export const layer = (options?: Options) =>
         return [
           ...(yield* Effect.forEach(names, (file) => loadFile(path.join(directory, file))).pipe(
             Effect.map((configs) => configs.filter((config): config is Document => config !== undefined)),
+      // kilocode_change end
           )),
           new Directory({ type: "directory", path: directory }),
         ]

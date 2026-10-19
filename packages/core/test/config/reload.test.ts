@@ -216,7 +216,9 @@ describe("config plugin reloads", () => {
 
               // kilocode_change - Kilo project directory
               yield* Effect.promise(() =>
+// kilocode_change start - Kilo config path
                 fs.rm(input.file.includes(".kilo/") ? path.dirname(target) : target, { recursive: true }),
+// kilocode_change end
               )
               yield* waitUntil(references.list().pipe(Effect.map((items) => items.length === 0)))
               yield* Effect.promise(async () => {
