@@ -31,13 +31,13 @@ export default Runtime.handler(
       : { type: "local" as const, command, ...(environment ? { environment } : {}) }
 
     const global = yield* Global.Service
-    const configPath = yield* Effect.promise(() => resolveConfigPath(input.global ? global.config : process.cwd(), input.global))
+    const configPath = yield* Effect.promise(() => resolveConfigPath(input.global ? global.config : process.cwd(), input.global)) // kilocode_change - global mode
     yield* Effect.promise(() => write(configPath, input.name, server))
     process.stdout.write(`MCP server "${input.name}" added to ${configPath}` + EOL)
   }),
 )
 
-export async function resolveConfigPath(directory: string, global = false) {
+export async function resolveConfigPath(directory: string, global = false) { // kilocode_change - global mode, like Kilo v1
   // kilocode_change start - Kilo config names, with .kilo and .kilocode before root files, like Kilo v1; the global directory only reads root files, like Kilo v1
   const candidates = global
     ? ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"].map((name) => path.join(directory, name))

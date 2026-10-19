@@ -12,7 +12,7 @@ export default Runtime.handler(
   Commands.commands.plugin.commands.remove,
   Effect.fn("cli.plugin.remove")(function* (input) {
     const global = yield* Global.Service
-    const configPath = yield* Effect.promise(() => resolveConfigPath(global.config, true))
+    const configPath = yield* Effect.promise(() => resolveConfigPath(global.config, true)) // kilocode_change - global mode
     const server = yield* Effect.promise(() => removePluginConfig(configPath, input.package))
     const config = yield* Config.Service
     const info = yield* config.get()

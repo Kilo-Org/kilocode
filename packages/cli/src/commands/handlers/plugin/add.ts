@@ -25,7 +25,7 @@ export default Runtime.handler(
 
     if (target === "server") {
       const global = yield* Global.Service
-      const configPath = yield* Effect.promise(() => resolveConfigPath(global.config, true))
+      const configPath = yield* Effect.promise(() => resolveConfigPath(global.config, true)) // kilocode_change - global mode
       const changed = yield* Effect.promise(() => writePluginConfig(configPath, input.package))
       process.stdout.write(
         changed
