@@ -8,8 +8,14 @@ import type { Plugin } from "@opencode/plugin/effect/plugin"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import type { LayerNode } from "@opencode/util/effect/layer-node"
 import { Global } from "@opencode/util/global"
-import { Context, Effect, Layer, type Scope } from "effect"
+import { Context, Duration, Effect, Layer, type Scope } from "effect"
 import { KiloApp } from "./app"
+
+/**
+ * The duration in milliseconds of the last activation of each Kilo plugin, by plugin ID. The startup ratchet
+ * (packages/kilo-cli/script/startup.ts) reads it; nothing at runtime does.
+ */
+export const activations = new Map<string, number>()
 
 // The server's SdkPlugins store with the Kilo plugins registered, the seam upstream offers to embedders. The
 // plugin loader gives a registered plugin only its Scope, so the host provides the global services that a Kilo
@@ -23,7 +29,17 @@ const plugins = makeGlobalNode({
       const services = Context.pick(Bus.Service, Global.Service)(yield* Effect.context<Bus.Service | Global.Service>())
       const register = (plugin: Plugin<Bus.Service | Global.Service | Scope.Scope>, phase?: "post") =>
         sdk.register(
-          { id: plugin.id, effect: (context) => plugin.effect(context).pipe(Effect.provide(services)) },
+          {
+            id: plugin.id,
+            effect: (context) =>
+              plugin.effect(context).pipe(
+                Effect.provide(services),
+                Effect.timed,
+                Effect.map(([duration]) => {
+                  activations.set(plugin.id, Duration.toMillis(duration))
+                }),
+              ),
+          },
           { phase },
         )
       yield* Effect.forEach(KiloPlugins, (plugin) => register(plugin))

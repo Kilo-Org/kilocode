@@ -51,6 +51,8 @@ test("the server gets the Kilo plugins through SdkPlugins and serves the Kilo Ga
           expect(plugins.body.data).toContainEqual(
             expect.objectContaining({ id: "kilocode.gateway", source: { type: "sdk" }, state: { status: "active" } }),
           )
+          // The host times each Kilo plugin activation for the startup ratchet.
+          expect(KiloHost.activations.get("kilocode.gateway")).toBeNumber()
 
           const provider = yield* eventually(
             get("/api/provider/kilo"),

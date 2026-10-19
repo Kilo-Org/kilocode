@@ -1,0 +1,11 @@
+{
+  "$comment": "Startup ratchet budgets (#15244), read by script/startup.ts (`bun run startup`). Values are milliseconds. `plugins`: median activation time of each Kilo plugin while the local Kilo API answers after `latency` ms. `overhead`: median time until all Location plugins are active with the Kilo host overrides, minus the median without them. Each budget is the measured value plus a small margin. Raise a budget only with the reason in the PR that needs it, and lower it when a change makes startup faster.",
+  "latency": 300,
+  "runs": 5,
+  "plugins": {
+    "kilocode.gateway": 360,
+    "kilo.agent": 50,
+    "kilo.agent.ceiling": 50
+  },
+  "overhead": 370
+}

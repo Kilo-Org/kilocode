@@ -183,3 +183,9 @@ jobs:
       - name: Test the Kilo host
         working-directory: packages/kilo-cli
         run: bun test
+
+      # Fails when Kilo plugin activation grows past packages/kilo-cli/startup-budget.json (#15244).
+      - name: Startup ratchet
+        working-directory: packages/kilo-cli
+        timeout-minutes: 2
+        run: bun run startup

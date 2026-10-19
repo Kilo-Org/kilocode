@@ -8,5 +8,5 @@
     "noUncheckedIndexedAccess": false,
     "noUnusedLocals": true
   },
-  "include": ["src", "test", "../cli/src/virtual.d.ts"]
+  "include": ["src", "test", "script", "../cli/src/virtual.d.ts"]
 }
