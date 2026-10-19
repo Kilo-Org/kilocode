@@ -139,7 +139,9 @@ describe("Agent Manager worktree deletion lifecycle", () => {
     const gate = Promise.withResolvers<void>()
     const wt = state.getWorktrees().at(0)!
     host.createOnDisk = async () => ({ worktree: wt, result: { path: worktree, branch: wt.branch } }) as never
-    host.runSetup = async () => {
+    host.runSetup = async (_dir, _branch, _id, _early, origin) => {
+      // WorktreeSetup hooks see a plain new worktree as `create`.
+      expect(origin).toBe("create")
       calls.push("setup:start")
       entered.resolve()
       await gate.promise

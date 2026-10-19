@@ -9,6 +9,7 @@ import { EventV2Bridge } from "@/event-v2-bridge"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { WakeupEvent } from "@opencode-ai/schema/kilocode/wakeup-event"
 import { Context, Effect, Fiber, Layer, Option, Semaphore } from "effect"
+import { unrestricted } from "@kilocode/sandbox"
 import { fireLayer, text as wakeupText } from "./resume"
 import * as schema from "./schema"
 
@@ -67,7 +68,14 @@ export namespace Wakeup {
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
-      const storage = yield* Storage.Service
+      // The wakeup and cron queues are sandbox-protected, since a forged record would prompt a session
+      // that may not be sandboxed. This service is their only writer, also when a sandboxed tool calls it.
+      const store = yield* Storage.Service
+      const storage: Storage.Interface = {
+        ...store,
+        write: (target, content) => unrestricted(store.write(target, content)),
+        remove: (target) => unrestricted(store.remove(target)),
+      }
       const fire = yield* Fire
       const events = yield* EventV2Bridge.Service
       // Timers live in the service scope, so tearing the layer down stops them.

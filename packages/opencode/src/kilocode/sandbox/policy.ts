@@ -1,8 +1,9 @@
-import { accessSync, constants, readFileSync, realpathSync, statSync } from "node:fs"
+import { accessSync, constants, mkdirSync, readFileSync, realpathSync, statSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { Effect, Semaphore } from "effect"
 import { Global } from "@opencode-ai/core/global"
+import * as Log from "@opencode-ai/core/util/log"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Database } from "@opencode-ai/core/database/database"
 import { backendSupport, run as runSandbox, unrestricted, type Profile } from "@kilocode/sandbox"
@@ -23,6 +24,7 @@ import { SandboxStore } from "./store"
 export type Snapshot = SandboxStore.Snapshot
 export type Target = { id: SessionID; directory: string }
 
+const log = Log.create({ service: "sandbox" })
 const snapshots = new Map<string, Snapshot>()
 const synced = new Map<string, number>()
 const locks = new Map<SessionID, { semaphore: Semaphore.Semaphore; refs: number }>()
@@ -165,6 +167,42 @@ function root(path: string) {
   return { path, kind: "subtree" as const }
 }
 
+// Scripts the Agent Manager (and JetBrains) run outside the sandbox: on worktree creation and on Run.
+const SCRIPTS = ["setup-script", "run-script"].flatMap((name) =>
+  ["", ".sh", ".ps1", ".cmd", ".bat"].map((ext) => name + ext),
+)
+
+/**
+ * Content a sandboxed agent could write that Kilo later runs or acts on outside the sandbox: the
+ * worktree setup/run scripts (also the legacy `.kilocode/` ones the migration moves into `.kilo/`),
+ * the database (a forged `project.commands.start` runs when the CLI creates a worktree), and the
+ * wakeup/cron queues (a forged record prompts a session that may not be sandboxed). Defense in
+ * depth: the server process itself is not sandboxed, so its own writes are unaffected.
+ */
+function unsafe(project: readonly string[]) {
+  const scripts = [...new Set(project)].flatMap((dir) =>
+    [".kilo", ".kilocode"].flatMap((sub) =>
+      SCRIPTS.map((name) => ({ path: path.join(dir, sub, name), kind: "literal" as const })),
+    ),
+  )
+  const db = Database.path()
+  const state = path.isAbsolute(db)
+    ? [db, `${db}-wal`, `${db}-shm`, `${db}-journal`].map((file) => ({ path: file, kind: "literal" as const }))
+    : []
+  const queues = ["wakeup", "cron"].map((key) => path.join(Global.Path.data, "storage", key))
+  // Bubblewrap only protects deny paths that exist when the sandbox starts.
+  for (const dir of queues) ensure(dir)
+  return [...scripts, ...state, ...queues.map(root)]
+}
+
+function ensure(dir: string) {
+  try {
+    mkdirSync(dir, { recursive: true })
+  } catch (err) {
+    log.warn("could not create a sandbox-protected directory", { dir, err })
+  }
+}
+
 function marker(dir: string) {
   try {
     const file = path.join(dir, ".git")
@@ -263,6 +301,7 @@ export function profile(
         root(path.join(Global.Path.home, ".claude")),
         ...(Flag.KILO_CONFIG_DIR ? [root(path.resolve(Flag.KILO_CONFIG_DIR))] : []),
         ...(Flag.KILO_CONFIG ? [{ path: path.resolve(Flag.KILO_CONFIG), kind: "literal" as const }] : []),
+        ...unsafe(project),
       ],
       denyNames: [".git"],
       temporaryDirectory: Global.Path.tmp,

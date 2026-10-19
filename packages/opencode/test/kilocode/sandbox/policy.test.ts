@@ -2,12 +2,18 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import { describe, expect, test } from "bun:test"
 import { Global } from "@opencode-ai/core/global"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { FSUtil } from "@opencode-ai/core/fs-util"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { assertWrite, run as runSandbox } from "@kilocode/sandbox"
 import { Effect, Exit } from "effect"
 import { profile } from "@/kilocode/sandbox/policy"
 import { SandboxPreference } from "@/kilocode/sandbox/preference"
 import { SandboxStore } from "@/kilocode/sandbox/store"
+import { Wakeup } from "@/kilocode/wakeup"
 import type { InstanceContext } from "@/project/instance-context"
+import { SessionID } from "@/session/schema"
 import { ProjectV2 } from "@opencode-ai/core/project"
 import { tmpdir } from "../../fixture/fixture"
 
@@ -200,7 +206,7 @@ describe("sandbox policy", () => {
 
     expect(new Set(roots(ctx))).toEqual(expected(dirs.a))
     expect(policy.filesystem.temporaryDirectory).toBe(Global.Path.tmp)
-    expect(policy.filesystem.denyWrite).toEqual([
+    expect(policy.filesystem.denyWrite.slice(0, 6)).toEqual([
       { path: SandboxStore.root, kind: "subtree" },
       { path: SandboxPreference.root, kind: "subtree" },
       { path: Global.Path.config, kind: "subtree" },
@@ -307,5 +313,113 @@ describe("sandbox policy", () => {
     )
 
     expect(Exit.isFailure(result)).toBe(true)
+  })
+
+  describe("content Kilo runs or acts on outside the sandbox", () => {
+    const SCRIPTS = ["setup-script", "run-script"].flatMap((name) =>
+      ["", ".sh", ".ps1", ".cmd", ".bat"].map((ext) => name + ext),
+    )
+    const scripts = (dir: string) =>
+      [".kilo", ".kilocode"].flatMap((sub) =>
+        SCRIPTS.map((name) => ({ path: path.join(dir, sub, name), kind: "literal" as const })),
+      )
+    const queues = ["wakeup", "cron"].map((key) => ({
+      path: path.join(Global.Path.data, "storage", key),
+      kind: "subtree" as const,
+    }))
+
+    async function database<T>(file: string, fn: () => Promise<T>) {
+      const previous = Flag.KILO_DB
+      Flag.KILO_DB = file
+      try {
+        return await fn()
+      } finally {
+        Flag.KILO_DB = previous
+      }
+    }
+
+    test("denies the worktree scripts of every project root once, the database files and the queues", async () => {
+      await using tmp = await fixture()
+      const dirs = tmp.extra
+      const db = path.join(tmp.path, "kilo.db")
+      await database(db, async () => {
+        const single = profile(context(dirs.main, dirs.main, dirs)).filesystem.denyWrite
+        const nested = profile(context(dirs.local, dirs.main, dirs)).filesystem.denyWrite
+        const named = (rules: typeof single) => rules.filter((rule) => /(setup|run)-script/.test(rule.path))
+
+        expect(named(single)).toEqual(scripts(dirs.main))
+        expect(named(single)).toHaveLength(20)
+        expect(named(nested)).toEqual([...scripts(dirs.main), ...scripts(dirs.local)])
+        expect(single).toEqual(
+          expect.arrayContaining([
+            ...[db, `${db}-wal`, `${db}-shm`, `${db}-journal`].map((file) => ({
+              path: file,
+              kind: "literal" as const,
+            })),
+            ...queues,
+          ]),
+        )
+        // Bubblewrap only protects deny paths that exist, so the queues are created up front.
+        for (const queue of queues) expect((await fs.stat(queue.path)).isDirectory()).toBe(true)
+      })
+    })
+
+    test("refuses sandboxed writes to setup and run scripts, the database and the queues, not to other .kilo files", async () => {
+      await using tmp = await fixture()
+      const dirs = tmp.extra
+      const db = path.join(tmp.path, "kilo.db")
+      await database(db, async () => {
+        const policy = profile(context(dirs.main, dirs.main, dirs))
+        const write = (target: string) => Effect.runPromise(runSandbox(policy, assertWrite(target)).pipe(Effect.exit))
+        for (const target of [
+          path.join(dirs.main, ".kilo", "setup-script"),
+          path.join(dirs.main, ".kilo", "run-script.ps1"),
+          path.join(dirs.main, ".kilocode", "setup-script.sh"),
+          db,
+          `${db}-wal`,
+          path.join(Global.Path.data, "storage", "wakeup", "ses_x", "wku_forged.json"),
+          path.join(Global.Path.data, "storage", "cron", "ses_x", "wku_forged.json"),
+        ])
+          expect(Exit.isFailure(await write(target))).toBe(true)
+        expect(Exit.isSuccess(await write(path.join(dirs.main, ".kilo", "plans", "plan.md")))).toBe(true)
+        expect(Exit.isSuccess(await write(path.join(Global.Path.data, "storage", "session", "x.json")))).toBe(true)
+      })
+    })
+
+    test("the Wakeup service still writes its queue for a sandboxed tool while direct writes are refused", async () => {
+      await using tmp = await fixture()
+      const dirs = tmp.extra
+      const policy = profile(context(dirs.main, dirs.main, dirs))
+      const sessionID = SessionID.make(`ses_sandbox_wakeup_${Date.now()}`)
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const wake = yield* Wakeup.Service
+          const files = yield* FSUtil.Service
+          const info = yield* runSandbox(
+            policy,
+            wake.schedule({
+              sessionID,
+              directory: dirs.main,
+              prompt: "check the deploy",
+              when: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+            }),
+          )
+          const listed = yield* wake.list({ sessionID })
+          const forged = yield* runSandbox(
+            policy,
+            files.writeWithDirs(
+              path.join(Global.Path.data, "storage", "wakeup", sessionID, "wku_forged.json"),
+              JSON.stringify({ ...info, id: "wku_forged" }),
+            ),
+          ).pipe(Effect.exit)
+          const cancelled = yield* runSandbox(policy, wake.cancel(info.id, sessionID))
+          return { info, listed, forged, cancelled, left: yield* wake.list({ sessionID }) }
+        }).pipe(Effect.scoped, Effect.provide(AppNodeBuilder.build(LayerNode.group([Wakeup.node, FSUtil.node])))),
+      )
+      expect(result.listed.map((item) => item.id)).toEqual([result.info.id])
+      expect(Exit.isFailure(result.forged)).toBe(true)
+      expect(result.cancelled?.id).toBe(result.info.id)
+      expect(result.left).toEqual([])
+    })
   })
 })
