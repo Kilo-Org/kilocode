@@ -159,6 +159,7 @@ export const layer = Layer.effectDiscard(
         revision: "internal",
         source: { type: "builtin" as const },
       }))
+      ;(post as Plugin.Generation[]).push(...sdk.all("post")) // kilocode_change(agent) seam - host plugins after the internal post plugins
       const operations = yield* sources.operations()
       // Activate everything available locally before waiting on missing package installs.
       const immediate = yield* resolve(modules, pre, post, operations, false, running)
