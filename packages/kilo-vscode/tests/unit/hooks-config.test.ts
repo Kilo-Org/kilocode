@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { EVENTS } from "../../../core/src/kilocode/hooks-events"
+import { KiloHooks } from "../../../opencode/src/kilocode/hooks/hooks"
 import {
   GROUP_LABELS,
   HOOK_EVENTS,
@@ -9,6 +10,7 @@ import {
   blocking,
   draft,
   entries,
+  inert,
   inherited,
   matcher,
   matcherKind,
@@ -76,10 +78,37 @@ describe("inherited with substitutions", () => {
 describe("matcherKind", () => {
   it("reads tool matchers the way the CLI does", () => {
     expect(matcherKind(undefined, "PreToolUse")).toEqual({ kind: "all" })
-    expect(matcherKind(" * ", "PreToolUse")).toEqual({ kind: "all" })
+    expect(matcherKind("", "PreToolUse")).toEqual({ kind: "all" })
+    expect(matcherKind("*", "PreToolUse")).toEqual({ kind: "all" })
     expect(matcherKind("edit | write,bash", "PreToolUse")).toEqual({ kind: "names", names: ["edit", "write", "bash"] })
     expect(matcherKind("mcp__github__.*", "PreToolUse")).toEqual({ kind: "regex" })
     expect(matcherKind("edit(", "PreToolUse")).toEqual({ kind: "invalid" })
+  })
+
+  it('does not trim the matcher: only an empty value and "*" match everything', () => {
+    // The CLI compares the raw text: " * " is not "*" but a regular expression (spaces, then a space) that
+    // no tool name matches, and "  " is a list of no name.
+    expect(matcherKind(" * ", "PreToolUse")).toEqual({ kind: "regex" })
+    expect(matcherKind("  ", "PreToolUse")).toEqual({ kind: "names", names: [] })
+    expect(matcherKind(" ", "SessionStart")).toEqual({ kind: "names", names: [] })
+    // Spaces are not in the strict charset, so this is a regular expression that never matches "rate_limit".
+    expect(matcherKind(" rate_limit ", "StopFailure")).toEqual({ kind: "regex" })
+  })
+
+  it("agrees with KiloHooks.matches on what matches everything and what matches only the listed names", () => {
+    const values = [undefined, "", "*", " * ", " ", "  ", "edit | write,bash", "a|b", " rate_limit ", "|", ","]
+    // A value read as a regular expression is skipped: the UI only says it is one.
+    for (const event of ["PreToolUse", "StopFailure", "SessionStart"] as const) {
+      const strict = HOOK_INFO[event].strict === true
+      for (const value of values) {
+        const kind = matcherKind(value, event)
+        if (kind.kind === "all") expect(KiloHooks.matches(value, ["unlisted"], strict)).toBe(true)
+        if (kind.kind !== "names") continue
+        expect(KiloHooks.matches(value, ["unlisted"], strict)).toBe(false)
+        for (const name of kind.names) expect(KiloHooks.matches(value, [name], strict)).toBe(true)
+      }
+    }
+    expect(KiloHooks.matches(" * ", ["bash", "edit", "*"])).toBe(false)
   })
 
   it("has no matcher on events without one, whatever the value", () => {
@@ -143,6 +172,9 @@ describe("validate", () => {
     expect(validate({ ...base, command: "x", timeout: "1.5" }).timeout).toBeDefined()
     expect(validate({ ...base, command: "x", timeout: "86401" }).timeout).toBeDefined()
     expect(validate({ ...base, command: "x", matcher: "edit(" }).matcher).toBeDefined()
+    // Applying saves the trimmed matcher, so whitespace around it is not an error.
+    expect(validate({ ...base, command: "x", matcher: "  edit|write  " })).toEqual({})
+    expect(validate({ ...base, command: "x", matcher: " edit( " }).matcher).toBeDefined()
   })
 
   it("ignores the matcher on events without one", () => {
@@ -247,6 +279,86 @@ describe("save", () => {
     const moved = save(config, entry, { ...draft(entry, "PreToolUse"), matcher: "Edit" })
     expect(moved.PreToolUse).toEqual([{ matcher: "Edit", hooks: [{ ...guard, ...extra }] }])
     expect(patch(config, edited).hooks?.PreToolUse).toEqual(edited.PreToolUse)
+  })
+
+  it("keeps if on an edit within the same event, even where the CLI skips the hook", () => {
+    // `if` on a non-tool event makes the CLI skip the hook; dropping it would make the hook run.
+    const config: HooksConfig = {
+      Stop: [{ hooks: [{ type: "command", command: "notify.sh", if: "Bash(*)" }] }],
+      SessionStart: [{ matcher: "startup", hooks: [{ type: "command", command: "ctx.sh", if: "Bash(*)" }] }],
+    }
+    const entry = entries(config, "Stop")[0]!
+    expect(patch(config, save(config, entry, draft(entry, "Stop")))).toEqual({})
+    const timed = save(config, entry, { ...draft(entry, "Stop"), timeout: "30" })
+    expect(timed.Stop).toEqual([{ hooks: [{ type: "command", command: "notify.sh", timeout: 30, if: "Bash(*)" }] }])
+    // A matcher change creates a new group in the same event: the hook is still the same hook.
+    const start = entries(config, "SessionStart")[0]!
+    const rematched = save(config, start, { ...draft(start, "SessionStart"), matcher: "resume" })
+    expect(rematched.SessionStart).toEqual([
+      { matcher: "resume", hooks: [{ type: "command", command: "ctx.sh", if: "Bash(*)" }] },
+    ])
+  })
+
+  it("drops if only when the hook moves to another event that cannot use it", () => {
+    const config: HooksConfig = { Stop: [{ hooks: [{ type: "command", command: "notify.sh", if: "Bash(*)" }] }] }
+    const entry = entries(config, "Stop")[0]!
+    const away = save(config, entry, { ...draft(entry, "Stop"), event: "Notification" })
+    expect(away.Notification).toEqual([{ hooks: [{ type: "command", command: "notify.sh" }] }])
+    const tool = save(config, entry, { ...draft(entry, "Stop"), event: "PostToolUse" })
+    expect(tool.PostToolUse).toEqual([{ hooks: [{ type: "command", command: "notify.sh", if: "Bash(*)" }] }])
+  })
+
+  it("flags a hook whose if is on an event that does not evaluate it", () => {
+    const at = (event: HookEvent, handler: HookHandler) => entries({ [event]: [{ hooks: [handler] }] }, event)[0]!
+    const cond = { type: "command" as const, command: "x.sh", if: "Bash(*)" }
+    expect(inert(at("Stop", cond))).toBe(true)
+    expect(inert(at("UserPromptSubmit", cond))).toBe(true)
+    expect(inert(at("PostToolBatch", cond))).toBe(true)
+    for (const event of ["PreToolUse", "PostToolUse", "PostToolUseFailure", "PermissionRequest"] as const) {
+      expect(inert(at(event, cond))).toBe(false)
+    }
+    expect(inert(at("Stop", { type: "command", command: "x.sh" }))).toBe(false)
+    expect("settings.agentBehaviour.hooks.ifIgnored" in dict).toBe(true)
+  })
+
+  it("keeps the original arguments when the args text is left as shown", () => {
+    // One argument per line in the editor: a line break inside an argument or an empty argument
+    // cannot be told from a separator, so an untouched text must not be re-split.
+    const config: HooksConfig = {
+      PreToolUse: [
+        { matcher: "bash", hooks: [{ type: "command", command: "python3", args: ["-c", "import sys\nprint(1)"] }] },
+        { matcher: "edit", hooks: [{ type: "command", command: "tool", args: ["--msg", ""] }] },
+      ],
+    }
+    const code = entries(config, "PreToolUse")[0]!
+    const unchanged = save(config, code, draft(code, "PreToolUse"))
+    expect(unchanged.PreToolUse[0]?.hooks[0]?.args).toEqual(["-c", "import sys\nprint(1)"])
+    expect(patch(config, unchanged)).toEqual({})
+    const msg = entries(config, "PreToolUse")[1]!
+    const timed = save(config, msg, { ...draft(msg, "PreToolUse"), timeout: "30" })
+    expect(timed.PreToolUse[1]?.hooks[0]).toEqual({
+      type: "command",
+      command: "tool",
+      args: ["--msg", ""],
+      timeout: 30,
+    })
+  })
+
+  it("splits the args text again once it is edited", () => {
+    const config: HooksConfig = {
+      PreToolUse: [{ matcher: "bash", hooks: [{ type: "command", command: "python3", args: ["-c", "a\nb"] }] }],
+    }
+    const entry = entries(config, "PreToolUse")[0]!
+    const edited = save(config, entry, { ...draft(entry, "PreToolUse"), args: "-c\nx\n\ny" })
+    expect(edited.PreToolUse[0]?.hooks[0]?.args).toEqual(["-c", "x", "y"])
+    // Switching a shell hook to exec form starts from the text as typed.
+    const shell: HooksConfig = { Stop: [{ hooks: [{ type: "command", command: "x.sh" }] }] }
+    const plain = entries(shell, "Stop")[0]!
+    expect(save(shell, plain, { ...draft(plain, "Stop"), exec: true }).Stop[0]?.hooks[0]?.args).toEqual([])
+    expect(save(shell, plain, { ...draft(plain, "Stop"), exec: true, args: "a\nb" }).Stop[0]?.hooks[0]?.args).toEqual([
+      "a",
+      "b",
+    ])
   })
 
   it("keeps shell but drops if when a hook moves to an event that does not evaluate if", () => {

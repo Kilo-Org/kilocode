@@ -1164,6 +1164,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.invalid": "Expressão regular inválida",
   "settings.agentBehaviour.hooks.unmatched":
     "Nenhuma ferramenta se chama {{names}} aqui, então este hook nunca é executado para ela.",
+  "settings.agentBehaviour.hooks.ifIgnored":
+    "O Kilo ignora este hook: a condição `if` só funciona em eventos de ferramentas.",
   "settings.agentBehaviour.hooks.command": "Comando",
   "settings.agentBehaviour.hooks.command.help":
     "Recebe o evento como JSON via stdin e é executado na pasta do projeto.",

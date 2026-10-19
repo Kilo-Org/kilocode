@@ -1126,6 +1126,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.regex": "تعبير عادي، يُطابَق في أي موضع من القيمة",
   "settings.agentBehaviour.hooks.matcher.invalid": "تعبير عادي غير صالح",
   "settings.agentBehaviour.hooks.unmatched": "لا توجد أداة باسم {{names}} هنا، لذا لن يعمل هذا الخطاف معها أبدًا.",
+  "settings.agentBehaviour.hooks.ifIgnored": "يتخطى Kilo هذا الخطاف: الشرط `if` يعمل فقط مع أحداث الأدوات.",
   "settings.agentBehaviour.hooks.command": "الأمر",
   "settings.agentBehaviour.hooks.command.help": "يستقبل الحدث بتنسيق JSON عبر stdin ويعمل في مجلد المشروع.",
   "settings.agentBehaviour.hooks.command.required": "أدخل أمرًا",

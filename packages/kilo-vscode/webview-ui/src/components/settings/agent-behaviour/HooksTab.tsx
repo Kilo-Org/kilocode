@@ -16,6 +16,7 @@ import {
   HOOK_INFO,
   blocking,
   entries,
+  inert,
   inherited,
   matcherKind,
   patch,
@@ -163,6 +164,10 @@ const HooksTab: Component<Props> = (props) => {
             {(names) => (
               <div style={warning}>{language.t("settings.agentBehaviour.hooks.unmatched", { names: names() })}</div>
             )}
+          </Show>
+          {/* `if` is only evaluated on tool events: anywhere else the CLI skips the hook. */}
+          <Show when={inert(entry)}>
+            <div style={warning}>{language.t("settings.agentBehaviour.hooks.ifIgnored")}</div>
           </Show>
           <Show
             when={

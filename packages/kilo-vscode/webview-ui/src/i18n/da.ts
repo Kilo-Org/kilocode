@@ -1151,6 +1151,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.regex": "Regulært udtryk, der matches hvor som helst i værdien",
   "settings.agentBehaviour.hooks.matcher.invalid": "Ugyldigt regulært udtryk",
   "settings.agentBehaviour.hooks.unmatched": "Intet værktøj hedder {{names}} her, så denne hook kører aldrig for det.",
+  "settings.agentBehaviour.hooks.ifIgnored":
+    "Kilo springer denne hook over: betingelsen `if` virker kun på værktøjshændelser.",
   "settings.agentBehaviour.hooks.command": "Kommando",
   "settings.agentBehaviour.hooks.command.help": "Modtager hændelsen som JSON på stdin og kører i projektmappen.",
   "settings.agentBehaviour.hooks.command.required": "Angiv en kommando",

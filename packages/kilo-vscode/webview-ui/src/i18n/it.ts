@@ -937,6 +937,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.invalid": "Espressione regolare non valida",
   "settings.agentBehaviour.hooks.unmatched":
     "Qui nessun tool si chiama {{names}}, quindi questo hook non viene mai eseguito per esso.",
+  "settings.agentBehaviour.hooks.ifIgnored":
+    "Kilo salta questo hook: la condizione `if` funziona solo sugli eventi dei tool.",
   "settings.agentBehaviour.hooks.command": "Comando",
   "settings.agentBehaviour.hooks.command.help":
     "Riceve l'evento come JSON su stdin e viene eseguito nella cartella del progetto.",

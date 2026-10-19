@@ -1080,6 +1080,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.invalid": "Недійсний регулярний вираз",
   "settings.agentBehaviour.hooks.unmatched":
     "Тут немає інструмента з назвою {{names}}, тому цей хук для нього ніколи не виконується.",
+  "settings.agentBehaviour.hooks.ifIgnored": "Kilo пропускає цей хук: умова `if` працює лише для подій інструментів.",
   "settings.agentBehaviour.hooks.command": "Команда",
   "settings.agentBehaviour.hooks.command.help":
     "Отримує подію у форматі JSON через stdin і виконується в каталозі проєкту.",

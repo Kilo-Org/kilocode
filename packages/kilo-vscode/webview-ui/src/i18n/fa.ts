@@ -1065,6 +1065,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.invalid": "عبارت منظم نامعتبر",
   "settings.agentBehaviour.hooks.unmatched":
     "اینجا هیچ ابزاری با نام {{names}} وجود ندارد، بنابراین این هوک هرگز برای آن اجرا نمی‌شود.",
+  "settings.agentBehaviour.hooks.ifIgnored":
+    "Kilo این هوک را نادیده می‌گیرد: شرط `if` فقط برای رویدادهای ابزار کار می‌کند.",
   "settings.agentBehaviour.hooks.command": "دستور",
   "settings.agentBehaviour.hooks.command.help":
     "رویداد را به‌صورت JSON از stdin دریافت می‌کند و در پوشه پروژه اجرا می‌شود.",

@@ -1153,6 +1153,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.invalid": "Nieprawidłowe wyrażenie regularne",
   "settings.agentBehaviour.hooks.unmatched":
     "Żadne narzędzie nie nazywa się tutaj {{names}}, więc ten hook nigdy się dla niego nie uruchomi.",
+  "settings.agentBehaviour.hooks.ifIgnored": "Kilo pomija ten hook: warunek `if` działa tylko dla zdarzeń narzędzi.",
   "settings.agentBehaviour.hooks.command": "Polecenie",
   "settings.agentBehaviour.hooks.command.help": "Otrzymuje zdarzenie jako JSON na stdin i działa w katalogu projektu.",
   "settings.agentBehaviour.hooks.command.required": "Wpisz polecenie",

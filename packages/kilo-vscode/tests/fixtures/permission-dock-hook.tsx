@@ -43,6 +43,21 @@ const ask: PermissionRequest = {
   always: ["git push *"],
   args: { hookAsk: true, reason: "  Force push‮ to main\u0007\nRewrites shared history.  " },
 }
+// A hook ask for a tool with no command or file: the server sends the tool and its arguments so the
+// prompt can show what the hook asks about. Both hold model-written text, so both are shown escaped.
+const tool: PermissionRequest = {
+  id: "permission-4",
+  sessionID: "session-1",
+  toolName: "mcp__github__create_issue",
+  patterns: ["*"],
+  always: [],
+  args: {
+    hookAsk: true,
+    reason: "Creates a public issue",
+    tool: "mcp__github__create_issue‮\u0007",
+    input: { title: "Bug‮ report", labels: ["a\u0007", 1] },
+  },
+}
 const next: PermissionRequest = { ...edit, id: "permission-3", patterns: ["other.txt"] }
 const session = { currentSessionID: () => edit.sessionID }
 const language = { t: (key: string) => key }
@@ -50,7 +65,7 @@ const config = { config: () => ({ permission: {} }) }
 Object.defineProperty(document, "hasFocus", { value: () => true })
 
 // A rule toggled on one request never reaches the next request the same dock shows.
-for (const target of [ask, next]) {
+for (const target of [ask, tool, next]) {
   const root = document.createElement("div")
   document.body.append(root)
   const calls: Array<{ id: string; response: string; approved: string[]; denied: string[] }> = []
@@ -96,6 +111,18 @@ for (const target of [ask, next]) {
       assert.equal(
         root.querySelector("[data-hook-reason]")?.textContent,
         "Force push\\u202e to main\\x07\nRewrites shared history.",
+      )
+      // Older servers send neither the tool nor its arguments: nothing extra is shown.
+      assert.equal(root.querySelector("[data-hook-tool]"), null)
+      assert.equal(root.querySelector('[data-slot="permission-input"]'), null)
+    }
+    if (target === tool) {
+      assert.equal(root.querySelector('[data-slot="permission-rule-row"]'), null, "A hook ask offers no rules")
+      assert.equal(root.querySelector("[data-hook-tool]")?.textContent, "mcp__github__create_issue\\u202e\\x07")
+      assert.equal(root.querySelector('[data-slot="permission-input-label"]')?.textContent, "ui.messagePart.mcp.input")
+      assert.equal(
+        root.querySelector('[data-slot="permission-input-code"]')?.textContent,
+        ["{", '  "title": "Bug\\u202e report",', '  "labels": [', '    "a\\u0007",', "    1", "  ]", "}"].join("\n"),
       )
     }
     if (target === next) {

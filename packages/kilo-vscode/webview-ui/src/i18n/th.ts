@@ -1134,6 +1134,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.invalid": "นิพจน์ทั่วไปไม่ถูกต้อง",
   "settings.agentBehaviour.hooks.unmatched":
     "ไม่มีเครื่องมือชื่อ {{names}} ที่นี่ ฮุกนี้จึงไม่ทำงานกับเครื่องมือดังกล่าวเลย",
+  "settings.agentBehaviour.hooks.ifIgnored":
+    "Kilo จะข้ามฮุกนี้ เพราะเงื่อนไข `if` ใช้ได้กับเหตุการณ์ของเครื่องมือเท่านั้น",
   "settings.agentBehaviour.hooks.command": "คำสั่ง",
   "settings.agentBehaviour.hooks.command.help": "รับเหตุการณ์เป็น JSON ทาง stdin และทำงานในโฟลเดอร์โปรเจกต์",
   "settings.agentBehaviour.hooks.command.required": "ป้อนคำสั่ง",

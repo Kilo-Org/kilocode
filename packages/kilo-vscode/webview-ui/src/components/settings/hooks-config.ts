@@ -549,15 +549,20 @@ const split = (value: string, separator: RegExp) =>
 export function matcherKind(value: string | undefined, event: HookEvent): MatcherKind {
   const info = meta(event)
   if (!info.matcher) return { kind: "none" }
-  const text = value?.trim()
   // FileChanged: every entry is a literal file name to watch, whatever its characters. Without one it
-  // adds nothing to the watch list and only runs for paths that hooks add with `watchPaths`.
-  if (info.matcher === "file") return text ? { kind: "files", names: split(text, /\|/) } : { kind: "dynamic" }
-  if (!text || text === "*") return { kind: "all" }
-  if (info.strict && /^[\w|]+$/.test(text)) return { kind: "names", names: split(text, /\|/) }
-  if (!info.strict && /^[\w\s,|-]+$/.test(text)) return { kind: "names", names: split(text, /[|,]/) }
+  // adds nothing to the watch list and only runs for paths that hooks add with `watchPaths`. The CLI
+  // trims these entries (lifecycle `names` and `applies`).
+  if (info.matcher === "file") {
+    const text = value?.trim()
+    return text ? { kind: "files", names: split(text, /\|/) } : { kind: "dynamic" }
+  }
+  // Like KiloHooks.matches, the text is not trimmed: only "", undefined and "*" match everything, so
+  // " * " is a regular expression, and whitespace around a name list or a regex is part of the value.
+  if (!value || value === "*") return { kind: "all" }
+  if (info.strict && /^[\w|]+$/.test(value)) return { kind: "names", names: split(value, /\|/) }
+  if (!info.strict && /^[\w\s,|-]+$/.test(value)) return { kind: "names", names: split(value, /[|,]/) }
   try {
-    new RegExp(text)
+    new RegExp(value)
     return { kind: "regex" }
   } catch {
     return { kind: "invalid" }
@@ -577,6 +582,11 @@ export function blocking(entry: HookEntry) {
   return meta(entry.event).failure && !entry.handler.async && entry.handler.onFailure === "block"
 }
 
+/** Whether the CLI skips this hook: `if` is only evaluated on tool events, so anywhere else the hook never runs. */
+export function inert(entry: HookEntry) {
+  return entry.handler.if !== undefined && meta(entry.event).matcher !== "tool"
+}
+
 export function draft(entry: HookEntry | undefined, event: HookEvent): HookDraft {
   if (!entry) return { event, matcher: "", command: "", exec: false, args: "", timeout: "", block: false, async: false }
   return {
@@ -593,7 +603,8 @@ export function draft(entry: HookEntry | undefined, event: HookEvent): HookDraft
 
 export function validate(input: HookDraft): HookErrors {
   const errors: HookErrors = {}
-  if (matcherKind(input.matcher, input.event).kind === "invalid")
+  // The editor saves the trimmed matcher, so that is what has to be valid.
+  if (matcherKind(input.matcher.trim(), input.event).kind === "invalid")
     errors.matcher = "settings.agentBehaviour.hooks.matcher.invalid"
   if (!input.command.trim()) errors.command = "settings.agentBehaviour.hooks.command.required"
   const value = input.timeout.trim()
@@ -606,21 +617,34 @@ export function validate(input: HookDraft): HookErrors {
   return errors
 }
 
-// `from` is the hook being edited: fields the editor does not show (shell, if) are kept, `if` only
-// on tool events, where the CLI evaluates it (elsewhere it would make the CLI skip the hook).
-function handler(input: HookDraft, from?: HookHandler): HookHandler {
+// The editor shows one argument per line. Text left as shown keeps the original array, whose arguments
+// may contain line breaks or be empty and would not survive the split.
+function words(input: HookDraft, from?: HookHandler) {
+  if (from?.args && input.args === from.args.join("\n")) return [...from.args]
+  return input.args.split(/\r?\n/).filter((line) => line.length > 0)
+}
+
+/**
+ * `from` is the hook being edited: fields the editor does not show (shell, if) are kept. `if` stays
+ * wherever the hook stays: an edit within its event keeps it even on a non-tool event, where the CLI
+ * skips the hook (dropping it would make the hook start running). It is dropped only when the hook
+ * moves to another event that does not evaluate it.
+ */
+function handler(input: HookDraft, from?: HookEntry): HookHandler {
   const seconds = input.timeout.trim()
   const info = meta(input.event)
   const block = input.block && info.failure && !input.async
+  const old = from?.handler
+  const keep = old?.if !== undefined && (from?.event === input.event || info.matcher === "tool")
   return {
     type: "command",
     command: input.command.trim(),
-    ...(input.exec ? { args: input.args.split(/\r?\n/).filter((line) => line.length > 0) } : {}),
+    ...(input.exec ? { args: words(input, old) } : {}),
     ...(seconds ? { timeout: Number(seconds) } : {}),
     ...(block ? { onFailure: "block" as const } : {}),
-    ...(!block && !input.async && from?.onFailure === "continue" ? { onFailure: "continue" as const } : {}),
-    ...(from?.shell !== undefined ? { shell: from.shell } : {}),
-    ...(from?.if !== undefined && info.matcher === "tool" ? { if: from.if } : {}),
+    ...(!block && !input.async && old?.onFailure === "continue" ? { onFailure: "continue" as const } : {}),
+    ...(old?.shell !== undefined ? { shell: old.shell } : {}),
+    ...(keep ? { if: old.if } : {}),
     ...(input.async ? { async: true } : {}),
   }
 }
@@ -629,7 +653,7 @@ function target(input: HookDraft) {
   return meta(input.event).matcher ? input.matcher.trim() || undefined : undefined
 }
 
-function group(input: HookDraft, from?: HookHandler): HookGroup {
+function group(input: HookDraft, from?: HookEntry): HookGroup {
   const value = target(input)
   return { ...(value ? { matcher: value } : {}), hooks: [handler(input, from)] }
 }
@@ -677,15 +701,15 @@ export function save(hooks: HooksConfig | null | undefined, entry: HookEntry | u
   const at = entry ? locate(next, entry) : undefined
   const item = entry && at ? next[entry.event][at.group] : undefined
   if (entry && at && item && entry.event === input.event && item.matcher === target(input)) {
-    item.hooks[at.index] = handler(input, entry.handler)
+    item.hooks[at.index] = handler(input, entry)
     return next
   }
   if (entry && at && item && entry.event === input.event && item.hooks.length === 1) {
-    next[entry.event][at.group] = group(input, entry.handler)
+    next[entry.event][at.group] = group(input, entry)
     return next
   }
   if (entry && at) drop(next, entry.event, at)
-  next[input.event] = [...next[input.event], group(input, entry?.handler)]
+  next[input.event] = [...next[input.event], group(input, entry)]
   return next
 }
 

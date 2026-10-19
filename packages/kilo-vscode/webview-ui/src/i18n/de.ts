@@ -1175,6 +1175,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.invalid": "Ungültiger regulärer Ausdruck",
   "settings.agentBehaviour.hooks.unmatched":
     "Hier gibt es kein Tool namens {{names}}, daher wird dieser Hook dafür nie ausgeführt.",
+  "settings.agentBehaviour.hooks.ifIgnored":
+    "Kilo überspringt diesen Hook: Die Bedingung `if` funktioniert nur bei Tool-Ereignissen.",
   "settings.agentBehaviour.hooks.command": "Befehl",
   "settings.agentBehaviour.hooks.command.help":
     "Erhält das Ereignis als JSON über stdin und wird im Projektordner ausgeführt.",

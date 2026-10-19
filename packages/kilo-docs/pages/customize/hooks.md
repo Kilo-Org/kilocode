@@ -183,13 +183,13 @@ On `PreToolUse`, `PostToolUse`, `PostToolUseFailure` and `PermissionRequest`, `i
 
 | Condition | Evaluated as |
 |---|---|
-| `Bash(rm *)` | Each part of the command, split on `\|`, `;` and `&`, with leading `NAME=value` assignments removed, is matched with `*` wildcards. Commands with quotes, `$`, redirects, subshells, groups or wrappers such as `sudo`, `env`, `xargs` or `sh` always run the hook. `prefix:*` means `prefix*`. |
+| `Bash(rm *)` | Each part of the command, split on `\|`, `;` and `&`, with leading `NAME=value` assignments removed and repeated spaces counted as one, is matched with `*` wildcards. Commands with quotes, `$`, redirects, subshells, groups, wrappers such as `sudo`, `env`, `xargs` or `sh`, a program given by path such as `/usr/bin/git`, a program name with a `*`, or a program name in another letter case such as `GIT` always run the hook. `prefix:*` means `prefix*`. |
 | `Edit(*.env)`, `Read(src/**)` | A glob on the file path. A pattern without `/` matches the file name; `//abs/path` is absolute; `~/` is your home folder; anything else is relative to the project folder. |
 | `WebFetch(domain:example.com)` | The URL host is `example.com` or a subdomain of it. |
 | `Bash`, `mcp__github__create_issue` | Every call of that tool. |
 | Anything else | The hook runs. |
 
-On other events, a hook with `if` never runs, as in Claude Code.
+On other events, a hook with `if` never runs, as in Claude Code. The VS Code Hooks tab shows a warning on such a hook, and keeps its `if` when you edit it.
 
 ## Hook input
 
@@ -199,9 +199,9 @@ Each hook receives a JSON object on stdin. Every event has these fields:
 |---|---|
 | `session_id` | The root session: for a subagent, the session that started it. Left out for events without a session (`FileChanged`, `ConfigChange`, `CommitMessage`, worktree events). |
 | `hook_event_name` | The event. |
-| `cwd` | The session folder, or the project folder. |
+| `cwd` | The session folder, or the project folder (`CwdChanged`: the new folder). |
 | `prompt_id` | The user message that started the turn, when known. |
-| `permission_mode` | `bypassPermissions` when the session allows everything, `plan` with the plan agent, else `default` (also with client-side auto-approve). Sent on tool, `PermissionRequest`, prompt, `Stop` and `SubagentStop` events. |
+| `permission_mode` | `bypassPermissions` when the session allows everything, `plan` with the plan agent, else `default` (also with client-side auto-approve). Sent on tool, `PermissionRequest`, prompt, `Stop`, `SubagentStop` and `CwdChanged` events, and on `InstructionsLoaded` for nested files. |
 | `agent_id`, `agent_type` | In subagents: the subagent session id and its type (`general-purpose`, `Explore`, `Plan`, or the Kilo Code agent name). |
 | `kilo_session_id` | The session the event belongs to. |
 | `kilo_agent` | The Kilo Code agent name. |
@@ -260,6 +260,7 @@ The command runs in the project folder with these environment variables:
 | `KILO_PROJECT_DIR`, `CLAUDE_PROJECT_DIR` | The project folder. |
 | `KILO_HOOK_EVENT` | The event. |
 | `KILO_HOOK_DEPTH` | How deep in hooks this process is: `1` for a hook Kilo Code started. See [Loop safety](#loop-safety). |
+| `KILO_NO_DAEMON` | `1`: a `kilo` command in a hook starts its own backend and never attaches to a running Kilo daemon. See [Loop safety](#loop-safety). |
 | `WORKTREE_PATH`, `REPO_PATH` | `WorktreeSetup` and `WorktreeTeardown` only: the worktree and the main repository, as for setup scripts. |
 
 `CLAUDE_ENV_FILE` is not set.
@@ -281,26 +282,26 @@ JSON fields:
 | Field | Events | Effect |
 |---|---|---|
 | `hookSpecificOutput.permissionDecision: "deny"` with `permissionDecisionReason` | `PreToolUse`, `PreModelSwitch` | Blocks with that reason. |
-| `hookSpecificOutput.permissionDecision: "ask"` | `PreToolUse` | Shows a permission prompt for the call, even when rules or auto-approve would allow it. When nobody can answer (goal turns, wakeups, background subagents, `kilo run` without a terminal), the call is denied. |
+| `hookSpecificOutput.permissionDecision: "ask"` | `PreToolUse` | Shows a permission prompt for the call, even when rules or auto-approve would allow it. In VS Code, the prompt shows the hook's reason, the tool and the call's input. When nobody can answer (goal turns, wakeups, background subagents, `kilo run` without a terminal), the call is denied. |
 | `hookSpecificOutput.permissionDecision: "ask"` | `PreModelSwitch` | Rejects the prompt. |
 | `hookSpecificOutput.permissionDecision: "allow"` or `"defer"` | `PreToolUse` | Ignored: hooks cannot skip a permission prompt. |
 | `hookSpecificOutput.decision.behavior: "deny"` with `message` | `PermissionRequest` | Denies the call and closes the prompt. With `interrupt: true`, the turn stops too. `"allow"` is ignored. |
 | `hookSpecificOutput.updatedInput` | `PreToolUse` | Kilo Code does not rewrite tool input: when it differs from `tool_input`, the call is blocked. |
 | `hookSpecificOutput.updatedToolOutput`, `updatedMCPToolOutput` | `PostToolUse` | Replaces the output the agent sees (images and attachments are dropped). Only for calls that succeeded: a shell command that exits non-zero runs `PostToolUseFailure`, which cannot replace the output. |
 | `decision: "block"` with `reason` | Events that can block | Blocks with that reason. On `PostToolUse` and `PostToolUseFailure`, the reason is shown to the agent. |
-| `continue: false` with `stopReason` | Events that can block, and `PostToolUse`, `PostToolUseFailure` | Stops: rejects the prompt, model switch or compaction; skips the wakeup; pauses the goal on `GoalReport`; never continues on `Stop`. On tool events, the turn ends after the current step (`PreToolUse` also blocks the call). Ignored on `TaskCreated` and `TaskCompleted`. |
+| `continue: false` with `stopReason` | Events that can block, and `PostToolUse`, `PostToolUseFailure` | Stops: rejects the prompt, model switch or compaction; skips the wakeup; pauses the goal on `GoalReport`; never continues on `Stop`. On tool events other than `PermissionRequest`, the turn ends after the current step (`PreToolUse` also blocks the call). On `PermissionRequest` it counts only together with a deny, and then also stops the turn. Ignored on `TaskCreated`, `TaskCompleted`, `WorktreeSetup`, `CommitMessage` and `BranchName`: use exit `2` or `decision: "block"` there. |
 | `hookSpecificOutput.additionalContext` | `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`, `UserPromptSubmit`, `UserPromptExpansion`, `PostModelSwitch`, `SessionStart`, `Stop`, `SubagentStop`, `SubagentStart`, `GoalReport`, `WakeupFire` | Adds context for the agent (see below). Ignored on other events. |
-| `hookSpecificOutput.watchPaths` | `SessionStart`, `CwdChanged`, `FileChanged` | Absolute paths `FileChanged` also watches. `[]` clears the list. |
+| `hookSpecificOutput.watchPaths` | `SessionStart`, `CwdChanged`, `FileChanged` | Absolute paths `FileChanged` also watches. `SessionStart` and `CwdChanged` add to the list (`[]` from `CwdChanged` clears it); `FileChanged` replaces it. |
 | `hookSpecificOutput.sessionTitle` | `UserPromptSubmit`, `SessionStart` | Sets the session title. |
 | `hookSpecificOutput.suppressOriginalPrompt: true` | `UserPromptSubmit` | Leaves the prompt text out of the "blocked" notice. |
 | `hookSpecificOutput.commitMessage` | `CommitMessage` | Replaces the generated commit message. With several hooks, the last one in config order wins. |
 | `hookSpecificOutput.branchName` | `BranchName` | Replaces the generated branch name. |
-| `systemMessage` | All | Shown to you as a notice. |
+| `systemMessage` | All | Events with a session: shown to you as a notice. Logged on `FileChanged`, `ConfigChange`, `SessionEnd`, `CommitMessage`, `WorktreeSetup` and `WorktreeTeardown`. |
 
 Where context goes:
 
 - `PreToolUse`, `PostToolUse` and `PostToolUseFailure`: next to the tool result the agent sees. `PostToolBatch`: next to the last tool result of the step.
-- `UserPromptSubmit` and `UserPromptExpansion`: added to the prompt, hidden in the chat.
+- `UserPromptSubmit` and `UserPromptExpansion`: added to the prompt, hidden in the chat. For `/goal`, `/resume-claude`, `/resume-codex` and commands that run as a subtask, the context is dropped; a block still rejects the command.
 - `SessionStart` and `PostModelSwitch`: added to the conversation before the next model call, so the system prompt and its cache stay unchanged.
 - `SubagentStart`: added to the subagent's first prompt.
 - `Stop` and `SubagentStop`: the agent continues with it, like a block.
@@ -340,7 +341,7 @@ Hooks that block can make the agent loop. Kilo Code caps every loop:
 - **`GoalReport`**: after 3 rejected reports in a row, the goal is paused with the hook's reason.
 - **`FileChanged`**: changes to a file are ignored while its hook runs and for 500 ms after, so a hook that rewrites the file it watches does not loop.
 - **`PostToolBatch`**: a block ends the turn.
-- **Hooks that run `kilo`**: hooks get `KILO_HOOK_DEPTH`. A Kilo Code started by a hook only runs the tool-guard events (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest`, `TaskCreated`, `TaskCompleted`), and from depth 3 none.
+- **Hooks that run `kilo`**: hooks get `KILO_HOOK_DEPTH`. A Kilo Code started by a hook only runs the tool-guard events (`PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest`, `TaskCreated`, `TaskCompleted`), and from depth 3 none. Hooks also get `KILO_NO_DAEMON=1`, so a `kilo` command in a hook never attaches to a running Kilo daemon, which would not see `KILO_HOOK_DEPTH`.
 
 ## Examples
 
@@ -481,7 +482,7 @@ Claude Code compatibility is on by default in the CLI, and off by default in the
 
 | Area | Kilo Code |
 |---|---|
-| `PermissionRequest` | Can only deny. Hooks run at the same time as the prompt, so the prompt shows right away; the first answer wins. `allow`, `updatedInput` and `updatedPermissions` are ignored, so remote-approval hooks still show the local prompt. |
+| `PermissionRequest` | Can only deny. Hooks run at the same time as the prompt, so the prompt shows right away; the first answer wins. `allow`, `updatedInput` and `updatedPermissions` are ignored, so remote-approval hooks still show the local prompt. Not run for calls denied without a prompt, such as those of background subagents. |
 | `PreToolUse` scope | Also runs for `@` file attachments, pasted text attachments, MCP resource attachments and `!` shell lines in command templates, so secret guards hold. `PostToolUse` does not run for them. |
 | `PreToolUse` `ask` | Never answered by rules, auto-approve or allow-everything, never remembered. Denies the call when nobody can answer. The tool's own permission rule can ask a second time. |
 | `updatedInput` | Not applied: a `PreToolUse` hook that rewrites the input blocks the call. |
@@ -490,12 +491,17 @@ Claude Code compatibility is on by default in the CLI, and off by default in the
 | `UserPromptSubmit` | Not run for wakeups, background results, goal turns or messages from other sessions. |
 | `CwdChanged` | Means a shell command ran in a different folder than the previous one: Kilo Code's shell keeps no working directory between commands. |
 | `ConfigChange` | Observe only, read from Kilo Code config only, and runs for changes Kilo Code writes, not for edits made outside it. |
+| `FileChanged` | A group without a matcher runs only for the paths hooks add with `watchPaths`, not for files other groups name. |
+| `watchPaths` | From `CwdChanged`, adds to the watch list instead of replacing it. |
+| `systemMessage`, `continue` | `systemMessage` is shown on every event with a session, including `Notification`, `PreCompact`, `PostCompact`, `InstructionsLoaded` and `StopFailure`; `continue: false` on `PreCompact` blocks compaction. |
+| Exit `2` on `FileChanged`, `SessionEnd` | stderr is logged, not shown. |
+| `CLAUDE_ENV_FILE` | Not provided. |
 | `Notification` | Sends 3 of Claude Code's 12 types: `permission_prompt`, `agent_needs_input` (with `kilo_notification_type: "question"`) and `idle_prompt`. |
 | `SessionStart`, `SessionEnd` | `SessionStart` sources are `startup`, `resume`, `fork` and `compact` (never `clear`). `SessionEnd` reasons are `other` and `prompt_input_exit`. |
 | `SessionStart` context | Added to the conversation after your first message, not before it. |
 | `SessionStart` for commands | `/goal`, `/resume-claude` and `/resume-codex` run it on their first model step, not when you send the command. |
 | `PreModelSwitch`, `PostModelSwitch` | Matchers are tested against the canonical name (`claude-sonnet-4-5`), the model id, and `provider/model`. A model no spelling matches does not run every hook. |
-| Model switch scope | `PreModelSwitch` and `PostModelSwitch` do not run for slash commands or `/goal` prompts. |
+| Model switch scope | `PostModelSwitch` runs only after a prompt you send or "Implement the plan" switched the model; `PreModelSwitch` only for prompts you send. Neither runs for slash commands, `/goal`, goal turns, wakeups or subagents. |
 | `PreCompact` | A block on an automatic compaction lets the turn go on without compacting, and holds for the rest of the turn. If the provider then rejects a request as too long, the turn ends with `Compaction was blocked by a PreCompact hook: <reason>`. With `compaction.threshold_percent` set, Kilo Code also estimates each request before sending it: while a block is in place, a request whose estimate reaches the threshold is not sent and the turn ends the same way. |
 | `WorktreeCreate`, `WorktreeRemove` | Not run: they would replace git worktree creation. Use `WorktreeSetup` and `WorktreeTeardown`. `WorktreeSetup` ignores `additionalContext`. |
 | Transcript | No `transcript_path`: sessions are stored in a database. |

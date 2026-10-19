@@ -64,6 +64,13 @@ export const PermissionDock: Component<{
     // Escape control/bidi chars per line: the reason is hook output and may quote model-written text.
     return value.trim().split(/\r?\n/).map(displaySkillCommand).join("\n")
   }
+  // The tool the hook asks about (metadata.tool) is absent from older servers, and a hook ask for a tool
+  // without a command or file shows nothing else about the call.
+  const hookTool = () => {
+    const value = props.request.args?.tool
+    if (!hookAsk() || typeof value !== "string" || !value.trim()) return undefined
+    return displaySkillCommand(value.trim())
+  }
   // Bash sends fine-grained rules via metadata.rules; other tools use the always array.
   const rules = () => props.request.args?.rules ?? props.request.always ?? []
   // Rules like "git *" or "git log *" — strip the trailing wildcard for display.
@@ -92,11 +99,14 @@ export const PermissionDock: Component<{
 
   // Dynamic MCP tools send their resolved input as metadata.mcpInput so the full
   // request, including nested objects and arrays, is inspectable before approval.
+  // A hook ask sends the call's arguments as metadata.input (older servers send none).
   const input = () => {
-    const value = props.request.args?.mcpInput
+    const value = props.request.args?.mcpInput ?? (hookAsk() ? props.request.args?.input : undefined)
     if (!value || typeof value !== "object") return undefined
     if (Object.keys(value).length === 0) return undefined
-    return JSON.stringify(value, null, 2)
+    const json = JSON.stringify(value, null, 2)
+    // The arguments of a hook ask are model-written: escape control/bidi chars per line, like the reason.
+    return hookAsk() ? json.split("\n").map(displaySkillCommand).join("\n") : json
   }
 
   const diffs = createMemo(() => permissionDiffs(props.request))
@@ -387,6 +397,13 @@ export const PermissionDock: Component<{
                     <div data-slot="permission-hint" data-wrap>
                       {language.t("notification.permission.descriptionHookAsk")}
                     </div>
+                    <Show when={hookTool()}>
+                      {(name) => (
+                        <div data-slot="permission-hint" data-wrap data-hook-tool>
+                          <code style={{ "font-family": "var(--vscode-editor-font-family, monospace)" }}>{name()}</code>
+                        </div>
+                      )}
+                    </Show>
                     <Show when={reason()}>
                       {(text) => (
                         <div

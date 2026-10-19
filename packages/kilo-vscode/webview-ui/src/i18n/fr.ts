@@ -1179,6 +1179,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.invalid": "Expression régulière non valide",
   "settings.agentBehaviour.hooks.unmatched":
     "Aucun outil ne s'appelle {{names}} ici, ce hook ne s'exécute donc jamais pour lui.",
+  "settings.agentBehaviour.hooks.ifIgnored":
+    "Kilo ignore ce hook : la condition `if` ne fonctionne que sur les événements d'outil.",
   "settings.agentBehaviour.hooks.command": "Commande",
   "settings.agentBehaviour.hooks.command.help":
     "Reçoit l'événement en JSON sur stdin et s'exécute dans le dossier du projet.",

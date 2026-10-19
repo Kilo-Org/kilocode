@@ -55,7 +55,9 @@ const HookEditView: Component<Props> = (props) => {
 
   const info = () => HOOK_INFO[form().event]
   const field = () => matcher(form().event)
-  const kind = () => matcherKind(form().matcher, form().event)
+  // Applying saves the trimmed matcher, so that is the one described here.
+  const text = () => form().matcher.trim()
+  const kind = () => matcherKind(text(), form().event)
   const summary = () => {
     const value = kind()
     if (value.kind === "all") return language.t("settings.agentBehaviour.hooks.matcher.all")
@@ -159,7 +161,7 @@ const HookEditView: Component<Props> = (props) => {
               fallback={<div style={error}>{language.t("settings.agentBehaviour.hooks.matcher.invalid")}</div>}
             >
               <div style={hint}>{summary()}</div>
-              <Show when={unknown(form().matcher, props.tools, form().event).join(", ")}>
+              <Show when={unknown(text(), props.tools, form().event).join(", ")}>
                 {(names) => (
                   <div style={warning}>{language.t("settings.agentBehaviour.hooks.unmatched", { names: names() })}</div>
                 )}

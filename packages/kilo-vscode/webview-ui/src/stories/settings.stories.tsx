@@ -660,13 +660,18 @@ export const HookFeedbackAttachment: Story = {
 const HOOK_ASK: PermissionRequest = {
   id: "perm-hook-ask",
   sessionID: HOOK_SESSION,
-  toolName: "bash",
-  patterns: ["git push --force origin main"],
+  toolName: "webfetch",
+  patterns: ["*"],
   always: [],
-  args: { hookAsk: true, reason: "Force-pushing to main rewrites shared history." },
+  args: {
+    hookAsk: true,
+    reason: "This host is not on the approved list.",
+    tool: "webfetch",
+    input: { url: "https://internal.example.com/export?format=csv", format: "text" },
+  },
 }
 
-/** A PreToolUse hook answered "ask": a forced prompt with the hook's reason and no auto-approve rules. */
+/** A PreToolUse hook answered "ask": a forced prompt with the hook's reason, the tool and its input, and no auto-approve rules. */
 export const PermissionDockHookAsk: Story = {
   name: "AgentBehaviourTab — hooks: ask permission prompt",
   render: () => (

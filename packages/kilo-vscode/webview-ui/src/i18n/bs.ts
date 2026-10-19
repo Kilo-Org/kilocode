@@ -1153,6 +1153,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.invalid": "Nevažeći regularni izraz",
   "settings.agentBehaviour.hooks.unmatched":
     "Ovdje nijedan alat nema naziv {{names}}, pa se ovaj hook za njega nikad ne pokreće.",
+  "settings.agentBehaviour.hooks.ifIgnored": "Kilo preskače ovaj hook: uvjet `if` radi samo na događajima alata.",
   "settings.agentBehaviour.hooks.command": "Naredba",
   "settings.agentBehaviour.hooks.command.help": "Prima događaj kao JSON na stdin i pokreće se u direktoriju projekta.",
   "settings.agentBehaviour.hooks.command.required": "Unesite naredbu",

@@ -1138,6 +1138,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.invalid": "잘못된 정규식",
   "settings.agentBehaviour.hooks.unmatched":
     "여기에는 이름이 {{names}}인 도구가 없으므로 이 훅은 해당 도구에 대해 실행되지 않습니다.",
+  "settings.agentBehaviour.hooks.ifIgnored": "Kilo는 이 훅을 건너뜁니다. `if` 조건은 도구 이벤트에서만 작동합니다.",
   "settings.agentBehaviour.hooks.command": "명령어",
   "settings.agentBehaviour.hooks.command.help": "이벤트를 stdin을 통해 JSON으로 받아 프로젝트 폴더에서 실행됩니다.",
   "settings.agentBehaviour.hooks.command.required": "명령어를 입력하세요",

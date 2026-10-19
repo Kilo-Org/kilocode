@@ -118,13 +118,13 @@ Fields each event adds to the [common fields](/docs/customize/hooks#hook-input):
 - Prompts are admitted in the order they arrive, and the session shows as busy while these hooks run; **Stop** cancels them.
 - A blocked prompt is not saved. You see a notice with the reason and your prompt text, so you can copy it.
 - `UserPromptExpansion` runs before the template's `!` shell lines, so a block keeps them from running.
-- `PreModelSwitch` runs only when a prompt you send changes the session's provider or model. Slash commands, `/goal` prompts, goal turns, wakeups, subagents and the first model of a session apply their model without it, and without `PostModelSwitch`.
+- `PreModelSwitch` runs only when a prompt you send changes the session's provider or model. Slash commands, `/goal` prompts, goal turns, wakeups, subagents and the first model of a session apply their model without it, and without `PostModelSwitch`. `PostModelSwitch` also runs after "Implement the plan" switched the model (`source` is `plan_followup`).
 
 ### Sessions
 
 - `SessionStart` runs once per session in each Kilo Code process: before the first prompt's `UserPromptSubmit`, or on the first model step of `/goal`, `/resume-claude`, `/resume-codex`, a wakeup or a summarize. It runs again with `compact` after compaction. Subagents run `SubagentStart` instead.
 - Context from `SessionStart` starts with a note telling the model to treat it as information, not instructions. It is added to the conversation after your first message, not before it, and Kilo Code adds the last startup context again after compaction when no `SessionStart` hook matches `compact`.
-- `SessionEnd` runs when a session that ran `SessionStart` is deleted, and when `kilo serve`, the TUI or `kilo run` exits. All `SessionEnd` hooks of one exit share 1.5 seconds, raised to the largest `SessionEnd` `timeout` in your config (at most 60 seconds), and capped at 3 seconds under `kilo serve`. `KILO_SESSIONEND_HOOKS_TIMEOUT_MS` (or `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS`) overrides the budget.
+- `SessionEnd` runs when a session that ran `SessionStart` is deleted, and when `kilo serve`, the TUI or `kilo run` exits. All `SessionEnd` hooks of one exit share 1.5 seconds, raised to the largest `SessionEnd` `timeout` in your config (at most 60 seconds). `KILO_SESSIONEND_HOOKS_TIMEOUT_MS` (or `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS`) replaces that budget, with no 60-second limit. Under `kilo serve` the budget, including that override, is capped at 3 seconds.
 - `InstructionsLoaded` runs for each instruction file of the session when `SessionStart` runs, and when the agent reads a file in a folder with its own `AGENTS.md`. `memory_type` is `User` for files in your Kilo Code or Claude Code config folders, `Managed` for managed config, and `Project` otherwise.
 
 ### Agent loop
@@ -150,7 +150,7 @@ Fields each event adds to the [common fields](/docs/customize/hooks#hook-input):
 
 - `Notification` fires once a permission prompt or a question stays unanswered for 6 seconds, and once the session is idle for 60 seconds after a turn. Answering earlier cancels it.
 - `ConfigChange` runs after the VS Code settings or another Kilo Code client changed the global config (`user_settings`) or the project config (`project_settings`) through Kilo Code. A global change runs the hook once, even with several projects open.
-- `FileChanged` watches the file names in its matchers in the project folder, plus the absolute paths hooks return in `watchPaths`. A group without a matcher adds nothing to the watch list and runs for every watched path, so use one to handle `watchPaths` paths. Changes are debounced by 100 ms.
+- `FileChanged` watches the file names in its matchers in the project folder, plus the absolute paths hooks return in `watchPaths`. A group without a matcher adds nothing to the watch list and runs only for the paths hooks add with `watchPaths`, so use one to handle those paths. Changes are debounced by 100 ms.
 - `CwdChanged` compares the `workdir` of each shell command with the previous one in the session, starting from the session folder.
 
 ### Kilo only

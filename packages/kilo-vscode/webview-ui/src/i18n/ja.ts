@@ -1146,6 +1146,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.invalid": "無効な正規表現です",
   "settings.agentBehaviour.hooks.unmatched":
     "ここには {{names}} という名前のツールがないため、このフックがそのツールで実行されることはありません。",
+  "settings.agentBehaviour.hooks.ifIgnored":
+    "Kilo はこのフックをスキップします。`if` 条件はツールのイベントでのみ機能します。",
   "settings.agentBehaviour.hooks.command": "コマンド",
   "settings.agentBehaviour.hooks.command.help":
     "イベントを JSON として stdin で受け取り、プロジェクトフォルダーで実行されます。",

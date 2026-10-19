@@ -1148,6 +1148,8 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.invalid": "Недопустимое регулярное выражение",
   "settings.agentBehaviour.hooks.unmatched":
     "Здесь нет инструмента с именем {{names}}, поэтому этот хук для него никогда не выполняется.",
+  "settings.agentBehaviour.hooks.ifIgnored":
+    "Kilo пропускает этот хук: условие `if` работает только для событий инструментов.",
   "settings.agentBehaviour.hooks.command": "Команда",
   "settings.agentBehaviour.hooks.command.help":
     "Получает событие в формате JSON через stdin и выполняется в каталоге проекта.",

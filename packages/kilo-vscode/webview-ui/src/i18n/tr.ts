@@ -1080,6 +1080,7 @@ export const dict = {
   "settings.agentBehaviour.hooks.matcher.invalid": "Geçersiz normal ifade",
   "settings.agentBehaviour.hooks.unmatched":
     "Burada {{names}} adında bir araç yok; bu nedenle bu hook onun için hiç çalışmaz.",
+  "settings.agentBehaviour.hooks.ifIgnored": "Kilo bu hook'u atlar: `if` koşulu yalnızca araç olaylarında çalışır.",
   "settings.agentBehaviour.hooks.command": "Komut",
   "settings.agentBehaviour.hooks.command.help": "Olayı stdin üzerinden JSON olarak alır ve proje klasöründe çalışır.",
   "settings.agentBehaviour.hooks.command.required": "Bir komut girin",
