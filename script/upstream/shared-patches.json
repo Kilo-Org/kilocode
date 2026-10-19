@@ -1,19 +1,23 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 15,
-    "markedLines": 45,
-    "unmarkedLines": 18,
+    "files": 16,
+    "markedLines": 129,
+    "unmarkedLines": 27,
     "deletedFiles": 0
   },
   "files": {
+    ".github/actions/setup-bun/action.yml": {
+      "rung": 3,
+      "seam": "Windows CI setup: skip the Bun dependency cache (restoring about 1 GB took 104 to 118 s of `Setup Bun`, a fresh install 43 to 66 s), and exclude the workspace, temp and Bun directories from Defender real-time scanning before the install. Both carried over from v1 (`main`). No seam: the composite action has no input to skip the cache or to run a step before the install, and every job that installs dependencies uses it."
+    },
     ".github/workflows/check.yml": {
       "rung": 3,
       "seam": "CI triggers and gates: run `check` on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`) and for every pull request, so stacked v2 PRs that target another PR branch are checked; skip `lint:changed` on upstream sync PRs (branch `sync-v*`), whose changed files are upstream's and fail upstream's lint too. No seam: workflow triggers and step conditions cannot be extended from outside the file."
     },
     ".github/workflows/test.yml": {
       "rung": 3,
-      "seam": "CI triggers: run the unit and e2e matrix on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`). Skip the `affected` job, and with it the e2e job that needs it: the e2e job tests only `packages/app` and `packages/session-ui`, which Kilo removed (`skipFiles` in script/upstream/utils/config.ts). One job-level line, so upstream changes to the e2e steps still merge cleanly. No seam: workflow triggers and job conditions cannot be extended from outside the file."
+      "seam": "CI triggers: run the unit and e2e matrix on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`). Skip the `affected` job, and with it the e2e job that needs it: the e2e job tests only `packages/app` and `packages/session-ui`, which Kilo removed (`skipFiles` in script/upstream/utils/config.ts). One job-level line, so upstream changes to the e2e steps still merge cleanly. CI speed: `Verify packed workerd SDK` runs in its own `sdk` job, and the compiled service and Node build checks run in a `build` matrix job, so they no longer wait for the unit tests in `unit` (the copies are next to the job they came from, so a sync that changes them shows the conflict in this file). The Turbo cache step uses `.turbo/cache` (where Turborepo 2.x writes; the old path never existed, so the cache never saved), keys on turbo.json and bun.lock instead of every package.json (that hash took up to 35 s per step on Windows), and restores without the commit SHA. Pull requests check out two commits, because `--affected` compares only with the merge's first parent. No seam: workflow triggers, job conditions, jobs, steps and cache keys cannot be extended from outside the file. Upstream has no job split or cache key input."
     },
     ".gitignore": {
       "rung": 3,
@@ -69,7 +73,7 @@
     },
     "turbo.json": {
       "rung": 3,
-      "seam": "Register `@kilocode/gateway-core#test` in Turborepo so `bun turbo test --affected` runs the Gateway core unit and boundary tests in CI.",
+      "seam": "Register `@kilocode/gateway-core#test` in Turborepo so `bun turbo test --affected` runs the Gateway core unit and boundary tests in CI. Add a `transit` task and depend on `^transit` in the test tasks of packages with internal dependencies, so a test hash covers the files of every transitive workspace dependency. `^build` covers only direct dependencies (`build` has no `dependsOn`), so a cached `@opencode/cli#test` replayed after a change in `@opencode/core`. Upstream has no option for transitive input hashing; transit nodes are the documented Turborepo pattern.",
       "unmarked": "JSON has no comments."
     }
   }
