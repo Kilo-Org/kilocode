@@ -116,7 +116,8 @@ jobs:
                         login
                       }
                       createdAt
-                      labels(first: 50) {
+                      labels(first: 100) {
+                        totalCount
                         nodes {
                           name
                         }
@@ -202,6 +203,11 @@ jobs:
               const text = activity
                 ? `${activity.date.toISOString()} via ${activity.source}`
                 : "unknown"
+
+              if (pr.labels.totalCount > pr.labels.nodes.length) {
+                core.warning(`PR #${pr.number} has ${pr.labels.totalCount} labels, more than were fetched; skipping so a guard label is not missed`)
+                return []
+              }
 
               const labels = pr.labels.nodes.map((label) => label.name)
 
