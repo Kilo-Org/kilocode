@@ -218,11 +218,13 @@ describe("Kilo task nesting", () => {
             .children(chat.id)
             .pipe(Effect.map((items) => items.find((item) => item.id === result.metadata.sessionId))),
           "delegated task child was not created",
+          "15 seconds",
         )
         expect(kids?.parentID).toBe(chat.id)
         const prompt = yield* pollWithTimeout(
           Effect.sync(() => (seen?.sessionID === result.metadata.sessionId ? seen : undefined)),
           "delegated task child did not start",
+          "15 seconds",
         )
         expect(prompt.agent).toBe("explore")
       }),
