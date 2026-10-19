@@ -2,7 +2,8 @@ import { expect } from "bun:test"
 import { Auth } from "@/auth"
 import { InstanceStore } from "@/project/instance-store"
 import { ModelCache } from "@/provider/model-cache"
-import { Effect, Layer, Redacted, Ref } from "effect"
+import { Deferred, Duration, Effect, Fiber, Layer, Redacted, Ref } from "effect"
+import * as TestClock from "effect/testing/TestClock"
 import * as Discovery from "../../../src/kilocode/anaconda-desktop/discovery"
 import {
   decodeMetadata,
@@ -12,9 +13,7 @@ import {
 } from "../../../src/kilocode/anaconda-desktop/domain"
 import * as DesktopPlatform from "../../../src/kilocode/anaconda-desktop/platform"
 import * as Desktop from "../../../src/kilocode/anaconda-desktop/service"
-import { testEffect } from "../../lib/effect"
-
-const it = testEffect(Layer.empty)
+import { it, testEffect } from "../../lib/effect"
 
 function ready(
   serverID: string,
@@ -142,3 +141,197 @@ it.live("sync requires acknowledgement for limited tool support", () =>
     expect(yield* Ref.get(writes)).toBe(1)
   }),
 )
+
+// kilocode_change start - regression tests for status() cache + single-flight
+// guards added to mitigate Issue #37 (runtimed-nightly.exe idle load).
+
+function deps(discovery: Layer.Layer<Discovery.Service, never, never>) {
+  const platform = Layer.succeed(
+    DesktopPlatform.Service,
+    DesktopPlatform.Service.of({
+      info: { platform: "linux", arch: "x64", home: "/tmp", env: {} },
+      dataDir: () => Effect.succeed("/tmp"),
+      installation: () => Effect.succeed({ path: "/usr/bin/anaconda-desktop" }),
+      open: () => Effect.void,
+    }),
+  )
+  const auth = Layer.mock(Auth.Service)({
+    get: () => Effect.succeed(undefined),
+    set: () => Effect.void,
+  })
+  const cache = Layer.mock(ModelCache.Service)({ clear: () => Effect.void })
+  const instances = Layer.mock(InstanceStore.Service)({ disposeAll: () => Effect.void })
+  return Desktop.layer.pipe(
+    Layer.provide(discovery),
+    Layer.provide(platform),
+    Layer.provide(auth),
+    Layer.provide(cache),
+    Layer.provide(instances),
+  )
+}
+
+const { effect: itEffect } = testEffect(Layer.empty)
+
+itEffect("status() returns the cached result within the TTL (Issue #37 regression)", () =>
+  Effect.gen(function* () {
+    const counter = { value: 0 }
+    const layer = deps(
+      Layer.succeed(
+        Discovery.Service,
+        Discovery.Service.of({
+          discover: () =>
+            Effect.sync(() => {
+              counter.value += 1
+              return ready("only", 9000, "only-k")
+            }),
+        }),
+      ),
+    )
+
+    // Provide the layer once so the `AnacondaDesktop.Service` instance (and its
+    // `cacheRef` closure) survives across both `status()` calls.
+    const program = Effect.gen(function* () {
+      const first = yield* Desktop.Service.use((service) => service.status())
+      const second = yield* Desktop.Service.use((service) => service.status())
+      return [first, second] as const
+    }).pipe(Effect.provide(layer))
+
+    const [first, second] = yield* program
+
+    expect(first.type).toBe("ready")
+    if (first.type !== "ready") throw new Error("expected ready status")
+    expect(second.type).toBe("ready")
+    if (second.type !== "ready") throw new Error("expected ready status")
+    // Both calls returned the same cached result; only one discover() ran.
+    expect(second.serverID).toBe(first.serverID)
+    expect(counter.value).toBe(1)
+  }),
+)
+
+itEffect("status() re-fetches after the TTL expires", () =>
+  Effect.gen(function* () {
+    const counter = { value: 0 }
+    const layer = deps(
+      Layer.succeed(
+        Discovery.Service,
+        Discovery.Service.of({
+          discover: () =>
+            Effect.sync(() => {
+              counter.value += 1
+              return ready(`srv-${counter.value}`, 9000 + counter.value, `k-${counter.value}`)
+            }),
+        }),
+      ),
+    )
+
+    const program = Effect.gen(function* () {
+      const before = yield* Desktop.Service.use((service) => service.status())
+      // Advance the TestClock past the 5s TTL — the next call must re-discover.
+      yield* TestClock.adjust(Duration.toMillis("6 seconds") + 100)
+      const after = yield* Desktop.Service.use((service) => service.status())
+      return { before, after } as const
+    }).pipe(Effect.provide(layer))
+
+    const { before, after } = yield* program
+    if (before.type !== "ready") throw new Error("expected ready status")
+    if (after.type !== "ready") throw new Error("expected ready status")
+    // discover() ran exactly twice: once before the TTL, once after.
+    expect(counter.value).toBe(2)
+  }),
+)
+
+itEffect("status() coalesces concurrent callers via the single-flight permit", () =>
+  Effect.gen(function* () {
+    const counter = { value: 0 }
+    // `started` is signalled as soon as the leader reaches the inner `discover`
+    // body. We must NOT race with `Effect.yieldNow` / setTimeout here — see
+    // AGENTS.md "Synchronizing With Concurrent Work" and the parallel-init
+    // pattern in `test/project/instance.test.ts`.
+    const started = yield* Deferred.make<void>()
+    const release = yield* Deferred.make<void>()
+    const layer = deps(
+      Layer.succeed(
+        Discovery.Service,
+        Discovery.Service.of({
+          discover: () =>
+            Effect.gen(function* () {
+              counter.value += 1
+              yield* Deferred.succeed(started, undefined)
+              yield* Deferred.await(release)
+              return ready("only", 9999, "only-k")
+            }),
+        }),
+      ),
+    )
+
+    const program = Effect.gen(function* () {
+      const fa = yield* Desktop.Service.use((s) => s.status()).pipe(Effect.forkChild)
+      const fb = yield* Desktop.Service.use((s) => s.status()).pipe(Effect.forkChild)
+      const fc = yield* Desktop.Service.use((s) => s.status()).pipe(Effect.forkChild)
+
+      // Wait until the leader is parked inside Deferred.await(release) before
+      // we release; this guarantees the other two forks have queued on the
+      // Semaphore and will be coalesced into the leader's result.
+      yield* Deferred.await(started)
+      yield* Deferred.succeed(release, undefined)
+
+      const a = yield* Fiber.join(fa)
+      const b = yield* Fiber.join(fb)
+      const c = yield* Fiber.join(fc)
+      return [a, b, c] as const
+    }).pipe(Effect.provide(layer))
+
+    const [a, b, c] = yield* program
+
+    expect(a.type).toBe("ready")
+    if (a.type !== "ready") throw new Error("expected ready status")
+    expect(b.type).toBe("ready")
+    if (b.type !== "ready") throw new Error("expected ready status")
+    expect(c.type).toBe("ready")
+    if (c.type !== "ready") throw new Error("expected ready status")
+    // Exactly one discover() must have run despite three concurrent callers.
+    expect(counter.value).toBe(1)
+  }),
+)
+
+itEffect("sync() bypasses the status cache and invalidates it afterwards", () =>
+  Effect.gen(function* () {
+    const state = { next: ready("alpha", 9100, "alpha-k") }
+    const counter = { value: 0 }
+    const layer = deps(
+      Layer.succeed(
+        Discovery.Service,
+        Discovery.Service.of({
+          discover: () =>
+            Effect.sync(() => {
+              counter.value += 1
+              return state.next
+            }),
+        }),
+      ),
+    )
+
+    const program = Effect.gen(function* () {
+      const before = yield* Desktop.Service.use((s) => s.status())
+      const callsAfterStatus = counter.value
+      // Even within the cache TTL, sync() must observe the freshest world.
+      state.next = ready("beta", 9200, "beta-k")
+      yield* Desktop.Service.use((s) => s.sync(true))
+      const callsAfterSync = counter.value
+      const status = yield* Desktop.Service.use((s) => s.status())
+      return { before, status, callsAfterStatus, callsAfterSync } as const
+    }).pipe(Effect.provide(layer))
+
+    const { before, status, callsAfterStatus, callsAfterSync } = yield* program
+
+    if (before.type !== "ready") throw new Error("expected ready status")
+    if (status.type !== "ready") throw new Error("expected ready status")
+    expect(before.serverID).toBe("alpha")
+    expect(status.serverID).toBe("beta")
+    // sync() always bypassed the cache (one extra discover() call) and the
+    // status cache was invalidated, so the next status() re-discovered too.
+    expect(callsAfterSync).toBe(callsAfterStatus + 1)
+    expect(counter.value).toBe(callsAfterSync + 1)
+  }),
+)
+// kilocode_change end
