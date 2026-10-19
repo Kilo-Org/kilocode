@@ -10,7 +10,7 @@
 // Usage:
 //   bun migration-tracking/technical-notes/script/v2-baseline.ts                    # refs and ancestry
 //   bun migration-tracking/technical-notes/script/v2-baseline.ts --checks           # plus every check
-//   bun migration-tracking/technical-notes/script/v2-baseline.ts --checks --only test,cli-build
+//   bun migration-tracking/technical-notes/script/v2-baseline.ts --checks --only test,cli-build   # or --only=test,cli-build
 
 import { $ } from "bun"
 import { mkdir, mkdtemp, rm } from "node:fs/promises"
@@ -138,8 +138,12 @@ if (!Bun.argv.includes("--checks")) {
   process.exit(0)
 }
 
-const only = Bun.argv.includes("--only") ? new Set(Bun.argv[Bun.argv.indexOf("--only") + 1]?.split(",")) : undefined
+const only = selection()
 const unknown = [...(only ?? [])].filter((name) => !CHECKS.some((check) => check.name === name))
+if (only?.size === 0) {
+  console.log(`\n--only needs check names: --only a,b or --only=a,b. Known: ${CHECKS.map((check) => check.name).join(", ")}`)
+  process.exit(1)
+}
 if (unknown.length > 0) {
   console.log(`\nunknown check(s): ${unknown.join(", ")}. Known: ${CHECKS.map((check) => check.name).join(", ")}`)
   process.exit(1)
@@ -189,6 +193,16 @@ console.log(
   "\ncompare failures with migration-tracking/technical-notes/baseline/pinned-v2-baseline.md, and with origin/v2 before your change",
 )
 process.exit(results.some((result) => result.gated && result.code !== 0) ? 1 : 0)
+
+// `--only a,b` or `--only=a,b`. An empty set means the flag had no names, which must not read as a passing run.
+function selection() {
+  const index = Bun.argv.findIndex((arg) => arg === "--only" || arg.startsWith("--only="))
+  if (index === -1) return undefined
+  const arg = Bun.argv[index] ?? ""
+  const value = arg === "--only" ? Bun.argv[index + 1] : arg.slice("--only=".length)
+  if (!value || value.startsWith("--")) return new Set<string>()
+  return new Set(value.split(",").filter(Boolean))
+}
 
 function isolated(home: string) {
   return {

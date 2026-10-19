@@ -126,7 +126,7 @@ When a Kilo capability genuinely needs upstream code to call it:
 
 Rules that apply once a package lands, kept here so the landing PR finds them:
 
-- **`kilo-vscode` (G2): `virtua` patch.** v1 `main` pins `virtua@0.49.1` and patches it (`patches/virtua@0.49.1.patch`, adds `VirtualizerHandle.measure()`), and `kilo-vscode/webview-ui/src/components/chat/MessageList.tsx` calls `handle.measure()` for the transcript handoff-flicker fix. v2 has neither the dependency nor the patch. Port the patch with its call site, or neither, and do not bump `virtua` without both.
+- **`kilo-vscode` (G2): `virtua` patch.** v1 `main` pins `virtua@0.49.1` and patches it (`patches/virtua@0.49.1.patch`, adds `VirtualizerHandle.measure()`), and `packages/kilo-vscode/webview-ui/src/components/chat/MessageList.tsx` calls `handle.measure()` for the transcript handoff-flicker fix. v2 has neither the dependency nor the patch. Port the patch with its call site, or neither, and do not bump `virtua` without both.
 
 ## Validation
 
