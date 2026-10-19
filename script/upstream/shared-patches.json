@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 14,
-    "markedLines": 48,
+    "files": 15,
+    "markedLines": 45,
     "unmarkedLines": 18,
     "deletedFiles": 0
   },
@@ -17,16 +17,21 @@
     },
     ".gitignore": {
       "rung": 3,
-      "seam": "Ignore Kilo-only local dev profiles (`.kilo-v2-dev/` from script/dev-isolated.ts and `.kilo-dev/`), `telemetry-id`, generated dependency installs, merge reports, and JetBrains state under `.kilo/`, and `packages/app/.artifacts/`. No seam: root gitignore rules cannot live in a Kilo-owned file. Reconciled by 3-way merge during upstream syncs; goes away when the Kilo host owns the root and dev entry (U-E0-01).",
-      "unmarked": "Twelve ignore patterns. A gitignore pattern line cannot carry an inline comment, so each pattern is preceded by a `# kilocode_change:` comment line."
+      "seam": "Ignore the v1 line's local dev profile (`.kilo-dev/`, left behind when one checkout switches between `main` and `v2`), `telemetry-id`, generated dependency installs, merge reports, and JetBrains state under `.kilo/`, and `packages/app/.artifacts/`. No seam: root gitignore rules cannot live in a Kilo-owned file. The v2 `bun dev` profile moved into the Kilo host package (packages/kilo-cli/.gitignore, U-E0-01); the remaining patterns are not host entries and stay. Reconciled by 3-way merge during upstream syncs.",
+      "unmarked": "Eleven ignore patterns. A gitignore pattern line cannot carry an inline comment, so each pattern is preceded by a `# kilocode_change:` comment line."
     },
     "README.md": {
       "rung": 4,
-      "seam": "Show the generated Kilo v2 migration progress map (badge, treemap, history from migration-tracking/progress/) on the branch front page. Visibility only, no behavior. No seam: the repository README is a single upstream-owned file, and a Kilo-owned README cannot be the front page of the same repository. Goes away when the map is published outside the repository (for example GitHub Pages) or when the Kilo host owns the repository root (U-E0-01)."
+      "seam": "Show the generated Kilo v2 migration progress map (badge, treemap, history from migration-tracking/progress/) on the branch front page. Visibility only, no behavior. No seam: the repository README is a single upstream-owned file, and a Kilo-owned README cannot be the front page of the same repository. The Kilo host (U-E0-01) is a package and does not change the front page. Goes away when the map is published outside the repository (for example GitHub Pages)."
     },
     "package.json": {
       "rung": 3,
-      "seam": "Root `dev` script runs script/dev-isolated.ts, so `bun dev` never uses the installed OpenCode or Kilo data. Goes away when the Kilo host owns the dev entry (U-E0-01). Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check `packages/gui-extensions`, which Kilo removed (`skipFiles`).",
+      "seam": "Root `dev` script runs script/dev-isolated.ts, which starts the Kilo host entry (packages/kilo-cli) with an isolated profile, so `bun dev` never uses the installed OpenCode or Kilo data. Stays after U-E0-01: `bun dev` from the root reads the upstream root package.json, and upstream's script runs the upstream CLI with the real data. Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check `packages/gui-extensions`, which Kilo removed (`skipFiles`).",
+      "unmarked": "JSON has no comments."
+    },
+    "packages/cli/package.json": {
+      "rung": 3,
+      "seam": "Export `./*` (`./src/*.ts`) as `core`, `server` and `util` do, so the Kilo host (packages/kilo-cli, U-E0-01) can run the upstream command handlers and services. Generic: any embedding entry can use it. Rungs 1 and 2 cannot supply it: the CLI exported only `./run` and `./server-process`, so no entry outside the package could reach `Commands`, `Runtime` or a handler.",
       "unmarked": "JSON has no comments."
     },
     "packages/cli/script/app-assets.ts": {
@@ -37,22 +42,22 @@
       "rung": 3,
       "seam": "Accept a 404 for the web UI shell in the compiled service smoke test, because the Kilo build embeds no web UI (`packages/app` removed). The API, authentication, and plugin checks still run. No seam: the smoke script has no option to skip the web UI check."
     },
+    "packages/cli/src/server-process.ts": {
+      "rung": 3,
+      "seam": "`Options.overrides` (service replacements), passed through to `ServerProcess.start` in packages/server/src/process.ts, so an embedding entry's `serve` handler can replace services in the server it starts. The Kilo host registers the Kilo plugins this way (`SdkPlugins.node` replacement, U-E0-01). Two lines, no Kilo value. Rungs 1 and 2 cannot supply it: `run` built the server options itself and had no way to add a replacement."
+    },
     "packages/core/package.json": {
       "rung": 3,
-      "seam": "Runtime dependency on `@kilocode/gateway-core` for the built-in `KiloGatewayPlugin` adapter (`packages/core/src/kilocode/gateway.ts`). Goes away when the Kilo host registers the Gateway plugin outside `@opencode/core` (U-E0-01).",
+      "seam": "Runtime dependency on `@kilocode/gateway-core` for the Gateway adapter (`packages/core/src/kilocode/gateway.ts`). The Kilo host registers the plugin through `SdkPlugins.register` since U-E0-01, but the adapter still lives in core. Goes away when the adapter moves into packages/kilo-plugin with the Gateway RPC (U-E0-02, #15173).",
       "unmarked": "JSON has no comments."
-    },
-    "packages/core/src/plugin/provider.ts": {
-      "rung": 3,
-      "seam": "Replace upstream `KiloPlugin` (which stamps OpenCode referer and title headers) with `KiloGatewayPlugin` (`packages/core/src/kilocode/gateway.ts`) until the Kilo host registers built-in Kilo plugins via `SdkPlugins.register` (U-E0-01)."
-    },
-    "packages/core/test/plugin/provider-kilo.test.ts": {
-      "rung": 3,
-      "seam": "Update the built-in `ProviderPlugins` assertion to expect `kilocode.gateway` in place of `opencode.provider.kilo`."
     },
     "packages/sdk/script/verify-package.ts": {
       "rung": 3,
-      "seam": "Pack `@kilocode/gateway-core` before `@opencode/core` in the workerd SDK verification script because `@opencode/core` depends on `@kilocode/gateway-core`."
+      "seam": "Pack `@kilocode/gateway-core` before `@opencode/core` in the workerd SDK verification script because `@opencode/core` depends on `@kilocode/gateway-core`. Goes away with the core dependency (U-E0-02)."
+    },
+    "packages/server/src/process.ts": {
+      "rung": 3,
+      "seam": "`ServerProcess.start` takes `overrides` (service replacements) and passes them to `createRoutes`, which already takes them (as `ServerFetch.BootOptions.overrides` does for the embedded server). Three lines, no Kilo value. Rungs 1 and 2 cannot supply it: the process server built its routes without replacements, so a host could not register plugins (`SdkPlugins`) or replace services in the server the CLI spawns."
     },
     "packages/tui/src/component/dialog-integration.tsx": {
       "rung": 3,
@@ -60,7 +65,7 @@
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 3,
-      "seam": "Register the built-in `KiloTeams` TUI plugin (`/teams`, `/team`, `/org`, `/orgs`) until the Kilo host owns the TUI built-in plugin list (U-E0-01)."
+      "seam": "Register the built-in `KiloTeams` TUI plugin (`/teams`, `/team`, `/org`, `/orgs`). Stays after U-E0-01: the TUI loads its built-in list in the TUI process, which `SdkPlugins` (a server store) does not reach. The config-driven path (`plugins` in the TUI config, loaded by `tui/src/plugin/context.tsx`) loads only npm packages or local files, which a compiled binary does not have. A generic seam needs an `@opencode/tui` export of the list (package.json) plus an extension point in this file, which is not fewer shared lines than these two."
     },
     "turbo.json": {
       "rung": 3,

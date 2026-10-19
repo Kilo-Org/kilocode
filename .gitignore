@@ -31,8 +31,6 @@ target
 
 # Local dev files
 opencode-dev
-# kilocode_change: isolated `bun dev` profile for the v2 line (script/dev-isolated.ts)
-.kilo-v2-dev/
 # kilocode_change: isolated `bun dev` profile for the v1 line
 .kilo-dev/
 UPCOMING_CHANGELOG.md

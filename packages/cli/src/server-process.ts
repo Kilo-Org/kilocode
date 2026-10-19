@@ -26,6 +26,7 @@ export type Options = {
   readonly hostname?: string
   readonly port?: number
   readonly cors?: readonly string[]
+  readonly overrides?: LayerNode.Replacements // kilocode_change(host) seam - service replacements an embedding entry passes to the server
 }
 
 // The process effect lives until server shutdown; tracing it would parent every request to one process-lifetime trace.
@@ -153,6 +154,7 @@ const processEffect = Effect.fnUntraced(function* (options: Options) {
             },
         transform,
         () => remote.urls,
+        options.overrides, // kilocode_change(host) seam - pass the overrides through
       )
       const server = yield* launch.pipe(
         Effect.catch((error) => {

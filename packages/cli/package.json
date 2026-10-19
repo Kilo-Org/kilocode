@@ -12,6 +12,7 @@
     "bin"
   ],
   "exports": {
+    "./*": "./src/*.ts",
     "./vite-host": "./dev/host.js",
     "./run": "./src/run/index.ts",
     "./server-process": "./src/server-process.ts"

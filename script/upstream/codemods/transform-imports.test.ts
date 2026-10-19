@@ -44,18 +44,18 @@ test("leaves the external @opencode-ai packages that upstream v2 still uses", ()
   expect(sourceFile.getFullText()).toContain('"@opencode-ai/pty"')
 })
 
-test("renames imports in the Kilo plugin too, so Kilo code follows a package rename", async () => {
+test("renames imports in the Kilo packages too, so Kilo code follows a package rename", async () => {
   const root = path.join(import.meta.dir, "..", "..", "..")
   const cwd = process.cwd()
   process.chdir(root)
   try {
-    const results = await transformAllImports(["packages/kilo-plugin/src/*.ts"])
+    const results = await transformAllImports(["packages/kilo-*/src/*.ts"])
     expect(results.flatMap((r) => r.changes.map((c) => [c.before, c.after]))).toContainEqual([
-      "@opencode/plugin/effect",
-      "@kilocode/plugin/effect",
+      "@opencode/plugin/runtime",
+      "@kilocode/plugin/runtime",
     ])
     // Dry run: the file is unchanged.
-    expect(await Bun.file("packages/kilo-plugin/src/index.ts").text()).toContain('from "@opencode/plugin/effect"')
+    expect(await Bun.file("packages/kilo-cli/src/index.ts").text()).toContain('from "@opencode/plugin/runtime"')
   } finally {
     process.chdir(cwd)
   }

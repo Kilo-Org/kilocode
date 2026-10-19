@@ -11,6 +11,7 @@ import { Plugin } from "@opencode/core/plugin"
 import { PluginHooks } from "@opencode/core/plugin/hooks"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { ProviderPlugins } from "@opencode/core/plugin/provider"
+import { KiloPlugin } from "@opencode/core/plugin/provider/kilo"
 import { Provider } from "@opencode/core/provider"
 import { Rpc } from "@opencode/core/rpc"
 import { Agent } from "@opencode/schema/agent"
@@ -45,7 +46,9 @@ const headers = (team?: string) => ({
   ...(team ? { "X-KILOCODE-ORGANIZATIONID": team } : {}),
 })
 
-// Adds the provider with a static models.dev-style seed model (`models-dev/only`), then starts the plugin.
+// Adds the provider with a static models.dev-style seed model (`models-dev/only`), then starts the plugins in
+// production order: the upstream built-in `KiloPlugin` (OpenCode referer and title) first, then the Gateway
+// plugin, which the Kilo host registers through `SdkPlugins.register` after the built-in list.
 const addPlugin = Effect.fn(function* () {
   const providers = yield* Provider.Service
   yield* providers.transform((editor) => {
@@ -58,6 +61,7 @@ const addPlugin = Effect.fn(function* () {
   })
   const plugin = yield* Plugin.Service
   const host = yield* PluginHost.make(plugin)
+  yield* KiloPlugin.effect(host)
   yield* KiloGatewayPlugin.effect(host)
   return host
 })
@@ -76,11 +80,9 @@ function eventually<A, E>(effect: Effect.Effect<A, E>, predicate: (value: A) => 
 }
 
 describe("KiloGatewayPlugin", () => {
-  it.effect("replaces the upstream Kilo plugin", () =>
+  it.effect("is not in the upstream built-in provider list; the Kilo host registers it", () =>
     Effect.sync(() => {
-      const ids = ProviderPlugins.map((item) => item.id)
-      expect(ids).toContain("kilocode.gateway")
-      expect(ids).not.toContain("opencode.provider.kilo")
+      expect(ProviderPlugins.map((item) => item.id)).not.toContain(KiloGatewayPlugin.id)
     }),
   )
 
