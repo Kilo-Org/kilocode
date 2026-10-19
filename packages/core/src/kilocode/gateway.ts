@@ -302,7 +302,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
           connection,
           envActive,
           models: stored.models,
-          defaultModelID: defaultModelID ?? stored.defaultModelID,
+          // The stored default belongs to the stored models. `KiloDefaults.get` answers its static fallback when the
+          // Kilo API is down, so it must not replace the stored default.
+          defaultModelID: stored.defaultModelID ?? defaultModelID,
           failed: false,
           anonymous: !token,
         }

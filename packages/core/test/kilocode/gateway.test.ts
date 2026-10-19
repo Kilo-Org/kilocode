@@ -347,8 +347,73 @@ describe("KiloGatewayPlugin", () => {
     ),
   )
 
-  // #15244: a later start does not wait for the network when the exact scope has a stored catalog.
-  it.live("starts from the stored personal catalog and default, then loads the fresh catalog in the background", () =>
+  // #15244: a later start does not wait for the network when the exact scope has a stored catalog. The fresh catalog
+  // drops the paid frontier model, and for the anonymous scope also the small model.
+  for (const scope of [
+    {
+      name: "personal",
+      signedIn: true,
+      stored: ["kilo-auto/free", "kilo-auto/frontier", "kilo-auto/small"],
+      fresh: ["kilo-auto/free", "kilo-auto/small"],
+      default: "kilo-auto/frontier",
+    },
+    {
+      name: "anonymous",
+      signedIn: false,
+      stored: ["kilo-auto/free", "kilo-auto/small"],
+      fresh: ["kilo-auto/free"],
+      default: "kilo-auto/free",
+    },
+  ])
+    it.live(
+      `starts from the stored ${scope.name} catalog and default, then loads the fresh catalog in the background`,
+      () =>
+        Effect.acquireUseRelease(
+          Effect.sync(() => fixture()),
+          (backend) =>
+            withEnv({ ...env, KILO_API_URL: backend.url }, () =>
+              Effect.gen(function* () {
+                const credentials = yield* Credential.Service
+                if (scope.signedIn)
+                  yield* credentials.create({
+                    integrationID,
+                    label: "a@example.test",
+                    value: oauth({ server: backend.url, organizationID: null, email: "a@example.test" }),
+                  })
+                // First start: no stored catalog, so the activation waits for the fetch and stores the result.
+                yield* Effect.scoped(addPlugin())
+
+                // Second start: the Kilo API is slow and its catalog changed.
+                backend.state.delay = 300
+                const catalog = backend.state.models as { data: { id: string }[] }
+                backend.state.models = {
+                  data: catalog.data.filter(
+                    (model) => model.id !== "kilo-auto/frontier" && (scope.signedIn || model.id !== "kilo-auto/small"),
+                  ),
+                }
+                const requests = backend.requests.length
+                yield* addPlugin()
+                const models = yield* Model.Service
+                const providers = yield* Provider.Service
+                const kiloModels = Effect.map(models.available(), (list) =>
+                  list.filter((item) => item.providerID === kilo).map((item) => String(item.id)),
+                )
+                // The activation returned with the stored catalog and default, before the fetch answered.
+                expect(yield* kiloModels).toEqual(scope.stored)
+                expect(yield* models.default()).toMatchObject({ providerID: kilo, id: Model.ID.make(scope.default) })
+                expect((yield* providers.get(kilo))?.settings?.baseURL).toBe(`${backend.url}/api/gateway/v1`)
+
+                // The fresh catalog arrives in the background and replaces it.
+                expect(yield* eventually(kiloModels, (list) => list.length === scope.fresh.length)).toEqual(scope.fresh)
+                const fetched = backend.requests.slice(requests).filter((request) => request.path.endsWith("/models"))
+                expect(fetched).toHaveLength(1)
+              }),
+            ),
+          (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+        ),
+    )
+
+  it.live("keeps the stored default with the stored catalog when the Kilo API is down", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => fixture()),
       (backend) =>
@@ -360,36 +425,17 @@ describe("KiloGatewayPlugin", () => {
               label: "a@example.test",
               value: oauth({ server: backend.url, organizationID: null, email: "a@example.test" }),
             })
-            // First start: no stored catalog, so the activation waits for the fetch and stores the result.
-            yield* Effect.scoped(addPlugin())
-
-            // Second start: the Kilo API is slow and its catalog changed.
-            backend.state.delay = 300
-            const catalog = backend.state.models as { data: unknown[] }
-            backend.state.models = { data: catalog.data.slice(0, 2) }
-            const requests = backend.requests.length
+            // The stored default differs from the static fallback that `KiloDefaults.get` answers on failure.
+            backend.state.defaults = { defaultModel: "kilo-auto/small", defaultFreeModel: "kilo-auto/free" }
             yield* addPlugin()
             const models = yield* Model.Service
-            const providers = yield* Provider.Service
-            const kiloModels = Effect.map(models.available(), (list) =>
-              list.filter((item) => item.providerID === kilo).map((item) => item.id),
-            )
-            // The activation returned with the stored catalog and default, before the fetch answered.
-            expect(yield* kiloModels).toEqual([
-              Model.ID.make("kilo-auto/free"),
-              Model.ID.make("kilo-auto/frontier"),
-              Model.ID.make("kilo-auto/small"),
-            ])
-            expect(yield* models.default()).toMatchObject({ providerID: kilo, id: Model.ID.make("kilo-auto/frontier") })
-            expect((yield* providers.get(kilo))?.settings?.baseURL).toBe(`${backend.url}/api/gateway/v1`)
+            expect(yield* models.default()).toMatchObject({ providerID: kilo, id: Model.ID.make("kilo-auto/small") })
 
-            // The fresh catalog arrives in the background and replaces it.
-            expect(yield* eventually(kiloModels, (list) => list.length === 2)).toEqual([
-              Model.ID.make("kilo-auto/free"),
-              Model.ID.make("kilo-auto/frontier"),
-            ])
-            const fetched = backend.requests.slice(requests).filter((request) => request.path.endsWith("/models"))
-            expect(fetched).toHaveLength(1)
+            backend.state.modelsStatus = 503
+            backend.state.defaultsStatus = 503
+            const rpc = yield* Rpc.Service
+            yield* rpc.call("kilocode.gateway", "organization.set", { organizationID: null })
+            expect(yield* models.default()).toMatchObject({ providerID: kilo, id: Model.ID.make("kilo-auto/small") })
           }),
         ),
       (backend) => Effect.sync(() => backend[Symbol.dispose]()),
