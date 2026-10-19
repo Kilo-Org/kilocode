@@ -76,7 +76,7 @@ const CHECKS: Check[] = [
   { name: "progress-map", cwd: ".", argv: ["bun", "script/upstream/progress.ts", "--check"], skip: noV1Target },
   { name: "upstream-install", cwd: "script/upstream", argv: ["bun", "install", "--frozen-lockfile"] },
   { name: "upstream-typecheck", cwd: "script/upstream", argv: ["bun", "run", "typecheck"] },
-  { name: "upstream-test", cwd: "script/upstream", argv: ["bun", "test"], isolate: true },
+  { name: "upstream-test", cwd: "script/upstream", argv: ["bun", "test"] },
   { name: "kilo-import-rule", cwd: "script/upstream", argv: ["bun", "placement.ts", "--imports"] },
   { name: "kilo-plugin-test", cwd: "packages/kilo-plugin", argv: ["bun", "test"], isolate: true },
   { name: "kilo-cli-test", cwd: "packages/kilo-cli", argv: ["bun", "test"], isolate: true },

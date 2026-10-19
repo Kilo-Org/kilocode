@@ -163,4 +163,14 @@ Use these only as deltas against this table.
 
 ## Reproducer
 
-`migration-tracking/technical-notes/script/v2-baseline.ts` **does not run on this base** as written. It hard-codes `PINNED_V2 = 76dbaf20`, refuses to run unless `upstream/v2` equals that pin, and targets `packages/www`. It is classified rewrite-or-drop in `migration-tracking/discovery/doc-inventory.md`. Until it is rewritten, reproduce with the commands in the table above, run from the listed directories. The 2026-10-16 capture used a throwaway script outside the repo with isolated `OPENCODE_TEST_HOME` and `XDG_*` directories, in a clean worktree, with the same sequence (turbo test also `--force`). The 2026-10-11 capture used the sequence: install, typecheck (`--force` re-run), lint, turbo test `--continue`, the three `check:generated` commands, then CLI build and service smoke.
+From the repository root, in a clean worktree:
+
+```sh
+bun migration-tracking/technical-notes/script/v2-baseline.ts            # refs and ancestry only, offline
+bun migration-tracking/technical-notes/script/v2-baseline.ts --checks   # plus every check, logs in baseline/logs/ (gitignored)
+bun migration-tracking/technical-notes/script/v2-baseline.ts --checks --only test,cli-build   # a subset, for example one re-run
+```
+
+The script takes the base from `pinned()` (`script/upstream/utils/upstream.ts`), so it follows each sync without an edit, and refuses to run the checks unless the pin is an ancestor of `HEAD` and of `upstream/dev` (when that ref exists locally). `--checks` runs the commands of `check.yml`, `test.yml` and `kilo-v2.yml` in CI order, plus the two checks CI does not run (`lint:effect-patterns`, `packages/protocol` `check:generated`, reported but not failing the run). It runs turbo test with `--force` and isolated `OPENCODE_TEST_HOME` and `XDG_*` directories. The CI steps it does not mirror, and why, are listed at the top of the script.
+
+The captures above predate the script. The 2026-10-16 capture used a throwaway script outside the repo with the same isolation, in a clean worktree, and the sequence of the table above (turbo test also `--force`). The 2026-10-11 capture used the sequence: install, typecheck (`--force` re-run), lint, turbo test `--continue`, the three `check:generated` commands, then CLI build and service smoke.
