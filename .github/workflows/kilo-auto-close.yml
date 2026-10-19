@@ -30,6 +30,13 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const PR_DAYS_INACTIVE = 30
+            // Community PRs where the community sweep set `awaiting-contributor`: a
+            // maintainer asked for something. They close sooner, but only after this
+            // many days with no activity at all, so a reply or a push resets the clock.
+            const AWAITING_DAYS_INACTIVE = 14
+            const AWAITING_LABEL = "awaiting-contributor"
+            // Never closed, PRs or issues. Set by hand. See docs/community-triage.md.
+            const KEEP_LABEL = "keep-open"
             const ISSUE_DAYS_INACTIVE = 60
             const MAX_RETRIES = 3
 
@@ -41,6 +48,7 @@ jobs:
 
             const startTime = Date.now()
             const prCutoff = new Date(Date.now() - PR_DAYS_INACTIVE * 24 * 60 * 60 * 1000)
+            const awaitingCutoff = new Date(Date.now() - AWAITING_DAYS_INACTIVE * 24 * 60 * 60 * 1000)
             const issueCutoff = new Date(Date.now() - ISSUE_DAYS_INACTIVE * 24 * 60 * 60 * 1000)
             const { owner, repo } = context.repo
             const dryRunInput = context.payload.inputs?.dryRun
@@ -108,6 +116,12 @@ jobs:
                         login
                       }
                       createdAt
+                      labels(first: 100) {
+                        totalCount
+                        nodes {
+                          name
+                        }
+                      }
                       commits(last: 1) {
                         nodes {
                           commit {
@@ -190,13 +204,28 @@ jobs:
                 ? `${activity.date.toISOString()} via ${activity.source}`
                 : "unknown"
 
-              if (!activity || activity.date > prCutoff) {
+              if (pr.labels.totalCount > pr.labels.nodes.length) {
+                core.warning(`PR #${pr.number} has ${pr.labels.totalCount} labels, more than were fetched; skipping so a guard label is not missed`)
+                return []
+              }
+
+              const labels = pr.labels.nodes.map((label) => label.name)
+
+              if (labels.includes(KEEP_LABEL)) {
+                core.info(`PR #${pr.number} has the ${KEEP_LABEL} label, skipping (last activity: ${text})`)
+                return []
+              }
+
+              const awaiting = labels.includes(AWAITING_LABEL)
+              const cutoff = awaiting ? awaitingCutoff : prCutoff
+
+              if (!activity || activity.date > cutoff) {
                 core.info(`PR #${pr.number} is fresh (last activity: ${text})`)
                 return []
               }
 
-              core.info(`PR #${pr.number} is STALE (last activity: ${text})`)
-              return [{ ...pr, activity }]
+              core.info(`PR #${pr.number} is STALE${awaiting ? ` (${AWAITING_LABEL})` : ""} (last activity: ${text})`)
+              return [{ ...pr, activity, awaiting }]
             })
 
             core.info(`Found ${stalePrs.length} stale pull requests`)
@@ -212,7 +241,9 @@ jobs:
 
             for (const pr of stalePrs) {
               const issue_number = pr.number
-              const closeComment = `To stay organized pull requests are automatically closed after ${PR_DAYS_INACTIVE} days of inactivity. If the pull request is still relevant please reopen it or create a fresh new one.`
+              const closeComment = pr.awaiting
+                ? `A maintainer asked for changes on this pull request and we have not heard back in ${AWAITING_DAYS_INACTIVE} days, so it is being closed. If it is still relevant please reopen it when you have updates, or create a fresh new one.`
+                : `To stay organized pull requests are automatically closed after ${PR_DAYS_INACTIVE} days of inactivity. If the pull request is still relevant please reopen it or create a fresh new one.`
 
               if (dryRun) {
                 core.info(`[dry-run] Would close PR #${issue_number} from ${pr.author?.login || 'unknown'} (last activity: ${pr.activity.date.toISOString()} via ${pr.activity.source}): ${pr.title}`)
@@ -290,6 +321,11 @@ jobs:
 
                 if (issue.pull_request) {
                   core.info(`Skipping PR #${issue.number} in issue scan`)
+                  continue
+                }
+
+                if (issue.labels.some((label) => (typeof label === "string" ? label : label.name) === KEEP_LABEL)) {
+                  core.info(`Issue #${issue.number} has the ${KEEP_LABEL} label, skipping`)
                   continue
                 }
 
