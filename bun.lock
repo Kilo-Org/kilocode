@@ -300,6 +300,8 @@
       "dependencies": {
         "@opencode/core": "workspace:*",
         "@opencode/plugin": "workspace:*",
+        "@opencode/schema": "workspace:*",
+        "@opencode/util": "workspace:*",
         "effect": "catalog:",
       },
       "devDependencies": {

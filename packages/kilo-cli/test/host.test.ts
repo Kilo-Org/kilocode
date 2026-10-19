@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { fixture } from "@kilocode/gateway-core/testing"
+import { Permission } from "@opencode/core/permission"
 import { createRoutes } from "@opencode/server/routes"
 import { Context, Effect, Layer, References } from "effect"
 import { HttpEffect, HttpRouter, HttpServer } from "effect/http"
@@ -66,6 +67,85 @@ test("the server gets the Kilo plugins through SdkPlugins and serves the Kilo Ga
     )
   } finally {
     delete process.env.KILO_API_URL
+    await rm(directory, { recursive: true, force: true })
+  }
+}, 30_000)
+
+// The real plugin order of the server the host starts: the Kilo agents before the config plugins, the agent ceiling
+// in the post phase after all internal post plugins (config agents, browser). A global allow-all must not open Ask or
+// Plan, and Plan keeps its per-agent opt-in.
+test("the server runs the Kilo agent ceiling after the config plugins", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-host-"))
+  try {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const context = yield* Layer.build(
+            createRoutes(
+              {
+                password: "secret",
+                database: { path: ":memory:" },
+                models: { fetch: false },
+                fs: { filewatcher: false },
+                config: {
+                  directory,
+                  project: false,
+                  content: JSON.stringify({
+                    permissions: [{ action: "*", resource: "*", effect: "allow" }],
+                    agents: {
+                      plan: { permissions: [{ action: "shell", resource: "cargo search *", effect: "allow" }] },
+                    },
+                  }),
+                },
+              },
+              () => [],
+              KiloHost.overrides,
+            ).pipe(Layer.provide(HttpServer.layerServices)),
+          )
+          const handler = Context.get(context, HttpRouter.HttpRouter)
+            .asHttpEffect()
+            .pipe(HttpEffect.toWebHandlerWith(context))
+          const agents = Effect.promise(async () => {
+            const url = new URL("/api/agent", "http://kilo.local")
+            url.searchParams.set("location[directory]", directory)
+            const response = await handler(
+              new Request(url, { headers: { authorization: `Basic ${btoa("opencode:secret")}` } }),
+            )
+            return (await response.json()).data as {
+              id: string
+              mode: string
+              hidden: boolean
+              permissions: Permission.Rule[]
+            }[]
+          })
+          // The ceiling removes the config probe agent last, so its absence means the generation is complete.
+          const list = yield* eventually(
+            agents,
+            (data) =>
+              data.some((agent) => agent.id === "ask") && !data.some((agent) => agent.id === "kilo-config-permissions"),
+          )
+          const effect = (id: string, action: string, resource: string) =>
+            Permission.evaluate(action, resource, list.find((agent) => agent.id === id)?.permissions ?? []).effect
+
+          expect(list.filter((agent) => agent.mode !== "subagent" && !agent.hidden).map((agent) => agent.id)).toEqual([
+            "code",
+            "ask",
+            "debug",
+            "orchestrator",
+            "plan",
+          ])
+          expect(effect("code", "edit", "src/index.ts")).toBe("allow")
+          for (const id of ["ask", "plan"]) {
+            expect(effect(id, "edit", "src/index.ts")).toBe("deny")
+            expect(effect(id, "shell", "rm -rf src")).toBe("deny")
+          }
+          expect(effect("plan", "shell", "cargo search serde")).toBe("allow")
+          expect(effect("orchestrator", "shell", "ls")).toBe("deny")
+          expect(list.map((agent) => agent.id)).not.toContain("kilo-config-permissions")
+        }),
+      ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),
+    )
+  } finally {
     await rm(directory, { recursive: true, force: true })
   }
 }, 30_000)
