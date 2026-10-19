@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./embedding-catalog": "./src/embedding-catalog.ts",
     "./testing": "./src/testing.ts"
   },
   "files": [

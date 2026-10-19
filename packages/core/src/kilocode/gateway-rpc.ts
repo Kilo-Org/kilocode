@@ -1,5 +1,6 @@
 export * as KiloGatewayRpc from "./gateway-rpc.js"
 
+import { EmbeddingCatalog } from "@kilocode/gateway-core/embedding-catalog"
 import { Rpc } from "@opencode/schema/rpc"
 import { Schema } from "effect"
 
@@ -158,21 +159,7 @@ export const TranscriptionModel = Schema.Struct({
 
 export type TranscriptionModel = typeof TranscriptionModel.Type
 
-export const EmbeddingCatalog = Schema.Struct({
-  defaultModel: Schema.String,
-  models: Schema.Array(
-    Schema.Struct({
-      id: Schema.String,
-      name: Schema.String,
-      dimension: Schema.Number,
-      scoreThreshold: Schema.Number,
-      note: Schema.optional(Schema.String),
-    }),
-  ),
-  aliases: Schema.Record(Schema.String, Schema.String),
-})
-
-export type EmbeddingCatalog = typeof EmbeddingCatalog.Type
+export type { EmbeddingCatalog } from "@kilocode/gateway-core/embedding-catalog"
 
 export const FimTarget = Schema.Struct({
   provider: Schema.Literals(["kilo", "inception", "mistral"]),

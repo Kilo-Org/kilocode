@@ -104,6 +104,7 @@ describe("KiloGatewayPlugin", () => {
       }
       expect(isRetryable(await failure({ code: "PROMOTION_MODEL_LIMIT_REACHED" }, 429))).toBe(false)
       expect(isRetryable(await failure({ error: { message: "Too Many Requests" } }, 429))).toBe(true)
+      expect(isRetryable(await failure({ error: { message: "Request Timeout" } }, 408))).toBe(true)
     }),
   )
 

@@ -182,6 +182,9 @@ describe("KiloErrors", () => {
     expect(promo.status).toBe(429)
     expect(promo.headers.get("x-should-retry")).toBe("false")
     expect((await rewrite({ error: { message: "Too Many Requests" } }, 429)).headers.has("x-should-retry")).toBe(false)
+    // A generic Gateway 408 or 409 keeps the upstream retry decision.
+    expect((await rewrite({ error: { message: "Request Timeout" } }, 408)).headers.has("x-should-retry")).toBe(false)
+    expect((await rewrite({ error: { message: "Conflict" } }, 409)).headers.has("x-should-retry")).toBe(false)
     expect((await rewrite({ error: "Auto top-up in progress", error_type: "top_up_in_progress" }, 503)).headers.has("x-should-retry")).toBe(false)
   })
 

@@ -184,7 +184,7 @@ describe("KiloModels.embeddingModels", () => {
 
   test("retries transient failures and stops after 3 attempts", async () => {
     using backend = fixture()
-    const statuses = [503, 429]
+    const statuses = [503, 425]
     const flaky = Bun.serve({
       hostname: "127.0.0.1",
       port: 0,

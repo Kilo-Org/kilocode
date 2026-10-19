@@ -1,6 +1,7 @@
 export * as KiloModels from "./models.js"
 
 import { Effect, Option, Schedule, Schema } from "effect"
+import { EmbeddingCatalog } from "./embedding-catalog.js"
 import { KiloHeaders } from "./headers.js"
 import { json, request } from "./http.js"
 import { KiloServer } from "./server.js"
@@ -162,20 +163,7 @@ const TranscriptionCatalog = Schema.Struct({
 })
 const decodeTranscriptionCatalog = Schema.decodeUnknownOption(TranscriptionCatalog)
 
-const EmbeddingCatalog = Schema.Struct({
-  defaultModel: Schema.String,
-  models: Schema.Array(
-    Schema.Struct({
-      id: Schema.String,
-      name: Schema.String,
-      dimension: PositiveInt,
-      scoreThreshold: Schema.Finite,
-      note: Schema.optionalKey(Schema.String),
-    }),
-  ),
-  aliases: Schema.Record(Schema.String, Schema.String),
-})
-export type EmbeddingCatalog = typeof EmbeddingCatalog.Type
+export { EmbeddingCatalog } from "./embedding-catalog.js"
 const decodeEmbeddingCatalog = Schema.decodeUnknownOption(EmbeddingCatalog)
 
 export interface Failure {
@@ -318,6 +306,10 @@ export function transcriptionModels(scope: Scope): Effect.Effect<TranscriptionMo
   })
 }
 
+// v1 `fetchKiloEmbeddingModelCatalog` also retried HTTP 425, so keep that status for this endpoint only.
+const retryableEmbedding = (failure: Failure) =>
+  retryable(failure) || (failure.kind === "http" && failure.status === 425)
+
 // Ported from v1 `fetchKiloEmbeddingModelCatalog` (`api/embedding-models.ts`): the embedding model catalog for
 // codebase indexing. The route is public, so it sends no token. It refuses redirects, and it retries network
 // errors and transient statuses up to 3 attempts in total.
@@ -339,7 +331,7 @@ export function embeddingModels(scope: Pick<Scope, "server" | "version">): Effec
     const parsed = decodeEmbeddingCatalog(raw)
     if (Option.isNone(parsed)) return yield* Effect.fail({ kind: "schema" } satisfies Failure)
     return parsed.value
-  }).pipe(Effect.retry({ times: 2, schedule: Schedule.exponential("200 millis"), while: retryable }))
+  }).pipe(Effect.retry({ times: 2, schedule: Schedule.exponential("200 millis"), while: retryableEmbedding }))
 }
 
 export function entries(models: readonly Model[]): Entry[] {
