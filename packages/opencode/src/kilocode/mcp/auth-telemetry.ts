@@ -395,10 +395,10 @@ export function observe<A extends Result, E, R, R2>(
 ) {
   return (name: string, onAuthorization?: (url: string) => void, opts?: Options) =>
     Effect.gen(function* () {
-      // A lookup failure only loses context, but an interrupt must still abort the sign-in
-      // before an attempt is recorded.
+      // A lookup failure only loses context, but any interrupt, even mixed with a failure, must
+      // still abort the sign-in before an attempt is recorded.
       const server = yield* lookup(name).pipe(
-        Effect.catchCause((cause) => (Cause.hasInterruptsOnly(cause) ? Effect.interrupt : Effect.succeed(undefined))),
+        Effect.catchCause((cause) => (Cause.hasInterrupts(cause) ? Effect.interrupt : Effect.succeed(undefined))),
       )
       const attempt: Attempt = {
         id: crypto.randomUUID(),
@@ -411,18 +411,27 @@ export function observe<A extends Result, E, R, R2>(
         done: false,
       }
       const attribution = attribute(name, server)
-      yield* Effect.try({
-        try: () =>
-          Telemetry.trackMcpAuthStarted({ schemaVersion: VERSION, attemptId: attempt.id, external: attempt.external }),
-        catch: (err) => err,
-      }).pipe(
-        Effect.tapError((err) => Effect.logWarning("mcp auth telemetry failed", { err })),
-        Effect.ignore,
-      )
-      return yield* run(name, onAuthorization, opts).pipe(
-        Effect.provideService(Current, attempt),
-        // Queue the terminal event before the caller sees the result; never fails the sign-in.
-        Effect.onExit((exit) => Effect.promise(() => emit(attempt, exit, attribution))),
+      // Sending the started event and attaching the completion are one uninterruptible step:
+      // only the sign-in itself can be interrupted, so every started event gets its completion.
+      return yield* Effect.uninterruptibleMask((restore) =>
+        Effect.gen(function* () {
+          yield* Effect.try({
+            try: () =>
+              Telemetry.trackMcpAuthStarted({
+                schemaVersion: VERSION,
+                attemptId: attempt.id,
+                external: attempt.external,
+              }),
+            catch: (err) => err,
+          }).pipe(
+            Effect.tapError((err) => Effect.logWarning("mcp auth telemetry failed", { err })),
+            Effect.ignore,
+          )
+          return yield* restore(run(name, onAuthorization, opts).pipe(Effect.provideService(Current, attempt))).pipe(
+            // Queue the terminal event before the caller sees the result; never fails the sign-in.
+            Effect.onExit((exit) => Effect.promise(() => emit(attempt, exit, attribution))),
+          )
+        }),
       )
     })
 }

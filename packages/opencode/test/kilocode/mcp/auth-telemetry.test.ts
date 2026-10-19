@@ -424,6 +424,46 @@ describe("MCP auth telemetry: config lookup", () => {
     }),
   )
 
+  mcpTest.instance("a lookup that is both interrupted and failed still aborts", () =>
+    Effect.gen(function* () {
+      const rec = yield* record()
+      const mixed = Cause.combine(Cause.interrupt(), Cause.fail(new Error("config unavailable")))
+      const exit = yield* Effect.exit(KiloAuthTelemetry.observe(run, () => Effect.failCause(mixed))("server"))
+
+      expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+      expect(rec.started).toHaveLength(0)
+    }),
+  )
+
+  // An interrupt landing right after the started event must still produce its completion,
+  // so every `MCP Auth Started` has exactly one `MCP Auth Completed`.
+  mcpTest.instance("an interrupt right after the started event still records the completion", () =>
+    Effect.gen(function* () {
+      const rec = yield* record()
+      const track = spyOn(Telemetry, "trackMcpAuthStarted").mockImplementation((props) => {
+        rec.started.push(props)
+        Fiber.getCurrent()?.interruptUnsafe()
+      })
+      yield* Effect.addFinalizer(() => Effect.sync(() => track.mockRestore()))
+
+      // Run in its own fiber so the spy interrupts the sign-in, not the test.
+      const fiber = yield* KiloAuthTelemetry.observe(run, () => Effect.succeed(undefined))("server").pipe(
+        Effect.forkScoped,
+      )
+      const exit = yield* Fiber.await(fiber)
+
+      expect(Exit.isFailure(exit) && Cause.hasInterruptsOnly(exit.cause)).toBe(true)
+      expect(rec.started).toHaveLength(1)
+      expect(rec.completed).toHaveLength(1)
+      expect(rec.completed[0]).toMatchObject({
+        attemptId: rec.started[0]?.attemptId,
+        outcome: "interrupted",
+        phase: "prepare",
+        errorCode: "interrupted",
+      })
+    }),
+  )
+
   mcpTest.instance("interrupting the caller during the lookup records no attempt", () =>
     Effect.gen(function* () {
       const rec = yield* record()
