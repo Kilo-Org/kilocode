@@ -76,14 +76,14 @@ Only when a seam makes no sense (a defect fix, or a Kilo-specific decision no kn
 ### 6. Imports
 
 - A logic package (`packages/kilo-*-core`) imports nothing from `@opencode/*`. Check: `rg -c "from \"@opencode" packages/kilo-<name>-core/src` must print nothing.
-- An adapter or plugin imports `@opencode/plugin`, `@opencode/schema`, `@opencode/client` and `@opencode/util` freely. It imports core internals (`@opencode/core/*`, relative `../` into `packages/core/src`) only when no public surface has it; name each one in the PR. Count: `rg -oh --no-filename 'from "(@opencode/core/[^"]+|\.\./[^"]+)"' <adapter dir> | sort -u | wc -l`. The number must not grow without a reason.
+- An adapter or plugin imports `@opencode/plugin`, `@opencode/schema`, `@opencode/client` and `@opencode/util` freely. It imports core internals (`@opencode/core/*`, relative `../` into `packages/core/src`) only when no public surface has it; name each one in the PR. Count: run `bun script/upstream/progress.ts` and read `coreImports` in `migration-tracking/progress/progress.json`; the run fails when a logic package imports `@opencode/*`, and the PR comment names new core-internal imports. The number must not grow without a reason.
 
 ### 7. Done-proof for the progress map
 
 Every v1 patch cell you replace gets its ID on the v2 code:
 
 - In a shared upstream file (rung 3 or 4): `// kilocode_change(<feature>:<id>)`.
-- In a Kilo-owned file (rung 1 or 2): `// kilo_port(<feature>:<id>)` on the code that now provides the behavior. (Until the generator recognises `kilo_port`, also add the cell to `dispositions.json` with `state: "ported"`, the v2 path in `note`, and `by`.)
+- In a Kilo-owned file (rung 1 or 2): `// kilo_port(<feature>:<id>)` on the code that now provides the behavior.
 - Behavior v2 already provides: `dispositions.json`, `state: "native"`, with the v2 pointer. Behavior not carried: `state: "dropped"`, with the reason.
 
 Then regenerate and verify:

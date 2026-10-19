@@ -92,6 +92,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # The PR merge commit and its first parent (the base branch tip), for the base map and the PR diff.
+          fetch-depth: 2
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -100,15 +103,14 @@ jobs:
 
       - name: Compare the progress map with the base branch
         env:
-          BASE_REF: ${{ github.base_ref }}
           REPO: ${{ github.repository }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          git fetch --depth=1 --no-tags origin "$BASE_REF"
-          git show "FETCH_HEAD:migration-tracking/progress/progress.json" > base.json 2>/dev/null || echo '{}' > base.json
+          git show "HEAD^1:migration-tracking/progress/progress.json" > base.json 2>/dev/null || echo '{}' > base.json
+          git diff -U0 --no-color HEAD^1 HEAD > pr.diff
           {
             echo '<!-- migration-progress -->'
-            bun script/upstream/progress.ts --compare base.json migration-tracking/progress/progress.json
+            bun script/upstream/progress.ts --compare base.json migration-tracking/progress/progress.json pr.diff
             echo
             echo "<img width=\"900\" alt=\"v2 migration progress map at this commit\" src=\"https://raw.githubusercontent.com/$REPO/$HEAD_SHA/migration-tracking/progress/progress.svg\" />"
             echo

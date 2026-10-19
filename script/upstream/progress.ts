@@ -12,22 +12,30 @@
  *   path, or the same feature and basename.
  * - api: a `/kilocode/*` operation in the v1 OpenAPI document. Done when the path literal appears in
  *   `packages/protocol`, `packages/server` or a Kilo-owned v2 file.
- * - hook: one Kilo hunk in a shared upstream file. Its ID is a hash of the added lines. Done when a
- *   v2 file carries `kilocode_change(<feature>:<id>)`.
- * - test: a module or hook in a test file, same rules.
+ * - patch: one Kilo hunk in a shared upstream file. Its ID is a hash of the added lines. Done when a
+ *   v2 file carries a done-proof with the ID: `kilocode_change(<feature>:<id>)` in a shared upstream
+ *   file, or `kilo_port(<feature>:<id>)` in a Kilo-owned file. The proof also records the rung where
+ *   the cell landed.
+ * - test: a module or patch in a test file, same rules.
  * A disposition (`ported`, `native`, `facade`) also marks a cell done; `dropped` removes it from the
  * denominator and lists it.
+ *
+ * Two ratcheted numbers join the summary: the distinct core-internal upstream modules that Kilo
+ * packages and adapters import, and the shared patches by rung in `script/upstream/shared-patches.json`.
  *
  * Usage, from the repository root:
  *   bun script/upstream/progress.ts                 regenerate progress.json and README.md
  *   bun script/upstream/progress.ts --check         exit 1 when the committed output is stale
  *   bun script/upstream/progress.ts --list <feature>  print the open cells of one feature
- *   bun script/upstream/progress.ts --compare <base.json> <head.json>  markdown delta for a PR comment
+ *   bun script/upstream/progress.ts --compare <base.json> <head.json> [<pr.diff>]  markdown delta for a PR comment;
+ *     with the PR diff (`git diff -U0`), also the placement line of the PR
  */
 
 import { $ } from "bun"
 import path from "node:path"
-import { isKiloOwned } from "./utils/owned"
+import { readBaseline } from "./utils/baseline"
+import { isGenerated, isKiloOwned } from "./utils/owned"
+import { coveredLines } from "./utils/shared"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const DIR = path.join(ROOT, "migration-tracking/progress")
@@ -42,8 +50,14 @@ type Config = {
 
 type State = "ported" | "native" | "facade" | "dropped"
 type Disposition = { state: State; v2?: string; note: string; by: string }
-type Kind = "module" | "api" | "hook" | "test"
-type Cell = { id: string; kind: Kind; feature: string; source: string; v2?: string; state?: State }
+type Kind = "module" | "api" | "patch" | "test"
+/** Where Kilo code meets upstream (fork conventions): 1 plugin hook, 2 host composition, 3 seam, 4 patch. */
+type Rung = 1 | 2 | 3 | 4
+const RUNG = { 1: "plugin", 2: "host", 3: "seam", 4: "patch" } as const
+type Rungs = Record<(typeof RUNG)[Rung], number>
+type Cell = { id: string; kind: Kind; feature: string; source: string; v2?: string; state?: State; rung?: Rung }
+/** Rung per shared file, from `script/upstream/shared-patches.json`. */
+type SharedRungs = Record<string, { rung: 3 | 4 }>
 
 const TAG = /kilocode_change\(([a-z0-9-]+)(?::([0-9a-f]{12}))?\)/g
 const MARKER = /^\s*(?:\/\/|\/\*|\{\/\*|<!--|#|\*)?\s*(?:\/\/|\/\*|\{\/\*)?\s*kilocode_change\b/
@@ -118,7 +132,7 @@ export function canon(lines: string[]) {
     .replace(/\s+/g, "")
 }
 
-export function hookId(added: string[]) {
+export function patchId(added: string[]) {
   const normalized = added
     .map((l) => l.replace(/\/\/.*$/, "").replace(/\/\*.*?\*\//g, "").replace(/\s+/g, ""))
     .filter(Boolean)
@@ -189,6 +203,54 @@ export function classify(hunk: Hunk, bindings: Map<string, string>, split: Recor
   return { kind: "cell", feature: `unattributed:${areaOf(hunk.file)}`, how: "unattributed" }
 }
 
+export type Proof = { id: string; at: string; tag: string; rung: Rung; misplaced: boolean }
+
+/**
+ * Done-proofs in `git grep -n -o` output. `kilocode_change(<feature>:<id>)` belongs in a shared upstream file and lands at
+ * the rung of that file in shared-patches.json. `kilo_port(<feature>:<id>)` belongs in a Kilo-owned file and lands at
+ * rung 2 in the host package (`packages/kilo-cli`), rung 1 elsewhere. A proof in the other kind of file is misplaced.
+ */
+export function parseProofs(grep: string, rungs: SharedRungs): Proof[] {
+  return grep.split("\n").flatMap((line) => {
+    const m = line.match(/^([^:]+):(\d+):((kilocode_change|kilo_port)\(([a-z0-9-]+):([0-9a-f]{12})\))$/)
+    if (!m) return []
+    const owned = isKiloOwned(m[1])
+    // A shared file without a shared-patches.json entry fails script/check-shared-patches.ts; count it as rung 4 until then.
+    const rung: Rung = owned ? (m[1].startsWith("packages/kilo-cli/") ? 2 : 1) : (rungs[m[1]]?.rung ?? 4)
+    return [{ id: `patch:${m[5]}:${m[6]}`, at: `${m[1]}:${m[2]}`, tag: m[3], rung, misplaced: owned !== (m[4] === "kilo_port") }]
+  })
+}
+
+/** One proof per cell: the highest rung, then the first in path order. A cell proved twice is reported once. */
+export function proofByCell(proofs: Proof[]) {
+  const best = new Map<string, Proof>()
+  for (const p of proofs) if ((best.get(p.id)?.rung ?? 0) < p.rung) best.set(p.id, p)
+  return best
+}
+
+/**
+ * Core-internal upstream modules that Kilo files import (`@opencode/core/*`, or a relative path into `packages/core/src`
+ * outside `kilocode/`), as sorted `@opencode/core/<module>` names. Also the imports that break the logic-package rule:
+ * `packages/kilo-*-core` imports nothing from `@opencode/*`.
+ */
+export function scanImports(sources: [file: string, source: string][]) {
+  const modules = new Set<string>()
+  const violations: string[] = []
+  for (const [file, source] of sources) {
+    for (const m of source.replace(/^\s*(\/\/|\*).*$/gm, "").matchAll(/\b(?:from|import|require)\s*\(?\s*["']([^"']+)["']/g)) {
+      const target = m[1].startsWith("@opencode/core/")
+        ? `packages/core/src/${m[1].slice("@opencode/core/".length)}`
+        : m[1].startsWith(".")
+          ? path.posix.join(path.posix.dirname(file), m[1])
+          : ""
+      const core = target.startsWith("packages/core/src/") && !isKiloOwned(target)
+      if (core) modules.add(`@opencode/core/${target.slice("packages/core/src/".length).replace(/\.[cm]?[jt]sx?$/, "").replace(/\/index$/, "")}`)
+      if (/^packages\/kilo-[^/]+-core\//.test(file) && (core || m[1].startsWith("@opencode/"))) violations.push(`${file}: ${m[1]}`)
+    }
+  }
+  return { modules: [...modules].sort(byName), violations: violations.sort(byName) }
+}
+
 async function git(args: string[]) {
   return (await $`git ${args}`.cwd(ROOT).quiet().text()).trimEnd()
 }
@@ -217,12 +279,18 @@ async function collect(config: Config, dispositions: Record<string, Disposition>
     v2Modules.set(`${feature}|${relativeOf(f)}`, f)
     v2Modules.set(`${feature}|${path.basename(f)}`, f)
   }
-  const v2Markers = new Map<string, string>()
-  const grep = await git(["grep", "-n", "-o", "-E", "kilocode_change\\([a-z0-9-]+:[0-9a-f]{12}\\)", "--", "packages"]).catch(() => "")
-  for (const line of grep.split("\n")) {
-    const m = line.match(/^([^:]+):(\d+):kilocode_change\(([a-z0-9-]+):([0-9a-f]{12})\)$/)
-    if (m) v2Markers.set(`hook:${m[3]}:${m[4]}`, `${m[1]}:${m[2]}`)
-  }
+  const baseline = await readBaseline(ROOT)
+  // Done-proofs of patch cells, from the working tree like the files above.
+  const found = parseProofs(await git(["grep", "-n", "-o", "-E", "(kilocode_change|kilo_port)\\([a-z0-9-]+:[0-9a-f]{12}\\)", "--", "packages"]).catch(() => ""), baseline.files)
+  const proofs = proofByCell(found)
+
+  // Ratchet: core-internal upstream modules imported by the non-test files of Kilo packages and adapters.
+  const adapters = v2Files.filter((f) => /^packages\/(kilo-[^/]+|.+\/src\/kilocode)\//.test(f) && /\.[cm]?[jt]sx?$/.test(f) && !isTestPath(f))
+  const imports = scanImports(await Promise.all(adapters.map(async (f): Promise<[string, string]> => [f, await Bun.file(path.join(ROOT, f)).text()])))
+  if (imports.violations.length) throw new Error(`logic packages (packages/kilo-*-core) must import nothing from @opencode/*:\n  ${imports.violations.join("\n  ")}`)
+  // Ratchet: shared patches by rung.
+  const sharedPatches = { seam: 0, patch: 0 }
+  for (const entry of Object.values(baseline.files)) sharedPatches[RUNG[entry.rung]]++
 
   const cells: Cell[] = []
 
@@ -268,7 +336,7 @@ async function collect(config: Config, dispositions: Record<string, Disposition>
     }
   }
 
-  // hook cells: Kilo hunks in shared upstream files.
+  // patch cells: Kilo hunks in shared upstream files.
   const shared = (await git(["diff", "--diff-filter=M", "--name-only", v1Base, v1Target, "--", "packages"]))
     .split("\n")
     .filter((f) => f && !isKiloOwned(f) && !GENERATED.some((re) => re.test(f)))
@@ -298,12 +366,18 @@ async function collect(config: Config, dispositions: Record<string, Disposition>
       continue
     }
     attribution[result.how]++
-    const id = `hook:${result.feature}:${hookId(hunk.added)}`
-    cells.push({ id, kind: isTestPath(hunk.file) ? "test" : "hook", feature: result.feature, source: `${hunk.file}:${hunk.line}`, v2: v2Markers.get(id) })
+    const id = `patch:${result.feature}:${patchId(hunk.added)}`
+    const proof = proofs.get(id)
+    cells.push({ id, kind: isTestPath(hunk.file) ? "test" : "patch", feature: result.feature, source: `${hunk.file}:${hunk.line}`, v2: proof?.at, rung: proof?.rung })
   }
 
-  // dispositions: a decision per cell. Unknown IDs and incomplete entries are errors so the file cannot rot.
+  // Done-proofs and dispositions name cells. Unknown IDs and misplaced or incomplete entries are errors so they cannot rot.
   const ids = new Set(cells.map((c) => c.id))
+  const unknown = found.filter((p) => !ids.has(p.id)).map((p) => `${p.at}: ${p.tag}`)
+  if (unknown.length) throw new Error(`done-proofs name cells that do not exist on the v1 target:\n  ${unknown.join("\n  ")}`)
+  const misplaced = found.filter((p) => p.misplaced).map((p) => `${p.at}: ${p.tag}`)
+  if (misplaced.length)
+    throw new Error(`done-proofs in the wrong kind of file (kilocode_change in shared upstream files, kilo_port in Kilo-owned files):\n  ${misplaced.join("\n  ")}`)
   const stale = Object.keys(dispositions).filter((id) => !ids.has(id))
   if (stale.length) throw new Error(`dispositions.json names cells that do not exist on the v1 target:\n  ${stale.join("\n  ")}`)
   const invalid = Object.entries(dispositions)
@@ -317,20 +391,21 @@ async function collect(config: Config, dispositions: Record<string, Disposition>
     if (d.v2) cell.v2 = d.v2
   }
 
-  return { cells, notCounted, attribution, shared: shared.length, hunks: hunks.length }
+  return { cells, notCounted, attribution, shared: shared.length, hunks: hunks.length, coreImports: imports.modules, sharedPatches }
 }
 
-type Box = { feature: string; kinds: Record<Kind, { done: number; total: number }>; done: number; total: number; dropped: number; excluded?: string }
+type Box = { feature: string; kinds: Record<Kind, { done: number; total: number }>; done: number; total: number; dropped: number; landed: Rungs; excluded?: string }
 
 function boxes(cells: Cell[], config: Config) {
   const map = new Map<string, Box>()
   for (const cell of cells) {
     const box = map.get(cell.feature) ?? {
       feature: cell.feature,
-      kinds: { module: { done: 0, total: 0 }, api: { done: 0, total: 0 }, hook: { done: 0, total: 0 }, test: { done: 0, total: 0 } },
+      kinds: { module: { done: 0, total: 0 }, api: { done: 0, total: 0 }, patch: { done: 0, total: 0 }, test: { done: 0, total: 0 } },
       done: 0,
       total: 0,
       dropped: 0,
+      landed: { plugin: 0, host: 0, seam: 0, patch: 0 },
       excluded: config.exclude[cell.feature],
     }
     map.set(cell.feature, box)
@@ -345,6 +420,7 @@ function boxes(cells: Cell[], config: Config) {
       box.kinds[cell.kind].done++
       box.done++
     }
+    if (cell.rung) box.landed[RUNG[cell.rung]]++
   }
   return [...map.values()].sort((a, b) => byName(a.feature, b.feature))
 }
@@ -356,14 +432,21 @@ const bar = (done: number, total: number) => {
   return "█".repeat(filled) + "░".repeat(16 - filled)
 }
 const ratio = (k: { done: number; total: number }) => (k.total ? `${k.done}/${k.total}` : "")
+/** `31 plugin, 2 seam, 1 patch`. Zero counts are left out unless `all` is set. */
+const rungText = (counts: Partial<Rungs>, all = false) =>
+  Object.entries(counts)
+    .filter(([, v]) => all || v)
+    .map(([k, v]) => `${v} ${k}`)
+    .join(", ")
 
 // Treemap: squarified boxes per feature, a grid of cells inside each box,
 // green for done, grey for open, yellow for dropped. Boxes above CAP cells draw CAP cells that each stand for
-// several, so the file stays small enough to commit.
+// several, so the file stays small enough to commit. The legend row names the colors and the landed rungs.
 const PANEL = 495
 const GAP = 10
 const HEADER = 30
 const MAP = 280
+const LEGEND = 24
 const CAP = 200
 type Rect = [number, number, number, number]
 
@@ -449,15 +532,21 @@ function panel(title: string, items: Box[], left: number) {
   return parts
 }
 
-function svg(features: Box[], unattributed: Box[]) {
+function svg(features: Box[], unattributed: Box[], landed: Rungs) {
   const width = 2 * PANEL + GAP
-  const height = HEADER + MAP
+  const height = HEADER + MAP + LEGEND
+  const y = HEADER + MAP + 6
+  const swatch = (x: number, cls: string, text: string) => `<rect class="${cls}" x="${x}" y="${y}" width="12" height="12"/>${label(x + 16, y + 11, text, 12)}`
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">`,
     `<style>rect{stroke:#0d1117;stroke-width:.5}.d{fill:#2ea043}.o{fill:#6e7681}.x{fill:#d29922}.b{fill:none;stroke-width:2}text{font-family:sans-serif;fill:#fff;stroke:#0d1117;stroke-width:3;paint-order:stroke}</style>`,
     `<rect x="0" y="0" width="${width}" height="${height}" fill="#0d1117" stroke="none"/>`,
     ...panel("Features", features, 0),
-    ...panel("Unattributed hooks by upstream area", unattributed, PANEL + GAP),
+    ...panel("Unattributed patches by upstream area", unattributed, PANEL + GAP),
+    swatch(4, "d", "done"),
+    swatch(60, "o", "open"),
+    swatch(112, "x", "dropped"),
+    label(190, y + 11, `Landed by rung: ${rungText(landed, true)}`, 12),
     "</svg>",
     "",
   ].join("\n")
@@ -479,21 +568,47 @@ function badge(label: string, percent: number) {
 
 /** The committed progress.json shape that `--compare` reads. */
 export type Snapshot = {
-  summary?: { done: number; total: number; percent: number; dropped: number }
+  summary?: { done: number; total: number; percent: number; dropped: number; coreImports?: number; sharedPatches?: { seam: number; patch: number } }
   features?: { feature: string; done: number; total: number; dropped: number; kinds: Record<Kind, { done: number; total: number }> }[]
+  coreImports?: string[]
   done?: string[]
   dropped?: string[]
 }
 
+export type Placement = { marked: Rungs; ports: number }
+
+/**
+ * Placement of a PR, from its diff (`git diff -U0`) and the head text of the shared files it touches: new marked lines in
+ * shared upstream files by rung (shared-patches.json), with the same marker rules as script/check-shared-patches.ts, and
+ * new `kilo_port(<feature>:<id>)` annotations in Kilo-owned files under `packages/`.
+ */
+export function placement(diff: string, contents: Map<string, string>, rungs: SharedRungs): Placement {
+  const hunks = parseHunks(diff)
+  const fresh = new Set([...diff.matchAll(/^diff --git a\/.* b\/(.*)\nnew file mode/gm)].map((m) => m[1]))
+  const marked = { plugin: 0, host: 0, seam: 0, patch: 0 }
+  for (const file of new Set(hunks.map((h) => h.file))) {
+    const text = contents.get(file)
+    if (text === undefined || isKiloOwned(file) || isGenerated(file)) continue
+    const covered = coveredLines(text.split(/\r?\n/), fresh.has(file))
+    const count = hunks.filter((h) => h.file === file).reduce((s, h) => s + h.added.filter((l, i) => l.trim() !== "" && covered.has(h.line + i)).length, 0)
+    marked[RUNG[rungs[file]?.rung ?? 4]] += count
+  }
+  const ports = hunks
+    .filter((h) => h.file.startsWith("packages/") && isKiloOwned(h.file))
+    .reduce((s, h) => s + (h.added.join("\n").match(/kilo_port\([a-z0-9-]+:[0-9a-f]{12}\)/g)?.length ?? 0), 0)
+  return { marked, ports }
+}
+
 /** Markdown delta between two progress.json files, for the PR comment. Deterministic and self-contained. */
-export function compare(base: Snapshot, head: Snapshot) {
+export function compare(base: Snapshot, head: Snapshot, place?: Placement) {
   const b = base.summary ?? { done: 0, total: 0, percent: 0, dropped: 0 }
   const h = head.summary ?? { done: 0, total: 0, percent: 0, dropped: 0 }
   const sign = (v: number) => (v > 0 ? `+${v}` : `${v}`)
   const before = new Map((base.features ?? []).map((f) => [f.feature, f]))
   const after = new Map((head.features ?? []).map((f) => [f.feature, f]))
   const names = [...new Set([...before.keys(), ...after.keys()])].sort(byName)
-  const kinds: Kind[] = ["module", "api", "hook", "test"]
+  const kinds: Kind[] = ["module", "api", "patch", "test"]
+  const plural = (k: string, v: number) => (Math.abs(v) === 1 ? k : k.endsWith("ch") ? `${k}es` : `${k}s`)
   const rows = names.flatMap((name) => {
     const x = before.get(name)
     const y = after.get(name)
@@ -502,7 +617,7 @@ export function compare(base: Snapshot, head: Snapshot) {
       .map((k) => {
         const d = (y?.kinds[k].done ?? 0) - (x?.kinds[k].done ?? 0)
         const t = (y?.kinds[k].total ?? 0) - (x?.kinds[k].total ?? 0)
-        return [d ? `${sign(d)} ${k}${Math.abs(d) === 1 ? "" : "s"} done` : "", t ? `${sign(t)} ${k}${Math.abs(t) === 1 ? "" : "s"} total` : ""].filter(Boolean).join(", ")
+        return [d ? `${sign(d)} ${plural(k, d)} done` : "", t ? `${sign(t)} ${plural(k, t)} total` : ""].filter(Boolean).join(", ")
       })
       .filter(Boolean)
     const dropped = (y?.dropped ?? 0) - (x?.dropped ?? 0)
@@ -522,6 +637,23 @@ export function compare(base: Snapshot, head: Snapshot) {
   const lines = [
     `${icon} **v2 migration progress: ${b.percent}% → ${h.percent}%** (${sign(h.done - b.done)} done, ${sign(h.total - b.total)} total, ${sign(h.dropped - b.dropped)} dropped; ${h.done}/${h.total} cells)`,
   ]
+  if (place) {
+    const marked = Object.values(place.marked).reduce((s, v) => s + v, 0)
+    const known = base.coreImports
+    const added = known && (head.coreImports ?? []).filter((m) => !known.includes(m))
+    const imports = added
+      ? `${added.length} new core-internal ${plural("import", added.length)}${added.length ? ` (${added.map((m) => `\`${m}\``).join(", ")})` : ""}`
+      : "core-internal imports not compared (the base map has no import list)"
+    lines.push(
+      "",
+      `**Placement:** ${marked} new marked ${plural("line", marked)} in shared files${marked ? ` (${rungText(place.marked)})` : ""}, ${place.ports} new \`kilo_port\` ${plural("annotation", place.ports)}, ${imports}.`,
+    )
+  }
+  const shared = (s?: { seam: number; patch: number }) => (s ? rungText(s, true) : "n/a")
+  lines.push(
+    "",
+    `**Ratchets:** ${head.summary?.coreImports ?? "n/a"} core-internal imports (base ${base.summary?.coreImports ?? "n/a"}); shared patches by rung ${shared(head.summary?.sharedPatches)} (base ${shared(base.summary?.sharedPatches)}).`,
+  )
   if (!rows.length && !closed.length && !reopened.length && !dropped.length) return [...lines, "", "No change to the progress map.", ""].join("\n")
   if (rows.length) lines.push("", "| Feature | Before | After | Change |", "|---|---:|---:|---|", ...rows)
   lines.push(...list("cells closed", closed), ...list("cells reopened (were done on the base)", reopened), ...list("cells dropped", dropped), "")
@@ -587,7 +719,7 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
   const total = counted.reduce((s, b) => s + b.total, 0)
   const done = counted.reduce((s, b) => s + b.done, 0)
   const dropped = all.reduce((s, b) => s + b.dropped, 0)
-  const kinds = (["module", "api", "hook", "test"] as Kind[]).map((k) => ({
+  const kinds = (["module", "api", "patch", "test"] as Kind[]).map((k) => ({
     kind: k,
     done: counted.reduce((s, b) => s + b.kinds[k].done, 0),
     total: counted.reduce((s, b) => s + b.kinds[k].total, 0),
@@ -597,20 +729,35 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     .filter((c) => c.state !== "dropped" && (c.v2 !== undefined || c.state !== undefined))
     .map((c) => c.id)
     .sort()
+  const landed = { plugin: 0, host: 0, seam: 0, patch: 0 }
+  for (const b of counted) for (const r of Object.values(RUNG)) landed[r] += b.landed[r]
 
   const json = {
     pins: config.pins,
-    summary: { done, total, percent: pct(done, total), dropped, kinds },
+    summary: { done, total, percent: pct(done, total), dropped, kinds, landed, coreImports: data.coreImports.length, sharedPatches: data.sharedPatches },
     notCounted: data.notCounted,
     attribution: data.attribution,
-    features: all.map((b) => ({ feature: b.feature, done: b.done, total: b.total, dropped: b.dropped, kinds: b.kinds, excluded: b.excluded })),
+    coreImports: data.coreImports,
+    features: all.map((b) => ({
+      feature: b.feature,
+      done: b.done,
+      total: b.total,
+      dropped: b.dropped,
+      kinds: b.kinds,
+      landed: Object.values(b.landed).some(Boolean) ? b.landed : undefined,
+      excluded: b.excluded,
+    })),
+    landed: Object.fromEntries(
+      data.cells.flatMap((c) => (c.rung && c.state !== "dropped" ? [[c.id, RUNG[c.rung]]] : [])).sort(([a], [b]) => byName(a, b)),
+    ),
     done: doneIds,
     dropped: droppedCells.map((c) => c.id),
   }
 
   const points = [...past, { date: "now", done, total, percent: pct(done, total) }]
   const row = (b: Box) =>
-    `| ${b.feature} | ${ratio(b.kinds.module)} | ${ratio(b.kinds.api)} | ${ratio(b.kinds.hook)} | ${ratio(b.kinds.test)} | ${b.done}/${b.total} | ${pct(b.done, b.total)}% | \`${bar(b.done, b.total)}\` |`
+    `| ${b.feature} | ${ratio(b.kinds.module)} | ${ratio(b.kinds.api)} | ${ratio(b.kinds.patch)} | ${ratio(b.kinds.test)} | ${b.done}/${b.total} | ${pct(b.done, b.total)}% | \`${bar(b.done, b.total)}\` | ${rungText(b.landed)} |`
+  const imports = data.coreImports.length ? ` (${data.coreImports.map((m) => `\`${m}\``).join(", ")})` : ""
   const md = [
     "# Kilo v2 migration progress",
     "",
@@ -628,7 +775,11 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     `|---|---:|---:|---:|`,
     ...kinds.map((k) => `| ${k.kind} | ${k.done} | ${k.total} | ${pct(k.done, k.total)}% |`),
     "",
-    `Not counted: ${data.notCounted.branding} branding-only hunks (rename script territory), ${data.notCounted.marker} marker-only hunks (block boundaries), generated files. Hook attribution: ${data.attribution.tag} by tag, ${data.attribution.import} by import, ${data.attribution.identifier} by identifier, ${data.attribution.unattributed} unattributed (see below).`,
+    `Not counted: ${data.notCounted.branding} branding-only hunks (rename script territory), ${data.notCounted.marker} marker-only hunks (block boundaries), generated files. Patch attribution: ${data.attribution.tag} by tag, ${data.attribution.import} by import, ${data.attribution.identifier} by identifier, ${data.attribution.unattributed} unattributed (see below).`,
+    "",
+    `Landed by rung, for patch cells closed by a done-proof: ${rungText(landed, true)}.`,
+    "",
+    `Ratchets: ${data.coreImports.length} core-internal upstream modules imported by Kilo packages and adapters${imports}; ${data.sharedPatches.seam + data.sharedPatches.patch} shared patches by rung: ${rungText(data.sharedPatches, true)} (\`script/upstream/shared-patches.json\`).`,
     "",
     `## History`,
     "",
@@ -642,19 +793,19 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     "",
     `## Features`,
     "",
-    `Cells per kind as done/total. A cell is done when it exists on v2 by the rules below, or has a disposition.`,
+    `Cells per kind as done/total. A cell is done when it exists on v2 by the rules below, or has a disposition. Landed: the rungs of the done-proofs.`,
     "",
-    `| Feature | Modules | API | Hooks | Tests | Done | % | |`,
-    `|---|---:|---:|---:|---:|---:|---:|---|`,
+    `| Feature | Modules | API | Patches | Tests | Done | % | | Landed |`,
+    `|---|---:|---:|---:|---:|---:|---:|---|---|`,
     ...features.map(row),
     "",
-    `## Unattributed hooks`,
+    `## Unattributed patches`,
     "",
     `Hunks in shared upstream files with no \`kilocode_change(<feature>)\` tag, no Kilo import and no Kilo identifier, grouped by upstream area. They count in the total. Tag them on \`main\` to move them into a feature box, or give them a disposition.`,
     "",
-    `| Area | Hooks | Tests | Done | % |`,
+    `| Area | Patches | Tests | Done | % |`,
     `|---|---:|---:|---:|---:|`,
-    ...unattributed.map((b) => `| ${b.feature.slice("unattributed:".length)} | ${ratio(b.kinds.hook)} | ${ratio(b.kinds.test)} | ${b.done}/${b.total} | ${pct(b.done, b.total)}% |`),
+    ...unattributed.map((b) => `| ${b.feature.slice("unattributed:".length)} | ${ratio(b.kinds.patch)} | ${ratio(b.kinds.test)} | ${b.done}/${b.total} | ${pct(b.done, b.total)}% |`),
     "",
     `## Excluded`,
     "",
@@ -669,8 +820,10 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     `- Feature boxes come from the v1 target: directories under \`src/kilocode/\`, \`packages/kilo-*\`, and the split table in \`features.json\`.`,
     `- module: a Kilo-owned v1 file. Done when a tracked Kilo-owned v2 file has the same feature and relative path, or the same feature and basename.`,
     `- api: a \`/kilocode/*\` operation in the v1 OpenAPI document. Done when the path literal appears in \`packages/protocol/src\`, \`packages/server/src\` or a Kilo-owned v2 file.`,
-    `- hook: one Kilo hunk in a shared upstream file (\`git diff -U0\` of the v1 target over its upstream base). Its ID hashes the added lines without whitespace and comments. Done when a tracked v2 file carries \`kilocode_change(<feature>:<id>)\`.`,
-    `- test: a module or hook in a test file, same rules.`,
+    `- patch: one Kilo hunk in a shared upstream file (\`git diff -U0\` of the v1 target over its upstream base). Its ID hashes the added lines without whitespace and comments. Done when a tracked v2 file under \`packages/\` carries a done-proof with the ID: \`kilocode_change(<feature>:<id>)\` in a shared upstream file, \`kilo_port(<feature>:<id>)\` in a Kilo-owned file. A proof with an unknown ID, or in the wrong kind of file, fails the run.`,
+    `- test: a module or patch in a test file, same rules.`,
+    `- landed: the rung of the done-proof. \`kilo_port\` is rung 2 (host) in \`packages/kilo-cli\` and rung 1 (plugin) in other Kilo-owned files; a marker has the rung of its file in \`script/upstream/shared-patches.json\` (3 seam, 4 patch). A cell with more than one proof counts once, at the highest rung.`,
+    `- Ratchets: core-internal imports count the distinct modules in \`packages/core/src\` outside \`kilocode/\` that non-test files in \`packages/kilo-*\` and \`packages/*/src/kilocode\` import, as \`@opencode/core/*\` or by relative path. A logic package (\`packages/kilo-*-core\`) that imports anything from \`@opencode/*\` fails the run. Shared patches by rung count the entries in \`shared-patches.json\`.`,
     `- A disposition in \`dispositions.json\` overrides: \`ported\`, \`native\` and \`facade\` count as done, \`dropped\` leaves the denominator and is listed above. Every disposition needs a note and an author.`,
     `- Hunks whose only change is a brand rename, and hunks that contain only markers, are not cells.`,
     "",
@@ -678,26 +831,38 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     "",
     `- cell: one unit of Kilo's v1 delta (a file, an API operation or a hunk). open: not done and no disposition.`,
     `- feature box: the cells of one feature. The feature comes from the v1 path or from \`features.json\`; a tag is always a feature name.`,
-    `- area: for unattributed hooks, the upstream directory of the shared file (\`session\`, \`tui/component\`); \`<pkg>/pkg\` means a file outside \`src\`, \`test\` and \`script\`, such as \`package.json\` or a Dockerfile.`,
-    `- re-pin: moving \`pins.v1Target\` in \`features.json\` to a newer \`main\` commit, normally in an upstream sync PR. Cells and hook IDs follow the new target.`,
+    `- area: for unattributed patches, the upstream directory of the shared file (\`session\`, \`tui/component\`); \`<pkg>/pkg\` means a file outside \`src\`, \`test\` and \`script\`, such as \`package.json\` or a Dockerfile.`,
+    `- re-pin: moving \`pins.v1Target\` in \`features.json\` to a newer \`main\` commit, normally in an upstream sync PR. Cells and patch IDs follow the new target.`,
+    `- rung: where Kilo code meets upstream (fork conventions): 1 plugin hook, 2 host composition, 3 seam, 4 patch.`,
     "",
     `## Working with the map`,
     "",
     `- \`bun script/upstream/progress.ts --list <feature>\` prints the open cells of a feature with their IDs and v1 source lines.`,
-    `- To mark a hook ported, put \`kilocode_change(<feature>:<id>)\` on the marker line of the v2 code that replaces it. To record a decision instead, add the cell ID to \`dispositions.json\`.`,
-    `- To move an unattributed hook into a feature, tag its marker on \`main\` as \`kilocode_change(<feature>)\`; the next v1 re-pin picks it up.`,
+    `- To mark a patch ported, put its ID on the v2 code that replaces it: \`kilocode_change(<feature>:<id>)\` on a marked line in a shared upstream file, \`kilo_port(<feature>:<id>)\` in a Kilo-owned file. To record a decision instead, add the cell ID to \`dispositions.json\`.`,
+    `- To move an unattributed patch into a feature, tag its marker on \`main\` as \`kilocode_change(<feature>)\`; the next v1 re-pin picks it up.`,
     "",
   ].join("\n")
 
-  return { json: JSON.stringify(json, null, 2) + "\n", md, svg: svg(features, unattributed), history: chart(points), badge: badge("v2 migration", pct(done, total)) }
+  return { json: JSON.stringify(json, null, 2) + "\n", md, svg: svg(features, unattributed, landed), history: chart(points), badge: badge("v2 migration", pct(done, total)) }
 }
 
 async function main() {
   const args = process.argv.slice(2)
   const cmp = args.indexOf("--compare")
   if (cmp >= 0) {
-    const read = async (file: string) => (await Bun.file(file).text().catch(() => "")) || "{}"
-    console.log(compare(JSON.parse(await read(args[cmp + 1])) as Snapshot, JSON.parse(await read(args[cmp + 2])) as Snapshot))
+    // One-time mapping: a base snapshot written before the cell kind `hook` became `patch` uses the old kind and ID prefix.
+    const read = async (file: string) => ((await Bun.file(file).text().catch(() => "")) || "{}").replaceAll('"hook"', '"patch"').replaceAll('"hook:', '"patch:')
+    const base = JSON.parse(await read(args[cmp + 1])) as Snapshot
+    const head = JSON.parse(await read(args[cmp + 2])) as Snapshot
+    if (!args[cmp + 3]) {
+      console.log(compare(base, head))
+      return
+    }
+    // The placement line reads the shared files the PR touches from the working tree, which is the head of the PR.
+    const diff = await Bun.file(args[cmp + 3]).text()
+    const shared = [...new Set(parseHunks(diff).map((h) => h.file))].filter((f) => !isKiloOwned(f))
+    const contents = new Map(await Promise.all(shared.map(async (f): Promise<[string, string]> => [f, await Bun.file(path.join(ROOT, f)).text().catch(() => "")])))
+    console.log(compare(base, head, placement(diff, contents, (await readBaseline(ROOT)).files)))
     return
   }
   const config = await readJson<Config>("features.json")

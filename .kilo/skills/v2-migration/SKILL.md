@@ -162,13 +162,13 @@ Grow the test surface with each PR.
 
 ## Progress map
 
-`migration-tracking/progress/README.md` is the generated map of Kilo's v1 delta: one cell per Kilo-owned file, `/kilocode/*` API operation and hook in a shared upstream file, grouped by feature. `bun script/upstream/progress.ts` regenerates it; CI fails when it is stale. Module and API cells turn done on their own when the file or path literal lands on v2. Hooks and decisions do not, so for every unit:
+`migration-tracking/progress/README.md` is the generated map of Kilo's v1 delta: one cell per Kilo-owned file, `/kilocode/*` API operation and patch in a shared upstream file, grouped by feature. `bun script/upstream/progress.ts` regenerates it; CI fails when it is stale. Module and API cells turn done on their own when the file or path literal lands on v2. Patch cells and decisions do not, so for every unit:
 
-- Before you start, run `bun script/upstream/progress.ts --list <feature>`. The open cells are the inventory of the feature; each hook cell names its v1 source line.
-- When you port a patch cell (the map still calls the kind `hook`), put its ID on the v2 code that replaces it: `// kilocode_change(<feature>:<id>)` when that code is a marked line in a shared upstream file, `// kilo_port(<feature>:<id>)` when it is in a Kilo-owned file (rung 1 or 2). Until the generator recognises `kilo_port`, also record the cell in `dispositions.json` with `state: "ported"` and the v2 path in `note`. Without an ID the cell stays open.
-- When a hook or module needs no port, add its cell ID to `migration-tracking/progress/dispositions.json` with `state` (`native` when v2 has the behavior built in, `facade` when the v1 compatibility layer serves it, `dropped` when the feature is not carried), a `note` with the reason, and `by`. Do not mark a cell `ported` by disposition when a marker or file can prove it.
-- A loose hook that lands in `unattributed:<area>` belongs to a feature. Tag its v1 marker on `main` as `kilocode_change(<feature>)` in a small follow-up PR; the next re-pin moves it.
-- Regenerate before you commit. CI posts one comment per PR with the delta (percent, changed features, closed and dropped cells) and the treemap of the head commit; the `progress.json` diff carries the same information. Mention the before and after count of the feature in the PR.
+- Before you start, run `bun script/upstream/progress.ts --list <feature>`. The open cells are the inventory of the feature; each patch cell names its v1 source line.
+- When you port a patch cell, put its ID on the v2 code that replaces it: `// kilocode_change(<feature>:<id>)` when that code is a marked line in a shared upstream file, `// kilo_port(<feature>:<id>)` when it is in a Kilo-owned file (rung 1 or 2). Without an ID the cell stays open. An unknown ID, or a proof in the wrong kind of file, fails the run. The map records the rung where the cell landed.
+- When a patch or module needs no port, add its cell ID to `migration-tracking/progress/dispositions.json` with `state` (`native` when v2 has the behavior built in, `facade` when the v1 compatibility layer serves it, `dropped` when the feature is not carried), a `note` with the reason, and `by`. Do not mark a cell `ported` by disposition when a marker or file can prove it.
+- A loose patch that lands in `unattributed:<area>` belongs to a feature. Tag its v1 marker on `main` as `kilocode_change(<feature>)` in a small follow-up PR; the next re-pin moves it.
+- Regenerate before you commit. CI posts one comment per PR with the delta (percent, changed features, closed and dropped cells), the placement line (new marked lines in shared files by rung, new `kilo_port` annotations, new core-internal imports), the two ratchets and the treemap of the head commit; the `progress.json` diff carries the same information. Mention the before and after count of the feature in the PR.
 
 ## Evidence
 
