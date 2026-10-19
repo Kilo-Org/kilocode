@@ -8,20 +8,20 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**12 / 9854 cells done (0.1%)**, 0 dropped. `░░░░░░░░░░░░░░░░`
+**39 / 9841 cells done (0.4%)**, 13 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 9 | 3557 | 0.3% |
+| module | 10 | 3556 | 0.3% |
 | api | 0 | 39 | 0% |
-| patch | 0 | 3459 | 0% |
-| test | 3 | 2799 | 0.1% |
+| patch | 22 | 3447 | 0.6% |
+| test | 7 | 2799 | 0.3% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
-Landed by rung, for patch cells closed by a done-proof: 0 plugin, 0 host, 0 seam, 0 patch.
+Landed by rung, for patch cells closed by a done-proof: 8 plugin, 0 host, 0 seam, 0 patch.
 
-Ratchets: 4 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/plugin/sdk`, `@opencode/core/variant`); 15 shared patches by rung: 14 seam, 1 patch (`script/upstream/shared-patches.json`).
+Ratchets: 8 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 17 shared patches by rung: 16 seam, 1 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -32,7 +32,8 @@ One point per day from the committed `progress.json` on the first-parent history
 | Date | Done | Total | % |
 |---|---:|---:|---:|
 | 2026-10-16 | 12 | 9854 | 0.1% |
-| now | 12 | 9854 | 0.1% |
+| 2026-10-19 | 39 | 9838 | 0.4% |
+| now | 39 | 9841 | 0.4% |
 
 ## Features
 
@@ -41,7 +42,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | Feature | Modules | API | Patches | Tests | Done | % | | Landed |
 |---|---:|---:|---:|---:|---:|---:|---|---|
 | acp | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| agent | 0/4 | 0/1 | 0/2 | 0/8 | 0/15 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| agent | 1/3 | 0/1 | 1/1 | 4/8 | 6/13 | 46.2% | `███████░░░░░░░░░` | 1 plugin |
 | agent-manager | 0/4 | 0/3 | 0/1 | 0/4 | 0/12 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | anaconda-desktop | 0/7 | 0/3 |  | 0/7 | 0/17 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | archive-security |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -170,10 +171,10 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 | plugin | 0/51 |  | 0/51 | 0% |
 | skill | 0/39 |  | 0/39 | 0% |
 | permission | 0/36 |  | 0/36 | 0% |
-| agent | 0/34 |  | 0/34 | 0% |
 | effect | 0/33 |  | 0/33 | 0% |
 | installation | 0/25 |  | 0/25 | 0% |
 | tui/app | 0/24 |  | 0/24 | 0% |
+| agent | 21/23 |  | 21/23 | 91.3% |
 | core/pty | 0/22 |  | 0/22 | 0% |
 | project | 0/22 |  | 0/22 | 0% |
 | sdk/pkg | 0/21 |  | 0/21 | 0% |
@@ -302,14 +303,26 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 
 ## Dropped
 
-None.
+- `module:packages/opencode/src/kilocode/agent/scout.txt`: Scout prompt. Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
+- `patch:agent:063e034b577a`: Scout prompt import. Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
+- `patch:unattributed:agent:09375914c157`: Rule for the `suggest` tool, which v2 does not have yet. The suggest unit (U-E2-16) adds the rule with the tool (#14999, differences table). (agents-plugin)
+- `patch:unattributed:agent:0faa6c731275`: Kilo `whenToUse` guidance in the LLM agent generation prompt (`kilo agent create`). v2 has no agent generation and no `generate.txt`. (agents-plugin)
+- `patch:unattributed:agent:1b8fe669272e`: Telemetry options for the LLM agent generation call (`kilo agent create`). v2 has no agent generation, so no call exists to configure. (agents-plugin)
+- `patch:unattributed:agent:2e2369fd59e1`: Orchestrator `deprecated` badge field. The v2 agent schema has no field for it (#14999, differences table). (agents-plugin)
+- `patch:unattributed:agent:461dc96586d3`: Per-agent hardening after config: metadata lifting (no v2 schema fields), Explore shell limits (native Explore, U-E2-17), the Plan edit guard after per-agent rules (U-E2-13) and Scout reference agents (U-E11-05). Each part is a row of the differences table in #14999. (agents-plugin)
+- `patch:unattributed:agent:51a770bdc581`: RuntimeFlags in the agent service fed Scout and the shared agent board rules. The v2 agents plugin reads no runtime flags: Scout is not ported (U-E11-05), and the board unit adds its own rules. (agents-plugin)
+- `patch:unattributed:agent:6cdbea643f7d`: Default denies for the Scout repository tools (`repo_clone`, `repo_overview`). Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
+- `patch:unattributed:agent:7c1daa44f22c`: Kilo `whenToUse` guidance in the LLM agent generation prompt (`kilo agent create`). v2 has no agent generation and no `generate.txt`. (agents-plugin)
+- `patch:unattributed:agent:8c603298aa6d`: RuntimeFlags in the agent service fed Scout and the shared agent board rules. The v2 agents plugin reads no runtime flags: Scout is not ported (U-E11-05), and the board unit adds its own rules. (agents-plugin)
+- `patch:unattributed:agent:92890c7740e7`: Scout agent. Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
+- `patch:unattributed:agent:d88711e4e0f0`: Rule for the `suggest` tool, which v2 does not have yet. The suggest unit (U-E2-16) adds the rule with the tool (#14999, differences table). (agents-plugin)
 
 ## Counting rules
 
 - Feature boxes come from the v1 target: directories under `src/kilocode/`, `packages/kilo-*`, and the split table in `features.json`.
 - module: a Kilo-owned v1 file. Done when a tracked Kilo-owned v2 file has the same feature and relative path, or the same feature and basename.
 - api: a `/kilocode/*` operation in the v1 OpenAPI document. Done when the path literal appears in `packages/protocol/src`, `packages/server/src` or a Kilo-owned v2 file.
-- patch: one Kilo hunk in a shared upstream file (`git diff -U0` of the v1 target over its upstream base). Its ID hashes the added lines without whitespace and comments. Done when a tracked v2 file under `packages/` carries a done-proof with the ID: `kilocode_change(<feature>:<id>)` in a shared upstream file, `kilo_port(<feature>:<id>)` in a Kilo-owned file. A proof with an unknown ID, or in the wrong kind of file, fails the run.
+- patch: one Kilo hunk in a shared upstream file (`git diff -U0` of the v1 target over its upstream base). Its ID hashes the added lines without whitespace and comments. Done when a tracked v2 file under `packages/` carries a done-proof with the ID: `kilocode_change(<feature>:<id>)` in a shared upstream file, `kilo_port(<feature>:<id>)` in a Kilo-owned file. For an unattributed patch, the feature is its box, `unattributed:<area>`. A proof with an unknown ID, or in the wrong kind of file, fails the run.
 - test: a module or patch in a test file, same rules.
 - landed: the rung of the done-proof. `kilo_port` is rung 2 (host) in `packages/kilo-cli` and rung 1 (plugin) in other Kilo-owned files; a marker has the rung of its file in `script/upstream/shared-patches.json` (3 seam, 4 patch). A cell with more than one proof counts once, at the highest rung.
 - Ratchets: core-internal imports count the distinct modules in `packages/core/src` outside `kilocode/` that non-test files in `packages/kilo-*` and `packages/*/src/kilocode` import, as `@opencode/core/*` or by relative path. A non-test file of a logic package (`packages/kilo-*-core`) that imports anything from `@opencode/*` fails the run. Shared patches by rung count the entries in `shared-patches.json`.

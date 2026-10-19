@@ -4,15 +4,15 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 12,
-    "total": 9854,
-    "percent": 0.1,
-    "dropped": 0,
+    "done": 39,
+    "total": 9841,
+    "percent": 0.4,
+    "dropped": 13,
     "kinds": [
       {
         "kind": "module",
-        "done": 9,
-        "total": 3557
+        "done": 10,
+        "total": 3556
       },
       {
         "kind": "api",
@@ -21,24 +21,24 @@
       },
       {
         "kind": "patch",
-        "done": 0,
-        "total": 3459
+        "done": 22,
+        "total": 3447
       },
       {
         "kind": "test",
-        "done": 3,
+        "done": 7,
         "total": 2799
       }
     ],
     "landed": {
-      "plugin": 0,
+      "plugin": 8,
       "host": 0,
       "seam": 0,
       "patch": 0
     },
-    "coreImports": 4,
+    "coreImports": 8,
     "sharedPatches": {
-      "seam": 14,
+      "seam": 16,
       "patch": 1
     }
   },
@@ -55,7 +55,11 @@
   "coreImports": [
     "@opencode/core/app",
     "@opencode/core/bus",
+    "@opencode/core/permission",
     "@opencode/core/plugin/sdk",
+    "@opencode/core/shell",
+    "@opencode/core/tool-output",
+    "@opencode/core/util/wildcard",
     "@opencode/core/variant"
   ],
   "features": [
@@ -85,26 +89,32 @@
     },
     {
       "feature": "agent",
-      "done": 0,
-      "total": 15,
-      "dropped": 0,
+      "done": 6,
+      "total": 13,
+      "dropped": 2,
       "kinds": {
         "module": {
-          "done": 0,
-          "total": 4
+          "done": 1,
+          "total": 3
         },
         "api": {
           "done": 0,
           "total": 1
         },
         "patch": {
-          "done": 0,
-          "total": 2
+          "done": 1,
+          "total": 1
         },
         "test": {
-          "done": 0,
+          "done": 4,
           "total": 8
         }
+      },
+      "landed": {
+        "plugin": 1,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -2342,9 +2352,9 @@
     },
     {
       "feature": "unattributed:agent",
-      "done": 0,
-      "total": 34,
-      "dropped": 0,
+      "done": 21,
+      "total": 23,
+      "dropped": 11,
       "kinds": {
         "module": {
           "done": 0,
@@ -2355,13 +2365,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
-          "total": 34
+          "done": 21,
+          "total": 23
         },
         "test": {
           "done": 0,
           "total": 0
         }
+      },
+      "landed": {
+        "plugin": 7,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -6037,7 +6053,16 @@
       }
     }
   ],
-  "landed": {},
+  "landed": {
+    "patch:agent:2e5632e7bfc6": "plugin",
+    "patch:unattributed:agent:161afe543464": "plugin",
+    "patch:unattributed:agent:55cce67688d4": "plugin",
+    "patch:unattributed:agent:655072363498": "plugin",
+    "patch:unattributed:agent:6f9571fe6129": "plugin",
+    "patch:unattributed:agent:80e846e9fd1c": "plugin",
+    "patch:unattributed:agent:a91ca8efa1b6": "plugin",
+    "patch:unattributed:agent:b6727a425792": "plugin"
+  },
   "done": [
     "module:packages/kilo-gateway/src/api/models.ts",
     "module:packages/kilo-gateway/src/api/modes.ts",
@@ -6050,7 +6075,48 @@
     "module:packages/kilo-gateway/src/index.ts",
     "module:packages/kilo-gateway/test/api/models.test.ts",
     "module:packages/kilo-gateway/test/api/profile.test.ts",
-    "module:packages/kilo-gateway/test/auth/device.test.ts"
+    "module:packages/kilo-gateway/test/auth/device.test.ts",
+    "module:packages/opencode/src/kilocode/agent/index.ts",
+    "module:packages/opencode/test/kilocode/agent-global-config-dirs.test.ts",
+    "module:packages/opencode/test/kilocode/agent-permission-overrides.test.ts",
+    "module:packages/opencode/test/kilocode/agent-skill-permissions.test.ts",
+    "module:packages/opencode/test/kilocode/ask-agent-permissions.test.ts",
+    "patch:agent:2e5632e7bfc6",
+    "patch:unattributed:agent:0a0c97da2c48",
+    "patch:unattributed:agent:161afe543464",
+    "patch:unattributed:agent:19ff1297ae1a",
+    "patch:unattributed:agent:1c5cb886bb38",
+    "patch:unattributed:agent:21c84cad48b3",
+    "patch:unattributed:agent:407e5d080313",
+    "patch:unattributed:agent:55cce67688d4",
+    "patch:unattributed:agent:655072363498",
+    "patch:unattributed:agent:6f9571fe6129",
+    "patch:unattributed:agent:6fd86cbf07a5",
+    "patch:unattributed:agent:80e846e9fd1c",
+    "patch:unattributed:agent:8558c7e71c33",
+    "patch:unattributed:agent:860878fa7bab",
+    "patch:unattributed:agent:8a47a5bd2127",
+    "patch:unattributed:agent:a46eaa33223b",
+    "patch:unattributed:agent:a91ca8efa1b6",
+    "patch:unattributed:agent:b6727a425792",
+    "patch:unattributed:agent:e4427a3d9c64",
+    "patch:unattributed:agent:e4427a3d9c64",
+    "patch:unattributed:agent:e4427a3d9c64",
+    "patch:unattributed:agent:fbbd4a8ba315"
   ],
-  "dropped": []
+  "dropped": [
+    "module:packages/opencode/src/kilocode/agent/scout.txt",
+    "patch:agent:063e034b577a",
+    "patch:unattributed:agent:09375914c157",
+    "patch:unattributed:agent:0faa6c731275",
+    "patch:unattributed:agent:1b8fe669272e",
+    "patch:unattributed:agent:2e2369fd59e1",
+    "patch:unattributed:agent:461dc96586d3",
+    "patch:unattributed:agent:51a770bdc581",
+    "patch:unattributed:agent:6cdbea643f7d",
+    "patch:unattributed:agent:7c1daa44f22c",
+    "patch:unattributed:agent:8c603298aa6d",
+    "patch:unattributed:agent:92890c7740e7",
+    "patch:unattributed:agent:d88711e4e0f0"
+  ]
 }

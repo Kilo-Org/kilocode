@@ -150,6 +150,8 @@ test("parseProofs: kilo_port in Kilo-owned files, kilocode_change in shared file
     "packages/core/src/tool/grep.ts:3:kilo_port(tool:eeeeeeeeeeee)",
     "packages/kilo-plugin/src/x.ts:9:kilocode_change(tool:ffffffffffff)",
     "packages/kilo-plugin/src/y.ts:1:kilo_port(tool:not-an-id)",
+    "packages/kilo-plugin/src/agent/index.ts:4:kilo_port(unattributed:agent:abcdefabcdef)",
+    "packages/kilo-plugin/src/z.ts:2:kilo_port(unattributed:tui/component:012345012345)",
   ].join("\n")
   expect(parseProofs(grep, rungs).map((p) => [p.id, p.at, p.rung, p.misplaced])).toEqual([
     ["patch:sandbox:1a2b3c4d5e6f", "packages/kilo-plugin/src/sandbox-guard.ts:12", 1, false],
@@ -161,6 +163,9 @@ test("parseProofs: kilo_port in Kilo-owned files, kilocode_change in shared file
     ["patch:process:dddddddddddd", "packages/core/src/unlisted.ts:1", 4, false],
     ["patch:tool:eeeeeeeeeeee", "packages/core/src/tool/grep.ts:3", 4, true],
     ["patch:tool:ffffffffffff", "packages/kilo-plugin/src/x.ts:9", 1, true],
+    // an unattributed patch names its box as the feature
+    ["patch:unattributed:agent:abcdefabcdef", "packages/kilo-plugin/src/agent/index.ts:4", 1, false],
+    ["patch:unattributed:tui/component:012345012345", "packages/kilo-plugin/src/z.ts:2", 1, false],
   ])
 })
 
@@ -214,8 +219,9 @@ test("placement counts new marked lines in shared files by rung and new kilo_por
     "+// kilocode_change - new file",
     "+export const added = 1",
     "diff --git a/packages/kilo-plugin/src/guard.ts b/packages/kilo-plugin/src/guard.ts",
-    "@@ -0,0 +1,2 @@",
+    "@@ -0,0 +1,3 @@",
     "+// kilo_port(sandbox:1a2b3c4d5e6f)",
+    "+// kilo_port(unattributed:agent:abcdefabcdef)",
     "+export const guard = 1 // kilocode_change",
     "diff --git a/script/upstream/x.test.ts b/script/upstream/x.test.ts",
     "@@ -0,0 +1 @@",
@@ -231,12 +237,12 @@ test("placement counts new marked lines in shared files by rung and new kilo_por
     ["packages/core/src/added.ts", "// kilocode_change - new file\nexport const added = 1\n"],
   ])
   const place = placement(diff, contents, rungs)
-  expect(place).toEqual({ marked: { plugin: 0, host: 0, seam: 4, patch: 3 }, ports: 1 })
+  expect(place).toEqual({ marked: { plugin: 0, host: 0, seam: 4, patch: 3 }, ports: 2 })
 
   const summary = (coreImports: number) => ({ done: 0, total: 1, percent: 0, dropped: 0, coreImports, sharedPatches: { seam: 13, patch: 1 } })
   const head = { summary: summary(2), coreImports: ["@opencode/core/bus", "@opencode/core/variant"] }
   const out = compare({ summary: summary(1), coreImports: ["@opencode/core/variant"] }, head, place)
-  expect(out).toContain("**Placement:** 7 new marked lines in shared files (4 seam, 3 patch), 1 new `kilo_port` annotation, 1 new core-internal import (`@opencode/core/bus`).")
+  expect(out).toContain("**Placement:** 7 new marked lines in shared files (4 seam, 3 patch), 2 new `kilo_port` annotations, 1 new core-internal import (`@opencode/core/bus`).")
   expect(out).toContain("**Ratchets:** 2 core-internal imports (base 1); shared patches by rung 13 seam, 1 patch (base 13 seam, 1 patch).")
   expect(compare({}, head, { marked: { plugin: 0, host: 0, seam: 0, patch: 0 }, ports: 0 })).toContain(
     "**Placement:** 0 new marked lines in shared files, 0 new `kilo_port` annotations, core-internal imports not compared (the base map has no import list).",
