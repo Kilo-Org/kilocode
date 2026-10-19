@@ -1,14 +1,13 @@
 import { describe, expect } from "bun:test"
 import { KiloErrors } from "@kilocode/gateway-core"
+import { EmbeddingCatalog } from "@kilocode/gateway-core/embedding-catalog"
 import { fixture } from "@kilocode/gateway-core/testing"
 import { isRetryable } from "@opencode/ai"
 import { httpFailure } from "@opencode/ai/route/executor"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import { Bus } from "@opencode/core/bus"
 import { Credential } from "@opencode/core/credential"
 import { Integration } from "@opencode/core/integration"
-import { KiloGatewayPlugin } from "@opencode/core/kilocode/gateway"
-import { KiloGatewayRpc } from "@opencode/core/kilocode/gateway-rpc"
 import { Model } from "@opencode/core/model"
 import { Plugin } from "@opencode/core/plugin"
 import { PluginHooks } from "@opencode/core/plugin/hooks"
@@ -18,10 +17,12 @@ import { KiloPlugin } from "@opencode/core/plugin/provider/kilo"
 import { Provider } from "@opencode/core/provider"
 import { Rpc } from "@opencode/core/rpc"
 import { Agent } from "@opencode/schema/agent"
+import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { Session } from "@opencode/schema/session"
-import { withEnv } from "../fixture/env"
-import { testEffect } from "../lib/effect"
-import { PluginTestLayer } from "../plugin/fixture"
+import { withEnv } from "../../core/test/fixture/env"
+import { testEffect } from "../../core/test/lib/effect"
+import { PluginTestLayer } from "../../core/test/plugin/fixture"
+import { KiloGatewayPlugin } from "../src/gateway"
 
 const it = testEffect(PluginTestLayer)
 const kilo = Provider.ID.make("kilo")
@@ -86,6 +87,16 @@ describe("KiloGatewayPlugin", () => {
   it.effect("is not in the upstream built-in provider list; the Kilo host registers it", () =>
     Effect.sync(() => {
       expect(ProviderPlugins.map((item) => item.id)).not.toContain(KiloGatewayPlugin.id)
+    }),
+  )
+
+  // The RPC contract in Schema and the Gateway decoder in the logic package each define the embedding catalog,
+  // because neither package may import the other.
+  it.effect("declares the embedding catalog of the RPC contract as the Gateway logic decodes it", () =>
+    Effect.sync(() => {
+      expect(Schema.toJsonSchemaDocument(KiloGatewayRpc.EmbeddingCatalog)).toEqual(
+        Schema.toJsonSchemaDocument(EmbeddingCatalog),
+      )
     }),
   )
 

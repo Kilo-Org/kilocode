@@ -1,9 +1,11 @@
-export * as KiloGatewayRpc from "./gateway-rpc.js"
+export * as KiloGatewayRpc from "./gateway.js"
 
-import { EmbeddingCatalog } from "@kilocode/gateway-core/embedding-catalog"
-import { Rpc } from "@opencode/schema/rpc"
 import { Schema } from "effect"
+import { Rpc } from "../rpc.js"
 
+// The `kilocode.gateway` RPC contract: the reference Kilo RPC. The Gateway plugin in packages/kilo-plugin
+// registers the handlers; clients (TUI, VS Code, JetBrains) import this contract from
+// `@opencode/schema/kilocode/gateway`, never from Core or the plugin.
 // Standard Schemas, so the promise client of the TUI accepts the contract too.
 const portable = Schema.toStandardSchemaV1
 const Failure = { unauthorized: portable(Schema.Undefined), failed: portable(Schema.Undefined) }
@@ -159,7 +161,24 @@ export const TranscriptionModel = Schema.Struct({
 
 export type TranscriptionModel = typeof TranscriptionModel.Type
 
-export type { EmbeddingCatalog } from "@kilocode/gateway-core/embedding-catalog"
+// The wire shape of the `models.embeddings` answer. `@kilocode/gateway-core/embedding-catalog` decodes the same shape
+// from the Kilo API; a logic package imports nothing from `@opencode/*` and Schema depends on no Kilo package, so
+// each side keeps its definition and packages/kilo-plugin/test/gateway.test.ts checks that they stay equal.
+export const EmbeddingCatalog = Schema.Struct({
+  defaultModel: Schema.String,
+  models: Schema.Array(
+    Schema.Struct({
+      id: Schema.String,
+      name: Schema.String,
+      dimension: Schema.Int.check(Schema.isGreaterThan(0)),
+      scoreThreshold: Schema.Finite,
+      note: Schema.optionalKey(Schema.String),
+    }),
+  ),
+  aliases: Schema.Record(Schema.String, Schema.String),
+})
+
+export type EmbeddingCatalog = typeof EmbeddingCatalog.Type
 
 export const FimTarget = Schema.Struct({
   provider: Schema.Literals(["kilo", "inception", "mistral"]),
