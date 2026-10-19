@@ -1,6 +1,14 @@
 package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.plugin.KiloBundle
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.ex.CustomComponentAction
+import com.intellij.openapi.actionSystem.impl.ActionButton
+import com.intellij.openapi.actionSystem.ActionToolbar
+import com.intellij.openapi.actionSystem.ActionUiKind
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FadeText
@@ -80,7 +88,9 @@ internal class ActiveListRenderer(
         menu: ActiveListMenu<*>?,
         collapse: Boolean = false,
         toggles: (String) -> (() -> Unit)? = { null },
+        sections: ActiveListCollapse? = null,
     ) : this(model, cfg, toggles, collapse) {
+        this.sections = sections
         this.menu = menu
         if (menu != null) attachMenu(menu)
     }
@@ -107,10 +117,12 @@ internal class ActiveListRenderer(
     }
 
     private var menu: ActiveListMenu<*>? = null
+    private var sections: ActiveListCollapse? = null
     private val insets = JBUI.CurrentTheme.Popup.separatorLabelInsets()
     private val sep = GroupHeaderSeparator(insets)
     /** Trailing indicator; the containing band owns the click target. */
     private val chevron = ActiveListActionCell()
+    private val toolbar = Stack.horizontal()
 
     // Only a list that can fold gets this container; every other list keeps the platform separator
     // directly in the cell header, exactly as before.
@@ -118,6 +130,7 @@ internal class ActiveListRenderer(
         BandPanel(chevron).apply {
             add(chevron)
             add(sep)
+            add(toolbar)
         }
     } else {
         null
@@ -457,6 +470,17 @@ internal class ActiveListRenderer(
         // The band — and the chevron that rides on it — exists only on the row that opens a section.
         band?.isVisible = heading != null
         chevron.isVisible = folding && heading != null
+        val actions = heading?.let { sections?.actions?.invoke(it) }.orEmpty()
+        while (toolbar.componentCount > actions.size) toolbar.remove(toolbar.componentCount - 1)
+        for ((idx, action) in actions.withIndex()) {
+            val cell = toolbar.components.getOrNull(idx) as? SectionAction
+            if (cell?.action !== action) {
+                if (cell != null) toolbar.remove(idx)
+                toolbar.add(SectionAction(action) { sections?.context?.invoke() ?: DataContext.EMPTY_CONTEXT }, idx)
+            }
+            (toolbar.getComponent(idx) as SectionAction).update()
+        }
+        toolbar.isVisible = actions.isNotEmpty()
         // A folded section's caption already carries its hidden-row count and names the section it
         // stands for; every other band returns there through the owner's stable action.
         if (folded) {
@@ -486,6 +510,7 @@ internal class ActiveListRenderer(
         top.setPreferredSize(heading?.let {
             val height = sep.preferredSize.height
                 .coerceAtLeast(sep.getFontMetrics(sep.font).height + insets.top + insets.bottom)
+                .coerceAtLeast(toolbar.preferredSize.height + insets.top + insets.bottom)
             Dimension(0, height + JBUI.scale(2))
         })
     }
@@ -645,7 +670,7 @@ internal class ActiveListChangesCell @RequiresEdt constructor() : JPanel(BorderL
     override fun cellAction(): (() -> Unit)? = data?.action
 }
 
-/** Full-width separator with a trailing toggle; the entire band is one click target. */
+/** Full-width toggle target, with toolbar buttons immediately before the trailing indicator. */
 private class BandPanel(private val chevron: ActiveListActionCell) : JPanel(null), ActiveListHitCell {
     override val cellId: String get() = ACTIVE_LIST_SECTION_CELL
     override fun cellEnabled() = chevron.cellEnabled()
@@ -670,7 +695,39 @@ private class BandPanel(private val chevron: ActiveListActionCell) : JPanel(null
             size.width,
             size.height,
         )
+        val toolbar = components.getOrNull(2) ?: return
+        val space = (chevron.x - UiStyle.Gap.sm()).coerceAtLeast(0)
+        val width = toolbar.preferredSize.width.coerceAtMost(space)
+        val height = toolbar.preferredSize.height.coerceAtMost(bottom.coerceAtLeast(0))
+        toolbar.setBounds(space - width, bottom - height, width, height)
     }
+}
+
+/** Renderer buttons expose their platform presentation through the list's synthetic click path. */
+private class SectionAction @RequiresEdt constructor(val action: AnAction, private val context: () -> DataContext) : JPanel(BorderLayout()), ActiveListHitCell {
+    private val presentation = action.templatePresentation.clone()
+    private val button = (action as? CustomComponentAction)?.createCustomComponent(presentation, ActionPlaces.TOOLWINDOW_TITLE)
+        ?: ActionButton(action, presentation, ActionPlaces.TOOLWINDOW_TITLE, ActionToolbar.DEFAULT_MINIMUM_BUTTON_SIZE)
+    override val cellId = "$ACTIVE_LIST_SECTION_CELL:action:${System.identityHashCode(action)}"
+
+    init {
+        UiStyle.Components.transparent(this)
+        add(button, BorderLayout.CENTER)
+    }
+
+    private fun event() = AnActionEvent.createEvent(context(), presentation, ActionPlaces.TOOLWINDOW_TITLE, ActionUiKind.TOOLBAR, null)
+
+    @RequiresEdt
+    fun update() {
+        action.update(event())
+        isVisible = presentation.isVisible
+        button.isEnabled = presentation.isEnabled
+    }
+
+    override fun cellEnabled() = presentation.isEnabled && presentation.isVisible
+    override fun cellCursor() = Cursor.HAND_CURSOR
+    override fun cellTooltip() = presentation.description ?: presentation.text
+    override fun cellAction(): () -> Unit = { action.actionPerformed(event()) }
 }
 
 internal class ActiveListActionCell : JBLabel(), ActiveListHitCell {

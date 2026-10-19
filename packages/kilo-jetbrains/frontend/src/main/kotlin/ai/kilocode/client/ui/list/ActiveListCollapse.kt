@@ -1,6 +1,8 @@
 package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.plugin.KiloBundle
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.DataContext
 
 internal const val ACTIVE_LIST_SECTION_CELL = "__section__"
 
@@ -8,10 +10,14 @@ internal const val ACTIVE_LIST_SECTION_CELL = "__section__"
  * Opt-in switch for collapsible section separators, supplied by a list's owner. Present — non-null on
  * the [ActiveList] — is what turns the feature on; the loaded set is the sections that start collapsed,
  * and [save] receives the set again on every toggle so the owner can persist it.
+ * [actions] optionally supplies platform toolbar buttons for each section, using [context] for updates
+ * and invocation. Buttons remain available when the section is collapsed.
  */
 internal class ActiveListCollapse(
     val load: () -> Set<String> = { emptySet() },
     val save: (Set<String>) -> Unit = {},
+    val actions: (String) -> List<AnAction> = { emptyList() },
+    val context: () -> DataContext = { DataContext.EMPTY_CONTEXT },
 )
 
 /**

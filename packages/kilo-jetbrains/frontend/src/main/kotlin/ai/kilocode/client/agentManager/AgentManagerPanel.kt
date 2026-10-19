@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.actions.CopySessionPrRefAction
+import ai.kilocode.client.actions.NewWorktreeAction
 import ai.kilocode.client.agentManager.worktree.CreateFailure
 import ai.kilocode.client.agentManager.worktree.CreateKind
 import ai.kilocode.client.agentManager.worktree.NewWorktreeDialog
@@ -127,6 +128,7 @@ class AgentManagerPanel(
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
     private val provider = WorktreeDeleteProvider()
     private val edit = RenameAction()
+    private val create = NewWorktreeAction()
     private val group = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? ActionGroup ?: DefaultActionGroup()
     private val list = ActiveList(
         KiloBundle.message("worktree.empty"),
@@ -159,6 +161,19 @@ class AgentManagerPanel(
         collapse = ActiveListCollapse(
             load = KiloPluginSettings::getAgentSectionsCollapsed,
             save = KiloPluginSettings::setAgentSectionsCollapsed,
+            actions = { section ->
+                if (section == KiloBundle.message("worktree.section.local")) listOf(create) else emptyList()
+            },
+            context = {
+                DataContext { id ->
+                    when {
+                        SidePanelKeys.MODE.`is`(id) -> SidePanelMode.AGENT_MANAGER
+                        SidePanelKeys.WORKTREE_PANEL.`is`(id) -> this
+                        com.intellij.openapi.actionSystem.CommonDataKeys.PROJECT.`is`(id) -> project
+                        else -> null
+                    }
+                }
+            },
         ),
     )
     // Rows are dense and neighbours are only ever passed over on the way somewhere else, so the dwell is

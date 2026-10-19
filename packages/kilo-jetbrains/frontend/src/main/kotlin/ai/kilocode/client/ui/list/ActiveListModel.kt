@@ -285,7 +285,7 @@ internal fun activeListHits(
             hit.cellAction(),
         )
     }
-    return out
+    return out.sortedBy { it.id == ACTIVE_LIST_SECTION_CELL }
 }
 
 /** Clickable action-cell rectangles for a row, in list coordinates. */

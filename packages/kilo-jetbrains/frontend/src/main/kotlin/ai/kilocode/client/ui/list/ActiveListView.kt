@@ -71,6 +71,7 @@ internal class ActiveListView(
         menu,
         collapse != null,
         { section: String -> toggle(section) },
+        collapse,
     )
     // Hover tracking also drives the hover callback, so a consumer that only wants row hover does not
     // have to turn on the hover action bar to get it.
@@ -227,12 +228,19 @@ internal class ActiveListView(
                 press = null
                 val hit = hit(e) ?: return
                 if (hit.item.key != down.key || hit.id != down.id) return
-                if (hit.item.progress != null) return
+                if (hit.item.progress != null && !down.id.startsWith(ACTIVE_LIST_SECTION_CELL)) return
                 // The separator chevron folds its section here rather than through [fire]: a band
                 // belongs to the run it heads, and an expanded run's band rides on a row that has no
                 // cell of its own to answer for. Same interception as the menu glyph's, above.
                 if (hit.id == ACTIVE_LIST_SECTION_CELL) {
                     hit.item.section?.let(::flip)
+                    e.consume()
+                    return
+                }
+                if (down.id.startsWith("$ACTIVE_LIST_SECTION_CELL:action:")) {
+                    val idx = rowAt(e.point) ?: return
+                    activeListHits(list, idx, list.isSelectedIndex(idx))
+                        .firstOrNull { it.id == down.id && it.enabled }?.action?.invoke()
                     e.consume()
                     return
                 }
@@ -1004,7 +1012,7 @@ internal class ActiveListView(
         if (item is ActiveListGap) return baseCursor
         // A folded section's stand-in is only a band, so it is the one row whose hit targets come from
         // nowhere else. Every other row is checked exactly as before.
-        if (menu == null && item.cells.isEmpty() && activeListRegions(item).isEmpty() && item !is ActiveListSectionRow) return baseCursor
+        if (collapse == null && menu == null && item.cells.isEmpty() && activeListRegions(item).isEmpty() && item !is ActiveListSectionRow) return baseCursor
         val hit = activeListHits(list, idx, list.isSelectedIndex(idx))
             .firstOrNull { it.enabled && it.bounds.contains(point) }
             ?: return baseCursor
@@ -1026,6 +1034,10 @@ internal class ActiveListView(
         val item = model.getElementAt(idx)
         if (item is ActiveListGap) return null
         val selected = list.isSelectedIndex(idx)
+        val button = activeListHits(list, idx, selected).firstOrNull {
+            it.id.startsWith("$ACTIVE_LIST_SECTION_CELL:action:") && it.bounds.contains(e.point)
+        }
+        if (button != null) return if (!enabled || button.enabled) Hit(item, button.id) else null
         val id = if (enabled) {
             activeListCellAt(list, idx, e.point, selected, menu?.takeIf { it.available(item) } != null)
         } else {
@@ -1038,7 +1050,7 @@ internal class ActiveListView(
                 .map { it.id }
                 .toSet() + activeListRegions(item).keys + ACTIVE_LIST_SECTION_CELL
             activeListHits(list, idx, selected)
-                .firstOrNull { it.id in ids && it.bounds.contains(e.point) }
+                .firstOrNull { (it.id in ids || it.id.startsWith("$ACTIVE_LIST_SECTION_CELL:action:")) && it.bounds.contains(e.point) }
                 ?.id
         }
         return Hit(item, id)

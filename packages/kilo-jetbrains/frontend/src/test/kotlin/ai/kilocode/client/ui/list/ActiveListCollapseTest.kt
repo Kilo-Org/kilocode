@@ -1,6 +1,8 @@
 package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.testing.fire
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import java.awt.Point
@@ -9,6 +11,55 @@ import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
 
 class ActiveListCollapseTest : BasePlatformTestCase() {
+
+    fun `test section toolbar precedes toggle and clicks do not select open or fold`() {
+        var calls = 0
+        val opened = mutableListOf<String>()
+        val action = object : DumbAwareAction("Add") {
+            override fun actionPerformed(e: AnActionEvent) { calls++ }
+        }
+        val view = ActiveListView(
+            empty = "",
+            collapse = ActiveListCollapse(actions = { if (it == "wt") listOf(action) else emptyList() }),
+            onOpen = { row, _ -> opened += row.key },
+            onCell = { _, _ -> fail("Unexpected row action") },
+        )
+        view.update(listOf(row("cur", null), row("a", "wt"), row("b", "wt"), row("c", "other")))
+        layout(view)
+        view.select("cur")
+        for (folded in listOf(false, true)) {
+            layout(view)
+            val hits = activeListHits(view.list, 1, false)
+            val button = hits.single { it.id.startsWith("$ACTIVE_LIST_SECTION_CELL:action:") }
+            val band = hits.single { it.id == ACTIVE_LIST_SECTION_CELL }.bounds
+            assertEquals(view.list.width, band.width)
+            assertTrue(button.bounds.width > 0)
+            assertTrue(button.bounds.x > band.width / 2)
+            assertTrue(button.bounds.x + button.bounds.width < band.x + band.width)
+            click(view, center(button.bounds))
+            assertEquals(if (folded) 3 else 4, view.list.model.size)
+            assertEquals("cur", view.selected()?.key)
+            assertTrue(opened.isEmpty())
+            click(view, Point(band.x + 1, band.y + band.height / 2))
+        }
+        assertEquals(2, calls)
+        assertFalse(activeListHits(view.list, 3, false).any { it.id.startsWith("$ACTIVE_LIST_SECTION_CELL:action:") })
+    }
+
+    fun `test disabled toolbar click does not toggle section`() {
+        val action = object : DumbAwareAction("Add") {
+            override fun update(e: AnActionEvent) { e.presentation.isEnabled = false }
+            override fun actionPerformed(e: AnActionEvent) { fail("Disabled action ran") }
+        }
+        val view = view(ActiveListCollapse(actions = { listOf(action) }))
+        view.update(listOf(row("cur", null), row("a", "wt")))
+        layout(view)
+        view.select("cur")
+        val button = activeListHits(view.list, 1, false).single { it.id.startsWith("$ACTIVE_LIST_SECTION_CELL:action:") }
+        click(view, center(button.bounds))
+        assertEquals(2, view.list.model.size)
+        assertEquals("cur", view.selected()?.key)
+    }
 
     fun `test entire separator band toggles without opening its worktree`() {
         val opened = mutableListOf<String>()
