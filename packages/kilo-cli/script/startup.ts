@@ -1,10 +1,15 @@
 // Startup ratchet (#15244). It boots the server that the Kilo host starts, with a local Kilo API that answers
-// after a fixed delay, and fails when Kilo plugin activation costs more than the budgets in startup-budget.json.
-// Two measures stay stable on shared CI runners:
+// after a fixed delay, and fails when the Kilo plugins cost more startup time than the budgets in
+// startup-budget.json.
+// Three measures stay stable on shared CI runners:
 // - the activation time of each Kilo plugin: a plugin that waits for the network during activation shows the
 //   fixture delay on every machine, a plugin that does not shows almost nothing;
 // - the median time until all plugins of a Location are active with the host overrides, minus the median without
-//   them. The runs alternate in one process, so the runner speed cancels out.
+//   them. The runs alternate in one process, so the runner speed cancels out;
+// - the module load cost of the Kilo host: fresh processes import the upstream server routes, with and without the
+//   host, which imports every Kilo server plugin (`KiloPlugins`) and their dependencies, and the ratchet compares
+//   the medians. A ported feature that loads heavy modules or runs slow top-level code shows up here, also when its
+//   activation is fast.
 // The first run of each kind warms up the process and stores the Gateway catalog; it is not measured. The measured
 // runs are later starts with the same database, as a user's second start is.
 import { fixture } from "@kilocode/gateway-core/testing"
@@ -67,6 +72,31 @@ const boot = (overrides: LayerNode.Replacements) =>
     }),
   ).pipe(Effect.provideService(References.MinimumLogLevel, "Error"), Effect.runPromise)
 
+// Module load cost, measured before the boots. One warm-up of each kind fills the transpiler cache.
+const load = async (host: boolean) => {
+  const script = [
+    "const start = performance.now()",
+    'await import("@opencode/server/routes")',
+    host ? `await import(${JSON.stringify(path.join(import.meta.dir, "../src/host.ts"))})` : "",
+    "console.log(performance.now() - start)",
+  ].join("\n")
+  const child = Bun.spawn([process.execPath, "-e", script], {
+    cwd: path.join(import.meta.dir, ".."),
+    env: process.env,
+    stdout: "pipe",
+    stderr: "inherit",
+  })
+  const [output, code] = await Promise.all([new Response(child.stdout).text(), child.exited])
+  if (code !== 0) throw new Error(`module load run exited with ${code}`)
+  return Number(output.trim())
+}
+await load(false)
+await load(true)
+const loads: { upstream: number; host: number }[] = []
+for (const _ of Array.from({ length: budget.loadRuns }))
+  loads.push({ upstream: await load(false), host: await load(true) })
+const modules = median(loads.map((sample) => sample.host)) - median(loads.map((sample) => sample.upstream))
+
 await boot([])
 await boot(KiloHost.overrides)
 const samples: { upstream: number; host: number; plugins: Map<string, number> }[] = []
@@ -95,22 +125,28 @@ const failures = [
     .filter((id) => !ids.includes(id))
     .map((id) => `${id}: has a budget but did not activate; remove it from startup-budget.json`),
   ...(overhead > budget.overhead ? [`host overhead: ${ms(overhead)} is over its budget ${ms(budget.overhead)}`] : []),
+  ...(modules > budget.modules ? [`host module load: ${ms(modules)} is over its budget ${ms(budget.modules)}`] : []),
 ]
 
-console.log(`Kilo startup ratchet: Kilo API delay ${budget.latency} ms, ${budget.runs} runs, medians`)
+console.log(
+  `Kilo startup ratchet: Kilo API delay ${budget.latency} ms, ${budget.runs} boot runs, ${budget.loadRuns} module load runs, medians`,
+)
 console.table([
   ...plugins.map((plugin) => ({ measure: plugin.id, median: ms(plugin.median), budget: ms(plugin.budget) })),
   { measure: "host overhead", median: ms(overhead), budget: ms(budget.overhead) },
+  { measure: "host module load", median: ms(modules), budget: ms(budget.modules) },
 ])
 console.log("samples (ms):")
 console.log(`  upstream: ${samples.map((sample) => Math.round(sample.upstream)).join(", ")}`)
 console.log(`  host:     ${samples.map((sample) => Math.round(sample.host)).join(", ")}`)
 for (const id of ids)
   console.log(`  ${id}: ${samples.map((sample) => Math.round(sample.plugins.get(id) ?? 0)).join(", ")}`)
+console.log(`  module load, upstream: ${loads.map((sample) => Math.round(sample.upstream)).join(", ")}`)
+console.log(`  module load, host:     ${loads.map((sample) => Math.round(sample.host)).join(", ")}`)
 if (failures.length > 0) {
   console.error(`\nStartup ratchet failed:\n${failures.map((failure) => `- ${failure}`).join("\n")}`)
   console.error(
-    "Make the activation cheaper, or raise the budget in startup-budget.json and state the reason in the PR.",
+    "Make the activation or module load cheaper (for example a dynamic import in the code path that needs it), or raise the budget in startup-budget.json and state the reason in the PR.",
   )
   process.exit(1)
 }
