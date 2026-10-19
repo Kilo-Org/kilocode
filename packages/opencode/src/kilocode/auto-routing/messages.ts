@@ -81,9 +81,34 @@ function filePart(data: unknown, mime: string, filename: string): unknown {
   if (mime.startsWith("image/")) return { type: "image_url", image_url: { url } }
   if (mime.startsWith("video/")) return { type: "video_url", video_url: { url } }
   if (mime.startsWith("audio/")) {
-    return { type: "input_audio", input_audio: { data: url.replace(/^data:[^;]*;base64,/, ""), format: mime.slice(6) } }
+    // The gateway provider rejects an unmapped format; the classifier skips that part.
+    const format = AUDIO_FORMATS[mime.slice("audio/".length)]
+    if (!format) return undefined
+    return { type: "input_audio", input_audio: { data: url.replace(/^data:[^;]*;base64,/, ""), format } }
   }
   return { type: "file", file: { filename, file_data: url } }
+}
+
+// Copy of MIME_TO_FORMAT in @openrouter/ai-sdk-provider.
+const AUDIO_FORMATS: Record<string, string> = {
+  mpeg: "mp3",
+  mp3: "mp3",
+  "x-wav": "wav",
+  wave: "wav",
+  wav: "wav",
+  ogg: "ogg",
+  vorbis: "ogg",
+  aac: "aac",
+  "x-aac": "aac",
+  m4a: "m4a",
+  "x-m4a": "m4a",
+  mp4: "m4a",
+  aiff: "aiff",
+  "x-aiff": "aiff",
+  flac: "flac",
+  "x-flac": "flac",
+  pcm16: "pcm16",
+  pcm24: "pcm24",
 }
 
 function dataUrl(data: unknown, mime: string): string | undefined {

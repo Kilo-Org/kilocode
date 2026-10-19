@@ -472,6 +472,9 @@ describe("openai message conversion", () => {
           { type: "file", mediaType: "application/pdf", filename: "spec.pdf", data: "data:application/pdf;base64,JVBE" },
           { type: "file", mediaType: "text/plain", filename: "notes.txt", data: new Uint8Array([104, 105]) },
           { type: "file", mediaType: "image/jpeg", data: new URL("https://example.com/b.jpg") },
+          { type: "file", mediaType: "audio/mpeg", data: "data:audio/mpeg;base64,SUQz" },
+          { type: "file", mediaType: "audio/x-wav", data: "UklG" },
+          { type: "file", mediaType: "audio/basic", data: "AAAA" },
         ],
       },
     ] as unknown as ModelMessage[]
@@ -483,6 +486,8 @@ describe("openai message conversion", () => {
           { type: "file", file: { filename: "spec.pdf", file_data: "data:application/pdf;base64,JVBE" } },
           { type: "file", file: { filename: "notes.txt", file_data: "data:text/plain;base64,aGk=" } },
           { type: "image_url", image_url: { url: "https://example.com/b.jpg" } },
+          { type: "input_audio", input_audio: { data: "SUQz", format: "mp3" } },
+          { type: "input_audio", input_audio: { data: "UklG", format: "wav" } },
         ],
       },
     ])
