@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.ChangesPanel
 import ai.kilocode.client.ui.FadeText
@@ -66,14 +67,25 @@ private fun activeListFade() = Registry.`is`("kilo.list.fade", true)
 internal class ActiveListRenderer(
     private val model: CollectionListModel<ActiveListItem>,
     private val cfg: ActiveListConfig = ActiveListConfig.Equal,
+    private val toggles: (String) -> (() -> Unit)? = { null },
+    private val folding: Boolean = false,
 ) : JPanel(BorderLayout()), ListCellRenderer<ActiveListItem> {
+    /**
+     * A list with a row menu. [toggles] is only consulted by a [collapse] list; a list that never
+     * folds keeps [ActiveListConfig] and the cell tree it has always had.
+     */
     constructor(
         model: CollectionListModel<ActiveListItem>,
         cfg: ActiveListConfig = ActiveListConfig.Equal,
         menu: ActiveListMenu<*>?,
-    ) : this(model, cfg) {
+        collapse: Boolean = false,
+        toggles: (String) -> (() -> Unit)? = { null },
+    ) : this(model, cfg, toggles, collapse) {
         this.menu = menu
-        if (menu == null) return
+        if (menu != null) attachMenu(menu)
+    }
+
+    private fun attachMenu(menu: ActiveListMenu<*>) {
         glyph.update(activeListMenuCell())
         glyph.isVisible = false
         val tail = JPanel(BorderLayout())
@@ -97,9 +109,22 @@ internal class ActiveListRenderer(
     private var menu: ActiveListMenu<*>? = null
     private val insets = JBUI.CurrentTheme.Popup.separatorLabelInsets()
     private val sep = GroupHeaderSeparator(insets)
+    /** Trailing indicator; the containing band owns the click target. */
+    private val chevron = ActiveListActionCell()
+
+    // Only a list that can fold gets this container; every other list keeps the platform separator
+    // directly in the cell header, exactly as before.
+    private val band: JPanel? = if (folding) {
+        BandPanel(chevron).apply {
+            add(chevron)
+            add(sep)
+        }
+    } else {
+        null
+    }
     private val top = JPanel(BorderLayout()).apply {
         border = JBUI.Borders.empty()
-        add(sep, BorderLayout.NORTH)
+        add(band ?: sep, BorderLayout.NORTH)
     }
     // Pin the glyph to the top of the label so a stretched icon column keeps the icon on the
     // first text line instead of centering it across a multi-line row.
@@ -177,10 +202,13 @@ internal class ActiveListRenderer(
     init {
         isOpaque = true
         top.isOpaque = true
+        chevron.isVisible = false
+        band?.let { UiStyle.Components.transparent(it) }
         UiStyle.Components.transparent(
             layers,
             layers.content,
             row,
+            chevron,
             mark,
             icon,
             title,
@@ -256,6 +284,10 @@ internal class ActiveListRenderer(
             JBUI.Borders.empty(UiStyle.Gap.MD, 0, UiStyle.Gap.MD, 0)
         }
         mark.border = if (menu == null) JBUI.Borders.empty() else JBUI.Borders.emptyRight(UiStyle.Gap.MD)
+        // Align the band chevron with the row icon column so a separator reads as one level above the
+        // rows under it. [mark] sits at the row's leading edge, so its total width — icon column plus
+        // the menu-time right padding — is exactly the offset the caption starts at.
+        band?.border = JBUI.Borders.empty()
     }
 
     override fun updateUI() {
@@ -283,12 +315,17 @@ internal class ActiveListRenderer(
         val fg = UIUtil.getListForeground(active, active || focused)
         val weak = UiStyle.Colors.weak()
         val titleFg = if (value.progress != null) weak else fg
-        val section = activeListSectionTitle(model.items, index)
+        // The band belongs to the row that opens a section — the previous row has a different one — and
+        // to a folded section's stand-in. Reading it off the stamped row keeps the on-demand hit stamp,
+        // which is built from the bare renderer without the platform's leading-line reset, honest.
+        val prev = model.items.getOrNull(index - 1)
+        val heading = value.section?.takeIf { it != prev?.section }
+        val folded = value is ActiveListSectionRow
 
         background = list.background
         top.background = list.background
         wrap.update(list, selected, active)
-        syncHeader(section, index)
+        syncHeader(heading, index, folded, value.section?.let(toggles))
 
         if (value is ActiveListGap) {
             gap = true
@@ -300,8 +337,20 @@ internal class ActiveListRenderer(
             activeListInvalidate(this)
             return this
         }
+        if (value is ActiveListSectionRow) {
+            // A collapsed section's stand-in: the band is the whole row. The body stays hidden rather
+            // than sized to zero, so the cell measures its band and nothing else.
+            gap = false
+            layers.isVisible = false
+            pill.isVisible = false
+            glyph.isVisible = false
+            wrap.isVisible = false
+            activeListInvalidate(this)
+            return this
+        }
         gap = false
         layers.isVisible = true
+        wrap.isVisible = true
 
         // Text that runs out of room is cut and faded rather than ellipsed, so the row spends every pixel
         // it has on the text itself. The fade blends into whatever the row painted behind the line, read
@@ -396,8 +445,8 @@ internal class ActiveListRenderer(
         return this
     }
 
-    private fun syncHeader(section: String?, index: Int) {
-        sep.caption = section
+    private fun syncHeader(heading: String?, index: Int, folded: Boolean, collapse: (() -> Unit)?) {
+        sep.caption = heading
         sep.setHideLine(!cfg.divider || index == 0)
         val font = if (cfg.header == ActiveListWeight.BOLD) {
             RelativeFont.BOLD.derive(sep.font)
@@ -405,8 +454,36 @@ internal class ActiveListRenderer(
             RelativeFont.PLAIN.derive(sep.font)
         }
         if (sep.font != font) sep.font = font
-        top.isVisible = section != null
-        top.setPreferredSize(section?.let {
+        // The band — and the chevron that rides on it — exists only on the row that opens a section.
+        band?.isVisible = heading != null
+        chevron.isVisible = folding && heading != null
+        // A folded section's caption already carries its hidden-row count and names the section it
+        // stands for; every other band returns there through the owner's stable action.
+        if (folded) {
+            chevron.update(
+                ActiveListCell(
+                    "",
+                    KiloBundle.message("list.section.expand"),
+                    icon = AllIcons.General.ArrowRight,
+                    iconOnly = true,
+                    alwaysVisible = true,
+                    action = collapse,
+                ),
+            )
+        } else if (collapse != null) {
+            chevron.update(
+                ActiveListCell(
+                    "",
+                    KiloBundle.message("list.section.collapse"),
+                    icon = AllIcons.General.ArrowDown,
+                    iconOnly = true,
+                    alwaysVisible = true,
+                    action = collapse,
+                ),
+            )
+        }
+        top.isVisible = heading != null
+        top.setPreferredSize(heading?.let {
             val height = sep.preferredSize.height
                 .coerceAtLeast(sep.getFontMetrics(sep.font).height + insets.top + insets.bottom)
             Dimension(0, height + JBUI.scale(2))
@@ -453,6 +530,7 @@ internal class ActiveListRenderer(
         focused: Boolean,
     ): Int {
         val fixed = bodyHeight
+        if (value is ActiveListSectionRow) return 0
         bodyHeight = null
         getListCellRendererComponent(list, value, index, selected, focused)
         val height = LayoutPass.measure { wrap.preferredSize.height }
@@ -565,6 +643,34 @@ internal class ActiveListChangesCell @RequiresEdt constructor() : JPanel(BorderL
     override fun cellTooltip(): String? = toolTipText
 
     override fun cellAction(): (() -> Unit)? = data?.action
+}
+
+/** Full-width separator with a trailing toggle; the entire band is one click target. */
+private class BandPanel(private val chevron: ActiveListActionCell) : JPanel(null), ActiveListHitCell {
+    override val cellId: String get() = ACTIVE_LIST_SECTION_CELL
+    override fun cellEnabled() = chevron.cellEnabled()
+    override fun cellCursor() = chevron.cellCursor()
+    override fun cellTooltip() = chevron.cellTooltip()
+    override fun cellAction() = chevron.cellAction()
+
+    override fun getPreferredSize(): Dimension = Dimension(
+        components.filter { it.isVisible }.sumOf { it.preferredSize.width },
+        components.filter { it.isVisible }.maxOfOrNull { it.preferredSize.height } ?: 0,
+    )
+
+    override fun doLayout() {
+        val sep = components.getOrNull(1) ?: return
+        sep.setBounds(0, 0, width, height)
+        val size = chevron.preferredSize
+        val insets = JBUI.CurrentTheme.Popup.separatorLabelInsets()
+        val bottom = height - insets.bottom
+        chevron.setBounds(
+            (width - size.width - insets.right).coerceAtLeast(0),
+            (bottom - size.height).coerceAtLeast(0),
+            size.width,
+            size.height,
+        )
+    }
 }
 
 internal class ActiveListActionCell : JBLabel(), ActiveListHitCell {

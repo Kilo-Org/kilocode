@@ -17,6 +17,7 @@ object KiloPluginSettings {
     private const val CODE_EDIT_DISPLAY_KEY = "kilo.session.codeEditDisplay"
     private const val MCP_TOOL_DISPLAY_KEY = "kilo.session.mcpToolDisplay"
     private const val HOVER_PREVIEW_KEY = "kilo.session.hoverPreview"
+    private const val AGENT_SECTIONS_KEY = "kilo.agentManager.collapsedSections"
 
     /**
      * Mode the prompt picker last selected, or null when the CLI's own default should win.
@@ -137,6 +138,19 @@ object KiloPluginSettings {
 
     internal fun unsetHoverPreview() {
         PropertiesComponent.getInstance().unsetValue(HOVER_PREVIEW_KEY)
+    }
+
+    /** Separators the user folded in the Agents list, identified by their caption. */
+    fun getAgentSectionsCollapsed(): Set<String> =
+        PropertiesComponent.getInstance().getList(AGENT_SECTIONS_KEY)?.toSet().orEmpty()
+
+    fun setAgentSectionsCollapsed(value: Set<String>) {
+        PropertiesComponent.getInstance().setList(AGENT_SECTIONS_KEY, value)
+    }
+
+    internal fun unsetAgentSectionsCollapsed() {
+        // unsetValue alone does not clear a value written through setList.
+        PropertiesComponent.getInstance().setList(AGENT_SECTIONS_KEY, emptyList())
     }
 
     /** Reads every transcript appearance preference as one snapshot. */
