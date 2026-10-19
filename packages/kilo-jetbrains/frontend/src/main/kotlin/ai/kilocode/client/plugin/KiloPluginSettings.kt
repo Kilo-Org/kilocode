@@ -18,6 +18,7 @@ object KiloPluginSettings {
     private const val MCP_TOOL_DISPLAY_KEY = "kilo.session.mcpToolDisplay"
     private const val HOVER_PREVIEW_KEY = "kilo.session.hoverPreview"
     private const val AGENT_SECTIONS_KEY = "kilo.agentManager.collapsedSections"
+    private const val FETCH_WORKTREE_BASE_KEY = "kilo.worktree.fetchBase"
 
     /**
      * Mode the prompt picker last selected, or null when the CLI's own default should win.
@@ -151,6 +152,16 @@ object KiloPluginSettings {
     internal fun unsetAgentSectionsCollapsed() {
         // unsetValue alone does not clear a value written through setList.
         PropertiesComponent.getInstance().setList(AGENT_SECTIONS_KEY, emptyList())
+    }
+
+    fun getFetchWorktreeBase(): Boolean = PropertiesComponent.getInstance().getBoolean(FETCH_WORKTREE_BASE_KEY, true)
+
+    fun setFetchWorktreeBase(value: Boolean) {
+        PropertiesComponent.getInstance().setValue(FETCH_WORKTREE_BASE_KEY, value.toString())
+    }
+
+    internal fun unsetFetchWorktreeBase() {
+        PropertiesComponent.getInstance().unsetValue(FETCH_WORKTREE_BASE_KEY)
     }
 
     /** Reads every transcript appearance preference as one snapshot. */

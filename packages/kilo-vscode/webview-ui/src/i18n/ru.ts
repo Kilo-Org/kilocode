@@ -329,6 +329,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Чтение списка задач",
   "ui.permission.toolLabel.todoWrite": "Запись списка задач",
   "ui.permission.toolLabel.codeSearch": "Поиск кода",
+  "ui.permission.toolLabel.browserOpen": "Встроенный браузер",
   "ui.permission.copyCommand": "Копировать",
   "ui.approval.auto": "Одобрено автоматически",
   "ui.approval.manual": "Одобрено вами",
@@ -607,6 +608,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Получить содержимое по URL",
   "settings.permissions.tool.websearch.description": "Поиск в интернете",
   "settings.permissions.tool.codesearch.description": "Поиск кода в интернете",
+  "settings.permissions.tool.browser_open.description": "Открыть страницу во встроенном браузере",
   "settings.permissions.tool.external_directory.description": "Доступ к файлам вне директории проекта",
   "settings.permissions.tool.doom_loop.description": "Обнаружение повторных вызовов инструментов с одинаковым вводом",
 
@@ -1180,6 +1182,8 @@ export const dict = {
   "settings.autoApprove.tool.webfetch": "Получение URL. Разрешает извлечение содержимого по указанному URL-адресу.",
   "settings.autoApprove.tool.websearch":
     "Поиск в интернете. Разрешает выполнение внешних поисковых запросов в интернете.",
+  "settings.autoApprove.tool.browser_open":
+    "Открывать страницы во встроенном браузере. Это встроенный предпросмотр, а не автоматизация Playwright.",
   "settings.autoApprove.tool.external_directory":
     "Доступ к файлам вне рабочей области. Срабатывает при доступе к файлам за пределами текущего каталога проекта.",
   "settings.autoApprove.tool.doom_loop":
