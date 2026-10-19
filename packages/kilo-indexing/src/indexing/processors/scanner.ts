@@ -382,7 +382,7 @@ export class DirectoryScanner implements IDirectoryScanner {
                 release()
               }
             }
-            if (!addedBlocksFromFile) {
+            if (!addedBlocksFromFile && !this._cancelled) {
               this.cacheManager.updateHash(filePath, currentFileHash)
             }
           } else {
