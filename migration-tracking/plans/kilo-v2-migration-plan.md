@@ -967,6 +967,16 @@ flowchart LR
 | #14991 | Tracker → U-E1-03, U-E1-04 (+ server contracts for U-E1-08, U-E6-08) | Gateway epic; design in `kilo-gateway-v2-plan.md` |
 | #15020 | U-L1-01 (+ the shared-file counter of U-L3-01, the marker guard of U-E3-08) | |
 | #15108 | U-E1-05 | Aliased-model prompt overrides only |
+| #15171 | Tracker → E0 | Foundation epic |
+| #15172 | U-E0-01 | |
+| #15173 | U-E0-02 | |
+| #15175 | U-E0-03 | |
+| #15176 | U-E0-04 | |
+| #15177 | U-E0-05 | |
+| #15229 | U-E0-01 + placement automation (`v2-host-strategy.md` §9 step 2) | Work merged in #15232 |
+| #15230 | Progress map adopts the host strategy (`v2-host-strategy.md` §9 step 2b; feeds U-L3-01) | Work merged in #15231 |
+| #15244 | E0 foundation: Kilo plugin startup ratchet and Gateway startup (startup part of U-E9-01) | Work merged in #15246, #15248 |
+| #15059 | Proposed: U-E1-08 (reload, watcher policy) + U-E9-05 (TUI config hot reload) | Evaluation issue; mapping to confirm with the user |
 
 Issues that map to more than one unit (#14378, #14391, #14395, #14399, #14413, #14414, #14416, #14419) either become umbrellas with one child per unit, or are narrowed; that choice is the user's.
 
@@ -994,11 +1004,10 @@ Issues that map to more than one unit (#14378, #14391, #14395, #14399, #14413, #
 | N16 JetBrains scenario set | U-L4-04 |
 | N17 preview release train | U-E3-10 |
 
-### Units that need a new issue (75)
+### Units that need a new issue (70)
 
 | Epic | Units |
 |---|---|
-| E0 | U-E0-01, -02, -03, -04, -05 |
 | E1 | U-E1-01, -02, -05 (beyond #15108), -06, -07, -08 |
 | E2 | U-E2-06 … -12, -14, -15, -16, -17 … -26, -28, -29, -30 (all except -01 … -05, -13, -27) |
 | E9 | U-E9-01 … -08, -13, -14, -15 |
