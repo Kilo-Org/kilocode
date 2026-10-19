@@ -475,6 +475,7 @@ describe("openai message conversion", () => {
           { type: "file", mediaType: "audio/mpeg", data: "data:audio/mpeg;base64,SUQz" },
           { type: "file", mediaType: "audio/x-wav", data: "UklG" },
           { type: "file", mediaType: "audio/basic", data: "AAAA" },
+          { type: "file", mediaType: "audio/constructor", data: "AAAA" },
         ],
       },
     ] as unknown as ModelMessage[]

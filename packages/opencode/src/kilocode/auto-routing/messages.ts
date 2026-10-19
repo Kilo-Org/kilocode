@@ -82,8 +82,9 @@ function filePart(data: unknown, mime: string, filename: string): unknown {
   if (mime.startsWith("video/")) return { type: "video_url", video_url: { url } }
   if (mime.startsWith("audio/")) {
     // The gateway provider rejects an unmapped format; the classifier skips that part.
-    const format = AUDIO_FORMATS[mime.slice("audio/".length)]
-    if (!format) return undefined
+    const sub = mime.slice("audio/".length)
+    if (!Object.hasOwn(AUDIO_FORMATS, sub)) return undefined
+    const format = AUDIO_FORMATS[sub]
     return { type: "input_audio", input_audio: { data: url.replace(/^data:[^;]*;base64,/, ""), format } }
   }
   return { type: "file", file: { filename, file_data: url } }
