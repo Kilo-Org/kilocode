@@ -40,6 +40,7 @@ const finish = exitCode => {
     exitCode,
     durationMs: Date.now() - startedAt,
     timedOut,
+    stdoutTruncated,
     stdoutLines: stdout.split('\\n').filter(line => line.length > 0),
     stderrTail,
   });
@@ -86,6 +87,8 @@ export type EvalContainerResult = {
   exitCode: number
   durationMs: number
   timedOut: boolean
+  // The stdout cap cut the event stream; the retained prefix is not the full answer.
+  stdoutTruncated: boolean
   stdoutLines: string[]
   stderrTail: string
 }
@@ -184,6 +187,7 @@ export type EvalModelConfig = {
   cost: { input: number; output: number; cache_read: number; cache_write: number }
   limit: { context: number; output: number }
   variants?: Record<string, Record<string, unknown>>
+  headers?: Record<string, string>
 }
 
 export type EvalProviderConfig = {
@@ -235,12 +239,20 @@ export function evalProviderConfig(input: EvalProviderConfigInput): EvalProvider
               output: input.model.limit.output,
             },
             ...(input.model.variants ? { variants: input.model.variants } : {}),
+            ...modelHeaders(input.model.headers),
           },
         },
       },
     },
     enabled_providers: [input.provider.id],
   }
+}
+
+// Model headers are part of the request the model normally receives; credential
+// headers stay out because the key travels in KILO_AUTH_CONTENT.
+function modelHeaders(headers: Record<string, string>): { headers?: Record<string, string> } {
+  const kept = Object.fromEntries(Object.entries(headers).filter(([key]) => !isSecretKey(key)))
+  return Object.keys(kept).length > 0 ? { headers: kept } : {}
 }
 
 function modalities(input: Record<string, boolean>): string[] {
@@ -256,5 +268,5 @@ export function redactedConfig(config: unknown): string {
 }
 
 function isSecretKey(key: string): boolean {
-  return /(api[-_]?key|token|secret|password|authorization)/i.test(key)
+  return /(api[-_]?key|token|secret|password|authorization|cookie)/i.test(key)
 }

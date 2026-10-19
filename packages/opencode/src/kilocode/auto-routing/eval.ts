@@ -252,6 +252,7 @@ async function runItem(state: Worker, item: ClientEvalPlanItem): Promise<void> {
       },
     )
     const parsed = containerResult(result.stdout.toString())
+    if (parsed.stdoutTruncated) throw new Error("Output exceeded the container stdout cap; the case was not uploaded")
     const events = parseKiloRunEvents(parsed.stdoutLines)
     const score = await uploadClientEvalResult({
       token: state.input.token,
@@ -286,13 +287,14 @@ function label(entry: CustomRouterEntryRef): string {
 async function writeEnvFile(values: Record<string, string>): Promise<{ dir: string; file: string }> {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-auto-eval-env-"))
   const file = path.join(dir, "eval.env")
-  await fs.writeFile(
-    file,
-    Object.entries(values)
-      .map(([key, value]) => `${key}=${value}`)
-      .join("\n"),
-    { mode: 0o600 },
-  )
+  const body = Object.entries(values)
+    .map(([key, value]) => `${key}=${value}`)
+    .join("\n")
+  // The caller owns cleanup only after this returns; a failed write must not leave credentials behind.
+  await fs.writeFile(file, body, { mode: 0o600 }).catch(async (error: unknown) => {
+    await fs.rm(dir, { recursive: true, force: true })
+    throw error
+  })
   return { dir, file }
 }
 

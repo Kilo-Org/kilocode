@@ -61,16 +61,37 @@ function userContent(content: unknown): string | unknown[] {
       continue
     }
     if (part.type === "image") {
-      const url = imageUrl(part.image)
+      const url = dataUrl(part.image, typeof part.mediaType === "string" ? part.mediaType : "image/jpeg")
       if (url) parts.push({ type: "image_url", image_url: { url } })
+      continue
+    }
+    if (part.type === "file" && typeof part.mediaType === "string") {
+      const file = filePart(part.data, part.mediaType, typeof part.filename === "string" ? part.filename : "")
+      if (file) parts.push(file)
     }
   }
   return parts.length > 0 ? parts : ""
 }
 
-function imageUrl(image: unknown): string | undefined {
-  if (typeof image === "string") return image
-  if (image instanceof URL) return image.toString()
+// Mirrors the gateway provider's file conversion (@openrouter/ai-sdk-provider),
+// so the classifier sees the attachment the selected model receives.
+function filePart(data: unknown, mime: string, filename: string): unknown {
+  const url = dataUrl(data, mime)
+  if (!url) return undefined
+  if (mime.startsWith("image/")) return { type: "image_url", image_url: { url } }
+  if (mime.startsWith("video/")) return { type: "video_url", video_url: { url } }
+  if (mime.startsWith("audio/")) {
+    return { type: "input_audio", input_audio: { data: url.replace(/^data:[^;]*;base64,/, ""), format: mime.slice(6) } }
+  }
+  return { type: "file", file: { filename, file_data: url } }
+}
+
+function dataUrl(data: unknown, mime: string): string | undefined {
+  if (data instanceof URL) return data.toString()
+  if (typeof data === "string") return /^(data|https?):/i.test(data) ? data : `data:${mime};base64,${data}`
+  if (data instanceof Uint8Array || data instanceof ArrayBuffer) {
+    return `data:${mime};base64,${Buffer.from(data instanceof ArrayBuffer ? new Uint8Array(data) : data).toString("base64")}`
+  }
   return undefined
 }
 

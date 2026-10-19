@@ -149,6 +149,13 @@ describe("eval provider config", () => {
     expect(entry.cost).toEqual({ input: 1, output: 2, cache_read: 0, cache_write: 0 })
     expect(Object.keys(entry.variants ?? {})).toEqual(["low", "high"])
   })
+
+  test("keeps configured model headers and drops credential headers", () => {
+    const model = { ...MODEL, headers: { "X-Route": "eu", Authorization: "Bearer sk-secret-value", "x-api-key": "k" } }
+    const entry = evalProviderConfig({ model, provider: PROVIDER }).provider.ollama.models.qwen3
+    expect(entry.headers).toEqual({ "X-Route": "eu" })
+    expect(config().provider.ollama.models.qwen3.headers).toBeUndefined()
+  })
 })
 
 describe("docker invocation", () => {
@@ -219,6 +226,28 @@ describe("docker invocation", () => {
       } finally {
         await input.close()
       }
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test.skipIf(process.platform === "win32")("reports a truncated event stream when stdout passes the cap", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-auto-eval-entry-"))
+    try {
+      await fs.writeFile(path.join(dir, "entry.mjs"), EVAL_ENTRYPOINT)
+      const run = async (size: number) => {
+        await fs.writeFile(
+          path.join(dir, "kilo"),
+          `#!/usr/bin/env node\nprocess.stdout.write('x'.repeat(${size}) + '\\n')`,
+          { mode: 0o755 },
+        )
+        const result = await Process.text(["node", path.join(dir, "entry.mjs")], {
+          env: { PATH: `${dir}${path.delimiter}${process.env.PATH ?? ""}` },
+        })
+        return JSON.parse(result.text) as { stdoutTruncated: boolean }
+      }
+      expect((await run(3 * 1024 * 1024)).stdoutTruncated).toBe(true)
+      expect((await run(1024)).stdoutTruncated).toBe(false)
     } finally {
       await fs.rm(dir, { recursive: true, force: true })
     }

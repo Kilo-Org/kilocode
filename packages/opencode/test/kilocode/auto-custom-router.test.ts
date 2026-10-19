@@ -462,11 +462,33 @@ describe("openai message conversion", () => {
     ])
   })
 
-  test("drops unsupported parts and keeps an empty content string", () => {
+  test("converts session file attachments the way the gateway provider does", () => {
+    // Session messages carry attachments as `file` parts whose data is the part URL.
     const messages = [
-      { role: "user", content: [{ type: "file", mediaType: "application/pdf", data: "abc" }] },
+      {
+        role: "user",
+        content: [
+          { type: "file", mediaType: "image/png", filename: "a.png", data: "data:image/png;base64,iVBO" },
+          { type: "file", mediaType: "application/pdf", filename: "spec.pdf", data: "data:application/pdf;base64,JVBE" },
+          { type: "file", mediaType: "text/plain", filename: "notes.txt", data: new Uint8Array([104, 105]) },
+          { type: "file", mediaType: "image/jpeg", data: new URL("https://example.com/b.jpg") },
+        ],
+      },
     ] as unknown as ModelMessage[]
-    expect(openaiMessages(messages)).toEqual([{ role: "user", content: "" }])
+    expect(openaiMessages(messages)).toEqual([
+      {
+        role: "user",
+        content: [
+          { type: "image_url", image_url: { url: "data:image/png;base64,iVBO" } },
+          { type: "file", file: { filename: "spec.pdf", file_data: "data:application/pdf;base64,JVBE" } },
+          { type: "file", file: { filename: "notes.txt", file_data: "data:text/plain;base64,aGk=" } },
+          { type: "image_url", image_url: { url: "https://example.com/b.jpg" } },
+        ],
+      },
+    ])
+  })
+
+  test("drops unsupported parts and keeps an empty content string", () => {
     expect(openaiMessages([{ role: "user", content: [{ type: "reasoning", text: "x" }] } as unknown as ModelMessage])).toEqual([
       { role: "user", content: "" },
     ])
