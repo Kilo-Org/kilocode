@@ -16,7 +16,7 @@ All numbers were measured on the repository, not estimated. B1 is the upstream v
 | Patched files that merge textually into v2 (`git merge-file`) | 103 of 941 (11%), nearly all `packages/ui` |
 | Kilo imports with no same-named v2 module | 532 of 697 (76%) |
 | Archived port after 1462 upstream commits | 24 shared seam files: 5 still apply, 16 conflict, 3 targets deleted |
-| v2.0.30 sync, gateway adapter dependencies | 3 of 12 imported upstream modules changed, 0 conflicts, found by reading the diff by hand |
+| v2.0.30 sync, Gateway adapter dependencies (`core/src/kilocode/gateway.ts` and `gateway-rpc.ts`) | 3 of 12 distinct imported upstream modules changed, 0 conflicts, found by reading the diff by hand |
 
 What follows from the numbers:
 
@@ -80,7 +80,7 @@ Mapped onto the rung table in the fork conventions: plugin hook is rung 1, host 
 
 The host is Kilo's own `main()`. It does what `packages/cli/src/index.ts` does (compose layers, run `Commands`), with Kilo's plugins and Kilo's service overrides passed through the two seams upstream already offers to embedders: `SdkPlugins.register` (`packages/core/src/plugin/sdk.ts`) and `LayerNode` replacements (`Global.node.replace(Global.layerWith(...))`, used by upstream itself in `cli/src/index.ts`). Q-HOST-01 is answered: a Kilo host entry package, not a thin wrapper, because upstream's CLI exports no wrap surface.
 
-Why it is first: every feature merged before it registers through a marked line in an upstream builtin list (the Gateway in `provider.ts:14`, Kilo agents in `internal.ts`, the TUI `/teams` command in `builtins.ts`). Three existing shared patches (`.gitignore`, root `package.json`, `README.md`) already state in `shared-patches.json` that they go away when the host owns the root and dev entry. Rungs 1 and 2 of the ladder are closed until the host exists, so every unit lands on rung 3 by necessity.
+Why it is first: every feature merged before it registers through a marked line in an upstream builtin list (the Gateway in `provider.ts:14` and the TUI `/teams` command in `builtins.ts` on `v2`; the Kilo agents PR #14999, still open, adds the same shape to `internal.ts`). Three existing shared patches (`.gitignore`, root `package.json`, `README.md`) already state in `shared-patches.json` that they go away when the host owns the root and dev entry. Rungs 1 and 2 of the ladder are closed until the host exists, so every unit lands on rung 3 by necessity.
 
 ### Pieces, measured against the tree at `v2.0.30`
 
@@ -167,7 +167,7 @@ The test for the strategy: under every upstream future, Kilo must be no worse of
 Three rules make the second and third rows true. They are enforced, not advisory.
 
 1. **Every host dependency on upstream is one of three things:** the public plugin API; a listed seam with a named rung-3 fallback in `shared-patches.json`; or a mirrored file registered in the sync tooling with a drift check. Nothing else.
-2. **Logic packages import zero `@opencode/*`.** Adapters import the public surfaces (`@opencode/plugin`, `@opencode/schema`, `@opencode/client`, `@opencode/util`) freely and core internals only through an allowlist with a reason. The count of distinct core-internal modules imported by Kilo packages is a ratcheted number next to the shared-patch count. Today the Gateway adapter imports 12 upstream modules, 2 of them core internals (`Bus`, `Variant`); `kilo-gateway-core` imports none. Since U-E0-01 the host adds `App`, `Bus` and `plugin/sdk` (its composition seams), so the distinct count across Kilo packages is 4. `bun script/upstream/placement.ts --imports` prints it and fails on a logic-package import.
+2. **Logic packages import zero `@opencode/*`.** Adapters import the public surfaces (`@opencode/plugin`, `@opencode/schema`, `@opencode/client`, `@opencode/util`) freely and core internals only through an allowlist with a reason. The count of distinct core-internal modules imported by Kilo packages is a ratcheted number next to the shared-patch count. Today the Gateway adapter files (`core/src/kilocode/gateway.ts` and `gateway-rpc.ts`) import 12 distinct upstream modules: 10 from the public surfaces (`gateway.ts` 9, plus `@opencode/schema/rpc` in `gateway-rpc.ts`) and 2 core internals (`Bus`, `Variant`); `kilo-gateway-core` imports none. Since U-E0-01 the host adds `App`, `Bus` and `plugin/sdk` (its composition seams), so the distinct count across Kilo packages is 4. `bun script/upstream/placement.ts --imports` prints it and fails on a logic-package import.
 3. **A marked line is never the home of behavior.** It registers, widens or calls out. Behavior lives in a Kilo-owned module.
 
 ## 7. Detecting upstream change without conflicts
