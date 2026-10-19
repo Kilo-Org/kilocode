@@ -2,11 +2,13 @@ export * as Provider from "./provider.js"
 
 import { Effect, Schema } from "effect"
 import { Integration } from "./integration.js"
+import { ProviderCompatibility } from "./model-compatibility.js"
 import { optional, statics } from "./schema.js"
 import { ephemeral, inventory } from "./event.js"
 
 export const ID = Schema.String.pipe(
   Schema.brand("Provider.ID"),
+  Schema.annotate({ identifier: "Provider.ID" }),
   statics((schema) => ({
     opencode: schema.make("opencode"),
     anthropic: schema.make("anthropic"),
@@ -44,6 +46,10 @@ export type Compaction = typeof Compaction.Type
 export const Transport = Schema.Literals(["http", "websocket"]).annotate({ identifier: "Provider.Transport" })
 export type Transport = typeof Transport.Type
 
+/** HTTP request body compression; only endpoints known to decode it should enable it. */
+export const Encoding = Schema.Literals(["zstd", "gzip", "none"]).annotate({ identifier: "Provider.Encoding" })
+export type Encoding = typeof Encoding.Type
+
 export const Settings = Schema.StructWithRest(
   Schema.Struct({
     timeout: Schema.Union([Schema.Finite, Schema.Literal(false)]).pipe(optional),
@@ -51,6 +57,7 @@ export const Settings = Schema.StructWithRest(
     chunkTimeout: Schema.Union([Schema.Finite, Schema.Literal(false)]).pipe(optional),
     compaction: Compaction.pipe(optional),
     transport: Transport.pipe(optional),
+    encoding: Encoding.pipe(optional),
   }),
   [Schema.Record(Schema.String, Schema.Any)],
 ).annotate({ identifier: "Provider.Settings" })
@@ -77,6 +84,8 @@ export const Info = Schema.Struct({
   name: Schema.String,
   activation: Activation,
   package: Package,
+  /** Inherited by every model of this provider; model compatibility overrides individual fields. */
+  compatibility: ProviderCompatibility.pipe(optional),
   ...Overlays,
 })
   .annotate({ identifier: "Provider.Info" })

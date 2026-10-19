@@ -1,7 +1,16 @@
 diff --git a/dist/index.cjs b/dist/index.cjs
-index 635f1c0134274c89e7efbcae2adf3d9ecba575ee..5eaa7b451c8c7e12e51f61c2a835ff6f7a8ea0ae 100644
+index 635f1c0134274c89e7efbcae2adf3d9ecba575ee..3f4dfb779a55deaae2c188a442b78ca519d5c17d 100644
 --- a/dist/index.cjs
 +++ b/dist/index.cjs
+@@ -517,7 +517,7 @@ function applyPublicAuth(clientId, params) {
+ }
+ /** Loopback hosts exempt from the in-transit `https:` requirement (RFC 8252 §7.3). */
+ function isLoopbackHost(hostname) {
+-	return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]" || hostname === "::1";
++	return hostname === "localhost" || hostname.endsWith(".localhost") || hostname === "127.0.0.1" || hostname === "[::1]" || hostname === "::1";
+ }
+ /**
+ * SEP-2207: refuse to send credentials to a non-TLS, non-loopback token endpoint.
 @@ -977,7 +977,6 @@ async function discoverMetadataWithFallback(serverUrl, wellKnownType, fetchFn, o
  	else {
  		const wellKnownPath = buildWellKnownPath(wellKnownType, issuer.pathname);
@@ -19,9 +28,18 @@ index 635f1c0134274c89e7efbcae2adf3d9ecba575ee..5eaa7b451c8c7e12e51f61c2a835ff6f
  	return {
  		authorizationUrl,
 diff --git a/dist/index.mjs b/dist/index.mjs
-index f02ce3ca394e826fc27c9848dbe9a214bf6ba7a9..73a93a066c3540e131fa0770a74b4a7e8d9343a0 100644
+index f02ce3ca394e826fc27c9848dbe9a214bf6ba7a9..3508b8e841bb8d3d724fa5ff573902dbca81cf89 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
+@@ -514,7 +514,7 @@ function applyPublicAuth(clientId, params) {
+ }
+ /** Loopback hosts exempt from the in-transit `https:` requirement (RFC 8252 §7.3). */
+ function isLoopbackHost(hostname) {
+-	return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]" || hostname === "::1";
++	return hostname === "localhost" || hostname.endsWith(".localhost") || hostname === "127.0.0.1" || hostname === "[::1]" || hostname === "::1";
+ }
+ /**
+ * SEP-2207: refuse to send credentials to a non-TLS, non-loopback token endpoint.
 @@ -974,7 +974,6 @@ async function discoverMetadataWithFallback(serverUrl, wellKnownType, fetchFn, o
  	else {
  		const wellKnownPath = buildWellKnownPath(wellKnownType, issuer.pathname);

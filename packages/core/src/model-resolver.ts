@@ -237,10 +237,13 @@ const resolveCatalogModel = Effect.fn("ModelResolver.resolveCatalogModel")(funct
         compatibility: resolved.compatibility
           ? Object.assign({}, runtime.compatibility, resolved.compatibility)
           : runtime.compatibility,
-        // Timeouts are transport policy, so they land on the route's HTTP defaults instead of package settings.
+        // Timeouts and body encoding are transport policy, so they land on the route's HTTP defaults instead of package settings.
         defaults: {
           ...runtime.defaults,
-          http: mergeHttpOptions(runtime.defaults?.http, new HttpOptions(Provider.timeouts(configured))),
+          http: mergeHttpOptions(
+            runtime.defaults?.http,
+            new HttpOptions({ ...Provider.timeouts(configured), encoding: Provider.encoding(configured) }),
+          ),
         },
       })
     },

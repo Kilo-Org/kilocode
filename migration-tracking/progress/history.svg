@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 200" width="1000" height="200">
+<style>text{font-family:sans-serif;font-size:11px;fill:#8b949e}.l{stroke:#30363d;stroke-width:1}.p{fill:none;stroke:#2ea043;stroke-width:2}.m{fill:#2ea043}</style>
+<rect x="0" y="0" width="1000" height="200" fill="#0d1117"/>
+<line class="l" x1="40" y1="170.00" x2="990" y2="170.00"/><text x="4" y="174.00">0%</text>
+<line class="l" x1="40" y1="132.50" x2="990" y2="132.50"/><text x="4" y="136.50">25%</text>
+<line class="l" x1="40" y1="95.00" x2="990" y2="95.00"/><text x="4" y="99.00">50%</text>
+<line class="l" x1="40" y1="57.50" x2="990" y2="57.50"/><text x="4" y="61.50">75%</text>
+<line class="l" x1="40" y1="20.00" x2="990" y2="20.00"/><text x="4" y="24.00">100%</text>
+<polyline class="p" points="40.00,169.85 515.00,168.65 990.00,168.65"/>
+<circle class="m" cx="40.00" cy="169.85" r="3"><title>2026-10-16: 0.1% (12/9854)</title></circle>
+<text x="40.00" y="192" text-anchor="middle">2026-10-16</text>
+<circle class="m" cx="515.00" cy="168.65" r="3"><title>2026-10-19: 0.9% (86/9829)</title></circle>
+<text x="515.00" y="192" text-anchor="middle">2026-10-19</text>
+<circle class="m" cx="990.00" cy="168.65" r="3"><title>now: 0.9% (86/9829)</title></circle>
+<text x="990.00" y="192" text-anchor="middle">now</text>
+</svg>

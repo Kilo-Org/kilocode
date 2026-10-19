@@ -102,17 +102,24 @@ if (Script.release && !Script.preview) {
   await $`git push origin refs/tags/${tag} --force-with-lease --no-verify`
   await new Promise((resolve) => setTimeout(resolve, 5_000))
   await $`git fetch origin`
-  await $`git checkout -B v2 origin/v2`
+  await $`git checkout -B dev origin/dev`
   await prepareReleaseFiles()
   await writeChangelog()
   if ((await $`git diff --quiet`.nothrow()).exitCode !== 0) {
     // The release already published this code; a push-triggered dev publish of a version bump is wasted work.
     await $`git commit -am ${`sync release versions for ${tag} [skip ci]`}`
-    await $`git push origin HEAD:v2 --no-verify`
+    await $`git push origin HEAD:dev --no-verify`
   }
 }
 
 if (Script.release) {
   console.log("\n=== desktop ===\n")
   await $`bun ./packages/desktop/scripts/publish.ts`
+}
+
+if (Script.release && Script.channel === "latest") {
+  console.log("\n=== winget ===\n")
+  // Everything else is published by now, and WinGet validation can reject a submission for reasons unrelated to the release.
+  if ((await $`bun ./script/publish-winget.ts`.nothrow()).exitCode !== 0)
+    console.log("::warning::WinGet submission failed; see the winget step output above")
 }

@@ -48,9 +48,14 @@ This section covers both JSON/JSONC configuration and file-based definitions und
 
 ### Use your existing configuration
 
-V2 reads existing global and project configuration from the same locations as V1:
+V2 reads existing system, global, and project configuration from the same locations as V1:
 
 ```text
+/Library/Application Support/opencode/opencode.json(c)
+/etc/opencode/opencode.json(c)
+%ProgramData%\opencode\opencode.json(c)
+/Library/Managed Preferences/<user>/ai.opencode.managed.plist
+/Library/Managed Preferences/ai.opencode.managed.plist
 ~/.config/opencode/opencode.json(c)
 <project>/opencode.json(c)
 <project>/.opencode/opencode.json(c)
@@ -59,6 +64,12 @@ V2 reads existing global and project configuration from the same locations as V1
 V2 reads these same locations. It normalizes supported V1 and native V2 fields in memory without rewriting the source
 file. Existing supported V1 configuration is intended to keep working, so you do not need to convert it to try or adopt
 V2.
+
+As in V1, system configuration and macOS managed preferences have the highest precedence, so their settings override
+global and project files. Their [policies](/policies#precedence), including migrated `enabled_providers` and
+`disabled_providers`, also outrank global and project policies. Overriding a setting cannot stop users from adding
+providers, MCP servers, agents, or plugins, so express admin-enforced restrictions as `policies` rather
+than ordinary settings such as `permissions`.
 
 ### Ask OpenCode to migrate
 
@@ -80,20 +91,6 @@ Nested mixing is intentionally bounded. OpenCode recognizes mixed V1 and V2 memb
 `experimental`, but it does not recursively infer formats inside individual agents, providers, commands, or models. Keep
 each of those nested entries entirely in one format. Supported V1 syntax remains quiet by itself; malformed values,
 unsupported legacy fields, and conflicting V1/V2 values produce warnings while unrelated valid settings continue to load.
-
-### Sharing
-
-The deprecated V1 `autoshare` boolean becomes the explicit `share` policy:
-
-```jsonc
-// V1
-{ "autoshare": true }
-
-// V2
-{ "share": "auto" }
-```
-
-Use `"manual"`, `"auto"`, or `"disabled"`. If the V1 file already uses `share`, no change is needed.
 
 ### Permissions and tools
 
@@ -358,7 +355,8 @@ Rename the singular `provider` map to `providers`. V2 separates the runtime pack
 ```
 
 V1 `npm` becomes `package`, and AI SDK packages receive the `aisdk:` prefix. `api` becomes `settings.baseURL`. Provider
-`options` are separated into `settings`, `headers`, and `body` according to their request role. See [Providers](/providers).
+`options` are separated into `settings`, `headers`, and `body` according to their request role. `options.setCacheKey`
+becomes `compatibility.supportsPromptCacheKey` on the provider. See [Providers](/providers).
 
 V2 consolidated two legacy provider namespaces:
 

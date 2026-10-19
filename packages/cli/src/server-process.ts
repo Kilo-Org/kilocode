@@ -9,7 +9,8 @@ import { AppProcess } from "@opencode/util/process"
 import { randomBytes, randomUUID } from "node:crypto"
 import { Effect, Option, Redacted, Schema } from "effect"
 import { PersistentPty } from "@opencode/schema/persistent-pty"
-import { HttpServer } from "effect/unstable/http"
+import { HttpServer } from "effect/http"
+import { NetAddress } from "effect/net"
 import { Env } from "./env"
 import { ServiceConfig } from "./services/service-config"
 import { RetainedImage } from "./services/retained-image"
@@ -25,6 +26,7 @@ export type Options = {
   readonly hostname?: string
   readonly port?: number
   readonly cors?: readonly string[]
+  readonly overrides?: LayerNode.Replacements // kilocode_change(host) seam - service replacements an embedding entry passes to the server
 }
 
 // The process effect lives until server shutdown; tracing it would parent every request to one process-lifetime trace.
@@ -116,6 +118,11 @@ const processEffect = Effect.fnUntraced(function* (options: Options) {
             project: !truthy(
               process.env.OPENCODE_CONFIG_PROJECT_DISABLE ?? process.env.OPENCODE_DISABLE_PROJECT_CONFIG,
             ),
+            // .claude is only read for skills, so both flags gate the same roots.
+            claude: !(
+              truthy(process.env.OPENCODE_DISABLE_CLAUDE_CODE) ||
+              truthy(process.env.OPENCODE_DISABLE_CLAUDE_CODE_SKILLS)
+            ),
             file: process.env.OPENCODE_CONFIG,
             content: process.env.OPENCODE_CONFIG_CONTENT,
           },
@@ -147,6 +154,7 @@ const processEffect = Effect.fnUntraced(function* (options: Options) {
             },
         transform,
         () => remote.urls,
+        options.overrides, // kilocode_change(host) seam - pass the overrides through
       )
       const server = yield* launch.pipe(
         Effect.catch((error) => {
@@ -173,14 +181,17 @@ const processEffect = Effect.fnUntraced(function* (options: Options) {
         }),
       )
       if (server === undefined) return
-      if (serviceOptions !== undefined && config.remote !== undefined && server.address._tag === "TcpAddress") {
-        const bound = server.address.hostname
+      if (serviceOptions !== undefined && config.remote !== undefined && NetAddress.isInetAddress(server.address)) {
+        const bound = NetAddress.formatIp(server.address.address)
         // A wildcard bind also listens on loopback, which is all the tunnel needs to reach.
-        const host = bound === "0.0.0.0" || bound === "::" ? "127.0.0.1" : bound.includes(":") ? `[${bound}]` : bound
+        const target =
+          bound === "0.0.0.0" || bound === "::"
+            ? `127.0.0.1:${server.address.port}`
+            : NetAddress.formatInet(server.address)
         yield* Effect.forkScoped(
           RemoteTunnel.run({
             route: config.remote.route,
-            target: `${host}:${server.address.port}`,
+            target,
             onURL: (url) => {
               remote.urls = url === undefined ? [] : [url]
             },

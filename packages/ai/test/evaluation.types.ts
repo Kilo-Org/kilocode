@@ -1,7 +1,7 @@
 import { Effect } from "effect"
 import { Evaluation, EvaluationClient, EvaluationModel, type EvaluationRoute } from "../src/experimental.js"
 import type { Service } from "../src/experimental/evaluation-client.js"
-import { OpenCodeZen, OpenRouter, TypeSafeAI, VercelAIGateway } from "../src/providers.js"
+import { OpenCode, OpenRouter, TypeSafeAI, VercelAIGateway } from "../src/providers.js"
 
 type Requirements<T> = T extends Effect.Effect<infer _A, infer _E, infer R> ? R : never
 type Success<T> = T extends Effect.Effect<infer A, infer _E, infer _R> ? A : never
@@ -34,7 +34,7 @@ void (true satisfies ClientRequirements)
 
 Effect.gen(function* () {
   const response = yield* Evaluation.run({
-    model: OpenCodeZen.experimental.evaluation("jev-1.13"),
+    model: OpenCode.experimental.evaluation("jev-1.13"),
     state: ["hello"],
     questions: { greeting: { type: "boolean", instructions: "Greeting?" } },
   })

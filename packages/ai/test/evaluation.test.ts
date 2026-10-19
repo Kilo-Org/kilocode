@@ -1,8 +1,8 @@
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
-import { HttpClientRequest } from "effect/unstable/http"
+import { HttpClientRequest } from "effect/http"
 import { Evaluation, EvaluationClient } from "../src/experimental.js"
-import { OpenCodeZen, OpenRouter, TypeSafeAI, VercelAIGateway } from "../src/providers.js"
+import { OpenCode, OpenRouter, TypeSafeAI, VercelAIGateway } from "../src/providers.js"
 import { it } from "./lib/effect.js"
 import { dynamicResponse } from "./lib/http.js"
 
@@ -116,9 +116,9 @@ describe("experimental Evaluation", () => {
     ),
   )
 
-  it.effect("configures the OpenCode Zen System One endpoint", () =>
+  it.effect("configures the OpenCode System One endpoint", () =>
     Evaluation.run({
-      model: OpenCodeZen.configure({ apiKey: "zen-key", baseURL: "https://zen.test/v1" }).experimental.evaluation(
+      model: OpenCode.configure({ apiKey: "opencode-key", baseURL: "https://opencode.test/v1" }).experimental.evaluation(
         "jev-1.13",
       ),
       state: "hello",
@@ -136,8 +136,8 @@ describe("experimental Evaluation", () => {
         EvaluationClient.layer.pipe(
           Layer.provide(
             dynamicResponse((input) => {
-              expect(input.request.url).toBe("https://zen.test/v1/systemone")
-              expect(input.request.headers.authorization).toBe("Bearer zen-key")
+              expect(input.request.url).toBe("https://opencode.test/v1/systemone")
+              expect(input.request.headers.authorization).toBe("Bearer opencode-key")
               return Effect.succeed(
                 input.respond(
                   JSON.stringify({

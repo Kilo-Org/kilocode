@@ -13,7 +13,7 @@ import {
 } from "@opentui/core"
 import type { JSX } from "@opentui/solid"
 import { useRenderer } from "@opentui/solid"
-import { batch, createMemo, createSignal, For, onCleanup, Show, splitProps } from "solid-js"
+import { batch, createEffect, createMemo, createSignal, For, on, onCleanup, Show, splitProps } from "solid-js"
 import { splitAddedPatch, splitPatchHunks, type AddedPatchChunk } from "../util/diff"
 import { stringWidth } from "../util/string-width"
 
@@ -31,10 +31,12 @@ type Props = Omit<JSX.IntrinsicElements["diff"], "diff" | "lineNumberBg" | "ref"
   lineNumberBg: ColorInput
   ref?: (value: PatchDiffRef) => void
   scroll?: () => ScrollBoxRenderable | undefined
+  /** Extra gutter columns before the line numbers, painted in each row's color. */
+  gutterPadding?: number
 }
 
 export function PatchDiff(props: Props) {
-  const [local, diffProps] = splitProps(props, ["diff", "hunkFg", "lineNumberBg", "ref", "scroll"])
+  const [local, diffProps] = splitProps(props, ["diff", "hunkFg", "lineNumberBg", "ref", "scroll", "gutterPadding"])
   const hunks = createMemo(() => splitPatchHunks(local.diff))
   const chunks = createMemo(() => {
     if (!local.scroll) return
@@ -70,20 +72,32 @@ export function PatchDiff(props: Props) {
           ...[...side.getLineSigns()].filter(([line]) => line >= 0).map(([, sign]) => stringWidth(sign.after ?? "")),
         ),
       )
+      // A diff creates its gutters after it mounts, so wait a few frames for them to appear.
+      if (sides.length === 0 && attempt < 5) return syncGutters(attempt + 1)
+      if (sides.length === 0) return
       const maxDigits = Math.max(...digits)
       const maxAfter = Math.max(...after)
-      if (!maxDigits && attempt < 2) return syncGutters(attempt + 1)
-      if (!maxDigits) return
       const width = Math.max(maxDigits, minDigits())
       sides.forEach((side) => {
         const index = sides.indexOf(side)
         const signs = new Map([...side.getLineSigns()].filter(([line]) => line >= 0))
-        signs.set(-1, { after: " ".repeat(maxAfter + width - digits[index]) })
+        // Line -1 never renders; its sign only sets the gutter's padding columns.
+        signs.set(-1, {
+          before: " ".repeat(local.gutterPadding ?? 0) || undefined,
+          after: " ".repeat(maxAfter + width - digits[index]),
+        })
         side.setLineNumbers(lineNumbers[index])
         side.setLineSigns(signs)
       })
     })
   }
+  createEffect(
+    on(
+      () => local.gutterPadding,
+      () => syncGutters(),
+      { defer: true },
+    ),
+  )
   const register = (index: number, node: DiffRenderable) => {
     nodes.set(index, node)
     onCleanup(() => nodes.delete(index))

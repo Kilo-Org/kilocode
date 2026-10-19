@@ -214,8 +214,8 @@ Read package.json and README.md in parallel, then return their relevant setup de
 
 The runtime has no direct filesystem access, imports, timers, or `fetch`; it can
 only call tools in its catalog. Permission `execute` with resource `*` controls
-whether Code Mode is available. Every nested tool still enforces its own
-permission.
+whether Code Mode is available. Nested built-in and MCP tools still enforce
+their own permissions, and plugin tools enforce the permissions they assert.
 
 ### Sessions
 
@@ -232,6 +232,25 @@ Rename this session to "Timeout cleanup", then move it to the new worktree.
 ```
 
 These utilities do not request a built-in permission action.
+
+### Worktrees
+
+The same namespace manages worktrees for the session's project:
+
+- `worktree_create` creates a worktree from a `name` and returns its
+  `directory`. The project's worktree configuration selects the destination and
+  strategy.
+- `worktree_list` lists the project's worktrees.
+- `worktree_remove` removes a worktree OpenCode recorded for the project. Set
+  `force` to discard uncommitted changes.
+
+```text
+Create a worktree named "login" and move this session into it.
+```
+
+`worktree_remove` uses the `edit` permission with the worktree directory as its
+resource. The other worktree utilities do not request a built-in permission
+action.
 
 ## Browser
 

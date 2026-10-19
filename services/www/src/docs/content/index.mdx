@@ -19,31 +19,33 @@ OpenCode is an open source AI coding agent. It’s available as a terminal-based
     { label: "yarn", code: "yarn global add @opencode/cli" },
     { label: "vite+", code: "vp install -g @opencode/cli" },
     { label: "aur", code: "paru -S opencode-beta" },
+    { label: "mise", code: "mise use -g opencode" },
   ]}
 />
 
 The npm package uses a postinstall script to select the native `opencode` binary for your platform. The Bun and pnpm commands
-explicitly allow the required script; Vite+ requires no additional flag.
+explicitly allow the required script; Vite+ requires no additional flag. The mise command requires mise 2026.10.9 or later;
+older versions install OpenCode 1.
 
 Windows package managers are not supported.
 
 
 Download a standalone CLI binary for your platform.
 
-- **macOS:** [Apple silicon](https://opencode.ai/files/bin/2.0.6/opencode-darwin-arm64.zip) · [Intel](https://opencode.ai/files/bin/2.0.6/opencode-darwin-x64.zip) · [Intel (baseline)](https://opencode.ai/files/bin/2.0.6/opencode-darwin-x64-baseline.zip)
-- **Windows:** [ARM64](https://opencode.ai/files/bin/2.0.6/opencode-windows-arm64.zip) · [x64](https://opencode.ai/files/bin/2.0.6/opencode-windows-x64.zip) · [x64 (baseline)](https://opencode.ai/files/bin/2.0.6/opencode-windows-x64-baseline.zip)
-- **Linux (glibc):** [ARM64](https://opencode.ai/files/bin/2.0.6/opencode-linux-arm64.tar.gz) · [x64](https://opencode.ai/files/bin/2.0.6/opencode-linux-x64.tar.gz) · [x64 (baseline)](https://opencode.ai/files/bin/2.0.6/opencode-linux-x64-baseline.tar.gz)
-- **Linux (musl):** [ARM64](https://opencode.ai/files/bin/2.0.6/opencode-linux-arm64-musl.tar.gz) · [x64](https://opencode.ai/files/bin/2.0.6/opencode-linux-x64-musl.tar.gz) · [x64 (baseline)](https://opencode.ai/files/bin/2.0.6/opencode-linux-x64-baseline-musl.tar.gz)
+- **macOS:** [Apple silicon](https://opencode.ai/update/api/latest/cli/opencode/opencode-darwin-arm64.zip) · [Intel](https://opencode.ai/update/api/latest/cli/opencode/opencode-darwin-x64.zip) · [Intel (baseline)](https://opencode.ai/update/api/latest/cli/opencode/opencode-darwin-x64-baseline.zip)
+- **Windows:** [ARM64](https://opencode.ai/update/api/latest/cli/opencode/opencode-windows-arm64.zip) · [x64](https://opencode.ai/update/api/latest/cli/opencode/opencode-windows-x64.zip) · [x64 (baseline)](https://opencode.ai/update/api/latest/cli/opencode/opencode-windows-x64-baseline.zip)
+- **Linux (glibc):** [ARM64](https://opencode.ai/update/api/latest/cli/opencode/opencode-linux-arm64.tar.gz) · [x64](https://opencode.ai/update/api/latest/cli/opencode/opencode-linux-x64.tar.gz) · [x64 (baseline)](https://opencode.ai/update/api/latest/cli/opencode/opencode-linux-x64-baseline.tar.gz)
+- **Linux (musl):** [ARM64](https://opencode.ai/update/api/latest/cli/opencode/opencode-linux-arm64-musl.tar.gz) · [x64](https://opencode.ai/update/api/latest/cli/opencode/opencode-linux-x64-musl.tar.gz) · [x64 (baseline)](https://opencode.ai/update/api/latest/cli/opencode/opencode-linux-x64-baseline-musl.tar.gz)
 
 ## Desktop
 
 Download the latest OpenCode Desktop build for your platform.
 
-- **macOS:** [Apple silicon](https://opencode.ai/files/bin/2.0.6/opencode-desktop-mac-arm64.dmg) · [Intel](https://opencode.ai/files/bin/2.0.6/opencode-desktop-mac-x64.dmg)
-- **Windows:** [x64](https://opencode.ai/files/bin/2.0.6/opencode-desktop-win-x64.exe) · [ARM64](https://opencode.ai/files/bin/2.0.6/opencode-desktop-win-arm64.exe)
-- **Linux (.deb):** [x64](https://opencode.ai/files/bin/2.0.6/opencode-desktop-linux-amd64.deb) · [ARM64](https://opencode.ai/files/bin/2.0.6/opencode-desktop-linux-arm64.deb)
-- **Linux (.rpm):** [x64](https://opencode.ai/files/bin/2.0.6/opencode-desktop-linux-x86_64.rpm) · [ARM64](https://opencode.ai/files/bin/2.0.6/opencode-desktop-linux-aarch64.rpm)
-- **Linux (AppImage):** [x64](https://opencode.ai/files/bin/2.0.6/opencode-desktop-linux-x86_64.AppImage) · [ARM64](https://opencode.ai/files/bin/2.0.6/opencode-desktop-linux-arm64.AppImage)
+- **macOS:** [Apple silicon](https://opencode.ai/update/api/latest/desktop/opencode/opencode-desktop-mac-arm64.dmg) · [Intel](https://opencode.ai/update/api/latest/desktop/opencode/opencode-desktop-mac-x64.dmg)
+- **Windows:** [x64](https://opencode.ai/update/api/latest/desktop/opencode/opencode-desktop-win-x64.exe) · [ARM64](https://opencode.ai/update/api/latest/desktop/opencode/opencode-desktop-win-arm64.exe)
+- **Linux (.deb):** [x64](https://opencode.ai/update/api/latest/desktop/opencode/opencode-desktop-linux-amd64.deb) · [ARM64](https://opencode.ai/update/api/latest/desktop/opencode/opencode-desktop-linux-arm64.deb)
+- **Linux (.rpm):** [x64](https://opencode.ai/update/api/latest/desktop/opencode/opencode-desktop-linux-x86_64.rpm) · [ARM64](https://opencode.ai/update/api/latest/desktop/opencode/opencode-desktop-linux-aarch64.rpm)
+- **Linux (AppImage):** [x64](https://opencode.ai/update/api/latest/desktop/opencode/opencode-desktop-linux-x86_64.AppImage) · [ARM64](https://opencode.ai/update/api/latest/desktop/opencode/opencode-desktop-linux-arm64.AppImage)
 
 
 ## Web

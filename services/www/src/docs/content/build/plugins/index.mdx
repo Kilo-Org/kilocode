@@ -591,6 +591,22 @@ interface IntegrationEditor {
 }
 ```
 
+### Credentials
+
+Make a saved credential the active one for its integration.
+
+```ts
+await ctx.credential.activate({ credentialID })
+```
+
+#### Reference
+
+```ts
+interface CredentialContext {
+  activate(input: CredentialActivateInput, requestOptions?: RequestOptions): Promise<void>
+}
+```
+
 ### MCP
 
 List MCP servers and their current connection state.
@@ -722,6 +738,32 @@ const review = await ctx.generate.text({
 
 ### Permissions
 
+Ask for permission before performing an action. `assert` evaluates the session's [permission rules](/permissions),
+including saved approvals, and prompts the user when a rule resolves to `ask`. It resolves once the action is allowed.
+
+```ts
+execute: async (input, context) => {
+  await ctx.permission.assert({
+    sessionID: context.sessionID,
+    agent: context.agent,
+    source: { type: "tool", messageID: context.messageID, id: context.id },
+    action: "deploy",
+    resources: [input.environment],
+    save: [input.environment],
+  })
+  return { content: await deploy(input.environment) }
+}
+```
+
+- `action` and `resources` are matched against the rules. Any `deny` blocks the action; otherwise any `ask` prompts.
+- `save` lists the patterns stored when the user chooses to always allow.
+- `agent` selects whose rules apply and defaults to the session's agent. `source` attaches the prompt to a tool call.
+- `metadata` passes extra detail to permission prompts and `evaluate` hooks.
+
+A deny rule or a rejection with feedback rejects with a `Tool.Error` that carries the reason, so the model sees it and
+continues. A plain rejection ends the current step. Let these errors propagate rather than returning them as tool
+output.
+
 Inspect or resolve pending permission requests.
 
 ```ts
@@ -734,7 +776,7 @@ Replace the session-scoped permission rules. They are evaluated after the agent'
 last matching rule wins. Child sessions inherit the rules in effect when they are created.
 
 ```ts
-await ctx.permission.rules({
+await ctx.session.update({
   sessionID,
   permissions: [{ action: "edit", resource: "/path/to/original/checkout/**", effect: "deny" }],
 })

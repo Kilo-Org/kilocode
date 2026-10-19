@@ -1,6 +1,6 @@
 import { describe, expect } from "bun:test"
 import { ConfigProvider, Effect, Layer, Logger, Ref, Schema, Stream } from "effect"
-import { Headers, HttpClientRequest } from "effect/unstable/http"
+import { Headers, HttpClientRequest } from "effect/http"
 import {
   Media,
   LLM,
@@ -2114,6 +2114,24 @@ describe("OpenAI Responses route", () => {
       )
 
       expect(prepared.body).not.toHaveProperty("prompt_cache_key")
+    }),
+  )
+
+  it.effect("omits the prompt cache key when compatibility disables it", () =>
+    Effect.gen(function* () {
+      const prepared = yield* compileRequest(
+        LLM.request({
+          model: LanguageModel.update(model, { compatibility: { supportsPromptCacheKey: false } }),
+          prompt: "Hello",
+          promptCacheKey: "request_cache",
+        }),
+      )
+
+      expect(prepared.body).not.toHaveProperty("prompt_cache_key")
+      expect(model.compatibility?.supportsPromptCacheKey).toBeUndefined()
+      expect(
+        (yield* compileRequest(LLM.request({ model, prompt: "Hello", promptCacheKey: "request_cache" }))).body,
+      ).toHaveProperty("prompt_cache_key", "request_cache")
     }),
   )
 

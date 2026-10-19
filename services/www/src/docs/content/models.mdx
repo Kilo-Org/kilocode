@@ -226,6 +226,38 @@ OpenCode recognizes `reasoning`, `reasoning_content`, and `reasoning_text`, and 
 string. It reads streamed reasoning from that field and restores the field when sending prior assistant messages back to
 the model.
 
+## Prompt caching
+
+OpenCode places prompt-cache breakpoints automatically on routes that are known to need them, such as Anthropic. When
+Claude models are served through an OpenAI-compatible proxy such as LiteLLM, OpenCode cannot tell that they need
+Anthropic-style `cache_control` breakpoints. Set `compatibility.cacheFormat` on those Claude models:
+
+```jsonc title="opencode.jsonc"
+{
+  "providers": {
+    "litellm": {
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": { "baseURL": "https://litellm.example.com/v1" },
+      "models": {
+        "claude-sonnet-5": {
+          "compatibility": { "cacheFormat": "anthropic" },
+        },
+        "claude-opus-5-5": {
+          "compatibility": { "cacheFormat": "anthropic" },
+        },
+        // Other models on the same proxy cache automatically and need no setting.
+        "gpt-6.1": {},
+      },
+    },
+  },
+}
+```
+
+OpenCode then marks the last tool definition, the system prompt, and the latest message with
+`cache_control: { "type": "ephemeral" }`, which uses the endpoint's default five-minute cache lifetime. Use `"alibaba"`
+for Alibaba Model Studio models, which accept the same markers but ignore them on tool definitions. Set
+`compatibility.cacheFormat` on the provider instead when every model it serves accepts the same format.
+
 ## Local
 
 OpenCode automatically discovers models from Ollama, LM Studio, and vLLM at their default local addresses. You can also

@@ -3,7 +3,7 @@ import path from "path"
 import type { SessionInfo } from "@opencode/client"
 import { Project } from "@opencode/schema/project"
 import { TextAttributes, type RGBA } from "@opentui/core"
-import { useDialog } from "../ui/dialog"
+import { DIALOG_LIST_INSET, useDialog } from "../ui/dialog"
 import { DialogSelect } from "../ui/dialog-select"
 import { useRoute } from "../context/route"
 import { useData } from "../context/data"
@@ -226,14 +226,14 @@ export function DialogSessionList() {
         },
       ]}
       emptyView={
-        <box paddingLeft={4} paddingRight={4}>
+        <box paddingLeft={DIALOG_LIST_INSET} paddingRight={DIALOG_LIST_INSET}>
           <text fg={searchState().error ? theme.text.feedback.error.base : theme.text.muted}>
             {searchState().message}
           </text>
         </box>
       }
       noMatchView={
-        <box paddingLeft={4} paddingRight={4}>
+        <box paddingLeft={DIALOG_LIST_INSET} paddingRight={DIALOG_LIST_INSET}>
           <text fg={searchState().error ? theme.text.feedback.error.base : theme.text.muted}>
             {searchState().message}
           </text>

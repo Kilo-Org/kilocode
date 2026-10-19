@@ -1,5 +1,5 @@
 import { Clock, Duration, Effect, Stream } from "effect"
-import { Headers, HttpClientRequest } from "effect/unstable/http"
+import { Headers, HttpClientRequest } from "effect/http"
 import { Auth } from "../auth.js"
 import { render as renderEndpoint } from "../endpoint.js"
 import { Framing } from "../framing.js"
@@ -7,6 +7,7 @@ import type { HttpMiddleware, Transport, TransportPrepareInput } from "./index.j
 import * as ProviderShared from "../../protocols/shared.js"
 import {
   AIError,
+  DEFAULT_CHUNK_TIMEOUT_MS,
   DEFAULT_HTTP_TIMEOUT_MS,
   mergeJsonRecords,
   TransportError,
@@ -88,6 +89,7 @@ export const httpJson = <Body, Frame>(input: HttpJsonInput<Body, Frame>): HttpJs
         url: parts.url,
         body: parts.bodyText,
         headers: parts.headers,
+        encoding: prepareInput.request.http?.encoding,
       })
       return {
         request,
@@ -123,7 +125,7 @@ export const httpJson = <Body, Frame>(input: HttpJsonInput<Body, Frame>): HttpJs
         frames: prepared.framing.frame(
           RequestExecutor.responseStream(response).pipe(
             Stream.timeoutOrElse({
-              duration: timeoutDuration(request.http?.chunkTimeout),
+              duration: timeoutDuration(request.http?.chunkTimeout, DEFAULT_CHUNK_TIMEOUT_MS),
               orElse: () => Stream.fail(timeout("read", "Timed out waiting for response data", http)),
             }),
             Stream.interruptWhen(
@@ -139,8 +141,8 @@ export const httpJson = <Body, Frame>(input: HttpJsonInput<Body, Frame>): HttpJs
     }),
 })
 
-const timeoutDuration = (value: HttpTimeout | undefined) =>
-  value === false ? Duration.infinity : Duration.millis(value ?? DEFAULT_HTTP_TIMEOUT_MS)
+const timeoutDuration = (value: HttpTimeout | undefined, fallback = DEFAULT_HTTP_TIMEOUT_MS) =>
+  value === false ? Duration.infinity : Duration.millis(value ?? fallback)
 
 export const sseJson = {
   id: "http-json/sse",
