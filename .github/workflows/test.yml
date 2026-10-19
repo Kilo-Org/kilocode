@@ -54,15 +54,25 @@ jobs:
           bun -e 'const result = await Bun.file("affected.json").json(); console.log(`app=${result.packages.count > 0}`)' >> "$GITHUB_OUTPUT"
 
   unit:
-    name: unit (${{ matrix.settings.name }})
+    name: unit (${{ matrix.settings.name }}, ${{ matrix.shard }}/${{ matrix.settings.shards }}) # kilocode_change
     strategy:
       fail-fast: false
       matrix:
         settings:
           - name: linux
             host: blacksmith-4vcpu-ubuntu-2404
+            shards: 2 # kilocode_change
+            concurrency: 2 # kilocode_change - test processes per package and shard (KILO_TEST_CONCURRENCY)
           - name: windows
             host: blacksmith-4vcpu-windows-2025
+            shards: 3 # kilocode_change
+            concurrency: 1 # kilocode_change
+        # kilocode_change start - the KILO_TEST_SHARD index; Linux runs two shards
+        shard: [1, 2, 3]
+        exclude:
+          - settings: { name: linux, host: blacksmith-4vcpu-ubuntu-2404, shards: 2, concurrency: 2 }
+            shard: 3
+        # kilocode_change end
     runs-on: ${{ matrix.settings.host }}
     defaults:
       run:
@@ -72,7 +82,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }} # kilocode_change - a PR diffs against the merge's first parent, so two commits are enough
 
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -97,70 +107,63 @@ jobs:
 
       - name: Cache Turbo
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        # kilocode_change start - Turborepo 2.x writes .turbo/cache. Hashing every package.json (node_modules included) took up to 35 s per step on Windows.
         with:
-          path: node_modules/.cache/turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', '**/package.json') }}-${{ github.sha }}
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-unit-${{ matrix.shard }}-${{ github.sha }}
           restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', '**/package.json') }}-
-            turbo-${{ runner.os }}-
+            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-unit-${{ matrix.shard }}-
+            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-unit-
+        # kilocode_change end
 
       - name: Run unit tests
         timeout-minutes: 20
         run: |
           # The runners have four vCPUs, and each Bun test process performs its own concurrent work.
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            GITHUB_ACTIONS=false bun turbo test --concurrency=3
-            exit 0
+          # kilocode_change start - core, tui and cli run in balanced shards through `test:ci`; the other packages run in shard 1
+          args=(--concurrency=3)
+          [ "${{ github.event_name }}" = "workflow_dispatch" ] || args+=(--affected)
+          status=0
+          if [ "${{ matrix.shard }}" = "1" ]; then
+            GITHUB_ACTIONS=false bun turbo test "${args[@]}" --filter='!@opencode/core' --filter='!@opencode/tui' --filter='!@opencode/cli' || status=1
           fi
-          GITHUB_ACTIONS=false bun turbo test --affected --concurrency=3
+          GITHUB_ACTIONS=false bun turbo test:ci "${args[@]}" || status=1
+          exit $status
+          # kilocode_change end
         env:
           OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
           TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && format('{0}^1', github.sha) || github.event.before }}
           TURBO_SCM_HEAD: ${{ github.sha }}
+          KILO_TEST_SHARD: ${{ matrix.shard }}/${{ matrix.settings.shards }} # kilocode_change
+          KILO_TEST_CONCURRENCY: ${{ matrix.settings.concurrency }} # kilocode_change
+
+      # kilocode_change start - JUnit reports of test:ci: failing cases as annotations, and the reports as an artifact
+      - name: Publish unit reports
+        if: ${{ !cancelled() }}
+        uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6.4.0
+        with:
+          report_paths: artifacts/unit/*.xml
+          annotate_only: true
+          detailed_summary: true
+          include_time_in_summary: true
+          fail_on_failure: false
+
+      # Input for script/kilocode/test/test-durations.ts, which refreshes the shard weights. Not a test result.
+      - name: Upload unit reports
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: unit-reports-${{ matrix.settings.name }}-${{ matrix.shard }}
+          path: artifacts/unit/*.xml
+          if-no-files-found: ignore
+          retention-days: 14
+      # kilocode_change end
 
       - name: Verify published codemode package
         if: runner.os == 'Linux'
         working-directory: packages/codemode
         run: bun run script/publish.ts --dry-run
-
-      - name: Verify packed workerd SDK
-        if: runner.os == 'Linux'
-        timeout-minutes: 15
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            bun turbo verify:package --filter=@opencode/sdk
-            exit 0
-          fi
-          bun turbo verify:package --affected --filter=@opencode/sdk
-        env:
-          TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && format('{0}^1', github.sha) || github.event.before }}
-          TURBO_SCM_HEAD: ${{ github.sha }}
-
-      - name: Verify compiled service lifecycle
-        if: always()
-        timeout-minutes: 10
-        working-directory: packages/cli
-        env:
-          NODE_OPTIONS: ${{ runner.os == 'Windows' && '--max-old-space-size=4096' || '' }}
-        run: |
-          bun run script/build.ts --single --skip-install
-          bun run script/service-smoke.ts
-
-      - name: Setup Node build runtime
-        if: always()
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: "26.4.0"
-
-      - name: Verify Node build
-        if: always()
-        timeout-minutes: 15
-        working-directory: packages/cli
-        env:
-          NODE_OPTIONS: ${{ runner.os == 'Windows' && '--max-old-space-size=4096' || '' }}
-        run: |
-          bun run script/build-node.ts --single --skip-install --outdir=dist/node
-          bun run script/service-smoke.ts --node
 
       - name: Check generated client
         if: runner.os == 'Linux'
@@ -274,3 +277,74 @@ jobs:
             packages/session-ui/component-tests/playwright-report
             packages/app/component-tests/test-results
             packages/app/component-tests/playwright-report
+
+  # kilocode_change start - the SDK and build checks ran after the unit tests in `unit`. Their own jobs run them in parallel.
+  sdk:
+    name: sdk package
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify packed workerd SDK
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            bun turbo verify:package --filter=@opencode/sdk
+            exit 0
+          fi
+          bun turbo verify:package --affected --filter=@opencode/sdk
+        env:
+          TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && format('{0}^1', github.sha) || github.event.before }}
+          TURBO_SCM_HEAD: ${{ github.sha }}
+
+  build:
+    name: build (${{ matrix.settings.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - name: linux
+            host: blacksmith-4vcpu-ubuntu-2404
+          - name: windows
+            host: blacksmith-4vcpu-windows-2025
+    runs-on: ${{ matrix.settings.host }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify compiled service lifecycle
+        working-directory: packages/cli
+        env:
+          NODE_OPTIONS: ${{ runner.os == 'Windows' && '--max-old-space-size=4096' || '' }}
+        run: |
+          bun run script/build.ts --single --skip-install
+          bun run script/service-smoke.ts
+
+      - name: Setup Node build runtime
+        if: always()
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "26.4.0"
+
+      - name: Verify Node build
+        if: always()
+        working-directory: packages/cli
+        env:
+          NODE_OPTIONS: ${{ runner.os == 'Windows' && '--max-old-space-size=4096' || '' }}
+        run: |
+          bun run script/build-node.ts --single --skip-install --outdir=dist/node
+          bun run script/service-smoke.ts --node
+  # kilocode_change end
