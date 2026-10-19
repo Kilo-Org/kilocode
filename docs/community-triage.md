@@ -32,6 +32,17 @@ Two workflows do the work. Both use `script/kilocode/community-triage.ts`. A thi
 
 The sweep runs the evening before each maintainer slot. Andrea starts Friday and Bruno starts Tuesday with a fresh queue.
 
+## Closing is paused
+
+The team is migrating to opencode v2, and community reviews are paused until further notice. A community PR must not be closed because nobody had time to answer it. So the automation closes and removes nothing for now.
+
+- The sweep never closes a PR. It also posts no due-date comment, because that comment warns about a close.
+- The label workflow only adds labels. It never closes or removes a PR.
+- Labels, priorities and the queue keep working. The digest shows "Waiting for contributor" as days waiting, without the 14 day limit.
+- The setting is the constant `PAUSED` in `script/kilocode/community-triage.ts`. While it is `true`, the variable `COMMUNITY_AUTO_CLOSE_ENABLED` has no effect, and the sweep logs what it would close. A test fails if the constant changes, so the change is deliberate.
+- To resume, set `PAUSED` to `false` in a PR, update the test, and remove this section. Then the [14 day rule](#the-14-day-rule) applies again.
+- `kilo-auto-close.yml` is a separate workflow. This pause does not change it. Check it before you rely on the pause, because it closes PRs with no activity for 30 days.
+
 ## Who is a maintainer
 
 An author or commenter is a maintainer when one of these is true:
@@ -71,7 +82,7 @@ Set by the workflows:
 | `quick-win` | Small, low-risk PR. See [Quick wins](#quick-wins) |
 | `priority:p1`, `priority:p2`, `priority:p3` | Set from the title when a community PR opens. See [Priority](#priority) |
 | `needs-triage` | A maintainer should look: a new PR, or the contributor replied or pushed |
-| `awaiting-contributor` | A maintainer reacted last. The 14 day clock runs |
+| `awaiting-contributor` | A maintainer reacted last. The 14 day clock runs, but nothing closes while closing is paused |
 
 Set by hand:
 
@@ -174,6 +185,8 @@ The digest lists quick wins in their own section, right after "Adopt".
 
 ## The 14 day rule
 
+Closing is paused, so the sweep currently closes no PR and posts no comment. See [Closing is paused](#closing-is-paused). This is the rule for when it resumes.
+
 When a PR has been `awaiting-contributor` for 14 days:
 
 | PR | Result |
@@ -184,7 +197,7 @@ When a PR has been `awaiting-contributor` for 14 days:
 
 Before the sweep closes or adopts a PR, it checks the full history for a contributor reply. This catches replies on long PRs.
 
-Closing is **off by default**. Until it is on, the sweep only logs what it would close. To turn it on, set the repo variable `COMMUNITY_AUTO_CLOSE_ENABLED` to `true`. To try it by hand, run the sweep from the Actions tab and tick "close".
+Closing is **off by default**. Until it is on, the sweep only logs what it would close. To turn it on, set the repo variable `COMMUNITY_AUTO_CLOSE_ENABLED` to `true`. While `PAUSED` is `true`, this variable has no effect.
 
 When a PR first gets `awaiting-contributor`, the sweep also posts one comment that gives the due date. That comment is also off until closing is on. The sweep posts at most 20 comments per run (`MAX_COMMENTS`).
 
@@ -201,8 +214,8 @@ Each sweep writes a queue to the job summary, and to [Slack](#slack). It lists t
 | Needs triage | No maintainer has reacted yet |
 | Contributor replied, needs review | The contributor answered after the last maintainer reaction |
 | Approved, ready to merge | The last maintainer reaction is an approval |
-| Waiting for contributor | Days waiting, out of 14. Longest wait first |
-| Closed in this run | PRs the sweep closed. Only when closing is on |
+| Waiting for contributor | Days waiting. Longest wait first. With closing on, it shows the days out of 14 |
+| Closed in this run | PRs the sweep closed. Always empty while closing is paused |
 
 A PR can be in "Quick wins" and in its state section. The digest marks first-time contributors and PRs with failing checks next to the PR. Adopt and Quick wins follow the `high-value` and `quick-win` rules. The other sections use the same state rules as the status labels. `needs-triage` covers both "Needs triage" and "Contributor replied, needs review", because a maintainer should look in both cases.
 
@@ -246,7 +259,7 @@ New issues get the `community` label, `needs-triage`, `first-time-contributor` f
 
 | Name | Kind | Needed | Purpose |
 |---|---|---|---|
-| `COMMUNITY_AUTO_CLOSE_ENABLED` | Variable | No | `true` turns on closing and comments |
+| `COMMUNITY_AUTO_CLOSE_ENABLED` | Variable | No | `true` turns on closing and comments. No effect while closing is paused |
 | `COMMUNITY_TRIAGE_MEMBER_TOKEN` | Secret | Yes | Token with `read:org`. Finds private org members |
 | `COMMUNITY_TRIAGE_SLACK_TOKEN` | Secret | No | Slack bot token (`xoxb-`, scope `chat:write`). Posts a summary and threads the lists. The bot must be in the channel |
 | `COMMUNITY_TRIAGE_SLACK_CHANNEL` | Secret | No | Channel ID (`C...`) for the bot token |
@@ -257,5 +270,5 @@ Labels are created by the workflows, and their color and description are kept in
 ## Safety
 
 - `community-label.yml` uses `pull_request_target`. It checks out the base branch only. It never runs PR code.
-- The sweep never closes drafts, `high-value` PRs or `keep-open` PRs.
+- While closing is paused, the sweep closes nothing. When it resumes, it never closes drafts, `high-value` PRs or `keep-open` PRs.
 - Closed PRs can be reopened by the contributor.
