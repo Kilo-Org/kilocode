@@ -52,6 +52,22 @@ Signals that rung 1 applies:
 
 Write the plugin in `packages/kilo-plugin/src/<feature>.ts` (or the feature's own `packages/kilo-*` package) and add it to `KiloPlugins` in `packages/kilo-plugin/src/index.ts`; the host registers it (step 3). Builtin tools: wrap with `editor.update` when you add parameters, output or policy; replace with `editor.remove` plus `editor.add` when you change the algorithm or the tool is a different product, and list the replaced upstream file as a mirror (`mirroredFiles` in `script/upstream/utils/config.ts` once it exists; until then, name it in the PR).
 
+#### Add a Kilo RPC
+
+A Kilo RPC is rung 1: the plugin API has an `rpc` domain (`packages/plugin/src/effect/rpc.ts`), and the server serves every registered RPC through one generic route, `rpc.call` (`POST /api/rpc/:rpcID/:method`, `packages/protocol/src/groups/rpc.ts`). The reference is the Gateway RPC, `kilocode.gateway` (U-E0-02).
+
+1. Contract: `packages/schema/src/kilocode/<feature>.ts`, `Rpc.define({ id: "kilocode.<feature>", methods, events })` with `Rpc` from `../rpc.js`. Wrap each schema in `Schema.toStandardSchemaV1` so the promise client accepts it. Import only `effect` and Schema modules: `@opencode/schema` depends on no Kilo package (that needs a shared `package.json` patch, and the packed SDK check in `packages/sdk/script/verify-package.ts` fails).
+2. Handlers: in the feature's plugin under `packages/kilo-plugin/src/<feature>/`, `yield* ctx.rpc.register(Definition, { ... }).pipe(Effect.orDie)`. A handler fails with `context.error("<name>", message)`, using an error name of the contract. List the plugin in `KiloPlugins`.
+3. Clients (TUI, VS Code, JetBrains) import the contract from `@opencode/schema/kilocode/<feature>` and call `client.rpc(Definition).<method>(input, { location })`, never from Core or `kilo-plugin`.
+4. Round trip: a test in `packages/kilo-cli/test/` boots the server with `KiloHost.overrides` and calls a method through the generated client, as `rpc.test.ts` does for the Gateway.
+5. `bun run generate` in `packages/client` leaves no drift: plugin methods are not in the generated OpenAPI or SDK surface, only the generic `rpc.call`. The typed surface is the Schema contract.
+
+```sh
+git grep -n -E "Rpc\.define|\.register\([A-Za-z]+\.Definition" -- packages/kilo-plugin/src packages/schema/src/kilocode   # existing Kilo RPCs and their handlers
+bun test test/rpc.test.ts      # from packages/kilo-cli: the round trip through the generated client
+bun run check:generated        # from packages/client: generate, then fail on drift
+```
+
 ### 3. Rung 2: look for a service node or boot option
 
 ```sh
@@ -89,7 +105,7 @@ Only when a seam makes no sense (a defect fix, or a Kilo-specific decision no kn
 
 - A logic package (`packages/kilo-*-core`) imports nothing from `@opencode/*` (static, export-from or dynamic import).
 - An adapter or plugin imports `@opencode/plugin`, `@opencode/schema`, `@opencode/client` and `@opencode/util` freely. It imports core internals (`@opencode/core/*`, relative `../` into `packages/core/src`) only when no public surface has it; name each one in the PR. The number must not grow without a reason.
-- Check both: `bun script/upstream/placement.ts --imports`. It fails on a logic package import (CI runs it) and prints the distinct core-internal modules per adapter (Kilo-owned modules inside core, such as `core/src/kilocode/gateway-rpc.ts`, do not count). The progress map carries the same count as a ratchet (`coreImports` in `migration-tracking/progress/progress.json`), also fails on a logic package import, and the PR comment names new core-internal imports.
+- Check both: `bun script/upstream/placement.ts --imports`. It fails on a logic package import (CI runs it) and prints the distinct core-internal modules per adapter (Kilo-owned modules, such as `core/src/kilocode/config/*` or the RPC contracts in `schema/src/kilocode/`, do not count). The progress map carries the same count as a ratchet (`coreImports` in `migration-tracking/progress/progress.json`), also fails on a logic package import, and the PR comment names new core-internal imports.
 
 ### 7. Done-proof for the progress map
 
@@ -131,6 +147,7 @@ Plus: shared files touched with rung, core-internal imports added and mirrored f
 |---|---|---|
 | react to or change a tool call, a session request, compaction, a permission, a command, a provider or model | 1 | `kilo-plugin`, domain hook or editor |
 | add, wrap or replace a builtin tool | 1 | `ToolEditor.update` or `remove` + `add` |
+| add a Kilo RPC for clients | 1 | contract in `schema/src/kilocode/<feature>.ts`, `ctx.rpc.register` in `kilo-plugin` |
 | register a plugin, replace a service, set paths, translate env, change a boot option | 2 | `KiloPlugins` in `packages/kilo-plugin`, `overrides` in `packages/kilo-cli/src/host.ts`, `names` in `env.ts` |
 | register a TUI plugin | 3 | one marked line in `tui/src/plugin/builtins.ts` |
 | a knob upstream does not expose yet | 3 | seam, generic, tagged, `shared-patches.json` |

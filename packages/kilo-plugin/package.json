@@ -13,6 +13,8 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@kilocode/gateway-core": "workspace:*",
+    "@opencode/client": "workspace:*",
     "@opencode/core": "workspace:*",
     "@opencode/plugin": "workspace:*",
     "@opencode/schema": "workspace:*",
@@ -20,6 +22,7 @@
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@opencode/ai": "workspace:*",
     "@tsconfig/bun": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",

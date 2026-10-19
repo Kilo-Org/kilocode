@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 30,
-    "markedLines": 305,
-    "unmarkedLines": 51,
+    "files": 29,
+    "markedLines": 304,
+    "unmarkedLines": 50,
     "deletedFiles": 0
   },
   "files": {
@@ -64,7 +64,7 @@
     },
     "packages/core/package.json": {
       "rung": 3,
-      "seam": "Runtime dependency on `@kilocode/gateway-core` for the Gateway adapter (`packages/core/src/kilocode/gateway.ts`). The Kilo host registers the plugin through `SdkPlugins.register` since U-E0-01, but the adapter still lives in core. Goes away when the adapter moves into packages/kilo-plugin with the Gateway RPC (U-E0-02, #15173). Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments.",
+      "seam": "Add a `test:ci` script that runs the Kilo test runner (script/kilocode/test/test-runner.ts) in balanced shards for CI. Turborepo runs only package.json scripts, so the sharded task needs a script in each sharded package (core, tui, cli); the package's own `test` script stays as it is and the runner calls it with file arguments.",
       "unmarked": "JSON has no comments."
     },
     "packages/core/src/config.ts": {
@@ -106,10 +106,6 @@
     "packages/core/test/session-activation.test.ts": {
       "rung": 3,
       "seam": "Tests for the Kilo config discovery seam: `kilo.json`, `kilo.jsonc`, `.kilo` and `.kilocode` names and v1 order. Shared test files, marked for the same reason as the discovery seam."
-    },
-    "packages/sdk/script/verify-package.ts": {
-      "rung": 3,
-      "seam": "Pack `@kilocode/gateway-core` before `@opencode/core` in the workerd SDK verification script because `@opencode/core` depends on `@kilocode/gateway-core`. Goes away with the core dependency (U-E0-02)."
     },
     "packages/server/src/process.ts": {
       "rung": 3,

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import path from "node:path"
 
-// Kilo Gateway logic must stay independent of OpenCode. Only the v2 adapter in packages/core imports both.
+// Kilo Gateway logic must stay independent of OpenCode. Only the v2 adapter in packages/kilo-plugin imports both.
 test("has no OpenCode imports or dependencies", async () => {
   const root = path.join(import.meta.dir, "..")
   const files = await Array.fromAsync(new Bun.Glob("src/**/*.ts").scan({ cwd: root }))

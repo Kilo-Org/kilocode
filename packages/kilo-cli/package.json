@@ -27,6 +27,8 @@
   },
   "devDependencies": {
     "@kilocode/gateway-core": "workspace:*",
+    "@opencode/client": "workspace:*",
+    "@opencode/schema": "workspace:*",
     "@opencode/server": "workspace:*",
     "@tsconfig/bun": "catalog:",
     "@types/bun": "catalog:",
