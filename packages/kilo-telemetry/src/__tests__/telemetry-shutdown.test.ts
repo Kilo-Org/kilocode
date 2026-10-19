@@ -36,6 +36,8 @@ describe("Telemetry.shutdown timeout (#9788)", () => {
 
   test("a new client shuts down normally after the timeout test", async () => {
     Client.init()
+    const client = Client.getClient()
+    expect(client).not.toBeNull()
     await Telemetry.shutdown()
     expect(Client.getClient()).toBeNull()
   })
