@@ -64,6 +64,54 @@ describe("OpenAI Chat route", () => {
     }),
   )
 
+  it.effect("omits stream usage options when compatibility disables them", () =>
+    Effect.gen(function* () {
+      const prepared = yield* compileRequest(
+        LLM.request({ model: LanguageModel.update(model, { compatibility: { streamUsage: false } }), prompt: "Hello" }),
+      )
+
+      expect(prepared.body).not.toHaveProperty("stream_options")
+    }),
+  )
+
+  it.effect("sends store only to OpenAI and Azure unless compatibility opts in", () =>
+    Effect.gen(function* () {
+      const compatible = OpenAICompatible.configure({ baseURL: "https://api.compatible.test/v1", apiKey: "test" })
+      const omitted = yield* compileRequest(
+        LLM.request({ model: compatible.model("compatible-model"), prompt: "Hello", providerOptions: { store: true } }),
+      )
+      const optedIn = yield* compileRequest(
+        LLM.request({
+          model: LanguageModel.update(compatible.model("compatible-model"), {
+            compatibility: { supportsStore: true },
+          }),
+          prompt: "Hello",
+        }),
+      )
+      const openaiHost = yield* compileRequest(
+        LLM.request({
+          model: OpenAICompatible.configure({ baseURL: "https://api.openai.com/v1", apiKey: "test" }).model(
+            "gpt-4o-mini",
+          ),
+          prompt: "Hello",
+        }),
+      )
+      const azure = yield* compileRequest(
+        LLM.request({
+          model: Azure.configure({ baseURL: "https://opencode-test.openai.azure.com/openai/", apiKey: "test" }).chat(
+            "gpt-4o-mini",
+          ),
+          prompt: "Hello",
+        }),
+      )
+
+      expect(omitted.body).not.toHaveProperty("store")
+      expect(optedIn.body.store).toBe(false)
+      expect(openaiHost.body.store).toBe(false)
+      expect(azure.body.store).toBe(false)
+    }),
+  )
+
   it.effect("lowers chronological system updates to escaped user wrappers in order", () =>
     Effect.gen(function* () {
       const prepared = yield* compileRequest(

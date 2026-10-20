@@ -47,18 +47,16 @@
 
 ```bash
 # YOLO
-curl -fsSL https://opencode.ai/install | bash
+curl -fsSL https://opencode.ai/v2/install | bash
 
 # Менеджери пакетів
 npm i -g @opencode/cli@latest      # або bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS і Linux (рекомендовано, завжди актуально)
+brew install anomalyco/tap/opencode-v2 # macOS і Linux (рекомендовано, завжди актуально)
 brew install opencode              # macOS і Linux (офіційна формула Homebrew, оновлюється рідше)
 sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
+paru -S opencode-beta              # Arch Linux (Latest from AUR)
 mise use -g opencode               # Будь-яка ОС
-nix run nixpkgs#opencode           # або github:anomalyco/opencode для найновішої dev-гілки
+nix run github:anomalyco/opencode  # Nix
 ```
 
 > [!TIP]
@@ -66,20 +64,18 @@ nix run nixpkgs#opencode           # або github:anomalyco/opencode для н�
 
 ### Десктопний застосунок (BETA)
 
-OpenCode також доступний як десктопний застосунок. Завантажуйте напряму зі [сторінки релізів](https://github.com/anomalyco/opencode/releases) або [opencode.ai/download](https://opencode.ai/download).
+OpenCode також доступний як десктопний застосунок. Завантажуйте з [opencode.ai/download](https://opencode.ai/download).
 
 | Платформа             | Завантаження                       |
 | --------------------- | ---------------------------------- |
 | macOS (Apple Silicon) | `opencode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `opencode-desktop-mac-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe` |
+| Windows               | `opencode-desktop-win-x64.exe`     |
 | Linux                 | `.deb`, `.rpm` або AppImage        |
 
 ```bash
 # macOS (Homebrew)
 brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
 ```
 
 #### Каталог встановлення
@@ -93,8 +89,8 @@ scoop bucket add extras; scoop install extras/opencode-desktop
 
 ```bash
 # Приклади
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/v2/install | bash
+XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/v2/install | bash
 ```
 
 ### Агенти

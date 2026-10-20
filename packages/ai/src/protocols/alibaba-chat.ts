@@ -43,7 +43,6 @@ export type OptionsInput = typeof Options.Type
 
 export const compatibility = {
   maxTokensField: "max_completion_tokens",
-  supportsStore: false,
   supportsStrictMode: false,
   reasoningField: "reasoning_content",
   zaiToolStream: false,

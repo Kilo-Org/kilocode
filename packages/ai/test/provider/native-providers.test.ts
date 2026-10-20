@@ -83,13 +83,13 @@ describe("native OpenAI-compatible providers", () => {
 
     expect(together).toMatchObject({
       provider: "togetherai",
-      compatibility: { maxTokensField: "max_tokens", supportsStore: false, supportsStrictMode: false },
+      compatibility: { maxTokensField: "max_tokens", supportsStrictMode: false },
       route: { id: "togetherai-chat", protocol: "openai-chat" },
     })
     expect(together.route.endpoint.baseURL).toBe("https://api.together.xyz/v1")
     expect(cerebras).toMatchObject({
       provider: "cerebras",
-      compatibility: { maxTokensField: "max_tokens", reasoningField: "reasoning", supportsStore: false },
+      compatibility: { maxTokensField: "max_tokens", reasoningField: "reasoning" },
       route: { id: "cerebras-chat", protocol: "openai-chat" },
     })
     expect(cerebras.route.endpoint.baseURL).toBe("https://api.cerebras.ai/v1")
@@ -129,7 +129,7 @@ describe("native OpenAI-compatible providers", () => {
     const deepinfra = DeepInfra.configure({ apiKey: "fixture" }).model("google/gemma-3-27b-it")
     expect(deepinfra).toMatchObject({
       provider: "deepinfra",
-      compatibility: { maxTokensField: "max_tokens", reasoningField: "reasoning_content", supportsStore: false },
+      compatibility: { maxTokensField: "max_tokens", reasoningField: "reasoning_content" },
       route: { id: "deepinfra-chat", protocol: "openai-chat" },
     })
     expect(deepinfra.route.endpoint.baseURL).toBe("https://api.deepinfra.com/v1/openai")

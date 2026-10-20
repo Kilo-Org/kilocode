@@ -110,18 +110,18 @@ You can also access the models directly through the following API endpoints.
 | Jev 1.13                        | jev-1.13                        | `https://opencode.ai/inference/systemone/v1/systemone`                     | -                           |
 | Jev 1.13 Free                   | jev-1.13-free                   | `https://opencode.ai/inference/systemone/v1/systemone`                     | -                           |
 | Big Pickle                      | big-pickle                      | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
+| GLM-5.3-Flash Free              | glm-5.3-flash-free              | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
 | DeepSeek V4.1 Flash Free        | deepseek-v4.1-flash-free        | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
-| Space Bunny Free                | space-bunny-free                | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
-| Cat Jam Free                    | cat-jam-free                    | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
+| MiniMax M3.1 Flash Free         | minimax-m3.1-flash-free         | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
+| Beam Free                       | beam-free                       | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
+| LL Alpha Free                   | ll-alpha-free                   | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
 | LongCat 2.5 Preview Free        | longcat-2.5-preview-free        | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
-| Step 5 Preview Free             | step-5-preview-free             | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
 | Exo Free                        | exo-free                        | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
 | MiMo-V2.6-Flash Free            | mimo-v2.6-flash-free            | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
 | MiMo-V2.5 Free                  | mimo-v2.5-free                  | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
 | Nemotron 3 Ultra Free           | nemotron-3-ultra-free           | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
 | Nemotron 3.5 Lightning Free     | nemotron-3.5-lightning-free     | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
 | Nemotron 3.5 Super VL Free      | nemotron-3.5-super-vl-free      | `https://opencode.ai/inference/openai/v1/chat/completions`                 | `@ai-sdk/openai-compatible` |
-| Muse Spark 1.3 Contributor Free | muse-spark-1.3-contributor-free | `https://opencode.ai/inference/openai/v1/responses`                        | `@ai-sdk/openai`            |
 
 </div>
 
@@ -204,18 +204,18 @@ Console uses pay-as-you-go pricing. Below are the prices **per 1M tokens**.
 | Model                             | Input           | Output          | Cached Read     | Cached Write |
 | --------------------------------- | --------------- | --------------- | --------------- | ------------ |
 | Big Pickle                        | Free            | Free            | Free            | -            |
+| GLM-5.3-Flash Free                | Free            | Free            | Free            | -            |
 | DeepSeek V4.1 Flash Free          | Free            | Free            | Free            | -            |
-| Space Bunny Free                  | Free            | Free            | Free            | -            |
-| Cat Jam Free                      | Free            | Free            | Free            | -            |
+| MiniMax M3.1 Flash Free           | Free            | Free            | Free            | -            |
+| Beam Free                         | Free            | Free            | Free            | -            |
+| LL Alpha Free                     | Free            | Free            | Free            | -            |
 | LongCat 2.5 Preview Free          | Free            | Free            | Free            | -            |
-| Step 5 Preview Free               | Free            | Free            | Free            | -            |
 | Exo Free                          | Free            | Free            | Free            | -            |
 | MiMo-V2.6-Flash Free              | Free            | Free            | Free            | -            |
 | MiMo-V2.5 Free                    | Free            | Free            | Free            | -            |
 | Nemotron 3 Ultra Free             | Free            | Free            | Free            | -            |
 | Nemotron 3.5 Lightning Free       | Free            | Free            | Free            | -            |
 | Nemotron 3.5 Super VL Free        | Free            | Free            | Free            | -            |
-| Muse Spark 1.3 Contributor Free   | Free            | Free            | Free            | -            |
 | Jev 1.13 Free                     | Free            | Free            | -               | -            |
 | Jev 1.13                          | $0.042          | Free            | -               | -            |
 | MiniMax M3                        | $0.30           | $1.20           | $0.06           | -            |
@@ -315,11 +315,12 @@ You may notice [low-cost models](/models), such as Haiku, Nano, or Flash, in you
 models to generate session titles.
 
 <Callout>
-  Credit card fees are passed along at cost (4.4% + $0.30 per transaction); we don't charge anything beyond that.
+  A processing fee of 4.6% + $0.31 is added to each credit purchase to cover payment costs; we don't charge anything beyond that.
 </Callout>
 
 ### Free models
 
+- GLM-5.3-Flash Free is free on OpenCode for a limited time. Its provider follows a zero-retention policy and does not use your data for model training.
 - DeepSeek V4.1 Flash Free is free on OpenCode for a limited time. Its provider follows a zero-retention policy and does not use your data for model training.
 - Exo Free is available on OpenCode for a limited time. The team is using this time to collect feedback and improve the model.
 - MiMo-V2.6-Flash Free is available on OpenCode for a limited time. The team is using this time to collect feedback and improve the model.
@@ -328,26 +329,18 @@ models to generate session titles.
 - Nemotron 3.5 Lightning Free is available on OpenCode for a limited time. The team is using this time to collect feedback and improve the model.
 - Nemotron 3.5 Super VL Free is available on OpenCode for a limited time. The team is using this time to collect feedback and improve the model.
 - Big Pickle is a stealth model that's free on OpenCode for a limited time. The team is using this time to collect feedback and improve the model.
-- Space Bunny Free is a stealth model that's free on OpenCode for a limited time. Its provider follows a zero-retention policy and does not use your data for model training.
-- Cat Jam Free is a stealth model that's free on OpenCode for a limited time. Its provider does not use your data for model training and retains it for 30 days for safety reasons. It's not available in Angola, Belarus, Cambodia, China (including Hong Kong and Macau), Cuba, the Democratic Republic of the Congo, Equatorial Guinea, Iran, Iraq, Laos, Libya, Nigeria, North Korea, Russia, Syria, Turkmenistan, Uzbekistan, Venezuela, or the Crimea, Donetsk, and Luhansk regions of Ukraine.
+- MiniMax M3.1 Flash Free is free on OpenCode for a limited time. Its provider follows a zero-retention policy and does not use your data for model training.
+- Beam Free is free on OpenCode for a limited time. Its provider does not use your data for model training and retains it for 30 days for safety reasons. It's not available in Angola, Belarus, Cambodia, China (including Hong Kong and Macau), Cuba, the Democratic Republic of the Congo, Equatorial Guinea, Iran, Iraq, Laos, Libya, Nigeria, North Korea, Russia, Syria, Turkmenistan, Uzbekistan, Venezuela, or the Crimea, Donetsk, and Luhansk regions of Ukraine.
+- LL Alpha Free is a stealth model that's free on OpenCode for a limited time. The team is using this time to collect feedback and improve the model.
 - LongCat 2.5 Preview Free is free on OpenCode for a limited time. Its provider follows a zero-retention policy and does not use your data for model training.
-- Step 5 Preview Free is free on OpenCode for a limited time. Its provider follows a zero-retention policy and does not use your data for model training.
-- Muse Spark 1.3 Contributor Free is available on OpenCode for a limited time. The team is using this time to collect feedback and improve the model.
 - Jev 1.13 Free is available on OpenCode for a limited time.
 
 [Contact us](mailto:help@anoma.ly) if you have any questions.
 
-### Auto-reload
+### Auto-recharge and budgets
 
-If your balance goes below $5, Console automatically reloads $20. You can change the auto-reload amount or disable
-auto-reload entirely.
-
-### Monthly limits
-
-You can set a monthly usage limit for the entire workspace and for each member of your team.
-
-For example, with a $20 monthly usage limit, Console will not use more than $20 in a month. If auto-reload is enabled,
-you might still be charged more than $20 when your balance goes below $5.
+[Auto-recharge](/console/billing#auto-recharge) buys credits when your balance runs low, and
+[budgets](/console/budgets) cap monthly spend for the workspace and each member.
 
 ### Deprecated models
 
@@ -377,6 +370,7 @@ you might still be charged more than $20 when your balance goes below $5.
 All our models are hosted in the US and EU. Our providers follow a zero-retention policy and do not use your data for model training, with the following exceptions:
 
 - Big Pickle: During its free period, collected data may be used to improve the model.
+- LL Alpha Free: During its free period, collected data may be used to improve the model. Data is retained for 30 days.
 - Exo Free: During its free period, collected data may be used to improve the model.
 - MiMo-V2.6-Flash Free: During its free period, collected data may be used to improve the model.
 - MiMo-V2.5 Free: During its free period, collected data may be used to improve the model.
@@ -386,8 +380,7 @@ All our models are hosted in the US and EU. Our providers follow a zero-retentio
 - OpenAI APIs: Requests are retained for 30 days in accordance with [OpenAI's Data Policies](https://platform.openai.com/docs/guides/your-data).
 - Anthropic APIs: Requests are retained for 30 days in accordance with [Anthropic's Data Policies](https://docs.anthropic.com/en/docs/claude-code/data-usage).
 - Mistral APIs: Prompts and other inputs are not used for training. Data is retained in accordance with [Mistral's Data Retention Policy](https://docs.mistral.ai/admin/monitor-comply/zero-data-retention).
-- Cat Jam Free: Prompts and other inputs are not used for training. Data is retained for 30 days for safety reasons.
-- Muse Spark 1.3 Contributor Free: Heavily discounted token pricing in exchange for permission to use your prompts and completions to train future Meta models. [Learn more](https://dev.meta.ai/docs/pricing-rate-limits#contributor-tier).
+- Beam Free: Prompts and other inputs are not used for training. Data is retained for 30 days for safety reasons.
 
 For subscription models, see [Go privacy](/console/go#privacy).
 

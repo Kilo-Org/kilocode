@@ -297,6 +297,8 @@ export function transformSession(input: TransformInput): TransformResult {
             : -1
           const compactionIndex = messages.findIndex((candidate) => candidate.row.id === item.row.id)
           const tail = tailIndex < 0 ? [] : messages.slice(tailIndex, compactionIndex)
+          // V1 kept these messages beside the summary; they replay as text, like compactions before v2.1.
+          const recent = serializeRecent(tail, byMessage)
           return [
             row(
               { ...item.row, time_updated: Math.max(item.row.time_updated, summary.row.time_updated) },
@@ -306,7 +308,7 @@ export function transformSession(input: TransformInput): TransformResult {
                 status: "completed",
                 reason: compaction.auto ? "auto" : "manual",
                 summary: summaryText,
-                recent: serializeRecent(tail, byMessage),
+                ...(recent ? { metadata: { recent } } : {}),
                 time: { created: item.row.time_created },
               },
             ),
@@ -379,13 +381,13 @@ export function transformSession(input: TransformInput): TransformResult {
         return []
       const content = owned.flatMap((part): Array<Record<string, unknown>> => {
         if (part.type === "text")
-          return [{ type: "text", text: part.text, ...(part.metadata ? { state: part.metadata } : {}) }]
+          return [{ type: "text", text: part.text, ...(part.metadata ? { native: part.metadata } : {}) }]
         if (part.type === "reasoning")
           return [
             {
               type: "reasoning",
               text: part.text,
-              ...(part.metadata ? { state: part.metadata } : {}),
+              ...(part.metadata ? { native: part.metadata } : {}),
               time: { created: part.time.start, ...(part.time.end === undefined ? {} : { completed: part.time.end }) },
             },
           ]
@@ -939,9 +941,11 @@ function legacyToolNotice(messages: ReadonlyArray<TransformResult["messages"][nu
         : []),
     ...(called.has("skill") ? ["The `skill` tool now takes `id` instead of `name`."] : []),
     ...(removed.length === 1
-      ? [`The \`${removed[0]}\` tool is no longer available and must not be called.`]
+      ? [`The \`${removed[0]}\` tool is no longer available by default. Only call it if it is in your tool list.`]
       : removed.length > 1
-        ? [`The following tools are no longer available and must not be called: ${list(removed)}.`]
+        ? [
+            `The following tools are no longer available by default. Only call them if they are in your tool list: ${list(removed)}.`,
+          ]
         : []),
   ]
   if (parts.length === 0) return undefined
@@ -953,7 +957,7 @@ function migrateTool(part: typeof SessionV1.ToolPart.Type, fallback: number) {
     type: "tool" as const,
     id: part.callID,
     name: part.tool,
-    ...(part.metadata ? { providerState: part.metadata } : {}),
+    ...(part.metadata ? { native: part.metadata } : {}),
   }
   if (part.state.status === "completed")
     return {

@@ -37,7 +37,7 @@ export const layer = Layer.effect(
         Effect.sync(() => {
           plugins.set(plugin.id, { ...plugin, revision: String(++revision), source: { type: "sdk" } })
           phases.set(plugin.id, options?.phase) // kilocode_change(agent) seam - remember the phase
-        }).pipe(Effect.andThen(bus.publish(Updated, {})), Effect.asVoid),
+        }).pipe(Effect.andThen(bus.publish(Updated, {}, { global: true })), Effect.asVoid),
       all: (phase) => [...plugins.values()].filter((plugin) => phases.get(plugin.id) === phase), // kilocode_change(agent) seam - one phase
     })
   }),

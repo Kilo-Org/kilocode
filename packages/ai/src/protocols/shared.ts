@@ -1,5 +1,5 @@
 import { Tool } from "@opencode/schema/tool"
-import { Effect, Option, Schema } from "effect"
+import { Effect, Option, Predicate, Schema, SchemaGetter, SchemaTransformation } from "effect"
 import { Headers, HttpClientRequest } from "effect/http"
 import { Media } from "../media.js"
 import {
@@ -27,11 +27,38 @@ const isJson = Schema.is(Schema.Json)
 export const JsonObject = Schema.Record(Schema.String, Schema.Unknown)
 export const optionalArray = <const S extends Schema.Top>(schema: S) => Schema.optional(Schema.Array(schema))
 export const optionalNull = <const S extends Schema.Top>(schema: S) => Schema.optional(Schema.NullOr(schema))
+/** Optional provider field where an explicit `null` means absent, so decoding never yields `null`. */
+export const optionalNullish = <const S extends Schema.Top>(schema: S) =>
+  Schema.optional(Schema.NullOr(schema)).pipe(
+    Schema.decodeTo(
+      Schema.optional(Schema.toType(schema)),
+      SchemaTransformation.transformOptional({
+        decode: Option.filter(Predicate.isNotNullish),
+        encode: (value) => value,
+      }),
+    ),
+  )
 /** Optional field whose malformed value decodes to `undefined` instead of failing the enclosing struct. */
 export const lenient = <const S extends Schema.Top>(schema: S) =>
   Schema.optionalKey(
     Schema.UndefinedOr(schema).pipe(Schema.catchDecoding(() => Effect.succeed(Option.some(undefined)))),
   )
+/**
+ * Accepts stream frames that carry no `type`, alongside the typed event schema. Gateways inject such frames as
+ * keep-alives, so they decode as an ignored event; one with an `error` still decodes as an error event.
+ */
+export const withUntypedFrames = <const S extends Schema.Codec<{ readonly type: string }, { readonly type: string }>>(
+  event: S,
+) =>
+  Schema.Union([
+    event,
+    JsonObject.check(Schema.makeFilter((frame) => !("type" in frame))).pipe(
+      Schema.decodeTo(event, {
+        decode: SchemaGetter.transform((frame) => ({ ...frame, type: frame.error != null ? "error" : "ignored" })),
+        encode: SchemaGetter.forbidden(() => "Untyped stream frames are decode-only"),
+      }),
+    ),
+  ])
 /** Provider-defined string enum: known values for autocomplete, any string accepted at runtime. */
 export const knownString = <Known extends string>() =>
   Schema.declare<OpenString<Known>>((value): value is OpenString<Known> => typeof value === "string", {

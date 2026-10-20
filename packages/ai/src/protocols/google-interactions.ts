@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect"
+import { Effect, Schema, SchemaGetter } from "effect"
 import { Route } from "../route/client.js"
 import { Auth } from "../route/auth.js"
 import { Endpoint } from "../route/endpoint.js"
@@ -148,6 +148,24 @@ const Interaction = Schema.StructWithRest(
   }),
   [Schema.Record(Schema.String, Schema.Unknown)],
 )
+const KNOWN_EVENT_TYPES = new Set([
+  "step.start",
+  "step.delta",
+  "step.stop",
+  "interaction.created",
+  "interaction.status_update",
+  "interaction.completed",
+  "error",
+])
+// Google may add stream event types. Unknown types are ignored, while a malformed known type still fails decoding.
+const UnknownEvent = Schema.Struct({
+  event_type: Schema.String.check(Schema.makeFilter((type) => !KNOWN_EVENT_TYPES.has(type))),
+}).pipe(
+  Schema.decodeTo(Schema.Struct({ event_type: Schema.Literal("unknown") }), {
+    decode: SchemaGetter.transform(() => ({ event_type: "unknown" as const })),
+    encode: SchemaGetter.forbidden(() => "Unknown Google Interactions stream events are decode-only"),
+  }),
+)
 const Event = Schema.Union([
   Schema.Struct({ event_type: Schema.Literal("step.start"), index: Schema.Number, step: OutputStep }),
   Schema.Struct({ event_type: Schema.Literal("step.delta"), index: Schema.Number, delta: Delta }),
@@ -163,6 +181,7 @@ const Event = Schema.Union([
   }),
   Schema.Struct({ event_type: Schema.Literal("interaction.completed"), interaction: Interaction }),
   Schema.Struct({ event_type: Schema.Literal("error"), error: Schema.Unknown }),
+  UnknownEvent,
 ])
 type Event = typeof Event.Type
 
@@ -475,6 +494,7 @@ const step = Effect.fnUntraced(function* (state: ParserState, event: Event) {
       return yield* onStop(state, event.index)
     case "interaction.created":
     case "interaction.status_update":
+    case "unknown":
       return [state, []] satisfies StepResult
     case "error":
       return yield* new AIError({

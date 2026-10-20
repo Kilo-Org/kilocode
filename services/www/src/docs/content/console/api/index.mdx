@@ -1,6 +1,6 @@
 ---
 title: "API Overview"
-description: "Authenticate with the OpenCode Console API using service account keys or user tokens."
+description: "Authenticate with the OpenCode Console API using personal API keys, service account keys, or user tokens."
 ---
 
 The Console API lets integrations read workspace configuration and manage budgets. Paths are relative
@@ -20,6 +20,28 @@ curl --fail-with-body "${CONSOLE_URL}/api/v2/config" \
 | [Providers](/console/api/providers) | `https://opencode.ai/inference/custom/...` |
 | [Budgets](/console/api/budgets)     | `/api/v1/budgets/members`                  |
 | [Config](#workspace-config)         | `GET /api/v2/config`                       |
+
+## Personal API keys
+
+Every member can create personal API keys. A personal key acts as you, and its usage counts toward your
+[member budget](/console/budgets#member-budgets). Use one for your own scripts and [harnesses](/console/harnesses).
+
+1. Open **Account** from the account menu and find **Personal API keys**.
+2. Click **Add API key**.
+3. Choose the **Workspace**, a **Key name**, and an optional **Expiration**, then click **Create**.
+4. Copy the key. It is shown only once.
+
+Send it as a bearer token, like a service account key. Each key works in the workspace chosen when it was created.
+
+```text
+Authorization: Bearer oc_sk_...
+```
+
+Members' keys can list and call models. Owners and admins can also grant Console API permissions, up to their own role.
+A key can never create other keys.
+
+Revoke a key from **Personal API keys** on the **Account** page. Owners and admins can see and revoke a member's keys
+from the member's page under **Members**. Leaving or being removed from a workspace revokes your keys in it.
 
 ## Service accounts
 

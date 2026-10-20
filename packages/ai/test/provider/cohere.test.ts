@@ -133,6 +133,30 @@ it.effect("Cohere rejects incomplete streams", () =>
   }),
 )
 
+it.effect("Cohere ignores unknown stream events but rejects malformed known ones", () =>
+  Effect.gen(function* () {
+    const generate = (...events: ReadonlyArray<unknown>) =>
+      LLMClient.generate(LLM.request({ model: cohere.model("command-a-03-2025"), prompt: "Hi" })).pipe(
+        Effect.provide(fixedResponse(sseEvents(...events))),
+      )
+    const response = yield* generate(
+      { type: "message-start" },
+      { type: "debug", detail: "new event type" },
+      { type: "content-delta", index: 0, delta: { message: { content: { text: "OK" } } } },
+      { type: "content-end", index: 0 },
+      { type: "message-end", delta: { finish_reason: "COMPLETE" } },
+    )
+    expect(response.text).toBe("OK")
+
+    const error = yield* generate(
+      { type: "message-start" },
+      { type: "content-delta", delta: { message: { content: { text: "OK" } } } },
+      { type: "message-end", delta: { finish_reason: "COMPLETE" } },
+    ).pipe(Effect.flip)
+    expect(error.reason._tag).toBe("InvalidProviderOutput")
+  }),
+)
+
 it.effect("Cohere preserves native tool plans in continued history", () =>
   Effect.gen(function* () {
     const response = yield* LLMClient.generate(

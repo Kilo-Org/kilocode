@@ -583,6 +583,58 @@ describe("OpencodePlugin", () => {
     ),
   )
 
+  it.live("builds Console model variants from its reasoning and applies its release date", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() =>
+        Bun.serve({
+          port: 0,
+          fetch: () =>
+            Response.json({
+              providers: {
+                remote: {
+                  name: "Remote",
+                  package: "aisdk:@ai-sdk/openai",
+                  models: {
+                    reasoner: {
+                      releaseDate: "2026-02-03",
+                      capabilities: { reasoning: { supported: true, effort: ["default", "low", "high"] } },
+                      variants: [{ id: "high", headers: { "x-tier": "high" } }],
+                    },
+                  },
+                },
+              },
+            }),
+        }),
+      ),
+      (server) =>
+        Effect.gen(function* () {
+          const credentials = yield* Credential.Service
+          const models = yield* Model.Service
+          yield* credentials.create({
+            integrationID: Integration.ID.make("opencode"),
+            value: Credential.Key.make({ type: "key", key: "secret", metadata: { server: server.url.origin } }),
+          })
+
+          yield* addPlugin()
+
+          const reasoner = required(yield* models.get(Provider.ID.make("remote"), Model.ID.make("reasoner")))
+          expect(reasoner.time.released).toBe(Date.UTC(2026, 1, 3))
+          expect(reasoner.variants).toEqual([
+            {
+              id: Model.VariantID.make("low"),
+              settings: { reasoningEffort: "low", reasoningSummary: "auto", include: ["reasoning.encrypted_content"] },
+            },
+            {
+              id: Model.VariantID.make("high"),
+              settings: { reasoningEffort: "high", reasoningSummary: "auto", include: ["reasoning.encrypted_content"] },
+              headers: { "x-tier": "high" },
+            },
+          ])
+        }),
+      (server) => Effect.promise(() => server.stop(true)),
+    ),
+  )
+
   it.effect("refreshes hosted search with Console config, retains it on failure, and skips unchanged snapshots", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => {

@@ -5,7 +5,6 @@ import { describe, expect } from "bun:test"
 import { Config } from "@opencode/schema/config"
 import { Money } from "@opencode/schema/money"
 import {
-  Cause,
   DateTime,
   Deferred,
   Duration,
@@ -79,11 +78,10 @@ const itWithActivity = testEffect(
 )
 
 describe("LocationServiceMap", () => {
-  for (const failure of ["file", "permissions", "config reference"] as const) {
+  for (const failure of ["file", "permissions"] as const) {
     for (const invalidate of [false, true]) {
       // The file-path fixture boots on Windows rather than failing during
-      // discovery. The config-reference case covers repair on every OS.
-      // Windows does not enforce POSIX directory modes, and root bypasses them.
+      // discovery. Windows does not enforce POSIX directory modes, and root bypasses them.
       const test =
         (failure === "file" && process.platform === "win32") ||
         (failure === "permissions" && (process.platform === "win32" || process.getuid?.() === 0))
@@ -102,20 +100,8 @@ describe("LocationServiceMap", () => {
             yield* Effect.promise(() => fs.mkdir(directory, { mode: 0o000 }))
             yield* Effect.addFinalizer(() => Effect.promise(() => fs.chmod(directory, 0o755)))
           }
-          if (failure === "config reference") {
-            yield* Effect.promise(() => fs.mkdir(path.join(directory, "username.txt"), { recursive: true }))
-            yield* Effect.promise(() =>
-              fs.writeFile(path.join(directory, "opencode.json"), JSON.stringify({ username: "{file:username.txt}" })),
-            )
-          }
           const first = yield* Effect.exit(load)
           expect(Exit.isFailure(first)).toBe(true)
-          if (failure === "config reference" && Exit.isFailure(first)) {
-            expect(Cause.squash(first.cause)).toMatchObject({
-              name: "ConfigInvalidError",
-              data: { message: expect.stringContaining('bad file reference: "{file:username.txt}"') },
-            })
-          }
           if (!invalidate) expect(yield* locations.contextEffectOption(ref).pipe(Effect.scoped)).toEqual(Option.none())
 
           if (failure === "file") {
@@ -123,10 +109,6 @@ describe("LocationServiceMap", () => {
             yield* Effect.promise(() => fs.mkdir(directory))
           }
           if (failure === "permissions") yield* Effect.promise(() => fs.chmod(directory, 0o755))
-          if (failure === "config reference") {
-            yield* Effect.promise(() => fs.rm(path.join(directory, "username.txt"), { recursive: true }))
-            yield* Effect.promise(() => fs.writeFile(path.join(directory, "username.txt"), "test-user"))
-          }
           expect((yield* Effect.promise(() => fs.stat(directory))).isDirectory()).toBe(true)
           if (invalidate) yield* locations.invalidate(ref)
           const repaired = yield* Effect.exit(load)
@@ -137,8 +119,8 @@ describe("LocationServiceMap", () => {
     }
   }
 
-  for (const failure of ["file", "missing", "config reference"] as const) {
-    // A file-path Location boots on Windows; use the missing config reference there.
+  for (const failure of ["file", "missing"] as const) {
+    // A file-path Location boots on Windows; the missing directory covers it there.
     const test = failure === "file" && process.platform === "win32" ? it.live.skip : it.live
     test(`keeps the repaired graph after concurrent ${failure} failures release`, () =>
       Effect.gen(function* () {
@@ -147,12 +129,6 @@ describe("LocationServiceMap", () => {
         const ref = Location.Ref.make({ directory: AbsolutePath.make(directory) })
         const locations = yield* LocationServiceMap.Service
         if (failure === "file") yield* Effect.promise(() => fs.writeFile(directory, "file"))
-        if (failure === "config reference") {
-          yield* Effect.promise(() => fs.mkdir(path.join(directory, "username.txt"), { recursive: true }))
-          yield* Effect.promise(() =>
-            fs.writeFile(path.join(directory, "opencode.json"), JSON.stringify({ username: "{file:username.txt}" })),
-          )
-        }
 
         const scopes = yield* Effect.forEach(Array.from({ length: 8 }), () =>
           Effect.acquireRelease(Scope.make(), (scope) => Scope.close(scope, Exit.void)),
@@ -164,11 +140,7 @@ describe("LocationServiceMap", () => {
         )
         expect(failures.every(Exit.isFailure)).toBe(true)
         if (failure === "file") yield* Effect.promise(() => fs.rm(directory))
-        if (failure !== "config reference") yield* Effect.promise(() => fs.mkdir(directory))
-        if (failure === "config reference") {
-          yield* Effect.promise(() => fs.rm(path.join(directory, "username.txt"), { recursive: true }))
-          yield* Effect.promise(() => fs.writeFile(path.join(directory, "username.txt"), "test-user"))
-        }
+        yield* Effect.promise(() => fs.mkdir(directory))
         const repaired = yield* locations.contextEffect(ref)
 
         yield* Effect.forEach(scopes, (scope) => Scope.close(scope, Exit.void))

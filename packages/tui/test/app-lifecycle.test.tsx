@@ -3,10 +3,13 @@ import { EmbeddedTerminalRenderable } from "@opentui/core"
 import { createTestRenderer } from "@opentui/core/testing"
 import { Effect, FileSystem } from "effect"
 import { Global } from "@opencode/util/global"
+import { SimulationRenderer } from "@opencode/simulation/frontend/renderer"
 import path from "node:path"
+import { Writable } from "node:stream"
 import { createEventStream, createFetch, directory, json } from "./fixture/tui-client"
 import { tmpdir } from "./fixture/fixture"
 import { createAppFixture } from "./fixture/app"
+import { waitForHighlightedFrame } from "./fixture/frame"
 import type { PluginInfo } from "@opencode/client"
 
 test.each([100, 44])("Ctrl-O is immediate, dismissible, and prunes cached deletions at width %s", async (width) => {
@@ -214,17 +217,42 @@ test.each(["dismissed", "refreshing"])(
   },
 )
 
+test("boots on the simulation renderer with the terminal title enabled", async () => {
+  await Effect.runPromise(
+    Effect.scoped(
+      Effect.gen(function* () {
+        const setup = SimulationRenderer.setupFor(yield* SimulationRenderer.create({}))
+        yield* Effect.promise(async () => {
+          await using app = await createAppFixture({ setup })
+          await app.ready
+          await app.waitForFrame((frame) => frame.includes("commands"))
+        })
+      }),
+    ),
+  )
+})
+
 test("SIGHUP clears title and disposes scoped resources once", async () => {
   await using state = await tmpdir()
-  const setup = await createTestRenderer({ width: 80, height: 24, useThread: false })
-  const titles: string[] = []
+  const output: string[] = []
+  const setup = await createTestRenderer({
+    width: 80,
+    height: 24,
+    bufferedOutput: "stdout",
+    stdout: new Writable({
+      write(chunk, _encoding, callback) {
+        output.push(chunk.toString())
+        callback()
+      },
+    }) as NodeJS.WriteStream,
+  })
+  await setup.renderer.setupTerminal()
   let started!: () => void
   const ready = new Promise<void>((resolve) => {
     started = resolve
   })
   const setTitle = setup.renderer.setTerminalTitle.bind(setup.renderer)
   setup.renderer.setTerminalTitle = (title) => {
-    titles.push(title)
     if (title === "OpenCode") started()
     setTitle(title)
   }
@@ -250,17 +278,19 @@ test("SIGHUP clears title and disposes scoped resources once", async () => {
     await task
 
     expect(setup.renderer.isDestroyed).toBe(true)
-    expect(titles.at(-1)).toBe("")
+    expect(output.join("")).toContain("\x1b]0;\x07")
     expect(process.listeners("SIGHUP").every((listener) => listeners.has(listener))).toBe(true)
   } finally {
     if (!setup.renderer.isDestroyed) setup.renderer.destroy()
+    await setup.renderer.closed
     await server.stop()
   }
 })
 
 test("session lifecycle updates the terminal title and prints the epilogue after cleanup", async () => {
   await using state = await tmpdir()
-  const setup = await createTestRenderer({ width: 80, height: 24, useThread: false })
+  const setup = await createTestRenderer({ width: 80, height: 24 })
+  await setup.renderer.setupTerminal()
   let initialTitle!: () => void
   const initialTitleSet = new Promise<void>((resolve) => {
     initialTitle = resolve
@@ -347,7 +377,8 @@ test("session lifecycle updates the terminal title and prints the epilogue after
 
 test("session title generated while an untitled session is loading remains visible", async () => {
   await using state = await tmpdir()
-  const setup = await createTestRenderer({ width: 80, height: 24, useThread: false })
+  const setup = await createTestRenderer({ width: 80, height: 24 })
+  await setup.renderer.setupTerminal()
   const titles: string[] = []
   const setTitle = setup.renderer.setTerminalTitle.bind(setup.renderer)
   const generatedTitle = Promise.withResolvers<void>()
@@ -622,7 +653,8 @@ test.each([80, 120])("completes custom Markdown and ordinary fences in a session
       return undefined
     },
   })
-  const streaming = await setup.waitForFrame(
+  const streaming = await waitForHighlightedFrame(
+    setup,
     (frame) =>
       frame.includes("initial") &&
       frame.includes("DiagramStart") &&
@@ -660,7 +692,8 @@ test.each([80, 120])("completes custom Markdown and ordinary fences in a session
       tokens: session.tokens,
     },
   })
-  const frame = await setup.waitForFrame(
+  const frame = await waitForHighlightedFrame(
+    setup,
     (frame) => frame.includes("MARKDOWN_END") && frame.includes("initial final") && frame.includes("2ms"),
   )
   expect(frame).toContain("DiagramStart")
@@ -754,13 +787,17 @@ test("keeps assistant footer metrics current after prepend, same-length refresh,
     },
   })
 
-  const initial = await setup.waitForFrame((frame) => frame.includes("Original answer") && frame.includes("20.0 tok/s"))
+  const initial = await waitForHighlightedFrame(
+    setup,
+    (frame) => frame.includes("Original answer") && frame.includes("20.0 tok/s"),
+  )
   expect(initial).toContain("Current input")
   expect(initial).toContain("4.0s \u00b7 20.0 tok/s")
   expect(initial).not.toContain("Prepended input")
 
   setup.mockInput.pressKey("g", { ctrl: true })
-  const prepended = await setup.waitForFrame(
+  const prepended = await waitForHighlightedFrame(
+    setup,
     (frame) =>
       frame.includes("Prepended input") &&
       frame.includes("Prepended instructions") &&
@@ -775,7 +812,8 @@ test("keeps assistant footer metrics current after prepend, same-length refresh,
   // Refresh the latest page: length stays four, but the retained assistant moves from index three to one.
   refresh = true
   setup.events.disconnect()
-  const refreshed = await setup.waitForFrame(
+  const refreshed = await waitForHighlightedFrame(
+    setup,
     (frame) =>
       frame.includes("Later input") &&
       frame.includes("Later answer") &&
@@ -795,7 +833,8 @@ test("keeps assistant footer metrics current after prepend, same-length refresh,
     durable: { aggregateID: session.id, seq: 1, version: 1 },
     data: { sessionID: session.id, to: "msg_0004" },
   })
-  const reverted = await setup.waitForFrame(
+  const reverted = await waitForHighlightedFrame(
+    setup,
     (frame) => frame.includes("Original answer") && !frame.includes("Later input") && !frame.includes("Later answer"),
   )
   expect(reverted).toContain("Current input")
@@ -805,7 +844,8 @@ test("keeps assistant footer metrics current after prepend, same-length refresh,
 
 test("session startup prompt is submitted exactly once", async () => {
   await using state = await tmpdir()
-  const setup = await createTestRenderer({ width: 80, height: 24, useThread: false })
+  const setup = await createTestRenderer({ width: 80, height: 24 })
+  await setup.renderer.setupTerminal()
   const events = createEventStream()
   const cwd = process.cwd()
   const location = { directory: cwd, project: { id: "project", directory: cwd } }
@@ -1346,9 +1386,10 @@ test("ctrl+c dismisses autocomplete and shell mode before exiting", async () => 
 
 test.skipIf(process.platform === "win32").each(["manual", "select"] as const)(
   "selection copy and pane management respect %s mode in the prompt and terminal pane",
-  async (copy) => {
-    await using state = await tmpdir()
-    const setup = await createTestRenderer({ width: 100, height: 30, useThread: false, kittyKeyboard: true })
+    async (copy) => {
+      await using state = await tmpdir()
+      const setup = await createTestRenderer({ width: 100, height: 30, kittyKeyboard: true })
+      await setup.renderer.setupTerminal()
     setup.renderer.start()
     const ready = Promise.withResolvers<void>()
     const session = {
