@@ -54,14 +54,14 @@ Self-testing means you use the real CLI like a user and judge the result. Unit t
 
 **Quick check without UI:** `env KILO_V2_PROFILE=$(mktemp -d) bun dev run --standalone "<prompt>"`.
 
-**TUI check.** The `vscode-self-test` harness runs the TUI in a quiet VS Code terminal and reads the terminal text. The v1 extension only hosts the window. No v2 extension is needed.
+**TUI check.** The `vscode-self-test` harness runs the TUI in a quiet VS Code terminal and reads the terminal text. It launches VS Code without an extension (`--mode none`), so no v1 checkout and no v2 extension are needed.
 
 ### 1. Setup (one shell call)
 
-Set the first line, then run the whole block from the v2 worktree. `V1` must be a v1 checkout with a built `packages/kilo-vscode/dist` (prefer a separate v1 worktree, never build in the user's main checkout). Use a new `ID` for each test.
+Run `bun install` once in a new worktree. Without `node_modules` the TUI exits with `Cannot find module`. Set the first line, then run the whole block from the v2 worktree. Use a new `ID` for each test.
 
 ```bash
-ID=my-test V1=/path/to/v1/checkout HEADLESS=true V2=$(git rev-parse --show-toplevel)
+ID=my-test HEADLESS=true V2=$(git rev-parse --show-toplevel)
 T=/tmp/kilo-v2-st-$ID; rm -rf $T; mkdir -p $T/user/User $T/repo
 cat > $T/user/User/settings.json <<'EOF'
 {
@@ -83,22 +83,22 @@ cat > $T/user/User/settings.json <<'EOF'
 EOF
 printf 'export const VERSION = "1.2.3"\n' > $T/repo/math.ts && git -C $T/repo init -q && git -C $T/repo add -A && git -C $T/repo -c user.name=t -c user.email=t@t commit -qm init
 cat > $T/env.sh <<EOF
-export KILO_SELF_TEST_REPO=$V1
+export KILO_SELF_TEST_REPO=$V2
 T=$T
 st() { node ~/.config/kilo/scripts/vscode-self-test/cli.mjs "\$@" --session kilo-v2-$ID; }
 screen() { st evaluate --script 'return [...document.querySelectorAll(".xterm-rows > div")].map(r => r.textContent.trim()).filter(t => /[^\s┃╹▀]/.test(t)).join("\n")' | jq -r '.structuredContent.result | fromjson? // .'; }
-idle() { sleep 1; st wait --text "esc interrupt" --state hidden >/dev/null; }
+idle() { sleep 1; for i in 1 2 3 4; do st wait --text "esc interrupt" --state hidden --timeout-ms 60000 | jq -e '.isError == false' >/dev/null && return 0; done; echo "idle wait failed (session busy or harness error)"; return 1; }
 tclick() { P=\$(st evaluate --script "const el = [...document.querySelectorAll('.xterm-rows span')].find(s => s.textContent.includes(\$(jq -Rn --arg s "\$1" '\$s'))); if (!el) return ''; const r = el.getBoundingClientRect(); return Math.round(r.x + Math.min(r.width / 2, 20)) + ' ' + Math.round(r.y + r.height / 2)" | jq -r '.structuredContent.result | fromjson? // .'); [ -n "\$P" ] || { echo "not found: \$1"; return 1; }; st click --x \${P% *} --y \${P#* } >/dev/null; }
 logs() { grep -h "\${1:-level=ERROR}" \$T/profile/data/opencode/log/*.log | tail -\${2:-20}; }
 EOF
 source $T/env.sh
 st start >/dev/null
-st launch-vscode --mode dev --build false --auth false --headless $HEADLESS --user-dir $T/user --workspace $T/repo >/dev/null
+st launch-vscode --mode none --auth false --headless $HEADLESS --user-dir $T/user --workspace $T/repo >/dev/null
 st run-command --command "View: Close Primary Side Bar" >/dev/null
 st run-command --command "View: Close Secondary Side Bar" >/dev/null
 st run-command --command "Terminal: Focus Terminal" >/dev/null
 st type --submit --value "env KILO_V2_PROFILE=$T/profile bun $V2/script/dev-isolated.ts --standalone" >/dev/null
-st wait --text "ctrl+p commands" >/dev/null && screen
+st wait --text "ctrl+p commands" --timeout-ms 60000 | jq -e '.isError == false' >/dev/null && screen
 ```
 
 The TUI is ready when the last command prints the home screen (about 15 seconds). The CLI starts signed out. To test signed in, start it with `env KILO_API_KEY=$(jq -r .kilo.access ~/.local/share/kilo/auth.json) KILO_ORG_ID=$(jq -r '.kilo.accountId // empty' ~/.local/share/kilo/auth.json) KILO_V2_PROFILE=...` instead.
@@ -111,10 +111,10 @@ Start every later shell call with `source /tmp/kilo-v2-st-<ID>/env.sh`. Then act
 |---|---|
 | `st type --value "<text>" >/dev/null` | Type a prompt, a slash command (`/connect`) or a mention (`@math`) |
 | `st press --keys <keys> >/dev/null` | `Enter`, `Escape`, `Shift+Tab` (agent), `Control+p` (commands). Chords are two calls: `Control+x`, then `n` (new tab) or `m` (model) |
-| `idle` | Wait until the answer is complete. Use after sending a prompt |
+| `idle` | Wait until the answer is complete (at most 4 minutes; reports a failure if the session does not become idle). Use after sending a prompt |
 | `screen` | Print the terminal text |
 | `tclick "<text>"` | Click visible TUI text, for example a tab title. Use a short unique part |
-| `st wait --text "<text>"` | Wait until text appears |
+| `st wait --text "<text>"` | Wait until text appears. Default 10 seconds, `--timeout-ms` at most 60000. Check `isError` in the JSON |
 | `logs` | Print CLI log errors. `logs "<pattern>" <lines>` for other lines |
 | `st screenshot` | Only with `HEADLESS=false`. Read the PNG |
 
@@ -141,6 +141,7 @@ st stop-vscode --cleanup true >/dev/null; st stop >/dev/null; rm -rf $T
 
 - Read `screen` after every step. Dialogs chain: choosing a model opens a variant dialog, and the next typed text lands in its search field.
 - Do not wait for text you typed. It is already on the screen. Use `idle`.
+- A free-model answer can show `Retrying` first when the Gateway upstream fails. `idle` waits through it. Report a test as blocked only when `idle` reports a failure.
 - `st click --text` does not reach the terminal. Use `tclick`.
 - Headless runs cannot take screenshots. Set `HEADLESS=false` only for visual review, because the window then opens on the user's screen.
 - New tabs get their title a few seconds after the first answer. The active tab title scrolls, so match a short part.
@@ -148,7 +149,7 @@ st stop-vscode --cleanup true >/dev/null; st stop >/dev/null; rm -rf $T
 - CLI data of a test: log in `$T/profile/data/opencode/log/`, database `$T/profile/data/opencode/opencode-local.db`.
 - Parallel agents use different `ID` values.
 
-The VS Code extension (G2) uses the same harness later, with `KILO_SELF_TEST_REPO` pointing at the v2 worktree.
+The VS Code extension (G2) uses the same harness later with `--mode dev`, after the v2 worktree has `packages/kilo-vscode`.
 
 ## Test policy
 
