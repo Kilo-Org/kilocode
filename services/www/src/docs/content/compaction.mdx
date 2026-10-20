@@ -7,18 +7,20 @@ summary, so the session can keep going past the model's context limit.
 
 ## How it works
 
-When a session approaches the model's context limit, OpenCode summarizes
-everything except the most recent conversation, about 15,000 tokens by default.
-Once the summary is ready, it is placed in front of that recent conversation and
-the session continues from there.
+When a session approaches the model's context limit, OpenCode summarizes the
+entire current conversation. It also keeps the most recent conversation, about
+15,000 tokens by default, beside the summary so exact recent details remain
+available.
 
 ```text
 before   [ system prompt ][ older conversation ............ ][ recent 15k ][ pending work ]
-after    [ system prompt ][ summary ][ recent 15k ][ pending work ]
+request  [ system prompt ][ older conversation ............ ][ recent 15k ][ summary instructions ]
+after    [ system prompt ][ summary of older + recent ][ recent 15k ][ pending work ]
 ```
 
-The model sees the summary as past conversation. Later compactions update the
-same summary rather than starting over.
+Sending the full conversation lets the summary request reuse the normal request's
+prompt cache when the provider supports it. Later compactions update the existing
+summary using the conversation since that checkpoint.
 
 ## Start
 
@@ -82,7 +84,7 @@ Add `compaction` to any [OpenCode configuration file](/config):
 | --- | ---: | --- |
 | `auto` | `true` | Compact automatically near the context limit, and recover once when a provider rejects a request as too long. Manual compaction always works. |
 | `keep.tokens` | `15000` | Approximate recent conversation kept beside the summary. Larger values preserve more detail but leave less room for new work. |
-| `buffer` | 10% of the limit | Tokens to keep free below the model's limit. Larger values start automatic compaction earlier. |
+| `buffer` | 15% of the limit, at least 16k | Tokens to keep free below the model's limit. Larger values start automatic compaction earlier. |
 
 `keep.tokens` and `buffer` accept non-negative integers.
 
@@ -123,7 +125,7 @@ after    [ encrypted checkpoint + recent user messages ]
 | --- | --- |
 | Support | OpenAI Responses models. Support varies by deployment and model. |
 | Threshold | Same `auto` and `buffer` settings as summary compaction. Manual requests work too. |
-| Portability | An encrypted checkpoint only works with the same provider, model, and endpoint. If you switch models, the session continues from the original conversation instead. |
+| Portability | An encrypted checkpoint only works with the same provider and model. If you switch models, the session continues from the original conversation instead. |
 | Too long | If the provider rejects a compaction as too long, OpenCode retries it with a smaller request. It does not switch to a summary. |
 
 ## Summaries

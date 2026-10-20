@@ -1,7 +1,7 @@
 export * as SessionRevert from "./revert.js"
 
 import { and, asc, eq, gt } from "drizzle-orm"
-import { Effect, Schema } from "effect"
+import { Effect } from "effect"
 import { Database } from "../database/database.js"
 import { Bus } from "../bus.js"
 import { Instance } from "../instance/service.js"
@@ -11,6 +11,7 @@ import { SessionEvent } from "./event.js"
 import { MessageNotFoundError } from "./error.js"
 import { SessionMessage } from "./message.js"
 import { SessionSchema } from "./schema.js"
+import { SessionHistory } from "./history.js"
 import { SessionMessageTable } from "./sql.js"
 
 interface BoundaryInput {
@@ -102,10 +103,9 @@ const plan = Effect.fn("SessionRevert.plan")(function* (db: Database.Interface["
     .orderBy(asc(SessionMessageTable.seq))
     .all()
     .pipe(Effect.orDie)
-  const decode = Schema.decodeUnknownEffect(SessionMessage.Info)
   const files = new Map<RelativePath, Snapshot.ID>()
   for (const row of rows) {
-    const message = yield* decode({ ...row.data, id: row.id, type: row.type }).pipe(Effect.orDie)
+    const message = SessionHistory.decodeMessageRowSync(row)
     if (message.type !== "assistant" || !message.snapshot?.start) continue
     for (const file of message.snapshot.files ?? [])
       if (!files.has(file)) files.set(file, Snapshot.ID.make(message.snapshot.start))

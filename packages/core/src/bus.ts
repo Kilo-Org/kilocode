@@ -12,6 +12,7 @@ import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import { isDeepStrictEqual } from "node:util"
 import { Durable } from "@opencode/schema/durable-event-manifest"
 import { SessionEvent } from "@opencode/schema/session-event"
+import { SessionLegacy } from "@opencode/schema/session-legacy"
 import type { SessionID } from "@opencode/schema/session-id"
 import { AbsolutePath } from "@opencode/schema/schema"
 
@@ -70,6 +71,10 @@ const envelope = (aggregateID: string, seq: number, version: number) => ({
   version: Event.Version.make(version),
 })
 
+// Every stored event decodes through here, so payloads written in older shapes are upgraded in one place.
+const decodeStoredData = (definition: Event.DurableDefinition, data: unknown) =>
+  Schema.decodeUnknownSync(definition.data)(SessionLegacy.event(definition.type, data))
+
 const decodeSerializedEvent = (event: SerializedEvent): Event.Payload => {
   const definition = Durable.get(event.type)
   if (!definition?.durable) {
@@ -80,7 +85,7 @@ const decodeSerializedEvent = (event: SerializedEvent): Event.Payload => {
     created: event.created ?? 0,
     type: definition.type,
     durable: envelope(event.aggregateID, event.seq, definition.durable.version),
-    data: Schema.decodeUnknownSync(definition.data)(event.data),
+    data: decodeStoredData(definition, event.data),
   }
 }
 
@@ -346,7 +351,8 @@ export function configured(options?: Options) {
                             stored?.id === event.id &&
                             stored.type === versionedType(definition.type, durable.version) &&
                             stored.created === (event.created ?? 0) &&
-                            isDeepStrictEqual(stored.data, encoded)
+                            // Rows written before a payload rename compare in their upgraded shape.
+                            isDeepStrictEqual(SessionLegacy.event(definition.type, stored.data), encoded)
                           ) {
                             if (input.ownerID && row?.ownerID == null) {
                               yield* db
@@ -684,7 +690,7 @@ export function configured(options?: Options) {
                   id: event.id,
                   created: event.created ?? 0,
                   type: definition.type,
-                  data: Schema.decodeUnknownSync(definition.data)(event.data),
+                  data: decodeStoredData(definition, event.data),
                 } as Event.Payload
                 const committed = yield* commitDurableEvent(definition, payload, {
                   seq: event.seq,

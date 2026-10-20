@@ -379,3 +379,9 @@ export function useConfig() {
   if (!value) throw new Error("ConfigProvider is missing")
   return value
 }
+
+/** Reactive accessor for the temporary "new-designs" experiment. */
+export function useNewDesigns() {
+  const config = useConfig()
+  return () => config.data.experimental?.["new-designs"] === true
+}

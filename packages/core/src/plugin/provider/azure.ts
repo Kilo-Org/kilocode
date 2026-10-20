@@ -479,15 +479,12 @@ function expandResourceName(baseURL: string, resourceName: string) {
     .replaceAll("${AZURE_COGNITIVE_SERVICES_RESOURCE_NAME}", resourceName)
 }
 
-// The Azure CLI method stores the resource as credential metadata, the API key method as its form answer. API keys
-// imported from V1 keep their connect-form answer as metadata.
+// Both the API key and Azure CLI methods store their resource form answer as credential metadata.
 function credentialResource(credential: Credential.Value | undefined) {
   const resource =
-    credential?.type === "key"
-      ? (credential.configuration?.resourceName ?? credential.metadata?.resourceName)
-      : credential?.type === "external" && credential.methodID === methodID
-        ? credential.metadata?.resourceName
-        : undefined
+    credential?.type === "key" || (credential?.type === "external" && credential.methodID === methodID)
+      ? credential.metadata?.resourceName
+      : undefined
   return typeof resource === "string" && resource.trim() !== "" ? resource : undefined
 }
 

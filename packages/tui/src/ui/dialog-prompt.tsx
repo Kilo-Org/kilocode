@@ -4,7 +4,7 @@ import { useTheme } from "../context/theme"
 import { DialogFooter, DialogHeader, DialogLayout, useDialog, type DialogSize } from "./dialog"
 import { Show, createEffect, createSignal, onMount, type JSX } from "solid-js"
 import { Spinner } from "../component/spinner"
-import { useConfig } from "../config"
+import { useConfig, useNewDesigns } from "../config"
 import { useRenderer } from "@opentui/solid"
 
 export type DialogPromptAction = {
@@ -19,6 +19,8 @@ export type DialogPromptAction = {
 export type DialogPromptProps = {
   title: string
   size?: DialogSize
+  /** Faint line below the title, under the "new-designs" experiment. */
+  subtitle?: string
   description?: () => JSX.Element
   placeholder?: string
   value?: string
@@ -34,6 +36,7 @@ export function DialogPrompt(props: DialogPromptProps) {
   const renderer = useRenderer()
   const theme = useTheme().surface("dialog")
   const config = useConfig().data
+  const newDesigns = useNewDesigns()
   const [textareaTarget, setTextareaTarget] = createSignal<TextareaRenderable>()
   let textarea: TextareaRenderable
 
@@ -48,6 +51,14 @@ export function DialogPrompt(props: DialogPromptProps) {
       textarea.gotoLineEnd()
     },
   }
+
+  const extraActions = () =>
+    (props.actions ?? []).map((action) => ({
+      title: action.title,
+      command: action.command,
+      disabled: props.busy,
+      onTrigger: () => action.onTrigger(handle),
+    }))
 
   Keymap.createLayer(() => ({
     mode: "modal",
@@ -119,25 +130,30 @@ export function DialogPrompt(props: DialogPromptProps) {
 
   return (
     <DialogLayout
+      footerGap={2}
       header={
         <DialogHeader
           title={props.title}
+          description={props.subtitle}
           onClose={() => {
             if (!props.busy) (props.onCancel ?? dialog.clear)()
           }}
         />
       }
-      footer={
+      footer={{
+        actions: {
+          primary: [
+            ...extraActions(),
+            { title: "submit", command: "dialog.prompt.submit", disabled: props.busy, onTrigger: confirm },
+          ],
+        },
+      }}
+      legacyFooter={
         <Show when={!props.busy} fallback={<text fg={theme.text.muted}>processing…</text>}>
           <DialogFooter
-            actions={[
-              { title: "submit", command: "dialog.prompt.submit", onTrigger: confirm },
-              ...(props.actions ?? []).map((action) => ({
-                title: action.title,
-                command: action.command,
-                onTrigger: () => action.onTrigger(handle),
-              })),
-            ]}
+            actions={{
+              secondary: [{ title: "submit", command: "dialog.prompt.submit", onTrigger: confirm }, ...extraActions()],
+            }}
           />
         </Show>
       }
@@ -153,7 +169,7 @@ export function DialogPrompt(props: DialogPromptProps) {
           }}
           initialValue={props.value}
           placeholder={props.placeholder ?? "Enter text"}
-          placeholderColor={theme.text.muted}
+          placeholderColor={newDesigns() ? theme.text.faint : theme.text.muted}
           textColor={props.busy ? theme.text.formfield.disabled : theme.text.formfield.base}
           focusedTextColor={props.busy ? theme.text.formfield.disabled : theme.text.formfield.base}
           cursorColor={props.busy ? theme.background.formfield.disabled : theme.text.base}

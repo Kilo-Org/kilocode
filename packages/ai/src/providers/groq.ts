@@ -93,7 +93,6 @@ export const configure = (input: LanguageModelOptions = {}) => {
           maxTokensField: "max_completion_tokens",
           reasoningField: "reasoning",
           requireReasoning: false,
-          supportsStore: false,
           supportsStrictMode: false,
         },
       }),

@@ -23,6 +23,7 @@ import { Worktree } from "@opencode/schema/worktree"
 import { Project } from "@opencode/schema/project"
 import { AbsolutePath, RelativePath } from "../schema.js"
 import type { SessionSchema } from "./schema.js"
+import { SessionHistory } from "./history.js"
 import { ProjectTable } from "../project/sql.js"
 
 type DatabaseService = Database.Interface["db"]
@@ -31,7 +32,6 @@ type MessageEvent = Exclude<
   typeof SessionEvent.Forked.Type | typeof SessionEvent.Deleted.Type
 >
 
-const decodeMessage = Schema.decodeUnknownSync(SessionMessage.Info)
 const encodeMessage = Schema.encodeSync(SessionMessage.Info)
 
 export class SessionAlreadyProjected extends Error {}
@@ -189,6 +189,7 @@ const projectFork = Effect.fn("SessionProjector.projectFork")(function* (
   if (event.data.instructionEntries)
     yield* InstructionEntry.initialize(db, event.data.sessionID, event.data.instructionEntries, event.created)
 
+  const forkedID = (seq: number) => SessionMessage.ID.make(`${SessionMessage.ID.fromEvent(event.id)}_${seq}`)
   let cursor = -1
   while (copiedSeq !== undefined) {
     const rows = yield* db
@@ -211,21 +212,39 @@ const projectFork = Effect.fn("SessionProjector.projectFork")(function* (
       .pipe(Effect.orDie)
     if (rows.length === 0) break
 
-    yield* db
-      .insert(SessionMessageTable)
-      .values(
-        rows.map((row) => ({
-          id: SessionMessage.ID.make(`${SessionMessage.ID.fromEvent(event.id)}_${row.seq}`),
+    const values = yield* Effect.forEach(rows, (row) =>
+      Effect.gen(function* () {
+        const copy = {
+          id: forkedID(row.seq),
           session_id: event.data.sessionID,
           type: row.type,
           seq: row.seq,
           time_created: row.time_created,
           time_updated: row.time_updated,
           data: row.data,
-        })),
-      )
-      .run()
-      .pipe(Effect.orDie)
+        }
+        // A summary references the first message it kept, which the fork copied under a new ID.
+        const keepID = row.type === "compaction" ? row.data.metadata?.keepID : undefined
+        if (typeof keepID !== "string") return copy
+        const kept = yield* db
+          .select({ seq: SessionMessageTable.seq })
+          .from(SessionMessageTable)
+          .where(
+            and(
+              eq(SessionMessageTable.session_id, event.data.parentID),
+              eq(SessionMessageTable.id, SessionMessage.ID.make(keepID)),
+            ),
+          )
+          .get()
+          .pipe(Effect.orDie)
+        if (!kept) return copy
+        return {
+          ...copy,
+          data: { ...row.data, metadata: { ...row.data.metadata, keepID: forkedID(kept.seq) } },
+        }
+      }),
+    )
+    yield* db.insert(SessionMessageTable).values(values).run().pipe(Effect.orDie)
 
     cursor = rows.at(-1)!.seq
   }
@@ -236,8 +255,6 @@ const projectFork = Effect.fn("SessionProjector.projectFork")(function* (
 
 function run(db: DatabaseService, event: MessageEvent) {
   return Effect.gen(function* () {
-    const decodeRow = (row: typeof SessionMessageTable.$inferSelect) =>
-      decodeMessage({ ...row.data, id: row.id, type: row.type })
     const updateMessage = (message: SessionMessage.Info) => {
       const encoded = encodeMessage(message)
       const { id, type, ...data } = encoded
@@ -318,7 +335,7 @@ function run(db: DatabaseService, event: MessageEvent) {
             .get()
             .pipe(Effect.orDie)
           if (!row) return
-          const message = decodeRow(row)
+          const message = SessionHistory.decodeMessageRowSync(row)
           return message.type === "assistant" && !message.time.completed ? message : undefined
         })
       },
@@ -337,7 +354,7 @@ function run(db: DatabaseService, event: MessageEvent) {
             .get()
             .pipe(Effect.orDie)
           if (!row) return
-          const message = decodeRow(row)
+          const message = SessionHistory.decodeMessageRowSync(row)
           return message.type === "assistant" ? message : undefined
         })
       },
@@ -358,7 +375,7 @@ function run(db: DatabaseService, event: MessageEvent) {
             .get()
             .pipe(Effect.orDie)
           if (!row) return
-          const message = decodeRow(row)
+          const message = SessionHistory.decodeMessageRowSync(row)
           return message.type === "shell" ? message : undefined
         })
       },
@@ -379,7 +396,7 @@ function run(db: DatabaseService, event: MessageEvent) {
             .get()
             .pipe(Effect.orDie)
           if (!row) return
-          const message = decodeRow(row)
+          const message = SessionHistory.decodeMessageRowSync(row)
           return message.type === "compaction" ? message : undefined
         })
       },
@@ -612,6 +629,22 @@ const layer = Layer.effectDiscard(
         .run()
         .pipe(Effect.orDie)
     })
+    yield* bus.project(SessionEvent.Archived, (event) =>
+      db
+        .update(SessionTable)
+        .set({ time_archived: event.created, time_updated: event.created })
+        .where(eq(SessionTable.id, event.data.sessionID))
+        .run()
+        .pipe(Effect.orDie),
+    )
+    yield* bus.project(SessionEvent.Unarchived, (event) =>
+      db
+        .update(SessionTable)
+        .set({ time_archived: null, time_updated: event.created })
+        .where(eq(SessionTable.id, event.data.sessionID))
+        .run()
+        .pipe(Effect.orDie),
+    )
     yield* bus.project(SessionEvent.MessageContentUpdated, (event) => run(db, event))
     yield* bus.project(SessionEvent.UsageRecorded, (event) => applyUsage(db, event.data.sessionID, event.data))
     yield* bus.project(SessionEvent.Forked, (event) => projectFork(db, event))
@@ -790,7 +823,7 @@ const layer = Layer.effectDiscard(
           .where(eq(SessionTable.id, event.data.sessionID))
           .run()
           .pipe(Effect.orDie)
-        yield* InstructionState.reset(db, event.data.sessionID)
+        yield* InstructionState.rewind(db, event.data.sessionID, boundary.seq)
       }),
     )
     yield* bus.subscribe([SessionEvent.Step.Ended, SessionEvent.Step.Failed, SessionEvent.UsageRecorded]).pipe(

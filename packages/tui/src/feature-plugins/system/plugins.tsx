@@ -197,7 +197,9 @@ export function PluginsDialog(props: { context: Plugin.Context; plugins: ReturnT
               },
             ]}
             footerHints={[
-              ...(pluginError(focusedEntry()) && !focusedTui() ? [{ title: "view error", label: "enter" }] : []),
+              ...(pluginError(focusedEntry()) && !focusedTui()
+                ? [{ title: "view error", label: "enter", group: "primary" as const }]
+                : []),
               { title: `${showInternal() ? "hide" : "show"} internal`, label: "ctrl+a" },
             ]}
             onMove={(option) => setFocused(option.value)}
