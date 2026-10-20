@@ -9,8 +9,8 @@
 <polyline class="p" points="40.00,169.85 515.00,168.65 990.00,168.65"/>
 <circle class="m" cx="40.00" cy="169.85" r="3"><title>2026-10-16: 0.1% (12/9854)</title></circle>
 <text x="40.00" y="192" text-anchor="middle">2026-10-16</text>
-<circle class="m" cx="515.00" cy="168.65" r="3"><title>2026-10-19: 0.9% (86/9829)</title></circle>
+<circle class="m" cx="515.00" cy="168.65" r="3"><title>2026-10-19: 0.9% (87/9829)</title></circle>
 <text x="515.00" y="192" text-anchor="middle">2026-10-19</text>
-<circle class="m" cx="990.00" cy="168.65" r="3"><title>now: 0.9% (87/9829)</title></circle>
+<circle class="m" cx="990.00" cy="168.65" r="3"><title>now: 0.9% (89/9829)</title></circle>
 <text x="990.00" y="192" text-anchor="middle">now</text>
 </svg>

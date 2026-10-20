@@ -219,7 +219,7 @@ describe("Config", () => {
         // different string than the global root.
         const real = path.join(tmp.path, "real")
         const link = path.join(tmp.path, "link")
-        const global = AbsolutePath.make(path.join(real, ".kilo")) // kilocode_change - Kilo project directory
+        const global = AbsolutePath.make(path.join(real, ".kilo")) // kilocode_change(config) - Kilo project directory
         const once = Effect.gen(function* () {
           const config = yield* Config.Service
           const watcher = yield* Watcher.Test
@@ -232,11 +232,8 @@ describe("Config", () => {
               .map((subscription) => subscription.path),
           ).toEqual([global])
           expect(
-            // kilocode_change - Kilo project directory
             (yield* watcher.subscriptions()).filter((subscription) =>
-// kilocode_change start - Kilo config names and .kilo directory
-              subscription.path.includes(`${path.sep}.kilo${path.sep}`),
-// kilocode_change end
+              subscription.path.includes(`${path.sep}.kilo${path.sep}`), // kilocode_change(config) - Kilo project directory
             ),
           ).toEqual([])
         })
@@ -1278,19 +1275,7 @@ describe("Config", () => {
               {
                 type: "entries",
                 path: tmp.path,
-                // kilocode_change - Kilo config names and directories
-// kilocode_change start - Kilo config names and .kilo directory
-                names: [
-                  ".agents",
-                  ".claude",
-                  ".kilo",
-                  ".kilocode",
-                  "kilo.json",
-                  "kilo.jsonc",
-                  "opencode.json",
-                  "opencode.jsonc",
-                ],
-// kilocode_change end
+                names: [".agents", ".claude", ".kilo", ".kilocode", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"], // kilocode_change(config) - Kilo names
               },
             ])
           }).pipe(Effect.provide(testLayer(tmp.path, undefined, undefined, undefined, Watcher.testLayer)))
@@ -1873,19 +1858,7 @@ describe("Config", () => {
             expect(yield* watcher.subscriptions()).toContainEqual({
               path: tmp.path,
               type: "entries",
-              // kilocode_change - Kilo config names and directories
-// kilocode_change start - Kilo config names and .kilo directory
-              names: [
-                ".agents",
-                ".claude",
-                ".kilo",
-                ".kilocode",
-                "kilo.json",
-                "kilo.jsonc",
-                "opencode.json",
-                "opencode.jsonc",
-              ],
-// kilocode_change end
+              names: [".agents", ".claude", ".kilo", ".kilocode", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"], // kilocode_change(config) - Kilo names
             })
           }).pipe(Effect.provide(testLayer(tmp.path)))
         }),
@@ -1893,7 +1866,7 @@ describe("Config", () => {
     ),
   )
 
-  // kilocode_change start - Kilo stops at the worktree root like Kilo v1, so "outside" is not loaded, and .kilo replaces .opencode
+  // kilocode_change start - config: Kilo stops at the worktree root like Kilo v1, so "outside" is not loaded, and .kilo replaces .opencode
   it.live("loads global and ancestor configuration up to the project boundary", () =>
     Effect.acquireDisposable(Effect.promise(() => tmpdir())).pipe(
       Effect.flatMap((tmp) => {

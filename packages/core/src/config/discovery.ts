@@ -8,13 +8,9 @@ import { Global } from "@opencode/util/global"
 import { Location } from "../location.js"
 import { AbsolutePath } from "../schema.js"
 import type { Options } from "../config.js"
-import { KiloConfigDiscovery } from "../kilocode/config/discovery.js" // kilocode_change
+import { KiloConfigDiscovery } from "../kilocode/config/discovery.js" // kilocode_change(config)
 
-// kilocode_change start - Kilo v1 file names (opencode.* wins over kilo.*), and .kilocode and .kilo instead of .opencode
-export const names = KiloConfigDiscovery.names
-const directoryNames = KiloConfigDiscovery.directories
-const candidates = [".claude", ".agents", ...directoryNames.toReversed(), ...names.toReversed()]
-// kilocode_change end
+export const names = KiloConfigDiscovery.names // kilocode_change(config) - Kilo v1 root file names
 
 /** Eligible sources in priority order, including paths that may appear later. */
 export interface Sources {
@@ -82,21 +78,12 @@ export const discover = Effect.fn("ConfigDiscovery.discover")(function* (options
   const directories =
     globalRoots.slice(0, configDirectories.length).includes(current) || options?.project === false
       ? []
-// kilocode_change start - Kilo v1 discovery order and worktree boundary
-      : yield* fs.up({ targets: ["."], start: location.directory }).pipe(
-          // kilocode_change - stop the walk at the worktree root, like Kilo v1
-          Effect.flatMap((ancestors) => KiloConfigDiscovery.withinWorktree(fs, location, ancestors)),
-          Effect.orDie,
-        )
-// kilocode_change end
+      : yield* fs.up({ targets: ["."], start: location.directory }).pipe(Effect.flatMap(KiloConfigDiscovery.withinWorktree(fs, location)), Effect.orDie) // kilocode_change(config) - stop at the worktree root, like Kilo v1
   const discovered = yield* Effect.forEach(directories, (directory) =>
     Effect.gen(function* () {
       // Resolve the parent too: missing children must honor symlinked global roots.
       const parent = yield* fs.resolve(directory)
-      // kilocode_change - candidates include the Kilo project directories
-// kilocode_change start - Kilo v1 discovery order and worktree boundary
-      return yield* Effect.forEach(candidates, (name) =>
-// kilocode_change end
+      return yield* Effect.forEach(KiloConfigDiscovery.candidates, (name) => // kilocode_change(config) - Kilo directories and names
         fs
           .resolve(path.join(parent, name))
           .pipe(Effect.map((resolved) => ({ item: AbsolutePath.make(path.join(directory, name)), resolved }))),
@@ -135,17 +122,9 @@ export const discover = Effect.fn("ConfigDiscovery.discover")(function* (options
     preferences,
     global: globalEnabled ? globalDirectory : undefined,
     explicit: options?.file ? AbsolutePath.make(path.resolve(options.file)) : undefined,
-    // kilocode_change - Kilo project directories replace .opencode; opencode.* wins over kilo.* at any depth, like Kilo v1
-// kilocode_change start - Kilo v1 discovery order and worktree boundary
-    direct: KiloConfigDiscovery.byFamily(
-      visible.filter((item) => ![".agents", ".claude", ...directoryNames].includes(path.basename(item))).toReversed(),
-    ),
-// kilocode_change end
+    direct: KiloConfigDiscovery.direct(visible), // kilocode_change(config) - Kilo v1 root file order
     project: yield* Effect.forEach(
-      // kilocode_change - Kilo project directories replace .opencode
-// kilocode_change start - Kilo v1 discovery order and worktree boundary
-      visible.filter((item) => directoryNames.includes(path.basename(item))).toReversed(),
-// kilocode_change end
+      KiloConfigDiscovery.projectDirectories(visible), // kilocode_change(config) - .kilocode and .kilo instead of .opencode
       (directory) => fs.isDir(directory).pipe(Effect.map((present) => ({ path: directory, present }))),
     ),
     claude:

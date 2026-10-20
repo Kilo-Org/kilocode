@@ -16,7 +16,7 @@ import { AbsolutePath } from "./schema.js"
 import { ConfigVariable } from "./config/variable.js"
 import { ConfigNormalize } from "./config/normalize.js"
 import { ConfigDiscovery } from "./config/discovery.js"
-import { KiloConfigDiscovery } from "./kilocode/config/discovery.js" // kilocode_change
+import { KiloConfigDiscovery } from "./kilocode/config/discovery.js" // kilocode_change(config)
 import { ConfigWatch } from "./config/watch.js"
 import { WellKnown } from "./wellknown.js"
 import { AppProcess } from "@opencode/util/process"
@@ -209,15 +209,10 @@ export const layer = (options?: Options) =>
         return info ? [new Document({ type: "document", path: plist, info })] : []
       })
 
-      // kilocode_change start - file order is a parameter: Kilo v1 reads .kilocode and .kilo in another order than the global directory
-      const loadDirectory = Effect.fnUntraced(function* (
-        directory: AbsolutePath,
-        names: readonly string[] = ConfigDiscovery.names,
-      ) {
+      const loadDirectory = Effect.fnUntraced(function* (directory: AbsolutePath, names: readonly string[] = ConfigDiscovery.names) { // kilocode_change(config) - file order per directory
         return [
-          ...(yield* Effect.forEach(names, (file) => loadFile(path.join(directory, file))).pipe(
+          ...(yield* Effect.forEach(names, (file) => loadFile(path.join(directory, file))).pipe( // kilocode_change(config) - file order per directory
             Effect.map((configs) => configs.filter((config): config is Document => config !== undefined)),
-      // kilocode_change end
           )),
           new Directory({ type: "directory", path: directory }),
         ]
@@ -279,7 +274,7 @@ export const layer = (options?: Options) =>
         const globalSupplementary = sources.global ? yield* loadDirectory(sources.global).pipe(Effect.orDie) : []
         const projectSupplementary = yield* Effect.forEach(
           sources.project.filter((root) => root.present),
-          (root) => loadDirectory(root.path, KiloConfigDiscovery.configFiles), // kilocode_change - Kilo v1 directory order
+          (root) => loadDirectory(root.path, KiloConfigDiscovery.configFiles), // kilocode_change(config) - Kilo v1 directory file order
         ).pipe(
           Effect.orDie,
           Effect.map((entries) => entries.flat()),
@@ -388,11 +383,7 @@ export const layer = (options?: Options) =>
       const update = Effect.fn("Config.update")(
         function* (patch: Patch) {
           const directory = initial.global ?? AbsolutePath.make(globalService.config)
-          // kilocode_change start - write the first existing file in Kilo v1 preference order, else kilo.jsonc
-          const candidates = KiloConfigDiscovery.configFiles.map((name) => path.join(directory, name))
-          const filepath =
-            (yield* Effect.filter(candidates, fs.isFile)).at(0) ?? path.join(directory, "kilo.jsonc")
-          // kilocode_change end
+          const filepath = yield* KiloConfigDiscovery.writeTarget(fs, directory) // kilocode_change(config) - Kilo v1 write preference
           const text = (yield* fs.readFileStringSafe(filepath)) ?? "{}\n"
           const updated = yield* Effect.try({
             try: () =>

@@ -20,7 +20,7 @@ import { it } from "../../lib/effect"
 function configLayer(input: { directory: string; global: string; project?: string; git?: boolean }) {
   const project = AbsolutePath.make(input.project ?? input.directory)
   const vcs = input.git ? { type: "git" as const, store: AbsolutePath.make(path.join(project, ".git")) } : undefined
-  return AppNodeBuilder.build(LayerNode.group([Config.node, Bus.node]), [
+  const built = AppNodeBuilder.build(LayerNode.group([Config.node, Bus.node]), [
     Location.node.replace(
       Layer.succeed(
         Location.Service,
@@ -34,6 +34,8 @@ function configLayer(input: { directory: string; global: string; project?: strin
     WellKnown.node.replace(emptyWellknownNode),
     Watcher.node.replace(Watcher.testLayer),
   ])
+  // Merge the watcher layer by reference so Watcher.Test resolves to the instance the built graph uses.
+  return Layer.mergeAll(built, Watcher.testLayer)
 }
 
 const write = (file: string, value: unknown) =>
@@ -57,7 +59,23 @@ const directories = (root: string) =>
     )
   })
 
+// kilo_port(unattributed:config:546539fc1643) kilo_port(unattributed:config:8cdbdec70393)
 describe("Kilo config discovery", () => {
+  it.live("reads kilo.json and kilo.jsonc in the project root, .jsonc after .json", () =>
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const project = path.join(tmp.path, "repo")
+      const global = path.join(tmp.path, "global")
+      yield* write(path.join(project, "kilo.jsonc"), { shell: "kilo-jsonc" })
+      yield* write(path.join(project, "kilo.json"), { shell: "kilo-json" })
+
+      expect(yield* shells.pipe(Effect.provide(configLayer({ directory: project, global, git: true })))).toEqual([
+        "kilo-json",
+        "kilo-jsonc",
+      ])
+    }),
+  )
+
   it.live("reads project root files like Kilo v1: opencode.* wins over kilo.* at any depth", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
@@ -119,6 +137,44 @@ describe("Kilo config discovery", () => {
         path.join("repo", ".kilocode"),
         path.join("repo", ".kilo"),
       ])
+    }),
+  )
+
+  it.live("reads only the root files of the global directory, not .kilo or .kilocode inside it", () =>
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const project = path.join(tmp.path, "repo")
+      const global = path.join(tmp.path, "global")
+      yield* write(path.join(global, "kilo.json"), { shell: "global-root" })
+      yield* write(path.join(global, ".kilo", "kilo.json"), { shell: "global-dot-kilo" })
+      yield* write(path.join(global, ".kilocode", "kilo.json"), { shell: "global-dot-kilocode" })
+      yield* Effect.promise(() => fs.mkdir(project, { recursive: true }))
+
+      const layer = configLayer({ directory: project, global, git: true })
+      expect(yield* shells.pipe(Effect.provide(layer))).toEqual(["global-root"])
+      expect(yield* directories(tmp.path).pipe(Effect.provide(layer))).toEqual(["global"])
+    }),
+  )
+
+  it.live("watches the Kilo names and directories in each project directory", () =>
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const project = path.join(tmp.path, "repo")
+      const global = path.join(tmp.path, "global")
+      yield* Effect.promise(() => fs.mkdir(project, { recursive: true }))
+
+      const subscriptions = yield* Effect.gen(function* () {
+        const config = yield* Config.Service
+        const watcher = yield* Watcher.Test
+        yield* config.entries()
+        return yield* watcher.subscriptions()
+      }).pipe(Effect.provide(configLayer({ directory: project, global, git: true })))
+
+      expect(subscriptions).toContainEqual({
+        type: "entries",
+        path: AbsolutePath.make(project),
+        names: [".agents", ".claude", ".kilo", ".kilocode", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"],
+      })
     }),
   )
 

@@ -143,7 +143,7 @@ function project(
     if (format === "markdown")
       yield* Effect.promise(() =>
         Bun.write(
-          path.join(tmp.path, ".kilo/commands/review.md"), // kilocode_change - Kilo project directory
+          path.join(tmp.path, ".kilo/commands/review.md"), // kilocode_change(config) - Kilo project directory
           [
             "---",
             "description: Review code",

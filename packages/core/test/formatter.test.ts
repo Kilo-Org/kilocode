@@ -66,9 +66,8 @@ function append(expression: string) {
 const markdown = { command: append("'md'"), extensions: [".md"] }
 const project = { command: append("'project'"), extensions: [".project"] }
 
-// kilocode_change start - Kilo formatter config layer
+// kilocode_change start - config: the Kilo project directory .kilo replaces .opencode
 // Writes formatter config layers from lowest to highest priority: global, project, then project .kilo.
-// kilocode_change - Kilo project directory replaces .opencode
 function withLayers<A, E, R>(
   layers: ConfigInput["formatter"][],
   body: (formatter: Formatter.Interface, directory: string) => Effect.Effect<A, E, R>,
@@ -82,7 +81,7 @@ function withLayers<A, E, R>(
           path.join(global.config, "opencode.jsonc"),
           path.join(directory, "opencode.json"),
           path.join(directory, ".kilo", "opencode.jsonc"),
-// kilocode_change end
+          // kilocode_change end
         ]
         await Promise.all(layers.map((formatter, index) => fs.writeFile(files[index], JSON.stringify({ formatter }))))
       })
