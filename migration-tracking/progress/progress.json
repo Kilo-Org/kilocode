@@ -4,7 +4,7 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 86,
+    "done": 87,
     "total": 9829,
     "percent": 0.9,
     "dropped": 25,
@@ -21,7 +21,7 @@
       },
       {
         "kind": "patch",
-        "done": 34,
+        "done": 35,
         "total": 3445
       },
       {
@@ -32,13 +32,13 @@
     ],
     "landed": {
       "plugin": 19,
-      "host": 0,
+      "host": 1,
       "seam": 0,
       "patch": 0
     },
     "coreImports": 9,
     "sharedPatches": {
-      "seam": 28,
+      "seam": 29,
       "patch": 2
     }
   },
@@ -895,7 +895,7 @@
     },
     {
       "feature": "global",
-      "done": 0,
+      "done": 1,
       "total": 7,
       "dropped": 0,
       "kinds": {
@@ -908,13 +908,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 1,
           "total": 4
         },
         "test": {
           "done": 0,
           "total": 1
         }
+      },
+      "landed": {
+        "plugin": 0,
+        "host": 1,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -6073,6 +6079,7 @@
     "patch:gateway:d29cb22ad5f6": "plugin",
     "patch:gateway:e8673ed1650b": "plugin",
     "patch:gateway:f983d8f993c8": "plugin",
+    "patch:global:0e189a57d108": "host",
     "patch:unattributed:agent:161afe543464": "plugin",
     "patch:unattributed:agent:55cce67688d4": "plugin",
     "patch:unattributed:agent:655072363498": "plugin",
@@ -6147,6 +6154,7 @@
     "patch:gateway:d29cb22ad5f6",
     "patch:gateway:e8673ed1650b",
     "patch:gateway:f983d8f993c8",
+    "patch:global:0e189a57d108",
     "patch:unattributed:agent:0a0c97da2c48",
     "patch:unattributed:agent:161afe543464",
     "patch:unattributed:agent:19ff1297ae1a",

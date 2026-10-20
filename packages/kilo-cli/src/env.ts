@@ -1,6 +1,7 @@
 // KILO_* environment translation (host composition, rung 2). Kilo users set KILO_<NAME>; the upstream runtime
 // reads OPENCODE_<NAME>. The entry imports this module first, so the translation runs before an upstream module
-// reads the environment. Child processes (the background service, a standalone server) inherit the result.
+// reads the environment. Child processes (the background service, a standalone server) inherit the result. It also
+// names Kilo's app directory (`directory` below).
 
 /**
  * The v1 Kilo variables (`packages/core/src/flag/flag.ts` and `packages/opencode/src/effect/runtime-flags.ts` on
@@ -35,4 +36,13 @@ export function translate(env: Record<string, string | undefined>) {
   }
 }
 
+/**
+ * Kilo v2's app directory name (D-4): config, data, cache, state and tmp are `<XDG base>/kilo2`, apart from both
+ * upstream's `opencode` and v1 Kilo's `kilo` directories, until storage consolidation (U-E8-02). The upstream
+ * global paths read it when their module loads (`packages/util/src/global.ts`), so every path follows it: the
+ * `Global` service, logs, locks, tmp and the database. Every process the host starts runs this module first.
+ */
+export const directory = "kilo2"
+
 translate(process.env)
+process.env.OPENCODE_APP_DIR_NAME = directory // kilo_port(global:0e189a57d108)

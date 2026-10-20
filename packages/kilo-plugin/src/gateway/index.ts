@@ -84,10 +84,11 @@ interface CatalogState {
   readonly skippedOfflineTest?: boolean
 }
 
-export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
+export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Scope>({
   id: "kilocode.gateway",
   effect: Effect.fn(function* (ctx) {
     const bus = yield* Bus.Service
+    const global = yield* Global.Service
     const scope = yield* Scope.Scope
     const instanceID = randomUUID()
     const lock = Semaphore.makeUnsafe(1)
@@ -115,7 +116,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Scope.Scope>({
     const getMachineID = Effect.gen(function* () {
       if (process.env.KILO_MACHINE_ID?.trim()) return process.env.KILO_MACHINE_ID.trim()
       if (cachedMachineID !== undefined) return cachedMachineID ?? undefined
-      const resolved = yield* KiloMachine.get(Global.Path.data)
+      const resolved = yield* KiloMachine.get(global.data)
       cachedMachineID = resolved ?? null
       return resolved
     })

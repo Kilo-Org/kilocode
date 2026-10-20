@@ -8,20 +8,20 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**86 / 9829 cells done (0.9%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
+**87 / 9829 cells done (0.9%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
 | module | 31 | 3547 | 0.9% |
 | api | 0 | 39 | 0% |
-| patch | 34 | 3445 | 1% |
+| patch | 35 | 3445 | 1% |
 | test | 21 | 2798 | 0.8% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
-Landed by rung, for patch cells closed by a done-proof: 19 plugin, 0 host, 0 seam, 0 patch.
+Landed by rung, for patch cells closed by a done-proof: 19 plugin, 1 host, 0 seam, 0 patch.
 
-Ratchets: 9 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/location`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 30 shared patches by rung: 28 seam, 2 patch (`script/upstream/shared-patches.json`).
+Ratchets: 9 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/location`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 31 shared patches by rung: 29 seam, 2 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -33,7 +33,7 @@ One point per day from the committed `progress.json` on the first-parent history
 |---|---:|---:|---:|
 | 2026-10-16 | 12 | 9854 | 0.1% |
 | 2026-10-19 | 86 | 9829 | 0.9% |
-| now | 86 | 9829 | 0.9% |
+| now | 87 | 9829 | 0.9% |
 
 ## Features
 
@@ -74,7 +74,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | filesystem-containment |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | fixture |  |  |  | 0/10 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | gateway | 30/35 |  | 12/18 | 17/22 | 59/75 | 78.7% | `█████████████░░░` | 11 plugin |
-| global | 0/2 |  | 0/4 | 0/1 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| global | 0/2 |  | 1/4 | 0/1 | 1/7 | 14.3% | `██░░░░░░░░░░░░░░` | 1 host |
 | goals | 0/9 |  | 0/6 | 0/6 | 0/21 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | i18n | 0/20 |  |  |  | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | image-size | 0/1 |  | 0/2 | 0/1 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |

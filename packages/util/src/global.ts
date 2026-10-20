@@ -9,7 +9,7 @@ import { roots } from "#global-roots"
 import { Flock } from "./flock.js"
 import { makeGlobalNode } from "./effect/app-node.js"
 
-const app = "opencode"
+const app = process.env.OPENCODE_APP_DIR_NAME || "opencode" // kilocode_change(identity) seam - an embedding entry names the app directory
 const { data, cache, config, state, tmp } = roots(app)
 
 const paths = {

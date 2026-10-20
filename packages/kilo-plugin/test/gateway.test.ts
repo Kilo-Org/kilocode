@@ -19,6 +19,7 @@ import { Rpc } from "@opencode/core/rpc"
 import { Agent } from "@opencode/schema/agent"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { Session } from "@opencode/schema/session"
+import { Global } from "@opencode/util/global"
 import { withEnv } from "../../core/test/fixture/env"
 import { testEffect } from "../../core/test/lib/effect"
 import { PluginTestLayer } from "../../core/test/plugin/fixture"
@@ -66,7 +67,8 @@ const addPlugin = Effect.fn(function* () {
   const plugin = yield* Plugin.Service
   const host = yield* PluginHost.make(plugin)
   yield* KiloPlugin.effect(host)
-  yield* KiloGatewayPlugin.effect(host)
+  // The host gives a registered Kilo plugin the global services it requires (packages/kilo-cli/src/host.ts).
+  yield* KiloGatewayPlugin.effect(host).pipe(Effect.provide(Global.layerWith({})))
   return host
 })
 
