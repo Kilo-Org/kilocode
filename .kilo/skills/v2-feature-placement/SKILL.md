@@ -90,7 +90,7 @@ Only when steps 2 and 3 found nothing. A seam is the knob or dispatch point upst
 - Generic: an optional setting, an exported value, a pass-through parameter, a call to a registered list. Any plugin could use it.
 - No Kilo constant, condition or import in the marked lines. Kilo's value is set from `kilo-plugin` or the host.
 - One to three lines. Prefer files that change rarely. Do not reformat or restructure around it.
-- Each line: `// kilocode_change(<feature>) seam - <what the knob is>`.
+- Each line: `// kilocode_change(<feature>) seam - <what the knob is>`. For more than one line, use a block: `// kilocode_change start - <feature> seam: <what the knob is>` ... `// kilocode_change end`. Never `kilocode_change(<feature>) start`: the counters recognize a block only when `start` or `end` follows `kilocode_change` directly, and that form breaks the count.
 - Add the file to `script/upstream/shared-patches.json` with `rung: 3` and a `seam` text that names the missing knob and why rungs 1 and 2 cannot supply it. Raise `limits` only in the same PR.
 
 ### 5. Rung 4: write a patch
@@ -98,7 +98,7 @@ Only when steps 2 and 3 found nothing. A seam is the knob or dispatch point upst
 Only when a seam makes no sense (a defect fix, or a Kilo-specific decision no knob can express).
 
 - One line thick. If the behavior is more than a fix, the line calls into a Kilo-owned module (`if (yield* KiloPolicy.x(...)) ...`) and the policy lives there. Never write policy inline in an upstream file.
-- `// kilocode_change(<feature>) - <reason>`, or `kilocode_change(<feature>:<id>)` when it replaces a v1 patch cell.
+- `// kilocode_change(<feature>) - <reason>`, or `kilocode_change(<feature>:<id>)` when it replaces a v1 patch cell. If a fix truly needs more than one line, use the block form from step 4 (`kilocode_change start - <feature>: <reason>` ... `kilocode_change end`) and put any `<feature>:<id>` proof on one of its lines.
 - `shared-patches.json` entry with `rung: 4` and the reason rungs 1 to 3 do not work. The PR repeats the reason.
 
 ### 6. Imports
