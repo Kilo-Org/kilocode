@@ -13,12 +13,15 @@ afterEach(() => {
 })
 
 describe("resolveGlideSpecifier", () => {
-  test("converts the runtime-installed module URL to a path require() accepts", async () => {
-    process.env[env] = "file:///tmp/cache/node_modules/@valkey/valkey-glide/build-ts/index.js"
-    const { resolveGlideSpecifier } = await import("../../../../src/indexing/vector-store/valkey-loader")
+  test.skipIf(process.platform === "win32")(
+    "converts the runtime-installed module URL to a path require() accepts",
+    async () => {
+      process.env[env] = "file:///tmp/cache/node_modules/@valkey/valkey-glide/build-ts/index.js"
+      const { resolveGlideSpecifier } = await import("../../../../src/indexing/vector-store/valkey-loader")
 
-    expect(resolveGlideSpecifier()).toBe("/tmp/cache/node_modules/@valkey/valkey-glide/build-ts/index.js")
-  })
+      expect(resolveGlideSpecifier()).toBe("/tmp/cache/node_modules/@valkey/valkey-glide/build-ts/index.js")
+    },
+  )
 
   test("falls back to the package name when no override is present", async () => {
     delete process.env[env]
