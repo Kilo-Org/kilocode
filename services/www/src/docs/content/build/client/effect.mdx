@@ -39,33 +39,34 @@ Configure default headers on the supplied `HttpClient`. Native operations use
 normal Effect interruption for cancellation. RPC methods additionally accept
 per-call location, header, and signal options.
 
+{/* prettier-ignore */}
 ```ts
 import { HttpClient, HttpClientRequest } from "effect/http"
 
-const httpClient = yield * HttpClient.HttpClient
-const client =
-  yield *
-  OpenCode.make({ baseUrl: "https://opencode.example.com" }).pipe(
-    Effect.provideService(
-      HttpClient.HttpClient,
-      HttpClient.mapRequest(httpClient, (request) =>
-        HttpClientRequest.setHeaders(request, { authorization: `Bearer ${process.env.OPENCODE_TOKEN}` }),
-      ),
+const httpClient = yield* HttpClient.HttpClient
+const client = yield* OpenCode.make({ baseUrl: "https://opencode.example.com" }).pipe(
+  Effect.provideService(
+    HttpClient.HttpClient,
+    HttpClient.mapRequest(httpClient, (request) =>
+      HttpClientRequest.setHeaders(request, { authorization: `Bearer ${process.env.OPENCODE_TOKEN}` }),
     ),
-  )
+  ),
+)
 
-const sessions = yield * client.session.list()
+const sessions = yield* client.session.list()
 ```
 
 ## Stream events
 
 Streaming operations such as `event.subscribe()` and `session.log()` return Effect Streams.
 
+{/* prettier-ignore */}
 ```ts
 import { Effect, Stream } from "effect"
 
-yield *
-  client.event.subscribe().pipe(Stream.runForEach((event) => Effect.logInfo("OpenCode event", { type: event.type })))
+yield* client.event
+  .subscribe()
+  .pipe(Stream.runForEach((event) => Effect.logInfo("OpenCode event", { type: event.type })))
 ```
 
 Native and RPC event Streams share one lazy connection per client. Constructing
@@ -78,20 +79,20 @@ receive the current connection marker before live events.
 
 Use the same shared contract as Promise clients and server plugins:
 
+{/* prettier-ignore */}
 ```ts
 import { Acme } from "opencode-acme-plugin/rpc"
 
 const acme = client.rpc(Acme)
-const result = yield * acme.search({ query: "hello" }, { location: { directory: "/workspace" } })
+const result = yield* acme.search({ query: "hello" }, { location: { directory: "/workspace" } })
 
-yield *
-  acme.events
-    .subscribe("updated")
-    .pipe(
-      Stream.runForEach((event) =>
-        Effect.logInfo("Plugin event", { type: event.type, location: event.location, text: event.data.text }),
-      ),
-    )
+yield* acme.events
+  .subscribe("updated")
+  .pipe(
+    Stream.runForEach((event) =>
+      Effect.logInfo("Plugin event", { type: event.type, location: event.location, text: event.data.text }),
+    ),
+  )
 ```
 
 Method arguments and results are inferred from the contract. The second optional
@@ -144,7 +145,8 @@ const health = await Effect.runPromise(
 
 Discover without starting, or stop the exact registered service.
 
+{/* prettier-ignore */}
 ```ts
-const endpoint = yield * Service.discover()
-yield * Service.stop()
+const endpoint = yield* Service.discover()
+yield* Service.stop()
 ```

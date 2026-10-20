@@ -46,6 +46,10 @@ export type ProviderPackage = ProviderPackageDefinition
 
 const packages = new Map<string, Promise<unknown>>()
 const builtins = new Map<string, () => Promise<unknown>>([
+  ["@opencode/ai/providers/alibaba", () => import("@opencode/ai/providers/alibaba")],
+  ["@opencode/ai/providers/alibaba/chat", () => import("@opencode/ai/providers/alibaba/chat")],
+  ["@opencode/ai/providers/alibaba/messages", () => import("@opencode/ai/providers/alibaba/messages")],
+  ["@opencode/ai/providers/alibaba/responses", () => import("@opencode/ai/providers/alibaba/responses")],
   ["@opencode/ai/providers/amazon-bedrock", () => import("@opencode/ai/providers/amazon-bedrock")],
   ["@opencode/ai/providers/amazon-bedrock/mantle", () => import("@opencode/ai/providers/amazon-bedrock/mantle")],
   [
@@ -53,12 +57,14 @@ const builtins = new Map<string, () => Promise<unknown>>([
     () => import("@opencode/ai/providers/amazon-bedrock/mantle/chat"),
   ],
   [
+    "@opencode/ai/providers/amazon-bedrock/mantle/messages",
+    () => import("@opencode/ai/providers/amazon-bedrock/mantle/messages"),
+  ],
+  [
     "@opencode/ai/providers/amazon-bedrock/mantle/responses",
     () => import("@opencode/ai/providers/amazon-bedrock/mantle/responses"),
   ],
-  ["@opencode/ai/providers/alibaba/chat", () => import("@opencode/ai/providers/alibaba/chat")],
-  ["@opencode/ai/providers/alibaba/messages", () => import("@opencode/ai/providers/alibaba/messages")],
-  ["@opencode/ai/providers/alibaba/responses", () => import("@opencode/ai/providers/alibaba/responses")],
+  ["@opencode/ai/providers/amazon-bedrock-mantle", () => import("@opencode/ai/providers/amazon-bedrock-mantle")],
   ["@opencode/ai/providers/anthropic", () => import("@opencode/ai/providers/anthropic")],
   ["@opencode/ai/providers/anthropic-compatible", () => import("@opencode/ai/providers/anthropic-compatible")],
   ["@opencode/ai/providers/azure", () => import("@opencode/ai/providers/azure")],
@@ -77,23 +83,34 @@ const builtins = new Map<string, () => Promise<unknown>>([
   ["@opencode/ai/providers/google", () => import("@opencode/ai/providers/google")],
   ["@opencode/ai/providers/google/interactions", () => import("@opencode/ai/providers/google/interactions")],
   ["@opencode/ai/providers/google-vertex", () => import("@opencode/ai/providers/google-vertex")],
+  ["@opencode/ai/providers/google-vertex/chat", () => import("@opencode/ai/providers/google-vertex/chat")],
   ["@opencode/ai/providers/google-vertex/gemini", () => import("@opencode/ai/providers/google-vertex/gemini")],
   [
     "@opencode/ai/providers/google-vertex/interactions",
     () => import("@opencode/ai/providers/google-vertex/interactions"),
   ],
-  ["@opencode/ai/providers/google-vertex/chat", () => import("@opencode/ai/providers/google-vertex/chat")],
-  ["@opencode/ai/providers/google-vertex/responses", () => import("@opencode/ai/providers/google-vertex/responses")],
   ["@opencode/ai/providers/google-vertex/messages", () => import("@opencode/ai/providers/google-vertex/messages")],
   ["@opencode/ai/providers/google-vertex/mistral", () => import("@opencode/ai/providers/google-vertex/mistral")],
+  ["@opencode/ai/providers/google-vertex/responses", () => import("@opencode/ai/providers/google-vertex/responses")],
+  ["@opencode/ai/providers/google-vertex-chat", () => import("@opencode/ai/providers/google-vertex-chat")],
+  [
+    "@opencode/ai/providers/google-vertex-interactions",
+    () => import("@opencode/ai/providers/google-vertex-interactions"),
+  ],
+  ["@opencode/ai/providers/google-vertex-messages", () => import("@opencode/ai/providers/google-vertex-messages")],
+  ["@opencode/ai/providers/google-vertex-mistral", () => import("@opencode/ai/providers/google-vertex-mistral")],
+  ["@opencode/ai/providers/google-vertex-responses", () => import("@opencode/ai/providers/google-vertex-responses")],
   ["@opencode/ai/providers/groq", () => import("@opencode/ai/providers/groq")],
+  ["@opencode/ai/providers/meta", () => import("@opencode/ai/providers/meta")],
   ["@opencode/ai/providers/meta/chat", () => import("@opencode/ai/providers/meta/chat")],
   ["@opencode/ai/providers/meta/messages", () => import("@opencode/ai/providers/meta/messages")],
   ["@opencode/ai/providers/meta/responses", () => import("@opencode/ai/providers/meta/responses")],
+  ["@opencode/ai/providers/minimax", () => import("@opencode/ai/providers/minimax")],
   ["@opencode/ai/providers/minimax/chat", () => import("@opencode/ai/providers/minimax/chat")],
   ["@opencode/ai/providers/minimax/messages", () => import("@opencode/ai/providers/minimax/messages")],
   ["@opencode/ai/providers/minimax/responses", () => import("@opencode/ai/providers/minimax/responses")],
   ["@opencode/ai/providers/mistral", () => import("@opencode/ai/providers/mistral")],
+  ["@opencode/ai/providers/moonshot", () => import("@opencode/ai/providers/moonshot")],
   ["@opencode/ai/providers/moonshot/chat", () => import("@opencode/ai/providers/moonshot/chat")],
   ["@opencode/ai/providers/moonshot/messages", () => import("@opencode/ai/providers/moonshot/messages")],
   ["@opencode/ai/providers/moonshot/responses", () => import("@opencode/ai/providers/moonshot/responses")],
@@ -113,8 +130,19 @@ const builtins = new Map<string, () => Promise<unknown>>([
   ["@opencode/ai/providers/togetherai", () => import("@opencode/ai/providers/togetherai")],
   ["@opencode/ai/providers/venice", () => import("@opencode/ai/providers/venice")],
   ["@opencode/ai/providers/vercel-ai-gateway", () => import("@opencode/ai/providers/vercel-ai-gateway")],
+  ["@opencode/ai/providers/vercel-ai-gateway/chat", () => import("@opencode/ai/providers/vercel-ai-gateway/chat")],
+  [
+    "@opencode/ai/providers/vercel-ai-gateway/messages",
+    () => import("@opencode/ai/providers/vercel-ai-gateway/messages"),
+  ],
+  [
+    "@opencode/ai/providers/vercel-ai-gateway/responses",
+    () => import("@opencode/ai/providers/vercel-ai-gateway/responses"),
+  ],
   ["@opencode/ai/providers/xai", () => import("@opencode/ai/providers/xai")],
+  ["@opencode/ai/providers/zai", () => import("@opencode/ai/providers/zai")],
   ["@opencode/ai/providers/zai/chat", () => import("@opencode/ai/providers/zai/chat")],
+  ["@opencode/ai/providers/zai-coding-plan", () => import("@opencode/ai/providers/zai-coding-plan")],
   ["@opencode/ai/providers/zai-coding-plan/chat", () => import("@opencode/ai/providers/zai-coding-plan/chat")],
   ["@opencode/ai/providers/zai-coding-plan/messages", () => import("@opencode/ai/providers/zai-coding-plan/messages")],
   [
@@ -122,6 +150,9 @@ const builtins = new Map<string, () => Promise<unknown>>([
     () => import("@opencode/ai/providers/zai-coding-plan/responses"),
   ],
 ])
+
+/** Native `@opencode/ai/providers/*` entrypoints bundled with Core and loadable by name from config. */
+export const builtinPackages: ReadonlySet<string> = new Set(builtins.keys())
 
 export const loadPackage = Effect.fn("Provider.loadPackage")(function* (input: string, npm?: Npm.Interface) {
   const specifier = packageName(input)

@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect"
+import { Effect, Schema, SchemaGetter } from "effect"
 import { Route } from "../route/client.js"
 import { Endpoint } from "../route/endpoint.js"
 import { Framing } from "../route/framing.js"
@@ -75,6 +75,28 @@ const NativeUsage = Schema.Struct({
   billed_units: Schema.optional(TokenCounts),
   cached_tokens: Schema.optional(Schema.Number),
 })
+const KNOWN_EVENT_TYPES = new Set([
+  "message-start",
+  "content-start",
+  "content-delta",
+  "content-end",
+  "tool-plan-delta",
+  "tool-call-start",
+  "tool-call-delta",
+  "tool-call-end",
+  "message-end",
+  "citation-start",
+  "citation-end",
+])
+// Cohere may add stream event types. Unknown types are ignored, while a malformed known type still fails decoding.
+const UnknownEvent = Schema.Struct({
+  type: Schema.String.check(Schema.makeFilter((type) => !KNOWN_EVENT_TYPES.has(type))),
+}).pipe(
+  Schema.decodeTo(Schema.Struct({ type: Schema.Literal("unknown") }), {
+    decode: SchemaGetter.transform(() => ({ type: "unknown" as const })),
+    encode: SchemaGetter.forbidden(() => "Unknown Cohere stream events are decode-only"),
+  }),
+)
 const Event = Schema.Union([
   Schema.Struct({ type: Schema.Literal("message-start") }),
   Schema.Struct({
@@ -110,6 +132,7 @@ const Event = Schema.Union([
   }),
   // Citation output is outside this basic chat surface.
   Schema.Struct({ type: Schema.Literals(["citation-start", "citation-end"]) }),
+  UnknownEvent,
 ])
 type Event = typeof Event.Type
 type State = {

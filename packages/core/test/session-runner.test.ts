@@ -42,7 +42,6 @@ import { SessionCompaction } from "@opencode/core/session/compaction"
 import { SessionInbox } from "@opencode/core/session/inbox"
 import { SessionMessage } from "@opencode/core/session/message"
 import { SessionModelTransport } from "@opencode/core/session/model-transport"
-import { SessionProviderContext } from "@opencode/core/session/provider-context"
 import { Money } from "@opencode/schema/money"
 import { SessionProjector } from "@opencode/core/session/projector"
 import { SessionExecution } from "@opencode/core/session/execution"
@@ -1514,24 +1513,19 @@ describe("SessionRunnerLLM", () => {
       yield* s.runPrompt("Original request")
       s.systemBaseline = "Checkpoint instructions"
       yield* s.runPrompt("Before checkpoint")
-      const target = SessionProviderContext.provenance({
-        model: s.currentModel,
-        ref: Model.Ref.make({
-          id: Model.ID.make(s.currentModel.id),
-          providerID: Provider.ID.make(s.currentModel.provider),
-        }),
-      })
-      if (!target) throw new Error("Expected concrete fixture endpoint")
       const replacement = [
         Message.assistant(CompactionPart.make({ provider: s.currentModel.provider, encrypted: "checkpoint" })),
       ]
-      const providerContext = SessionProviderContext.encode(target, replacement)
+      const native = { messages: JSON.parse(JSON.stringify(replacement)) }
       yield* s.bus.publish(SessionEvent.Compaction.Ended, {
         sessionID,
         reason: "manual",
+        model: Model.Ref.make({
+          id: Model.ID.make(s.currentModel.id),
+          providerID: Provider.ID.make(s.currentModel.provider),
+        }),
         text: "",
-        recent: "",
-        providerContext,
+        native,
       })
       const checkpoint = (yield* s.messages).find((message) => message.type === "compaction")
       if (!checkpoint) throw new Error("Expected checkpoint")
@@ -1554,7 +1548,7 @@ describe("SessionRunnerLLM", () => {
       ])
       expect(
         (yield* s.session.messages({ sessionID: forked.id })).find((message) => message.type === "compaction"),
-      ).toMatchObject({ providerContext })
+      ).toMatchObject({ native })
 
       const original = s.currentModel
       s.currentModel = LanguageModel.update(original, { id: "different-deployment" })
@@ -1577,18 +1571,7 @@ describe("SessionRunnerLLM", () => {
       expect(s.requests.at(-1)?.messages[0]?.content).toEqual([Message.text("Original request")])
       expect(
         (yield* s.session.messages({ sessionID: forked.id })).find((message) => message.type === "compaction"),
-      ).toMatchObject({ providerContext })
-
-      const hooks = yield* PluginHooks.Service
-      yield* hooks.register("session", "model.request", (event) =>
-        Effect.sync(() => {
-          event.baseURL = "https://another-deployment.example/v1"
-        }),
-      )
-      const before = s.requests.length
-      yield* s.session.prompt({ sessionID: forked.id, text: "Changed route", resume: false })
-      expect(yield* s.session.resume(forked.id).pipe(Effect.exit)).toMatchObject({ _tag: "Failure" })
-      expect(s.requests).toHaveLength(before)
+      ).toMatchObject({ native })
     },
   )
 
@@ -1737,6 +1720,34 @@ describe("SessionRunnerLLM", () => {
     })
     yield* replaySessionProjection(sessionID)
     expect(yield* s.messages).toHaveLength(3)
+  })
+
+  scenario("keeps the system prompt stable across a committed revert", function* (s) {
+    yield* s.runPrompt("First")
+    s.systemBaseline = "Changed context"
+    yield* s.runPrompt("Second")
+    const third = yield* s.runPrompt("Third")
+    const before = s.requests.at(-1)?.system.map((part) => part.text)
+    expect(before).toEqual([defaultSystem, fakeIdentity, "Initial context"])
+
+    yield* s.bus.publish(SessionEvent.RevertEvent.Committed, { sessionID, to: third.id })
+    yield* s.runPrompt("Fourth")
+
+    expect(s.requests.at(-1)?.system.map((part) => part.text)).toEqual(before)
+  })
+
+  scenario("resyncs the instruction state when a committed revert removes an update", function* (s) {
+    yield* s.runPrompt("First")
+    s.systemBaseline = "Changed context"
+    const second = yield* s.runPrompt("Second")
+    s.systemBaseline = "Latest context"
+    yield* s.runPrompt("Third")
+
+    // The "Latest context" update is delivered with "Third", after the boundary.
+    yield* s.bus.publish(SessionEvent.RevertEvent.Committed, { sessionID, to: second.id })
+    yield* s.runPrompt("Fourth")
+
+    expect(s.requests.at(-1)?.system.map((part) => part.text)).toEqual([defaultSystem, fakeIdentity, "Latest context"])
   })
 
   scenario("uses the selected model family prompt when the agent does not override it", function* (s) {
@@ -2557,7 +2568,7 @@ describe("SessionRunnerLLM", () => {
           role: "user",
           content: [{ type: "text", text: SessionCompaction.buildPrompt(false) }],
         })
-        expect(userTexts(compact)).not.toContain("Retained recent request")
+        expect(userTexts(compact).includes("Retained recent request")).toBe(reason === "auto")
         for (const field of [
           "model",
           "system",
@@ -2574,10 +2585,10 @@ describe("SessionRunnerLLM", () => {
         expect(compact.system.map((part) => part.text)).toContain("Review the project carefully.")
         expect(requestAgents[2]).toBe(agentID)
         expect(s.executions).toEqual(["x".repeat(4_000)])
-        expect((yield* s.messages).find((message) => message.type === "compaction")).toMatchObject({
-          model: { id: s.currentModel.id, providerID: s.currentModel.provider, variant },
-          providerState: { responseId: "summary" },
-        })
+        const stored = (yield* s.messages).find((message) => message.type === "compaction")
+        expect(stored).toMatchObject({ model: { id: s.currentModel.id, providerID: s.currentModel.provider, variant } })
+        // The summary call's provider metadata is never replayed, so it is not stored.
+        expect(stored).not.toHaveProperty("native")
 
         // Compare wire content without the cache breakpoints that move to the new final message.
         const before = yield* compileRequest(LLMRequest.update(normal, { cache: "none" }))
@@ -3008,7 +3019,9 @@ describe("SessionRunnerLLM", () => {
     expect(userTexts(s.requests[0])[0]).toContain("older exchanges omitted")
     expect(userTexts(s.requests[0])[0]).not.toContain("Request 0:")
     expect(userTexts(s.requests[0])[0]).not.toContain("Request 1:")
+    // The latest exchange is the retained tail, so shrinking drops only exchanges before it.
     expect(userTexts(s.requests[0])[0]).toContain("Request 2:")
+    expect(userTexts(s.requests[0])[0]).not.toContain("Request 3:")
     expect((yield* s.messages).find((message) => message.id === compaction.id)).toMatchObject({
       status: "completed",
       summary: "## Objective\n- Recovered",
@@ -3102,6 +3115,7 @@ describe("SessionRunnerLLM", () => {
     yield* s.runPrompt("Recent exact request ".repeat(180))
 
     expect(s.requests).toHaveLength(2)
+    expect(JSON.stringify(s.requests[0].messages)).toContain("Recent exact request ".repeat(180))
     expect(userTexts(s.requests[0]).at(-1)).toContain("## Objective")
     expect(userTexts(s.requests[1])).toHaveLength(1)
     expect(userTexts(s.requests[1])[0]).toContain("<summary>\n## Objective\n- Preserve the task\n</summary>")
@@ -3112,8 +3126,25 @@ describe("SessionRunnerLLM", () => {
     expect(context[0]).toMatchObject({
       type: "compaction",
       summary: "## Objective\n- Preserve the task",
-      recent: `[User]: ${"Recent exact request ".repeat(180)}`,
+      metadata: { recent: `[User]: ${"Recent exact request ".repeat(180)}` },
     })
+    // Only a reference to the kept messages is stored; history rebuilds their text.
+    const db = (yield* Database.Service).db
+    const stored = yield* db
+      .select()
+      .from(SessionMessageTable)
+      .where(eq(SessionMessageTable.id, context[0].id))
+      .get()
+      .pipe(Effect.orDie)
+    const kept = yield* db
+      .select()
+      .from(SessionMessageTable)
+      .where(sql`${SessionMessageTable.session_id} = ${sessionID} and ${SessionMessageTable.type} = 'user'`)
+      .orderBy(desc(SessionMessageTable.seq))
+      .get()
+      .pipe(Effect.orDie)
+    expect(stored?.data).toMatchObject({ metadata: { keepID: kept?.id } })
+    expect(stored?.data).not.toHaveProperty("recent")
 
     s.requests.length = 0
     s.executions.length = 0
@@ -3130,7 +3161,7 @@ describe("SessionRunnerLLM", () => {
     expect((yield* store.context(sessionID))[0]).toMatchObject({
       type: "compaction",
       summary: "## Objective\n- Preserve the updated task",
-      recent: `[User]: ${"Newest exact request ".repeat(180)}`,
+      metadata: { recent: `[User]: ${"Newest exact request ".repeat(180)}` },
     })
   })
 
@@ -3162,7 +3193,7 @@ describe("SessionRunnerLLM", () => {
     expect(s.executions).toEqual(["continue"])
     expect(JSON.stringify(s.requests[2].messages)).toContain("first")
     const installed = (yield* s.messages).filter((message) => message.type === "compaction")
-    expect(installed).toMatchObject([{ status: "completed", reason: "auto", providerContext: { version: 1 } }])
+    expect(installed).toMatchObject([{ status: "completed", reason: "auto", native: { messages: expect.any(Array) } }])
     // New input without a post-checkpoint usage anchor must not retrigger compaction.
     yield* s.llm.push(TestLLM.textWithUsage("Measured", "measured", 10_000))
     yield* s.runPrompt("Third real request")
@@ -3211,7 +3242,7 @@ describe("SessionRunnerLLM", () => {
     expect(JSON.stringify(s.requests[2].messages)).toContain("recovered-window")
     expect(JSON.stringify(s.requests[2].messages)).not.toContain('"encrypted":"native-window"')
     expect(yield* s.context).toMatchObject([
-      { type: "compaction", status: "completed", providerContext: { version: 1 } },
+      { type: "compaction", status: "completed", native: { messages: expect.any(Array) } },
       { type: "assistant" },
     ])
   })
@@ -3483,13 +3514,13 @@ describe("SessionRunnerLLM", () => {
 
     expect(s.requests).toHaveLength(2)
     expect(userTexts(s.requests[0]).at(-1)).toContain("## Objective")
-    // The summary may use the whole 20k reserve of a 200k window.
-    expect(s.requests[0]?.generation?.maxTokens).toBe(20_000)
+    // The summary may use the whole 30k reserve of a 200k window.
+    expect(s.requests[0]?.generation?.maxTokens).toBe(30_000)
     expect(s.requests[1]?.generation?.maxTokens).toBe(32_000)
   })
 
   scenario("keeps the summary its room on a small window", function* (s) {
-    // 90% of 64k would leave 6.4k for the summary, so the 16k reserve sets the ceiling at 48k instead.
+    // 85% of 64k would leave 9.6k for the summary, so the 16k reserve sets the ceiling at 48k instead.
     s.currentModel = smallWindowModel
     yield* s.llm.push(TestLLM.textWithUsage("Earlier answer", "text-small-first", 59_000))
     yield* s.runPrompt("Earlier question")
@@ -3567,13 +3598,11 @@ describe("SessionRunnerLLM", () => {
     yield* s.bus.publish(SessionEvent.Compaction.Started, {
       sessionID,
       reason: "manual",
-      recent: "",
     })
     yield* s.bus.publish(SessionEvent.Compaction.Ended, {
       sessionID,
       reason: "manual",
       text: "summary",
-      recent: "",
     })
     s.systemUnavailable = true
     yield* s.runPrompt("Third")
@@ -3652,8 +3681,7 @@ describe("SessionRunnerLLM", () => {
               id: "call-provider",
               name: "web_search",
               executed: true,
-              providerState: { source: "provider" },
-              providerResultState: { source: "provider" },
+              native: { source: "provider" },
             },
             {
               input: { query: "hello" },
@@ -3824,12 +3852,12 @@ describe("SessionRunnerLLM", () => {
         {
           type: "reasoning",
           text: "Signed thought",
-          state: { signature: "sig_1" },
+          native: { signature: "sig_1" },
         },
         {
           type: "reasoning",
           text: "Encrypted thought",
-          state: { itemId: "rs_1", reasoningEncryptedContent: "encrypted-state" },
+          native: { itemId: "rs_1", reasoningEncryptedContent: "encrypted-state" },
         },
       ]),
     ])
@@ -3881,7 +3909,7 @@ describe("SessionRunnerLLM", () => {
         {
           type: "reasoning",
           text: "thinking",
-          state: { reasoningField: "reasoning", reasoningDetails: details },
+          native: { reasoningField: "reasoning", reasoningDetails: details },
         },
         { type: "text", text: "Hello world" },
       ]),
@@ -3925,7 +3953,7 @@ describe("SessionRunnerLLM", () => {
     expect(yield* s.context).toMatchObject([
       Expected.user("Check first"),
       Expected.assistant({}, [
-        { type: "text", text: "Checking.", state: { itemId: "msg_commentary", phase: "commentary" } },
+        { type: "text", text: "Checking.", native: { itemId: "msg_commentary", phase: "commentary" } },
       ]),
     ])
 
@@ -4408,25 +4436,21 @@ describe("SessionRunnerLLM", () => {
       sessionID,
       reason: "manual",
       inputID: first,
-      recent: "",
     })
     yield* s.bus.publish(SessionEvent.Compaction.Started, {
       sessionID,
       reason: "manual",
       inputID: completed,
-      recent: "",
     })
     yield* s.bus.publish(SessionEvent.Compaction.Ended, {
       sessionID,
       reason: "manual",
       text: "## Objective\n- Earlier completed checkpoint",
-      recent: "",
     })
     yield* s.bus.publish(SessionEvent.Compaction.Started, {
       sessionID,
       reason: "auto",
       inputID: last,
-      recent: "",
     })
 
     // These starts have no terminal events, as after SIGKILL. The older orphan
@@ -4462,7 +4486,6 @@ describe("SessionRunnerLLM", () => {
       sessionID,
       reason: "manual",
       inputID: previous,
-      recent: "",
     })
     yield* s.llm.push(TestLLM.text("## Objective\n- New checkpoint", "new-summary"))
     const gate = yield* s.llm.gate
@@ -4618,7 +4641,7 @@ describe("SessionRunnerLLM", () => {
       id: "call-hosted-interrupted",
       input: { query: "stale" },
       executed: true,
-      state: { itemId: "call-hosted-interrupted" },
+      native: { itemId: "call-hosted-interrupted" },
     })
     s.requests.length = 0
     yield* s.llm.push([])
@@ -5340,7 +5363,7 @@ describe("SessionRunnerLLM", () => {
         type: "assistant",
         finish: "stop",
         rawFinish: "end_turn",
-        providerState: { responseId: "response-1", serviceTier: "priority" },
+        native: { responseId: "response-1", serviceTier: "priority" },
         content: [Expected.text("Complete")],
       },
     ])
@@ -5371,7 +5394,7 @@ describe("SessionRunnerLLM", () => {
         type: "assistant",
         finish: "content-filter",
         rawFinish: "SAFETY",
-        providerState: {
+        native: {
           responseId: "response-blocked",
           refusal: { category: "safety", explanation: "Prompt blocked" },
         },
@@ -5911,7 +5934,7 @@ describe("SessionRunnerLLM", () => {
           {
             type: "reasoning",
             text: "",
-            state: { itemId: "rs_disconnected", reasoningEncryptedContent: "encrypted-state" },
+            native: { itemId: "rs_disconnected", reasoningEncryptedContent: "encrypted-state" },
           },
         ]),
         { type: "synthetic", text: INCOMPLETE_STREAM_CONTINUATION },

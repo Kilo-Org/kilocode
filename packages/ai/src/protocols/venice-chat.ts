@@ -349,7 +349,6 @@ const onHalt = Effect.fn("VeniceChat.onHalt")(function* (state: State) {
 
 export const compatibility = {
   maxTokensField: "max_completion_tokens",
-  supportsStore: false,
   supportsPromptCacheKey: true,
 } satisfies LanguageModelCompatibility
 

@@ -221,7 +221,8 @@ export class LanguageModelCompatibility extends Schema.Class<LanguageModelCompat
   requireFinishReason: Schema.optional(Schema.Boolean),
   requireAssistantAfterTool: Schema.optional(Schema.Boolean),
   supportsStore: Schema.optional(Schema.Boolean),
-  supportsUsageInStreaming: Schema.optional(Schema.Boolean),
+  /** Request usage in the stream with `stream_options.include_usage`. Defaults to true. */
+  streamUsage: Schema.optional(Schema.Boolean),
   supportsStrictMode: Schema.optional(Schema.Boolean),
   // Accepts `prompt_cache_key` in the request body. Chat omits the key unless
   // this is true; other protocols omit it only when this is false.

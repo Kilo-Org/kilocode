@@ -65,7 +65,7 @@ export function TerminalPane(props: {
     if (terminalTheme) terminal?.write(terminalTheme)
   }
 
-  const send = (data: Uint8Array) => {
+  const send = (data: Uint8Array<ArrayBuffer>) => {
     if (attached && socket?.readyState === WebSocket.OPEN) socket.send(data)
   }
 
@@ -295,6 +295,7 @@ export function TerminalPane(props: {
       <Show when={!failure()} fallback={<text fg={theme.text.feedback.error.base}>{failure()}</text>}>
         <>
           <embeddedTerminal
+            transparentBackground={themes.currentTokens().background.raised.base.a === 0}
             ref={(value) => {
               terminal = value
               props.onFocusRequest?.(() => {

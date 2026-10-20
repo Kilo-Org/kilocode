@@ -99,6 +99,15 @@ export function DialogExecute(props: { part: SessionMessageAssistantTool }) {
     ],
   }))
 
+  const copyActions = () => [
+    copied() === "code"
+      ? { title: "✓ copied", color: theme.text.feedback.success.base, onTrigger: () => copy("code") }
+      : { title: "copy code", key: "c", onTrigger: () => copy("code") },
+    copied() === "output"
+      ? { title: "✓ copied", color: theme.text.feedback.success.base, onTrigger: () => copy("output") }
+      : { title: "copy output", key: "o", onTrigger: () => copy("output") },
+  ]
+
   return (
     <DialogLayout
       header={
@@ -113,18 +122,16 @@ export function DialogExecute(props: { part: SessionMessageAssistantTool }) {
           <text fg={failed() ? theme.text.feedback.error.base : theme.text.muted}>{status()}</text>
         </DialogHeader>
       }
-      footer={
+      footer={{ actions: { primary: copyActions() } }}
+      legacyFooter={
         <DialogFooter
-          actions={[
-            { title: "scroll", key: "↑/↓" },
-            copied() === "code"
-              ? { title: "✓ copied", color: theme.text.feedback.success.base, onTrigger: () => copy("code") }
-              : { title: "copy code", key: "c", onTrigger: () => copy("code") },
-            copied() === "output"
-              ? { title: "✓ copied", color: theme.text.feedback.success.base, onTrigger: () => copy("output") }
-              : { title: "copy output", key: "o", onTrigger: () => copy("output") },
-            { title: "back", key: "esc", onTrigger: () => dialog.clear() },
-          ]}
+          actions={{
+            secondary: [
+              { title: "scroll", key: "↑/↓" },
+              ...copyActions(),
+              { title: "back", key: "esc", onTrigger: () => dialog.clear() },
+            ],
+          }}
         />
       }
     >

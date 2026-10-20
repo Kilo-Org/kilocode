@@ -12,6 +12,7 @@ import {
 } from "../route/transport/index.js"
 import {
   AIError,
+  InvalidProviderOutputError,
   LLMEvent,
   Usage,
   type FinishReason,
@@ -664,6 +665,18 @@ const step = (state: ParserState, event: GeminiEvent | NextRequest) => {
     usage: event.usageMetadata ?? state.usage,
     finishReason: candidate?.finishReason ?? state.finishReason,
   }
+  // Gemini sporadically ends a valid request with MALFORMED_RESPONSE; continuing or resending it recovers.
+  if (candidate?.finishReason === "MALFORMED_RESPONSE")
+    return Effect.fail(
+      new AIError({
+        reason: new InvalidProviderOutputError({
+          route: state.route,
+          message: `Gemini stopped with ${candidate.finishReason}`,
+          body: ProviderShared.encodeJson(event),
+          classification: "incomplete-stream",
+        }),
+      }),
+    )
   if (candidate?.finishReason && mapFinishReason(candidate.finishReason, state.hasToolCalls) === "error")
     return Effect.fail(
       ProviderShared.eventError(

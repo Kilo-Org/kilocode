@@ -69,6 +69,8 @@ export const Capabilities = Schema.Struct({
   tools: Schema.Boolean,
   input: Schema.Array(Schema.String),
   output: Schema.Array(Schema.String),
+  /** Whether the model accepts a sampling temperature. Unknown when unset. */
+  temperature: Schema.Boolean.pipe(optional),
 })
   .annotate({ identifier: "Model.Capabilities" })
   .pipe(

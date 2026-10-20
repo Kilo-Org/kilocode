@@ -1496,6 +1496,9 @@ test.each([80, 160])(
       expect(viewer.app.renderer.root.findDescendantById("diff-file-header-2")).toBeDefined()
       expect(viewer.app.renderer.root.findDescendantById("diff-file-header-0")).toBeUndefined()
       expect(findDiffs(viewer.app.renderer.root)).toHaveLength(0)
+      viewer.app.mockInput.pressKey("m")
+      await viewer.app.flush()
+      expect(findDiffs(viewer.app.renderer.root)).toHaveLength(0)
 
       viewer.app.mockInput.pressKey("?")
       await viewer.app.waitForFrame((frame) => frame.includes("Review + next / reopen"))
@@ -2479,14 +2482,18 @@ test.each([100, 160])("the sidebar source picker switches VCS sources at %i colu
     viewer.app.mockInput.pressArrow("down")
     await viewer.app.flush()
     viewer.app.mockInput.pressEnter()
-    await viewer.app.waitForFrame((frame) => frame.includes("Uncommitted") && frame.includes("const first"))
+    await viewer.app.waitForFrame(
+      (frame) => !frame.includes("Diff source") && frame.includes("Uncommitted") && frame.includes("const first"),
+    )
     expect(viewer.vcsDiffInput()).toEqual({ location: { directory: "/repo/session" }, mode: "working", context: "12" })
     await viewer.app.mockMouse.click(source().x, source().y)
     await viewer.app.waitForFrame((frame) => frame.includes("Diff source"))
     viewer.app.mockInput.pressKey("HOME")
     await viewer.app.flush()
     viewer.app.mockInput.pressEnter()
-    await viewer.app.waitForFrame((frame) => frame.includes("All") && frame.includes("const first"))
+    await viewer.app.waitForFrame(
+      (frame) => !frame.includes("Diff source") && frame.includes("All") && frame.includes("const first"),
+    )
     expect(viewer.vcsDiffInput()).toEqual({
       location: { directory: "/repo/session" },
       mode: "branch",

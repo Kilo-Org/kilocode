@@ -215,6 +215,7 @@ const layer = Layer.effect(
           ...(input.update ? { preferOnline: true, noGitRevCache: true } : {}),
           // Audit reports are unused here, but Arborist waits for them before completing an install.
           audit: false,
+          windowsHide: true,
         }
         const arborist = new Arborist({
           ...options,
@@ -372,7 +373,14 @@ const layer = Layer.effect(
       if (!installed)
         return yield* new InstallFailedError({ dir: root, cause: new Error(`Package is not installed: ${pkg}`) })
       const { manifest, resolve } = yield* Effect.promise(() => import("pacote"))
-      const options = { ...(yield* NpmConfig.load(root)), preferOnline: true, noGitRevCache: true, ignoreScripts: true }
+      const options = {
+        ...(yield* NpmConfig.load(root)),
+        preferOnline: true,
+        noGitRevCache: true,
+        ignoreScripts: true,
+        // Pacote spawns Git directly rather than through AppProcess.
+        windowsHide: true,
+      }
       const available = yield* Effect.tryPromise({
         try: async () =>
           target.type === "git" ? gitRevision(await resolve(pkg, options)) : (await manifest(pkg, options)).version,

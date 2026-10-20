@@ -7,6 +7,7 @@ import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { llmClient } from "./effect/app-node-platform.js"
 import { ModelResolver } from "./model-resolver.js"
 import { Model } from "./model.js"
+import { ModelRetry } from "./model-retry.js"
 
 export interface TextInput {
   readonly prompt: string
@@ -71,6 +72,7 @@ export const layer = Layer.effect(
           }),
         )
         .pipe(
+          ModelRetry.retry,
           Effect.mapError(
             (error: AIError) =>
               new UnavailableError({

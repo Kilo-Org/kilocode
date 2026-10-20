@@ -12,6 +12,7 @@ import { ProjectSchema } from "@opencode/core/project/schema"
 import { ProjectTable } from "@opencode/core/project/sql"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Hash } from "@opencode/util/hash"
+import { initGit } from "./fixture/git"
 import { tmpdir } from "./fixture/tmpdir"
 import { testEffect } from "./lib/effect"
 
@@ -326,11 +327,7 @@ function real(value: string) {
 }
 
 async function initRepo(dir: string, opts?: { commit?: boolean; remote?: string }) {
-  await $`git init`.cwd(dir).quiet()
-  await $`git config core.fsmonitor false`.cwd(dir).quiet()
-  await $`git config commit.gpgsign false`.cwd(dir).quiet()
-  await $`git config user.email test@opencode.test`.cwd(dir).quiet()
-  await $`git config user.name Test`.cwd(dir).quiet()
+  await initGit(dir)
   if (opts?.commit) await $`git commit --allow-empty -m root`.cwd(dir).quiet()
   if (opts?.remote) await $`git remote add origin ${opts.remote}`.cwd(dir).quiet()
 }

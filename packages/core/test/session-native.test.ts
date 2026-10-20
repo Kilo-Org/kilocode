@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import { CompactionPart, LanguageModel, Message, ToolCallPart, Media } from "@opencode/ai"
 import { OpenAIResponses } from "@opencode/ai/protocols"
 import { Bus } from "@opencode/core/bus"
+import { Event } from "@opencode/schema/event"
 import { Database } from "@opencode/core/database/database"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { EventTable } from "@opencode/core/event/sql"
@@ -14,19 +15,25 @@ import { SessionHistory } from "@opencode/core/session/history"
 import { SessionInbox } from "@opencode/core/session/inbox"
 import { InstructionState } from "@opencode/core/session/instruction-state"
 import { SessionMessage } from "@opencode/core/session/message"
+import { SessionLegacy } from "@opencode/schema/session-legacy"
 import { SessionProjector } from "@opencode/core/session/projector"
-import { SessionProviderContext } from "@opencode/core/session/provider-context"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { toLLMMessages } from "@opencode/core/session/runner/to-llm-message"
 import { SessionSchema } from "@opencode/core/session/schema"
-import { InstructionStateTable, SessionTable } from "@opencode/core/session/sql"
+import { InstructionStateTable, SessionMessageTable, SessionTable } from "@opencode/core/session/sql"
 import { SessionStore } from "@opencode/core/session/store"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Model } from "@opencode/schema/model"
-import { asc, eq } from "drizzle-orm"
+import { Provider } from "@opencode/schema/provider"
+import { asc, eq, sql } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 import { testEffect } from "./lib/effect"
-import legacyMedia from "./fixture/provider-context/2.0.14-media.json"
+import legacyMedia from "./fixture/native/2.0.14-media.json"
+
+// A window as compaction stores it, and as history and replay read it back.
+const stored = (messages: ReadonlyArray<Message>) => ({ messages: JSON.parse(JSON.stringify(messages)) })
+const decode = (checkpoint: { readonly native: { readonly messages: unknown } }) =>
+  Schema.decodeUnknownSync(SessionHistory.NativeWindow)(checkpoint.native.messages)
 
 const model = SessionRunnerModel.resolved(
   LanguageModel.make({ id: "deployment", provider: "openai", route: OpenAIResponses.route }),
@@ -36,27 +43,28 @@ const model = SessionRunnerModel.resolved(
     limit: { context: 128_000, output: 4096 },
   },
 )
-const target = SessionProviderContext.provenance(model)
-if (!target) throw new Error("Fixture must have a concrete endpoint")
+const target = model.ref
 const replacement = [
   Message.user("retained request"),
   Message.assistant(
     CompactionPart.make({ provider: model.model.provider, encrypted: "opaque-checkpoint", id: "cp_1" }),
   ),
 ]
-const providerContext = SessionProviderContext.encode(target, replacement)
-const sessionID = SessionSchema.ID.make("ses_provider_context")
+const native = stored(replacement)
+const sessionID = SessionSchema.ID.make("ses_native")
 
+// A window as releases before v2.1 stored it, read the way history reads stored rows.
+const legacy = (messages: unknown) =>
+  SessionLegacy.message("compaction", { providerContext: { version: 1, messages } }) as {
+    readonly native: { readonly messages: unknown }
+  }
 // Frozen serialized data, deliberately not constructed using today's Message API.
-const legacyContext = Schema.decodeUnknownSync(SessionProviderContext.Info)({
-  ...providerContext,
-  messages: legacyMedia,
-})
+const legacyCheckpoint = legacy(legacyMedia)
 
 test("reads pre-2.0.15 checkpoint media without rewriting the stored payload", async () => {
-  const before = JSON.stringify(legacyContext)
-  const decoded = SessionProviderContext.decode(legacyContext)
-  expect(await Effect.runPromise(SessionProviderContext.validate(legacyContext))).toEqual(decoded)
+  const before = JSON.stringify(legacyMedia)
+  const decoded = decode(legacyCheckpoint)
+  expect(await Effect.runPromise(validate(legacyCheckpoint))).toEqual(decoded)
   expect(decoded[0]?.content).toMatchObject([
     { type: "text", text: "retained attachments" },
     {
@@ -70,7 +78,7 @@ test("reads pre-2.0.15 checkpoint media without rewriting the stored payload", a
     { type: "media", media: { source: { type: "base64", data: "BAUG", mediaType: "image/jpeg" } } },
   ])
   expect(decoded[1]?.content).toMatchObject(legacyMedia[1]?.content ?? [])
-  expect(JSON.stringify(legacyContext)).toBe(before)
+  expect(JSON.stringify(legacyMedia)).toBe(before)
 })
 
 test("reads mixed legacy and current media without overriding an existing asset", async () => {
@@ -80,17 +88,17 @@ test("reads mixed legacy and current media without overriding an existing asset"
     mediaType: "image/png",
     data: "AQID",
   }
-  const context = Schema.decodeUnknownSync(SessionProviderContext.Info)({
-    ...providerContext,
-    messages: [{ role: "user", content: [...(legacyMedia[0]?.content ?? []), current] }],
-  })
-  const decoded = SessionProviderContext.decode(context)
-  expect(await Effect.runPromise(SessionProviderContext.validate(context))).toEqual(decoded)
+  const checkpoint = legacy([{ role: "user", content: [...(legacyMedia[0]?.content ?? []), current] }])
+  const decoded = decode(checkpoint)
+  expect(await Effect.runPromise(validate(checkpoint))).toEqual(decoded)
   expect(decoded[0]?.content.at(-1)).toMatchObject({ media: current.media })
-  const invalid = { ...context, messages: [{ role: "user", content: [{ ...current, media: null }] }] }
-  expect(() => SessionProviderContext.decode(invalid)).toThrow()
-  expect(await Effect.runPromise(Effect.isFailure(SessionProviderContext.validate(invalid)))).toBe(true)
+  const invalid = legacy([{ role: "user", content: [{ ...current, media: null }] }])
+  expect(() => decode(invalid)).toThrow()
+  expect(await Effect.runPromise(Effect.isFailure(validate(invalid)))).toBe(true)
 })
+
+const validate = (checkpoint: { readonly native: { readonly messages: unknown } }) =>
+  Schema.decodeUnknownEffect(SessionHistory.NativeWindow)(checkpoint.native.messages)
 
 const it = testEffect(
   AppNodeBuilder.build(
@@ -111,7 +119,7 @@ const setup = Effect.gen(function* () {
     sessionID,
     projectID: Project.ID.global,
     location: { directory: AbsolutePath.make("/project") },
-    slug: "provider-context",
+    slug: "native",
     version: "test",
   })
   const state = { value: "initial instructions" }
@@ -128,32 +136,58 @@ const setup = Effect.gen(function* () {
     yield* bus.publish(SessionEvent.InboxDelivered, { sessionID, inboxID: id })
     return id
   })
-  const compact = (context?: SessionProviderContext.Info) =>
+  const compact = (window?: SessionMessage.Native, ref = model.ref) =>
     bus.publish(SessionEvent.Compaction.Ended, {
       sessionID,
       reason: "manual",
-      text: context ? "" : "local summary",
-      recent: "",
-      providerContext: context,
+      model: ref,
+      text: window ? "" : "local summary",
+      native: window,
     })
   const load = (boundary: SessionHistory.Boundary) =>
     SessionHistory.entriesForRunner(database.db, sessionID, instructions, boundary)
   return { db: database.db, bus, state, instructions, prepare, prompt, compact, load }
 })
 
-it.effect("loads and replays a persisted pre-2.0.15 media checkpoint", () =>
+it.effect("loads and replays a pre-v2.1 providerContext checkpoint with pre-2.0.15 media", () =>
   Effect.gen(function* () {
     const s = yield* setup
     yield* s.prepare
     yield* s.prompt("original request")
-    yield* s.bus.publish(SessionEvent.Compaction.Started, { sessionID, reason: "manual", recent: "" })
-    yield* s.compact(legacyContext)
+    yield* s.bus.publish(SessionEvent.Compaction.Started, { sessionID, reason: "manual" })
+    // An event as releases before v2.1 stored it.
+    yield* s.bus.replay({
+      id: Event.ID.create(),
+      created: 1,
+      aggregateID: sessionID,
+      seq: (yield* Bus.latestSequence(s.db, sessionID)) + 1,
+      type: Bus.versionedType(SessionEvent.Compaction.Ended.type, 1),
+      data: {
+        sessionID,
+        reason: "manual",
+        model: model.ref,
+        text: "",
+        providerContext: { version: 1, provenance: { providerID: "openai" }, messages: legacyMedia },
+      },
+    })
+    // Its projected row, too: the event upgrades before projecting, so restore the old row shape directly.
+    const providerContext = JSON.stringify({ version: 1, provenance: { providerID: "openai" }, messages: legacyMedia })
+    yield* s.db
+      .update(SessionMessageTable)
+      .set({
+        data: sql`json_set(json_remove(${SessionMessageTable.data}, '$.native'), '$.providerContext', json(${providerContext}))`,
+      })
+      .where(eq(SessionMessageTable.type, "compaction"))
+      .run()
+    expect(
+      (yield* s.db.select().from(SessionMessageTable).where(eq(SessionMessageTable.type, "compaction")).get())?.data,
+    ).not.toHaveProperty("native")
     yield* s.prompt("continue")
     const history = yield* SessionHistory.load(s.db, sessionID, target)
-    expect(toLLMMessages(history, model.ref).slice(0, 2)).toEqual([...SessionProviderContext.decode(legacyContext)])
-    expect(history.some(SessionProviderContext.isCheckpoint)).toBe(true)
+    expect(toLLMMessages(history, model.ref).slice(0, 2)).toEqual([...decode(legacyCheckpoint)])
+    expect(history.some(SessionHistory.isNativeCompaction)).toBe(true)
     const local = yield* SessionHistory.load(s.db, sessionID, "local")
-    expect(local.some(SessionProviderContext.isCheckpoint)).toBe(false)
+    expect(local.some(SessionHistory.isNativeCompaction)).toBe(false)
     expect(toLLMMessages(local, model.ref).map((message) => message.content)).toEqual([
       [Message.text("original request")],
       [Message.text("continue")],
@@ -161,18 +195,15 @@ it.effect("loads and replays a persisted pre-2.0.15 media checkpoint", () =>
   }),
 )
 
-test("canonical provider context round-trips tools, opaque checkpoints and binary media through JSON", () => {
+test("a native window round-trips tools, opaque checkpoints and binary media through JSON", () => {
   const messages = [
     ...replacement,
     Message.assistant(ToolCallPart.make({ id: "call_1", name: "read", input: { path: "file" } })),
     Message.tool({ id: "call_1", name: "read", result: { text: "result" } }),
     Message.user({ type: "media", media: Media.bytes(new Uint8Array([1, 2, 3]), "image/png") }),
   ]
-  const context = SessionProviderContext.encode(providerContext.provenance, messages)
-  const stored = Schema.decodeUnknownSync(Schema.fromJsonString(SessionProviderContext.Info))(JSON.stringify(context))
-  const decoded = SessionProviderContext.decode(stored)
-  expect(decoded).toEqual(messages)
-  const optionalMetadata = SessionProviderContext.encode(providerContext.provenance, [
+  expect(decode({ native: stored(messages) })).toEqual(messages)
+  const optionalMetadata = stored([
     Message.make({
       role: "user",
       content: [
@@ -181,57 +212,15 @@ test("canonical provider context round-trips tools, opaque checkpoints and binar
       providerMetadata: { openai: { itemId: undefined, type: "message", status: undefined, phase: undefined } },
     }),
   ])
-  expect(SessionProviderContext.decode(optionalMetadata)[0]).toMatchObject({
+  expect(decode({ native: optionalMetadata })[0]).toMatchObject({
     providerMetadata: { openai: { type: "message" } },
     content: [{ metadata: { attachment: { source: { type: "inline" } } } }],
   })
   expect(() =>
-    SessionProviderContext.decode({
-      ...context,
-      messages: [{ role: "assistant", content: [{ type: "compaction", provider: "openai" }] }],
+    decode({
+      native: { messages: [{ role: "assistant", content: [{ type: "compaction", provider: "openai" }] }] },
     }),
   ).toThrow()
-})
-
-test("compatibility uses the actual deployment and endpoint rather than a catalog alias or variant", () => {
-  expect(
-    SessionProviderContext.compatible(
-      providerContext.provenance,
-      SessionProviderContext.provenance({
-        ...model,
-        ref: { ...model.ref, id: Model.ID.make("alias"), variant: Model.VariantID.make("high") },
-      }),
-    ),
-  ).toBe(true)
-  for (const changed of [
-    { ...model, model: LanguageModel.update(model.model, { id: "other-deployment" }) },
-    {
-      ...model,
-      model: LanguageModel.update(model.model, {
-        route: model.model.route.with({ endpoint: { baseURL: "https://another.example/v1?api-key=secret" } }),
-      }),
-    },
-    { ...model, model: LanguageModel.update(model.model, { route: model.model.route.with({ id: "other-route" }) }) },
-  ])
-    expect(
-      SessionProviderContext.compatible(providerContext.provenance, SessionProviderContext.provenance(changed)),
-    ).toBe(false)
-  const privateEndpoint = SessionProviderContext.provenance({
-    ...model,
-    model: LanguageModel.update(model.model, {
-      route: model.model.route.with({ endpoint: { baseURL: "https://user:secret@example.com/v1?api-key=secret" } }),
-    }),
-  })
-  expect(JSON.stringify(privateEndpoint)).not.toContain("secret")
-  expect(
-    SessionProviderContext.provenance({
-      ...model,
-      model: LanguageModel.update(model.model, {
-        route: model.model.route.with({ endpoint: { path: () => "/dynamic" } }),
-      }),
-    }),
-  ).toBeUndefined()
-  expect(SessionProviderContext.compatible(providerContext.provenance, undefined)).toBe(false)
 })
 
 it.effect(
@@ -243,8 +232,8 @@ it.effect(
       yield* s.prompt("original request")
       s.state.value = "changed instructions"
       yield* s.prepare
-      yield* s.bus.publish(SessionEvent.Compaction.Started, { sessionID, reason: "manual", recent: "" })
-      const completed = yield* s.compact(providerContext)
+      yield* s.bus.publish(SessionEvent.Compaction.Started, { sessionID, reason: "manual" })
+      const completed = yield* s.compact(native)
       s.state.value = "newest instructions"
       yield* s.prepare
       yield* s.prompt("continue")
@@ -257,11 +246,11 @@ it.effect(
           initial_values: { "test/context": Instructions.hash("changed instructions") },
           current_values: { "test/context": Instructions.hash("newest instructions") },
         })
-        const native = yield* s.load(target)
-        expect(native.initial).toBe("changed instructions")
+        const replayed = yield* s.load(target)
+        expect(replayed.initial).toBe("changed instructions")
         expect(
           toLLMMessages(
-            native.entries.map((entry) => entry.message),
+            replayed.entries.map((entry) => entry.message),
             model.ref,
           ),
         ).toEqual([
@@ -271,8 +260,8 @@ it.effect(
         ])
         for (const incompatible of [
           "local" as const,
-          { ...providerContext.provenance, modelID: "other" },
-          { ...providerContext.provenance, provider: "other" },
+          { ...model.ref, id: Model.ID.make("other") },
+          { ...model.ref, providerID: Provider.ID.make("other") },
         ]) {
           const expanded = yield* s.load(incompatible)
           expect(expanded.initial).toBe("changed instructions")
@@ -289,7 +278,7 @@ it.effect(
         }
         const preview = yield* SessionHistory.preview(s.db, sessionID, s.instructions, target)
         expect(preview.initial).toBe("changed instructions")
-        expect(preview.messages).toEqual(native.entries.map((entry) => entry.message))
+        expect(preview.messages).toEqual(replayed.entries.map((entry) => entry.message))
         const store = yield* SessionStore.Service
         expect((yield* store.messages({ sessionID })).map((message) => message.type)).toEqual([
           "user",
@@ -306,7 +295,7 @@ it.effect(
         .where(eq(EventTable.aggregate_id, sessionID))
         .orderBy(asc(EventTable.seq))
         .all()
-      expect(recorded.filter((event) => event.data.providerContext !== undefined)).toHaveLength(1)
+      expect(recorded.filter((event) => event.data.native !== undefined)).toHaveLength(1)
       yield* s.bus.remove(sessionID)
       yield* s.db.delete(SessionTable).where(eq(SessionTable.id, sessionID)).run()
       for (const event of recorded)
@@ -331,20 +320,20 @@ it.effect("falls back to an earlier compatible native or local checkpoint", () =
     yield* s.prepare
     yield* s.compact()
     yield* s.prompt("after local")
-    yield* s.compact(providerContext)
+    yield* s.compact(native)
     yield* s.prompt("after native")
     s.state.value = "new native baseline"
     yield* s.prepare
-    yield* s.compact({ ...providerContext, provenance: { ...providerContext.provenance, modelID: "other" } })
+    yield* s.compact(native, { ...model.ref, id: Model.ID.make("other") })
     s.state.value = "post-epoch update"
     yield* s.prepare
-    const native = yield* s.load(target)
-    expect(native.initial).toBe("new native baseline")
-    expect(native.entries.map((entry) => entry.message.type)).toEqual(["compaction", "user", "system"])
-    expect(native.entries[0]?.message).toMatchObject({ providerContext })
+    const replayed = yield* s.load(target)
+    expect(replayed.initial).toBe("new native baseline")
+    expect(replayed.entries.map((entry) => entry.message.type)).toEqual(["compaction", "user", "system"])
+    expect(replayed.entries[0]?.message).toMatchObject({ native, model: model.ref })
     expect(
       toLLMMessages(
-        native.entries.map((entry) => entry.message),
+        replayed.entries.map((entry) => entry.message),
         model.ref,
       ).filter((message) => message.role === "system"),
     ).toEqual([Message.system("post-epoch update")])
@@ -355,14 +344,18 @@ it.effect("falls back to an earlier compatible native or local checkpoint", () =
   }),
 )
 
-it.effect("rejects malformed persisted native windows instead of silently dropping them", () =>
+it.effect("skips a malformed native window and replays the history before it", () =>
   Effect.gen(function* () {
     const s = yield* setup
-    yield* s.compact({ ...providerContext, messages: [{ role: "invalid", content: [] }] })
-    expect(yield* SessionHistory.load(s.db, sessionID, target).pipe(Effect.flip)).toMatchObject({
-      _tag: "Session.MessageDecodeError",
-    })
+    yield* s.prompt("before")
+    yield* s.compact({ messages: [{ role: "invalid", content: [] }] })
+    yield* s.prompt("after")
+    const history = yield* SessionHistory.load(s.db, sessionID, target)
+    expect(toLLMMessages(history, model.ref).map((message) => message.content)).toEqual([
+      [Message.text("before")],
+      [Message.text("after")],
+    ])
     const store = yield* SessionStore.Service
-    expect(yield* store.context(sessionID).pipe(Effect.flip)).toMatchObject({ _tag: "Session.MessageDecodeError" })
+    expect((yield* store.context(sessionID)).map((message) => message.type)).toEqual(["compaction", "user"])
   }),
 )

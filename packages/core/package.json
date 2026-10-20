@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "2.0.29",
+  "version": "2.0.32",
   "name": "@opencode/core",
   "type": "module",
   "license": "MIT",
@@ -25,7 +25,7 @@
     "update-models-snapshot": "bun run script/update-models-snapshot.ts",
     "test": "bun run script/test.ts",
     "test:ci": "bun ../../script/kilocode/test/test-runner.ts --ci",
-    "typecheck": "tsgo -b tsconfig.json tsconfig.tests.json"
+    "typecheck": "tsc -b tsconfig.json tsconfig.tests.json"
   },
   "exports": {
     "./*": "./src/*.ts"
@@ -107,7 +107,7 @@
     "@lydell/node-pty": "catalog:",
     "@modelcontextprotocol/client": "2.0.0",
     "@modelcontextprotocol/core": "2.0.0",
-    "@opencode-ai/pty": "0.2.0",
+    "@opencode-ai/pty": "0.3.1",
     "@opencode/ai": "workspace:*",
     "@opencode/codemode": "workspace:*",
     "@opencode/plugin": "workspace:*",
