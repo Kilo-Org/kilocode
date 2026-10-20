@@ -333,6 +333,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Читати завдання",
   "ui.permission.toolLabel.todoWrite": "Записати завдання",
   "ui.permission.toolLabel.codeSearch": "Пошук коду",
+  "ui.permission.toolLabel.browserOpen": "Вбудований браузер",
   "ui.permission.copyCommand": "Копіювати",
   "ui.approval.auto": "Схвалено автоматично",
   "ui.approval.manual": "Схвалено вами",
@@ -561,6 +562,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Отримати вміст з URL",
   "settings.permissions.tool.websearch.description": "Шукати в інтернеті",
   "settings.permissions.tool.codesearch.description": "Шукати код в інтернеті",
+  "settings.permissions.tool.browser_open.description": "Відкрити сторінку у вбудованому браузері",
   "settings.permissions.tool.external_directory.description": "Доступ до файлів поза директорією проєкту",
   "settings.permissions.tool.doom_loop.description":
     "Виявляти повторювані виклики інструментів з однаковими вхідними даними",
@@ -1139,6 +1141,8 @@ export const dict = {
     "Керувати списком завдань. Дозволяє читання та оновлення внутрішнього списку завдань.",
   "settings.autoApprove.tool.webfetch": "Отримати URL. Дозволяє отримання вмісту з вказаного URL.",
   "settings.autoApprove.tool.websearch": "Шукати в інтернеті. Дозволяє зовнішній веб-пошук.",
+  "settings.autoApprove.tool.browser_open":
+    "Відкривати сторінки у вбудованому браузері. Це вбудований перегляд, а не автоматизація Playwright.",
   "settings.autoApprove.tool.doom_loop":
     "Запобігати повторюваним діям. Спрацьовує, коли той самий виклик інструменту повторюється з однаковими вхідними даними.",
 

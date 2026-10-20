@@ -1,5 +1,21 @@
 # @kilocode/cli
 
+## 7.8.15
+
+### Minor Changes
+
+- [#15183](https://github.com/Kilo-Org/kilocode/pull/15183) [`61e311c`](https://github.com/Kilo-Org/kilocode/commit/61e311cbfb94233a5c2f9aae76f5775c42fcc675) - Route `kilo-auto/custom/<slug>` auto routers on the client: the CLI registers
+  its own provider models as router entries (`kilo auto router add|remove|list`),
+  asks the auto-routing service for a decision when it can serve one of them, and
+  runs the picked model locally. `kilo auto eval <router>` runs the missing
+  client evals in Docker and uploads each result as it finishes.
+
+### Patch Changes
+
+- [#15235](https://github.com/Kilo-Org/kilocode/pull/15235) [`c61a974`](https://github.com/Kilo-Org/kilocode/commit/c61a974f983c0ff7853b776781945856dbf28dbf) - Let the `browser_open` permission prompt remember your choice. The prompt now offers the current origin and all origins as always-allow rules, and Auto-Approve settings list `browser_open` so you can allow Integrated Browser navigation without answering each request.
+
+- [#15254](https://github.com/Kilo-Org/kilocode/pull/15254) [`705b5d6`](https://github.com/Kilo-Org/kilocode/commit/705b5d6d1c4bdcf87dda0a235e1d24135e759538) - Restore `edit` and `write` for subagents delegated by an agent that allows edits on specific paths. The subagent's own edit allowlist now governs instead of inheriting a blanket edit deny.
+
 ## 7.8.13
 
 ### Minor Changes

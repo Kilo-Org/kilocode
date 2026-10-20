@@ -28,6 +28,7 @@ import { TuiApi } from "./groups/tui"
 import { WorkspaceApi } from "./groups/workspace"
 // kilocode_change start - Kilo HttpApi groups
 import { AgentBuilderApi } from "@/kilocode/server/httpapi/groups/agent-builder"
+import { AgentUsageApi } from "@/kilocode/server/httpapi/groups/agent-usage"
 import { BranchNameApi } from "@/kilocode/server/httpapi/groups/branch-name"
 import { CommitMessageApi } from "@/kilocode/server/httpapi/groups/commit-message"
 import { BackgroundProcessApi } from "@/kilocode/server/httpapi/groups/background-process"
@@ -98,6 +99,7 @@ export const InstanceHttpApi = HttpApi.make("opencode-instance")
   .addHttpApi(WorkspaceApi)
   // kilocode_change start - Kilo HttpApi groups
   .addHttpApi(AgentBuilderApi)
+  .addHttpApi(AgentUsageApi)
   .addHttpApi(BackgroundProcessApi)
   .addHttpApi(BranchNameApi)
   .addHttpApi(CommitMessageApi)
