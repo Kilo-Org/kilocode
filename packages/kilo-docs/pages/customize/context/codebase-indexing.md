@@ -212,14 +212,14 @@ For team or production use:
 
 ## Setting Up Valkey
 
-If you choose **Valkey** as your vector store, you need a running Valkey server with the [search module](https://github.com/valkey-io/valkey-search) loaded. A plain Valkey server without it does not work. Kilo downloads the Valkey client the first time you select Valkey, so the first index start needs network access.
+If you choose **Valkey** as your vector store, you need a running Valkey server with the [search module](https://github.com/valkey-io/valkey-search) loaded. A plain Valkey server without it does not work. The search module must be version 1.1 or later. Kilo downloads the Valkey client the first time you select Valkey, so the first index start needs network access.
 
 ### Quick Local Setup
 
-The `valkey-bundle` image includes the search module:
+The `valkey-bundle` image includes the search module. Use tag `9.1` or later; older tags ship search module 1.0:
 
 ```bash
-docker run -p 6379:6379 valkey/valkey-bundle
+docker run -p 6379:6379 valkey/valkey-bundle:9.1
 ```
 
 Then set the URL in `kilo.jsonc`:
