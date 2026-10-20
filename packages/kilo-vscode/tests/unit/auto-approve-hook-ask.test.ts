@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test"
+import { afterEach, describe, expect, it } from "bun:test"
 import * as vscode from "vscode"
 import type { Event, KiloClient } from "@kilocode/sdk/v2/client"
 import { registerToggleAutoApprove } from "../../src/commands/toggle-auto-approve"
@@ -6,17 +6,33 @@ import type { KiloConnectionService } from "../../src/services/cli-backend/conne
 
 type Pending = { id: string; metadata?: Record<string, unknown> }
 
-// The VS Code API surface the toggle uses, backed by an in-memory setting.
+// The VS Code API surface the toggle uses. The mock is shared by every test file in the process.
+const api = vscode as unknown as {
+  workspace: {
+    getConfiguration: () => unknown
+    onDidChangeConfiguration: () => { dispose(): void }
+  }
+  window: { showInformationMessage: () => Promise<undefined> }
+  commands: { registerCommand: () => { dispose(): void } }
+}
+const original = {
+  config: api.workspace.getConfiguration,
+  change: api.workspace.onDidChangeConfiguration,
+  info: api.window.showInformationMessage,
+  register: api.commands.registerCommand,
+}
+
+// Restore the shared mock: a stubbed getConfiguration would answer every later test's settings.
+afterEach(() => {
+  api.workspace.getConfiguration = original.config
+  api.workspace.onDidChangeConfiguration = original.change
+  api.window.showInformationMessage = original.info
+  api.commands.registerCommand = original.register
+})
+
+// Backs the toggle with an in-memory setting.
 function settings(initial: boolean) {
   const state = { active: initial }
-  const api = vscode as unknown as {
-    workspace: {
-      getConfiguration: () => unknown
-      onDidChangeConfiguration: () => { dispose(): void }
-    }
-    window: { showInformationMessage: () => Promise<undefined> }
-    commands: { registerCommand: () => { dispose(): void } }
-  }
   api.workspace.getConfiguration = () => ({
     get: (_key: string, fallback?: boolean) => state.active ?? fallback,
     inspect: () => ({}),
