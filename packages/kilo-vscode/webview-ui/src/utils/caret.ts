@@ -16,5 +16,6 @@ export function forwardKey(e: KeyboardEvent, mac: boolean): boolean {
 export function forward(e: KeyboardEvent, mac: boolean) {
   if (!forwardKey(e, mac)) return
   e.preventDefault()
-  document.getSelection()?.modify("move", "forward", "character")
+  const el = e.target as Element
+  el.ownerDocument.getSelection()?.modify("move", "forward", "character")
 }
