@@ -48,9 +48,22 @@ export namespace KiloSessionCompaction {
   // kilocode_change start - #34: inject original task prompt into compaction continue for sub-agents
   /**
    * Maximum character length for the extracted original task text. Prevents
-   * context bloat when the original task prompt is very long.
+   * context bloat when the original task prompt is very long. Split evenly
+   * between head and tail.
    */
   const ORIGINAL_TASK_MAX_CHARS = 4000
+
+  /**
+   * Keeps both ends of an over-long task: the output format requirements
+   * ("Return NO_FINDINGS if…", "Output JSON…") live at the end, so a head-only
+   * slice would drop exactly what the continue prompt promises to preserve.
+   */
+  function truncate(text: string) {
+    if (text.length <= ORIGINAL_TASK_MAX_CHARS) return text
+    const half = ORIGINAL_TASK_MAX_CHARS / 2
+    const dropped = text.length - ORIGINAL_TASK_MAX_CHARS
+    return `${text.slice(0, half)}\n[...${dropped} chars truncated...]\n${text.slice(-half)}`
+  }
 
   /**
    * Builds a continue prompt for sub-agent sessions after compaction.
@@ -102,10 +115,7 @@ export namespace KiloSessionCompaction {
     if (!text) return undefined
 
     // Truncate to prevent context bloat
-    const truncated =
-      text.length > ORIGINAL_TASK_MAX_CHARS
-        ? text.slice(0, ORIGINAL_TASK_MAX_CHARS) + "\n[truncated]"
-        : text
+    const truncated = truncate(text)
 
     const overflowPrefix = input.overflow
       ? "The previous request exceeded the provider's size limit due to large media attachments. The conversation was compacted and media files were removed from context.\n\n"

@@ -169,8 +169,10 @@ describe("KiloSessionCompaction.continuePrompt (#34)", () => {
     expect(result).toBeUndefined()
   })
 
-  test("truncates long original tasks to prevent context bloat", () => {
-    const longText = "A".repeat(5000) // Exceeds 4000 char limit
+  test("truncates long original tasks but keeps the head and the format requirements at the tail", () => {
+    const head = "HEAD ".repeat(500) // 2500 chars
+    const tail = "Return NO_FINDINGS if there are no issues." // format requirement sits at the end
+    const longText = head + "B".repeat(5000) + tail
     const messages: SessionV1.WithParts[] = [
       withParts(userMessage("msg_1", childSessionID), [
         textPart("msg_1", longText),
@@ -181,12 +183,28 @@ describe("KiloSessionCompaction.continuePrompt (#34)", () => {
       messages,
     })
     expect(result).toBeDefined()
-    // The truncated text should be at most 4000 chars + "[truncated]"
     const taskMatch = result!.match(/<original_task>\n([\s\S]*?)\n<\/original_task>/)
     expect(taskMatch).not.toBeNull()
     const extracted = taskMatch![1]
-    expect(extracted.length).toBeLessThanOrEqual(4000 + "[truncated]".length + 1)
-    expect(extracted).toContain("[truncated]")
+    expect(extracted.startsWith("HEAD")).toBe(true)
+    // the output format requirement at the end must survive truncation
+    expect(extracted.endsWith(tail)).toBe(true)
+    expect(extracted).toContain("truncated")
+    // 2000 chars of head + 2000 chars of tail + the marker
+    expect(extracted.length).toBeLessThanOrEqual(4000 + 40)
+  })
+
+  test("does not mark a task that fits the limit as truncated", () => {
+    const messages: SessionV1.WithParts[] = [
+      withParts(userMessage("msg_1", childSessionID), [
+        textPart("msg_1", "Review the code. Return NO_FINDINGS if no issues."),
+      ]),
+    ]
+    const result = KiloSessionCompaction.continuePrompt({
+      sessionID: childSessionID,
+      messages,
+    })
+    expect(result).not.toContain("truncated")
   })
 
   test("includes overflow prefix when overflow flag is set", () => {

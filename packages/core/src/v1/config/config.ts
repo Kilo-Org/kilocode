@@ -218,7 +218,7 @@ export const Info = Schema.Struct({
   // kilocode_change start - #34: subagent step budget to prevent runaway reasoning loops
   subagent_steps: Schema.optional(NonNegativeInt).annotate({
     description:
-      "Maximum number of agent steps (turns) for sub-agents. When a sub-agent reaches this limit, tools are disabled and it must produce a text response. Prevents runaway reasoning loops in sub-agents that reach context compaction. Set to 0 or leave unset for unlimited steps.",
+      "Maximum number of agent steps (turns) for sub-agents, including agents with mode 'all'. When a sub-agent reaches this limit, tools are disabled and it must produce a text response. Prevents runaway reasoning loops in sub-agents that reach context compaction. An agent with its own `steps` setting is not affected. Set to 0 or leave unset for unlimited steps.",
   }),
   // kilocode_change end
   username: Schema.optional(Schema.String).annotate({
