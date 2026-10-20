@@ -33,7 +33,9 @@ jobs:
       - name: Check workflow allowlist
         run: bun script/check-workflows.ts
 
-  # Build the CLI on one native runner per OS and keep the binaries as workflow artifacts.
+  # Build the Kilo host (packages/kilo-cli) on one native runner per OS and keep the executables as workflow
+  # artifacts. `bun run install:alpha` installs the darwin-arm64 one. The upstream CLI is not built here: it is
+  # not what Kilo ships.
   # Artifacts only: no publishing and no secrets.
   build:
     name: build (${{ matrix.target }})
@@ -54,19 +56,18 @@ jobs:
       - name: Setup Bun and install dependencies
         uses: ./.github/actions/setup-bun
 
-      - name: Build CLI
-        working-directory: packages/cli
+      - name: Build the Kilo host
+        working-directory: packages/kilo-cli
         run: bun run script/build.ts --single --skip-install
 
-      # The glob keeps this step independent of the binary name.
-      - name: Check that the binary starts
-        run: |
-          binary=(packages/cli/dist/cli-${{ matrix.target }}/bin/*)
-          "${binary[0]}" --version
+      # Runs the executable in an isolated profile. The host must be the Kilo entry, not the upstream one: it names
+      # itself `kilo`, keeps its data in `kilo2` (not `opencode`) and starts the background service from itself.
+      - name: Check the Kilo host
+        run: bun script/kilocode/smoke-host.ts packages/kilo-cli/dist/cli-${{ matrix.target }}/bin/kilo
 
       # A tarball keeps the executable bit, which a zipped artifact loses.
       - name: Archive CLI
-        run: tar -czf kilo-v2-cli-${{ matrix.target }}.tar.gz -C packages/cli/dist cli-${{ matrix.target }}
+        run: tar -czf kilo-v2-cli-${{ matrix.target }}.tar.gz -C packages/kilo-cli/dist cli-${{ matrix.target }}
 
       - name: Upload CLI artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -76,6 +77,7 @@ jobs:
           if-no-files-found: error
           overwrite: true
           retention-days: 7
+
   shared:
     name: shared upstream patches
     runs-on: ubuntu-24.04
