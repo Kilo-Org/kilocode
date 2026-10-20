@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 31,
-    "markedLines": 280,
+    "markedLines": 281,
     "unmarkedLines": 38,
     "deletedFiles": 0
   },
@@ -26,7 +26,7 @@
     },
     "AGENTS.md": {
       "rung": 4,
-      "seam": "One marked block at the top with the Kilo rules for the v2 line (integration branch `origin/v2`, moving base, branch names, `bun dev` isolation instead of `dev:live`, plugin-first placement, checks), pointing at migration-context.md, the plan, the fork conventions and the skills. It overrides the upstream rules it contradicts (default branch `dev`, `dev:live` against the installed service). Instructions only, no behavior. No seam: `AGENTS.md` is the only root instruction file that every agent used on this repository reads (v2 core loads only `AGENTS.md`, `core/src/config/plugin/instruction.ts`). A Kilo `instructions` entry in a root `kilo.json` would reach Kilo sessions only, and the contradicting upstream rules would still be in this file, so the override sits next to them. The upstream text below the block stays untouched, so syncs conflict only when upstream edits the first lines."
+      "seam": "One marked block at the top with the Kilo rules for the v2 line (integration branch `origin/v2`, moving base, branch names, `bun dev` isolation instead of `dev:live`, plugin-first placement, direction of code movement, checks), pointing at migration-context.md, the plan, the fork conventions and the skills. It overrides the upstream rules it contradicts (default branch `dev`, `dev:live` against the installed service). Instructions only, no behavior. No seam: `AGENTS.md` is the only root instruction file that every agent used on this repository reads (v2 core loads only `AGENTS.md`, `core/src/config/plugin/instruction.ts`). A Kilo `instructions` entry in a root `kilo.json` would reach Kilo sessions only, and the contradicting upstream rules would still be in this file, so the override sits next to them. The upstream text below the block stays untouched, so syncs conflict only when upstream edits the first lines."
     },
     "README.md": {
       "rung": 4,
