@@ -17,7 +17,8 @@ import {
 } from "./domain"
 
 export interface Interface {
-  readonly status: () => Effect.Effect<Status>
+  /** `refresh` bypasses the TTL cache so a user-driven re-check always observes the machine as it is now. */
+  readonly status: (refresh?: boolean) => Effect.Effect<Status>
   readonly open: () => Effect.Effect<true, PlatformError>
   readonly sync: (
     acknowledge?: boolean,
@@ -34,23 +35,27 @@ function same(left: Record<string, string> | undefined, right: Record<string, st
 }
 
 /**
- * Time a successful discovery result stays valid for `status()`.
+ * How long a discovery result stays valid for a throttled `status()` call.
  *
- * 5 seconds is short enough that a user clicking "Check again" in the dialog
- * always observes a fresh value on a re-check, and long enough to absorb a
- * periodic caller (a re-rendering webview panel, a debounced SSE re-boot path,
- * etc.) that would otherwise drive a Python-heavy management-API query every
- * few hundred milliseconds. Each full discovery issues ~6 HTTPS requests
- * against `127.0.0.1:<port>` and the Anaconda Desktop daemon re-imports
- * pandas / plotly / qt6 for every request, generating heavy disk writes to
+ * A full discovery issues ~6 sequential HTTPS requests against
+ * `127.0.0.1:<port>` and the Anaconda Desktop daemon re-imports pandas /
+ * plotly / qt6 for each one, writing heavily to
  * `runt-nightly\envs\...\__pycache__` and `rattler\cache\pkgs\...\__pycache__`
- * (Issue #37).
+ * (Issue #37). A periodic caller (a re-rendering webview panel, a debounced
+ * SSE re-boot path, ...) must therefore not be able to reach the daemon on
+ * every call.
  *
- * `status()` honours the cache; `sync()` always bypasses it — a sync that
- * just succeeded must be visible immediately, otherwise the user could
- * "connect" but still see "not ready" in the dialog.
+ * 5 seconds is long enough to absorb such a caller and short enough that the
+ * next throttled call still tracks the machine. User-driven actions do not rely
+ * on it: `status(true)` and `sync()` bypass the cache, and `open()` / `sync()`
+ * invalidate it, so "check again" is never answered from a stale snapshot.
  */
 const STATUS_CACHE_TTL = Duration.seconds(5)
+
+interface Cached {
+  readonly result: Discovery.DiscoveryResult
+  readonly expires: number
+}
 
 export const layer = Layer.effect(
   Service,
@@ -61,64 +66,63 @@ export const layer = Layer.effect(
     const instances = yield* InstanceStore.Service
     const platform = yield* DesktopPlatform.Service
 
-    // Single-flight + short-TTL cache for `status()`. Issue #37: without these
-    // guards, a periodic caller of `status()` (e.g. a webview that polls on a
-    // tight cadence) can fan out to `discovery.discover()` continuously; each
-    // call hits the Anaconda Desktop Python management API multiple times and
-    // re-imports heavy Python packages, causing runtimed-nightly.exe to
-    // consume ~50% CPU and write ~20-30 MB/s to __pycache__ while the user is
-    // idle.
+    // Issue #37: a periodic caller of `status()` must not be able to fan out to
+    // `discovery.discover()` continuously; each call hits the Anaconda Desktop
+    // Python management API multiple times and re-imports heavy Python
+    // packages, driving runtimed-nightly.exe to ~50% CPU and 20-30 MB/s of
+    // `__pycache__` writes while the user is idle.
     //
-    // - `cacheRef` / `cacheExpiresAt` are the latest successful `discover()`
-    //   result and the wall-clock instant it goes stale.
-    // - `flight` is a single-permit semaphore that serialises concurrent
-    //   `discover()` calls so two callers cannot both fan out to the heavy
-    //   path at the same instant.
-    const cacheRef = yield* Ref.make<Discovery.DiscoveryResult | undefined>(undefined)
-    const cacheExpiresAt = yield* Ref.make<number>(0)
+    // - `memo` holds the latest discovery result plus the wall-clock instant it
+    //   goes stale. The instant is read *after* `discover()` returns, so a slow
+    //   discovery cannot publish a value that is already expired.
+    // - `flight` is a single-permit semaphore that serialises discovery so two
+    //   callers never reach the heavy path at the same instant. Waiters re-read
+    //   the cache inside the permit and reuse the leader's result.
+    const memo = yield* Ref.make<Cached | undefined>(undefined)
     const flight = Semaphore.makeUnsafe(1)
 
-    // Read the cache, otherwise run a single `discover()` and remember the
-    // result for `STATUS_CACHE_TTL`. Concurrent callers coalesce via `flight`.
-    const cachedStatus = Effect.fnUntraced(function* () {
+    const cached = Effect.fnUntraced(function* () {
+      const entry = yield* Ref.get(memo)
       const now = yield* Clock.currentTimeMillis
-      const expires = yield* Ref.get(cacheExpiresAt)
-      const cached = yield* Ref.get(cacheRef)
-      if (cached !== undefined && expires > now) return cached
+      if (entry !== undefined && entry.expires > now) return entry.result
+    })
 
-      // Serialise: at most one `discover()` in flight at a time. Concurrent
-      // callers wait on `flight` and read the same cached result below.
-      const result = yield* flight.withPermits(1)(
+    const invalidate = Effect.fnUntraced(function* () {
+      yield* Ref.set(memo, undefined)
+    })
+
+    const resolve = Effect.fnUntraced(function* (refresh: boolean) {
+      if (!refresh) {
+        const hit = yield* cached()
+        if (hit !== undefined) return hit
+      }
+
+      return yield* flight.withPermits(1)(
         Effect.gen(function* () {
           // Re-check inside the critical section; another caller may have
-          // populated the cache while we were waiting for the permit.
-          const nowLocked = yield* Clock.currentTimeMillis
-          const expiresLocked = yield* Ref.get(cacheExpiresAt)
-          const stillCached = yield* Ref.get(cacheRef)
-          if (stillCached !== undefined && expiresLocked > nowLocked) return stillCached
+          // published the result while we were waiting for the permit.
+          if (!refresh) {
+            const hit = yield* cached()
+            if (hit !== undefined) return hit
+          }
 
-          const fresh = yield* discovery.discover()
-          yield* Ref.set(cacheRef, fresh)
-          yield* Ref.set(cacheExpiresAt, nowLocked + Duration.toMillis(STATUS_CACHE_TTL))
-          return fresh
+          const result = yield* discovery.discover()
+          const now = yield* Clock.currentTimeMillis
+          yield* Ref.set(memo, { result, expires: now + Duration.toMillis(STATUS_CACHE_TTL) })
+          return result
         }),
       )
-      return result
     })
 
-    const invalidateCache = Effect.fnUntraced(function* () {
-      yield* Ref.set(cacheRef, undefined)
-      yield* Ref.set(cacheExpiresAt, 0)
-    })
-
-    const status = Effect.fn("AnacondaDesktop.status")(function* () {
-      const found = yield* cachedStatus()
-      return found.status
+    const status = Effect.fn("AnacondaDesktop.status")(function* (refresh = false) {
+      return (yield* resolve(refresh)).status
     })
 
     const open = Effect.fn("AnacondaDesktop.open")(function* () {
-      yield* platform.open()
-      return true as const
+      // Opening Desktop changes what a later check finds, so drop the cache
+      // instead of letting the next `status()` answer from the pre-open
+      // snapshot.
+      return yield* platform.open().pipe(Effect.as(true as const), Effect.ensuring(invalidate()))
     })
 
     const sync = Effect.fn("AnacondaDesktop.sync")(function* (acknowledge = false) {
@@ -165,7 +169,7 @@ export const layer = Layer.effect(
             return found.status
           }),
         )
-        .pipe(Effect.ensuring(invalidateCache()))
+        .pipe(Effect.ensuring(invalidate()))
     })
 
     return Service.of({ status, open, sync })

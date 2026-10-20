@@ -10,7 +10,7 @@ export type SetupState = {
 }
 
 type Api = {
-  status(signal: AbortSignal): Promise<AnacondaDesktopStatus>
+  status(refresh: boolean, signal: AbortSignal): Promise<AnacondaDesktopStatus>
   open(signal: AbortSignal): Promise<void>
   sync(acknowledge: boolean, signal: AbortSignal): Promise<ReadyStatus>
 }
@@ -65,9 +65,11 @@ export function createSetupController(options: Options) {
     }
   }
 
-  const check = () =>
+  // `refresh` skips the server-side status cache; only a user-driven "check
+  // again" asks for a value that was just produced.
+  const check = (refresh: boolean) =>
     operate("checking", async (signal) => {
-      const status = await options.api.status(signal)
+      const status = await options.api.status(refresh, signal)
       if (!signal.aborted) update({ status })
     })
 
@@ -75,7 +77,7 @@ export function createSetupController(options: Options) {
     start() {
       if (active) return
       active = true
-      void check()
+      void check(false)
     },
     stop() {
       if (!active) return
@@ -83,7 +85,7 @@ export function createSetupController(options: Options) {
       abort?.abort()
       abort = undefined
     },
-    refresh: check,
+    refresh: () => check(true),
     open() {
       return operate("opening", (signal) => options.api.open(signal))
     },

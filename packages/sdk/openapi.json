@@ -17710,6 +17710,14 @@
               "type": "string"
             },
             "required": false
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -17734,7 +17742,7 @@
             }
           }
         },
-        "description": "Discover the locally installed Anaconda Desktop and its active inference server.",
+        "description": "Discover the locally installed Anaconda Desktop and its active inference server. Results are throttled; pass refresh=true to force a fresh check.",
         "summary": "Get Anaconda Desktop setup status",
         "x-codeSamples": [
           {
@@ -43936,6 +43944,9 @@
                       "type": "string"
                     },
                     "branchName": {
+                      "type": "string"
+                    },
+                    "agent": {
                       "type": "string"
                     },
                     "model": {

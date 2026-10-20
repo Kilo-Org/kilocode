@@ -50,7 +50,7 @@ export const anacondaDesktopHandlers = HttpApiBuilder.group(InstanceHttpApi, "an
     const desktop = yield* AnacondaDesktop.Service
 
     return handlers
-      .handle("status", () => desktop.status())
+      .handle("status", (ctx) => desktop.status(ctx.query.refresh === true))
       .handle("open", () => desktop.open().pipe(Effect.mapError(openError)))
       .handle("sync", (ctx) =>
         desktop.sync(ctx.payload.acknowledgeToolLimitations === true).pipe(Effect.mapError(syncError)),

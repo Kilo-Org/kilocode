@@ -334,4 +334,111 @@ itEffect("sync() bypasses the status cache and invalidates it afterwards", () =>
     expect(counter.value).toBe(callsAfterSync + 1)
   }),
 )
+
+itEffect("status() stamps the TTL once discovery has finished", () =>
+  Effect.gen(function* () {
+    const counter = { value: 0 }
+    // A real discovery issues up to six sequential requests with a 4s timeout
+    // each, so it can easily outlast the whole TTL. Stamping the entry before the
+    // call would publish an already-expired result and let the next caller fan
+    // out again immediately.
+    const layer = deps(
+      Layer.succeed(
+        Discovery.Service,
+        Discovery.Service.of({
+          discover: () =>
+            Effect.gen(function* () {
+              counter.value += 1
+              yield* TestClock.adjust("6 seconds")
+              return ready(`srv-${counter.value}`, 9300 + counter.value, `k-${counter.value}`)
+            }),
+        }),
+      ),
+    )
+
+    const program = Effect.gen(function* () {
+      const first = yield* Desktop.Service.use((service) => service.status())
+      const second = yield* Desktop.Service.use((service) => service.status())
+      return { first, second } as const
+    }).pipe(Effect.provide(layer))
+
+    const { first, second } = yield* program
+
+    if (first.type !== "ready") throw new Error("expected ready status")
+    if (second.type !== "ready") throw new Error("expected ready status")
+    expect(second.serverID).toBe(first.serverID)
+    // Discovery consumed the TTL and more; the result is still valid for it.
+    expect(counter.value).toBe(1)
+  }),
+)
+
+itEffect("status(true) bypasses the cache and republishes it", () =>
+  Effect.gen(function* () {
+    const state = { next: ready("alpha", 9400, "alpha-k") }
+    const counter = { value: 0 }
+    const layer = deps(
+      Layer.succeed(
+        Discovery.Service,
+        Discovery.Service.of({
+          discover: () =>
+            Effect.sync(() => {
+              counter.value += 1
+              return state.next
+            }),
+        }),
+      ),
+    )
+
+    const program = Effect.gen(function* () {
+      yield* Desktop.Service.use((s) => s.status())
+      state.next = ready("beta", 9500, "beta-k")
+      // Well inside the TTL, so only an explicit "check again" can see this.
+      const fresh = yield* Desktop.Service.use((s) => s.status(true))
+      const cached = yield* Desktop.Service.use((s) => s.status())
+      return { fresh, cached } as const
+    }).pipe(Effect.provide(layer))
+
+    const { fresh, cached } = yield* program
+
+    if (fresh.type !== "ready") throw new Error("expected ready status")
+    if (cached.type !== "ready") throw new Error("expected ready status")
+    expect(fresh.serverID).toBe("beta")
+    expect(cached.serverID).toBe("beta")
+    // One throttled call, one forced call; the forced result is cached again.
+    expect(counter.value).toBe(2)
+  }),
+)
+
+itEffect("open() invalidates the status cache", () =>
+  Effect.gen(function* () {
+    const counter = { value: 0 }
+    const layer = deps(
+      Layer.succeed(
+        Discovery.Service,
+        Discovery.Service.of({
+          discover: () =>
+            Effect.sync(() => {
+              counter.value += 1
+              return ready(`srv-${counter.value}`, 9600 + counter.value, `k-${counter.value}`)
+            }),
+        }),
+      ),
+    )
+
+    const program = Effect.gen(function* () {
+      const before = yield* Desktop.Service.use((s) => s.status())
+      yield* Desktop.Service.use((s) => s.open())
+      const after = yield* Desktop.Service.use((s) => s.status())
+      return { before, after } as const
+    }).pipe(Effect.provide(layer))
+
+    const { before, after } = yield* program
+
+    if (before.type !== "ready") throw new Error("expected ready status")
+    if (after.type !== "ready") throw new Error("expected ready status")
+    expect(after.serverID).toBe(`srv-${counter.value}`)
+    // The open() invalidated a still-valid entry, so the next check re-discovered.
+    expect(counter.value).toBe(2)
+  }),
+)
 // kilocode_change end

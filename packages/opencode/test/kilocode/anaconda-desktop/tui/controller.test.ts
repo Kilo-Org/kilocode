@@ -25,7 +25,7 @@ async function flush() {
 }
 
 function setup(input: {
-  status(signal: AbortSignal): Promise<AnacondaDesktopStatus>
+  status(refresh: boolean, signal: AbortSignal): Promise<AnacondaDesktopStatus>
   open?(signal: AbortSignal): Promise<void>
   sync?(acknowledge: boolean, signal: AbortSignal): Promise<ReadyStatus>
 }) {
@@ -42,8 +42,10 @@ function setup(input: {
 describe("Anaconda Desktop TUI setup controller", () => {
   test("checks once on start and only checks again on explicit refresh", async () => {
     const calls: Array<ReturnType<typeof deferred<AnacondaDesktopStatus>>> = []
+    const refreshes: boolean[] = []
     const controller = setup({
-      status: async () => {
+      status: async (refresh) => {
+        refreshes.push(refresh)
         const call = deferred<AnacondaDesktopStatus>()
         calls.push(call)
         return call.promise
@@ -52,6 +54,9 @@ describe("Anaconda Desktop TUI setup controller", () => {
 
     controller.start()
     expect(calls).toHaveLength(1)
+    // The automatic check may use the throttled status; a user-driven re-check
+    // must ask the backend to bypass the cache.
+    expect(refreshes).toEqual([false])
     expect(await controller.refresh()).toBe(false)
     calls[0].resolve(waiting)
     await flush()
@@ -59,6 +64,7 @@ describe("Anaconda Desktop TUI setup controller", () => {
 
     const refreshed = controller.refresh()
     expect(calls).toHaveLength(2)
+    expect(refreshes).toEqual([false, true])
     calls[1].resolve(waiting)
     expect(await refreshed).toBe(true)
     controller.stop()
@@ -68,7 +74,7 @@ describe("Anaconda Desktop TUI setup controller", () => {
     const pending = deferred<AnacondaDesktopStatus>()
     let signal: AbortSignal | undefined
     const controller = setup({
-      status: (current) => {
+      status: (_, current) => {
         signal = current
         return pending.promise
       },

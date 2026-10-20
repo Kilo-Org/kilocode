@@ -38,8 +38,8 @@ export function AnacondaDesktopSetup(props: { model: ModelComponent }) {
 
   const controller = createSetupController({
     api: {
-      async status(signal) {
-        const result = await sdk.client.anacondaDesktop.status(undefined, { signal })
+      async status(refresh, signal) {
+        const result = await sdk.client.anacondaDesktop.status({ refresh }, { signal })
         if (result.data) return result.data
         throw new Error(errorMessage(result.error, "Anaconda Desktop status could not be checked."))
       },
