@@ -138,6 +138,12 @@ Use the side-by-side toggle in the file viewer to switch between a unified diff 
 
 These are saved snapshots, not a live view of the checkout. Diffs may be unavailable for binary, unsupported, or large files, or when there are too many changes to save in full.
 
+## Previewing a running app
+
+You can preview a web app running inside a Cloud Agent session's sandbox. When a session serves an app on a port, the web interface shows a preview button and preview links, and selecting one opens the running app in a new browser tab. Each preview is served from its own hostname that targets the session's workspace and port, so different sessions and ports do not collide.
+
+Preview is available to every Cloud Agent account.
+
 ## Agent Environment Profiles
 
 Agent environment profiles are reusable bundles of environment settings for cloud-agent sessions. A profile can include:
