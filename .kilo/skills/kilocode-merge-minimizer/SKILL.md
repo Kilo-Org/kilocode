@@ -18,12 +18,14 @@ The main goal on v2 is to move Kilo code out of shared upstream files, into a Ki
 Use the first option that works (`.kilo/skills/v2-migration/SKILL.md`, `migration-tracking/technical-notes/v2-fork-conventions.md`, "Plugin-first extension order"):
 
 1. **Kilo plugin** on the public plugin API (`@opencode/plugin`: agent, provider, model, session, event, tool, permission, command, skill, mcp, rpc, storage and more). No shared-file change.
-2. **Kilo host** (`packages/kilo-cli`, unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry. List a server plugin in `packages/kilo-plugin/src/index.ts` (`KiloPlugins`); the host registers it. Replacements go in `overrides` in `packages/kilo-cli/src/host.ts`. A TUI plugin still needs one marked line in `packages/tui/src/plugin/builtins.ts`.
-3. **Seam patch** in a shared file: small and generic (widen an API, add a hook, export a value), marked `kilocode_change`, in a file that changes rarely. One generic seam is better than many small edits. Offer it upstream when it is generic.
+2. **Kilo host** (`packages/kilo-cli`, unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry, and Kilo-owned mirrors of upstream files (the host entry, a replaced tool), listed in `mirroredFiles` once U-L3-01 lands it and named in the PR until then. List a server plugin in `packages/kilo-plugin/src/index.ts` (`KiloPlugins`); the host registers it. Replacements go in `overrides` in `packages/kilo-cli/src/host.ts`. A TUI plugin still needs one marked call-out line in `packages/tui/src/plugin/builtins.ts` (rung 4).
+3. **Seam patch** in a shared file: small and generic (widen an API, add a hook, export a value, upstream's value as the default), marked `kilocode_change`, in a file that changes rarely. No Kilo path, identifier or string in the marked lines. One generic seam is better than many small edits.
 4. **Feature patch** in a shared file: last resort, marked, with the reason in the PR that options 1 to 3 do not work.
 5. **Branding and product strings**: the rename script (`script/upstream` codemods) during syncs, never hand edits.
 
 Kilo logic packages (for example `packages/kilo-gateway-core`) import nothing from `@opencode/*`. Only thin adapters do.
+
+Direction (`migration-tracking/plans/v2-host-strategy.md` section 5, the source of truth): code moves from upstream files into Kilo-owned files, never back. Never propose a seam or patch in an upstream file in order to remove or shrink a Kilo-owned file. A patch adds, it never changes an upstream default: upstream's own test files pass unchanged against the code without the host, and are never edited to fit a Kilo value.
 
 ## Core Rules
 
@@ -34,7 +36,7 @@ Kilo logic packages (for example `packages/kilo-gateway-core`) import nothing fr
 - Use `script/upstream/fix-kilocode-markers.ts` for stale or broad markers, inspecting `--dry-run` output before applying changes.
 - Avoid adding Kilo business logic directly to shared files. Keep shared-file edits as close as possible to upstream shape.
 - Do not change shared files unless the change is required for Kilo functionality, fixes a Kilo bug, or is a minimal targeted upstream-quality fix.
-- Do not duplicate upstream logic unless there is a concrete reason. If duplication is unavoidable, isolate the Kilo delta and keep the upstream dependency obvious.
+- Do not duplicate upstream logic unless there is a concrete reason. The sanctioned form is a host mirror (rung 2): a Kilo-owned copy of an upstream file with the differences marked `Kilo:` and the file listed in `mirroredFiles` (once U-L3-01 lands it; until then, named in the PR), kept in step by the drift check. Otherwise isolate the Kilo delta and keep the upstream dependency obvious.
 
 ## Shared File Structure
 
@@ -53,18 +55,20 @@ Move Kilo logic to a plugin or the host (options 1 and 2) when:
 - The change is an additive Kilo feature or integration, not a modification of existing upstream behavior.
 - The plugin API or an Effect layer can express it, even when that needs one generic seam (option 3) instead of the feature code in the shared file.
 
-Extract Kilo logic into Kilo-owned code behind a narrow seam (option 3) when:
+Extract Kilo logic into Kilo-owned code behind a generic knob (option 3) or a one-line call-out (option 4) when:
 
 - The shared-file change has meaningful Kilo-owned behavior, not just a tiny condition, import, registration, or field.
 - The code has loops, branching, error handling, async workflows, storage access, network calls, UI rendering, or telemetry.
 - The shared file can become a small orchestrator that calls Kilo helpers.
 - The Kilo code is independent enough that extraction will not hide future upstream fixes or behavior changes.
 
-Keep the change inline (option 3 or 4, marked) when:
+A knob keeps upstream's value as the default and the host sets Kilo's value (option 3). A call-out imports a Kilo module and is rung 4, however short. A change that would replace an upstream default (file names, order, a heuristic) inline is never kept inline: it becomes a knob with upstream's default, because upstream's own tests must keep passing without the host.
+
+Keep the change inline (option 4, marked) when:
 
 - The Kilo delta is a single field, import, call, simple condition, or small registry entry.
 - Extraction would reshape upstream code more than the Kilo change itself.
-- The change modifies an upstream algorithm, ordering, heuristic, control flow, or bug fix.
+- The change is a defect fix inside an upstream algorithm or control flow.
 - Extraction would duplicate upstream logic or hide semantic dependency on upstream behavior.
 - The Kilo helper closes over upstream-local state. Keep closure-scoped helpers inline and contiguous in one narrow marker block.
 - The shared file owns the only route table, enum, schema, switch, or registry where the hook must exist.
@@ -116,7 +120,7 @@ bun script/upstream/fix-kilocode-markers.ts <repo-relative-file> --dry-run
 
 Before finishing, confirm:
 
-- Each shared-file change uses the highest option that works, and the PR states the option and the missing seam.
+- Each shared-file change uses the first option that works (1 before 2 before 3 before 4), and the PR states the option and the missing seam.
 - Shared files contain minimal integration points only.
 - Kilo logic and tests live in Kilo-owned paths.
 - Markers are narrow, and stale markers are removed.
