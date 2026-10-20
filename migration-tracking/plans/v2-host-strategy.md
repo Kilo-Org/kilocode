@@ -122,7 +122,7 @@ This section is the source of truth for adding a file to `v2` or moving a change
 Kilo is the host, OpenCode is a library. Three rules follow, and they are not trade-offs:
 
 1. **Code moves one way.** From upstream files into Kilo-owned files (`packages/kilo-*`, `src/kilocode/`, `test/kilocode/`), never the reverse. A proposal that adds or widens a `kilocode_change` line in an upstream file in order to remove or shrink a Kilo-owned file is rejected, whatever the line count says. The host entry mirror (162 Kilo-owned lines) is preferred over a five-line seam in `cli/src/index.ts` for this reason.
-2. **A mirror is rung 2.** A Kilo-owned file that re-implements an upstream file (the host entry `packages/kilo-cli/src/index.ts` and `serve.ts`, a replaced builtin tool) is host composition. It is registered in `mirroredFiles` and kept in step by the drift check (section 7), not turned into a seam.
+2. **A mirror is rung 2.** A Kilo-owned file that re-implements an upstream file (the host entry `packages/kilo-cli/src/index.ts` and `serve.ts`, a replaced builtin tool) is host composition. It is listed as a mirror (`mirroredFiles` in the sync tooling once U-L3-01 lands it; until then, named in the PR) and kept in step by the drift check (section 7), not turned into a seam.
 3. **A patch adds, it never changes an upstream default.** The default graph (upstream code run without the host) must behave exactly like upstream, and upstream's own test files must pass against it unchanged. When a Kilo change makes upstream tests fail, the Kilo value is in the wrong place: the upstream file gets a generic knob with upstream's default, and the host supplies Kilo's value. Forked upstream test files are the symptom and are not allowed.
 
 ### The four rungs
