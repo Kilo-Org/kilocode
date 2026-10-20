@@ -12,6 +12,7 @@ import { BoardContext } from "@/kilocode/board/context" // kilocode_change
 import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
+import { PromptService as KiloPromptService } from "@/kilocode/session/prompt" // kilocode_change - steering escalation
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { KiloSessionTitle } from "@/kilocode/session/title" // kilocode_change
 import { SessionTranscript } from "@/kilocode/session/transcript" // kilocode_change
@@ -30,7 +31,7 @@ import { BUILTIN_COMMANDS } from "@/kilocode/session/builtin-commands" // kiloco
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
 import { SessionID, MessageID, PartID } from "./schema"
-import type { NotFoundError } from "@/storage/storage"
+import { NotFoundError } from "@/storage/storage" // kilocode_change - value import for steering escalation
 import { MessageV2 } from "./message-v2"
 import { SessionRevert } from "./revert"
 import { Session } from "./session"
@@ -1499,6 +1500,9 @@ export const layer = Layer.effect(
         // Tell the parent when a human steers this subagent; only a turn that will run counts.
         const steer = { session, parts: input.parts, messageID: message.info.id }
         yield* KiloSessionSteering.notify({ ...steer, config, flags, database })
+        // kilocode_change - deliver a mid-run direction change to active task subagents
+        yield* KiloSessionPrompt.fanout({ message, config: yield* config.get(), flags }).pipe(Effect.orDie)
+        // kilocode_change end
         // Queue tails and runner fibers can resume outside the HTTP request's
         // ambient instance context; bridge both Effect refs and legacy ALS.
         const bridge = yield* EffectBridge.make()
@@ -1548,6 +1552,7 @@ export const layer = Layer.effect(
       closeReasons.delete(sessionID) // kilocode_change
       let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
       const ctx = yield* InstanceState.context
+      const cfg = yield* config.get() // kilocode_change - steering gate for this turn
       let structured: unknown
       let step = 0
       const session = yield* sessions.get(sessionID).pipe(Effect.orDie)
@@ -1637,6 +1642,13 @@ export const layer = Layer.effect(
         }
 
         step++
+        // kilocode_change start - stop before another step when the previous one
+        // already queued the escalated steering turn for this session.
+        if (KiloSessionPromptQueue.hasFollowup(sessionID)) {
+          closeReasons.set(sessionID, "superseded")
+          break
+        }
+        // kilocode_change end
 
         const model = yield* getModel(lastUser.model.providerID, lastUser.model.modelID, sessionID)
         const task = tasks.pop()
@@ -1753,7 +1765,7 @@ export const layer = Layer.effect(
           const promptOps = yield* ops(sessionID) // kilocode_change
 
           // kilocode_change start
-          const notify = BoardContext.allowed({ session, agent, user: lastUser })
+          const boardNotify = BoardContext.allowed({ session, agent, user: lastUser })
             ? yield* BoardContext.notifier({ cache: board, session, agent, user: lastUser }).pipe(
                 Effect.provideService(Config.Service, config),
                 Effect.provideService(Database.Service, database),
@@ -1762,6 +1774,19 @@ export const layer = Layer.effect(
                 Effect.provideService(RuntimeFlags.Service, flags),
               )
             : undefined
+          // Escalation delivers a synthetic user turn through the normal prompt path.
+          const deliver = (value: { sessionID: SessionID; synthetic: string }) =>
+            prompt({
+              sessionID: value.sessionID,
+              parts: [{ type: "text", text: value.synthetic, synthetic: true, metadata: { kind: "steering" } }],
+            }).pipe(Effect.asVoid)
+          // Steering rides the same tool-boundary seam as board activity, so the
+          // shared tool loop stays a single call site.
+          const notify = yield* KiloSessionSteering.notifier({
+            sessionID,
+            enabled: KiloSessionSteering.enabled({ config: cfg, flags }),
+            board: boardNotify,
+          })
           // kilocode_change end
           const tools = yield* SessionTools.resolve({
             agent,
@@ -1838,7 +1863,7 @@ export const layer = Layer.effect(
           const system = [
             ...env,
             ...mem, // kilocode_change
-            ...(tools.board_read && notify ? [BoardContext.instructions] : []), // kilocode_change
+            ...(tools.board_read && boardNotify ? [BoardContext.instructions] : []), // kilocode_change
             ...instructions,
             ...(mcpInstructions ? [mcpInstructions] : []),
             ...(skills ? [skills] : []),
@@ -1955,7 +1980,14 @@ export const layer = Layer.effect(
           // the time we get here, so nothing is cut off. The close reason is
           // "superseded", not "interrupted": this is a deliberate queue handoff,
           // not a premature stop, so clients must not flash an interruption warning.
-          if (KiloSessionPromptQueue.hasFollowup(sessionID)) {
+          // Unconsumed steering escalates first so the child cannot end a turn on
+          // superseded instructions. Delivery is a synthetic prompt, so it queues
+          // behind this turn and takes the same handoff path below.
+          const steer = yield* KiloSessionPrompt.escalate({ sessionID, config: cfg, flags }).pipe(
+            Effect.provideService(KiloPromptService, { prompt: deliver }),
+            Effect.orDie,
+          )
+          if (steer || KiloSessionPromptQueue.hasFollowup(sessionID)) {
             closeReasons.set(sessionID, "superseded")
             // kilocode_change - record which turn handed off so a goal loop that
             // owns it can continue after the queued prompt instead of pausing.

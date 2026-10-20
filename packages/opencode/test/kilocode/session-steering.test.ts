@@ -1,7 +1,7 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { expect, test } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Effect, Fiber, Layer } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
@@ -18,6 +18,13 @@ import { KiloSessionSteering } from "../../src/kilocode/session/steering"
 import { provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
+import { awaitWithTimeout, pollWithTimeout } from "../lib/effect"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { MessageID, PartID } from "../../src/session/schema"
+import { SteeringNotice } from "../../src/kilocode/session/steering-notice"
+import { MessageV2 } from "../../src/session/message-v2"
+import { KiloSessionSteeringInbox } from "../../src/kilocode/session/steering-inbox"
 
 const summary = Layer.succeed(
   SessionSummary.Service,
@@ -296,4 +303,119 @@ it.live("does not notify the parent when the main session is prompted", () =>
     }),
     { git: true, config },
   ),
+)
+
+const has = (text: string) => ({ body }: { body: Record<string, unknown> }) =>
+  Array.isArray(body.messages) && JSON.stringify(body.messages).includes(text)
+
+it.live("makes a subagent continue in the same turn with the new direction", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* ({ llm }) {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const parent = yield* sessions.create({ title: "Steering parent" })
+      const child = yield* sessions.create({ parentID: parent.id, title: "Steering child" })
+
+      const request = yield* sessions.updateMessage({
+        id: MessageID.ascending(),
+        sessionID: child.id,
+        role: "user",
+        agent: "code",
+        time: { created: Date.now() },
+        model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("test-model") },
+      })
+      yield* sessions.updatePart({
+        id: PartID.ascending(),
+        messageID: request.id,
+        sessionID: child.id,
+        type: "text",
+        text: "CHILD_FIRST",
+      })
+      // Write into the session's own directory so the read tool resolves it.
+      yield* Effect.promise(() => Bun.write(`${child.directory}/steering.txt`, "steering target"))
+      yield* llm.push(reply().tool("read", { filePath: "steering.txt" }))
+      yield* llm.push(reply().text("CHILD_DONE").stop())
+
+      const entry = KiloSessionSteeringInbox.post({
+        origin: parent.id,
+        messageID: MessageID.ascending(),
+        text: "Use email only, drop Google.",
+        targets: [child.id],
+      })
+      expect(entry?.revision).toBe(1)
+
+      yield* awaitWithTimeout(prompt.loop({ sessionID: child.id }).pipe(Effect.orDie), "steering child did not finish", "15 seconds")
+
+      const messages = yield* sessions.messages({ sessionID: child.id })
+      const parts = messages.flatMap((message) => message.parts)
+      const done = parts.filter((part) => part.type === "text" && part.text === "CHILD_DONE")
+      // The update did not create a second turn: it reached the same turn.
+      expect(done).toHaveLength(1)
+      expect(messages.filter((message) => message.info.role === "user")).toHaveLength(1)
+      const tool = parts.find((part) => part.type === "tool")
+      expect(tool?.type === "tool" && tool.state.status === "completed" ? tool.state.metadata : undefined).toMatchObject({
+        [SteeringNotice.key]: { revision: 1, text: "Use email only, drop Google." },
+      })
+      expect(KiloSessionSteeringInbox.pending(child.id)).toBeUndefined()
+    }),
+    { git: true, config: (url) => ({ ...config(url), experimental: { subagent_steering: true } }) },
+  ),
+  20000,
+)
+
+it.live("escalates unconsumed steering as a follow-up turn instead of finishing stale", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* ({ llm }) {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const parent = yield* sessions.create({ title: "Escalation parent" })
+      const child = yield* sessions.create({ parentID: parent.id, title: "Escalation child" })
+
+      const request = yield* sessions.updateMessage({
+        id: MessageID.ascending(),
+        sessionID: child.id,
+        role: "user",
+        agent: "code",
+        time: { created: Date.now() },
+        model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("test-model") },
+      })
+      yield* sessions.updatePart({
+        id: PartID.ascending(),
+        messageID: request.id,
+        sessionID: child.id,
+        type: "text",
+        text: "CHILD_FIRST",
+      })
+      // The child answers without calling a tool, so there is no tool boundary for
+      // the in-band notice and the update must arrive as its own turn.
+      yield* llm.push(reply().text("CHILD_FIRST_DONE").stop())
+      yield* llm.push(reply().text("CHILD_STEERED_DONE").stop())
+
+      KiloSessionSteeringInbox.post({
+        origin: parent.id,
+        messageID: MessageID.ascending(),
+        text: "Use email only, drop Google.",
+        targets: [child.id],
+      })
+
+      yield* awaitWithTimeout(prompt.loop({ sessionID: child.id }).pipe(Effect.orDie), "child did not finish", "15 seconds")
+
+      // Delivery is queued behind the source turn, so wait for the follow-up to land.
+      const users = yield* pollWithTimeout(
+        sessions
+          .messages({ sessionID: child.id })
+          .pipe(Effect.map((messages) => messages.filter((message) => message.info.role === "user"))),
+        "escalated steering turn never arrived",
+        "15 seconds",
+      ).pipe(
+        Effect.flatMap((value) => (value.length >= 2 ? Effect.succeed(value) : Effect.fail(new Error("pending")))),
+        Effect.retry({ times: 300 }),
+        Effect.orDie,
+      )
+      expect(JSON.stringify(users.at(-1)?.parts)).toContain("Use email only, drop Google.")
+      expect(KiloSessionSteeringInbox.pending(child.id)).toBeUndefined()
+    }),
+    { git: true, config: (url) => ({ ...config(url), experimental: { subagent_steering: true } }) },
+  ),
+  20000,
 )
