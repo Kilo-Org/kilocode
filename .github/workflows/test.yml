@@ -178,32 +178,6 @@ jobs:
         working-directory: services/www
         run: bun run check:generated
 
-  # kilocode_change start - the SDK check ran after the unit tests in `unit`. Its own job runs it in parallel.
-  sdk:
-    name: sdk package
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 15
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
-
-      - name: Setup Bun
-        uses: ./.github/actions/setup-bun
-
-      - name: Verify packed workerd SDK
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            bun turbo verify:package --filter=@opencode/sdk
-            exit 0
-          fi
-          bun turbo verify:package --affected --filter=@opencode/sdk
-        env:
-          TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && format('{0}^1', github.sha) || github.event.before }}
-          TURBO_SCM_HEAD: ${{ github.sha }}
-  # kilocode_change end
-
   build:
     name: build (${{ matrix.settings.name }})
     strategy:
@@ -246,10 +220,10 @@ jobs:
         timeout-minutes: 10
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            bun turbo build --concurrency=3 --filter='@opencode/cli^...' --filter='@opencode/app^...'
+            bun turbo build --concurrency=3 --filter='@opencode/cli^...' # kilocode_change - Kilo removed @opencode/app, and turbo fails on a filter with no package
             exit 0
           fi
-          bun turbo build --affected --concurrency=3 --filter='@opencode/cli^...' --filter='@opencode/app^...'
+          bun turbo build --affected --concurrency=3 --filter='@opencode/cli^...' # kilocode_change
         env:
           TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && format('{0}^1', github.sha) || github.event.before }}
           TURBO_SCM_HEAD: ${{ github.sha }}
@@ -399,3 +373,29 @@ jobs:
         run: |
           echo "affected packages: $AFFECTED, browser test legs: $SUITES (expected $EXPECTED)"
           test "$AFFECTED" = success && test "$SUITES" = "$EXPECTED"
+
+  # kilocode_change start - the SDK check ran after the unit tests in `unit`. Its own job runs it in parallel.
+  sdk:
+    name: sdk package
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify packed workerd SDK
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            bun turbo verify:package --filter=@opencode/sdk
+            exit 0
+          fi
+          bun turbo verify:package --affected --filter=@opencode/sdk
+        env:
+          TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && format('{0}^1', github.sha) || github.event.before }}
+          TURBO_SCM_HEAD: ${{ github.sha }}
+  # kilocode_change end
