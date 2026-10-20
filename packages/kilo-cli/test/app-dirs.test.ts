@@ -100,7 +100,10 @@ function environment(root: string, extra: Record<string, string>) {
     ...inherited,
     HOME: root,
     USERPROFILE: root,
+    // os.tmpdir() reads TMPDIR on POSIX and TEMP or TMP on Windows.
     TMPDIR: path.join(root, "tmp"),
+    TEMP: path.join(root, "tmp"),
+    TMP: path.join(root, "tmp"),
     OPENCODE_DISABLE_AUTOUPDATE: "1",
     ...extra,
   }
