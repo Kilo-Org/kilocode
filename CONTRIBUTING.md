@@ -22,7 +22,13 @@ New providers should rarely require OpenCode changes. Add the provider to [model
 
 ## Development
 
-OpenCode requires an exact version of bun (currently 1.4.2) Install bun via their installer script, passing in the exact version of bun described in package.json: `curl -fsSL https://bun.sh/install | bash -s "bun-v$(node -p "require('./package.json').packageManager.split('@')[1]")"`
+OpenCode requires the exact Bun version pinned in `packageManager` in `package.json`. Install it with Bun's installer script:
+
+```bash
+curl -fsSL https://bun.sh/install | bash -s "bun-v$(grep '"packageManager"' package.json | sed -E 's/.*bun@([^"]+).*/\1/')"
+```
+
+Then, from the repository root:
 
 ```bash
 bun install

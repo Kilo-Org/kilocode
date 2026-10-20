@@ -22,36 +22,54 @@ const artifact = `kilo-v2-cli-${target}.tar.gz`
 const binDir = process.env.KILO_ALPHA_BIN_DIR ?? path.join(os.homedir(), ".local", "bin")
 const name = process.env.KILO_ALPHA_NAME ?? "kilo-alpha"
 
-if (process.platform !== "darwin" || process.arch !== "arm64")
-  fail(`install:alpha only supports macOS arm64 for now (this is ${process.platform} ${process.arch}).`)
+class InstallError extends Error {}
 
-if (!Bun.which("gh"))
-  fail("The GitHub CLI (gh) is not installed. Install it from https://cli.github.com and run `gh auth login`.")
-if ((await $`gh auth status`.quiet().nothrow()).exitCode !== 0) fail("gh is not authenticated. Run `gh auth login`.")
-
-const runs =
-  await $`gh run list -R ${repo} --workflow ${workflow} --branch ${branch} --status success --limit 1 --json databaseId,headSha,createdAt`
-    .quiet()
-    .nothrow()
-if (runs.exitCode !== 0) fail(`Could not list workflow runs:\n${runs.stderr.toString().trim()}`)
-const run = (JSON.parse(runs.stdout.toString()) as { databaseId: number; headSha: string; createdAt: string }[])[0]
-if (!run) fail(`No successful ${workflow} run found on ${branch}.`)
-console.error(`run ${run.databaseId} (${run.headSha.slice(0, 9)}, ${run.createdAt})`)
-
-const tmp = await mkdtemp(path.join(os.tmpdir(), "kilo-alpha-"))
 try {
+  await main()
+} catch (error) {
+  if (!(error instanceof InstallError)) throw error
+  console.error(`install:alpha: ${error.message}`)
+  process.exitCode = 1
+}
+
+async function main() {
+  if (process.platform !== "darwin" || process.arch !== "arm64")
+    fail(`install:alpha only supports macOS arm64 for now (this is ${process.platform} ${process.arch}).`)
+
+  if (!Bun.which("gh"))
+    fail("The GitHub CLI (gh) is not installed. Install it from https://cli.github.com and run `gh auth login`.")
+  if ((await $`gh auth status`.quiet().nothrow()).exitCode !== 0) fail("gh is not authenticated. Run `gh auth login`.")
+
+  const runs =
+    await $`gh run list -R ${repo} --workflow ${workflow} --branch ${branch} --event push --status success --limit 1 --json databaseId,headSha,createdAt`
+      .quiet()
+      .nothrow()
+  if (runs.exitCode !== 0) fail(`Could not list workflow runs:\n${runs.stderr.toString().trim()}`)
+  const run = (JSON.parse(runs.stdout.toString()) as { databaseId: number; headSha: string; createdAt: string }[])[0]
+  if (!run) fail(`No successful ${workflow} run found on ${branch}.`)
+  console.error(`run ${run.databaseId} (${run.headSha.slice(0, 9)}, ${run.createdAt})`)
+
+  const tmp = await mkdtemp(path.join(os.tmpdir(), "kilo-alpha-"))
+  try {
+    await install(run.databaseId, tmp)
+  } finally {
+    await rm(tmp, { recursive: true, force: true })
+  }
+}
+
+async function install(runID: number, tmp: string) {
   // The artifact is uploaded unarchived (`archive: false`), so `gh run download` cannot be used: it tries to
   // unzip the raw tarball. The zip endpoint serves the file as uploaded. `gh api` buffers the whole response
   // without progress, so the download goes through curl with the token from gh.
   const archive = path.join(tmp, artifact)
   const found =
-    await $`gh api repos/${repo}/actions/runs/${run.databaseId}/artifacts --jq ${`.artifacts[] | select(.name == "${artifact}" and (.expired | not)) | .id`}`
+    await $`gh api repos/${repo}/actions/runs/${runID}/artifacts --jq ${`.artifacts[] | select(.name == "${artifact}" and (.expired | not)) | .id`}`
       .quiet()
       .nothrow()
   const id = found.stdout.toString().trim()
   if (found.exitCode !== 0 || !id)
     fail(
-      `Run ${run.databaseId} has no unexpired ${artifact} artifact (they expire after 7 days).\n${found.stderr.toString().trim()}`,
+      `Run ${runID} has no unexpired ${artifact} artifact (they expire after 7 days).\n${found.stderr.toString().trim()}`,
     )
   const token = (await $`gh auth token`.quiet().text()).trim()
   console.log(`Downloading ${artifact} (~60 MB). This may take several minutes...`)
@@ -80,11 +98,8 @@ try {
   if (version.exitCode !== 0) fail(`Installed ${dest}, but it failed to start:\n${version.stderr.toString().trim()}`)
   console.error(`installed ${dest} (${version.stdout.toString().trim()})`)
   if (!process.env.PATH?.split(path.delimiter).includes(binDir)) console.error(`note: ${binDir} is not on your PATH`)
-} finally {
-  await rm(tmp, { recursive: true, force: true })
 }
 
 function fail(message: string): never {
-  console.error(`install:alpha: ${message}`)
-  process.exit(1)
+  throw new InstallError(message)
 }
