@@ -34,6 +34,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBTextField
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.tabs.JBTabs
 import com.intellij.ui.tabs.JBTabsFactory
 import com.intellij.ui.tabs.JBTabsPosition
@@ -56,7 +57,12 @@ private const val NAME_COLUMNS = 67
 
 /** What the user confirmed in the New Worktree dialog. */
 sealed interface NewWorktreePlan {
-    data class Create(val branch: String, val base: String?, val prompt: PendingPrompt?) : NewWorktreePlan
+    data class Create(
+        val branch: String,
+        val base: String?,
+        val prompt: PendingPrompt?,
+        val fetchBase: Boolean = false,
+    ) : NewWorktreePlan
     data class Branch(val branch: String) : NewWorktreePlan
     data class Pr(val url: String) : NewWorktreePlan
 }
@@ -127,6 +133,10 @@ internal class NewWorktreeDialog(
     )
     private val branch = JBTextField(suggestedName)
     private val base = BranchPicker(branches, defaultBase)
+    private val fetch = JBCheckBox(
+        KiloBundle.message("worktree.configure.fetchBase"),
+        KiloPluginSettings.getFetchWorktreeBase(),
+    )
     private val url = JBTextField().apply {
         emptyText.text = KiloBundle.message("worktree.import.pr.placeholder")
     }
@@ -266,6 +276,7 @@ internal class NewWorktreeDialog(
     }
         .addLabeledComponent(KiloBundle.message("worktree.configure.branch"), branch)
         .addLabeledComponent(KiloBundle.message("worktree.configure.base"), base)
+        .addComponent(fetch)
         .panel
 
     private fun wirePickers() {
@@ -369,7 +380,8 @@ internal class NewWorktreeDialog(
         val resolved = explicit.ifEmpty { name.text.trim() }.ifEmpty { suggestedName }
         val target = base.resolve()
         if (!validBase(target)) return
-        plan = NewWorktreePlan.Create(resolved, target, pending(text))
+        KiloPluginSettings.setFetchWorktreeBase(fetch.isSelected)
+        plan = NewWorktreePlan.Create(resolved, target, pending(text), fetch.isSelected)
         close(OK_EXIT_CODE)
     }
 
