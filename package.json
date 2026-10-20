@@ -28,6 +28,7 @@
     "check": "bun run lint && bun run typecheck",
     "typecheck:profile": "bun script/profile-typecheck.ts",
     "typecheck:profile:packages": "bun script/profile-typecheck-packages.ts",
+    "install:alpha": "bun script/install-alpha.ts",
     "upgrade-opentui": "bun run script/upgrade-opentui.ts",
     "postinstall": "bun run --cwd packages/core fix-node-pty",
     "prepare": "husky",
