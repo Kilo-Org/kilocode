@@ -29,31 +29,29 @@ describe("Kilo config write target", () => {
     expect(await resolveConfigPath(root, true)).toBe(path.join(root, "kilo.json"))
   })
 
-  test("prefers kilo.* over opencode.* and .jsonc over .json in the project root", async () => {
+  test("prefers kilo.jsonc over kilo.json and never picks opencode files", async () => {
     const root = await fixture(["opencode.jsonc", "kilo.json"])
     expect(await resolveConfigPath(root)).toBe(path.join(root, "kilo.json"))
     const both = await fixture(["kilo.json", "kilo.jsonc"])
     expect(await resolveConfigPath(both)).toBe(path.join(both, "kilo.jsonc"))
-    const opencode = await fixture(["opencode.json"])
-    expect(await resolveConfigPath(opencode)).toBe(path.join(opencode, "opencode.json"))
+    const opencode = await fixture(["opencode.json", "opencode.jsonc"])
+    expect(await resolveConfigPath(opencode)).toBe(path.join(opencode, "kilo.json"))
   })
 
-  test("prefers .kilo, then .kilocode, over the project root files", async () => {
-    const root = await fixture(["kilo.jsonc", ".kilocode/opencode.json", ".kilo/opencode.json"])
-    expect(await resolveConfigPath(root)).toBe(path.join(root, ".kilo", "opencode.json"))
-    const legacy = await fixture(["kilo.jsonc", ".kilocode/opencode.json"])
-    expect(await resolveConfigPath(legacy)).toBe(path.join(legacy, ".kilocode", "opencode.json"))
+  test("prefers .kilo over the project root files", async () => {
+    const root = await fixture(["kilo.jsonc", ".kilo/kilo.json"])
+    expect(await resolveConfigPath(root)).toBe(path.join(root, ".kilo", "kilo.json"))
   })
 
-  test("ignores .opencode", async () => {
-    const root = await fixture([".opencode/opencode.json"])
+  test("ignores .opencode and .kilocode", async () => {
+    const root = await fixture([".opencode/opencode.json", ".kilocode/kilo.json"])
     expect(await resolveConfigPath(root)).toBe(path.join(root, "kilo.json"))
   })
 
   test("checks only the root files of the global directory", async () => {
-    const root = await fixture([".kilo/kilo.json", ".kilocode/kilo.json"])
+    const root = await fixture([".kilo/kilo.json"])
     expect(await resolveConfigPath(root, true)).toBe(path.join(root, "kilo.json"))
-    const existing = await fixture([".kilo/kilo.json", "opencode.jsonc"])
-    expect(await resolveConfigPath(existing, true)).toBe(path.join(existing, "opencode.jsonc"))
+    const existing = await fixture([".kilo/kilo.json", "kilo.jsonc"])
+    expect(await resolveConfigPath(existing, true)).toBe(path.join(existing, "kilo.jsonc"))
   })
 })

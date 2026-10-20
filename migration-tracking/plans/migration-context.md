@@ -42,6 +42,7 @@ Do not re-litigate these without new evidence. Proposed changes go to the user.
 8. **Gates override P-labels** for surface readiness. P-labels order work globally; gates define what a surface needs to ship.
 9. **Plan format.** One file with two parts: Part A high level (epics, gates, critical path, risks), Part B low level (per-epic units, dependencies, acceptance), plus appendices (facts, glossary, links).
 10. **Readability.** Separate why, what, when and how-to-verify. Progressive disclosure. No sub-numbered steps. Issue IDs only in Part B and the register. One canonical place per fact.
+11. **Config names (2026-10-20).** Kilo v2 reads only Kilo-named config: `kilo.json` and `kilo.jsonc` (project roots, ancestors up to the worktree root, the global and system directories) and the project directory `.kilo`. It reads no `opencode.json`, `opencode.jsonc`, `.opencode` or `.kilocode`. Contents use the v2 schema; explicit config paths accept any name; the CLI writes `kilo.json`. v1 files with the old names move through the v1 import (U-E3-03), OpenCode projects through import. Unit U-E1-07.
 
 ## Deferred decisions
 

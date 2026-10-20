@@ -4,7 +4,7 @@ import { Permission } from "@opencode/core/permission"
 import { createRoutes } from "@opencode/server/routes"
 import { Context, Effect, Layer, References } from "effect"
 import { HttpEffect, HttpRouter, HttpServer } from "effect/http"
-import { mkdtemp, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
@@ -149,6 +149,64 @@ test("the server runs the Kilo agent ceiling after the config plugins", async ()
     )
   } finally {
     await rm(directory, { recursive: true, force: true })
+  }
+}, 30_000)
+
+// The server the host starts discovers Kilo config names: kilo.json and .kilo, not opencode.json, .opencode or
+// .kilocode. The upstream server without the host overrides keeps the upstream names (test/config in core).
+test("the server reads kilo.json and .kilo and ignores opencode and .kilocode config", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "kilo-host-"))
+  const project = path.join(root, "repo")
+  const files = {
+    "kilo.json": { username: "root-kilo" },
+    ".kilo/kilo.jsonc": { shell: "dot-kilo" },
+    "opencode.json": { username: "root-opencode" },
+    ".opencode/opencode.json": { shell: "dot-opencode" },
+    ".kilocode/kilo.json": { shell: "dot-kilocode" },
+  }
+  for (const [file, value] of Object.entries(files)) {
+    await mkdir(path.dirname(path.join(project, file)), { recursive: true })
+    await writeFile(path.join(project, file), JSON.stringify(value))
+  }
+  try {
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const context = yield* Layer.build(
+            createRoutes(
+              {
+                password: "secret",
+                database: { path: ":memory:" },
+                models: { fetch: false },
+                fs: { filewatcher: false },
+                config: { directory: path.join(root, "global") },
+              },
+              () => [],
+              KiloHost.overrides,
+            ).pipe(Layer.provide(HttpServer.layerServices)),
+          )
+          const handler = Context.get(context, HttpRouter.HttpRouter)
+            .asHttpEffect()
+            .pipe(HttpEffect.toWebHandlerWith(context))
+          const entries = yield* Effect.promise(async () => {
+            const url = new URL("/api/config", "http://kilo.local")
+            url.searchParams.set("location[directory]", project)
+            const response = await handler(
+              new Request(url, { headers: { authorization: `Basic ${btoa("opencode:secret")}` } }),
+            )
+            return (await response.json()) as { type: string; path?: string }[]
+          })
+          const paths = entries.flatMap((entry) => (entry.path?.includes(`${path.sep}repo`) ? [entry.path] : []))
+          expect(paths.map((item) => path.relative(project, item).replaceAll("\\", "/"))).toEqual([
+            "kilo.json",
+            ".kilo/kilo.jsonc",
+            ".kilo",
+          ])
+        }),
+      ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),
+    )
+  } finally {
+    await rm(root, { recursive: true, force: true })
   }
 }, 30_000)
 

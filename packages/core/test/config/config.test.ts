@@ -219,7 +219,7 @@ describe("Config", () => {
         // different string than the global root.
         const real = path.join(tmp.path, "real")
         const link = path.join(tmp.path, "link")
-        const global = AbsolutePath.make(path.join(real, ".kilo")) // kilocode_change(config) - Kilo project directory
+        const global = AbsolutePath.make(path.join(real, ".opencode"))
         const once = Effect.gen(function* () {
           const config = yield* Config.Service
           const watcher = yield* Watcher.Test
@@ -233,7 +233,7 @@ describe("Config", () => {
           ).toEqual([global])
           expect(
             (yield* watcher.subscriptions()).filter((subscription) =>
-              subscription.path.includes(`${path.sep}.kilo${path.sep}`), // kilocode_change(config) - Kilo project directory
+              subscription.path.includes(`${path.sep}.opencode${path.sep}`),
             ),
           ).toEqual([])
         })
@@ -1275,7 +1275,7 @@ describe("Config", () => {
               {
                 type: "entries",
                 path: tmp.path,
-                names: [".agents", ".claude", ".kilo", ".kilocode", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"], // kilocode_change(config) - Kilo names
+                names: [".agents", ".claude", ".opencode", "opencode.json", "opencode.jsonc"],
               },
             ])
           }).pipe(Effect.provide(testLayer(tmp.path, undefined, undefined, undefined, Watcher.testLayer)))
@@ -1858,7 +1858,7 @@ describe("Config", () => {
             expect(yield* watcher.subscriptions()).toContainEqual({
               path: tmp.path,
               type: "entries",
-              names: [".agents", ".claude", ".kilo", ".kilocode", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"], // kilocode_change(config) - Kilo names
+              names: [".agents", ".claude", ".opencode", "opencode.json", "opencode.jsonc"],
             })
           }).pipe(Effect.provide(testLayer(tmp.path)))
         }),
@@ -1866,8 +1866,7 @@ describe("Config", () => {
     ),
   )
 
-  // kilocode_change start - config: Kilo stops at the worktree root like Kilo v1, so "outside" is not loaded, and .kilo replaces .opencode
-  it.live("loads global and ancestor configuration up to the project boundary", () =>
+  it.live("loads global and ancestor configuration across the project boundary", () =>
     Effect.acquireDisposable(Effect.promise(() => tmpdir())).pipe(
       Effect.flatMap((tmp) => {
         const global = path.join(tmp.path, "global")
@@ -1884,19 +1883,19 @@ describe("Config", () => {
             await fs.mkdir(directory, { recursive: true })
             await fs.mkdir(path.join(root, ".agents"), { recursive: true })
             await fs.mkdir(path.join(root, ".claude"), { recursive: true })
-            await fs.mkdir(path.join(root, ".kilo"), { recursive: true })
+            await fs.mkdir(path.join(root, ".opencode"), { recursive: true })
             await fs.mkdir(path.join(directory, ".agents"), { recursive: true })
             await fs.mkdir(path.join(directory, ".claude"), { recursive: true })
-            await fs.mkdir(path.join(directory, ".kilo"), { recursive: true })
+            await fs.mkdir(path.join(directory, ".opencode"), { recursive: true })
             await Promise.all([
               fs.writeFile(path.join(tmp.path, "opencode.json"), JSON.stringify({ $schema: "outside" })),
               fs.writeFile(path.join(global, "opencode.json"), JSON.stringify({ $schema: "global" })),
               fs.writeFile(path.join(root, "opencode.json"), JSON.stringify({ $schema: "root" })),
               fs.writeFile(path.join(parent, "opencode.jsonc"), JSON.stringify({ $schema: "parent" })),
               fs.writeFile(path.join(directory, "opencode.json"), JSON.stringify({ $schema: "directory" })),
-              fs.writeFile(path.join(root, ".kilo", "opencode.json"), JSON.stringify({ $schema: "root-dot" })),
+              fs.writeFile(path.join(root, ".opencode", "opencode.json"), JSON.stringify({ $schema: "root-dot" })),
               fs.writeFile(
-                path.join(directory, ".kilo", "opencode.jsonc"),
+                path.join(directory, ".opencode", "opencode.jsonc"),
                 JSON.stringify({ $schema: "directory-dot" }),
               ),
             ])
@@ -1910,8 +1909,8 @@ describe("Config", () => {
 
             expect(entries.filter((entry) => entry.type === "directory").map((entry) => entry.path)).toEqual([
               AbsolutePath.make(global),
-              AbsolutePath.make(path.join(root, ".kilo")),
-              AbsolutePath.make(path.join(directory, ".kilo")),
+              AbsolutePath.make(path.join(root, ".opencode")),
+              AbsolutePath.make(path.join(directory, ".opencode")),
             ])
             expect(compatibility.agents.filter((path) => inFixture(tmp.path, path))).toEqual([
               AbsolutePath.make(globalAgents),
@@ -1925,6 +1924,7 @@ describe("Config", () => {
             ])
             expect(documents.map((document) => document.info.$schema)).toEqual([
               "global",
+              "outside",
               "root",
               "parent",
               "directory",
@@ -1934,13 +1934,14 @@ describe("Config", () => {
             expect(entries.map((entry) => (entry.type === "document" ? entry.info.$schema : entry.path))).toEqual([
               "global",
               AbsolutePath.make(global),
+              "outside",
               "root",
               "parent",
               "directory",
               "root-dot",
-              AbsolutePath.make(path.join(root, ".kilo")),
+              AbsolutePath.make(path.join(root, ".opencode")),
               "directory-dot",
-              AbsolutePath.make(path.join(directory, ".kilo")),
+              AbsolutePath.make(path.join(directory, ".opencode")),
             ])
           }).pipe(
             Effect.provide(
@@ -1954,5 +1955,4 @@ describe("Config", () => {
       }),
     ),
   )
-  // kilocode_change end
 })

@@ -2,15 +2,33 @@ export * as ConfigDiscovery from "./discovery.js"
 
 import os from "os"
 import path from "path"
-import { Effect } from "effect"
+import { Context, Effect, Layer } from "effect" // kilocode_change(config) seam - discovery layout service
 import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
+import { makeGlobalNode } from "@opencode/util/effect/app-node" // kilocode_change(config) seam - discovery layout node
 import { Location } from "../location.js"
 import { AbsolutePath } from "../schema.js"
 import type { Options } from "../config.js"
-import { KiloConfigDiscovery } from "../kilocode/config/discovery.js" // kilocode_change(config)
 
-export const names = KiloConfigDiscovery.names // kilocode_change(config) - Kilo v1 root file names
+export const names = ["opencode.json", "opencode.jsonc"]
+
+// kilocode_change start - config seam: config names and walk bound with upstream defaults; an embedding host replaces the node
+/**
+ * Config names and walk bound; for reads, a later name wins. `names`: root files of the system, global and project
+ * directories, also the global write target (the last existing name, else the last name). `directories`: project
+ * config directories at one level, read from `directoryFiles`. `walk`: bounds the upward walk (nearest first).
+ */
+export interface Layout {
+  readonly names: readonly string[]
+  readonly directories: readonly string[]
+  readonly directoryFiles: readonly string[]
+  readonly walk: (input: Walk) => Effect.Effect<readonly string[]>
+}
+type Walk = { readonly ancestors: readonly string[]; readonly location: Location.Interface; readonly fs: FSUtil.Interface }
+const defaults: Layout = { names, directories: [".opencode"], directoryFiles: names, walk: (input) => Effect.succeed(input.ancestors) }
+export class LayoutService extends Context.Service<LayoutService, Layout>()("@opencode/ConfigDiscovery/Layout") {}
+export const node = makeGlobalNode({ service: LayoutService, layer: Layer.succeed(LayoutService, defaults), deps: [] })
+// kilocode_change end
 
 /** Eligible sources in priority order, including paths that may appear later. */
 export interface Sources {
@@ -61,6 +79,7 @@ export const discover = Effect.fn("ConfigDiscovery.discover")(function* (options
   const fs = yield* FSUtil.Service
   const global = yield* Global.Service
   const location = yield* Location.Service
+  const layout = yield* LayoutService // kilocode_change(config) seam
   const system = (() => {
     if (options?.system === false) return
     if (typeof options?.system === "string") return AbsolutePath.make(path.resolve(options.system))
@@ -78,12 +97,12 @@ export const discover = Effect.fn("ConfigDiscovery.discover")(function* (options
   const directories =
     globalRoots.slice(0, configDirectories.length).includes(current) || options?.project === false
       ? []
-      : yield* fs.up({ targets: ["."], start: location.directory }).pipe(Effect.flatMap(KiloConfigDiscovery.withinWorktree(fs, location)), Effect.orDie) // kilocode_change(config) - stop at the worktree root, like Kilo v1
+      : yield* fs.up({ targets: ["."], start: location.directory }).pipe(Effect.flatMap((ancestors) => layout.walk({ ancestors, location, fs })), Effect.orDie) // kilocode_change(config) seam
   const discovered = yield* Effect.forEach(directories, (directory) =>
     Effect.gen(function* () {
       // Resolve the parent too: missing children must honor symlinked global roots.
       const parent = yield* fs.resolve(directory)
-      return yield* Effect.forEach(KiloConfigDiscovery.candidates, (name) => // kilocode_change(config) - Kilo directories and names
+      return yield* Effect.forEach([".claude", ".agents", ...layout.directories.toReversed(), ...layout.names.toReversed()], (name) => // kilocode_change(config) seam
         fs
           .resolve(path.join(parent, name))
           .pipe(Effect.map((resolved) => ({ item: AbsolutePath.make(path.join(directory, name)), resolved }))),
@@ -96,7 +115,7 @@ export const discover = Effect.fn("ConfigDiscovery.discover")(function* (options
 
   const globalEnabled = options?.global !== false
   const globalFiles = yield* Effect.forEach(
-    configDirectories.flatMap((directory) => names.map((name) => path.join(directory, name))),
+    configDirectories.flatMap((directory) => layout.names.map((name) => path.join(directory, name))), // kilocode_change(config) seam
     (file) => fs.resolve(file),
   )
   // Global sources must not re-enter through the project walk.
@@ -122,9 +141,9 @@ export const discover = Effect.fn("ConfigDiscovery.discover")(function* (options
     preferences,
     global: globalEnabled ? globalDirectory : undefined,
     explicit: options?.file ? AbsolutePath.make(path.resolve(options.file)) : undefined,
-    direct: KiloConfigDiscovery.direct(visible), // kilocode_change(config) - Kilo v1 root file order
+    direct: visible.filter((item) => ![".agents", ".claude", ...layout.directories].includes(path.basename(item))).toReversed(), // kilocode_change(config) seam
     project: yield* Effect.forEach(
-      KiloConfigDiscovery.projectDirectories(visible), // kilocode_change(config) - .kilocode and .kilo instead of .opencode
+      visible.filter((item) => layout.directories.includes(path.basename(item))).toReversed(), // kilocode_change(config) seam
       (directory) => fs.isDir(directory).pipe(Effect.map((present) => ({ path: directory, present }))),
     ),
     claude:
