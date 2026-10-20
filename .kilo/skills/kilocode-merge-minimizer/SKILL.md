@@ -18,7 +18,7 @@ The main goal on v2 is to move Kilo code out of shared upstream files, into a Ki
 Use the first option that works (`.kilo/skills/v2-migration/SKILL.md`, `migration-tracking/technical-notes/v2-fork-conventions.md`, "Plugin-first extension order"):
 
 1. **Kilo plugin** on the public plugin API (`@opencode/plugin`: agent, provider, model, session, event, tool, permission, command, skill, mcp, rpc, storage and more). No shared-file change.
-2. **Kilo host** (`packages/kilo-cli`, unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry, and Kilo-owned mirrors of upstream files (the host entry, a replaced tool) registered in `mirroredFiles`. List a server plugin in `packages/kilo-plugin/src/index.ts` (`KiloPlugins`); the host registers it. Replacements go in `overrides` in `packages/kilo-cli/src/host.ts`. A TUI plugin still needs one marked call-out line in `packages/tui/src/plugin/builtins.ts` (rung 4).
+2. **Kilo host** (`packages/kilo-cli`, unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry, and Kilo-owned mirrors of upstream files (the host entry, a replaced tool), listed in `mirroredFiles` once U-L3-01 lands it and named in the PR until then. List a server plugin in `packages/kilo-plugin/src/index.ts` (`KiloPlugins`); the host registers it. Replacements go in `overrides` in `packages/kilo-cli/src/host.ts`. A TUI plugin still needs one marked call-out line in `packages/tui/src/plugin/builtins.ts` (rung 4).
 3. **Seam patch** in a shared file: small and generic (widen an API, add a hook, export a value, upstream's value as the default), marked `kilocode_change`, in a file that changes rarely. No Kilo path, identifier or string in the marked lines. One generic seam is better than many small edits.
 4. **Feature patch** in a shared file: last resort, marked, with the reason in the PR that options 1 to 3 do not work.
 5. **Branding and product strings**: the rename script (`script/upstream` codemods) during syncs, never hand edits.
@@ -36,7 +36,7 @@ Direction (`migration-tracking/plans/v2-host-strategy.md` section 5, the source 
 - Use `script/upstream/fix-kilocode-markers.ts` for stale or broad markers, inspecting `--dry-run` output before applying changes.
 - Avoid adding Kilo business logic directly to shared files. Keep shared-file edits as close as possible to upstream shape.
 - Do not change shared files unless the change is required for Kilo functionality, fixes a Kilo bug, or is a minimal targeted upstream-quality fix.
-- Do not duplicate upstream logic unless there is a concrete reason. The sanctioned form is a host mirror (rung 2): a Kilo-owned copy of an upstream file with the differences marked `Kilo:` and the file listed in `mirroredFiles`, kept in step by the drift check. Otherwise isolate the Kilo delta and keep the upstream dependency obvious.
+- Do not duplicate upstream logic unless there is a concrete reason. The sanctioned form is a host mirror (rung 2): a Kilo-owned copy of an upstream file with the differences marked `Kilo:` and the file listed in `mirroredFiles` (once U-L3-01 lands it; until then, named in the PR), kept in step by the drift check. Otherwise isolate the Kilo delta and keep the upstream dependency obvious.
 
 ## Shared File Structure
 

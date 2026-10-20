@@ -16,7 +16,7 @@ Kilo is the host, OpenCode is a library. Code moves one way: from upstream files
 | Word | Meaning | Marker |
 |---|---|---|
 | Plugin hook (rung 1) | An extension point upstream exposes through `@opencode/plugin`; you attach from a Kilo-owned file | none |
-| Host composition (rung 2) | Plugin registration, service replacement, environment translation or boot option in the Kilo host; a Kilo-owned mirror of an upstream file (host entry, replaced tool), registered in `mirroredFiles` | none |
+| Host composition (rung 2) | Plugin registration, service replacement, environment translation or boot option in the Kilo host; a Kilo-owned mirror of an upstream file (host entry, replaced tool), listed in `mirroredFiles` once U-L3-01 lands it, named in the PR until then | none |
 | Seam (rung 3) | One to three generic lines you add to an upstream file so that a plugin hook becomes possible. Carries no Kilo value: no `kilocode/` path, `Kilo*` identifier or Kilo string literal | `kilocode_change(<feature>) seam` |
 | Patch (rung 4) | A Kilo-specific line inside an upstream file, including a registration or import of a Kilo module. One line thick; behavior lives in a Kilo module | `kilocode_change(<feature>)` |
 
@@ -163,7 +163,7 @@ Plus: shared files touched with rung, core-internal imports added and mirrored f
 | add, wrap or replace a builtin tool | 1 | `ToolEditor.update` or `remove` + `add` |
 | add a Kilo RPC for clients | 1 | contract in `schema/src/kilocode/<feature>.ts`, `ctx.rpc.register` in `kilo-plugin` |
 | register a plugin, replace a service, set paths, translate env, change a boot option | 2 | `KiloPlugins` in `packages/kilo-plugin`, `overrides` in `packages/kilo-cli/src/host.ts`, `names` in `env.ts` |
-| change the host entry, or re-implement an upstream file | 2 | the mirror in `packages/kilo-cli`, differences marked `Kilo:`, listed in `mirroredFiles`; never a seam in the mirrored file |
+| change the host entry, or re-implement an upstream file | 2 | the mirror in `packages/kilo-cli`, differences marked `Kilo:`, listed in `mirroredFiles` once U-L3-01 lands it (named in the PR until then); never a seam in the mirrored file |
 | register a TUI plugin | 4 | one marked call-out line in `tui/src/plugin/builtins.ts` |
 | a knob upstream does not expose yet | 3 | seam, generic, tagged, `shared-patches.json` |
 | a defect fix or a Kilo decision inside upstream logic with no knob | 4 | one tagged line, policy in a Kilo module |
