@@ -636,7 +636,9 @@ const IndexingTab: Component = () => {
             </SettingsRow>
             <SettingsRow
               title={language.t("settings.indexing.valkeyPassword.title")}
-              description={description(language.t("settings.indexing.valkeyPassword.description"), [["valkey", "password"]])}
+              description={description(language.t("settings.indexing.valkeyPassword.description"), [
+                ["valkey", "password"],
+              ])}
               tag={() => tag(scope(), [["valkey", "password"]])}
               last
             >
