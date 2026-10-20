@@ -83,6 +83,56 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         Disposer.dispose(fix.popup.disposable)
     }
 
+    fun `test the last row is revealed flush with the end of the list`() {
+        val fix = shown(40)
+
+        fix.popup.select(39)
+        val view = fix.port.view ?: error("expected a view")
+        assertEquals(
+            "hovering the last row must leave the list scrolled to its end",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        fix.popup.select(20)
+        fix.popup.select(39)
+        assertEquals(
+            "returning to the last row must scroll back to the end",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
+    /**
+     * The balloon can be laid out more than once, and the platform may settle on a shorter body after
+     * the first pass. A reveal applied against the taller viewport then leaves the list short of the
+     * end, which is what hovering the last stripe exposed.
+     */
+    fun `test a revealed last row stays revealed when the popup shrinks`() {
+        val fix = shown(40)
+        fix.popup.select(39)
+        val view = fix.port.view ?: error("expected a view")
+        assertEquals(
+            "precondition: the last row starts flush with the end",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        fix.popup.fitWithin(CAP_W, CAP_H - 80)
+        fix.popup.component.size = fix.popup.component.preferredSize
+        layoutAll(fix.popup.component)
+
+        assertEquals(
+            "the last row must stay at the end after the body shrinks",
+            view.height - fix.port.extentSize.height,
+            fix.port.viewPosition.y,
+        )
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
     /** A row requested before the body had bounds still has to be revealed once it does. */
     fun `test a row requested before layout is revealed once laid out`() {
         val popup = popup(items(40), hovered = 30)
