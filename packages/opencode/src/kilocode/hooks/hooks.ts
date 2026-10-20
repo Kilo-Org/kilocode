@@ -546,15 +546,21 @@ export function condition(rule: string, call?: Call): boolean {
   return true
 }
 
+function posix(value: string) {
+  const slash = value.replaceAll("\\", "/")
+  if (process.platform !== "win32") return slash
+  return slash.replace(/^\/?([A-Za-z]):(?=\/|$)/, (_, drive: string) => "/" + drive.toLowerCase())
+}
+
 function glob(pattern: string, file: string, cwd: string) {
-  const target = file.replaceAll("\\", "/")
+  const target = posix(file)
   if (!pattern.includes("/")) return new Bun.Glob(pattern).match(path.basename(target))
   const full = pattern.startsWith("//")
     ? pattern.slice(1)
     : pattern.startsWith("~/")
       ? path.join(os.homedir(), pattern.slice(2))
       : path.join(cwd, pattern)
-  return new Bun.Glob(full.replaceAll("\\", "/")).match(target)
+  return new Bun.Glob(posix(full)).match(target)
 }
 
 /**

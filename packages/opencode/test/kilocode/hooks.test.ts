@@ -7,6 +7,7 @@ import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { Database } from "@opencode-ai/core/database/database"
 import { Global } from "@opencode-ai/core/global"
 import { CLAUDE_KNOWN, EVENTS, IMPORTED } from "@opencode-ai/core/kilocode/hooks-events"
+import { Shell } from "@opencode-ai/core/shell"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { InstanceRef } from "../../src/effect/instance-ref"
 import * as SandboxPolicy from "../../src/kilocode/sandbox/policy"
@@ -264,12 +265,14 @@ describe("condition", () => {
     expect(KiloHooks.condition("Edit(*.env)", edit("src/a.ts"))).toBe(false)
     expect(KiloHooks.condition("Edit(/src/**)", edit("src/a.ts"))).toBe(true)
     expect(KiloHooks.condition("Edit(/src/**)", edit("lib/a.ts"))).toBe(false)
-    expect(
-      KiloHooks.condition(
-        `Read(/${path.join(dir, "secret")}/*)`,
-        call("read", { filePath: "secret/a" }, { directory: dir }),
-      ),
-    ).toBe(true)
+    const secret = path.join(dir, "secret")
+    const read = call("read", { filePath: "secret/a" }, { directory: dir })
+    const win = process.platform === "win32"
+    const rule = win
+      ? "//" + secret.at(0)?.toLowerCase() + secret.slice(2).replaceAll("\\", "/")
+      : "//" + secret.slice(1)
+    expect(KiloHooks.condition(`Read(${rule}/*)`, read)).toBe(true)
+    if (win) expect(KiloHooks.condition(`Read(//${secret.replaceAll("\\", "/")}/*)`, read)).toBe(true)
   })
 
   test("matches WebFetch domains and their subdomains", () => {
@@ -849,14 +852,13 @@ describe("running hooks", () => {
     expect(value).toEqual({ code: 1, stdout: "", stderr: "" })
   })
 
-  test("runs shell-form hooks in bash", async () => {
+  test.skipIf(process.platform === "win32" && !Shell.gitbash())("runs shell-form hooks in bash", async () => {
     const value = await KiloHooks.run(
       { type: "command", command: "if [[ -n bash ]]; then echo bash-ok >&2; exit 2; fi", shell: "bash" },
       {},
       { cwd: process.cwd() },
     )
-    expect(value.code).toBe(2)
-    expect(value.stderr.trim()).toBe("bash-ok")
+    expect({ code: value.code, stderr: value.stderr.trim() }).toEqual({ code: 2, stderr: "bash-ok" })
   })
 
   test("tells hooks the event and nesting depth, keeps them off the daemon and hides an outer CLAUDE_ENV_FILE", async () => {

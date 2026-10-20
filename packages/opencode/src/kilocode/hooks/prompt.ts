@@ -249,6 +249,32 @@ const screen = Effect.fnUntraced(function* (input: {
 })
 
 /**
+ * Resolves the hooks a prompt or slash command may run. `idle` means none needs to run before the
+ * prompt proceeds; a root session's pending SessionStart is then held for its next model step.
+ */
+const load = Effect.fnUntraced(function* (
+  input: {
+    sessionID: SessionID
+    session: Session.Info
+    start: boolean
+    sessions: Session.Interface
+  } & Services,
+) {
+  const hooks = yield* KiloHookSession.find({
+    sessionID: input.sessionID,
+    events: input.start
+      ? ["UserPromptSubmit", "SessionStart", "SessionEnd", "InstructionsLoaded"]
+      : ["UserPromptSubmit"],
+    config: input.config,
+    database: input.database,
+  })
+  const active = KiloHooks.select(hooks, "UserPromptSubmit", []).length > 0
+  const idle = !active && !(input.start && hooks.SessionStart?.length)
+  if (idle && input.start) KiloHookSession.hold(input.sessionID, yield* KiloHookSession.ensure({ ...input, hooks }))
+  return { hooks, active, idle }
+})
+
+/**
  * SessionStart (first prompt) and UserPromptSubmit for a human prompt. Returns the prompt with any
  * UserPromptSubmit context appended (SessionStart context goes on the next model step); a block
  * dies with `KiloHooks.Blocked` after notifying the user.
@@ -279,22 +305,17 @@ export function submit(
     const admission = { session, sessions: input.sessions, status: input.status, root, agent, text }
     admissions.set(next, admission)
     const start = !session.parentID && KiloHookSession.pending(id)
-    const hooks = yield* KiloHookSession.find({
-      sessionID: id,
-      events: start ? ["UserPromptSubmit", "SessionStart", "SessionEnd", "InstructionsLoaded"] : ["UserPromptSubmit"],
-      config: input.config,
-      database: input.database,
-    })
-    const active = KiloHooks.select(hooks, "UserPromptSubmit", []).length > 0
-    if (!active && !(start && hooks.SessionStart?.length)) {
-      if (start) KiloHookSession.hold(id, yield* KiloHookSession.ensure({ ...input, sessionID: id, session, hooks }))
-      return next
-    }
+    const loaded = yield* load({ ...input, sessionID: id, session, start })
+    if (loaded.idle) return next
     const parts = yield* admit(
       { sessionID: id, status: input.status },
       Effect.gen(function* () {
-        if (start) KiloHookSession.hold(id, yield* KiloHookSession.ensure({ ...input, sessionID: id, session, hooks }))
-        if (!active) return []
+        if (start)
+          KiloHookSession.hold(
+            id,
+            yield* KiloHookSession.ensure({ ...input, sessionID: id, session, hooks: loaded.hooks }),
+          )
+        if (!loaded.active) return []
         const result = yield* screen({
           ...input,
           sessionID: id,
@@ -303,7 +324,7 @@ export function submit(
           agent,
           key: next.messageID,
           text,
-          hooks,
+          hooks: loaded.hooks,
         })
         if (result.blocked) return yield* Effect.die(result.blocked)
         return result.parts
@@ -348,24 +369,19 @@ export function command(
     const id = cmd.sessionID
     const session = yield* input.sessions.get(id).pipe(Effect.orDie)
     const start = !session.parentID && !DETACHED.has(cmd.command) && KiloHookSession.pending(id)
-    const hooks = yield* KiloHookSession.find({
-      sessionID: id,
-      events: start ? ["UserPromptSubmit", "SessionStart", "SessionEnd", "InstructionsLoaded"] : ["UserPromptSubmit"],
-      config: input.config,
-      database: input.database,
-    })
-    const active = KiloHooks.select(hooks, "UserPromptSubmit", []).length > 0
-    if (!active && !(start && hooks.SessionStart?.length)) {
-      if (start) KiloHookSession.hold(id, yield* KiloHookSession.ensure({ ...input, sessionID: id, session, hooks }))
-      return []
-    }
+    const loaded = yield* load({ ...input, sessionID: id, session, start })
+    if (loaded.idle) return []
     const agent = cmd.agent ?? session.agent
     const root = session.parentID ? yield* KiloHookPayload.root(id, input.sessions) : id
     return yield* admit(
       { sessionID: id, status: input.status },
       Effect.gen(function* () {
-        if (start) KiloHookSession.hold(id, yield* KiloHookSession.ensure({ ...input, sessionID: id, session, hooks }))
-        if (!active) return []
+        if (start)
+          KiloHookSession.hold(
+            id,
+            yield* KiloHookSession.ensure({ ...input, sessionID: id, session, hooks: loaded.hooks }),
+          )
+        if (!loaded.active) return []
         const result = yield* screen({
           ...input,
           sessionID: id,
@@ -374,7 +390,7 @@ export function command(
           agent,
           key,
           text: invocation(cmd),
-          hooks,
+          hooks: loaded.hooks,
         })
         if (result.blocked) return yield* Effect.fail(result.blocked)
         return result.parts

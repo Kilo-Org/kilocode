@@ -184,7 +184,7 @@ On `PreToolUse`, `PostToolUse`, `PostToolUseFailure` and `PermissionRequest`, `i
 | Condition | Evaluated as |
 |---|---|
 | `Bash(rm *)` | Each part of the command, split on `\|`, `;` and `&`, with leading `NAME=value` assignments removed and repeated spaces counted as one, is matched with `*` wildcards. Commands with quotes, `$`, redirects, subshells, groups, wrappers such as `sudo`, `env`, `xargs` or `sh`, a program given by path such as `/usr/bin/git`, a program name with a `*`, or a program name in another letter case such as `GIT` always run the hook. `prefix:*` means `prefix*`. |
-| `Edit(*.env)`, `Read(src/**)` | A glob on the file path. A pattern without `/` matches the file name; `//abs/path` is absolute; `~/` is your home folder; anything else is relative to the project folder. |
+| `Edit(*.env)`, `Read(src/**)` | A glob on the file path. A pattern without `/` matches the file name; `//abs/path` is absolute (on Windows, `//c/Users/me/**` for `C:\Users\me`); `~/` is your home folder; anything else is relative to the project folder. |
 | `WebFetch(domain:example.com)` | The URL host is `example.com` or a subdomain of it. |
 | `Bash`, `mcp__github__create_issue` | Every call of that tool. |
 | Anything else | The hook runs. |

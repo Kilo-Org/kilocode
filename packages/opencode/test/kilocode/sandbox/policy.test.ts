@@ -386,40 +386,43 @@ describe("sandbox policy", () => {
       })
     })
 
-    test("the Wakeup service still writes its queue for a sandboxed tool while direct writes are refused", async () => {
-      await using tmp = await fixture()
-      const dirs = tmp.extra
-      const policy = profile(context(dirs.main, dirs.main, dirs))
-      const sessionID = SessionID.make(`ses_sandbox_wakeup_${Date.now()}`)
-      const result = await Effect.runPromise(
-        Effect.gen(function* () {
-          const wake = yield* Wakeup.Service
-          const files = yield* FSUtil.Service
-          const info = yield* runSandbox(
-            policy,
-            wake.schedule({
-              sessionID,
-              directory: dirs.main,
-              prompt: "check the deploy",
-              when: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-            }),
-          )
-          const listed = yield* wake.list({ sessionID })
-          const forged = yield* runSandbox(
-            policy,
-            files.writeWithDirs(
-              path.join(Global.Path.data, "storage", "wakeup", sessionID, "wku_forged.json"),
-              JSON.stringify({ ...info, id: "wku_forged" }),
-            ),
-          ).pipe(Effect.exit)
-          const cancelled = yield* runSandbox(policy, wake.cancel(info.id, sessionID))
-          return { info, listed, forged, cancelled, left: yield* wake.list({ sessionID }) }
-        }).pipe(Effect.scoped, Effect.provide(AppNodeBuilder.build(LayerNode.group([Wakeup.node, FSUtil.node])))),
-      )
-      expect(result.listed.map((item) => item.id)).toEqual([result.info.id])
-      expect(Exit.isFailure(result.forged)).toBe(true)
-      expect(result.cancelled?.id).toBe(result.info.id)
-      expect(result.left).toEqual([])
-    })
+    posix(
+      "the Wakeup service still writes its queue for a sandboxed tool while direct writes are refused",
+      async () => {
+        await using tmp = await fixture()
+        const dirs = tmp.extra
+        const policy = profile(context(dirs.main, dirs.main, dirs))
+        const sessionID = SessionID.make(`ses_sandbox_wakeup_${Date.now()}`)
+        const result = await Effect.runPromise(
+          Effect.gen(function* () {
+            const wake = yield* Wakeup.Service
+            const files = yield* FSUtil.Service
+            const info = yield* runSandbox(
+              policy,
+              wake.schedule({
+                sessionID,
+                directory: dirs.main,
+                prompt: "check the deploy",
+                when: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+              }),
+            )
+            const listed = yield* wake.list({ sessionID })
+            const forged = yield* runSandbox(
+              policy,
+              files.writeWithDirs(
+                path.join(Global.Path.data, "storage", "wakeup", sessionID, "wku_forged.json"),
+                JSON.stringify({ ...info, id: "wku_forged" }),
+              ),
+            ).pipe(Effect.exit)
+            const cancelled = yield* runSandbox(policy, wake.cancel(info.id, sessionID))
+            return { info, listed, forged, cancelled, left: yield* wake.list({ sessionID }) }
+          }).pipe(Effect.scoped, Effect.provide(AppNodeBuilder.build(LayerNode.group([Wakeup.node, FSUtil.node])))),
+        )
+        expect(result.listed.map((item) => item.id)).toEqual([result.info.id])
+        expect(Exit.isFailure(result.forged)).toBe(true)
+        expect(result.cancelled?.id).toBe(result.info.id)
+        expect(result.left).toEqual([])
+      },
+    )
   })
 })
