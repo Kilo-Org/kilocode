@@ -40,6 +40,7 @@ import java.awt.AlphaComposite
 import java.awt.BasicStroke
 import java.awt.BorderLayout
 import java.awt.Color
+import java.awt.Container
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
@@ -120,7 +121,9 @@ internal class ActiveListRenderer(
 
     private var menu: ActiveListMenu<*>? = null
     private var sections: ActiveListCollapse? = null
-    private val insets = JBUI.CurrentTheme.Popup.separatorLabelInsets()
+    private val insets = JBUI.CurrentTheme.Popup.separatorLabelInsets().let {
+        JBUI.insets(it.top + UiStyle.Gap.sm(), it.left, it.bottom, it.right)
+    }
     private val sep = GroupHeaderSeparator(insets)
     /** Trailing indicator; the containing band owns the click target. */
     private val chevron = ActiveListActionCell()
@@ -300,9 +303,10 @@ internal class ActiveListRenderer(
             JBUI.Borders.empty(UiStyle.Gap.MD, 0, UiStyle.Gap.MD, 0)
         }
         mark.border = if (menu == null) JBUI.Borders.empty() else JBUI.Borders.emptyRight(UiStyle.Gap.MD)
-        // Align the band chevron with the row icon column so a separator reads as one level above the
-        // rows under it. [mark] sits at the row's leading edge, so its total width — icon column plus
-        // the menu-time right padding — is exactly the offset the caption starts at.
+        // Collapsible bands keep padding inside their full-width hit target. Plain separators use the
+        // header border so every ActiveList section gets the same vertical breathing room.
+        top.border = if (folding) JBUI.Borders.empty() else JBUI.Borders.empty(UiStyle.Gap.SM, 0)
+        toolbar.border = JBUI.Borders.empty(UiStyle.Gap.SM, 0)
         band?.border = JBUI.Borders.empty()
     }
 
@@ -523,7 +527,8 @@ internal class ActiveListRenderer(
             val height = sep.preferredSize.height
                 .coerceAtLeast(sep.getFontMetrics(sep.font).height + insets.top + insets.bottom)
                 .coerceAtLeast(toolbar.preferredSize.height + insets.top + insets.bottom)
-            Dimension(0, height + JBUI.scale(2))
+            val padding = if (folding) UiStyle.Gap.sm() * 2 else top.insets.top + top.insets.bottom
+            Dimension(0, height + padding + JBUI.scale(2))
         })
     }
 
@@ -694,35 +699,36 @@ private class BandPanel(private val toggle: SectionToggle) : JPanel(null), Activ
 
     override fun getPreferredSize(): Dimension = Dimension(
         components.filter { it.isVisible }.sumOf { it.preferredSize.width },
-        components.filter { it.isVisible }.maxOfOrNull { it.preferredSize.height } ?: 0,
+        (components.filter { it.isVisible }.maxOfOrNull { it.preferredSize.height } ?: 0) + UiStyle.Gap.sm() * 2,
     )
 
     override fun doLayout() {
         val sep = components.getOrNull(1) ?: return
-        sep.setBounds(0, 0, width, height)
+        val padding = UiStyle.Gap.sm()
+        val content = (height - padding * 2).coerceAtLeast(0)
+        sep.setBounds(0, padding, width, content)
         val size = toggle.preferredSize
         val insets = JBUI.CurrentTheme.Popup.separatorLabelInsets()
-        val bottom = height - insets.bottom
+        val bottom = this.height - padding - insets.bottom
         toggle.setBounds(
-            (width - size.width - insets.right).coerceAtLeast(0),
+            (width - size.width).coerceAtLeast(0),
             (bottom - size.height).coerceAtLeast(0),
             size.width,
             size.height,
         )
-        val toolbar = components.getOrNull(2) ?: return
+        val toolbar = components.getOrNull(2) as? Container ?: return
         val space = (toggle.x - UiStyle.Gap.sm()).coerceAtLeast(0)
         val width = toolbar.preferredSize.width.coerceAtMost(space)
-        val height = toolbar.preferredSize.height.coerceAtMost(bottom.coerceAtLeast(0))
-        toolbar.setBounds(space - width, bottom - height, width, height)
+        val height = toolbar.preferredSize.height.coerceAtMost(this.height)
+        // The toolbar's small top/bottom border surrounds its actions; position that outer box around
+        // the toggle so the actual buttons inside it share the toggle's vertical bounds.
+        val top = (toggle.y - toolbar.insets.top).coerceAtLeast(0)
+        toolbar.setBounds(space - width, top, width, height.coerceAtMost(this.height - top))
     }
 }
 
-/** Trailing expand/collapse control with the platform toolbar-button hover treatment. */
-private class SectionToggle(private val chevron: ActiveListActionCell) : JPanel(BorderLayout()),
-    ActiveListHitCell,
-    ActiveListHoverCell {
-    private var hovered = false
-
+/** Trailing expand/collapse control; the tooltip remains, but it intentionally has no hover chrome. */
+private class SectionToggle(private val chevron: ActiveListActionCell) : JPanel(BorderLayout()), ActiveListHitCell {
     override val cellId = ACTIVE_LIST_SECTION_TOGGLE_CELL
 
     init {
@@ -736,18 +742,6 @@ private class SectionToggle(private val chevron: ActiveListActionCell) : JPanel(
     override fun cellCursor() = chevron.cellCursor()
     override fun cellTooltip() = chevron.cellTooltip()
     override fun cellAction() = chevron.cellAction()
-
-    override fun cellHovered(hovered: Boolean) {
-        this.hovered = hovered
-    }
-
-    override fun paintComponent(g: Graphics) {
-        if (hovered && cellEnabled()) {
-            ActionButtonLook.SYSTEM_LOOK.paintBackground(g, this, ActionButtonComponent.POPPED)
-            ActionButtonLook.SYSTEM_LOOK.paintBorder(g, this, ActionButtonComponent.POPPED)
-        }
-        super.paintComponent(g)
-    }
 }
 
 /** Renderer buttons expose their platform presentation through the list's synthetic click path. */

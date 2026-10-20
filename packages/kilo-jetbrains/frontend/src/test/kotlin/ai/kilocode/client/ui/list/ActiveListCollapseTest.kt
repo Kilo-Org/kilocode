@@ -1,6 +1,7 @@
 package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -35,8 +36,13 @@ class ActiveListCollapseTest : BasePlatformTestCase() {
             val band = hits.single { it.id == ACTIVE_LIST_SECTION_CELL }.bounds
             assertEquals(view.list.width, band.width)
             assertTrue(button.bounds.width > 0)
+            assertTrue(button.bounds.y >= band.y + UiStyle.Gap.sm())
+            assertTrue(button.bounds.y + button.bounds.height <= band.y + band.height - UiStyle.Gap.sm())
             assertTrue(button.bounds.x > band.width / 2)
             assertTrue(button.bounds.x + button.bounds.width < toggle.bounds.x)
+            assertEquals(band.x + band.width, toggle.bounds.x + toggle.bounds.width)
+            assertEquals(toggle.bounds.y, button.bounds.y)
+            assertEquals(toggle.bounds.height, button.bounds.height)
             click(view, center(button.bounds))
             assertEquals(if (folded) 3 else 4, view.list.model.size)
             assertEquals("cur", view.selected()?.key)

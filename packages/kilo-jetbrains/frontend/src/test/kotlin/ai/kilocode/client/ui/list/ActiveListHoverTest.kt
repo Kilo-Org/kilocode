@@ -66,9 +66,9 @@ class ActiveListHoverTest : BasePlatformTestCase() {
         assertImagesDiffer(idle, paint(view))
 
         move(view, center(toggle.bounds))
-        assertEquals(toggle.id, (view.list as ActiveListActive).hoveredCell())
+        assertNull((view.list as ActiveListActive).hoveredCell())
         assertEquals(listOf("a"), seen)
-        assertImagesDiffer(idle, paint(view))
+        assertImagesEqual(idle, paint(view))
 
         val band = hits.single { it.id == ACTIVE_LIST_SECTION_CELL }.bounds
         move(view, Point(band.x + 1, band.y + band.height / 2))
