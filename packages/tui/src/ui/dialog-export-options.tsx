@@ -1,4 +1,5 @@
 import { Keymap } from "../context/keymap"
+import { useNewDesigns } from "../config"
 import { useTheme } from "../context/theme"
 import { DialogHeader, DialogLayout, type DialogContext } from "./dialog"
 import { createStore } from "solid-js/store"
@@ -22,7 +23,12 @@ type Active = ExportFormat | "thinking" | "tools" | "sanitize" | "copy" | "expor
 
 export function DialogExportOptions(props: DialogExportOptionsProps) {
   const theme = useTheme().surface("dialog")
-  const overlayTheme = useTheme()
+  const newDesigns = useNewDesigns()
+  // Same field styling as the question form: only the focused row is highlighted, and the
+  // mark alone shows what's checked.
+  const markColor = (active: boolean, checked: boolean) =>
+    active ? theme.text.formfield.focused : checked ? theme.text.formfield.selected : theme.text.muted
+  const labelColor = (active: boolean) => (active ? theme.text.formfield.focused : theme.text.formfield.base)
   const [store, setStore] = createStore({
     format: "markdown" as ExportFormat,
     thinking: props.defaultThinking,
@@ -51,27 +57,33 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
     if (store.active === "copy" || store.active === "export") confirm(store.active)
   }
 
+  const move = (offset: number) => {
+    const options: Active[] =
+      store.format === "markdown" ? ["markdown", "json", "thinking", "tools"] : ["markdown", "json", "sanitize"]
+    const order: Active[] = newDesigns() ? options : [...options, "copy", "export"]
+    setStore("active", order[(order.indexOf(store.active) + offset + order.length) % order.length])
+  }
+
   Keymap.createLayer(() => ({
     mode: "modal",
     commands: [
-      {
-        bind: "tab",
-        title: "Next export option",
-        group: "Dialog",
-        run: () => {
-          const order: Active[] =
-            store.format === "markdown"
-              ? ["markdown", "json", "thinking", "tools", "copy", "export"]
-              : ["markdown", "json", "sanitize", "copy", "export"]
-          setStore("active", order[(order.indexOf(store.active) + 1) % order.length])
-        },
-      },
-      {
-        bind: "return",
-        title: "Select export option",
-        group: "Dialog",
-        run: activate,
-      },
+      { bind: "tab", title: "Next export option", group: "Dialog", run: () => move(1) },
+      { bind: "shift+tab", title: "Previous export option", group: "Dialog", run: () => move(-1) },
+      ...(newDesigns()
+        ? [
+            // The footer owns enter (save) and c (copy), so space toggles the focused option instead.
+            { bind: "return", title: "Save to file", group: "Dialog", run: () => confirm("export") },
+            { bind: "c", title: "Copy export", group: "Dialog", run: () => confirm("copy") },
+            { bind: "space", title: "Toggle export option", group: "Dialog", run: activate },
+          ]
+        : [
+            {
+              bind: "return",
+              title: "Select export option",
+              group: "Dialog",
+              run: activate,
+            },
+          ]),
     ],
   }))
 
@@ -83,15 +95,27 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
   return (
     <DialogLayout
       header={<DialogHeader title="Export session" />}
-      footer={
+      footer={{
+        actions: {
+          primary: [
+            { title: "copy", key: "c", onTrigger: () => confirm("copy") },
+            { title: "save to file", key: "enter", onTrigger: () => confirm("export") },
+          ],
+        },
+      }}
+      legacyFooter={
         <box flexDirection="row" justifyContent="flex-end" gap={1}>
           <box
             paddingLeft={4}
             paddingRight={4}
-            backgroundColor={overlayTheme.background.raised.high}
+            backgroundColor={
+              store.active === "copy" ? theme.background.action.primary.focused : theme.background.action.primary.base
+            }
             onMouseUp={() => confirm("copy")}
           >
-            <text fg={overlayTheme.text.base}>Copy</text>
+            <text fg={store.active === "copy" ? theme.text.action.primary.focused : theme.text.action.primary.base}>
+              Copy
+            </text>
           </box>
           <box
             paddingLeft={4}
@@ -115,28 +139,16 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
             <For each={["markdown", "json"] as const}>
               {(format) => (
                 <box
+                  flexDirection="row"
+                  gap={1}
                   paddingLeft={1}
                   paddingRight={1}
-                  backgroundColor={
-                    store.active === format
-                      ? theme.background.formfield.focused
-                      : store.format === format
-                        ? theme.background.formfield.selected
-                        : theme.background.formfield.base
-                  }
                   onMouseUp={() => selectFormat(format)}
                 >
-                  <text
-                    fg={
-                      store.active === format
-                        ? theme.text.formfield.focused
-                        : store.format === format
-                          ? theme.text.formfield.selected
-                          : theme.text.formfield.base
-                    }
-                  >
-                    {store.format === format ? "◉" : "○"} {format === "markdown" ? "Markdown" : "JSON"}
+                  <text fg={markColor(store.active === format, store.format === format)}>
+                    {store.format === format ? "◉" : "○"}
                   </text>
+                  <text fg={labelColor(store.active === format)}>{format === "markdown" ? "Markdown" : "JSON"}</text>
                 </box>
               )}
             </For>
@@ -146,118 +158,37 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
           <box
             flexDirection="row"
             gap={1}
-            backgroundColor={
-              store.active === "thinking"
-                ? theme.background.formfield.focused
-                : store.thinking
-                  ? theme.background.formfield.selected
-                  : theme.background.formfield.base
-            }
             onMouseUp={() => {
               setStore("active", "thinking")
               setStore("thinking", !store.thinking)
             }}
           >
-            <text
-              fg={
-                store.active === "thinking"
-                  ? theme.text.formfield.focused
-                  : store.thinking
-                    ? theme.text.formfield.selected
-                    : theme.text.formfield.base
-              }
-            >
-              {store.thinking ? "[x]" : "[ ]"}
-            </text>
-            <text
-              fg={
-                store.active === "thinking"
-                  ? theme.text.formfield.focused
-                  : store.thinking
-                    ? theme.text.formfield.selected
-                    : theme.text.formfield.base
-              }
-            >
-              Include thinking
-            </text>
+            <text fg={markColor(store.active === "thinking", store.thinking)}>{store.thinking ? "[x]" : "[ ]"}</text>
+            <text fg={labelColor(store.active === "thinking")}>Include thinking</text>
           </box>
           <box
             flexDirection="row"
             gap={1}
-            backgroundColor={
-              store.active === "tools"
-                ? theme.background.formfield.focused
-                : store.tools
-                  ? theme.background.formfield.selected
-                  : theme.background.formfield.base
-            }
             onMouseUp={() => {
               setStore("active", "tools")
               setStore("tools", !store.tools)
             }}
           >
-            <text
-              fg={
-                store.active === "tools"
-                  ? theme.text.formfield.focused
-                  : store.tools
-                    ? theme.text.formfield.selected
-                    : theme.text.formfield.base
-              }
-            >
-              {store.tools ? "[x]" : "[ ]"}
-            </text>
-            <text
-              fg={
-                store.active === "tools"
-                  ? theme.text.formfield.focused
-                  : store.tools
-                    ? theme.text.formfield.selected
-                    : theme.text.formfield.base
-              }
-            >
-              Include tools
-            </text>
+            <text fg={markColor(store.active === "tools", store.tools)}>{store.tools ? "[x]" : "[ ]"}</text>
+            <text fg={labelColor(store.active === "tools")}>Include tools</text>
           </box>
         </Show>
         <Show when={store.format === "json"}>
           <box
             flexDirection="row"
             gap={1}
-            backgroundColor={
-              store.active === "sanitize"
-                ? theme.background.formfield.focused
-                : store.sanitize
-                  ? theme.background.formfield.selected
-                  : theme.background.formfield.base
-            }
             onMouseUp={() => {
               setStore("active", "sanitize")
               setStore("sanitize", !store.sanitize)
             }}
           >
-            <text
-              fg={
-                store.active === "sanitize"
-                  ? theme.text.formfield.focused
-                  : store.sanitize
-                    ? theme.text.formfield.selected
-                    : theme.text.formfield.base
-              }
-            >
-              {store.sanitize ? "[x]" : "[ ]"}
-            </text>
-            <text
-              fg={
-                store.active === "sanitize"
-                  ? theme.text.formfield.focused
-                  : store.sanitize
-                    ? theme.text.formfield.selected
-                    : theme.text.formfield.base
-              }
-            >
-              Sanitize sensitive data
-            </text>
+            <text fg={markColor(store.active === "sanitize", store.sanitize)}>{store.sanitize ? "[x]" : "[ ]"}</text>
+            <text fg={labelColor(store.active === "sanitize")}>Sanitize sensitive data</text>
           </box>
         </Show>
       </box>

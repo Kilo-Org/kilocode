@@ -36,6 +36,7 @@ import { Workspace } from "@opencode/core/workspace"
 import { Expected } from "./lib/session-message"
 import { testEffect } from "./lib/effect"
 import { LocationServiceMap } from "@opencode/core/location-service-map"
+import { initGit } from "./fixture/git"
 import { offlineModels } from "./fixture/models"
 import { promptLocationNode } from "./fixture/prompt-location"
 import { globalProjectNode } from "./lib/project"
@@ -158,11 +159,7 @@ describe("Session.create", () => {
           .pipe(Effect.orDie)
         if (!before) return yield* Effect.die(new Error("created session not found"))
 
-        yield* Effect.promise(async () => {
-          await $`git init -q`.cwd(directory)
-          await $`git config user.email test@example.com`.cwd(directory)
-          await $`git config user.name Test`.cwd(directory)
-        })
+        yield* Effect.promise(() => initGit(directory))
         const unborn = yield* projects.resolve(ref.directory)
         const unbornRoot = yield* session.get(created.id)
         const unbornNested = yield* session.get(child.id)
@@ -269,9 +266,7 @@ describe("Session.create", () => {
 
         yield* Effect.promise(async () => {
           for (const root of [nested, outer]) {
-            await $`git init -q`.cwd(root)
-            await $`git config user.email test@example.com`.cwd(root)
-            await $`git config user.name Test`.cwd(root)
+            await initGit(root)
             await $`git commit --allow-empty -qm initial`.cwd(root)
           }
         })
@@ -1270,7 +1265,6 @@ describe("SessionTransfer", () => {
       yield* bus.publish(SessionEvent.Compaction.Started, {
         sessionID: source.id,
         reason: "manual",
-        recent: "pending",
       })
 
       expect((yield* transfer.export({ sessionID: source.id })).messages).toMatchObject([Expected.user("Settled")])
@@ -1292,7 +1286,7 @@ describe("SessionTransfer", () => {
       const runningCompactionID = SessionMessage.ID.create()
       const completedCompactionID = SessionMessage.ID.create()
       const model = Model.Ref.make({ id: Model.ID.make("model"), providerID: Provider.ID.make("provider") })
-      const providerState = { responseId: "summary-response" }
+      const native = { responseId: "summary-response" }
 
       yield* transfer.import({
         data: {
@@ -1339,7 +1333,6 @@ describe("SessionTransfer", () => {
               status: "running",
               reason: "manual",
               summary: "pending",
-              recent: "pending",
               time: { created: DateTime.makeUnsafe(8) },
             },
             {
@@ -1348,9 +1341,8 @@ describe("SessionTransfer", () => {
               status: "completed",
               reason: "manual",
               model,
-              providerState,
+              native,
               summary: "summary",
-              recent: "recent",
               time: { created: DateTime.makeUnsafe(9) },
             },
           ],
@@ -1365,10 +1357,10 @@ describe("SessionTransfer", () => {
         completedCompactionID,
       ])
       expect(yield* Bus.latestSequence(db, sessionID)).toBe(4)
-      expect((yield* transfer.export({ sessionID })).messages.at(-1)).toMatchObject({ model, providerState })
+      expect((yield* transfer.export({ sessionID })).messages.at(-1)).toMatchObject({ model, native })
       expect((yield* transfer.export({ sessionID, sanitize: true })).messages.at(-1)).toMatchObject({
         model,
-        providerState: { redacted: `compaction-provider-state:${completedCompactionID}` },
+        native: { redacted: `compaction-native:${completedCompactionID}` },
       })
     }),
   )

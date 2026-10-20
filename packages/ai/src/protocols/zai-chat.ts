@@ -64,7 +64,6 @@ const fromRequest = Effect.fn("ZAIChat.fromRequest")(function* (request: LLMRequ
 
 export const compatibility = {
   maxTokensField: "max_tokens",
-  supportsStore: false,
   supportsStrictMode: false,
   reasoningField: "reasoning_content",
   zaiToolStream: false,

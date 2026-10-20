@@ -134,7 +134,7 @@ OpenCode includes these visible agents:
 
 | Agent | Mode | Purpose |
 | --- | --- | --- |
-| **Build** (`build`) | `primary` | Default coding agent. Tools are allowed by default; sensitive environment-file reads and access outside the workspace ask for approval. |
+| **Build** (`build`) | `primary` | Default coding agent. Tools and access outside the workspace are allowed by default; sensitive environment-file reads ask for approval. |
 | **Plan** (`plan`) | `primary` | Explores and plans without editing normal project files. It may write OpenCode plan files when asked, and shell commands remain permission-controlled. |
 | **General** (`general`) | `subagent` | Handles research and multi-step work with broad tool access, but cannot launch more subagents. |
 | **Explore** (`explore`) | `subagent` | Searches and reads code or web sources without editing files. |

@@ -19,7 +19,7 @@ import { Spinner } from "./spinner"
 import { errorMessage } from "../util/error"
 import { useSessionTabs } from "../context/session-tabs"
 import { useStorage } from "../context/storage"
-import { useConfig } from "../config"
+import { useConfig, useNewDesigns } from "../config"
 import { withTimestampedFallback } from "@opencode/util/session-title-fallback"
 import { projectName } from "../util/project"
 import { useLocation } from "../context/location"
@@ -33,6 +33,7 @@ export function DialogSessionList() {
   const local = useLocal()
   const sessionTabs = useSessionTabs()
   const config = useConfig().data
+  const newDesigns = useNewDesigns()
   const toast = useToast()
   const activeLocation = useLocation()
   const [filter, setFilter] = createSignal("")
@@ -206,6 +207,10 @@ export function DialogSessionList() {
           </Show>
         </box>
       }
+      searchInTitle
+      titlePlaceholder={
+        !allProjects() && currentProjectName() ? `Search sessions in ${currentProjectName()}` : "Search sessions"
+      }
       options={options()}
       skipFilter={true}
       current={currentSessionID()}
@@ -286,7 +291,7 @@ export function DialogSessionList() {
         },
       ]}
       footerHints={[
-        ...quickSwitchFooterHints(),
+        ...(newDesigns() ? [] : quickSwitchFooterHints()),
         { title: allProjects() ? "current directory" : "all projects", label: "ctrl+a", side: "right" },
       ]}
     />

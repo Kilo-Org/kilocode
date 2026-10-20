@@ -9,9 +9,11 @@ import { useConnected } from "./use-connected"
 import { useData } from "../context/data"
 import { modelPreferenceKey } from "../model-preference"
 import { useLocation } from "../context/location"
+import { useNewDesigns } from "../config"
 
 export function DialogModel(props: { providerID?: string }) {
   const local = useLocal()
+  const newDesigns = useNewDesigns()
   const data = useData()
   const dialog = useDialog()
   const location = useLocation()
@@ -140,11 +142,19 @@ export function DialogModel(props: { providerID?: string }) {
 
   return (
     <DialogSelect<ReturnType<typeof options>[number]["value"]>
+      searchInTitle
+      titlePlaceholder="Search models"
       options={options()}
       actions={[
         {
           command: "model.dialog.provider",
-          title: connected() ? "Connect an integration" : "View all integrations",
+          title: newDesigns()
+            ? connected()
+              ? "connect integration"
+              : "view all integrations"
+            : connected()
+              ? "Connect an integration"
+              : "View all integrations",
           selection: "none",
           onTrigger() {
             dialog.replace(() => (
@@ -156,7 +166,7 @@ export function DialogModel(props: { providerID?: string }) {
         },
         {
           command: "model.dialog.favorite",
-          title: "Favorite",
+          title: newDesigns() ? "favorite" : "Favorite",
           hidden: !connected(),
           onTrigger: (option) => {
             local.model.toggleFavorite(option.value as { providerID: string; modelID: string })
@@ -168,7 +178,6 @@ export function DialogModel(props: { providerID?: string }) {
       skipFilter={true}
       title={title()}
       current={local.model.current()}
-      focusCurrent={false}
     />
   )
 }
@@ -182,12 +191,12 @@ export function prioritizeFavorites<T extends { value: { providerID: string; mod
   )
 }
 
+// The server owns model order (`Model.available()`: preferred free models first when signed out, newest first
+// otherwise). This only applies the picker's grouping and keeps the server's order for everything else.
 export function sortModelOptions<
   T extends {
     providerID?: string
     providerName?: string
-    releaseDate: string | number
-    title: string
     footer?: string
   },
 >(options: T[], grouped = true) {
@@ -201,13 +210,7 @@ export function sortModelOptions<
     const name = grouped ? (a.providerName ?? "").localeCompare(b.providerName ?? "") : 0
     if (name !== 0) return name
 
-    const free = Number(b.footer === "Free") - Number(a.footer === "Free")
-    if (free !== 0) return free
-
-    const release = Number(b.releaseDate) - Number(a.releaseDate)
-    if (release !== 0) return release
-
-    return a.title.localeCompare(b.title)
+    return Number(b.footer === "Free") - Number(a.footer === "Free")
   })
 }
 

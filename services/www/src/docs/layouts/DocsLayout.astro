@@ -4,7 +4,7 @@ import { ClientRouter } from "astro:transitions"
 import DocsHeader from "../components/DocsHeader.astro"
 import DocsSidebar from "../components/DocsSidebar.astro"
 import DocsTableOfContents from "../components/DocsTableOfContents.astro"
-import { getDocsSection } from "../lib/navigation"
+import { docsHref, getDocsSection } from "../lib/navigation"
 import "../styles/global.css"
 
 interface Props {
@@ -19,7 +19,7 @@ interface Props {
 const section = getDocsSection(Astro.props.currentSlug)
 const fullWidth = Astro.props.fullWidth ?? false
 const description = Astro.props.description ?? `${Astro.props.title} documentation for OpenCode.`
-const canonical = new URL(Astro.url.pathname, "https://opencode.ai").href
+const canonical = new URL(docsHref(Astro.props.currentSlug), "https://opencode.ai").href
 ---
 
 <!doctype html>

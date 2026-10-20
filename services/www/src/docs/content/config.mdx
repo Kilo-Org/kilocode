@@ -333,8 +333,9 @@ rate limits, and disabling search.
 
 ### MCP
 
-Configure local and remote Model Context Protocol servers. Global timeouts can
-be overridden by an individual server.
+Configure local and remote Model Context Protocol servers. Global
+`mcp.timeout` values apply to servers defined in configuration files; each
+server's `timeout` overrides them.
 
 ```jsonc
 {
@@ -385,7 +386,7 @@ automatic and manual requests with a provider or model policy:
 
 A model setting overrides the provider setting. Automatic compaction uses the
 selected model's usable input budget. Provider checkpoints keep recent user messages within the same
-`compaction.tokens` budget that local summaries use for their retained tail.
+`compaction.keep.tokens` budget that local summaries use for their retained tail.
 Top-level `compaction.auto: false` disables new automatic compaction without
 discarding installed checkpoints. See the [compaction guide](/compaction) for
 budgeting and overflow recovery.
@@ -408,6 +409,20 @@ interval and 30-minute active window.
 
 See the [warming guide](/warming) for request behavior, customization,
 and cost considerations.
+
+### Experimental
+
+Experimental features may change or be removed in a future release.
+
+Set `todo` to `true` to give agents a `todowrite` tool for tracking multi-step work.
+
+```jsonc
+{
+  "experimental": {
+    "todo": true,
+  },
+}
+```
 
 ### Skills
 
@@ -555,3 +570,56 @@ headers, and model variants.
 Provider `settings.transport: "websocket"` selects its session WebSocket.
 
 See the [providers guide](/providers) for credentials, custom endpoints, provider packages, the WebSocket transport, and model configuration.
+
+## Variables
+
+You can use variable substitution in your config files to reference environment variables and file contents. Place references inside JSON strings.
+
+### Env vars
+
+Use `{env:VARIABLE_NAME}` to substitute environment variables:
+
+```jsonc title="opencode.jsonc"
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "{env:OPENCODE_MODEL}",
+  "providers": {
+    "anthropic": {
+      "settings": {
+        "apiKey": "{env:ANTHROPIC_API_KEY}",
+      },
+    },
+  },
+}
+```
+
+If the environment variable is not set, it will be replaced with an empty string.
+
+### Files
+
+Use `{file:path/to/file}` to substitute the contents of a file:
+
+```jsonc title="opencode.jsonc"
+{
+  "$schema": "https://opencode.ai/config.json",
+  "providers": {
+    "openai": {
+      "settings": {
+        "apiKey": "{file:~/.secrets/openai-key}",
+      },
+    },
+  },
+}
+```
+
+File paths can be:
+
+- Relative to the config file directory
+- Absolute, or starting with `~/` for your home directory
+
+If the file does not exist, it will be replaced with an empty string.
+
+These are useful for:
+
+- Keeping sensitive data like API keys in separate files.
+- Sharing common configuration snippets across multiple config files.

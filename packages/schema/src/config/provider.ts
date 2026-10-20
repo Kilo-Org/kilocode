@@ -69,10 +69,28 @@ class Limit extends Schema.Class<Limit>("Config.Model.Limit")({
   output: Schema.Int.pipe(optional),
 }) {}
 
+// models.dev v2's `capabilities.reasoning`. OpenCode builds the model's variants from it; no control means none.
+export const Reasoning = Schema.Union([
+  Schema.Struct({ supported: Schema.Literal(false) }),
+  Schema.Struct({
+    supported: Schema.Literal(true),
+    toggle: Schema.Boolean.pipe(optional),
+    effort: Schema.String.pipe(Schema.Array, optional),
+    budget: Schema.Struct({
+      min: Schema.Int.pipe(optional),
+      max: Schema.Int.pipe(optional),
+    }).pipe(optional),
+  }),
+]).annotate({ identifier: "Config.Model.Reasoning" })
+export type Reasoning = typeof Reasoning.Type
+
 class Model extends Schema.Class<Model>("Config.Model")({
   modelID: ID.pipe(optional),
   family: Family.pipe(optional),
   name: Schema.String.pipe(optional),
+  releaseDate: Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}(-\d{2})?$/u))
+    .annotate({ description: "Release date as YYYY-MM-DD or YYYY-MM" })
+    .pipe(optional),
   compatibility: Compatibility.pipe(optional),
   package: Schema.String.pipe(optional),
   ...ModelOverlays,
@@ -81,6 +99,8 @@ class Model extends Schema.Class<Model>("Config.Model")({
     tools: optional(fields.tools),
     input: optional(fields.input),
     output: optional(fields.output),
+    temperature: fields.temperature,
+    reasoning: Reasoning.pipe(optional),
   }))
     .annotate({ identifier: "Config.Model.Capabilities" })
     .pipe(optional),

@@ -203,6 +203,21 @@ describe("SessionModelRequest.boundImages", () => {
     expect(result[3]).toBe(third)
   })
 
+  test("keeps the replaced prefix stable as new images arrive, so the prompt cache survives", () => {
+    const image = (name: string) =>
+      Message.user({ type: "media", media: Media.base64("a".repeat(3 * 1024 * 1024), "image/png"), filename: name })
+    const removed = (messages: ReturnType<typeof boundImages>) =>
+      messages.filter((message) => message.content[0]?.type === "text").length
+    const history = Array.from({ length: 9 }, (_, i) => image(`${i}.png`))
+
+    // 27 MiB passes the 25 MiB trigger: the oldest four go, leaving 15 MiB.
+    expect(removed(boundImages(history))).toBe(4)
+    // Each later image used to move the cut by one; now the cut holds until the kept payload passes the trigger again.
+    expect(removed(boundImages([...history, image("9.png")]))).toBe(4)
+    expect(removed(boundImages([...history, image("9.png"), image("10.png"), image("11.png")]))).toBe(4)
+    expect(removed(boundImages([...history, ...Array.from({ length: 4 }, (_, i) => image(`${9 + i}.png`))]))).toBe(8)
+  })
+
   test("replaces images nested in tool results", () => {
     const image = "a".repeat(13 * 1024 * 1024)
     const result = boundImages([

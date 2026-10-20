@@ -1,0 +1,3 @@
+# Kilo prompt and reminder templates are compared and sent as LF text. Without this, a Windows checkout
+# with core.autocrlf turns them into CRLF (upstream does the same for packages/core/src in the root file).
+src/**/*.txt text eol=lf
