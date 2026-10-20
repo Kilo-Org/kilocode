@@ -4,7 +4,7 @@
  * `bun run install:alpha`: installs the CLI binary that the newest successful `kilo-v2` run on the `v2`
  * branch built (.github/workflows/kilo-v2.yml, `build` job), for local dogfooding.
  *
- * macOS arm64 only for now. Requires an authenticated `gh`. The binary is installed as `kilo-alpha`
+ * macOS arm64 only for now. Requires an authenticated `gh`. The binary is installed as `kilo2`
  * (override with KILO_ALPHA_BIN_DIR / KILO_ALPHA_NAME) so it never replaces an installed `kilo`.
  */
 
@@ -19,7 +19,7 @@ const branch = "v2"
 const target = "darwin-arm64"
 const artifact = `kilo-v2-cli-${target}.tar.gz`
 const binDir = process.env.KILO_ALPHA_BIN_DIR ?? path.join(os.homedir(), ".local", "bin")
-const name = process.env.KILO_ALPHA_NAME ?? "kilo-alpha"
+const name = process.env.KILO_ALPHA_NAME ?? "kilo2"
 
 class InstallError extends Error {}
 
