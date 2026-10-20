@@ -1,0 +1,802 @@
+{
+  "unit": "U-E2-03",
+  "area": "slow-snapshot",
+  "v1": {
+    "commit": "fb7e96eda5409517a05948b9efaf01c53997bf6e",
+    "sources": [
+      "packages/opencode/src/kilocode/snapshot/track.ts",
+      "packages/opencode/src/snapshot/index.ts",
+      "packages/opencode/src/kilocode/config/config.ts",
+      "packages/opencode/src/question/index.ts",
+      "packages/core/src/v1/config/migrate.ts"
+    ]
+  },
+  "constants": {
+    "TIMEOUT_MS": 10000,
+    "TURN_TIMEOUT_MS": 120000,
+    "ANSWER_CONTINUE": "Continue with snapshots",
+    "ANSWER_DISABLE": "Disable for this project",
+    "PROGRESS_INITIALIZING": "{spinner} Initializing snapshot…",
+    "SPINNER_FRAMES": [
+      "⠋",
+      "⠙",
+      "⠹",
+      "⠸",
+      "⠼",
+      "⠴",
+      "⠦",
+      "⠧",
+      "⠇",
+      "⠏"
+    ],
+    "SPINNER_INTERVAL_MS": 120,
+    "initialState": {
+      "disabledForSession": false,
+      "asked": false
+    },
+    "persistedKey": "snapshot",
+    "persistedDefaultFile": ".kilo/kilo.jsonc",
+    "note": "wrap and protect cases pass short timeoutMs values; only the relation of inner time to timeoutMs matters. Hashes read <hash>."
+  },
+  "cases": [
+    {
+      "name": "env-timeout-2500",
+      "fn": "KiloSnapshotTrack.TIMEOUT_MS, TURN_TIMEOUT_MS (read at module load)",
+      "input": {
+        "KILO_SNAPSHOT_TRACK_TIMEOUT_MS": "2500",
+        "KILO_SNAPSHOT_TURN_TIMEOUT_MS": "2500"
+      },
+      "output": {
+        "TIMEOUT_MS": 2500,
+        "TURN_TIMEOUT_MS": 2500
+      }
+    },
+    {
+      "name": "env-timeout-0",
+      "fn": "KiloSnapshotTrack.TIMEOUT_MS, TURN_TIMEOUT_MS (read at module load)",
+      "input": {
+        "KILO_SNAPSHOT_TRACK_TIMEOUT_MS": "0",
+        "KILO_SNAPSHOT_TURN_TIMEOUT_MS": "0"
+      },
+      "output": {
+        "TIMEOUT_MS": 10000,
+        "TURN_TIMEOUT_MS": 120000
+      }
+    },
+    {
+      "name": "env-timeout--5",
+      "fn": "KiloSnapshotTrack.TIMEOUT_MS, TURN_TIMEOUT_MS (read at module load)",
+      "input": {
+        "KILO_SNAPSHOT_TRACK_TIMEOUT_MS": "-5",
+        "KILO_SNAPSHOT_TURN_TIMEOUT_MS": "-5"
+      },
+      "output": {
+        "TIMEOUT_MS": 10000,
+        "TURN_TIMEOUT_MS": 120000
+      }
+    },
+    {
+      "name": "env-timeout-abc",
+      "fn": "KiloSnapshotTrack.TIMEOUT_MS, TURN_TIMEOUT_MS (read at module load)",
+      "input": {
+        "KILO_SNAPSHOT_TRACK_TIMEOUT_MS": "abc",
+        "KILO_SNAPSHOT_TURN_TIMEOUT_MS": "abc"
+      },
+      "output": {
+        "TIMEOUT_MS": 10000,
+        "TURN_TIMEOUT_MS": 120000
+      }
+    },
+    {
+      "name": "env-timeout-1.5",
+      "fn": "KiloSnapshotTrack.TIMEOUT_MS, TURN_TIMEOUT_MS (read at module load)",
+      "input": {
+        "KILO_SNAPSHOT_TRACK_TIMEOUT_MS": "1.5",
+        "KILO_SNAPSHOT_TURN_TIMEOUT_MS": "1.5"
+      },
+      "output": {
+        "TIMEOUT_MS": 1.5,
+        "TURN_TIMEOUT_MS": 1.5
+      }
+    },
+    {
+      "name": "progress-part",
+      "fn": "KiloSnapshotTrack.progressPart",
+      "input": {
+        "sessionID": "ses_fixture",
+        "messageID": "msg_fixture",
+        "partID": "prt_fixture",
+        "frame": 1
+      },
+      "output": {
+        "id": "prt_fixture",
+        "messageID": "msg_fixture",
+        "sessionID": "ses_fixture",
+        "type": "text",
+        "text": "⠙ Initializing snapshot…",
+        "synthetic": true,
+        "metadata": {
+          "kilocode.lifecycle": "transient"
+        }
+      }
+    },
+    {
+      "name": "fast-under-timeout",
+      "fn": "KiloSnapshotTrack.wrap",
+      "input": {
+        "inner": {
+          "ms": 0,
+          "hash": "fast"
+        },
+        "timeoutMs": 100,
+        "sessionID": "ses_fixture",
+        "answer": "continue"
+      },
+      "output": {
+        "result": "fast",
+        "asked": [],
+        "persistCalls": 0,
+        "state": {
+          "disabledForSession": false,
+          "asked": false
+        }
+      }
+    },
+    {
+      "name": "slow-but-under-timeout",
+      "fn": "KiloSnapshotTrack.wrap",
+      "input": {
+        "inner": {
+          "ms": 20,
+          "hash": "h20"
+        },
+        "timeoutMs": 200,
+        "sessionID": "ses_fixture",
+        "answer": "disable"
+      },
+      "output": {
+        "result": "h20",
+        "asked": [],
+        "persistCalls": 0,
+        "state": {
+          "disabledForSession": false,
+          "asked": false
+        }
+      }
+    },
+    {
+      "name": "timeout-continue",
+      "fn": "KiloSnapshotTrack.wrap",
+      "input": {
+        "inner": {
+          "ms": 80,
+          "hash": "slowhash"
+        },
+        "timeoutMs": 20,
+        "sessionID": "ses_fixture",
+        "answer": "continue"
+      },
+      "output": {
+        "result": "slowhash",
+        "asked": [
+          {
+            "sessionID": "ses_fixture"
+          }
+        ],
+        "persistCalls": 0,
+        "state": {
+          "disabledForSession": false,
+          "asked": false
+        }
+      }
+    },
+    {
+      "name": "timeout-continue-no-hash",
+      "fn": "KiloSnapshotTrack.wrap",
+      "input": {
+        "inner": {
+          "ms": 80,
+          "hash": null
+        },
+        "timeoutMs": 20,
+        "sessionID": "ses_fixture",
+        "answer": "continue"
+      },
+      "output": {
+        "result": null,
+        "asked": [
+          {
+            "sessionID": "ses_fixture"
+          }
+        ],
+        "persistCalls": 0,
+        "state": {
+          "disabledForSession": false,
+          "asked": true
+        }
+      }
+    },
+    {
+      "name": "timeout-disable",
+      "fn": "KiloSnapshotTrack.wrap",
+      "input": {
+        "inner": "hang",
+        "timeoutMs": 20,
+        "sessionID": "ses_fixture",
+        "answer": "disable"
+      },
+      "output": {
+        "result": null,
+        "asked": [
+          {
+            "sessionID": "ses_fixture"
+          }
+        ],
+        "persistCalls": 1,
+        "state": {
+          "disabledForSession": true,
+          "asked": true
+        }
+      }
+    },
+    {
+      "name": "timeout-dismissed",
+      "fn": "KiloSnapshotTrack.wrap",
+      "input": {
+        "inner": "hang",
+        "timeoutMs": 20,
+        "sessionID": "ses_fixture",
+        "answer": "dismissed"
+      },
+      "output": {
+        "result": null,
+        "asked": [
+          {
+            "sessionID": "ses_fixture"
+          }
+        ],
+        "persistCalls": 0,
+        "state": {
+          "disabledForSession": true,
+          "asked": true
+        }
+      }
+    },
+    {
+      "name": "timeout-no-session",
+      "fn": "KiloSnapshotTrack.wrap",
+      "input": {
+        "inner": "hang",
+        "timeoutMs": 20,
+        "sessionID": null,
+        "answer": "continue"
+      },
+      "output": {
+        "result": null,
+        "asked": [],
+        "persistCalls": 0,
+        "state": {
+          "disabledForSession": true,
+          "asked": false
+        }
+      }
+    },
+    {
+      "name": "timeout-already-asked",
+      "fn": "KiloSnapshotTrack.wrap",
+      "input": {
+        "inner": "hang",
+        "timeoutMs": 20,
+        "sessionID": "ses_fixture",
+        "initial": {
+          "asked": true
+        },
+        "answer": "continue"
+      },
+      "output": {
+        "result": null,
+        "asked": [],
+        "persistCalls": 0,
+        "state": {
+          "disabledForSession": true,
+          "asked": true
+        }
+      }
+    },
+    {
+      "name": "timeout-wait-policy",
+      "fn": "KiloSnapshotTrack.wrap",
+      "input": {
+        "inner": {
+          "ms": 80,
+          "hash": "waited"
+        },
+        "timeoutMs": 20,
+        "sessionID": "ses_fixture",
+        "snapshotInitialization": "wait",
+        "answer": "disable"
+      },
+      "output": {
+        "result": "waited",
+        "asked": [],
+        "persistCalls": 0,
+        "state": {
+          "disabledForSession": false,
+          "asked": false
+        }
+      }
+    },
+    {
+      "name": "already-disabled-for-session",
+      "fn": "KiloSnapshotTrack.wrap",
+      "input": {
+        "inner": "hang",
+        "timeoutMs": 20,
+        "sessionID": "ses_fixture",
+        "initial": {
+          "disabledForSession": true
+        },
+        "answer": "continue"
+      },
+      "output": {
+        "result": null,
+        "asked": [],
+        "persistCalls": 0,
+        "state": {
+          "disabledForSession": true,
+          "asked": false
+        }
+      }
+    },
+    {
+      "name": "inner-failure",
+      "fn": "KiloSnapshotTrack.wrap",
+      "input": {
+        "inner": "fail",
+        "timeoutMs": 100,
+        "sessionID": "ses_fixture",
+        "answer": "continue"
+      },
+      "output": {
+        "result": null,
+        "asked": [],
+        "persistCalls": 0,
+        "state": {
+          "disabledForSession": false,
+          "asked": false
+        }
+      }
+    },
+    {
+      "name": "turn-budget-timeout",
+      "fn": "KiloSnapshotTrack.protect",
+      "input": {
+        "first": {
+          "inner": "hang",
+          "timeoutMs": 20,
+          "fallback": {
+            "hash": "base",
+            "files": []
+          }
+        },
+        "second": {
+          "inner": "succeeds",
+          "fallback": null
+        }
+      },
+      "output": {
+        "first": {
+          "hash": "base",
+          "files": []
+        },
+        "stateAfterFirst": {
+          "disabledForSession": true,
+          "asked": false
+        },
+        "second": null,
+        "secondInnerRan": false
+      }
+    },
+    {
+      "name": "config-migrate-{\"snapshot\":false}",
+      "fn": "ConfigMigrateV1.migrate",
+      "input": {
+        "snapshot": false
+      },
+      "output": {
+        "isV1": true,
+        "snapshots": false
+      }
+    },
+    {
+      "name": "config-migrate-{\"snapshot\":true}",
+      "fn": "ConfigMigrateV1.migrate",
+      "input": {
+        "snapshot": true
+      },
+      "output": {
+        "isV1": true,
+        "snapshots": true
+      }
+    },
+    {
+      "name": "config-migrate-{}",
+      "fn": "ConfigMigrateV1.migrate",
+      "input": {},
+      "output": {
+        "isV1": false,
+        "snapshots": null
+      }
+    },
+    {
+      "name": "question-disable",
+      "fn": "KiloSnapshotTrack.wrap with defaultHooks (Question service, persistDisable), then Snapshot.track after reload",
+      "input": {
+        "reply": [
+          "Disable for this project"
+        ],
+        "inner": "hang",
+        "timeoutMs": 20,
+        "files": {}
+      },
+      "output": {
+        "question": {
+          "id": "que_<id>",
+          "sessionID": "ses_fixture",
+          "questions": [
+            {
+              "question": "It is taking a long time to initialize the snapshot system, likely due to the size of the repository.\n\nDo you want to disable Snapshots for this repository?",
+              "header": "Snapshot is slow",
+              "options": [
+                {
+                  "label": "Continue with snapshots",
+                  "description": "Keep waiting for the snapshot to complete. Subsequent turns are fast once the initial snapshot is built.",
+                  "labelKey": "snapshot.slowRepo.answer.continue",
+                  "descriptionKey": "snapshot.slowRepo.answer.continue.description"
+                },
+                {
+                  "label": "Disable for this project",
+                  "description": "Turn off Kilo's snapshots for this project. You will lose undo/redo of Kilo file changes, but git still tracks everything.",
+                  "labelKey": "snapshot.slowRepo.answer.disable",
+                  "descriptionKey": "snapshot.slowRepo.answer.disable.description"
+                }
+              ],
+              "questionKey": "snapshot.slowRepo.question",
+              "headerKey": "snapshot.slowRepo.header",
+              "custom": false
+            }
+          ],
+          "blocking": true
+        },
+        "result": null,
+        "state": {
+          "disabledForSession": true,
+          "asked": true
+        },
+        "filesAfter": {
+          ".kilo/kilo.jsonc": "{\n  \"snapshot\": false\n}"
+        },
+        "nextStartTrack": null
+      }
+    },
+    {
+      "name": "question-continue",
+      "fn": "KiloSnapshotTrack.wrap with defaultHooks (Question service, persistDisable), then Snapshot.track after reload",
+      "input": {
+        "reply": [
+          "Continue with snapshots"
+        ],
+        "inner": {
+          "ms": 150,
+          "hash": "slowhash"
+        },
+        "timeoutMs": 20,
+        "files": {}
+      },
+      "output": {
+        "question": {
+          "id": "que_<id>",
+          "sessionID": "ses_fixture",
+          "questions": [
+            {
+              "question": "It is taking a long time to initialize the snapshot system, likely due to the size of the repository.\n\nDo you want to disable Snapshots for this repository?",
+              "header": "Snapshot is slow",
+              "options": [
+                {
+                  "label": "Continue with snapshots",
+                  "description": "Keep waiting for the snapshot to complete. Subsequent turns are fast once the initial snapshot is built.",
+                  "labelKey": "snapshot.slowRepo.answer.continue",
+                  "descriptionKey": "snapshot.slowRepo.answer.continue.description"
+                },
+                {
+                  "label": "Disable for this project",
+                  "description": "Turn off Kilo's snapshots for this project. You will lose undo/redo of Kilo file changes, but git still tracks everything.",
+                  "labelKey": "snapshot.slowRepo.answer.disable",
+                  "descriptionKey": "snapshot.slowRepo.answer.disable.description"
+                }
+              ],
+              "questionKey": "snapshot.slowRepo.question",
+              "headerKey": "snapshot.slowRepo.header",
+              "custom": false
+            }
+          ],
+          "blocking": true
+        },
+        "result": "slowhash",
+        "state": {
+          "disabledForSession": false,
+          "asked": false
+        },
+        "filesAfter": {},
+        "nextStartTrack": "<hash>"
+      }
+    },
+    {
+      "name": "question-reject",
+      "fn": "KiloSnapshotTrack.wrap with defaultHooks (Question service, persistDisable), then Snapshot.track after reload",
+      "input": {
+        "reply": "reject",
+        "inner": "hang",
+        "timeoutMs": 20,
+        "files": {}
+      },
+      "output": {
+        "question": {
+          "id": "que_<id>",
+          "sessionID": "ses_fixture",
+          "questions": [
+            {
+              "question": "It is taking a long time to initialize the snapshot system, likely due to the size of the repository.\n\nDo you want to disable Snapshots for this repository?",
+              "header": "Snapshot is slow",
+              "options": [
+                {
+                  "label": "Continue with snapshots",
+                  "description": "Keep waiting for the snapshot to complete. Subsequent turns are fast once the initial snapshot is built.",
+                  "labelKey": "snapshot.slowRepo.answer.continue",
+                  "descriptionKey": "snapshot.slowRepo.answer.continue.description"
+                },
+                {
+                  "label": "Disable for this project",
+                  "description": "Turn off Kilo's snapshots for this project. You will lose undo/redo of Kilo file changes, but git still tracks everything.",
+                  "labelKey": "snapshot.slowRepo.answer.disable",
+                  "descriptionKey": "snapshot.slowRepo.answer.disable.description"
+                }
+              ],
+              "questionKey": "snapshot.slowRepo.question",
+              "headerKey": "snapshot.slowRepo.header",
+              "custom": false
+            }
+          ],
+          "blocking": true
+        },
+        "result": null,
+        "state": {
+          "disabledForSession": true,
+          "asked": true
+        },
+        "filesAfter": {},
+        "nextStartTrack": "<hash>"
+      }
+    },
+    {
+      "name": "question-unknown-label",
+      "fn": "KiloSnapshotTrack.wrap with defaultHooks (Question service, persistDisable), then Snapshot.track after reload",
+      "input": {
+        "reply": [
+          "Something else"
+        ],
+        "inner": "hang",
+        "timeoutMs": 20,
+        "files": {}
+      },
+      "output": {
+        "question": {
+          "id": "que_<id>",
+          "sessionID": "ses_fixture",
+          "questions": [
+            {
+              "question": "It is taking a long time to initialize the snapshot system, likely due to the size of the repository.\n\nDo you want to disable Snapshots for this repository?",
+              "header": "Snapshot is slow",
+              "options": [
+                {
+                  "label": "Continue with snapshots",
+                  "description": "Keep waiting for the snapshot to complete. Subsequent turns are fast once the initial snapshot is built.",
+                  "labelKey": "snapshot.slowRepo.answer.continue",
+                  "descriptionKey": "snapshot.slowRepo.answer.continue.description"
+                },
+                {
+                  "label": "Disable for this project",
+                  "description": "Turn off Kilo's snapshots for this project. You will lose undo/redo of Kilo file changes, but git still tracks everything.",
+                  "labelKey": "snapshot.slowRepo.answer.disable",
+                  "descriptionKey": "snapshot.slowRepo.answer.disable.description"
+                }
+              ],
+              "questionKey": "snapshot.slowRepo.question",
+              "headerKey": "snapshot.slowRepo.header",
+              "custom": false
+            }
+          ],
+          "blocking": true
+        },
+        "result": null,
+        "state": {
+          "disabledForSession": true,
+          "asked": true
+        },
+        "filesAfter": {},
+        "nextStartTrack": "<hash>"
+      }
+    },
+    {
+      "name": "question-disable-existing-kilo-json",
+      "fn": "KiloSnapshotTrack.wrap with defaultHooks (Question service, persistDisable), then Snapshot.track after reload",
+      "input": {
+        "reply": [
+          "Disable for this project"
+        ],
+        "inner": "hang",
+        "timeoutMs": 20,
+        "files": {
+          ".kilo/kilo.json": "{\n  \"$schema\": \"https://app.kilo.ai/config.json\",\n  \"model\": \"a/b\"\n}"
+        }
+      },
+      "output": {
+        "question": {
+          "id": "que_<id>",
+          "sessionID": "ses_fixture",
+          "questions": [
+            {
+              "question": "It is taking a long time to initialize the snapshot system, likely due to the size of the repository.\n\nDo you want to disable Snapshots for this repository?",
+              "header": "Snapshot is slow",
+              "options": [
+                {
+                  "label": "Continue with snapshots",
+                  "description": "Keep waiting for the snapshot to complete. Subsequent turns are fast once the initial snapshot is built.",
+                  "labelKey": "snapshot.slowRepo.answer.continue",
+                  "descriptionKey": "snapshot.slowRepo.answer.continue.description"
+                },
+                {
+                  "label": "Disable for this project",
+                  "description": "Turn off Kilo's snapshots for this project. You will lose undo/redo of Kilo file changes, but git still tracks everything.",
+                  "labelKey": "snapshot.slowRepo.answer.disable",
+                  "descriptionKey": "snapshot.slowRepo.answer.disable.description"
+                }
+              ],
+              "questionKey": "snapshot.slowRepo.question",
+              "headerKey": "snapshot.slowRepo.header",
+              "custom": false
+            }
+          ],
+          "blocking": true
+        },
+        "result": null,
+        "state": {
+          "disabledForSession": true,
+          "asked": true
+        },
+        "filesAfter": {
+          ".kilo/kilo.json": "{\n  \"$schema\": \"https://app.kilo.ai/config.json\",\n  \"model\": \"a/b\",\n  \"snapshot\": false\n}"
+        },
+        "nextStartTrack": null
+      }
+    },
+    {
+      "name": "question-disable-existing-jsonc-comment",
+      "fn": "KiloSnapshotTrack.wrap with defaultHooks (Question service, persistDisable), then Snapshot.track after reload",
+      "input": {
+        "reply": [
+          "Disable for this project"
+        ],
+        "inner": "hang",
+        "timeoutMs": 20,
+        "files": {
+          ".kilo/kilo.jsonc": "{\n  // keep me\n  \"model\": \"a/b\"\n}\n"
+        }
+      },
+      "output": {
+        "question": {
+          "id": "que_<id>",
+          "sessionID": "ses_fixture",
+          "questions": [
+            {
+              "question": "It is taking a long time to initialize the snapshot system, likely due to the size of the repository.\n\nDo you want to disable Snapshots for this repository?",
+              "header": "Snapshot is slow",
+              "options": [
+                {
+                  "label": "Continue with snapshots",
+                  "description": "Keep waiting for the snapshot to complete. Subsequent turns are fast once the initial snapshot is built.",
+                  "labelKey": "snapshot.slowRepo.answer.continue",
+                  "descriptionKey": "snapshot.slowRepo.answer.continue.description"
+                },
+                {
+                  "label": "Disable for this project",
+                  "description": "Turn off Kilo's snapshots for this project. You will lose undo/redo of Kilo file changes, but git still tracks everything.",
+                  "labelKey": "snapshot.slowRepo.answer.disable",
+                  "descriptionKey": "snapshot.slowRepo.answer.disable.description"
+                }
+              ],
+              "questionKey": "snapshot.slowRepo.question",
+              "headerKey": "snapshot.slowRepo.header",
+              "custom": false
+            }
+          ],
+          "blocking": true
+        },
+        "result": null,
+        "state": {
+          "disabledForSession": true,
+          "asked": true
+        },
+        "filesAfter": {
+          ".kilo/kilo.jsonc": "{\n  \"$schema\": \"https://app.kilo.ai/config.json\",\n  // keep me\n  \"model\": \"a/b\",\n  \"snapshot\": false\n}\n"
+        },
+        "nextStartTrack": null
+      }
+    },
+    {
+      "name": "service-no-config",
+      "fn": "Snapshot.track, Snapshot.cleanup",
+      "input": {
+        "git": true,
+        "files": {}
+      },
+      "output": {
+        "track": "<hash>",
+        "cleanup": null
+      }
+    },
+    {
+      "name": "service-opencode-json-disabled",
+      "fn": "Snapshot.track, Snapshot.cleanup",
+      "input": {
+        "git": true,
+        "files": {
+          "opencode.json": "{\"snapshot\":false}"
+        }
+      },
+      "output": {
+        "track": null,
+        "cleanup": null
+      }
+    },
+    {
+      "name": "service-kilo-jsonc-disabled",
+      "fn": "Snapshot.track, Snapshot.cleanup",
+      "input": {
+        "git": true,
+        "files": {
+          ".kilo/kilo.jsonc": "{ \"snapshot\": false }"
+        }
+      },
+      "output": {
+        "track": null,
+        "cleanup": null
+      }
+    },
+    {
+      "name": "service-kilo-jsonc-enabled",
+      "fn": "Snapshot.track, Snapshot.cleanup",
+      "input": {
+        "git": true,
+        "files": {
+          ".kilo/kilo.jsonc": "{ \"snapshot\": true }"
+        }
+      },
+      "output": {
+        "track": "<hash>",
+        "cleanup": null
+      }
+    },
+    {
+      "name": "service-not-git",
+      "fn": "Snapshot.track",
+      "input": {
+        "git": false,
+        "files": {}
+      },
+      "output": {
+        "track": null
+      }
+    }
+  ]
+}
