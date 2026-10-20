@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 
 // The Kilo host entry (U-E0-01, #15172). Mirror of packages/cli/src/index.ts (v2.0.30): the same layers and the
-// upstream command handlers, with Kilo's composition added: KILO_* environment translation (./env, imported first),
-// Kilo's app name, and a serve handler (./serve) that gives the server the Kilo plugins and service overrides
-// (./host). Every server the CLI starts (background service, standalone, stdio) runs this entry with `serve`.
+// upstream command handlers, with Kilo's composition added: KILO_* environment translation and the `kilo2` app
+// directory (./env, imported first), Kilo's app name, and a serve handler (./serve) that gives the server the Kilo
+// plugins and service overrides (./host). Every server the CLI starts (background service, standalone, stdio) runs this entry with `serve`.
 // Keep it in step with the upstream file; the differences are marked "Kilo:".
 import "./env"
 import { ensurePluginRuntime } from "@opencode/plugin/runtime"
@@ -127,8 +127,8 @@ Effect.gen(function* () {
   Effect.provide(
     LayerNode.compile(LayerNode.group([Global.node, AppProcess.node, Npm.node, EffectFlock.node]), {
       replacements: [
-        // Kilo: KILO_CONFIG_DIR reaches OPENCODE_CONFIG_DIR through ./env. Kilo's own app directory replaces
-        // these paths here (U-E1-01).
+        // Kilo: KILO_CONFIG_DIR reaches OPENCODE_CONFIG_DIR through ./env, which also names Kilo's `kilo2` app
+        // directory before the global paths load (U-E1-01).
         Global.node.replace(
           Global.layerWith(process.env.OPENCODE_CONFIG_DIR ? { config: process.env.OPENCODE_CONFIG_DIR } : {}),
         ),
