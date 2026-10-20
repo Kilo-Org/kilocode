@@ -11,6 +11,10 @@ import type {
   AgentManagerRequestId,
   AgentManagerResult,
   AgentPartInput,
+  AgentUsageRunsErrors,
+  AgentUsageRunsResponses,
+  AgentUsageSummaryErrors,
+  AgentUsageSummaryResponses,
   AnacondaDesktopOpenErrors,
   AnacondaDesktopOpenResponses,
   AnacondaDesktopStatusErrors,
@@ -6296,6 +6300,84 @@ export class AgentBuilder extends HeyApiClient {
   }
 }
 
+export class AgentUsage extends HeyApiClient {
+  /**
+   * Get agent usage summary
+   *
+   * Get a per-agent rollup of runs, sessions, direct cost, active time, tokens, errors, and the last run time for the routed project.
+   */
+  public summary<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      agent?: string
+      from?: string
+      to?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "agent" },
+            { in: "query", key: "from" },
+            { in: "query", key: "to" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<AgentUsageSummaryResponses, AgentUsageSummaryErrors, ThrowOnError>({
+      url: "/kilocode/agent-usage/summary",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List agent runs
+   *
+   * List agent runs newest first by start time, with optional agent and time window filters. Pages by the opaque `next` cursor returned by the previous page.
+   */
+  public runs<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      agent?: string
+      from?: string
+      to?: string
+      limit?: string
+      cursor?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "agent" },
+            { in: "query", key: "from" },
+            { in: "query", key: "to" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "cursor" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<AgentUsageRunsResponses, AgentUsageRunsErrors, ThrowOnError>({
+      url: "/kilocode/agent-usage/runs",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class BackgroundProcess extends HeyApiClient {
   /**
    * List background processes
@@ -12189,6 +12271,11 @@ export class KiloClient extends HeyApiClient {
   private _agentBuilder?: AgentBuilder
   get agentBuilder(): AgentBuilder {
     return (this._agentBuilder ??= new AgentBuilder({ client: this.client }))
+  }
+
+  private _agentUsage?: AgentUsage
+  get agentUsage(): AgentUsage {
+    return (this._agentUsage ??= new AgentUsage({ client: this.client }))
   }
 
   private _backgroundProcess?: BackgroundProcess
