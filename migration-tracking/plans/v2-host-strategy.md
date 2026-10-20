@@ -1,6 +1,6 @@
 # Kilo host strategy and feature placement
 
-Status: living, 2026-10-19. This document is the reusable record of the host strategy: why Kilo code moves out of upstream files, how a change is placed on v2, what the strategy guarantees when upstream changes again, and in which order the work happens. The plan (`kilo-v2-migration-plan.md`) holds the units and their status; the fork conventions (`../technical-notes/v2-fork-conventions.md`) hold the rules; the skill `.kilo/skills/v2-feature-placement/SKILL.md` is the procedure an agent follows for one change.
+Status: living, 2026-10-20. This document is the reusable record of the host strategy and the source of truth for how a change reaches `v2` (the placement rules, section 5): why Kilo code moves out of upstream files, how a change is placed on v2 (section 5), what the strategy guarantees when upstream changes again, and in which order the work happens. The plan (`kilo-v2-migration-plan.md`) holds the units and their status; the fork conventions (`../technical-notes/v2-fork-conventions.md`) hold the rules; the skill `.kilo/skills/v2-feature-placement/SKILL.md` is the procedure an agent follows for one change.
 
 Related: epic #15171 (foundation), U-E0-01 host (#15172), U-E0-02 plugin scaffolding (#15173), Q-HOST-01 (answered: a Kilo host entry package), progress map `../progress/README.md`.
 
@@ -32,6 +32,8 @@ What follows from the numbers:
 - **Bulk carry of unchanged files.** 11% of the patched files carry textually, almost all presentation code. Carry such files only inside the unit that needs them, never as a bulk step.
 - **Dual-input strangler (keep `packages/opencode` as a legacy host, #12887).** v1 and v2 share no stable interface at the runtime, wire or persistence layer. There is no seam for a runtime-level strangler. The one viable strangler seam is the wire protocol (section 10, facade).
 - **Typecheck-and-iterate as a port method for clients.** 964 workspace imports of `kilo-vscode` resolve to nothing on v2 and the wire format changed. The type errors enumerate the protocol delta precisely, so this stays an inventory tool, not a port method.
+- **A seam in upstream's entry instead of the host mirror (2026-10-20).** Proposed: export a `run(options)` from `cli/src/index.ts` (about five marked lines) so that `packages/kilo-cli/src/index.ts` (162 lines) can go. Rejected: it moves code from a Kilo-owned file back into an upstream file, which is the wrong direction (section 5, "Direction"). The mirror stays and gets a drift check (section 7).
+- **Kilo values hard-coded into upstream discovery (#15018, 2026-10-19).** `core/src/config/discovery.ts` and `config.ts` imported a Kilo module and replaced upstream's file names and order. The result read `.kilo` for everyone, so upstream's own tests failed and six upstream test files had to be forked; `config.test.ts` alone has 34 upstream commits in 60 days. Rejected shape, replaced by a generic layout seam with upstream defaults, Kilo's values supplied by the host (U-E1-07). The rule it produced: a patch adds, it never changes an upstream default.
 
 ## 3. Target shape
 
@@ -111,7 +113,19 @@ Acceptance is in the plan row U-E0-01 and in #15172: `bun dev` starts the host, 
 
 What the host does not do: it does not port features, it does not remove the need for a seam where upstream has no extension point, and it does not solve the clients (section 10).
 
-## 5. Feature placement: the three cases
+## 5. Placement rules
+
+This section is the source of truth for adding a file to `v2` or moving a change onto it. `AGENTS.md`, the `v2-feature-placement` skill and the fork conventions point here; when they disagree with this section, this section wins.
+
+### Direction
+
+Kilo is the host, OpenCode is a library. Three rules follow, and they are not trade-offs:
+
+1. **Code moves one way.** From upstream files into Kilo-owned files (`packages/kilo-*`, `src/kilocode/`, `test/kilocode/`), never the reverse. A proposal that adds or widens a `kilocode_change` line in an upstream file in order to remove or shrink a Kilo-owned file is rejected, whatever the line count says. The host entry mirror (162 Kilo-owned lines) is preferred over a five-line seam in `cli/src/index.ts` for this reason.
+2. **A mirror is rung 2.** A Kilo-owned file that re-implements an upstream file (the host entry `packages/kilo-cli/src/index.ts` and `serve.ts`, a replaced builtin tool) is host composition. It is registered in `mirroredFiles` and kept in step by the drift check (section 7), not turned into a seam.
+3. **A patch adds, it never changes an upstream default.** The default graph (upstream code run without the host) must behave exactly like upstream, and upstream's own test files must pass against it unchanged. When a Kilo change makes upstream tests fail, the Kilo value is in the wrong place: the upstream file gets a generic knob with upstream's default, and the host supplies Kilo's value. Forked upstream test files are the symptom and are not allowed.
+
+### The four rungs
 
 ```mermaid
 flowchart TB
@@ -127,6 +141,8 @@ flowchart TB
   style r3 fill:#fff8e1,stroke:#f9a825
   style r4 fill:#ffebee,stroke:#c62828
 ```
+
+Rung 2 includes mirrors (Direction, rule 2). Rung 3 and rung 4 are told apart mechanically: a marked line that references a `kilocode/` path, a `Kilo*` identifier or a Kilo string literal is a patch, rung 4, however small. A registration line that imports a Kilo plugin into an upstream list (`tui/src/plugin/builtins.ts`) is therefore a rung-4 call-out, not a seam.
 
 Check the hook before assuming it is missing. On v2, compaction configuration is itself an upstream plugin (`core/src/config/plugin/compaction.ts` calls `SessionCompaction.Service.transform`), the `session.compaction` hook can replace a compaction result, and every builtin tool is a plugin registered through the same `ToolEditor` a Kilo plugin receives (`core/src/tool/plugin/grep.ts`, id `opencode.tool.grep`). Of the 241 v1 tool-area patches, all but about two have a rung-1 home.
 
@@ -150,8 +166,9 @@ Check the hook before assuming it is missing. On v2, compaction configuration is
 - A seam is generic: it widens a setting, exports a value or adds a dispatch point any plugin could use. It never contains a Kilo constant, a Kilo condition or a Kilo import.
 - A patch is one line thick. When it is more than a defect fix, the line is a call into a Kilo-owned module (`if (yield* KiloPolicy.x(...)) ...`) and the policy lives there. v1 `session/prompt.ts` with 149 inline hunks is the shape to avoid.
 - Every marked line carries its feature: `kilocode_change(<feature>)`, or `kilocode_change(<feature>:<id>)` when it replaces a v1 patch cell from the progress map. Seams add the word `seam`. A block names its feature after `start -`: `kilocode_change start - <feature>: <reason>` ... `kilocode_change end`. The counters recognize a block only when `start` or `end` follows `kilocode_change` directly (`script/upstream/utils/shared.ts`, `utils/markers.ts`), so `kilocode_change(<feature>) start` breaks the count (#15259). A done-proof inside a block goes on one of its lines as `kilocode_change(<feature>:<id>)`.
+- A patch never changes an upstream default (Direction, rule 3). Upstream test files are not edited; the Kilo behavior is tested from Kilo-owned tests that compose the host's values explicitly.
 - Builtin tools: wrap with `editor.update(id, ...)` when Kilo adds parameters, output or policy (grep, read, edit, write, prompt text); replace with `editor.remove(id)` plus `editor.add(...)` when Kilo changed the algorithm or the tool is a different product (task, websearch, parts of shell). A replaced tool is registered as a mirror of the upstream file it replaces.
-- Until the host lands, a plugin registers through one marked line in the upstream builtin list, and the PR says the line moves to the host.
+- A server plugin registers in `KiloPlugins`; the host registers it. The TUI built-in list is the one remaining registration line in an upstream file, a rung-4 call-out (section 10).
 
 ## 6. Guarantees when upstream changes again
 
@@ -210,11 +227,11 @@ What does not change: the pins, the cell IDs, the dispositions file, the determi
 
 | # | Step | Unit or issue | Exit |
 |---|---|---|---|
-| 1 | Kilo host | U-E0-01, #15172 | host runs CLI and server; Gateway registration leaves `provider.ts`; root patches retired; `service-smoke` isolated |
+| 1 | Kilo host | U-E0-01, #15172, done (#15232) | host runs CLI and server; Gateway registration leaves `provider.ts`; `service-smoke` isolated. The root `dev` script and README patches stay (the host is a package, not the repository root; reasons in `shared-patches.json`) |
 | 2 | Feature placement skill and automation | new issue, same worktree as step 1 | `.kilo/skills/v2-feature-placement/SKILL.md` with verified commands; `script/upstream/placement.ts` answers "is there a hook, a service node, an existing seam" for a path or module |
 | 2b | Progress map adopts the strategy (section 8, items 1 to 5) | new issue, own worktree, parallel to steps 1 and 2 | `patch` kind, `kilo_port` done-proof, landed-by-rung view, the two ratchets, placement line in the PR comment |
 | 3 | Plugin scaffolding; Gateway RPC moves into `kilo-plugin` | U-E0-02, #15173 | one Kilo RPC round-trips from the plugin; `bun run generate` clean |
-| 4 | Re-home in-flight registrations (agents, config) | follow-ups to #14999, #15018 | baseline unchanged after they land |
+| 4 | Re-home in-flight registrations (agents, config) | agents done (#15238); config in progress as a generic layout seam with host-supplied values (U-E1-07) | baseline unchanged after they land; the six forked upstream config test files return to upstream |
 | 5 | Identity: `kilo2` app directory through the host | U-E1-01, D-4 part 1 | isolated from the v1 IDE |
 | 6 | Dispositions pass: mark what v2 already does `native` | map data PR | each cell has a v2 pointer and reviewer |
 | 7 | Sync detectors: impact report, `mirroredFiles` drift check | U-L3-01 follow-ups | sync PR body carries the per-feature table |
@@ -227,4 +244,4 @@ What does not change: the pins, the cell IDs, the dispositions file, the determi
 - **Facade (proposed D-5).** Kilo owns both the server contract and every client; all clients speak the v1 protocol through `@kilocode/sdk`. A Kilo-owned facade that serves the v1 wire protocol on v2 core lets a client move to the v2 binary before it moves to the native client. Donor mechanism: the archived port's `packages/kilo-vscode/src/backend` (29 files). The decision is binary and must be explicit: a bridge with a removal date, or clients rebuilt natively first. Both consume the same donor code. It sits after the host and before any G2 work, and it needs the VS Code client view of the map as input.
 - **Owners (D-3).** U-E0-01, U-L1-01 and U-L3-01 have no owner.
 - **Binary and service command.** The client's default `["opencode", "serve", "--service"]` must become Kilo's for clients that do not pass a command (D-4). The CLI and TUI pass `selfCommand()`, so the host already spawns itself (U-E0-01).
-- **TUI plugin registration.** Decided in U-E0-01: the marked line in `tui/src/plugin/builtins.ts` stays (section 4, "What landed").
+- **TUI plugin registration.** Decided in U-E0-01: the marked line in `tui/src/plugin/builtins.ts` stays (section 4, "What landed"). It imports a Kilo module into an upstream list, so it is a rung-4 call-out, not a seam; `shared-patches.json` relabels it with the checker that enforces the rung 3 and 4 distinction (U-L3-01).
