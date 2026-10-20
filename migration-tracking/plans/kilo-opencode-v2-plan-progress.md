@@ -1,7 +1,7 @@
 # Phased Plan — Port Kilo onto OpenCode v2
 
 > [!WARNING]
-> **Superseded by [`kilo-v2-migration-plan.md`](kilo-v2-migration-plan.md) (2026-10-12).** Archived reference only. Status and percentages below describe the archived `kilo-v2` port, not the new Kilo integration branch `origin/v2`. Live unit status is in Part B of the new plan.
+> **Superseded by [`kilo-v2-migration-plan.md`](kilo-v2-migration-plan.md) (2026-10-12; foundation decisions 2026-10-20).** Archived reference only. Its adapter-based VS Code rows (the original extension backed by v2 through `kilo-vscode/src/backend`) describe the approach rejected by `migration-context.md` decision 14; the G2 client is a new native package (decision 15). Status and percentages below describe the archived `kilo-v2` port, not the new Kilo integration branch `origin/v2`. Live unit status is in Part B of the new plan.
 
 Updated: September 9, 2026  
 Related issue: Kilo-Org/kilocode#13750  

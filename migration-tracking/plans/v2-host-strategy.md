@@ -1,6 +1,6 @@
 # Kilo host strategy and feature placement
 
-Status: living, 2026-10-20. This document is the reusable record of the host strategy and the source of truth for how a change reaches `v2` (the placement rules, section 5): why Kilo code moves out of upstream files, how a change is placed on v2 (section 5), what the strategy guarantees when upstream changes again, and in which order the work happens. The plan (`kilo-v2-migration-plan.md`) holds the units and their status; the fork conventions (`../technical-notes/v2-fork-conventions.md`) hold the rules; the skill `.kilo/skills/v2-feature-placement/SKILL.md` is the procedure an agent follows for one change.
+Status: living, 2026-10-20 (foundation decisions 13 to 18 folded in). This document is the reusable record of the host strategy and the source of truth for how a change reaches `v2` (the placement rules, section 5): why Kilo code moves out of upstream files, how a change is placed on v2 (section 5), what the strategy guarantees when upstream changes again, and in which order the work happens. The plan (`kilo-v2-migration-plan.md`) holds the units and their status; the fork conventions (`../technical-notes/v2-fork-conventions.md`) hold the rules; the skill `.kilo/skills/v2-feature-placement/SKILL.md` is the procedure an agent follows for one change.
 
 Related: epic #15171 (foundation), U-E0-01 host (#15172), U-E0-02 plugin scaffolding (#15173), Q-HOST-01 (answered: a Kilo host entry package), progress map `../progress/README.md`.
 
@@ -30,7 +30,7 @@ What follows from the numbers:
 ## 2. Approaches that were measured and rejected
 
 - **Bulk carry of unchanged files.** 11% of the patched files carry textually, almost all presentation code. Carry such files only inside the unit that needs them, never as a bulk step.
-- **Dual-input strangler (keep `packages/opencode` as a legacy host, #12887).** v1 and v2 share no stable interface at the runtime, wire or persistence layer. There is no seam for a runtime-level strangler. The one viable strangler seam is the wire protocol (section 10, facade).
+- **Dual-input strangler (keep `packages/opencode` as a legacy host, #12887).** v1 and v2 share no stable interface at the runtime, wire or persistence layer. There is no seam for a runtime-level or wire-level strangler: clients rebuild natively (section 10, decision 14), and the cutover is a hard cut with a one-shot import (decision 17).
 - **Typecheck-and-iterate as a port method for clients.** 964 workspace imports of `kilo-vscode` resolve to nothing on v2 and the wire format changed. The type errors enumerate the protocol delta precisely, so this stays an inventory tool, not a port method.
 - **A seam in upstream's entry instead of the host mirror (2026-10-20).** Proposed: export a `run(options)` from `cli/src/index.ts` (about five marked lines) so that `packages/kilo-cli/src/index.ts` (162 lines) can go. Rejected: it moves code from a Kilo-owned file back into an upstream file, which is the wrong direction (section 5, "Direction"). The mirror stays and gets a drift check (section 7).
 - **Kilo values hard-coded into upstream discovery (#15018, 2026-10-19).** `core/src/config/discovery.ts` and `config.ts` imported a Kilo module and replaced upstream's file names and order. The result read `.kilo` for everyone, so upstream's own tests failed and six upstream test files had to be forked; `config.test.ts` alone has 34 upstream commits in 60 days. Rejected shape, replaced by a generic layout seam with upstream defaults, Kilo's values supplied by the host (U-E1-07). The rule it produced: a patch adds, it never changes an upstream default.
@@ -111,7 +111,7 @@ Known wrinkles: `packages/client/src/effect/service.ts:61` spawns `["opencode", 
 
 Acceptance is in the plan row U-E0-01 and in #15172: `bun dev` starts the host, the host runs the upstream CLI and server, Kilo plugins register through `SdkPlugins.register`, `service-smoke` passes with isolated HOME and XDG, the Gateway registration leaves `provider.ts`. In-flight PRs merge with their marked registration and move to the host in a follow-up.
 
-What the host does not do: it does not port features, it does not remove the need for a seam where upstream has no extension point, and it does not solve the clients (section 10).
+What the host does not do: it does not port features, it does not remove the need for a seam where upstream has no extension point, and it does not solve the clients: each client is a new package on `v2` wired natively to `@opencode/client` and the Kilo RPCs (section 10, decision 15).
 
 ## 5. Placement rules
 
@@ -189,7 +189,7 @@ Three rules make the second and third rows true. They are enforced, not advisory
 
 ## 7. Detecting upstream change without conflicts
 
-Three detectors replace the conflict as the signal, and together they cover more than the conflict did.
+Three detectors replace the conflict as the signal, and together they cover more than the conflict did. They are gates, not reports (decision 18, U-L3-02 to U-L3-04): a report nobody reads is not a detector, so each one blocks the sync until a human or the sync agent has acted on it.
 
 | Upstream change | Conflict (markers only) | Typecheck of Kilo packages | Dependency impact report | Mirror drift check |
 |---|---|---|---|---|
@@ -200,15 +200,15 @@ Three detectors replace the conflict as the signal, and together they cover more
 | A file the host mirrors | no, it is a copy | no | | **yes** |
 | Internals Kilo does not import | no | no | no, correctly | |
 
-**Dependency impact report** (`script/upstream/impact.ts`, a sync step): for each Kilo package and adapter, resolve its `@opencode/*` and relative imports to files (the progress map generator already does this), then `git diff --stat <previous pin> <new pin> -- <those files>` plus the seam list from `shared-patches.json` and the `mirroredFiles` list. Output: one table per feature in the sync PR body ("gateway: 3 of 12 dependencies changed, diff attached; agents: 0 of 7, nothing to retest"). The v2.0.30 sync PR wrote this section by hand under "Gateway impact".
+**Dependency impact report** (`script/upstream/impact.ts`, a sync step): for each Kilo package and adapter, resolve its `@opencode/*` and relative imports to files (the progress map generator already does this), then `git diff --stat <previous pin> <new pin> -- <those files>` plus the seam list from `shared-patches.json` and the `mirroredFiles` list. Output: one table per feature in the sync PR body ("gateway: 3 of 12 dependencies changed, diff attached; agents: 0 of 7, nothing to retest"). The v2.0.30 sync PR wrote this section by hand under "Gateway impact". The gate: each Kilo package carries an `upstream-deps.json` lock with the content hash of every upstream file it imports; `check-upstream-deps` fails when a hash at the current pin differs from the recorded one or an import is unlisted. The only way to green is to update the entry, which the sync agent does after reading the dependency diff and running the package's tests; the update is a line in the sync PR diff next to the diff it acknowledges. Measured on 2026-10-20 against `upstream/dev` (166 commits past the `v2.0.30` pin): Kilo packages import 37 upstream files, 11 had changed, 1 of them in a marked file; the other 10 would have passed a marker-only sync silently.
 
-**Mirror drift check:** the host entry and every replaced builtin tool are listed as `mirroredFiles` with the upstream path and the pinned hash. The sync PR prints the upstream diff of each mirrored file since the last pin so it is reviewed like a conflict.
+**Mirror drift check:** the host entry and every replaced builtin tool are listed as `mirroredFiles` with the upstream path and the pinned hash. The same lock gate applies: the sync fails until the mirror entry is updated, and the sync PR prints the upstream diff of each mirrored file since the last pin so it is reviewed like a conflict (U-L3-03).
 
-**Retest scope:** automated tests of every Kilo package always; the per-feature manual self-test only for features with a non-empty row in the impact report.
+**Retest scope:** automated tests of every Kilo package always; the per-feature manual self-test is required for features with a non-empty row in the impact report, and the sync does not merge while a lock entry is stale.
 
 ## 8. Measurement: what changes in the progress map
 
-The progress map (`../progress/README.md`, `bun script/upstream/progress.ts`) is the generated inventory of the v1 delta: one cell per Kilo-owned module, `/kilocode/*` API operation, patch in a shared file and test, grouped by feature, with `native`, `facade` and `dropped` dispositions. It was built before the host strategy and has one gap that the strategy creates, plus a few additions it needs.
+The progress map (`../progress/README.md`, `bun script/upstream/progress.ts`) is the generated inventory of the v1 delta: one cell per Kilo-owned module, `/kilocode/*` API operation, patch in a shared file and test, grouped by feature, with `ported`, `native` and `dropped` dispositions (`facade` is no longer a valid outcome, decision 14; removing it from the generator is part of U-L3-05). It was built before the host strategy and has one gap that the strategy creates, plus a few additions it needs.
 
 **The gap.** Today a v1 patch cell closes when a v2 `kilocode_change(<feature>:<id>)` marker carries its ID. Markers are allowed only in shared upstream files (rungs 3 and 4). Under the host strategy most v1 patches are re-expressed as plugin hooks in Kilo-owned files (rung 1), where markers are forbidden, so those cells could never close. The map needs a second done-proof: an annotation for Kilo-owned files, for example `// kilo_port(<feature>:<id>)` on the Kilo code that replaces the v1 patch. The generator scans Kilo-owned paths for it exactly as it scans shared files for tagged markers. The skill tells agents which one to write: `kilocode_change(<feature>:<id>)` in a shared file, `kilo_port(<feature>:<id>)` in a Kilo-owned file.
 
@@ -219,7 +219,7 @@ The progress map (`../progress/README.md`, `bun script/upstream/progress.ts`) is
 3. Record **where each done cell landed**: rung 1 or 2 when the proof is in a Kilo-owned path, rung 3 or 4 when it is a marker in a shared file (the rung comes from `shared-patches.json`). Show it per feature (`landed: 31 plugin, 2 seam, 1 patch`) and as a view. This is the shared-patch ratchet as a view, and it shows which features fought the ladder.
 4. Add two ratcheted numbers to the summary and the PR comment: distinct core-internal upstream modules imported by Kilo packages (adapters; logic packages must be zero), and mirrored files with their drift state. Shared patches by rung already exist in `check-shared-patches.ts` and join the same summary.
 5. The PR comment adds one placement line derived from the diff: new marked lines in shared files by rung, new `kilo_port` annotations, new core-internal imports. A PR that adds a rung-4 line without a `shared-patches.json` entry fails the check that already exists.
-6. Client views: filter cells by the API operations and SDK symbols each client imports (VS Code first). A client can move to the v2 binary when every cell in its view is done, native, facade or dropped. That replaces hand-written escalation lists and is the input for the facade decision.
+6. Client views: filter cells by the API operations and SDK symbols each client imports (VS Code first). A client can move to the v2 binary when every cell in its view is done, native or dropped. That replaces hand-written escalation lists and is the instrument for the G2 and G3 criteria (U-L3-05).
 
 What does not change: the pins, the cell IDs, the dispositions file, the determinism rule (no model in the generator), and the `--check` job.
 
@@ -232,16 +232,16 @@ What does not change: the pins, the cell IDs, the dispositions file, the determi
 | 2b | Progress map adopts the strategy (section 8, items 1 to 5) | new issue, own worktree, parallel to steps 1 and 2 | `patch` kind, `kilo_port` done-proof, landed-by-rung view, the two ratchets, placement line in the PR comment |
 | 3 | Plugin scaffolding; Gateway RPC moves into `kilo-plugin` | U-E0-02, #15173 | one Kilo RPC round-trips from the plugin; `bun run generate` clean |
 | 4 | Re-home in-flight registrations (agents, config) | agents done (#15238); config in progress as a generic layout seam with host-supplied values (U-E1-07) | baseline unchanged after they land; the six forked upstream config test files return to upstream |
-| 5 | Identity: `kilo2` app directory through the host | U-E1-01, D-4 part 1 | isolated from the v1 IDE |
+| 5 | Identity: `kilo2` binary and app directories through the host | U-E1-01, D-4 part 1, done (#15270, #15288) | isolated from the v1 IDE; at public release `kilo2` becomes `kilo` with a one-shot import (decision 13) |
 | 6 | Dispositions pass: mark what v2 already does `native` | map data PR | each cell has a v2 pointer and reviewer |
-| 7 | Sync detectors: impact report, `mirroredFiles` drift check | U-L3-01 follow-ups | sync PR body carries the per-feature table |
+| 7 | Sync gates: `upstream-deps.json` lock and impact report, `mirroredFiles` drift, checker rung classification | U-L3-02, U-L3-03, U-L3-04 | a changed upstream dependency fails CI until acknowledged; sync PR body carries the per-feature table |
 | 8 | Tag backlog on `main`: `kilocode_change(<feature>)` per upstream area | v1 PRs, cheap agents draft, area owners merge | unattributed count falls across re-pins |
-| 9 | Facade decision | section 10 | recorded, with a unit for the chosen path |
-| 10 | G1 feature units by cost: branding by script, native adoption, self-contained modules, seam-heavy features | plan Part B | cell delta per PR |
+| 9 | Clients: VS Code walking skeleton now (U-E6-22), breaking-changes document (U-E6-23), fan-out gate for JetBrains and cloud consumers (U-E1-10) | section 10, decision 15 | skeleton chats through the native client; the gate is measured, not felt |
+| 10 | G1 feature units by cost: branding by script, native adoption, self-contained modules, seam-heavy features; each Kilo feature RPC first, then TUI and VS Code consumers (decision 16, settings RPC U-E1-09 first) | plan Part B | cell delta per PR |
 
-## 10. Open decisions
+## 10. Client decisions and open questions
 
-- **Facade (proposed D-5).** Kilo owns both the server contract and every client; all clients speak the v1 protocol through `@kilocode/sdk`. A Kilo-owned facade that serves the v1 wire protocol on v2 core lets a client move to the v2 binary before it moves to the native client. Donor mechanism: the archived port's `packages/kilo-vscode/src/backend` (29 files). The decision is binary and must be explicit: a bridge with a removal date, or clients rebuilt natively first. Both consume the same donor code. It sits after the host and before any G2 work, and it needs the VS Code client view of the map as input.
+- **No v1 wire facade (D-5 answered, 2026-10-20).** Clients rebuild natively. A facade that serves the v1 protocol on the v2 core cannot guarantee v1 behavior: the v1 contract describes shapes and status codes, and the behavior lives in side effects the v2 core no longer has in the same form (`PATCH /config/overlay` in v1: precedence check, revision under a file lock, JSONC write, cache invalidation or instance disposal so the change applies at once; v2: a one-key write to the global file and a debounced per-Location reload). State is separate too (`kilo2` config and database), so a v1 client over a facade would see different sessions than a v1 client next to it. Measured on the archived port's adapter (`kilo-v2`, `packages/kilo-vscode/src/backend`, 25 files): 88 methods mapped of 129 the v1 extension uses, the real typecheck failing, no row with end-to-end acceptance, and its own plan stating "#12887 (strangler) is not the strategy". The `vscode-v2-boot` adapter (2026-10-20, 43 methods mapped of 99, 8 constant stubs, `config.overlay` returning `{}`) confirmed the same boundary in a few hours. Upstream never served v1 routes on its v2 server; its one shim went the other way and was deleted. Both adapters remain as mechanism references (server spawn, status derivation, the mismatch list); neither is merged. Evidence: `v2-plan-delta-2026-10-20.md`.
 - **Owners (D-3).** U-E0-01, U-L1-01 and U-L3-01 have no owner.
-- **Binary and service command.** The client's default `["opencode", "serve", "--service"]` must become Kilo's for clients that do not pass a command (D-4). The CLI and TUI pass `selfCommand()`, so the host already spawns itself (U-E0-01).
+- **Binary and service command.** The internal binary is `kilo2` (decision 13, #15288); at public release it becomes `kilo`. The client's default `["opencode", "serve", "--service"]` must become Kilo's for clients that do not pass a command (D-4). The CLI and TUI pass `selfCommand()`, so the host already spawns itself (U-E0-01).
 - **TUI plugin registration.** Decided in U-E0-01: the marked line in `tui/src/plugin/builtins.ts` stays (section 4, "What landed"). It imports a Kilo module into an upstream list, so it is a rung-4 call-out, not a seam; `shared-patches.json` relabels it with the checker that enforces the rung 3 and 4 distinction (U-L3-01).

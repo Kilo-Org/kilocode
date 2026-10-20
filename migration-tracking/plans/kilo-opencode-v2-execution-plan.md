@@ -1,7 +1,7 @@
 # Kilo v1 → v2 migration plan
 
 > [!WARNING]
-> **Superseded by [`kilo-v2-migration-plan.md`](kilo-v2-migration-plan.md) (2026-10-12).** Archived reference only. This plan assumed the old `kilo-v2` branch and release-tag merges, which `migration-context.md` Decisions 1–2 replace. Its decision numbering differs from the current one. Do not act on it.
+> **Superseded by [`kilo-v2-migration-plan.md`](kilo-v2-migration-plan.md) (2026-10-12; foundation decisions 2026-10-20).** Archived reference only. Its preview `kilo2` versus customer `kilo` split, opt-in re-runnable import, capability handshake and adapter-based VS Code switch are replaced by `migration-context.md` decisions 13 to 17 (`kilo2` internal identity with a one-shot import at the public rename; no v1 wire facade; new native client packages). This plan assumed the old `kilo-v2` branch and release-tag merges, which `migration-context.md` Decisions 1–2 replace. Its decision numbering differs from the current one. Do not act on it.
 
 Finalized 2026-09-30. Base: opus-55. Merged in: upstream-resync rigor, capability handshake and validation rules from deepseek; VS Code blockers, sharing/remote steps, standing rules and metrics from kimi-k3. Status: not started. First actions:
 - Team sign-off on Decisions 3, 4 and 5.

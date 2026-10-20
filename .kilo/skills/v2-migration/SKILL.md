@@ -18,7 +18,9 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 
 ## Strategy
 
-- Order: CLI/TUI first (G1), then VS Code (G2), then JetBrains (G3). Cloud consumers follow a versioned release.
+- Order: CLI/TUI (G1) continues; VS Code (G2) starts now as a walking skeleton in a new package on `origin/v2` (U-E6-22), wired natively to `@opencode/client` and the Kilo RPCs, no v1 wire facade (decisions 14 and 15). JetBrains (G3) and cloud consumers start after the fan-out gate (U-E1-10): shared Kilo RPC set stable for two releases, a published versioned client, the breaking-changes document (`migration-tracking/technical-notes/v1-v2-client-breaking-changes.md`).
+- Unit shape for a Kilo feature: RPC first (schema in `packages/schema/src/kilocode`, implementation in `kilo-plugin`), then the TUI consumer, then the VS Code consumer, in one unit (decision 16). The settings RPC (U-E1-09) is the first one.
+- Identity: the internal binary and app directories are `kilo2`, separate from v1 data and config. Never read or write v1 directories; the one-shot import happens at the public rename (decision 13).
 - The upstream base moves: every upstream release is merged into `v2` (see Branches and PRs), so the migration keeps up with upstream. Build and check against the current `v2`, not the initial base.
 - Before you place a change, load the skill `v2-feature-placement`. It decides the rung for one change (plugin hook, host, seam or patch), with the commands to find the upstream extension point and the done-proof the progress map needs. Reasoning, guarantees and the placement rules (source of truth): `migration-tracking/plans/v2-host-strategy.md`, section 5.
 - Direction: Kilo is the host, OpenCode is a library. Code moves from upstream files into Kilo-owned files, never back. A Kilo-owned mirror of an upstream file (the host entry, a replaced tool) is rung 2; never propose a seam in an upstream file to remove it. A patch adds and never changes an upstream default: upstream's own tests pass unchanged without the host, and are never edited to fit a Kilo value.
@@ -150,7 +152,7 @@ st stop-vscode --cleanup true >/dev/null; st stop >/dev/null; rm -rf $T
 - CLI data of a test: log in `$T/profile/data/opencode/log/`, database `$T/profile/data/opencode/opencode-local.db`.
 - Parallel agents use different `ID` values.
 
-The VS Code extension (G2) uses the same harness later with `--mode dev`, after the v2 worktree has `packages/kilo-vscode`.
+The VS Code extension (G2) uses the same harness with `--mode dev` once the walking skeleton (`packages/kilo-vscode` on `origin/v2`, U-E6-22) runs; `KILO_SELF_TEST_REPO` then points at the v2 worktree.
 
 ## Test policy
 
@@ -172,8 +174,7 @@ Grow the test surface with each PR.
   2. The v2 code is in a Kilo-owned file (rung 1 or 2): `// kilo_port(<feature>:<id>)` on it. This includes a Kilo adapter that only selects or configures upstream code, and a Kilo-owned v2 test that carries the assertions of a v1 test patch cell.
   3. A module or test ported under another name: give the new file the v1 name when that name fits the package (the cell then closes by name). Otherwise add a `ported` disposition with the v2 path and symbol in `note`.
   4. Upstream v2 has the behavior and no Kilo code is involved: a `native` disposition with the v2 pointer.
-  5. The v1 compatibility layer serves it: a `facade` disposition.
-  6. The behavior is not carried: a `dropped` disposition with the evidence (see below).
+  5. The behavior is not carried: a `dropped` disposition with the evidence (see below). There is no `facade` disposition: no v1 compatibility layer exists (decision 14).
 
   Dispositions go in `migration-tracking/progress/dispositions.json` with `state`, `note` and `by` (your branch name). Without a proof the cell stays open. An unknown ID, or a proof in the wrong kind of file, fails the run. The map records the rung where the cell landed.
 - Verify before you close a cell. A proof or a disposition says that v2 has the behavior, not that a file exists:

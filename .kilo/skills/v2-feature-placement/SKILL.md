@@ -58,11 +58,13 @@ Write the plugin in `packages/kilo-plugin/src/<feature>.ts` (or the feature's ow
 
 #### Add a Kilo RPC
 
+A Kilo feature unit is RPC first, then the TUI consumer, then the VS Code consumer, in one unit (decision 16). The settings RPC is the first such unit: it replaces the v1 `/config/*` group and owns the reload semantics. A client never gets a feature before its RPC has merged, and no client speaks the v1 protocol to the v2 host (decision 14).
+
 A Kilo RPC is rung 1: the plugin API has an `rpc` domain (`packages/plugin/src/effect/rpc.ts`), and the server serves every registered RPC through one generic route, `rpc.call` (`POST /api/rpc/:rpcID/:method`, `packages/protocol/src/groups/rpc.ts`). The reference is the Gateway RPC, `kilocode.gateway` (U-E0-02).
 
 1. Contract: `packages/schema/src/kilocode/<feature>.ts`, `Rpc.define({ id: "kilocode.<feature>", methods, events })` with `Rpc` from `../rpc.js`. Wrap each schema in `Schema.toStandardSchemaV1` so the promise client accepts it. Import only `effect` and Schema modules: `@opencode/schema` depends on no Kilo package (that needs a shared `package.json` patch, and the packed SDK check in `packages/sdk/script/verify-package.ts` fails).
 2. Handlers: in the feature's plugin under `packages/kilo-plugin/src/<feature>/`, `yield* ctx.rpc.register(Definition, { ... }).pipe(Effect.orDie)`. A handler fails with `context.error("<name>", message)`, using an error name of the contract. List the plugin in `KiloPlugins`.
-3. Clients (TUI, VS Code, JetBrains) import the contract from `@opencode/schema/kilocode/<feature>` and call `client.rpc(Definition).<method>(input, { location })`, never from Core or `kilo-plugin`.
+3. Clients (TUI, VS Code, JetBrains) import the contract from `@opencode/schema/kilocode/<feature>` and call `client.rpc(Definition).<method>(input, { location })`, never from Core or `kilo-plugin`. The VS Code consumer lands in the new `packages/kilo-vscode` on `origin/v2`; JetBrains and cloud consumers follow after the fan-out gate (U-E1-10), reading the wire-level breaking-changes document.
 4. Round trip: a test in `packages/kilo-cli/test/` boots the server with `KiloHost.overrides` and calls a method through the generated client, as `rpc.test.ts` does for the Gateway.
 5. `bun run generate` in `packages/client` leaves no drift: plugin methods are not in the generated OpenAPI or SDK surface, only the generic `rpc.call`. The typed surface is the Schema contract.
 
@@ -113,7 +115,7 @@ These come up again and again and are refused on sight:
 - A seam or patch in an upstream file whose purpose is to remove or shrink a Kilo-owned file (for example a `run(options)` export in `cli/src/index.ts` to delete the host entry mirror). Wrong direction.
 - Editing an upstream test file so that it passes with a Kilo value. The value belongs in the host.
 - Relabelling a rung in `shared-patches.json` instead of changing the placement. A label fix is allowed only when the code is already correct and the label was wrong.
-- Borrowing a shape from the archived port (tag `kilo-v2-checkpoints-2026-09`) without checking it against v1 behavior and against the current upstream seams. The port provides mechanism only.
+- Borrowing a shape from the archived port (tag `kilo-v2-checkpoints-2026-09`) without checking it against v1 behavior and against the current upstream seams. The port provides mechanism only; its v1-shaped client adapters (`packages/kilo-vscode/src/backend`) and the `vscode-v2-boot` adapter are rejected (decision 14).
 
 ### 6. Imports
 

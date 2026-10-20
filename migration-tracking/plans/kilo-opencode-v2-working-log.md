@@ -1,7 +1,9 @@
 # Phased Plan - Port Kilo onto OpenCode V2
 
 > [!WARNING]
-> **Frozen evidence, superseded by [`kilo-v2-migration-plan.md`](kilo-v2-migration-plan.md) (2026-10-12).** Cite its dated facts; do not maintain it. Its "implementation is paused" instruction and its branch, store and `kilo2` rules describe the archived `kilo-v2` port and no longer apply. `migration-context.md` and the new plan govern.
+> **Frozen evidence, superseded by [`kilo-v2-migration-plan.md`](kilo-v2-migration-plan.md) (2026-10-12).** Cite its dated facts; do not maintain it. Its "implementation is paused" instruction and its branch, store and adapter rules describe the archived `kilo-v2` port and no longer apply. `migration-context.md` and the new plan govern.
+
+> `kilo2` is current again as the internal identity of `origin/v2` (decision 13, 2026-10-20), with a one-shot import at the public rename; the opt-in copy-import and "do not ship `kilo2`" rules below are archived.
 
 > [!IMPORTANT]
 > Local working copy of
