@@ -711,6 +711,34 @@ export const kiloScenarios: Scenario[] = [
       object(body.totals)
       check(body.models.length === 0, "a new session should have no model usage")
     }),
+  http.protected.get("/kilocode/agent-usage/summary", "agentUsage.summary").json(200, (body) => {
+    array(body)
+    for (const item of body) {
+      object(item)
+      check(typeof item.agent === "string", "summary row should include an agent")
+      check(typeof item.runs === "number", "summary row should include a run count")
+      check(typeof item.cost === "number", "summary row should include direct cost")
+      check(typeof item.activeMs === "number", "summary row should include active time")
+    }
+  }),
+  http.protected
+    .get("/kilocode/agent-usage/runs", "agentUsage.runs")
+    .at((ctx) => ({ path: "/kilocode/agent-usage/runs?limit=1", headers: ctx.headers() }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        object(body)
+        array(body.items)
+        check(
+          body.next === undefined || typeof body.next === "string",
+          "runs page should return an optional opaque next cursor",
+        )
+        const invalid = yield* request("GET", {
+          path: "/kilocode/agent-usage/runs?cursor=not-a-cursor",
+          headers: ctx.headers(),
+        })
+        check(invalid.status === 400, "a malformed cursor should be rejected with 400")
+      }),
+    ),
   http.protected
     .get("/kilocode/background-jobs", "kilocode.backgroundJobs")
     .at((ctx) => ({
