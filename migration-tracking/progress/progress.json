@@ -39,7 +39,7 @@
     "coreImports": 9,
     "sharedPatches": {
       "seam": 20,
-      "patch": 5
+      "patch": 6
     }
   },
   "notCounted": {
