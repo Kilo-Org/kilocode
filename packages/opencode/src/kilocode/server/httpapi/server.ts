@@ -11,6 +11,7 @@ import { AppNodeBuilderV1 } from "@/effect/app-node-builder-v1" // kilocode_chan
 
 import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
 import { agentBuilderHandlers } from "./handlers/agent-builder"
+import { agentUsageHandlers } from "./handlers/agent-usage"
 import { anacondaDesktopHandlers } from "./handlers/anaconda-desktop"
 import { backgroundProcessHandlers } from "./handlers/background-process"
 import { branchNameHandlers } from "./handlers/branch-name"
@@ -32,6 +33,7 @@ import { telemetryHandlers } from "./handlers/telemetry"
 
 export const provide = Layer.provide([
   agentBuilderHandlers,
+  agentUsageHandlers,
   anacondaDesktopHandlers.pipe(Layer.provide(AnacondaDesktop.liveLayer)),
   backgroundProcessHandlers,
   branchNameHandlers,
