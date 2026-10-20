@@ -1,5 +1,6 @@
 # Kilo Gateway v2 Implementation Plan (#14991)
 
+- **Placement note (2026-10-20):** the Gateway plugin registers from `KiloPlugins` in the host; the `provider.ts` registration line in section 1 and PR 1 is superseded by U-E0-01 (#15232) and `v2-host-strategy.md` sections 4 and 5. Zero shared source files remain for the Gateway.
 - **Issue:** [#14991](https://github.com/Kilo-Org/kilocode/issues/14991) (Part of [#13750](https://github.com/Kilo-Org/kilocode/issues/13750))
 - **Plan units:** `U-E1-03` (Gateway auth, profile, teams, Pass, errors, tRPC), `U-E1-04` (Gateway provider, catalog authority, routed Auto model), plus server-side client contracts for `U-E1-08` and `U-E6-08` (FIM/edit).
 - **Follow-up issues pulled out:**

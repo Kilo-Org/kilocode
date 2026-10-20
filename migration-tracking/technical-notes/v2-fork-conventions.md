@@ -6,7 +6,7 @@ This file holds the working rules. Facts and decisions live in one place each; t
 
 | Topic | Canonical place |
 |---|---|
-| Branches, pinned refs, decisions (D1 to D10), working model | [`../plans/migration-context.md`](../plans/migration-context.md) |
+| Branches, pinned refs, decisions (1 to 18), working model | [`../plans/migration-context.md`](../plans/migration-context.md) |
 | Units, gates, per-unit `Mechanism` column | [`../plans/kilo-v2-migration-plan.md`](../plans/kilo-v2-migration-plan.md) |
 | Placement strategy, vocabulary, shape rules | [`../plans/v2-host-strategy.md`](../plans/v2-host-strategy.md) |
 | How to place one change, done-proofs | `.kilo/skills/v2-feature-placement/SKILL.md` |
@@ -117,14 +117,15 @@ When a Kilo capability genuinely needs upstream code to call it:
 ## `kilocode_change` markers
 
 - Mark every Kilo edit inside a shared upstream file with a `kilocode_change` comment saying what changed and why, so upstream merges show the intent. Markers apply to plugin-first rungs 3 and 4 only. Forms: inline `// kilocode_change(<feature>) - <reason>` (add `seam` for rung 3), a block `kilocode_change start - <reason>` ... `kilocode_change end`, or `# kilocode_change` and `<!-- kilocode_change -->` in YAML, shell and Markdown. The counters recognize a block only when `start` or `end` follows `kilocode_change` directly (`script/upstream/utils/shared.ts`, `utils/markers.ts`), so a block names its feature after `start -`, not as `kilocode_change(<feature>) start`.
+- A Kilo package that imports upstream files will carry an `upstream-deps.json` lock with content hashes, and CI will fail after a sync until the entry is updated by whoever read the dependency diff (decision 18, U-L3-02; the host's mirrored files follow the same gate in U-L3-03).
 - Every shared file Kilo changes has an entry in `script/upstream/shared-patches.json` with its rung and the missing seam; a PR that adds a patch raises `limits` in the same diff, and one that removes a patch lowers them. A file that cannot carry markers (JSON) states an `unmarked` reason. Check with `bun script/check-opencode-annotations.ts --worktree` and `bun script/check-shared-patches.ts --worktree` before a commit; CI runs both without `--worktree` (`kilo-v2.yml`, job `shared upstream patches`).
 - Do not mark Kilo-owned files. A file under a Kilo-owned path is Kilo by construction; markers there are noise. When source moves from a shared v1 file into a Kilo package (for example `packages/kilo-plugin`), drop the inherited markers, keep useful explanatory comments, and close the progress-map cell it replaces.
 - Preserve existing markers when resolving an upstream merge. Resolve in favour of the current v2 architecture first, then reapply the Kilo invariant through its owned seam.
 - Removing a marker from a shared upstream file requires explaining whether its behavior was removed or relocated. Removing redundant markers from Kilo-owned files does not remove the behavior; record that distinction in the PR.
 
-## Packages that are not on v2 yet
+## Client packages
 
-Rules that apply once a package lands, kept here so the landing PR finds them:
+Each client is a new stripped-down package on `origin/v2`, wired natively to `@opencode/client` and the Kilo RPCs: port the UI, rewrite the data layer; no v1 wire facade and no `@kilocode/sdk` (decisions 14 and 15). Rules that apply once a package lands, kept here so the landing PR finds them:
 
 - **`kilo-vscode` (G2): `virtua` patch.** v1 `main` pins `virtua@0.49.1` and patches it (`patches/virtua@0.49.1.patch`, adds `VirtualizerHandle.measure()`), and `packages/kilo-vscode/webview-ui/src/components/chat/MessageList.tsx` calls `handle.measure()` for the transcript handoff-flicker fix. v2 has neither the dependency nor the patch. Port the patch with its call site, or neither, and do not bump `virtua` without both.
 

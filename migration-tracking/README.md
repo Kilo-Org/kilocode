@@ -10,6 +10,8 @@ Planning, evidence and validation material for moving Kilo onto the upstream ope
 | Shared facts, pinned refs, decisions, working model, conventions | [plans/migration-context.md](plans/migration-context.md) | living |
 | Host strategy: why Kilo code leaves upstream files, how one change is placed (plugin hook, host, seam, patch), guarantees when upstream changes, order of work | [plans/v2-host-strategy.md](plans/v2-host-strategy.md) | living |
 | Epics, gates, critical path (Part A); units, dependencies, acceptance and status (Part B) | [plans/kilo-v2-migration-plan.md](plans/kilo-v2-migration-plan.md) | living |
+| Why there is no v1 facade, why `kilo2`, why clients are new packages, why sync detectors are gates: the 2026-10-20 decisions with evidence | [plans/v2-plan-delta-2026-10-20.md](plans/v2-plan-delta-2026-10-20.md) | dated record |
+| Client wire differences: every v1 SDK operation the v1 extension uses, with its v2 equivalent, missing RPC or dropped | `technical-notes/v1-v2-client-breaking-changes.md` (U-E6-23, in progress) | living |
 | Baseline health of the pinned upstream base | [technical-notes/baseline/pinned-v2-baseline.md](technical-notes/baseline/pinned-v2-baseline.md) | living |
 | v1 vs v2 API and session model differences | [v2-v1-schema-diffs.md](technical-notes/baseline/v2-v1-schema-diffs.md), [v2-v1-session-diffs.md](technical-notes/baseline/v2-v1-session-diffs.md) | living |
 
