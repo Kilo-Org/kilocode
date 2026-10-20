@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 25,
-    "markedLines": 195,
+    "files": 26,
+    "markedLines": 197,
     "unmarkedLines": 38,
     "deletedFiles": 0
   },
@@ -112,6 +112,10 @@
       "rung": 3,
       "seam": "Define `@opencode/core#test:ci`, `@opencode/tui#test:ci` and `@opencode/cli#test:ci` (a generic `test:ci` task adds a no-op node to every package): `dependsOn: [\"transit\"]` like upstream's generic `test`, `env: [\"KILO_TEST_SHARD\"]` gives each shard its own cache key, `passThroughEnv` hands the runner its concurrency and deadline, and `inputs` add the runner and its durations from script/kilocode/test/. Upstream has no sharded test task. The `transit` task and the `@kilocode/gateway-core#test` entry that Kilo carried are upstream since v2.0.32 (generic `test` on `transit`, anomalyco/opencode#55866 and anomalyco/opencode#56117).",
       "unmarked": "JSON has no comments."
+    },
+    "packages/cli/src/services/updater.ts": {
+      "rung": 4,
+      "seam": "Kilo config names for the autoupdate policy (feature `config`): read the `autoupdate` key from Kilo's global config names (`kilo.json`, `kilo.jsonc`, last wins) instead of `config.json`/`opencode.json(c)`, so a value in the Kilo config applies. Rung 4: one import and one marked line in an upstream CLI service; the CLI may not import Core (`test/import-boundaries.test.ts`), so it calls out to `util/src/kilocode/config/files.ts`. No hook or node for the updater policy."
     }
   }
 }
