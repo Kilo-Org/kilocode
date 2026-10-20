@@ -24,6 +24,7 @@ import { buildAppArchive } from "../../cli/script/app-assets"
 import { verifyArtifact, verifySimulationGraph } from "../../cli/script/verify-artifact"
 import { resolveOpencodePty } from "../../cli/script/opencode-pty"
 import { NativeArch } from "../../../script/native-arch"
+import { directory } from "../src/env"
 
 const dir = path.resolve(import.meta.dirname, "..")
 // Kilo: the executable is `kilo`. The upstream target names (`opencode-linux-x64`) stay the build's internal names.
@@ -208,6 +209,10 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       OPENCODE_CLI_NAME: `'${binary}'`,
       OPENCODE_CHANNEL: `'${Script.channel}'`,
       OPENCODE_ARTIFACT: `'cli'`,
+      // Kilo: the app directory, fixed at build time. `src/env.ts` also sets it at runtime, but a bundled build
+      // evaluates the `global` chunk (which reads it when it loads) before the entry's own body, so the runtime
+      // assignment is too late and the executable would write to `opencode` instead of `kilo2`.
+      "process.env.OPENCODE_APP_DIR_NAME": JSON.stringify(directory),
       ...(highlights ? { OPENCODE_RELEASE_HIGHLIGHTS: JSON.stringify(highlights) } : {}),
       OPENCODE_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "undefined",
       // FFF_LIBC selects the fff native lib variant: "musl" or "gnu".
