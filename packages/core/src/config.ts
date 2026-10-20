@@ -385,7 +385,7 @@ export const layer = (options?: Options) =>
           const directory = initial.global ?? AbsolutePath.make(globalService.config)
           const candidates = layout.names.map((name) => path.join(directory, name)) // kilocode_change(config) seam
           const filepath =
-            (yield* Effect.filter(candidates, fs.isFile)).at(-1) ?? path.join(directory, layout.names.at(-1)!) // kilocode_change(config) seam
+            (yield* Effect.filter(candidates, fs.isFile)).at(-1) ?? path.join(directory, layout.names.at(-1) ?? "opencode.jsonc") // kilocode_change(config) seam
           const text = (yield* fs.readFileStringSafe(filepath)) ?? "{}\n"
           const updated = yield* Effect.try({
             try: () =>

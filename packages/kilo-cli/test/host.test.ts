@@ -4,7 +4,7 @@ import { Permission } from "@opencode/core/permission"
 import { createRoutes } from "@opencode/server/routes"
 import { Context, Effect, Layer, References } from "effect"
 import { HttpEffect, HttpRouter, HttpServer } from "effect/http"
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
@@ -155,7 +155,7 @@ test("the server runs the Kilo agent ceiling after the config plugins", async ()
 // The server the host starts discovers Kilo config names: kilo.json and .kilo, not opencode.json, .opencode or
 // .kilocode. The upstream server without the host overrides keeps the upstream names (test/config in core).
 test("the server reads kilo.json and .kilo and ignores opencode and .kilocode config", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "kilo-host-"))
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-host-")))
   const project = path.join(root, "repo")
   const files = {
     "kilo.json": { username: "root-kilo" },
@@ -179,7 +179,7 @@ test("the server reads kilo.json and .kilo and ignores opencode and .kilocode co
                 database: { path: ":memory:" },
                 models: { fetch: false },
                 fs: { filewatcher: false },
-                config: { directory: path.join(root, "global") },
+                config: { directory: path.join(root, "global"), claude: false },
               },
               () => [],
               KiloHost.overrides,
@@ -196,7 +196,8 @@ test("the server reads kilo.json and .kilo and ignores opencode and .kilocode co
             )
             return (await response.json()) as { type: string; path?: string }[]
           })
-          const paths = entries.flatMap((entry) => (entry.path?.includes(`${path.sep}repo`) ? [entry.path] : []))
+          // The system directory cannot be turned off through server options, so keep only the project entries.
+          const paths = entries.flatMap((entry) => (entry.path?.startsWith(project) ? [entry.path] : []))
           expect(paths.map((item) => path.relative(project, item).replaceAll("\\", "/"))).toEqual([
             "kilo.json",
             ".kilo/kilo.jsonc",

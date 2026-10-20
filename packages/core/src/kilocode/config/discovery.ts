@@ -11,7 +11,7 @@ import type { ConfigDiscovery } from "../../config/discovery.js"
  * follows from `names`: the last existing name, else `kilo.jsonc`, which is Kilo v1's preference.
  */
 export const layout: ConfigDiscovery.Layout = {
-  names: KiloConfigFiles.names, // kilo_port(unattributed:config:8cdbdec70393)
+  names: KiloConfigFiles.names,
   directories: KiloConfigFiles.directories,
   directoryFiles: KiloConfigFiles.directoryFiles,
   walk: (input) =>

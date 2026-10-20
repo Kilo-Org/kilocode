@@ -19,7 +19,7 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
-Landed by rung, for patch cells closed by a done-proof: 21 plugin, 1 host, 0 seam, 0 patch.
+Landed by rung, for patch cells closed by a done-proof: 19 plugin, 3 host, 0 seam, 0 patch.
 
 Ratchets: 9 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config/discovery`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 25 shared patches by rung: 20 seam, 5 patch (`script/upstream/shared-patches.json`).
 

@@ -10,7 +10,7 @@ import path from "path"
 // v2 does not read them, and the v1 migration moves them (plan U-E3-03). The file contents use the v2 schema.
 
 /** Root files of the global directory, the system directory and each project directory. `.jsonc` wins. */
-export const names = ["kilo.json", "kilo.jsonc"] // kilo_port(unattributed:config:546539fc1643)
+export const names = ["kilo.json", "kilo.jsonc"]
 
 /** Kilo v1 `ALL_CONFIG_FILES` order inside `.kilo`, without `opencode.*`: `.json` wins. */
 export const directoryFiles = ["kilo.jsonc", "kilo.json"]

@@ -210,6 +210,13 @@ describe("Kilo config discovery", () => {
       yield* update
       expect(yield* read("kilo.json")).toEqual({ shell: "/bin/zsh" })
       expect((yield* Effect.promise(() => fs.readdir(global))).toSorted()).toEqual(["kilo.json", "opencode.jsonc"])
+
+      // With both files, kilo.jsonc wins, like Kilo v1.
+      yield* write(path.join(global, "kilo.jsonc"), {})
+      yield* write(path.join(global, "kilo.json"), {})
+      yield* update
+      expect(yield* read("kilo.jsonc")).toEqual({ shell: "/bin/zsh" })
+      expect(yield* read("kilo.json")).toEqual({})
     }),
   )
 })

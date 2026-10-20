@@ -31,8 +31,8 @@
       }
     ],
     "landed": {
-      "plugin": 21,
-      "host": 1,
+      "plugin": 19,
+      "host": 3,
       "seam": 0,
       "patch": 0
     },
@@ -2633,8 +2633,8 @@
         }
       },
       "landed": {
-        "plugin": 2,
-        "host": 0,
+        "plugin": 0,
+        "host": 2,
         "seam": 0,
         "patch": 0
       }
@@ -6093,8 +6093,8 @@
     "patch:unattributed:agent:80e846e9fd1c": "plugin",
     "patch:unattributed:agent:a91ca8efa1b6": "plugin",
     "patch:unattributed:agent:b6727a425792": "plugin",
-    "patch:unattributed:config:546539fc1643": "plugin",
-    "patch:unattributed:config:8cdbdec70393": "plugin"
+    "patch:unattributed:config:546539fc1643": "host",
+    "patch:unattributed:config:8cdbdec70393": "host"
   },
   "done": [
     "module:packages/kilo-gateway/src/api/constants.ts",

@@ -52,7 +52,7 @@
     },
     "packages/cli/src/commands/handlers/mcp/add.ts": {
       "rung": 4,
-      "seam": "Kilo config write target for `mcp add` (feature `config`): the first existing file of `.kilo/kilo.jsonc`, `.kilo/kilo.json`, `kilo.jsonc`, `kilo.json`, else `kilo.json`; the global directory checks only its root files, like Kilo v1. Rung 4: the handler imports a Kilo module (util/src/kilocode/config/files.ts, which holds the names and order) and calls out to it. No seam: the CLI never builds Core `Config` and may not import Core (`test/import-boundaries.test.ts`), so the discovery layout node does not reach it, and Kilo's write order (directory before root files, `.jsonc` first, global root-only) differs in shape from upstream's, so a generic knob would be Kilo-shaped."
+      "seam": "Kilo config write target for `mcp add` (feature `config`): the first existing file of `.kilo/kilo.jsonc`, `.kilo/kilo.json`, `kilo.jsonc`, `kilo.json`, else `kilo.json`; the global directory checks only its root files, like Kilo v1. Rung 4: the handler imports a Kilo module (util/src/kilocode/config/files.ts, which holds the names and order) and calls out to it. No seam: the CLI never builds Core `Config` and may not import Core (`test/import-boundaries.test.ts`), so the discovery layout node does not reach it, and Kilo's write order (directory before root files, `.jsonc` first, global root-only) differs in shape from upstream's, so a generic knob would be Kilo-shaped. The call-out is unconditional, so the upstream `packages/cli` binary (built and smoke-tested in CI, not shipped) also writes `kilo.json` while its server reads only `opencode.*`."
     },
     "packages/cli/src/commands/handlers/plugin/add.ts": {
       "rung": 4,

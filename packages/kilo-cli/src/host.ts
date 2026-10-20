@@ -59,5 +59,6 @@ const plugins = makeGlobalNode({
 export const overrides: LayerNode.Replacements = [
   SdkPlugins.node.replace(plugins),
   App.node.replace(App.configured(KiloApp)),
+  // kilo_port(unattributed:config:546539fc1643) kilo_port(unattributed:config:8cdbdec70393)
   ConfigDiscovery.node.replace(Layer.succeed(ConfigDiscovery.LayoutService, KiloConfigDiscovery.layout)),
 ]

@@ -15,8 +15,8 @@ export const names = ["opencode.json", "opencode.jsonc"]
 // kilocode_change start - config seam: config names and walk bound with upstream defaults; an embedding host replaces the node
 /**
  * Config names and walk bound; for reads, a later name wins. `names`: root files of the system, global and project
- * directories, also the global write target (the last existing name, else the last name). `directories`: project
- * config directories at one level, read from `directoryFiles`. `walk`: bounds the upward walk (nearest first).
+ * directories, also the global write target (the last existing name, else the last name). `directories`: project config
+ * directories at one level, read from `directoryFiles`. `walk`: bounds the upward walk (nearest first, also `.claude`).
  */
 export interface Layout {
   readonly names: readonly string[]
