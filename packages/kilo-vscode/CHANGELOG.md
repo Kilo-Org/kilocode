@@ -1,5 +1,11 @@
 # kilo-code
 
+## 7.8.15
+
+### Patch Changes
+
+- [#15235](https://github.com/Kilo-Org/kilocode/pull/15235) [`c61a974`](https://github.com/Kilo-Org/kilocode/commit/c61a974f983c0ff7853b776781945856dbf28dbf) - Let the `browser_open` permission prompt remember your choice. The prompt now offers the current origin and all origins as always-allow rules, and Auto-Approve settings list `browser_open` so you can allow Integrated Browser navigation without answering each request.
+
 ## 7.8.13
 
 ### Minor Changes
