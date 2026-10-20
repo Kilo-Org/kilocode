@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-// kilocode_change - new file
 
 /**
  * `bun run install:alpha`: installs the CLI binary that the newest successful `kilo-v2` run on the `v2`
