@@ -579,12 +579,18 @@ export namespace BackgroundProcess {
     exited(active, 1, null)
   }
 
-  function pattern(input?: string) {
+  function pattern(input?: string, field: "ready" | "wake" = "ready") {
     if (!input) return
     try {
       return new RegExp(input)
     } catch (err) {
-      throw new Error(`Invalid ready pattern: ${err instanceof Error ? err.message : String(err)}`)
+      // kilocode_change - the second argument names the failing field so an
+      // invalid wake.pattern surfaces as "Invalid wake pattern" rather than
+      // being mislabelled as "Invalid ready pattern".
+      throw new Error(
+        `Invalid ${field} pattern: ${err instanceof Error ? err.message : String(err)}`,
+      )
+      // kilocode_change end - field-specific pattern error
     }
   }
 
@@ -1001,7 +1007,14 @@ export namespace BackgroundProcess {
       })
     if (next === undefined) return
     active.offset = size
-    if (next) append(active, next)
+    // kilocode_change start - re-adopted persistent processes have no live
+    // `proc` listener, so wake detection must be driven from the log replay
+    // path. Tag the chunk "stdout" because the runner merges both streams
+    // into a single log file - either stream would work, and stdout is the
+    // most representative signal. Fresh-start processes are unaffected
+    // because their `proc` listeners already feed the wake engine.
+    if (next) append(active, next, !active.proc && active.wake ? "stdout" : undefined)
+    // kilocode_change end - wake fed from log replay on re-adoption
   }
 
   function watch(shared: Shared, active: Active) {
@@ -1074,8 +1087,9 @@ export namespace BackgroundProcess {
       throw new Error(`Ready port is already in use: ${input.ready.port}`)
     }
     // kilocode_change start - validate wake pattern before launching the process.
-    // The existing `pattern()` helper throws on invalid regex.
-    const wakePattern = pattern(input.wake?.pattern)
+    // Use a dedicated field name so a malformed wake.pattern surfaces as
+    // "Invalid wake pattern" instead of "Invalid ready pattern".
+    const wakePattern = pattern(input.wake?.pattern, "wake")
     // kilocode_change end - validate wake pattern before launching the process
     const args = Shell.args(sh, input.command, cwd)
     const lifetime = input.lifetime ?? "session"
@@ -1272,7 +1286,10 @@ export namespace BackgroundProcess {
         continue
       }
       if (shared.processes.has(record.info.id)) continue
-      const wakePattern = pattern(record.start.wake?.pattern)
+      // kilocode_change - wake-pattern uses its own field name so a malformed
+      // stored wake.pattern surfaces as "Invalid wake pattern" instead of
+      // being mislabelled.
+      const wakePattern = pattern(record.start.wake?.pattern, "wake")
       const active: Active = {
         ctx: state.ctx,
         info: record.info,

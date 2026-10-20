@@ -697,6 +697,55 @@ describe("WakeEngine FIFO + cooldown", () => {
     await asyncWait(() => fired.flat().length === 2, "two events should fire eventually", 1000)
     expect(fired.flat()).toEqual(["first", "second"])
   })
+
+  test("K-T7: byte cap evicts oldest events once the retained bytes would exceed the budget", async () => {
+    const fired: string[][] = []
+    const warnings: string[] = []
+    const state = WakeEngine.createWake({
+      pattern: /.+/,
+      cooldownMs: 60_000, // huge cooldown so nothing fires during the test
+      fire: async (input) => {
+        fired.push([...input.lines])
+      },
+      log: (level, message) => {
+        if (level === "warn") warnings.push(message)
+      },
+    })
+
+    // Each line stays well under MAX_WAKE_LINE_BYTES so the line-size policy
+    // never applies. Use 16 KiB lines so the byte cap kicks in well before
+    // the line-count cap and is the only mechanism that drops anything.
+    const lineSize = 16 * 1024 // 16 KiB per line
+    const line = "x".repeat(lineSize)
+    const total = 1_500
+    for (let index = 0; index < total; index++)
+      WakeEngine.feed(state, "stdout", Buffer.from(`${line}-${index}\n`, "utf8"))
+
+    expect(state.queueBytes).toBeLessThanOrEqual(WakeEngine.MAX_WAKE_QUEUE_BYTES + lineSize)
+    expect(state.droppedBytes).toBeGreaterThan(0)
+    expect(state.dropped).toBe(0)
+    expect(state.queue.length).toBeLessThanOrEqual(WakeEngine.MAX_WAKE_QUEUE)
+    expect(warnings.some((message) => message.includes("byte cap"))).toBe(true)
+  })
+
+  test("K-T8: dispatch deducts the batched bytes from queueBytes so the cap recovers", async () => {
+    const fired: string[][] = []
+    const state = WakeEngine.createWake({
+      pattern: /.+/,
+      cooldownMs: 10,
+      batchMax: 2,
+      fire: async (input) => {
+        fired.push([...input.lines])
+      },
+    })
+
+    WakeEngine.feed(state, "stdout", Buffer.from("alpha\nbeta\ngamma\n", "utf8"))
+    const beforeBytes = state.queueBytes
+    expect(beforeBytes).toBeGreaterThan(0)
+    await asyncWait(() => fired.flat().length === 3, "all events should fire", 1000)
+    expect(state.queueBytes).toBe(0)
+    expect(fired.flat()).toEqual(["alpha", "beta", "gamma"])
+  })
 })
 
 describe("BackgroundProcess integration", () => {

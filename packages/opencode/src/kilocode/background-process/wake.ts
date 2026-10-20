@@ -22,6 +22,11 @@ import { StringDecoder } from "node:string_decoder"
 
 export const MAX_WAKE_LINE_BYTES = 64 * 1024
 export const MAX_WAKE_QUEUE = 1000
+// Caps the cumulative bytes a single wake queue may retain. A chatty producer
+// could otherwise stream up to ~64 MiB (1000 * 64 KiB) of matched lines into a
+// single queue and emit ~3 MiB into one synthetic prompt after the cooldown.
+// This ceiling bounds both retained memory and per-batch prompt size.
+export const MAX_WAKE_QUEUE_BYTES = 8 * 1024 * 1024
 export const DEFAULT_WAKE_COOLDOWN_MS = 1_000
 export const DEFAULT_WAKE_BATCH_MAX = 50
 
@@ -63,6 +68,8 @@ export type WakeState = {
   /** Per-stream drop-mode flag, set when the current line is oversize. */
   dropping: WakeDropping
   queue: string[]
+  /** Cumulative UTF-8 byte length of `queue`. Mirrors enqueue/dispatch updates. */
+  queueBytes: number
   lastAt?: number
   dispatching?: boolean
   timer?: ReturnType<typeof setTimeout>
@@ -71,6 +78,8 @@ export type WakeState = {
   /** Number of times a single line exceeded `MAX_WAKE_LINE_BYTES`. */
   droppedLines: number
   dropped: number
+  /** Lines dropped because the queue's byte budget was exceeded. */
+  droppedBytes: number
   batchCalls: number
   fired: number
   fire: WakeFire
@@ -88,8 +97,10 @@ export function createWake(opts: WakeOptions): WakeState {
     buffer: { stdout: "", stderr: "" },
     dropping: { stdout: false, stderr: false },
     queue: [],
+    queueBytes: 0,
     droppedLines: 0,
     dropped: 0,
+    droppedBytes: 0,
     batchCalls: 0,
     fired: 0,
     fire: opts.fire,
@@ -227,15 +238,31 @@ function scanLine(state: WakeState, source: "stdout" | "stderr", line: string): 
   enqueue(state, line)
 }
 
-/** Push a matched line onto the FIFO, enforcing the queue bound. */
+/** Push a matched line onto the FIFO, enforcing line-count and byte-count caps. */
 function enqueue(state: WakeState, line: string): void {
   if (state.disposed) return
+  const lineBytes = Buffer.byteLength(line, "utf8")
+  // Enforce the queue's byte budget first - it is the more meaningful ceiling
+  // for a chatty producer streaming moderately-sized lines. Drop oldest
+  // entries (and their bytes) until the new line fits, then enforce the
+  // line-count cap as a final fallback.
+  while (state.queueBytes + lineBytes > MAX_WAKE_QUEUE_BYTES && state.queue.length > 0) {
+    const evicted = state.queue.shift()
+    state.queueBytes -= Buffer.byteLength(evicted ?? "", "utf8")
+    state.droppedBytes++
+    state.log("warn", "wake queue byte cap exceeded; dropped oldest event", {
+      dropped: state.droppedBytes,
+      cap: MAX_WAKE_QUEUE_BYTES,
+    })
+  }
   if (state.queue.length >= MAX_WAKE_QUEUE) {
-    state.queue.shift()
+    const evicted = state.queue.shift()
+    state.queueBytes -= Buffer.byteLength(evicted ?? "", "utf8")
     state.dropped++
     state.log("warn", "wake queue overflowed; dropped oldest event", { dropped: state.dropped })
   }
   state.queue.push(line)
+  state.queueBytes += lineBytes
   schedule(state)
 }
 
@@ -265,6 +292,7 @@ export async function dispatch(state: WakeState): Promise<void> {
   if (state.queue.length === 0) return
   state.dispatching = true
   const batch = state.queue.splice(0, state.batchMax)
+  for (const line of batch) state.queueBytes -= Buffer.byteLength(line, "utf8")
   let retried = false
   try {
     state.batchCalls++
@@ -274,6 +302,7 @@ export async function dispatch(state: WakeState): Promise<void> {
   } catch (err) {
     // Put events back at the head, preserving order.
     state.queue.unshift(...batch)
+    for (const line of batch) state.queueBytes += Buffer.byteLength(line, "utf8")
     state.log("warn", "wake batch dispatch failed; re-queued", { size: batch.length, err })
     if (state.timer) clearTimeout(state.timer)
     state.timer = setTimeout(() => {
@@ -337,6 +366,7 @@ export function dispose(state: WakeState): void {
     state.timer = undefined
   }
   state.queue = []
+  state.queueBytes = 0
   state.buffer = { stdout: "", stderr: "" }
   state.dropping = { stdout: false, stderr: false }
 }
