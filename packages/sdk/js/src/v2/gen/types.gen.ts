@@ -15468,6 +15468,116 @@ export type AgentBuilderSaveResponses = {
 
 export type AgentBuilderSaveResponse = AgentBuilderSaveResponses[keyof AgentBuilderSaveResponses]
 
+export type AgentUsageSummaryData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    agent?: string
+    from?: string
+    to?: string
+  }
+  url: "/kilocode/agent-usage/summary"
+}
+
+export type AgentUsageSummaryErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type AgentUsageSummaryError = AgentUsageSummaryErrors[keyof AgentUsageSummaryErrors]
+
+export type AgentUsageSummaryResponses = {
+  /**
+   * Per-agent usage rollup for the project
+   */
+  200: Array<{
+    agent: string
+    runs: number
+    sessions: number
+    cost: number
+    activeMs: number
+    tokens: {
+      input: number
+      output: number
+      reasoning: number
+      cache: {
+        read: number
+        write: number
+      }
+    }
+    errors: number
+    lastRunAt: number
+  }>
+}
+
+export type AgentUsageSummaryResponse = AgentUsageSummaryResponses[keyof AgentUsageSummaryResponses]
+
+export type AgentUsageRunsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    agent?: string
+    from?: string
+    to?: string
+    limit?: string
+    cursor?: string
+  }
+  url: "/kilocode/agent-usage/runs"
+}
+
+export type AgentUsageRunsErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+}
+
+export type AgentUsageRunsError = AgentUsageRunsErrors[keyof AgentUsageRunsErrors]
+
+export type AgentUsageRunsResponses = {
+  /**
+   * One page of agent runs, newest first
+   */
+  200: {
+    items: Array<{
+      id: string
+      agent: string
+      sessionID: string
+      rootSessionID: string
+      parentSessionID: string
+      title: string
+      role: string
+      model: {
+        providerID: string
+        modelID: string
+      }
+      startedAt: number
+      completedAt: number
+      activeMs: number
+      cost: number
+      tokens: {
+        input: number
+        output: number
+        reasoning: number
+        cache: {
+          read: number
+          write: number
+        }
+      }
+      outcome: "completed" | "cancelled" | "errored" | "running"
+    }>
+    next?: string
+  }
+}
+
+export type AgentUsageRunsResponse = AgentUsageRunsResponses[keyof AgentUsageRunsResponses]
+
 export type BackgroundProcessListData = {
   body?: never
   path?: never

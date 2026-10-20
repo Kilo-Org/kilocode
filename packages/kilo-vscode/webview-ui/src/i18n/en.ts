@@ -325,6 +325,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Todo Read",
   "ui.permission.toolLabel.todoWrite": "Todo Write",
   "ui.permission.toolLabel.codeSearch": "Code Search",
+  "ui.permission.toolLabel.browserOpen": "Integrated Browser",
   "ui.permission.copyCommand": "Copy",
   "ui.approval.auto": "Auto-approved",
   "ui.approval.manual": "Approved by you",
@@ -518,6 +519,7 @@ export const dict = {
   "settings.permissions.tool.todowrite.description": "Update the todo list",
   "settings.permissions.tool.webfetch.description": "Fetch content from a URL",
   "settings.permissions.tool.websearch.description": "Search the web",
+  "settings.permissions.tool.browser_open.description": "Open a page in the Integrated Browser",
   "settings.permissions.tool.codesearch.description": "Search code on the web",
   "settings.permissions.tool.external_directory.description": "Access files outside the project directory",
   "settings.permissions.tool.doom_loop.description": "Detect repeated tool calls with identical input",
@@ -1169,6 +1171,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "Manage task list. Allows reading and updating the internal task list.",
   "settings.autoApprove.tool.webfetch": "Fetch a URL. Allows retrieving content from a specific URL.",
   "settings.autoApprove.tool.websearch": "Search the web. Allows performing external web searches.",
+  "settings.autoApprove.tool.browser_open":
+    "Open pages in the Integrated Browser. This is the in-app preview, not Playwright browser automation.",
   "settings.autoApprove.tool.doom_loop":
     "Prevent repeated identical actions. Triggered when the same tool call repeats with identical input.",
 
