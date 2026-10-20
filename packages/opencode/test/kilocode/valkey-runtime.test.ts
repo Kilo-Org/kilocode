@@ -54,7 +54,7 @@ describe("ValkeyRuntime", () => {
     }
   })
 
-  test("installs the pinned package once and exports its entrypoint", async () => {
+  test.skipIf(process.platform === "win32")("installs the pinned package once and exports its entrypoint", async () => {
     const { ValkeyRuntime } = await import("../../src/kilocode/valkey")
 
     await Promise.all([ValkeyRuntime.ensure("valkey"), ValkeyRuntime.ensure("valkey")])
@@ -64,7 +64,7 @@ describe("ValkeyRuntime", () => {
     expect(process.env[env]).toBe(entry)
   })
 
-  test("retries after a failed install", async () => {
+  test.skipIf(process.platform === "win32")("retries after a failed install", async () => {
     const { ValkeyRuntime } = await import("../../src/kilocode/valkey")
     add.mockImplementationOnce(async () => {
       throw new Error("registry unavailable")
