@@ -87,7 +87,7 @@ export KILO_SELF_TEST_REPO=$V2
 T=$T
 st() { node ~/.config/kilo/scripts/vscode-self-test/cli.mjs "\$@" --session kilo-v2-$ID; }
 screen() { st evaluate --script 'return [...document.querySelectorAll(".xterm-rows > div")].map(r => r.textContent.trim()).filter(t => /[^\s┃╹▀]/.test(t)).join("\n")' | jq -r '.structuredContent.result | fromjson? // .'; }
-idle() { sleep 1; for i in 1 2 3 4; do st wait --text "esc interrupt" --state hidden --timeout-ms 60000 | jq -e '.isError == false' >/dev/null && return 0; done; echo "still busy after 4 minutes"; return 1; }
+idle() { sleep 1; for i in 1 2 3 4; do st wait --text "esc interrupt" --state hidden --timeout-ms 60000 | jq -e '.isError == false' >/dev/null && return 0; done; echo "idle wait failed (session busy or harness error)"; return 1; }
 tclick() { P=\$(st evaluate --script "const el = [...document.querySelectorAll('.xterm-rows span')].find(s => s.textContent.includes(\$(jq -Rn --arg s "\$1" '\$s'))); if (!el) return ''; const r = el.getBoundingClientRect(); return Math.round(r.x + Math.min(r.width / 2, 20)) + ' ' + Math.round(r.y + r.height / 2)" | jq -r '.structuredContent.result | fromjson? // .'); [ -n "\$P" ] || { echo "not found: \$1"; return 1; }; st click --x \${P% *} --y \${P#* } >/dev/null; }
 logs() { grep -h "\${1:-level=ERROR}" \$T/profile/data/opencode/log/*.log | tail -\${2:-20}; }
 EOF
@@ -98,7 +98,7 @@ st run-command --command "View: Close Primary Side Bar" >/dev/null
 st run-command --command "View: Close Secondary Side Bar" >/dev/null
 st run-command --command "Terminal: Focus Terminal" >/dev/null
 st type --submit --value "env KILO_V2_PROFILE=$T/profile bun $V2/script/dev-isolated.ts --standalone" >/dev/null
-st wait --text "ctrl+p commands" --timeout-ms 60000 >/dev/null && screen
+st wait --text "ctrl+p commands" --timeout-ms 60000 | jq -e '.isError == false' >/dev/null && screen
 ```
 
 The TUI is ready when the last command prints the home screen (about 15 seconds). The CLI starts signed out. To test signed in, start it with `env KILO_API_KEY=$(jq -r .kilo.access ~/.local/share/kilo/auth.json) KILO_ORG_ID=$(jq -r '.kilo.accountId // empty' ~/.local/share/kilo/auth.json) KILO_V2_PROFILE=...` instead.
@@ -111,7 +111,7 @@ Start every later shell call with `source /tmp/kilo-v2-st-<ID>/env.sh`. Then act
 |---|---|
 | `st type --value "<text>" >/dev/null` | Type a prompt, a slash command (`/connect`) or a mention (`@math`) |
 | `st press --keys <keys> >/dev/null` | `Enter`, `Escape`, `Shift+Tab` (agent), `Control+p` (commands). Chords are two calls: `Control+x`, then `n` (new tab) or `m` (model) |
-| `idle` | Wait until the answer is complete (at most 4 minutes; prints `still busy` on timeout). Use after sending a prompt |
+| `idle` | Wait until the answer is complete (at most 4 minutes; reports a failure if the session does not become idle). Use after sending a prompt |
 | `screen` | Print the terminal text |
 | `tclick "<text>"` | Click visible TUI text, for example a tab title. Use a short unique part |
 | `st wait --text "<text>"` | Wait until text appears. Default 10 seconds, `--timeout-ms` at most 60000. Check `isError` in the JSON |
@@ -141,7 +141,7 @@ st stop-vscode --cleanup true >/dev/null; st stop >/dev/null; rm -rf $T
 
 - Read `screen` after every step. Dialogs chain: choosing a model opens a variant dialog, and the next typed text lands in its search field.
 - Do not wait for text you typed. It is already on the screen. Use `idle`.
-- A free-model answer can show `Retrying` first when the Gateway upstream fails. `idle` waits through it. Report a test as blocked only when `idle` times out.
+- A free-model answer can show `Retrying` first when the Gateway upstream fails. `idle` waits through it. Report a test as blocked only when `idle` reports a failure.
 - `st click --text` does not reach the terminal. Use `tclick`.
 - Headless runs cannot take screenshots. Set `HEADLESS=false` only for visual review, because the window then opens on the user's screen.
 - New tabs get their title a few seconds after the first answer. The active tab title scrolls, so match a short part.
