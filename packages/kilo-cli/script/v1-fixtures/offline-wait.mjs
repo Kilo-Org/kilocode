@@ -429,14 +429,13 @@ const { provideTestInstance, disposeTestRuntime } = await source("packages/openc
 const { Bus } = await source("packages/opencode/src/bus/index.ts")
 const lifecycle = await (async () => {
   const dir = await fs.mkdtemp(path.join(process.env.TMPDIR, "net-"))
-  const t0 = Date.now()
+  // Only the order of events and qualitative timing facts are recorded, so that regeneration is deterministic.
   const events = []
-  const at = () => Math.round((Date.now() - t0) / 1000)
   const result = await provideTestInstance({
     directory: dir,
     fn: async () => {
       const offs = ["Asked", "Restored", "Replied", "Rejected"].map((key) =>
-        Bus.subscribe(SessionNetwork.Event[key], (event) => events.push({ type: event.type, atSec: at() })),
+        Bus.subscribe(SessionNetwork.Event[key], (event) => events.push(event.type)),
       )
       const out = {}
       // Restore (what the probe loop does when the network is back), then the resume window, then the reply.
@@ -446,9 +445,11 @@ const lifecycle = await (async () => {
         abort: new AbortController().signal,
       })
       const pending = structuredClone((await SessionNetwork.list())[0])
+      const restoredAt = Date.now()
       await SessionNetwork.restore({ requestID: a.id })
       const restored = (await SessionNetwork.list())[0]
       await a.promise
+      const waited = Date.now() - restoredAt
       out.restoreThenAutoResume = {
         pendingBefore: {
           message: pending.message,
@@ -456,11 +457,12 @@ const lifecycle = await (async () => {
           hasRestoredTime: pending.time.restored !== undefined,
         },
         afterRestore: { restored: restored.restored, hasRestoredTime: restored.time.restored !== undefined },
-        resolvedAfterSec: at(),
+        // v1 resumes 10 s after the restore; a busy machine can only make the wait longer.
+        resumedAfterTenSeconds: waited >= 9_900,
         pendingAfter: (await SessionNetwork.list()).length,
       }
       // An explicit reply ("retry now") resolves at once.
-      const t1 = Date.now()
+      const askedAt = Date.now()
       const b = await SessionNetwork.ask({
         sessionID: "ses_fixture_b",
         message: "Host not found",
@@ -468,7 +470,7 @@ const lifecycle = await (async () => {
       })
       await SessionNetwork.reply({ requestID: b.id })
       await b.promise
-      out.replyResolvesImmediately = { underOneSecond: Date.now() - t1 < 1000 }
+      out.replyResolvesImmediately = { beforeResumeWindow: Date.now() - askedAt < 9_900 }
       // A reject fails with RejectedError; the processor maps it to "blocked".
       const c = await SessionNetwork.ask({
         sessionID: "ses_fixture_c",
@@ -565,7 +567,7 @@ await write({
       ].map((key) => [key, SessionRetry[key]]),
     ),
     STALL_MS: KiloSessionProcessor.STALL_MS,
-    note: "Inputs with $type are built as that class (Error with cause and code, DOMException, DisconnectedError, APICallError); other inputs are plain objects. Policy steps and timelines ran with Math.random fixed to 0. '<wall-clock Date.now()>' marks the wall-clock `next` of a Reconnected status. The lifecycle case uses real timers; resolvedAfterSec is the 10 s resume window.",
+    note: "Inputs with $type are built as that class (Error with cause and code, DOMException, DisconnectedError, APICallError); other inputs are plain objects. Policy steps and timelines ran with Math.random fixed to 0. '<wall-clock Date.now()>' marks the wall-clock `next` of a Reconnected status. The lifecycle case uses real timers and records only event order and qualitative timing (resume after the 10 s window, reply before it).",
   },
   cases,
 })

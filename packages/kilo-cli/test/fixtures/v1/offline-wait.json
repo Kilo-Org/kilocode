@@ -19,7 +19,7 @@
     "RETRY_MAX_DELAY": 2147483647,
     "RETRY_MAX_RETRIES": 5,
     "STALL_MS": 10000,
-    "note": "Inputs with $type are built as that class (Error with cause and code, DOMException, DisconnectedError, APICallError); other inputs are plain objects. Policy steps and timelines ran with Math.random fixed to 0. '<wall-clock Date.now()>' marks the wall-clock `next` of a Reconnected status. The lifecycle case uses real timers; resolvedAfterSec is the 10 s resume window."
+    "note": "Inputs with $type are built as that class (Error with cause and code, DOMException, DisconnectedError, APICallError); other inputs are plain objects. Policy steps and timelines ran with Math.random fixed to 0. '<wall-clock Date.now()>' marks the wall-clock `next` of a Reconnected status. The lifecycle case uses real timers and records only event order and qualitative timing (resume after the 10 s window, reply before it)."
   },
   "cases": [
     {
@@ -2139,11 +2139,11 @@
             "restored": true,
             "hasRestoredTime": true
           },
-          "resolvedAfterSec": 10,
+          "resumedAfterTenSeconds": true,
           "pendingAfter": 0
         },
         "replyResolvesImmediately": {
-          "underOneSecond": true
+          "beforeResumeWindow": true
         },
         "rejectRejects": {
           "isRejectedError": true,
@@ -2154,42 +2154,15 @@
           "pendingAfter": 0
         },
         "events": [
-          {
-            "type": "session.network.asked",
-            "atSec": 0
-          },
-          {
-            "type": "session.network.restored",
-            "atSec": 0
-          },
-          {
-            "type": "session.network.replied",
-            "atSec": 10
-          },
-          {
-            "type": "session.network.asked",
-            "atSec": 10
-          },
-          {
-            "type": "session.network.replied",
-            "atSec": 10
-          },
-          {
-            "type": "session.network.asked",
-            "atSec": 10
-          },
-          {
-            "type": "session.network.rejected",
-            "atSec": 10
-          },
-          {
-            "type": "session.network.asked",
-            "atSec": 10
-          },
-          {
-            "type": "session.network.rejected",
-            "atSec": 10
-          }
+          "session.network.asked",
+          "session.network.restored",
+          "session.network.replied",
+          "session.network.asked",
+          "session.network.replied",
+          "session.network.asked",
+          "session.network.rejected",
+          "session.network.asked",
+          "session.network.rejected"
         ]
       }
     }

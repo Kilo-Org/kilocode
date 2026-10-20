@@ -5,7 +5,7 @@
 // Each area runs in its own child process inside the v1 checkout, with its own temporary HOME, XDG and TMPDIR, so
 // that no v1 code can reach the real user stores (see technical-notes/baseline/cli-fixture-storage-incident.md).
 // The child calls the v1 functions and writes the cases; this script adds the provenance and writes the fixture.
-import { mkdir, mkdtemp, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 
@@ -76,8 +76,15 @@ for (const [area, unit] of Object.entries(areas).filter(([area]) => only.length 
       constants: result.constants,
       cases: result.cases,
     }
-    // The temporary root is the only machine-specific value a case can carry.
-    const text = JSON.stringify(fixture, null, 2).replaceAll(temp, "<tmp>")
+    // The temporary root is the only machine-specific value a case can carry. Replace it in each string before
+    // serializing (JSON escapes Windows backslashes), in both forms (macOS resolves /var to /private/var), longest first.
+    const roots = [...new Set([await realpath(temp), temp])].sort((a, b) => b.length - a.length)
+    const text = JSON.stringify(
+      fixture,
+      (_key, value) =>
+        typeof value === "string" ? roots.reduce((s, root) => s.replaceAll(root, "<tmp>"), value) : value,
+      2,
+    )
     const file = path.join(import.meta.dir, "../test/fixtures/v1", `${area}.json`)
     await Bun.write(file, text + "\n")
     console.log(`${area}: ${result.cases.length} cases -> ${path.relative(repo, file)}`)

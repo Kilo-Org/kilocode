@@ -161,6 +161,8 @@ const runInfra = (fx) => Effect.runPromise(fx.pipe(Effect.provide(infra)))
   out.prune = { retentionMs: retention, gcPrune: "7.days", cases }
 }
 
+// A real tab in the file name: git C-quotes it as \t in the diff header below.
+const diffFiles = ["a.txt", "lib/a.txt", "sp ace\tq.txt", "missing.txt"]
 // ---------- 3. DiffFull.batch parse with a fake git ----------
 {
   const text = [
@@ -187,9 +189,7 @@ const runInfra = (fx) => Effect.runPromise(fx.pipe(Effect.provide(infra)))
     "",
   ].join("\n")
   const f = fakeGit(() => ({ code: 0, text, stderr: "" }))
-  const map = await Effect.runPromise(
-    DiffFull.batch(f.git, "FROM", "TO", ["a.txt", "lib/a.txt", "sp ace\\tq.txt", "missing.txt"]),
-  )
+  const map = await Effect.runPromise(DiffFull.batch(f.git, "FROM", "TO", diffFiles))
   const fail = fakeGit(() => ({ code: 1, text: "", stderr: "boom" }))
   const failed = await Effect.runPromise(DiffFull.batch(fail.git, "FROM", "TO", ["a.txt"]))
   const empty = fakeGit(() => ({ code: 0, text: "", stderr: "" }))
@@ -773,7 +773,7 @@ const cases = [
   {
     name: "diff-batch",
     fn: "DiffFull.batch (fake git)",
-    input: ["a.txt", "lib/a.txt", "sp ace\\tq.txt", "missing.txt"],
+    input: diffFiles,
     output: out.diffBatch,
   },
   ...["LockTimeoutError", "LockCompromisedError", "bodyError", "success"].map((name) => ({

@@ -194,6 +194,8 @@ const snapshot = (ctx, body) =>
   Effect.runPromise(
     Snapshot.Service.use(body).pipe(Effect.provide(snapshotLayer), Effect.provideService(InstanceRef, ctx)),
   )
+// Answers the next question.asked event with `reply`. The caller removes the listener with `off`, also when no
+// question arrives, so that a stale listener cannot answer the question of a later case.
 const answerNext = (ctx, reply) => {
   const seen = Promise.withResolvers()
   const on = (event) => {
@@ -211,7 +213,7 @@ const answerNext = (ctx, reply) => {
     )
   }
   GlobalBus.on("event", on)
-  return seen.promise
+  return { seen: seen.promise, off: () => GlobalBus.off("event", on) }
 }
 const configFiles = [".kilo/kilo.jsonc", ".kilo/kilo.json", "kilo.json", "opencode.json"]
 const questions = [
@@ -237,18 +239,22 @@ for (const [name, reply, inner, files] of questions) {
   const ctx = await load(dir)
   const state = K.makeState()
   const asked = answerNext(ctx, reply)
-  const result = await context.provide(ctx, () =>
-    AppRuntime.runPromise(
-      K.wrap({
-        inner: inner === "hang" ? hang() : after(inner.ms, inner.hash),
-        state,
-        sessionID: "ses_fixture",
-        hooks: { ...K.defaultHooks, async startProgress() {}, async updateProgress() {}, async endProgress() {} },
-        timeoutMs: 20,
-      }).pipe(Effect.provideService(InstanceRef, ctx)),
-    ),
-  )
-  const request = await Promise.race([asked, new Promise((resolve) => setTimeout(() => resolve(null), 2000))])
+  const { result, request } = await (async () => {
+    const result = await context.provide(ctx, () =>
+      AppRuntime.runPromise(
+        K.wrap({
+          inner: inner === "hang" ? hang() : after(inner.ms, inner.hash),
+          state,
+          sessionID: "ses_fixture",
+          hooks: { ...K.defaultHooks, async startProgress() {}, async updateProgress() {}, async endProgress() {} },
+          timeoutMs: 20,
+        }).pipe(Effect.provideService(InstanceRef, ctx)),
+      ),
+    )
+    const request = await Promise.race([asked.seen, new Promise((resolve) => setTimeout(() => resolve(null), 2000))])
+    return { result, request }
+  })().finally(asked.off)
+  if (!request) throw new Error(`${name}: v1 asked no question after the timeout`)
   const filesAfter = Object.fromEntries(
     (
       await Promise.all(
@@ -263,7 +269,7 @@ for (const [name, reply, inner, files] of questions) {
     fn: "KiloSnapshotTrack.wrap with defaultHooks (Question service, persistDisable), then Snapshot.track after reload",
     input: { reply, inner, timeoutMs: 20, files },
     output: {
-      question: request && { ...request, id: "que_<id>" },
+      question: { ...request, id: "que_<id>" },
       result: result ?? null,
       state: { disabledForSession: state.disabledForSession, asked: state.asked },
       filesAfter,

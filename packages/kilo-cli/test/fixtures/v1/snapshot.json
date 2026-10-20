@@ -192,7 +192,7 @@
       "input": [
         "a.txt",
         "lib/a.txt",
-        "sp ace\\tq.txt",
+        "sp ace\tq.txt",
         "missing.txt"
       ],
       "output": {
@@ -207,13 +207,12 @@
           "--",
           "a.txt",
           "lib/a.txt",
-          "sp ace\\tq.txt",
+          "sp ace\tq.txt",
           "missing.txt"
         ],
         "result": {
           "lib/a.txt": "diff --git a/lib/a.txt b/lib/a.txt\nindex 1..2 100644\n--- a/lib/a.txt\n+++ b/lib/a.txt\n@@ -1 +1 @@\n-x\n+y",
-          "a.txt": "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1 +1 @@\n-1\n+2",
-          "sp ace\\tq.txt": "diff --git \"a/sp ace\\tq.txt\" \"b/sp ace\\tq.txt\"\n@@ -0,0 +1 @@\n+q"
+          "a.txt": "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1 +1 @@\n-1\n+2"
         },
         "onGitFailure": {},
         "emptyFilesCalls": 0,
