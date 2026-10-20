@@ -1,5 +1,39 @@
 # kilo-code
 
+## 7.8.15
+
+### Patch Changes
+
+- [#15235](https://github.com/Kilo-Org/kilocode/pull/15235) [`c61a974`](https://github.com/Kilo-Org/kilocode/commit/c61a974f983c0ff7853b776781945856dbf28dbf) - Let the `browser_open` permission prompt remember your choice. The prompt now offers the current origin and all origins as always-allow rules, and Auto-Approve settings list `browser_open` so you can allow Integrated Browser navigation without answering each request.
+
+## 7.8.13
+
+### Minor Changes
+
+- [#14866](https://github.com/Kilo-Org/kilocode/pull/14866) [`f01b273`](https://github.com/Kilo-Org/kilocode/commit/f01b273c1343538764c6f1fe43feee41b5521863) - Let a primary agent choose which agent runs an Agent Manager session it starts, so a session fanned out through Agent Manager can run a custom agent (and its edit/bash/MCP permission rules) instead of always falling back to the workspace default agent.
+
+- [#15119](https://github.com/Kilo-Org/kilocode/pull/15119) [`cbdb045`](https://github.com/Kilo-Org/kilocode/commit/cbdb0459c84d28884ab3eb280c9611750090771b) - Redesign the Agent Manager New Worktree dialog. Pick the base branch next to the project, set an optional branch name next to the worktree name, and choose versions next to the Create button. The Advanced options section is gone. The base branch pick is kept as a draft until you create the worktree, and you can make it the project default from the branch picker. Branch pickers also open faster in repositories with many branches.
+
+### Patch Changes
+
+- [#14866](https://github.com/Kilo-Org/kilocode/pull/14866) [`e703b56`](https://github.com/Kilo-Org/kilocode/commit/e703b5637b35f46a992fc79923468ec43e4488ed) - Reject internal agents when an agent starts an Agent Manager session for a named agent, and list the selectable agents on every rejection so a wrong name can be corrected without guessing.
+
+- [#15118](https://github.com/Kilo-Org/kilocode/pull/15118) [`33e6701`](https://github.com/Kilo-Org/kilocode/commit/33e670164675d8e4a59b803bdafa68a75b0947d3) - Align brand yellow hover colors with Anaconda.
+
+- [#15104](https://github.com/Kilo-Org/kilocode/pull/15104) [`0f4936d`](https://github.com/Kilo-Org/kilocode/commit/0f4936df112d1f4b6d1b319c8c9eb2fc55ed957c) - Keep Gemini thought signatures and other OpenRouter reasoning details that arrive late in a response, so later requests in the conversation replay them
+
+- [#14942](https://github.com/Kilo-Org/kilocode/pull/14942) [`b7672ae`](https://github.com/Kilo-Org/kilocode/commit/b7672ae502af111048191119d61cea62157291f5) - Show why a provider failed to load — such as rejected credentials or a network error — instead of silently hiding it from the provider list. The CLI, TUI, and VS Code model picker now surface the reason and offer to sign in again when credentials were rejected.
+
+- [#15041](https://github.com/Kilo-Org/kilocode/pull/15041) [`32bc724`](https://github.com/Kilo-Org/kilocode/commit/32bc7248ea08066475b16c94d8b9864addcbd00f) Thanks [@hdcodedev](https://github.com/hdcodedev)! - Send review comments from the Changes view to the chat when the sidebar is showing History.
+
+- [#14774](https://github.com/Kilo-Org/kilocode/pull/14774) [`0913273`](https://github.com/Kilo-Org/kilocode/commit/09132736d7905647679acd1f8d788aae36165e1a) Thanks [@LEN5010](https://github.com/LEN5010)! - Prevent restarted Agent Manager terminals from lingering after closing the terminal or reloading the panel.
+
+- [#15113](https://github.com/Kilo-Org/kilocode/pull/15113) [`ba0410f`](https://github.com/Kilo-Org/kilocode/commit/ba0410fbdd54b5c787080cc73c38a6d5aadc9d44) - Update the VS Code extension brand yellow to #FFDD00.
+
+- [#14925](https://github.com/Kilo-Org/kilocode/pull/14925) [`4516a48`](https://github.com/Kilo-Org/kilocode/commit/4516a48321acdd7a5ddd8437a5ae29a4b6e646ca) Thanks [@abdulhusainahk](https://github.com/abdulhusainahk)! - Show a dismissible hint naming the first workspace folder used by chat in multi-root windows, with guidance for working on another folder. The hint is available in all supported sidebar languages.
+
+- [#15045](https://github.com/Kilo-Org/kilocode/pull/15045) [`6fcbc66`](https://github.com/Kilo-Org/kilocode/commit/6fcbc6683fba96b6a22ead1b67017a8ba715463e) Thanks [@hdcodedev](https://github.com/hdcodedev)! - Keep new files with accented or non-Latin names, such as `résumé.txt`, when moving a chat to a worktree
+
 ## 7.8.12
 
 ### Minor Changes
