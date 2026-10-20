@@ -1,5 +1,5 @@
 ---
-title: "Using DotHoosh with Kilo Code | DotHoosh"
+title: "Using DotHoosh with Kilo Code | Iranian AI Gateway"
 description: "Configure DotHoosh in Kilo Code — locally with your own API key from the DotHoosh gateway."
 sidebar_label: DotHoosh
 ---
