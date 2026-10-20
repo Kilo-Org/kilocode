@@ -86,14 +86,14 @@ export const ReadTool = Tool.define<
     const scope = yield* Scope.Scope
 
     // kilocode_change start - authorize missing paths without enumerating sibling names
-    const miss = Effect.fn("ReadTool.miss")(function* (filepath: string, worktree: string, ctx: Tool.Context) {
+    const miss = Effect.fn("ReadTool.miss")(function* (filepath: string, root: string, ctx: Tool.Context) {
       const dir = path.dirname(filepath)
       const parent = yield* fs.realPath(dir).pipe(Effect.option)
       if (parent._tag === "None") return yield* Effect.fail(new Error(`File not found: ${filepath}`))
       yield* assertExternalDirectoryEffect(ctx, parent.value, { bypass: false, kind: "directory" })
       yield* ctx.ask({
         permission: "read",
-        patterns: [...new Set([filepath, parent.value].map((item) => path.relative(worktree, item)))],
+        patterns: [...new Set([filepath, parent.value].map((item) => path.relative(root, item)))],
         always: ["*"],
         metadata: {},
       })
