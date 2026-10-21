@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 32,
-    "markedLines": 288,
+    "files": 27,
+    "markedLines": 204,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -55,16 +55,16 @@
       "seam": "Accept a 404 for the web UI shell in the compiled service smoke test, because the Kilo build embeds no web UI (`packages/app` removed). The API, authentication, and plugin checks still run. No seam: the smoke script has no option to skip the web UI check."
     },
     "packages/cli/src/commands/handlers/mcp/add.ts": {
-      "rung": 3,
-      "seam": "Kilo config discovery: read `kilo.json`, `kilo.jsonc`, `.kilo` and `.kilocode` in Kilo v1 order (directory candidates before root files, `.kilocode` before `.kilo`), and keep writing `kilo.json`. Upstream discovery has fixed names and order and no plugin or host seam can change it, so the shared discovery file carries the difference. Test files mirror the same behavior."
+      "rung": 4,
+      "seam": "Kilo config write target for `mcp add` (feature `config`): the first existing file of `.kilo2/kilo2.jsonc`, `.kilo2/kilo2.json`, `kilo2.jsonc`, `kilo2.json`, else `kilo2.json`; the global directory checks only its root files. Internal releases use kilo2 names without a v1 fallback (decision 12); the file order follows v1. Rung 4: the handler imports a Kilo module (util/src/kilocode/config/files.ts, which holds the names and order) and calls out to it. No seam: the CLI never builds Core `Config` and may not import Core (`test/import-boundaries.test.ts`), so the discovery layout node does not reach it, and Kilo's write order (directory before root files, `.jsonc` first, global root-only) differs in shape from upstream's, so a generic knob would be Kilo-shaped. The call-out is unconditional, so the upstream `packages/cli` binary (not shipped) also writes `kilo2.json` while its server reads only `opencode.*`."
     },
     "packages/cli/src/commands/handlers/plugin/add.ts": {
-      "rung": 3,
-      "seam": "Kilo config path for plugin commands: resolve `kilo.json`, `kilo.jsonc`, `.kilo` and `.kilocode`, and only root files in the global directory, like Kilo v1. Shared CLI handlers with no plugin seam for config path selection."
+      "rung": 4,
+      "seam": "Kilo config path for `plugin add` and `plugin remove` (feature `config`): pass global mode to `resolveConfigPath` (mcp/add.ts) so the global directory checks only its root files, like Kilo v1. Rung 4: one marked line each; the order lives in util/src/kilocode/config/files.ts. No hook, node or option for the config path in the CLI handlers."
     },
     "packages/cli/src/commands/handlers/plugin/remove.ts": {
-      "rung": 3,
-      "seam": "Kilo config path for plugin commands: resolve `kilo.json`, `kilo.jsonc`, `.kilo` and `.kilocode`, and only root files in the global directory, like Kilo v1. Shared CLI handlers with no plugin seam for config path selection."
+      "rung": 4,
+      "seam": "Kilo config path for `plugin add` and `plugin remove` (feature `config`): pass global mode to `resolveConfigPath` (mcp/add.ts) so the global directory checks only its root files, like Kilo v1. Rung 4: one marked line each; the order lives in util/src/kilocode/config/files.ts. No hook, node or option for the config path in the CLI handlers."
     },
     "packages/cli/src/server-process.ts": {
       "rung": 3,
@@ -77,11 +77,11 @@
     },
     "packages/core/src/config.ts": {
       "rung": 3,
-      "seam": "Kilo config discovery: read `kilo.json`, `kilo.jsonc`, `.kilo` and `.kilocode` in Kilo v1 order (directory candidates before root files, `.kilocode` before `.kilo`), and keep writing `kilo.json`. Upstream discovery has fixed names and order and no plugin or host seam can change it, so the shared discovery file carries the difference. Test files mirror the same behavior."
+      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound) that discovery and `Config` read for the root file names, the project directory names, the file order inside those directories, the upward-walk bound and the global write target (the last existing name). Generic: no Kilo name, import or condition; the default graph behaves as upstream, so the upstream config tests run unchanged. The Kilo host replaces the node (`KiloHost.overrides`) with `KiloConfigDiscovery.layout` (core/src/kilocode/config/discovery.ts): `kilo2.json`, `kilo2.jsonc`, `.kilo2`, v1 file orders, worktree boundary. Internal releases have no v1 filename fallback (decision 12). Rungs 1 and 2 cannot do it alone: discovery runs before plugins load, `ConfigDiscovery` had no service node, and `Config.node` is configured by `createRoutes` from server options, so replacing it would copy them."
     },
     "packages/core/src/config/discovery.ts": {
       "rung": 3,
-      "seam": "Kilo config discovery: read `kilo.json`, `kilo.jsonc`, `.kilo` and `.kilocode` in Kilo v1 order (directory candidates before root files, `.kilocode` before `.kilo`), and keep writing `kilo.json`. Upstream discovery has fixed names and order and no plugin or host seam can change it, so the shared discovery file carries the difference. Test files mirror the same behavior."
+      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound) that discovery and `Config` read for the root file names, the project directory names, the file order inside those directories, the upward-walk bound and the global write target (the last existing name). Generic: no Kilo name, import or condition; the default graph behaves as upstream, so the upstream config tests run unchanged. The Kilo host replaces the node (`KiloHost.overrides`) with `KiloConfigDiscovery.layout` (core/src/kilocode/config/discovery.ts): `kilo2.json`, `kilo2.jsonc`, `.kilo2`, v1 file orders, worktree boundary. Internal releases have no v1 filename fallback (decision 12). Rungs 1 and 2 cannot do it alone: discovery runs before plugins load, `ConfigDiscovery` had no service node, and `Config.node` is configured by `createRoutes` from server options, so replacing it would copy them."
     },
     "packages/core/src/plugin/sdk.ts": {
       "rung": 3,
@@ -90,30 +90,6 @@
     "packages/core/src/plugin/supervisor.ts": {
       "rung": 3,
       "seam": "Appends the embedder plugins registered with phase `post` (`SdkPlugins.all(\"post\")`) after the internal post plugins, so they see the result of config. One line, no Kilo value. Rungs 1 and 2 cannot supply it: the supervisor builds the boot order itself and put every embedder plugin in the pre phase."
-    },
-    "packages/core/test/config/command-subagent.test.ts": {
-      "rung": 3,
-      "seam": "Tests for the Kilo config discovery seam: `kilo.json`, `kilo.jsonc`, `.kilo` and `.kilocode` names and v1 order. Shared test files, marked for the same reason as the discovery seam."
-    },
-    "packages/core/test/config/config.test.ts": {
-      "rung": 3,
-      "seam": "Tests for the Kilo config discovery seam: `kilo.json`, `kilo.jsonc`, `.kilo` and `.kilocode` names and v1 order. Shared test files, marked for the same reason as the discovery seam."
-    },
-    "packages/core/test/config/reload.test.ts": {
-      "rung": 3,
-      "seam": "Tests for the Kilo config discovery seam: `kilo.json`, `kilo.jsonc`, `.kilo` and `.kilocode` names and v1 order. Shared test files, marked for the same reason as the discovery seam."
-    },
-    "packages/core/test/formatter.test.ts": {
-      "rung": 3,
-      "seam": "Tests for the Kilo config discovery seam: `kilo.json`, `kilo.jsonc`, `.kilo` and `.kilocode` names and v1 order. Shared test files, marked for the same reason as the discovery seam."
-    },
-    "packages/core/test/plugin/supervisor-reload.test.ts": {
-      "rung": 3,
-      "seam": "Tests for the Kilo config discovery seam: `kilo.json`, `kilo.jsonc`, `.kilo` and `.kilocode` names and v1 order. Shared test files, marked for the same reason as the discovery seam."
-    },
-    "packages/core/test/session-activation.test.ts": {
-      "rung": 3,
-      "seam": "Tests for the Kilo config discovery seam: `kilo.json`, `kilo.jsonc`, `.kilo` and `.kilocode` names and v1 order. Shared test files, marked for the same reason as the discovery seam."
     },
     "packages/server/src/process.ts": {
       "rung": 3,
@@ -140,6 +116,10 @@
       "rung": 3,
       "seam": "Define `@opencode/core#test:ci`, `@opencode/tui#test:ci` and `@opencode/cli#test:ci` (a generic `test:ci` task adds a no-op node to every package): `dependsOn: [\"transit\"]` like upstream's generic `test`, `env: [\"KILO_TEST_SHARD\"]` gives each shard its own cache key, `passThroughEnv` hands the runner its concurrency and deadline, and `inputs` add the runner and its durations from script/kilocode/test/. Upstream has no sharded test task. The `transit` task and the `@kilocode/gateway-core#test` entry that Kilo carried are upstream since v2.0.32 (generic `test` on `transit`, anomalyco/opencode#55866 and anomalyco/opencode#56117).",
       "unmarked": "JSON has no comments."
+    },
+    "packages/cli/src/services/updater.ts": {
+      "rung": 4,
+      "seam": "Kilo config names for the autoupdate policy (feature `config`): read the `update` or legacy `autoupdate` key from Kilo's global config names (`kilo2.json`, `kilo2.jsonc`, last defined policy wins) instead of `config.json`/`opencode.json(c)` or v1 `kilo.json(c)`. Internal releases have no v1 filename fallback (decision 12). Rung 4: one import and one marked line in an upstream CLI service; the CLI may not import Core (`test/import-boundaries.test.ts`), so it calls out to `util/src/kilocode/config/files.ts`. No hook or node for the updater policy."
     }
   }
 }

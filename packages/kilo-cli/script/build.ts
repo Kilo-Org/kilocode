@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-// Builds the Kilo host (packages/kilo-cli/src/index.ts) into a standalone `kilo` executable.
+// Builds the Kilo host (packages/kilo-cli/src/index.ts) into a standalone `kilo2` executable for internal releases.
 //
 // Mirror of packages/cli/script/build.ts (v2.1.0). That script compiles the upstream entry as `opencode` and takes
 // no entry option, and changing it would put a Kilo edit into an upstream file. This one keeps the same plugins,
@@ -9,7 +9,7 @@
 // script directory. Keep it in step with the upstream file.
 //
 // Output layout matches upstream's, so `bun run install:alpha` and the CI smoke test find the binary the same way:
-// <outdir>/cli-<os>-<arch>/bin/kilo. Supported flags: --single, --baseline, --target=, --outdir=, --skip-install,
+// <outdir>/cli-<os>-<arch>/bin/kilo2. Supported flags: --single, --baseline, --target=, --outdir=, --skip-install,
 // --skip-web-ui. The release-only targets that CI does not build (musl, baseline) stay available through --target.
 import { $ } from "bun"
 import { mkdir, rm } from "fs/promises"
@@ -27,8 +27,8 @@ import { NativeArch } from "../../../script/native-arch"
 import { directory } from "../src/env"
 
 const dir = path.resolve(import.meta.dirname, "..")
-// Kilo: the executable is `kilo`. The upstream target names (`opencode-linux-x64`) stay the build's internal names.
-const binary = "kilo"
+// Kilo: internal releases use `kilo2`, separate from v1. The upstream target names stay the build's internal names.
+const binary = "kilo2"
 const upstreamBinary = "opencode"
 const outdir = path.resolve(
   dir,
@@ -196,7 +196,7 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       execArgv: [
         "--smol",
         // Kilo: the user agent names Kilo.
-        `--user-agent=kilo/${Script.channel}/${Script.version}/cli`,
+        `--user-agent=kilo2/${Script.channel}/${Script.version}/cli`,
         "--use-system-ca",
         "--no-warnings",
         "--",

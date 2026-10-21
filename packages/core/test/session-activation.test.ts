@@ -36,7 +36,7 @@ const project = Effect.gen(function* () {
   const tmp = yield* tmpdirScoped()
   yield* Effect.promise(() =>
     Bun.write(
-      path.join(tmp.path, ".kilo/plugins/prompt.ts"), // kilocode_change - Kilo project directory
+      path.join(tmp.path, ".opencode/plugins/prompt.ts"),
       `export default {
         id: "prompt-readiness",
         async setup(ctx) {

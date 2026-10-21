@@ -16,7 +16,6 @@ import { AbsolutePath } from "./schema.js"
 import { ConfigVariable } from "./config/variable.js"
 import { ConfigNormalize } from "./config/normalize.js"
 import { ConfigDiscovery } from "./config/discovery.js"
-import { KiloConfigDiscovery } from "./kilocode/config/discovery.js" // kilocode_change
 import { ConfigWatch } from "./config/watch.js"
 import { WellKnown } from "./wellknown.js"
 import { AppProcess } from "@opencode/util/process"
@@ -104,6 +103,7 @@ export const layer = (options?: Options) =>
       const globalService = yield* Global.Service
       const wellknown = yield* WellKnown.Service
       const processes = yield* AppProcess.Service
+      const layout = yield* ConfigDiscovery.LayoutService // kilocode_change(config) seam
       const reloadLock = Semaphore.makeUnsafe(1)
       const updateLock = Semaphore.makeUnsafe(1)
       const decodeOptions = { errors: "all", onExcessProperty: "ignore" } as const
@@ -209,15 +209,10 @@ export const layer = (options?: Options) =>
         return info ? [new Document({ type: "document", path: plist, info })] : []
       })
 
-      // kilocode_change start - file order is a parameter: Kilo v1 reads .kilocode and .kilo in another order than the global directory
-      const loadDirectory = Effect.fnUntraced(function* (
-        directory: AbsolutePath,
-        names: readonly string[] = ConfigDiscovery.names,
-      ) {
+      const loadDirectory = Effect.fnUntraced(function* (directory: AbsolutePath, names: readonly string[] = layout.names) { // kilocode_change(config) seam
         return [
-          ...(yield* Effect.forEach(names, (file) => loadFile(path.join(directory, file))).pipe(
+          ...(yield* Effect.forEach(names, (file) => loadFile(path.join(directory, file))).pipe( // kilocode_change(config) seam
             Effect.map((configs) => configs.filter((config): config is Document => config !== undefined)),
-      // kilocode_change end
           )),
           new Directory({ type: "directory", path: directory }),
         ]
@@ -279,7 +274,7 @@ export const layer = (options?: Options) =>
         const globalSupplementary = sources.global ? yield* loadDirectory(sources.global).pipe(Effect.orDie) : []
         const projectSupplementary = yield* Effect.forEach(
           sources.project.filter((root) => root.present),
-          (root) => loadDirectory(root.path, KiloConfigDiscovery.configFiles), // kilocode_change - Kilo v1 directory order
+          (root) => loadDirectory(root.path, layout.directoryFiles), // kilocode_change(config) seam
         ).pipe(
           Effect.orDie,
           Effect.map((entries) => entries.flat()),
@@ -388,11 +383,9 @@ export const layer = (options?: Options) =>
       const update = Effect.fn("Config.update")(
         function* (patch: Patch) {
           const directory = initial.global ?? AbsolutePath.make(globalService.config)
-          // kilocode_change start - write the first existing file in Kilo v1 preference order, else kilo.jsonc
-          const candidates = KiloConfigDiscovery.configFiles.map((name) => path.join(directory, name))
+          const candidates = layout.names.map((name) => path.join(directory, name)) // kilocode_change(config) seam
           const filepath =
-            (yield* Effect.filter(candidates, fs.isFile)).at(0) ?? path.join(directory, "kilo.jsonc")
-          // kilocode_change end
+            (yield* Effect.filter(candidates, fs.isFile)).at(-1) ?? path.join(directory, layout.names.at(-1) ?? "opencode.jsonc") // kilocode_change(config) seam
           const text = (yield* fs.readFileStringSafe(filepath)) ?? "{}\n"
           const updated = yield* Effect.try({
             try: () =>
@@ -438,6 +431,7 @@ export function configured(options?: Options) {
       Credential.node,
       WellKnown.node,
       AppProcess.node,
+      ConfigDiscovery.node, // kilocode_change(config) seam
     ],
   })
 }

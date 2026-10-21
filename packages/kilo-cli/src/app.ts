@@ -6,7 +6,7 @@ import { OPENCODE_CHANNEL, OPENCODE_VERSION } from "@opencode/cli/version"
  * with `KILO_CLIENT` (see ./env).
  */
 export const KiloApp = {
-  name: process.env.OPENCODE_CLIENT ?? "kilo",
+  name: process.env.OPENCODE_CLIENT ?? "kilo2",
   version: OPENCODE_VERSION,
   channel: OPENCODE_CHANNEL,
 }

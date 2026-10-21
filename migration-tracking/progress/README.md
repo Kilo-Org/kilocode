@@ -8,20 +8,20 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**88 / 9829 cells done (0.9%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
+**90 / 9829 cells done (0.9%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
 | module | 31 | 3547 | 0.9% |
 | api | 0 | 39 | 0% |
-| patch | 36 | 3445 | 1% |
+| patch | 38 | 3445 | 1.1% |
 | test | 21 | 2798 | 0.8% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
-Landed by rung, for patch cells closed by a done-proof: 20 plugin, 1 host, 0 seam, 0 patch.
+Landed by rung, for patch cells closed by a done-proof: 20 plugin, 3 host, 0 seam, 0 patch.
 
-Ratchets: 9 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/location`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 32 shared patches by rung: 29 seam, 3 patch (`script/upstream/shared-patches.json`).
+Ratchets: 9 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config/discovery`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 27 shared patches by rung: 20 seam, 7 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -33,8 +33,9 @@ One point per day from the committed `progress.json` on the first-parent history
 |---|---:|---:|---:|
 | 2026-10-16 | 12 | 9854 | 0.1% |
 | 2026-10-19 | 87 | 9829 | 0.9% |
-| 2026-10-20 | 87 | 9829 | 0.9% |
-| now | 88 | 9829 | 0.9% |
+| 2026-10-20 | 88 | 9829 | 0.9% |
+| 2026-10-21 | 88 | 9829 | 0.9% |
+| now | 90 | 9829 | 0.9% |
 
 ## Features
 
@@ -154,7 +155,7 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 | cli | 0/216 |  | 0/216 | 0% |
 | server | 0/173 |  | 0/173 | 0% |
 | tui/component | 0/142 |  | 0/142 | 0% |
-| config | 0/130 |  | 0/130 | 0% |
+| config | 2/130 |  | 2/130 | 1.5% |
 | core/test |  | 0/118 | 0/118 | 0% |
 | tui/context | 0/101 |  | 0/101 | 0% |
 | tui/routes | 0/97 |  | 0/97 | 0% |

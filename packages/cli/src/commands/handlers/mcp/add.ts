@@ -4,6 +4,7 @@ import { readFile, stat, writeFile } from "node:fs/promises"
 import { Effect, Option } from "effect"
 import { applyEdits, modify } from "jsonc-parser"
 import { Global } from "@opencode/util/global"
+import { KiloConfigFiles } from "@opencode/util/kilocode/config/files" // kilocode_change(config)
 import { Commands } from "../../commands"
 import { Runtime } from "../../../framework/runtime"
 
@@ -31,20 +32,14 @@ export default Runtime.handler(
       : { type: "local" as const, command, ...(environment ? { environment } : {}) }
 
     const global = yield* Global.Service
-    const configPath = yield* Effect.promise(() => resolveConfigPath(input.global ? global.config : process.cwd(), input.global)) // kilocode_change - global mode
+    const configPath = yield* Effect.promise(() => resolveConfigPath(input.global ? global.config : process.cwd(), input.global)) // kilocode_change(config) - global mode
     yield* Effect.promise(() => write(configPath, input.name, server))
     process.stdout.write(`MCP server "${input.name}" added to ${configPath}` + EOL)
   }),
 )
 
-export async function resolveConfigPath(directory: string, global = false) { // kilocode_change - global mode, like Kilo v1
-  // kilocode_change start - Kilo config names, with .kilo and .kilocode before root files, like Kilo v1; the global directory only reads root files, like Kilo v1
-  const candidates = global
-    ? ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"].map((name) => path.join(directory, name))
-    : [".kilo", ".kilocode", "."].flatMap((parent) =>
-        ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"].map((name) => path.join(directory, parent, name)),
-      )
-  // kilocode_change end
+export async function resolveConfigPath(directory: string, global = false) { // kilocode_change(config) - global mode, like Kilo v1
+  const candidates = KiloConfigFiles.writeCandidates(directory, global) // kilocode_change(config) - Kilo v1 names and order
   for (const candidate of candidates) {
     if (
       await stat(candidate).then(
@@ -54,7 +49,7 @@ export async function resolveConfigPath(directory: string, global = false) { // 
     )
       return candidate
   }
-  return path.join(directory, "kilo.json") // kilocode_change - new files are kilo.json, like Kilo v1
+  return path.join(directory, KiloConfigFiles.newFile) // kilocode_change(config) - internal v2 config filename
 }
 
 async function write(configPath: string, name: string, server: unknown) {

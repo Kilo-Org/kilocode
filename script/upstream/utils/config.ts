@@ -131,6 +131,10 @@ export const defaultConfig: MergeConfig = {
     "salesforce/**",
     // Upstream VS Code extension (Kilo ships its own)
     "sdks/vscode/**",
+    // Upstream's own project config for developing OpenCode: contributor agents, commands, skills, glossaries,
+    // triage tools and sample themes. Kilo reads `.kilo` (migration-context.md decision 12) and keeps its
+    // project config there.
+    ".opencode/**",
   ],
 
   // Branding only (`transforms.branding`).

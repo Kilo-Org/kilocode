@@ -147,10 +147,22 @@ st stop-vscode --cleanup true >/dev/null; st stop >/dev/null; rm -rf $T
 - Headless runs cannot take screenshots. Set `HEADLESS=false` only for visual review, because the window then opens on the user's screen.
 - New tabs get their title a few seconds after the first answer. The active tab title scrolls, so match a short part.
 - Never type real credentials. Stop auth flows before the secret input, or use a test account.
-- CLI data of a test: log in `$T/profile/data/opencode/log/`, database `$T/profile/data/opencode/opencode-local.db`.
+- CLI data of a test: log in `$T/profile/data/kilo2/log/opencode-local.log`, database files in `$T/profile/data/kilo2/`.
 - Parallel agents use different `ID` values.
 
 The VS Code extension (G2) uses the same harness later with `--mode dev`, after the v2 worktree has `packages/kilo-vscode`.
+
+### Debug the server
+
+The TUI is an HTTP client of a server process. `bun dev` uses the profile's background service unless you pass `--standalone`, which starts a private server for that one call. All commands below take the same `KILO_V2_PROFILE` as the test (`P=<profile>`). Outside the checkout, replace `bun dev` with `bun $V2/script/dev-isolated.ts`.
+
+- **Service:** `env KILO_V2_PROFILE=$P bun dev service status|start|restart|stop`. `status` prints the server URL. Stop the service when the test is done.
+- **API:** `bun dev api` sends one request through the same discovery and auth as the CLI, so you can compare what the TUI shows with the server state. Pass a method and path as separate arguments, or an OpenAPI operation ID: `bun dev api get /api/info`, `bun dev api server.info`, `bun dev api get /api/agent`. Use `--param key=value`, `--data '<json>'` and `-H name:value` as needed. `/api/info` returns the server `pid`.
+- **Logs:** one shared file per profile, `$P/data/kilo2/log/opencode-local.log`. Each line is `key=value` text with `level`, `run=<id>` (one process) and `role=cli|server`; filter with `grep 'run=<id>'` or `grep 'role=server'`. For more detail, set `OPENCODE_LOG_LEVEL=DEBUG` before the server starts (restart the service). `--print-logs` copies logs to stderr (server logs only with `--standalone`).
+- **Heap snapshot:** `kill -USR1 <server pid>`. Wait for `heap snapshot written` in the log; the file is `heap-<pid>-<time>.heapsnapshot` in the log directory, and its `path=` is authoritative. A large heap takes seconds to write.
+- **CPU profile:** `kill -PROF <server pid>` records ten seconds. Wait for `CPU profile written`; the file is `cpu-<pid>-<time>.cpuprofile` in the log directory. Open both files in Chrome DevTools.
+- **Inspector:** `env KILO_V2_PROFILE=$P BUN_OPTIONS=--inspect=127.0.0.1:0 bun dev <args>` prints two inspector URLs: the first is the `bun dev` wrapper, the second the CLI process.
+- Heap and CPU signals do not exist on Windows.
 
 ## Test policy
 

@@ -10,6 +10,7 @@ import { stripVTControlCharacters } from "node:util"
 import { RetainedImage } from "./retained-image"
 import { action, parseReleaseVersion, type Policy } from "./updater-action"
 import { errorMessage } from "../util/error"
+import { KiloConfigFiles } from "@opencode/util/kilocode/config/files" // kilocode_change(config)
 
 export const methods = ["curl", "npm", "pnpm", "bun", "yarn", "vp", "brew", "winget"] as const
 
@@ -162,7 +163,7 @@ const make = Effect.gen(function* () {
   const installedWinget = /[\\/]winget[\\/]packages[\\/]anomaly\.opencode_/i.test(executable)
 
   const readPolicy = Effect.fnUntraced(function* () {
-    const values = yield* Effect.forEach(["config.json", "opencode.json", "opencode.jsonc"], (name) =>
+    const values = yield* Effect.forEach(KiloConfigFiles.names, (name) => // kilocode_change(config) - Kilo config names, the last one wins
       fs.readFileString(path.join(global.config, name)).pipe(
         Effect.map(decodePolicy),
         Effect.orElseSucceed(() => undefined),
