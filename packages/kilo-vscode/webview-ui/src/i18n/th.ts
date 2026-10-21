@@ -287,6 +287,10 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "เข้าสู่ระบบ ChatGPT อีกครั้ง จากนั้นส่งข้อความของคุณใหม่เพื่อใช้งานโมเดล Codex ต่อไป",
 
+  "error.upstreamTimeout.title": "เซิร์ฟเวอร์ของผู้ให้บริการ AI หมดเวลารอ",
+  "error.upstreamTimeout.description":
+    "โดยปกตินี่เป็นปัญหาชั่วคราวที่ฝั่งเซิร์ฟเวอร์ ไม่ใช่ปัญหาการตั้งค่าของคุณ Kilo จะลองใหม่ให้อัตโนมัติ แต่หากเกิดขึ้นต่อเนื่อง ให้ส่งข้อความของคุณอีกครั้งหรือตรวจสอบหน้าสถานะของผู้ให้บริการ",
+
   "notification.permission.title": "ต้องการสิทธิ์",
   "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
   "notification.permission.titleSkillShell": 'เรียกใช้คำสั่งเชลล์จากสกิล "{{skill}}" หรือไม่?',

@@ -291,6 +291,10 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Zaloguj się ponownie do ChatGPT, a następnie wyślij wiadomość jeszcze raz, aby kontynuować korzystanie z modeli Codex.",
 
+  "error.upstreamTimeout.title": "Serwer dostawcy AI przekroczył limit czasu",
+  "error.upstreamTimeout.description":
+    "To zwykle tymczasowy problem po stronie serwera, a nie problem z Twoją konfiguracją. Kilo automatycznie ponawia takie błędy, ale jeśli się powtarza, wyślij wiadomość ponownie lub sprawdź stronę statusu dostawcy.",
+
   "notification.permission.title": "Wymagane uprawnienie",
   "notification.permission.titleSubagent": "Wymagane uprawnienie (podagent)",
   "notification.permission.titleSkillShell": "Uruchomić polecenia powłoki z umiejętności „{{skill}}”?",

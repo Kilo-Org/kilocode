@@ -272,6 +272,10 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI 已將您登出",
   "error.providerAuth.chatgpt.description": "請再次登入 ChatGPT，然後重新發送訊息以繼續使用 Codex 模型。",
 
+  "error.upstreamTimeout.title": "AI 服務商的伺服器逾時",
+  "error.upstreamTimeout.description":
+    "這通常是服務端的暫時性問題，並非你的設定有誤。Kilo 會自動重試這類錯誤；若經常發生，請重新傳送訊息或查看服務商的狀態頁面。",
+
   "notification.permission.title": "需要權限",
   "notification.permission.titleSubagent": "需要權限（子代理）",
   "notification.permission.titleSkillShell": "要執行技能「{{skill}}」的 shell 指令嗎？",

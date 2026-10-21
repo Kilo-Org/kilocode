@@ -1499,7 +1499,6 @@ describe("session.message-v2.fromError", () => {
         message: body.error.message,
         isRetryable: true,
         responseBody: JSON.stringify(body),
-        statusCode: 500, // kilocode_change - 5xx status now propagated from stream errors
       },
     })
   })

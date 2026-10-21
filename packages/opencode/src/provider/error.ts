@@ -169,10 +169,6 @@ export function parseStreamError(input: unknown): ParsedStreamError | undefined 
         message: typeof body?.error?.message === "string" ? body?.error?.message : "Server error.",
         isRetryable: true,
         responseBody,
-        // kilocode_change start - propagate 5xx status so mid-stream retry can
-        // classify these as server errors eligible for retry after partial output.
-        statusCode: body?.error?.code === "server_is_overloaded" ? 503 : 500,
-        // kilocode_change end
       }
   }
   return KiloError.fallback(body, responseBody) // kilocode_change - render unlisted provider error codes as clean messages

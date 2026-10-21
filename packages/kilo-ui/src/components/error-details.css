@@ -24,7 +24,6 @@
   overflow-wrap: anywhere;
 }
 
-/* kilocode_change start - secondary hint text inside an error card message */
 .error-card-hint {
   margin: 4px 0 0;
   font-size: var(--font-size-small);
@@ -33,7 +32,6 @@
   line-height: var(--line-height-large);
   overflow-wrap: anywhere;
 }
-/* kilocode_change end */
 
 .error-card [data-component="collapsible"] {
   margin-top: 0;

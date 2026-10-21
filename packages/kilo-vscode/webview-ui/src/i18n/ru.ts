@@ -287,6 +287,10 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Войдите в ChatGPT снова, затем отправьте сообщение еще раз, чтобы продолжить использование моделей Codex.",
 
+  "error.upstreamTimeout.title": "Сервер ИИ-провайдера не ответил вовремя",
+  "error.upstreamTimeout.description":
+    "Обычно это временная проблема на стороне сервера, а не с вашей конфигурацией. Kilo автоматически повторяет такие попытки, но если ошибка повторяется, отправьте сообщение ещё раз или проверьте страницу статуса провайдера.",
+
   "notification.permission.title": "Требуется разрешение",
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
   "notification.permission.titleSkillShell": "Выполнить команды оболочки из навыка «{{skill}}»?",

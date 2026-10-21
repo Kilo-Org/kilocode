@@ -86,17 +86,11 @@ export function parseAssistantError(error: AssistantMessage["error"] | null | un
     try {
       const body = JSON.parse(data.responseBody) as Record<string, unknown>
       const bodyError = body.error as Record<string, unknown> | undefined
-      // kilocode_change start - extract numeric HTTP status from responseBody
-      // when the top-level statusCode is missing (common for stream error
-      // frames that arrive without an HTTP status wrapper). Validate the
-      // range so provider-internal numeric codes are not mistaken for HTTP
-      // status codes.
       if (statusCode === undefined) {
         const rawCode = bodyError?.code ?? body.code
         const numeric = typeof rawCode === "number" ? rawCode : Number(rawCode)
         if (!Number.isNaN(numeric) && numeric >= 100 && numeric < 600) statusCode = numeric
       }
-      // kilocode_change end
       if (bodyError && typeof bodyError.code === "string") {
         code = bodyError.code
       } else if (typeof body.code === "string") {
@@ -140,7 +134,6 @@ export function isUnauthorizedPromotionLimitError(parsed: ParsedError | null): b
   )
 }
 
-// kilocode_change start - detect upstream idle timeout / 504 gateway timeout
 /**
  * Returns true when the parsed error represents an upstream idle timeout
  * (504 Gateway Timeout) or similar server-side timeout that is safe to
@@ -154,4 +147,3 @@ export function isUpstreamTimeoutError(parsed: ParsedError | null): boolean {
   if (parsed.message && /upstream\s+(?:idle\s+)?timeout/i.test(parsed.message)) return true
   return false
 }
-// kilocode_change end

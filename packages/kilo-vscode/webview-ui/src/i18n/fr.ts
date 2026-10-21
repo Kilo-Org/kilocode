@@ -293,6 +293,10 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Reconnectez-vous à ChatGPT, puis renvoyez votre message pour continuer à utiliser les modèles Codex.",
 
+  "error.upstreamTimeout.title": "Le serveur du fournisseur d'IA a expiré",
+  "error.upstreamTimeout.description":
+    "Il s'agit généralement d'un problème temporaire côté serveur, et non d'un problème de configuration. Kilo réessaie automatiquement ces erreurs ; si cela continue, renvoyez votre message ou consultez la page d'état de votre fournisseur.",
+
   "notification.permission.title": "Permission requise",
   "notification.permission.titleSubagent": "Permission requise (sous-agent)",
   "notification.permission.titleSkillShell": "Exécuter les commandes shell de la compétence «\u00a0{{skill}}\u00a0» ?",

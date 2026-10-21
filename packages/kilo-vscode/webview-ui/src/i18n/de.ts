@@ -298,6 +298,10 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Melden Sie sich erneut bei ChatGPT an und senden Sie Ihre Nachricht noch einmal, um weiterhin Codex-Modelle zu verwenden.",
 
+  "error.upstreamTimeout.title": "Der Server des KI-Anbieters hat nicht rechtzeitig geantwortet",
+  "error.upstreamTimeout.description":
+    "Das ist in der Regel ein vorübergehendes Problem auf der Serverseite und kein Fehler in Ihrer Einrichtung. Kilo wiederholt solche Fehler automatisch. Sollte es weiterhin auftreten, senden Sie Ihre Nachricht erneut oder prüfen Sie die Statusseite Ihres Anbieters.",
+
   "notification.permission.title": "Berechtigung erforderlich",
   "notification.permission.titleSubagent": "Berechtigung erforderlich (Subagent)",
   "notification.permission.titleSkillShell": "Shell-Befehle aus dem Skill „{{skill}}“ ausführen?",

@@ -288,6 +288,10 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "دوباره با ChatGPT وارد شوید، سپس پیام خود را مجدداً ارسال کنید تا از مدل‌های Codex استفاده کنید.",
 
+  "error.upstreamTimeout.title": "سرور ارائه‌دهنده هوش مصنوعی زمان پاسخ را از دست داد",
+  "error.upstreamTimeout.description":
+    "این معمولاً مشکلی موقت در سمت سرور است و ربطی به تنظیمات شما ندارد. Kilo این خطاها را به‌طور خودکار دوباره تلاش می‌کند، اما اگر تکرار شود، پیام خود را دوباره ارسال کنید یا صفحه وضعیت ارائه‌دهنده را بررسی کنید.",
+
   "notification.permission.title": "مجوز لازم است",
   "notification.permission.titleSubagent": "مجوز مورد نیاز است (زیرعامل)",
   "notification.permission.titleSkillShell": "دستورهای شل از مهارت «{{skill}}» اجرا شود؟",

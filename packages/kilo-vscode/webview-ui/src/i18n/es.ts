@@ -293,6 +293,10 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Vuelve a iniciar sesión con ChatGPT y envía tu mensaje de nuevo para seguir usando los modelos Codex.",
 
+  "error.upstreamTimeout.title": "El servidor del proveedor de IA agotó el tiempo de espera",
+  "error.upstreamTimeout.description":
+    "Esto suele ser un problema temporal del servidor y no de tu configuración. Kilo reintenta estos errores automáticamente, pero si sigue ocurriendo, vuelve a enviar tu mensaje o consulta la página de estado de tu proveedor.",
+
   "notification.permission.title": "Permiso requerido",
   "notification.permission.titleSubagent": "Permiso requerido (subagente)",
   "notification.permission.titleSkillShell": "¿Ejecutar comandos de shell de la habilidad «{{skill}}»?",

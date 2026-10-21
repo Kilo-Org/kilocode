@@ -290,6 +290,10 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "ChatGPT에 다시 로그인한 후 메시지를 다시 보내 Codex 모델을 계속 사용하세요.",
 
+  "error.upstreamTimeout.title": "AI 제공업체 서버 시간이 초과되었습니다",
+  "error.upstreamTimeout.description":
+    "대개 서버 측의 일시적인 문제이며 설정 문제가 아닙니다. Kilo가 이 오류를 자동으로 다시 시도하지만, 계속 발생한다면 메시지를 다시 보내거나 제공업체의 상태 페이지를 확인하세요.",
+
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
   "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',

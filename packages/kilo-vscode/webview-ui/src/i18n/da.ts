@@ -289,6 +289,10 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Log ind med ChatGPT igen, og send din besked på ny for at fortsætte med at bruge Codex-modeller.",
 
+  "error.upstreamTimeout.title": "AI-udbyderens server fik timeout",
+  "error.upstreamTimeout.description":
+    "Dette er normalt et midlertidigt problem på serversiden og ikke et problem med din opsætning. Kilo prøver denne slags fejl igen automatisk, men hvis det fortsætter, så send din besked igen eller tjek udbyderens statusside.",
+
   "notification.permission.title": "Tilladelse påkrævet",
   "notification.permission.titleSubagent": "Tilladelse påkrævet (underagent)",
   "notification.permission.titleSkillShell": "Kør shell-kommandoer fra færdigheden „{{skill}}“?",

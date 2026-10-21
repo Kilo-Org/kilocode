@@ -14,7 +14,7 @@ import {
   parseProviderAuthError,
   isUnauthorizedPaidModelError,
   isUnauthorizedPromotionLimitError,
-  isUpstreamTimeoutError, // kilocode_change
+  isUpstreamTimeoutError,
 } from "../../utils/errorUtils"
 import ProviderConnectDialog from "../settings/ProviderConnectDialog"
 
@@ -127,8 +127,6 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
           </Button>
         </div>
       </Match>
-      {/* kilocode_change start - show a clear, user-friendly message for
-          upstream idle timeout (504) errors instead of the raw technical text */}
       <Match when={isUpstreamTimeoutError(parsed())}>
         <Card variant="error" class="error-card" role="alert">
           <div class="error-card-body">
@@ -149,7 +147,6 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
           </Collapsible>
         </Card>
       </Match>
-      {/* kilocode_change end */}
     </Switch>
   )
 }

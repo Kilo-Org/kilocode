@@ -171,20 +171,15 @@ const layer = Layer.effect(
         const error = parse(e)
         if (e instanceof KiloSessionProcessor.IncompleteResponseError) return KiloSessionProcessor.blockRetry(error)
         if (attempt.text || attempt.reasoning || attempt.tool) {
-          // kilocode_change start - allow retryable 5xx server errors (e.g. 504
-          // upstream idle timeout) to be retried even after partial output.
-          // Partial output from the failed attempt is discarded before retry
-          // via the tapError cleanup in the request pipeline. Rate-limit (429)
-          // and other 4xx errors still keep their partial output and surface
-          // the error to the user, matching the original behavior.
-          if (
-            MessageV2.APIError.isInstance(error) &&
-            error.data.isRetryable &&
-            error.data.statusCode !== undefined &&
-            error.data.statusCode >= 500
-          ) {
-            return error
-          }
+          // kilocode_change start - allow a transient server-side failure (e.g. 504
+          // upstream idle timeout) to be retried after partial text or reasoning:
+          // the retry drops the failed attempt's parts first, so nothing layers
+          // on top of them. A tool call still blocks the retry: the provider may
+          // have already executed it and the retried request would run the side
+          // effects a second time. KiloSessionProcessor.transient stays in lockstep
+          // with the retry policy that performs the retry, including cases the
+          // matching message patterns cover (#15042).
+          if (!attempt.tool && KiloSessionProcessor.transient(error)) return error
           // kilocode_change end
           return KiloSessionProcessor.blockRetry(error)
         }
@@ -975,8 +970,11 @@ const layer = Layer.effect(
         return yield* Effect.gen(function* () {
           // kilocode_change start - publish retry state consistently for provider and empty-response retries
           const retries = { provider: 0 }
-          // kilocode_change start - shared baseline for discarding partial output before retry
-          const requestBaseline = new Set<string>()
+          // kilocode_change start - shared baseline; holds every part that existed
+          // when the step started. `request` drops parts added after this set on
+          // its first re-run, so a retry cleans up the failed attempt's output
+          // before regenerating from the same request.
+          const baseline = new Set<string>()
           // kilocode_change end
           const setRetry = (info: {
             attempt: number
@@ -993,8 +991,44 @@ const layer = Layer.effect(
             })
           }
 
+          const discard = Effect.fn("SessionProcessor.discardIncomplete")(function* (
+            baseline: Set<string>,
+            retain?: (part: MessageV2.Part) => boolean, // kilocode_change - keep parts a failed attempt already showed
+          ) {
+            yield* Effect.forEach(
+              Object.values(ctx.toolcalls),
+              (call) => Deferred.succeed(call.done, undefined).pipe(Effect.ignore),
+              { concurrency: "unbounded" },
+            )
+            const parts = yield* MessageV2.parts(ctx.assistantMessage.id).pipe(
+              Effect.provideService(Database.Service, database),
+            )
+            yield* Effect.forEach(
+              parts.filter((part) => !baseline.has(part.id) && !retain?.(part)),
+              (part) =>
+                session.removePart({ sessionID: ctx.sessionID, messageID: ctx.assistantMessage.id, partID: part.id }),
+              { concurrency: 1 },
+            )
+            ctx.currentText = undefined
+            ctx.reasoningMap = {}
+            ctx.toolcalls = {}
+            ctx.toolmeta = {}
+            ctx.assistantMessage.finish = undefined
+          })
+
           const request = () =>
             Effect.gen(function* () {
+              // kilocode_change start - the retried attempt re-runs this effect,
+              // so this is the only point that can clean up ahead of the next
+              // attempt. Baseline is unchanged on re-entry (no parts were added
+              // before the retry started), so this drops exactly the failed
+              // attempt's visible output; reasoning is retained because the
+              // failed-attempt reasoning was already streamed and closed. A
+              // no-op on the first run, and a terminal failure keeps the last
+              // attempt's output for the user.
+              yield* discard(baseline, (part) => part.type === "reasoning")
+              attempt = KiloSessionProcessor.attempt()
+              // kilocode_change end
               ctx.currentText = undefined
               ctx.reasoningMap = {}
               yield* status.set(ctx.sessionID, { type: "busy" })
@@ -1038,24 +1072,6 @@ const layer = Layer.effect(
                 (cause) => Effect.fail(Cause.squash(cause)),
               ),
               Effect.tapError(() => Effect.forEach(Object.keys(ctx.reasoningMap), finishReasoning)), // kilocode_change - close failed-attempt reasoning before retry resets tracking
-              // kilocode_change start - discard partial output before retrying a
-              // retryable transient error (e.g. 504 upstream idle timeout) that
-              // arrived mid-stream. Without this cleanup, the retried attempt
-              // would layer new parts on top of the failed attempt's partial
-              // output. Only discards when there is partial output (baseline
-              // non-empty) and the error is retryable; failures in discard must
-              // not block the retry.
-              Effect.tapError((e) =>
-                Effect.gen(function* () {
-                  if (e instanceof KiloSessionProcessor.IncompleteResponseError) return
-                  const error = retryParse(e)
-                  if (!MessageV2.APIError.isInstance(error) || !error.data.isRetryable) return
-                  if (requestBaseline.size === 0) return
-                  yield* discard(requestBaseline).pipe(Effect.provideService(Database.Service, database))
-                  attempt = KiloSessionProcessor.attempt()
-                }).pipe(Effect.catch(() => Effect.void)),
-              ),
-              // kilocode_change end
               Effect.retry(
                 SessionRetry.policy({
                   provider: input.model.providerID,
@@ -1074,45 +1090,15 @@ const layer = Layer.effect(
               ),
             )
 
-          const discard = Effect.fn("SessionProcessor.discardIncomplete")(function* (baseline: Set<string>) {
-            yield* Effect.forEach(
-              Object.values(ctx.toolcalls),
-              (call) => Deferred.succeed(call.done, undefined).pipe(Effect.ignore),
-              { concurrency: "unbounded" },
-            )
-            const parts = yield* MessageV2.parts(ctx.assistantMessage.id).pipe(
-              Effect.provideService(Database.Service, database),
-            )
-            yield* Effect.forEach(
-              parts.filter((part) => !baseline.has(part.id)),
-              (part) =>
-                session.removePart({ sessionID: ctx.sessionID, messageID: ctx.assistantMessage.id, partID: part.id }),
-              { concurrency: 1 },
-            )
-            ctx.currentText = undefined
-            ctx.reasoningMap = {}
-            ctx.toolcalls = {}
-            ctx.toolmeta = {}
-            ctx.assistantMessage.finish = undefined
-          })
-
-          const recover = () => {
-            const baseline = new Set<string>()
-            return KiloSessionProcessor.recover({
+          const recover = () =>
+            KiloSessionProcessor.recover({
               run: Effect.fn("SessionProcessor.incompleteAttempt")(function* () {
                 baseline.clear()
-                // kilocode_change start - sync shared baseline for mid-stream retry cleanup
-                requestBaseline.clear()
-                // kilocode_change end
                 for (const part of yield* MessageV2.parts(ctx.assistantMessage.id).pipe(
                   Effect.provideService(Database.Service, database),
                 )) {
                   baseline.add(part.id)
-                  // kilocode_change start - sync shared baseline for mid-stream retry cleanup
-                  requestBaseline.add(part.id)
-                  // kilocode_change end
                 }
-                attempt = KiloSessionProcessor.attempt()
                 yield* request()
               }),
               replayable: () =>
@@ -1126,7 +1112,6 @@ const layer = Layer.effect(
               discard: () => discard(baseline),
               set: setRetry,
             })
-          }
 
           yield* recover().pipe(Effect.catch(halt), Effect.ensuring(cleanup()))
           // kilocode_change end

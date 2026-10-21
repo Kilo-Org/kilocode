@@ -288,6 +288,10 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Codex modellerini kullanmaya devam etmek için ChatGPT ile tekrar giriş yapın ve mesajınızı yeniden gönderin.",
 
+  "error.upstreamTimeout.title": "Yapay zeka sağlayıcısının sunucusu zaman aşımına uğradı",
+  "error.upstreamTimeout.description":
+    "Bu genellikle sunucu tarafındaki geçici bir sorundur; kurulumunuzla ilgili bir sorun değildir. Kilo bu tür hataları otomatik olarak yeniden dener, ancak sorun devam ederse mesajınızı tekrar gönderin veya sağlayıcınızın durum sayfasını kontrol edin.",
+
   "notification.permission.title": "İzin gerekli",
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",
   "notification.permission.titleSkillShell": "“{{skill}}” becerisindeki kabuk komutları çalıştırılsın mı?",

@@ -296,6 +296,10 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Logg på ChatGPT igjen, og send meldingen din på nytt for å fortsette å bruke Codex-modeller.",
 
+  "error.upstreamTimeout.title": "Tjenerserveren til AI-leverandøren fikk tidsavbrudd",
+  "error.upstreamTimeout.description":
+    "Dette er vanligvis et midlertidig problem på serversiden, ikke et problem med oppsettet ditt. Kilo prøver disse feilene på nytt automatisk, men hvis det fortsetter, kan du sende meldingen på nytt eller sjekke leverandørens statusside.",
+
   "notification.permission.title": "Tillatelse påkrevd",
   "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",
   "notification.permission.titleSkillShell": "Kjøre skallkommandoer fra ferdigheten «{{skill}}»?",

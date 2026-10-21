@@ -290,6 +290,10 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Ponovo se prijavite na ChatGPT, a zatim ponovo pošaljite poruku da nastavite koristiti Codex modele.",
 
+  "error.upstreamTimeout.title": "Server pružatelja AI usporio je",
+  "error.upstreamTimeout.description":
+    "Ovo je obično privremeni problem na strani servera, a ne problem vaše konfiguracije. Kilo automatski ponavlja ove greške, ali ako se to nastavlja, ponovo pošaljite poruku ili provjerite statusnu stranicu pružatelja.",
+
   "notification.permission.title": "Potrebna dozvola",
   "notification.permission.titleSubagent": "Potrebna dozvola (podagent)",
   "notification.permission.titleSkillShell": "Pokrenuti shell komande iz vještine „{{skill}}”?",

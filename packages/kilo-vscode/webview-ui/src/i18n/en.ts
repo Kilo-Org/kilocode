@@ -284,11 +284,9 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Sign in with ChatGPT again, then send your message again to keep using Codex models.",
 
-  // kilocode_change start - upstream timeout (504) error display
   "error.upstreamTimeout.title": "The AI provider's server timed out",
   "error.upstreamTimeout.description":
     "This is usually a temporary server-side issue — not a problem with your setup. Kilo automatically retries these errors, but if it keeps happening, try sending your message again or check your provider's status page.",
-  // kilocode_change end
 
   "notification.permission.title": "Permission required",
   "notification.permission.titleSubagent": "Permission required (subagent)",

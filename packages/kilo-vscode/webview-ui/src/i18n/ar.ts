@@ -282,6 +282,10 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "سجل الدخول باستخدام ChatGPT مرة أخرى، ثم أرسل رسالتك مرة أخرى لمواصلة استخدام نماذج Codex.",
 
+  "error.upstreamTimeout.title": "انتهت مهلة خادم مزوّد الذكاء الاصطناعي",
+  "error.upstreamTimeout.description":
+    "هذه عادةً مشكلة مؤقتة في الخادم وليست مشكلة في إعداداتك. يعيد Kilo المحاولة تلقائيًا لهذه الأخطاء، لكن إذا استمرت ف أعد إرسال رسالتك أو تحقّق من صفحة حالة المزوّد.",
+
   "notification.permission.title": "مطلوب إذن",
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
   "notification.permission.titleSkillShell": "هل تريد تشغيل أوامر الصدفة من المهارة «{{skill}}»؟",

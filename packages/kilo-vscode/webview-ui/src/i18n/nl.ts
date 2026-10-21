@@ -292,6 +292,10 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Meld je opnieuw aan bij ChatGPT en stuur je bericht nog een keer om Codex-modellen te blijven gebruiken.",
 
+  "error.upstreamTimeout.title": "De server van de AI-provider had een time-out",
+  "error.upstreamTimeout.description":
+    "Dit is meestal een tijdelijk probleem aan de serverkant en geen probleem met je instellingen. Kilo probeert dit soort fouten automatisch opnieuw, maar als het blijft gebeuren, stuur je bericht opnieuw of controleer je de statuspagina van je provider.",
+
   "notification.permission.title": "Toestemming vereist",
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",
   "notification.permission.titleSkillShell": "Shell-opdrachten uit vaardigheid “{{skill}}” uitvoeren?",
