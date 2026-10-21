@@ -4,6 +4,7 @@ import { OpenCode } from "@opencode/client"
 import { Service } from "@opencode/client/effect/service"
 import { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
 import { Effect } from "effect"
+import { UserError } from "../../error"
 
 // Shared parts of the `kilo marketplace` handlers. Each handler connects to the running server (starting it when
 // needed) and calls the `kilocode.marketplace` RPC for the current directory.
@@ -18,9 +19,20 @@ export const connect = Effect.gen(function* () {
 export type Connection = Effect.Success<typeof connect>
 
 export const call = <A>(run: () => Promise<A>) =>
-  Effect.tryPromise({ try: run, catch: (error) => new Error(error instanceof Error ? error.message : String(error)) })
+  Effect.tryPromise({ try: run, catch: (error) => (error instanceof Error ? error : new Error(String(error))) })
 
 export const print = (lines: readonly string[]) => Effect.sync(() => process.stdout.write(lines.join(EOL) + EOL))
+
+export async function validateList(value: unknown) {
+  const result = await KiloMarketplaceRpc.Definition.methods.list.output["~standard"].validate(value)
+  if (result.issues)
+    throw new UserError({
+      message:
+        "Incompatible marketplace response from the background server. Restart it with `kilo service restart` " +
+        "(or `bun run dev service restart` in this checkout) and retry.",
+    })
+  return result.value
+}
 
 export function scopesOf(installed: readonly KiloMarketplaceRpc.Installed[], item: KiloMarketplaceRpc.Item) {
   return installed

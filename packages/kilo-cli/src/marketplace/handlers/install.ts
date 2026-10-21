@@ -1,5 +1,6 @@
 import { Runtime } from "@opencode/cli/framework/runtime"
 import { Effect, Option } from "effect"
+import { UserError } from "../../error"
 import { Marketplace } from "../commands"
 import { call, connect, print } from "./client"
 
@@ -21,8 +22,8 @@ export default Runtime.handler(
             ]
             if (registries.length === 1) return Effect.succeed(registries[0])
             if (registries.length === 0)
-              return Effect.fail(new Error(`No ${input.kind} ${input.id} in any marketplace`))
-            return Effect.fail(new Error(`${input.id} is in ${registries.join(", ")}; pass --registry`))
+              return Effect.fail(new UserError({ message: `No ${input.kind} ${input.id} in any marketplace` }))
+            return Effect.fail(new UserError({ message: `${input.id} is in ${registries.join(", ")}; pass --registry` }))
           }),
         ),
     })

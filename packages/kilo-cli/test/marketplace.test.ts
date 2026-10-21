@@ -6,13 +6,28 @@ import { storage } from "@opencode/core/plugin/host"
 import { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
 import { createRoutes } from "@opencode/server/routes"
 import { LayerNode } from "@opencode/util/effect/layer-node"
-import { Context, Effect, Layer, References } from "effect"
+import { Context, Effect, Layer, Option, References } from "effect"
 import { HttpEffect, HttpRouter, HttpServer } from "effect/http"
 import { mkdtemp, readdir, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { McpRegistry } from "../../kilo-plugin/src/marketplace/mcp-registry"
 import { KiloHost } from "../src/host"
+import { validateList } from "../src/marketplace/handlers/client"
+import { selectUninstall } from "../src/marketplace/handlers/uninstall"
+
+test.each([[], { items: [] }, { items: [], failures: [undefined] }])(
+  "rejects incompatible marketplace list responses with restart instructions: %j",
+  async (response) => {
+    await expect(validateList(response)).rejects.toThrow("bun run dev service restart")
+  },
+)
+
+test("accepts empty marketplace lists and preserves registry warnings", async () => {
+  expect(await validateList({ items: [], failures: [] })).toEqual({ items: [], failures: [] })
+  const response = { items: [], failures: [{ registry: "kilo", message: "Registry unavailable" }] }
+  expect(await validateList(response)).toEqual(response)
+})
 
 // The `kilocode.marketplace` RPC end to end: the host registers the marketplace plugin, the generated client calls it,
 // and a local stand-in for the Kilo API serves the catalog YAML and the skill archive.
@@ -173,8 +188,19 @@ test("lists, installs and uninstalls marketplace skills and MCP servers through 
               type: "not_found",
             })
 
+            const selected = selectUninstall(await rpc.installed({}, options), {
+              kind: "skill",
+              id: "demo",
+              project: false,
+              global: false,
+              registry: Option.none(),
+            })
+            expect(selected.scope).toBe("project")
             expect(
-              await rpc.uninstall({ registry: "kilo", kind: "skill", id: "demo", scope: "project" }, options),
+              await rpc.uninstall(
+                { registry: selected.registry, kind: selected.kind, id: selected.id, scope: selected.scope },
+                options,
+              ),
             ).toEqual({})
             expect(await readdir(path.join(directory, ".kilo2", "skills"))).toEqual([])
             expect(await rpc.installed({}, options)).toEqual([])

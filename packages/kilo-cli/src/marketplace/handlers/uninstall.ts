@@ -1,5 +1,7 @@
 import { Runtime } from "@opencode/cli/framework/runtime"
+import { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
 import { Effect, Option } from "effect"
+import { UserError } from "../../error"
 import { Marketplace } from "../commands"
 import { call, connect, print, type Connection } from "./client"
 
@@ -7,33 +9,49 @@ export default Runtime.handler(
   Marketplace.commands.uninstall,
   Effect.fn("cli.marketplace.uninstall")(function* (input) {
     const marketplace = yield* connect
-    const scope = input.project ? "project" : "global"
     const records = yield* call(() => marketplace.rpc.installed({}, marketplace.options))
-    const matches = records.filter(
-      (record) =>
-        record.kind === input.kind &&
-        record.id === input.id &&
-        record.scope === scope &&
-        Option.match(input.registry, { onNone: () => true, onSome: (registry) => registry === record.registry }),
-    )
-    if (matches.length === 0) {
-      return yield* Effect.fail(new Error(`${input.id} is not installed from a marketplace (${scope})`))
-    }
-    if (matches.length > 1) {
-      const registries = matches.map((record) => record.registry).join(", ")
-      return yield* Effect.fail(new Error(`${input.id} is installed from ${registries}; pass --registry`))
-    }
-    const server = matches[0].server
-    if (server) yield* signOut(marketplace, server)
+    const record = yield* Effect.try({ try: () => selectUninstall(records, input), catch: (error) => error })
+    if (record.server) yield* signOut(marketplace, record.server)
     yield* call(() =>
       marketplace.rpc.uninstall(
-        { registry: matches[0].registry, kind: input.kind, id: input.id, scope },
+        { registry: record.registry, kind: record.kind, id: record.id, scope: record.scope },
         marketplace.options,
       ),
     )
-    yield* print([`Uninstalled ${input.kind} ${input.id} (${scope})`])
+    yield* print([`Uninstalled ${record.kind} ${record.id} (${record.scope})`])
   }),
 )
+
+export function selectUninstall(
+  records: readonly KiloMarketplaceRpc.Installed[],
+  input: Runtime.Input<typeof Marketplace.commands.uninstall>,
+) {
+  if (input.project && input.global) throw new UserError({ message: "Pass only one of --project or --global." })
+  const scope = input.project ? "project" : input.global ? "global" : undefined
+  const recordsForItem = records.filter(
+    (record) =>
+      record.kind === input.kind &&
+      record.id === input.id &&
+      Option.match(input.registry, { onNone: () => true, onSome: (registry) => registry === record.registry }),
+  )
+  const matches = recordsForItem.filter((record) => scope === undefined || record.scope === scope)
+  if (matches.length === 0) {
+    const hint =
+      recordsForItem.length > 0
+        ? ` It is installed in ${recordsForItem[0].scope} scope; rerun with --${recordsForItem[0].scope}.`
+        : " Run `market installed` to see installed items and their scopes."
+    throw new UserError({
+      message: `${input.id} is not installed from a marketplace${scope ? ` (${scope})` : ""}.${hint}`,
+    })
+  }
+  if (new Set(matches.map((record) => record.scope)).size > 1)
+    throw new UserError({ message: `${input.id} is installed in both scopes; pass --project or --global.` })
+  if (matches.length > 1)
+    throw new UserError({
+      message: `${input.id} is installed from ${matches.map((record) => record.registry).join(", ")}; pass --registry`,
+    })
+  return matches[0]
+}
 
 // Removes the server's stored OAuth credentials first, as `mcp logout` and the TUI do: the plugin API cannot remove
 // credentials, so the client does it. Best effort: a server without a sign-in has nothing to remove.

@@ -23,6 +23,7 @@ import { EffectFlock } from "@opencode/util/effect-flock"
 import { Heap } from "@opencode/cli/heap"
 import { CpuProfile } from "@opencode/cli/cpu-profile"
 import { KiloApp } from "./app"
+import { formatError } from "./error"
 import { KiloCommands } from "./marketplace/commands"
 
 ensurePluginRuntime()
@@ -164,7 +165,7 @@ Effect.gen(function* () {
     Effect.sync(() => {
       if (Cause.hasInterruptsOnly(cause)) return
       if (!getErrorReported(Cause.squash(cause))) return
-      process.stderr.write(Cause.pretty(cause) + "\n")
+      process.stderr.write(formatError(cause) + "\n") // Kilo: expected user errors do not need a stack trace.
     }),
   ),
   NodeRuntime.runMain({ disableErrorReporting: true }),

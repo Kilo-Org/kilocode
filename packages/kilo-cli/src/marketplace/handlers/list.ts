@@ -1,7 +1,7 @@
 import { Runtime } from "@opencode/cli/framework/runtime"
 import { Effect, Option } from "effect"
 import { Marketplace } from "../commands"
-import { call, connect, print, scopesOf } from "./client"
+import { call, connect, print, scopesOf, validateList } from "./client"
 
 export default Runtime.handler(
   Marketplace.commands.list,
@@ -16,7 +16,9 @@ export default Runtime.handler(
     const [lists, installed] = yield* call(() =>
       Promise.all([
         Promise.all(
-          kinds.map((kind) => marketplace.rpc.list({ kind, refresh: input.refresh, query }, marketplace.options)),
+          kinds.map((kind) =>
+            marketplace.rpc.list({ kind, refresh: input.refresh, query }, marketplace.options).then(validateList),
+          ),
         ),
         marketplace.rpc.installed({}, marketplace.options),
       ]),

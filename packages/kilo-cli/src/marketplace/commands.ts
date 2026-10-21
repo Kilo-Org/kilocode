@@ -62,11 +62,15 @@ export const Marketplace = Spec.make("marketplace", {
       },
     }),
     Spec.make("uninstall", {
-      description: "Remove a marketplace item and everything its install wrote",
+      description: "Remove a marketplace item, inferring its scope when unambiguous",
       params: {
         kind,
         id: Argument.String("id").pipe(Argument.withDescription("Item id")),
         project,
+        global: Flag.Boolean("global").pipe(
+          Flag.withDescription("Remove the global installation instead of inferring the scope"),
+          Flag.withDefault(false),
+        ),
         registry,
       },
     }),
