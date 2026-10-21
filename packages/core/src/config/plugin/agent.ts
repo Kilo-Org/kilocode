@@ -67,15 +67,8 @@ export const Plugin = define({
             )
           })
         }).pipe(Effect.map((documents) => documents.flat()))
-        const permissions = expandPermissions(
-          documents.flatMap((document) => document.info.permissions ?? []),
-          global.home,
-        )
         const configuredDefault = Config.latest(documents, "default_agent")
         if (configuredDefault !== undefined) draft.default(AgentV2.ID.make(configuredDefault))
-        for (const current of draft.list()) {
-          draft.update(current.id, (agent) => agent.permissions.push(...permissions))
-        }
 
         for (const document of documents) {
           for (const [id, item] of Object.entries(document.info.agents ?? {})) {
@@ -85,9 +78,7 @@ export const Plugin = define({
               continue
             }
 
-            const exists = draft.get(agentID) !== undefined
             draft.update(agentID, (agent) => {
-              if (!exists) agent.permissions.push(...permissions)
               if (item.model !== undefined) {
                 const model = ModelV2.parse(item.model)
                 agent.model = { id: model.modelID, providerID: model.providerID, variant: agent.model?.variant }
@@ -105,10 +96,25 @@ export const Plugin = define({
               if (item.hidden !== undefined) agent.hidden = item.hidden
               if (item.color !== undefined) agent.color = item.color
               if (item.steps !== undefined) agent.steps = item.steps
-              if (item.permissions !== undefined) {
-                agent.permissions.push(...expandPermissions(item.permissions, global.home))
-              }
             })
+          }
+        }
+
+        // Documents arrive in ascending priority and the last matching rule wins, so apply their
+        // permission rules in reverse: a user-global rule has to stay ahead of a repository rule.
+        // Statement order inside each document stays unchanged, and a document's own agent rules
+        // still follow its global rules.
+        for (const document of documents.toReversed()) {
+          const permissions = expandPermissions(document.info.permissions ?? [], global.home)
+          for (const agent of draft.list()) {
+            draft.update(agent.id, (item) => item.permissions.push(...permissions))
+          }
+          for (const [id, item] of Object.entries(document.info.agents ?? {})) {
+            if (item.permissions === undefined) continue
+            const agentID = AgentV2.ID.make(id)
+            if (draft.get(agentID) === undefined) continue
+            const rules = expandPermissions(item.permissions, global.home)
+            draft.update(agentID, (agent) => agent.permissions.push(...rules))
           }
         }
       }),

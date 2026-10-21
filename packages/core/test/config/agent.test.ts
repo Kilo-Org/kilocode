@@ -45,7 +45,7 @@ describe("ConfigAgentPlugin.Plugin", () => {
     }),
   )
 
-  it.effect("applies all global permissions before agent-specific permissions", () =>
+  it.effect("applies config permissions in reverse document priority with agent rules last", () =>
     Effect.gen(function* () {
       const agents = yield* AgentV2.Service
       const build = AgentV2.ID.make("build")
@@ -104,8 +104,8 @@ describe("ConfigAgentPlugin.Plugin", () => {
       if (!buildAgent) throw new Error("expected configured build agent")
       expect(buildAgent.permissions).toEqual([
         { action: "bash", resource: "*", effect: "allow" },
-        { action: "bash", resource: "*", effect: "ask" },
         { action: "read", resource: "*", effect: "allow" },
+        { action: "bash", resource: "*", effect: "ask" },
         { action: "bash", resource: "git *", effect: "allow" },
       ])
       expect(PermissionV2.evaluate("bash", "git status", buildAgent.permissions).effect).toBe("allow")
@@ -120,18 +120,63 @@ describe("ConfigAgentPlugin.Plugin", () => {
         model: { providerID: "openrouter", id: "openai/gpt-5", variant: "high" },
       })
       expect(reviewer.permissions).toEqual([
-        { action: "bash", resource: "*", effect: "ask" },
         { action: "read", resource: "*", effect: "allow" },
+        { action: "bash", resource: "*", effect: "ask" },
         { action: "edit", resource: "*", effect: "deny" },
         { action: "read", resource: "*", effect: "deny" },
       ])
       expect(PermissionV2.evaluate("read", "README.md", reviewer.permissions).effect).toBe("deny")
       expect((yield* agents.get(AgentV2.ID.make("late")))?.permissions).toEqual([
-        { action: "bash", resource: "*", effect: "ask" },
         { action: "read", resource: "*", effect: "allow" },
         { action: "edit", resource: "*", effect: "allow" },
+        { action: "bash", resource: "*", effect: "ask" },
       ])
       expect(yield* agents.get(AgentV2.ID.make("removed"))).toBeUndefined()
+    }),
+  )
+
+  it.effect("keeps user-global permission rules ahead of repository permission rules", () =>
+    Effect.gen(function* () {
+      const agents = yield* AgentV2.Service
+      const build = AgentV2.ID.make("build")
+      yield* agents.transform((editor) => editor.update(build, () => {}))
+
+      const config = Config.Service.of({
+        entries: () =>
+          Effect.succeed([
+            new Config.Document({
+              type: "document",
+              info: decode({
+                permissions: [
+                  { action: "bash", resource: "*", effect: "ask" },
+                  { action: "edit", resource: "*", effect: "deny" },
+                ],
+              }),
+            }),
+            new Config.Document({
+              type: "document",
+              info: decode({
+                permissions: [
+                  { action: "bash", resource: "*", effect: "allow" },
+                  { action: "read", resource: "*", effect: "allow" },
+                ],
+                agents: {
+                  build: { permissions: [{ action: "edit", resource: "*", effect: "allow" }] },
+                },
+              }),
+            }),
+          ]),
+      })
+
+      yield* ConfigAgentPlugin.Plugin.effect(host({ agent: agentHost(agents) })).pipe(
+        Effect.provideService(Config.Service, config),
+      )
+
+      const agent = yield* agents.get(build)
+      if (!agent) throw new Error("expected configured build agent")
+      expect(PermissionV2.evaluate("bash", "bun test", agent.permissions).effect).toBe("ask")
+      expect(PermissionV2.evaluate("edit", "src/index.ts", agent.permissions).effect).toBe("deny")
+      expect(PermissionV2.evaluate("read", "src/index.ts", agent.permissions).effect).toBe("allow")
     }),
   )
 
