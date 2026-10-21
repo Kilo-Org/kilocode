@@ -1,0 +1,33 @@
+import { homedir } from "node:os"
+import { commands, window, workspace, type ExtensionContext } from "vscode"
+import { chat } from "./chat"
+import { command, manager } from "./server"
+
+export function activate(context: ExtensionContext) {
+  const output = window.createOutputChannel("Kilo Code (v2)")
+  const storage = context.globalStorageUri.fsPath
+  const directory = workspace.workspaceFolders?.[0]?.uri.fsPath ?? homedir()
+  const server = manager({
+    command: () => command({ extension: context.extensionPath, storage, env: process.env }),
+    cwd: directory,
+    env: process.env,
+    log: (text) => output.append(text),
+  })
+  const view = chat({ context, server, directory })
+
+  context.subscriptions.push(
+    output,
+    window.registerWebviewViewProvider("kilo-code.v2.chat", view.provider, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+    commands.registerCommand("kilo-code.v2.newSession", async () => {
+      await commands.executeCommand("kilo-code.v2.chat.focus")
+      await view.post({ type: "command", name: "newSession" })
+    }),
+    // The webview reconnects on its own: its event stream fails, and the next request starts a new server.
+    commands.registerCommand("kilo-code.v2.restartServer", () => server.stop()),
+    { dispose: () => void server.stop() },
+  )
+}
+
+export function deactivate() {}

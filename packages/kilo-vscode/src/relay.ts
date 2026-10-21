@@ -1,0 +1,59 @@
+// Host side of the webview fetch bridge (relay) (see webview/transport.ts). It adds the server credentials, sends the request
+// to the server and streams the response back to the webview.
+import type { Request, ToHost, ToWebview } from "./protocol"
+
+export type Target = { url: string; authorization: string }
+
+export function bridge(input: {
+  target: () => Promise<Target>
+  post: (message: ToWebview) => void
+  open?: (url: string) => void
+  fetch?: typeof globalThis.fetch
+}) {
+  const requests = new Map<number, AbortController>()
+  const run = input.fetch ?? globalThis.fetch
+
+  const send = async (message: Request) => {
+    const abort = new AbortController()
+    requests.set(message.id, abort)
+    const result = await (async () => {
+      const target = await input.target()
+      const headers = new Headers(message.headers)
+      headers.set("authorization", target.authorization)
+      const response = await run(target.url + message.path, {
+        method: message.method,
+        headers,
+        body: message.body,
+        signal: abort.signal,
+      })
+      input.post({
+        type: "response",
+        id: message.id,
+        status: response.status,
+        statusText: response.statusText,
+        headers: [...response.headers.entries()],
+      })
+      if (!response.body) return
+      for await (const data of response.body) input.post({ type: "chunk", id: message.id, data })
+    })().then(
+      () => undefined,
+      (error: unknown) => error,
+    )
+    requests.delete(message.id)
+    if (abort.signal.aborted) return
+    if (result === undefined) return input.post({ type: "end", id: message.id })
+    input.post({ type: "error", id: message.id, message: result instanceof Error ? result.message : String(result) })
+  }
+
+  return {
+    receive(message: ToHost) {
+      if (message.type === "fetch") return void send(message)
+      if (message.type === "abort") return requests.get(message.id)?.abort()
+      input.open?.(message.url)
+    },
+    dispose() {
+      requests.forEach((abort) => abort.abort())
+      requests.clear()
+    },
+  }
+}

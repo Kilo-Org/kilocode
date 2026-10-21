@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 90,
+    "done": 94,
     "total": 9829,
-    "percent": 0.9,
+    "percent": 1,
     "dropped": 25,
     "kinds": [
       {
         "kind": "module",
-        "done": 31,
+        "done": 35,
         "total": 3547
       },
       {
@@ -5983,12 +5983,12 @@
     },
     {
       "feature": "vscode",
-      "done": 0,
+      "done": 4,
       "total": 2057,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 4,
           "total": 1439
         },
         "api": {
@@ -6145,6 +6145,10 @@
     "module:packages/kilo-gateway/test/fim.test.ts",
     "module:packages/kilo-gateway/test/mistral-fim-endpoint.test.ts",
     "module:packages/kilo-gateway/test/responses.test.ts",
+    "module:packages/kilo-vscode/script/build.ts",
+    "module:packages/kilo-vscode/script/launch.ts",
+    "module:packages/kilo-vscode/src/extension.ts",
+    "module:packages/kilo-vscode/src/util/process.ts",
     "module:packages/opencode/src/kilocode/agent/index.ts",
     "module:packages/opencode/src/kilocode/balance-refresh.ts",
     "module:packages/opencode/src/kilocode/kilo-errors.ts",

@@ -1,0 +1,450 @@
+body {
+}
+:root {
+  color-scheme: light dark;
+  font-family: var(--vscode-font-family, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-foreground);
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+body {
+  padding: 0;
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+button,
+input,
+textarea {
+  border-radius: 2px;
+}
+button {
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  border: 1px solid transparent;
+  padding: 4px 9px;
+  line-height: 1.4;
+}
+button:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+button.secondary {
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+  background: var(--vscode-button-secondaryBackground);
+}
+button.secondary:hover:not(:disabled) {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+input,
+textarea {
+  min-width: 0;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, transparent);
+  padding: 5px 7px;
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+}
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--vscode-focusBorder);
+  flex-shrink: 0;
+}
+code,
+pre {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.95em;
+}
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 8px 0;
+}
+p {
+  margin: 8px 0;
+}
+summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+small {
+  font-size: 0.9em;
+}
+.muted {
+  color: var(--vscode-descriptionForeground);
+}
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.header strong {
+  font-size: 15px;
+}
+.version {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+.new-session {
+  margin-left: auto;
+}
+.connection {
+  overflow-wrap: anywhere;
+}
+.scroll {
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
+}
+.sessions,
+.transcript {
+  flex: 1;
+}
+.sessions {
+  padding: 6px 12px 12px;
+}
+.section-label {
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 6px 0 10px;
+}
+.session-row {
+  cursor: pointer;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-input-border, transparent));
+}
+.session-row:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+.session-row-title,
+.session-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.session-row-title {
+  flex-wrap: wrap;
+}
+.title-button {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: transparent;
+  color: var(--vscode-foreground);
+  padding: 3px 0;
+  min-width: 40px;
+}
+.title-button:hover:not(:disabled) {
+  background: transparent;
+  text-decoration: underline;
+}
+.rename-button {
+  font-size: 11px;
+  padding: 2px 6px;
+}
+.rename-input {
+  flex: 1;
+  min-width: 60px;
+}
+.session-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  padding-top: 4px;
+}
+.session-meta time {
+  margin-left: auto;
+}
+.session-heading {
+  padding: 6px 12px 10px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--vscode-panel-border, transparent);
+}
+.session-heading .title-button {
+  font-weight: 600;
+}
+.empty {
+  padding: 16px 0;
+}
+.transcript {
+  padding: 0 12px;
+}
+.transcript-content {
+  padding: 10px 0 18px;
+}
+.load-earlier {
+  display: block;
+  margin: 0 auto 16px;
+}
+.vscode-session-turn {
+  margin: 0 0 18px;
+  min-width: 0;
+}
+.vscode-session-turn[data-row="user"] {
+  padding: 10px;
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border, transparent);
+  border-radius: 3px;
+}
+.turn-label {
+  font-weight: 600;
+  font-size: 11px;
+  margin-bottom: 7px;
+}
+.prose {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.55;
+}
+.prose + .prose {
+  margin-top: 8px;
+}
+.pending {
+  opacity: 0.65;
+}
+.reasoning {
+  margin: 8px 0;
+  font-size: 0.95em;
+}
+.reasoning .prose {
+  padding: 8px 0;
+}
+.tool {
+  border: 1px solid var(--vscode-panel-border, var(--vscode-input-border, transparent));
+  border-radius: 3px;
+  padding: 8px;
+  margin-top: 10px;
+  min-width: 0;
+}
+.tool summary strong {
+  font-weight: 600;
+}
+.tool-input {
+  display: inline;
+  padding-left: 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.tool-status {
+  display: block;
+  font-size: 11px;
+  padding-top: 4px;
+}
+.tool pre {
+  max-height: 240px;
+  overflow-y: auto;
+}
+.notice {
+  margin: 8px 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.working {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  font-size: 12px;
+}
+.working-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.working span:last-child:not(.working-dot) {
+  overflow-wrap: anywhere;
+}
+.error {
+  color: var(--vscode-errorForeground, var(--vscode-foreground));
+}
+.banner {
+  padding: 10px 12px;
+  background: var(--vscode-inputValidation-errorBackground);
+  border: 1px solid var(--vscode-inputValidation-errorBorder, transparent);
+  overflow-wrap: anywhere;
+}
+.error-line {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.error-line span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.composer {
+  padding: 0 12px 12px;
+  flex-shrink: 0;
+  max-height: 65%;
+  overflow-y: auto;
+}
+.prompt-input-container {
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border, transparent));
+  background: var(--vscode-input-background);
+  border-radius: 3px;
+}
+.prompt-input-container:focus-within {
+  border-color: var(--vscode-focusBorder);
+}
+.prompt-input {
+  display: block;
+  width: 100%;
+  min-height: 72px;
+  max-height: 240px;
+  resize: vertical;
+  border: none;
+  padding: 10px;
+  line-height: 1.5;
+}
+.prompt-input:focus-visible {
+  outline: none;
+}
+.prompt-input-hint-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  padding: 7px;
+  flex-wrap: wrap;
+}
+.prompt-hint {
+  margin-right: auto;
+  font-size: 10px;
+}
+.dock {
+  border: 1px solid var(--vscode-panel-border, var(--vscode-input-border, transparent));
+  background: var(--vscode-editor-background);
+  border-radius: 3px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.dock h2 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+}
+.resource {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 6px 0;
+}
+.actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.question-fields {
+  padding: 0;
+  margin: 0;
+  border: none;
+  min-width: 0;
+}
+.question-field {
+  padding: 8px 0;
+  margin: 0 0 6px;
+  border: none;
+  min-width: 0;
+}
+.question-field legend {
+  padding: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.question-field p {
+  margin-top: 0;
+  font-size: 12px;
+}
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 5px 0;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.option input {
+  margin: 2px 0 0;
+}
+.option small {
+  display: block;
+  margin-top: 3px;
+}
+.validation {
+  font-size: 11px;
+}
+
+@media (max-width: 320px) {
+  .header {
+    gap: 6px;
+    padding: 8px;
+  }
+  .sessions,
+  .transcript {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  .composer {
+    padding: 0 8px 8px;
+  }
+  .prompt-hint {
+    width: 100%;
+  }
+}

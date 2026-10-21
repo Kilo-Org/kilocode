@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "kilo-code-v2",
+  "displayName": "Kilo Code (v2 preview)",
+  "description": "Kilo Code on the Kilo v2 server",
+  "publisher": "kilocode",
+  "version": "0.0.1",
+  "private": true,
+  "license": "MIT",
+  "type": "commonjs",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "kilo-code-v2",
+          "title": "Kilo Code (v2)",
+          "icon": "assets/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "kilo-code-v2": [
+        {
+          "type": "webview",
+          "id": "kilo-code.v2.chat",
+          "name": "Chat"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "kilo-code.v2.newSession",
+        "title": "New Session",
+        "category": "Kilo Code (v2)",
+        "icon": "$(add)"
+      },
+      {
+        "command": "kilo-code.v2.restartServer",
+        "title": "Restart Server",
+        "category": "Kilo Code (v2)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "kilo-code.v2.newSession",
+          "when": "view == kilo-code.v2.chat",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "bun script/build.ts",
+    "package": "bun script/build.ts",
+    "extension": "bun script/launch.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p webview",
+    "lint": "oxlint --config ../../.oxlintrc.json src webview script test",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@opencode/client": "workspace:*",
+    "@opencode/schema": "workspace:*",
+    "solid-js": "catalog:"
+  },
+  "devDependencies": {
+    "@babel/core": "7.29.7",
+    "@babel/preset-typescript": "7.27.1",
+    "@tsconfig/bun": "catalog:",
+    "@types/babel__core": "7.20.5",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@types/vscode": "1.95.0",
+    "@typescript/native": "catalog:",
+    "babel-preset-solid": "1.9.15"
+  }
+}
