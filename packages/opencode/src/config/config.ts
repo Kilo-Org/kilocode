@@ -648,12 +648,13 @@ const layer = Layer.effect(
           return result
         }
 
-        // Permission entries in the merged map resolve per key and pattern, so keep global and
-        // project contributions apart and apply project entries first: a user-global entry decides
-        // the result for a key and pattern that a project file also sets. Every merge before this
-        // point is global-scoped.
-        const globalPermissions: ConfigPermissionV1.Info[] = result.permission ? [result.permission] : []
-        const localPermissions: ConfigPermissionV1.Info[] = []
+        // Permission entries in the merged map resolve per key and pattern, so keep scoped
+        // contributions apart and apply project entries first: a user-global entry decides the
+        // result for a key and pattern that a project file also sets. The permission rules merged
+        // before this point come from the legacy `.kilocodeignore` migration, which is
+        // project-scoped, so they join the project side.
+        const globalPermissions: ConfigPermissionV1.Info[] = []
+        const localPermissions: ConfigPermissionV1.Info[] = result.permission ? [result.permission] : []
         const mergePermissions = (list: ConfigPermissionV1.Info[]) =>
           list.reduce<ConfigPermissionV1.Info>((acc, item) => mergeDeep(acc, item), {})
 

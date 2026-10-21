@@ -84,6 +84,26 @@ test("a scalar project bash permission maps to the '*' pattern under the local s
   })
 })
 
+test("project permission entries apply after legacy ignore rules", async () => {
+  await using tmp = await tmpdir()
+  const dir = path.join(tmp.path, "a")
+  const kilo = path.join(dir, ".kilo")
+  await fs.mkdir(kilo, { recursive: true })
+  await Bun.write(path.join(dir, ".kilocodeignore"), "secrets/\n")
+  await Bun.write(path.join(kilo, "kilo.json"), JSON.stringify({ permission: { read: { "*": "deny" } } }))
+
+  await provideTestInstance({
+    directory: dir,
+    fn: async () => {
+      const cfg = await Effect.runPromise(
+        Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(testLayer)),
+      )
+      expect(cfg.permission?.read).toMatchObject({ "*": "deny" })
+      expect(cfg.permission_origins?.read?.["*"]).toBe("local")
+    },
+  })
+})
+
 test("global permission entries decide a key and pattern that a project file also sets", async () => {
   await using tmp = await tmpdir()
   const global = path.join(tmp.path, "global")
