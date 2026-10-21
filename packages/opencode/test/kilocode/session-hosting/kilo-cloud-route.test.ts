@@ -1,0 +1,139 @@
+import { Auth } from "@/auth"
+import { PROVIDER, provider as kiloCloud } from "@/kilocode/session-hosting/kilo-cloud"
+import type { HostedSessionID, NativeRequest } from "@/kilocode/session-hosting/types"
+import { expect } from "bun:test"
+import { Effect, Layer } from "effect"
+import { testEffect } from "../../lib/effect"
+
+const it = testEffect(Layer.empty)
+
+const SESSION = "ses_00000000000000000000000001"
+const OTHER = "ses_00000000000000000000000002"
+const TOKEN = "kilo-test-bearer-value"
+
+type Call = { method: string; path: string; search: URLSearchParams; auth: string | null; body: string }
+
+function harness() {
+  const calls: Call[] = []
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    async fetch(request) {
+      const url = new URL(request.url)
+      calls.push({
+        method: request.method,
+        path: url.pathname,
+        search: url.searchParams,
+        auth: request.headers.get("authorization"),
+        body: request.method === "POST" ? await request.text() : "",
+      })
+      return Response.json({ ok: true })
+    },
+  })
+  return { url: `http://127.0.0.1:${server.port}`, calls, stop: () => server.stop(true) }
+}
+
+function auth() {
+  const info = new Auth.Api({ type: "api", key: TOKEN })
+  return {
+    get: (id: string) => Effect.succeed(id === "kilo" ? info : undefined),
+    all: () => Effect.succeed<Record<string, Auth.Info>>({ kilo: info }),
+    set: () => Effect.void,
+    remove: () => Effect.void,
+  } satisfies Auth.Interface
+}
+
+const hosted: HostedSessionID = { providerID: PROVIDER, sessionID: SESSION }
+
+function native(path: string, options: { method?: string; query?: string; body?: string } = {}): NativeRequest {
+  const url = new URL(path + (options.query ? `?${options.query}` : ""), "http://localhost")
+  const headers = new Headers({ accept: "application/json" })
+  if (options.body) headers.set("content-type", "application/json")
+  return {
+    session: hosted,
+    method: options.method ?? (options.body ? "POST" : "GET"),
+    path: url.pathname,
+    query: url.searchParams,
+    headers,
+    ...(options.body ? { body: options.body } : {}),
+  }
+}
+
+it.effect("maps only the proven native allowlist onto the Cloud facade", () => {
+  const app = harness()
+  const cloud = kiloCloud({ auth: auth(), env: { CLOUD_AGENT_NEXT_BASE_URL: app.url } })
+  return Effect.gen(function* () {
+    const route = cloud.route
+    if (!route) throw new Error("kilo-cloud must implement native routing")
+
+    yield* route(native(`/session/${SESSION}`))
+    yield* route(native(`/session/${SESSION}/message`, { query: "limit=2&before=cursor-1&directory=%2Ftmp" }))
+    yield* route(native(`/session/${SESSION}/prompt_async`, { body: '{"parts":[]}' }))
+    yield* route(native(`/session/${SESSION}/abort`, { body: "{}" }))
+    yield* route(native(`/session/${SESSION}/command`, { body: '{"command":"init"}' }))
+    yield* route(native(`/session/${SESSION}/todo`))
+    yield* route(native(`/session/${SESSION}/diff`))
+    yield* route(native("/session/status", { query: "workspace=wrk_att_x" }))
+    yield* route(native("/question"))
+    yield* route(native("/permission"))
+    yield* route(native("/event"))
+    yield* route(native("/question/que_1/reply", { method: "POST", body: '{"answers":[["a"]]}' }))
+    yield* route(native("/question/que_1/reject", { method: "POST", body: "{}" }))
+    yield* route(native("/permission/per_1/reply", { method: "POST", body: '{"reply":"once"}' }))
+
+    expect(app.calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      `GET /kilo/session/${SESSION}`,
+      `GET /kilo/session/${SESSION}/message`,
+      `POST /kilo/session/${SESSION}/prompt_async`,
+      `POST /kilo/session/${SESSION}/abort`,
+      `POST /kilo/session/${SESSION}/command`,
+      `GET /kilo/session/${SESSION}/todo`,
+      `GET /kilo/session/${SESSION}/diff`,
+      "GET /kilo/session/status",
+      "GET /kilo/question",
+      "GET /kilo/permission",
+      "GET /kilo/event",
+      "POST /kilo/question/que_1/reply",
+      "POST /kilo/question/que_1/reject",
+      "POST /kilo/permission/per_1/reply",
+    ])
+
+    // Id-scoped reads keep pagination only; every other selector is dropped.
+    expect(Object.fromEntries(app.calls[1]!.search)).toEqual({ limit: "2", before: "cursor-1" })
+    expect([...app.calls[0]!.search.keys()]).toEqual([])
+    // Collection-scoped routes carry exactly Cloud's public directory selector.
+    expect(Object.fromEntries(app.calls[7]!.search)).toEqual({
+      directory: `/cloud-agent/sessions/${SESSION}`,
+    })
+    expect(Object.fromEntries(app.calls[10]!.search)).toEqual({
+      directory: `/cloud-agent/sessions/${SESSION}`,
+    })
+    expect(Object.fromEntries(app.calls[11]!.search)).toEqual({
+      directory: `/cloud-agent/sessions/${SESSION}`,
+    })
+
+    // Fresh provider auth, never the local client's.
+    expect(app.calls.every((call) => call.auth === `Bearer ${TOKEN}`)).toBe(true)
+    expect(app.calls[2]!.body).toBe('{"parts":[]}')
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("rejects unsupported and mismatched native requests without a Cloud request", () => {
+  const app = harness()
+  const cloud = kiloCloud({ auth: auth(), env: { CLOUD_AGENT_NEXT_BASE_URL: app.url } })
+  return Effect.gen(function* () {
+    const route = cloud.route
+    if (!route) throw new Error("kilo-cloud must implement native routing")
+
+    const unsupported = yield* Effect.flip(route(native(`/session/${SESSION}/children`)))
+    expect(unsupported.code).toBe("invalid_request")
+
+    const mismatched = yield* Effect.flip(route(native(`/session/${OTHER}/message`)))
+    expect(mismatched.code).toBe("invalid_request")
+
+    const unknown = yield* Effect.flip(route(native("/session/not-a-route")))
+    expect(unknown.code).toBe("invalid_request")
+
+    expect(app.calls).toHaveLength(0)
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})

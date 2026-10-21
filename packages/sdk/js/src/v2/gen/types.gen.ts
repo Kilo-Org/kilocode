@@ -99,6 +99,7 @@ export type Event =
   | EventSessionDrained1
   | EventSessionDrainInterrupted1
   | EventSessionWakeup1
+  | EventSessionHostAvailability1
   | EventServerInstanceDisposed
   | EventSessionTurnOpen
   | EventSessionTurnClose
@@ -219,6 +220,7 @@ export type Event =
   | EventSessionDrained
   | EventSessionDrainInterrupted
   | EventSessionWakeup
+  | EventSessionHostAvailability
 
 export type QuestionReplied = {
   sessionID: string
@@ -1269,6 +1271,7 @@ export type GlobalEvent = {
     | EventSessionDrained
     | EventSessionDrainInterrupted
     | EventSessionWakeup
+    | EventSessionHostAvailability
     | {
         id: string
         type: "models-dev.refreshed"
@@ -2183,6 +2186,16 @@ export type GlobalEvent = {
         properties: {
           sessionID: string
           pending: number
+        }
+      }
+    | {
+        id: string
+        type: "session.host.availability"
+        properties: {
+          providerID: string
+          sessionID?: string
+          state: "available" | "unavailable"
+          reason?: string
         }
       }
     | SyncEventSessionCreated
@@ -4818,6 +4831,149 @@ export type KilocodeMigrateSessionsDiscoverResult = {
   dropped: Array<string>
 }
 
+export type SessionHostProviderId = string
+
+export type SessionHostAvailability =
+  | {
+      state: "available"
+    }
+  | {
+      state: "unavailable"
+      reason: "signed_out" | "rejected" | "unreachable"
+      message: string
+    }
+
+export type SessionHostTransport =
+  | {
+      state: "unknown"
+    }
+  | {
+      state: "reachable"
+      checkedAt: number
+    }
+  | {
+      state: "unreachable"
+      checkedAt: number
+      message: string
+    }
+
+export type SessionHostProviderStatus = {
+  id: SessionHostProviderId
+  default: boolean
+  availability: SessionHostAvailability
+  transport: SessionHostTransport
+}
+
+export type SessionHostProviders = {
+  providers: Array<SessionHostProviderStatus>
+}
+
+export type UnauthorizedError = {
+  _tag: "UnauthorizedError"
+  message: string
+}
+
+export type UpstreamError = {
+  _tag: "UpstreamError"
+  message: string
+  service?: string
+  status?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+}
+
+export type ServiceUnavailableError = {
+  _tag: "ServiceUnavailableError"
+  message: string
+  service?: string
+}
+
+export type SessionHostPaymentRequiredError = {
+  code: string
+  message: string
+}
+
+export type SessionHostRemoteSessionId = string
+
+export type SessionHostIdentity = {
+  providerID: SessionHostProviderId
+  sessionID: SessionHostRemoteSessionId
+}
+
+export type SessionHostSession = {
+  id: SessionHostIdentity
+  session: Session
+}
+
+export type SessionHostSessionPage = {
+  items: Array<SessionHostSession>
+}
+
+export type SessionHostRepository =
+  | {
+      type: "github"
+      repo: string
+      branch?: string
+    }
+  | {
+      type: "gitlab"
+      url: string
+      branch?: string
+    }
+  | {
+      type: "git"
+      url: string
+      branch?: string
+    }
+
+export type SessionHostOrganizationId = string
+
+export type SessionHostOrigin = "cli" | "desktop"
+
+export type SessionHostStartInput = {
+  repository: SessionHostRepository
+  prompt: string
+  agent: {
+    mode: string
+    model: string
+  }
+  organizationID?: SessionHostOrganizationId
+  origin?: SessionHostOrigin
+  operationKey?: string
+  messageID?: string
+}
+
+export type SessionHostStartResult = {
+  session: SessionHostIdentity
+  messageID: string
+  delivery: "sent" | "queued"
+  replayed: boolean
+}
+
+export type SessionHostTranscriptPage = {
+  items: Array<{
+    info: Message
+    parts: Array<Part>
+  }>
+  cursor?: string
+  omitted?: number
+}
+
+export type SessionHostAttachmentId = string
+
+export type SessionHostAttached = {
+  attachmentID: SessionHostAttachmentId
+  session: SessionHostIdentity
+  expiresAt: number
+}
+
+export type SessionHostDetached = {
+  detached: boolean
+}
+
+export type SessionHostGoneError = {
+  code: string
+  message: string
+}
+
 export type KilocodeSessionImportResult = {
   ok: boolean
   id: string
@@ -4838,11 +4994,6 @@ export type MemoryApiServerError = {
     code: string
     message: string
   }
-}
-
-export type UnauthorizedError = {
-  _tag: "UnauthorizedError"
-  message: string
 }
 
 export type SessionsResponse = {
@@ -4872,12 +5023,6 @@ export type PromptInput = {
   text: string
   files?: Array<PromptInputFileAttachment>
   agents?: Array<PromptAgentAttachment>
-}
-
-export type ServiceUnavailableError = {
-  _tag: "ServiceUnavailableError"
-  message: string
-  service?: string
 }
 
 export type MessageNotFoundError = {
@@ -5010,6 +5155,26 @@ export type QuestionRejected2 = {
   }
 }
 
+export type SessionHostAvailability2 = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "session.host.availability"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    providerID: string
+    sessionID?: string
+    state: "available" | "unavailable"
+    reason?: string
+  }
+}
+
 export type V2Event =
   | ModelsDevRefreshed
   | IntegrationUpdated
@@ -5105,6 +5270,7 @@ export type V2Event =
   | SessionDrained
   | SessionDrainInterrupted
   | SessionWakeup
+  | SessionHostAvailability2
 
 export type V2EventStream = string
 
@@ -6581,6 +6747,17 @@ export type EventSessionWakeup = {
   properties: {
     sessionID: string
     pending: number
+  }
+}
+
+export type EventSessionHostAvailability = {
+  id: string
+  type: "session.host.availability"
+  properties: {
+    providerID: string
+    sessionID?: string
+    state: "available" | "unavailable"
+    reason?: string
   }
 }
 
@@ -10682,6 +10859,17 @@ export type EventSessionWakeup1 = {
   properties: {
     sessionID: string
     pending: number
+  }
+}
+
+export type EventSessionHostAvailability1 = {
+  id: string
+  type: "session.host.availability"
+  properties: {
+    providerID: string
+    sessionID?: string
+    state: "available" | "unavailable"
+    reason?: string
   }
 }
 
@@ -18546,6 +18734,343 @@ export type SandboxToggleResponses = {
 }
 
 export type SandboxToggleResponse = SandboxToggleResponses[keyof SandboxToggleResponses]
+
+export type SessionHostProvidersData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/kilocode/session-host/provider"
+}
+
+export type SessionHostProvidersErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostProvidersError = SessionHostProvidersErrors[keyof SessionHostProvidersErrors]
+
+export type SessionHostProvidersResponses = {
+  /**
+   * Registered session host providers
+   */
+  200: SessionHostProviders
+}
+
+export type SessionHostProvidersResponse = SessionHostProvidersResponses[keyof SessionHostProvidersResponses]
+
+export type SessionHostListData = {
+  body?: never
+  path?: never
+  query?: {
+    limit?: string
+  }
+  url: "/kilocode/session-host/session"
+}
+
+export type SessionHostListErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostListError = SessionHostListErrors[keyof SessionHostListErrors]
+
+export type SessionHostListResponses = {
+  /**
+   * Hosted sessions
+   */
+  200: SessionHostSessionPage
+}
+
+export type SessionHostListResponse = SessionHostListResponses[keyof SessionHostListResponses]
+
+export type SessionHostStartData = {
+  body?: SessionHostStartInput
+  path?: never
+  query?: never
+  url: "/kilocode/session-host/session"
+}
+
+export type SessionHostStartErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostStartError = SessionHostStartErrors[keyof SessionHostStartErrors]
+
+export type SessionHostStartResponses = {
+  /**
+   * Hosted session started
+   */
+  200: SessionHostStartResult
+}
+
+export type SessionHostStartResponse = SessionHostStartResponses[keyof SessionHostStartResponses]
+
+export type SessionHostGetData = {
+  body?: never
+  path: {
+    providerID: SessionHostProviderId
+    sessionID: string
+  }
+  query?: never
+  url: "/kilocode/session-host/session/{providerID}/{sessionID}"
+}
+
+export type SessionHostGetErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostGetError = SessionHostGetErrors[keyof SessionHostGetErrors]
+
+export type SessionHostGetResponses = {
+  /**
+   * Hosted session
+   */
+  200: SessionHostSession
+}
+
+export type SessionHostGetResponse = SessionHostGetResponses[keyof SessionHostGetResponses]
+
+export type SessionHostTranscriptData = {
+  body?: never
+  path: {
+    providerID: SessionHostProviderId
+    sessionID: string
+  }
+  query?: {
+    limit?: string
+    before?: string
+  }
+  url: "/kilocode/session-host/session/{providerID}/{sessionID}/message"
+}
+
+export type SessionHostTranscriptErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostTranscriptError = SessionHostTranscriptErrors[keyof SessionHostTranscriptErrors]
+
+export type SessionHostTranscriptResponses = {
+  /**
+   * Hosted transcript page
+   */
+  200: SessionHostTranscriptPage
+}
+
+export type SessionHostTranscriptResponse = SessionHostTranscriptResponses[keyof SessionHostTranscriptResponses]
+
+export type SessionHostAttachData = {
+  body?: never
+  path: {
+    providerID: SessionHostProviderId
+    sessionID: string
+  }
+  query?: {
+    organizationID?: SessionHostOrganizationId
+  }
+  url: "/kilocode/session-host/session/{providerID}/{sessionID}/attach"
+}
+
+export type SessionHostAttachErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostAttachError = SessionHostAttachErrors[keyof SessionHostAttachErrors]
+
+export type SessionHostAttachResponses = {
+  /**
+   * Hosted session attached
+   */
+  200: SessionHostAttached
+}
+
+export type SessionHostAttachResponse = SessionHostAttachResponses[keyof SessionHostAttachResponses]
+
+export type SessionHostDetachData = {
+  body?: never
+  path: {
+    attachmentID: SessionHostAttachmentId
+  }
+  query?: never
+  url: "/kilocode/session-host/attachment/{attachmentID}"
+}
+
+export type SessionHostDetachErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * SessionHostGoneError
+   */
+  410: SessionHostGoneError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostDetachError = SessionHostDetachErrors[keyof SessionHostDetachErrors]
+
+export type SessionHostDetachResponses = {
+  /**
+   * Attachment disposed
+   */
+  200: SessionHostDetached
+}
+
+export type SessionHostDetachResponse = SessionHostDetachResponses[keyof SessionHostDetachResponses]
 
 export type KilocodeSessionImportProjectData = {
   body?: {
