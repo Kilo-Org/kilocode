@@ -46,6 +46,7 @@ describe("ConfigAgentPlugin.Plugin", () => {
   )
 
   it.effect("applies config permissions in reverse document priority with agent rules last", () =>
+    // kilocode_change
     Effect.gen(function* () {
       const agents = yield* AgentV2.Service
       const build = AgentV2.ID.make("build")
@@ -104,8 +105,10 @@ describe("ConfigAgentPlugin.Plugin", () => {
       if (!buildAgent) throw new Error("expected configured build agent")
       expect(buildAgent.permissions).toEqual([
         { action: "bash", resource: "*", effect: "allow" },
+        // kilocode_change start
         { action: "read", resource: "*", effect: "allow" },
         { action: "bash", resource: "*", effect: "ask" },
+        // kilocode_change end
         { action: "bash", resource: "git *", effect: "allow" },
       ])
       expect(PermissionV2.evaluate("bash", "git status", buildAgent.permissions).effect).toBe("allow")
@@ -120,21 +123,26 @@ describe("ConfigAgentPlugin.Plugin", () => {
         model: { providerID: "openrouter", id: "openai/gpt-5", variant: "high" },
       })
       expect(reviewer.permissions).toEqual([
+        // kilocode_change start
         { action: "read", resource: "*", effect: "allow" },
         { action: "bash", resource: "*", effect: "ask" },
+        // kilocode_change end
         { action: "edit", resource: "*", effect: "deny" },
         { action: "read", resource: "*", effect: "deny" },
       ])
       expect(PermissionV2.evaluate("read", "README.md", reviewer.permissions).effect).toBe("deny")
       expect((yield* agents.get(AgentV2.ID.make("late")))?.permissions).toEqual([
+        // kilocode_change start
         { action: "read", resource: "*", effect: "allow" },
         { action: "edit", resource: "*", effect: "allow" },
         { action: "bash", resource: "*", effect: "ask" },
+        // kilocode_change end
       ])
       expect(yield* agents.get(AgentV2.ID.make("removed"))).toBeUndefined()
     }),
   )
 
+  // kilocode_change start - permission rules apply in reverse document priority
   it.effect("keeps user-global permission rules ahead of repository permission rules", () =>
     Effect.gen(function* () {
       const agents = yield* AgentV2.Service
@@ -179,6 +187,7 @@ describe("ConfigAgentPlugin.Plugin", () => {
       expect(PermissionV2.evaluate("read", "src/index.ts", agent.permissions).effect).toBe("allow")
     }),
   )
+  // kilocode_change end
 
   it.effect("maps configured agent fields and preserves an unspecified model variant", () =>
     Effect.gen(function* () {
