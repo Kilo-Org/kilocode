@@ -23,7 +23,7 @@ Decision: for VS Code, D-5 is answered as a native rebuild with no v1 wire facad
 | Response body | The resource itself | An envelope: `{ data }`, `{ data, cursor: { previous, next } }` for pages, or `{ location, data }` for location-scoped reads (`Location.response`) |
 | Events | `GET /global/event`, SSE of `{ directory, project, workspace, payload }`; `payload.type === "sync"` wraps durable events (`session.updated.1`, `message.part.updated.1`) | `GET /api/event`, SSE of `{ id, created, type, location, data, metadata }`. One stream for all locations. Volatile: no replay, a slow consumer fails the stream, and events during a disconnect are lost. After a reconnect the client reloads state with list calls, or replays the durable events of one session with `GET /api/experimental/session/:sessionID/log?after=<seq>&follow=true` (SSE; durable events carry `durable: { aggregateID, seq, version }`) |
 | Health | `GET /global/health` | `GET /api/info` (server name, version, channel) |
-| Kilo routes | Hono routes under `/kilo/*`, `/kilocode/*` and others | Plugin RPC: `POST /api/rpc/:rpcID/:method?location[directory]=<path>`, body `{ "input": ... }`, response `{ "output": ... }`. RPC events arrive on `/api/event` with `type: "rpc.<rpcID>.<event>"`. The only Kilo RPC on v2 today is `kilocode.gateway` |
+| Kilo routes | Hono routes under `/kilo/*`, `/kilocode/*` and others | Plugin RPC: `POST /api/rpc/:rpcID/:method?location[directory]=<path>`, body `{ "input": ... }`, response `{ "output": ... }`. RPC events arrive on `/api/event` with `type: "rpc.<rpcID>.<event>"`. The Kilo RPCs on v2 today are `kilocode.gateway` and `kilocode.handshake` |
 | Message IDs | Client may set `messageID` | Client may set `id` on `session.prompt`; a retry with the same ID is idempotent |
 | Pages | `?before=<messageID>&limit=`, next cursor in the `X-Next-Cursor` header | Opaque `cursor` from `cursor.next` or `cursor.previous` in the response body; `order` only on the first page |
 
@@ -128,7 +128,7 @@ Settings are read-only on v2 until a Kilo settings RPC exists. It replaces the v
 | instance.dispose | `POST /instance/dispose` | location.reload | As above |
 | instance.reload | `POST /instance/reload` | location.reload | As above |
 | global.event | `GET /global/event` | event.subscribe | `GET /api/event`, see "Wire basics" |
-| experimental.capabilities.get | `GET /experimental/capabilities` | needs Kilo RPC | Capability and version handshake: U-E1-08 (server), U-E6-02 (client), shape per Q-G2-02. Until then `GET /api/info` gives the version and a `kilocode.gateway` call proves a Kilo host |
+| experimental.capabilities.get | `GET /experimental/capabilities` | kilocode.handshake.get for identity; needs Kilo RPC for capabilities | `POST /api/rpc/kilocode.handshake/get` body `{ "input": {} }` returns `{ product: "kilo", version, channel }`. An upstream server answers `rpc.unavailable`, a v1 server 404. Feature capabilities: U-E1-08, U-E6-02, shape per Q-G2-02 |
 
 ### Kilo Gateway, account and generation
 
