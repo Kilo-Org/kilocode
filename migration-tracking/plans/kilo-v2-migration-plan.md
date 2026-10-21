@@ -918,8 +918,6 @@ flowchart LR
 | #14023 | Tracker → U-E10-01 | |
 | #14024 | Tracker → U-E10-02 | |
 | #14371 | U-E2-01 | |
-| #14372 | Not needed | Native v2 compacts before each step, recovers from context overflow and shrinks oversized summary requests (`core/src/session/compaction.ts`). `compaction.threshold_percent` is a config key for U-E1-07 |
-| #14373 | Not needed | Native v2 takes the snapshot in parallel with the model request (`core/src/session/runner/step.ts`), so a slow repository no longer blocks the turn; `snapshots: false` disables it |
 | #14374 | U-E2-04 | |
 | #14375 | U-E9-09 | |
 | #14376 | U-E11-04 | |
@@ -987,7 +985,6 @@ flowchart LR
 | #15173 | U-E0-02 | |
 | #15175 | U-E0-03 | |
 | #15176 | U-E0-04 | |
-| #15177 | Not needed | The v1 reference fixtures served U-E2-01 to U-E2-04; two of them are native now and the other two are small Kilo additions checked against current upstream |
 | #15229 | U-E0-01 + placement automation (`v2-host-strategy.md` §9 step 2) | Work merged in #15232 |
 | #15230 | Progress map adopts the host strategy (`v2-host-strategy.md` §9 step 2b; feeds U-L3-01) | Work merged in #15231 |
 | #15244 | E0 foundation: Kilo plugin startup ratchet and Gateway startup (startup part of U-E9-01) | Work merged in #15246, #15248 |
@@ -1004,7 +1001,6 @@ Issues that map to more than one unit (#14378, #14391, #14395, #14399, #14413, #
 | N2 ratchet | U-L3-01 |
 | N3 sync automation and e2e lane | U-L1-01 + U-E0-04 |
 | N4 delta sweep | U-L2-01 |
-| N5 v1 reference fixtures | Not needed: U-E2-02 and U-E2-03 are native in v2; U-E2-01 and U-E2-04 are small Kilo additions tested against current upstream |
 | N6a package assessment | U-E9-14 (`kilo-web-ui`), U-E8-03 (`kilo-console` retired, docs deploy), U-L5-01 (docs content) |
 | N6b package imports onto the old branch | Not needed as a unit: `kilo-jetbrains` lands in U-E7-02, `kilo-docs` in U-E8-03 |
 | N7 progress-plan and issue alignment | Not needed: this plan replaces the progress plan; issue-body updates are a user follow-up |
