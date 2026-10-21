@@ -38,7 +38,8 @@ export function translate(env: Record<string, string | undefined>) {
 
 /**
  * Kilo v2's app directory name (D-4): config, data, cache, state and tmp are `<XDG base>/kilo2`, apart from both
- * upstream's `opencode` and v1 Kilo's `kilo` directories, until storage consolidation (U-E8-02). The upstream
+ * upstream's `opencode` and v1 Kilo's `kilo` directories during internal releases. Release migration to `kilo`
+ * is explicit (U-E3-03, U-E8-02); v1 storage remains separate while v1 clients ship. The upstream
  * global paths read it when their module loads (`packages/util/src/global.ts`), so every path follows it: the
  * `Global` service, logs, locks, tmp and the database. Every process the host starts runs this module first.
  */

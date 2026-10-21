@@ -65,70 +65,76 @@ const directories = (root: string) =>
   })
 
 describe("Kilo config discovery", () => {
-  it.live("reads kilo.json and kilo.jsonc at each level, farthest first and .jsonc after .json", () =>
+  it.live("reads kilo2.json and kilo2.jsonc at each level, farthest first and .jsonc after .json", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       const project = path.join(tmp.path, "repo")
       const nested = path.join(project, "app")
       const global = path.join(tmp.path, "global")
-      yield* write(path.join(project, "kilo.jsonc"), { shell: "root-jsonc" })
-      yield* write(path.join(nested, "kilo.jsonc"), { shell: "nested-jsonc" })
-      yield* write(path.join(nested, "kilo.json"), { shell: "nested-json" })
+      yield* write(path.join(project, "kilo2.jsonc"), { shell: "root-jsonc" })
+      yield* write(path.join(nested, "kilo2.jsonc"), { shell: "nested-jsonc" })
+      yield* write(path.join(nested, "kilo2.json"), { shell: "nested-json" })
 
-      expect(yield* shells.pipe(Effect.provide(configLayer({ directory: nested, project, global, git: true })))).toEqual(
-        ["root-jsonc", "nested-json", "nested-jsonc"],
-      )
+      expect(
+        yield* shells.pipe(Effect.provide(configLayer({ directory: nested, project, global, git: true }))),
+      ).toEqual(["root-jsonc", "nested-json", "nested-jsonc"])
     }),
   )
 
-  it.live("ignores opencode.json, opencode.jsonc, .opencode and .kilocode next to Kilo files", () =>
+  it.live("ignores v1 Kilo and OpenCode config next to internal v2 files", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       const project = path.join(tmp.path, "repo")
       const global = path.join(tmp.path, "global")
-      yield* write(path.join(project, "kilo.json"), { shell: "kilo" })
+      yield* write(path.join(project, "kilo2.json"), { shell: "kilo2" })
+      yield* write(path.join(project, "kilo.json"), { shell: "v1-json" })
+      yield* write(path.join(project, "kilo.jsonc"), { shell: "v1-jsonc" })
+      yield* write(path.join(project, ".kilo", "kilo.json"), { shell: "v1-dir" })
+      yield* write(path.join(project, ".kilo", "kilo2.json"), { shell: "v1-dir-v2-file" })
       yield* write(path.join(project, "opencode.json"), { shell: "opencode-json" })
       yield* write(path.join(project, "opencode.jsonc"), { shell: "opencode-jsonc" })
       yield* write(path.join(project, ".opencode", "opencode.json"), { shell: "dot-opencode" })
       yield* write(path.join(project, ".kilocode", "kilo.json"), { shell: "dot-kilocode" })
       yield* write(path.join(global, "opencode.jsonc"), { shell: "global-opencode" })
+      yield* write(path.join(global, "kilo.json"), { shell: "global-v1-json" })
+      yield* write(path.join(global, "kilo.jsonc"), { shell: "global-v1-jsonc" })
 
       const layer = configLayer({ directory: project, global, git: true })
-      expect(yield* shells.pipe(Effect.provide(layer))).toEqual(["kilo"])
+      expect(yield* shells.pipe(Effect.provide(layer))).toEqual(["kilo2"])
       expect(yield* directories(tmp.path).pipe(Effect.provide(layer))).toEqual(["global"])
     }),
   )
 
-  it.live("reads the global directory and .kilo in their Kilo v1 file orders", () =>
+  it.live("reads the global directory and .kilo2 in their Kilo v1 file orders", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       const project = path.join(tmp.path, "repo")
       const global = path.join(tmp.path, "global")
-      for (const name of ["kilo.jsonc", "kilo.json"]) {
+      for (const name of ["kilo2.jsonc", "kilo2.json"]) {
         yield* write(path.join(global, name), { shell: `global-${name}` })
-        yield* write(path.join(project, ".kilo", name), { shell: `dir-${name}` })
+        yield* write(path.join(project, ".kilo2", name), { shell: `dir-${name}` })
       }
 
       const layer = configLayer({ directory: project, global, git: true })
-      // The global directory and project roots let .jsonc win; .kilo lets .json win (v1 ALL_CONFIG_FILES).
+      // The global directory and project roots let .jsonc win; .kilo2 lets .json win (v1 file order).
       expect(yield* shells.pipe(Effect.provide(layer))).toEqual([
-        "global-kilo.json",
-        "global-kilo.jsonc",
-        "dir-kilo.jsonc",
-        "dir-kilo.json",
+        "global-kilo2.json",
+        "global-kilo2.jsonc",
+        "dir-kilo2.jsonc",
+        "dir-kilo2.json",
       ])
       // Commands, agents, modes, skills and plugins load from every directory entry.
-      expect(yield* directories(tmp.path).pipe(Effect.provide(layer))).toEqual(["global", path.join("repo", ".kilo")])
+      expect(yield* directories(tmp.path).pipe(Effect.provide(layer))).toEqual(["global", path.join("repo", ".kilo2")])
     }),
   )
 
-  it.live("reads only the root files of the global directory, not .kilo inside it", () =>
+  it.live("reads only the root files of the global directory, not .kilo2 inside it", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       const project = path.join(tmp.path, "repo")
       const global = path.join(tmp.path, "global")
-      yield* write(path.join(global, "kilo.json"), { shell: "global-root" })
-      yield* write(path.join(global, ".kilo", "kilo.json"), { shell: "global-dot-kilo" })
+      yield* write(path.join(global, "kilo2.json"), { shell: "global-root" })
+      yield* write(path.join(global, ".kilo2", "kilo2.json"), { shell: "global-dot-kilo2" })
       yield* Effect.promise(() => fs.mkdir(project, { recursive: true }))
 
       const layer = configLayer({ directory: project, global, git: true })
@@ -137,7 +143,7 @@ describe("Kilo config discovery", () => {
     }),
   )
 
-  it.live("watches the Kilo names and .kilo in each project directory", () =>
+  it.live("watches the Kilo names and .kilo2 in each project directory", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       const project = path.join(tmp.path, "repo")
@@ -154,7 +160,7 @@ describe("Kilo config discovery", () => {
       expect(subscriptions).toContainEqual({
         type: "entries",
         path: AbsolutePath.make(project),
-        names: [".agents", ".claude", ".kilo", "kilo.json", "kilo.jsonc"],
+        names: [".agents", ".claude", ".kilo2", "kilo2.json", "kilo2.jsonc"],
       })
     }),
   )
@@ -165,9 +171,9 @@ describe("Kilo config discovery", () => {
       const project = path.join(tmp.path, "repo")
       const link = path.join(tmp.path, "link")
       const global = path.join(tmp.path, "global")
-      yield* write(path.join(tmp.path, "kilo.json"), { shell: "outside" })
-      yield* write(path.join(tmp.path, ".kilo", "kilo.json"), { shell: "outside-dot" })
-      yield* write(path.join(project, "kilo.json"), { shell: "root" })
+      yield* write(path.join(tmp.path, "kilo2.json"), { shell: "outside" })
+      yield* write(path.join(tmp.path, ".kilo2", "kilo2.json"), { shell: "outside-dot" })
+      yield* write(path.join(project, "kilo2.json"), { shell: "root" })
       yield* Effect.promise(() => fs.mkdir(path.join(project, "app"), { recursive: true }))
       yield* Effect.promise(() => fs.symlink(project, link, process.platform === "win32" ? "junction" : undefined))
 
@@ -188,7 +194,7 @@ describe("Kilo config discovery", () => {
     }),
   )
 
-  it.live("writes global config to kilo.jsonc, else an existing kilo.json, and never to opencode files", () =>
+  it.live("writes global config to kilo2.jsonc, else an existing kilo2.json, and never to v1 or opencode files", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       const global = path.join(tmp.path, "global")
@@ -201,22 +207,28 @@ describe("Kilo config discovery", () => {
       const read = (name: string) => Effect.promise(() => Bun.file(path.join(global, name)).json())
 
       yield* write(path.join(global, "opencode.jsonc"), {})
+      yield* write(path.join(global, "kilo.json"), {})
       yield* update
-      expect(yield* read("kilo.jsonc")).toEqual({ shell: "/bin/zsh" })
+      expect(yield* read("kilo2.jsonc")).toEqual({ shell: "/bin/zsh" })
       expect(yield* read("opencode.jsonc")).toEqual({})
-
-      yield* Effect.promise(() => fs.rm(path.join(global, "kilo.jsonc")))
-      yield* write(path.join(global, "kilo.json"), {})
-      yield* update
-      expect(yield* read("kilo.json")).toEqual({ shell: "/bin/zsh" })
-      expect((yield* Effect.promise(() => fs.readdir(global))).toSorted()).toEqual(["kilo.json", "opencode.jsonc"])
-
-      // With both files, kilo.jsonc wins, like Kilo v1.
-      yield* write(path.join(global, "kilo.jsonc"), {})
-      yield* write(path.join(global, "kilo.json"), {})
-      yield* update
-      expect(yield* read("kilo.jsonc")).toEqual({ shell: "/bin/zsh" })
       expect(yield* read("kilo.json")).toEqual({})
+
+      yield* Effect.promise(() => fs.rm(path.join(global, "kilo2.jsonc")))
+      yield* write(path.join(global, "kilo2.json"), {})
+      yield* update
+      expect(yield* read("kilo2.json")).toEqual({ shell: "/bin/zsh" })
+      expect((yield* Effect.promise(() => fs.readdir(global))).toSorted()).toEqual([
+        "kilo.json",
+        "kilo2.json",
+        "opencode.jsonc",
+      ])
+
+      // With both files, .jsonc wins, like Kilo v1.
+      yield* write(path.join(global, "kilo2.jsonc"), {})
+      yield* write(path.join(global, "kilo2.json"), {})
+      yield* update
+      expect(yield* read("kilo2.jsonc")).toEqual({ shell: "/bin/zsh" })
+      expect(yield* read("kilo2.json")).toEqual({})
     }),
   )
 })

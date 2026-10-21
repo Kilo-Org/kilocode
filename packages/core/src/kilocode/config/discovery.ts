@@ -7,8 +7,8 @@ import type { ConfigDiscovery } from "../../config/discovery.js"
 /**
  * Kilo config discovery as a value for the generic discovery layout (`ConfigDiscovery.Layout`). The Kilo host
  * replaces `ConfigDiscovery.node` with it (packages/kilo-cli/src/host.ts), so every server it starts reads
- * `kilo.json`, `kilo.jsonc` and `.kilo` and stops the upward walk at the worktree root. The global write target
- * follows from `names`: the last existing name, else `kilo.jsonc`, which is Kilo v1's preference.
+ * `kilo2.json`, `kilo2.jsonc` and `.kilo2` and stops the upward walk at the worktree root. The global write target
+ * follows from `names`: the last existing name, else `kilo2.jsonc`, preserving Kilo v1's file order with v2 names.
  */
 export const layout: ConfigDiscovery.Layout = {
   names: KiloConfigFiles.names,

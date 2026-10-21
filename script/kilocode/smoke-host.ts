@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
 
 // Smoke test for a compiled Kilo host executable (packages/kilo-cli/script/build.ts). Usage:
-//   bun script/kilocode/smoke-host.ts <path to the kilo executable>
+//   bun script/kilocode/smoke-host.ts <path to the kilo2 executable>
 //
 // It runs the executable in an isolated profile (its own HOME and XDG directories, a free service port) and fails
 // unless the executable
-// - reports a version and is named `kilo`, so it is not the upstream `opencode` entry;
+// - reports a version and is named `kilo2`, so it is neither v1 `kilo` nor upstream `opencode`;
 // - keeps all of its data in `kilo2` and never creates an `opencode` directory (U-E1-01, so it can sit next to v1);
 // - starts the background service from itself, reports its URL and stops it again.
 // The service respawns the executable with `serve --service`, which exercises the host's serve handler too.
@@ -15,7 +15,7 @@ import os from "node:os"
 import path from "node:path"
 
 const binary = process.argv[2]
-if (!binary) throw new Error("Usage: bun script/kilocode/smoke-host.ts <path to the kilo executable>")
+if (!binary) throw new Error("Usage: bun script/kilocode/smoke-host.ts <path to the kilo2 executable>")
 if (!(await Bun.file(binary).exists())) throw new Error(`Missing executable: ${binary}`)
 
 const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-smoke-")))
@@ -42,7 +42,7 @@ async function run(args: string[], timeout: number) {
 
 async function ok(args: string[], timeout = 60_000) {
   const result = await run(args, timeout)
-  if (result.code !== 0) throw new Error(`\`kilo ${args.join(" ")}\` exited with ${result.code}:\n${result.stderr}`)
+  if (result.code !== 0) throw new Error(`\`kilo2 ${args.join(" ")}\` exited with ${result.code}:\n${result.stderr}`)
   return result.stdout
 }
 
@@ -60,7 +60,7 @@ function freePort() {
 let failure: unknown
 try {
   const version = await ok(["--version"])
-  if (!version.startsWith("kilo ")) throw new Error(`Expected the version line to start with "kilo ", got: ${version}`)
+  if (!version.startsWith("kilo2 ")) throw new Error(`Expected the version line to start with "kilo2 ", got: ${version}`)
 
   // A private port, so a service that is already running on this machine (the default port) cannot interfere.
   await ok(["service", "set", "port", String(await freePort())])

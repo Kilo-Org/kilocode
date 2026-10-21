@@ -4,7 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import { resolveConfigPath } from "../../../src/commands/handlers/mcp/add"
 
-// `mcp add`, `plugin add` and `plugin remove` write the file that resolveConfigPath picks, like Kilo v1.
+// `mcp add`, `plugin add` and `plugin remove` use v1's write preference with the isolated internal v2 names.
 
 const roots: string[] = []
 
@@ -23,35 +23,43 @@ async function fixture(files: string[]) {
 }
 
 describe("Kilo config write target", () => {
-  test("creates kilo.json when no config file exists", async () => {
+  test("creates kilo2.json when no config file exists", async () => {
     const root = await fixture([])
-    expect(await resolveConfigPath(root)).toBe(path.join(root, "kilo.json"))
-    expect(await resolveConfigPath(root, true)).toBe(path.join(root, "kilo.json"))
+    expect(await resolveConfigPath(root)).toBe(path.join(root, "kilo2.json"))
+    expect(await resolveConfigPath(root, true)).toBe(path.join(root, "kilo2.json"))
   })
 
-  test("prefers kilo.jsonc over kilo.json and never picks opencode files", async () => {
-    const root = await fixture(["opencode.jsonc", "kilo.json"])
-    expect(await resolveConfigPath(root)).toBe(path.join(root, "kilo.json"))
-    const both = await fixture(["kilo.json", "kilo.jsonc"])
-    expect(await resolveConfigPath(both)).toBe(path.join(both, "kilo.jsonc"))
+  test("prefers kilo2.jsonc over kilo2.json and never picks opencode files", async () => {
+    const root = await fixture(["opencode.jsonc", "kilo2.json"])
+    expect(await resolveConfigPath(root)).toBe(path.join(root, "kilo2.json"))
+    const both = await fixture(["kilo2.json", "kilo2.jsonc"])
+    expect(await resolveConfigPath(both)).toBe(path.join(both, "kilo2.jsonc"))
     const opencode = await fixture(["opencode.json", "opencode.jsonc"])
-    expect(await resolveConfigPath(opencode)).toBe(path.join(opencode, "kilo.json"))
+    expect(await resolveConfigPath(opencode)).toBe(path.join(opencode, "kilo2.json"))
   })
 
-  test("prefers .kilo over the project root files", async () => {
-    const root = await fixture(["kilo.jsonc", ".kilo/kilo.json"])
-    expect(await resolveConfigPath(root)).toBe(path.join(root, ".kilo", "kilo.json"))
+  test("prefers .kilo2 over the project root files", async () => {
+    const root = await fixture(["kilo2.jsonc", ".kilo2/kilo2.json"])
+    expect(await resolveConfigPath(root)).toBe(path.join(root, ".kilo2", "kilo2.json"))
   })
 
-  test("ignores .opencode and .kilocode", async () => {
-    const root = await fixture([".opencode/opencode.json", ".kilocode/kilo.json"])
-    expect(await resolveConfigPath(root)).toBe(path.join(root, "kilo.json"))
+  test("ignores v1 Kilo and OpenCode files and directories", async () => {
+    const root = await fixture([
+      "kilo.json",
+      "kilo.jsonc",
+      ".kilo/kilo.json",
+      ".kilo/kilo2.json",
+      ".opencode/opencode.json",
+      ".kilocode/kilo.json",
+    ])
+    expect(await resolveConfigPath(root)).toBe(path.join(root, "kilo2.json"))
+    expect(await resolveConfigPath(root, true)).toBe(path.join(root, "kilo2.json"))
   })
 
   test("checks only the root files of the global directory", async () => {
-    const root = await fixture([".kilo/kilo.json"])
-    expect(await resolveConfigPath(root, true)).toBe(path.join(root, "kilo.json"))
-    const existing = await fixture([".kilo/kilo.json", "kilo.jsonc"])
-    expect(await resolveConfigPath(existing, true)).toBe(path.join(existing, "kilo.jsonc"))
+    const root = await fixture([".kilo2/kilo2.json"])
+    expect(await resolveConfigPath(root, true)).toBe(path.join(root, "kilo2.json"))
+    const existing = await fixture([".kilo2/kilo2.json", "kilo2.jsonc"])
+    expect(await resolveConfigPath(existing, true)).toBe(path.join(existing, "kilo2.jsonc"))
   })
 })

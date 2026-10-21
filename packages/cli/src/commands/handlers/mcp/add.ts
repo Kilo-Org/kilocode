@@ -49,7 +49,7 @@ export async function resolveConfigPath(directory: string, global = false) { // 
     )
       return candidate
   }
-  return path.join(directory, KiloConfigFiles.newFile) // kilocode_change(config) - new files are kilo.json, like Kilo v1
+  return path.join(directory, KiloConfigFiles.newFile) // kilocode_change(config) - internal v2 config filename
 }
 
 async function write(configPath: string, name: string, server: unknown) {

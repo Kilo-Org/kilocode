@@ -152,14 +152,18 @@ test("the server runs the Kilo agent ceiling after the config plugins", async ()
   }
 }, 30_000)
 
-// The server the host starts discovers Kilo config names: kilo.json and .kilo, not opencode.json, .opencode or
-// .kilocode. The upstream server without the host overrides keeps the upstream names (test/config in core).
-test("the server reads kilo.json and .kilo and ignores opencode and .kilocode config", async () => {
+// The server discovers only the isolated internal v2 names. The upstream server without the host overrides
+// keeps the upstream names (test/config in core).
+test("the server reads kilo2.json and .kilo2 and ignores v1 and opencode config", async () => {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-host-")))
   const project = path.join(root, "repo")
   const files = {
-    "kilo.json": { username: "root-kilo" },
-    ".kilo/kilo.jsonc": { shell: "dot-kilo" },
+    "kilo2.json": { username: "root-kilo2" },
+    ".kilo2/kilo2.jsonc": { shell: "dot-kilo2" },
+    "kilo.json": { username: "root-v1" },
+    "kilo.jsonc": { username: "root-v1-jsonc" },
+    ".kilo/kilo.jsonc": { shell: "dot-v1" },
+    ".kilo/kilo2.jsonc": { shell: "dot-v1-v2-file" },
     "opencode.json": { username: "root-opencode" },
     ".opencode/opencode.json": { shell: "dot-opencode" },
     ".kilocode/kilo.json": { shell: "dot-kilocode" },
@@ -199,9 +203,9 @@ test("the server reads kilo.json and .kilo and ignores opencode and .kilocode co
           // The system directory cannot be turned off through server options, so keep only the project entries.
           const paths = entries.flatMap((entry) => (entry.path?.startsWith(project) ? [entry.path] : []))
           expect(paths.map((item) => path.relative(project, item).replaceAll("\\", "/"))).toEqual([
-            "kilo.json",
-            ".kilo/kilo.jsonc",
-            ".kilo",
+            "kilo2.json",
+            ".kilo2/kilo2.jsonc",
+            ".kilo2",
           ])
         }),
       ).pipe(Effect.provideService(References.MinimumLogLevel, "Warn")),

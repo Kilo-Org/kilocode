@@ -53,8 +53,8 @@ const plugins = makeGlobalNode({
 
 /**
  * Service replacements that the Kilo host gives the server it starts. `createRoutes` applies them after its
- * standard set, so they win: the Kilo plugins, Kilo's app identity and Kilo's config discovery (`kilo.json`,
- * `.kilo`, worktree boundary).
+ * standard set, so they win: the Kilo plugins, Kilo's app identity and Kilo's config discovery (`kilo2.json`,
+ * `.kilo2`, worktree boundary).
  */
 export const overrides: LayerNode.Replacements = [
   SdkPlugins.node.replace(plugins),
