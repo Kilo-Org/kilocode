@@ -1,22 +1,5 @@
 # Real V1 writer fixture and V2 migration audit
 
-## Session-policy fixtures for U-E2-01 to U-E2-04 (U-E0-05, 2026-10-20)
-
-These fixtures are on `v2` in `packages/kilo-cli/test/fixtures/v1/`. They are a separate set from the September writer fixture described below.
-
-- **Shape.** One JSON file per area: `unit`, `area`, `v1.commit` (the pinned v1 target), `v1.sources`, `constants` and `cases`. Each case is one call of the v1 function or service named in `fn`, with its `input` and the `output` v1 gave. Load them with `load(area)` and `pick(fixture, name)` from `packages/kilo-cli/test/v1-fixtures.ts`. A v2 test asserts its own behavior against `output`. It does not run v1 code.
-- **Regenerate.** Run `KILOCODE_V1_CHECKOUT=<v1 checkout> bun script/v1-fixtures.ts [area...]` from `packages/kilo-cli`. The checkout must be clean at the pinned v1 target and have `bun install` done. The script refuses any other commit. Each area runs in its own child process (`script/v1-fixtures/<area>.mjs`) with a new temporary HOME, XDG and TMPDIR, so no v1 code can reach a real store (see `cli-fixture-storage-incident.md`). The output is deterministic: two full runs give identical files.
-- **Normalized values.** `<tmp>` replaces temporary paths, `<hash>` and `<oids>` replace git object ids, `que_<id>` replaces question ids, and `<wall-clock Date.now()>` replaces wall-clock times. Timeouts in the `wrap` and `protect` cases of `slow-snapshot.json` are shortened. Only the relation between the inner time and the timeout matters.
-- **What v1 does, from the cases and the v1 source:**
-  - **Offline wait (U-E2-01).** v1 has no time limit on the offline wait. It polls every 3 s and resumes 10 s after the network comes back. Offline errors do not use up the 5 provider retries. A retryable connection reset uses the normal backoff (#14893). The "~84 s" bound in the plan row belongs to native v2; v1 has no such value. The `timeline/offline x8 ...` case waits 960 s in virtual time and then resumes.
-  - **Overflow (U-E2-02).** `threshold_percent` applies only in the preflight check before a step, and always to `limit.context`. It is (0, 100] with no default. The post-step check ignores it. v2 `ConfigCompaction` has no `threshold_percent` and no `reserved`. The Kilo docs differ from the code in four points (post-step, range, input limit, `preserve_recent_tokens` clamp); the fixtures follow the code. `measure` and `split` outputs depend on the v1 message serialization.
-  - **Slow snapshot (U-E2-03).** The question comes after 10 s. Only "Disable for this project" persists `snapshot: false`; when no project config file exists, it writes `.kilo/kilo.jsonc` (the comment in `track.ts` says `kilo.json`). The running session uses an in-memory guard. The file takes effect at the next instance load. v1 `snapshot` becomes `snapshots` in v2 config.
-  - **Snapshots (U-E2-04).** Pins older than 7 days are pruned, then `gc --prune=7.days` runs. There is no count limit. `restore` does not delete files that are not in the snapshot. `revert` keeps empty directories. `diffFull` reports a move as one delete and one add; the text `diff` reports it as a rename. `DiffFull.batch` does not unquote the C-quoted paths in git diff headers, so a file name with a tab gets no patch (case `diff-batch`). This is a v1 defect; decide in U-E2-04 whether v2 keeps it.
-- **Not covered:** the v1 compaction processor flows (`KiloCompactionChunks.process`, `replay`, `KiloCompactionPayloadRecovery.process`), the live probe loop of the offline wait (it needs the network), stale-lock breaking (it needs a lock older than 60 s), and symlink attacks on snapshot cleanup. The v1 tests named in the progress map cover them.
-- **Progress map.** The map closes a v1 API cell when any tracked Kilo file contains the route path, also in data or comments. The snapshot fixture therefore names its Kilo snapshot modules with a brace pattern, so that it does not close the snapshot prepare route cell.
-
-## September 2026 writer fixture
-
 Audited on 2026-09-05. This is a disposable-fixture result, not a claim that
 any real user store has been opened. The test creates a new V1 database under
 `/tmp`, copies it to a separate disposable destination, and runs the V2
