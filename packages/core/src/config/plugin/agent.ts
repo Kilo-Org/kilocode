@@ -107,8 +107,10 @@ export const Plugin = define({
         // still follow its global rules.
         for (const document of documents.toReversed()) {
           const permissions = expandPermissions(document.info.permissions ?? [], global.home)
-          for (const agent of draft.list()) {
-            draft.update(agent.id, (item) => item.permissions.push(...permissions))
+          if (permissions.length > 0) {
+            for (const agent of draft.list()) {
+              draft.update(agent.id, (item) => item.permissions.push(...permissions))
+            }
           }
           for (const [id, item] of Object.entries(document.info.agents ?? {})) {
             if (item.permissions === undefined) continue

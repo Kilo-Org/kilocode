@@ -45,8 +45,8 @@ describe("ConfigAgentPlugin.Plugin", () => {
     }),
   )
 
+  // kilocode_change start - permission rules apply in reverse document priority
   it.effect("applies config permissions in reverse document priority with agent rules last", () =>
-    // kilocode_change
     Effect.gen(function* () {
       const agents = yield* AgentV2.Service
       const build = AgentV2.ID.make("build")
@@ -141,6 +141,7 @@ describe("ConfigAgentPlugin.Plugin", () => {
       expect(yield* agents.get(AgentV2.ID.make("removed"))).toBeUndefined()
     }),
   )
+  // kilocode_change end
 
   // kilocode_change start - permission rules apply in reverse document priority
   it.effect("keeps user-global permission rules ahead of repository permission rules", () =>
