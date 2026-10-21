@@ -340,8 +340,7 @@ Nothing in the tree is skipped. Every issue has a gate, is marked post-cutover w
 | Issue | Title (short) | Placement | Reason / change needed (applied by N7) |
 |---|---|---|---|
 | **#14017** | Runtime and CLI/TUI parity | G1 epic | |
-| #14371 | Offline network wait | G1 | Drop the stale "pinned v1 revision" and "before upstream merges move the engine" |
-| #14374 | Snapshot retention/concurrency | G1 | Same as #14371 |
+| #14374 | Snapshot retention/concurrency | G1 | Only snapshot cleanup remains; it moves to worktree teardown (U-E2-26) |
 | #14375 | TUI notifications | G1 | |
 | #14376 | Legacy theme catalogue | **Post-cutover** | Decision 5 (legacy TUI extras) |
 | #14377 | Session scope switching | G1 | |

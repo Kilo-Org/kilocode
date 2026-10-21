@@ -91,7 +91,7 @@ Each unit has exactly one surface.
 ### E2 Runtime behavior
 
 - **Why:** V1 policy on top of generic runtime services must survive, and the IDE tracks consume it.
-- **What:** session policy (offline wait, overflow, snapshots, deletion, drain, subagents, wakeups, goals, retention, recall); agents, plan, review, commands, skills, rules; Kilo tools and permission policy; memory, indexing, sandbox, telemetry; MCP deltas and marketplace; board, background processes, worktree runtime, Agent Manager host contract; generation endpoints; Atomic Chat provider.
+- **What:** session policy (deletion, drain, subagents, wakeups, goals, retention, recall); agents, plan, review, commands, skills, rules; Kilo tools and permission policy; memory, indexing, sandbox, telemetry; MCP deltas and marketplace; board, background processes, worktree runtime, Agent Manager host contract; generation endpoints; Atomic Chat provider.
 - **Exit criteria:**
   - Every E2 unit with gate G1 passes its acceptance.
   - Every native-equivalence claim in the inventory is backed by a test covering scope, errors, cancellation, persistence and presentation.

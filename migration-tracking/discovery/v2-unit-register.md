@@ -45,8 +45,6 @@ Donor paths are relative to the donor tag; `kc/` = `packages/kilo-cli/src/`, `kv
 
 | Unit | Title | Surface | Gate | Features | Issues | Delta | Stale | Donor | Depends |
 |---|---|---|---|---|---|---|---|---|---|
-| U-E2-01 | Offline network wait and reconnect | shared runtime | G1 | F-CORE-034, F-V2-009 | #14371 | needs-port | MATERIAL (A06; incl. #14893 at the V1 tip) | no (progress row "Needs port") | U-E0-01 |
-| U-E2-04 | Snapshot seed/materialize, locking, cleanup, retention, restore/diff | shared runtime | G1 | F-CORE-036b, F-V2-011 | #14374 | partial | MATERIAL (+490; lock/cleanup NEW) | no | U-E0-01 |
 | U-E2-05 | Message deletion runtime operation, Kilo revert, stable ordering | shared runtime | G2 | F-CORE-042 | #14380 | needs-port | MATERIAL | no | U-E0-02 |
 | U-E2-06 | Session core verification: drain/control, prompt queue and steer, title, processing hardening | shared runtime | G1 | F-CORE-037, F-CORE-043, F-CORE-044, F-CORE-045, F-V2-008, Part 1 "Sessions" | new | partial | MATERIAL + NEW (drain, steer; ~128 fixes) | no (native reuse) | U-E0-01 |
 | U-E2-07 | Subagent resume, background subagents (default on), steering | shared runtime | G1 | F-CORE-041, F-V2-012, F-V2-033 | new | partial | MATERIAL (#14702, #13641) | no | U-E2-06 |
@@ -323,10 +321,10 @@ Every issue in the #13750 tree maps to a unit or is closed out as a tracker.
 | #14022 | tracker → E7 | #14409 | U-E3-07 |
 | #14023 | tracker → E10 | #14410 | U-E3-06 |
 | #14024 | tracker → E10 | #14411 | U-E3-07 |
-| #14371 | U-E2-01 | #14412 | U-E3-07 |
+| | | #14412 | U-E3-07 |
 | | | #14413 | U-E3-01 (+ U-E3-02, U-E3-03) |
 | | | #14414 | U-E3-11 (G1 child; G2/G3 children later) |
-| #14374 | U-E2-04 | #14415 | U-E6-08 (evidence: `editor-services-inventory.md`) |
+| #14374 | U-E2-26 | #14415 | U-E6-08 (evidence: `editor-services-inventory.md`) |
 | #14375 | U-E9-09 | #14416 | U-E6-08 |
 | #14376 | U-E11-04 | #14417 | U-E6-07 |
 | #14377 | U-E9-10 | #14418 | U-E11-01 |

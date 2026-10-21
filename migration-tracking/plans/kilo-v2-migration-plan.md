@@ -480,8 +480,6 @@ Every E2 unit except U-E2-18, -21, -28 (SMALL) and U-E2-29 (EMPTY) re-derives be
 
 | Unit | Title | Issue | Gate | Deps | Delta | Stale | Donor | Acceptance | Status |
 |---|---|---|---|---|---|---|---|---|---|
-| U-E2-01 | Offline network wait and reconnect | #14371 | G1 | U-E0-01 | needs-port | M | no | Native v2 retries a failed model call for about 84 s (10 retries, `core/src/session/runner/retry.ts`) and then fails the step; it has no offline detection. Kilo keeps waiting while the network is down and resumes when it is back; other errors keep the native policy. The `session.retry` hook can lengthen each wait but cannot add a retry after the 10th (`retry.ts` returns before the hook), so check whether that is enough before adding a seam | todo |
-| U-E2-04 | Snapshot retention and worktree cleanup | #14374 | G1 | U-E0-01 | partial | M | no | Native v2 snapshots (alternates seeding, ignore rules, 2 MiB untracked limit, packing, restore and diff in `core/src/snapshot.ts` and `core/src/git.ts`) stay as they are. Add what v2 lacks: pruning of old snapshot data (the v2 store only grows) and removal of the snapshot store of a deleted Agent Manager worktree | todo |
 | U-E2-05 | Message deletion runtime operation, Kilo revert, stable ordering | #14380 | G2 | U-E0-02, Q-G2-05 | needs-port | M | no | Public delete operation (semantics per Q-G2-05) in the generated client; ordering stable after delete and revert | todo |
 | U-E2-06 | Session core verification: drain/control, prompt queue and steer, title, processing hardening | new | G1 | U-E0-01 | partial | M + NEW | no | Native-equivalence tests (scope, errors, cancellation, persistence, presentation) for drain, stop/resume, queue dismissal, steer labels, bounded title, processing fixes | todo |
 | U-E2-07 | Subagent resume, background subagents (default on), steering | new | G1 | U-E2-06 | partial | M | no | Background subagents on by default with kill switch, survive stop; resume hint; steering into subagents | todo |
@@ -529,7 +527,7 @@ Every E2 unit except U-E2-18, -21, -28 (SMALL) and U-E2-29 (EMPTY) re-derives be
 |---|---|---|---|---|---|---|---|---|---|
 | U-E2-24 | Shared agent board / swarm (default on) | new | G1 | U-E2-07 | needs-port | NEW | partial M | Board keyed by root session; recipients as v1; default on with kill switch | todo |
 | U-E2-25 | Background processes tool, sidebar data, `/process`, on persistent PTY | new | G1 | U-E0-02 | needs-port | M | partial M | Tool and `/process` as v1; a stale `running` row shows no PID after restart | todo |
-| U-E2-26 | Worktree runtime: family detection, teardown, Kilo layout, VCS | new | G1 | U-E0-01 | partial | M | no | Family detection and teardown as v1; `.kilo/worktrees` layout | todo |
+| U-E2-26 | Worktree runtime: family detection, teardown, Kilo layout, VCS, snapshot cleanup | new | G1 | U-E0-01 | partial | M | no | Family detection and teardown as v1; `.kilo/worktrees` layout; teardown removes the snapshot store of the deleted worktree, and old snapshot data is pruned (the native v2 store in `core/src/snapshot.ts` only grows) | todo |
 | U-E2-27 | Agent Manager host contract and control plane (ask/reply/reject, protection) | #14391 | G2 | U-E2-26, Q-G2-06 | needs-port | M | partial L | Public control-plane contract (per Q-G2-06) in the generated client, incl. multi-project routing | todo |
 
 ### Workstream: generation and providers
@@ -547,8 +545,6 @@ flowchart TD
   E1_04["U-E1-04"]:::ext
   E1_07["U-E1-07"]:::ext
   subgraph SP["Session policy"]
-    E2_01["01 offline wait"]
-    E2_04["04 snapshots"]
     E2_05["05 message deletion G2"]:::g2
     E2_06["06 session core"]
     E2_07["07 subagents"]
@@ -588,7 +584,7 @@ flowchart TD
     E2_28["28 generation G2"]:::g2
     E2_29["29 Atomic Chat"]
   end
-  E0_01 --> E2_01 & E2_04 & E2_06 & E2_20 & E2_26
+  E0_01 --> E2_06 & E2_20 & E2_26
   E0_02 --> E2_05 & E2_11 & E2_12 & E2_16 & E2_18 & E2_19 & E2_22 & E2_25 & E2_28
   E2_06 --> E2_07 & E2_08
   E2_08 --> E2_09
@@ -917,8 +913,7 @@ flowchart LR
 | #14022 | Tracker → E7 | |
 | #14023 | Tracker → U-E10-01 | |
 | #14024 | Tracker → U-E10-02 | |
-| #14371 | U-E2-01 | |
-| #14374 | U-E2-04 | |
+| #14374 | U-E2-26 | Snapshot cleanup part only |
 | #14375 | U-E9-09 | |
 | #14376 | U-E11-04 | |
 | #14377 | U-E9-10 | |

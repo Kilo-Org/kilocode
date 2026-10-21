@@ -102,10 +102,7 @@ Verification: **Local checks passed** means recorded focused tests or isolated i
 | Streaming conversation, history and resume | Kilo CLI over native client | 2 | Implemented | Local checks passed; full E2E pending | Original VS Code end-to-end acceptance remains partial. |
 | Permissions and questions/forms | Native v2 with Kilo adapters | 2 | Implemented | Local checks passed; full E2E pending | Validate each original UI caller and policy variant. |
 | Response completion and Stop in original extension | VS Code session adapter | 2, 5 | Partial | Full E2E pending; see scope notes | Focused host regression passes; final desktop verification pending. |
-| Session fork, compaction and snapshots | Native v2 runtime | 2 | Native reuse | Kilo integration E2E pending | Generic functionality does not cover all Kilo snapshot/overflow rules below. |
-| Offline wait and network recovery interaction | Kilo session policy / client integration | 2, 4, 5 | Needs port | Pending | Restore detection, user reply/reject, cancellation and visible waiting lifecycle. |
-| Kilo overflow accounting and proactive thresholds | Kilo policy over native compaction | 2 | Partial | Full E2E pending; see scope notes | Native overflow rebuild exists; exact token/economic threshold behavior is unproven. |
-| Slow snapshot interaction | Snapshot policy and UI | 2, 4, 5 | Partial | Full E2E pending; see scope notes | Timeout question, persisted disable choice and initialization feedback remain missing. |
+| Session fork, compaction and snapshots | Native v2 runtime | 2 | Native reuse | Kilo integration E2E pending | Generic functionality does not cover all Kilo snapshot rules below. |
 | Snapshot retention, concurrency and detailed restore/diff behavior | Snapshot runtime and client adapters | 2, 5 | Partial | Full E2E pending; see scope notes | Audit identifies pruning, locking, validation and editor detail gaps. |
 | Native session transfer and explicit foreign-format import | Kilo CLI | 4, 6 | Implemented | Local checks passed; full E2E pending | Preserve source data and verify supported formats independently. |
 | Session message deletion for original client | Public runtime operation and VS Code adapter | 5 | Needs port | Pending | No established complete replacement for the original caller. |
