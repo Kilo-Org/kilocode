@@ -100,6 +100,7 @@ export const Plugin = define({
           }
         }
 
+        // kilocode_change start
         // Documents arrive in ascending priority and the last matching rule wins, so apply their
         // permission rules in reverse: a user-global rule has to stay ahead of a repository rule.
         // Statement order inside each document stays unchanged, and a document's own agent rules
@@ -117,6 +118,7 @@ export const Plugin = define({
             draft.update(agentID, (agent) => agent.permissions.push(...rules))
           }
         }
+        // kilocode_change end
       }),
     )
   }),
