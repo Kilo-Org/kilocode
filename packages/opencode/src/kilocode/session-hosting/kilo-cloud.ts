@@ -10,6 +10,8 @@ import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Effect, Redacted, Schema } from "effect"
 import z from "zod"
 import {
+  AttachInput,
+  GetInput,
   HostedFailure,
   HostedSessionID,
   ListInput,
@@ -194,21 +196,18 @@ export function provider(options: Options): Provider {
 
   const invalid = (message: string) => new HostedFailure({ code: "invalid_response", message, retryable: false })
 
+  const identity = (sessionID: unknown) =>
+    decode(HostedSessionID, { providerID: PROVIDER, sessionID }, "Kilo Cloud returned an unsupported session identity")
+
+  const hosted = (session: SessionV1.SessionInfo) =>
+    identity(session.id).pipe(Effect.map((id): HostedSession => ({ id, session })))
+
   const list = (raw: ListInput = {}): Effect.Effect<HostedSessionPage, HostedFailure> =>
     Effect.gen(function* () {
       const input = yield* check(ListInput, raw)
-      const auth = yield* resolve()
+      const auth = yield* resolve(input.organizationID)
       const query = new URLSearchParams()
       if (input.limit !== undefined) query.set("limit", String(input.limit))
-      if (input.cursor !== undefined) {
-        const start = Number(input.cursor)
-        if (!Number.isSafeInteger(start) || start < 0) {
-          return yield* Effect.fail(
-            new HostedFailure({ code: "invalid_request", message: "Session list cursor is invalid", retryable: false }),
-          )
-        }
-        query.set("start", String(start))
-      }
       const response = yield* request(auth, {
         method: "GET",
         path: route("/kilo/session", query),
@@ -220,30 +219,30 @@ export function provider(options: Options): Provider {
         body,
         "Kilo Cloud returned unsupported sessions",
       )
-      return { items: sessions.map((session) => hosted(session)) }
+      return { items: yield* Effect.forEach(sessions, hosted) }
     })
 
-  const get = (raw: HostedSessionID): Effect.Effect<HostedSession, HostedFailure> =>
+  const get = (raw: GetInput): Effect.Effect<HostedSession, HostedFailure> =>
     Effect.gen(function* () {
-      const id = yield* check(HostedSessionID, raw)
-      const auth = yield* resolve()
+      const input = yield* check(GetInput, raw)
+      const auth = yield* resolve(input.organizationID)
       const response = yield* request(auth, {
         method: "GET",
-        path: `/kilo/session/${id.sessionID}`,
+        path: `/kilo/session/${input.id.sessionID}`,
         headers: headers(auth),
       })
       const body = yield* consume(response)
       const session = yield* decode(SessionV1.SessionInfo, body, "Kilo Cloud returned an unsupported session")
-      if (session.id !== id.sessionID) {
+      if (session.id !== input.id.sessionID) {
         return yield* Effect.fail(invalid("Kilo Cloud returned a different session identity"))
       }
-      return hosted(session)
+      return yield* hosted(session)
     })
 
   const transcript = (raw: TranscriptInput): Effect.Effect<HostedTranscriptPage, HostedFailure> =>
     Effect.gen(function* () {
       const input = yield* check(TranscriptInput, raw)
-      const auth = yield* resolve()
+      const auth = yield* resolve(input.organizationID)
       const query = new URLSearchParams()
       if (input.limit !== undefined) query.set("limit", String(input.limit))
       if (input.before !== undefined) query.set("before", input.before)
@@ -327,17 +326,19 @@ export function provider(options: Options): Provider {
       if (result.delivery !== "sent" && result.delivery !== "queued") {
         return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported delivery state"))
       }
+      const session = yield* identity(result.kiloSessionId)
       return {
-        session: { providerID: PROVIDER, sessionID: result.kiloSessionId },
+        session,
         messageID,
         delivery: result.delivery,
         replayed: result.replayed === true,
       }
     })
 
-  const attach = (id: HostedSessionID): Effect.Effect<Attachment, HostedFailure> =>
+  const attach = (raw: AttachInput): Effect.Effect<Attachment, HostedFailure> =>
     Effect.gen(function* () {
-      const session = yield* get(id)
+      const input = yield* check(AttachInput, raw)
+      const session = yield* get(input)
       return { session: session.id, expiresAt: clock() + ATTACHMENT_TTL_MS }
     })
 
@@ -352,10 +353,6 @@ export function provider(options: Options): Provider {
     start,
     attach,
   }
-}
-
-function hosted(session: SessionV1.SessionInfo): HostedSession {
-  return { id: { providerID: PROVIDER, sessionID: session.id }, session }
 }
 
 function route(base: `/${string}`, query: URLSearchParams): `/${string}` {

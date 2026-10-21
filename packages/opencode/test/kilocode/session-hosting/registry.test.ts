@@ -32,10 +32,10 @@ function provider(name: string, session: string, options: { default?: boolean; a
           },
         ],
       }),
-    get: (input) => Effect.succeed({ id: input, session: sessionInfo(input.sessionID, name) }),
+    get: (input) => Effect.succeed({ id: input.id, session: sessionInfo(input.id.sessionID, name) }),
     transcript: () => Effect.succeed({ items: [] }),
     start: () => Effect.fail(new HostedFailure({ code: "rejected", message: "unused", retryable: false })),
-    attach: (input) => Effect.succeed({ session: input, expiresAt: 1 }),
+    attach: (input) => Effect.succeed({ session: input.id, expiresAt: 1 }),
   }
   return { value, availability }
 }
@@ -70,8 +70,8 @@ it.effect("keeps two providers with colliding remote session ids isolated", () =
     expect(key(first.items[0].id)).toBe(`alpha:${SESSION}`)
     expect(key(second.items[0].id)).toBe(`beta:${SESSION}`)
 
-    const a = yield* alpha.value.get(first.items[0].id)
-    const b = yield* beta.value.get(second.items[0].id)
+    const a = yield* alpha.value.get({ id: first.items[0].id })
+    const b = yield* beta.value.get({ id: second.items[0].id })
     expect(a.session.title).toBe("alpha")
     expect(b.session.title).toBe("beta")
 

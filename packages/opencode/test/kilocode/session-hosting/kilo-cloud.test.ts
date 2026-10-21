@@ -32,12 +32,13 @@ type State = {
   list: "ok" | "unavailable"
   detail: "ok" | "invalid" | "notfound" | "mismatch"
   transcript: "ok" | "unavailable" | "mismatch"
+  sessionID: string
   starts: number
 }
 
 function harness() {
   const calls: Call[] = []
-  const state: State = { list: "ok", detail: "ok", transcript: "ok", starts: 0 }
+  const state: State = { list: "ok", detail: "ok", transcript: "ok", sessionID: SESSION, starts: 0 }
 
   const server = Bun.serve({
     hostname: "127.0.0.1",
@@ -61,7 +62,7 @@ function harness() {
           result: {
             data: {
               cloudAgentSessionId: WORKSPACE,
-              kiloSessionId: SESSION,
+              kiloSessionId: state.sessionID,
               messageId: input.message.id,
               delivery: "queued",
               replayed: state.starts > 1,
@@ -74,7 +75,7 @@ function harness() {
         if (state.list === "unavailable") {
           return Response.json({ error: "KILO_SESSION_SNAPSHOT_PENDING" }, { status: 503 })
         }
-        return Response.json([sessionInfo(SESSION), sessionInfo(OTHER)])
+        return Response.json([sessionInfo(state.sessionID), sessionInfo(OTHER)])
       }
 
       if (url.pathname === `/kilo/session/${SESSION}/message`) {
@@ -168,6 +169,7 @@ it.effect("normalizes an idle-stopped transcript into native models without a li
     const cloud = client(app.url, signedIn())
     const page = yield* cloud.list({ limit: 2 })
     expect(page.items.map((item) => key(item.id))).toEqual([`${PROVIDER}:${SESSION}`, `${PROVIDER}:${OTHER}`])
+    expect("cursor" in page).toBe(false)
     expect(page.items[0]?.session.title).toBe(`Hosted ${SESSION}`)
 
     const transcript = yield* cloud.transcript({ id: hosted, limit: 1, before: "cursor-1" })
@@ -193,6 +195,20 @@ it.effect("normalizes an idle-stopped transcript into native models without a li
     for (const secret of [app.url, TOKEN, CLOUD, WORKSPACE, "fence", "resnapshot"]) {
       expect(read).not.toContain(secret)
     }
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("applies an explicit organization scope to every read operation", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url, signedIn())
+    yield* cloud.list({ organizationID: ORG })
+    yield* cloud.get({ id: hosted, organizationID: ORG })
+    yield* cloud.transcript({ id: hosted, organizationID: ORG })
+    yield* cloud.attach({ id: hosted, organizationID: ORG })
+
+    expect(app.calls).toHaveLength(4)
+    expect(app.calls.every((call) => call.org === ORG)).toBe(true)
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 
@@ -289,10 +305,10 @@ it.effect("keeps durable reads while a later operation failure exposes retryabil
     expect(after.items.map((item) => key(item.id))).toEqual(before.items.map((item) => key(item.id)))
 
     app.state.detail = "notfound"
-    expect(yield* cloud.get(hosted).pipe(Effect.flip)).toMatchObject({ code: "not_found", retryable: false })
+    expect(yield* cloud.get({ id: hosted }).pipe(Effect.flip)).toMatchObject({ code: "not_found", retryable: false })
 
     app.state.detail = "ok"
-    expect(String((yield* cloud.get(hosted)).session.id)).toBe(SESSION)
+    expect(String((yield* cloud.get({ id: hosted })).session.id)).toBe(SESSION)
 
     app.state.transcript = "ok"
     app.state.list = "unavailable"
@@ -332,18 +348,56 @@ it.effect("marks an ambiguous start as non-retryable without an idempotency key"
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 
+it.effect("requires a stable message identity for an idempotent start", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url, signedIn())
+    const failure = yield* cloud
+      .start({
+        repository: { type: "github", repo: "Kilo-Org/kilocode" },
+        prompt: "Do the thing",
+        agent: { mode: "code", model: "kilo/test-model" },
+        operationKey: OPERATION,
+      })
+      .pipe(Effect.flip)
+    expect(failure).toMatchObject({ code: "invalid_request", retryable: false })
+    expect(app.calls).toHaveLength(0)
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("rejects Cloud identities that the host seam cannot accept", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url, signedIn())
+    app.state.sessionID = "ses/bad"
+
+    expect(yield* cloud.list().pipe(Effect.flip)).toMatchObject({ code: "invalid_response", retryable: false })
+    expect(
+      yield* cloud
+        .start({
+          repository: { type: "github", repo: "Kilo-Org/kilocode" },
+          prompt: "Do the thing",
+          agent: { mode: "code", model: "kilo/test-model" },
+          operationKey: OPERATION,
+          messageID: MESSAGE,
+        })
+        .pipe(Effect.flip),
+    ).toMatchObject({ code: "invalid_response", retryable: false })
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
 it.effect("rejects mismatched or malformed payloads without retryability", () => {
   const app = harness()
   return Effect.gen(function* () {
     const cloud = client(app.url, signedIn())
     app.state.detail = "invalid"
-    expect(yield* cloud.get(hosted).pipe(Effect.flip)).toMatchObject({
+    expect(yield* cloud.get({ id: hosted }).pipe(Effect.flip)).toMatchObject({
       code: "invalid_response",
       retryable: false,
     })
 
     app.state.detail = "mismatch"
-    expect(yield* cloud.get(hosted).pipe(Effect.flip)).toMatchObject({ code: "invalid_response" })
+    expect(yield* cloud.get({ id: hosted }).pipe(Effect.flip)).toMatchObject({ code: "invalid_response" })
 
     app.state.detail = "ok"
     app.state.transcript = "mismatch"
@@ -362,7 +416,7 @@ it.effect("returns an attachment descriptor with no provider-private material", 
     clock: () => now,
   })
   return Effect.gen(function* () {
-    const descriptor = yield* cloud.attach(hosted)
+    const descriptor = yield* cloud.attach({ id: hosted })
     expect(Object.keys(descriptor).sort()).toEqual(["expiresAt", "session"])
     expect(descriptor).toEqual({ session: hosted, expiresAt: now + ATTACHMENT_TTL_MS })
 

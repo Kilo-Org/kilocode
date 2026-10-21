@@ -98,7 +98,6 @@ export type HostedSession = Schema.Schema.Type<typeof HostedSession>
 
 export const HostedSessionPage = Schema.Struct({
   items: Schema.Array(HostedSession),
-  cursor: Schema.optional(Schema.String),
 }).annotate({ identifier: "SessionHostSessionPage" })
 export type HostedSessionPage = Schema.Schema.Type<typeof HostedSessionPage>
 
@@ -130,18 +129,33 @@ export type Repository = Schema.Schema.Type<typeof Repository>
 export const Origin = Schema.Literals(["cli", "desktop"]).annotate({ identifier: "SessionHostOrigin" })
 export type Origin = Schema.Schema.Type<typeof Origin>
 
+export const OrganizationID = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)).annotate({
+  identifier: "SessionHostOrganizationID",
+})
+export type OrganizationID = Schema.Schema.Type<typeof OrganizationID>
+
 export const ListInput = Schema.Struct({
-  cursor: Schema.optional(Schema.String),
   limit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))),
+  organizationID: Schema.optional(OrganizationID),
 }).annotate({ identifier: "SessionHostListInput" })
 export type ListInput = Schema.Schema.Type<typeof ListInput>
+
+export const GetInput = Schema.Struct({
+  id: HostedSessionID,
+  organizationID: Schema.optional(OrganizationID),
+}).annotate({ identifier: "SessionHostGetInput" })
+export type GetInput = Schema.Schema.Type<typeof GetInput>
 
 export const TranscriptInput = Schema.Struct({
   id: HostedSessionID,
   limit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))),
   before: Schema.optional(Schema.String),
+  organizationID: Schema.optional(OrganizationID),
 }).annotate({ identifier: "SessionHostTranscriptInput" })
 export type TranscriptInput = Schema.Schema.Type<typeof TranscriptInput>
+
+export const AttachInput = GetInput.annotate({ identifier: "SessionHostAttachInput" })
+export type AttachInput = Schema.Schema.Type<typeof AttachInput>
 
 export const StartInput = Schema.Struct({
   repository: Repository,
@@ -150,13 +164,21 @@ export const StartInput = Schema.Struct({
     mode: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(50)),
     model: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
   }),
-  organizationID: Schema.optional(Schema.String),
+  organizationID: Schema.optional(OrganizationID),
   origin: Schema.optional(Origin),
   /** Stable idempotency key. Reuse it with the same `messageID` to retry safely. */
   operationKey: Schema.optional(Schema.String),
   /** Stable initial message identity. Required for a retry-safe start after an ambiguous failure. */
   messageID: Schema.optional(Schema.String),
-}).annotate({ identifier: "SessionHostStartInput" })
+})
+  .check(
+    Schema.makeFilter((input) =>
+      input.operationKey === undefined || input.messageID !== undefined
+        ? undefined
+        : "messageID is required when operationKey is supplied",
+    ),
+  )
+  .annotate({ identifier: "SessionHostStartInput" })
 export type StartInput = Schema.Schema.Type<typeof StartInput>
 
 export const StartResult = Schema.Struct({
@@ -173,8 +195,8 @@ export interface Provider {
   readonly availability: Effect.Effect<Availability>
   readonly transport: Effect.Effect<Transport>
   readonly list: (input?: ListInput) => Effect.Effect<HostedSessionPage, HostedFailure>
-  readonly get: (id: HostedSessionID) => Effect.Effect<HostedSession, HostedFailure>
+  readonly get: (input: GetInput) => Effect.Effect<HostedSession, HostedFailure>
   readonly transcript: (input: TranscriptInput) => Effect.Effect<HostedTranscriptPage, HostedFailure>
   readonly start: (input: StartInput) => Effect.Effect<StartResult, HostedFailure>
-  readonly attach: (id: HostedSessionID) => Effect.Effect<Attachment, HostedFailure>
+  readonly attach: (input: AttachInput) => Effect.Effect<Attachment, HostedFailure>
 }
