@@ -57,7 +57,7 @@ Kilo v1 inherits these groups from opencode v1.18.26. Kilo's patches on them are
 | Group | V1 behavior | BASE equivalent | Verdict | Unit |
 |---|---|---|---|---|
 | Sessions and prompt loop | Session CRUD, message/part model, agent loop, prompt queue, abort, revert, fork, title, SQLite store | Durable inbox, steer/queue delivery, explicit step loop, restart recovery, fork/move/background (`core/src/session/*`) | native (different model: self-contained typed messages, see `v2-v1-schema-diffs.md`) | U-E2-06 |
-| Compaction and snapshots | Auto-compaction, prune, tail turns, git snapshots, diff/restore | `session/compaction.ts` (auto/overflow/manual, native compaction), `snapshot.ts`, revert stage/commit | partial (`prune`/`tail_turns` unsupported, `config/normalize.ts:332-333`) | U-E2-02, U-E2-03, U-E2-04 |
+| Compaction and snapshots | Auto-compaction, prune, tail turns, git snapshots, diff/restore | `session/compaction.ts` (auto/overflow/manual, native compaction), `snapshot.ts`, revert stage/commit | partial (`prune`/`tail_turns` unsupported, `config/normalize.ts:332-333`) | U-E2-04 |
 | Tools | bash, read, edit, write, patch, grep, glob, list, webfetch, websearch, task, todo, question, skill, lsp, batch, multiedit | edit, patch, write, read, glob, grep, shell, webfetch, websearch, skill, subagent, question, mcp-resource, file-diff | partial (no todo, no LSP diagnostics: TODOs at `edit.ts:107`, `file-mutation.ts:131`) | U-E2-16 |
 | Permissions | Rule-based allow/ask/deny, per agent, external_directory | Rule effects per action/resource, per-session rules, saved approvals, managed policies, forms | native | U-E2-17 |
 | Providers and models | models.dev, AI SDK providers, auth plugins | `@opencode/ai` runtime, 33 provider plugins, swappable catalog (`ServerOptions.models`) | native mechanism | U-E1-04 |
@@ -142,8 +142,6 @@ Column **Snap**: `pre` = present at SNAP with no material change; `Δ` = present
 | ID | Feature | Paths (V1) | Snap | BASE | Delta | Unit |
 |---|---|---|---|---|---|---|
 | F-CORE-034 | Offline wait and reconnect | `k/session/processor.ts` (+ #14893 conn-reset retry at the V1 tip) | Δ | Retry bounded at 10 recurs (~84 s); `session.hook("retry")` cannot extend | needs-port | U-E2-01 |
-| F-CORE-035 | Overflow accounting, `threshold_percent`, chunked compaction, payload recovery | `k/session/{overflow,compaction*}.ts` | Δ (`5edf432c2f` #14318) | Auto/overflow compaction, `buffer`/`keep` | partial | U-E2-02 |
-| F-CORE-036a | Slow-snapshot interaction (timeouts, question, persisted disable) | `k/snapshot/{track,prepare}.ts` | Δ | Snapshots, no slow-snapshot question | partial | U-E2-03 |
 | F-CORE-036b | Snapshot seed/materialize, locking, cleanup, retention | `k/snapshot/{seed,materialize,lock,cleanup}.ts` | Δ (+490; lock/cleanup POST) | Snapshot perf work, no Kilo hardening | partial | U-E2-04 |
 | F-CORE-037 | Session drain, stop/resume control, `kilo run` waits for drain | `k/session/{drain,control}.ts` | POST | Run coordinator, interruption | partial | U-E2-06 |
 | F-CORE-038 | Wakeups and cron (persisted, re-armed at start) | `k/wakeup/*`, `k/tool/{schedule-wakeup,cancel-wakeup,cron}.ts` | POST (#14094, #14312) | none | needs-port | U-E2-08 |
@@ -394,7 +392,6 @@ Each needs a product disposition, so it maps to a unit even when no port is need
 | F-V2-007 | Managed policy | `core/src/managed-policy.ts` | Inherit | U-E1-07 |
 | F-V2-008 | Session core (inbox, runner, coordinator) | `core/src/session/*` | Inherit, verify | U-E2-06 |
 | F-V2-009 | Retry policy | `session/runner/retry.ts` | Extend for offline wait | U-E2-01 |
-| F-V2-010 | Compaction and overflow | `session/compaction.ts` | Add Kilo thresholds | U-E2-02 |
 | F-V2-011 | Snapshots and revert | `core/src/snapshot.ts` | Add Kilo policy | U-E2-04 |
 | F-V2-012 | Restart recovery | `session/execution/restart.ts` | Inherit; covers part of task resume | U-E2-07 |
 | F-V2-013 | Fork, move, background | protocol `session.*` | Inherit | U-E3-05 |
