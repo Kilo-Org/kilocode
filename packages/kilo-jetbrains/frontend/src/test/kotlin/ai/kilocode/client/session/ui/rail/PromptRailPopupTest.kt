@@ -178,6 +178,23 @@ class PromptRailPopupTest : BasePlatformTestCase() {
         Disposer.dispose(fix.popup.disposable)
     }
 
+    /**
+     * A wheel or scrollbar drag is the user taking over the list. A later balloon resize must not drag
+     * the list back to the row the pointer hovered earlier.
+     */
+    fun `test manual scrolling stops revealing the hovered row on resize`() {
+        val fix = shown(40)
+        fix.popup.select(39)
+        assertTrue("precondition: the hovered row scrolls down", fix.port.viewPosition.y > 0)
+
+        fix.port.viewPosition = Point(0, 0)
+        fix.port.extentSize = Dimension(CAP_W, CAP_H - 80)
+
+        assertEquals("manual scrolling must stop the resize follow", Point(0, 0), fix.port.viewPosition)
+
+        Disposer.dispose(fix.popup.disposable)
+    }
+
     /** A row requested before the body had bounds still has to be revealed once it does. */
     fun `test a row requested before layout is revealed once laid out`() {
         val popup = popup(items(40), hovered = 30)

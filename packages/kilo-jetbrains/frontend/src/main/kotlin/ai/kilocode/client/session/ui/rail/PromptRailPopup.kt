@@ -109,6 +109,14 @@ internal class PromptRailPopup(
         },
     ).apply {
         setListCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
+        // A wheel or scrollbar drag is the user taking over the list. Stop following the hovered row so
+        // a later balloon resize cannot snap the list back. Reveal-driven scrolling keeps the follow.
+        onScroll = {
+            if (!revealing) {
+                pending = -1
+                follow = -1
+            }
+        }
         update(items.map(::row))
     }
 
