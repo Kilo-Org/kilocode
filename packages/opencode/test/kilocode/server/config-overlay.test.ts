@@ -982,9 +982,7 @@ describe("config overlay routes", () => {
   })
 
   test.serial("refreshes effective config after project permission update", async () => {
-    await using global = await tmpdir()
     await using project = await tmpdir()
-    await setGlobal(global.path, { permission: { edit: "allow" } })
 
     const before = await json<Agent[]>(await req(project.path, "/agent"))
     expect(
