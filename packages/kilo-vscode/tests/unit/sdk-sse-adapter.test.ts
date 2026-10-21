@@ -214,6 +214,55 @@ describe("KiloConnectionService backend crash", () => {
 })
 
 describe("KiloConnectionService SSE startup", () => {
+  it("waits for the current adapter to recover without opening a replacement connection", async () => {
+    const original = globalThis.fetch
+    const chunk = new TextEncoder().encode(
+      'data: {"payload":{"id":"evt_connected","type":"server.connected","properties":{}}}\n\n',
+    )
+    const streams: ReadableStreamDefaultController<Uint8Array>[] = []
+    const reconnecting = Promise.withResolvers<void>()
+    let calls = 0
+    let servers = 0
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input)
+      if (!url.endsWith("/global/event")) return Response.json(true)
+      calls += 1
+      return new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            streams.push(controller)
+            if (calls === 1) controller.enqueue(chunk)
+            if (calls === 2) reconnecting.resolve()
+          },
+        }),
+        { status: 200, headers: { "content-type": "text/event-stream" } },
+      )
+    }) as typeof fetch
+    const service = new KiloConnectionService({} as never)
+    const internal = service as unknown as {
+      serverManager: { getServer(): Promise<unknown> }
+    }
+    internal.serverManager.getServer = async () => {
+      servers += 1
+      return { port: 52512, password: "secret", process: {} }
+    }
+    try {
+      await service.connect("C:\\work\\demo")
+      const client = service.getClient()
+      streams.at(0)!.close()
+      await reconnecting.promise
+      const pending = service.getClientAsync("C:\\work\\demo")
+      expect(service.getConnectionState()).toBe("connecting")
+      streams.at(1)!.enqueue(chunk)
+      expect(await pending).toBe(client)
+      expect(calls).toBe(2)
+      expect(servers).toBe(1)
+    } finally {
+      service.dispose()
+      globalThis.fetch = original
+    }
+  })
+
   it("waits through an initial SSE fetch failure until the stream opens", async () => {
     const original = globalThis.fetch
     const chunk = new TextEncoder().encode(

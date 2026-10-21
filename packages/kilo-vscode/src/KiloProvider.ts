@@ -4218,8 +4218,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       bindings,
     })
   }
-  private async resolveSession(sessionID?: string, draftID?: string, context?: string, contextDirectory?: string) {
-    if (!this.client) return undefined
+  private async resolveSession(
+    sessionID?: string,
+    draftID?: string,
+    context?: string,
+    contextDirectory?: string,
+    client = this.client,
+  ) {
+    if (!client) return undefined
     const project = this.opts.projectQualifier?.()?.projectId
 
     // Agent Manager: consult the shared route service for an exact directory
@@ -4268,13 +4274,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (pending) return pending
       if (draftID) this.creatingDrafts.add(draftID)
       const creation = (async () => {
-        const metadata = await sandboxSessionMetadata(this.connectionService.sandboxPreference, this.client!, dir)
-        const { data: session } = await this.client!.session.create(
+        const metadata = await sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir)
+        const { data: session } = await client.session.create(
           { directory: dir, platform: this.opts.platform, metadata },
           { throwOnError: true },
         )
         if (draftID && this.closedDrafts.delete(draftID)) {
-          await this.client!.session.delete({ sessionID: session.id, directory: dir }, { throwOnError: true })
+          await client.session.delete({ sessionID: session.id, directory: dir }, { throwOnError: true })
           return undefined
         }
         if (project === this.opts.projectQualifier?.()?.projectId) {
@@ -4317,11 +4323,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /** Execute an SDK call with visible exponential backoff for retryable HTTP errors. */
   private async withRetry(
-    fn: () => Promise<{ error?: unknown; response?: Response }>,
+    fn: (signal: AbortSignal) => Promise<{ error?: unknown; response?: Response }>,
     sid: string,
     messageID?: string,
+    abortController = new AbortController(),
   ): Promise<void> {
-    const abortController = new AbortController()
     this.retryAbortControllers.set(sid, abortController)
 
     try {
@@ -4331,7 +4337,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           return
         }
 
-        const result = await fn()
+        const result = await fn(abortController.signal)
         if (!result.error) return
         if (this.confirmations.has(messageID)) return
 
@@ -4373,8 +4379,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         })
         if (this.confirmations.has(messageID)) return
       }
+    } catch (error) {
+      if (!abortController.signal.aborted) throw error
     } finally {
-      this.retryAbortControllers.delete(sid)
+      if (this.retryAbortControllers.get(sid) === abortController) this.retryAbortControllers.delete(sid)
     }
   }
 
@@ -4717,31 +4725,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     browserFeedback?: BrowserFeedbackData,
     injectedTitle?: string,
   ): Promise<void> {
-    if (!this.client) {
-      this.postMessage({
-        type: "sendMessageFailed",
-        error: "Not connected to CLI backend",
-        text,
-        sessionID,
-        draftID,
-        messageID,
-        files,
-        review,
-        browserFeedback,
-      })
-      return
-    }
-
+    const controller = new AbortController()
+    if (sessionID) this.retryAbortControllers.set(sessionID, controller)
+    if (!sessionID && draftID) this.creatingDrafts.add(draftID)
     let resolved: { sid: string; dir: string } | undefined
     try {
+      const client =
+        this.client ?? (await this.connectionService.getClientAsync(this.getRootDirectory(), controller.signal))
+      controller.signal.throwIfAborted()
+      if (draftID && this.closedDrafts.delete(draftID)) return
       const sandbox = this.sandboxTransitions.get(
         this.sandboxKey({ sessionID, draftID, agentManagerContext: context, contextDirectory }),
       )
-      resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory)
+      resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory, client)
       if (!resolved) return
       if (sandbox) await sandbox
       const sid = resolved.sid
       const dir = resolved.dir
+      this.retryAbortControllers.set(sid, controller)
 
       const parts: Array<TextPartInput | FilePartInput> = []
       if (files) {
@@ -4770,10 +4771,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Kept outside withRetry so retryable prompt errors keep their backoff.
       // The Integrated Browser does not use Playwright and is not affected.
       await this.connectionService.prepareTools(dir)
+      controller.signal.throwIfAborted()
       await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Message request", () =>
         this.withRetry(
-          () =>
-            this.client!.session.promptAsync({
+          async (signal) => {
+            const client = this.client ?? (await this.connectionService.getClientAsync(dir, signal))
+            return client.session.promptAsync({
               sessionID: sid,
               directory: dir,
               messageID,
@@ -4783,12 +4786,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               variant,
               editorContext,
               snapshotInitialization: this.opts.snapshotInitialization,
-            }),
+            })
+          },
           sid,
           messageID,
+          controller,
         ),
       )
     } catch (error) {
+      if (controller.signal.aborted) return
       console.error("[Kilo New] KiloProvider: Failed to send message:", error)
       this.postMessage({
         type: "sendMessageFailed",
@@ -4801,6 +4807,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         review,
         browserFeedback,
       })
+    } finally {
+      const sid = resolved?.sid ?? sessionID
+      if (sid && this.retryAbortControllers.get(sid) === controller) this.retryAbortControllers.delete(sid)
+      if (draftID) this.creatingDrafts.delete(draftID)
     }
   }
 
@@ -4818,31 +4828,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     context?: string,
     contextDirectory?: string,
   ): Promise<void> {
-    if (!this.client) {
-      this.postMessage({
-        type: "sendMessageFailed",
-        error: "Not connected to CLI backend",
-        text: `/${command} ${args}`.trim(),
-        sessionID,
-        draftID,
-        messageID,
-        files,
-      })
-      return
-    }
-
+    // Goal controls must retain the running goal's cancellation controller.
+    const controller = command === "goal" ? undefined : new AbortController()
+    if (sessionID && controller) this.retryAbortControllers.set(sessionID, controller)
+    if (!sessionID && draftID) this.creatingDrafts.add(draftID)
     let resolved: { sid: string; dir: string } | undefined
     try {
+      const client =
+        this.client ?? (await this.connectionService.getClientAsync(this.getRootDirectory(), controller?.signal))
+      controller?.signal.throwIfAborted()
+      if (draftID && this.closedDrafts.delete(draftID)) return
       const sandbox = this.sandboxTransitions.get(
         this.sandboxKey({ sessionID, draftID, agentManagerContext: context, contextDirectory }),
       )
-      resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory)
+      resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory, client)
       if (!resolved) return
       const control = goalControl(command, args)
       const stopping = control && args.trim() !== ""
       if (sandbox && !stopping) await sandbox
       const sid = resolved.sid
       const dir = resolved.dir
+      if (controller) this.retryAbortControllers.set(sid, controller)
 
       if (messageID) {
         this.connectionService.recordMessageSessionId(messageID, sid)
@@ -4860,8 +4866,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         await this.checkpoints.get(sid)
         await this.connectionService.prepareTools(dir)
       }
-      const send = () =>
-        this.client!.session.command({
+      controller?.signal.throwIfAborted()
+      const send = async (signal?: AbortSignal) => {
+        const client = this.client ?? (await this.connectionService.getClientAsync(dir, signal))
+        return client.session.command({
           sessionID: sid,
           directory: dir,
           command,
@@ -4873,8 +4881,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           parts,
           snapshotInitialization: this.opts.snapshotInitialization,
         })
+      }
       await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Command request", async () => {
-        if (command !== "goal") return this.withRetry(send, sid, messageID)
+        if (command !== "goal") return this.withRetry(send, sid, messageID, controller)
         const result = await send()
         if (result.error) throw result.error
         if (args.trim()) return
@@ -4888,6 +4897,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.postMessage({ type: "sessionCommandCompleted", messageID })
       }
     } catch (error) {
+      if (controller?.signal.aborted) return
       console.error("[Kilo New] KiloProvider: Failed to send command:", error)
       this.postMessage({
         type: "sendMessageFailed",
@@ -4898,6 +4908,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         messageID,
         files,
       })
+    } finally {
+      const sid = resolved?.sid ?? sessionID
+      if (sid && controller && this.retryAbortControllers.get(sid) === controller)
+        this.retryAbortControllers.delete(sid)
+      if (draftID) this.creatingDrafts.delete(draftID)
     }
   }
 
