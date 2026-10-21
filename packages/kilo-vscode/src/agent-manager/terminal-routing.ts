@@ -63,6 +63,10 @@ function isTerminalMessage(
 
 export class TerminalRouter {
   private manager: TerminalManager
+  /** Keep failed cleanup reachable after a panel replaces its manager. */
+  private readonly retired = new Set<TerminalManager>()
+  /** Includes creates waiting for the shared backend connection. */
+  private readonly creates = new Map<TerminalManager, number>()
   /** Ordinals reserved by in-flight creates, per context — prevents two
    *  concurrent creates from grabbing the same "Terminal N" title. */
   private readonly reserved = new Map<string, Set<number>>()
@@ -119,6 +123,7 @@ export class TerminalRouter {
             message: error instanceof Error ? error.message : String(error),
           })
         })
+        .finally(() => this.prune())
       return true
     }
     // resize
@@ -136,16 +141,32 @@ export class TerminalRouter {
     this.generation++
     const manager = this.manager
     this.manager = this.createManager()
+    this.retired.add(manager)
     this.reserved.clear()
-    return manager.dispose()
+    return Promise.all([...this.retired].map((entry) => entry.dispose())).then(() => this.prune())
   }
 
-  blockDirectory(directory: string): Promise<() => void> {
-    return this.manager.blockDirectory(directory)
+  async blockDirectory(directory: string): Promise<() => void> {
+    const releases = await Promise.all(
+      [this.manager, ...this.retired].map((manager) => manager.blockDirectory(directory)),
+    )
+    return () => {
+      for (const release of releases) release()
+    }
   }
 
-  closeDirectory(directory: string): Promise<void> {
-    return this.manager.closeDirectory(directory)
+  async closeDirectory(directory: string): Promise<void> {
+    try {
+      await Promise.all([this.manager, ...this.retired].map((manager) => manager.closeDirectory(directory)))
+    } finally {
+      this.prune()
+    }
+  }
+
+  private prune(): void {
+    for (const manager of this.retired) {
+      if (!this.creates.has(manager) && !manager.hasPendingCleanup()) this.retired.delete(manager)
+    }
   }
 
   private async handleCreate(
@@ -173,6 +194,7 @@ export class TerminalRouter {
     }
     const ordinal = this.reserveOrdinal(worktreeId)
     const title = `Terminal ${ordinal}`
+    this.creates.set(manager, (this.creates.get(manager) ?? 0) + 1)
     try {
       // Join the shared backend connection instead of racing its synchronous
       // client accessor when this is the first Kilo action in the window.
@@ -203,6 +225,10 @@ export class TerminalRouter {
       // cleared this create's reservation, and releasing here would
       // delete a *new* panel's reservation for the same number.
       if (generation === this.generation) this.releaseOrdinal(worktreeId, ordinal)
+      const count = this.creates.get(manager) ?? 1
+      if (count === 1) this.creates.delete(manager)
+      else this.creates.set(manager, count - 1)
+      this.prune()
     }
   }
 

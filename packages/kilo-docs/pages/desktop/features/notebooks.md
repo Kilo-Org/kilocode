@@ -7,6 +7,10 @@ description: "Analyze data in interactive Python notebooks alongside your chat i
 
 Open interactive Python notebooks in a tab next to your chat, so you can explore and visualize data without leaving the conversation. A notebook is a shared document you and the agent build together: you edit and run cells directly, while the agent reads, writes, and runs cells alongside you as you talk through the analysis. Notebooks run on a dedicated notebook runtime.
 
+{% callout type="info" %}
+Notebooks require a [Kilo account](/docs/desktop/settings/ai#ai-providers). Sign in to create, open, and work with them.
+{% /callout %}
+
 {% image src="/docs/img/desktop/notebooks-with-chat.png" alt="A Python notebook open beside a chat in Kilo Desktop" width="800" /%}
 
 ## Open a notebook
@@ -16,6 +20,8 @@ A notebook opens as its own tab beside the chat. There are a few ways to get the
 - **Ask the agent** to list the files in your workspace, then select an `.ipynb` file in its reply to open it.
 - **From the [Files](/docs/desktop/features/files) tab**, search or browse the workspace and select an `.ipynb` file.
 - **Ask the agent to open it** by name — the agent can open and list notebooks for you, so the one you're discussing stays in view. You can also create a new notebook by asking the agent.
+
+If you're signed out, the **Notebook** option in the **+** menu is grayed out, and a notebook you open from Files or a chat link shows a sign-in prompt instead. If you sign out while a notebook is open, the tab shows the sign-in prompt until you sign in again.
 
 ## Work with cells
 
@@ -29,11 +35,15 @@ Each individual cell includes controls to {% svgIcon src="/docs/img/desktop/play
 
 Work on notebooks together with the agent. Ask it to make a change — fix a typo, add analysis, rework a chart — and it reads the notebook, edits or adds cells, and saves. When the notebook is open beside the chat, the results appear in its tab, and a dot marks each cell the agent changes so you can see at a glance what it edited. The notebook doesn't need to be open, though — the agent can edit any notebook in your workspace.
 
+If you're signed out when the agent tries to open or list notebooks, the chat shows **Sign in to use embedded notebooks?** with **Sign in** and **Not now**. After you sign in, the agent continues the task. **Not now** turns off the agent's notebook tools until you sign in or restart the app. Other features still ask on their own.
+
 ## Environment and packages
 
 Each notebook uses a Python environment. Select the kernel button in the toolbar to see the details of that environment. New notebooks can get a shared `environment.yml` in their workspace; toggle this under [Settings → Notebooks](/docs/desktop/settings/general#notebooks).
 
 The agent can work with [conda environments](/docs/desktop/features/environments) too — ask it to find an appropriate conda environment for this notebook and point the notebook at it, and it will. A helpful pattern is to have the agent write an `environment.yml` into the workspace: then every notebook there, existing or new, picks up that environment automatically.
+
+Before the agent adds packages to a notebook that you haven't approved yet, it asks you first. It also flags package names that look like misspellings of popular packages (a common way to slip in malicious packages).
 
 ## Runtime status
 

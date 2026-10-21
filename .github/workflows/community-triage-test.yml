@@ -9,6 +9,7 @@ on:
     paths:
       - script/kilocode/community-triage*.ts
       - .github/workflows/community-*.yml
+      - .github/community-maintainers.json
   workflow_dispatch:
 
 concurrency:
