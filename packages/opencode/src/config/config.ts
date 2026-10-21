@@ -648,6 +648,15 @@ const layer = Layer.effect(
           return result
         }
 
+        // Permission entries in the merged map resolve per key and pattern, so keep global and
+        // project contributions apart and apply project entries first: a user-global entry decides
+        // the result for a key and pattern that a project file also sets. Every merge before this
+        // point is global-scoped.
+        const globalPermissions: ConfigPermissionV1.Info[] = result.permission ? [result.permission] : []
+        const localPermissions: ConfigPermissionV1.Info[] = []
+        const mergePermissions = (list: ConfigPermissionV1.Info[]) =>
+          list.reduce<ConfigPermissionV1.Info>((acc, item) => mergeDeep(acc, item), {})
+
         const merge = Effect.fnUntraced(function* (
           source: string,
           next: Info,
@@ -659,15 +668,20 @@ const layer = Layer.effect(
           const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
           result = mergeConfigConcatArrays(result, scoped, trusted) // kilocode_change
           if (scoped.agent) configuredAgents = mergeDeep(configuredAgents, scoped.agent)
+          if (scoped.permission) {
+            if (scope === "global") globalPermissions.push(scoped.permission)
+            else localPermissions.push(scoped.permission)
+          }
           if (next.instructions?.length) {
             result.instruction_origins = origins(result.instruction_origins, next.instructions, trusted, source)
           }
           if (next.skills?.paths?.length) {
             result.skill_path_origins = origins(result.skill_path_origins, next.skills.paths, trusted, source)
           }
-          // record which scope last set each permission + pattern. A scalar value (e.g. bash: "allow")
+          // record which scope decides each permission + pattern. A scalar value (e.g. bash: "allow")
           // maps to pattern "*"; an object records each of its patterns. Global and project config can
-          // contribute different patterns under one key, so track per pattern; later merges win.
+          // contribute different patterns under one key, so track per pattern; a global entry keeps
+          // the attribution because it is applied last.
           if (scoped.permission && typeof scoped.permission === "object") {
             const map = { ...result.permission_origins }
             for (const [key, value] of Object.entries(scoped.permission)) {
@@ -676,6 +690,7 @@ const layer = Layer.effect(
               const inner = { ...map[key] }
               for (const [pattern, action] of Object.entries(patterns)) {
                 if (action === null) continue
+                if (inner[pattern] === "global") continue
                 inner[pattern] = scope
               }
               map[key] = inner
@@ -1012,6 +1027,15 @@ const layer = Layer.effect(
             },
           })
         }
+
+        // kilocode_change start
+        // Apply project permission entries first and global entries last, so a global entry decides
+        // the result for a key and pattern that a project file also sets. Project entries that a
+        // global file does not mention keep applying.
+        if (localPermissions.length > 0) {
+          result.permission = mergeDeep(mergePermissions(localPermissions), mergePermissions(globalPermissions))
+        }
+        // kilocode_change end
 
         if (Flag.KILO_PERMISSION) {
           try {

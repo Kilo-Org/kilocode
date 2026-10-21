@@ -77,7 +77,7 @@ permission:
 
 ## Config Precedence
 
-When `permissions` rules come from both your global configuration and repository-scoped configuration such as `kilo.json`, `.kilo/kilo.json`, or agent Markdown files in a project config directory, the global rules are applied after the repository rules, so a global rule decides the result when both match. Repository rules still apply to requests your global configuration does not match, and rules inside a single file keep their statement order.
+When `permissions` rules come from both your global configuration and repository-scoped configuration such as `kilo.json`, `.kilo/kilo.json`, or agent Markdown files in a project config directory, the global rules are applied after the repository rules, so a global rule decides the result when both match. The same ordering applies to `permission` entries in `kilo.json` and `kilo.jsonc`: a global entry decides the result for a key and pattern that a project file also sets. Repository rules still apply to requests your global configuration does not match, and rules inside a single file keep their statement order.
 
 ## Patterns
 
