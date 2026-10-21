@@ -76,6 +76,11 @@ export function modelSelection(input?: string, variant?: string) {
   }
 }
 
+// V1 had a single MCP timeout, so a bare number bounds every phase.
+export function migrateMcpTimeout(timeout: number) {
+  return { startup: timeout, catalog: timeout, execution: timeout }
+}
+
 export function migrateMcp(info: ConfigMCPV1.Info) {
   const disabled = info.enabled === undefined ? undefined : !info.enabled
   if (info.type === "local")
@@ -85,7 +90,7 @@ export function migrateMcp(info: ConfigMCPV1.Info) {
       cwd: info.cwd,
       environment: info.environment,
       disabled,
-      timeout: info.timeout === undefined ? undefined : { catalog: info.timeout, execution: info.timeout },
+      timeout: info.timeout === undefined ? undefined : migrateMcpTimeout(info.timeout),
     }
   return {
     type: info.type,
@@ -99,7 +104,7 @@ export function migrateMcp(info: ConfigMCPV1.Info) {
       redirect_uri: info.oauth.redirectUri,
     },
     disabled,
-    timeout: info.timeout === undefined ? undefined : { catalog: info.timeout, execution: info.timeout },
+    timeout: info.timeout === undefined ? undefined : migrateMcpTimeout(info.timeout),
   }
 }
 

@@ -23,6 +23,8 @@ export function DialogThemeList() {
   return (
     <DialogSelect
       title="Themes"
+      searchInTitle
+      titlePlaceholder="Search themes"
       options={options}
       current={initial}
       onMove={(opt) => {

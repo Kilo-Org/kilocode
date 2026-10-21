@@ -41,7 +41,7 @@ describe("SessionRunnerRetry.policy", () => {
 
   it.effect("keeps the general allowance for other transient failures", () =>
     Effect.gen(function* () {
-      expect(yield* decisions(internal, 10)).toEqual(Array(10).fill(true))
+      expect(yield* decisions(internal, 11)).toEqual([...Array(10).fill(true), false])
     }),
   )
 })

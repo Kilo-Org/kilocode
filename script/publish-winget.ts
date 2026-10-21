@@ -109,6 +109,7 @@ async function prepare(input: (typeof packages)[number]) {
       "Publisher: OpenCode",
       "PublisherUrl: https://anoma.ly/",
       "PublisherSupportUrl: https://github.com/anomalyco/opencode/issues",
+      "PrivacyUrl: https://opencode.ai/legal/privacy-policy",
       `PackageName: ${input.name}`,
       "PackageUrl: https://opencode.ai/",
       "License: MIT",

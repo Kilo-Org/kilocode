@@ -516,7 +516,7 @@ const fromRequest = Effect.fn("BedrockConverse.fromRequest")(function* (request:
   )
   // Bedrock-Claude shares Anthropic's 4-breakpoint cap. Spend the budget in
   // tools → system → messages order to favour the highest-impact prefixes.
-  const breakpoints = BedrockCache.breakpoints(request.model.id)
+  const breakpoints = BedrockCache.breakpoints(request.model)
   const toolConfig = (() => {
     if (flattened.tools.length === 0) return undefined
     return {

@@ -14,6 +14,8 @@ import { Credential } from "@opencode/core/credential"
 import { ConfigV1 } from "../fixture/v1-config/config"
 import { ConfigPermissionV1 } from "@opencode/core/v1/config/permission"
 import { ConfigNormalize } from "@opencode/core/config/normalize"
+import { ConfigVariable } from "@opencode/core/config/variable"
+import { FSUtil } from "@opencode/util/fs-util"
 import { Watcher } from "@opencode/core/filesystem/watcher"
 import { Bus } from "@opencode/core/bus"
 import { Global } from "@opencode/util/global"
@@ -31,6 +33,7 @@ import { tmpdir } from "../fixture/tmpdir"
 import { testEffect } from "../lib/effect"
 
 const it = testEffect(Layer.empty)
+const itWithPermissions = process.platform === "win32" || process.getuid?.() === 0 ? it.live.skip : it.live
 const selection = Schema.decodeUnknownSync(ConfigModel.Selection)
 const decodeInfo = Schema.decodeUnknownSync(Info, { errors: "all", onExcessProperty: "ignore" })
 const encodeInfo = Schema.encodeSync(Info)
@@ -208,6 +211,41 @@ describe("Config", () => {
         )
       }),
     ),
+  )
+
+  // Filesystem sandboxes deny reads outside the project. Simulate a denied discovery root with a
+  // symlink into an unsearchable directory, which makes realpath fail with EACCES.
+  itWithPermissions(
+    "treats unreadable discovery roots as absent",
+    () =>
+      Effect.acquireDisposable(Effect.promise(() => tmpdir())).pipe(
+        Effect.flatMap((tmp) => {
+          const global = path.join(tmp.path, "global")
+          const home = path.join(global, "home")
+          const project = path.join(home, "project")
+          const locked = path.join(tmp.path, "locked")
+          return Effect.promise(async () => {
+            await fs.mkdir(path.join(locked, "agents"), { recursive: true })
+            await fs.mkdir(project, { recursive: true })
+            await fs.writeFile(path.join(project, "opencode.json"), JSON.stringify({ shell: "project" }))
+            await fs.symlink(path.join(locked, "agents"), path.join(home, ".agents"))
+            await fs.symlink(path.join(locked, "agents"), path.join(project, ".opencode"))
+            await fs.chmod(locked, 0o000)
+          }).pipe(
+            Effect.andThen(Effect.addFinalizer(() => Effect.promise(() => fs.chmod(locked, 0o755)))),
+            Effect.andThen(
+              Effect.gen(function* () {
+                const config = yield* Config.Service
+                const entries = yield* config.entries()
+                expect(entries.flatMap((entry) => (entry.type === "document" ? [entry.info.shell] : []))).toEqual([
+                  "project",
+                ])
+              }).pipe(Effect.provide(testLayer(project, global))),
+            ),
+            Effect.scoped,
+          )
+        }),
+      ),
   )
 
   it.live("discovers the global config directory once when the project walk reaches it", () =>
@@ -1273,7 +1311,7 @@ describe("Config", () => {
               {
                 type: "directory",
                 path: AbsolutePath.make(path.join(tmp.path, "global")),
-                ignore: ["**/{node_modules,.git}/**", ".git", "node_modules"],
+                ignore: FSUtil.ignoreGlobs.toSorted(),
               },
               {
                 type: "entries",
@@ -1350,8 +1388,10 @@ describe("Config", () => {
         const previous = {
           token: process.env.OPENCODE_TEST_MCP_TOKEN,
           missing: process.env.OPENCODE_TEST_MISSING,
+          flag: process.env.OPENCODE_TEST_FLAG,
         }
-        process.env.OPENCODE_TEST_MCP_TOKEN = "secret"
+        process.env.OPENCODE_TEST_FLAG = "false"
+        process.env.OPENCODE_TEST_MCP_TOKEN = String.raw`C:\Users\new\"secret"`
         delete process.env.OPENCODE_TEST_MISSING
         return previous
       }),
@@ -1368,6 +1408,7 @@ describe("Config", () => {
                     `{
                       // Ignored reference: {file:.}
                       "username": "user-{env:OPENCODE_TEST_MISSING}",
+                      "snapshots": {env:OPENCODE_TEST_FLAG},
                       "mcp": {
                         "servers": {
                           "remote": {
@@ -1376,7 +1417,8 @@ describe("Config", () => {
                             "headers": {
                               "Authorization": "Bearer {env:OPENCODE_TEST_MCP_TOKEN}",
                               "X-Token": "{file:token.txt}",
-                              "X-Missing": "Bearer {file:~/.opencode-test-missing/key}"
+                              "X-Missing": "Bearer {file:~/.opencode-test-missing/key}",
+                              "X-Folder": "{file:.}"
                             }
                           }
                         }
@@ -1390,13 +1432,15 @@ describe("Config", () => {
                 const config = yield* Config.Service
                 const document = (yield* config.entries()).find((entry) => entry.type === "document")
                 expect(document?.info.username).toBe("user-")
+                expect(document?.info.snapshots).toBe(false)
                 const remote = document?.info.mcp?.servers?.remote
                 expect(remote?.type).toBe("remote")
                 if (remote?.type !== "remote") return
                 expect(remote.headers).toEqual({
-                  Authorization: "Bearer secret",
+                  Authorization: String.raw`Bearer C:\Users\new\"secret"`,
                   "X-Token": 'file\n"token"',
                   "X-Missing": "Bearer ",
+                  "X-Folder": "",
                 })
               }).pipe(Effect.provide(testLayer(tmp.path)))
             }),
@@ -1408,8 +1452,23 @@ describe("Config", () => {
           else process.env.OPENCODE_TEST_MCP_TOKEN = previous.token
           if (previous.missing === undefined) delete process.env.OPENCODE_TEST_MISSING
           else process.env.OPENCODE_TEST_MISSING = previous.missing
+          if (previous.flag === undefined) delete process.env.OPENCODE_TEST_FLAG
+          else process.env.OPENCODE_TEST_FLAG = previous.flag
         }),
     ),
+  )
+
+  it.effect("keeps env values unescaped when the config already parses", () =>
+    Effect.gen(function* () {
+      const text = yield* ConfigVariable.substitute({
+        type: "virtual",
+        source: "test",
+        dir: "/",
+        text: '{ "quoted": "{env:QUOTED}", "fragment": {env:FRAGMENT} }',
+        env: { QUOTED: String.raw`a\"b`, FRAGMENT: '{"k":"v"}' },
+      })
+      expect(JSON.parse(text)).toEqual({ quoted: 'a"b', fragment: { k: "v" } })
+    }).pipe(Effect.provide(AppNodeBuilder.build(FSUtil.node))),
   )
 
   it.live("does not load legacy config.json files", () =>
@@ -1838,13 +1897,13 @@ describe("Config", () => {
                   type: "local",
                   command: ["node", "server.js"],
                   disabled: true,
-                  timeout: { catalog: 10000, execution: 10000 },
+                  timeout: { startup: 10000, catalog: 10000, execution: 10000 },
                 },
                 remote: {
                   type: "remote",
                   url: "https://mcp.example.com",
                   oauth: { client_id: "client", callback_port: 19876 },
-                  timeout: { catalog: 20000, execution: 20000 },
+                  timeout: { startup: 20000, catalog: 20000, execution: 20000 },
                 },
               },
             })

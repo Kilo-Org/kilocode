@@ -54,7 +54,7 @@ const CHECKS: Check[] = [
   { name: "www-check-generated", cwd: "services/www", argv: ["bun", "run", "check:generated"] },
   // test.yml sdk
   { name: "sdk-verify-package", cwd: ".", argv: ["bun", "turbo", "verify:package", "--filter=@opencode/sdk"] },
-  // test.yml build, kilo-v2.yml build
+  // test.yml build (the upstream CLI)
   { name: "cli-build", cwd: "packages/cli", argv: ["bun", "run", "script/build.ts", "--single", "--skip-install"] },
   {
     name: "cli-binary-version",
@@ -69,6 +69,14 @@ const CHECKS: Check[] = [
     skip: nodeTooOld,
   },
   { name: "node-service-smoke", cwd: "packages/cli", argv: ["bun", "run", "script/service-smoke.ts", "--node"], skip: nodeTooOld, isolate: true },
+  // kilo-v2.yml build (the Kilo host)
+  { name: "kilo-build", cwd: "packages/kilo-cli", argv: ["bun", "run", "script/build.ts", "--single", "--skip-install"] },
+  {
+    name: "kilo-host-smoke",
+    cwd: ".",
+    argv: ["bash", "-c", `bun script/kilocode/smoke-host.ts packages/kilo-cli/dist/cli-${process.platform}-${process.arch}/bin/kilo`],
+    isolate: true,
+  },
   // kilo-v2.yml
   { name: "workflow-allowlist", cwd: ".", argv: ["bun", "script/check-workflows.ts"] },
   { name: "opencode-annotations", cwd: ".", argv: ["bun", "script/check-opencode-annotations.ts"] },

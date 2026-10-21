@@ -162,7 +162,7 @@ const cliCredential = () =>
   })
 
 const keyCredential = (key = "secret", resourceName = "test-resource") =>
-  Credential.Key.make({ type: "key", key, configuration: { resourceName } })
+  Credential.Key.make({ type: "key", key, metadata: { resourceName } })
 
 const connect = Effect.fn(function* (value: Credential.Value) {
   const credentials = yield* Credential.Service

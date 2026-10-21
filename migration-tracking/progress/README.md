@@ -21,7 +21,7 @@ Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only
 
 Landed by rung, for patch cells closed by a done-proof: 20 plugin, 1 host, 0 seam, 0 patch.
 
-Ratchets: 9 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/location`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 31 shared patches by rung: 29 seam, 2 patch (`script/upstream/shared-patches.json`).
+Ratchets: 9 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/location`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 32 shared patches by rung: 29 seam, 3 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -33,6 +33,7 @@ One point per day from the committed `progress.json` on the first-parent history
 |---|---:|---:|---:|
 | 2026-10-16 | 12 | 9854 | 0.1% |
 | 2026-10-19 | 87 | 9829 | 0.9% |
+| 2026-10-20 | 88 | 9829 | 0.9% |
 | now | 88 | 9829 | 0.9% |
 
 ## Features

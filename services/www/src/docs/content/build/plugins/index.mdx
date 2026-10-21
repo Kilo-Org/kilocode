@@ -792,6 +792,14 @@ const session = await ctx.session.get({ sessionID })
 const messages = await ctx.session.context({ sessionID })
 ```
 
+List sessions a page at a time. To get the next page, pass `cursor.next` back as `cursor`. The cursor remembers your
+filters, so you don't need to repeat them.
+
+```ts
+const page = await ctx.session.list({ directory: ctx.location.directory, limit: 20 })
+const next = page.cursor.next ? await ctx.session.list({ cursor: page.cursor.next, limit: 20 }) : undefined
+```
+
 Change the agent or model used by subsequent requests.
 
 ```ts
@@ -1634,7 +1642,7 @@ interface SessionContextHook extends SessionRequestHook {
 
 interface SessionCompactionResult {
   summary: string
-  providerState?: Record<string, unknown>
+  native?: Record<string, unknown>
   metadata?: Record<string, unknown>
   tokens?: TokenUsage
 }
