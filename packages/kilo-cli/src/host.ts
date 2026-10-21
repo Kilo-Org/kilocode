@@ -3,6 +3,8 @@ export * as KiloHost from "./host"
 import { KiloPlugins, KiloPostPlugins } from "@kilocode/kilo-plugin"
 import { App } from "@opencode/core/app"
 import { Bus } from "@opencode/core/bus"
+import { ConfigDiscovery } from "@opencode/core/config/discovery"
+import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
 import { SdkPlugins } from "@opencode/core/plugin/sdk"
 import type { Plugin } from "@opencode/plugin/effect/plugin"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
@@ -51,9 +53,12 @@ const plugins = makeGlobalNode({
 
 /**
  * Service replacements that the Kilo host gives the server it starts. `createRoutes` applies them after its
- * standard set, so they win: the Kilo plugins and Kilo's app identity.
+ * standard set, so they win: the Kilo plugins, Kilo's app identity and Kilo's config discovery (`kilo2.json`,
+ * `.kilo2`, worktree boundary).
  */
 export const overrides: LayerNode.Replacements = [
   SdkPlugins.node.replace(plugins),
   App.node.replace(App.configured(KiloApp)),
+  // kilo_port(unattributed:config:546539fc1643) kilo_port(unattributed:config:8cdbdec70393)
+  ConfigDiscovery.node.replace(Layer.succeed(ConfigDiscovery.LayoutService, KiloConfigDiscovery.layout)),
 ]

@@ -61,9 +61,9 @@ jobs:
         run: bun run script/build.ts --single --skip-install
 
       # Runs the executable in an isolated profile. The host must be the Kilo entry, not the upstream one: it names
-      # itself `kilo`, keeps its data in `kilo2` (not `opencode`) and starts the background service from itself.
+      # itself `kilo2`, keeps its data in `kilo2` (not `opencode`) and starts the background service from itself.
       - name: Check the Kilo host
-        run: bun script/kilocode/smoke-host.ts packages/kilo-cli/dist/cli-${{ matrix.target }}/bin/kilo
+        run: bun script/kilocode/smoke-host.ts packages/kilo-cli/dist/cli-${{ matrix.target }}/bin/kilo2
 
       # A tarball keeps the executable bit, which a zipped artifact loses.
       - name: Archive CLI

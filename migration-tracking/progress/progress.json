@@ -4,7 +4,7 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 87,
+    "done": 89,
     "total": 9829,
     "percent": 0.9,
     "dropped": 25,
@@ -21,7 +21,7 @@
       },
       {
         "kind": "patch",
-        "done": 35,
+        "done": 37,
         "total": 3445
       },
       {
@@ -32,14 +32,14 @@
     ],
     "landed": {
       "plugin": 19,
-      "host": 1,
+      "host": 3,
       "seam": 0,
       "patch": 0
     },
     "coreImports": 9,
     "sharedPatches": {
-      "seam": 29,
-      "patch": 3
+      "seam": 20,
+      "patch": 7
     }
   },
   "notCounted": {
@@ -55,7 +55,7 @@
   "coreImports": [
     "@opencode/core/app",
     "@opencode/core/bus",
-    "@opencode/core/location",
+    "@opencode/core/config/discovery",
     "@opencode/core/permission",
     "@opencode/core/plugin/sdk",
     "@opencode/core/shell",
@@ -2611,7 +2611,7 @@
     },
     {
       "feature": "unattributed:config",
-      "done": 0,
+      "done": 2,
       "total": 130,
       "dropped": 0,
       "kinds": {
@@ -2624,13 +2624,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 2,
           "total": 130
         },
         "test": {
           "done": 0,
           "total": 0
         }
+      },
+      "landed": {
+        "plugin": 0,
+        "host": 2,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -6086,7 +6092,9 @@
     "patch:unattributed:agent:6f9571fe6129": "plugin",
     "patch:unattributed:agent:80e846e9fd1c": "plugin",
     "patch:unattributed:agent:a91ca8efa1b6": "plugin",
-    "patch:unattributed:agent:b6727a425792": "plugin"
+    "patch:unattributed:agent:b6727a425792": "plugin",
+    "patch:unattributed:config:546539fc1643": "host",
+    "patch:unattributed:config:8cdbdec70393": "host"
   },
   "done": [
     "module:packages/kilo-gateway/src/api/constants.ts",
@@ -6175,7 +6183,9 @@
     "patch:unattributed:agent:e4427a3d9c64",
     "patch:unattributed:agent:e4427a3d9c64",
     "patch:unattributed:agent:e4427a3d9c64",
-    "patch:unattributed:agent:fbbd4a8ba315"
+    "patch:unattributed:agent:fbbd4a8ba315",
+    "patch:unattributed:config:546539fc1643",
+    "patch:unattributed:config:8cdbdec70393"
   ],
   "dropped": [
     "module:packages/kilo-gateway/src/auth/device-auth.ts",
