@@ -987,28 +987,28 @@ describe("config overlay routes", () => {
     await setGlobal(global.path, { permission: { edit: "allow" } })
 
     const before = await json<Agent[]>(await req(project.path, "/agent"))
-    expect(Permission.evaluate("edit", "*", before.find((item) => item.name === "code")?.permission ?? []).action).toBe(
-      "allow",
-    )
+    expect(
+      Permission.evaluate("websearch", "*", before.find((item) => item.name === "code")?.permission ?? []).action,
+    ).toBe("allow")
 
     await json(
       await req(project.path, "/config/overlay", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ scope: "project", set: { permission: { edit: { "*": "ask" } } } }),
+        body: JSON.stringify({ scope: "project", set: { permission: { websearch: "ask" } } }),
       }),
     )
     const body = await json<Overlay & { effective: { permission: Record<string, string | Record<string, string>> } }>(
       await req(project.path, "/config/overlay?scope=project"),
     )
-    const edit = body.effective.permission.edit
+    const websearch = body.effective.permission.websearch
     const after = await json<Agent[]>(await req(project.path, "/agent"))
 
-    expect(typeof edit === "string" ? edit : edit?.["*"]).toBe("ask")
-    expect(Permission.evaluate("edit", "*", after.find((item) => item.name === "code")?.permission ?? []).action).toBe(
-      "ask",
-    )
-    expect(body.collections.permission.find((item) => item.key === "edit")).toMatchObject({
+    expect(typeof websearch === "string" ? websearch : websearch?.["*"]).toBe("ask")
+    expect(
+      Permission.evaluate("websearch", "*", after.find((item) => item.name === "code")?.permission ?? []).action,
+    ).toBe("ask")
+    expect(body.collections.permission.find((item) => item.key === "websearch")).toMatchObject({
       source: "project",
       overridden: true,
     })
