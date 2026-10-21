@@ -1703,6 +1703,122 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
     })
   }, 30000)
 
+  test("the poll withdraws a closed PR without remote control and leaves unlinked sessions alone", async () => {
+    const poller = await import("../../src/kilo-sessions/pr-link-poller")
+    const poll = spyOn(poller, "startPrLinkPoll").mockImplementation(() => () => {})
+    await using tmp = await repoWithRemote()
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const owner = await setupSession()
+          const bystander = await setupSession()
+          await KiloSessions.bootstrap(owner)
+          await KiloSessions.bootstrap(bystander)
+          await clearStaleIngest()
+          emitPart(owner, toolPart(owner, "p-create", "gh pr create --fill", "https://github.com/owner/repo/pull/7\n"))
+          await Effect.runPromise(
+            pollWithTimeout(
+              Effect.sync(() => prLinkItems(owner).at(-1)),
+              "PR creation was not ingested",
+            ),
+          )
+
+          const { Process } = await import("../../src/util/process")
+          spyOn(Process, "text").mockResolvedValue({
+            code: 0,
+            stdout: Buffer.from("[]"),
+            stderr: Buffer.alloc(0),
+            text: "[]",
+          })
+          const run = poll.mock.calls.at(-1)?.[0]
+          if (!run) throw new Error("PR poll was not registered")
+          await run()
+          expect(await PrLink.readSessionPrLink(owner)).toBeUndefined()
+          await Effect.runPromise(
+            pollWithTimeout(
+              Effect.sync(() => (prLinkItems(owner).length === 2 ? true : undefined)),
+              "closed PR was not withdrawn without remote control",
+            ),
+          )
+          expect(prLinkItems(owner).at(-1)?.data).toEqual({
+            platform: null,
+            prUrl: null,
+            prNumber: null,
+            headRef: null,
+            headSha: null,
+          })
+
+          await run()
+          await KiloSessions.create(owner)
+          await KiloSessions.create(bystander)
+          await Effect.runPromise(
+            pollWithTimeout(
+              Effect.sync(() =>
+                ingestBodies.some(
+                  (body) => body.sessionId === bystander && body.data.some((item) => item.type === "session_status"),
+                )
+                  ? true
+                  : undefined,
+              ),
+              "full sync did not complete after PR withdrawal",
+            ),
+          )
+          expect(prLinkItems(owner)).toHaveLength(2)
+          expect(prLinkItems(bystander)).toEqual([])
+          expect(RemoteWS.connect).not.toHaveBeenCalled()
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  test("full sync retries PR evidence queued before the session has a share", async () => {
+    await using tmp = await repoWithRemote()
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        delete process.env.KILO_API_KEY
+        reset("tok")
+        const id = await setupSession()
+        expect(await KiloSessions.create(id)).toEqual({ id: "", ingestPath: "" })
+        const runtime = await initKiloSessions()
+        try {
+          process.env.KILO_API_KEY = "tok"
+          reset("tok")
+          emitPart(id, toolPart(id, "p-create", "gh pr create --fill", "https://github.com/owner/repo/pull/7\n"))
+          const record = await Effect.runPromise(
+            pollWithTimeout(
+              Effect.promise(() => PrLink.readSessionPrLink(id)),
+              "PR evidence was not recorded before session bootstrap",
+            ),
+          )
+          await clearStaleIngest()
+          expect(prLinkItems(id)).toEqual([])
+
+          await KiloSessions.create(id)
+          await Effect.runPromise(
+            pollWithTimeout(
+              Effect.sync(() => prLinkItems(id).at(-1)),
+              "full sync did not retry PR evidence after session bootstrap",
+            ),
+          )
+          expect(prLinkItems(id)).toEqual([
+            {
+              type: "session_pr_link",
+              data: { ...record.link, headRef: record.headRef, headSha: record.headSha },
+            },
+          ])
+          expect(RemoteWS.connect).not.toHaveBeenCalled()
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
   test("upgrade sends one clear for a session whose link came only from the dropped worktree record", async () => {
     await using tmp = await repoWithRemote()
     // The old per-worktree record an earlier CLI persisted for this checkout.

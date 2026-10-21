@@ -493,18 +493,18 @@ export namespace KiloSessions {
   async function syncPrLinkTriple(sessionId: string, triple: PrLinkTriple) {
     const key = JSON.stringify(triple)
     if (lastPrLinkTriple.get(sessionId) === key) return
-    // Record the triple only after ingest accepts (queues) it. A missing client
-    // makes ingest.sync return false without queueing; recording before would
-    // poison the dedupe map and skip the persist after a later login.
+    // The queue drops items without a share. Leave those triples retryable
+    // until bootstrap completes, just as ingest.sync does for a missing client.
+    if (!(await readShare(sessionId))) return
     const accepted = await ingest.sync(sessionId, [{ type: "session_pr_link", data: triple }])
     if (accepted) lastPrLinkTriple.set(sessionId, key)
   }
 
-  // Ingest stored evidence even without a remote heartbeat. An absent record
-  // must not withdraw a link already stored by the backend.
+  // Ingest stored evidence without a remote heartbeat. Withdraw an absent
+  // record only if this process previously ingested the session's link.
   async function syncPrLinkForSession(sessionId: string) {
     const record = await readSessionPrLink(sessionId)
-    if (record) await syncPrLinkTriple(sessionId, tripleOf(record))
+    await syncSessionPrLink(sessionId, record, new Set())
   }
 
   // Sessions already cleared by the legacy sweep this process.
@@ -904,9 +904,12 @@ export namespace KiloSessions {
           if (prEnabled()) {
             yield* Effect.acquireRelease(
               Effect.sync(() =>
-                startPrLinkPoll(async () => {
-                  await Instance.restore(ctx, () => refreshPrLink())
-                }),
+                startPrLinkPoll(() =>
+                  Instance.restore(ctx, async () => {
+                    await refreshPrLink()
+                    for (const sessionID of tracked) await syncPrLinkForSession(sessionID)
+                  }),
+                ),
               ),
               (stop) => Effect.sync(stop),
             )
