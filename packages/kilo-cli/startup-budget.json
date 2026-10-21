@@ -4,6 +4,7 @@
   "runs": 5,
   "loadRuns": 9,
   "plugins": {
+    "kilocode.handshake": 50,
     "kilocode.gateway": 50,
     "kilo.agent": 50,
     "kilo.agent.ceiling": 50
