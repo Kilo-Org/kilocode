@@ -921,4 +921,84 @@ setTimeout(() => process.exit(0), 50)
     },
     15_000,
   )
+
+  test(
+    "re-adopted persistent process wake does not replay historical log content as fresh events",
+    async () => {
+      await using tmp = await tmpdir()
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const sessionID = SessionID.descending()
+          // Emit three JSON events then idle. After re-adoption we expect NO
+          // additional wake fires for these historical events - the wake
+          // engine should only see bytes produced after the instance reload.
+          const command = await script(
+            tmp.path,
+            "events-after-restart.mjs",
+            `console.log("ready")
+const writes = [
+  '{"type":"generate","id":"r1"}',
+  '{"type":"accept","id":"r2"}',
+  '{"type":"steer","id":"r3"}',
+]
+let index = 0
+const tick = () => {
+  if (index >= writes.length) {
+    setTimeout(() => {}, 60_000)
+    return
+  }
+  process.stdout.write(writes[index++] + "\\n", () => setTimeout(tick, 30))
+}
+tick()
+`,
+          )
+
+          const fired: string[][] = []
+          BackgroundProcess._setWakeFireForTest(async (payload) => {
+            fired.push([...payload.lines])
+          })
+
+          let info
+          try {
+            info = await BackgroundProcess.start({
+              sessionID,
+              command,
+              cwd: tmp.path,
+              lifetime: "persistent",
+              ready: { pattern: "ready", timeout: 5_000 },
+              wake: { pattern: '"type":"(generate|accept|steer|exit)"' },
+            })
+            // Wait for the three historical events to fire through the live
+            // proc listener path before we simulate a restart.
+            await asyncWait(
+              () => fired.flat().filter((line) => /"id":"r\d"/.test(line)).length >= 3,
+              "historical events did not fire wake before restart",
+              10_000,
+            )
+            const beforeAdoption = fired.flat().length
+            expect(beforeAdoption).toBe(3)
+
+            // Simulate an instance restart: clear in-memory state and re-load
+            // the persistent process from disk, which re-enters records() and
+            // rebuilds the wake engine from scratch.
+            await BackgroundProcess.shutdown()
+            const adopted = await BackgroundProcess.get(info.id)
+            expect(adopted?.lifetime).toBe("persistent")
+
+            // Give the re-adoption path, the 1s cooldown, and a few watch
+            // ticks enough time to misbehave if it would replay history. The
+            // expected count is unchanged: 3 events, all already seen.
+            await Bun.sleep(2_500)
+            const afterAdoption = fired.flat().length
+            expect(afterAdoption).toBe(3)
+          } finally {
+            if (info) await BackgroundProcess.stop(info.id)
+            await BackgroundProcess.stopSession(sessionID)
+          }
+        },
+      })
+    },
+    30_000,
+  )
 })

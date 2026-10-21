@@ -204,6 +204,15 @@ export namespace BackgroundProcess {
     disposed?: boolean
     // kilocode_change start - wake detection state
     wake?: WakeEngine.WakeState
+    /**
+     * Bytes-position in the log file the wake engine has consumed. Initialised
+     * to the file size at adoption time so `output()` only feeds wake with
+     * bytes produced after re-adoption; pre-existing log content that the
+     * display buffer replays is intentionally not surfaced as new events.
+     * Undefined while the wake engine is being fed via the live `proc`
+     * listeners (start path).
+     */
+    wakeOffset?: number
     // kilocode_change end - wake detection state
   }
 
@@ -1007,14 +1016,23 @@ export namespace BackgroundProcess {
       })
     if (next === undefined) return
     active.offset = size
-    // kilocode_change start - re-adopted persistent processes have no live
-    // `proc` listener, so wake detection must be driven from the log replay
-    // path. Tag the chunk "stdout" because the runner merges both streams
-    // into a single log file - either stream would work, and stdout is the
-    // most representative signal. Fresh-start processes are unaffected
-    // because their `proc` listeners already feed the wake engine.
-    if (next) append(active, next, !active.proc && active.wake ? "stdout" : undefined)
-    // kilocode_change end - wake fed from log replay on re-adoption
+    if (next) {
+      append(active, next)
+      // kilocode_change start - on re-adoption, drive the wake engine from
+      // the log file instead of from a live proc listener. wakeOffset is
+      // initialised to the file size at adoption time in records(), so the
+      // first output() call after adoption feeds nothing into the wake
+      // engine and historical events are not replayed as new turns. The
+      // runner merges stdout and stderr into one log file, so tagging the
+      // chunk "stdout" is the most representative signal and matches how
+      // the live proc listeners feed it.
+      if (!active.proc && active.wake && active.wakeOffset !== undefined) {
+        const wakeCutoff = Math.max(0, active.wakeOffset - start)
+        if (wakeCutoff < next.length) WakeEngine.feed(active.wake, "stdout", next.slice(wakeCutoff))
+        active.wakeOffset = size
+      }
+      // kilocode_change end - wake fed from log after re-adoption cutoff
+    }
   }
 
   function watch(shared: Shared, active: Active) {
@@ -1332,6 +1350,16 @@ export namespace BackgroundProcess {
       if (process.platform !== "win32") {
         await Promise.all([chmod(file, 0o600), chmod(logfile(shared, active.info.id), 0o600).catch(() => undefined)])
       }
+      // kilocode_change start - capture the log size at adoption time so the
+      // wake feed only sees bytes produced AFTER re-adoption. Without this,
+      // output()'s first read on adoption would replay every historical line
+      // into the wake engine and re-fire old generate / accept / exit events
+      // as fresh synthetic turns.
+      if (active.wake && active.log) {
+        const wakeInitMeta = await stat(active.log).catch(() => undefined)
+        active.wakeOffset = wakeInitMeta?.size ?? 0
+      }
+      // kilocode_change end - skip pre-adoption bytes in wake feed
       shared.processes.set(active.info.id, active)
       await output(active)
       watch(shared, active)
