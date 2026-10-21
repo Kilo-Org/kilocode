@@ -1,5 +1,5 @@
 import { homedir } from "node:os"
-import { commands, window, workspace, type ExtensionContext } from "vscode"
+import { commands, ExtensionMode, window, workspace, type ExtensionContext } from "vscode"
 import { chat } from "./chat"
 import { command, manager } from "./server"
 
@@ -28,6 +28,9 @@ export function activate(context: ExtensionContext) {
     commands.registerCommand("kilo-code.v2.restartServer", () => server.stop()),
     { dispose: () => void server.stop() },
   )
+
+  // `bun run extension` opens a development host: show the chat right away.
+  if (context.extensionMode === ExtensionMode.Development) void commands.executeCommand("kilo-code.v2.chat.focus")
 }
 
 export function deactivate() {}
