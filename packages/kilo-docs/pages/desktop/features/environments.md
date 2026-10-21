@@ -46,11 +46,11 @@ The most durable approach is to have the agent write an `environment.yml` into t
 
 The agent can create environments and install, update, or remove packages for you. It asks you to approve each change and shows the channels it will use. It won't install packages from local files or from URL or local-path channels. When you're signed in, the agent prefers Anaconda's channels (`defaults` or your organization's channels) and uses `conda-forge` only when a package isn't available there.
 
-The agent can also add or remove conda channels for you, but only named channels (such as `defaults` or `conda-forge`). It changes your user conda settings (`~/.condarc`). If no channels are configured, the agent asks before using Anaconda's `defaults` channel instead of picking one itself.
+The agent can also add or remove conda channels for you, but only named channels (such as `defaults` or `conda-forge`). It changes your user conda settings (`~/.condarc`). If no channels are configured and you haven't named one, the agent asks whether to use Anaconda's `defaults` channel before it continues. It doesn't pick a channel on its own.
 
 ## If installs fail
 
-If no conda channels are configured, creating environments and installing packages fails with *No conda channels are configured, so there is nothing to install from.* Add a channel, or ask the agent to use Anaconda's `defaults` channel.
+Conda needs at least one channel to install from. If an install runs without one — for example, your conda settings list no channels and you turned off every channel in the Channels control, or you declined the agent's suggestion — it fails with *No conda channels are configured, so there is nothing to install from.* To fix it, select a channel in the Channels control, ask the agent to use Anaconda's `defaults` channel, or add a channel to your conda settings.
 
 ## Browse your conda environments
 

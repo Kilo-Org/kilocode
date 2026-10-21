@@ -5,7 +5,7 @@ description: "Manage the app version, your account, appearance, notifications, c
 
 # General settings
 
-Open settings from the gear at the bottom of the sidebar, and use the search box at the top to filter them. The **General** settings cover the app version and logs, your account, appearance, notifications, conda environments, notebooks, privacy, and keyboard shortcuts
+Open settings from the gear at the bottom of the sidebar, and use the search box at the top to filter them. The **General** settings cover the app version and logs, your account, appearance, notifications, conda environments, notebooks, privacy, and keyboard shortcuts.
 
 ## About
 
