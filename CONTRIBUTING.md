@@ -22,7 +22,15 @@ New providers should rarely require OpenCode changes. Add the provider to [model
 
 ## Development
 
-OpenCode requires Bun 1.3 or newer. From the repository root:
+<!-- kilocode_change start - bootstrap: the exact Bun version, which the build and install:alpha need -->
+OpenCode requires the exact Bun version pinned in `packageManager` in `package.json`. Install it with Bun's installer script:
+
+```bash
+curl -fsSL https://bun.sh/install | bash -s "bun-v$(grep '"packageManager"' package.json | sed -E 's/.*bun@([^"]+).*/\1/')"
+```
+
+Then, from the repository root:
+<!-- kilocode_change end -->
 
 ```bash
 bun install

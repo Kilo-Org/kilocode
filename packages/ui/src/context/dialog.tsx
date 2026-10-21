@@ -47,6 +47,9 @@ function init() {
   const closing = new Map<string, ReturnType<typeof setTimeout> | undefined>()
   // The same ids, reactive, so the top dialog that stays open owns the focus trap during an exit animation.
   const [exiting, setExiting] = createSignal<ReadonlySet<string>>(new Set())
+  // The top dialog that stays open. A dialog without an exit animation leaves the DOM as soon as it starts closing, so
+  // it stops being the active dialog then, not when it is disposed.
+  const top = () => stack().findLast((item) => !exiting().has(item.id))
   const lock = { value: false }
   const state = { disposed: false }
 
@@ -161,7 +164,7 @@ function init() {
 
         return (
           <Kobalte
-            modal={stack().findLast((item) => !exiting().has(item.id))?.id === id}
+            modal={top()?.id === id}
             open={!closing()}
             onOpenChange={(open: boolean) => {
               if (!open) dismiss(id)
@@ -231,6 +234,7 @@ function init() {
 
   return {
     stack,
+    top,
     close,
     show,
     push,
@@ -302,8 +306,9 @@ export function useDialog() {
   }
 
   return {
+    /** The top dialog that is open. One that has started closing no longer counts, though it waits to be disposed. */
     get active() {
-      return ctx.stack().at(-1)
+      return ctx.top()
     },
     /**
      * id lets the caller close this dialog later rather than whichever is on top. Opening is deferred; once

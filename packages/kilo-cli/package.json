@@ -10,9 +10,10 @@
   },
   "scripts": {
     "dev": "bun run src/index.ts",
+    "build": "bun run script/build.ts",
     "startup": "bun run script/startup.ts",
     "test": "bun test --timeout 30000",
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",
@@ -33,6 +34,6 @@
     "@tsconfig/bun": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "@typescript/native": "catalog:"
   }
 }

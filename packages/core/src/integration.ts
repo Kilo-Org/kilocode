@@ -759,7 +759,7 @@ const layer = Layer.effect(
             value: Credential.Key.make({
               type: "key",
               key: input.key,
-              ...(Object.keys(answer).length > 0 ? { configuration: answer } : {}),
+              ...(Object.keys(answer).length > 0 ? { metadata: answer } : {}),
             }),
           })
         }),

@@ -1,11 +1,12 @@
 import { existsSync } from "fs"
 import path from "path"
 import { render, useRenderer, useTerminalDimensions } from "@opentui/solid"
-import { registerOpencodeSpinner } from "./component/register-spinner"
+import "./component/spinner-renderable"
 import { Effect, Latch } from "effect"
 import { Service, type Endpoint } from "@opencode/client/effect/service"
 import { OpenCode, type SessionInfo } from "@opencode/client"
 import { Global } from "@opencode/util/global"
+import { noTimeoutFetch } from "@opencode/util/no-timeout-fetch"
 import { ClipboardProvider, useClipboard } from "./context/clipboard"
 import { LogProvider, type LogSink } from "./context/log"
 import { ExitProvider, useExit } from "./context/exit"
@@ -101,7 +102,7 @@ import { CommandPaletteDialog } from "./component/command-palette"
 import { COMMAND_PALETTE_COMMAND, Keymap, type KeymapCommand } from "./context/keymap"
 
 import { DialogVariant } from "./component/dialog-variant"
-import { destroyRenderer } from "./util/renderer"
+import { destroyRenderer, setTerminalTitle } from "./util/renderer"
 import { cliErrorMessage, errorFormat } from "./util/error"
 import { AttentionProvider } from "./context/attention"
 import { StorageProvider, useStorage } from "./context/storage"
@@ -109,8 +110,6 @@ import { SessionTerminalsProvider } from "./context/session-terminals"
 import { PanelProvider, usePanel } from "./context/panel"
 import { SessionFrame } from "./component/session-frame"
 import { createTuiClipboard } from "./clipboard"
-
-registerOpencodeSpinner()
 
 const appGlobalBindingCommands = ["session.list", "session.new", "open.menu"] as const
 
@@ -213,7 +212,11 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
   const config = Config.resolve(yield* Effect.tryPromise(() => input.config.get()), {
     terminalSuspend: process.platform !== "win32",
   })
-  const options = { baseUrl: input.server.endpoint.url, headers: Service.headers(input.server.endpoint) }
+  const options = {
+    baseUrl: input.server.endpoint.url,
+    headers: Service.headers(input.server.endpoint),
+    fetch: noTimeoutFetch,
+  }
   const api = OpenCode.make(options)
   const location = yield* Effect.tryPromise(() => api.file.list({ location: { directory: process.cwd() } })).pipe(
     Effect.map((response) => response.location),
@@ -227,7 +230,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
     ? {
         reconnect: async (signal: AbortSignal) => {
           const endpoint = await managed.reconnect(signal)
-          const next = { baseUrl: endpoint.url, headers: Service.headers(endpoint) }
+          const next = { baseUrl: endpoint.url, headers: Service.headers(endpoint), fetch: noTimeoutFetch }
           return { api: OpenCode.make(next), url: endpoint.url }
         },
         restart: managed.restart,
@@ -253,7 +256,11 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
         if (handoff) {
           handoff.renderer.useMouse = options.useMouse
           return yield* Effect.acquireRelease(Effect.succeed(handoff.renderer), (renderer) =>
-            Effect.sync(() => destroyRenderer(renderer)),
+            Effect.promise(async () => {
+              destroyRenderer(renderer)
+              // closed rejects when the terminal is gone or the final flush times out; nothing is left to restore.
+              await renderer.closed.catch(() => {})
+            }),
           )
         }
         if (process.env.OPENCODE_DRIVE) {
@@ -265,7 +272,11 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
             try: () => createCliRenderer(options),
             catch: (error) => (error instanceof Error ? error : new Error(String(error))),
           }),
-          (renderer) => Effect.sync(() => destroyRenderer(renderer)),
+          (renderer) =>
+            Effect.promise(async () => {
+              destroyRenderer(renderer)
+              await renderer.closed.catch(() => {})
+            }),
         )
       })
       renderer.setMaxListeners(15)
@@ -607,23 +618,23 @@ function App() {
     if (!terminalTitleEnabled()) return
 
     if (route.data.type === "home") {
-      renderer.setTerminalTitle("OpenCode")
+      setTerminalTitle(renderer, "OpenCode")
       return
     }
 
     if (route.data.type === "session") {
       const title = session?.title
       if (!title || isFallbackTitle(title)) {
-        renderer.setTerminalTitle("OpenCode")
+        setTerminalTitle(renderer, "OpenCode")
         return
       }
 
-      renderer.setTerminalTitle(`OC | ${title.length > 40 ? title.slice(0, 37) + "…" : title}`)
+      setTerminalTitle(renderer, `OC | ${title.length > 40 ? title.slice(0, 37) + "…" : title}`)
       return
     }
 
     if (route.data.type === "plugin") {
-      renderer.setTerminalTitle(`OC | ${route.data.name}`)
+      setTerminalTitle(renderer, `OC | ${route.data.name}`)
     }
   })
 
@@ -1163,8 +1174,8 @@ function App() {
         category: "System",
         palette: undefined,
         enabled: process.platform !== "win32",
-        run: () => {
-          renderer.suspend()
+        run: async () => {
+          await renderer.suspend()
           process.once("SIGCONT", () => renderer.resume())
           process.kill(0, "SIGTSTP")
         },
@@ -1176,7 +1187,7 @@ function App() {
         palette: undefined,
         run: () => {
           const next = !terminalTitleEnabled()
-          if (!next) renderer.setTerminalTitle("")
+          if (!next) setTerminalTitle(renderer, "")
           void config
             .update((draft) => {
               draft.terminal = { ...draft.terminal, title: next }

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@opencode/codemode",
-  "version": "2.0.29",
+  "version": "2.0.32",
   "description": "Effect-native confined code execution over schema-described tools",
   "type": "module",
   "license": "MIT",
@@ -21,7 +21,7 @@
   },
   "scripts": {
     "build": "bun run script/build.ts",
-    "typecheck": "tsgo --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
   "dependencies": {
@@ -31,6 +31,6 @@
   "devDependencies": {
     "@tsconfig/bun": "catalog:",
     "@types/bun": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "@typescript/native": "catalog:"
   }
 }

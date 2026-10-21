@@ -257,6 +257,7 @@ function normalizeMcp(input: Record<string, unknown>, encoded: Record<string, un
       ["experimental", "mcp_timeout"],
       diagnostics,
     )
+    // V1 never applied this to connecting, unlike a per-server timeout.
     if (value !== undefined) {
       timeout.catalog = value
       timeout.execution = value
@@ -272,13 +273,18 @@ function normalizeMcp(input: Record<string, unknown>, encoded: Record<string, un
           return
         }
         if (name === "servers" && !isDirectLegacyMcp(value)) {
-          Object.entries(decodeMap(value, ConfigMCP.Server, path, diagnostics, decodeEncoded)).forEach(
-            ([key, server]) => setOwn(nativeServers, key, server),
-          )
+          Object.entries(
+            decodeMap(expandServerTimeouts(value), ConfigMCP.Server, path, diagnostics, decodeEncoded),
+          ).forEach(([key, server]) => setOwn(nativeServers, key, server))
           return
         }
         if (name === "timeout" && !isDirectLegacyMcp(value)) {
-          normalizeMcpTimeout(value, timeout, path, diagnostics)
+          normalizeMcpTimeout(
+            typeof value === "number" ? ConfigMigrateV1.migrateMcpTimeout(value) : value,
+            timeout,
+            path,
+            diagnostics,
+          )
           return
         }
         const server = decodeValue(ConfigMCPV1.Info, value, path, diagnostics)
@@ -296,6 +302,19 @@ function normalizeMcp(input: Record<string, unknown>, encoded: Record<string, un
     ...(Object.keys(timeout).length ? { timeout } : {}),
     ...(Object.keys(servers).length ? { servers } : {}),
   }
+}
+
+// Native servers accept the V1 bare-number timeout so one V1-shaped field does not drop the whole server.
+function expandServerTimeouts(value: unknown) {
+  if (!isRecord(value)) return value
+  return Object.fromEntries(
+    Object.entries(value).map(([name, server]) => [
+      name,
+      isRecord(server) && typeof server.timeout === "number"
+        ? { ...server, timeout: ConfigMigrateV1.migrateMcpTimeout(server.timeout) }
+        : server,
+    ]),
+  )
 }
 
 function normalizeMcpTimeout(
@@ -447,6 +466,15 @@ function normalizeExperimental(
           diagnostics,
         )
         if (value !== undefined) result.portable_shell_scanner = value
+      }
+      if (own(experimental, "todo")) {
+        const value = decodeEncoded(
+          ConfigExperimental.Info.fields.todo,
+          experimental.todo,
+          ["experimental", "todo"],
+          diagnostics,
+        )
+        if (value !== undefined) result.todo = value
       }
       if (own(experimental, "subagent_depth")) {
         const value = decodeEncoded(

@@ -1336,7 +1336,7 @@ describe("ModelResolver", () => {
         Credential.Key.make({
           type: "key",
           key: "workers-secret",
-          configuration: { accountId: "account" },
+          metadata: { accountId: "account" },
         }),
       )
 
@@ -1397,7 +1397,7 @@ describe("ModelResolver", () => {
         Credential.Key.make({
           type: "key",
           key: "fallback-secret",
-          configuration: { accountId: "account" },
+          metadata: { accountId: "account" },
         }),
         {
           loadAISDK: (runtime) =>

@@ -1,9 +1,9 @@
 export * as Session from "./session.js"
 export * from "./session/schema.js"
 
-import { Effect, Layer, Schema, Context, Stream } from "effect"
+import { DateTime, Effect, Layer, Schema, Context, Stream } from "effect"
 import { LLMClient } from "@opencode/ai"
-import { ListAnchor } from "@opencode/schema/session"
+import { ListAnchor, ListCursor, ListFilter } from "@opencode/schema/session"
 import { and, desc, eq } from "drizzle-orm"
 import { Project } from "./project.js"
 import { Model } from "@opencode/schema/model"
@@ -32,6 +32,7 @@ import {
   CompactionConflictError,
   ForkEmptyError,
   InboxConflictError,
+  InvalidListCursorError,
   MessageDecodeError,
   MessageNotFoundError,
   NotFoundError,
@@ -75,10 +76,12 @@ import { InstructionEntry } from "./session/instruction-entry.js"
 //   - by subpath
 // - by workspace (home is special)
 
-export { ListAnchor }
+export { ListAnchor, ListCursor }
 
 export const ListInput = SessionStore.ListInput
 export type ListInput = SessionStore.ListInput
+
+const DefaultListLimit = 50
 
 type CreateBaseInput = {
   id?: SessionSchema.ID
@@ -103,6 +106,7 @@ export {
   BusyError,
   CompactionConflictError,
   InboxConflictError,
+  InvalidListCursorError,
   MessageDecodeError,
   MessageNotFoundError,
   NotFoundError,
@@ -116,9 +120,14 @@ export { DestinationNotFoundError, DestinationNotDirectoryError, DestinationUnav
 export { TurnRangeError }
 
 export interface Interface {
-  readonly list: (input?: ListInput) => Effect.Effect<{
-    readonly data: SessionSchema.Info[]
-  }>
+  /** A cursor carries the filters of the request that produced it, so filters passed with a cursor are ignored. */
+  readonly list: (input?: ListFilter & { readonly limit?: number; readonly cursor?: ListCursor }) => Effect.Effect<
+    {
+      readonly data: SessionSchema.Info[]
+      readonly cursor: { readonly previous?: ListCursor; readonly next?: ListCursor }
+    },
+    InvalidListCursorError
+  >
   readonly create: (input: CreateInput) => Effect.Effect<SessionSchema.Info, NotFoundError>
   readonly fork: (
     input: ForkInput,
@@ -174,6 +183,8 @@ export interface Interface {
   readonly switchAgent: (input: { sessionID: SessionSchema.ID; agent: Agent.ID }) => Effect.Effect<void, NotFoundError>
   readonly switchModel: (input: { sessionID: SessionSchema.ID; model: Model.Ref }) => Effect.Effect<void, NotFoundError>
   readonly rename: (input: { sessionID: SessionSchema.ID; title: string }) => Effect.Effect<void, NotFoundError>
+  readonly archive: (sessionID: SessionSchema.ID) => Effect.Effect<void, NotFoundError>
+  readonly unarchive: (sessionID: SessionSchema.ID) => Effect.Effect<void, NotFoundError>
   readonly setMetadata: (input: {
     sessionID: SessionSchema.ID
     metadata: SessionSchema.Metadata
@@ -369,14 +380,37 @@ const layer = Layer.effect(
         yield* execution.interrupt(sessionID)
         yield* execution.awaitIdle(sessionID)
         yield* transport.close(sessionID)
-        const children = yield* result.list({ parentID: sessionID })
-        yield* Effect.forEach(children.data, (child) => result.remove(child.id), { concurrency: 1, discard: true })
+        const children = yield* store.list({ parentID: sessionID })
+        yield* Effect.forEach(children, (child) => result.remove(child.id), { concurrency: 1, discard: true })
         yield* environments.clear(sessionID)
         yield* bus.publish(SessionEvent.Deleted, { sessionID })
         yield* bus.remove(sessionID)
       }),
-      list: Effect.fn("Session.list")(function* (input) {
-        return { data: yield* store.list(input) }
+      list: Effect.fn("Session.list")(function* (input = {}) {
+        const filter =
+          input.cursor === undefined
+            ? input
+            : yield* ListCursor.parse(input.cursor).pipe(Effect.mapError(() => new InvalidListCursorError()))
+        const data = yield* store.list({ ...filter, limit: input.limit ?? DefaultListLimit })
+        const first = data[0]
+        const last = data.at(-1)
+        return {
+          data,
+          cursor: {
+            previous: first
+              ? ListCursor.make({
+                  ...filter,
+                  anchor: { id: first.id, time: DateTime.toEpochMillis(first.time.updated), direction: "previous" },
+                })
+              : undefined,
+            next: last
+              ? ListCursor.make({
+                  ...filter,
+                  anchor: { id: last.id, time: DateTime.toEpochMillis(last.time.updated), direction: "next" },
+                })
+              : undefined,
+          },
+        }
       }),
       messages: Effect.fn("Session.messages")(function* (input) {
         yield* result.get(input.sessionID)
@@ -433,6 +467,8 @@ const layer = Layer.effect(
       switchAgent: (input) => sessions.forSession(input.sessionID).switchAgent(input),
       switchModel: (input) => sessions.forSession(input.sessionID).switchModel(input),
       rename: (input) => sessions.forSession(input.sessionID).rename(input),
+      archive: (sessionID) => sessions.forSession(sessionID).archive(),
+      unarchive: (sessionID) => sessions.forSession(sessionID).unarchive(),
       setMetadata: (input) => sessions.forSession(input.sessionID).setMetadata(input),
       setPermissions: (input) => sessions.forSession(input.sessionID).setPermissions(input),
       move: moves.move,

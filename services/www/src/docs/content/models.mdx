@@ -105,6 +105,37 @@ Define new variants, or replace catalog variants with the same ID, in the model'
 
 Each variant can contain `settings`, `headers`, and `body`. Its values are applied after provider and model values.
 
+To replace a model's reasoning variants, describe its reasoning controls in `capabilities.reasoning`, using the
+[models.dev](https://models.dev) v2 shape. OpenCode builds the variants for the model's package from them:
+
+```jsonc title="opencode.jsonc"
+{
+  "providers": {
+    "openai": {
+      "models": {
+        "gpt-5.2": {
+          "capabilities": {
+            "reasoning": {
+              "supported": true,
+              "effort": ["low", "medium", "high"],
+            },
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+| Field       | Purpose                                                                    |
+| ----------- | -------------------------------------------------------------------------- |
+| `supported` | Whether the model reasons. `false`, or `true` without controls, adds no variants. |
+| `toggle`    | Adds a `none` variant that turns reasoning off.                             |
+| `effort`    | Effort levels to offer. `default` keeps the provider default and adds no variant. |
+| `budget`    | Optional `min` and `max` thinking tokens. Ignored when `effort` is set.     |
+
+Variants listed in `variants` are applied on top of the ones built from `capabilities.reasoning`.
+
 ## Options
 
 Provider and model entries can customize requests with `settings`, `headers`, and `body`:
