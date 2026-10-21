@@ -214,13 +214,14 @@ describe("KiloConnectionService backend crash", () => {
 })
 
 describe("KiloConnectionService SSE startup", () => {
-  it("waits for the current adapter to recover without opening a replacement connection", async () => {
+  it.each([false, true])("recovers the current stream or explicitly replaces it (retry: %s)", async (retry) => {
     const original = globalThis.fetch
     const chunk = new TextEncoder().encode(
       'data: {"payload":{"id":"evt_connected","type":"server.connected","properties":{}}}\n\n',
     )
     const streams: ReadableStreamDefaultController<Uint8Array>[] = []
     const reconnecting = Promise.withResolvers<void>()
+    const replaced = Promise.withResolvers<void>()
     let calls = 0
     let servers = 0
     globalThis.fetch = (async (input: RequestInfo | URL) => {
@@ -233,6 +234,7 @@ describe("KiloConnectionService SSE startup", () => {
             streams.push(controller)
             if (calls === 1) controller.enqueue(chunk)
             if (calls === 2) reconnecting.resolve()
+            if (calls === 3) replaced.resolve()
           },
         }),
         { status: 200, headers: { "content-type": "text/event-stream" } },
@@ -251,12 +253,19 @@ describe("KiloConnectionService SSE startup", () => {
       const client = service.getClient()
       streams.at(0)!.close()
       await reconnecting.promise
-      const pending = service.getClientAsync("C:\\work\\demo")
+      const pending = service.getClientAsync("C:\\work\\demo", undefined, true)
+      const reconnect = retry
+        ? Promise.all([service.connect("C:\\work\\demo"), service.connect("C:\\work\\demo")])
+        : undefined
+      if (retry) await replaced.promise
       expect(service.getConnectionState()).toBe("connecting")
-      streams.at(1)!.enqueue(chunk)
-      expect(await pending).toBe(client)
-      expect(calls).toBe(2)
-      expect(servers).toBe(1)
+      streams.at(retry ? 2 : 1)!.enqueue(chunk)
+      const ready = await pending
+      await reconnect
+      expect(ready).toBe(service.getClient())
+      expect(ready === client).toBe(!retry)
+      expect(calls).toBe(retry ? 3 : 2)
+      expect(servers).toBe(retry ? 2 : 1)
     } finally {
       service.dispose()
       globalThis.fetch = original

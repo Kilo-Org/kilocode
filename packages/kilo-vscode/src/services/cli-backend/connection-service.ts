@@ -182,12 +182,8 @@ export class KiloConnectionService {
       return
     }
 
-    if (this.client && this.sseClient) {
-      await this.waitForClient()
-      return
-    }
-
     // Mark as connecting early so concurrent callers won't start another connection attempt.
+    this.error = null
     this.setState("connecting")
 
     this.connectPromise = this.doConnect(workspaceDir)
@@ -220,16 +216,20 @@ export class KiloConnectionService {
    * Get the shared SDK client, auto-connecting if not yet started.
    * Accepts an optional directory to use as the workspace root; falls back
    * to the first VS Code workspace folder. Throws if neither is available
-   * or if the connection fails.
+   * or if the connection fails. During SSE recovery, fail promptly unless
+   * an interactive send explicitly opts into waiting for the stream.
    */
-  async getClientAsync(dir?: string, signal?: AbortSignal): Promise<KiloClient> {
+  async getClientAsync(dir?: string, signal?: AbortSignal, wait = false): Promise<KiloClient> {
     this.lifetime.signal.throwIfAborted()
     signal?.throwIfAborted()
     if (dir) this.trackDirectory(dir)
     if (this.client && this.state === "connected") return this.client
     // The adapter owns SSE recovery. Reuse it instead of resetting the shared
     // HTTP client and event subscriptions whenever a request arrives mid-reconnect.
-    if (this.client && this.sseClient) return this.waitForClient(signal)
+    if (this.client && this.sseClient) {
+      if (wait) return this.waitForClient(signal)
+      throw this.error ?? new Error("CLI event stream is reconnecting")
+    }
     const root = dir ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
     if (!root) throw new Error("No workspace folder open")
     this.trackDirectory(root)
@@ -242,9 +242,17 @@ export class KiloConnectionService {
     const pending = Promise.withResolvers<KiloClient>()
     const timeout = AbortSignal.timeout(30_000)
     const abort = AbortSignal.any([this.lifetime.signal, timeout, ...(signal ? [signal] : [])])
+    let failure = this.error
     const cancel = () =>
-      pending.reject(timeout.aborted ? new Error("Timed out waiting for CLI event stream to reconnect") : abort.reason)
+      pending.reject(
+        timeout.aborted
+          ? new Error(`Timed out waiting for CLI event stream to reconnect${failure ? `: ${failure.message}` : ""}`, {
+              cause: failure ?? undefined,
+            })
+          : abort.reason,
+      )
     const unsubscribe = this.onStateChange((state, error) => {
+      if (error) failure = error
       if (state === "connected" && this.client) pending.resolve(this.client)
       if (!this.client || state === "disconnected") {
         pending.reject(error ?? new Error("CLI backend disconnected while waiting for its event stream"))
@@ -917,7 +925,7 @@ export class KiloConnectionService {
 
   private setState(state: ConnectionState, error?: Error): void {
     this.state = state
-    this.error = state === "error" ? (error ?? this.error) : null
+    this.error = state === "error" || state === "connecting" ? (error ?? this.error) : null
     for (const listener of this.stateListeners) {
       listener(state, this.error ?? undefined)
     }

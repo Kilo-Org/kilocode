@@ -3,6 +3,7 @@ import { setImmediate as tick } from "node:timers/promises"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { KiloProvider } from "../../src/KiloProvider"
 import { KiloConnectionService, type ConnectionState } from "../../src/services/cli-backend/connection-service"
+import { generateFim } from "../../src/services/autocomplete/fim"
 import { SdkSSEAdapter } from "../../src/services/cli-backend/sdk-sse-adapter"
 
 const resources: { dispose(): void }[] = []
@@ -35,6 +36,7 @@ type Provider = {
   ): Promise<void>
   handleSendCommand(command: string, args: string, messageID?: string, sessionID?: string): Promise<void>
   cancelRetry(sid: string): void
+  sends: Set<AbortController>
 }
 
 function setup(dir = "/repo/origin") {
@@ -189,6 +191,91 @@ describe("sending during local SSE recovery", () => {
     expect(test.sent).not.toContainEqual(expect.objectContaining({ type: "sendMessageFailed" }))
   })
 
+  it.each(["message", "command", "goal"] as const)(
+    "cancels a queued %s when its provider is disposed, including drafts without session IDs",
+    async (kind) => {
+      const test = setup()
+      const sibling = new KiloProvider({} as never, test.connection)
+      resources.push(sibling)
+      test.backend.setState("connecting")
+      test.prepared.resolve()
+      const create = spyOn(test.client.session, "create").mockRejectedValue(new Error("Unexpected session creation"))
+      const pending =
+        kind === "message"
+          ? test.internal.handleSendMessage("hello", "m1", undefined, "draft-1")
+          : test.internal.handleSendCommand(kind === "goal" ? "goal" : "compact", "", "m1")
+      expect(test.internal.sends.size).toBe(1)
+      test.provider.dispose()
+      await pending
+      test.backend.setState("connected")
+      expect(create).not.toHaveBeenCalled()
+      expect(test.prompts).toEqual([])
+      expect(test.commands).toEqual([])
+      expect(test.internal.sends.size).toBe(0)
+      expect(test.internal.retryAbortControllers.size).toBe(0)
+      expect(test.sent).not.toContainEqual(expect.objectContaining({ type: "sendMessageFailed" }))
+      expect(test.connection.getClient()).toBe(test.client)
+      create.mockRestore()
+    },
+  )
+
+  it.each(["message", "command"] as const)(
+    "cancels every preparing %s for the same session on disposal",
+    async (kind) => {
+      const test = setup()
+      const send = () =>
+        kind === "message"
+          ? test.internal.handleSendMessage("hello", "m1", "s1")
+          : test.internal.handleSendCommand("compact", "", "m1", "s1")
+      const pending = Promise.all([send(), send()])
+      await test.preparing.promise
+      expect(test.internal.sends.size).toBe(2)
+      test.provider.dispose()
+      test.prepared.resolve()
+      await pending
+      expect(test.prompts).toEqual([])
+      expect(test.commands).toEqual([])
+      expect(test.internal.sends.size).toBe(0)
+      expect(test.internal.retryAbortControllers.size).toBe(0)
+    },
+  )
+
+  it("does not create a session if disposed during sandbox preparation", async () => {
+    const test = setup()
+    const preparing = Promise.withResolvers<void>()
+    const prepared = Promise.withResolvers<Awaited<ReturnType<KiloClient["config"]["get"]>>>()
+    test.client.config.get = async () => {
+      preparing.resolve()
+      return prepared.promise
+    }
+    const create = spyOn(test.client.session, "create").mockRejectedValue(new Error("Unexpected session creation"))
+    const pending = test.internal.handleSendMessage("hello", "m1", undefined, "draft-1")
+    await preparing.promise
+    test.provider.dispose()
+    prepared.resolve({ data: {} } as Awaited<ReturnType<KiloClient["config"]["get"]>>)
+    await pending
+    expect(create).not.toHaveBeenCalled()
+    expect(test.prompts).toEqual([])
+    expect(test.internal.sends.size).toBe(0)
+    create.mockRestore()
+  })
+
+  it("keeps the running goal's cancellation ownership while its control command waits", async () => {
+    const test = setup()
+    const controller = new AbortController()
+    test.internal.retryAbortControllers.set("s1", controller)
+    test.backend.setState("connecting")
+    const pending = test.internal.handleSendCommand("goal", "pause", "m1", "s1")
+    expect(test.internal.retryAbortControllers.get("s1")).toBe(controller)
+    expect(controller.signal.aborted).toBe(false)
+    test.backend.setState("connected")
+    await pending
+    expect(test.commands).toHaveLength(1)
+    expect(test.internal.retryAbortControllers.get("s1")).toBe(controller)
+    expect(controller.signal.aborted).toBe(false)
+    expect(test.internal.sends.size).toBe(0)
+  })
+
   it("preserves the existing send path and optional arguments while connected", async () => {
     const test = setup()
     test.prepared.resolve()
@@ -230,9 +317,9 @@ describe("sending during local SSE recovery", () => {
     const test = setup()
     const waiting = Promise.withResolvers<void>()
     const acquire = test.connection.getClientAsync.bind(test.connection)
-    const spy = spyOn(test.connection, "getClientAsync").mockImplementation((dir, signal) => {
+    const spy = spyOn(test.connection, "getClientAsync").mockImplementation((dir, signal, wait) => {
       waiting.resolve()
-      return acquire(dir, signal)
+      return acquire(dir, signal, wait)
     })
     test.client.session.promptAsync = async (input) => {
       test.prompts.push(input)
@@ -265,21 +352,79 @@ describe("shared client waits", () => {
     const sse = test.backend.sseClient
     const server = spyOn(test.backend.serverManager, "getServer").mockRejectedValue(new Error("Unexpected restart"))
     test.backend.setState("connecting")
-    const pending = Promise.all([test.connection.getClientAsync(), test.connection.connect("D:\\work\\demo")])
+    const pending = Promise.all([
+      test.connection.getClientAsync(undefined, undefined, true),
+      test.connection.getClientAsync("D:\\work\\demo", undefined, true),
+    ])
     test.backend.setState("error", new Error("temporary stream failure"))
     test.backend.setState("connecting")
     test.backend.setState("connected")
-    expect(await pending).toEqual([test.client, undefined])
+    expect(await pending).toEqual([test.client, test.client])
     expect(test.backend.sseClient).toBe(sse)
     expect(server).not.toHaveBeenCalled()
     expect(test.backend.stateListeners.size).toBe(0)
     server.mockRestore()
   })
 
+  it.each(["connecting", "error"] as const)(
+    "fails background acquisition promptly while %s without resetting SSE",
+    async (state) => {
+      const test = setup()
+      const sse = test.backend.sseClient
+      const failure = new Error("SSE socket closed")
+      test.backend.setState(state, state === "error" ? failure : undefined)
+      const timer = spyOn(AbortSignal, "timeout")
+      const server = spyOn(test.backend.serverManager, "getServer")
+      try {
+        await expect(test.connection.getClientAsync("C:\\work\\demo")).rejects.toThrow(
+          state === "error" ? failure.message : "CLI event stream is reconnecting",
+        )
+        await expect(generateFim(test.connection, "codestral", "prefix", "suffix", () => {})).rejects.toThrow()
+        expect(timer).not.toHaveBeenCalled()
+        expect(server).not.toHaveBeenCalled()
+        expect(test.backend.sseClient).toBe(sse)
+        expect(test.backend.stateListeners.size).toBe(0)
+      } finally {
+        timer.mockRestore()
+        server.mockRestore()
+      }
+    },
+  )
+
+  it("preserves the underlying error if an explicit reconnect fails", async () => {
+    const test = setup()
+    const failure = new Error("Backend health check failed")
+    test.backend.setState("error", new Error("Stale stream error"))
+    const server = spyOn(test.backend.serverManager, "getServer").mockRejectedValue(failure)
+    try {
+      await expect(test.connection.connect("C:\\work\\demo")).rejects.toBe(failure)
+      expect(server).toHaveBeenCalledTimes(1)
+      expect(test.connection.getConnectionError()).toBe(failure)
+      expect(test.backend.sseClient).toBeNull()
+    } finally {
+      server.mockRestore()
+    }
+  })
+
+  it("allows a caller deadline to cancel only its own recovery wait", async () => {
+    const test = setup()
+    const controller = new AbortController()
+    test.backend.setState("connecting")
+    const pending = test.connection.getClientAsync(undefined, controller.signal, true)
+    const sibling = test.connection.getClientAsync(undefined, undefined, true)
+    const failure = new Error("Caller deadline exceeded")
+    controller.abort(failure)
+    await expect(pending).rejects.toBe(failure)
+    expect(test.backend.stateListeners.size).toBe(1)
+    test.backend.setState("connected")
+    expect(await sibling).toBe(test.client)
+    expect(test.backend.stateListeners.size).toBe(0)
+  })
+
   it("fails promptly when the Agent process exits instead of returning a stale client", async () => {
     const test = setup()
     test.backend.setState("connecting")
-    const pending = test.connection.getClientAsync()
+    const pending = test.connection.getClientAsync(undefined, undefined, true)
     test.backend.handleServerExit(9)
     await expect(pending).rejects.toThrow("CLI background process exited")
     expect(() => test.connection.getClient()).toThrow("Not connected")
@@ -291,10 +436,13 @@ describe("shared client waits", () => {
     const controller = new AbortController()
     const timeout = spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal)
     try {
+      const failure = new Error("SSE socket closed")
+      test.backend.setState("error", failure)
       test.backend.setState("connecting")
-      const pending = test.connection.getClientAsync()
+      const pending = test.connection.getClientAsync(undefined, undefined, true)
       controller.abort()
-      await expect(pending).rejects.toThrow("Timed out waiting for CLI event stream")
+      await expect(pending).rejects.toThrow("Timed out waiting for CLI event stream to reconnect: SSE socket closed")
+      await expect(pending).rejects.toMatchObject({ cause: failure })
       expect(test.backend.stateListeners.size).toBe(0)
     } finally {
       timeout.mockRestore()
@@ -304,7 +452,7 @@ describe("shared client waits", () => {
   it("releases waiting clients when the extension is disposed", async () => {
     const test = setup()
     test.backend.setState("connecting")
-    const pending = test.connection.getClientAsync()
+    const pending = test.connection.getClientAsync(undefined, undefined, true)
     test.connection.dispose()
     await expect(pending).rejects.toThrow("CLI connection service disposed")
     expect(test.backend.stateListeners.size).toBe(0)
