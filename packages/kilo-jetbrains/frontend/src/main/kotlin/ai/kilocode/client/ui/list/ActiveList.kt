@@ -107,9 +107,9 @@ internal class ActiveList(
     @RequiresEdt
     fun select(key: String, scroll: Boolean = true): Boolean = view.select(key, scroll)
 
-    /** True when the selected row is entirely inside the viewport; false when nothing is selected. */
+    /** True when row [index] is entirely inside the viewport. */
     @RequiresEdt
-    fun selectedFullyVisible(): Boolean = view.selectedFullyVisible()
+    fun indexFullyVisible(index: Int): Boolean = view.indexFullyVisible(index)
 
     @RequiresEdt
     fun selectIndex(index: Int) = view.selectIndex(index)

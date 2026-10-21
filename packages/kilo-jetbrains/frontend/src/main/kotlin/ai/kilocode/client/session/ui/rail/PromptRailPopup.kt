@@ -95,6 +95,15 @@ internal class PromptRailPopup(
         // close the card on some installs and leave it open on others.
         enter = { true },
         onCell = { _, _ -> },
+        onSelect = {
+            // Selection inside the list (arrow keys, a click) is the user's choice. Reveal owns the
+            // selection only while it is applying a hover request; otherwise the old hovered row would
+            // be selected again the next time the body lays out, scrolling away from the user's row.
+            if (!revealing) {
+                pending = -1
+                follow = -1
+            }
+        },
         onOpen = { row, focus ->
             items.firstOrNull { it.id == row.key }?.let { onSelect(it, focus) }
         },
@@ -234,7 +243,9 @@ internal class PromptRailPopup(
             }
             val index = follow
             if (index < 0) return
-            if (rows.selectedFullyVisible()) return
+            // Ask about the row this method is about to reveal. Checking the selected row instead can
+            // diverge when the list's own selection moved after the hover.
+            if (rows.indexFullyVisible(index)) return
             val key = items.getOrNull(index)?.id ?: return
             rows.select(key)
         } finally {

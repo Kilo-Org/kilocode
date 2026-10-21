@@ -362,12 +362,11 @@ internal class ActiveListView(
         return true
     }
 
-    /** True when the selected row is entirely inside the viewport; false when nothing is selected. */
+    /** True when row [index] is entirely inside the viewport. */
     @RequiresEdt
-    fun selectedFullyVisible(): Boolean {
+    fun indexFullyVisible(index: Int): Boolean {
         checkEdt()
-        val idx = list.selectedIndex
-        return idx >= 0 && ScrollingUtil.isIndexFullyVisible(list, idx)
+        return index in 0 until model.size && ScrollingUtil.isIndexFullyVisible(list, index)
     }
 
     @RequiresEdt
@@ -691,10 +690,11 @@ internal class ActiveListView(
             else -> return
         }
         // The view and list may not have been laid out yet, so their heights can still be zero even when
-        // the cells are measured. The last cell's bottom is the content height the viewport will clamp
-        // against once it lays the view out.
+        // the cells are measured. Convert the last cell into this panel's space so the clamp and [row]
+        // above use one coordinate system, even if the view later gains padding.
         val last = list.getCellBounds(model.size - 1, model.size - 1)
-        val content = maxOf(height, list.height, last?.let { it.y + it.height } ?: 0)
+        val end = last?.let { SwingUtilities.convertRectangle(list, it, this) }?.let { it.y + it.height } ?: 0
+        val content = maxOf(height, end)
         val max = (content - extent).coerceAtLeast(0)
         port.viewPosition = Point(port.viewPosition.x, y.coerceIn(0, max))
     }
