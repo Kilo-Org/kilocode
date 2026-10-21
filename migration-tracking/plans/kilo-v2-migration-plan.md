@@ -544,6 +544,20 @@ Every E2 unit except U-E2-18, -21, -28 (SMALL) and U-E2-29 (EMPTY) re-derives be
 | U-E2-28 | Generation endpoints: enhance prompt, commit message, branch name | new | G2 | U-E0-02 | partial | SMALL | yes M | Endpoints in the generated client; output and errors match v1; editor-context prefix; equivalence with the BASE `generate` group decided | todo |
 | U-E2-29 | Atomic Chat local provider plugin | new | G1 | U-E1-04 | needs-port | EMPTY | no | Provider discovered and usable | todo |
 
+#### Branch-name check (2026-10-21)
+
+User-reported local check on `99f2a0589e`: native `POST /api/experimental/generate` accepts `{ "prompt": "..." }` and returns `{ "data": { "text": "..." } }`. The caller supplied the v1 branch-name instructions and numbered user messages; the model was not recorded. Source: `packages/protocol/src/groups/generate.ts` and `packages/core/src/generate.ts`.
+
+| User messages | Raw `data.text` |
+|---|---|
+| Fix the token refresh race in MCP OAuth | `fix-token-refresh-race` |
+| hi | `null` |
+| is the login bug fixed? | `null` |
+| Please use the branch name feature-login-page | `feature-login-page` |
+| Can you look at the MCP OAuth code? → Fix the token refresh race | `fix-token-refresh-race` |
+
+`null` above is text, not JSON null. These five samples show that native text generation is reusable, not that branch-name parity is complete. Still required or unverified: Kilo's prompt, last-four-user-message selection and 1,000-character limit per message, output parsing and 50-character limit, small-model preference, temperature 0.1, 10-second timeout with null-on-error, and Agent Manager integration. Native `POST /api/session/{sessionID}/generate` also exists but was not tested. U-E2-28 remains todo; both `branch-name` progress cells stay open. This is not an end-to-end test.
+
 ```mermaid
 flowchart TD
   E0_01["U-E0-01"]:::ext
