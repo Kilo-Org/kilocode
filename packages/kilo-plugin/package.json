@@ -19,7 +19,8 @@
     "@opencode/plugin": "workspace:*",
     "@opencode/schema": "workspace:*",
     "@opencode/util": "workspace:*",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "jsonc-parser": "3.3.1"
   },
   "devDependencies": {
     "@opencode/ai": "workspace:*",
