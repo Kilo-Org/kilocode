@@ -36,6 +36,7 @@ import {
   enabled as prEnabled,
   loadSessionLinks,
   pruneLegacyWorktreeLinks,
+  readSessionPrLink,
   recordPrCreate,
   recordPush,
 } from "@/kilo-sessions/pr-link"
@@ -499,6 +500,13 @@ export namespace KiloSessions {
     if (accepted) lastPrLinkTriple.set(sessionId, key)
   }
 
+  // Ingest stored evidence even without a remote heartbeat. An absent record
+  // must not withdraw a link already stored by the backend.
+  async function syncPrLinkForSession(sessionId: string) {
+    const record = await readSessionPrLink(sessionId)
+    if (record) await syncPrLinkTriple(sessionId, tripleOf(record))
+  }
+
   // Sessions already cleared by the legacy sweep this process.
   const legacyPruned = new Set<string>()
 
@@ -784,20 +792,23 @@ export namespace KiloSessions {
             if (!prEnabled()) return
             // kilocode_change - A PR is linked only on the session's own hard
             // evidence: the session ran a create command whose output returned
-            // the PR URL, or it pushed the PR's head branch. Agent text, a
+            // the PR URL, it pushed the PR's head branch, or it explicitly
+            // linked the PR with link_pr. Agent text, a
             // listing (`gh pr list`), a view, or a review is a mention, never a
-            // link, so only a completed shell tool with such a command is read.
+            // link, so only a completed evidence-producing tool is read.
             if (part.type !== "tool" || part.state.status !== "completed") return
+            if (part.tool === "link_pr") return syncPrLinkForSession(part.sessionID)
             if (part.tool !== "bash" && part.tool !== "shell") return
             const raw = part.state.input["command"]
             const command = typeof raw === "string" ? raw : undefined
             if (!command) return
             if (isPrCreateCommand(command)) {
               await recordPrCreate(part.sessionID, Instance.worktree, part.state.output)
-              return
+              return syncPrLinkForSession(part.sessionID)
             }
             if (isPushCommand(command)) {
               await recordPush(part.sessionID, Instance.worktree, command, part.state.output)
+              await syncPrLinkForSession(part.sessionID)
             }
           })
           watch(Session.Event.Diff, (evt) =>
@@ -1782,6 +1793,7 @@ export namespace KiloSessions {
         data: await statuses.snapshot(sessionId, () => AppRuntime.runPromise(deriveStatus(sessionId))),
       },
     ])
+    await syncPrLinkForSession(sessionId)
   }
 
   /** Normalize a git remote URL: strip credentials, query params, and hash. Returns undefined for unrecognized formats. */
