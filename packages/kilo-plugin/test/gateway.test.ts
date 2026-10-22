@@ -2,11 +2,12 @@ import { describe, expect } from "bun:test"
 import { KiloErrors } from "@kilocode/gateway-core"
 import { EmbeddingCatalog } from "@kilocode/gateway-core/embedding-catalog"
 import { fixture } from "@kilocode/gateway-core/testing"
-import { isRetryable, LLM } from "@opencode/ai"
+import { isRetryable, LLM, LLMClient } from "@opencode/ai"
+import { RequestExecutor } from "@opencode/ai/route"
 import { compileRequest } from "@opencode/ai/route/client"
 import { httpFailure } from "@opencode/ai/route/executor"
 import type { HttpPrepared } from "@opencode/ai/route/transport/http"
-import { Cause, Deferred, Effect, Exit, Fiber, Schema } from "effect"
+import { Cause, Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect"
 import { HttpClientRequest } from "effect/http"
 import { Bus } from "@opencode/core/bus"
 import { Config } from "@opencode/core/config"
@@ -23,6 +24,9 @@ import { KiloPlugin } from "@opencode/core/plugin/provider/kilo"
 import { VerbosityPlugin } from "@opencode/core/plugin/verbosity"
 import { Provider } from "@opencode/core/provider"
 import { Rpc } from "@opencode/core/rpc"
+import { SessionModelRequest } from "@opencode/core/session/model-request"
+import { SessionModelTransport } from "@opencode/core/session/model-transport"
+import { WebSocketConstructor } from "@opencode/core/effect/websocket-constructor"
 import { Agent } from "@opencode/schema/agent"
 import { Document, Event, Info } from "@opencode/schema/config"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
@@ -34,6 +38,7 @@ import { PluginTestLayer } from "../../core/test/plugin/fixture"
 import { KiloPostPlugins } from "../src"
 import { KiloGatewayPlugin } from "../src/gateway"
 import { GatewayOptions } from "../src/gateway/options"
+import { KiloGatewayModel } from "../../kilo-cli/src/gateway-model"
 
 const it = testEffect(PluginTestLayer)
 const kilo = Provider.ID.make("kilo")
@@ -1586,6 +1591,198 @@ describe("KiloGatewayPlugin", () => {
     ),
   )
 
+  for (const scenario of [
+    { name: "empty saved OAuth organization", saved: "", configured: "selected", expected: "selected" },
+    { name: "explicit saved Personal", saved: null, configured: "selected", expected: null },
+    { name: "empty configured organization", saved: "", configured: "", expected: null },
+    { name: "empty organization with a scoped URL", saved: "", configured: "", expected: "selected", scoped: true },
+  ]) {
+    it.live(`resolves ${scenario.name} without changing an explicit Personal choice`, () =>
+      Effect.gen(function* () {
+        const backend = yield* Effect.acquireRelease(
+          Effect.sync(() => fixture()),
+          (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+        )
+        yield* withEnv({ ...env, KILO_API_URL: backend.url }, () => Effect.gen(function* () {
+          const credentials = yield* Credential.Service
+          yield* credentials.create({
+            integrationID,
+            label: "saved",
+            value: oauth({ server: backend.url, organizationID: scenario.saved }),
+          })
+          const config = yield* Config.Test
+          yield* config.setEntries([new Document({
+            type: "document",
+            info: Schema.decodeUnknownSync(Info)({ providers: { kilo: { settings: {
+              kilocodeOrganizationId: scenario.configured,
+              ...(scenario.scoped ? { baseURL: `${backend.url}/api/organizations/selected` } : {}),
+            } } } }),
+          })])
+          const host = yield* addPlugin()
+          const rpc = yield* Rpc.Service
+          expect(yield* rpc.call("kilocode.gateway", "authStatus", {})).toMatchObject({
+            authenticated: true,
+            organizationID: scenario.expected,
+          })
+          expect(backend.requests.filter((request) => request.path.endsWith("/models"))).toEqual([{
+            method: "GET",
+            path: scenario.expected
+              ? scenario.scoped ? "/api/organizations/selected/models" : "/api/gateway/v1/organizations/selected/models"
+              : "/api/gateway/v1/models",
+            authorization: "Bearer token",
+            ...(scenario.expected ? { organizationID: scenario.expected } : {}),
+          }])
+          if (scenario.expected && !scenario.scoped) {
+            yield* rpc.call("kilocode.gateway", "organization.set", { organizationID: null })
+            yield* host.provider.reload()
+            expect(yield* rpc.call("kilocode.gateway", "authStatus", {})).toMatchObject({ organizationID: null })
+          }
+        }))
+      }),
+    )
+  }
+
+  for (const source of ["env", "config"] as const) {
+    it.live(`fails closed for a ${source} organization without a token`, () =>
+      Effect.gen(function* () {
+        const backend = yield* Effect.acquireRelease(
+          Effect.sync(() => fixture()),
+          (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+        )
+        yield* withEnv({ ...env, KILO_API_URL: backend.url, KILO_ORG_ID: source === "env" ? "selected" : undefined }, () => Effect.gen(function* () {
+          if (source === "config") {
+            const config = yield* Config.Test
+            yield* config.setEntries([new Document({ type: "document", info: Schema.decodeUnknownSync(Info)({
+              providers: { kilo: { settings: { kilocodeOrganizationId: "selected" } } },
+            }) })])
+          }
+          const host = yield* addPlugin()
+          const rpc = yield* Rpc.Service
+          const providers = yield* Provider.Service
+          expect(yield* rpc.call("kilocode.gateway", "authStatus", {})).toMatchObject({ authenticated: false, organizationID: "selected" })
+          expect((yield* providers.available()).some((provider) => provider.id === kilo)).toBe(false)
+          expect(yield* rpc.client(KiloGatewayRpc.Definition).models({}).pipe(Effect.flip)).toMatchObject({ type: "failed", data: { kind: "unauthorized" } })
+          expect(yield* rpc.client(KiloGatewayRpc.Definition)["models.images"]({}).pipe(Effect.flip)).toMatchObject({ type: "unauthorized" })
+          const session = yield* host.session.create({ title: "no token" })
+          const hooks = yield* PluginHooks.Service
+          expect(Exit.isFailure(yield* hooks.trigger("session", "http.request", {
+            sessionID: session.id,
+            agent: Agent.ID.make("code"),
+            model: { providerID: kilo, id: Model.ID.make("kilo-auto/free") },
+            kind: "primary",
+            request: new Request(`${backend.url}/api/gateway/v1/chat/completions`),
+          }).pipe(Effect.exit))).toBe(true)
+          expect(backend.requests).toEqual([])
+        }))
+      }),
+    )
+  }
+
+  for (const source of ["oauth", "key", "config-token", "config-key"] as const) {
+    it.live(`sends an explicit empty ${source} token through the native model request without lower credentials`, () =>
+      Effect.gen(function* () {
+        const backend = yield* Effect.acquireRelease(
+          Effect.sync(() => fixture()),
+          (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+        )
+        const sent: Array<{ path: string; authorization: string | null; apiKey: string | null; body: string }> = []
+        backend.state.models = { data: [
+          { id: "kilo-auto/free", name: "Free", context_length: 128000, isFree: true },
+          { id: "anthropic/free", name: "Free Anthropic", context_length: 128000, isFree: true, opencode: { ai_sdk_provider: "anthropic" } },
+          { id: "paid/model", name: "Paid", context_length: 128000, isFree: false },
+        ] }
+        const inference = yield* Effect.acquireRelease(
+          Effect.sync(() => Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
+            const path = new URL(request.url).pathname
+            if (request.method === "GET") return fetch(new URL(path, backend.url), request)
+            sent.push({ path, authorization: request.headers.get("authorization"), apiKey: request.headers.get("x-api-key"), body: await request.text() })
+            if (path.endsWith("/messages")) return new Response([
+              { type: "message_start", message: { id: "message-empty-token", type: "message", role: "assistant", model: "anthropic/free", content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 1, output_tokens: 0 } } },
+              { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } },
+              { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "OK" } },
+              { type: "content_block_stop", index: 0 },
+              { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 1 } },
+              { type: "message_stop" },
+            ].map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join(""), { headers: { "content-type": "text/event-stream" } })
+            return new Response(`data: ${JSON.stringify({
+              id: "completion-empty-token",
+              object: "chat.completion.chunk",
+              created: 0,
+              model: "kilo-auto/free",
+              choices: [{ index: 0, delta: { role: "assistant", content: "OK" }, finish_reason: "stop" }],
+              usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+            })}\n\ndata: [DONE]\n\n`, { headers: { "content-type": "text/event-stream" } })
+          } })),
+          (server) => Effect.sync(() => server.stop(true)),
+        )
+        yield* withEnv({ ...env, KILO_API_URL: backend.url, KILO_AI_GATEWAY_URL: `${inference.url.origin}/api/v1` }, () => Effect.gen(function* () {
+          const credentials = yield* Credential.Service
+          if (source === "oauth" || source === "key") yield* credentials.create({
+            integrationID,
+            label: "empty",
+            value: source === "oauth"
+              ? Credential.OAuth.make({ type: "oauth", methodID, access: "", refresh: "", expires: 0, metadata: { server: backend.url } })
+              : Credential.Key.make({ type: "key", key: "" }),
+          })
+          const config = yield* Config.Test
+          yield* config.setEntries([new Document({ type: "document", info: Schema.decodeUnknownSync(Info)({
+            providers: { kilo: { settings: {
+              apiKey: source === "config-key" ? "" : "lower-key",
+              ...(source !== "config-key" ? { kilocodeToken: source === "config-token" ? "" : "lower-token" } : {}),
+            } } },
+          }) })])
+          const host = yield* addPlugin()
+          yield* ConfigProviderPlugin.Plugin.effect(host)
+          const providers = yield* Provider.Service
+          expect((yield* providers.get(kilo))?.settings).toMatchObject({
+            apiKey: source === "config-key" ? "" : "lower-key",
+            kiloEmptyToken: true,
+          })
+          const rpc = yield* Rpc.Service
+          expect(yield* rpc.call("kilocode.gateway", "authStatus", {})).toMatchObject({ authenticated: false, organizationID: null })
+          expect(yield* rpc.call("kilocode.gateway", "models", {})).toHaveLength(2)
+          const resolver = yield* ModelResolver.Service.pipe(Effect.provide(KiloGatewayModel.resolverLayer(ModelResolver.layer)))
+          const session = yield* host.session.create({ title: "empty token" })
+          const requests = yield* SessionModelRequest.Service.pipe(Effect.provide(SessionModelRequest.layer.pipe(
+            Layer.provide(SessionModelTransport.layer.pipe(Layer.provide(WebSocketConstructor.layer))),
+          )))
+          const llm = yield* LLMClient.Service.pipe(Effect.provide(LLMClient.layer.pipe(Layer.provide(RequestExecutor.layer))))
+          for (const id of ["kilo-auto/free", "anthropic/free"]) {
+            const resolved = yield* resolver.resolve(Model.Ref.make({ providerID: kilo, id: Model.ID.make(id) }))
+            if (!resolved) throw new Error("Missing empty-token model")
+            const prepared = yield* requests.primary({ session, agent: Agent.ID.make("code"), model: resolved, system: [], messages: [] })
+            yield* llm.generate(prepared.request, prepared.options)
+            yield* llm.generate(LLM.request({ model: resolved.model, prompt: "Stateless empty token" }))
+          }
+          expect(sent.map((request) => ({ path: request.path, authorization: request.authorization, apiKey: request.apiKey }))).toEqual([
+            { path: "/api/v1/chat/completions", authorization: "Bearer", apiKey: null },
+            { path: "/api/v1/chat/completions", authorization: "Bearer", apiKey: null },
+            { path: "/api/v1/messages", authorization: "Bearer", apiKey: null },
+            { path: "/api/v1/messages", authorization: "Bearer", apiKey: null },
+          ])
+          expect(sent.every((request) => !request.body.includes("kiloEmptyToken"))).toBe(true)
+          expect(backend.requests.every((request) => request.authorization === null)).toBe(true)
+          const stored = yield* credentials.list(integrationID)
+          expect(stored).toHaveLength(source === "oauth" || source === "key" ? 1 : 0)
+          if (source === "oauth" || source === "key") {
+            expect(stored[0]?.value).toMatchObject(source === "oauth" ? { access: "" } : { key: "" })
+          }
+          if (source !== "key") return
+          yield* credentials.create({ integrationID, label: "usable OAuth", value: oauth({ server: backend.url }) })
+          yield* host.provider.reload()
+          expect((yield* providers.get(kilo))?.settings?.kiloEmptyToken).toBe(false)
+          const modelService = yield* Model.Service
+          yield* eventually(modelService.get(kilo, Model.ID.make("kilo-auto/free")), Boolean)
+          const restored = yield* resolver.resolve(Model.Ref.make({ providerID: kilo, id: Model.ID.make("kilo-auto/free") }))
+          if (!restored) throw new Error("Missing restored OAuth model")
+          yield* llm.generate(LLM.request({ model: restored.model, prompt: "Restored OAuth" }))
+          expect(sent.at(-1)?.authorization).toBe("Bearer token")
+          expect(sent.at(-1)?.body.includes("kiloEmptyToken")).toBe(false)
+        }))
+      }),
+    )
+  }
+
   it.live("sends anonymous fallback requests without erasing the retained credential identity", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => fixture()),
@@ -1728,6 +1925,41 @@ describe("KiloGatewayPlugin", () => {
         (backend) => Effect.sync(() => backend[Symbol.dispose]()),
       ),
     )
+
+  it.live("keeps default and saved-login Gateway routing distinct from an explicit API-root override", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "route-token" }, () =>
+          Effect.gen(function* () {
+            const config = yield* Config.Test
+            const hooks = yield* PluginHooks.Service
+            const probe = (baseURL: string) => Effect.scoped(Effect.gen(function* () {
+              const host = yield* addPlugin()
+              const session = yield* host.session.create({ title: "routing parity" })
+              expect((yield* hooks.trigger("session", "model.request", {
+                sessionID: session.id,
+                agent: Agent.ID.make("code"),
+                model: { providerID: kilo, id: Model.ID.make("kilo-auto/small") },
+                kind: "primary",
+                headers: {},
+              })).baseURL).toBe(baseURL)
+            }))
+            yield* probe(`${backend.url}/api/gateway/v1`)
+            yield* config.setEntries([new Document({
+              type: "document",
+              info: Schema.decodeUnknownSync(Info)({ providers: { kilo: { settings: { baseURL: backend.url } } } }),
+            })])
+            yield* probe(`${backend.url}/api/openrouter`)
+            yield* config.setEntries([])
+            const credentials = yield* Credential.Service
+            yield* credentials.create({ integrationID, label: "login", value: oauth({ server: backend.url, organizationID: null }) })
+            yield* withEnv({ KILO_API_KEY: undefined }, () => probe(`${backend.url}/api/gateway/v1`))
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
 
   it.live("uses the API app root for account and device calls while preserving the inference base", () =>
     Effect.acquireUseRelease(

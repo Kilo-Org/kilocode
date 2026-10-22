@@ -17,18 +17,20 @@ test("normalizes the server and resolves KILO_API_URL and KILO_AI_GATEWAY_URL li
       KILO_AI_GATEWAY_URL: "http://localhost:3001/api/v1/",
     }),
   ).toBe("http://localhost:3001/api/v1")
-  expect(KiloServer.gateway("https://api.kilo.ai", {})).toBe("https://ai-gateway.kilo.ai/api/v1")
+  expect(KiloServer.gateway(undefined, {})).toBe("https://ai-gateway.kilo.ai/api/v1")
+  expect(KiloServer.gateway("https://api.kilo.ai", {})).toBe("https://api.kilo.ai/api/gateway")
   expect(KiloServer.gateway("http://localhost:3000", { KILO_API_URL: "http://localhost:3000" })).toBe(
-    "http://localhost:3000/api/gateway/v1",
+    "http://localhost:3000/api/gateway",
   )
   const env = {
     KILO_API_URL: "https://api.example.test",
     KILO_AI_GATEWAY_URL: "https://gateway.example.test/api/v1/",
   }
-  expect(KiloServer.gateway("https://api.example.test", env)).toBe("https://gateway.example.test/api/v1")
+  expect(KiloServer.gateway("https://api.example.test", env)).toBe("https://api.example.test/api/gateway")
   expect(KiloServer.gateway("https://gateway.example.test/api/v1", env)).toBe("https://gateway.example.test/api/v1")
   expect(KiloServer.gateway("https://staging.kilo.test", {})).toBe("https://staging.kilo.test/api/gateway")
-  expect(KiloServer.openrouter("https://api.example.test", env)).toBe("https://gateway.example.test/api/v1")
+  expect(KiloServer.openrouter("https://api.example.test", env)).toBe("https://api.example.test/api/openrouter")
+  expect(KiloServer.openrouter("https://gateway.example.test/api/v1", env)).toBe("https://gateway.example.test/api/v1")
   expect(KiloServer.openrouter("https://staging.kilo.test", {})).toBe("https://staging.kilo.test/api/openrouter")
   // v1 url.test.ts: an existing `/api/...` route is replaced, a path prefix is kept, and search and hash are dropped.
   expect(KiloServer.openrouter("https://staging.kilo.test/api/openrouter", {})).toBe(
@@ -103,7 +105,7 @@ test("resolves the account server and team in v1 order", () => {
   expect(KiloAccount.resolve({ token: "plain" }, {})).toEqual({
     token: "plain",
     server: "https://api.kilo.ai",
-    baseURL: "https://api.kilo.ai",
+    baseURL: KiloServer.DEFAULT_AI_GATEWAY_URL,
     organizationID: null,
   })
   expect(
@@ -152,6 +154,16 @@ test("keeps account API and inference bases distinct without losing the token sc
   const configured = KiloAccount.resolve({ token: "plain", server: KiloServer.DEFAULT_AI_GATEWAY_URL }, {})
   expect(configured.server).toBe(KiloServer.DEFAULT_API_URL)
   expect(configured.baseURL).toBe(KiloServer.DEFAULT_AI_GATEWAY_URL)
+})
+
+test("distinguishes default Gateway routing from explicit API-root and token overrides like v1", () => {
+  const env = { KILO_API_URL: "https://api.example.test" }
+  const defaults = KiloAccount.resolve({ token: "plain" }, env)
+  expect(KiloServer.openrouter(defaults.baseURL, env)).toBe("https://api.example.test/api/gateway/v1")
+  const configured = KiloAccount.resolve({ token: "plain", server: env.KILO_API_URL }, env)
+  expect(KiloServer.openrouter(configured.baseURL, env)).toBe("https://api.example.test/api/openrouter")
+  const embedded = KiloAccount.resolve({ token: `${env.KILO_API_URL}:secret` }, env)
+  expect(KiloServer.openrouter(embedded.baseURL, env)).toBe("https://api.example.test/api/openrouter")
 })
 
 test("builds Kilo provider headers without OpenCode attribution", () => {

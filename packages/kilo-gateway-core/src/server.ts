@@ -73,20 +73,21 @@ export function isConfiguredBase(
 ): boolean {
   if (!server) return true
   const normalized = normalize(server)
-  return normalized === fromEnv(env) || normalized === aiGatewayFromEnv(env)
+  return normalized === aiGatewayFromEnv(env)
 }
 
 // Resolves the AI gateway base URL for inference, matching `resolveKiloGatewayBaseUrl` / `resolveKiloOpenRouterBaseUrl`
 // on main (`packages/kilo-gateway/src/api/url.ts`):
 // - Uses `aiGatewayFromEnv(env)` (`https://ai-gateway.kilo.ai/api/v1` by default, or `${KILO_API_URL}/api/gateway/v1`,
-//   or `KILO_AI_GATEWAY_URL`) when `server` is the configured base.
+//   or `KILO_AI_GATEWAY_URL`) only when `server` is the configured Gateway base.
 // - Keeps legacy API app routing (`${prefix}/api/gateway`) for custom or token-embedded server URLs.
 export function gateway(server?: string, env: Record<string, string | undefined> = process.env) {
   if (isConfiguredBase(server, env)) return aiGatewayFromEnv(env)
   return apiUrl(server!, "gateway")
 }
 
-// v1 createKilo uses the OpenRouter route for every inference dialect, not the media/FIM Gateway route.
+// v1 keeps this legacy alias for custom/token URL overrides, regardless of the wire dialect.
+// The path does not select an upstream: the Kilo Gateway can route to Vercel, OpenRouter, or direct providers.
 export function openrouter(server?: string, env: Record<string, string | undefined> = process.env) {
   if (isConfiguredBase(server, env)) return aiGatewayFromEnv(env)
   return apiUrl(server!, "openrouter")

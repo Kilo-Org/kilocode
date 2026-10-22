@@ -60,6 +60,29 @@ describe("KiloModels", () => {
     expect(result.models.every((model) => model.free)).toBe(true)
   })
 
+  test("retains an explicit empty token without exposing paid anonymous models", async () => {
+    using backend = fixture()
+    const result = await Effect.runPromise(KiloModels.get({ server: backend.url, token: "" }))
+    expect(result.anonymous).toBe(false)
+    expect(result.models.map((model) => model.id)).toEqual(["kilo-auto/free", "kilo-auto/small"])
+    expect(backend.requests).toEqual([
+      { method: "GET", path: "/api/openrouter/models", authorization: null },
+    ])
+  })
+
+  for (const token of [undefined, ""]) {
+    test(`does not retry a team 401 against public models with token ${String(token)}`, async () => {
+      using backend = fixture()
+      backend.state.teamModelsStatus = 401
+      expect(await Effect.runPromise(
+        KiloModels.get({ server: backend.url, token, organizationID: "selected" }).pipe(Effect.flip),
+      )).toEqual({ kind: "unauthorized", status: 401 })
+      expect(backend.requests).toEqual([
+        { method: "GET", path: "/api/organizations/selected/models", authorization: null, organizationID: "selected" },
+      ])
+    })
+  }
+
   test("fetches the team catalog from /api/organizations/:id/models and sends the team header", async () => {
     using backend = fixture()
     const result = await Effect.runPromise(

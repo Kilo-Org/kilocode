@@ -53,7 +53,7 @@ export function authContent(env: Record<string, string | undefined> = process.en
 // selected organization. `null` is an explicit personal selection, not a missing selection.
 export function resolve(input: Input, env: Record<string, string | undefined> = process.env): Info {
   const tokenServer = KiloServer.fromToken(input.token)
-  const baseURL = tokenServer ?? (input.server ? KiloServer.normalize(input.server) : KiloServer.fromEnv(env))
+  const baseURL = tokenServer ?? (input.server ? KiloServer.normalize(input.server) : KiloServer.aiGatewayFromEnv(env))
   const tokenOrg = KiloServer.organizationFromUrl(baseURL)
   return {
     token: input.token,

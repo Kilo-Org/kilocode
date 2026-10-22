@@ -87,6 +87,7 @@ interface Snapshot {
 
 interface CatalogState {
   readonly account?: KiloAccount.Info
+  readonly organizationID?: string
   readonly connection?: ConnectionInfo
   readonly envActive: boolean
   readonly models: readonly KiloModels.Model[]
@@ -108,7 +109,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     const instanceID = randomUUID()
     const lock = Semaphore.makeUnsafe(1)
     let server = KiloServer.fromEnv()
-    let gateway = server
+    let gateway = KiloServer.aiGatewayFromEnv()
     let epoch = 0
     let catalog: CatalogState = {
       envActive: false,
@@ -116,8 +117,8 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       failed: false,
       anonymous: true,
     }
-    const scopeCompatible = () => !catalog.account || KiloAccount.compatible(catalog.account)
-    const activeAccount = () => scopeCompatible() ? catalog.account : undefined
+    const scopeCompatible = () => !catalog.organizationID && (!catalog.account || KiloAccount.compatible(catalog.account))
+    const activeAccount = () => scopeCompatible() && catalog.account?.token ? catalog.account : undefined
     const lastGood = new Map<string, Snapshot>()
     const sessionMetadata = new Map<string, KiloGatewayRpc.SessionMetadata>()
     let retryFiber: Fiber.Fiber<void, never> | undefined
@@ -158,7 +159,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         ),
       )
       const envInput = KiloAccount.envToken()
-      const configuredServer = settings?.baseURL ? KiloServer.normalize(settings.baseURL) : KiloServer.fromEnv()
+      const configuredServer = settings?.baseURL ? KiloServer.normalize(settings.baseURL) : KiloServer.aiGatewayFromEnv()
       const content = KiloAccount.authContent()
       const connection = content === undefined ? yield* ctx.integration.connection.active(id) : undefined
       const credential = connection
@@ -168,8 +169,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         content !== undefined ? (content ?? undefined) : credential ? credentialInput(credential) : undefined
       // v1's final provider auth patch runs after config: env > saved OAuth/key > config token > config API key.
       const token = envInput?.token ?? saved?.token ?? settings?.kilocodeToken ?? settings?.apiKey
-      const base = settings?.baseURL || (!envInput ? saved?.server : undefined) || configuredServer
-      const key = token
+      const loginServer = !envInput && saved?.server ? KiloServer.normalize(saved.server) : undefined
+      const base = settings?.baseURL || (loginServer === KiloServer.fromEnv() ? undefined : loginServer) || configuredServer
+      const key = token !== undefined
         ? !envInput && content === undefined && saved && connection
           ? organizationKey(connection)
           : `organization:${snapshotKey(KiloServer.fromToken(token) ?? base, token)}`
@@ -180,13 +182,16 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           ? decodeSelection(yield* ctx.storage.get("organization:env"))
           : Option.none()
       const selection = Option.orElse(storedSelection, () => legacy)
-      const account = token
+      const organizationID = Option.isSome(selection)
+        ? selection.value.organizationID
+        : saved?.organizationID === null
+          ? null
+          : saved?.organizationID || settings?.kilocodeOrganizationId
+      const account = token !== undefined
         ? KiloAccount.resolve({
             token,
             server: base,
-            organizationID: Option.isSome(selection)
-              ? selection.value.organizationID
-              : (saved?.organizationID ?? settings?.kilocodeOrganizationId),
+            organizationID: organizationID === "" ? undefined : organizationID,
           })
         : undefined
       // Adopt the old unscoped selection once, then keep all future choices bound to this credential identity.
@@ -197,7 +202,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       return {
         server: KiloServer.apiBase(configuredServer),
         gateway: configuredServer,
-        envActive: Boolean(envInput || content !== undefined || (!saved && token)),
+        envActive: Boolean(envInput || content !== undefined || (!saved && token !== undefined)),
         connection: !envInput && content === undefined && saved ? connection : undefined,
         selectionKey: key,
         personalSelected:
@@ -205,6 +210,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           (!envInput && saved?.organizationID === null) ||
           settings?.kilocodeOrganizationId === null,
         account,
+        organizationID: account
+          ? account.organizationID
+          : process.env.KILO_ORG_ID || organizationID || KiloServer.organizationFromUrl(base) || null,
       }
     })
 
@@ -259,6 +267,19 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       let organizationID = current?.organizationID ?? null
       const token = current?.token
 
+      if (!current && resolved.organizationID) {
+        catalog = {
+          organizationID: resolved.organizationID,
+          connection,
+          envActive,
+          models: [],
+          failed: true,
+          failure: { kind: "unauthorized" },
+          anonymous: true,
+        }
+        return
+      }
+
       // A scoped token cannot select another team (or Personal), even if the profile belongs to both teams.
       if (current && !KiloAccount.compatible(current)) {
         catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
@@ -281,7 +302,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           envActive,
           models: [],
           failed: false,
-          anonymous: !token,
+          anonymous: token === undefined,
           skippedOfflineTest: true,
         }
         return
@@ -297,9 +318,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         : { profile: Option.none<KiloProfile.Info>(), unauthorized: false }
       const profile = fetchedProfile.profile
       if (targetEpoch !== epoch) return
-      // An outage leaves the team-only status unknown, so fail closed. A rejected token keeps v1's catalog 401
+// An outage leaves the team-only status unknown, so fail closed. A rejected token keeps v1's catalog 401
       // fallback to the anonymous free catalog rather than hiding free models from an expired credential.
-      if (current && !organizationID && Option.isNone(profile) && !fetchedProfile.unauthorized) {
+      if (token && !organizationID && Option.isNone(profile) && !fetchedProfile.unauthorized) {
         catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
         return
       }
@@ -403,7 +424,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           // Kilo API is down, so it must not replace the stored default.
           defaultModelID: stored.defaultModelID ?? defaultModelID,
           failed: false,
-          anonymous: !token,
+          anonymous: token === undefined,
         }
       } else {
         catalog = {
@@ -413,7 +434,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           models: [],
           failed: true,
           failure: fetched.failure,
-          anonymous: !token,
+          anonymous: token === undefined,
         }
       }
       yield* scheduleRetry(fetched.failure, targetEpoch, attempt)
@@ -456,7 +477,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         previousServer !== (resolved.account?.server ?? resolved.server) ||
         previousGateway !== (resolved.account?.baseURL ?? resolved.gateway) ||
         previous.account?.token !== resolved.account?.token ||
-        previous.account?.organizationID !== resolved.account?.organizationID ||
+        (previous.account?.organizationID ?? previous.organizationID ?? null) !== resolved.organizationID ||
         JSON.stringify(previous.connection) !== JSON.stringify(resolved.connection)
       ) {
         catalog = { envActive: false, models: [], failed: true, anonymous: true }
@@ -481,7 +502,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     const start = yield* resolveCurrentAccount
     server = start.server
     gateway = start.gateway
-    const stored = start.account?.organizationID
+    const stored = start.organizationID
       ? undefined
       : yield* readSnapshot(snapshotKey(start.account?.baseURL ?? gateway, start.account?.token))
     if (stored) {
@@ -492,7 +513,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         models: stored.models,
         defaultModelID: stored.defaultModelID,
         failed: false,
-        anonymous: !start.account?.token,
+        anonymous: start.account?.token === undefined,
       }
     }
     yield* stored ? Effect.forkIn(reload, scope) : lock.withPermit(loadCatalog(++epoch, 0))
@@ -507,7 +528,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       const headers = KiloHeaders.provider({ version: ctx.app.version, organizationID: account?.organizationID })
       const current = editor.get(id)
       const { apiKey: _, ...restSettings } = current?.provider.settings ?? {}
-      const baseSettings = { ...restSettings, baseURL }
+      const baseSettings = { ...restSettings, baseURL, kiloEmptyToken: account?.token === "" }
       const mergedHeaders = {
         ...current?.provider.headers,
         ...headers,
@@ -517,11 +538,11 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       }
 
       if (catalog.skippedOfflineTest) {
-        const activation = !account || catalog.anonymous || catalog.envActive ? "enabled" : "auto"
+        const activation = !account || catalog.anonymous || catalog.envActive || account.token === "" ? "enabled" : "auto"
         const settings =
           !account || catalog.anonymous
             ? { ...baseSettings, apiKey: KiloAccount.ANONYMOUS_KEY }
-            : catalog.envActive
+            : catalog.envActive || account.token === ""
               ? { ...baseSettings, apiKey: account.token }
               : baseSettings
         editor.update(id, (provider) => {
@@ -551,11 +572,11 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         return
       }
 
-      const activation = !account || catalog.anonymous || catalog.envActive ? "enabled" : "auto"
+      const activation = !account || catalog.anonymous || catalog.envActive || account.token === "" ? "enabled" : "auto"
       const settings =
         !account || catalog.anonymous
           ? { ...baseSettings, apiKey: KiloAccount.ANONYMOUS_KEY }
-          : catalog.envActive
+          : catalog.envActive || account.token === ""
             ? { ...baseSettings, apiKey: account.token }
             : baseSettings
       const sourceConnection =
@@ -728,10 +749,10 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       .register(KiloGatewayRpc.Definition, {
         authStatus: () =>
           Effect.sync(() => {
-            const account = activeAccount()
+            const account = scopeCompatible() ? catalog.account : undefined
             return {
-              authenticated: Boolean(account),
-              organizationID: account?.organizationID ?? null,
+              authenticated: Boolean(account?.token),
+              organizationID: account?.organizationID ?? catalog.organizationID ?? null,
               server: catalog.account?.server ?? server,
             }
           }),
@@ -803,7 +824,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         "organization.set": (input, context) =>
           Effect.gen(function* () {
             const resolved = yield* resolveCurrentAccount
-            if (!resolved.selectionKey || !resolved.account)
+            if (!resolved.selectionKey || !resolved.account?.token)
               return yield* Effect.fail(context.error("unauthorized", "Not signed in to Kilo Gateway"))
             if (!KiloAccount.compatible({ ...resolved.account, organizationID: input.organizationID })) {
               return yield* Effect.fail(context.error("failed", "Organization conflicts with the Kilo token scope"))
@@ -931,7 +952,7 @@ function isLoopback(server: string): boolean {
 
 function snapshotKey(server: string, token?: string): string {
   const route = KiloServer.gateway(server)
-  if (!token) return `catalog:anonymous:${route}`
+  if (token === undefined) return `catalog:anonymous:${route}`
   const hash = createHash("sha256").update(`${route}:${token}`).digest("hex")
   return `catalog:personal:${hash}`
 }

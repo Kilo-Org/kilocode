@@ -52,6 +52,12 @@ test("selects the default team like v1", () => {
   expect(KiloProfile.defaultOrganizationID(profile)).toBeNull()
   expect(KiloProfile.defaultOrganizationID({ ...profile, hasPersonalAccount: false })).toBe("first")
   expect(
+    KiloProfile.defaultOrganizationID({ ...profile, hasPersonalAccount: false, selectedOrganizationId: "second" }),
+  ).toBe("second")
+  expect(
+    KiloProfile.defaultOrganizationID({ ...profile, hasPersonalAccount: false, selectedOrganizationId: "missing" }),
+  ).toBe("first")
+  expect(
     KiloProfile.defaultOrganizationID({ email: "a@example.test", organizations: [], hasPersonalAccount: false }),
   ).toBeNull()
 })
