@@ -531,6 +531,195 @@ it.live("rebases scope-local ownership after a project rename and uninstalls fro
   }),
 )
 
+for (const field of [
+  "paths",
+  "config",
+  "resource-skill",
+  "resource-config",
+  "pending-skill",
+  "pending-config",
+] as const) {
+  it.live(`rejects repository-controlled recovery ${field} outside managed destinations before any mutation`, () =>
+    Effect.gen(function* () {
+      const test = yield* fixture()
+      const projectInput = { ...input, scope: "project" } as const
+      const source = path.join(test.directory, "src")
+      const config = path.join(test.directory, "source.json")
+      const content = '{"mcp":{"servers":{"demo":{"type":"remote","url":"https://keep.example.com"}}}}'
+      yield* Effect.promise(async () => {
+        await Bun.write(path.join(source, "SKILL.md"), "tracked source")
+        await Bun.write(config, content)
+      })
+      const skillFingerprint = yield* Effect.promise(() => Installer.resourceFingerprint({ path: source }))
+      const configFingerprint = yield* Effect.promise(() => Installer.resourceFingerprint({ config, server: "demo" }))
+      const resource = field.endsWith("config")
+        ? { config: "/source.json", server: "demo", fingerprints: [configFingerprint!] }
+        : { path: "/src", fingerprints: [skillFingerprint!] }
+      const record = {
+        ...projectInput,
+        project: "/",
+        installedAt: 0,
+        paths: field === "paths" ? ["/src"] : [],
+        ...(field === "config" ? { config: "/source.json", server: "demo" } : {}),
+        resources: field.startsWith("resource-") ? [resource] : [],
+        ...(field.startsWith("pending-") ? { pending: [resource] } : {}),
+      }
+      yield* Effect.promise(() =>
+        Bun.write(journal(path.join(test.directory, ".kilo2")), JSON.stringify({ directory: "/", record })),
+      )
+      yield* test.start({
+        ...test.host,
+        location: {
+          ...test.host.location,
+          directory: AbsolutePath.make(test.directory),
+          project: { ...test.host.location.project, directory: AbsolutePath.make(test.directory) },
+        },
+      })
+      for (const method of ["installed", "install", "uninstall"] as const) {
+        expect(
+          yield* test.rpc
+            .call("kilocode.marketplace", method, method === "installed" ? {} : projectInput)
+            .pipe(Effect.flip),
+        ).toMatchObject({ type: "fetch_failed", message: expect.stringContaining("outside its installation scope") })
+        expect(yield* Effect.promise(() => Bun.file(path.join(source, "SKILL.md")).text())).toBe("tracked source")
+        expect(yield* Effect.promise(() => Bun.file(config).text())).toBe(content)
+      }
+    }),
+  )
+}
+
+;(process.platform === "win32" ? it.live.skip : it.live)(
+  "rejects recovery through a repository-controlled skills-directory symlink",
+  () =>
+    Effect.gen(function* () {
+      const test = yield* fixture()
+      const root = path.join(test.directory, ".kilo2")
+      const source = path.join(test.directory, "src", "guide")
+      yield* Effect.promise(() => Bun.write(path.join(source, "SKILL.md"), "tracked source"))
+      const fingerprint = yield* Effect.promise(() => Installer.resourceFingerprint({ path: source }))
+      yield* Effect.promise(async () => {
+        await fs.mkdir(root)
+        await fs.symlink(path.join(test.directory, "src"), path.join(root, "skills"))
+        await Bun.write(
+          journal(root),
+          JSON.stringify({
+            directory: test.directory,
+            record: {
+              ...input,
+              scope: "project",
+              project: test.directory,
+              installedAt: 0,
+              paths: [path.join(root, "skills", "guide")],
+              resources: [{ path: path.join(root, "skills", "guide"), fingerprints: [fingerprint] }],
+            },
+          }),
+        )
+      })
+      yield* test.start({
+        ...test.host,
+        location: {
+          ...test.host.location,
+          directory: AbsolutePath.make(test.directory),
+          project: { ...test.host.location.project, directory: AbsolutePath.make(test.directory) },
+        },
+      })
+      expect(
+        yield* test.rpc.call("kilocode.marketplace", "uninstall", { ...input, scope: "project" }).pipe(Effect.flip),
+      ).toMatchObject({
+        type: "fetch_failed",
+        message: expect.stringContaining("Unsafe marketplace recovery directory"),
+      })
+      expect(yield* Effect.promise(() => Bun.file(path.join(source, "SKILL.md")).text())).toBe("tracked source")
+    }),
+)
+
+for (const trusted of [false, true]) {
+  ;(process.platform === "win32" ? it.live.skip : it.live)(
+    `${trusted ? "preserves deliberately installed" : "rejects forged journal authority for"} external config symlinks`,
+    () =>
+      Effect.gen(function* () {
+        const test = yield* fixture()
+        const project = path.join(test.directory, "project")
+        const config = path.join(project, "kilo2.jsonc")
+        const external = path.join(test.directory, "dotfiles.jsonc")
+        const projectInput = { ...input, scope: "project" } as const
+        const projectKey = `installed:kilo:mcp:demo:project:${project}`
+        const content = '{"mcp":{"servers":{"demo":{"type":"remote","url":"https://new.example.com/mcp"}}}}'
+        yield* Effect.promise(async () => {
+          await fs.mkdir(project)
+          await Bun.write(external, trusted ? "{}" : content)
+          await fs.symlink(external, config)
+        })
+        yield* test.start({
+          ...test.host,
+          location: {
+            ...test.host.location,
+            directory: AbsolutePath.make(project),
+            project: { ...test.host.location.project, directory: AbsolutePath.make(project) },
+          },
+        })
+        if (!trusted) {
+          const fingerprint = yield* Effect.promise(() => Installer.resourceFingerprint({ config, server: "demo" }))
+          yield* Effect.promise(() =>
+            Bun.write(
+              journal(path.join(project, ".kilo2")),
+              JSON.stringify({
+                directory: project,
+                record: {
+                  ...projectInput,
+                  project,
+                  installedAt: 0,
+                  paths: [],
+                  config,
+                  server: "demo",
+                  resources: [{ config, server: "demo", target: external, fingerprints: [fingerprint] }],
+                },
+              }),
+            ),
+          )
+          for (const method of ["installed", "install", "uninstall"] as const) {
+            expect(
+              yield* test.rpc
+                .call("kilocode.marketplace", method, method === "installed" ? {} : projectInput)
+                .pipe(Effect.flip),
+            ).toMatchObject({ type: "fetch_failed", message: expect.stringContaining("no machine-local ownership") })
+            expect(yield* Effect.promise(() => Bun.file(external).text())).toBe(content)
+          }
+          return
+        }
+        const installed = decode(yield* test.rpc.call("kilocode.marketplace", "install", projectInput))
+        expect(installed.resources).toContainEqual(
+          expect.objectContaining({ config, target: yield* Effect.promise(() => fs.realpath(external)) }),
+        )
+        expect(decodeList(yield* test.rpc.call("kilocode.marketplace", "installed", {}))).toEqual([installed])
+        const record = yield* test.host.storage.get(projectKey)
+        if (record === undefined) throw new Error("Expected machine-local installation ownership")
+        yield* test.host.storage.remove(projectKey)
+        expect(yield* test.rpc.call("kilocode.marketplace", "uninstall", projectInput).pipe(Effect.flip)).toMatchObject(
+          { type: "fetch_failed", message: expect.stringContaining("no machine-local ownership") },
+        )
+        yield* test.host.storage.set(projectKey, record)
+        const changed = path.join(test.directory, "other-config.jsonc")
+        yield* Effect.promise(async () => {
+          await Bun.write(changed, content)
+          await fs.unlink(config)
+          await fs.symlink(changed, config)
+        })
+        expect(yield* test.rpc.call("kilocode.marketplace", "uninstall", projectInput).pipe(Effect.flip)).toMatchObject(
+          { type: "fetch_failed", message: expect.stringContaining("no machine-local ownership") },
+        )
+        expect(yield* Effect.promise(() => Bun.file(changed).text())).toBe(content)
+        yield* Effect.promise(async () => {
+          await fs.unlink(config)
+          await fs.symlink(external, config)
+        })
+        yield* test.rpc.call("kilocode.marketplace", "uninstall", projectInput)
+        expect(yield* Effect.promise(() => fs.readlink(config))).toBe(external)
+        expect(yield* Effect.promise(() => Bun.file(external).json())).toEqual({ mcp: { servers: {} } })
+      }),
+  )
+}
+
 for (const failAt of [1, 2]) {
   it.live(`${failAt === 1 ? "initial" : "final"} database save failure retains a recoverable scope-local journal`, () =>
     Effect.gen(function* () {
@@ -575,11 +764,14 @@ for (const failAt of [1, 2]) {
 it.live("persists new and pending ownership before cleanup, retains failures, and retries durable cleanup", () =>
   Effect.gen(function* () {
     const test = yield* fixture()
-    const old = path.join(test.directory, "old.json")
-    const unreadable = path.join(test.directory, "not-a-file.json")
-    const obsolete = path.join(test.directory, "skills", "obsolete")
-    const guide = path.join(test.directory, "skills", "guide")
-    const config = path.join(test.directory, "kilo2.json")
+    const input = { registry: "kilo", kind: "mcp", id: "demo", scope: "project" } as const
+    const key = `installed:kilo:mcp:demo:project:${test.directory}`
+    const root = path.join(test.directory, ".kilo2")
+    const old = path.join(test.directory, "kilo2.jsonc")
+    const unreadable = path.join(test.directory, "kilo2.json")
+    const obsolete = path.join(root, "skills", "obsolete")
+    const guide = path.join(root, "skills", "guide")
+    const config = path.join(root, "kilo2.jsonc")
     const legacy = JSON.stringify({ mcp: { servers: { legacy: { type: "remote", url: "https://legacy" } } } })
     const previous = JSON.stringify({ mcp: { servers: { demo: { type: "remote", url: "https://old" } } } })
     yield* Effect.promise(async () => {
@@ -587,6 +779,7 @@ it.live("persists new and pending ownership before cleanup, retains failures, an
       await Bun.write(unreadable, legacy)
       await fs.mkdir(obsolete, { recursive: true })
       await Bun.write(path.join(obsolete, "SKILL.md"), "obsolete guide")
+      await Bun.write(config, "{}")
     })
     const owned = yield* Effect.promise(async () =>
       Promise.all(
@@ -604,6 +797,7 @@ it.live("persists new and pending ownership before cleanup, retains failures, an
       key,
       JSON.stringify({
         ...input,
+        project: test.directory,
         installedAt: 0,
         paths: [obsolete],
         config: old,
@@ -615,6 +809,11 @@ it.live("persists new and pending ownership before cleanup, retains failures, an
     let rejectWrite = Infinity
     yield* test.start({
       ...test.host,
+      location: {
+        ...test.host.location,
+        directory: AbsolutePath.make(test.directory),
+        project: { ...test.host.location.project, directory: AbsolutePath.make(test.directory) },
+      },
       storage: {
         ...test.host.storage,
         set: (key, value) =>
@@ -631,7 +830,7 @@ it.live("persists new and pending ownership before cleanup, retains failures, an
                 })
                 expect(yield* Effect.promise(() => Bun.file(path.join(obsolete, "SKILL.md")).exists())).toBe(true)
                 expect(yield* Effect.promise(() => Bun.file(path.join(guide, "SKILL.md")).exists())).toBe(false)
-                expect(yield* Effect.promise(() => Bun.file(config).exists())).toBe(false)
+                expect(yield* Effect.promise(() => Bun.file(config).json())).toEqual({})
               }
               snapshots.push(record)
               if (snapshots.length === rejectWrite) return yield* Effect.die(new Error("progress write failed"))
@@ -649,7 +848,7 @@ it.live("persists new and pending ownership before cleanup, retains failures, an
     )
     expect(snapshots).toHaveLength(3)
     expect(decode(JSON.parse(String(yield* test.host.storage.get(key))))).toMatchObject({ pending: first.pending })
-    expect(yield* Effect.promise(() => fs.readdir(path.join(test.directory, "skills")))).toEqual(["guide"])
+    expect(yield* Effect.promise(() => fs.readdir(path.join(root, "skills")))).toEqual(["guide"])
 
     // Uninstall may remove active resources, but a failed pending read must keep the manifest for retry.
     expect(yield* test.rpc.call("kilocode.marketplace", "uninstall", input).pipe(Effect.flip)).toMatchObject({
@@ -659,7 +858,7 @@ it.live("persists new and pending ownership before cleanup, retains failures, an
     expect(decode(JSON.parse(String(yield* test.host.storage.get(key))))).toMatchObject({ pending: first.pending })
     expect(yield* Effect.promise(() => Bun.file(path.join(guide, "SKILL.md")).exists())).toBe(false)
     expect(yield* Effect.promise(() => Bun.file(config).json())).toEqual({ mcp: { servers: {} } })
-    expect(yield* Effect.promise(() => Bun.file(journal(test.directory)).exists())).toBe(true)
+    expect(yield* Effect.promise(() => Bun.file(journal(root)).exists())).toBe(true)
     const again = decode(yield* test.rpc.call("kilocode.marketplace", "install", input))
     expect(again.pending).toEqual(first.pending)
     expect(yield* Effect.promise(() => Bun.file(path.join(guide, "SKILL.md")).text())).toBe("new guide")
@@ -685,6 +884,6 @@ it.live("persists new and pending ownership before cleanup, retains failures, an
     expect(yield* Effect.promise(() => Bun.file(unreadable).json())).toEqual({ mcp: { servers: {} } })
     yield* test.rpc.call("kilocode.marketplace", "uninstall", input)
     expect(yield* test.host.storage.get(key)).toBeUndefined()
-    expect(yield* Effect.promise(() => fs.readdir(path.join(test.directory, "skills")))).toEqual([])
+    expect(yield* Effect.promise(() => fs.readdir(path.join(root, "skills")))).toEqual([])
   }),
 )

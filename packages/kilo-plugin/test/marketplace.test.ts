@@ -229,10 +229,11 @@ describe("skill install", () => {
     expect(await Bun.file(path.join(abandoned, "ref/a.txt")).text()).toBe("keep until deleted")
     await fs.rename(path.join(directory, "original"), path.join(directory, "moved"))
     await remove(path.join(directory, "moved", "skills", "demo"), [owned])
-    expect(await fs.readdir(path.join(directory, "moved"))).toEqual(["skills"])
+    expect((await fs.readdir(path.join(directory, "moved"))).toSorted()).toEqual([".marketplace-trash", "skills"])
+    expect(await fs.readdir(path.join(directory, "moved", ".marketplace-trash"))).toEqual([])
   })
 
-  test("replacement retries cleanup of interrupted old contents before installing the new tree", async () => {
+  test("replacement keeps the new tree and retries interrupted backup cleanup", async () => {
     const directory = await tmp()
     const root = path.join(directory, "skills")
     const target = await install({
@@ -255,18 +256,117 @@ describe("skill install", () => {
       await original(location, options)
     })
     try {
-      await expect(install({ root, id: "demo", archive, fingerprints: [owned] })).rejects.toBe(
-        interrupted,
-      )
+      await expect(install({ root, id: "demo", archive, fingerprints: [owned] })).rejects.toBe(interrupted)
     } finally {
       failure.mockRestore()
     }
-    expect(await fingerprint(target)).toBeUndefined()
-    expect((await fs.readdir(directory)).toSorted()).toEqual([".marketplace-trash", "skills"])
-    await install({ root, id: "demo", archive, fingerprints: [owned] })
     expect(await Bun.file(path.join(target, "SKILL.md")).text()).toBe("new")
-    expect(await fs.readdir(directory)).toEqual(["skills"])
+    expect((await fs.readdir(directory)).toSorted()).toEqual([".marketplace-trash", "skills"])
+    await install({ root, id: "demo", archive, fingerprints: [owned, (await fingerprint(target))!] })
+    expect(await Bun.file(path.join(target, "SKILL.md")).text()).toBe("new")
+    expect(await fs.readdir(path.join(directory, ".marketplace-trash"))).toEqual([])
     await remove(target, [(await fingerprint(target))!])
+  })
+
+  test("restores the untouched old skill when promoting the staged replacement fails", async () => {
+    const directory = await tmp()
+    try {
+      const root = path.join(directory, "skills")
+      const target = await install({
+        root,
+        id: "demo",
+        archive: await tarball({ "SKILL.md": "old", "ref/a.txt": "old reference" }),
+      })
+      const owned = (await fingerprint(target))!
+      const original = fs.rename
+      const denied = new Error("staging rename denied")
+      using failure = spyOn(fs, "rename").mockImplementation(async (source, destination) => {
+        if (String(source).includes(".marketplace-staging")) {
+          const parent = path.join(directory, ".marketplace-trash")
+          const backups = await fs.readdir(parent)
+          expect(backups).toHaveLength(1)
+          expect(await fingerprint(path.join(parent, backups[0]))).toBe(owned)
+          throw denied
+        }
+        await original(source, destination)
+      })
+      await expect(
+        install({ root, id: "demo", archive: await tarball({ "SKILL.md": "new" }), fingerprints: [owned] }),
+      ).rejects.toBe(denied)
+      expect(await fingerprint(target)).toBe(owned)
+      expect(await Bun.file(path.join(target, "ref/a.txt")).text()).toBe("old reference")
+      expect(await fs.readdir(path.join(directory, ".marketplace-trash"))).toEqual([])
+      expect((await fs.readdir(directory)).toSorted()).toEqual([".marketplace-trash", "skills"])
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  test("keeps failed rollback backups addressable by ownership after a project move", async () => {
+    const directory = await tmp()
+    try {
+      const root = path.join(directory, "original", "skills")
+      const target = await install({ root, id: "demo", archive: await tarball({ "SKILL.md": "old" }) })
+      const owned = (await fingerprint(target))!
+      const original = fs.rename
+      const promotion = new Error("promotion failed")
+      const rollback = new Error("rollback failed")
+      const failure = spyOn(fs, "rename").mockImplementation(async (source, destination) => {
+        if (String(source).includes(".marketplace-staging")) throw promotion
+        if (String(source).includes(".marketplace-trash")) throw rollback
+        await original(source, destination)
+      })
+      try {
+        await expect(
+          install({ root, id: "demo", archive: await tarball({ "SKILL.md": "new" }), fingerprints: [owned] }),
+        ).rejects.toMatchObject({ errors: [promotion, rollback], cause: promotion })
+      } finally {
+        failure.mockRestore()
+      }
+      expect(await fingerprint(target)).toBeUndefined()
+      const parent = path.join(directory, "original", ".marketplace-trash")
+      const backups = await fs.readdir(parent)
+      expect(backups).toHaveLength(1)
+      expect(await fingerprint(path.join(parent, backups[0]))).toBe(owned)
+      await fs.rename(path.join(directory, "original"), path.join(directory, "moved"))
+      await remove(path.join(directory, "moved", "skills", "demo"), [owned])
+      expect(await fs.readdir(path.join(directory, "moved", ".marketplace-trash"))).toEqual([])
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  test("concurrent resource cleanup retains the shared trash parent before another rename", async () => {
+    const directory = await tmp()
+    try {
+      const root = path.join(directory, "skills")
+      const first = await install({ root, id: "first", archive: await tarball({ "SKILL.md": "first" }) })
+      const second = await install({ root, id: "second", archive: await tarball({ "SKILL.md": "second" }) })
+      const firstOwned = (await fingerprint(first))!
+      const secondOwned = (await fingerprint(second))!
+      const entered = Promise.withResolvers<void>()
+      const resume = Promise.withResolvers<void>()
+      const original = fs.rename
+      using paused = spyOn(fs, "rename").mockImplementation(async (source, destination) => {
+        if (source === second) {
+          entered.resolve()
+          await resume.promise
+        }
+        await original(source, destination)
+      })
+      const removing = remove(second, [secondOwned])
+      await entered.promise
+      try {
+        await remove(first, [firstOwned])
+      } finally {
+        resume.resolve()
+        await removing
+      }
+      expect(await fs.readdir(root)).toEqual([])
+      expect(await fs.readdir(path.join(directory, ".marketplace-trash"))).toEqual([])
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true })
+    }
   })
 
   test("fingerprints protect changed contents, added files, empty directories, and symbolic links", async () => {

@@ -57,6 +57,7 @@ export async function install(input: {
           {
             config: input.config,
             server: MarketplaceMcp.serverName(item.id),
+            target: await MarketplaceMcp.resolveFile(input.config),
             fingerprints: [MarketplaceMcp.serverFingerprint(server)],
           },
         ]
@@ -65,6 +66,8 @@ export async function install(input: {
   if (new Set(resources.map(key)).size !== resources.length)
     throw new SkillError("invalid", "Duplicate install resources")
   const prior = input.previous ? [...active(input.previous), ...(input.previous.pending ?? [])] : []
+  for (const resource of prior.filter((old) => resources.some((resource) => key(old) === key(resource))))
+    await checkTarget(resource)
   const allowed = (resource: Resource) =>
     prior.filter((old) => key(old) === key(resource)).flatMap((old) => old.fingerprints ?? [])
   // Preparation and ownership preflight finish before the durable intent and before any target writes.
@@ -136,14 +139,25 @@ function active(record: Written & { id: string }): readonly Resource[] {
 }
 
 export async function resourceFingerprint(resource: Resource): Promise<string | undefined> {
+  await checkTarget(resource)
   return "path" in resource
     ? Skill.fingerprint(resource.path)
     : MarketplaceMcp.fingerprint(resource.config, resource.server)
 }
 
 export async function cleanup(resource: Resource) {
+  await checkTarget(resource)
   if ("path" in resource) return Skill.remove(resource.path, resource.fingerprints)
   await MarketplaceMcp.remove({ file: resource.config, name: resource.server, fingerprints: resource.fingerprints })
+}
+
+async function checkTarget(resource: Resource) {
+  if (
+    "config" in resource &&
+    resource.target &&
+    resource.target !== (await MarketplaceMcp.resolveFile(resource.config))
+  )
+    throw new McpError("conflict", `MCP config target changed since installation: ${resource.config}`)
 }
 
 export async function uninstall(record: Written & { readonly id: string }) {

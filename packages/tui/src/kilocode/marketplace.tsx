@@ -12,6 +12,7 @@ import { createEffect, onCleanup } from "solid-js"
 import { useLocation } from "../context/location"
 import { DialogIntegration } from "../component/dialog-integration"
 import { DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
+import { DialogMarketplaceSecret } from "./dialog-marketplace-secret"
 
 type Kind = KiloMarketplaceRpc.Kind
 type Item = KiloMarketplaceRpc.Item
@@ -51,6 +52,7 @@ export default Plugin.define({
           onCleanup(() => {
             if (!active) return
             active.abort()
+            active = undefined
             dismissed?.()
             dismissed = undefined
             context.ui.dialog.clear()
@@ -68,17 +70,20 @@ export default Plugin.define({
               slash: { name: "marketplace" },
               run: async () => {
                 if (active) return
-                active = new AbortController()
+                const controller = new AbortController()
+                active = controller
                 await marketplace({
                   ...context,
                   target: location.ref ?? context.data.location.default(),
-                  signal: active.signal,
+                  signal: controller.signal,
                   signIn: (integrationID) =>
                     new Promise<void>((resolve) => {
                       dismissed = resolve
                       context.ui.dialog.show(() => <DialogIntegration integrationID={integrationID} autoConnect />)
                     }),
-                }).finally(() => (active = undefined))
+                }).finally(() => {
+                  if (active === controller) active = undefined
+                })
               },
             },
           ],
@@ -92,7 +97,7 @@ export default Plugin.define({
 function connect(context: Context) {
   return {
     rpc: context.client.rpc(KiloMarketplaceRpc.Definition),
-    options: { location: context.target },
+    options: { location: context.target, signal: context.signal },
   }
 }
 
@@ -214,7 +219,8 @@ async function registries(context: Context): Promise<void> {
   if (context.signal.aborted) return
   const { rpc, options } = connect(context)
   const list = await rpc.registries({}, options).catch((error: Error) => {
-    context.ui.toast.show({ variant: "error", message: error.message || "Couldn't load registries" })
+    if (!context.signal.aborted)
+      context.ui.toast.show({ variant: "error", message: error.message || "Couldn't load registries" })
     return undefined
   })
   if (!list || context.signal.aborted) return
@@ -236,9 +242,10 @@ async function registries(context: Context): Promise<void> {
     })
     if (!confirmed || context.signal.aborted) return registries(context)
   }
-  await rpc["registries.set"]({ id: registry.id, enabled: !registry.enabled }, options).catch((error: Error) =>
-    context.ui.toast.show({ variant: "error", message: error.message || "Couldn't change the registry" }),
-  )
+  await rpc["registries.set"]({ id: registry.id, enabled: !registry.enabled }, options).catch((error: Error) => {
+    if (!context.signal.aborted)
+      context.ui.toast.show({ variant: "error", message: error.message || "Couldn't change the registry" })
+  })
   return registries(context)
 }
 
@@ -251,7 +258,8 @@ async function browse(context: Context, kind: Kind, query?: string): Promise<voi
     rpc.installed({}, options),
     rpc.registries({}, options),
   ]).catch((error: Error) => {
-    context.ui.toast.show({ variant: "error", message: error.message || "Couldn't load the marketplace" })
+    if (!context.signal.aborted)
+      context.ui.toast.show({ variant: "error", message: error.message || "Couldn't load the marketplace" })
     return undefined
   })
   if (!loaded || context.signal.aborted) return
@@ -444,7 +452,8 @@ async function act(context: Context, item: Item, installed: readonly Installed[]
     const answers = await ask(context, item)
     if (!answers || context.signal.aborted) return
     const result = await rpc.install({ ...ref, scope: choice.scope, ...answers }, options).catch((error: Error) => {
-      context.ui.toast.show({ variant: "error", message: error.message || "Unknown error" })
+      if (!context.signal.aborted)
+        context.ui.toast.show({ variant: "error", message: error.message || "Unknown error" })
       return undefined
     })
     if (!result || context.signal.aborted) return
@@ -628,11 +637,27 @@ async function ask(context: Context, item: Item) {
   ]
   const params: Record<string, string> = {}
   for (const parameter of declared) {
-    const value = await context.ui.dialog.prompt({
+    const prompt = {
       title: parameter.name,
       description: parameter.optional ? "Optional. Leave empty to skip." : `Required by ${item.name}.`,
       placeholder: parameter.placeholder,
-    })
+    }
+    const value = parameter.secret
+      ? await new Promise<string | undefined>((resolve) => {
+          context.ui.dialog.show(
+            () => (
+              <DialogMarketplaceSecret
+                {...prompt}
+                onConfirm={(value) => {
+                  resolve(value)
+                  context.ui.dialog.clear()
+                }}
+              />
+            ),
+            () => resolve(undefined),
+          )
+        })
+      : await context.ui.dialog.prompt(prompt)
     if (value === undefined || context.signal.aborted) return undefined
     if (!parameter.optional && !value.trim()) {
       context.ui.toast.show({ variant: "error", message: `${parameter.name} is required` })

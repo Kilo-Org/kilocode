@@ -49,9 +49,11 @@ async function mount(
     loadFailed?: boolean
     uninstallFailed?: boolean
     width?: number
+    item?: KiloMarketplaceRpc.Item
+    hold?: { method: string; until: Promise<void> }
   },
 ) {
-  const calls: { method: string; path: string; body?: unknown }[] = []
+  const calls: { method: string; path: string; body?: unknown; signal: AbortSignal; directory: string | null }[] = []
   let removed = false
   let checks = 0
   let signedIn = false
@@ -62,18 +64,32 @@ async function mount(
     height: 40,
     config: { animations: false },
     fetch: async (url, request) => {
-      calls.push({ method: request.method, path: url.pathname })
+      const call = {
+        method: request.method,
+        path: url.pathname,
+        signal: request.signal,
+        directory: url.searchParams.get("location[directory]"),
+        body: undefined as unknown,
+      }
+      calls.push(call)
       if (url.pathname.startsWith("/api/rpc/kilocode.marketplace/")) {
-        calls[calls.length - 1].body = await request.json()
+        call.body = await request.json()
         const method = url.pathname.split("/").at(-1)
+        if (
+          inventory?.hold &&
+          method === inventory.hold.method &&
+          url.searchParams.get("location[directory]") === directory
+        )
+          await inventory.hold.until
         if (inventory?.unavailable && (method === "list" || method === "registries"))
           return new Response("Catalog unavailable", { status: 503 })
-        if (method === "list") return json({ output: { items: [item], failures: [] } })
+        if (method === "list") return json({ output: { items: [inventory?.item ?? item], failures: [] } })
         if (method === "installed") {
           await inventory?.delayed
           if (inventory?.loadFailed) return new Response("Inventory unavailable", { status: 503 })
           return json({ output: inventory ? records : removed ? [] : [installed] })
         }
+        if (method === "registries.set") return json({ output: [] })
         if (method === "registries")
           return json({
             output: [
@@ -91,7 +107,7 @@ async function mount(
         if (method === "install") return json({ output: result })
         if (method === "uninstall") {
           if (inventory?.uninstallFailed) return new Response("Installation contents are modified", { status: 409 })
-          const body = calls[calls.length - 1].body as {
+          const body = call.body as {
             input: Pick<KiloMarketplaceRpc.Installed, "registry" | "kind" | "id" | "scope">
           }
           records = records.filter(
@@ -101,6 +117,20 @@ async function mount(
           removed = true
           return json({ output: {} })
         }
+      }
+      if (inventory?.hold && url.pathname === "/api/project")
+        return json([
+          {
+            id: "proj_other",
+            name: "Other project",
+            canonical: "/tmp/other-project",
+            time: { created: 1, updated: 1 },
+            sandboxes: [],
+          },
+        ])
+      if (inventory?.hold && url.pathname === "/api/location") {
+        const target = url.searchParams.get("location[directory]") ?? directory
+        return json({ directory: target, project: { id: "proj_test", directory: target, canonical: target } })
       }
       if (auth && url.pathname === "/api/config")
         return json([
@@ -519,3 +549,140 @@ test("successful sign-in with a pending transport is not reported connected", as
     clearInterval(heartbeat)
   }
 }, 20_000)
+
+test.each([70, 120])("secret parameters stay masked and submit the real edited value at width %s", async (width) => {
+  await using app = await mount(
+    record,
+    record,
+    { status: "connected" },
+    {
+      width,
+      item: {
+        ...item,
+        parameters: [{ key: "public", name: "Public value", optional: false }],
+        options: [
+          {
+            name: "HTTP",
+            prerequisites: [],
+            parameters: [{ key: "token", name: "API token", optional: false, secret: true }],
+          },
+        ],
+      },
+    },
+  )
+  await reinstall(app)
+  await app.waitForFrame((frame) => frame.includes("Public value"))
+  await app.mockInput.typeText("visible")
+  expect(await app.waitForFrame((frame) => frame.includes("visible"))).toContain("visible")
+  app.mockInput.pressEnter()
+  await app.waitForFrame((frame) => frame.includes("API token") && frame.includes("Input hidden"))
+  await app.waitFor(() => app.renderer.currentFocusedRenderable?.id === "marketplace-secret")
+  await app.mockInput.typeText("discarded-secret")
+  expect(app.captureCharFrame()).not.toContain("discarded-secret")
+  app.mockInput.pressKey("u", { ctrl: true })
+  await app.mockInput.pasteBracketedText("private-tokenX")
+  await app.waitForFrame((frame) => frame.includes("**************"))
+  expect(app.captureCharFrame()).not.toContain("private-token")
+  app.mockInput.pressBackspace()
+  app.mockInput.pressEnter()
+  await app.waitFor(() => app.calls.some((call) => call.path.endsWith("/install")))
+  expect(app.calls.find((call) => call.path.endsWith("/install"))?.body).toMatchObject({
+    input: { params: { public: "visible", token: "private-token" } },
+  })
+  expect(app.captureCharFrame()).not.toContain("private-token")
+})
+
+test.each(["cancel", "required", "optional"] as const)(
+  "secret prompt handles %s without exposing input",
+  async (mode) => {
+    await using app = await mount(
+      record,
+      record,
+      { status: "connected" },
+      {
+        item: {
+          ...item,
+          options: [
+            {
+              name: "HTTP",
+              prerequisites: [],
+              parameters: [{ key: "token", name: "API token", optional: mode === "optional", secret: true }],
+            },
+          ],
+        },
+      },
+    )
+    await reinstall(app)
+    await app.waitForFrame((frame) => frame.includes("API token") && frame.includes("Input hidden"))
+    await app.waitFor(() => app.renderer.currentFocusedRenderable?.id === "marketplace-secret")
+    if (mode === "cancel") {
+      await app.mockInput.typeText("never-submit")
+      app.mockInput.pressEscape()
+    }
+    if (mode !== "cancel") app.mockInput.pressEnter()
+    if (mode === "optional") {
+      await app.waitFor(() => app.calls.some((call) => call.path.endsWith("/install")))
+      expect(app.calls.find((call) => call.path.endsWith("/install"))?.body).toMatchObject({
+        input: { params: { token: "" } },
+      })
+      return
+    }
+    await app.waitForFrame((frame) => frame.includes("Marketplace: MCP Servers"))
+    expect(app.captureCharFrame()).not.toContain("never-submit")
+    expect(app.calls.some((call) => call.path.endsWith("/install"))).toBe(false)
+  },
+)
+
+test.each(["list", "installed", "registries", "registries.set", "install", "uninstall"])(
+  "switching locations aborts %s without error toasts or blocking a fresh marketplace",
+  async (method) => {
+    const held = Promise.withResolvers<void>()
+    await using app = await mount(record, record, undefined, { hold: { method, until: held.promise } })
+    try {
+      if (method === "install" || method === "uninstall") {
+        await actions(app)
+        await app.mockInput.typeText(method === "install" ? "Reinstall" : "Uninstall")
+        app.mockInput.pressEnter()
+      }
+      if (method !== "install" && method !== "uninstall") {
+        await app.mockInput.typeText("/marketplace")
+        await app.waitForFrame((frame) => frame.includes("/marketplace"))
+        app.mockInput.pressEnter()
+        await app.waitForFrame((frame) => frame.includes("Choose which marketplaces to browse"))
+        await app.mockInput.typeText(method === "list" || method === "installed" ? "MCP Servers" : "Registries")
+        app.mockInput.pressEnter()
+        if (method === "registries.set") {
+          await app.waitForFrame((frame) => /\[on\]\s+Kilo/.test(frame))
+          app.mockInput.pressEnter()
+        }
+      }
+      await app.waitFor(() => app.calls.some((call) => call.path.endsWith(`/${method}`)))
+      app.mockInput.pressKey("o", { ctrl: true })
+      await app.waitForFrame((frame) => frame.includes("Other project"))
+      await app.mockInput.typeText("Other project")
+      app.mockInput.pressEnter()
+      await app.waitFor(() =>
+        app.calls.some((call) => call.path === "/api/location" && call.directory === "/tmp/other-project"),
+      )
+      await app.waitFor(() => app.calls.some((call) => call.path.endsWith(`/${method}`) && call.signal.aborted))
+      await app.waitForVisualIdle()
+      expect(app.captureCharFrame()).not.toMatch(/abort|Couldn't|Unknown error/i)
+      await app.mockInput.typeText("/marketplace")
+      await app.waitForFrame((frame) => frame.includes("/marketplace"))
+      app.mockInput.pressEnter()
+      await app.waitForFrame((frame) => frame.includes("Choose which marketplaces to browse"))
+      await app.mockInput.typeText("MCP Servers")
+      app.mockInput.pressEnter()
+      await app.waitForFrame((frame) => frame.includes("Marketplace: MCP Servers"))
+      held.resolve()
+      await app.waitForVisualIdle()
+      const frame = app.captureCharFrame()
+      expect(frame).not.toMatch(/abort|Couldn't|Unknown error/i)
+      expect(app.calls.some((call) => call.path.endsWith("/list") && call.directory === "/tmp/other-project")).toBe(
+        true,
+      )
+    } finally {
+      held.resolve()
+    }
+  },
+)

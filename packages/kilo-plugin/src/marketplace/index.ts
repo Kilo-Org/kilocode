@@ -12,7 +12,7 @@ import { KiloMarketplaceRegistry } from "./kilo"
 import { McpRegistry } from "./mcp-registry"
 import { SkillsShRegistry } from "./skills-sh"
 import { Installer } from "./installer"
-import { McpError, configFile } from "./mcp"
+import { McpError, configFile, resolveFile, serverName } from "./mcp"
 import type { Entry, Registry } from "./registry"
 import { SkillError } from "./skill"
 
@@ -226,7 +226,19 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
 
     const local = (scope: KiloMarketplaceRpc.Scope) =>
       Effect.tryPromise({
-        try: () => readLocal(roots(scope), directory(scope), scope),
+        try: (signal) =>
+          readLocal(roots(scope), directory(scope), scope, (record) =>
+            Effect.runPromise(
+              storage(
+                ctx.storage.get(manifestKey(record)),
+                "fetch_failed",
+                "Couldn't verify external config ownership",
+              ).pipe(
+                Effect.map((value) => (value === undefined ? undefined : decodeRecord(value, manifestKey(record)))),
+              ),
+              { signal },
+            ),
+          ),
         catch: (error) => new StorageError("fetch_failed", message(error)),
       })
 
@@ -485,11 +497,26 @@ async function writeLocal(root: string, directory: string, record: KiloMarketpla
   }
 }
 
-async function readLocal(root: string, directory: string, scope: KiloMarketplaceRpc.Scope) {
+async function readLocal(
+  root: string,
+  directory: string,
+  scope: KiloMarketplaceRpc.Scope,
+  trusted: (record: KiloMarketplaceRpc.Installed) => Promise<KiloMarketplaceRpc.Installed | undefined>,
+) {
   const files = await fs.readdir(path.join(root, ".marketplace", "installed")).catch((error: NodeJS.ErrnoException) => {
     if (error.code === "ENOENT") return []
     throw error
   })
+  if (files.some((file) => file.endsWith(".json"))) {
+    // Repository metadata cannot turn a symlinked skill root into deletion authority elsewhere.
+    for (const candidate of scope === "project" ? [root, path.join(root, "skills")] : [path.join(root, "skills")]) {
+      const info = await fs.lstat(candidate).catch((error: NodeJS.ErrnoException) => {
+        if (error.code === "ENOENT") return undefined
+        throw error
+      })
+      if (info?.isSymbolicLink()) throw new Error(`Unsafe marketplace recovery directory: ${candidate}`)
+    }
+  }
   return Promise.all(
     files
       .filter((file) => file.endsWith(".json"))
@@ -503,21 +530,56 @@ async function readLocal(root: string, directory: string, scope: KiloMarketplace
         const stored = decoded.value
         if (stored.record.scope !== scope || path.basename(localFile(root, stored.record)) !== file)
           throw new Error(`Marketplace recovery record does not match its scope or filename: ${target}`)
-        const rebase = (original: string) => {
+        const rebase = (original: string, kind: "skill" | "config") => {
           const relative = path.relative(stored.directory, original)
-          if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative))
+          if (
+            !path.isAbsolute(stored.directory) ||
+            !path.isAbsolute(original) ||
+            relative === ".." ||
+            relative.startsWith(`..${path.sep}`) ||
+            path.isAbsolute(relative)
+          )
             throw new Error(`Marketplace recovery path is outside its installation scope: ${target}`)
-          return path.join(directory, relative)
+          const rebased = path.join(directory, relative)
+          const allowed =
+            kind === "skill"
+              ? path.dirname(rebased) === path.join(root, "skills") &&
+                /^[a-z0-9][a-z0-9._-]*$/i.test(path.basename(rebased))
+              : KiloConfigFiles.writeCandidates(directory, scope === "global").includes(rebased)
+          if (!allowed) throw new Error(`Marketplace recovery path is outside its installation scope: ${target}`)
+          return rebased
         }
-        const resource = (entry: KiloMarketplaceRpc.Resource): KiloMarketplaceRpc.Resource =>
-          "path" in entry ? { ...entry, path: rebase(entry.path) } : { ...entry, config: rebase(entry.config) }
+        const configs = KiloConfigFiles.writeCandidates(await resolveFile(directory), scope === "global")
+        const external = async (entry: Extract<KiloMarketplaceRpc.Resource, { config: string }>) => {
+          const destination = await resolveFile(entry.config)
+          if (scope === "global" || configs.includes(destination))
+            return entry.target ? { ...entry, target: destination } : entry
+          // A repository journal is not a trust anchor for an external dotfiles/config symlink.
+          const owned = await trusted(stored.record)
+          const resource = [...(owned?.resources ?? []), ...(owned?.pending ?? [])].find(
+            (resource) =>
+              "config" in resource &&
+              resource.config === entry.config &&
+              resource.server === entry.server &&
+              resource.target === destination,
+          )
+          if (!resource || !("config" in resource))
+            throw new Error(`Marketplace recovery config target has no machine-local ownership: ${entry.config}`)
+          return { ...entry, target: destination, fingerprints: resource.fingerprints }
+        }
+        const resource = async (entry: KiloMarketplaceRpc.Resource): Promise<KiloMarketplaceRpc.Resource> =>
+          "path" in entry
+            ? { ...entry, path: rebase(entry.path, "skill") }
+            : external({ ...entry, config: rebase(entry.config, "config") })
+        const config = stored.record.config ? rebase(stored.record.config, "config") : undefined
+        if (config) await external({ config, server: stored.record.server ?? serverName(stored.record.id) })
         return {
           ...stored.record,
           project: scope === "project" ? directory : undefined,
-          paths: stored.record.paths.map(rebase),
-          config: stored.record.config ? rebase(stored.record.config) : undefined,
-          resources: stored.record.resources?.map(resource),
-          pending: stored.record.pending?.map(resource),
+          paths: stored.record.paths.map((entry) => rebase(entry, "skill")),
+          config,
+          resources: stored.record.resources ? await Promise.all(stored.record.resources.map(resource)) : undefined,
+          pending: stored.record.pending ? await Promise.all(stored.record.pending.map(resource)) : undefined,
         }
       }),
   )

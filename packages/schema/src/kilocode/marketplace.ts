@@ -32,6 +32,8 @@ export const Parameter = Schema.Struct({
   name: Schema.String,
   placeholder: optional(Schema.String),
   optional: Schema.Boolean,
+  /** Mask entry in clients; the supplied value is still written to the MCP configuration. */
+  secret: optional(Schema.Boolean),
 })
 export type Parameter = typeof Parameter.Type
 
@@ -64,7 +66,13 @@ export type Item = typeof Item.Type
 /** Content evidence for a managed resource. During recovery both the previous and planned contents may be owned. */
 export const Resource = Schema.Union([
   Schema.Struct({ path: Schema.String, fingerprints: optional(Schema.Array(Schema.String)) }),
-  Schema.Struct({ config: Schema.String, server: Schema.String, fingerprints: optional(Schema.Array(Schema.String)) }),
+  Schema.Struct({
+    config: Schema.String,
+    server: Schema.String,
+    /** Canonical write destination; external project targets require matching machine-local ownership. */
+    target: optional(Schema.String),
+    fingerprints: optional(Schema.Array(Schema.String)),
+  }),
 ])
 export type Resource = typeof Resource.Type
 

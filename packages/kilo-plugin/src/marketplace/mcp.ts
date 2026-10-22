@@ -111,7 +111,10 @@ export async function configFile(directory: string, global: boolean) {
     if (
       await fs.stat(candidate).then(
         (info) => info.isFile(),
-        () => false,
+        (error: NodeJS.ErrnoException) => {
+          if (error.code === "ENOENT") return false
+          throw error
+        },
       )
     )
       return candidate
@@ -127,25 +130,27 @@ export function write(input: {
   replace: boolean
   fingerprints?: readonly string[]
 }) {
-  return serialized(input.file, async () => {
-    const text = await read(input.file)
+  return serialized(input.file, async (file) => {
+    const text = await read(file)
     check(text, input.file, input.name, input.replace ? input.fingerprints : [])
-    await save(input.file, text, ["mcp", "servers", input.name], input.server)
+    await save(file, text, ["mcp", "servers", input.name], input.server)
   })
 }
 
 /** Removes `mcp.servers.<name>`. A missing file or entry is not an error: the user may have removed it already. */
 export function remove(input: { file: string; name: string; fingerprints?: readonly string[] }) {
-  return serialized(input.file, async () => {
-    const text = await read(input.file)
+  return serialized(input.file, async (file) => {
+    const text = await read(file)
     if (entry(text, input.file, input.name) === undefined) return
     check(text, input.file, input.name, input.fingerprints)
-    await save(input.file, text, ["mcp", "servers", input.name], undefined)
+    await save(file, text, ["mcp", "servers", input.name], undefined)
   })
 }
 
 export async function preflight(input: { file: string; name: string; fingerprints?: readonly string[] }) {
-  check(await read(input.file), input.file, input.name, input.fingerprints)
+  return serialized(input.file, async (file) => {
+    check(await read(file), input.file, input.name, input.fingerprints)
+  })
 }
 
 function check(text: string, file: string, name: string, fingerprints: readonly string[] = []) {
@@ -156,8 +161,10 @@ function check(text: string, file: string, name: string, fingerprints: readonly 
 }
 
 export async function fingerprint(file: string, name: string) {
-  const value = entry(await read(file), file, name)
-  return value === undefined ? undefined : serverFingerprint(value)
+  return serialized(file, async (target) => {
+    const value = entry(await read(target), file, name)
+    return value === undefined ? undefined : serverFingerprint(value)
+  })
 }
 
 export function serverFingerprint(value: unknown): string {
@@ -177,15 +184,31 @@ export function serverFingerprint(value: unknown): string {
     .digest("hex")
 }
 
+// Canonical aliases share a queue and atomic writes replace the target, never the config symlink itself.
 // Read-modify-write of one config file runs one at a time in this process, so two installs started together (the
 // self-test did exactly that) cannot drop each other's entry. Writers in other processes, such as `mcp add`, are not
 // covered.
 const queues = new Map<string, Promise<unknown>>()
-function serialized<A>(file: string, task: () => Promise<A>) {
-  const run = (queues.get(file) ?? Promise.resolve()).catch(() => undefined).then(task)
-  queues.set(file, run)
+async function serialized<A>(file: string, task: (file: string) => Promise<A>) {
+  const target = await resolveFile(path.resolve(file))
+  const run = (queues.get(target) ?? Promise.resolve()).catch(() => undefined).then(() => task(target))
+  queues.set(target, run)
   return run.finally(() => {
-    if (queues.get(file) === run) queues.delete(file)
+    if (queues.get(target) === run) queues.delete(target)
+  })
+}
+
+export async function resolveFile(file: string): Promise<string> {
+  return fs.realpath(file).catch(async (error: NodeJS.ErrnoException) => {
+    if (error.code !== "ENOENT") throw error
+    // A new file may be below a symlinked directory, or be the missing target of a config symlink.
+    const info = await fs.lstat(file).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return undefined
+      throw error
+    })
+    if (info?.isSymbolicLink()) return resolveFile(path.resolve(path.dirname(file), await fs.readlink(file)))
+    if (info) return fs.realpath(file)
+    return path.join(await resolveFile(path.dirname(file)), path.basename(file))
   })
 }
 

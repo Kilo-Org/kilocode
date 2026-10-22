@@ -102,18 +102,19 @@ describe("MCP registry", () => {
     const option = entry.item.options[0]
     expect(option.parameters.map((parameter) => [parameter.key, parameter.optional])).toEqual([
       ["tenant", false],
-      ["api_key", false],
-      ["X_Team", true],
+      ["api_5f_key", false],
+      ["X_2d_Team", true],
     ])
     expect(option.parameters[0].placeholder).toBe("Your tenant")
+    expect(option.parameters[1].secret).toBe(true)
     expect(() =>
-      build({ template: String(entry.payloads[0]), parameters: option.parameters, params: { api_key: "k" } }),
+      build({ template: String(entry.payloads[0]), parameters: option.parameters, params: { api_5f_key: "k" } }),
     ).toThrow("Missing required parameters: tenant")
     expect(
       build({
         template: String(entry.payloads[0]),
         parameters: parameters(entry.item, option),
-        params: { tenant: "acme", api_key: "k" },
+        params: { tenant: "acme", api_5f_key: "k" },
       }),
     ).toEqual({ type: "remote", url: "https://acme.example.com/mcp", headers: { Authorization: "Bearer k" } })
   })
@@ -150,7 +151,7 @@ describe("MCP registry", () => {
       build({
         template: String(entry.payloads[index]),
         parameters: parameters(entry.item, option),
-        params: { DEMO_KEY: "k", dir: "/repo" },
+        params: { DEMO_5f_KEY: "k", dir: "/repo" },
       }),
     )
     expect(npm).toEqual({
@@ -169,6 +170,90 @@ describe("MCP registry", () => {
     expect(McpRegistry.parse(server({ packages: [{ registryType: "nuget", identifier: "x" }] }))).toEqual([])
     expect(serverName("io.github.owner/server-name")).toBe("io-github-owner-server-name")
     expect(serverName("context7")).toBe("context7")
+  })
+
+  test("skips inherited runner names without dropping valid neighboring servers or options", () => {
+    const entries = McpRegistry.parse({
+      servers: [
+        ...["constructor", "toString", "__proto__"].map((registryType) => ({
+          server: { name: registryType, packages: [{ registryType, identifier: "ignored" }] },
+        })),
+        {
+          server: {
+            name: "valid",
+            packages: [
+              { registryType: "constructor", identifier: "ignored" },
+              { registryType: "npm", identifier: "demo" },
+            ],
+          },
+        },
+      ],
+    })
+    expect(entries.map((entry) => entry.item.id)).toEqual(["valid"])
+    expect(entries[0].item.options.map((option) => option.name)).toEqual(["npx (npm)"])
+  })
+
+  test("encodes distinct parameter names injectively and retains their independent answers", () => {
+    const names = ["X-Api-Key", "X_Api_Key", "X.Api.Key", "X_2d_Api_2d_Key", "a/b", "a_b", "密钥"]
+    const [entry] = McpRegistry.parse(
+      server({
+        remotes: [
+          {
+            type: "streamable-http",
+            url: "https://example.com/mcp",
+            headers: names.map((name) => ({ name, isRequired: true })),
+          },
+        ],
+      }),
+    )
+    const declared = entry.item.options[0].parameters
+    expect(new Set(declared.map((parameter) => parameter.key)).size).toBe(names.length)
+    expect(declared.every((parameter) => /^[A-Za-z0-9_]+$/.test(parameter.key))).toBe(true)
+    expect(
+      build({
+        template: String(entry.payloads[0]),
+        parameters: declared,
+        params: Object.fromEntries(declared.map((parameter) => [parameter.key, `answer:${parameter.name}`])),
+      }),
+    ).toEqual({
+      type: "remote",
+      url: "https://example.com/mcp",
+      headers: Object.fromEntries(names.map((name) => [name, `answer:${name}`])),
+    })
+  })
+
+  test("carries optional secret metadata from headers, environment and argument variables", () => {
+    const [entry] = McpRegistry.parse(
+      server({
+        remotes: [
+          {
+            type: "streamable-http",
+            url: "https://example.com/{constructor}",
+            variables: {},
+            headers: [{ name: "Authorization", isSecret: true }],
+          },
+        ],
+        packages: [
+          {
+            registryType: "npm",
+            identifier: "demo",
+            environmentVariables: [{ name: "TOKEN", isRequired: true, isSecret: true }],
+            packageArguments: [
+              { name: "--token", value: "{TOKEN}", variables: { TOKEN: { isSecret: true } } },
+              { name: "--public", isRequired: true, isSecret: false },
+            ],
+          },
+        ],
+      }),
+    )
+    expect(entry.item.options[0].parameters).toEqual([
+      { key: "Authorization", name: "Authorization", optional: true, secret: true, placeholder: undefined },
+    ])
+    expect(JSON.parse(String(entry.payloads[0])).url).toBe("https://example.com/{constructor}")
+    expect(entry.item.options[1].parameters).toMatchObject([
+      { key: "TOKEN", optional: false, secret: true },
+      { name: "--public", optional: false, secret: false },
+    ])
   })
 
   test("preserves fixed values and defaults and resolves only declared nested inputs", () => {

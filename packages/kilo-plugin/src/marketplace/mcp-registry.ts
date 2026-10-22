@@ -167,6 +167,7 @@ const RUNNERS: Record<
 }
 
 function packageOption(pkg: Package): Built[] {
+  if (!Object.hasOwn(RUNNERS, pkg.registryType)) return []
   const runner = RUNNERS[pkg.registryType]
   // Only stdio packages run as a local server; HTTP transports of a package need a server started separately.
   if (!runner || (pkg.transport && pkg.transport.type !== "stdio")) return []
@@ -218,21 +219,24 @@ function resolve(name: string, input: Input, parameters: Map<string, KiloMarketp
 // Only declared registry variables are substituted; other braces are literal according to the registry schema.
 function template(text: string, parameters: Map<string, KiloMarketplaceRpc.Parameter>, variables: Input["variables"]) {
   return text.replace(/\{([A-Za-z0-9_.-]+)\}/g, (match, name: string) => {
-    const variable = variables?.[name]
+    const variable = variables && Object.hasOwn(variables, name) ? variables[name] : undefined
     return variable ? (variable.value ?? variable.default ?? placeholder(name, variable, parameters)) : match
   })
 }
 
 function placeholder(name: string, input: Partial<Input>, parameters: Map<string, KiloMarketplaceRpc.Parameter>) {
-  const key = name.replace(/[^A-Za-z0-9_]/g, "_")
+  // Escape the delimiter too, so distinct registry names cannot share an answer.
+  const key = name.replace(/[^A-Za-z0-9]/gu, (character) => `_${character.codePointAt(0)!.toString(16)}_`)
   if (!parameters.has(key)) {
     parameters.set(key, {
       key,
       name,
       placeholder: input.placeholder ?? input.description,
       optional: !input.isRequired,
+      ...(input.isSecret !== undefined ? { secret: input.isSecret } : {}),
     })
   }
+  if (input.isSecret) parameters.set(key, { ...parameters.get(key)!, secret: true })
   return `{{${key}}}`
 }
 

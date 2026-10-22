@@ -11,6 +11,7 @@ import {
   configFile,
   fingerprint,
   parameters,
+  preflight,
   remove,
   write,
 } from "../src/marketplace/mcp"
@@ -183,6 +184,133 @@ describe("MCP config translation", () => {
 })
 
 describe("MCP config files", () => {
+  test.skipIf(process.platform === "win32")(
+    "install and uninstall preserve a config symlink, target settings and comments, and logical metadata",
+    async () => {
+      const directory = await tmp()
+      const config = path.join(directory, "kilo2.jsonc")
+      const target = path.join(directory, "storage", "settings.jsonc")
+      await fs.mkdir(path.dirname(target))
+      await fs.writeFile(
+        target,
+        '{\n  // keep target comments\n  "model": "user/model",\n  "mcp": { "servers": { "foreign": { "type": "local", "command": ["keep"] } } }\n}\n',
+      )
+      await fs.symlink(path.relative(directory, target), config)
+      const foreign = await fingerprint(target, "foreign")
+      expect(await configFile(directory, true)).toBe(config)
+      const written = await Installer.install({
+        entry: mcpEntry,
+        skills: path.join(directory, "skills"),
+        config,
+        beforeWrite: async (intent) => {
+          expect(intent.config).toBe(config)
+          expect(intent.resources![0]).toMatchObject({ config, server: "demo" })
+        },
+      })
+      expect(written.config).toBe(config)
+      expect(written.resources![0]).toMatchObject({ config, server: "demo" })
+      expect((await fs.lstat(config)).isSymbolicLink()).toBe(true)
+      expect(await fs.readlink(config)).toBe(path.relative(directory, target))
+      expect(await fs.readFile(target, "utf8")).toContain("// keep target comments")
+      expect(await fingerprint(config, "demo")).toBe(await fingerprint(target, "demo"))
+      await preflight({ file: config, name: "demo", fingerprints: written.resources![0].fingerprints })
+      await expect(preflight({ file: target, name: "demo" })).rejects.toMatchObject({ reason: "conflict" })
+      expect(await Installer.inspect({ id: "demo", ...written })).toEqual({ status: "ready", warnings: [] })
+
+      await Installer.uninstall({ id: "demo", ...written })
+      expect((await fs.lstat(config)).isSymbolicLink()).toBe(true)
+      expect(await fs.readlink(config)).toBe(path.relative(directory, target))
+      const text = await fs.readFile(target, "utf8")
+      expect(text).toContain("// keep target comments")
+      expect(text).toContain('"model": "user/model"')
+      expect(await fingerprint(target, "foreign")).toBe(foreign)
+      expect(await fingerprint(config, "demo")).toBeUndefined()
+      expect(await fs.readdir(path.dirname(target))).toEqual(["settings.jsonc"])
+    },
+  )
+
+  test.skipIf(process.platform === "win32")("serializes writes and removals through config aliases", async () => {
+    const directory = await tmp()
+    const target = path.join(directory, "target.jsonc")
+    const alias = path.join(directory, "alias.jsonc")
+    const second = path.join(directory, "second.jsonc")
+    await fs.writeFile(target, "{ // keep alias comments\n}")
+    await fs.symlink("target.jsonc", alias)
+    await fs.symlink("alias.jsonc", second)
+    const files = [target, alias, second]
+    await Promise.all(
+      files.map((file, index) =>
+        write({ file, name: `server-${index}`, server: { type: "local", command: ["node"] }, replace: false }),
+      ),
+    )
+    const fingerprints = await Promise.all(files.map((file, index) => fingerprint(file, `server-${index}`)))
+    expect(fingerprints.every((value) => value !== undefined)).toBe(true)
+    await Promise.all(
+      files.map((file, index) => remove({ file, name: `server-${index}`, fingerprints: [fingerprints[index]!] })),
+    )
+    expect(await fingerprint(target, "server-0")).toBeUndefined()
+    expect(await fingerprint(target, "server-1")).toBeUndefined()
+    expect(await fingerprint(target, "server-2")).toBeUndefined()
+    expect(await fs.readFile(target, "utf8")).toContain("// keep alias comments")
+    expect((await fs.lstat(alias)).isSymbolicLink()).toBe(true)
+    expect((await fs.lstat(second)).isSymbolicLink()).toBe(true)
+    const results = await Promise.allSettled(
+      files.map((file) => write({ file, name: "same", server: { type: "local", command: ["node"] }, replace: false })),
+    )
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1)
+    expect(results.filter((result) => result.status === "rejected").map((result) => result.reason)).toEqual([
+      expect.objectContaining({ reason: "conflict" }),
+      expect.objectContaining({ reason: "conflict" }),
+    ])
+  })
+
+  test.skipIf(process.platform === "win32")("serializes new files below symlinked directories", async () => {
+    const directory = await tmp()
+    const target = path.join(directory, "storage")
+    const alias = path.join(directory, "alias")
+    await fs.mkdir(target)
+    await fs.symlink("storage", alias)
+    const files = [path.join(target, "new", "kilo2.json"), path.join(alias, "new", "kilo2.json")]
+    await Promise.all(
+      files.map((file, index) =>
+        write({ file, name: `server-${index}`, server: { type: "local", command: ["node"] }, replace: false }),
+      ),
+    )
+    expect(Object.keys((await Bun.file(files[0]).json()).mcp.servers).toSorted()).toEqual(["server-0", "server-1"])
+    expect((await fs.lstat(alias)).isSymbolicLink()).toBe(true)
+  })
+
+  test.skipIf(process.platform === "win32")(
+    "creates a missing config symlink target without replacing the link",
+    async () => {
+      const directory = await tmp()
+      const config = path.join(directory, "kilo2.json")
+      const target = path.join(directory, "new", "target.json")
+      await fs.symlink(path.relative(directory, target), config)
+      await write({ file: config, name: "demo", server: { type: "local", command: ["node"] }, replace: false })
+      expect((await fs.lstat(config)).isSymbolicLink()).toBe(true)
+      expect(await fingerprint(config, "demo")).toBe(await fingerprint(target, "demo"))
+      await remove({ file: config, name: "demo", fingerprints: [(await fingerprint(target, "demo"))!] })
+      expect((await Bun.file(target).json()).mcp.servers).toEqual({})
+      expect((await fs.lstat(config)).isSymbolicLink()).toBe(true)
+    },
+  )
+
+  test("config discovery and operations propagate non-ENOENT path errors", async () => {
+    const directory = await tmp()
+    const parent = path.join(directory, "not-a-directory")
+    const file = path.join(parent, "kilo2.json")
+    await fs.writeFile(parent, "keep")
+    await expect(configFile(parent, true)).rejects.toMatchObject({ code: "ENOTDIR" })
+    await expect(preflight({ file, name: "demo" })).rejects.toMatchObject({ code: "ENOTDIR" })
+    await expect(fingerprint(file, "demo")).rejects.toMatchObject({ code: "ENOTDIR" })
+    await expect(
+      write({ file, name: "demo", server: { type: "local", command: ["node"] }, replace: false }),
+    ).rejects.toMatchObject({ code: "ENOTDIR" })
+    await expect(remove({ file, name: "demo" })).rejects.toMatchObject({ code: "ENOTDIR" })
+    expect(await fs.readFile(parent, "utf8")).toBe("keep")
+  })
+
   test("fingerprints normalize JSON object ordering but protect changed and legacy entries", async () => {
     const file = path.join(await tmp(), "kilo2.jsonc")
     await write({

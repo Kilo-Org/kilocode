@@ -185,8 +185,10 @@ test("lists, installs and uninstalls marketplace skills and MCP servers through 
             expect(await Bun.file(config).json()).toEqual({ mcp: { servers: {} } })
 
             // Failed obsolete-config cleanup must not lose the newly installed server or its pending ownership.
-            const obsolete = path.join(directory, "obsolete.json")
+            const obsolete = path.join(directory, "kilo2.jsonc")
+            const replacement = path.join(directory, ".kilo2", "kilo2.jsonc")
             await Bun.write(obsolete, "{ broken")
+            await Bun.write(replacement, "{}")
             await Effect.runPromise(
               store.set(
                 `installed:kilo:mcp:demo-mcp:project:${directory}`,
@@ -194,18 +196,18 @@ test("lists, installs and uninstalls marketplace skills and MCP servers through 
                   ...server,
                   config: obsolete,
                   resources: server.resources?.map((resource) =>
-                    "config" in resource ? { ...resource, config: obsolete } : resource,
+                    "config" in resource ? { ...resource, config: obsolete, target: obsolete } : resource,
                   ),
                 }),
               ),
             )
             const reinstalled = await rpc.install({ ...mcp, params: { API_KEY: "replacement" } }, options)
             expect(reinstalled).toMatchObject({
-              config,
+              config: replacement,
               pending: [{ config: obsolete, server: "demo-mcp", fingerprints: expect.any(Array) }],
             })
             expect(await rpc.installed({}, options)).toContainEqual(reinstalled)
-            expect((await Bun.file(config).json()).mcp.servers["demo-mcp"].environment.API_KEY).toBe("replacement")
+            expect((await Bun.file(replacement).json()).mcp.servers["demo-mcp"].environment.API_KEY).toBe("replacement")
             await expect(rpc.uninstall(mcp, options)).rejects.toMatchObject({ type: "invalid_params" })
             expect(await rpc.installed({}, options)).toContainEqual({ ...reinstalled, status: "missing" })
             await Bun.write(obsolete, JSON.stringify({ mcp: { servers: { "demo-mcp": oldServer } } }))
@@ -230,10 +232,7 @@ test("lists, installs and uninstalls marketplace skills and MCP servers through 
             })
 
             expect(
-              await rpc.uninstall(
-                { registry: "kilo", kind: "skill", id: "demo", scope: "project" },
-                options,
-              ),
+              await rpc.uninstall({ registry: "kilo", kind: "skill", id: "demo", scope: "project" }, options),
             ).toEqual({})
             expect(await readdir(path.join(directory, ".kilo2", "skills"))).toEqual([])
             expect(await rpc.installed({}, options)).toEqual([])

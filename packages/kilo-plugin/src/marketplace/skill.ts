@@ -44,7 +44,9 @@ export async function preflight(target: string, fingerprints: readonly string[] 
 /**
  * Writes a prepared skill into `<root>/<id>`. The files are written to a staging directory next to `root` (outside
  * the scanned directory, on the same filesystem) and moved into place in one rename, so the skill scanner never sees
- * a half-written skill. Replacing an existing directory requires a matching content fingerprint.
+ * a half-written skill. Replacing an existing directory requires a matching content fingerprint. The old tree stays
+ * in fingerprint-addressed trash until promotion succeeds, so a failed promotion can restore it and interruption
+ * leaves a backup that the durable resource can still clean up.
  */
 export async function write(prepared: Awaited<ReturnType<typeof prepare>>, fingerprints: readonly string[] = []) {
   const target = prepared.target
@@ -63,10 +65,22 @@ export async function write(prepared: Awaited<ReturnType<typeof prepare>>, finge
     const failed = writes.find((write) => write.status === "rejected")
     if (failed) throw failed.reason
     await fs.mkdir(root, { recursive: true })
-    await remove(target, fingerprints)
-    await fs.rename(staging, target)
+    const current = await preflight(target, fingerprints)
+    await cleanup(target, fingerprints)
+    const backup = current === undefined ? undefined : trash(target, current)
+    if (backup) {
+      await fs.mkdir(path.dirname(backup), { recursive: true })
+      await fs.rename(target, backup)
+    }
+    try {
+      await fs.rename(staging, target)
+    } catch (error) {
+      if (backup) await fs.rename(backup, target).catch((error: unknown) => failures.push(error))
+      throw error
+    }
+    if (backup) await fs.rm(backup, { recursive: true, force: true })
   } catch (error) {
-    failures.push(error)
+    failures.unshift(error)
   } finally {
     // All writers have settled before cleanup, so none can recreate a failed staging directory.
     await fs.rm(staging, { recursive: true, force: true }).catch((error: unknown) => failures.push(error))
@@ -74,7 +88,7 @@ export async function write(prepared: Awaited<ReturnType<typeof prepare>>, finge
     await fs.rmdir(path.dirname(staging)).catch(() => undefined)
   }
   if (failures.length > 1)
-    throw new AggregateError(failures, `Skill write and staging cleanup failed at ${target}`, { cause: failures[0] })
+    throw new AggregateError(failures, `Skill write or cleanup failed at ${target}`, { cause: failures[0] })
   if (failures.length) throw failures[0]
   return target
 }
@@ -85,31 +99,34 @@ export async function write(prepared: Awaited<ReturnType<typeof prepare>>, finge
  */
 export async function remove(target: string, fingerprints: readonly string[] = []) {
   const current = await preflight(target, fingerprints)
+  await cleanup(target, fingerprints)
+  if (current === undefined) return
+  const destination = trash(target, current)
+  await fs.mkdir(path.dirname(destination), { recursive: true })
+  await fs.rename(target, destination)
+  await fs.rm(destination, { recursive: true, force: true })
+  // Keep the shared parent: another resource may be between mkdir and rename.
+}
+
+function trash(target: string, fingerprint: string) {
   const parent = path.join(path.dirname(path.dirname(target)), ".marketplace-trash")
-  const destination = (fingerprint: string) =>
-    path.join(
-      parent,
-      createHash("sha256")
-        // Relative identity keeps interrupted cleanup addressable when its project directory moves.
-        .update(JSON.stringify([path.relative(path.dirname(parent), target), fingerprint]))
-        .digest("hex"),
-    )
-  try {
-    const cleanup = await Promise.allSettled(
-      [...new Set(fingerprints)].map((fingerprint) =>
-        fs.rm(destination(fingerprint), { recursive: true, force: true }),
-      ),
-    )
-    const errors = cleanup.flatMap((result) => (result.status === "rejected" ? [result.reason] : []))
-    if (errors.length) throw new AggregateError(errors, `Skill trash cleanup failed at ${target}`, { cause: errors[0] })
-    if (current === undefined) return
-    await fs.mkdir(parent, { recursive: true })
-    await fs.rename(target, destination(current))
-    await fs.rm(destination(current), { recursive: true, force: true })
-  } finally {
-    // Other resources may still have recoverable trash in this scope.
-    await fs.rmdir(parent).catch(() => undefined)
-  }
+  return path.join(
+    parent,
+    createHash("sha256")
+      // Relative identity keeps interrupted cleanup addressable when its project directory moves.
+      .update(JSON.stringify([path.relative(path.dirname(parent), target), fingerprint]))
+      .digest("hex"),
+  )
+}
+
+async function cleanup(target: string, fingerprints: readonly string[]) {
+  const results = await Promise.allSettled(
+    [...new Set(fingerprints)].map((fingerprint) =>
+      fs.rm(trash(target, fingerprint), { recursive: true, force: true }),
+    ),
+  )
+  const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []))
+  if (errors.length) throw new AggregateError(errors, `Skill trash cleanup failed at ${target}`, { cause: errors[0] })
 }
 
 /**
