@@ -20,11 +20,10 @@ export interface Scope {
   readonly organizationID?: string | null
 }
 
-// Same behavior as v1 `fetchDefaultModel` (`api/profile.ts:106-136`):
-// reads `/api/organizations/{id}/defaults` for a team or `/api/defaults` otherwise,
-// and falls back to `kilo-auto/frontier` when signed in or `kilo-auto/free` when signed out.
-export function get(scope: Scope): Effect.Effect<string> {
-  const fallback = scope.token ? DEFAULT_MODEL : DEFAULT_FREE_MODEL
+// Team callers select their first allowed model when defaults are unavailable, as in
+// v1 `provider/catalog.ts:recommend`. Personal accounts keep v2's Frontier fallback.
+export function get(scope: Scope): Effect.Effect<string | undefined> {
+  const fallback = scope.token && scope.organizationID ? undefined : scope.token ? DEFAULT_MODEL : DEFAULT_FREE_MODEL
   return Effect.gen(function* () {
     const organizationID = scope.token ? (scope.organizationID ?? null) : null
     const url = organizationID
