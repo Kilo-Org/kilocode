@@ -1,0 +1,130 @@
+[data-component="kilo-pass-meter"] {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  [data-slot="kilo-pass-meter-header"] {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--text-base);
+    font-size: var(--font-size-small);
+  }
+
+  [data-slot="kilo-pass-meter-header"] strong {
+    text-align: right;
+    font-weight: var(--font-weight-medium);
+    font-variant-numeric: tabular-nums;
+  }
+
+  [data-slot="kilo-pass-meter-track"] {
+    position: relative;
+    height: 8px;
+    overflow: visible;
+    border-radius: 4px;
+    background: var(--border-weak-base);
+  }
+
+  :is(
+    [data-slot="kilo-pass-meter-paid-background"],
+    [data-slot="kilo-pass-meter-bonus-background"],
+    [data-slot="kilo-pass-meter-paid-fill"],
+    [data-slot="kilo-pass-meter-bonus-fill"]
+  ) {
+    position: absolute;
+    inset-block: 0;
+  }
+
+  [data-slot="kilo-pass-meter-paid-background"] {
+    left: 0;
+    background: color-mix(in srgb, var(--icon-warning-base) 18%, transparent);
+  }
+
+  [data-slot="kilo-pass-meter-bonus-background"] {
+    background: color-mix(in srgb, var(--icon-success-base) 18%, transparent);
+  }
+
+  [data-slot="kilo-pass-meter-paid-fill"] {
+    left: 0;
+    border-radius: 4px 0 0 4px;
+    background: var(--icon-warning-base);
+  }
+
+  [data-slot="kilo-pass-meter-bonus-fill"] {
+    border-radius: 0 4px 4px 0;
+    background: var(--icon-success-base);
+  }
+
+  [data-slot="kilo-pass-meter-boundary"] {
+    position: absolute;
+    top: 100%;
+    width: 2px;
+    height: 5px;
+    margin-left: -1px;
+    background: var(--text-weak);
+  }
+
+  [data-slot="kilo-pass-meter-amounts"] {
+    position: relative;
+    height: 15px;
+    color: var(--icon-warning-base);
+    font-size: var(--font-size-small);
+    font-weight: var(--font-weight-medium);
+    font-variant-numeric: tabular-nums;
+  }
+
+  [data-slot="kilo-pass-meter-amounts"] > span {
+    position: absolute;
+    transform: translateX(-50%);
+  }
+
+  /* Boundary labels at the track edges stay inside the card. */
+  [data-slot="kilo-pass-meter-amounts"] > span[data-pin="end"] {
+    right: 0;
+    left: auto !important;
+    transform: none;
+  }
+
+  [data-slot="kilo-pass-meter-amounts"] > span[data-pin="start"] {
+    left: 0 !important;
+    transform: none;
+  }
+
+  [data-slot="kilo-pass-meter-bonus-amount"] {
+    right: 0;
+    left: auto !important;
+    color: var(--icon-success-base);
+    transform: none !important;
+  }
+
+  [data-slot="kilo-pass-meter-legend"],
+  [data-slot="kilo-pass-meter-legend"] > span {
+    display: flex;
+    align-items: center;
+  }
+
+  [data-slot="kilo-pass-meter-legend"] {
+    justify-content: space-between;
+    color: var(--text-weak);
+    font-size: var(--font-size-small);
+  }
+
+  [data-slot="kilo-pass-meter-legend"] > span {
+    gap: 6px;
+  }
+
+  [data-slot="kilo-pass-meter-legend"] i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  [data-slot="kilo-pass-meter-paid-dot"] {
+    background: var(--icon-warning-base);
+  }
+
+  [data-slot="kilo-pass-meter-bonus-dot"] {
+    background: var(--icon-success-base);
+  }
+}
