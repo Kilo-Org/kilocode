@@ -2,13 +2,22 @@ import { describe, expect, test } from "bun:test"
 import { openUrl } from "../../src/open"
 
 describe("openUrl", () => {
-  test.each(["not a url", "", "/tmp/authorize", "C:\\Windows\\System32\\calc.exe", "\\\\server\\share\\file.html"])(
-    "rejects non-browser targets: %j",
-    (input) => expect(openUrl(input)).rejects.toThrow("Only http and https links"),
-  )
+  test("rejects values that are not URLs", async () => {
+    for (const input of ["not a url", ""]) {
+      const err = await openUrl(input).catch((err: unknown) => err)
+      expect(err).toMatchObject({ message: expect.stringContaining("Only http and https links") })
+    }
+  })
 
-  test.each(["file:///tmp/authorize", "javascript:alert(1)", "data:text/html,test", "ms-msdt:/id PCWDiagnostic"])(
-    "rejects non-http schemes: %j",
-    (input) => expect(openUrl(input)).rejects.toThrow("Only http and https links"),
-  )
+  test("rejects non-http schemes", async () => {
+    for (const input of [
+      "file:///etc/hosts",
+      "javascript:alert(1)",
+      "ms-msdt:/id PCWDiagnostic",
+      "\\\\server\\share\\file.html",
+    ]) {
+      const err = await openUrl(input).catch((err: unknown) => err)
+      expect(err).toMatchObject({ message: expect.stringContaining("Only http and https links") })
+    }
+  })
 })

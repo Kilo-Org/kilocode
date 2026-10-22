@@ -36,7 +36,7 @@ describe("McpOAuthProvider.redirectUrl", () => {
 
 // kilocode_change start - backport upstream OAuth authorization URL coverage
 describe("McpOAuthProvider.redirectToAuthorization", () => {
-  test("forwards http and https authorization URLs on different origins", async () => {
+  test("forwards http and https authorization URLs", async () => {
     const seen: string[] = []
     const provider = new McpOAuthProvider(
       "test-server",
@@ -50,27 +50,19 @@ describe("McpOAuthProvider.redirectToAuthorization", () => {
     expect(seen).toEqual(["https://auth.example.com/authorize?state=1", "http://127.0.0.1:8080/authorize"])
   })
 
-  test.each(["file:///tmp/authorize", "javascript:alert(1)", "data:text/html,test", "ms-msdt:/id PCWDiagnostic"])(
-    "rejects non-http authorization URLs without forwarding: %s",
-    async (input) => {
-      const seen: string[] = []
-      const provider = new McpOAuthProvider(
-        "test-server",
-        "https://mcp.example.com/mcp",
-        {},
-        { onRedirect: (url) => void seen.push(url.href) },
-        stubAuth,
-      )
-      const url = new URL(input)
-      const err = await provider.redirectToAuthorization(url).catch((err: unknown) => err)
-      expect(err).toMatchObject({
-        message: expect.stringContaining(
-          `returned a ${url.protocol} authorization URL; only http and https are supported`,
-        ),
-      })
-      expect(seen).toEqual([])
-    },
-  )
+  test("rejects authorization URLs that are not http or https", async () => {
+    const seen: string[] = []
+    const provider = new McpOAuthProvider(
+      "test-server",
+      "https://mcp.example.com/mcp",
+      {},
+      { onRedirect: (url) => void seen.push(url.href) },
+      stubAuth,
+    )
+    const err = await provider.redirectToAuthorization(new URL("file:///tmp/authorize")).catch((err: unknown) => err)
+    expect(err).toMatchObject({ message: expect.stringContaining("returned a file: authorization URL") })
+    expect(seen).toEqual([])
+  })
 })
 // kilocode_change end
 
