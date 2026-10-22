@@ -1159,6 +1159,21 @@
           "maximum": 24,
           "description": "Font size in pixels for the Kilo Code webview UI."
         },
+        "kilo-code.new.uiAnimations": {
+          "type": "string",
+          "enum": [
+            "full",
+            "reduced",
+            "off"
+          ],
+          "default": "full",
+          "enumDescriptions": [
+            "Show every animation, including the status shimmer and the spinner.",
+            "Play looping animations once instead of continuously.",
+            "Turn off chat animations entirely."
+          ],
+          "markdownDescription": "Controls how much the Kilo Code chat animates. Animations run on the main thread, so a chat that is in the background can keep a laptop busy. Animations are also reduced automatically while the VS Code window is not focused."
+        },
         "kilo-code.new.browserAutomation.enabled": {
           "type": "boolean",
           "default": false,
