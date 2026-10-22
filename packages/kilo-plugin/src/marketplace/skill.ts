@@ -23,6 +23,13 @@ const MAX_ENTRIES = 4096
 export async function prepare(input: { root: string; id: string; archive: Uint8Array; select?: string }) {
   if (!ID.test(input.id)) throw new SkillError("invalid", `Invalid skill id: ${input.id}`)
   const files = await extract(input.archive, input.select)
+  const { SkillFile } = await import("@opencode/core/config/plugin/skill-file")
+  const parsed = SkillFile.parse(
+    input.root,
+    path.resolve(input.root, input.id, "SKILL.md"),
+    new TextDecoder().decode(files.find((file) => file.path === "SKILL.md")!.data),
+  )
+  if (parsed._tag === "Skipped") throw new SkillError("invalid", `Invalid skill ${input.id}: ${parsed.reason}`)
   return { target: path.join(input.root, input.id), files, fingerprint: filesFingerprint(files) }
 }
 

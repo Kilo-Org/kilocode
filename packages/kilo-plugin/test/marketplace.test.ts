@@ -3,7 +3,7 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloMarketplaceRegistry } from "../src/marketplace/kilo"
-import { SkillError, bounded, extract, fingerprint, install, remove } from "../src/marketplace/skill"
+import { SkillError, bounded, extract, fingerprint, install, prepare, remove } from "../src/marketplace/skill"
 
 const SKILLS = `
 items:
@@ -144,6 +144,54 @@ describe("skill archives", () => {
 })
 
 describe("skill install", () => {
+  test.each([
+    ["frontmatter", "---\nname: demo\ndescription: Demo\n---\nBody"],
+    ["plain Markdown", "# Demo\nBody"],
+    ["omitted name", "---\ndescription: Demo\n---\nBody"],
+    ["omitted description", "---\nname: demo\n---\nBody"],
+    ["omitted name and description", "---\nmetadata: {}\n---\nBody"],
+    ["display name", "---\nname: A Different Display Name\n---\nBody"],
+    ["metadata flags", '---\nmetadata:\n  opencode/autoinvoke: "off"\ndisable-model-invocation: true\n---\nBody'],
+    ["opaque metadata", "---\nmetadata: [custom, 123]\ndisable-model-invocation: custom\n---\nBody"],
+    ["native YAML sanitization", "---\ndescription: Keywords: crawl, scrape\n---\nBody"],
+  ])("accepts native-compatible %s without rewriting content", async (_, content) => {
+    const directory = await tmp()
+    try {
+      const prepared = await prepare({
+        root: path.join(directory, "skills"),
+        id: "demo",
+        archive: await tarball({ "repo/skills/demo/SKILL.md": content }),
+        select: "demo",
+      })
+      expect(prepared.target).toBe(path.join(directory, "skills", "demo"))
+      expect(new TextDecoder().decode(prepared.files[0].data)).toBe(content)
+      expect(await fs.readdir(directory)).toEqual([])
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true })
+    }
+  })
+
+  test.each([
+    ["name: 123", "frontmatter"],
+    ["description: []", "frontmatter"],
+    ["description: [unclosed", "markdown"],
+  ])("rejects native-incompatible %s before writing", async (metadata, reason) => {
+    const directory = await tmp()
+    try {
+      await expect(
+        install({
+          root: path.join(directory, "skills"),
+          id: "demo",
+          archive: await tarball({ "SKILL.md": `---\n${metadata}\n---\nprivate body` }),
+          replace: false,
+        }),
+      ).rejects.toMatchObject({ reason: "invalid", message: `Invalid skill demo: ${reason}` })
+      expect(await fs.readdir(directory)).toEqual([])
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true })
+    }
+  })
+
   test("retries partially deleted owned trash after a project move without rehashing it", async () => {
     const directory = await tmp()
     const root = path.join(directory, "original", "skills")

@@ -98,19 +98,116 @@ function connect(context: Context) {
 
 async function marketplace(context: Context): Promise<void> {
   if (context.signal.aborted) return
-  const choice = await context.ui.dialog.select<Kind | "registries">({
+  const choice = await context.ui.dialog.select<Kind | "registries" | "installed">({
     title: "Marketplace",
     options: [
       ...kinds.map((entry) => ({ title: entry.title, value: entry.kind, description: entry.description })),
+      {
+        title: "Installed",
+        value: "installed" as const,
+        description: "Manage installations even when catalogs are unavailable",
+      },
       { title: "Registries", value: "registries" as const, description: "Choose which marketplaces to browse" },
     ],
   })
   if (!choice || context.signal.aborted) return
+  if (choice === "installed") {
+    await installed(context)
+    return marketplace(context)
+  }
   if (choice === "registries") {
     await registries(context)
     return marketplace(context)
   }
   return browse(context, choice)
+}
+
+async function installed(context: Context): Promise<void> {
+  if (context.signal.aborted) return
+  const { rpc, options } = connect(context)
+  const cancelled = new AbortController()
+  context.ui.dialog.show(
+    () => (
+      <DialogLayout header={<DialogHeader title="Installed" closeLabel="esc cancel" />}>
+        <text>Loading installed items...</text>
+      </DialogLayout>
+    ),
+    () => cancelled.abort(),
+  )
+  const records = await rpc
+    .installed({}, { ...options, signal: AbortSignal.any([context.signal, cancelled.signal]) })
+    .catch((error: Error) => {
+      if (!context.signal.aborted && !cancelled.signal.aborted)
+        context.ui.toast.show({
+          variant: "error",
+          message: `Couldn't load installations: ${error.message}. Reopen Installed to retry.`,
+        })
+      return undefined
+    })
+  if (context.signal.aborted || cancelled.signal.aborted) return
+  context.ui.dialog.clear()
+  if (!records) return
+  if (records.length === 0)
+    return context.ui.dialog.alert({ title: "Installed", message: "Nothing installed from marketplaces." })
+  const record = await context.ui.dialog.select<Installed>({
+    title: "Marketplace: Installed",
+    placeholder: "Filter by item, kind, registry or scope",
+    options: records.map((record) => ({
+      title: `${record.id} (${record.kind}, ${record.registry}, ${record.scope})`,
+      value: record,
+      description: [record.status ?? (record.recovering ? "incomplete" : "installed"), ...recordNotes(record)].join(
+        " · ",
+      ),
+    })),
+    search: (query, choices) =>
+      choices.filter((choice) =>
+        [
+          choice.value.id,
+          choice.value.kind,
+          choice.value.registry,
+          choice.value.scope,
+          choice.value.status ?? "installed",
+          ...recordNotes(choice.value),
+        ].some((value) => value.toLowerCase().includes(query.trim().toLowerCase())),
+      ),
+  })
+  if (!record || context.signal.aborted) return
+  const action = await context.ui.dialog.select<"details" | "uninstall" | "auth">({
+    title: `${record.id} (${record.registry}, ${record.scope})`,
+    options: [
+      { title: "Details", value: "details" },
+      ...(record.kind === "mcp" && record.server && record.config
+        ? [{ title: "Sign In / Manage Authentication", value: "auth" as const }]
+        : []),
+      {
+        title: "Uninstall",
+        value: "uninstall",
+        description: record.kind === "mcp" ? "Keeps sign-in; /mcps first" : "Remove owned installation files",
+      },
+    ],
+  })
+  if (!action || context.signal.aborted) return installed(context)
+  if (action === "details")
+    await context.ui.dialog.alert({
+      title: `${record.id} (${record.registry}, ${record.scope})`,
+      message: [
+        `Kind: ${record.kind}`,
+        `Registry: ${record.registry}`,
+        `Scope: ${record.scope}`,
+        ...(record.project ? [`Project: ${record.project}`] : []),
+        ...record.paths.map((path) => `Path: ${path}`),
+        ...(record.config ? [`Config: ${record.config}`] : []),
+        ...(record.server ? [`MCP server: ${record.server}`] : []),
+        ...(record.status === "ready" ? ["Status: ready"] : []),
+        ...recordNotes(record),
+        ...(record.status === "modified"
+          ? ["Local changes are retained. Uninstall refuses to remove modified resources."]
+          : []),
+      ].join("\n"),
+    })
+  if (action === "auth") await mcpInstalled(context, record)
+  if (action === "uninstall") await uninstall(context, record, record.id)
+  return installed(context)
 }
 
 async function registries(context: Context): Promise<void> {
@@ -365,14 +462,26 @@ async function act(context: Context, item: Item, installed: readonly Installed[]
       message: `Installed ${item.name} (${choice.scope})`,
     })
   }
-  const result = await rpc.uninstall({ ...ref, scope: choice.scope }, options).then(
-    () => undefined,
-    (error: Error) => error.message || "Unknown error",
-  )
+  return uninstall(context, { ...ref, scope: choice.scope }, item.name)
+}
+
+async function uninstall(
+  context: Context,
+  record: Pick<Installed, "registry" | "kind" | "id" | "scope">,
+  name: string,
+) {
+  const { rpc, options } = connect(context)
+  const result = await rpc
+    .uninstall({ registry: record.registry, kind: record.kind, id: record.id, scope: record.scope }, options)
+    .then(
+      () => undefined,
+      (error: Error) => error.message || "Unknown error",
+    )
+  if (context.signal.aborted) return
   if (result) return context.ui.toast.show({ variant: "error", message: result })
   context.ui.toast.show({
     variant: "success",
-    message: `Uninstalled ${item.name}${item.kind === "mcp" ? ". Sign-in retained because it may be shared with other installations." : ""}`,
+    message: `Uninstalled ${name}${record.kind === "mcp" ? ". Sign-in retained because it may be shared with other installations." : ""}`,
   })
 }
 

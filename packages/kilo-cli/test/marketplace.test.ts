@@ -220,7 +220,10 @@ test.each(["unique", "ambiguous", "missing", "partial", "partial-empty", "settin
 // and a local stand-in for the Kilo API serves the catalog YAML and the skill archive.
 test("lists, installs and uninstalls marketplace skills and MCP servers through the generated client", async () => {
   const archive = await new Bun.Archive(
-    { "demo/SKILL.md": "---\nname: demo\ndescription: Demo\n---\nBody" },
+    {
+      "demo/SKILL.md":
+        "---\nname: Demo Display Name\ndescription: Demo\nmetadata:\n  opencode/autoinvoke: false\n---\nBody",
+    },
     {
       compress: "gzip",
     },
@@ -292,7 +295,7 @@ test("lists, installs and uninstalls marketplace skills and MCP servers through 
                 database: { path: ":memory:" },
                 models: { fetch: false },
                 fs: { filewatcher: false },
-                config: { directory, project: false },
+                config: { directory: path.join(directory, "global"), project: true },
               },
               () => [],
               KiloHost.overrides,
@@ -326,6 +329,29 @@ test("lists, installs and uninstalls marketplace skills and MCP servers through 
               items: [expect.objectContaining({ registry: "kilo", kind: "skill", id: "demo" })],
               failures: [],
             })
+
+            for (const scope of ["global", "project"] as const) {
+              expect((await client.skill.list(options)).data.some((skill) => skill.id === "demo")).toBe(false)
+              const input = { registry: "kilo", kind: "skill" as const, id: "demo", scope }
+              const record = await rpc.install(input, options)
+              const target = path.join(directory, scope === "global" ? "global" : ".kilo2", "skills", "demo")
+              expect(record.paths).toEqual([target])
+              // Exercise native discovery after the public reload boundary, without a watcher or model call.
+              await client.location.reload()
+              expect(await rpc.installed({}, options)).toEqual([record])
+              expect((await client.skill.list(options)).data).toContainEqual({
+                id: "demo",
+                name: "Demo Display Name",
+                description: "Demo",
+                autoinvoke: false,
+                path: path.join(target, "SKILL.md"),
+                content: "Body",
+              })
+              await rpc.uninstall(input, options)
+              await client.location.reload()
+              expect(await rpc.installed({}, options)).toEqual([])
+              expect((await client.skill.list(options)).data.some((skill) => skill.id === "demo")).toBe(false)
+            }
 
             const record = await rpc.install({ registry: "kilo", kind: "skill", id: "demo", scope: "project" }, options)
             const target = path.join(directory, ".kilo2", "skills", "demo")
@@ -448,7 +474,8 @@ test("lists, installs and uninstalls marketplace skills and MCP servers through 
             await rpc.uninstall(searched, options)
             await rpc.list({ kind: "mcp", query: "needle" }, options)
             expect(searches.get("needle")).toBe(2)
-            expect(registry).toHaveBeenCalledTimes(1)
+            // Initial activation plus the four public reloads above; catalog queries reuse each adapter.
+            expect(registry).toHaveBeenCalledTimes(5)
 
             // Other projects fill the first page; global and current-project records span later pages.
             const manifests = Array.from({ length: 205 }, (_, index): KiloMarketplaceRpc.Installed => {

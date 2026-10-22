@@ -28,10 +28,13 @@ function journal(root: string) {
   return path.join(root, ".marketplace", "installed", `${hash}.json`)
 }
 
-const fixture = Effect.fn(function* () {
+const fixture = Effect.fn(function* (companion = false) {
   const directory = yield* Effect.promise(() => fs.mkdtemp(path.join(os.tmpdir(), "kilo-marketplace-plugin-")))
   yield* Effect.addFinalizer(() => Effect.promise(() => fs.rm(directory, { recursive: true, force: true })))
-  const archive = yield* Effect.promise(() => new Bun.Archive({ "SKILL.md": "new guide" }).bytes())
+  let archive = yield* Effect.promise(() => new Bun.Archive({ "SKILL.md": "new guide" }).bytes())
+  let invalid = yield* Effect.promise(() =>
+    new Bun.Archive({ "SKILL.md": "---\nname: 123\n---\nprivate body" }).bytes(),
+  )
   let unavailable = false
   const server = Bun.serve({
     port: 0,
@@ -40,12 +43,17 @@ const fixture = Effect.fn(function* () {
         ? new Response("Catalog temporarily unavailable", { status: 503 })
         : new URL(request.url).pathname === "/guide.tar"
           ? new Response(archive)
-          : new Response(`items:
+          : new URL(request.url).pathname === "/invalid.tar"
+            ? new Response(invalid)
+            : new URL(request.url).pathname.endsWith("/skills")
+              ? new Response(`items:\n  - id: guide\n    content: ${new URL("/guide.tar", request.url).href}\n`)
+              : new Response(`items:
   - id: demo
     content: '{"url":"https://new.example.com/mcp"}'
     skills:
       - id: guide
         content: ${new URL("/guide.tar", request.url).href}
+${companion ? `      - id: invalid\n        content: ${new URL("/invalid.tar", request.url).href}\n` : ""}
 `),
   })
   yield* Effect.addFinalizer(() => Effect.sync(() => server.stop(true)))
@@ -56,6 +64,11 @@ const fixture = Effect.fn(function* () {
     directory,
     host,
     rpc,
+    setSkill: async (content: string, later = false) => {
+      const bytes = await new Bun.Archive({ "SKILL.md": content }).bytes()
+      if (later) invalid = bytes
+      if (!later) archive = bytes
+    },
     failCatalog: () => {
       unavailable = true
     },
@@ -65,6 +78,130 @@ const fixture = Effect.fn(function* () {
       ),
   }
 })
+
+for (const reinstall of [false, true]) {
+  it.live(
+    `invalid standalone skill ${reinstall ? "reinstall preserves ownership" : "first install creates no ownership"}`,
+    () =>
+      Effect.gen(function* () {
+        const test = yield* fixture()
+        const writes: string[] = []
+        yield* test.start({
+          ...test.host,
+          storage: {
+            ...test.host.storage,
+            set: (storedKey, value) => {
+              if (storedKey.startsWith("installed:")) writes.push(storedKey)
+              return test.host.storage.set(storedKey, value)
+            },
+          },
+        })
+        const skill = { ...input, kind: "skill", id: "guide" } as const
+        yield* Effect.promise(() => Bun.write(path.join(test.directory, "kilo2.json"), '{"mcp":{"servers":{}}}'))
+        if (reinstall) yield* test.rpc.call("kilocode.marketplace", "install", skill)
+        const before = yield* test.rpc.call("kilocode.marketplace", "installed", {})
+        const files = yield* Effect.promise(async () =>
+          (await fs.readdir(test.directory, { recursive: true })).toSorted(),
+        )
+        const manifests = yield* Effect.promise(() =>
+          Promise.all(
+            files
+              .filter((file) => file.endsWith(".json"))
+              .map((file) => Bun.file(path.join(test.directory, file)).text()),
+          ),
+        )
+        const count = writes.length
+        yield* Effect.promise(() => test.setSkill("---\ndescription: []\n---\nprivate body"))
+        const failure = yield* test.rpc.call("kilocode.marketplace", "install", skill).pipe(Effect.flip)
+        expect(failure).toMatchObject({ type: "invalid_params", message: "Invalid skill guide: frontmatter" })
+        expect(writes).toHaveLength(count)
+        expect(yield* test.rpc.call("kilocode.marketplace", "installed", {})).toEqual(before)
+        expect(
+          yield* Effect.promise(async () => (await fs.readdir(test.directory, { recursive: true })).toSorted()),
+        ).toEqual(files)
+        expect(
+          yield* Effect.promise(() =>
+            Promise.all(
+              files
+                .filter((file) => file.endsWith(".json"))
+                .map((file) => Bun.file(path.join(test.directory, file)).text()),
+            ),
+          ),
+        ).toEqual(manifests)
+        const target = Bun.file(path.join(test.directory, "skills", "guide", "SKILL.md"))
+        if (reinstall) expect(yield* Effect.promise(() => target.text())).toBe("new guide")
+        if (!reinstall) expect(yield* Effect.promise(() => target.exists())).toBe(false)
+      }),
+  )
+}
+
+for (const reinstall of [false, true]) {
+  it.live(
+    `an invalid later MCP companion prevents all mutations and durable intent on ${reinstall ? "reinstall" : "first install"}`,
+    () =>
+      Effect.gen(function* () {
+        const test = yield* fixture(true)
+        const writes: string[] = []
+        yield* test.start({
+          ...test.host,
+          storage: {
+            ...test.host.storage,
+            set: (storedKey, value) => {
+              if (storedKey.startsWith("installed:")) writes.push(storedKey)
+              return test.host.storage.set(storedKey, value)
+            },
+          },
+        })
+        const config = path.join(test.directory, "kilo2.json")
+        yield* Effect.promise(() =>
+          Bun.write(config, '{"mcp":{"servers":{"existing":{"url":"https://keep.example.com"}}}}'),
+        )
+        if (reinstall) {
+          yield* Effect.promise(() => test.setSkill("old later companion", true))
+          yield* test.rpc.call("kilocode.marketplace", "install", input)
+          yield* Effect.promise(() => test.setSkill("---\nname: 123\n---\nprivate body", true))
+          yield* Effect.promise(() => test.setSkill("replacement guide"))
+        }
+        const before = yield* Effect.promise(() => Bun.file(config).text())
+        const record = yield* test.host.storage.get(key)
+        const manifest = yield* Effect.promise(() =>
+          Bun.file(journal(test.directory))
+            .text()
+            .catch(() => undefined),
+        )
+        const files = yield* Effect.promise(async () =>
+          (await fs.readdir(test.directory, { recursive: true })).toSorted(),
+        )
+        const count = writes.length
+        expect(yield* test.rpc.call("kilocode.marketplace", "install", input).pipe(Effect.flip)).toMatchObject({
+          type: "invalid_params",
+          message: "Invalid skill invalid: frontmatter",
+        })
+        expect(writes).toHaveLength(count)
+        expect(yield* test.host.storage.get(key)).toEqual(record)
+        expect(
+          yield* Effect.promise(() =>
+            Bun.file(journal(test.directory))
+              .text()
+              .catch(() => undefined),
+          ),
+        ).toBe(manifest)
+        expect(
+          yield* Effect.promise(async () => (await fs.readdir(test.directory, { recursive: true })).toSorted()),
+        ).toEqual(files)
+        expect(yield* Effect.promise(() => Bun.file(config).text())).toBe(before)
+        if (!reinstall) expect(yield* test.rpc.call("kilocode.marketplace", "installed", {})).toEqual([])
+        if (reinstall) {
+          expect(
+            yield* Effect.promise(() => Bun.file(path.join(test.directory, "skills", "guide", "SKILL.md")).text()),
+          ).toBe("new guide")
+          expect(
+            yield* Effect.promise(() => Bun.file(path.join(test.directory, "skills", "invalid", "SKILL.md")).text()),
+          ).toBe("old later companion")
+        }
+      }),
+  )
+}
 
 for (const cached of ["memory", "persisted"] as const) {
   it.live(`reports a failed source while serving its ${cached} catalog snapshot`, () =>

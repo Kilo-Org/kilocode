@@ -45,14 +45,23 @@ async function mount(
     polling?: Promise<void>
     refreshing?: Promise<void>
   },
+  inventory?: {
+    records?: readonly KiloMarketplaceRpc.Installed[]
+    unavailable?: boolean
+    delayed?: Promise<void>
+    loadFailed?: boolean
+    uninstallFailed?: boolean
+    width?: number
+  },
 ) {
   const calls: { method: string; path: string; body?: unknown }[] = []
   let removed = false
   let checks = 0
   let signedIn = false
+  let records = inventory?.records ?? [installed]
   const location = { directory, project: { id: "proj_test", directory, canonical: directory } }
   const app = await createAppFixture({
-    width: 120,
+    width: inventory?.width ?? 120,
     height: 40,
     config: { animations: false },
     fetch: async (url, request) => {
@@ -60,8 +69,14 @@ async function mount(
       if (url.pathname.startsWith("/api/rpc/kilocode.marketplace/")) {
         calls[calls.length - 1].body = await request.json()
         const method = url.pathname.split("/").at(-1)
+        if (inventory?.unavailable && (method === "list" || method === "registries"))
+          return new Response("Catalog unavailable", { status: 503 })
         if (method === "list") return json({ output: { items: [item], failures: [] } })
-        if (method === "installed") return json({ output: removed ? [] : [installed] })
+        if (method === "installed") {
+          await inventory?.delayed
+          if (inventory?.loadFailed) return new Response("Inventory unavailable", { status: 503 })
+          return json({ output: inventory ? records : removed ? [] : [installed] })
+        }
         if (method === "registries")
           return json({
             output: [
@@ -78,6 +93,14 @@ async function mount(
           })
         if (method === "install") return json({ output: result })
         if (method === "uninstall") {
+          if (inventory?.uninstallFailed) return new Response("Installation contents are modified", { status: 409 })
+          const body = calls[calls.length - 1].body as {
+            input: Pick<KiloMarketplaceRpc.Installed, "registry" | "kind" | "id" | "scope">
+          }
+          records = records.filter(
+            (record) =>
+              !Object.entries(body.input).every(([key, value]) => record[key as keyof typeof record] === value),
+          )
           removed = true
           return json({ output: {} })
         }
@@ -170,6 +193,24 @@ async function mount(
 
 type Fixture = Awaited<ReturnType<typeof mount>>
 
+async function inventory(app: Fixture) {
+  await app.mockInput.typeText("/marketplace")
+  app.mockInput.pressEnter()
+  await app.waitForFrame((frame) => frame.includes("Manage installations even"))
+  await app.waitFor(() => app.renderer.currentFocusedEditor instanceof InputRenderable)
+  await app.mockInput.typeText("Installed")
+  app.mockInput.pressEnter()
+}
+
+async function inventoryAction(app: Fixture, action: string) {
+  await app.waitForFrame((frame) => frame.includes("Marketplace: Installed"))
+  app.mockInput.pressEnter()
+  await app.waitForFrame((frame) => frame.includes("Details") && frame.includes("Uninstall"))
+  await app.waitFor(() => app.renderer.currentFocusedEditor instanceof InputRenderable)
+  await app.mockInput.typeText(action)
+  app.mockInput.pressEnter()
+}
+
 async function reinstall(app: Fixture) {
   await actions(app)
   await app.mockInput.typeText("Reinstall")
@@ -206,6 +247,123 @@ test("the production marketplace plugin registers only /marketplace without slas
   expect(frame).toMatch(/\/marketplace\s+Browse and install/)
   expect(frame).not.toMatch(/\/market\s+Browse and install/)
   expect(frame).not.toContain("/skills-marketplace")
+})
+
+test.each([70, 120])(
+  "Installed manages unavailable/delisted catalogs at width %s without catalog requests",
+  async (width) => {
+    await using app = await mount(
+      {
+        ...record,
+        registry: "disabled-source",
+        paths: ["/owned/companion"],
+        resources: [{ path: "/owned/companion", fingerprints: ["private-evidence"] }],
+      },
+      record,
+      undefined,
+      { unavailable: true, width },
+    )
+    await inventory(app)
+    await inventoryAction(app, "Details")
+    await app.waitForFrame((frame) => frame.includes("Path: /owned/companion") && frame.includes("MCP server: demo"))
+    expect(app.captureCharFrame()).not.toContain("private-evidence")
+    app.mockInput.pressEscape()
+    await inventoryAction(app, "Uninstall")
+    await app.waitForFrame((frame) => frame.includes("Nothing installed from marketplaces"))
+    expect(app.calls.find((call) => call.path.endsWith("/uninstall"))?.body).toMatchObject({
+      input: { registry: "disabled-source", kind: "mcp", id: "demo", scope: "project" },
+    })
+    expect(
+      app.calls
+        .filter((call) => call.path.startsWith("/api/rpc/kilocode.marketplace/"))
+        .every((call) => call.path.endsWith("/installed") || call.path.endsWith("/uninstall")),
+    ).toBe(true)
+    expect(app.calls.some((call) => call.method === "DELETE" && call.path.includes("credential"))).toBe(false)
+  },
+)
+
+test("Installed keeps duplicate IDs separate by registry and scope", async () => {
+  await using app = await mount(record, record, undefined, {
+    records: [record, { ...record, scope: "global" }, { ...record, registry: "community" }],
+  })
+  await inventory(app)
+  await app.waitForFrame((frame) => frame.includes("Marketplace: Installed") && frame.includes("community"))
+  await app.mockInput.typeText("global")
+  app.mockInput.pressEnter()
+  await app.waitForFrame((frame) => frame.includes("demo (kilo, global)"))
+  await app.mockInput.typeText("Uninstall")
+  app.mockInput.pressEnter()
+  await app.waitForFrame(
+    (frame) =>
+      frame.includes("Marketplace: Installed") && frame.includes("community") && !frame.includes("mcp · kilo · global"),
+  )
+  expect(app.calls.find((call) => call.path.endsWith("/uninstall"))?.body).toMatchObject({
+    input: { registry: "kilo", kind: "mcp", id: "demo", scope: "global" },
+  })
+})
+
+test.each(["missing", "modified", "incomplete"] as const)(
+  "Installed displays %s and pending cleanup and retains records on uninstall failure",
+  async (status) => {
+    await using app = await mount(
+      { ...record, status, recovering: status === "incomplete", pending: [{ path: "/old/skill" }] },
+      record,
+      undefined,
+      { uninstallFailed: true },
+    )
+    await inventory(app)
+    await app.waitForFrame((frame) => frame.includes("Marketplace: Installed"))
+    await app.mockInput.typeText(status)
+    await inventoryAction(app, "Details")
+    await app.waitForFrame((frame) => frame.includes(`Status: ${status}`) && frame.includes("Pending cleanup"))
+    app.mockInput.pressEscape()
+    await inventoryAction(app, "Uninstall")
+    await app.waitForFrame((frame) => frame.includes("Marketplace: Installed") && frame.includes("409"))
+    expect(app.captureCharFrame()).toContain("demo")
+  },
+)
+
+test("Installed authenticates the recorded MCP without reinstalling or fetching catalogs", async () => {
+  await using app = await mount(record, record, {}, { unavailable: true })
+  await inventory(app)
+  await inventoryAction(app, "Authentication")
+  await signIn(app)
+  await app.waitForFrame((frame) => frame.includes("Waiting for authorization"))
+  app.mockInput.pressEscape()
+  await app.waitForFrame((frame) => frame.includes("This server needs sign-in"))
+  expect(
+    app.calls
+      .filter((call) => call.path.startsWith("/api/rpc/kilocode.marketplace/"))
+      .some((call) => /\/(list|registries|install|uninstall)$/.test(call.path)),
+  ).toBe(false)
+})
+
+test("Installed reports inventory errors with a retry path", async () => {
+  await using app = await mount(record, record, undefined, { loadFailed: true })
+  await inventory(app)
+  await app.waitForFrame((frame) => frame.includes("Couldn't load installations") && frame.includes("Reopen Installed"))
+})
+
+test("Escape during delayed inventory loading does not reopen old inventory", async () => {
+  const delayed = Promise.withResolvers<void>()
+  await using app = await mount(record, record, undefined, { delayed: delayed.promise })
+  await inventory(app)
+  await app.waitForFrame((frame) => frame.includes("Loading installed items"))
+  app.mockInput.pressEscape()
+  await app.waitForFrame((frame) => frame.includes("Choose which marketplaces to browse"))
+  delayed.resolve()
+  await app.waitForVisualIdle()
+  expect(app.captureCharFrame()).not.toContain("Marketplace: Installed")
+  expect(app.calls.some((call) => call.path.endsWith("/uninstall"))).toBe(false)
+})
+
+test("Escape from Installed selection leaves ownership untouched", async () => {
+  await using app = await mount(record, record, undefined, { unavailable: true })
+  await inventory(app)
+  await app.waitForFrame((frame) => frame.includes("Marketplace: Installed"))
+  app.mockInput.pressEscape()
+  await app.waitForFrame((frame) => frame.includes("Choose which marketplaces to browse"))
+  expect(app.calls.some((call) => call.path.endsWith("/uninstall"))).toBe(false)
 })
 
 test.each(["missing", "incomplete"] as const)("%s records offer and execute repair/reinstall", async (status) => {
