@@ -103,6 +103,7 @@ runs:
     # forgot to re-run install) passes silently. Fail CI when the lockfile drifts
     # from the workspace, so version drift cannot land silently. # kilocode_change
     - name: Verify lockfile matches workspace
+      if: inputs.install != 'false'
       shell: bash
       run: bun script/check-bun-lock-workspace.ts
     # kilocode_change end
