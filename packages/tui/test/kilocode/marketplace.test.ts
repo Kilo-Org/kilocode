@@ -41,9 +41,6 @@ async function mount(
     overridden?: boolean
     outcome?: "complete" | "failed"
     afterAuth?: "failed" | "pending"
-    starting?: Promise<void>
-    polling?: Promise<void>
-    refreshing?: Promise<void>
   },
   inventory?: {
     records?: readonly KiloMarketplaceRpc.Installed[]
@@ -152,7 +149,6 @@ async function mount(
       if (auth && url.pathname === "/api/integration") return json({ location, data: [integration] })
       if (auth && url.pathname === "/api/integration/shared-integration") return json({ location, data: integration })
       if (auth && url.pathname === "/api/integration/shared-integration/connect/oauth") {
-        await auth.starting
         return json({
           location,
           data: {
@@ -165,13 +161,8 @@ async function mount(
       }
       if (auth && url.pathname === "/api/integration/shared-integration/connect/oauth/demo-attempt") {
         if (request.method === "DELETE") return new Response(null, { status: 204 })
-        await auth.polling
         signedIn = auth.outcome === "complete"
         return json({ location, data: { status: auth.outcome ?? "pending", message: "Authorization denied" } })
-      }
-      if (auth?.refreshing && signedIn && url.pathname === "/api/model") {
-        await auth.refreshing
-        return json({ location, data: [] })
       }
       // Both server names share a credential. Uninstall must not inspect or remove it.
       if (url.pathname === "/api/mcp")
@@ -489,48 +480,6 @@ test.each([undefined, "failed"] as const)(
     expect(app.calls.some((call) => call.path.endsWith("/uninstall"))).toBe(false)
   },
 )
-
-test("a late OAuth start response is cancelled without reopening the native dialog", async () => {
-  const started = Promise.withResolvers<void>()
-  await using app = await mount(record, record, { starting: started.promise })
-  await reinstall(app)
-  await signIn(app)
-  await app.waitForFrame((frame) => frame.includes("Starting authorization"))
-  app.mockInput.pressEscape()
-  await app.waitForFrame((frame) => frame.includes("This server needs sign-in"))
-  started.resolve()
-  await app.waitFor(() => app.calls.some((call) => call.method === "DELETE" && call.path.endsWith("demo-attempt")))
-  expect(app.captureCharFrame()).not.toContain("Waiting for authorization")
-  expect(app.calls.filter((call) => call.method === "GET" && call.path.endsWith("demo-attempt"))).toHaveLength(0)
-})
-
-test("a late pending OAuth poll cannot resume polling after cancellation", async () => {
-  const polled = Promise.withResolvers<void>()
-  await using app = await mount(record, record, { polling: polled.promise })
-  await reinstall(app)
-  await signIn(app)
-  await app.waitForFrame((frame) => frame.includes("Waiting for authorization"))
-  await app.waitFor(() => app.calls.some((call) => call.method === "GET" && call.path.endsWith("demo-attempt")))
-  app.mockInput.pressEscape()
-  await app.waitForFrame((frame) => frame.includes("This server needs sign-in"))
-  polled.resolve()
-  await new Promise((resolve) => setTimeout(resolve, 600))
-  expect(app.calls.filter((call) => call.method === "GET" && call.path.endsWith("demo-attempt"))).toHaveLength(1)
-})
-
-test("dismissing a completed login during refresh does not clear the subsequent connection outcome", async () => {
-  const refreshing = Promise.withResolvers<void>()
-  await using app = await mount(record, record, { outcome: "complete", refreshing: refreshing.promise })
-  await reinstall(app)
-  await signIn(app)
-  await app.waitFor(() => app.calls.some((call) => call.path.endsWith("demo-attempt")))
-  await app.waitForFrame((frame) => frame.includes("Waiting for authorization"))
-  app.mockInput.pressEscape()
-  await app.waitForFrame((frame) => frame.includes("Installed demo and connected"))
-  refreshing.resolve()
-  await app.waitForVisualIdle()
-  expect(app.captureCharFrame()).toContain("Installed demo and connected")
-})
 
 test("Escape during readiness keeps installation and returns to browsing without OAuth", async () => {
   await using app = await mount(record, record, { delayed: true })

@@ -6,215 +6,13 @@ import { storage } from "@opencode/core/plugin/host"
 import { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
 import { createRoutes } from "@opencode/server/routes"
 import { LayerNode } from "@opencode/util/effect/layer-node"
-import { Context, Effect, Layer, Option, References } from "effect"
+import { Context, Effect, Layer, References } from "effect"
 import { HttpEffect, HttpRouter, HttpServer } from "effect/http"
 import { mkdtemp, readdir, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { McpRegistry } from "../../kilo-plugin/src/marketplace/mcp-registry"
 import { KiloHost } from "../src/host"
-import { recordMessages, validateResponse } from "../src/marketplace/handlers/client"
-import { resolveRegistry } from "../src/marketplace/handlers/install"
-import { selectUninstall } from "../src/marketplace/handlers/uninstall"
-
-test.each([[], { items: [] }, { items: [], failures: [undefined] }])(
-  "rejects incompatible marketplace list responses with restart instructions: %j",
-  async (response) => {
-    await expect(validateResponse("list")(response)).rejects.toThrow("bun dev service restart")
-  },
-)
-
-test("accepts empty marketplace lists and preserves registry warnings", async () => {
-  expect(await validateResponse("list")({ items: [], failures: [] })).toEqual({ items: [], failures: [] })
-  const response = { items: [], failures: [{ registry: "kilo", message: "Registry unavailable" }] }
-  expect(await validateResponse("list")(response)).toEqual(response)
-})
-
-test.each([
-  ["installed", [{ id: "demo" }]],
-  ["registries", [{ id: "kilo" }]],
-  ["registries.set", {}],
-  ["install", { id: "demo" }],
-  ["uninstall", null],
-] as const)("rejects incompatible marketplace %s responses", async (method, value) => {
-  await expect(validateResponse(method)(value)).rejects.toThrow("kilo service restart")
-})
-
-test("accepts compatible non-list responses", async () => {
-  const record: KiloMarketplaceRpc.Installed = {
-    registry: "kilo",
-    kind: "skill",
-    id: "demo",
-    scope: "global",
-    paths: [],
-    installedAt: 1,
-  }
-  const registry: KiloMarketplaceRpc.RegistryInfo = {
-    id: "kilo",
-    name: "Kilo",
-    description: "",
-    kinds: ["skill"],
-    curated: true,
-    searchable: false,
-    enabled: true,
-  }
-  expect(await validateResponse("installed")([record])).toEqual([record])
-  expect(await validateResponse("install")(record)).toEqual(record)
-  expect(await validateResponse("registries")([registry])).toEqual([registry])
-  expect(await validateResponse("registries.set")([registry])).toEqual([registry])
-  expect(await validateResponse("uninstall")({})).toEqual({})
-})
-
-test.each(["ready", "missing", "modified", "incomplete"] as const)(
-  "validates and formats optional installed state: %s",
-  async (status) => {
-    const record: KiloMarketplaceRpc.Installed = {
-      registry: "kilo",
-      kind: "skill",
-      id: "demo",
-      scope: "project",
-      paths: [],
-      installedAt: 1,
-      status,
-      recovering: true,
-      resources: [{ path: "/project/.kilo2/skills/demo", fingerprints: ["private-content-evidence"] }],
-      pending: [{ config: "/project/obsolete.json", server: "demo" }],
-      warnings: ["Obsolete config cleanup failed"],
-    }
-    expect(await validateResponse("install")(record)).toEqual(record)
-    expect(await validateResponse("installed")([record])).toEqual([record])
-    expect(recordMessages(record)).toEqual([
-      `Status: ${status}`,
-      "Warning: Installation is incomplete; reinstall to repair it.",
-      "Warning: Obsolete config cleanup failed",
-    ])
-    expect(recordMessages(record).join("\n")).not.toContain("private-content-evidence")
-    expect(recordMessages({ ...record, recovering: false, warnings: undefined })).toContain(
-      "Warning: Pending cleanup: /project/obsolete.json (MCP server demo)",
-    )
-  },
-)
-
-test.each([
-  { status: "unknown" },
-  { recovering: "true" },
-  { warnings: [1] },
-  { resources: [{ path: "/demo", fingerprints: [1] }] },
-  { pending: [{ config: "/demo" }] },
-])("rejects malformed optional installed fields: %j", async (fields) => {
-  const record = { registry: "kilo", kind: "skill", id: "demo", scope: "global", paths: [], installedAt: 1, ...fields }
-  await expect(validateResponse("install")(record)).rejects.toThrow("kilo service restart")
-  await expect(validateResponse("installed")([record])).rejects.toThrow("kilo service restart")
-})
-
-test("derives old-server pending cleanup warnings without exposing fingerprints", () => {
-  expect(
-    recordMessages({
-      registry: "kilo",
-      kind: "skill",
-      id: "demo",
-      scope: "global",
-      paths: [],
-      installedAt: 1,
-      pending: [{ path: "/old/skill", fingerprints: ["secret"] }],
-    }),
-  ).toEqual(["Warning: Pending cleanup: /old/skill"])
-})
-
-test.each(["unique", "ambiguous", "missing", "partial", "partial-empty", "settings-failed"])(
-  "implicit registry resolution diagnoses enabled sources: %s",
-  async (scenario) => {
-    const calls: string[] = []
-    using server = Bun.serve({
-      port: 0,
-      fetch: async (request) => {
-        const method = new URL(request.url).pathname.split("/").at(-1)!
-        calls.push(method)
-        if (method === "list") {
-          expect((await request.json()).input).toEqual({ kind: "skill", query: "demo" })
-          const registries =
-            scenario === "missing" || scenario === "partial-empty"
-              ? []
-              : scenario === "ambiguous"
-                ? ["kilo", "other"]
-                : ["kilo"]
-          return Response.json({
-            output: {
-              items: registries.map((registry) => ({
-                registry,
-                kind: "skill",
-                id: "owner/demo",
-                name: "Demo",
-                description: "",
-                tags: [],
-                prerequisites: [],
-                parameters: [],
-                options: [],
-              })),
-              failures:
-                scenario.startsWith("partial") || scenario === "settings-failed"
-                  ? [{ registry: "offline", message: "Catalog unavailable" }]
-                  : [],
-            },
-          })
-        }
-        if (method === "registries") {
-          if (scenario === "settings-failed") return new Response("Settings unavailable", { status: 503 })
-          return Response.json({
-            output: [
-              {
-                id: "skills.sh",
-                name: "Skills.sh",
-                description: "",
-                kinds: ["skill"],
-                curated: false,
-                searchable: true,
-                enabled: false,
-              },
-              {
-                id: "mcp-only",
-                name: "MCP Only",
-                description: "",
-                kinds: ["mcp"],
-                curated: false,
-                searchable: true,
-                enabled: false,
-              },
-            ],
-          })
-        }
-        return new Response("Unexpected request", { status: 500 })
-      },
-    })
-    const client = OpenCode.make({ baseUrl: server.url.origin })
-    const location = { directory: "/project" }
-    const result = resolveRegistry(
-      { client, rpc: client.rpc(KiloMarketplaceRpc.Definition), location, options: { location } },
-      "skill",
-      "owner/demo",
-    )
-    if (scenario === "unique") {
-      expect(await result).toBe("kilo")
-      expect(calls).toEqual(["list"])
-      return
-    }
-    const error = await result.catch((error: Error) => error)
-    expect(error).toBeInstanceOf(Error)
-    const message = error instanceof Error ? error.message : ""
-    if (scenario.startsWith("partial") || scenario === "settings-failed") {
-      expect(message).toContain("Discovery in enabled registries is incomplete")
-      expect(message).toContain("offline: Catalog unavailable")
-    }
-    if (scenario === "missing" || scenario === "partial-empty") expect(message).toContain("enabled registries")
-    if (scenario === "ambiguous") expect(message).toContain("kilo, other; pass --registry")
-    if (scenario !== "settings-failed") {
-      expect(message).toContain("Skills.sh (skills.sh) is disabled")
-      expect(message).toContain("kilo marketplace registries --enable skills.sh")
-      expect(message).not.toContain("MCP Only")
-    }
-    expect(calls).toEqual(["list", "registries"])
-  },
-)
 
 // The `kilocode.marketplace` RPC end to end: the host registers the marketplace plugin, the generated client calls it,
 // and a local stand-in for the Kilo API serves the catalog YAML and the skill archive.
@@ -431,17 +229,9 @@ test("lists, installs and uninstalls marketplace skills and MCP servers through 
               type: "not_found",
             })
 
-            const selected = selectUninstall(await rpc.installed({}, options), {
-              kind: "skill",
-              id: "demo",
-              project: false,
-              global: false,
-              registry: Option.none(),
-            })
-            expect(selected.scope).toBe("project")
             expect(
               await rpc.uninstall(
-                { registry: selected.registry, kind: selected.kind, id: selected.id, scope: selected.scope },
+                { registry: "kilo", kind: "skill", id: "demo", scope: "project" },
                 options,
               ),
             ).toEqual({})

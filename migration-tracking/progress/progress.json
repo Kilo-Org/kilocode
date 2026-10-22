@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 96,
+    "done": 94,
     "total": 9829,
     "percent": 1,
     "dropped": 25,
     "kinds": [
       {
         "kind": "module",
-        "done": 33,
+        "done": 32,
         "total": 3547
       },
       {
@@ -26,7 +26,7 @@
       },
       {
         "kind": "test",
-        "done": 23,
+        "done": 22,
         "total": 2798
       }
     ],
@@ -38,8 +38,8 @@
     },
     "coreImports": 21,
     "sharedPatches": {
-      "seam": 23,
-      "patch": 18
+      "seam": 24,
+      "patch": 17
     }
   },
   "notCounted": {
@@ -372,12 +372,12 @@
     },
     {
       "feature": "cli",
-      "done": 2,
+      "done": 0,
       "total": 148,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 1,
+          "done": 0,
           "total": 72
         },
         "api": {
@@ -389,7 +389,7 @@
           "total": 25
         },
         "test": {
-          "done": 1,
+          "done": 0,
           "total": 51
         }
       }
@@ -6163,13 +6163,11 @@
     "module:packages/kilo-gateway/test/responses.test.ts",
     "module:packages/opencode/src/kilocode/agent/index.ts",
     "module:packages/opencode/src/kilocode/balance-refresh.ts",
-    "module:packages/opencode/src/kilocode/commands.ts",
     "module:packages/opencode/src/kilocode/kilo-errors.ts",
     "module:packages/opencode/test/kilocode/agent-global-config-dirs.test.ts",
     "module:packages/opencode/test/kilocode/agent-permission-overrides.test.ts",
     "module:packages/opencode/test/kilocode/agent-skill-permissions.test.ts",
     "module:packages/opencode/test/kilocode/ask-agent-permissions.test.ts",
-    "module:packages/opencode/test/kilocode/cli/error.test.ts",
     "module:packages/opencode/test/kilocode/kilo-errors.test.ts",
     "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts",
     "patch:agent:2e5632e7bfc6",

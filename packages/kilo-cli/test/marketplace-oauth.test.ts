@@ -1,4 +1,4 @@
-import { expect, spyOn, test } from "bun:test"
+import { expect, test } from "bun:test"
 import { OpenCode } from "@opencode/client"
 import { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
 import { createRoutes } from "@opencode/server/routes"
@@ -8,7 +8,6 @@ import { mkdtemp, realpath, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloHost } from "../src/host"
-import { reportInstall } from "../src/marketplace/handlers/install"
 
 async function eventually<A>(read: () => Promise<A>, ready: (value: A) => boolean) {
   const deadline = performance.now() + 10_000
@@ -126,17 +125,6 @@ test("marketplace remote install completes native OAuth and reconnects using the
             )
             const integrationID = server.data.find((server) => server.name === installed.server)?.integrationID
             if (!integrationID) throw new Error("Installed server did not expose native integration identity")
-            const output: string[] = []
-            const stdout = spyOn(process.stdout, "write").mockImplementation((chunk) => {
-              output.push(String(chunk))
-              return true
-            })
-            try {
-              await Effect.runPromise(reportInstall({ client, rpc, options, location }, installed))
-            } finally {
-              stdout.mockRestore()
-            }
-            expect(output.join("")).toContain("Run: kilo mcp auth 'fixture-oauth'")
             expect(tokenRequests).toHaveLength(0)
             const integration = await client.integration.get({ ...options, integrationID })
             const method = integration.data.methods.find((method) => method.type === "oauth")

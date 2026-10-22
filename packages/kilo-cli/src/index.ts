@@ -10,6 +10,7 @@ import { ensurePluginRuntime } from "@opencode/plugin/runtime"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { Cause, Effect } from "effect"
 import { getErrorReported } from "effect/Runtime"
+import { Commands } from "@opencode/cli/commands/commands"
 import { Runtime } from "@opencode/cli/framework/runtime"
 import { Observability } from "@opencode/util/observability"
 import { Updater } from "@opencode/cli/services/updater"
@@ -23,8 +24,6 @@ import { EffectFlock } from "@opencode/util/effect-flock"
 import { Heap } from "@opencode/cli/heap"
 import { CpuProfile } from "@opencode/cli/cpu-profile"
 import { KiloApp } from "./app"
-import { formatError } from "./error"
-import { KiloCommands } from "./marketplace/commands"
 
 ensurePluginRuntime()
 
@@ -33,8 +32,7 @@ if (process.env.OPENCODE_SSH_ASKPASS_PORT) {
   process.exit(await Effect.runPromise(askpass.pipe(Effect.provide(NodeServices.layer))))
 }
 
-// Kilo: the upstream command tree plus `kilo marketplace` (./marketplace/commands).
-const Handlers = Runtime.handlers(KiloCommands, {
+const Handlers = Runtime.handlers(Commands, {
   $: () => import("@opencode/cli/commands/handlers/default"),
   upgrade: () => import("@opencode/cli/commands/handlers/upgrade"),
   uninstall: () => import("@opencode/cli/commands/handlers/uninstall"),
@@ -89,14 +87,6 @@ const Handlers = Runtime.handlers(KiloCommands, {
   },
   // Kilo: the server gets the Kilo plugins and service overrides.
   serve: () => import("./serve"),
-  // Kilo: marketplace commands.
-  marketplace: {
-    list: () => import("./marketplace/handlers/list"),
-    installed: () => import("./marketplace/handlers/installed"),
-    registries: () => import("./marketplace/handlers/registries"),
-    install: () => import("./marketplace/handlers/install"),
-    uninstall: () => import("./marketplace/handlers/uninstall"),
-  },
 })
 
 Effect.gen(function* () {
@@ -123,7 +113,7 @@ Effect.gen(function* () {
     local: OPENCODE_LOCAL,
     args: process.argv.slice(2),
   })
-  return yield* Runtime.run(KiloCommands, Handlers, { version: OPENCODE_VERSION }) // Kilo: KiloCommands
+  return yield* Runtime.run(Commands, Handlers, { version: OPENCODE_VERSION })
 }).pipe(
   Effect.catchCause((cause) =>
     Effect.logError("cli process failed", {
@@ -165,7 +155,7 @@ Effect.gen(function* () {
     Effect.sync(() => {
       if (Cause.hasInterruptsOnly(cause)) return
       if (!getErrorReported(Cause.squash(cause))) return
-      process.stderr.write(formatError(cause) + "\n") // Kilo: expected user errors do not need a stack trace.
+      process.stderr.write(Cause.pretty(cause) + "\n")
     }),
   ),
   NodeRuntime.runMain({ disableErrorReporting: true }),
