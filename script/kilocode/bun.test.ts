@@ -4,9 +4,9 @@ import { execFile } from "node:child_process"
 import { createHash } from "node:crypto"
 import { once } from "node:events"
 import { watch } from "node:fs"
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
+import { chmod, mkdir, mkdtemp, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises"
 import { createServer, type ServerResponse } from "node:http"
-import { tmpdir, userInfo } from "node:os"
+import { tmpdir } from "node:os"
 import { basename, dirname, isAbsolute, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
@@ -155,8 +155,8 @@ async function fixture(
     process.env.TMPDIR = dir
     process.env.TMP = dir
     process.env.TEMP = dir
-    const cache = join(dir, `kilo-bun-${userInfo().uid}`, pin.version)
-    await mkdir(cache, { recursive: true })
+    const cache = join(dir, `kilo-bun-${process.getuid?.() ?? 0}`, pin.version)
+    await mkdir(cache, { recursive: true, mode: 0o700 })
     await check({ dir, file: join(cache, `${item.name}.tgz`), bytes, item, input, requests })
   } finally {
     Object.assign(item, original)
@@ -176,6 +176,27 @@ async function fixture(
     await rm(dir, { recursive: true, force: true })
   }
 }
+
+test.skipIf(!process.getuid).serial("rejects a cache accessible to other users before downloading", async () => {
+  await fixture(async ({ file, input, requests }) => {
+    await chmod(dirname(dirname(file)), 0o777)
+    await rejects(stage(input), /Bun cache directory is not private/)
+    expect(requests).toEqual([])
+  })
+})
+
+test.skipIf(!process.getuid).serial("rejects a symlinked cache without writing through it", async () => {
+  await fixture(async ({ dir, file, input, requests }) => {
+    const root = dirname(dirname(file))
+    const outside = join(dir, "outside")
+    await mkdir(outside, { mode: 0o700 })
+    await rename(root, `${root}.private`)
+    await symlink(outside, root)
+    await rejects(stage(input), /Bun cache directory is not private/)
+    expect(await readdir(outside)).toEqual([])
+    expect(requests).toEqual([])
+  })
+})
 
 test.serial("recovers a truncated cache with one verified download", async () => {
   await fixture(async ({ file, bytes, input, requests }) => {
