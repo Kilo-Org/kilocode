@@ -6,7 +6,7 @@ import { once } from "node:events"
 import { watch } from "node:fs"
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { createServer, type ServerResponse } from "node:http"
-import { tmpdir } from "node:os"
+import { tmpdir, userInfo } from "node:os"
 import { basename, dirname, isAbsolute, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
@@ -115,7 +115,7 @@ async function fixture(
   check: (data: {
     dir: string
     file: string
-    bytes: Buffer
+    bytes: Buffer<ArrayBuffer>
     item: ReturnType<typeof target>
     input: Parameters<typeof stage>[0]
     requests: string[]
@@ -155,7 +155,7 @@ async function fixture(
     process.env.TMPDIR = dir
     process.env.TMP = dir
     process.env.TEMP = dir
-    const cache = join(dir, "kilo-bun", pin.version)
+    const cache = join(dir, `kilo-bun-${userInfo().uid}`, pin.version)
     await mkdir(cache, { recursive: true })
     await check({ dir, file: join(cache, `${item.name}.tgz`), bytes, item, input, requests })
   } finally {

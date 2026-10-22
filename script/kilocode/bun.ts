@@ -2,7 +2,7 @@ import { execFile } from "node:child_process"
 import { createHash, randomUUID } from "node:crypto"
 import { rmSync } from "node:fs"
 import { appendFile, chmod, link, lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises"
-import { tmpdir } from "node:os"
+import { tmpdir, userInfo } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
@@ -53,7 +53,7 @@ export function host(
 export async function stage(input: Target): Promise<string> {
   const item = target(input)
   const root = resolve(tmpdir())
-  const cache = join(root, "kilo-bun", pin.version)
+  const cache = join(root, `kilo-bun-${userInfo().uid}`, pin.version)
   await mkdir(cache, { recursive: true, mode: 0o700 })
   const file = join(cache, `${item.name}.tgz`)
   const valid = (bytes: Uint8Array) =>
