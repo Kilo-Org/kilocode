@@ -2376,7 +2376,7 @@ export const layer = Layer.effect(
         template = template + "\n\n" + input.arguments
       }
 
-      const shellMatches = ConfigMarkdown.shell(template)
+      const shellMatches = cmd.source === "mcp" ? [] : ConfigMarkdown.shell(template) // kilocode_change - MCP prompt text is not a local shell template
       // kilocode_change start - skill templates run !`cmd`` only when trusted and the kill-switch is off,
       // mirroring the skill tool's gate (the slash-command path is user-initiated, so it is not prompted).
       const skillTemplate = cmd.source === "skill"
