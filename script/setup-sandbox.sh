@@ -95,7 +95,17 @@ extract_intercept_ca() {
       # them the system store is still consulted, so the leaf (which already
       # verified against the system store above) would verify against *any*
       # self-signed candidate and the first one would win.
-      if openssl verify "${verify[@]}" -CAfile "$f" "$leaf" >/dev/null 2>&1; then
+      # Multi-level intercept chains need their intermediates: the presented
+      # certs other than the anchor and leaf go through -untrusted, otherwise
+      # path building fails even though the chain is legitimate.
+      local untrusted=()
+      for other in "$state_dir"/chain-*.pem; do
+        [ -e "$other" ] || continue
+        [ "$other" = "$f" ] && continue
+        [ "$other" = "$leaf" ] && continue
+        untrusted+=(-untrusted "$other")
+      done
+      if openssl verify "${verify[@]}" "${untrusted[@]}" -CAfile "$f" "$leaf" >/dev/null 2>&1; then
         verified="$f"
         break
       fi
