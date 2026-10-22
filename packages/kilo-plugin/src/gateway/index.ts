@@ -80,6 +80,7 @@ interface CatalogState {
   readonly models: readonly KiloModels.Model[]
   readonly defaultModelID?: string
   readonly failed: boolean
+  readonly failure?: KiloModels.Failure
   readonly anonymous: boolean
   readonly skippedOfflineTest?: boolean
 }
@@ -235,7 +236,15 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           Option.isSome(profile) &&
           !profile.value.organizations.some((organization) => organization.id === organizationID)
         ) {
-          catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
+          catalog = {
+            account: current,
+            connection,
+            envActive,
+            models: [],
+            failed: true,
+            failure: { kind: "unauthorized", status: 403 },
+            anonymous: false,
+          }
           return
         }
       }
@@ -291,7 +300,15 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
 
       // Team scope always fails closed on error: never fall back to personal, anonymous, or models.dev models.
       if (organizationID) {
-        catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
+        catalog = {
+          account: current,
+          connection,
+          envActive,
+          models: [],
+          failed: true,
+          failure: fetched.failure,
+          anonymous: false,
+        }
         yield* scheduleRetry(fetched.failure, targetEpoch, attempt)
         return
       }
@@ -310,10 +327,19 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           // Kilo API is down, so it must not replace the stored default.
           defaultModelID: stored.defaultModelID ?? defaultModelID,
           failed: false,
+          failure: fetched.failure,
           anonymous: !token,
         }
       } else {
-        catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: !token }
+        catalog = {
+          account: current,
+          connection,
+          envActive,
+          models: [],
+          failed: true,
+          failure: fetched.failure,
+          anonymous: !token,
+        }
       }
       yield* scheduleRetry(fetched.failure, targetEpoch, attempt)
     })
@@ -658,7 +684,15 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         models: (_input, context) =>
           Effect.gen(function* () {
             if (catalog.failed) {
-              return yield* Effect.fail(context.error("failed", "Unable to retrieve Kilo model catalog"))
+              const reason = catalog.failure?.status
+                ? `HTTP ${catalog.failure.status}`
+                : (catalog.failure?.kind ?? "network")
+              return yield* Effect.fail(
+                context.error(
+                  "failed",
+                  `Failed to load the Kilo model catalog (${reason}). Check your connection and credentials.`,
+                ),
+              )
             }
             return KiloModels.entries(catalog.models)
           }),

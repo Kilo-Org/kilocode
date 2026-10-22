@@ -125,7 +125,10 @@ describe("KiloErrors", () => {
   test("formats PAID_MODEL_AUTH_REQUIRED, PROMOTION_MODEL_LIMIT_REACHED, and 402 usage_limit_exceeded with balance and buyCreditsUrl", async () => {
     const authRes = await KiloErrors.rewriteHttpResponse(
       Response.json(
-        { error: { code: "PAID_MODEL_AUTH_REQUIRED", message: "Auth required" }, error_type: "paid_model_auth_required" },
+        {
+          error: { code: "PAID_MODEL_AUTH_REQUIRED", message: "Auth required" },
+          error_type: "paid_model_auth_required",
+        },
         { status: 401 },
       ),
     )
@@ -140,7 +143,10 @@ describe("KiloErrors", () => {
 
     const promoRes = await KiloErrors.rewriteHttpResponse(
       Response.json(
-        { error: { code: "PROMOTION_MODEL_LIMIT_REACHED", message: "Limit reached" }, error_type: "promotion_limit_reached" },
+        {
+          error: { code: "PROMOTION_MODEL_LIMIT_REACHED", message: "Limit reached" },
+          error_type: "promotion_limit_reached",
+        },
         { status: 401 },
       ),
     )
@@ -185,7 +191,11 @@ describe("KiloErrors", () => {
     // A generic Gateway 408 or 409 keeps the upstream retry decision.
     expect((await rewrite({ error: { message: "Request Timeout" } }, 408)).headers.has("x-should-retry")).toBe(false)
     expect((await rewrite({ error: { message: "Conflict" } }, 409)).headers.has("x-should-retry")).toBe(false)
-    expect((await rewrite({ error: "Auto top-up in progress", error_type: "top_up_in_progress" }, 503)).headers.has("x-should-retry")).toBe(false)
+    expect(
+      (await rewrite({ error: "Auto top-up in progress", error_type: "top_up_in_progress" }, 503)).headers.get(
+        "x-should-retry",
+      ),
+    ).toBe("true")
   })
 
   test("classifies top_up_in_progress as retryable and policy/allow-list errors as non-retryable", () => {
@@ -198,7 +208,7 @@ describe("KiloErrors", () => {
         }),
         503,
       ),
-    ).toEqual({
+    ).toMatchObject({
       code: "top_up_in_progress",
       message: "Auto top-up is in progress, please retry shortly.",
       retryable: true,
@@ -210,7 +220,7 @@ describe("KiloErrors", () => {
       ["data_collection_required", 400, "No zero-data-retention endpoint available for this model"],
       ["upgrade_required", 426, "Please upgrade your Kilo CLI to continue"],
     ] as const) {
-      expect(KiloErrors.parse(JSON.stringify({ error: msg, error_type: errorType }), status)).toEqual({
+      expect(KiloErrors.parse(JSON.stringify({ error: msg, error_type: errorType }), status)).toMatchObject({
         code: errorType,
         message: msg,
         retryable: false,

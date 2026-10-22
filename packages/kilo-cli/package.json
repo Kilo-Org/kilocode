@@ -17,7 +17,9 @@
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",
+    "@kilocode/gateway-core": "workspace:*",
     "@kilocode/kilo-plugin": "workspace:*",
+    "@opencode/ai": "workspace:*",
     "@opencode/cli": "workspace:*",
     "@opencode/core": "workspace:*",
     "@opencode/plugin": "workspace:*",
@@ -27,7 +29,6 @@
     "effect": "catalog:"
   },
   "devDependencies": {
-    "@kilocode/gateway-core": "workspace:*",
     "@opencode/client": "workspace:*",
     "@opencode/schema": "workspace:*",
     "@opencode/server": "workspace:*",

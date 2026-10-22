@@ -21,9 +21,10 @@ export const CODES = {
 } as const
 
 export interface ParsedError {
-  readonly code: string
+  readonly code: string | number
   readonly message: string
   readonly retryable: boolean
+  readonly details: Record<string, unknown>
 }
 
 // Parses both Kilo Gateway error envelopes (from `apps/web/src/app/api/openrouter/[...path]/route.ts` and
@@ -33,8 +34,10 @@ export interface ParsedError {
 // 3. Responses API terminal frame `{ type: "response.failed", response: { error: { code, message } } }`
 // 4. Bare `{ code, message }`
 export function parse(rawBody: string | unknown, status?: number): ParsedError | undefined {
-  const value = typeof rawBody === "string" ? Option.getOrUndefined(decodeJson(rawBody)) : rawBody
-  if (!isRecord(value)) return undefined
+  const decoded = typeof rawBody === "string" ? Option.getOrUndefined(decodeJson(rawBody)) : rawBody
+  if (!isRecord(decoded)) return undefined
+  const inner = typeof decoded.message === "string" ? Option.getOrUndefined(decodeJson(decoded.message)) : undefined
+  const value = isRecord(inner) ? inner : decoded
 
   // Unwrap `response.failed` terminal SSE frame (`/responses`).
   const unwrapped =
@@ -44,10 +47,7 @@ export function parse(rawBody: string | unknown, status?: number): ParsedError |
 
   const nestedError = isRecord(unwrapped.error) ? unwrapped.error : undefined
   const rawCode =
-    asString(nestedError?.code) ??
-    asString(unwrapped.error_type) ??
-    asString(unwrapped.code) ??
-    asString(nestedError?.type)
+    asCode(nestedError?.code) ?? asString(unwrapped.error_type) ?? asCode(unwrapped.code) ?? asString(nestedError?.type)
   const rawMessage =
     asString(nestedError?.message) ??
     asString(unwrapped.message) ??
@@ -56,22 +56,28 @@ export function parse(rawBody: string | unknown, status?: number): ParsedError |
   if (!rawCode && !rawMessage) return undefined
 
   const normalizedCode = rawCode ?? (status === 402 ? CODES.USAGE_LIMIT_EXCEEDED : "api_error")
-  const message = formatMessage(normalizedCode, rawMessage, nestedError, unwrapped)
+  const code = String(normalizedCode)
+  const message = formatMessage(code, rawMessage, nestedError, unwrapped)
   if (!message) return undefined
 
   return {
     code: normalizedCode,
     message,
-    retryable: isRetryable(normalizedCode, message, status),
+    retryable:
+      !JSON.stringify(value).includes("FreeUsageLimitError") &&
+      isRetryable(code, message, status, asString(nestedError?.type)),
+    details: nestedError ?? unwrapped,
   }
 }
 
 // Rewrites a non-2xx HTTP `Response` from the Kilo Gateway so that the upstream error classifier
-// receives the formatted Kilo message and code while preserving status and headers. A non-retryable
-// error also gets `x-should-retry: false`.
+// receives the formatted Kilo message, code, and retry decision while preserving status and headers.
 export async function rewriteHttpResponse(response: Response): Promise<Response> {
   if (response.status < 400) return response
-  const text = await response.clone().text().catch(() => "")
+  const text = await response
+    .clone()
+    .text()
+    .catch(() => "")
   if (!text) return response
   const parsed = parse(text, response.status)
   if (!parsed) return response
@@ -83,12 +89,15 @@ export async function rewriteHttpResponse(response: Response): Promise<Response>
   // kilo_port(gateway:1995b11b5cdd) As in v1 retry.ts, Kilo errors that need user action are not retried, also on a
   // 429 such as PROMOTION_MODEL_LIMIT_REACHED. The upstream retry policy reads this header. A body without a Kilo
   // code parses as `api_error`; it must keep the upstream retry decision for 408 and 409.
-  if (!parsed.retryable && parsed.code !== "api_error") headers.set("x-should-retry", "false")
+  if (parsed.code !== "api_error" && (!parsed.retryable || !headers.has("x-should-retry")))
+    headers.set("x-should-retry", String(parsed.retryable))
   const body = JSON.stringify({
     error: {
+      ...parsed.details,
       code: parsed.code,
-      type: parsed.code,
+      type: typeof parsed.details.type === "string" ? parsed.details.type : String(parsed.code),
       message: parsed.message,
+      retryable: parsed.retryable,
     },
     error_type: parsed.code,
   })
@@ -111,9 +120,11 @@ function formatMessage(
   if (code === CODES.PROMOTION_MODEL_LIMIT_REACHED || code === "promotion_limit_reached") {
     return "You need to sign up to keep going. Sign up for free to continue and explore 500 other models. Takes 2 minutes, no credit card required. Or come back later."
   }
-  if (code === CODES.USAGE_LIMIT_EXCEEDED || code === CODES.INSUFFICIENT_CREDITS) {
+  if (code === "402" || code === CODES.USAGE_LIMIT_EXCEEDED || code === CODES.INSUFFICIENT_CREDITS) {
     const title = asString(nestedError?.title) ?? asString(root.title)
-    const buyUrl = asString(nestedError?.buyCreditsUrl) ?? asString(root.buyCreditsUrl)
+    const metadata = isRecord(nestedError?.metadata) ? nestedError.metadata : undefined
+    const buyUrl =
+      asString(nestedError?.buyCreditsUrl) ?? asString(root.buyCreditsUrl) ?? asString(metadata?.buyCreditsUrl)
     const balance = nestedError?.balance ?? root.balance
     const base = rawMessage ?? title ?? "Insufficient Kilo Gateway credits."
     const parts = [
@@ -123,15 +134,17 @@ function formatMessage(
     ].filter(Boolean)
     return parts.join(" ")
   }
+  if (code === CODES.RATE_LIMIT_EXCEEDED) return rawMessage ?? "Provider rate limit exceeded. Please try again shortly."
+  if (code === "server_error" || code === "server_is_overloaded") return rawMessage ?? "Server error."
   return rawMessage
 }
 
 const RETRYABLE_CODE =
   /top_up_in_progress|rate.?limit|too.?many.?requests|rate increased too quickly|exhausted|overload|server|unavailable|timeout/i
 const RETRYABLE_TEXT =
-  /rate increased too quickly|rate.?limit|too.?many.?requests|try again (?:later|in\b)|(?:currently|temporarily) at capacity|temporarily unavailable/i
+  /\b(?:429|500|502|503|504|524)\b|rate increased too quickly|rate.?limit|too.?many.?requests|overloaded|service[-_ ]unavailable|internal[-_ ]error|server[-_ ]error|provider[-_ ]returned[-_ ]error|terminated|fetch failed|failed to fetch|network[-_\s]error|upstream connect|connection (?:error|refused|lost)|socket (?:connection was closed|hang up)|reset before headers|getaddrinfo|enotfound|eai_again|econnrefused|econnreset|etimedout|^timeout$|\b(?:request|response|connection|network|stream|read) (?:timeout|timed out|time out)\b|try your request again|retry your request|resource[-_ ]exhausted|try again (?:later|in\b)|(?:currently|temporarily) at capacity|temporarily unavailable/i
 
-function isRetryable(code: string, message: string, status?: number): boolean {
+function isRetryable(code: string, message: string, status?: number, type?: string): boolean {
   if (code === CODES.TOP_UP_IN_PROGRESS) return true
   if (
     code === CODES.PAID_MODEL_AUTH_REQUIRED ||
@@ -147,9 +160,16 @@ function isRetryable(code: string, message: string, status?: number): boolean {
   ) {
     return false
   }
-  if (status === 429 || (status !== undefined && status >= 500 && status < 600)) return true
-  if (RETRYABLE_CODE.test(code)) return true
+  if (status === 408 || status === 409 || status === 429 || (status !== undefined && status >= 500 && status < 600))
+    return true
+  const numeric = Number(code)
+  if (numeric === 429 || (numeric >= 500 && numeric < 600)) return true
+  if (RETRYABLE_CODE.test(code) || (type && RETRYABLE_CODE.test(type))) return true
   return RETRYABLE_TEXT.test(message)
+}
+
+function asCode(value: unknown): string | number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : asString(value)
 }
 
 function asString(value: unknown): string | undefined {

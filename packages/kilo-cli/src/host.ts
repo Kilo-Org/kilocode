@@ -4,14 +4,18 @@ import { KiloPlugins, KiloPostPlugins } from "@kilocode/kilo-plugin"
 import { App } from "@opencode/core/app"
 import { Bus } from "@opencode/core/bus"
 import { ConfigDiscovery } from "@opencode/core/config/discovery"
+import { LayerNodePlatform } from "@opencode/core/effect/app-node-platform"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
 import { SdkPlugins } from "@opencode/core/plugin/sdk"
+import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import type { Plugin } from "@opencode/plugin/effect/plugin"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import type { LayerNode } from "@opencode/util/effect/layer-node"
 import { Global } from "@opencode/util/global"
 import { Context, Duration, Effect, Layer, type Scope } from "effect"
 import { KiloApp } from "./app"
+import { KiloGatewayErrors } from "./gateway-errors"
+import { KiloGatewayModel } from "./gateway-model"
 
 /**
  * The duration in milliseconds of the last activation of each Kilo plugin, by plugin ID. The startup ratchet
@@ -57,8 +61,10 @@ const plugins = makeGlobalNode({
  * `.kilo2`, worktree boundary).
  */
 export const overrides: LayerNode.Replacements = [
+  LayerNodePlatform.llmClient.replace(LayerNodePlatform.llmClient.mapLayer(KiloGatewayErrors.layer)),
   SdkPlugins.node.replace(plugins),
   App.node.replace(App.configured(KiloApp)),
+  SessionRunnerModel.node.replace(KiloGatewayModel.node),
   // kilo_port(unattributed:config:546539fc1643) kilo_port(unattributed:config:8cdbdec70393)
   ConfigDiscovery.node.replace(Layer.succeed(ConfigDiscovery.LayoutService, KiloConfigDiscovery.layout)),
 ]
