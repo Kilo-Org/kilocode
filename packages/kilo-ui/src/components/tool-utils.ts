@@ -1,0 +1,478 @@
+import type { ToolPart } from "@kilocode/sdk-v1/v2"
+import { createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js"
+import { useReducedMotion } from "../hooks/use-reduced-motion"
+import {
+  animate,
+  type AnimationPlaybackControls,
+  clearFadeStyles,
+  clearMaskStyles,
+  COLLAPSIBLE_SPRING,
+  GROW_SPRING,
+  settle,
+  WIPE_MASK,
+} from "./motion"
+
+export const TEXT_RENDER_THROTTLE_MS = 100
+export const STREAMING_TEXT_RENDER_THROTTLE_MS = 16
+
+export function createThrottledValue(getValue: () => string, getInterval: () => number = () => TEXT_RENDER_THROTTLE_MS) {
+  const [value, setValue] = createSignal(getValue())
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  let pending: string | undefined
+  let last = 0
+  let previous = getInterval()
+
+  const flush = () => {
+    if (timeout) {
+      clearTimeout(timeout)
+      timeout = undefined
+    }
+    if (pending === undefined) return
+    last = Date.now()
+    setValue(pending)
+    pending = undefined
+  }
+
+  createEffect(() => {
+    const next = getValue()
+    const wait = getInterval()
+    const now = Date.now()
+
+    // When the cadence slows (streaming -> settled), flush the pending tail now
+    // instead of waiting out the longer interval.
+    const slowed = wait > previous
+    previous = wait
+    if (slowed && timeout) {
+      pending = next
+      flush()
+      return
+    }
+
+    const remaining = wait - (now - last)
+    if (remaining <= 0) {
+      pending = undefined
+      if (timeout) {
+        clearTimeout(timeout)
+        timeout = undefined
+      }
+      last = now
+      setValue(next)
+      return
+    }
+    pending = next
+    if (timeout) clearTimeout(timeout)
+    timeout = setTimeout(flush, remaining)
+  })
+
+  onCleanup(() => {
+    if (timeout) clearTimeout(timeout)
+  })
+
+  return value
+}
+
+export function busy(status: string | undefined) {
+  return status === "pending" || status === "running"
+}
+
+/**
+ * Find how many leading rendered lines were dropped from a sliding tail
+ * window. Returns the first shifted index `shift` and how many new lines
+ * overlap it (`overlap`). Only indices where the first new line matches are
+ * considered, so the scan stays cheap for the bounded bash window.
+ */
+function bashLineSlide(rendered: string[], lines: string[]) {
+  let shift = 0
+  let overlap = 0
+  for (let k = 1; k < rendered.length; k++) {
+    if (rendered[k] !== lines[0]) continue
+    let m = 1
+    while (k + m < rendered.length && m < lines.length && rendered[k + m] === lines[m]) m++
+    if (m <= overlap) continue
+    shift = k
+    overlap = m
+    // The whole rendered block is still present, so no later index can beat it.
+    if (k + m >= rendered.length) break
+  }
+  return { shift, overlap }
+}
+
+/**
+ * Decide how to patch a streaming block of highlighted lines.
+ *
+ * Returns the number of leading lines that are unchanged (`start`), so only the
+ * trailing lines need re-highlighting. `shift` is the number of leading line
+ * nodes to drop from the DOM when the output is a sliding tail window. `skip`
+ * is true when the new lines are identical to the rendered ones. A shorter line
+ * set is not an append, so it reports `start: 0` and forces a full rebuild.
+ */
+export function bashLineUpdate(rendered: string[], lines: string[]) {
+  let same = 0
+  while (same < rendered.length && same < lines.length && rendered[same] === lines[same]) same++
+  if (same === lines.length) return { start: 0, skip: same === rendered.length, shift: 0 }
+  if (same > 0) return { start: same, skip: false, shift: 0 }
+  const { shift, overlap } = bashLineSlide(rendered, lines)
+  if (overlap > 0) return { start: overlap, skip: false, shift }
+  return { start: 0, skip: false, shift: 0 }
+}
+
+export function hold(state: () => boolean, wait = 2000) {
+  const [live, setLive] = createSignal(state())
+  let timer: ReturnType<typeof setTimeout> | undefined
+
+  createEffect(() => {
+    if (state()) {
+      if (timer) clearTimeout(timer)
+      timer = undefined
+      setLive(true)
+      return
+    }
+
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => {
+      timer = undefined
+      setLive(false)
+    }, wait)
+  })
+
+  onCleanup(() => {
+    if (timer) clearTimeout(timer)
+  })
+
+  return live
+}
+
+export function updateScrollMask(el: HTMLElement, fade = 12) {
+  const { scrollTop, scrollHeight, clientHeight } = el
+  const overflow = scrollHeight - clientHeight
+  if (overflow <= 1) {
+    el.style.maskImage = ""
+    el.style.webkitMaskImage = ""
+    return
+  }
+  const top = scrollTop > 1
+  const bottom = scrollTop < overflow - 1
+  const mask =
+    top && bottom
+      ? `linear-gradient(to bottom, transparent 0, black ${fade}px, black calc(100% - ${fade}px), transparent 100%)`
+      : top
+        ? `linear-gradient(to bottom, transparent 0, black ${fade}px)`
+        : bottom
+          ? `linear-gradient(to bottom, black calc(100% - ${fade}px), transparent 100%)`
+          : ""
+  el.style.maskImage = mask
+  el.style.webkitMaskImage = mask
+}
+
+export function useCollapsible(options: {
+  content: () => HTMLElement | undefined
+  body: () => HTMLElement | undefined
+  open: () => boolean
+  measure?: () => number
+  onOpen?: () => void
+  // Skip the mount run so content rendered in its initial state does not
+  // animate in; the caller renders the matching inline styles itself.
+  defer?: boolean
+}) {
+  const reduce = useReducedMotion()
+  let heightAnim: AnimationPlaybackControls | undefined
+  let fadeAnim: AnimationPlaybackControls | undefined
+  let gen = 0
+  let first = true
+
+  createEffect(
+    on(options.open, (isOpen) => {
+      const skip = first && options.defer
+      first = false
+      if (skip) return
+      const content = options.content()
+      const body = options.body()
+      if (!content || !body) return
+      heightAnim?.stop()
+      fadeAnim?.stop()
+      if (reduce()) {
+        body.style.opacity = ""
+        body.style.filter = ""
+        if (isOpen) {
+          content.style.display = ""
+          content.style.height = "auto"
+          options.onOpen?.()
+          return
+        }
+        content.style.height = "0px"
+        content.style.display = "none"
+        return
+      }
+      const id = ++gen
+      if (isOpen) {
+        content.style.display = ""
+        content.style.height = "0px"
+        body.style.opacity = "0"
+        body.style.filter = "blur(2px)"
+        fadeAnim = animate(body, { opacity: [0, 1], filter: ["blur(2px)", "blur(0px)"] }, COLLAPSIBLE_SPRING)
+        queueMicrotask(() => {
+          if (gen !== id) return
+          const c = options.content()
+          if (!c) return
+          const h = options.measure?.() ?? Math.ceil(body.getBoundingClientRect().height)
+          heightAnim = animate(c, { height: ["0px", `${h}px`] }, COLLAPSIBLE_SPRING)
+          heightAnim.finished.then(
+            () => {
+              if (gen !== id) return
+              c.style.height = "auto"
+              options.onOpen?.()
+            },
+            () => {},
+          )
+        })
+        return
+      }
+
+      const h = content.getBoundingClientRect().height
+      heightAnim = animate(content, { height: [`${h}px`, "0px"] }, COLLAPSIBLE_SPRING)
+      fadeAnim = animate(body, { opacity: [1, 0], filter: ["blur(0px)", "blur(2px)"] }, COLLAPSIBLE_SPRING)
+      heightAnim.finished.then(
+        () => {
+          if (gen !== id) return
+          content.style.display = "none"
+        },
+        () => {},
+      )
+    }),
+  )
+
+  onCleanup(() => {
+    ++gen
+    settle(heightAnim)
+    settle(fadeAnim)
+  })
+}
+
+export function useGrowIn(el: () => HTMLElement | undefined, enabled: boolean) {
+  const reduce = useReducedMotion()
+  let height: AnimationPlaybackControls | undefined
+  let obs: ResizeObserver | undefined
+  let gen = 0
+
+  // Height only: the parts reveal their own text with useToolFade, and a
+  // wrapper fade would hide that wipe.
+  const clear = (node: HTMLElement) => {
+    node.style.height = ""
+    node.style.overflow = ""
+  }
+
+  onMount(() => {
+    if (!enabled || reduce()) return
+    const node = el()
+    if (!node) return
+    const id = ++gen
+    node.style.overflow = "clip"
+    node.style.height = "0px"
+
+    queueMicrotask(() => {
+      if (gen !== id) return
+      const value = el()
+      if (!value) return
+      const child = value.firstElementChild ?? value
+      let target = Math.ceil(value.scrollHeight || child.getBoundingClientRect().height)
+      const done = (anim: AnimationPlaybackControls) => {
+        if (gen !== id || height !== anim) return
+        obs?.disconnect()
+        height = undefined
+        clear(value)
+      }
+      const start = (from: number, to: number) => {
+        const anim = animate(value, { height: [`${from}px`, `${to}px`] }, COLLAPSIBLE_SPRING)
+        height = anim
+        void anim.finished.then(() => done(anim)).catch(() => undefined)
+      }
+
+      start(0, target)
+      obs = new ResizeObserver(() => {
+        if (gen !== id || !height) return
+        const next = Math.ceil(child.getBoundingClientRect().height)
+        if (Math.abs(next - target) <= 1) return
+        const from = value.getBoundingClientRect().height
+        height.stop()
+        target = next
+        start(from, next)
+      })
+      obs.observe(child)
+    })
+  })
+
+  onCleanup(() => {
+    ++gen
+    obs?.disconnect()
+    settle(height)
+    const node = el()
+    if (node) clear(node)
+  })
+}
+
+export function useContextToolPending(parts: () => ToolPart[], working?: () => boolean) {
+  const anyRunning = createMemo(() => parts().some((part) => busy(part.state.status)))
+  const [settled, setSettled] = createSignal(false)
+  createEffect(() => {
+    if (!anyRunning() && !working?.()) setSettled(true)
+  })
+  return createMemo(() => !settled() && (!!working?.() || anyRunning()))
+}
+
+export function useRowWipe(opts: {
+  id: () => string
+  text: () => string | undefined
+  ref: () => HTMLElement | undefined
+  seen: Set<string>
+}) {
+  const reduce = useReducedMotion()
+
+  createEffect(() => {
+    const id = opts.id()
+    const txt = opts.text()
+    const el = opts.ref()
+    if (!el) return
+    if (!txt) {
+      clearFadeStyles(el)
+      clearMaskStyles(el)
+      return
+    }
+    if (reduce() || typeof window === "undefined") {
+      clearFadeStyles(el)
+      clearMaskStyles(el)
+      return
+    }
+    if (opts.seen.has(id)) {
+      clearFadeStyles(el)
+      clearMaskStyles(el)
+      return
+    }
+    opts.seen.add(id)
+
+    el.style.maskImage = WIPE_MASK
+    el.style.webkitMaskImage = WIPE_MASK
+    el.style.maskSize = "240% 100%"
+    el.style.webkitMaskSize = "240% 100%"
+    el.style.maskRepeat = "no-repeat"
+    el.style.webkitMaskRepeat = "no-repeat"
+    el.style.maskPosition = "100% 0%"
+    el.style.webkitMaskPosition = "100% 0%"
+    el.style.opacity = "0"
+    el.style.filter = "blur(2px)"
+    el.style.transform = "translateX(-0.06em)"
+
+    let done = false
+    const clear = () => {
+      if (done) return
+      done = true
+      clearFadeStyles(el)
+      clearMaskStyles(el)
+    }
+    if (typeof requestAnimationFrame !== "function") {
+      clear()
+      return
+    }
+    let anim: AnimationPlaybackControls | undefined
+    let frame: number | undefined = requestAnimationFrame(() => {
+      frame = undefined
+      const node = opts.ref()
+      if (!node) return
+      anim = animate(
+        node,
+        {
+          opacity: [0, 1],
+          filter: ["blur(2px)", "blur(0px)"],
+          transform: ["translateX(-0.06em)", "translateX(0)"],
+          maskPosition: "0% 0%",
+        },
+        GROW_SPRING,
+      )
+
+      anim.finished.catch(() => {}).finally(clear)
+    })
+
+    onCleanup(() => {
+      if (frame !== undefined) {
+        cancelAnimationFrame(frame)
+        clear()
+      }
+      settle(anim)
+    })
+  })
+}
+
+export function useToolFade(
+  ref: () => HTMLElement | undefined,
+  options?: { delay?: number; wipe?: boolean; animate?: boolean },
+) {
+  let anim: AnimationPlaybackControls | undefined
+  let frame: number | undefined
+  const delay = options?.delay ?? 0
+  const wipe = options?.wipe ?? false
+  const active = options?.animate !== false
+  const reduce = useReducedMotion()
+
+  onMount(() => {
+    if (!active) return
+
+    const el = ref()
+    if (!el || typeof window === "undefined") return
+    if (reduce()) return
+
+    const mask =
+      wipe &&
+      typeof CSS !== "undefined" &&
+      (CSS.supports("mask-image", "linear-gradient(to right, black, transparent)") ||
+        CSS.supports("-webkit-mask-image", "linear-gradient(to right, black, transparent)"))
+
+    el.style.opacity = "0"
+    el.style.filter = wipe ? "blur(3px)" : "blur(2px)"
+    el.style.transform = wipe ? "translateX(-0.06em)" : "translateY(0.04em)"
+
+    if (mask) {
+      el.style.maskImage = WIPE_MASK
+      el.style.webkitMaskImage = WIPE_MASK
+      el.style.maskSize = "240% 100%"
+      el.style.webkitMaskSize = "240% 100%"
+      el.style.maskRepeat = "no-repeat"
+      el.style.webkitMaskRepeat = "no-repeat"
+      el.style.maskPosition = "100% 0%"
+      el.style.webkitMaskPosition = "100% 0%"
+    }
+
+    frame = requestAnimationFrame(() => {
+      frame = undefined
+      const node = ref()
+      if (!node) return
+      // A node outside the document never finishes a Web Animation, and the
+      // pending animation keeps the node and its owner tree alive. Show it as is.
+      if (!node.isConnected) {
+        clearFadeStyles(node)
+        if (mask) clearMaskStyles(node)
+        return
+      }
+
+      anim = wipe
+        ? mask
+          ? animate(
+              node,
+              { opacity: 1, filter: "blur(0px)", transform: "translateX(0)", maskPosition: "0% 0%" },
+              { ...GROW_SPRING, delay },
+            )
+          : animate(node, { opacity: 1, filter: "blur(0px)", transform: "translateX(0)" }, { ...GROW_SPRING, delay })
+        : animate(node, { opacity: 1, filter: "blur(0px)", transform: "translateY(0)" }, { ...GROW_SPRING, delay })
+
+      anim?.finished.then(() => {
+        const value = ref()
+        if (!value) return
+        clearFadeStyles(value)
+        if (mask) clearMaskStyles(value)
+      })
+    })
+  })
+
+  onCleanup(() => {
+    if (frame !== undefined) cancelAnimationFrame(frame)
+    settle(anim)
+  })
+}

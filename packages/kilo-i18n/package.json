@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/kilo-i18n",
+  "version": "7.8.15",
+  "type": "module",
+  "license": "MIT",
+  "description": "Kilo-specific i18n translations and overrides",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "catalog:",
+    "@types/bun": "catalog:",
+    "@typescript/native": "catalog:"
+  },
+  "dependencies": {},
+  "peerDependencies": {}
+}

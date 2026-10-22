@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/sdk-v1",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Types only: declarations of the Kilo v1 SDK (origin/main packages/sdk/js, src/v2/client.ts, emitted with tsc --emitDeclarationOnly) that the VS Code extension uses as its view model on the v2 server. Request URL literals are widened to string, so these types do not read as v2 routes. No runtime client.",
+  "type": "module",
+  "exports": {
+    "./v2": {
+      "types": "./src/v2/client.d.ts"
+    },
+    "./v2/client": {
+      "types": "./src/v2/client.d.ts"
+    }
+  }
+}

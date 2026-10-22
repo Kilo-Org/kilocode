@@ -1,0 +1,180 @@
+import { describe, expect, it } from "bun:test"
+import {
+  cycleVariant,
+  getAgentVariant,
+  getVariant,
+  preserveVariant,
+  sessionVariantKeys,
+  sessionVariants,
+  transferVariants,
+  variantKey,
+} from "../../webview-ui/src/context/session-variant-store"
+import type { ModelSelection } from "../../webview-ui/src/types/messages"
+
+const model: ModelSelection = { providerID: "anthropic", modelID: "claude-sonnet-4" }
+const variants = ["low", "medium", "high"]
+
+describe("per-session variant selection", () => {
+  it("keeps reasoning effort independent for each Agent Manager session", () => {
+    const store: Record<string, string> = {}
+
+    store[variantKey(model, "code", "session-a")] = "low"
+    store[variantKey(model, "code", "session-b")] = "high"
+
+    expect(getVariant(store, model, variants, "code", "session-a")).toBe("low")
+    expect(getVariant(store, model, variants, "code", "session-b")).toBe("high")
+  })
+
+  it("keeps reasoning effort independent for each pending local tab", () => {
+    const store: Record<string, string> = {}
+
+    store[variantKey(model, "code", "pending-local-1")] = "medium"
+    store[variantKey(model, "code", "pending-local-2")] = "high"
+
+    expect(getVariant(store, model, variants, "code", "pending-local-1")).toBe("medium")
+    expect(getVariant(store, model, variants, "code", "pending-local-2")).toBe("high")
+  })
+
+  it("keeps no-session reasoning effort independent per agent", () => {
+    const store: Record<string, string> = {}
+
+    store[variantKey(model, "code")] = "medium"
+    store[variantKey(model, "ask")] = "high"
+
+    expect(getVariant(store, model, variants, "code")).toBe("medium")
+    expect(getVariant(store, model, variants, "ask")).toBe("high")
+  })
+
+  it("resolves the effective variant for a mode and model", () => {
+    const store: Record<string, string> = {}
+    store[variantKey(model, "ask")] = "high"
+
+    expect(getAgentVariant(store, model, { variants: { low: {}, high: {} } }, "ask")).toBe("high")
+  })
+
+  it("falls back to the configured mode variant", () => {
+    expect(getAgentVariant({}, model, { variants: { high: {}, max: {} } }, "code", "max")).toBe("max")
+  })
+
+  it.each(["anthropic/claude-sonnet-4", variantKey(model, "code")])(
+    "keeps the configured variant %s above the remembered preference",
+    (key) => {
+      const store = { [key]: "high" }
+      expect(getVariant(store, model, ["high", "max"], "code", "pending-new", "max")).toBe("max")
+      expect(getAgentVariant(store, model, { variants: { high: {}, max: {} } }, "code", "max")).toBe("max")
+    },
+  )
+
+  it.each(["low", ""])("preserves a session choice %s above configured and remembered variants", (value) => {
+    const store = {
+      [variantKey(model, "code")]: "high",
+      [variantKey(model, "code", "session-a")]: value,
+    }
+    expect(getVariant(store, model, ["low", "high", "max"], "code", "session-a", "max")).toBe(value || undefined)
+  })
+
+  it("ignores a configured variant that the model does not support", () => {
+    expect(getAgentVariant({}, model, { variants: { low: {}, high: {} } }, "code", "max")).toBeUndefined()
+  })
+
+  it("uses the model default when no variant is selected", () => {
+    expect(getVariant({}, model, variants, "code")).toBeUndefined()
+    expect(getVariant({ [variantKey(model, "code")]: "" }, model, variants, "code")).toBeUndefined()
+  })
+
+  it("preserves a provider variant named default", () => {
+    const store = { [variantKey(model, "code")]: "default" }
+    expect(getVariant(store, model, ["default", "thinking"], "code")).toBe("default")
+  })
+
+  it("carries the pre-submit agent variant into a newly created session", () => {
+    const store: Record<string, string> = {}
+
+    store[variantKey(model, "code")] = "medium"
+
+    expect(getVariant(store, model, variants, "code", "session-a")).toBe("medium")
+  })
+
+  it("prefers a session variant over the pre-submit agent variant", () => {
+    const store: Record<string, string> = {}
+
+    store[variantKey(model, "code")] = "medium"
+    store[variantKey(model, "code", "session-a")] = "high"
+
+    expect(getVariant(store, model, variants, "code", "session-a")).toBe("high")
+  })
+
+  it("falls back to the legacy provider/model variant key", () => {
+    const store: Record<string, string> = { "anthropic/claude-sonnet-4": "medium" }
+
+    expect(getVariant(store, model, variants, "code", "session-a")).toBe("medium")
+  })
+
+  it("transfers a pending local tab variant to the created session", () => {
+    const store: Record<string, string> = {}
+
+    store[variantKey(model, "code", "pending-local-1")] = "medium"
+    Object.assign(store, transferVariants(store, "pending-local-1", "session-a"))
+
+    expect(getVariant(store, model, variants, "code", "session-a")).toBe("medium")
+  })
+
+  it("extracts persisted session variant preferences", () => {
+    const store: Record<string, string> = {}
+
+    store[variantKey(model, "code", "session-a")] = "medium"
+    store[variantKey(model, "code", "session-b")] = "high"
+
+    expect(sessionVariants(store, "session-a")).toEqual({ "anthropic/claude-sonnet-4": "medium" })
+  })
+
+  it("finds only variant keys for the requested session", () => {
+    const store: Record<string, string> = {}
+
+    store[variantKey(model, "code", "pending-local-1")] = "medium"
+    store[variantKey(model, "code", "pending-local-2")] = "high"
+
+    expect(sessionVariantKeys(store, "pending-local-1")).toEqual(["session/pending-local-1/anthropic/claude-sonnet-4"])
+  })
+})
+
+describe("cycleVariant", () => {
+  it("advances to the next variant", () => {
+    expect(cycleVariant("low", variants)).toBe("medium")
+    expect(cycleVariant("medium", variants)).toBe("high")
+  })
+
+  it("returns to the model default after the last variant", () => {
+    expect(cycleVariant("high", variants)).toBeUndefined()
+  })
+
+  it("starts at the first variant when current is missing or unknown", () => {
+    expect(cycleVariant(undefined, variants)).toBe("low")
+    expect(cycleVariant("bogus", variants)).toBe("low")
+  })
+
+  it("returns undefined when no variants exist", () => {
+    expect(cycleVariant("low", [])).toBeUndefined()
+  })
+})
+
+describe("preserveVariant", () => {
+  it("keeps an exact variant", () => {
+    expect(preserveVariant("high", ["low", "high"])).toBe("high")
+    expect(preserveVariant("thinking", ["instant", "thinking"])).toBe("thinking")
+    expect(preserveVariant("default", ["default", "thinking"])).toBe("default")
+  })
+
+  it("falls back to the nearest supported effort", () => {
+    expect(preserveVariant("max", ["high", "xhigh"])).toBe("xhigh")
+    expect(preserveVariant("high", ["low", "medium"])).toBe("medium")
+    expect(preserveVariant("max", ["none", "low"])).toBe("low")
+  })
+
+  it("does not cross binary or custom variant families", () => {
+    expect(preserveVariant("thinking", ["low", "high"])).toBeUndefined()
+    expect(preserveVariant("instant", ["low", "high"])).toBeUndefined()
+    expect(preserveVariant("turbo", ["low", "high"])).toBeUndefined()
+    expect(preserveVariant("high", ["instant", "thinking"])).toBeUndefined()
+  })
+})

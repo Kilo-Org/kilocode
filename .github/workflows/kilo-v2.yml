@@ -229,6 +229,27 @@ jobs:
         working-directory: packages/kilo-cli
         run: bun test
 
+      - name: Typecheck the VS Code extension
+        working-directory: packages/kilo-vscode
+        run: bun run typecheck
+
+      - name: Lint the VS Code extension
+        working-directory: packages/kilo-vscode
+        run: bun run lint
+
+      - name: Test the VS Code extension
+        working-directory: packages/kilo-vscode
+        run: bun test
+
+      - name: Build the VS Code extension
+        working-directory: packages/kilo-vscode
+        run: bun run build
+
+      - name: Test the VS Code UI packages
+        run: |
+          bun --cwd packages/kilo-ui-base run test
+          bun --cwd packages/kilo-ui run test
+
       # Fails when Kilo plugin activation grows past packages/kilo-cli/startup-budget.json (#15244).
       - name: Startup ratchet
         working-directory: packages/kilo-cli
