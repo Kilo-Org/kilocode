@@ -1,13 +1,17 @@
 import { expect, test } from "bun:test"
 import { rejects } from "node:assert/strict"
 import { execFile } from "node:child_process"
+import { createHash } from "node:crypto"
+import { once } from "node:events"
+import { watch } from "node:fs"
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
+import { createServer, type ServerResponse } from "node:http"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { basename, dirname, isAbsolute, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
 import pkg from "../../package.json" with { type: "json" }
-import { pin, stage, target } from "./bun"
+import { host, pin, stage, target } from "./bun"
 
 const run = promisify(execFile)
 const cases: [Parameters<typeof stage>[0], keyof typeof pin.artifacts, string][] = [
@@ -31,6 +35,27 @@ test.each(cases)("maps %j to %s", (input, slug, name) => {
   expect(item.name).toBe(name)
   expect(item.os).toBe(input.os)
   expect(item.arch).toBe(input.arch)
+})
+
+test.each([
+  [{ os: "linux", arch: "x64", report: { header: { glibcVersionRuntime: "2.36" } } }, "bun-linux-x64-baseline"],
+  [{ os: "linux", arch: "x64", report: { header: {} } }, "bun-linux-x64-musl-baseline"],
+  [{ os: "linux", arch: "x64", report: { header: { glibcVersionRuntime: undefined } } }, "bun-linux-x64-musl-baseline"],
+  [{ os: "linux", arch: "x64", report: { header: { glibcVersionRuntime: "" } } }, "bun-linux-x64-musl-baseline"],
+  [{ os: "linux", arch: "arm64", report: { header: { glibcVersionRuntime: "2.36" } } }, "bun-linux-aarch64"],
+  [{ os: "linux", arch: "arm64", report: { header: {} } }, "bun-linux-aarch64-musl"],
+  [{ os: "darwin", arch: "x64", report: { header: {} } }, "bun-darwin-x64-baseline"],
+  [{ os: "darwin", arch: "arm64" }, "bun-darwin-aarch64"],
+  [{ os: "win32", arch: "x64", report: { header: {} } }, "bun-windows-x64-baseline"],
+  [{ os: "win32", arch: "arm64" }, "bun-windows-aarch64"],
+] satisfies [Parameters<typeof host>[0], string][])("selects host %j as %s", (input, name) => {
+  expect(target(host(input)).name).toBe(name)
+})
+
+test("host defaults to the running process", () => {
+  expect(host().os).toBe(process.platform)
+  expect(host().arch).toBe(process.arch)
+  expect(target(host())).toBeDefined()
 })
 
 test("manifest pins all twelve immutable npm tarballs with SHA-512", () => {
@@ -69,27 +94,142 @@ test("rejects unsupported targets before staging", async () => {
   expect(() => target({ os: "linux", arch: "arm64", avx2: false })).toThrow("Unsupported Bun target")
 })
 
-test("rejects a tampered cached tarball before extraction or executable use", async () => {
+async function fixture(
+  check: (data: {
+    dir: string
+    file: string
+    bytes: Buffer
+    item: ReturnType<typeof target>
+    input: Parameters<typeof stage>[0]
+    requests: string[]
+  }) => Promise<void>,
+) {
   const dir = await mkdtemp(join(tmpdir(), "kilo-bun-test-"))
+  const input = { os: "linux", arch: "x64", abi: "musl", avx2: false } as const
+  const item = target(input)
+  const original = { ...item }
+  const env = { TMPDIR: process.env.TMPDIR, TMP: process.env.TMP, TEMP: process.env.TEMP }
+  const server = createServer()
   try {
-    const input = { os: "linux", arch: "x64", abi: "musl", avx2: false } as const
+    await mkdir(join(dir, "package", "bin"), { recursive: true })
+    await writeFile(join(dir, "package", "bin", "bun"), "fixture-runtime")
+    const archive = join(dir, "fixture.tgz")
+    const tar =
+      process.platform === "win32" ? join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe") : "tar"
+    await run(tar, ["-czf", archive, "-C", dir, "package"], { windowsHide: true })
+    const bytes = await readFile(archive)
+    const requests: string[] = []
+    const pending: ServerResponse[] = []
+    server.on("request", (request, response) => {
+      requests.push(request.url ?? "/")
+      if (request.url === "/concurrent") {
+        pending.push(response)
+        if (pending.length === 2) for (const response of pending) response.end(bytes)
+        return
+      }
+      response.end(request.url === "/bad" ? bytes.subarray(0, 10) : bytes)
+    })
+    server.listen(0, "127.0.0.1")
+    await once(server, "listening")
+    const address = server.address()
+    if (!address || typeof address === "string") throw new Error("Missing fixture server port")
+    item.tarball = `http://127.0.0.1:${address.port}/good`
+    item.integrity = `sha512-${createHash("sha512").update(bytes).digest("base64")}`
+    process.env.TMPDIR = dir
+    process.env.TMP = dir
+    process.env.TEMP = dir
     const cache = join(dir, "kilo-bun", pin.version)
     await mkdir(cache, { recursive: true })
-    const file = join(cache, `${target(input).name}.tgz`)
-    await writeFile(file, "untrusted executable archive")
-    const script = `const {stage} = await import(${JSON.stringify(new URL("./bun.ts", import.meta.url).href)}); await stage(${JSON.stringify(input)});`
-    await rejects(
-      run(process.execPath, ["--eval", script], {
-        env: { ...process.env, TMPDIR: dir, TMP: dir, TEMP: dir },
-        windowsHide: true,
-      }),
-      /Bun checksum mismatch/,
-    )
-    expect(await readdir(dir)).toEqual(["kilo-bun"])
-    expect(await readFile(file, "utf8")).toBe("untrusted executable archive")
+    await check({ dir, file: join(cache, `${item.name}.tgz`), bytes, item, input, requests })
   } finally {
+    Object.assign(item, original)
+    for (const [key, value] of Object.entries(env)) {
+      if (value === undefined) {
+        delete process.env[key]
+        continue
+      }
+      process.env[key] = value
+    }
+    if (server.listening) {
+      const closed = once(server, "close")
+      server.closeAllConnections()
+      server.close()
+      await closed
+    }
     await rm(dir, { recursive: true, force: true })
   }
+}
+
+test.serial("recovers a truncated cache with one verified download", async () => {
+  await fixture(async ({ file, bytes, input, requests }) => {
+    await writeFile(file, bytes.subarray(0, 10))
+    const executable = await stage(input)
+    expect(isAbsolute(executable)).toBe(true)
+    expect(await readFile(executable, "utf8")).toBe("fixture-runtime")
+    expect(await readFile(file)).toEqual(bytes)
+    expect(requests).toEqual(["/good"])
+  })
+})
+
+test.serial("rejects bad downloaded bytes without caching, extracting, or retrying", async () => {
+  await fixture(async ({ dir, file, bytes, item, input, requests }) => {
+    await writeFile(file, bytes.subarray(0, 10))
+    item.tarball = new URL("/bad", item.tarball).href
+    const before = await readdir(dir)
+    await rejects(stage(input), /Bun checksum mismatch/)
+    expect(requests).toEqual(["/bad"])
+    expect(await readdir(dirname(file))).toEqual([])
+    expect(await readdir(dir)).toEqual(before)
+  })
+})
+
+test.serial("publishes complete caches atomically while concurrent callers extract privately", async () => {
+  await fixture(async ({ file, bytes, item, input, requests }) => {
+    item.tarball = new URL("/concurrent", item.tarball).href
+    const samples: Promise<Buffer | undefined>[] = []
+    const changed = Promise.withResolvers<void>()
+    const watcher = watch(dirname(file), (_, name) => {
+      if (String(name) !== basename(file)) return
+      samples.push(
+        readFile(file).catch((err: NodeJS.ErrnoException) => {
+          if (err.code === "ENOENT") return undefined
+          throw err
+        }),
+      )
+      changed.resolve()
+    })
+    try {
+      const paths = await Promise.all([stage(input), stage(input)])
+      await changed.promise
+      expect(new Set(paths).size).toBe(2)
+      for (const path of paths) expect(await readFile(path, "utf8")).toBe("fixture-runtime")
+      expect(requests).toEqual(["/concurrent", "/concurrent"])
+      expect(await readFile(file)).toEqual(bytes)
+      expect(samples.length).toBeGreaterThan(0)
+      for (const sample of await Promise.all(samples)) if (sample) expect(sample).toEqual(bytes)
+      expect(await readdir(dirname(file))).toEqual([basename(file)])
+    } finally {
+      watcher.close()
+    }
+  })
+})
+
+test.serial("cache mutation cannot tamper with staged executables or later extractions", async () => {
+  await fixture(async ({ file, bytes, input, requests }) => {
+    const first = await stage(input)
+    await writeFile(file, "tampered cache")
+    expect(await readFile(first, "utf8")).toBe("fixture-runtime")
+    const second = await stage(input)
+    expect(second).not.toBe(first)
+    expect(await readFile(second, "utf8")).toBe("fixture-runtime")
+    expect(await readFile(file)).toEqual(bytes)
+    await writeFile(first, "tampered executable")
+    const third = await stage(input)
+    expect(third).not.toBe(first)
+    expect(third).not.toBe(second)
+    expect(await readFile(third, "utf8")).toBe("fixture-runtime")
+    expect(requests).toEqual(["/good", "/good"])
+  })
 })
 
 test("install requires GITHUB_PATH before staging", async () => {

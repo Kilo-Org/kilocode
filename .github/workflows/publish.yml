@@ -88,9 +88,9 @@ jobs:
 
       - uses: ./.github/actions/setup-sbom # kilocode_change
 
-      # kilocode_change start - gate releases on the pinned and compiled TLS verifier
+      # kilocode_change start - block trusted bad chains, warn when live endpoints are unavailable
       - name: Verify Bun certificate revocation
-        run: bun script/kilocode/bun-probe.ts
+        run: bun script/kilocode/bun-probe.ts --allow-unavailable
       # kilocode_change end
 
       # kilocode_change start

@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process"
-import { createHash } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import { rmSync } from "node:fs"
-import { appendFile, chmod, link, lstat, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { appendFile, chmod, link, lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -32,29 +32,51 @@ export function target(input: Target) {
   throw new Error(`Unsupported Bun target: ${slug}`)
 }
 
+export function host(
+  input: { os: string; arch: string; report?: unknown } = {
+    os: process.platform,
+    arch: process.arch,
+    report: process.platform === "linux" ? process.report.getReport() : undefined,
+  },
+): Target {
+  const report = input.report
+  const header = report && typeof report === "object" && "header" in report ? report.header : undefined
+  const glibc = header && typeof header === "object" && "glibcVersionRuntime" in header && header.glibcVersionRuntime
+  return {
+    os: input.os,
+    arch: input.arch,
+    ...(input.os === "linux" && !glibc ? { abi: "musl" } : {}),
+    ...(input.arch === "x64" ? { avx2: false } : {}),
+  }
+}
+
 export async function stage(input: Target): Promise<string> {
   const item = target(input)
   const root = resolve(tmpdir())
   const cache = join(root, "kilo-bun", pin.version)
   await mkdir(cache, { recursive: true, mode: 0o700 })
   const file = join(cache, `${item.name}.tgz`)
-  const cached = await readFile(file).catch((err: NodeJS.ErrnoException) => {
+  const valid = (bytes: Uint8Array) =>
+    `sha512-${createHash("sha512").update(bytes).digest("base64")}` === item.integrity
+  let bytes = await readFile(file).catch((err: NodeJS.ErrnoException) => {
     if (err.code !== "ENOENT") throw err
   })
-  const bytes =
-    cached ??
-    (await (async () => {
-      const response = await fetch(item.tarball, { redirect: "error", signal: AbortSignal.timeout(120_000) })
-      if (!response.ok) throw new Error(`Bun download failed: ${response.status} ${item.tarball}`)
-      return Buffer.from(await response.arrayBuffer())
-    })())
-  if (`sha512-${createHash("sha512").update(bytes).digest("base64")}` !== item.integrity) {
-    throw new Error(`Bun checksum mismatch: ${item.name}@${pin.version}`)
+  if (bytes && !valid(bytes)) {
+    await rm(file, { force: true })
+    bytes = undefined
   }
-  if (!cached) {
-    await writeFile(file, bytes, { flag: "wx", mode: 0o600 }).catch((err: NodeJS.ErrnoException) => {
-      if (err.code !== "EEXIST") throw err
-    })
+  if (!bytes) {
+    const response = await fetch(item.tarball, { redirect: "error", signal: AbortSignal.timeout(120_000) })
+    if (!response.ok) throw new Error(`Bun download failed: ${response.status} ${item.tarball}`)
+    bytes = Buffer.from(await response.arrayBuffer())
+    if (!valid(bytes)) throw new Error(`Bun checksum mismatch: ${item.name}@${pin.version}`)
+    const part = join(cache, `${item.name}.${randomUUID()}.tmp`)
+    try {
+      await writeFile(part, bytes, { flag: "wx", mode: 0o600 })
+      await rename(part, file)
+    } finally {
+      await rm(part, { force: true })
+    }
   }
 
   // Extract verified bytes, never an executable from a shared compiler cache.
@@ -83,15 +105,7 @@ if (!process.versions.bun && process.argv[1] && resolve(process.argv[1]) === fil
   }
   const output = process.env.GITHUB_PATH
   if (!output) throw new Error("GITHUB_PATH is required for --install")
-  const report = process.platform === "linux" ? process.report.getReport() : undefined
-  const header = report && typeof report === "object" && "header" in report ? report.header : undefined
-  const abi = header && typeof header === "object" && !("glibcVersionRuntime" in header) ? "musl" : undefined
-  const file = await stage({
-    os: process.platform,
-    arch: process.arch,
-    abi,
-    ...(process.arch === "x64" ? { avx2: false } : {}),
-  })
+  const file = await stage(host())
   const check = await run(file, ["--print", "Bun.version + '/' + Bun.revision"], { windowsHide: true })
   if (check.stdout.trim() !== `${pin.runtime}/${pin.revision}`) throw new Error("Bun runtime or revision mismatch")
   await link(file, join(dirname(file), process.platform === "win32" ? "bunx.exe" : "bunx"))

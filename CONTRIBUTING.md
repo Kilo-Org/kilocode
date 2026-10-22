@@ -18,7 +18,7 @@ The Kilo Community is [on Discord](https://kilo.ai/discord).
 
 ## Prerequisites
 
-- **Bun 1.4.2+** — required for all packages.
+- **Bun `1.4.3-canary.20261021.1`** - The exact official npm package is required for all packages. Install it as shown below.
 - **Java 21** — required by the JetBrains plugin. The root `bun turbo typecheck` and `bun turbo test:ci` commands include `@kilocode/kilo-jetbrains` and will fail without Java 21.
 
   The preferred way to install Java is via [SDKMAN](https://sdkman.io/install):
@@ -41,9 +41,19 @@ The Kilo Community is [on Discord](https://kilo.ai/discord).
   bun turbo typecheck --filter=!@kilocode/kilo-jetbrains
   ```
 
+Use Node.js 24.22.1 or newer with npm from a trusted source to install the pinned Bun package:
+
+```bash
+npm install --global bun@1.4.3-canary.20261021.1
+bun --version
+bun --print "Bun.revision"
+```
+
+This npm package reports `1.4.4` for `bun --version`. Its full `Bun.revision` must be `963452075e9d7e2a47a482f297143af5ed4f76c0`. The CLI build rejects other revisions, even if they report the same runtime version. The root `package.json` pins the npm package version, and `script/kilocode/bun.json` records the runtime version, revision, and target artifact checksums.
+
 ## Developing Kilo CLI
 
-- **Requirements:** Bun 1.4.2+, Java 21 (see [Prerequisites](#prerequisites) above)
+- **Requirements:** Bun `1.4.3-canary.20261021.1` at the exact revision above, Java 21 (see [Prerequisites](#prerequisites) above)
 - Install dependencies and start the CLI from the repo root:
 
   ```bash
