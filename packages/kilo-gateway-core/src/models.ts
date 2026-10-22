@@ -12,6 +12,22 @@ const AISDKProvider = Schema.Literals(["anthropic", "openai", "openai-compatible
 export type AISDKProvider = typeof AISDKProvider.Type
 const decodeAISDKProvider = Schema.decodeUnknownOption(AISDKProvider)
 
+const Prompt = Schema.Literals([
+  "codex",
+  "gemini",
+  "beast",
+  "anthropic",
+  "trinity",
+  "anthropic_without_todo",
+  "ling",
+  "gpt55",
+])
+export type Prompt = typeof Prompt.Type
+const decodePrompt = Schema.decodeUnknownOption(Prompt)
+const decodeVariants = Schema.decodeUnknownOption(
+  Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Unknown)),
+)
+
 const AutoRouting = Schema.Struct({
   models: Schema.Array(Schema.String),
 })
@@ -78,6 +94,8 @@ const RawModel = Schema.Struct({
       family: Schema.optionalKey(Schema.NullOr(Schema.String)),
       reasoning_options: Schema.optionalKey(Schema.NullOr(Schema.Array(Schema.Unknown))),
       ai_sdk_provider: Schema.optionalKey(Schema.Unknown),
+      prompt: Schema.optionalKey(Schema.Unknown),
+      variants: Schema.optionalKey(Schema.Unknown),
     }),
   ),
 })
@@ -108,6 +126,8 @@ export interface Model {
   readonly description?: string
   readonly family?: string
   readonly aiSDKProvider?: AISDKProvider
+  readonly prompt?: Prompt
+  readonly variants?: Readonly<Record<string, Readonly<Record<string, unknown>>>>
   readonly free: boolean
   readonly recommendedIndex?: number
   readonly hasUserByokAvailable?: boolean
@@ -413,6 +433,14 @@ function toModel(model: RawModel): Model {
     ...Option.match(decodeAISDKProvider(model.opencode?.ai_sdk_provider), {
       onNone: () => ({}),
       onSome: (aiSDKProvider) => ({ aiSDKProvider }),
+    }),
+    ...Option.match(decodePrompt(model.opencode?.prompt), {
+      onNone: () => ({}),
+      onSome: (prompt) => ({ prompt }),
+    }),
+    ...Option.match(decodeVariants(model.opencode?.variants), {
+      onNone: () => ({}),
+      onSome: (variants) => ({ variants }),
     }),
     free: model.isFree === true,
     ...(model.preferredIndex !== undefined ? { recommendedIndex: model.preferredIndex } : {}),
