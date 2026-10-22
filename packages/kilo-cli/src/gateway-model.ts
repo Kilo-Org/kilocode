@@ -1,5 +1,6 @@
 export * as KiloGatewayModel from "./gateway-model"
 
+import { KiloErrors } from "@kilocode/gateway-core"
 import { Rpc } from "@opencode/core/rpc"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
@@ -45,15 +46,9 @@ const layer = Layer.effect(
       .pipe(
         Effect.match({
           onSuccess: () => undefined,
-          // System failures and arbitrary RPC messages must not expose endpoints, credentials, or response bodies.
+          // Format validated failure data, never a free-form RPC message that can contain private details.
           onFailure: (error) =>
-            "type" in error &&
-            error.type === "failed" &&
-            /^Failed to load the Kilo model catalog \((HTTP [1-5][0-9]{2}|network|schema)\)\. Check your connection and credentials\.$/.test(
-              error.message,
-            )
-              ? error.message
-              : undefined,
+            "type" in error && error.type === "failed" ? KiloErrors.catalogMessage(error.data) : undefined,
         }),
       )
     return SessionRunnerModel.Service.of({

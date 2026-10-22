@@ -48,7 +48,11 @@ it.effect("adds catalog diagnostics only for no default or an unavailable select
     let calls = 0
     yield* rpc.register(Definition, {
       models: (_input, context) =>
-        Effect.sync(() => calls++).pipe(Effect.andThen(Effect.fail(context.error("failed", diagnostic)))),
+        Effect.sync(() => calls++).pipe(
+          Effect.andThen(
+            Effect.fail(context.error("failed", "Catalog wording can change", { kind: "http", status: 503 })),
+          ),
+        ),
     })
     yield* Effect.gen(function* () {
       const models = yield* SessionRunnerModel.Service
@@ -119,24 +123,28 @@ it.effect("does not call the catalog RPC when default or explicit model resoluti
   }),
 )
 
-it.effect("does not expose arbitrary failed messages or malformed RPC output", () =>
+it.effect("formats typed failure data without exposing arbitrary RPC messages or malformed output", () =>
   Effect.gen(function* () {
     const rpc = yield* Rpc.Service
     const resolver = { resolve: () => Effect.undefined, resolveModel: () => Effect.die("Unexpected model resolution") }
-    for (const message of [
-      "private-token https://server.test/?secret=private-param private-body",
-      `${diagnostic}\nprivate-token`,
-    ]) {
+    for (const kind of ["network", "schema"] as const) {
       yield* Effect.scoped(
         Effect.gen(function* () {
           yield* rpc.register(Definition, {
-            models: (_input, context) => Effect.fail(context.error("failed", message)),
+            models: (_input, context) =>
+              Effect.fail(
+                context.error("failed", "private-token https://server.test/?secret=private-param private-body", {
+                  kind,
+                }),
+              ),
           })
           const error = yield* Effect.gen(function* () {
             const models = yield* SessionRunnerModel.Service
             return yield* models.resolve(session, () => Effect.succeed([]))
           }).pipe(Effect.provide(runner(resolver, rpc)), Effect.flip)
-          expect(error.message).toBe(`No model is available for session ${session.id}`)
+          expect(error.message).toBe(
+            `Failed to load the Kilo model catalog (${kind}). Check your connection and credentials.`,
+          )
         }),
       )
     }

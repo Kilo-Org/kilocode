@@ -2,6 +2,7 @@ export * as KiloGatewayRpc from "./gateway.js"
 
 import { Schema } from "effect"
 import { Rpc } from "../rpc.js"
+import { optional } from "../schema.js"
 
 // The `kilocode.gateway` RPC contract: the reference Kilo RPC. The Gateway plugin in packages/kilo-plugin
 // registers the handlers; clients (TUI, VS Code, JetBrains) import this contract from
@@ -218,6 +219,13 @@ export const ModelEntry = Schema.Struct({
 
 export type ModelEntry = typeof ModelEntry.Type
 
+export const CatalogFailure = Schema.Struct({
+  kind: Schema.Literals(["unauthorized", "network", "schema", "http"]),
+  status: optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(100), Schema.isLessThanOrEqualTo(599))),
+}).annotate({ identifier: "KiloGateway.CatalogFailure" })
+
+export interface CatalogFailure extends Schema.Schema.Type<typeof CatalogFailure> {}
+
 export const SessionMetadata = Schema.Struct({
   routedModelID: Schema.optional(Schema.String),
   vercelID: Schema.optional(Schema.String),
@@ -283,7 +291,7 @@ export const Definition = Rpc.define({
     models: {
       input: portable(Schema.Struct({})),
       output: portable(Schema.Array(ModelEntry)),
-      errors: Failure,
+      errors: { ...Failure, failed: portable(CatalogFailure) },
     },
     "models.images": {
       input: portable(Schema.Struct({})),

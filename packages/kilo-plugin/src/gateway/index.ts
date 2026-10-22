@@ -684,14 +684,12 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         models: (_input, context) =>
           Effect.gen(function* () {
             if (catalog.failed) {
-              const reason = catalog.failure?.status
-                ? `HTTP ${catalog.failure.status}`
-                : (catalog.failure?.kind ?? "network")
+              const failure = catalog.failure ?? { kind: "network" as const, status: undefined }
               return yield* Effect.fail(
-                context.error(
-                  "failed",
-                  `Failed to load the Kilo model catalog (${reason}). Check your connection and credentials.`,
-                ),
+                context.error("failed", KiloErrors.catalogMessage(failure), {
+                  kind: failure.kind,
+                  status: failure.status,
+                }),
               )
             }
             return KiloModels.entries(catalog.models)

@@ -1,6 +1,7 @@
 export * as KiloErrors from "./errors.js"
 
 import { Option, Schema } from "effect"
+import type { KiloModels } from "./models.js"
 
 const JsonValue = Schema.fromJsonString(Schema.Unknown)
 const decodeJson = Schema.decodeUnknownOption(JsonValue)
@@ -25,6 +26,11 @@ export interface ParsedError {
   readonly message: string
   readonly retryable: boolean
   readonly details: Record<string, unknown>
+}
+
+export function catalogMessage(failure: KiloModels.Failure) {
+  const reason = failure.status ? `HTTP ${failure.status}` : failure.kind
+  return `Failed to load the Kilo model catalog (${reason}). Check your connection and credentials.`
 }
 
 // Parses both Kilo Gateway error envelopes (from `apps/web/src/app/api/openrouter/[...path]/route.ts` and

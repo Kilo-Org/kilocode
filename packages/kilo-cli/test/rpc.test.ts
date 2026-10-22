@@ -121,3 +121,15 @@ test(
   }),
   30_000,
 )
+
+test(
+  "catalog failure data crosses the generated client without private scope details",
+  boot({ KILO_API_KEY: "private-fixture-token", KILO_ORG_ID: "private-missing-team" }, async (gateway) => {
+    await expect(gateway.rpc.models({}, gateway.options)).rejects.toMatchObject({
+      type: "failed",
+      message: "Failed to load the Kilo model catalog (HTTP 403). Check your connection and credentials.",
+      data: { kind: "unauthorized", status: 403 },
+    })
+  }),
+  30_000,
+)

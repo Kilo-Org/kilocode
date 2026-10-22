@@ -7,7 +7,7 @@ import { Provider } from "@opencode/core/provider"
 import { Rpc } from "@opencode/core/rpc"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { Global } from "@opencode/util/global"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import { withEnv } from "../../core/test/fixture/env"
 import { testEffect } from "../../core/test/lib/effect"
 import { PluginTestLayer } from "../../core/test/plugin/fixture"
@@ -53,6 +53,10 @@ for (const scenario of ["http", "network", "schema", "missing-team"] as const) {
             expect(failure).toEqual({
               type: "failed",
               message: `Failed to load the Kilo model catalog (${reason}). Check your connection and credentials.`,
+              data: {
+                kind: scenario === "http" ? "http" : scenario === "missing-team" ? "unauthorized" : scenario,
+                ...(scenario === "http" ? { status: 503 } : scenario === "missing-team" ? { status: 403 } : {}),
+              },
             })
             expect((yield* providers.available()).some((provider) => provider.id === kilo)).toBe(false)
             const models = yield* Model.Service
@@ -62,3 +66,14 @@ for (const scenario of ["http", "network", "schema", "missing-team"] as const) {
     }),
   )
 }
+
+it.effect("catalog failure data validates the public shape and omits an undefined status", () =>
+  Effect.sync(() => {
+    expect(Schema.encodeSync(KiloGatewayRpc.CatalogFailure)({ kind: "network", status: undefined })).toEqual({
+      kind: "network",
+    })
+    for (const invalid of [{ kind: "private-token" }, { kind: "http", status: "503" }, { kind: "http", status: 600 }]) {
+      expect(() => Schema.decodeUnknownSync(KiloGatewayRpc.CatalogFailure)(invalid)).toThrow()
+    }
+  }),
+)
