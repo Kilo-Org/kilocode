@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test"
 import fs from "node:fs"
 import path from "node:path"
+import { fixture } from "../fixtures/run"
 
 const MONOREPO_ROOT = path.resolve(import.meta.dir, "../../../..")
 const BASIC_TOOL_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/basic-tool.tsx")
@@ -24,6 +25,12 @@ const PROMPT_INPUT_FILE = path.join(
 )
 const TRANSCRIPT_PARTS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/utils/transcript-parts.ts")
 const CHAT_LAYOUT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/styles/chat-layout.css")
+
+describe("Native tool transcript behavior", () => {
+  it("opens file and diff targets and preserves native tool interactions", async () => {
+    await fixture("native-tool-render")
+  }, 15_000)
+})
 
 describe("Assistant Markdown streaming contract (source)", () => {
   const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
