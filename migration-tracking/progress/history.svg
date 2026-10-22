@@ -6,17 +6,15 @@
 <line class="l" x1="40" y1="95.00" x2="990" y2="95.00"/><text x="4" y="99.00">50%</text>
 <line class="l" x1="40" y1="57.50" x2="990" y2="57.50"/><text x="4" y="61.50">75%</text>
 <line class="l" x1="40" y1="20.00" x2="990" y2="20.00"/><text x="4" y="24.00">100%</text>
-<polyline class="p" points="40.00,169.85 230.00,168.65 420.00,168.65 610.00,168.65 800.00,168.65 990.00,168.65"/>
+<polyline class="p" points="40.00,169.85 277.50,168.65 515.00,168.65 752.50,168.65 990.00,168.65"/>
 <circle class="m" cx="40.00" cy="169.85" r="3"><title>2026-10-16: 0.1% (12/9854)</title></circle>
 <text x="40.00" y="192" text-anchor="middle">2026-10-16</text>
-<circle class="m" cx="230.00" cy="168.65" r="3"><title>2026-10-19: 0.9% (87/9829)</title></circle>
-<text x="230.00" y="192" text-anchor="middle">2026-10-19</text>
-<circle class="m" cx="420.00" cy="168.65" r="3"><title>2026-10-20: 0.9% (87/9829)</title></circle>
-<text x="420.00" y="192" text-anchor="middle">2026-10-20</text>
-<circle class="m" cx="610.00" cy="168.65" r="3"><title>2026-10-21: 0.9% (90/9829)</title></circle>
-<text x="610.00" y="192" text-anchor="middle">2026-10-21</text>
-<circle class="m" cx="800.00" cy="168.65" r="3"><title>2026-10-22: 0.9% (90/9829)</title></circle>
-<text x="800.00" y="192" text-anchor="middle">2026-10-22</text>
+<circle class="m" cx="277.50" cy="168.65" r="3"><title>2026-10-19: 0.9% (87/9829)</title></circle>
+<text x="277.50" y="192" text-anchor="middle">2026-10-19</text>
+<circle class="m" cx="515.00" cy="168.65" r="3"><title>2026-10-20: 0.9% (87/9829)</title></circle>
+<text x="515.00" y="192" text-anchor="middle">2026-10-20</text>
+<circle class="m" cx="752.50" cy="168.65" r="3"><title>2026-10-21: 0.9% (90/9829)</title></circle>
+<text x="752.50" y="192" text-anchor="middle">2026-10-21</text>
 <circle class="m" cx="990.00" cy="168.65" r="3"><title>now: 0.9% (90/9829)</title></circle>
 <text x="990.00" y="192" text-anchor="middle">now</text>
 </svg>
