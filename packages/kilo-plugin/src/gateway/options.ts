@@ -50,7 +50,9 @@ export function lower(provider: KiloModels.AISDKProvider | undefined, options: R
   if (!shared || !provider || provider === "openrouter") return { ...options }
   if (provider === "anthropic")
     return {
-      ...(shared.reasoning ? { thinking: { type: shared.reasoning.enabled ? "adaptive" : "disabled" } } : {}),
+      ...(shared.reasoning?.enabled !== undefined
+        ? { thinking: { type: shared.reasoning.enabled ? "adaptive" : "disabled" } }
+        : {}),
       ...(shared.verbosity !== undefined ? { effort: shared.verbosity } : {}),
       ...options,
     }

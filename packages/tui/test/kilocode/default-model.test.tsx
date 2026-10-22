@@ -92,6 +92,38 @@ test("waits for the SDK default before allowing automatic prompt submission", as
   expect(setup.local.model.current()?.modelID).toBe(recommended.id)
 })
 
+test("recovers first-load selection when the real five-second SDK default deadline expires", async () => {
+  const signals: AbortSignal[] = []
+  const aborted = Promise.withResolvers<void>()
+  await using setup = await renderLocal({
+    models: [first, recommended],
+    args: { prompt: "test prompt" },
+    waitForDefault: false,
+    fetch: (url, request) => {
+      if (url.pathname !== "/api/model/default") return
+      signals.push(request.signal)
+      return new Promise<Response>((_resolve, reject) => {
+        request.signal.addEventListener(
+          "abort",
+          () => {
+            reject(request.signal.reason)
+            aborted.resolve()
+          },
+          { once: true },
+        )
+      })
+    },
+  })
+  expect(signals.length).toBeGreaterThan(0)
+  expect(signals.every((signal) => !signal.aborted)).toBe(true)
+  expect(setup.local.model.catalogReady).toBe(false)
+  expect(setup.local.model.selection()).toBeUndefined()
+  await aborted.promise
+  await until(() => setup.local.model.catalogReady)
+  expect(signals.every((signal) => signal.aborted && signal.reason.name === "TimeoutError")).toBe(true)
+  expect(setup.local.model.selection()).toEqual({ providerID: "kilo", modelID: first.id, variant: undefined })
+}, 10_000)
+
 test("a user selection made during default loading is not replaced by the response", async () => {
   const response = Promise.withResolvers<Response>()
   await using setup = await renderLocal({

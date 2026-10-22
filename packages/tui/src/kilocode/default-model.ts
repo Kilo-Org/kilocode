@@ -15,7 +15,9 @@ export function createGatewayDefaultModel() {
     return { location: ref, models, config: data.location.config.list(ref) }
   })
   const [result] = createResource(source, async (source) => {
-    const response = await client.api.model.default({ location: source.location }).catch(() => undefined)
+    const response = await client.api.model
+      .default({ location: source.location }, { signal: AbortSignal.timeout(5000) })
+      .catch(() => undefined)
     return {
       source,
       model: response?.data ? { providerID: response.data.providerID, modelID: response.data.id } : undefined,
