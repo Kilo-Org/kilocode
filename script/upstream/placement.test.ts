@@ -28,7 +28,8 @@ test("compaction: session hook, upstream plugin that transforms the service, loc
   expect(plugin?.services).toContain("SessionCompaction.Service")
   expect(plugin?.calls).toEqual(expect.arrayContaining(["compaction.transform", "editor.configure"]))
   expect(report.nodes.map((item) => [item.name, item.kind])).toEqual([["SessionCompaction.node", "location"]])
-  expect(report.seams.entry).toBeNull()
+  expect(report.seams.entry).toMatchObject({ rung: 4 })
+  expect(report.seams.entry?.seam).toContain("SessionUsage.record")
   expect(report.suggestion.rung).toBe(1)
 })
 
