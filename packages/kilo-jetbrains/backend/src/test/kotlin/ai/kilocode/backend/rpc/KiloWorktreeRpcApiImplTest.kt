@@ -2690,6 +2690,55 @@ class KiloWorktreeRpcApiImplTest {
         return Path.of(assertNotNull(result.worktree, "create failed: ${result.error}").path)
     }
 
+    @Test
+    fun `create fetches latest base branch when requested`() = runBlocking {
+        initRepo()
+        originWith(1, "feature/remote")
+        val base = output(remote, "branch", "--show-current").trim()
+        git(repo, "fetch", "origin", base)
+        git(repo, "branch", "--set-upstream-to=origin/$base", base)
+        Files.writeString(remote.resolve("latest.txt"), "latest\n")
+        git(remote, "add", "latest.txt")
+        git(remote, "commit", "-m", "latest base")
+
+        val result = api.create(
+            repo.toString(),
+            CreateWorktreeRequestDto("feature/fresh", base, fetchBase = true),
+        )
+
+        val worktree = assertNotNull(result.worktree, result.error)
+        assertEquals("latest\n", Files.readString(Path.of(worktree.path).resolve("latest.txt")))
+        assertEquals(head(remote, base), head(Path.of(worktree.path), "HEAD"))
+    }
+
+    @Test
+    fun `create fetches differently named upstream when requested`() = runBlocking {
+        initRepo()
+        originWith(1, "feature/remote")
+        val base = output(repo, "branch", "--show-current").trim()
+        git(repo, "fetch", "origin", "feature/remote")
+        git(repo, "branch", "--set-upstream-to=origin/feature/remote", base)
+        Files.writeString(remote.resolve("latest.txt"), "latest\n")
+        git(remote, "add", "latest.txt")
+        git(remote, "commit", "-m", "latest base")
+
+        val result = api.create(repo.toString(), CreateWorktreeRequestDto("feature/fresh", base, fetchBase = true))
+
+        val worktree = assertNotNull(result.worktree, result.error)
+        assertEquals(head(remote, "feature/remote"), head(Path.of(worktree.path), "HEAD"))
+    }
+
+    @Test
+    fun `create retains local base without remote upstream`() = runBlocking {
+        initRepo()
+        git(repo, "branch", "local-only")
+
+        val result = api.create(repo.toString(), CreateWorktreeRequestDto("feature/fresh", "local-only", fetchBase = true))
+
+        val worktree = assertNotNull(result.worktree, result.error)
+        assertEquals(head(repo, "local-only"), head(Path.of(worktree.path), "HEAD"))
+    }
+
     private fun metadata(dir: Path, name: String): Path =
         Path.of(output(dir, "rev-parse", "--path-format=absolute", "--git-path", name).trimEnd('\r', '\n'))
 
