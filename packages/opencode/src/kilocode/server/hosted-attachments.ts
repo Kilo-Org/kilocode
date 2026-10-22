@@ -127,6 +127,8 @@ export function create(options: Options = {}) {
     if (live.get(entry.id) !== entry) return
     entry.expiresAt = input.expiresAt
     entry.leaseExpiresAt = now() + LEASE_MS
+    live.delete(entry.id)
+    live.set(entry.id, entry)
   }
 
   const dispose = (id: string) => {

@@ -88,6 +88,31 @@ describe("hosted attachments", () => {
     expect(store.lookup(first.id).kind).toBe("expired")
   })
 
+  test("recently renewed attachments are not evicted before idle ones", () => {
+    const store = Attachments.create()
+    const fake = provider("alpha")
+    const active = store.mint({
+      provider: fake.value,
+      session: hosted("alpha", "ses_00000000000000000000000001"),
+      expiresAt: Date.now() + 60_000,
+    })
+    for (let index = 0; index < 255; index++) {
+      store.mint({
+        provider: fake.value,
+        session: hosted("alpha", `ses_${String(index).padStart(26, "0")}`),
+        expiresAt: Date.now() + 60_000,
+      })
+    }
+    store.renew(active, { expiresAt: Date.now() + 60_000 })
+    store.mint({
+      provider: fake.value,
+      session: hosted("alpha", "ses_99999999999999999999999999"),
+      expiresAt: Date.now() + 60_000,
+    })
+
+    expect(store.lookup(active.id).kind).toBe("found")
+  })
+
   test("counts only live attachments for one hosted session", () => {
     const store = Attachments.create()
     const fake = provider("alpha")

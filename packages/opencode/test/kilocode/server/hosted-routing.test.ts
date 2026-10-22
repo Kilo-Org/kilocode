@@ -185,6 +185,29 @@ describe("hosted attachment routing", () => {
     expect(fake.calls).toHaveLength(0)
   })
 
+  test("keeps viewed and experimental workspace routes local with an attachment selector", async () => {
+    await using tmp = await tmpdir({ config: { formatter: false, lsp: false } })
+    const api = app()
+    const fake = provider("alpha")
+    const entry = attach(fake)
+    const viewed = await api.request(`/session/viewed?workspace=${entry.id}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-kilo-directory": tmp.path },
+      body: JSON.stringify({
+        viewer: { id: "11111111-1111-4111-8111-111111111111", active: true },
+        attached: [],
+        visible: [],
+      }),
+    })
+    const status = await api.request(`/experimental/workspace/status?workspace=${entry.id}`, {
+      headers: { "x-kilo-directory": tmp.path },
+    })
+
+    expect(viewed.status).not.toBe(400)
+    expect(status.status).not.toBe(400)
+    expect(fake.calls).toHaveLength(0)
+  })
+
   test("keeps hosting routes local even when the client carries an attachment selector", async () => {
     const api = app()
     const fake = provider("alpha")

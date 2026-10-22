@@ -1,6 +1,5 @@
 import type { FailureCode, NativeRequest } from "@/kilocode/session-hosting/types"
 import { isNativePath } from "@/kilocode/session-hosting/native-routes"
-import { isLocalWorkspaceRoute } from "@/server/shared/workspace-routing"
 import { Effect, Stream } from "effect"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import * as Attachments from "../hosted-attachments"
@@ -31,7 +30,6 @@ const STRIP_RESPONSE_HEADERS = new Set([
 ])
 
 const CLOUD_DIRECTORY = /^\/cloud-agent\/sessions\/[^/]+$/
-const LOCAL_PATHS = new Set(["/session", "/experimental/workspace", "/session/viewed"])
 
 class BodyError {
   readonly _tag = "BodyError"
@@ -75,7 +73,10 @@ export function attachmentID(url: URL, headers: Headers) {
 export function isLocalRoute(method: string, path: string) {
   if (isNativePath(method, path)) return false
   return (
-    (LOCAL_PATHS.has(path) && isLocalWorkspaceRoute(method, path)) ||
+    (method === "GET" && path === "/session") ||
+    (method === "POST" && path === "/session/viewed") ||
+    path === "/experimental/workspace" ||
+    path.startsWith("/experimental/workspace/") ||
     path === "/console" ||
     path.startsWith("/console/") ||
     path === "/kilocode/session-host" ||
