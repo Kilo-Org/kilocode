@@ -21,6 +21,7 @@ import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.Dimension
 import javax.swing.JComponent
+import javax.swing.event.ChangeListener
 
 /**
  * Balloon body for the prompt navigator: a header with first/latest jump buttons, and every navigable
@@ -56,6 +57,19 @@ internal class PromptRailPopup(
 
     /** Row to reveal once the list has been laid out, or -1. See [reveal]. */
     private var pending = -1
+
+    /**
+     * Row the pointer last asked to see, or -1 when the user clicked a row instead.
+     *
+     * Kept past the first reveal so a later layout can put it back into view. The balloon may lay the
+     * body out more than once and settle on a shorter viewport after the first pass; a one-shot reveal
+     * would leave the list at an offset computed for the taller body, with the last rows below the fold.
+     */
+    private var follow = -1
+    private var revealing = false
+
+    /** Viewport extent the last reveal was measured against, so only a resize re-applies it. */
+    private var extent = Dimension(0, 0)
     private var cap = Dimension(
         JBUI.scale(SessionUiStyle.View.Popup.MAX_WIDTH),
         JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT),
@@ -81,11 +95,28 @@ internal class PromptRailPopup(
         // close the card on some installs and leave it open on others.
         enter = { true },
         onCell = { _, _ -> },
+        onSelect = {
+            // Selection inside the list (arrow keys, a click) is the user's choice. Reveal owns the
+            // selection only while it is applying a hover request; otherwise the old hovered row would
+            // be selected again the next time the body lays out, scrolling away from the user's row.
+            if (!revealing) {
+                pending = -1
+                follow = -1
+            }
+        },
         onOpen = { row, focus ->
             items.firstOrNull { it.id == row.key }?.let { onSelect(it, focus) }
         },
     ).apply {
         setListCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR))
+        // A wheel or scrollbar drag is the user taking over the list. Stop following the hovered row so
+        // a later balloon resize cannot snap the list back. Reveal-driven scrolling keeps the follow.
+        onScroll = {
+            if (!revealing) {
+                pending = -1
+                follow = -1
+            }
+        }
         update(items.map(::row))
     }
 
@@ -103,6 +134,22 @@ internal class PromptRailPopup(
         addActionListener { onLatest() }
     }
     private val head = header()
+    private val viewport = rows.viewport()
+
+    /**
+     * Re-reveals the hovered row when the viewport's extent changes.
+     *
+     * The balloon can settle on a shorter body after the first layout pass. The reveal runs during the
+     * outer layout, before the scroll pane's extent reaches its final size, so the row it placed at the
+     * end of the taller viewport falls below the fold once the extent shrinks. Listening for extent
+     * changes — and nothing else — repeats the reveal for that resize without fighting a manual scroll.
+     */
+    private val resized = ChangeListener {
+        val size = viewport.extentSize
+        if (size == extent) return@ChangeListener
+        extent = Dimension(size)
+        reveal()
+    }
 
     /**
      * Clamps the body to the room the balloon was given. Without the clamp the list's preferred height
@@ -149,6 +196,7 @@ internal class PromptRailPopup(
     internal val list get() = rows
 
     init {
+        viewport.addChangeListener(resized)
         select(hovered)
     }
 
@@ -168,30 +216,49 @@ internal class PromptRailPopup(
             // Also drops any deferred reveal, so an earlier request cannot fire on the next layout and
             // move the list after the click.
             pending = -1
+            follow = -1
             rows.select(key, scroll = false)
             return
         }
         pending = index
+        follow = index
         reveal()
     }
 
     /**
-     * Applies [pending], or leaves it pending while the list has no bounds to scroll within.
+     * Applies [pending] and keeps [follow] visible across layout passes, or leaves them pending while
+     * the list has no bounds to scroll within.
      *
-     * `ScrollingUtil.ensureIndexIsVisible` measures the viewport extent, so running it against an
-     * unsized list resolves to no movement and the request would be silently dropped.
+     * Scrolling needs a viewport extent, so a request that arrives before the balloon has laid the list
+     * out resolves to no movement and has to stay pending. The same applies after the balloon resizes:
+     * the extent changed, so a row that was visible in the older pass may no longer be, and the reveal
+     * has to run again.
      */
     @RequiresEdt
     private fun reveal() {
-        val index = pending
-        if (index < 0) return
         if (rows.width <= 0 || rows.height <= 0) return
-        val key = items.getOrNull(index)?.id ?: return
-        // Cleared before scrolling: selecting re-enters layout, and that pass must not scroll again.
-        pending = -1
-        // The list lays out its own scroll pane, and the extent has to be settled before it is measured.
-        rows.validate()
-        rows.select(key)
+        // Selecting re-enters layout, and that pass must not scroll a second time mid-reveal.
+        if (revealing) return
+        revealing = true
+        try {
+            // The list lays out its own scroll pane, and the extent has to be settled before it is measured.
+            rows.validate()
+            if (pending >= 0) {
+                val index = pending
+                pending = -1
+                val key = items.getOrNull(index)?.id ?: return
+                rows.select(key)
+            }
+            val index = follow
+            if (index < 0) return
+            // Ask about the row this method is about to reveal. Checking the selected row instead can
+            // diverge when the list's own selection moved after the hover.
+            if (rows.indexFullyVisible(index)) return
+            val key = items.getOrNull(index)?.id ?: return
+            rows.select(key)
+        } finally {
+            revealing = false
+        }
     }
 
     private fun row(item: PromptRailItem) = Row(
