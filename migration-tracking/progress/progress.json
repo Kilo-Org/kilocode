@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 90,
+    "done": 92,
     "total": 9829,
     "percent": 0.9,
     "dropped": 25,
     "kinds": [
       {
         "kind": "module",
-        "done": 31,
+        "done": 32,
         "total": 3547
       },
       {
@@ -26,7 +26,7 @@
       },
       {
         "kind": "test",
-        "done": 21,
+        "done": 22,
         "total": 2798
       }
     ],
@@ -39,7 +39,7 @@
     "coreImports": 9,
     "sharedPatches": {
       "seam": 20,
-      "patch": 7
+      "patch": 16
     }
   },
   "notCounted": {
@@ -865,12 +865,12 @@
     },
     {
       "feature": "gateway",
-      "done": 59,
+      "done": 61,
       "total": 75,
       "dropped": 12,
       "kinds": {
         "module": {
-          "done": 30,
+          "done": 31,
           "total": 35
         },
         "api": {
@@ -882,7 +882,7 @@
           "total": 18
         },
         "test": {
-          "done": 17,
+          "done": 18,
           "total": 22
         }
       },
@@ -6121,6 +6121,7 @@
     "module:packages/kilo-gateway/src/edit-prompt.ts",
     "module:packages/kilo-gateway/src/edit.ts",
     "module:packages/kilo-gateway/src/fim.ts",
+    "module:packages/kilo-gateway/src/gateway-metadata.ts",
     "module:packages/kilo-gateway/src/headers.ts",
     "module:packages/kilo-gateway/src/index.ts",
     "module:packages/kilo-gateway/src/mistral-fim-endpoint.ts",
@@ -6143,6 +6144,7 @@
     "module:packages/kilo-gateway/test/edit-prompt.test.ts",
     "module:packages/kilo-gateway/test/edit.test.ts",
     "module:packages/kilo-gateway/test/fim.test.ts",
+    "module:packages/kilo-gateway/test/gateway-metadata.test.ts",
     "module:packages/kilo-gateway/test/mistral-fim-endpoint.test.ts",
     "module:packages/kilo-gateway/test/responses.test.ts",
     "module:packages/opencode/src/kilocode/agent/index.ts",
