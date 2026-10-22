@@ -6,10 +6,13 @@ import ai.kilocode.client.settings.base.SettingsRow
 import ai.kilocode.client.settings.base.SettingsStackedRow
 import ai.kilocode.client.testing.fire
 import ai.kilocode.rpc.dto.McpConfigDto
+import ai.kilocode.rpc.dto.McpOAuthDto
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBPasswordField
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.components.JBTextField
 import java.awt.Component
@@ -120,6 +123,123 @@ class McpEditDialogTest : BasePlatformTestCase() {
         assertEquals(mapOf("TOKEN" to "x", "EMPTY" to ""), result.environment)
     }
 
+    fun `test oauth section only shown for remote servers`() {
+        val local = open(local())
+        edt {
+            assertFalse(hasLabel(local.centerComponent(), title("oauth")))
+            true
+        }
+        val remote = open(remote())
+        edt {
+            assertTrue(hasLabel(remote.centerComponent(), title("oauth")))
+            true
+        }
+    }
+
+    fun `test oauth defaults to automatic when config has no oauth block`() {
+        val d = open(remote())
+
+        val result = edt { d.result() }
+
+        assertNull(result.oauth)
+    }
+
+    fun `test oauth mode disabled writes enabled false`() {
+        val d = open(remote())
+
+        val result = edt {
+            val root = d.centerComponent()
+            oauthModeBox(root).selectedItem = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode.disabled")
+            d.result()
+        }
+
+        assertEquals(McpOAuthDto(enabled = false), result.oauth)
+    }
+
+    fun `test oauth mode custom writes client fields`() {
+        val d = open(remote())
+
+        val result = edt {
+            val root = d.centerComponent()
+            oauthModeBox(root).selectedItem = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode.custom")
+            field<JBTextField>(root, title("oauth.clientId")).text = "abc"
+            descendants(root).filterIsInstance<JBPasswordField>().single().text = "shh"
+            field<JBTextField>(root, title("oauth.scope")).text = "read"
+            field<JBTextField>(root, title("oauth.callbackPort")).text = "19999"
+            d.result()
+        }
+
+        assertEquals(
+            McpOAuthDto(enabled = true, clientId = "abc", clientSecret = "shh", scope = "read", callbackPort = 19999),
+            result.oauth,
+        )
+    }
+
+    /**
+     * `URI.isAbsolute` alone accepts `javascript:x` and `file:///x`. The redirect target is a
+     * loopback HTTP listener, so only http(s) with a host may validate.
+     */
+    fun `test non-web redirect uri fails validation`() {
+        val d = open(remote())
+
+        edt {
+            val root = d.centerComponent()
+            oauthModeBox(root).selectedItem = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode.custom")
+            for (value in listOf("javascript:alert(1)", "file:///etc/passwd", "smb://host/share", "http:///nohost")) {
+                field<JBTextField>(root, title("oauth.redirectUri")).text = value
+                assertNotNull("$value must not validate", d.validateForTest())
+            }
+            true
+        }
+    }
+
+    fun `test loopback redirect uri passes validation`() {
+        val d = open(remote())
+
+        edt {
+            val root = d.centerComponent()
+            oauthModeBox(root).selectedItem = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode.custom")
+            field<JBTextField>(root, title("oauth.redirectUri")).text = "http://127.0.0.1:19876/mcp/oauth/callback"
+            assertNull(d.validateForTest())
+            true
+        }
+    }
+
+    fun `test switching back to automatic after custom clears the oauth block when one existed`() {
+        val cfg = remote().copy(oauth = McpOAuthDto(enabled = true, clientId = "abc"))
+        val d = open(cfg)
+
+        val result = edt {
+            val root = d.centerComponent()
+            oauthModeBox(root).selectedItem = KiloBundle.message("settings.agentBehavior.mcp.edit.oauth.mode.automatic")
+            d.result()
+        }
+
+        assertEquals(McpOAuthDto(clear = true), result.oauth)
+    }
+
+    /**
+     * Regression guard for the silent-drop bug: `Config.mergeDeep` clears `headers`/`oauth` whenever
+     * a remote server's `type` or `url` changes unless the patch explicitly carries them forward.
+     * Editing only the URL must not lose a previously configured OAuth client.
+     */
+    fun `test editing only the url preserves an existing custom oauth client`() {
+        val cfg = remote().copy(oauth = McpOAuthDto(enabled = true, clientId = "abc", scope = "read"))
+        val d = open(cfg)
+
+        val result = edt {
+            val root = d.centerComponent()
+            field<JBTextField>(root, title("url")).text = "https://retargeted.example.test/mcp"
+            d.result()
+        }
+
+        assertEquals("https://retargeted.example.test/mcp", result.url)
+        assertEquals(McpOAuthDto(enabled = true, clientId = "abc", scope = "read"), result.oauth)
+    }
+
+    private fun oauthModeBox(root: Component): ComboBox<String> =
+        descendants(root).filterIsInstance<ComboBox<String>>().single()
+
     private fun local() = McpConfigDto(
         type = "local",
         command = listOf("node", "server.js", "--flag"),
@@ -159,6 +279,10 @@ class McpEditDialogTest : BasePlatformTestCase() {
             (item is SettingsRow || item is SettingsStackedRow) &&
                 descendants(item).any { it is JLabel && it.text == title }
         }
+
+    /** Broader than [hasRow]: matches any descendant label text, including section titles. */
+    private fun hasLabel(root: Component, text: String): Boolean =
+        descendants(root).filterIsInstance<JLabel>().any { it.text == text }
 
     private fun envLabels(root: Component): List<String> {
         val list = descendants(root).filterIsInstance<JBList<*>>().singleOrNull() ?: return emptyList()

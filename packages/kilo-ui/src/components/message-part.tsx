@@ -215,11 +215,15 @@ export function relativizeProjectPath(path: string, directory?: string) {
   if (!directory) return path
   if (directory === "/") return path
   if (directory === "\\") return path
-  if (path === directory) return ""
 
-  const separator = directory.includes("\\") ? "\\" : "/"
-  const prefix = directory.endsWith(separator) ? directory : directory + separator
-  if (!path.startsWith(prefix)) return path
+  // Windows workspaces arrive with mixed separators (e.g. `C:\Sources/`), so compare with `/` only
+  const target = path.replaceAll("\\", "/")
+  const root = directory.replaceAll("\\", "/")
+  const trim = (value: string) => value.replace(/\/+$/, "")
+  if (trim(target) === trim(root)) return ""
+
+  const prefix = root.endsWith("/") ? root : root + "/"
+  if (!target.startsWith(prefix)) return path
   return path.slice(directory.length)
 }
 
@@ -2421,6 +2425,7 @@ ToolRegistry.register({
   name: "grep",
   render(props) {
     const i18n = useI18n()
+    const data = useData()
     const args: string[] = []
     if (props.input.pattern) args.push("pattern=" + props.input.pattern)
     if (props.input.include) args.push("include=" + props.input.include)
@@ -2433,7 +2438,7 @@ ToolRegistry.register({
           <ToolTriggerRow
             title={i18n.t("ui.tool.grep")}
             pending={pending()}
-            subtitle={getDirectory(props.input.path)}
+            subtitle={relativizeProjectPath(props.input.path, data.directory)}
             args={args}
           />
         }
@@ -2981,6 +2986,7 @@ ToolRegistry.register({
       <div data-component="edit-tool">
         <BasicTool
           {...props}
+          revision={props.metadata?.filediff?.patch ?? props.input.newString}
           icon="code-lines"
           defer
           hasDetails
@@ -3068,6 +3074,7 @@ ToolRegistry.register({
       <div data-component="write-tool">
         <BasicTool
           {...props}
+          revision={props.metadata?.filediff?.patch ?? props.input.content}
           icon="code-lines"
           defer
           hasDetails
@@ -3248,6 +3255,7 @@ ToolRegistry.register({
       <div data-component="apply-patch-tool">
         <BasicTool
           {...props}
+          revision={props.input.patchText}
           icon="code-lines"
           defer
           hasDetails

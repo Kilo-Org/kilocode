@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
@@ -361,6 +362,13 @@ internal class ActiveListView(
         return true
     }
 
+    /** True when row [index] is entirely inside the viewport. */
+    @RequiresEdt
+    fun indexFullyVisible(index: Int): Boolean {
+        checkEdt()
+        return index in 0 until model.size && ScrollingUtil.isIndexFullyVisible(list, index)
+    }
+
     @RequiresEdt
     fun selectIndex(index: Int) {
         checkEdt()
@@ -397,18 +405,22 @@ internal class ActiveListView(
         return model.items.firstOrNull { it.key == key }
     }
 
+    /**
+     * Anchor for a popup or balloon attached to [key]'s row, or to one [cell] of it. [leading] takes
+     * the target's bottom-left corner, which keeps a dropdown aligned with the cell it belongs to;
+     * the default takes its bottom middle for a balloon callout.
+     */
     @RequiresEdt
-    fun point(key: String, cell: String? = null): RelativePoint {
+    fun point(key: String, cell: String? = null, leading: Boolean = false): RelativePoint {
         checkEdt()
         val idx = activeListIndex(model.items, key)
         if (idx < 0) return RelativePoint(list, Point(0, 0))
         val bounds = list.getCellBounds(idx, idx) ?: return RelativePoint(list, Point(0, 0))
         val rect = cell?.let { activeListCellBounds(list, idx, list.isSelectedIndex(idx))[it] }
         val target = rect ?: bounds
-        // Horizontal middle of the target, anchored to its bottom edge: the balloon opens below, so
-        // a center anchor would bury the callout under the balloon body and cover the row instead of
-        // pointing at it.
-        val x = target.x + target.width / 2
+        // Anchored to the target's bottom edge: the balloon opens below, so a center anchor would
+        // bury the callout under the balloon body and cover the row instead of pointing at it.
+        val x = if (leading) target.x else target.x + target.width / 2
         val y = target.y + target.height
         return RelativePoint(list, Point(x.coerceIn(bounds.x, bounds.x + bounds.width), y))
     }
@@ -500,7 +512,7 @@ internal class ActiveListView(
             // rows must leave the viewport where the user left it, or a polling owner would drag the
             // view back to the selection on every tick.
             val idx = list.selectedIndex
-            if (idx >= 0 && identities() != before) ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
+            if (idx >= 0 && identities() != before) ensureVisible(idx)
         } finally {
             restoring = false
         }
@@ -646,7 +658,45 @@ internal class ActiveListView(
     private fun choose(idx: Int, scroll: Boolean = true) {
         checkEdt()
         list.selectedIndex = idx
-        if (scroll) ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
+        if (scroll) ensureVisible(idx)
+    }
+
+    /**
+     * Scrolls row [idx] into view without moving it when it is already fully visible.
+     *
+     * The viewport's view is this panel, not the nested `JList`, so scrolling the list directly measures
+     * the offset in the wrong coordinate space: the list stays at 0,0 inside the panel while the viewport
+     * moves the panel. The view position is therefore computed against this panel's coordinates directly,
+     * which is also the only reliable path before the first layout has settled.
+     */
+    @RequiresEdt
+    private fun ensureVisible(idx: Int) {
+        val port = parent as? JViewport
+        // Tests and embedders can put the raw list in their own scroll pane; there the list is the view
+        // and the platform helper already measures the right space.
+        if (port == null) {
+            ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
+            return
+        }
+        val extent = port.extentSize.height
+        if (extent <= 0) return
+        val cell = list.getCellBounds(idx, idx) ?: return
+        val row = SwingUtilities.convertRectangle(list, cell, this)
+        val top = port.viewPosition.y
+        val bottom = top + extent
+        val y = when {
+            row.y < top -> row.y
+            row.y + row.height > bottom -> row.y + row.height - extent
+            else -> return
+        }
+        // The view and list may not have been laid out yet, so their heights can still be zero even when
+        // the cells are measured. Convert the last cell into this panel's space so the clamp and [row]
+        // above use one coordinate system, even if the view later gains padding.
+        val last = list.getCellBounds(model.size - 1, model.size - 1)
+        val end = last?.let { SwingUtilities.convertRectangle(list, it, this) }?.let { it.y + it.height } ?: 0
+        val content = maxOf(height, end)
+        val max = (content - extent).coerceAtLeast(0)
+        port.viewPosition = Point(port.viewPosition.x, y.coerceIn(0, max))
     }
 
     @RequiresEdt
@@ -880,10 +930,17 @@ internal class ActiveListView(
         val id = if (enabled) {
             activeListCellAt(list, idx, e.point, selected, menu?.takeIf { it.available(item) } != null)
         } else {
-            activeListCellBounds(list, idx, selected)
-                .entries
-                .firstOrNull { it.value.contains(e.point) }
-                ?.key
+            // A hit-tested region without an action — a status pill with only an id for tooltip
+            // hit-testing — must not swallow a click/double-click that falls through to it. `action`
+            // is only the per-cell handler and is null for every cell routed through the panel-level
+            // `onCell` callback (Sign In, Connect, Delete, rename, the row menu glyph, ...), so
+            // blocking must key off whether the hit id is a real cell/region, not that field.
+            val ids = activeListVisibleCells(item, selected, menu?.takeIf { it.available(item) } != null)
+                .map { it.id }
+                .toSet() + activeListRegions(item).keys
+            activeListHits(list, idx, selected)
+                .firstOrNull { it.id in ids && it.bounds.contains(e.point) }
+                ?.id
         }
         return Hit(item, id)
     }
@@ -979,7 +1036,46 @@ internal class ActiveListView(
         return preferredSize.height < view.height
     }
 
-    override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
+    /**
+     * Full rendered row height at [width], measured from every cell renderer.
+     *
+     * `JList.preferredSize` can be stale before the list enters a viewport: wrapped row height only
+     * becomes known once the final width reaches the renderer. Popup owners need this answer before
+     * building their balloon, so measure the same renderers the list will use and sum every cell.
+     */
+    @RequiresEdt
+    internal fun preferredRowsHeight(width: Int): Int {
+        checkEdt()
+        val old = list.size
+        list.setSize(width.coerceAtLeast(1), old.height.coerceAtLeast(1))
+        try {
+            val fixed = list.fixedCellHeight
+            val body = if (fixed > 0) {
+                fixed.toLong() * model.size
+            } else {
+                (0 until model.size).sumOf { idx ->
+                    list.cellRenderer.getListCellRendererComponent(
+                        list,
+                        model.getElementAt(idx),
+                        idx,
+                        false,
+                        false,
+                    ).preferredSize.height.toLong()
+                }
+            }
+            return (body + list.insets.top + list.insets.bottom)
+                .coerceAtMost(Int.MAX_VALUE.toLong())
+                .toInt()
+        } finally {
+            list.size = old
+        }
+    }
+
+    override fun getPreferredScrollableViewportSize(): Dimension {
+        val pref = super.getPreferredSize()
+        val width = width.takeIf { it > 0 } ?: pref.width
+        return Dimension(pref.width, preferredRowsHeight(width))
+    }
 
     override fun getScrollableUnitIncrement(
         visibleRect: Rectangle,
@@ -1036,6 +1132,7 @@ private data class ActiveListHeightBadge(
     val style: UiStyle.Badge.Style,
     val id: String?,
     val icon: Any?,
+    val segments: List<FilledBadgeIcon.Segment>,
 )
 
 private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
@@ -1046,7 +1143,7 @@ private fun activeListHeightRow(item: ActiveListItem): ActiveListHeightRow {
         item.description,
         item.icon,
         item.section,
-        item.badges.map { ActiveListHeightBadge(it.text, it.style, it.id, it.icon) },
+        item.badges.map { ActiveListHeightBadge(it.text, it.style, it.id, it.icon, it.segments) },
         item.trailing,
         item.cells,
         item.disabled,

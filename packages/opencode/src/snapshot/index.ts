@@ -22,6 +22,7 @@ import { KiloSnapshotMaterialize } from "../kilocode/snapshot/materialize"
 import type { MessageID, SessionID } from "../session/schema"
 import { withStatics } from "@opencode-ai/core/schema"
 import { zod } from "@opencode-ai/core/effect-zod"
+import { KiloSnapshotLock } from "../kilocode/snapshot/lock"
 // kilocode_change end
 
 export const Patch = Schema.Struct({
@@ -213,8 +214,10 @@ export const layer: Layer.Layer<Service, never, Requirements> =
           const remove = (file: string) => fs.remove(file, { force: true }).pipe(Effect.orDie)
           // kilocode_change end
           // kilocode_change start - serialize snapshot repositories across CLI and extension processes
-          const locked = <A, R>(fx: Effect.Effect<A, never, R>) =>
-            lock(state.gitdir).withPermits(1)(flock.withLock(fx, `snapshot:${state.gitdir}`).pipe(Effect.orDie))
+          const locked = <A, E, R>(fx: Effect.Effect<A, E, R>) =>
+            lock(state.gitdir).withPermits(1)(
+              KiloSnapshotLock.dieOnLockError(flock.withLock(fx, `snapshot:${state.gitdir}`)),
+            )
 
           // kilocode_change end
 
@@ -433,7 +436,13 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                   return
                 const result = yield* git(args(["write-tree"]), { cwd: state.directory })
                 const hash = result.text.trim()
-                if (result.code !== 0 || !hash) return
+                if (result.code !== 0 || !hash) {
+                  yield* Effect.logWarning("failed to write snapshot tree", {
+                    exitCode: result.code,
+                    stderr: result.stderr,
+                  })
+                  return
+                }
                 if (
                   seed &&
                   !(yield* KiloSnapshotMaterialize.localizeTrees(

@@ -12,6 +12,18 @@ async function scratch() {
   return fs.promises.mkdtemp(path.join(os.tmpdir(), "kilo-product-sbom-"))
 }
 
+// The real catalog is the source of truth. Reading the version from it keeps these tests
+// valid across dependency bumps (Dependabot changes it without touching this file).
+function catalog() {
+  const text = fs.readFileSync(
+    path.join(import.meta.dir, "../../packages/kilo-jetbrains/gradle/libs.versions.toml"),
+    "utf8",
+  )
+  const match = text.match(/^okhttp\s*=\s*"([^"]+)"/m)
+  if (!match) throw new Error("okhttp version not found in libs.versions.toml")
+  return match[1]
+}
+
 function names(bom: any) {
   return bom.components.map((item: any) => item.name)
 }
@@ -55,7 +67,7 @@ broken = { module = "com.example:broken", version.ref = "missing" }
     expect(JetBrains.catalog(text).libraries).toContainEqual({
       group: "com.squareup.okhttp3",
       name: "okhttp",
-      version: "4.12.0",
+      version: catalog(),
     })
   })
 })
@@ -169,7 +181,7 @@ describe("jetbrains plugin", () => {
       const okhttp = bom.components.find((item: any) => item.name === "okhttp")
       expect(okhttp.licenses).toBeUndefined()
       expect(bom.metadata.properties).toContainEqual({
-        name: "kilocode:coverage:gap:com.squareup.okhttp3:okhttp@4.12.0",
+        name: `kilocode:coverage:gap:com.squareup.okhttp3:okhttp@${catalog()}`,
         value: "licence unknown: not tracked by the Gradle version catalog",
       })
     } finally {

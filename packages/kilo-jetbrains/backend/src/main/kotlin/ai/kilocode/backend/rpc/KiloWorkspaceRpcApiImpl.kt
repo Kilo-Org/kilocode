@@ -11,6 +11,7 @@ import ai.kilocode.backend.workspace.AgentData
 import ai.kilocode.backend.workspace.AgentInfo
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
 import ai.kilocode.backend.workspace.KiloWorkspaceState
+import ai.kilocode.jetbrains.api.infrastructure.ClientException
 import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.model.Agent
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
@@ -135,6 +136,17 @@ class KiloWorkspaceRpcApiImpl internal constructor(
     override suspend fun reload(directory: String) {
         if (app.appState.value !is KiloAppState.Ready) return
         manager.get(directory).reload()
+    }
+
+    override suspend fun reloadCoreSettings(directory: String): Boolean {
+        app.requireReady()
+        val api = app.api ?: throw IllegalStateException("Kilo API is unavailable")
+        return try {
+            withContext(Dispatchers.IO) { api.instanceReload(directory = directory) }
+        } catch (e: ClientException) {
+            if (e.statusCode == 409) return false
+            throw e
+        }
     }
 
     override suspend fun models(directory: String): ModelsWorkspaceDto {

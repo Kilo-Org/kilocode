@@ -1,4 +1,4 @@
-import { Cause, Deferred, Effect, Exit, Scope, Semaphore } from "effect"
+import { Cause, Deferred, Effect, Exit, Option, Scope, Semaphore } from "effect"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { NamedError } from "@opencode-ai/core/util/error"
 import type { EventV2 } from "@opencode-ai/core/event"
@@ -50,6 +50,10 @@ export namespace Goal {
 
   function matches<D extends EventV2.Definition>(event: EventV2.Payload, definition: D): event is EventV2.Payload<D> {
     return event.type === definition.type
+  }
+
+  function human(part: { type: string; synthetic?: boolean; ignored?: boolean }) {
+    return part.type !== "compaction" && (part.type !== "text" || (!part.synthetic && !part.ignored))
   }
 
   export function action(part: typeof SessionV1.ToolPart.Type) {
@@ -274,6 +278,46 @@ export namespace Goal {
         )
       })
 
+      const context = Effect.fn("Goal.context")(function* (id: SessionID, parent: () => MessageID | undefined) {
+        let user: Pick<typeof SessionV1.User.Type, "id" | "system" | "editorContext"> | undefined
+        const pending = new Map<MessageID, typeof SessionV1.User.Type>()
+        // Refresh context from real input, not goal turns or internal compaction messages.
+        yield* Effect.acquireRelease(
+          events.listen((event) =>
+            Effect.sync(() => {
+              if (event.metadata?.fork) return
+              if (matches(event, SessionV1.Event.MessageUpdated)) {
+                const info = event.data.info
+                if (info.sessionID !== id || info.role !== "user" || info.id === parent()) return
+                pending.set(info.id, info)
+                if (user?.id === info.id) user = info
+                return
+              }
+              if (!matches(event, SessionV1.Event.PartUpdated)) return
+              const part = event.data.part
+              if (part.sessionID !== id) return
+              const source = pending.get(part.messageID)
+              if (!source) return
+              if (part.type === "compaction") {
+                pending.delete(part.messageID)
+                return
+              }
+              if (!human(part)) return
+              if (!user || source.id >= user.id) user = source
+              pending.delete(part.messageID)
+            }),
+          ),
+          (off) => off,
+        )
+        const source = yield* sessions.findMessage(
+          id,
+          (message) => message.info.role === "user" && message.parts.some(human),
+        )
+        if (Option.isSome(source) && source.value.info.role === "user" && (!user || source.value.info.id > user.id))
+          user = source.value.info
+        return () => user
+      })
+
       const pendingFamily = Effect.fn("Goal.pendingFamily")(function* (id: SessionID) {
         const pending = [
           ...(yield* permission.list()),
@@ -376,11 +420,14 @@ export namespace Goal {
           return { run: true as const, note: list.map((entry) => entry.note).join("\n\n") }
         }
         yield* Effect.gen(function* () {
+          let parent: MessageID | undefined
+          const read = yield* context(input.id, () => parent)
           while (input.current() && input.ticket.running()) {
             yield* drain.wait(input.id).pipe(Effect.raceFirst(input.cancelled))
             const session = yield* sessions.get(input.id).pipe(Effect.orDie)
             if (!input.current() || !input.ticket.running() || session.time.archived || session.revert) break
             const messageID = MessageID.ascending()
+            parent = messageID
             const step: Step = yield* Effect.gen(function* () {
               const cycle = yield* Effect.acquireRelease(
                 Effect.sync(() => outcome(input.id, messageID, guard.running)),
@@ -394,6 +441,7 @@ export namespace Goal {
                 ),
                 (off) => off,
               )
+              const user = read()
               const result = yield* bridge.run(
                 ops.prompt(
                   {
@@ -402,6 +450,14 @@ export namespace Goal {
                     agent: input.agent,
                     model: input.model,
                     variant: input.model.variant,
+                    editorContext: user?.editorContext
+                      ? {
+                          ...user.editorContext,
+                          visibleFiles: user.editorContext.visibleFiles?.slice(),
+                          openTabs: user.editorContext.openTabs?.slice(),
+                        }
+                      : undefined,
+                    system: user?.system,
                     snapshotInitialization: input.snapshotInitialization,
                     parts: [
                       {
@@ -490,6 +546,7 @@ export namespace Goal {
             yield* Effect.sleep("5 seconds").pipe(Effect.raceFirst(input.cancelled))
           }
         }).pipe(
+          Effect.scoped,
           Effect.catchCause((cause) =>
             Effect.gen(function* () {
               if (Cause.hasInterruptsOnly(cause)) return

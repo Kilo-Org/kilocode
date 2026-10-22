@@ -53,6 +53,8 @@ import { KilocodeGlobalConfigStamp } from "@/kilocode/config/global-stamp"
 import { SandboxConfig } from "@/kilocode/sandbox/config"
 import { ExternalMarkdown } from "@/kilocode/config/external-markdown"
 import { ClaudeMigration } from "@/kilocode/config/claude-migration" // kilocode_change
+import { ProviderModels } from "@/kilocode/config/provider-models"
+import * as ReservedCommand from "@/kilocode/command/reserved" // kilocode_change
 import type { KilocodeMarkdown } from "@/kilocode/config/markdown"
 import {
   IndexingConfig as KiloIndexingConfig,
@@ -347,7 +349,9 @@ const layer = Layer.effect(
         ),
       )
       const parsed = ConfigParse.jsonc(expanded, source)
-      const normalized = normalizeLoadedConfig(parsed, source) // kilocode_change
+      const sanitized = ProviderModels.sanitize(parsed, source) // kilocode_change
+      if (configWarnings) configWarnings.push(...sanitized.warnings) // kilocode_change
+      const normalized = normalizeLoadedConfig(sanitized.config, source) // kilocode_change
       // kilocode_change start - preserve upstream excess-key compatibility while warning Kilo users about typos
       if (configWarnings) {
         // Warn for keys the V1 decoder drops and the V2 lowering does not consume. Probe the lowering
@@ -1130,7 +1134,7 @@ const layer = Layer.effect(
     })
 
     const warnings = Effect.fn("Config.warnings")(function* () {
-      return yield* InstanceState.use(state, (s) => s.warnings)
+      return yield* InstanceState.use(state, (s) => [...s.warnings, ...ReservedCommand.warnings(s.config.command)])
     })
     // kilocode_change end
 

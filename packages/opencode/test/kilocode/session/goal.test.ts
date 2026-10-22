@@ -175,28 +175,42 @@ const toolNames = (tools: unknown) =>
   (tools as { function: { name: string } }[] | undefined)?.map((tool) => tool.function.name) ?? []
 
 it.instance(
-  "starts a goal from the agent's goal tool",
+  "preserves the request prefix across goal start, next turns, completion, and ordinary follow-up",
   Effect.gen(function* () {
-    const run = yield* setup()
+    const run = yield* setup({ permission: { bash: "allow" } })
+    const lookup = spyOn(run.sessions, "findMessage")
+    yield* Effect.addFinalizer(() => Effect.sync(() => lookup.mockRestore()))
     yield* run.llm.push(
-      reply().tool("goal", { action: "start", objective: "Fix the validation tests" }),
+      reply().tool("goal", { action: "start", objective }),
       reply().text("Goal armed").stop(),
-      reply().tool("goal_report", { status: "complete", reason: "Validation tests pass." }),
-      reply().text("Final report").stop(),
+      shell(),
+      reply().text("First goal turn finished").stop(),
+      reply().tool("goal_report", { status: "complete", reason: "Validation is complete." }),
+      reply().text("Goal finished").stop(),
+      reply().text("Ordinary follow-up finished").stop(),
     )
-    yield* run.prompt.prompt({ sessionID: run.session.id, parts: [{ type: "text", text: "Keep working" }] })
+    const input = { sessionID: run.session.id, editorContext: { shell: "/bin/fish" }, system: "Keep the goal context." }
+    yield* run.prompt.prompt({ ...input, parts: [{ type: "text", text: "Keep working toward the validation goal" }] })
     yield* run.paused
-    expect(GoalState.read(yield* run.metadata)).toMatchObject({
-      text: "Fix the validation tests",
-      status: "complete",
-      active: false,
-      reason: expect.stringContaining("Validation tests pass."),
+    expect(GoalState.read(yield* run.metadata)).toMatchObject({ text: objective, status: "complete", active: false })
+    yield* run.prompt.prompt({ ...input, parts: [{ type: "text", text: "Continue ordinary chat" }] })
+    const requests = (yield* run.llm.hits).map((hit) => {
+      const messages = hit.body.messages
+      if (!Array.isArray(messages)) throw new Error("Expected model messages")
+      return { tools: hit.body.tools, messages }
     })
-    const hits = yield* run.llm.hits
-    expect(toolNames(hits.at(0)?.body.tools)).toContain("goal")
-    expect(toolNames(hits.at(1)?.body.tools)).not.toContain("goal")
-    expect(JSON.stringify(hits.at(-1)?.body.messages)).toContain("Fix the validation tests")
-    expect(hits).toHaveLength(4)
+    expect(requests).toHaveLength(7)
+    const first = requests.at(0)!
+    expect(JSON.stringify(first.messages.at(0))).toContain("Default shell: /bin/fish")
+    for (const [index, request] of requests.slice(1).entries()) {
+      const previous = requests.at(index)!
+      expect(request.tools).toEqual(first.tools)
+      expect(request.messages.at(0)).toEqual(first.messages.at(0))
+      expect(request.messages.slice(1, previous.messages.length)).toEqual(previous.messages.slice(1))
+    }
+    const original = (yield* run.sessions.messages({ sessionID: run.session.id })).at(0)!
+    const synthetic = { ...original, parts: original.parts.map((part) => ({ ...part, synthetic: true })) }
+    expect(lookup.mock.calls.filter(([, predicate]) => predicate(original) && !predicate(synthetic))).toHaveLength(1)
   }),
   30_000,
 )
@@ -234,9 +248,9 @@ it.instance(
     yield* run.prompt.prompt({ sessionID: run.session.id, parts: [{ type: "text", text: "Start something" }] })
     expect(GoalState.read(yield* run.metadata)).toBeUndefined()
     const parts = (yield* run.sessions.messages({ sessionID: run.session.id })).flatMap((message) => message.parts)
-    expect(
-      parts.some((part) => part.type === "tool" && part.tool === "goal" && part.state.status === "error"),
-    ).toBe(true)
+    expect(parts.some((part) => part.type === "tool" && part.tool === "goal" && part.state.status === "error")).toBe(
+      true,
+    )
     yield* Effect.sleep("5200 millis")
     expect(yield* run.llm.hits).toHaveLength(2)
   }),
@@ -259,9 +273,7 @@ it.instance(
       permissions
         .list()
         .pipe(
-          Effect.map((items) =>
-            items.find((item) => item.sessionID === run.session.id && item.permission === "goal"),
-          ),
+          Effect.map((items) => items.find((item) => item.sessionID === run.session.id && item.permission === "goal")),
         ),
       "Goal start did not request permission",
       "10 seconds",
@@ -270,9 +282,9 @@ it.instance(
     yield* run.idle
     expect(GoalState.read(yield* run.metadata)).toBeUndefined()
     const parts = (yield* run.sessions.messages({ sessionID: run.session.id })).flatMap((message) => message.parts)
-    expect(
-      parts.some((part) => part.type === "tool" && part.tool === "goal" && part.state.status === "error"),
-    ).toBe(true)
+    expect(parts.some((part) => part.type === "tool" && part.tool === "goal" && part.state.status === "error")).toBe(
+      true,
+    )
   }),
   30_000,
 )
@@ -290,9 +302,9 @@ it.instance(
     const metadata = yield* run.sessions.get(child.id).pipe(Effect.map((value) => value.metadata))
     expect(GoalState.read(metadata)).toBeUndefined()
     const parts = (yield* run.sessions.messages({ sessionID: child.id })).flatMap((message) => message.parts)
-    expect(
-      parts.some((part) => part.type === "tool" && part.tool === "goal" && part.state.status === "error"),
-    ).toBe(true)
+    expect(parts.some((part) => part.type === "tool" && part.tool === "goal" && part.state.status === "error")).toBe(
+      true,
+    )
   }),
   30_000,
 )
@@ -375,7 +387,7 @@ it.instance(
       reply().text("Done").stop(),
     )
     yield* run.prompt.prompt({ sessionID: run.session.id, parts: [{ type: "text", text: "Ordinary work" }] })
-    expect(JSON.stringify((yield* run.llm.hits).at(0)?.body.tools)).not.toContain('"goal_report"')
+    expect(toolNames((yield* run.llm.hits).at(0)?.body.tools)).toContain("goal_report")
     expect(GoalState.read(yield* run.metadata)).toBeUndefined()
     const parts = (yield* run.sessions.messages({ sessionID: run.session.id })).flatMap((message) => message.parts)
     expect(
@@ -444,7 +456,7 @@ for (const reason of ["", "   ", "x".repeat(2001)]) {
 
 for (const state of ["ordinary", "pause", "clear", "completed"] as const) {
   it.instance(
-    `excludes only questions during goals and restores them for ${state} chat`,
+    `keeps tool schemas stable and allows questions for ${state} chat`,
     Effect.gen(function* () {
       const run = yield* setup()
       const question = yield* Question.Service
@@ -484,16 +496,7 @@ for (const state of ["ordinary", "pause", "clear", "completed"] as const) {
         expect.arrayContaining([expect.objectContaining({ function: expect.objectContaining({ name: "question" }) })]),
       )
       if (state !== "ordinary") {
-        expect(
-          (hits.at(0)?.body.tools as { function: { name: string } }[]).filter(
-            (tool) => tool.function.name !== "goal_report" && tool.function.name !== "goal",
-          ),
-        ).toEqual(
-          (tools as { function: { name: string } }[]).filter(
-            (tool) => tool.function.name !== "question" && tool.function.name !== "goal",
-          ),
-        )
-        expect(JSON.stringify(hits.at(0)?.body.tools)).toContain('"goal_report"')
+        expect(hits.at(0)?.body.tools).toEqual(tools)
       }
       yield* question.reply({ requestID: pending.id, answers: [["Small"]] })
       yield* Fiber.join(work)
@@ -517,7 +520,7 @@ it.instance(
     if (!child) throw new Error("Goal did not create a child")
     expect(GoalPolicy.available(child.id, "question")).toBe(false)
     expect(GoalPolicy.available(child.id, "goal_report")).toBe(false)
-    expect(JSON.stringify((yield* run.llm.hits).at(1)?.body.tools)).not.toContain('"goal_report"')
+    expect(toolNames((yield* run.llm.hits).at(1)?.body.tools)).toContain("goal_report")
     yield* run.command("pause")
     yield* run.idle
     const work = yield* run.prompt
@@ -533,7 +536,7 @@ it.instance(
 )
 
 it.instance(
-  "does not execute an unadvertised question during a goal",
+  "does not execute a question during a goal despite stable tool schemas",
   Effect.gen(function* () {
     const run = yield* setup()
     const question = yield* Question.Service
@@ -912,6 +915,8 @@ it.instance(
         sessionID: session.id,
         agent: "code",
         model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("test-model") },
+        editorContext: { shell: "/bin/fish" },
+        system: "Use the latest human context.",
         parts: [{ type: "text", text: "Answer this instead" }],
       })
       .pipe(Effect.forkChild)
@@ -936,6 +941,8 @@ it.instance(
     const bodies = (yield* llm.hits).map((hit) => JSON.stringify(hit.body))
     expect(bodies.some((body) => body.includes("Answer this instead"))).toBe(true)
     expect(bodies.some((body) => body.includes("Continue working toward this session goal"))).toBe(true)
+    expect(bodies.at(-1)).toContain("Default shell: /bin/fish")
+    expect(bodies.at(-1)).toContain("Use the latest human context.")
   }),
   30_000,
 )
@@ -1166,7 +1173,10 @@ it.instance(
       sessionID: session.id,
       permission: [{ permission: "bash", pattern: "*", action: "ask" }],
     })
-    yield* llm.tool("bash", { command: `echo goal-permission-${crypto.randomUUID()}`, description: "Check the workspace" })
+    yield* llm.tool("bash", {
+      command: `echo goal-permission-${crypto.randomUUID()}`,
+      description: "Check the workspace",
+    })
     yield* command(objective)
     const pending = yield* pollWithTimeout(
       permission.list().pipe(Effect.map((items) => items.find((item) => item.sessionID === session.id))),
@@ -1191,7 +1201,21 @@ it.instance(
 it.instance(
   "preserves metadata and paused forks while goal controls leave the transcript and model unchanged",
   Effect.gen(function* () {
-    const { llm, sessions, session, command, metadata, wait } = yield* setup()
+    const { llm, sessions, session, command, metadata } = yield* setup()
+    const events = yield* EventV2Bridge.Service
+    const drain = yield* SessionDrain.Service
+    const resume = Effect.gen(function* () {
+      // An HTTP hit does not mean the client has started processing the stream.
+      const received = yield* events.subscribe(MessageV2.Event.PartUpdated).pipe(
+        Stream.filter((event) => event.data.part.sessionID === session.id && event.data.part.type === "step-start"),
+        Stream.take(1),
+        Stream.runDrain,
+        Effect.forkChild({ startImmediately: true }),
+      )
+      yield* llm.hang
+      yield* command("resume")
+      yield* awaitWithTimeout(Fiber.join(received), "goal stream did not start", "15 seconds")
+    })
     const selected = {
       agent: "ask",
       model: {
@@ -1208,6 +1232,8 @@ it.instance(
       if (before.length) expect(target).toBeDefined()
       for (const message of before) ids.add(message.info.id)
       const ack = yield* command(args)
+      // Cancellation can return before the prompt waiter releases its queue slot.
+      yield* awaitWithTimeout(drain.wait(session.id), "goal prompt did not drain")
       const after = yield* sessions.messages({ sessionID: session.id })
       expect(after.map((message) => message.info.id)).toEqual(before.map((message) => message.info.id))
       expect(KiloSessionContinuation.target(after)).toBe(target)
@@ -1230,9 +1256,7 @@ it.instance(
       expect.arrayContaining([expect.objectContaining({ text: expect.stringContaining("paused") })]),
     )
     expect(yield* llm.hits).toHaveLength(0)
-    yield* llm.hang
-    yield* command("resume")
-    yield* wait(1)
+    yield* resume
     const fork = yield* sessions.fork({ sessionID: session.id })
     expect(fork.metadata).toMatchObject({
       ...retained,
@@ -1251,9 +1275,7 @@ it.instance(
     })
     yield* control("")
     expect(yield* llm.hits).toHaveLength(1)
-    yield* llm.hang
-    yield* command("resume")
-    yield* wait(2)
+    yield* resume
     yield* control("clear")
     expect(yield* metadata).toEqual(retained)
     yield* Effect.sleep("5200 millis")
@@ -1784,12 +1806,13 @@ for (const kind of ["replay", "continue", "stop"] as const) {
       })
       const gate = Promise.withResolvers<void>()
       yield* Effect.addFinalizer(() => Effect.sync(gate.resolve))
-      if (kind !== "continue")
-        yield* run.prompt.prompt({
-          sessionID: run.session.id,
-          noReply: true,
-          parts: [{ type: "text", text: "x".repeat(240_000) }],
-        })
+      yield* run.prompt.prompt({
+        sessionID: run.session.id,
+        noReply: true,
+        editorContext: { shell: "/bin/fish" },
+        system: "Retain the goal context after compaction.",
+        parts: [{ type: "text", text: kind === "continue" ? "Check validation" : "x".repeat(240_000) }],
+      })
       yield* run.llm.push(
         ...(kind === "continue" ? [shell().usage({ input: 95000, output: 10 })] : []),
         reply().wait(gate.promise).text("The goal is to improve the validation workflow.").stop(),
@@ -1829,6 +1852,8 @@ for (const kind of ["replay", "continue", "stop"] as const) {
       })
       yield* run.wait(count + 1)
       expect(JSON.stringify((yield* run.llm.hits).at(-1)?.body)).toContain(objective)
+      expect(JSON.stringify((yield* run.llm.hits).at(-1)?.body)).toContain("Default shell: /bin/fish")
+      expect(JSON.stringify((yield* run.llm.hits).at(-1)?.body)).toContain("Retain the goal context after compaction.")
       yield* run.prompt.cancel(run.session.id)
     }),
     30_000,
@@ -1993,19 +2018,55 @@ for (const override of [
   { template: "Custom workflow: $ARGUMENTS", description: "Run a custom workflow" },
   { agent: "ask", model: "test/selected-model", variant: "focused" },
 ]) {
+  const aliased = "template" in override
   it.instance(
-    `rejects reserved goal ${"template" in override ? "templates" : "execution overrides"} in listing and dispatch`,
+    `ignores reserved goal ${aliased ? "templates" : "execution overrides"} without hiding other commands`,
     Effect.gen(function* () {
-      const run = yield* setup({ command: { goal: override } })
+      const run = yield* setup({
+        command: { goal: override, check: { template: "Check validation", description: "Check the workspace" } },
+      })
       const commands = yield* Command.Service
-      for (const effect of [commands.list().pipe(Effect.asVoid), run.command(objective).pipe(Effect.asVoid)]) {
-        const exit = yield* Effect.exit(effect)
-        expect(Exit.isFailure(exit)).toBe(true)
-        if (Exit.isFailure(exit)) expect(String(Cause.squash(exit.cause))).toContain("/goal command is reserved")
-      }
-      expect(yield* run.metadata).toEqual(retained)
-      expect(yield* run.sessions.messages({ sessionID: run.session.id })).toEqual([])
-      expect(yield* run.llm.hits).toHaveLength(0)
+
+      // A clashing name is skipped, not fatal: it used to fail the whole list and leave
+      // clients with no commands at all.
+      const list = yield* commands.list()
+      expect(list.map((item) => item.name)).toContain("check")
+      expect(list.map((item) => item.name)).toContain("init")
+      const goals = list.filter((item) => item.name === "goal")
+      expect(goals).toHaveLength(1)
+      expect(goals.at(0)?.description).toContain("Keep working toward a session goal")
+      expect(goals.at(0)?.template).toBe("$ARGUMENTS")
+      expect(yield* commands.get("goal")).toMatchObject({ source: "command", template: "$ARGUMENTS" })
+
+      // A template-less override has nothing to alias; a full template is reachable as
+      // goal:command instead of being dropped.
+      expect(list.map((item) => item.name).includes("goal:command")).toBe(aliased)
+
+      // Dispatch still reaches Kilo's own goal, on the dispatched model, and never
+      // renders the override's template.
+      yield* run.llm.text("Goal complete. All work is done.")
+      yield* run.command(objective)
+      yield* run.paused
+      expect(GoalState.read(yield* run.metadata)).toMatchObject({ text: objective, status: "paused" })
+      const hits = yield* run.llm.hits
+      expect(hits).toHaveLength(1)
+      expect(hits.at(0)?.body.model).toBe("test-model")
+      expect(JSON.stringify(hits.at(0)?.body.messages)).not.toContain("Custom workflow")
+
+      if (!aliased) return
+
+      // The override's own template still runs, on its own alias, under the normal
+      // command path rather than the goal runner.
+      yield* run.prompt.command({
+        sessionID: run.session.id,
+        agent: "code",
+        command: "goal:command",
+        arguments: "ship it",
+        model: "test/test-model",
+      })
+      const aliasHits = yield* run.llm.hits
+      expect(aliasHits).toHaveLength(2)
+      expect(JSON.stringify(aliasHits.at(-1)?.body.messages)).toContain("Custom workflow: ship it")
     }),
   )
 }
@@ -2121,7 +2182,7 @@ const dropWait = (run: Run) =>
   })
 
 it.instance(
-  "a wait-for-deploy goal only offers scheduling tools before it suspends",
+  "a wait-for-deploy goal keeps stable tool schemas before it suspends",
   Effect.gen(function* () {
     const run = yield* setup()
     const deploy = "Wait for the deploy to finish, then verify it"
@@ -2133,10 +2194,23 @@ it.instance(
     yield* run.wait(1)
     const names = toolNames((yield* run.llm.hits).at(0)?.body.tools)
     expect(names).toContain("schedule_wakeup")
-    expect(names).not.toContain("bash")
-    expect(names).not.toContain("read")
+    expect(names).toContain("bash")
+    expect(names).toContain("read")
     const waiting = yield* goalStatus(run, "waiting")
     expect(waiting.status).toBe("waiting")
+  }),
+  30_000,
+)
+
+it.instance(
+  "rejects non-scheduling goal actions despite stable schemas",
+  Effect.gen(function* () {
+    const run = yield* setup({ permission: { bash: "allow" } })
+    const file = path.join((yield* TestInstance).directory, "unexpected-goal-action")
+    yield* run.llm.push(shell(`touch "${file}"`), reply().text("Cannot run this action").stop())
+    yield* run.command("Wait for the deploy to finish, then verify it")
+    yield* run.paused
+    expect(yield* (yield* FSUtil.Service).exists(file)).toBe(false)
   }),
   30_000,
 )
@@ -2449,16 +2523,12 @@ it.instance(
     const done = yield* goalStatus(run, "complete")
     expect(done.active).toBe(false)
     yield* pollWithTimeout(
-      wake
-        .list({ sessionID: run.session.id })
-        .pipe(Effect.map((items) => (items.length === 0 ? true : undefined))),
+      wake.list({ sessionID: run.session.id }).pipe(Effect.map((items) => (items.length === 0 ? true : undefined))),
       "goal did not release its wakeups",
       "5 seconds",
     )
     yield* pollWithTimeout(
-      wake
-        .cronList({ sessionID: run.session.id })
-        .pipe(Effect.map((items) => (items.length === 0 ? true : undefined))),
+      wake.cronList({ sessionID: run.session.id }).pipe(Effect.map((items) => (items.length === 0 ? true : undefined))),
       "goal did not release its cron tasks",
       "5 seconds",
     )
@@ -2580,4 +2650,3 @@ it.instance(
   }),
   30_000,
 )
-

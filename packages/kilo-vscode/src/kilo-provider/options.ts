@@ -62,4 +62,6 @@ export type KiloProviderOptions = {
   topBarSurface?: "tab"
   /** Project-aware settings used by the standalone Agent Manager settings tab. */
   agentManagerSettings?: AgentManagerSettingsHandler
+  /** Dedicated Settings entry and its current route, including webview reloads. */
+  settingsPanel?: () => { tab?: string; projectId?: string }
 }

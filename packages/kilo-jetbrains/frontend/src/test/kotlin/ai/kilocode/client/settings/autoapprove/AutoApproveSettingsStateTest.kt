@@ -21,8 +21,8 @@ class AutoApproveSettingsStateTest {
         assertEquals("ask", defaultLevel("external_directory"))
         assertEquals("ask", defaultLevel("bash"))
         assertEquals("ask", defaultLevel("doom_loop"))
+        assertEquals("ask", defaultLevel("edit"))
         assertEquals("allow", defaultLevel("read"))
-        assertEquals("allow", defaultLevel("edit"))
     }
 
     @Test
