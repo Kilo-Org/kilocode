@@ -99,22 +99,41 @@ it.effect("maps only the proven native allowlist onto the Cloud facade", () => {
     ])
 
     // Id-scoped reads keep pagination only; every other selector is dropped.
-    expect(Object.fromEntries(app.calls[1]!.search)).toEqual({ limit: "2", before: "cursor-1" })
-    expect([...app.calls[0]!.search.keys()]).toEqual([])
-    // Collection-scoped routes carry exactly Cloud's public directory selector.
-    expect(Object.fromEntries(app.calls[7]!.search)).toEqual({
-      directory: `/cloud-agent/sessions/${SESSION}`,
-    })
-    expect(Object.fromEntries(app.calls[10]!.search)).toEqual({
-      directory: `/cloud-agent/sessions/${SESSION}`,
-    })
-    expect(Object.fromEntries(app.calls[11]!.search)).toEqual({
-      directory: `/cloud-agent/sessions/${SESSION}`,
-    })
+    expect(app.calls.map((call) => call.search.toString())).toEqual([
+      "",
+      "limit=2&before=cursor-1",
+      "",
+      "",
+      "",
+      "",
+      "",
+      `directory=${encodeURIComponent(`/cloud-agent/sessions/${SESSION}`)}`,
+      `directory=${encodeURIComponent(`/cloud-agent/sessions/${SESSION}`)}`,
+      `directory=${encodeURIComponent(`/cloud-agent/sessions/${SESSION}`)}`,
+      `directory=${encodeURIComponent(`/cloud-agent/sessions/${SESSION}`)}`,
+      `directory=${encodeURIComponent(`/cloud-agent/sessions/${SESSION}`)}`,
+      `directory=${encodeURIComponent(`/cloud-agent/sessions/${SESSION}`)}`,
+      `directory=${encodeURIComponent(`/cloud-agent/sessions/${SESSION}`)}`,
+    ])
 
     // Fresh provider auth, never the local client's.
-    expect(app.calls.every((call) => call.auth === `Bearer ${TOKEN}`)).toBe(true)
-    expect(app.calls[2]!.body).toBe('{"parts":[]}')
+    expect(app.calls.map((call) => call.auth)).toEqual(app.calls.map(() => `Bearer ${TOKEN}`))
+    expect(app.calls.map((call) => call.body)).toEqual([
+      "",
+      "",
+      '{"parts":[]}',
+      "{}",
+      '{"command":"init"}',
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      '{"answers":[["a"]]}',
+      "{}",
+      '{"reply":"once"}',
+    ])
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 

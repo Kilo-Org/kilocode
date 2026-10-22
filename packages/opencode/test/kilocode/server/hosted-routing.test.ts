@@ -149,8 +149,16 @@ describe("hosted attachment routing", () => {
     })
 
     expect(response.status).toBe(200)
-    const body = (await response.json()) as { providers: Array<{ id: string }> }
-    expect(body.providers.map((item) => item.id)).toEqual(["kilo-cloud"])
+    expect(await response.json()).toEqual({
+      providers: [
+        {
+          id: "kilo-cloud",
+          default: true,
+          availability: { state: "unavailable", reason: "signed_out", message: expect.any(String) },
+          transport: { state: "unknown" },
+        },
+      ],
+    })
     expect(fake.calls).toHaveLength(0)
   })
 

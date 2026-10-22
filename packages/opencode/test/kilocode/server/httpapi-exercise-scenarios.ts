@@ -476,7 +476,10 @@ export const kiloScenarios: Scenario[] = [
   http.protected
     .get("/kilocode/session-host/session", "sessionHost.list")
     .at((ctx) => ({ path: "/kilocode/session-host/session", headers: ctx.headers() }))
-    .status(401),
+    .json(200, (body) => {
+      object(body)
+      array(body.items)
+    }),
   http.protected
     .post("/kilocode/session-host/session", "sessionHost.start")
     .at((ctx) => ({

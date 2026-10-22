@@ -174,11 +174,9 @@ function forwardResponse(response: Response): HttpServerResponse.HttpServerRespo
     headers[key] = value
   })
   const contentType = response.headers.get("content-type")
-  if (!response.body) {
-    return HttpServerResponse.raw(null, { status: response.status, headers })
-  }
-  return HttpServerResponse.stream(
-    Stream.fromReadableStream({ evaluate: () => response.body!, onError: (err) => err }),
+  if (!response.body) return HttpServerResponse.raw(null, { status: response.status, headers })
+  return HttpServerResponse.raw(
+    Stream.toReadableStream(Stream.fromReadableStream({ evaluate: () => response.body!, onError: (err) => err })),
     { status: response.status, headers, ...(contentType ? { contentType } : {}) },
   )
 }

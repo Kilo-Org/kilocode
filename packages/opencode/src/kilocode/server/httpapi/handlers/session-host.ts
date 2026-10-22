@@ -24,6 +24,11 @@ import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { SessionHostGoneError, SessionHostPaymentRequiredError } from "../groups/session-host"
 
 const SERVICE = "kilo-cloud"
+const hostedDown = {
+  state: "unavailable",
+  reason: "unreachable",
+  message: "Hosted session availability could not be read",
+} as const
 
 function mapFailure(error: HostedFailure) {
   switch (error.code) {
@@ -95,7 +100,12 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
           return {
             id: provider.id,
             default: provider.default === true,
-            availability: yield* provider.availability,
+            // Availability probes credentials and remote state. It must never turn
+            // discovery into a server error, so an unexpected effect failure is a
+            // reported unavailable state instead.
+            availability: yield* provider.availability.pipe(
+              Effect.catchCause(() => Effect.succeed(hostedDown)),
+            ),
             transport: yield* provider.transport,
           }
         }),
@@ -104,14 +114,17 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
     })
 
     const list = Effect.fn("SessionHostHttpApi.list")(function* (ctx: { query: { limit?: number } }) {
-      const provider = yield* resolveDefault
+      // An unavailable host is reported, not thrown: this route must stay a local
+      // discovery surface even when Cloud cannot be reached.
+      const provider = yield* resolveDefault.pipe(Effect.catch(() => Effect.succeed(undefined)))
+      if (!provider) return { items: [] }
       return yield* provider
         .list(ctx.query.limit === undefined ? {} : { limit: ctx.query.limit })
         .pipe(Effect.mapError(mapFailure))
     })
 
     const start = Effect.fn("SessionHostHttpApi.start")(function* (ctx: { payload: typeof StartInput.Type }) {
-      const provider = yield* resolveDefault
+      const provider = yield* resolveDefault.pipe(Effect.mapError(mapFailure))
       return yield* provider.start(ctx.payload).pipe(Effect.mapError(mapFailure))
     })
 

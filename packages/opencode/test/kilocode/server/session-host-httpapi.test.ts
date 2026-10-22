@@ -16,6 +16,7 @@ import { Effect, Layer, Schema } from "effect"
 import { HttpClient, HttpClientRequest, HttpRouter } from "effect/unstable/http"
 import { HttpApi, HttpApiBuilder } from "effect/unstable/httpapi"
 import { testEffect, pollWithTimeout } from "../../lib/effect"
+import { parse } from "../../server/httpapi-exercise/assertions"
 
 const SESSION = "ses_00000000000000000000000001"
 const TOKEN = "kilo-test-bearer-value"
@@ -76,13 +77,13 @@ function harness() {
         ])
       }
       if (url.pathname === "/trpc/start") {
-        const input = JSON.parse(body) as { message: { id: string } }
+        const input = String(Object(parse(body)).message?.id)
         return Response.json({
           result: {
             data: {
               cloudAgentSessionId: "workspace_12345678-1234-1234-1234-123456789abc",
               kiloSessionId: SESSION,
-              messageId: input.message.id,
+              messageId: input,
               delivery: "queued",
               replayed: false,
             },
@@ -152,8 +153,7 @@ describe("session host HttpApi", () => {
     Effect.gen(function* () {
       const list = yield* HttpClient.get(`${SessionHostPaths.session}?limit=5`)
       expect(list.status).toBe(200)
-      const page = (yield* list.json) as { items: Array<{ id: { sessionID: string } }> }
-      expect(page.items.map((item) => item.id.sessionID)).toEqual([SESSION])
+      expect(yield* list.json).toMatchObject({ items: [{ id: { sessionID: SESSION } }] })
 
       const detail = yield* HttpClient.get(
         SessionHostPaths.sessionDetail.replace(":providerID", "kilo-cloud").replace(":sessionID", SESSION),
@@ -164,8 +164,7 @@ describe("session host HttpApi", () => {
         SessionHostPaths.message.replace(":providerID", "kilo-cloud").replace(":sessionID", SESSION),
       )
       expect(transcript.status).toBe(200)
-      const body = (yield* transcript.json) as { items: Array<{ parts: Array<{ type: string }> }> }
-      expect(body.items[0]?.parts[0]?.type).toBe("text")
+      expect(yield* transcript.json).toMatchObject({ items: [{ parts: [{ type: "text" }] }] })
 
       expect(app.calls.some((call) => call.path.endsWith("/event"))).toBe(false)
     }),
@@ -193,16 +192,19 @@ describe("session host HttpApi", () => {
         SessionHostPaths.attach.replace(":providerID", "kilo-cloud").replace(":sessionID", SESSION),
       )
       expect(response.status).toBe(200)
-      const body = (yield* response.json) as Record<string, unknown>
-      expect(Object.keys(body).sort()).toEqual(["attachmentID", "expiresAt", "session"])
-      expect(Attachments.isID(body.attachmentID as string)).toBe(true)
+      const body: unknown = yield* response.json
+      expect(body).toBeTypeOf("object")
+      const record = Object(body)
+      const id = String(record.attachmentID)
+      expect(Object.keys(record).sort()).toEqual(["attachmentID", "expiresAt", "session"])
+      expect(Attachments.isID(id)).toBe(true)
       const text = JSON.stringify(body)
       for (const secret of [app.url, TOKEN, "directory", "agent_", "workspace_", "fence", "resnapshot"]) {
         expect(text).not.toContain(secret)
       }
 
       const detach = yield* HttpClient.execute(
-        HttpClientRequest.delete(SessionHostPaths.attachment.replace(":attachmentID", body.attachmentID as string)),
+        HttpClientRequest.delete(SessionHostPaths.attachment.replace(":attachmentID", id)),
       )
       expect(detach.status).toBe(200)
       expect(yield* detach.json).toEqual({ detached: true })
@@ -217,7 +219,7 @@ describe("session host HttpApi", () => {
       ])
 
       const again = yield* HttpClient.execute(
-        HttpClientRequest.delete(SessionHostPaths.attachment.replace(":attachmentID", body.attachmentID as string)),
+        HttpClientRequest.delete(SessionHostPaths.attachment.replace(":attachmentID", id)),
       )
       expect(again.status).toBe(410)
 
@@ -241,9 +243,7 @@ describe("session host HttpApi", () => {
         Effect.flatMap(HttpClient.execute),
       )
       expect(response.status).toBe(200)
-      const body = (yield* response.json) as { session: { sessionID: string }; replayed: boolean }
-      expect(body.session.sessionID).toBe(SESSION)
-      expect(body.replayed).toBe(false)
+      expect(yield* response.json).toMatchObject({ session: { sessionID: SESSION }, replayed: false })
     }),
   )
 })
