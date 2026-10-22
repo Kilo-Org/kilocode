@@ -63,7 +63,7 @@ Then pick a model from the model picker, or set a default model in `provider-id/
 }
 ```
 
-**Manual configuration:** keep the key in the environment and declare the provider in `~/.config/kilo/kilo.json` or `./kilo.json`, so the secret never lands in the project file. The `baseURL` is required while SOKKAN Router is not in the catalogue, and harmless afterwards:
+**Manual configuration:** keep the key in the environment and declare the provider in `~/.config/kilo/kilo.json` or `./kilo.json`, so the secret never lands in the project file. While SOKKAN Router is not in the catalogue, the `baseURL` and a `models` block are both required: a provider without models is left out of the provider list, and the default model would not resolve. Both are harmless once the catalogue entry exists:
 
 ```bash
 export SOKKAN_API_KEY="skr_..."
@@ -77,6 +77,12 @@ export SOKKAN_API_KEY="skr_..."
       "npm": "@ai-sdk/openai-compatible",
       "env": ["SOKKAN_API_KEY"],
       "options": { "baseURL": "https://router.sokkan.ch/v1" },
+      "models": {
+        "qwen/qwen3.8-27b": {
+          "name": "Qwen3.8 27B",
+          "limit": { "context": 131072, "output": 32768 },
+        },
+      },
     },
   },
   "model": "sokkan/qwen/qwen3.8-27b",
