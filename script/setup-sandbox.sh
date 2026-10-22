@@ -72,6 +72,14 @@ extract_intercept_ca() {
     awk 'BEGIN { n=0 } /BEGIN CERT/ { n++ } { print > "'"$state_dir"'/chain-" n ".pem" }'
   leaf="$state_dir/chain-1.pem"
   [ -f "$leaf" ] || return 1
+  # -no-CAfile/-no-CApath are not enough on OpenSSL 3+: the default CA *store*
+  # is still consulted, and because the leaf already verified against the
+  # system store it would verify against any self-signed candidate. Anchor
+  # trust solely on the candidate with -no-CAstore where it exists (3.0+).
+  local verify=(-no-CAfile -no-CApath)
+  if openssl verify -help 2>&1 | grep -q -- "-no-CAstore"; then
+    verify+=(-no-CAstore)
+  fi
   verified=""
   for f in "$state_dir"/chain-*.pem; do
     [ -e "$f" ] || continue
@@ -87,7 +95,7 @@ extract_intercept_ca() {
       # them the system store is still consulted, so the leaf (which already
       # verified against the system store above) would verify against *any*
       # self-signed candidate and the first one would win.
-      if openssl verify -no-CAfile -no-CApath -CAfile "$f" "$leaf" >/dev/null 2>&1; then
+      if openssl verify "${verify[@]}" -CAfile "$f" "$leaf" >/dev/null 2>&1; then
         verified="$f"
         break
       fi
