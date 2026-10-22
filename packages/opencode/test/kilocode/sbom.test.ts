@@ -5,6 +5,7 @@ import path from "node:path"
 import * as Sbom from "../../script/kilocode/sbom"
 import { LanceDBRuntime } from "../../src/kilocode/lancedb"
 import { validate } from "../../../../script/kilocode/sbom/index"
+import { pin } from "../../../../script/kilocode/bun"
 
 const release = { version: "9.9.9", channel: "latest", commit: "d".repeat(40) }
 
@@ -60,6 +61,10 @@ describe("archive", () => {
       expect(result.entry).toMatchObject({ artifact: "kilo-linux-x64.tar.gz", target: "linux-x64" })
       expect(bom.metadata.component.hashes[0].content).toBe(result.entry.sha256)
       expect(bom.metadata.properties).toContainEqual({ name: "kilocode:build:commit", value: release.commit })
+      const runtime = bom.components.find((item: { name: string }) => item.name === "bun")
+      expect(runtime.version).toBe(pin.version)
+      expect(runtime.properties).toContainEqual({ name: "kilocode:bun:revision", value: pin.revision })
+      expect(runtime.properties).toContainEqual({ name: "kilocode:bun:runtime-version", value: pin.runtime })
     } finally {
       await fs.promises.rm(dir, { recursive: true, force: true })
     }

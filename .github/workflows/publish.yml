@@ -88,6 +88,11 @@ jobs:
 
       - uses: ./.github/actions/setup-sbom # kilocode_change
 
+      # kilocode_change start - gate releases on the pinned and compiled TLS verifier
+      - name: Verify Bun certificate revocation
+        run: bun script/kilocode/bun-probe.ts
+      # kilocode_change end
+
       # kilocode_change start
       - name: Setup Zig for Linux sandbox helpers
         run: |
