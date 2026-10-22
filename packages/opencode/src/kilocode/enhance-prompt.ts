@@ -28,8 +28,9 @@ export function clean(text: string) {
  * Lightweight prompt enhancement that mirrors the legacy singleCompletionHandler.
  * Calls generateText directly with a prompt-rewrite system instruction, no agent identity,
  * tools, or plugins. The user message is labeled as a draft so it stays rewrite input.
+ * The signal stops the model call (and its retries) when the client gives up.
  */
-export async function enhancePrompt(text: string): Promise<string> {
+export async function enhancePrompt(text: string, signal?: AbortSignal): Promise<string> {
   log.info("enhancing", { length: text.length })
 
   const resolved = await AppRuntime.runPromise(
@@ -51,6 +52,7 @@ export async function enhancePrompt(text: string): Promise<string> {
       mergeDeep(ProviderTransform.smallOptions(resolved.model), resolved.model.options),
     ),
     maxRetries: 3,
+    abortSignal: signal,
     system: INSTRUCTION,
     // Each call is a standalone rewrite, not part of a multi-turn conversation; a fresh ID
     // per call still satisfies the opencode API's "stable per-conversation ID" requirement.
