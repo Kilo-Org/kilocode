@@ -3,6 +3,7 @@ import * as path from "path"
 import { Config } from "../config/config"
 import { ConfigMCPV1 as ConfigMCP } from "@opencode-ai/core/v1/config/mcp"
 import * as Log from "@opencode-ai/core/util/log"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { Filesystem } from "../util/filesystem"
 import { KilocodePaths } from "./paths"
 
@@ -106,11 +107,11 @@ export namespace McpMigrator {
       }
     }
 
-    // 2. Project-level MCP settings (if projectDir provided)
+    // 2. Project-level MCP settings (if projectDir provided and project config is enabled)
     // Check .kilo/mcp.json and .kilocode/mcp.json for project-level settings
     // (not "mcp_settings.json" which is only used for global settings)
     // .kilocode is loaded first (lower precedence), .kilo second (higher precedence)
-    if (options?.projectDir) {
+    if (options?.projectDir && !Flag.KILO_DISABLE_PROJECT_CONFIG) {
       for (const dir of [".kilocode", ".kilo"]) {
         const projectSettingsPath = path.join(options.projectDir, dir, "mcp.json")
         const projectSettings = await readMcpSettings(projectSettingsPath)
