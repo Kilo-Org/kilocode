@@ -4,7 +4,7 @@ import { EmbeddingCatalog } from "@kilocode/gateway-core/embedding-catalog"
 import { fixture } from "@kilocode/gateway-core/testing"
 import { isRetryable } from "@opencode/ai"
 import { httpFailure } from "@opencode/ai/route/executor"
-import { Cause, Effect, Exit, Schema } from "effect"
+import { Cause, Deferred, Effect, Exit, Fiber, Schema } from "effect"
 import { Bus } from "@opencode/core/bus"
 import { Config } from "@opencode/core/config"
 import { ConfigProviderPlugin } from "@opencode/core/config/plugin/provider"
@@ -408,6 +408,84 @@ describe("KiloGatewayPlugin", () => {
             yield* eventually(models.available(), (list) => list.some((model) => model.providerID === kilo))
             const providers = yield* Provider.Service
             expect((yield* providers.get(kilo))?.settings?.baseURL).toBe(`${backend.second.url}/api/openrouter`)
+          }),
+        ),
+      (backend) => Effect.sync(() => {
+        backend.first[Symbol.dispose]()
+        backend.second[Symbol.dispose]()
+      }),
+    ),
+  )
+
+  it.live("keeps the current anonymous endpoint when a superseded provider reload resumes", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => ({ first: fixture(), second: fixture() })),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.first.url }, () =>
+          Effect.gen(function* () {
+            const providers = yield* Provider.Service
+            yield* providers.transform((editor) => {
+              editor.update(kilo, (provider) => {
+                provider.integrationID = integrationID
+                provider.package = "@opencode/ai/providers/openai-compatible"
+                provider.settings = { baseURL: "https://api.kilo.ai/api/gateway" }
+              })
+            })
+            const plugin = yield* Plugin.Service
+            const host = yield* PluginHost.make(plugin)
+            const paused = yield* Deferred.make<Fiber.Fiber<unknown, unknown>>()
+            const release = yield* Deferred.make<void>()
+            let pauseNextReload = false
+            yield* KiloPlugin.effect(host)
+            yield* KiloGatewayPlugin.effect({
+              ...host,
+              provider: {
+                ...host.provider,
+                reload: () => Effect.gen(function* () {
+                  yield* host.provider.reload()
+                  if (!pauseNextReload) return
+                  pauseNextReload = false
+                  const fiber = yield* Effect.fiber
+                  yield* Deferred.succeed(paused, fiber)
+                  yield* Deferred.await(release)
+                }),
+              },
+            }).pipe(Effect.provide(Global.layerWith({})))
+            const models = yield* Model.Service
+            const before = (yield* models.available()).filter((model) => model.providerID === kilo)
+            expect(before).toHaveLength(2)
+            const session = yield* host.session.create({ title: "superseded endpoint" })
+            const hooks = yield* PluginHooks.Service
+            const common = {
+              sessionID: session.id,
+              agent: Agent.ID.make("code"),
+              model: { providerID: kilo, id: Model.ID.make("kilo-auto/free") },
+              kind: "primary" as const,
+            }
+            const config = yield* Config.Test
+            yield* config.setEntries([
+              new Document({
+                type: "document",
+                info: Schema.decodeUnknownSync(Info)({ providers: { kilo: { settings: { baseURL: backend.second.url } } } }),
+              }),
+            ])
+            const bus = yield* Bus.Service
+            pauseNextReload = true
+            yield* bus.publish(Event.Updated, {})
+            const stale = yield* Deferred.await(paused)
+            expect((yield* models.available()).filter((model) => model.providerID === kilo)).toEqual([])
+            yield* config.setEntries([])
+            yield* bus.publish(Event.Updated, {})
+            yield* eventually(models.available(), (list) => list.some((model) => model.providerID === kilo))
+            expect((yield* hooks.trigger("session", "model.request", { ...common, headers: {} })).baseURL)
+              .toBe(`${backend.first.url}/api/gateway/v1`)
+            yield* Deferred.succeed(release, undefined)
+            expect(Exit.isSuccess(yield* Fiber.await(stale))).toBe(true)
+            expect((yield* models.available()).filter((model) => model.providerID === kilo)).toEqual(before)
+            expect((yield* hooks.trigger("session", "model.request", { ...common, headers: {} })).baseURL)
+              .toBe(`${backend.first.url}/api/gateway/v1`)
+            expect((yield* providers.get(kilo))?.settings?.baseURL).toBe(`${backend.first.url}/api/gateway/v1`)
+            expect(backend.second.requests).toEqual([])
           }),
         ),
       (backend) => Effect.sync(() => {
@@ -877,6 +955,9 @@ describe("KiloGatewayPlugin", () => {
             Effect.gen(function* () {
               const plugin = yield* Plugin.Service
               const host = yield* PluginHost.make(plugin)
+              const input = legacy.name === "team"
+                ? { KILO_API_KEY: `${backend.url}/api:legacy-token` }
+                : legacy.input
               yield* host.storage.set("organization:env", { organizationID: legacy.organizationID })
               const config = yield* Config.Test
               yield* config.setEntries([
@@ -888,7 +969,7 @@ describe("KiloGatewayPlugin", () => {
                 }),
               ])
               const rpc = yield* Rpc.Service
-              yield* withEnv(legacy.input, () =>
+              yield* withEnv(input, () =>
                 Effect.scoped(Effect.gen(function* () {
                   yield* addPlugin()
                   expect(yield* rpc.call("kilocode.gateway", "profile", {})).toMatchObject({
@@ -903,8 +984,18 @@ describe("KiloGatewayPlugin", () => {
                   expect(yield* rpc.call("kilocode.gateway", "profile", {})).toMatchObject({ organizationID: "first" })
                 })),
               )
+              if (legacy.name === "team") {
+                yield* config.setEntries([
+                  new Document({
+                    type: "document",
+                    info: Schema.decodeUnknownSync(Info)({
+                      providers: { kilo: { settings: { baseURL: "http://127.0.0.1:1/ignored", kilocodeOrganizationId: "first" } } },
+                    }),
+                  }),
+                ])
+              }
               yield* host.storage.set("organization:env", { organizationID: "first" })
-              yield* withEnv(legacy.input, () =>
+              yield* withEnv(input, () =>
                 Effect.scoped(Effect.gen(function* () {
                   yield* addPlugin()
                   expect(yield* rpc.call("kilocode.gateway", "profile", {})).toMatchObject({

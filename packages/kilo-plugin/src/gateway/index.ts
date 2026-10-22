@@ -167,7 +167,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       const key = token
         ? !envInput && content === undefined && saved && connection
           ? organizationKey(connection)
-          : `organization:${snapshotKey(base, token)}`
+          : `organization:${snapshotKey(KiloServer.fromToken(token) ?? base, token)}`
         : undefined
       const storedSelection = key ? decodeSelection(yield* ctx.storage.get(key)) : Option.none()
       const legacy =
@@ -420,6 +420,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         catalog = { envActive: false, models: [], failed: true, anonymous: true }
         yield* ctx.provider.reload()
       }
+      if (targetEpoch !== epoch) return
       server = resolved.server
       yield* cancelRetry
       yield* lock.withPermit(
