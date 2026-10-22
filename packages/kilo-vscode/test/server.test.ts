@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { OpenCode } from "@opencode/client"
 import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
-import { mkdtemp, mkdir, rm } from "node:fs/promises"
+import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { command, environment, parse, start, stop } from "../src/server"
@@ -65,10 +65,14 @@ test("starts the real v2 server, passes the Kilo handshake and stops when stdin 
   const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-server-"))
   const found = command({ extension, storage: root, env: {} })
   if (!found) throw new Error("dev entry not found")
-  const server = await start({ command: found, cwd: path.join(root, "workspace"), env: process.env })
+  // A stale INIT_CWD must not move the server out of the workspace.
+  const server = await start({ command: found, cwd: path.join(root, "workspace"), env: { ...process.env, INIT_CWD: root } })
   const api = OpenCode.make({ baseUrl: server.url, headers: { authorization: server.authorization } })
   const info = await api.rpc(KiloHandshakeRpc.Definition).get({}, { location: { directory: path.join(root, "workspace") } })
   expect(info.product).toBe("kilo")
+  // Without a location, the server creates the session in its own working directory.
+  const session = await api.session.create({})
+  expect(await realpath(session.location.directory)).toBe(await realpath(path.join(root, "workspace")))
   const denied = await fetch(`${server.url}/api/info`)
   expect(denied.status).toBe(401)
   const exited = new Promise((resolve) => server.process.once("exit", resolve))

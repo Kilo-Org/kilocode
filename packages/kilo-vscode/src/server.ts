@@ -85,7 +85,8 @@ export function start(input: {
   mkdirSync(input.cwd, { recursive: true })
   const child = launch(input.command.cmd, input.command.args, {
     cwd: input.cwd,
-    env: environment(input.env, { ...input.command.env, KILO_SERVER_PASSWORD: password }),
+    // dev-isolated.ts runs the CLI in INIT_CWD, which `bun run extension` leaves set to the caller's folder.
+    env: environment(input.env, { ...input.command.env, KILO_SERVER_PASSWORD: password, INIT_CWD: input.cwd }),
     stdio: ["pipe", "pipe", "pipe"],
     detached: process.platform !== "win32",
   })
