@@ -11,6 +11,10 @@ import type {
   AgentManagerRequestId,
   AgentManagerResult,
   AgentPartInput,
+  AgentUsageRunsErrors,
+  AgentUsageRunsResponses,
+  AgentUsageSummaryErrors,
+  AgentUsageSummaryResponses,
   AnacondaDesktopOpenErrors,
   AnacondaDesktopOpenResponses,
   AnacondaDesktopStatusErrors,
@@ -263,6 +267,8 @@ import type {
   McpAuthAuthenticateResponses,
   McpAuthCallbackErrors,
   McpAuthCallbackResponses,
+  McpAuthCancelErrors,
+  McpAuthCancelResponses,
   McpAuthRemoveErrors,
   McpAuthRemoveResponses,
   McpAuthStartErrors,
@@ -3052,9 +3058,50 @@ export class Auth2 extends HeyApiClient {
   /**
    * Authenticate MCP OAuth
    *
-   * Start OAuth flow and wait for callback (opens browser).
+   * Start OAuth flow and wait for callback, optionally letting the client open the browser.
    */
   public authenticate<ThrowOnError extends boolean = false>(
+    parameters: {
+      name: string
+      directory?: string
+      workspace?: string
+      external?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "name" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "external" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<McpAuthAuthenticateResponses, McpAuthAuthenticateErrors, ThrowOnError>(
+      {
+        url: "/mcp/{name}/auth/authenticate",
+        ...options,
+        ...params,
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+          ...params.headers,
+        },
+      },
+    )
+  }
+
+  /**
+   * Cancel MCP OAuth
+   *
+   * Cancel an active OAuth flow without removing stored credentials.
+   */
+  public cancel<ThrowOnError extends boolean = false>(
     parameters: {
       name: string
       directory?: string
@@ -3074,13 +3121,11 @@ export class Auth2 extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).post<McpAuthAuthenticateResponses, McpAuthAuthenticateErrors, ThrowOnError>(
-      {
-        url: "/mcp/{name}/auth/authenticate",
-        ...options,
-        ...params,
-      },
-    )
+    return (options?.client ?? this.client).post<McpAuthCancelResponses, McpAuthCancelErrors, ThrowOnError>({
+      url: "/mcp/{name}/auth/cancel",
+      ...options,
+      ...params,
+    })
   }
 }
 
@@ -6251,6 +6296,84 @@ export class AgentBuilder extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+}
+
+export class AgentUsage extends HeyApiClient {
+  /**
+   * Get agent usage summary
+   *
+   * Get a per-agent rollup of runs, sessions, direct cost, active time, tokens, errors, and the last run time for the routed project.
+   */
+  public summary<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      agent?: string
+      from?: string
+      to?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "agent" },
+            { in: "query", key: "from" },
+            { in: "query", key: "to" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<AgentUsageSummaryResponses, AgentUsageSummaryErrors, ThrowOnError>({
+      url: "/kilocode/agent-usage/summary",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List agent runs
+   *
+   * List agent runs newest first by start time, with optional agent and time window filters. Pages by the opaque `next` cursor returned by the previous page.
+   */
+  public runs<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      agent?: string
+      from?: string
+      to?: string
+      limit?: string
+      cursor?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "agent" },
+            { in: "query", key: "from" },
+            { in: "query", key: "to" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "cursor" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<AgentUsageRunsResponses, AgentUsageRunsErrors, ThrowOnError>({
+      url: "/kilocode/agent-usage/runs",
+      ...options,
+      ...params,
     })
   }
 }
@@ -12148,6 +12271,11 @@ export class KiloClient extends HeyApiClient {
   private _agentBuilder?: AgentBuilder
   get agentBuilder(): AgentBuilder {
     return (this._agentBuilder ??= new AgentBuilder({ client: this.client }))
+  }
+
+  private _agentUsage?: AgentUsage
+  get agentUsage(): AgentUsage {
+    return (this._agentUsage ??= new AgentUsage({ client: this.client }))
   }
 
   private _backgroundProcess?: BackgroundProcess

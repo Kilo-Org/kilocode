@@ -9,14 +9,14 @@
 import * as path from "path"
 import * as fs from "fs"
 import { createHash, randomUUID } from "crypto"
-import simpleGit, { type SimpleGit } from "simple-git"
+import { simpleGit, type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
 import { type GitOps, isKiloOwnedSshCommand, nonInteractiveEnv } from "./GitOps"
 import { execWithShellEnv } from "./shell-env"
 import { execGhRead } from "./gh"
 import { markNoIndex } from "../util/spotlight"
 import { BUDGET, isTimeout } from "./command-budget"
-import { WorktreePool, type PoolStart } from "./worktree-pool"
+import { WorktreePool, type PoolStart } from "./pool/pool"
 import {
   parsePRUrl,
   localBranchName,
@@ -157,6 +157,7 @@ export class WorktreeManager {
     ops?: GitOps,
     binary?: string,
     poolSize: number | (() => number) = 1,
+    home?: string,
   ) {
     this.root = root
     this.dir = path.join(root, KILO_DIR, "worktrees")
@@ -166,8 +167,11 @@ export class WorktreeManager {
     this.log = log
     this.pool = new WorktreePool({
       root,
-      dir: this.dir,
+      home,
+      local: this.dir,
+      folder: directory,
       poolSize,
+      rewarm: () => this.rewarmDelay,
       log,
       client: (cwd) => this.client(cwd),
       lock: (fn) => this.withGitLock(fn),
@@ -234,9 +238,10 @@ export class WorktreeManager {
     return result
   }
 
-  private client(cwd: string, ssh = false): SimpleGit {
+  private client(cwd: string, ssh = false, allow: readonly string[] = []): SimpleGit {
     return simpleGit(cwd, {
       binary: this.binary,
+      allowEnvironment: allow,
       unsafe: {
         allowUnsafeCustomBinary: this.binary !== "git",
         allowUnsafeSshCommand: ssh,
@@ -275,16 +280,9 @@ export class WorktreeManager {
     this.pool.warm(base)
   }
 
-  /** Adopt leftover pooled slots at startup and discard broken ones. */
+  /** Adopt leftover pooled slots at startup and discard broken ones. Never creates `.kilo/worktrees/`. */
   async reconcilePool(): Promise<void> {
     await this.ensureMigrated()
-    // With the pool disabled there is nothing to warm, so never create the
-    // directory. Leftover pooled slots are still adopted and removed.
-    if (!this.pool.enabled()) return this.pool.reconcile()
-    // Exclude before creating anything: a repository that cannot be excluded
-    // must not leave an untracked `.kilo/worktrees` directory behind.
-    await this.ensureGitExclude()
-    await this.ensureDir()
     return this.pool.reconcile()
   }
 
@@ -331,33 +329,16 @@ export class WorktreeManager {
     return { resolvedRemote }
   }
 
-  /** Claim a pooled slot for a new branch and schedule a replacement warm-up. */
+  /** Claim a pooled slot for a new branch. The pool moves it into `.kilo/worktrees/` and warms a replacement. */
   private async tryClaimPool(
     branch: string,
     oid: string,
     auto: boolean,
     base?: string,
   ): Promise<{ path: string; branch: string } | undefined> {
-    const slot = await this.pool.claim(branch, oid, auto)
-    if (!slot) return undefined
-    setTimeout(() => this.pool.warm(base), this.rewarmDelay)
-
-    // Keep the folder name aligned with the branch, as the normal path does.
-    const target = path.join(this.dir, directory(slot.branch))
-    if (target === slot.path || fs.existsSync(target)) {
-      this.log(`Reused pooled worktree: ${slot.path} (branch: ${slot.branch})`)
-      return slot
-    }
-    const moved = await this.git
-      .raw(["worktree", "move", slot.path, target])
-      .then(() => true)
-      .catch((error: unknown) => {
-        this.log(`Pooled worktree move failed, keeping ${slot.path}: ${error}`)
-        return false
-      })
-    const result = moved ? { path: target, branch: slot.branch } : slot
-    this.log(`Reused pooled worktree: ${result.path} (branch: ${result.branch})`)
-    return result
+    const slot = await this.pool.claim(branch, oid, auto, base)
+    if (slot) this.log(`Reused pooled worktree: ${slot.path} (branch: ${slot.branch})`)
+    return slot
   }
 
   async renameBranch(worktreePath: string, current: string, requested: string): Promise<string> {
@@ -1313,11 +1294,19 @@ export class WorktreeManager {
     const cached = WorktreeManager.fetchCache.get(key)
     if (cached && Date.now() - cached < WorktreeManager.FETCH_CACHE_TTL) return
 
-    // Only opt into simple-git's allowUnsafeSshCommand when the SSH command
-    // is the fixed value Kilo injects — never for an inherited one, which
-    // could be attacker-controlled.
+    // Only fetch with the fixed SSH command Kilo injects. An inherited one
+    // could be attacker-controlled, and dropping it would let ssh prompt.
     const env = nonInteractiveEnv()
-    await this.client(this.root, isKiloOwnedSshCommand(env))
+    if (!isKiloOwnedSshCommand(env)) throw new Error("Refusing to fetch with an inherited GIT_SSH_COMMAND")
+    // simple-git rejects guarded variables (any GIT_* key, EDITOR, VISUAL, ...)
+    // passed through .env() unless they are listed in allowEnvironment. Allow
+    // only the keys Kilo sets and drop any other inherited GIT_* key, matching
+    // how simple-git strips them for every other call.
+    const allow = ["GIT_TERMINAL_PROMPT", "GIT_SSH_COMMAND"]
+    for (const key of Object.keys(env)) {
+      if (key.toUpperCase().startsWith("GIT_") && !allow.includes(key)) delete env[key]
+    }
+    await this.client(this.root, true, allow)
       .env(env)
       .raw(["fetch", "--quiet", "--no-tags", remote, `+refs/heads/${branch}:refs/remotes/${remote}/${branch}`])
     WorktreeManager.fetchCache.set(key, Date.now())

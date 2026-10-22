@@ -181,7 +181,6 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     permission: input.session.permission,
     networkRestricted: restricted, // kilocode_change - let the registry suppress code-mode in restricted sessions
   })) {
-    if (!GoalPolicy.available(input.session.id, item.id)) continue // kilocode_change
     const base = ToolJsonSchema.fromTool(item)
     const schema = ProviderTransform.schema(input.model, base)
     tools[item.id] = tool({
@@ -191,6 +190,10 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
         return run.promise(
           Effect.gen(function* () {
             const ctx = context(args, options)
+            // kilocode_change start - stable schemas preserve the cache; goal restrictions apply at execution
+            if (!GoalPolicy.available(ctx.sessionID, item.id))
+              throw new Error(`Tool '${item.id}' is unavailable in the current Goal state.`)
+            // kilocode_change end
             yield* plugin.trigger(
               "tool.execute.before",
               { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },

@@ -16,7 +16,7 @@ This document will help you set up your development environment and understand h
 Before you begin, make sure you have the following installed:
 
 1. **Git** - For version control
-2. **Bun 1.3.14+** - Required for installing dependencies and running scripts
+2. **Bun 1.4.2+** - Required for installing dependencies and running scripts
 3. **Visual Studio Code** - Our recommended IDE for development
 4. **Java 21** - Required only when running JetBrains plugin checks or repo-level checks that include `@kilocode/kilo-jetbrains`
 
@@ -43,8 +43,7 @@ Before you begin, make sure you have the following installed:
 
    This command will install dependencies for all workspace packages.
 
-1. **Install VSCode Extensions**:
-   - **Required**: [ESBuild Problem Matchers](https://marketplace.visualstudio.com/items?itemName=connor4312.esbuild-problem-matchers) - Helps display build errors correctly.
+#### Recommended Extensions
 
 While not strictly necessary for running the extension, these extensions are recommended for development:
 

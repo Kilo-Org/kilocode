@@ -378,6 +378,24 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `a named worktree resolves its pull request against nothing cached`() {
+        val fresh = prPaths(listOf("/repo/.kilo/worktrees/feature-x/"))
+
+        // The caller named this one because an agent just stopped in it, so no cached answer about it
+        // can have accounted for whatever that agent did.
+        assertEquals(0, prAge("/repo/.kilo/worktrees/feature-x", fresh, maxAge = null))
+        // A trailing separator, a `.` segment, or a `..` on the way in still names the same checkout.
+        assertEquals(0, prAge("/repo/.kilo/worktrees/./feature-x", fresh, maxAge = null))
+        assertEquals(0, prAge("/repo/.kilo/worktrees/other/../feature-x", fresh, maxAge = null))
+
+        // Every other row keeps the caller's own ceiling. Spending the fan-out on all of them is what
+        // naming paths exists to avoid: one row's news is not news about the rest of the repository.
+        assertEquals(90_000, prAge("/repo/.kilo/worktrees/other", fresh, maxAge = 90_000))
+        assertNull(prAge("/repo/.kilo/worktrees/other", fresh, maxAge = null))
+        assertNull(prAge("/repo/.kilo/worktrees/feature-x", emptySet(), maxAge = null))
+    }
+
+    @Test
     fun `reason reports a timeout instead of falling through to the fallback text`() {
         assertEquals("timed out", api.reason(CmdOut(-1, "", "", timeout = true), "git worktree remove failed"))
         assertEquals("boom", api.reason(CmdOut(1, "", "boom"), "git worktree remove failed"))
@@ -2670,6 +2688,55 @@ class KiloWorktreeRpcApiImplTest {
     private suspend fun target(): Path {
         val result = api.create(repo.toString(), CreateWorktreeRequestDto("feature/x"))
         return Path.of(assertNotNull(result.worktree, "create failed: ${result.error}").path)
+    }
+
+    @Test
+    fun `create fetches latest base branch when requested`() = runBlocking {
+        initRepo()
+        originWith(1, "feature/remote")
+        val base = output(remote, "branch", "--show-current").trim()
+        git(repo, "fetch", "origin", base)
+        git(repo, "branch", "--set-upstream-to=origin/$base", base)
+        Files.writeString(remote.resolve("latest.txt"), "latest\n")
+        git(remote, "add", "latest.txt")
+        git(remote, "commit", "-m", "latest base")
+
+        val result = api.create(
+            repo.toString(),
+            CreateWorktreeRequestDto("feature/fresh", base, fetchBase = true),
+        )
+
+        val worktree = assertNotNull(result.worktree, result.error)
+        assertEquals("latest\n", Files.readString(Path.of(worktree.path).resolve("latest.txt")))
+        assertEquals(head(remote, base), head(Path.of(worktree.path), "HEAD"))
+    }
+
+    @Test
+    fun `create fetches differently named upstream when requested`() = runBlocking {
+        initRepo()
+        originWith(1, "feature/remote")
+        val base = output(repo, "branch", "--show-current").trim()
+        git(repo, "fetch", "origin", "feature/remote")
+        git(repo, "branch", "--set-upstream-to=origin/feature/remote", base)
+        Files.writeString(remote.resolve("latest.txt"), "latest\n")
+        git(remote, "add", "latest.txt")
+        git(remote, "commit", "-m", "latest base")
+
+        val result = api.create(repo.toString(), CreateWorktreeRequestDto("feature/fresh", base, fetchBase = true))
+
+        val worktree = assertNotNull(result.worktree, result.error)
+        assertEquals(head(remote, "feature/remote"), head(Path.of(worktree.path), "HEAD"))
+    }
+
+    @Test
+    fun `create retains local base without remote upstream`() = runBlocking {
+        initRepo()
+        git(repo, "branch", "local-only")
+
+        val result = api.create(repo.toString(), CreateWorktreeRequestDto("feature/fresh", "local-only", fetchBase = true))
+
+        val worktree = assertNotNull(result.worktree, result.error)
+        assertEquals(head(repo, "local-only"), head(Path.of(worktree.path), "HEAD"))
     }
 
     private fun metadata(dir: Path, name: String): Path =

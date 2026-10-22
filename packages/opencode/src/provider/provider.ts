@@ -11,6 +11,7 @@ import { Plugin } from "../plugin"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { type LanguageModelV3 } from "@ai-sdk/provider"
 import * as ModelsDev from "./models" // kilocode_change - assemble dynamic Kilo models around upstream core catalog
+import { failure } from "@/kilocode/provider/catalog-recovery" // kilocode_change
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
@@ -1156,11 +1157,21 @@ export type Info = Types.DeepMutable<Schema.Schema.Type<typeof Info>>
 
 const DefaultModelIDs = Schema.Record(Schema.String, Schema.String)
 
+// kilocode_change start - typed reason a provider failed to load, so clients can explain why instead of hiding it
+export const Failure = Schema.Struct({
+  providerID: Schema.String,
+  kind: Schema.Literals(["unauthorized", "unauthenticated", "network", "schema", "http"]),
+  status: optionalOmitUndefined(Schema.Int),
+}).annotate({ identifier: "ProviderFailure" })
+export type Failure = Types.DeepMutable<Schema.Schema.Type<typeof Failure>>
+// kilocode_change end
+
 export const ListResult = Schema.Struct({
   all: Schema.Array(Info),
   default: DefaultModelIDs,
   connected: Schema.Array(Schema.String),
   failed: Schema.Array(Schema.String), // kilocode_change
+  failures: Schema.Array(Failure), // kilocode_change
 })
 export type ListResult = Types.DeepMutable<Schema.Schema.Type<typeof ListResult>>
 
@@ -1195,11 +1206,12 @@ export class ModelNotFoundError extends Schema.TaggedErrorClass<ModelNotFoundErr
   modelID: ModelV2.ID,
   suggestions: Schema.optional(Schema.Array(Schema.String)),
   modelsEmpty: Schema.optional(Schema.Boolean), // kilocode_change
+  catalogError: Schema.optional(Schema.String), // kilocode_change
   cause: Schema.optional(Schema.Defect()),
 }) {
   override get message() {
     const suggestions = this.suggestions?.length ? ` Did you mean: ${this.suggestions.join(", ")}?` : ""
-    return `Model not found: ${this.providerID}/${this.modelID}.${suggestions}`
+    return `Model not found: ${this.providerID}/${this.modelID}.${suggestions}${this.catalogError ? ` ${this.catalogError}` : ""}` // kilocode_change
   }
 
   static isInstance(input: unknown): input is ModelNotFoundError {
@@ -1990,8 +2002,12 @@ const layer = Layer.effect(
           : fuzzysort
               .go(providerID, Object.keys({ ...s.catalog, ...s.providers }), { limit: 3, threshold: -10000 })
               .map((m) => m.target)
-        const empty = false // kilocode_change
-        return yield* new ModelNotFoundError({ providerID, modelID, suggestions, modelsEmpty: empty }) // kilocode_change
+        const empty = !!catalogProvider && Object.keys(catalogProvider.models).length === 0 // kilocode_change
+        // kilocode_change start
+        const catalogError =
+          empty && providerID === "kilo" ? failure(yield* modelsDevSvc.getFailure(providerID)) : undefined
+        return yield* new ModelNotFoundError({ providerID, modelID, suggestions, modelsEmpty: empty, catalogError })
+        // kilocode_change end
       }
 
       const info = provider.models[modelID]

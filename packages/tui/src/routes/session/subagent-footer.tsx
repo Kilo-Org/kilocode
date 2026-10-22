@@ -9,6 +9,7 @@ import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { Locale } from "../../util/locale"
 import { useTerminalDimensions } from "@opentui/solid"
 import { useCommandShortcut, useOpencodeKeymap } from "../../keymap"
+import { useSubagentKeys } from "../../kilocode/subagent-keys" // kilocode_change
 
 export function SubagentFooter() {
   const route = useRouteData("session")
@@ -76,7 +77,22 @@ export function SubagentFooter() {
   const parentShortcut = useCommandShortcut("session.parent")
   const previousShortcut = useCommandShortcut("session.child.previous")
   const nextShortcut = useCommandShortcut("session.child.next")
-  const [hover, setHover] = createSignal<"parent" | "prev" | "next" | null>(null)
+  // kilocode_change start - key hints
+  const keys = useSubagentKeys()
+  const dimensions = useTerminalDimensions()
+  // the subagent view never shows the sidebar, so the footer spans the terminal width minus padding
+  const narrow = createMemo(() => dimensions().width - 4 < 96)
+  const interruptShortcut = useCommandShortcut("subagent.interrupt")
+  const exitShortcut = useCommandShortcut("app.exit")
+  const interruptKey = createMemo(() => {
+    const key = interruptShortcut()
+    return !key || key === "escape" ? "esc" : key
+  })
+  const armed = createMemo(() => keys.interrupt() > 0)
+  // narrow footers drop usage while a key hint is shown so the row does not wrap
+  const crowded = createMemo(() => narrow() && (keys.interruptible() || keys.exit() > 0))
+  // kilocode_change end
+  const [hover, setHover] = createSignal<"interrupt" | "parent" | "prev" | "next" | null>(null) // kilocode_change
   useTerminalDimensions()
 
   return (
@@ -107,15 +123,42 @@ export function SubagentFooter() {
               <Spinner color={agentColor()} />
             </Show>
             {/* kilocode_change end */}
-            <Show when={usage()}>
+            {/* kilocode_change start - hide usage while a key hint crowds a narrow footer */}
+            <Show when={crowded() ? undefined : usage()}>
               {(item) => (
                 <text fg={theme.textMuted} wrapMode="none">
                   {[item().context, item().cost].filter(Boolean).join(" · ")}
                 </text>
               )}
             </Show>
+            {/* kilocode_change end */}
+            {/* kilocode_change start - transient exit confirmation */}
+            <Show when={keys.exit() > 0}>
+              <text fg={theme.primary} wrapMode="none" flexShrink={0}>
+                {exitShortcut() || "ctrl+c"} again to exit
+              </text>
+            </Show>
+            {/* kilocode_change end */}
           </box>
           <box flexDirection="row" gap={2}>
+            {/* kilocode_change start - interrupt this subagent, alongside the navigation shortcuts;
+                the brief exit confirmation takes its space so a narrow row never wraps */}
+            <Show when={keys.interruptible() && keys.exit() === 0}>
+              <box
+                onMouseOver={() => setHover("interrupt")}
+                onMouseOut={() => setHover(null)}
+                onMouseUp={() => keymap.dispatchCommand("subagent.interrupt")}
+                backgroundColor={hover() === "interrupt" ? theme.backgroundElement : theme.backgroundPanel}
+              >
+                <text fg={armed() ? theme.primary : theme.text} wrapMode="none">
+                  Interrupt{" "}
+                  <span style={{ fg: armed() ? theme.primary : theme.textMuted }}>
+                    {armed() ? `${interruptKey()} again` : interruptKey()}
+                  </span>
+                </text>
+              </box>
+            </Show>
+            {/* kilocode_change end */}
             <box
               onMouseOver={() => setHover("parent")}
               onMouseOut={() => setHover(null)}

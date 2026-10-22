@@ -61,6 +61,7 @@ const App: Component = () => {
       onCloseOthers={docs.closeOthers}
       onReorder={docs.reorder}
       onOpenFile={(file, line, column) => vscode.postMessage({ type: "document.openFile", file, line, column })}
+      onCopyPath={(file) => vscode.postMessage({ type: "document.copyPath", file })}
       onClosePanel={() => {
         setVisible(false)
         vscode.postMessage({ type: "document.close" })

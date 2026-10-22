@@ -56,6 +56,13 @@ internal class SessionScroll(
     val view: JComponent? get() = component.viewport.view as? JComponent
     var onScroll: (() -> Unit)? = null
 
+    /**
+     * A deliberate scroll gesture: wheel, scrollbar drag, or keyboard scroll. Unlike [onScroll] this
+     * excludes programmatic movement, so a caller that scrolled the transcript itself can tell its
+     * own jump apart from the user scrolling away from it afterwards.
+     */
+    var onGesture: (() -> Unit)? = null
+
     private var tail = true
     private var auto = false
     private var opening = false
@@ -79,10 +86,10 @@ internal class SessionScroll(
                 }
             })
         }
-        component.addMouseWheelListener(MouseWheelListener { user = true })
+        component.addMouseWheelListener(MouseWheelListener { gesture() })
         component.verticalScrollBar.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
-                user = true
+                gesture()
             }
         })
         markKeyScrollAsUser()
@@ -176,6 +183,53 @@ internal class SessionScroll(
         }
         ApplicationManager.getApplication().invokeLater {
             messagePass(gen, id, FOLLOW_PASSES)
+        }
+        return true
+    }
+
+    /**
+     * Scrolls so [id]'s turn sits at the top of the viewport, like [scrollMessageBottom] but anchored to
+     * the top of the turn rather than the bottom of a message — used by the prompt navigator, whose
+     * ticks jump to where a prompt starts rather than where the transcript ends.
+     */
+    @RequiresEdt
+    fun scrollMessageTop(id: String): Boolean {
+        return jump(::topPass) { messages.findTurn(id) }
+    }
+
+    /**
+     * Brings the top of one part of a message into view — used by the header timeline, whose bars
+     * jump to the step they represent rather than the start of the whole turn. Falls back to the
+     * message itself when the part has no renderer (e.g. a timeline-only `step-finish` marker, or a
+     * part currently suppressed from the transcript).
+     *
+     * Unlike [scrollMessageTop] this reveals rather than pins: a step whose top is already in view
+     * does not move the transcript at all, and a step that has to be revealed is left a small gap
+     * below the top edge instead of flush against it. Only the top is guaranteed — a step taller
+     * than the viewport keeps its bottom below the fold.
+     */
+    @RequiresEdt
+    fun scrollPartTop(message: String, part: String): Boolean {
+        return jump(::revealPass) { messages.findPart(message, part) ?: messages.findMessage(message) }
+    }
+
+    @RequiresEdt
+    private fun jump(pass: (Int, Int, () -> JComponent?) -> Unit, resolve: () -> JComponent?): Boolean {
+        val target = resolve() ?: return false
+        if (!target.isVisible) return false
+        user = false
+        pause = false
+        stable = -1
+        auto = true
+        show(messages)
+        auto = false
+        val gen = ++seq
+        if (SwingUtilities.isEventDispatchThread()) {
+            pass(gen, FOLLOW_PASSES, resolve)
+            return true
+        }
+        ApplicationManager.getApplication().invokeLater {
+            pass(gen, FOLLOW_PASSES, resolve)
         }
         return true
     }
@@ -373,6 +427,107 @@ internal class SessionScroll(
     }
 
     @RequiresEdt
+    private fun topPass(id: Int, remaining: Int, resolve: () -> JComponent?) {
+        if (id != seq) return
+        val target = resolve()
+        if (target == null || !target.isVisible) {
+            stable = -1
+            updateJump()
+            return
+        }
+        auto = true
+        try {
+            layoutScroll()
+            val y = messageTop(target)
+            component.viewport.viewPosition = Point(0, y)
+            bar.value = y
+            // Not near(): a top-anchored jump to a short latest turn lands within the follow threshold
+            // of the bottom, and re-arming follow there would let the next streamed delta pull the view
+            // back down and undo the jump. Only a transcript that cannot scroll stays followed, where
+            // there is nothing for follow to move.
+            tail = bar.maximum <= bar.visibleAmount
+            updateJump()
+        } finally {
+            auto = false
+        }
+        syncValue()
+        if (remaining <= 0) {
+            stable = -1
+            return
+        }
+        val next = messageTop(target)
+        val left = if (next == stable) remaining - 1 else FOLLOW_PASSES
+        stable = next
+        ApplicationManager.getApplication().invokeLater {
+            topPass(id, left, resolve)
+        }
+    }
+
+    /**
+     * Like [topPass] but reveals instead of pinning: it only moves the viewport when the target's
+     * top is not comfortably in view. Re-runs like the other passes because transcript panes reflow
+     * asynchronously, which can push a revealed target back out of view.
+     */
+    @RequiresEdt
+    private fun revealPass(id: Int, remaining: Int, resolve: () -> JComponent?) {
+        if (id != seq) return
+        val target = resolve()
+        if (target == null || !target.isVisible) {
+            stable = -1
+            updateJump()
+            return
+        }
+        auto = true
+        try {
+            layoutScroll()
+            val y = revealTop(target)
+            if (y != null) {
+                component.viewport.viewPosition = Point(0, y)
+                bar.value = y
+                // Same reasoning as topPass: a reveal that lands within the follow threshold of the
+                // bottom must not re-arm follow, or the next streamed delta undoes the jump.
+                tail = bar.maximum <= bar.visibleAmount
+            }
+            updateJump()
+        } finally {
+            auto = false
+        }
+        syncValue()
+        if (remaining <= 0) {
+            stable = -1
+            return
+        }
+        val next = top(target)
+        val left = if (next == stable) remaining - 1 else FOLLOW_PASSES
+        stable = next
+        ApplicationManager.getApplication().invokeLater {
+            revealPass(id, left, resolve)
+        }
+    }
+
+    /**
+     * Scroll offset that brings [target]'s top into view with a gap below the top edge, or null when
+     * it is already there and the transcript should not move.
+     */
+    @RequiresEdt
+    private fun revealTop(target: JComponent): Int? {
+        val top = top(target)
+        val view = component.viewport.viewPosition.y
+        val extent = component.viewport.extentSize.height
+        val gap = UiStyle.Gap.pad()
+        // Flush against the top edge counts as not revealed: the gap is what makes the top readable,
+        // and it is also what keeps the jump outline's top stroke off the viewport boundary.
+        if (top >= view + gap && top < view + extent) return null
+        return (top - gap).coerceIn(0, bottom())
+    }
+
+    /** [target]'s top in transcript coordinates, uncoerced, for reveal decisions. */
+    @RequiresEdt
+    private fun top(target: JComponent): Int {
+        return SwingUtilities.convertPoint(target, Point(0, 0), messages).y
+    }
+
+    @RequiresEdt
     private fun layoutScroll() {
         component.validate()
     }
@@ -392,6 +547,12 @@ internal class SessionScroll(
         val point = SwingUtilities.convertPoint(target, Point(0, target.height.coerceAtLeast(1)), messages)
         val extent = component.viewport.extentSize.height
         return (point.y - extent).coerceIn(0, bottom())
+    }
+
+    @RequiresEdt
+    private fun messageTop(target: JComponent): Int {
+        val point = SwingUtilities.convertPoint(target, Point(0, 0), messages)
+        return point.y.coerceIn(0, bottom())
     }
 
     @RequiresEdt
@@ -514,10 +675,16 @@ internal class SessionScroll(
             val base = map.get(key) ?: continue
             map.put(key, object : AbstractAction() {
                 override fun actionPerformed(e: ActionEvent) {
-                    user = true
+                    gesture()
                     base.actionPerformed(e)
                 }
             })
         }
+    }
+
+    /** Flags a deliberate user scroll and notifies [onGesture]. */
+    private fun gesture() {
+        user = true
+        onGesture?.invoke()
     }
 }

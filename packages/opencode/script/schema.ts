@@ -58,6 +58,11 @@ function restoreModelRefs(value: unknown, key?: string): unknown {
   if ((key === "model" || key === "small_model") && schema.type === "string") {
     return { ...schema, $ref: MODEL_REF }
   }
+  // kilocode_change start - Kilo's dedicated model settings take a provider/model reference too
+  if ((key === "subagent_model" || key === "memory_model") && schema.type === "string") {
+    return { ...schema, $ref: MODEL_REF }
+  }
+  // kilocode_change end
   return schema
 }
 

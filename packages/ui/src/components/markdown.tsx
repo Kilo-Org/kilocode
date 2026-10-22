@@ -359,6 +359,7 @@ export function Markdown(
         text: local.text,
         key: local.cacheKey,
         projection: projection(),
+        streaming: local.streaming ?? false, // kilocode_change - recover failed worker highlights when unchanged text settles
       }
     },
     async (src) => {
@@ -404,8 +405,14 @@ export function Markdown(
             }
             // kilocode_change end
             const cached = completedCode.get(blockKey)
-            if (block.complete && cached?.raw === block.raw) return cached
+            if (block.complete && cached?.raw === block.raw && (src.streaming || cached.generation > 0)) return cached // kilocode_change - retry failed highlights only when the message settles
             const result = await code(block.src, block.language, blockKey, block.complete)
+            // kilocode_change start: defer failed worker highlights until the message settles.
+            if (!src.streaming && result.generation === 0) {
+              const html = sanitize(await Promise.resolve(marked.parse(block.raw)))
+              return { key: blockKey, mode: "full" as const, raw: block.raw, hash: checksum(block.raw) ?? "", html }
+            }
+            // kilocode_change end
             const rendered = {
               key: blockKey,
               mode: block.mode,

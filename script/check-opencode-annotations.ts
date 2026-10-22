@@ -262,6 +262,24 @@ function coveredLines(text: string): { lines: string[]; covered: Set<number> } {
 
 // --- main ---
 
+// CI only runs this check when a changed file matches the workflow's `paths:` filter, so a scope
+// missing there means PRs touching only that scope never get checked. Fail fast on that drift.
+const workflow = path.join(ROOT, ".github/workflows/check-opencode-annotations.yml")
+const filter = existsSync(workflow) ? readFileSync(workflow, "utf8") : undefined
+const unwatched = filter == null ? [] : SCOPES.filter((scope) => !filter.includes(`- "${scope}/**"`))
+if (unwatched.length > 0) {
+  console.error(
+    [
+      "Checked scopes missing from the `paths:` filter in .github/workflows/check-opencode-annotations.yml:",
+      "",
+      ...unwatched.map((scope) => `  - "${scope}/**"`),
+      "",
+      "Add them so pull requests touching these scopes run this check in CI.",
+    ].join("\n"),
+  )
+  process.exit(1)
+}
+
 if (!worktree && isUpstreamMerge()) {
   console.log("Skipping shared upstream annotation check — upstream merge detected.")
   process.exit(0)

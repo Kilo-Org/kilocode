@@ -9,7 +9,12 @@ import {
   REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
 } from "../constants"
 import { getDefaultModelId, getModelQueryPrefix } from "../model-registry"
-import { withValidationErrorHandling, type HttpError, formatEmbeddingError } from "../shared/validation-helpers"
+import {
+  withValidationErrorHandling,
+  extractStatusCode,
+  type HttpError,
+  formatEmbeddingError,
+} from "../shared/validation-helpers"
 import { applyQueryPrefix, embedBatches } from "../shared/embedder-helpers"
 import {
   createRateLimitState,
@@ -54,6 +59,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
   private readonly maxItemTokens: number
   private readonly headers: Record<string, string>
   private readonly dimensions?: number
+  private readonly omitted = new Set<string>()
 
   // Global rate limiting state shared across all instances
   private static globalRateLimitState = createRateLimitState()
@@ -157,12 +163,15 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
    * @param url The full endpoint URL
    * @param batchTexts Array of texts to embed
    * @param model Model identifier to use
+   * @param dimensions Optional embedding dimensions to request
+   * @param signal Optional abort signal
    * @returns Promise resolving to OpenAI-compatible response
    */
   private async makeDirectEmbeddingRequest(
     url: string,
     batchTexts: string[],
     model: string,
+    dimensions: number | undefined,
     signal?: AbortSignal,
   ): Promise<OpenAIEmbeddingResponse> {
     const response = await fetch(url, {
@@ -181,7 +190,7 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
         input: batchTexts,
         model: model,
         encoding_format: "base64",
-        ...(this.dimensions !== undefined ? { dimensions: this.dimensions } : {}),
+        ...(dimensions !== undefined ? { dimensions } : {}),
       }),
       signal,
     })
@@ -213,6 +222,84 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
     }
   }
 
+  private async request(
+    texts: string[],
+    model: string,
+    options: { signal?: AbortSignal; timeout?: number; maxRetries?: number } = {},
+  ): Promise<{
+    response: OpenAIEmbeddingResponse
+    projected?: { embeddings: number[][]; usage: { promptTokens: number; totalTokens: number } }
+  }> {
+    const send = async (dimensions: number | undefined): Promise<OpenAIEmbeddingResponse> => {
+      if (this.isFullUrl) {
+        return this.makeDirectEmbeddingRequest(this.baseUrl, texts, model, dimensions, options.signal)
+      }
+      const body = {
+        input: texts,
+        model: model,
+        // OpenAI package (as of v4.78.1) has a parsing issue that truncates embedding dimensions to 256
+        // when processing numeric arrays, which breaks compatibility with models using larger dimensions.
+        // By requesting base64 encoding, we bypass the package's parser and handle decoding ourselves.
+        encoding_format: "base64" as const,
+        ...(dimensions !== undefined ? { dimensions } : {}),
+      }
+      if (options.timeout === undefined && options.maxRetries === undefined) {
+        return this.embeddingsClient.embeddings.create(body)
+      }
+      return this.embeddingsClient.embeddings.create(body, {
+        timeout: options.timeout,
+        maxRetries: options.maxRetries,
+      })
+    }
+
+    const check = (response: OpenAIEmbeddingResponse) => {
+      // Guard the shape before decoding. A 200 response with an error body has no
+      // data, so decoding it first would throw a raw TypeError. Do not throw here
+      // either: validation reads response.error for that case, and the batch caller
+      // reports the missing data when it needs the vectors.
+      const hasData = Array.isArray(response?.data)
+      const projected = hasData ? projectEmbeddingResponse(response) : undefined
+      if (this.dimensions !== undefined && projected) {
+        if (response.data.length !== texts.length) {
+          throw new Error("Invalid response from embedding endpoint")
+        }
+        for (const vector of projected.embeddings) {
+          if (Array.isArray(vector) && vector.length === this.dimensions) continue
+          throw new Error(
+            `Embedding endpoint returned ${Array.isArray(vector) ? vector.length : 0} dimensions, but ${this.dimensions} are configured. ` +
+              "Set the configured dimension to match the model output or use an endpoint that supports the requested dimensions.",
+          )
+        }
+      }
+      return { response, projected }
+    }
+    const dimensions = this.omitted.has(model) ? undefined : this.dimensions
+
+    try {
+      return check(await send(dimensions))
+    } catch (error) {
+      const status = extractStatusCode(error)
+      const param = error instanceof Error && "param" in error && error.param === "dimensions"
+      if (
+        dimensions === undefined ||
+        (status !== 400 && status !== 422) ||
+        !(error instanceof Error) ||
+        (!param && !/\bdimensions\b/i.test(error.message)) ||
+        !/unsupported|not support|not allowed|not permitted|unknown|unrecognized|unexpected|extra|does not|doesn't/i.test(
+          error.message,
+        )
+      ) {
+        throw error
+      }
+
+      log.warn("Embedding endpoint rejected the dimensions parameter, retrying without it")
+      // Keep the configured store size. Omit dimensions only after a matching response succeeds.
+      const result = check(await send(undefined))
+      if (result.projected) this.omitted.add(model)
+      return result
+    }
+  }
+
   /**
    * Helper method to handle batch embedding with retries and exponential backoff
    * @param batchTexts Array of texts to embed in this batch
@@ -223,33 +310,15 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
     batchTexts: string[],
     model: string,
   ): Promise<{ embeddings: number[][]; usage: { promptTokens: number; totalTokens: number } }> {
-    // Use cached value for performance
-    const isFullUrl = this.isFullUrl
-
     for (let attempts = 0; attempts < MAX_RETRIES; attempts++) {
       // Check global rate limit before attempting request
       await this.waitForGlobalRateLimit()
 
       try {
-        let response: OpenAIEmbeddingResponse
+        const { projected } = await this.request(batchTexts, model)
+        if (!projected) throw new Error("Invalid response from embedding endpoint")
 
-        if (isFullUrl) {
-          // Use direct HTTP request for full endpoint URLs
-          response = await this.makeDirectEmbeddingRequest(this.baseUrl, batchTexts, model)
-        } else {
-          // Use OpenAI SDK for base URLs
-          response = (await this.embeddingsClient.embeddings.create({
-            input: batchTexts,
-            model: model,
-            // OpenAI package (as of v4.78.1) has a parsing issue that truncates embedding dimensions to 256
-            // when processing numeric arrays, which breaks compatibility with models using larger dimensions.
-            // By requesting base64 encoding, we bypass the package's parser and handle decoding ourselves.
-            encoding_format: "base64",
-            ...(this.dimensions !== undefined ? { dimensions: this.dimensions } : {}),
-          })) as OpenAIEmbeddingResponse
-        }
-
-        return projectEmbeddingResponse(response)
+        return projected
       } catch (error) {
         log.error("OpenAI Compatible embedder batch error", {
           err: error instanceof Error ? error.message : String(error),
@@ -295,32 +364,21 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
         // Test with a minimal embedding request
         const testTexts = ["test"]
         const modelToUse = this.defaultModelId
-
         let response: OpenAIEmbeddingResponse
 
-        if (this.isFullUrl) {
-          // Test direct HTTP request for full endpoint URLs
-          const ctl = new AbortController()
-          const timer = setTimeout(() => ctl.abort(), REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS)
-          try {
-            response = await this.makeDirectEmbeddingRequest(this.baseUrl, testTexts, modelToUse, ctl.signal)
-          } finally {
-            clearTimeout(timer)
-          }
-        } else {
-          // Test using OpenAI SDK for base URLs
-          response = (await this.embeddingsClient.embeddings.create(
-            {
-              input: testTexts,
-              model: modelToUse,
-              encoding_format: "base64",
-              ...(this.dimensions !== undefined ? { dimensions: this.dimensions } : {}),
-            },
-            {
-              timeout: REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
-              maxRetries: REMOTE_EMBEDDER_VALIDATION_MAX_RETRIES,
-            },
-          )) as OpenAIEmbeddingResponse
+        // Abort full-endpoint requests on timeout. Base URLs get an SDK timeout instead.
+        const ctl = this.isFullUrl ? new AbortController() : undefined
+        const timer = ctl ? setTimeout(() => ctl.abort(), REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS) : undefined
+
+        try {
+          const result = await this.request(testTexts, modelToUse, {
+            signal: ctl?.signal,
+            timeout: REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
+            maxRetries: REMOTE_EMBEDDER_VALIDATION_MAX_RETRIES,
+          })
+          response = result.response
+        } finally {
+          if (timer) clearTimeout(timer)
         }
 
         const error = (response as { error?: string | { message?: string } }).error

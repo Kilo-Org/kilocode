@@ -132,6 +132,8 @@ Default to a single-word name for variables, parameters, and helper functions. R
 You MUST avoid using `mocks` as much as possible.
 Tests MUST test actual implementation, do not duplicate logic into a test.
 
+For VS Code UI changes, the optional shared self-test harness is at https://github.com/Kilo-Org/vscode-extension-self-test (the `vscode-self-test` skill). Offer it and let the user decide whether to install or use it.
+
 ## Markdown Tables
 
 Do not pad markdown table cells for column alignment. Use the compact form with single-space-padded content cells and a minimal separator row:

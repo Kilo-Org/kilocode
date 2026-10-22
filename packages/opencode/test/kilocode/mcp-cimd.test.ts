@@ -158,7 +158,12 @@ for (const Provider of [McpOAuthProvider, McpOAuthPendingProvider]) {
           }
           const entry = await Effect.runPromise(store.getForUrl(name, fixture.url))
           expect(entry?.tokens?.accessToken).toBe("access")
-          expect(entry?.clientInfo?.clientId).toBe(item.config.clientId ? undefined : expected)
+          // Credentials are bound to the authorization server that issued them; for a
+          // configured client only that binding is stored, never its secret.
+          const issuer = new URL("/", fixture.url).href
+          expect(entry?.tokens?.issuer).toBe(issuer)
+          if (item.config.clientId) expect(entry?.clientInfo).toEqual({ clientId: item.config.clientId, issuer })
+          if (!item.config.clientId) expect(entry?.clientInfo).toMatchObject({ clientId: expected, issuer })
           const restored = new McpOAuthProvider(
             name,
             fixture.url,
