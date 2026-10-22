@@ -291,6 +291,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Увійдіть у ChatGPT знову, а потім надішліть повідомлення ще раз, щоб продовжити використання моделей Codex.",
 
+  "provider.failure.unauthorized": "Облікові дані відхилено (HTTP {{status}}). Увійдіть знову.",
+  "provider.failure.unauthorizedNoStatus": "Облікові дані відхилено. Увійдіть знову.",
+  "provider.failure.unauthenticated": "Вхід не виконано.",
+  "provider.failure.network": "Не вдалося з’єднатися з провайдером. Перевірте з’єднання.",
+  "provider.failure.http": "Помилка провайдера (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Помилка провайдера.",
+  "provider.failure.schema": "Неочікувана відповідь від провайдера.",
+
   "notification.permission.title": "Потрібен дозвіл",
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",
   "notification.permission.titleSkillShell": "Виконати команди оболонки з навички «{{skill}}»?",
@@ -325,6 +333,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Читати завдання",
   "ui.permission.toolLabel.todoWrite": "Записати завдання",
   "ui.permission.toolLabel.codeSearch": "Пошук коду",
+  "ui.permission.toolLabel.browserOpen": "Вбудований браузер",
   "ui.permission.copyCommand": "Копіювати",
   "ui.approval.auto": "Схвалено автоматично",
   "ui.approval.manual": "Схвалено вами",
@@ -553,6 +562,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Отримати вміст з URL",
   "settings.permissions.tool.websearch.description": "Шукати в інтернеті",
   "settings.permissions.tool.codesearch.description": "Шукати код в інтернеті",
+  "settings.permissions.tool.browser_open.description": "Відкрити сторінку у вбудованому браузері",
   "settings.permissions.tool.external_directory.description": "Доступ до файлів поза директорією проєкту",
   "settings.permissions.tool.doom_loop.description":
     "Виявляти повторювані виклики інструментів з однаковими вхідними даними",
@@ -747,6 +757,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code — це асистент з кодування на базі ШІ. Попросіть його розробити функцію, виправити помилку або пояснити вашу кодову базу.",
+  "session.workspaceScope.description":
+    "Чат Kilo використовує лише «{{folder}}» — першу папку в цьому робочому просторі.",
+  "session.workspaceScope.alternatives":
+    "Щоб працювати з іншою папкою, відкрийте її в окремому вікні або додайте як проєкт до Agent Manager.",
+  "session.workspaceScope.dismiss": "Закрити підказку про межі робочого простору",
   "session.messages.scrollToBottom": "Прокрутити до низу",
   "session.messages.initializing": "Ініціалізація...",
   "session.messages.taskStarting": "Запуск...",
@@ -1139,6 +1154,8 @@ export const dict = {
     "Керувати списком завдань. Дозволяє читання та оновлення внутрішнього списку завдань.",
   "settings.autoApprove.tool.webfetch": "Отримати URL. Дозволяє отримання вмісту з вказаного URL.",
   "settings.autoApprove.tool.websearch": "Шукати в інтернеті. Дозволяє зовнішній веб-пошук.",
+  "settings.autoApprove.tool.browser_open":
+    "Відкривати сторінки у вбудованому браузері. Це вбудований перегляд, а не автоматизація Playwright.",
   "settings.autoApprove.tool.doom_loop":
     "Запобігати повторюваним діям. Спрацьовує, коли той самий виклик інструменту повторюється з однаковими вхідними даними.",
 

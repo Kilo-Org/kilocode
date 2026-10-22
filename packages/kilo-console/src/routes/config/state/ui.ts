@@ -12,7 +12,7 @@ export type Theme = {
 type Diff = "auto" | "stacked"
 export type TitleIcon = NonNullable<TuiPatch["title_icon"]>
 
-const fallback = ["#0c0a09", "#fafaf9", "#f9f76f", "#a6a09b", "#3794ff", "#44403b"]
+const fallback = ["#0c0a09", "#fafaf9", "#FFDD00", "#a6a09b", "#3794ff", "#44403b"]
 
 export const themes: Theme[] = [
   { id: "aura", swatches: ["#0f0f0f", "#edecee", "#a277ff", "#f694ff", "#a277ff", "#2d2d2d"] },
@@ -36,7 +36,7 @@ export const themes: Theme[] = [
   { id: "github", swatches: ["#0d1117", "#c9d1d9", "#58a6ff", "#bc8cff", "#39c5cf", "#30363d"] },
   { id: "gruvbox", swatches: ["#282828", "#ebdbb2", "#83a598", "#d3869b", "#8ec07c", "#665c54"] },
   { id: "kanagawa", swatches: ["#1F1F28", "#DCD7BA", "#7E9CD8", "#957FB8", "#D27E99", "#54546D"] },
-  { id: "kilo", swatches: ["#0c0a09", "#fafaf9", "#f9f76f", "#a6a09b", "#f9f76f", "#44403b"] },
+  { id: "kilo", swatches: ["#0c0a09", "#fafaf9", "#FFDD00", "#a6a09b", "#FFDD00", "#44403b"] },
   { id: "kilo-v1", swatches: ["#1e1e1e", "#cccccc", "#faf74f", "#007acc", "#007fd4", "#3c3c3c"] },
   { id: "lucent-orng", swatches: ["#000000", "#eeeeee", "#EC5B2B", "#EE7948", "#FFF7F1", "#EC5B2B"] },
   { id: "material", swatches: ["#263238", "#eeffff", "#82aaff", "#c792ea", "#89ddff", "#37474f"] },

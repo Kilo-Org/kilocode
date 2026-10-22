@@ -1,6 +1,8 @@
 import { RemoteCommand } from "@/kilo-sessions/remote-command"
 import { RemoteExit } from "@/kilo-sessions/remote-exit"
 import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
+import { RemoteAgentCatalog } from "@/kilo-sessions/remote-agent-catalog"
+import type { Agent } from "@/agent/agent"
 import { RemoteSessionLog } from "@/kilo-sessions/remote-session-log"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 // kilocode_change - set_pr_link: parse the app-supplied PR URL into a per-session link.
@@ -261,6 +263,11 @@ export namespace RemoteSender {
       readonly providers: () => Promise<Record<ProviderV2.ID, Provider.Info>>
       readonly default: () => Promise<RemoteModelCatalog.ModelRef | undefined>
     }
+    // kilocode_change - injectable agent list for list_agents; runs inside the
+    // provided directory, so it sees that directory's project agents.
+    agents?: {
+      readonly list: () => Promise<Agent.Info[]>
+    }
     commands?: RemoteCommand.Interface
     remoteExit?: {
       get: () => RemoteExit.Callback | undefined
@@ -346,6 +353,14 @@ export namespace RemoteSender {
         return AppRuntime.runPromise(Provider.Service.use((svc) => svc.defaultModel()))
       },
     }
+    // kilocode_change start - agent list seam for list_agents
+    const agents = options.agents ?? {
+      list: async () => {
+        const [{ AppRuntime }, { Agent }] = await Promise.all([import("@/effect/app-runtime"), import("@/agent/agent")])
+        return AppRuntime.runPromise(Agent.Service.use((svc) => svc.list()))
+      },
+    }
+    // kilocode_change end
     const session = options.session ?? {
       get: async (sessionID: SessionID) => {
         const { AppRuntime } = await import("@/effect/app-runtime")
@@ -1217,6 +1232,46 @@ export namespace RemoteSender {
           } catch {
             options.log.error("list models command failed", { id: msg.id })
             options.conn.send({ type: "response", id: msg.id, error: "failed to list models" })
+          }
+        })()
+        return
+      }
+      // kilocode_change end
+      // kilocode_change start - list_agents: the agents a session can run as,
+      // resolved in the directory the client will start or continue a session
+      // in. A present `directory` wins (contained relative path under the
+      // launch directory, as in create_session); otherwise a present sessionId
+      // uses that session's directory, and a sessionless request uses the
+      // launch directory.
+      if (msg.command === "list_agents") {
+        const parsed = RemoteAgentCatalog.Request.safeParse(msg.data)
+        const target = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (!parsed.success || (msg.sessionId && Option.isNone(target))) {
+          options.conn.send({ type: "response", id: msg.id, error: "invalid list_agents command" })
+          return
+        }
+        const dir = (() => {
+          if (parsed.data.directory === undefined) return undefined
+          try {
+            return resolveUnderLaunch(options.directory, parsed.data.directory)
+          } catch {
+            return null
+          }
+        })()
+        if (dir === null) {
+          options.conn.send({ type: "response", id: msg.id, error: "invalid list_agents directory" })
+          return
+        }
+        const run = options.provide ?? provide
+        void (async () => {
+          try {
+            const directory =
+              dir ?? (Option.isSome(target) ? (await catalog.get(target.value)).directory : options.directory)
+            const result = await run({ directory, fn: async () => RemoteAgentCatalog.build(await agents.list()) })
+            options.conn.send({ type: "response", id: msg.id, result })
+          } catch (error) {
+            options.log.error("list agents failed", { id: msg.id, error: errorName(error) })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to list agents" })
           }
         })()
         return

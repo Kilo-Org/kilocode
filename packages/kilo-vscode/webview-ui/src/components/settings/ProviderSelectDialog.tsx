@@ -4,6 +4,7 @@ import { List } from "@kilocode/kilo-ui/list"
 import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
 import { Tag } from "@kilocode/kilo-ui/tag"
 import { Show, createMemo } from "solid-js"
+import type { ProviderFailure } from "@kilocode/sdk/v2/client"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
@@ -15,6 +16,8 @@ import {
   isPopularProvider,
   kiloFallbackProvider,
   popularProviderIndex,
+  providerFailure,
+  providerFailureMessageKey,
   providerIcon,
 } from "./provider-catalog"
 import CustomProviderDialog from "./CustomProviderDialog"
@@ -24,6 +27,7 @@ type ProviderItem = {
   id: string
   name: string
   provider?: Provider
+  failure?: ProviderFailure
 }
 
 const ProviderSelectDialog = () => {
@@ -41,6 +45,7 @@ const ProviderSelectDialog = () => {
     const all = Object.values(provider.providers())
     const withKilo = all.some((item) => item.id === KILO_PROVIDER_ID) ? all : [kiloFallbackProvider(), ...all]
     const available = withKilo.filter((item) => !disabled.has(item.id) && !connected.has(item.id))
+    const failures = provider.failures()
 
     return [
       {
@@ -51,6 +56,7 @@ const ProviderSelectDialog = () => {
         id: item.id,
         name: item.name,
         provider: item,
+        failure: providerFailure(item.id, failures),
       })),
     ]
   })
@@ -112,30 +118,46 @@ const ProviderSelectDialog = () => {
               height={18}
               data-slot="list-item-extra-icon"
             />
-            <div
-              style={{
-                display: "flex",
-                gap: "8px",
-                "align-items": "center",
-                "min-width": 0,
-                flex: 1,
-                "flex-wrap": "wrap",
-              }}
-            >
-              <span
+            <div style={{ display: "flex", "flex-direction": "column", "min-width": 0, flex: 1 }}>
+              <div
                 style={{
-                  "font-size": "var(--kilo-font-size-14)",
-                  "line-height": "var(--kilo-font-size-20)",
-                  color: "var(--vscode-foreground)",
+                  display: "flex",
+                  gap: "8px",
+                  "align-items": "center",
+                  "min-width": 0,
+                  "flex-wrap": "wrap",
                 }}
               >
-                {item.name}
-              </span>
-              <Show when={item.id === KILO_PROVIDER_ID}>
-                <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
-              </Show>
-              <Show when={item.id === CUSTOM_PROVIDER_ID}>
-                <Tag>{language.t("settings.providers.tag.custom")}</Tag>
+                <span
+                  style={{
+                    "font-size": "var(--kilo-font-size-14)",
+                    "line-height": "var(--kilo-font-size-20)",
+                    color: "var(--vscode-foreground)",
+                  }}
+                >
+                  {item.name}
+                </span>
+                <Show when={item.id === KILO_PROVIDER_ID}>
+                  <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
+                </Show>
+                <Show when={item.id === CUSTOM_PROVIDER_ID}>
+                  <Tag>{language.t("settings.providers.tag.custom")}</Tag>
+                </Show>
+              </div>
+              <Show when={item.failure}>
+                {(failure) => {
+                  const { key, vars } = providerFailureMessageKey(failure())
+                  return (
+                    <span
+                      style={{
+                        "font-size": "var(--kilo-font-size-12)",
+                        color: "var(--vscode-errorForeground)",
+                      }}
+                    >
+                      {language.t(key, vars)}
+                    </span>
+                  )
+                }}
               </Show>
             </div>
           </div>

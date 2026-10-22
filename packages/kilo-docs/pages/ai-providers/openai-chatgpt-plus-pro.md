@@ -1,12 +1,14 @@
 ---
 title: "Using ChatGPT subscriptions with Kilo Code"
-description: "Sign in to Kilo with ChatGPT, connect your subscription through BYOK, or use OpenAI directly in VS Code and the CLI. Learn how setup, limits, and billing work."
-sidebar_label: ChatGPT Plus/Pro
+description: "Sign in to Kilo with ChatGPT on Go, Plus, or Pro, connect your subscription through BYOK, and see those requests in Usage. Learn how setup, limits, and billing work."
+sidebar_label: ChatGPT Go/Plus/Pro
 ---
 
 # Using ChatGPT subscriptions with Kilo Code
 
 You can use your ChatGPT account to sign in to Kilo and your subscription to run supported OpenAI models. Signing in and connecting your subscription are separate options. You can sign in with ChatGPT without using it for model requests, or connect a ChatGPT subscription to your existing Kilo account.
+
+Sign in with ChatGPT plan usage is available on the ChatGPT Go, Plus, and Pro plans. On those plans, you can sign in to commercial launch-partner apps and open source applications, including Kilo, and take your ChatGPT plan allowance with you.
 
 Your ChatGPT plan determines which models and how much usage are included. Check [OpenAI's current plan details](https://developers.openai.com/codex/pricing/) for details.
 
@@ -77,6 +79,12 @@ Learn more in OpenAI's help articles:
 - [Sign in with ChatGPT](https://help.openai.com/en/articles/20001410-sign-in-with-chatgpt)
 {% /callout %}
 
+### Usage data
+
+Sign in with ChatGPT requests appear in Kilo [Usage](https://app.kilo.ai/usage). Cost is **$0** for every request.
+
+Filter **Usage → Provider → `openai-chatgpt`** to isolate those requests and their token totals through Kilo. That filter does not include pay-as-you-go OpenAI API-key requests.
+
 ### Manage the connection
 
 Return to the BYOK page in the account or organization where you connected:
@@ -107,7 +115,7 @@ If OpenAI is already connected from an API key, environment variable, or `kilo.j
 {% /tab %}
 {% tab label="CLI" %}
 
-Run the auth command and follow the ChatGPT Plus/Pro sign-in flow:
+Run the auth command and follow the ChatGPT Go, Plus, or Pro sign-in flow:
 
 ```bash
 kilo auth login --provider codex
@@ -156,6 +164,9 @@ Disconnecting BYOK alone does not remove the ChatGPT identity linked to your Kil
 
 **My local browser sign-in fails with a CSRF or callback error.**
 The direct VS Code and CLI flow uses local port `1455`. Check that another application is not using it. On macOS or Linux, run `lsof -i :1455`. This does not apply to the dashboard BYOK flow.
+
+**I see `Invalid 'instructions': string too long`.**
+When you connect directly with ChatGPT/Codex, OpenAI limits the instructions Kilo can send to about 1 million characters. Your active custom agent's instructions, global and project rules (such as `AGENTS.md`), and instructions supplied by connected MCP servers all count toward this limit. Shorten your custom agent instructions, remove unnecessary rules, or disable MCP servers you don't need. This is an OpenAI limit, not a sign that you've used up your subscription.
 
 **How do I disconnect the local provider?**
 In VS Code, choose **Disconnect** in the provider settings. In the CLI, run `kilo auth logout` and choose OpenAI. This is separate from managing the connection on Kilo's BYOK page.

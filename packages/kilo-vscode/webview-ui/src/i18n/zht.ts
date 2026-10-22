@@ -272,6 +272,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI 已將您登出",
   "error.providerAuth.chatgpt.description": "請再次登入 ChatGPT，然後重新發送訊息以繼續使用 Codex 模型。",
 
+  "provider.failure.unauthorized": "憑證遭拒（HTTP {{status}}）。請重新登入。",
+  "provider.failure.unauthorizedNoStatus": "憑證遭拒。請重新登入。",
+  "provider.failure.unauthenticated": "尚未登入。",
+  "provider.failure.network": "無法連線至供應商。請檢查您的網路連線。",
+  "provider.failure.http": "供應商錯誤（HTTP {{status}}）。",
+  "provider.failure.httpNoStatus": "供應商錯誤。",
+  "provider.failure.schema": "供應商回傳非預期的回應。",
+
   "notification.permission.title": "需要權限",
   "notification.permission.titleSubagent": "需要權限（子代理）",
   "notification.permission.titleSkillShell": "要執行技能「{{skill}}」的 shell 指令嗎？",
@@ -305,6 +313,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "讀取待辦",
   "ui.permission.toolLabel.todoWrite": "更新待辦",
   "ui.permission.toolLabel.codeSearch": "程式碼搜尋",
+  "ui.permission.toolLabel.browserOpen": "整合瀏覽器",
   "ui.permission.copyCommand": "複製",
   "ui.approval.auto": "已自動核准",
   "ui.approval.manual": "由你核准",
@@ -535,6 +544,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "從 URL 取得內容",
   "settings.permissions.tool.websearch.description": "搜尋網頁",
   "settings.permissions.tool.codesearch.description": "在網路上搜尋程式碼",
+  "settings.permissions.tool.browser_open.description": "在整合瀏覽器中開啟頁面",
   "settings.permissions.tool.external_directory.description": "存取專案目錄之外的檔案",
   "settings.permissions.tool.doom_loop.description": "偵測具有相同輸入的重複工具呼叫",
 
@@ -690,6 +700,9 @@ export const dict = {
   "settings.aboutKiloCode.title": "關於 Kilo Code",
 
   "session.messages.welcome": "Kilo Code 是一個 AI 程式設計助手。讓它幫你建構功能、修復 bug 或解釋程式碼庫。",
+  "session.workspaceScope.description": "Kilo 聊天僅使用此工作區中的第一個資料夾「{{folder}}」。",
+  "session.workspaceScope.alternatives": "若要使用其他資料夾，請在獨立視窗中開啟，或將其作為專案新增至 Agent Manager。",
+  "session.workspaceScope.dismiss": "關閉工作區範圍提示",
   "session.messages.scrollToBottom": "捲動至底部",
   "session.messages.initializing": "初始化中...",
   "session.messages.taskStarting": "啟動中...",
@@ -1082,6 +1095,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "管理任務清單。允許讀取和更新內部任務清單。",
   "settings.autoApprove.tool.webfetch": "擷取 URL。允許從特定 URL 擷取內容。",
   "settings.autoApprove.tool.websearch": "搜尋網頁。允許執行外部網路搜尋。",
+  "settings.autoApprove.tool.browser_open":
+    "在整合瀏覽器中開啟頁面。這是應用程式內預覽，不是 Playwright 瀏覽器自動化。",
   "settings.autoApprove.tool.external_directory": "存取工作區外部的檔案。存取目前專案目錄之外的檔案時觸發。",
   "settings.autoApprove.tool.doom_loop": "防止重複相同操作。當相同的工具呼叫以相同的輸入重複時觸發。",
   "settings.checkpoints.enable.title": "啟用快照",

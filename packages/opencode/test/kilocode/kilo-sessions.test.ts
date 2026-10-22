@@ -1429,7 +1429,7 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
     return (await $`git rev-parse HEAD`.cwd(dir).quiet()).text().trim()
   }
 
-  test("a session's own gh pr create output links it with headRef/headSha; a bystander gets none", async () => {
+  test("a session's own gh pr create ingests without remote control; a bystander gets none", async () => {
     await using tmp = await repoWithRemote()
     await provide({
       directory: tmp.path,
@@ -1440,9 +1440,6 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
           const bystander = await setupSession()
           await KiloSessions.bootstrap(owner)
           await KiloSessions.bootstrap(bystander)
-          await KiloSessions.enableRemote()
-          await KiloSessions.attachRemoteSession(owner)
-          await KiloSessions.attachRemoteSession(bystander)
 
           await clearStaleIngest()
           emitPart(
@@ -1454,9 +1451,31 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
               "Creating pull request\n\nhttps://github.com/owner/repo/pull/7\n",
             ),
           )
-          await new Promise((r) => setTimeout(r, 300))
-
           const sha = await headSha(tmp.path)
+          await Effect.runPromise(
+            pollWithTimeout(
+              Effect.sync(() => prLinkItems(owner).at(-1)),
+              "PR creation was not ingested without remote control",
+            ),
+          )
+          expect(RemoteWS.connect).not.toHaveBeenCalled()
+          expect(prLinkItems(owner)).toEqual([
+            {
+              type: "session_pr_link",
+              data: {
+                platform: "github",
+                prUrl: "https://github.com/owner/repo/pull/7",
+                prNumber: 7,
+                headRef: "feature/x",
+                headSha: sha,
+              },
+            },
+          ])
+          expect(prLinkItems(bystander)).toEqual([])
+
+          await KiloSessions.enableRemote()
+          await KiloSessions.attachRemoteSession(owner)
+          await KiloSessions.attachRemoteSession(bystander)
           const payload = await capturedGetSessions()()
           const ownerRow = payload.sessions.find((s) => s.id === owner)
           const bystanderRow = payload.sessions.find((s) => s.id === bystander)
@@ -1474,15 +1493,7 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
           expect((await PrLink.loadSessionLinks()).size).toBe(1)
 
           await new Promise((r) => setTimeout(r, 1200))
-          const ownerLinks = prLinkItems(owner)
-          expect(ownerLinks.length).toBe(1)
-          expect(ownerLinks[0]!.data).toEqual({
-            platform: "github",
-            prUrl: "https://github.com/owner/repo/pull/7",
-            prNumber: 7,
-            headRef: "feature/x",
-            headSha: sha,
-          })
+          expect(prLinkItems(owner)).toHaveLength(1)
           // No link, and therefore no set and no clear, is ingested for the
           // bystander: a link never fans out.
           expect(prLinkItems(bystander)).toEqual([])
@@ -1524,7 +1535,7 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
     })
   }, 30000)
 
-  test("pushing new commits to its own PR keeps the link and advances headSha", async () => {
+  test("pushing new commits ingests its own PR link and headSha without remote control", async () => {
     await using tmp = await repoWithRemote()
     await provide({
       directory: tmp.path,
@@ -1533,8 +1544,6 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
         try {
           const id = await setupSession()
           await KiloSessions.bootstrap(id)
-          await KiloSessions.enableRemote()
-          await KiloSessions.attachRemoteSession(id)
           await clearStaleIngest()
 
           emitPart(
@@ -1548,6 +1557,7 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
             ),
           )
           expect(first?.headSha).toBeDefined()
+          await clearStaleIngest()
 
           await $`git commit --allow-empty -m next`.cwd(tmp.path).quiet()
           const next = await headSha(tmp.path)
@@ -1560,25 +1570,202 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
               `To github.com:owner/repo.git\n   ${first?.headSha}..${next}  feature/x -> feature/x\n`,
             ),
           )
-          const pushed = await Effect.runPromise(
+          await Effect.runPromise(
             pollWithTimeout(
-              Effect.promise(async () => {
-                const record = await PrLink.readSessionPrLink(id)
-                return record?.headSha === next ? record : undefined
-              }),
-              "pushed PR commit was not recorded",
+              Effect.sync(() => prLinkItems(id).at(-1)),
+              "pushed PR commit was not ingested without remote control",
             ),
           )
-          expect(pushed?.link.prNumber).toBe(7)
-          expect(pushed?.headRef).toBe("feature/x")
-          expect(pushed?.headSha).toBe(next)
+          expect(RemoteWS.connect).not.toHaveBeenCalled()
+          expect(prLinkItems(id)).toEqual([
+            {
+              type: "session_pr_link",
+              data: {
+                platform: "github",
+                prUrl: "https://github.com/owner/repo/pull/7",
+                prNumber: 7,
+                headRef: "feature/x",
+                headSha: next,
+              },
+            },
+          ])
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
 
-          const payload = await capturedGetSessions()()
-          expect(payload.sessions.find((s) => s.id === id)?.prLink).toMatchObject({
-            prNumber: 7,
-            headRef: "feature/x",
-            headSha: next,
+  test("an explicit link_pr ingests its stored link without remote control", async () => {
+    await using tmp = await repoWithRemote()
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const id = await setupSession()
+          await KiloSessions.bootstrap(id)
+          await clearStaleIngest()
+          const link = { platform: "github", prUrl: "https://github.com/owner/repo/pull/9", prNumber: 9 }
+          await PrLink.recordSessionLink(id, { link, evidence: "user" }, tmp.path)
+          const part = toolPart(id, "p-link", "", `Linked ${link.prUrl}`)
+          emitPart(id, { ...part, tool: "link_pr", state: { ...part.state, input: { url: link.prUrl } } })
+
+          await Effect.runPromise(
+            pollWithTimeout(
+              Effect.sync(() => prLinkItems(id).at(-1)),
+              "explicit PR link was not ingested without remote control",
+            ),
+          )
+          expect(RemoteWS.connect).not.toHaveBeenCalled()
+          expect(prLinkItems(id)).toEqual([
+            { type: "session_pr_link", data: { ...link, headRef: null, headSha: null } },
+          ])
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  test("full sync ingests a stored PR link without clearing an unlinked session", async () => {
+    await using tmp = await repoWithRemote()
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const owner = await setupSession()
+          const bystander = await setupSession()
+          await KiloSessions.bootstrap(owner)
+          await KiloSessions.bootstrap(bystander)
+          await clearStaleIngest()
+          const record = await PrLink.recordPrCreate(owner, tmp.path, "https://github.com/owner/repo/pull/7\n")
+          expect(record).toBeDefined()
+
+          await KiloSessions.create(owner)
+          await KiloSessions.create(bystander)
+          await Effect.runPromise(
+            pollWithTimeout(
+              Effect.sync(() =>
+                prLinkItems(owner).length > 0 &&
+                ingestBodies.some(
+                  (body) => body.sessionId === bystander && body.data.some((item) => item.type === "session_status"),
+                )
+                  ? true
+                  : undefined,
+              ),
+              "full sync did not ingest the stored PR link",
+            ),
+          )
+          expect(RemoteWS.connect).not.toHaveBeenCalled()
+          expect(prLinkItems(owner)).toEqual([
+            {
+              type: "session_pr_link",
+              data: { ...record!.link, headRef: record!.headRef, headSha: record!.headSha },
+            },
+          ])
+          expect(prLinkItems(bystander)).toEqual([])
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  test("the poll withdraws a stored closed PR before this process ingested it", async () => {
+    const poller = await import("../../src/kilo-sessions/pr-link-poller")
+    const poll = spyOn(poller, "startPrLinkPoll").mockImplementation(() => () => {})
+    await using tmp = await repoWithRemote()
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        const runtime = await initKiloSessions()
+        try {
+          const owner = await setupSession()
+          const bystander = await setupSession()
+          await KiloSessions.bootstrap(owner)
+          await KiloSessions.bootstrap(bystander)
+          await clearStaleIngest()
+          // Only persisted evidence exists, as it would after a process restart.
+          await PrLink.recordPrCreate(owner, tmp.path, "https://github.com/owner/repo/pull/7\n")
+
+          const { Process } = await import("../../src/util/process")
+          spyOn(Process, "text").mockResolvedValue({
+            code: 0,
+            stdout: Buffer.from("[]"),
+            stderr: Buffer.alloc(0),
+            text: "[]",
           })
+          const run = poll.mock.calls.at(-1)?.[0]
+          if (!run) throw new Error("PR poll was not registered")
+          await run()
+          expect(await PrLink.readSessionPrLink(owner)).toBeUndefined()
+          const item = await Effect.runPromise(
+            pollWithTimeout(
+              Effect.sync(() =>
+                prLinkItems(owner).find((item) => {
+                  const data = item.data
+                  return data != null && typeof data === "object" && "prUrl" in data && data.prUrl === null
+                }),
+              ),
+              "stored closed PR was not withdrawn on startup",
+            ),
+          )
+          expect(item.data).toEqual({
+            platform: null,
+            prUrl: null,
+            prNumber: null,
+            headRef: null,
+            headSha: null,
+          })
+
+          expect(prLinkItems(bystander)).toEqual([])
+          expect(RemoteWS.connect).not.toHaveBeenCalled()
+        } finally {
+          await runtime.dispose()
+        }
+      },
+    })
+  }, 30000)
+
+  test("full sync retries PR evidence queued before the session has a share", async () => {
+    await using tmp = await repoWithRemote()
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        delete process.env.KILO_API_KEY
+        reset("tok")
+        const id = await setupSession()
+        expect(await KiloSessions.create(id)).toEqual({ id: "", ingestPath: "" })
+        const runtime = await initKiloSessions()
+        try {
+          process.env.KILO_API_KEY = "tok"
+          reset("tok")
+          emitPart(id, toolPart(id, "p-create", "gh pr create --fill", "https://github.com/owner/repo/pull/7\n"))
+          const record = await Effect.runPromise(
+            pollWithTimeout(
+              Effect.promise(() => PrLink.readSessionPrLink(id)),
+              "PR evidence was not recorded before session bootstrap",
+            ),
+          )
+          await clearStaleIngest()
+          expect(prLinkItems(id)).toEqual([])
+
+          await KiloSessions.create(id)
+          await Effect.runPromise(
+            pollWithTimeout(
+              Effect.sync(() => prLinkItems(id).at(-1)),
+              "full sync did not retry PR evidence after session bootstrap",
+            ),
+          )
+          expect(prLinkItems(id)).toEqual([
+            {
+              type: "session_pr_link",
+              data: { ...record.link, headRef: record.headRef, headSha: record.headSha },
+            },
+          ])
+          expect(RemoteWS.connect).not.toHaveBeenCalled()
         } finally {
           await runtime.dispose()
         }

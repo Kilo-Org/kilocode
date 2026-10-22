@@ -5,7 +5,7 @@ description: "A unified API to access hundreds of AI models through a single end
 
 # AI Gateway
 
-The Kilo AI Gateway provides a unified, OpenAI-compatible API to access hundreds of AI models through a single endpoint at `https://api.kilo.ai/api/gateway`. It gives you the ability to track usage, manage costs, bring your own API keys, and enforce organization-level controls.
+The Kilo AI Gateway provides a unified, OpenAI-compatible API to access hundreds of AI models through a single endpoint at `https://ai-gateway.kilo.ai/api/v1`. It gives you the ability to track usage, manage costs, bring your own API keys, and enforce organization-level controls.
 
 The gateway works seamlessly with the [Vercel AI SDK](https://ai-sdk.dev), the [OpenAI SDK](/docs/gateway/sdks-and-frameworks#openai-sdk), or any OpenAI-compatible client in any language.
 
@@ -25,7 +25,7 @@ import { streamText } from "ai"
 import { createOpenAI } from "@ai-sdk/openai"
 
 const kilo = createOpenAI({
-  baseURL: "https://api.kilo.ai/api/gateway",
+  baseURL: "https://ai-gateway.kilo.ai/api/v1",
   apiKey: process.env.KILO_API_KEY,
 })
 
@@ -40,7 +40,7 @@ const result = streamText({
 All gateway API requests use the following base URL:
 
 ```
-https://api.kilo.ai/api/gateway
+https://ai-gateway.kilo.ai/api/v1
 ```
 
 ## More resources

@@ -298,6 +298,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Melden Sie sich erneut bei ChatGPT an und senden Sie Ihre Nachricht noch einmal, um weiterhin Codex-Modelle zu verwenden.",
 
+  "provider.failure.unauthorized": "Anmeldedaten abgelehnt (HTTP {{status}}). Melden Sie sich erneut an.",
+  "provider.failure.unauthorizedNoStatus": "Anmeldedaten abgelehnt. Melden Sie sich erneut an.",
+  "provider.failure.unauthenticated": "Nicht angemeldet.",
+  "provider.failure.network": "Anbieter nicht erreichbar. Überprüfen Sie Ihre Verbindung.",
+  "provider.failure.http": "Anbieterfehler (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Anbieterfehler.",
+  "provider.failure.schema": "Unerwartete Antwort vom Anbieter.",
+
   "notification.permission.title": "Berechtigung erforderlich",
   "notification.permission.titleSubagent": "Berechtigung erforderlich (Subagent)",
   "notification.permission.titleSkillShell": "Shell-Befehle aus dem Skill „{{skill}}“ ausführen?",
@@ -331,6 +339,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Todo lesen",
   "ui.permission.toolLabel.todoWrite": "Todo schreiben",
   "ui.permission.toolLabel.codeSearch": "Code-Suche",
+  "ui.permission.toolLabel.browserOpen": "Integrierter Browser",
   "ui.permission.copyCommand": "Kopieren",
   "ui.approval.auto": "Automatisch genehmigt",
   "ui.approval.manual": "Von dir genehmigt",
@@ -613,6 +622,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Inhalt von einer URL abrufen",
   "settings.permissions.tool.websearch.description": "Das Web durchsuchen",
   "settings.permissions.tool.codesearch.description": "Code im Web durchsuchen",
+  "settings.permissions.tool.browser_open.description": "Eine Seite im Integrierten Browser öffnen",
   "settings.permissions.tool.external_directory.description": "Zugriff auf Dateien außerhalb des Projektverzeichnisses",
   "settings.permissions.tool.doom_loop.description": "Wiederholte Tool-Aufrufe mit identischer Eingabe erkennen",
 
@@ -771,6 +781,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code ist ein KI-Programmierassistent. Bitten Sie ihn, Funktionen zu erstellen, Fehler zu beheben oder Ihre Codebasis zu erklären.",
+  "session.workspaceScope.description":
+    "Der Kilo-Chat verwendet nur „{{folder}}“, den ersten Ordner in diesem Arbeitsbereich.",
+  "session.workspaceScope.alternatives":
+    "Um mit einem anderen Ordner zu arbeiten, öffnen Sie ihn in einem eigenen Fenster oder fügen Sie ihn als Projekt im Agent Manager hinzu.",
+  "session.workspaceScope.dismiss": "Hinweis zum Umfang des Arbeitsbereichs ausblenden",
   "session.messages.scrollToBottom": "Nach unten scrollen",
   "session.messages.initializing": "Initialisierung...",
   "session.messages.taskStarting": "Wird gestartet...",
@@ -1205,6 +1220,8 @@ export const dict = {
     "Aufgabenliste verwalten. Ermöglicht das Lesen und Aktualisieren der internen Aufgabenliste.",
   "settings.autoApprove.tool.webfetch": "URL abrufen. Erlaubt das Abrufen von Inhalten einer bestimmten URL.",
   "settings.autoApprove.tool.websearch": "Das Web durchsuchen. Ermöglicht die Durchführung externer Web-Suchen.",
+  "settings.autoApprove.tool.browser_open":
+    "Seiten im Integrierten Browser öffnen. Dies ist die Vorschau in der App, nicht die Playwright-Browserautomatisierung.",
   "settings.autoApprove.tool.external_directory":
     "Zugriff auf Dateien außerhalb des Arbeitsbereichs. Wird ausgelöst, wenn auf Dateien außerhalb des aktuellen Projektverzeichnisses zugegriffen wird.",
   "settings.autoApprove.tool.doom_loop":

@@ -63,12 +63,50 @@ const agent: Agent.Info = {
   options: {},
 }
 
+const customAgent: Agent.Info = {
+  name: "candidate",
+  mode: "all",
+  permission: [],
+  options: {},
+}
+
+const subAgent: Agent.Info = {
+  name: "researcher",
+  mode: "subagent",
+  permission: [],
+  options: {},
+}
+
+// Mirrors the built-in title/summary/compaction utility agents: primary but hidden.
+const hiddenAgent: Agent.Info = {
+  name: "title",
+  mode: "primary",
+  hidden: true,
+  permission: [],
+  options: {},
+}
+
+const agentsByName: Record<string, Agent.Info> = {
+  build: agent,
+  candidate: customAgent,
+  researcher: subAgent,
+  title: hiddenAgent,
+}
+
 // Default provider is `test`, so resolution should prefer test, then kilo, then others.
-function makeRuntime(defaultProviderID = "test", host: Partial<AgentManager.Interface> = {}) {
+function makeRuntime(
+  defaultProviderID = "test",
+  host: Partial<AgentManager.Interface> = {},
+  agentSvc: Partial<Agent.Interface> = {},
+) {
   return ManagedRuntime.make(
     Layer.mergeAll(
       AppNodeBuilder.build(Truncate.node),
-      Layer.mock(Agent.Service, { get: () => Effect.succeed(agent) }),
+      Layer.mock(Agent.Service, {
+        get: (name: string) => Effect.succeed(agentsByName[name]),
+        list: () => Effect.succeed(Object.values(agentsByName)),
+        ...agentSvc,
+      }),
       AppNodeBuilder.build(Bus.node),
       AppNodeBuilder.build(CrossSpawnSpawner.node),
       Layer.mock(AgentManager.Service, host),
@@ -1115,5 +1153,145 @@ describe("agent_manager tool", () => {
         ).pipe(Effect.scoped),
       ),
     ).rejects.toThrow("Each task must include prompt, name, or branchName")
+  })
+
+  test("publishes a valid primary agent on the task without requiring a prompt", async () => {
+    const task = await publish(runtime, { name: "Prepared", agent: "candidate" })
+    expect(task?.agent).toBe("candidate")
+  })
+
+  test("omits agent from the published task when not specified", async () => {
+    const task = await publish(runtime, { name: "Prepared" })
+    expect(task?.agent).toBeUndefined()
+  })
+
+  // A padded name passes the trimmed fail-fast check, so it must be published
+  // canonical too. Agent.get resolves by exact key, so " candidate " would
+  // otherwise fail later at prompt time with "Agent not found".
+  test("publishes a padded agent name trimmed", async () => {
+    const task = await publish(runtime, { name: "Prepared", agent: "  candidate  " })
+    expect(task?.agent).toBe("candidate")
+  })
+
+  test("omits a blank agent from the published task", async () => {
+    const task = await publish(runtime, { name: "Prepared", agent: "   " })
+    expect(task?.agent).toBeUndefined()
+  })
+
+  test("rejects an unknown agent name before requesting permission", async () => {
+    const tool = await init()
+    const calls: unknown[] = []
+
+    const result = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { mode: "local", tasks: [{ prompt: "Fix", agent: "does-not-exist" }] },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => calls.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(calls).toEqual([])
+    expect(result.title).toBe("Invalid Agent Manager agent selection")
+    expect(result.output).toContain('Agent "does-not-exist" not found.')
+    expect(result.output).toContain("Available agents: build, candidate")
+    expect(result.metadata.count).toBe(0)
+  })
+
+  test("rejects a subagent-mode agent before requesting permission", async () => {
+    const tool = await init()
+    const calls: unknown[] = []
+
+    const result = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { mode: "local", tasks: [{ prompt: "Fix", agent: "researcher" }] },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => calls.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(calls).toEqual([])
+    expect(result.title).toBe("Invalid Agent Manager agent selection")
+    expect(result.output).toContain('Agent "researcher" is a subagent')
+    expect(result.output).toContain("task tool")
+    // The caller cannot enumerate agents, so the recoverable set must be on every
+    // rejection — a plausible wrong guess resolves and would otherwise get no list.
+    expect(result.output).toContain("Available agents: build, candidate")
+    expect(result.metadata.count).toBe(0)
+  })
+
+  // Hidden utility agents (title/summary/compaction) are primary, so a mode-only
+  // check accepted them and would have run a deny-only agent as a real session.
+  test("rejects a hidden internal agent before requesting permission", async () => {
+    const tool = await init()
+    const calls: unknown[] = []
+
+    const result = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { mode: "local", tasks: [{ prompt: "Fix", agent: "title" }] },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => calls.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(calls).toEqual([])
+    expect(result.title).toBe("Invalid Agent Manager agent selection")
+    expect(result.output).toContain('Agent "title" is an internal agent')
+    expect(result.output).toContain("Available agents: build, candidate")
+    expect(result.metadata.count).toBe(0)
+  })
+
+  test("never advertises subagent or hidden agents as selectable", async () => {
+    const tool = await init()
+    const result = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute({ mode: "local", tasks: [{ prompt: "Fix", agent: "nope" }] }, { ...ctx, ask: () => Effect.void }),
+      ).pipe(Effect.scoped),
+    )
+
+    const line = result.output.split("\n").find((item) => item.includes("Available agents:"))
+    expect(line).toBeDefined()
+    expect(line).not.toContain("researcher")
+    expect(line).not.toContain("title")
+  })
+
+  // `publish` waits on a queue, so a rejection proves nothing reached the bus.
+  // Asserting an array filled by subscribeCallback cannot fail: the callback runs
+  // on its own fiber and is still pending when the assertion executes.
+  test.each(["title", "researcher", "nope"])("starts no session for the rejected agent %s", async (name) => {
+    await expect(publish(runtime, { prompt: "Fix", agent: name })).rejects.toThrow()
+  })
+
+  test("does not publish any session when one task's agent is invalid", async () => {
+    const tool: Tool.Def = await init()
+    const events = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        Effect.gen(function* () {
+          const bus = yield* Bus.Service
+          const queue = yield* Queue.unbounded<AgentManagerStart>()
+          const off = yield* bus.subscribeCallback(AgentManagerEvent.Start, (item) =>
+            Queue.offerUnsafe(queue, item.properties),
+          )
+          yield* Effect.addFinalizer(() => Effect.sync(off))
+          yield* tool.execute(
+            {
+              mode: "local",
+              tasks: [
+                { prompt: "Fix one", agent: "candidate" },
+                { prompt: "Fix two", agent: "researcher" },
+              ],
+            },
+            { ...ctx, ask: () => Effect.void },
+          )
+          // Waiting on the queue is what makes this assertion real: reading an array
+          // filled by subscribeCallback passes even when an event was published,
+          // because that callback is still pending on its own fiber.
+          return yield* Queue.take(queue).pipe(Effect.timeout("1 second"), Effect.exit)
+        }),
+      ).pipe(Effect.scoped),
+    )
+    expect(Exit.isFailure(events)).toBe(true)
   })
 })
