@@ -1311,6 +1311,7 @@ object KiloCliDataParser {
         val error = obj["error"]?.jsonObject
         val raw = obj["summary"].obj()?.get("diffs")
         val summary = if (raw == null) null else MessageSummaryDto(parseDiffs(raw))
+        val model = obj["model"]?.obj()
 
         return MessageDto(
             id = obj.str("id") ?: "",
@@ -1329,7 +1330,16 @@ object KiloCliDataParser {
             finish = obj.str("finish"),
             error = error?.let { parseError(it) },
             summary = summary,
+            variant = obj.str("variant"),
+            model = model?.let(::parseModelSelection),
         )
+    }
+
+    private fun parseModelSelection(obj: JsonObject): ModelSelectionDto? {
+        val provider = obj.str("providerID")
+        val id = obj.str("modelID")
+        if (provider.isNullOrBlank() || id.isNullOrBlank()) return null
+        return ModelSelectionDto(provider, id, obj.str("variant"))
     }
 
     private fun parseDiffs(raw: JsonElement?): List<DiffFileDto> {

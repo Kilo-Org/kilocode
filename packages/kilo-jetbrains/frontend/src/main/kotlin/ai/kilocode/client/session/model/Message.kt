@@ -16,6 +16,17 @@ data class SessionHeaderSnapshot(
     val timeline: List<TimelineItem>,
     val todos: TodoSummary,
     val canCompact: Boolean,
+    /** Model the latest message ran with; only shown for sub-agent sessions. */
+    val model: HeaderModel? = null,
+)
+
+/** Display data for the model a sub-agent session runs with. */
+data class HeaderModel(
+    val name: String,
+    /** Capitalized reasoning effort, or null when the model has no variant. */
+    val variant: String?,
+    /** `provider/modelID`, used as the tooltip's first line. */
+    val id: String,
 )
 
 data class ContextUsage(
