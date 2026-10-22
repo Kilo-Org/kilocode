@@ -19,6 +19,7 @@ import java.awt.Cursor
 import java.awt.Rectangle
 import java.awt.event.KeyEvent
 import javax.swing.JComponent
+import javax.swing.JViewport
 import javax.swing.KeyStroke
 import javax.swing.ScrollPaneConstants
 import javax.swing.UIManager
@@ -99,8 +100,16 @@ internal class ActiveList(
         view.filter(query)
     }
 
+    /** The scroll pane's viewport, for owners that must track its extent. */
+    @RequiresEdt
+    internal fun viewport(): JViewport = scroll.viewport
+
     @RequiresEdt
     fun select(key: String, scroll: Boolean = true): Boolean = view.select(key, scroll)
+
+    /** True when row [index] is entirely inside the viewport. */
+    @RequiresEdt
+    fun indexFullyVisible(index: Int): Boolean = view.indexFullyVisible(index)
 
     @RequiresEdt
     fun selectIndex(index: Int) = view.selectIndex(index)

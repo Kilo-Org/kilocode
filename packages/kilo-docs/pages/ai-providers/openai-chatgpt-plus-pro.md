@@ -165,6 +165,9 @@ Disconnecting BYOK alone does not remove the ChatGPT identity linked to your Kil
 **My local browser sign-in fails with a CSRF or callback error.**
 The direct VS Code and CLI flow uses local port `1455`. Check that another application is not using it. On macOS or Linux, run `lsof -i :1455`. This does not apply to the dashboard BYOK flow.
 
+**I see `Invalid 'instructions': string too long`.**
+When you connect directly with ChatGPT/Codex, OpenAI limits the instructions Kilo can send to about 1 million characters. Your active custom agent's instructions, global and project rules (such as `AGENTS.md`), and instructions supplied by connected MCP servers all count toward this limit. Shorten your custom agent instructions, remove unnecessary rules, or disable MCP servers you don't need. This is an OpenAI limit, not a sign that you've used up your subscription.
+
 **How do I disconnect the local provider?**
 In VS Code, choose **Disconnect** in the provider settings. In the CLI, run `kilo auth logout` and choose OpenAI. This is separate from managing the connection on Kilo's BYOK page.
 

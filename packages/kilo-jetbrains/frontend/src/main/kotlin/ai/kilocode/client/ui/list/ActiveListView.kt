@@ -362,6 +362,13 @@ internal class ActiveListView(
         return true
     }
 
+    /** True when row [index] is entirely inside the viewport. */
+    @RequiresEdt
+    fun indexFullyVisible(index: Int): Boolean {
+        checkEdt()
+        return index in 0 until model.size && ScrollingUtil.isIndexFullyVisible(list, index)
+    }
+
     @RequiresEdt
     fun selectIndex(index: Int) {
         checkEdt()
@@ -505,7 +512,7 @@ internal class ActiveListView(
             // rows must leave the viewport where the user left it, or a polling owner would drag the
             // view back to the selection on every tick.
             val idx = list.selectedIndex
-            if (idx >= 0 && identities() != before) ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
+            if (idx >= 0 && identities() != before) ensureVisible(idx)
         } finally {
             restoring = false
         }
@@ -651,7 +658,45 @@ internal class ActiveListView(
     private fun choose(idx: Int, scroll: Boolean = true) {
         checkEdt()
         list.selectedIndex = idx
-        if (scroll) ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
+        if (scroll) ensureVisible(idx)
+    }
+
+    /**
+     * Scrolls row [idx] into view without moving it when it is already fully visible.
+     *
+     * The viewport's view is this panel, not the nested `JList`, so scrolling the list directly measures
+     * the offset in the wrong coordinate space: the list stays at 0,0 inside the panel while the viewport
+     * moves the panel. The view position is therefore computed against this panel's coordinates directly,
+     * which is also the only reliable path before the first layout has settled.
+     */
+    @RequiresEdt
+    private fun ensureVisible(idx: Int) {
+        val port = parent as? JViewport
+        // Tests and embedders can put the raw list in their own scroll pane; there the list is the view
+        // and the platform helper already measures the right space.
+        if (port == null) {
+            ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
+            return
+        }
+        val extent = port.extentSize.height
+        if (extent <= 0) return
+        val cell = list.getCellBounds(idx, idx) ?: return
+        val row = SwingUtilities.convertRectangle(list, cell, this)
+        val top = port.viewPosition.y
+        val bottom = top + extent
+        val y = when {
+            row.y < top -> row.y
+            row.y + row.height > bottom -> row.y + row.height - extent
+            else -> return
+        }
+        // The view and list may not have been laid out yet, so their heights can still be zero even when
+        // the cells are measured. Convert the last cell into this panel's space so the clamp and [row]
+        // above use one coordinate system, even if the view later gains padding.
+        val last = list.getCellBounds(model.size - 1, model.size - 1)
+        val end = last?.let { SwingUtilities.convertRectangle(list, it, this) }?.let { it.y + it.height } ?: 0
+        val content = maxOf(height, end)
+        val max = (content - extent).coerceAtLeast(0)
+        port.viewPosition = Point(port.viewPosition.x, y.coerceIn(0, max))
     }
 
     @RequiresEdt
