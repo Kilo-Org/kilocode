@@ -14,7 +14,7 @@ import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { IntegrationID, IntegrationMethodID } from "@opencode/schema/integration-id"
 import { Document } from "@opencode/schema/config"
 import { Global } from "@opencode/util/global"
-import { Effect } from "effect"
+import { Effect, Fiber, Schedule } from "effect"
 import { withEnv } from "../../core/test/fixture/env"
 import { testEffect } from "../../core/test/lib/effect"
 import { PluginTestLayer } from "../../core/test/plugin/fixture"
@@ -89,6 +89,29 @@ it.live("applies real agents, respects local overrides, and replaces organizatio
             const rpc = yield* Rpc.Service
             const call = (organizationID: string | null) =>
               rpc.call(KiloGatewayRpc.Definition.id, "organization.set", { organizationID })
+            const before = backend.requests.length
+            backend.state.delay = 100
+            const refresh = yield* call("first").pipe(Effect.forkChild({ startImmediately: true }))
+            yield* Effect.sync(() =>
+              backend.requests.slice(before).some((request) => request.path.endsWith("/profile")),
+            ).pipe(
+              Effect.repeat({ while: (started) => !started, schedule: Schedule.spaced("1 millis") }),
+              Effect.timeout("2 seconds"),
+            )
+            expect((yield* agents.get(Agent.ID.make("first-only")))?.system).toBe("First team")
+            yield* Fiber.join(refresh)
+            backend.state.delay = 0
+            const profile = backend.state.profile
+            backend.state.profile = {
+              user: { email: "fixture@example.test" },
+              organizations: [],
+              hasPersonalAccount: true,
+            }
+            yield* call("first")
+            expect(yield* agents.get(Agent.ID.make("first-only"))).toBeUndefined()
+            backend.state.profile = profile
+            yield* call("first")
+            expect((yield* agents.get(Agent.ID.make("first-only")))?.system).toBe("First team")
             backend.state.modes = { modes: [mode("second-only", "Second team")] }
             yield* call("selected")
             expect(yield* agents.get(Agent.ID.make("first-only"))).toBeUndefined()
@@ -122,13 +145,13 @@ it.live("managed privacy wins request and environment options, preserves routing
         },
         () =>
           Effect.gen(function* () {
-        backend.state.models = {
+            backend.state.models = {
               data: [
                 { id: "training", name: "Training", context_length: 128000, isFree: true, mayTrainOnYourPrompts: true },
                 { id: "private", name: "Private", context_length: 128000, isFree: true },
-          ],
-        }
-        backend.state.defaults = { defaultModel: "training" }
+              ],
+            }
+            backend.state.defaults = { defaultModel: "training" }
             const config = yield* Config.Test
             const user = new Document({
               type: "document",
@@ -152,10 +175,10 @@ it.live("managed privacy wins request and environment options, preserves routing
             const host = yield* PluginHost.make(plugins)
             yield* KiloGatewayPlugin.effect(host).pipe(Effect.provide(Global.layerWith({})))
             const models = yield* Model.Service
-        expect(
-          (yield* models.available()).filter((model) => model.providerID === kilo).map((model) => model.id),
-        ).toEqual([Model.ID.make("private")])
-        expect((yield* models.default())?.id).toBe(Model.ID.make("private"))
+            expect(
+              (yield* models.available()).filter((model) => model.providerID === kilo).map((model) => model.id),
+            ).toEqual([Model.ID.make("private")])
+            expect((yield* models.default())?.id).toBe(Model.ID.make("private"))
             const session = yield* host.session.create({})
             const hooks = yield* PluginHooks.Service
             const request = yield* hooks.trigger("session", "http.request", {

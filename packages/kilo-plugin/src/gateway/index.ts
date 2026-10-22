@@ -164,6 +164,23 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       }
     })
 
+    // Keep valid agents during refresh, but invalidate a changed scope before waiting for the catalog lock.
+    const resetOrganizationModes = (resolved: Pick<CatalogState, "account" | "connection" | "envActive">) =>
+      Effect.gen(function* () {
+        if (
+          catalog.account?.token === resolved.account?.token &&
+          catalog.account?.server === resolved.account?.server &&
+          catalog.account?.organizationID === resolved.account?.organizationID &&
+          catalog.envActive === resolved.envActive &&
+          (catalog.connection ? organizationKey(catalog.connection) : undefined) ===
+            (resolved.connection ? organizationKey(resolved.connection) : undefined)
+        )
+          return
+        KiloModes.clearCache()
+        organizationModes = []
+        yield* ctx.agent.reload()
+      })
+
     const saveSnapshot = (writeKey: string, snapshot: Snapshot) =>
       Effect.gen(function* () {
         if (!lastGood.has(writeKey) && lastGood.size >= MAX_SNAPSHOTS) {
@@ -205,6 +222,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     ): Effect.fn.Return<void> {
       const resolved = yield* resolveCurrentAccount
       if (targetEpoch !== epoch) return
+      yield* resetOrganizationModes(resolved)
       const current = resolved.account
       const connection = resolved.connection
       const envActive = resolved.envActive
@@ -243,6 +261,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           Option.isSome(profile) &&
           !profile.value.organizations.some((organization) => organization.id === organizationID)
         ) {
+          KiloModes.clearCache()
+          organizationModes = []
+          yield* ctx.agent.reload()
           catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
           return
         }
@@ -358,24 +379,16 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       )
     }
 
-    const reload = Effect.suspend(() => {
+    const reload = Effect.gen(function* () {
       const targetEpoch = ++epoch
-      KiloModes.clearCache()
-      organizationModes = []
-      return ctx.agent.reload().pipe(
-        Effect.andThen(KiloConfigPolicy.get(config)),
-        Effect.tap((next) =>
-          Effect.sync(() => {
-            policy = next
-          }),
-        ),
-        Effect.andThen(cancelRetry),
-        Effect.andThen(
-          lock.withPermit(
-            loadCatalog(targetEpoch, 0).pipe(
-              Effect.andThen(Effect.suspend(() => (targetEpoch === epoch ? ctx.provider.reload() : Effect.void))),
-            ),
-          ),
+      const resolved = yield* resolveCurrentAccount
+      if (targetEpoch !== epoch) return
+      yield* resetOrganizationModes(resolved)
+      policy = yield* KiloConfigPolicy.get(config)
+      yield* cancelRetry
+      yield* lock.withPermit(
+        loadCatalog(targetEpoch, 0).pipe(
+          Effect.andThen(Effect.suspend(() => (targetEpoch === epoch ? ctx.provider.reload() : Effect.void))),
         ),
       )
     })
