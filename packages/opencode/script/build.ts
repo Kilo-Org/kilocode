@@ -370,7 +370,9 @@ for (const item of targets) {
     await KiloSandboxNetwork.copy(kiloSandboxNetwork, path.resolve(dir, `dist/${name}/bin`), item.arch)
   }
 
-  if (item.os === "linux") {
+  // KILO_SKIP_PATCHELF=1: for builds whose bun already has the standard
+  // interpreter (e.g. distro packages), where rewriting the ELF is unneeded.
+  if (item.os === "linux" && process.env.KILO_SKIP_PATCHELF !== "1") {
     const interpreters: Record<string, string> = {
       x64: "/lib64/ld-linux-x86-64.so.2",
       arm64: "/lib/ld-linux-aarch64.so.1",
@@ -453,7 +455,10 @@ for (const item of targets) {
   binaries[name] = Script.version
 }
 
-if (Script.release) {
+// kilocode_change start - KILO_SKIP_RELEASE_UPLOAD=1 keeps the release build
+// settings but skips packing, SBOM evidence and the GitHub upload (distro builds)
+if (Script.release && process.env.KILO_SKIP_RELEASE_UPLOAD !== "1") {
+  // kilocode_change end
   const archives: string[] = [] // kilocode_change
   for (const key of Object.keys(binaries)) {
     const archive = key.replace(pkg.name, "kilo") // kilocode_change
