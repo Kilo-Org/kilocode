@@ -360,7 +360,7 @@ const LOCAL_SERVER_IDS = new Set(["lmstudio", "ollama", "atomic-chat", "anaconda
  */
 export function isLoopbackProvider(provider: {
   id?: unknown
-  options?: Record<string, any>
+  options?: Record<string, unknown>
   models: Record<string, Provider.Model>
 }) {
   if (typeof provider.id === "string" && LOCAL_SERVER_IDS.has(provider.id)) return true

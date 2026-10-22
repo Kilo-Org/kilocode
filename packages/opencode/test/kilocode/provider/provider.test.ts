@@ -224,7 +224,7 @@ describe("cheapestSmallModel", () => {
     const newer = model({ id: "a", release_date: "2026-06-01" })
     const sameAsNewer = model({ id: "z", release_date: "2026-06-01" })
     expect(cheapestSmallModel([same, newer])).toMatchObject({ id: "a" })
-    expect(cheapestSmallModel([same, sameAsNewer])).toMatchObject({ id: "z" })
+    expect(cheapestSmallModel([newer, sameAsNewer])).toMatchObject({ id: "z" })
   })
 
   test("skips embedding and rerank models even when they are free", () => {
