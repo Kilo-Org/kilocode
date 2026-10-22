@@ -168,8 +168,15 @@ export async function acquire(dir: string, workspacePath: string): Promise<Write
   // than trusting the heartbeat timer lets it learn about a takeover before
   // writing the store under a lock another session now owns.
   const owned = async () => {
-    const current = await read(path.join(lockdir, "meta.json"))
-    return current?.token === token
+    // A single unreadable metadata read (transient IO, a writer mid-rewrite)
+    // must not permanently park the session and dispose its watcher. Retry
+    // once; a real takeover leaves a stable foreign token on the second read.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const current = await read(path.join(lockdir, "meta.json"))
+      if (current) return current.token === token
+      if (attempt === 0) await new Promise<void>((resolve) => setTimeout(resolve, 25))
+    }
+    return false
   }
 
   return {

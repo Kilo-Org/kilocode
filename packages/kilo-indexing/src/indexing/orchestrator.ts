@@ -570,6 +570,10 @@ export class CodeIndexOrchestrator {
       this._cancelRequested = true
       this.scanner.cancel()
       await this._active
+      // The watcher's drainTask is separate from _active: shutdown() waits for
+      // it before returning, so a batch already writing cannot upsert after
+      // deleteCollection() or after the lock is released below.
+      if (this.fileWatcher.shutdown) await this.fileWatcher.shutdown()
       this.stopWatcher()
 
       try {

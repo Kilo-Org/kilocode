@@ -637,7 +637,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
     await writeFile(path.join(slot, "heartbeat"), "")
 
     watcher.onDidStartBatchProcessing.fire(["src/a.ts"])
-    await Bun.sleep(20)
+    for (let i = 0; i < 100 && watcher.disposed === 0; i += 1) await Bun.sleep(10)
     // The watcher writes the store outside runIndexing, so a batch after the
     // takeover must shut it down rather than commit unlocked.
     expect(watcher.disposed).toBeGreaterThan(0)
