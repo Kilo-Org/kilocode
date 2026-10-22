@@ -7,7 +7,7 @@ SHELL ["/bin/bash", "-lc"]
 
 # kilocode_change start
 ARG NODE_VERSION=24.22.1
-ARG BUN_VERSION=1.4.3-canary.20261021.1
+ARG BUN_VERSION=1.4.4
 # kilocode_change end
 
 ENV BUN_INSTALL=/opt/bun
@@ -21,7 +21,7 @@ RUN set -euo pipefail; \
   | tar -xJf - -C /usr/local --strip-components=1; \
   corepack enable
 
-# kilocode_change start - install the exact npm canary with retries
+# kilocode_change start - install the exact npm release with retries
 RUN set -euo pipefail; \
   for attempt in 1 2 3 4 5; do \
     if npm install --global --prefix "$BUN_INSTALL" "bun@${BUN_VERSION}"; then \

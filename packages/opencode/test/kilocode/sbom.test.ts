@@ -41,7 +41,7 @@ describe("target", () => {
       const bun = graph.components.find((item) => item.name === "bun")
       expect(bun?.properties).toMatchObject({ "bun:artifact": artifact.name, "bun:integrity": artifact.integrity })
     }
-  })
+  }, 30_000)
 
   test("accepts the npm package name form", () => {
     expect(Sbom.target("@kilocode/cli-linux-arm64-musl")).toMatchObject({

@@ -76,10 +76,10 @@ test("Node bootstrap and Bun select the same native runtime artifact", async () 
 })
 
 test("manifest pins all twelve immutable npm tarballs with SHA-512", () => {
-  expect(pin.version).toBe("1.4.3-canary.20261021.1")
+  expect(pin.version).toBe("1.4.4")
   expect(pkg.packageManager).toBe(`bun@${pin.version}`)
   expect(pin.runtime).toBe("1.4.4")
-  expect(pin.revision).toBe("963452075e9d7e2a47a482f297143af5ed4f76c0")
+  expect(pin.revision).toBe("38afee6c84fcf48c0edb2466aa4b27d287a59c30")
   expect(Object.keys(pin.artifacts).sort()).toEqual(cases.map(([, slug]) => slug).sort())
   for (const item of Object.values(pin.artifacts)) {
     expect(item.tarball).toBe(`https://registry.npmjs.org/@oven/${item.name}/-/${item.name}-${pin.version}.tgz`)

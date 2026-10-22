@@ -16,7 +16,7 @@ This document will help you set up your development environment and understand h
 Before you begin, make sure you have the following installed:
 
 1. **Git** - For version control
-2. **Bun `1.4.3-canary.20261021.1`** - The exact official npm package is required for installing dependencies and running scripts
+2. **Bun `1.4.4`** - The exact official npm package is required for installing dependencies and running scripts
 3. **Visual Studio Code** - Our recommended IDE for development
 4. **Java 21** - Required only when running JetBrains plugin checks or repo-level checks that include `@kilocode/kilo-jetbrains`
 
@@ -35,17 +35,17 @@ Before you begin, make sure you have the following installed:
      ```
      Replace `[YOUR-USERNAME]` with your actual GitHub username.
 
-2. **Install the pinned Bun package**:
+2. **Install the pinned Bun release**:
 
    Use Node.js 24.22.1 or newer with npm from a trusted source:
 
    ```bash
-   npm install --global bun@1.4.3-canary.20261021.1
+   npm install --global bun@1.4.4
    bun --version
    bun --print "Bun.revision"
    ```
 
-   This npm package reports `1.4.4` for `bun --version`. Its full `Bun.revision` must be `963452075e9d7e2a47a482f297143af5ed4f76c0`. The CLI build rejects other revisions, even if they report the same runtime version. The root `package.json` pins the npm package version, and `script/kilocode/bun.json` records the runtime version, revision, and target artifact checksums.
+   The expected `Bun.revision` is `38afee6c84fcf48c0edb2466aa4b27d287a59c30`. The CLI build rejects other revisions. The root `package.json` pins the npm package version, and `script/kilocode/bun.json` records the exact revision and target artifact checksums.
 
 3. **Install dependencies**:
 
