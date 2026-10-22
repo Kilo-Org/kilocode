@@ -626,6 +626,24 @@
 
 ## [Unreleased]
 
+## [7.1.12] - 2026-10-22
+
+### Added
+- Added project-scoped agent usage aggregation to the bundled CLI, backed by a pageable agent usage HTTP API.
+- Added custom auto routers with client models and local evals.
+- Added a session host registry and Kilo Cloud session adapter.
+- Agent Manager now fetches the base branch before creating new worktrees.
+
+### Fixed
+- Kept the prompt navigator in sync with the hovered stripe and stopped following the prompt after manual scrolling.
+- Preserved MCP prompt content so server-provided prompts render correctly.
+- Kept edit tools available to subagents of allowlist callers.
+- Mapped audio formats correctly in custom router decision input.
+- Ingested PR links without requiring remote control.
+
+### Changed
+- Bumped the bundled Kilo CLI pin to v7.8.15 (via v7.8.14).
+
 ## [7.1.11] - 2026-10-16
 
 ### Added
