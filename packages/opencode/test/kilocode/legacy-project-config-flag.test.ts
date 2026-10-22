@@ -146,7 +146,8 @@ describe("KILO_DISABLE_PROJECT_CONFIG with legacy Kilo Code files", () => {
     })
 
     expect(result.config.mcp).toBeUndefined()
-    expect(result.config.permission).toBeUndefined()
+    // A real ~/.kilocode/.kilocodeignore may still contribute global patterns, so only the project pattern is checked
+    expect(JSON.stringify(result.config.permission ?? {})).not.toContain("private/")
     expect(result.config.agent?.["project-mode"]).toBeUndefined()
     expect(result.config.command?.["deploy"]).toBeUndefined()
     expect(result.config.command?.["release"]).toBeDefined()
@@ -165,7 +166,7 @@ describe("KILO_DISABLE_PROJECT_CONFIG with legacy Kilo Code files", () => {
     })
 
     expect(Object.keys(result.config.mcp ?? {}).sort()).toEqual(["local", "other"])
-    expect(result.config.permission).toBeDefined()
+    expect(JSON.stringify(result.config.permission ?? {})).toContain("private/")
     expect(result.config.agent?.["project-mode"]).toBeDefined()
     expect(result.config.command?.["deploy"]).toBeDefined()
     expect(result.config.command?.["release"]).toBeDefined()
