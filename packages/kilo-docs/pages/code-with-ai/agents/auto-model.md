@@ -71,6 +71,17 @@ Auto Free may route your requests to providers that log prompts and outputs and 
 For NVIDIA free endpoints (Super/Ultra/etc): Trial use only - do not submit personal or confidential data. Your use is logged for security purposes and to improve NVIDIA products and services. The logged session data for improvement purposes is not linked to your identity or any persistent identifier. For more information about our data processing practices, see our [Privacy Policy](https://www.nvidia.com/en-us/about-nvidia/privacy-policy/). By interacting with this endpoint, you consent to our collection, recording, and use of such information and the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf).
 {% /callout %}
 
+### Custom auto routers
+
+A custom auto router is your own routing pool under a `kilo-auto/custom/<slug>` model id. Create the router in the Kilo web editor, then register the models this machine can run so the CLI can serve it locally instead of always forwarding to the gateway:
+
+- `kilo auto router list` — list your custom routers, their entries, and each entry's eval status
+- `kilo auto router add <router> <model>` — register a model configured in this CLI as a router entry
+- `kilo auto router remove <router> <model>` — remove a client model entry
+- `kilo auto eval <router>` — run the router's missing client evals locally in Docker
+
+When you select a custom router, Kilo ranks the entries this machine can serve, asks the routing service for a decision, and runs the chosen model through its local provider. See the [CLI command reference](/docs/code-with-ai/platforms/cli-reference#kilo-auto) for every command and option.
+
 ## Benefits
 
 ### Cost Optimization
