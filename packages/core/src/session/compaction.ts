@@ -134,7 +134,7 @@ const settings = (documents: readonly Config.Entry[]) => {
   )
 }
 
-const select = (
+export const select = ( // kilocode_change - exported for the compaction split regression test
   entries: readonly Entry[],
   tokens: number,
 ): { readonly head: string; readonly recent: string } | undefined => {
