@@ -35,7 +35,7 @@ One point per day from the committed `progress.json` on the first-parent history
 | 2026-10-19 | 87 | 9829 | 0.9% |
 | 2026-10-20 | 87 | 9829 | 0.9% |
 | 2026-10-21 | 90 | 9829 | 0.9% |
-| 2026-10-22 | 91 | 9829 | 0.9% |
+| 2026-10-22 | 92 | 9829 | 0.9% |
 | now | 93 | 9829 | 0.9% |
 
 ## Features
