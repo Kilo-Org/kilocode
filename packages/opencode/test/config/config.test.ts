@@ -1,28 +1,273 @@
-import { test, expect, describe, mock, afterEach } from "bun:test"
-import { Config } from "../../src/config/config"
-import { Instance } from "../../src/project/instance"
+import { test, expect, describe, afterEach, beforeEach, spyOn } from "bun:test"
+import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
+import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent" // kilocode_change
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { httpClient } from "@opencode-ai/core/effect/app-node-platform"
+import { Cause, Effect, Exit, Layer, Logger, Option } from "effect"
+import { NamedError } from "@opencode-ai/core/util/error"
+import { FetchHttpClient, HttpClient, HttpClientResponse } from "effect/unstable/http"
+import { Config } from "@/config/config"
+import { ConfigManaged } from "@/config/managed"
+import { ConfigParse } from "../../src/config/parse"
+import { ConfigV2Compat } from "../../src/config/v2-compat"
+import { snapshot } from "./snapshot"
+import { Npm } from "@opencode-ai/core/npm"
+
+import { InstanceRef } from "../../src/effect/instance-ref"
+import type { InstanceContext } from "../../src/project/instance-context"
 import { Auth } from "../../src/auth"
-import { tmpdir } from "../fixture/fixture"
+import { Account } from "../../src/account/account"
+import { AccessToken, AccountID, OrgID } from "../../src/account/schema"
+import { FSUtil } from "@opencode-ai/core/fs-util"
+import { Env } from "../../src/env"
+import { Git } from "../../src/git" // kilocode_change
+import {
+  provideTmpdirInstance,
+  TestInstance,
+  tmpdir,
+  tmpdirScoped,
+  withTestInstance,
+  provideInstanceEffect,
+  testInstanceStoreLayer,
+} from "../fixture/fixture"
+import { InstanceRuntime } from "@/project/instance-runtime"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { testEffect } from "../lib/effect"
 import path from "path"
 import fs from "fs/promises"
+import os from "os"
 import { pathToFileURL } from "url"
-import { Global } from "../../src/global"
-import { Filesystem } from "../../src/util/filesystem"
+import { Global } from "@opencode-ai/core/global"
+import { ProjectV2 } from "@opencode-ai/core/project"
+import { Filesystem } from "@/util/filesystem"
+import { ConfigPlugin } from "@/config/plugin"
+import { ConfigPluginV1 } from "@opencode-ai/core/v1/config/plugin"
+import { AccountTest } from "../fake/account"
+import { AuthTest } from "../fake/auth"
+import { NpmTest } from "../fake/npm"
+import { isIndexingPlugin } from "@kilocode/kilo-indexing/detect" // kilocode_change
+import { isAtomicChatPlugin } from "@/kilocode/atomic-chat-feature" // kilocode_change
 
+const unexpectedHttp = HttpClient.make((request) =>
+  Effect.die(`unexpected http request: ${request.method} ${request.url}`),
+)
+
+const json = (request: Parameters<typeof HttpClientResponse.fromWeb>[0], body: unknown, status = 200) =>
+  HttpClientResponse.fromWeb(
+    request,
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { "content-type": "application/json" },
+    }),
+  )
+
+const wellKnownAuth = (url: string) =>
+  Layer.mock(Auth.Service)({
+    all: () =>
+      Effect.succeed({
+        [url]: new Auth.WellKnown({ type: "wellknown", key: "TEST_TOKEN", token: "test-token" }),
+      }),
+  })
+
+function remoteConfigClient(input: {
+  wellKnown: unknown
+  remote?: unknown
+  remoteHtml?: string
+  seen: { wellKnown?: string; remote?: string; authorization?: string }
+}) {
+  return HttpClient.make((request) => {
+    if (request.url.includes(".well-known/opencode")) {
+      input.seen.wellKnown = request.url
+      return Effect.succeed(json(request, input.wellKnown))
+    }
+    if (request.url.includes("config.example.com") && (input.remote !== undefined || input.remoteHtml !== undefined)) {
+      input.seen.remote = request.url
+      input.seen.authorization = request.headers.authorization
+      if (input.remoteHtml !== undefined) {
+        return Effect.succeed(
+          HttpClientResponse.fromWeb(
+            request,
+            new Response(input.remoteHtml, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } }),
+          ),
+        )
+      }
+      return Effect.succeed(json(request, input.remote))
+    }
+    return Effect.succeed(json(request, {}, 404))
+  })
+}
+
+const configLayer = (
+  options: {
+    auth?: Layer.Layer<Auth.Service>
+    account?: Layer.Layer<Account.Service>
+    client?: HttpClient.HttpClient
+  } = {},
+) =>
+  LayerNode.compile(LayerNode.group([Config.node, FSUtil.node, Env.node, CrossSpawnSpawner.node]), [
+    [Auth.node, options.auth ?? AuthTest.empty],
+    [Account.node, options.account ?? AccountTest.empty],
+    [Npm.node, NpmTest.noop],
+    [httpClient, Layer.succeed(HttpClient.HttpClient, options.client ?? unexpectedHttp)],
+  ])
+
+const layer = configLayer()
+
+const it = testEffect(layer)
+const configIt = (options?: Parameters<typeof configLayer>[0]) => testEffect(configLayer(options))
+
+const schemaConfig = (config: object) => ({ $schema: "https://app.kilo.ai/config.json", ...config }) // kilocode_change
+
+const provideCurrentInstance = <A, E, R>(effect: Effect.Effect<A, E, R>, ctx: InstanceContext) =>
+  effect.pipe(Effect.provideService(InstanceRef, ctx))
+
+const load = (ctx: InstanceContext) =>
+  Effect.runPromise(
+    Config.Service.use((svc) => provideCurrentInstance(svc.get(), ctx)).pipe(Effect.scoped, Effect.provide(layer)),
+  )
+const clearEffect = (wait = false) =>
+  Config.use
+    .invalidate()
+    .pipe(
+      Effect.scoped,
+      Effect.provide(layer),
+      Effect.andThen(wait ? Effect.promise(() => InstanceRuntime.disposeAllInstances()) : Effect.void),
+    )
+const clear = (wait = false) => Effect.runPromise(clearEffect(wait))
 // Get managed config directory from environment (set in preload.ts)
 const managedConfigDir = process.env.KILO_TEST_MANAGED_CONFIG_DIR!
+const originalTestToken = process.env.TEST_TOKEN
+const originalConsoleToken = process.env.KILO_CONSOLE_TOKEN
+
+beforeEach(async () => {
+  await clear(true)
+})
 
 afterEach(async () => {
   await fs.rm(managedConfigDir, { force: true, recursive: true }).catch(() => {})
+  if (originalTestToken === undefined) delete process.env.TEST_TOKEN
+  else process.env.TEST_TOKEN = originalTestToken
+  if (originalConsoleToken === undefined) delete process.env.KILO_CONSOLE_TOKEN
+  else process.env.KILO_CONSOLE_TOKEN = originalConsoleToken
+  await clear(true)
 })
 
-async function writeManagedSettings(settings: object, filename = "opencode.json") {
-  await fs.mkdir(managedConfigDir, { recursive: true })
-  await Filesystem.write(path.join(managedConfigDir, filename), JSON.stringify(settings))
+const writeManagedSettingsEffect = (settings: object, filename?: string) =>
+  FSUtil.use.writeWithDirs(path.join(managedConfigDir, filename ?? "kilo.json"), JSON.stringify(settings)) // kilocode_change
+
+// kilocode_change start
+async function writeConfig(dir: string, config: object, name = "kilo.json") {
+  // kilocode_change end
+  await Filesystem.write(path.join(dir, name), JSON.stringify(config))
 }
 
-async function writeConfig(dir: string, config: object, name = "opencode.json") {
-  await Filesystem.write(path.join(dir, name), JSON.stringify(config))
+const writeConfigEffect = (
+  dir: string,
+  config: object,
+  name = "kilo.json", // kilocode_change
+) => FSUtil.use.writeWithDirs(path.join(dir, name), JSON.stringify(config))
+
+const withInstanceDir = <A, E, R>(dir: string, effect: Effect.Effect<A, E, R>) =>
+  effect.pipe(
+    Effect.provideService(TestInstance, { directory: dir }),
+    provideInstanceEffect(dir),
+    Effect.provide(testInstanceStoreLayer),
+    Effect.provide(LayerNode.compile(CrossSpawnSpawner.node)),
+  )
+
+const withGlobalConfigDir = <A, E, R>(dir: string, effect: Effect.Effect<A, E, R>) =>
+  Effect.acquireUseRelease(
+    Effect.gen(function* () {
+      const previous = Global.Path.config
+      ;(Global.Path as { config: string }).config = dir
+      yield* clearEffect(true)
+      return previous
+    }),
+    () => effect,
+    (previous) =>
+      Effect.gen(function* () {
+        ;(Global.Path as { config: string }).config = previous
+        yield* clearEffect(true)
+      }),
+  )
+
+const withGlobalConfig = <A, E, R>(
+  input: { config?: object; name?: string },
+  fn: (input: { dir: string }) => Effect.Effect<A, E, R>,
+) =>
+  Effect.gen(function* () {
+    const dir = yield* tmpdirScoped()
+    if (input.config) yield* writeConfigEffect(dir, schemaConfig(input.config), input.name)
+    return yield* withGlobalConfigDir(dir, fn({ dir }))
+  })
+
+const withConfigTree = <A, E, R>(
+  input: { global?: object; project?: object; local?: object },
+  effect: Effect.Effect<A, E, R>,
+) =>
+  Effect.gen(function* () {
+    const root = yield* tmpdirScoped()
+    const global = yield* tmpdirScoped()
+    const directory = path.join(root, "project")
+    yield* Effect.all(
+      [
+        input.global ? writeConfigEffect(global, schemaConfig(input.global)) : undefined,
+        input.project ? writeConfigEffect(directory, schemaConfig(input.project)) : undefined,
+        input.local ? writeConfigEffect(path.join(directory, ".kilo"), schemaConfig(input.local)) : undefined, // kilocode_change
+      ].filter((effect): effect is Effect.Effect<void, FSUtil.Error, FSUtil.Service> => effect !== undefined),
+      { concurrency: "unbounded" },
+    )
+    return yield* withGlobalConfigDir(global, withInstanceDir(directory, effect))
+  })
+
+const wellKnown = (input: {
+  authUrl?: string
+  config?: unknown
+  remoteConfig?: { url: string; headers?: Record<string, string> }
+  remote?: unknown
+  remoteHtml?: string
+  wellKnown?: unknown
+}) => {
+  const seen: { wellKnown?: string; remote?: string; authorization?: string } = {}
+  const client = remoteConfigClient({
+    seen,
+    wellKnown: input.wellKnown ?? {
+      ...(input.config !== undefined ? { config: input.config } : {}),
+      ...(input.remoteConfig !== undefined ? { remote_config: input.remoteConfig } : {}),
+    },
+    remote: input.remote,
+    remoteHtml: input.remoteHtml,
+  })
+  return {
+    seen,
+    it: configIt({ auth: wellKnownAuth(input.authUrl ?? "https://example.com"), client }),
+  }
+}
+
+function withProcessEnv<A, E, R>(key: string, value: string | undefined, effect: Effect.Effect<A, E, R>) {
+  return withProcessEnvs({ [key]: value }, effect)
+}
+
+function withProcessEnvs<A, E, R>(entries: Record<string, string | undefined>, effect: Effect.Effect<A, E, R>) {
+  return Effect.acquireUseRelease(
+    Effect.sync(() => {
+      const originals: Record<string, string | undefined> = {}
+      for (const [key, value] of Object.entries(entries)) {
+        originals[key] = process.env[key]
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+      return originals
+    }),
+    () => effect,
+    (originals) =>
+      Effect.sync(() => {
+        for (const [key, original] of Object.entries(originals)) {
+          if (original !== undefined) process.env[key] = original
+          else delete process.env[key]
+        }
+      }),
+  )
 }
 
 async function check(map: (dir: string) => string) {
@@ -31,58 +276,373 @@ async function check(map: (dir: string) => string) {
   await using tmp = await tmpdir({ git: true, config: { snapshot: true } })
   const prev = Global.Path.config
   ;(Global.Path as { config: string }).config = globalTmp.path
-  Config.global.reset()
+  await clear()
   try {
     await writeConfig(globalTmp.path, {
       $schema: "https://opencode.ai/config.json",
       snapshot: false,
     })
-    await Instance.provide({
+    await withTestInstance({
       directory: map(tmp.path),
-      fn: async () => {
-        const cfg = await Config.get()
+      fn: async (ctx) => {
+        const cfg = await load(ctx)
         expect(cfg.snapshot).toBe(true)
-        expect(Instance.directory).toBe(Filesystem.resolve(tmp.path))
-        expect(Instance.project.id).not.toBe("global")
+        expect(ctx.directory).toBe(Filesystem.resolve(tmp.path))
+        expect(ctx.project.id).not.toBe(ProjectV2.ID.global)
       },
     })
   } finally {
-    await Instance.disposeAll()
+    await InstanceRuntime.disposeAllInstances()
     ;(Global.Path as { config: string }).config = prev
-    Config.global.reset()
+    await clear()
   }
 }
 
-test("loads config with defaults when no files exist", async () => {
-  await using tmp = await tmpdir()
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.username).toBeDefined()
-    },
-  })
-})
+it.instance("loads config with defaults when no files exist", () =>
+  Effect.gen(function* () {
+    const config = yield* Config.use.get()
+    expect(config.username).toBeDefined()
+  }),
+)
 
-test("loads JSON config file", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
-        model: "test/model",
-        username: "testuser",
+it.instance("falls back to generic username when system user info is unavailable", () =>
+  Effect.gen(function* () {
+    const userInfo = spyOn(os, "userInfo").mockImplementation(() => {
+      throw Object.assign(new Error("missing passwd entry"), { code: "ENOENT" })
+    })
+    try {
+      const config = yield* Config.use.get()
+      expect(config.username).toBe("user")
+    } finally {
+      userInfo.mockRestore()
+    }
+  }),
+)
+
+it.effect("creates global jsonc config with schema when no global configs exist", () =>
+  withGlobalConfig({}, ({ dir }) =>
+    Effect.gen(function* () {
+      yield* Config.use.get().pipe(provideInstanceEffect(dir))
+
+      const content = yield* FSUtil.use.readFileString(path.join(dir, "kilo.jsonc")) // kilocode_change
+      expect(content).toContain('"$schema": "https://app.kilo.ai/config.json"') // kilocode_change
+    }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
+  ),
+)
+
+it.effect("does not create global config when KILO_CONFIG_DIR is set", () =>
+  Effect.gen(function* () {
+    const custom = yield* tmpdirScoped()
+    yield* withGlobalConfig({}, ({ dir }) =>
+      withProcessEnv(
+        "KILO_CONFIG_DIR",
+        custom,
+        Effect.gen(function* () {
+          yield* Config.use.get().pipe(provideInstanceEffect(dir))
+
+          expect(yield* FSUtil.use.existsSafe(path.join(dir, "opencode.jsonc"))).toBe(false)
+        }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
+      ),
+    )
+  }),
+)
+
+it.instance("loads JSON config file", () =>
+  Effect.gen(function* () {
+    // kilocode_change start
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json",
+      model: "test/model",
+      username: "testuser",
+    })
+    // kilocode_change end
+    const config = yield* Config.use.get()
+    expect(config.model).toBe("test/model")
+    expect(config.username).toBe("testuser")
+  }),
+)
+
+// kilocode_change start
+it.instance("preserves Kilo provider free model metadata", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json",
+      model: "kilo/free-e2e",
+      provider: {
+        kilo: {
+          models: {
+            "free-e2e": {
+              id: "free-e2e",
+              isFree: true,
+              ai_sdk_provider: "openai-compatible",
+            },
+          },
+        },
+      },
+    })
+    const config = yield* Config.use.get()
+    const model = config.provider?.kilo?.models?.["free-e2e"]
+    expect(model?.isFree).toBe(true)
+    expect(model?.ai_sdk_provider).toBe("openai-compatible")
+  }),
+)
+// kilocode_change end
+
+it.instance(
+  "loads shell config field",
+  Effect.gen(function* () {
+    const config = yield* Config.use.get()
+    expect(config.shell).toBe("bash")
+  }),
+  { config: { shell: "bash" } },
+)
+
+it.instance("updates config and preserves empty shell sentinel", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    // kilocode_change - upstream hardcodes project config to config.json; Kilo writes to kilo.json
+    yield* writeConfigEffect(test.directory, { $schema: "https://opencode.ai/config.json", shell: "bash" })
+
+    yield* Config.Service.use((svc) => svc.update(ConfigParse.schema(ConfigV1.Info, { shell: "" }, "test:config")))
+
+    const writtenConfig = yield* FSUtil.use.readJson(path.join(test.directory, "kilo.json")) // kilocode_change
+    expect(writtenConfig).toMatchObject({ shell: "" })
+  }),
+)
+
+it.effect("updates global config and omits empty shell key in json", () =>
+  withGlobalConfig({ config: { shell: "bash" } }, ({ dir }) =>
+    Effect.gen(function* () {
+      yield* Config.use.updateGlobal({ shell: "" })
+
+      const writtenConfig = yield* FSUtil.use.readJson(path.join(dir, "kilo.json")) // kilocode_change
+      expect(writtenConfig).not.toHaveProperty("shell")
+    }),
+  ),
+)
+
+it.effect("updates global config and omits empty shell key in jsonc", () =>
+  withGlobalConfig({ config: { shell: "bash", model: "test/model" }, name: "opencode.jsonc" }, ({ dir }) =>
+    Effect.gen(function* () {
+      yield* Config.use.updateGlobal({ shell: "" })
+
+      const file = path.join(dir, "opencode.jsonc")
+      const writtenConfig = yield* FSUtil.use.readFileString(file)
+      const parsed = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(writtenConfig, file), file)
+      expect(writtenConfig).not.toContain('"shell"')
+      expect(parsed.shell).toBeUndefined()
+      expect(parsed.model).toBe("test/model")
+    }),
+  ),
+)
+
+it.effect("logs global update diagnostics once without exposing values", () =>
+  withGlobalConfig(
+    {
+      config: {
+        providers: { example: { settings: { apiKey: "keep-me" } } },
+      },
+    },
+    ({ dir }) =>
+      Effect.gen(function* () {
+        const messages: unknown[] = []
+        yield* Config.use.updateGlobal({ username: "updated" }).pipe(
+          Effect.provide(
+            Logger.layer([
+              Logger.make<unknown, void>((options) => {
+                messages.push(options.message)
+              }),
+            ]),
+          ),
+        )
+        expect(JSON.stringify(messages)).not.toContain("keep-me")
+        expect(
+          messages.filter((item) => Array.isArray(item) && item[0] === "configuration compatibility diagnostic"),
+        ).toEqual([
+          [
+            "configuration compatibility diagnostic",
+            expect.objectContaining({
+              // kilocode_change - Kilo defaults to kilo.json (globalConfigFile prefers it) instead of upstream's opencode.json
+              source: path.join(dir, "kilo.json"),
+              kind: "unsupported",
+              path: ["providers"],
+            }),
+          ],
+        ])
+      }),
+  ),
+)
+
+const updateFixtures = path.join(import.meta.dir, "fixtures/v2-compat")
+const globalInputs = [...new Bun.Glob("update-global/*-input.{json,jsonc}").scanSync({ cwd: updateFixtures })].sort()
+const projectInputs = [...new Bun.Glob("update-project/*-input.json").scanSync({ cwd: updateFixtures })].sort()
+if (!globalInputs.length || !projectInputs.length) throw new Error("Missing config update fixtures")
+
+for (const input of globalInputs) {
+  const extension = path.extname(input)
+  const name = input.slice(0, -`-input${extension}`.length)
+  const prefix = path.join(updateFixtures, name)
+  it.live(`fixture ${name}`, () =>
+    withGlobalConfig({}, ({ dir }) =>
+      Effect.gen(function* () {
+        const fs = yield* FSUtil.Service
+        const file = path.join(dir, `opencode${extension}`)
+        yield* fs.writeFileString(file, yield* fs.readFileString(path.join(updateFixtures, input)))
+        const patch = ConfigParse.schema(ConfigV1.Info, yield* fs.readJson(`${prefix}-patch.json`), input)
+        const updated = yield* Config.use.updateGlobal(patch)
+        const written = yield* fs.readFileString(file)
+
+        yield* Effect.promise(() => snapshot(`${prefix}-output${extension}`, written))
+        yield* Effect.promise(() => snapshot(`${prefix}-normalized.json`, JSON.stringify(updated.info, null, 2) + "\n"))
+      }),
+    ),
+  )
+}
+
+for (const input of projectInputs) {
+  const name = input.slice(0, -"-input.json".length)
+  const prefix = path.join(updateFixtures, name)
+  it.instance(`fixture ${name}`, () =>
+    Effect.gen(function* () {
+      const instance = yield* TestInstance
+      const fs = yield* FSUtil.Service
+      // kilocode_change - upstream writes config.json, but Kilo's project config file set is kilo.json/kilo.jsonc/opencode.json/opencode.jsonc
+      const file = path.join(instance.directory, "kilo.json")
+      yield* fs.writeFileString(file, yield* fs.readFileString(path.join(updateFixtures, input)))
+      const patch = ConfigParse.schema(ConfigV1.Info, yield* fs.readJson(`${prefix}-patch.json`), input)
+      yield* Config.use.update(patch)
+      const written = yield* fs.readFileString(file)
+      const normalized = ConfigParse.schema(
+        ConfigV1.Info,
+        ConfigV2Compat.lower(ConfigParse.jsonc(written, file)).value,
+        file,
+      )
+
+      yield* Effect.promise(() => snapshot(`${prefix}-output.json`, written))
+      yield* Effect.promise(() => snapshot(`${prefix}-normalized.json`, JSON.stringify(normalized, null, 2) + "\n"))
+    }),
+  )
+}
+
+for (const name of ["opencode.json", "opencode.jsonc"]) {
+  it.live(`rejects updating ${name} with native permissions without writing it`, () =>
+    withGlobalConfig(
+      { name, config: { permissions: [{ action: "read", resource: "secret-resource", effect: "deny" }] } },
+      ({ dir }) =>
+        Effect.gen(function* () {
+          const fs = yield* FSUtil.Service
+          const file = path.join(dir, name)
+          const before = yield* fs.readFileString(file)
+          const exit = yield* Effect.exit(Config.use.updateGlobal({ username: "changed" }))
+          expect(Exit.isFailure(exit)).toBe(true)
+          if (Exit.isFailure(exit)) {
+            const error = Cause.squash(exit.cause)
+            expect(error).toMatchObject({ data: { path: file, issues: [{ path: ["permissions"] }] } })
+            expect(JSON.stringify(error)).not.toContain("secret-resource")
+          }
+          expect(yield* fs.readFileString(file)).toBe(before)
+        }),
+    ),
+  )
+}
+
+it.instance("rejects a project update with native agent permissions without writing it", () =>
+  Effect.gen(function* () {
+    const instance = yield* TestInstance
+    const fs = yield* FSUtil.Service
+    // kilocode_change - Kilo reads kilo.json, not upstream's config.json
+    const file = path.join(instance.directory, "kilo.json")
+    const before = JSON.stringify({ agents: { reviewer: { permissions: [] } } })
+    yield* fs.writeFileString(file, before)
+    const exit = yield* Effect.exit(Config.use.update({ username: "changed" }))
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit))
+      expect(Cause.squash(exit.cause)).toMatchObject({
+        data: { path: file, issues: [{ path: ["agents", "reviewer", "permissions"] }] },
       })
+    expect(yield* fs.readFileString(file)).toBe(before)
+  }),
+)
+
+it.effect("native project MCP servers override inherited V1 disabled state", () =>
+  withConfigTree(
+    {
+      global: {
+        mcp: {
+          shared: { type: "local", command: ["global-mcp"], enabled: false },
+        },
+      },
+      project: {
+        mcp: {
+          servers: {
+            shared: { type: "local", command: ["project-mcp"] },
+          },
+        },
+      },
     },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.model).toBe("test/model")
-      expect(config.username).toBe("testuser")
+    Effect.gen(function* () {
+      expect((yield* Config.use.get()).mcp?.shared).toMatchObject({
+        type: "local",
+        command: ["project-mcp"],
+        enabled: true,
+      })
+    }),
+  ),
+)
+
+it.effect("rejects native project permissions even with inherited V1 rules", () =>
+  withConfigTree(
+    {
+      global: {
+        permission: { read: "deny", bash: "ask" },
+        agent: { reviewer: { permission: { edit: "deny" } } },
+      },
+      project: {
+        permissions: [{ action: "read", resource: "*", effect: "allow" }],
+        agents: {
+          reviewer: {
+            system: "Review carefully",
+            permissions: [{ action: "edit", resource: "*", effect: "allow" }],
+          },
+        },
+      },
     },
-  })
-})
+    Effect.gen(function* () {
+      // kilocode_change start - Kilo degrades gracefully: an invalid project config is
+      // skipped with a warning instead of failing the whole Config.use.get(). The native
+      // V2 permission fields are still rejected, and the inherited global V1 rules survive.
+      const config = yield* Config.use.get()
+      const warnings = yield* Config.Service.use((svc) => svc.warnings())
+      const skipped = warnings.filter((item) => item.path.includes(path.join("project", "kilo.json")))
+      expect(skipped.length).toBeGreaterThan(0)
+      const detail = skipped.map((item) => item.message).join("\n")
+      expect(detail).toContain("permissions")
+      expect(detail).toContain("not supported")
+      expect(config.permission).toMatchObject({ read: "deny", bash: "ask" })
+      // kilocode_change end
+    }),
+  ),
+)
+
+it.instance(
+  "loads formatter boolean config",
+  Effect.gen(function* () {
+    const config = yield* Config.use.get()
+    expect(config.formatter).toBe(true)
+  }),
+  { config: { formatter: true } },
+)
+
+it.instance(
+  "loads lsp boolean config",
+  Effect.gen(function* () {
+    const config = yield* Config.use.get()
+    expect(config.lsp).toBe(true)
+  }),
+  { config: { lsp: true } },
+)
 
 test("loads project config from Git Bash and MSYS2 paths on Windows", async () => {
   // Git Bash and MSYS2 both use /<drive>/... paths on Windows.
@@ -101,1641 +661,1596 @@ test("loads project config from Cygwin paths on Windows", async () => {
   })
 })
 
-test("ignores legacy tui keys in opencode config", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await writeConfig(dir, {
-        $schema: "https://opencode.ai/config.json",
-        model: "test/model",
-        theme: "legacy",
-        tui: { scroll_speed: 4 },
-      })
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.model).toBe("test/model")
-      expect((config as Record<string, unknown>).theme).toBeUndefined()
-      expect((config as Record<string, unknown>).tui).toBeUndefined()
-    },
-  })
-})
+it.instance("ignores legacy tui keys in opencode config", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://opencode.ai/config.json",
+      model: "test/model",
+      theme: "legacy",
+      tui: { scroll_speed: 4 },
+    })
 
-test("loads JSONC config file", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(
-        path.join(dir, "opencode.jsonc"),
-        `{
+    const config = yield* Config.use.get()
+    expect(config.model).toBe("test/model")
+    expect((config as Record<string, unknown>).theme).toBeUndefined()
+    expect((config as Record<string, unknown>).tui).toBeUndefined()
+  }),
+)
+
+it.instance("loads JSONC config file", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* FSUtil.use.writeWithDirs(
+      // kilocode_change start
+      path.join(test.directory, "kilo.jsonc"),
+      `{
         // This is a comment
         "$schema": "https://app.kilo.ai/config.json",
         "model": "test/model",
         "username": "testuser"
       }`,
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.model).toBe("test/model")
-      expect(config.username).toBe("testuser")
-    },
-  })
-})
+      // kilocode_change end
+    )
+    const config = yield* Config.use.get()
+    expect(config.model).toBe("test/model")
+    expect(config.username).toBe("testuser")
+  }),
+)
 
-test("merges multiple config files with correct precedence", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await writeConfig(
-        dir,
-        {
-          $schema: "https://app.kilo.ai/config.json",
-          model: "base",
-          username: "base",
+it.instance("jsonc overrides json in the same directory", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(
+      test.directory,
+      {
+        $schema: "https://app.kilo.ai/config.json", // kilocode_change
+        model: "base",
+        username: "base",
+      },
+      "kilo.jsonc", // kilocode_change
+    )
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      model: "override",
+    })
+    const config = yield* Config.use.get()
+    expect(config.model).toBe("base")
+    expect(config.username).toBe("base")
+  }),
+)
+
+// kilocode_change start
+it.instance("prefers .kilo directory config over legacy .kilocode", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(path.join(test.directory, ".kilocode"), {
+      $schema: "https://app.kilo.ai/config.json",
+      model: "legacy/model",
+    })
+    yield* writeConfigEffect(path.join(test.directory, ".kilo"), {
+      $schema: "https://app.kilo.ai/config.json",
+      model: "new/model",
+    })
+
+    const config = yield* Config.use.get()
+    expect(config.model).toBe("new/model")
+  }),
+)
+// kilocode_change end
+
+// kilocode_change start - project config is untrusted: {env:} rejected; {file:} confined to the project root
+it.instance("rejects environment variable substitution in project config", () =>
+  withProcessEnv(
+    "TEST_VAR",
+    "test-user",
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      yield* writeConfigEffect(test.directory, {
+        $schema: "https://app.kilo.ai/config.json",
+        username: "{env:TEST_VAR}",
+      })
+      const config = yield* Config.use.get()
+      expect(config.username).not.toBe("test-user")
+      const issues = yield* Config.Service.use((svc) => svc.warnings())
+      expect(issues.length).toBeGreaterThan(0)
+    }),
+  ),
+)
+
+it.instance("injects $schema into config without existing schema", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    // Config without $schema - should trigger auto-add
+    yield* FSUtil.use.writeWithDirs(path.join(test.directory, "kilo.json"), JSON.stringify({ username: "test-user" }))
+    const config = yield* Config.use.get()
+    expect(config.username).toBe("test-user")
+    expect(config.$schema).toBe("https://app.kilo.ai/config.json")
+
+    // Read the file to verify $schema was injected
+    const content = yield* FSUtil.use.readFileString(path.join(test.directory, "kilo.json"))
+    expect(content).toContain('"$schema": "https://app.kilo.ai/config.json"')
+    const schemaIndex = content.indexOf('"$schema"')
+    const usernameIndex = content.indexOf('"username"')
+    expect(schemaIndex).toBeLessThan(usernameIndex)
+  }),
+)
+
+it.instance("injects $schema into comment-first JSONC config", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    // Config with leading comment - regex-based injection would fail
+    yield* FSUtil.use.writeWithDirs(
+      path.join(test.directory, "kilo.jsonc"),
+      '// project config\n{\n  "model": "test/model"\n}\n',
+    )
+    const config = yield* Config.use.get()
+    expect(config.model).toBe("test/model")
+    expect(config.$schema).toBe("https://app.kilo.ai/config.json")
+
+    // Read the file to verify $schema was injected correctly
+    const content = yield* FSUtil.use.readFileString(path.join(test.directory, "kilo.jsonc"))
+    expect(content).toContain('"$schema": "https://app.kilo.ai/config.json"')
+    expect(content).toContain("// project config")
+    const schemaIndex = content.indexOf('"$schema"')
+    const modelIndex = content.indexOf('"model"')
+    expect(schemaIndex).toBeLessThan(modelIndex)
+  }),
+)
+
+it.instance("does not write config when $schema already present", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const filepath = path.join(test.directory, "kilo.json")
+    // Config already has $schema - should not rewrite file
+    yield* FSUtil.use.writeWithDirs(
+      filepath,
+      JSON.stringify({ $schema: "https://app.kilo.ai/config.json", username: "test-user" }),
+    )
+    const before = yield* Effect.promise(() => fs.stat(filepath))
+
+    const config = yield* Config.use.get()
+    expect(config.username).toBe("test-user")
+
+    const after = yield* Effect.promise(() => fs.stat(filepath))
+    expect(after.mtimeMs).toBe(before.mtimeMs)
+  }),
+)
+
+it.instance("allows {file:} that stays inside the project root", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* FSUtil.use.writeWithDirs(path.join(test.directory, "included.txt"), "in-project")
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json",
+      username: "{file:included.txt}",
+    })
+    const config = yield* Config.use.get()
+    expect(config.username).toBe("in-project")
+  }),
+)
+
+it.instance("rejects {file:} that reads an absolute path from project config", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json",
+      username: "{file:/etc/passwd}",
+    })
+    const config = yield* Config.use.get()
+    expect(config.username ?? "").not.toContain("root:")
+  }),
+)
+
+it.instance("rejects {file:} that escapes the project root with parent directories", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const outside = path.join(path.dirname(test.directory), "secret.txt")
+    yield* FSUtil.use.writeWithDirs(outside, "outside-secret")
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json",
+      username: "{file:../secret.txt}",
+    })
+    const config = yield* Config.use.get()
+    expect(config.username).not.toBe("outside-secret")
+  }),
+)
+
+it.instance("rejects {file:} that escapes the project root through a symlink", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const outside = path.join(path.dirname(test.directory), "secret.txt")
+    const link = path.join(test.directory, "secret-link")
+    yield* FSUtil.use.writeWithDirs(outside, "outside-secret")
+    yield* Effect.promise(() => fs.symlink(outside, link))
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json",
+      username: "{file:secret-link}",
+    })
+    const config = yield* Config.use.get()
+    expect(config.username).not.toBe("outside-secret")
+  }),
+)
+
+it.instance("blocks provider apiKey {file:} exfiltration that escapes the project root", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const outside = path.join(path.dirname(test.directory), "creds.txt")
+    yield* FSUtil.use.writeWithDirs(outside, "leaked-credential")
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json",
+      provider: {
+        "openai-compatible": {
+          options: { baseURL: "http://127.0.0.1:4444/v1", apiKey: "{file:../creds.txt}" },
+          models: { "test-model": { name: "Test Model" } },
         },
-        "opencode.jsonc",
-      )
-      await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
-        model: "override",
-      })
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.model).toBe("override")
-      expect(config.username).toBe("base")
-    },
-  })
-})
+      },
+    })
+    const config = yield* Config.use.get()
+    expect(JSON.stringify(config.provider ?? {})).not.toContain("leaked-credential")
+  }),
+)
 
-test("prefers .kilo directory config over legacy .kilocode", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(
-        path.join(dir, ".kilocode", "kilo.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          model: "legacy/model",
+it.instance("still allows global config to read absolute files", () =>
+  withGlobalConfig({}, ({ dir }) =>
+    Effect.gen(function* () {
+      const secret = path.join(dir, "secret.txt")
+      yield* FSUtil.use.writeWithDirs(secret, "global-secret")
+      yield* writeConfigEffect(dir, {
+        $schema: "https://app.kilo.ai/config.json",
+        username: `{file:${secret}}`,
+      })
+      const config = yield* Config.use.get()
+      expect(config.username).toBe("global-secret")
+    }),
+  ),
+)
+// kilocode_change end
+
+const accountTokenIt = configIt({
+  account: Layer.mock(Account.Service)({
+    active: () =>
+      Effect.succeed(
+        Option.some({
+          id: AccountID.make("account-1"),
+          email: "user@example.com",
+          url: "https://control.example.com",
+          active_org_id: OrgID.make("org-1"),
         }),
-      )
-      await Filesystem.write(
-        path.join(dir, ".kilo", "kilo.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          model: "new/model",
-        }),
-      )
-    },
-  })
-
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.model).toBe("new/model")
-    },
-  })
-})
-
-test("handles environment variable substitution", async () => {
-  const originalEnv = process.env["TEST_VAR"]
-  process.env["TEST_VAR"] = "test-user"
-
-  try {
-    await using tmp = await tmpdir({
-      init: async (dir) => {
-        await writeConfig(dir, {
-          $schema: "https://app.kilo.ai/config.json",
-          username: "{env:TEST_VAR}",
-        })
-      },
-    })
-    await Instance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        const config = await Config.get()
-        expect(config.username).toBe("test-user")
-      },
-    })
-  } finally {
-    if (originalEnv !== undefined) {
-      process.env["TEST_VAR"] = originalEnv
-    } else {
-      delete process.env["TEST_VAR"]
-    }
-  }
-})
-
-test("preserves env variables when adding $schema to config", async () => {
-  const originalEnv = process.env["PRESERVE_VAR"]
-  process.env["PRESERVE_VAR"] = "secret_value"
-
-  try {
-    await using tmp = await tmpdir({
-      init: async (dir) => {
-        // Config without $schema - should trigger auto-add
-        await Filesystem.write(
-          path.join(dir, "opencode.json"),
-          JSON.stringify({
-            username: "{env:PRESERVE_VAR}",
-          }),
-        )
-      },
-    })
-    await Instance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        const config = await Config.get()
-        expect(config.username).toBe("secret_value")
-
-        // Read the file to verify the env variable was preserved
-        const content = await Filesystem.readText(path.join(tmp.path, "opencode.json"))
-        expect(content).toContain("{env:PRESERVE_VAR}")
-        expect(content).not.toContain("secret_value")
-        expect(content).toContain("$schema")
-      },
-    })
-  } finally {
-    if (originalEnv !== undefined) {
-      process.env["PRESERVE_VAR"] = originalEnv
-    } else {
-      delete process.env["PRESERVE_VAR"]
-    }
-  }
-})
-
-test("handles file inclusion substitution", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(path.join(dir, "included.txt"), "test-user")
-      await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
-        username: "{file:included.txt}",
-      })
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.username).toBe("test-user")
-    },
-  })
-})
-
-test("handles file inclusion with replacement tokens", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(path.join(dir, "included.md"), "const out = await Bun.$`echo hi`")
-      await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
-        username: "{file:included.md}",
-      })
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.username).toBe("const out = await Bun.$`echo hi`")
-    },
-  })
-})
-
-test("validates config schema and throws on invalid fields", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
-        invalid_field: "should cause error",
-      })
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      // Strict schema should throw an error for invalid fields
-      await expect(Config.get()).rejects.toThrow()
-    },
-  })
-})
-
-test("throws error for invalid JSON", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(path.join(dir, "opencode.json"), "{ invalid json }")
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      await expect(Config.get()).rejects.toThrow()
-    },
-  })
-})
-
-test("handles agent configuration", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
-        agent: {
-          test_agent: {
-            model: "test/model",
-            temperature: 0.7,
-            description: "test agent",
+      ),
+    activeOrg: () =>
+      Effect.succeed(
+        Option.some({
+          account: {
+            id: AccountID.make("account-1"),
+            email: "user@example.com",
+            url: "https://control.example.com",
+            active_org_id: OrgID.make("org-1"),
           },
-        },
-      })
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.agent?.["test_agent"]).toEqual(
-        expect.objectContaining({
+          org: {
+            id: OrgID.make("org-1"),
+            name: "Example Org",
+          },
+        }),
+      ),
+    config: () =>
+      Effect.succeed(
+        Option.some({
+          provider: { opencode: { options: { apiKey: "{env:KILO_CONSOLE_TOKEN}" } } },
+        }),
+      ),
+    token: () => Effect.succeed(Option.some(AccessToken.make("st_test_token"))),
+  }),
+})
+
+accountTokenIt.instance("resolves env templates in account config with account token", () =>
+  Effect.gen(function* () {
+    const config = yield* Config.use.get()
+    expect(config.provider?.["opencode"]?.options?.apiKey).toBe("st_test_token")
+  }),
+)
+
+// kilocode_change start
+it.instance("validates config schema and reports warning on invalid values", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json",
+      model: 42,
+    })
+    // invalid schema surfaces as warnings, not a throw
+    yield* Config.use.get()
+    const issues = yield* Config.Service.use((svc) => svc.warnings())
+    expect(issues.length).toBeGreaterThan(0)
+  }),
+)
+// kilocode_change end
+
+// kilocode_change start
+it.instance("reports warning for invalid JSON", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* FSUtil.use.writeWithDirs(path.join(test.directory, "kilo.json"), "{ invalid json }")
+    yield* Config.use.get()
+    const issues = yield* Config.Service.use((svc) => svc.warnings())
+    expect(issues.length).toBeGreaterThan(0)
+  }),
+)
+// kilocode_change end
+
+it.instance("handles agent configuration", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      agent: {
+        test_agent: {
           model: "test/model",
           temperature: 0.7,
           description: "test agent",
-        }),
-      )
-    },
-  })
-})
-
-test("treats agent variant as model-scoped setting (not provider option)", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
-        agent: {
-          test_agent: {
-            model: "openai/gpt-5.2",
-            variant: "xhigh",
-            max_tokens: 123,
-          },
         },
-      })
-    },
-  })
-
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      const agent = config.agent?.["test_agent"]
-
-      expect(agent?.variant).toBe("xhigh")
-      expect(agent?.options).toMatchObject({
-        max_tokens: 123,
-      })
-      expect(agent?.options).not.toHaveProperty("variant")
-    },
-  })
-})
-
-test("handles command configuration", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
-        command: {
-          test_command: {
-            template: "test template",
-            description: "test command",
-            agent: "test_agent",
-          },
-        },
-      })
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.command?.["test_command"]).toEqual({
-        template: "test template",
-        description: "test command",
-        agent: "test_agent",
-      })
-    },
-  })
-})
-
-test("migrates autoshare to share field", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          autoshare: true,
-        }),
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.share).toBe("auto")
-      expect(config.autoshare).toBe(true)
-    },
-  })
-})
-
-test("migrates mode field to agent field", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          mode: {
-            test_mode: {
-              model: "test/model",
-              temperature: 0.5,
-            },
-          },
-        }),
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.agent?.["test_mode"]).toEqual({
+      },
+    })
+    const config = yield* Config.use.get()
+    expect(config.agent?.["test_agent"]).toEqual(
+      expect.objectContaining({
         model: "test/model",
-        temperature: 0.5,
-        mode: "primary",
-        options: {},
-        permission: {},
-      })
-    },
-  })
-})
+        temperature: 0.7,
+        description: "test agent",
+      }),
+    )
+  }),
+)
 
-test("loads config from .opencode directory", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      const opencodeDir = path.join(dir, ".opencode")
-      await fs.mkdir(opencodeDir, { recursive: true })
-      const agentDir = path.join(opencodeDir, "agent")
-      await fs.mkdir(agentDir, { recursive: true })
+it.instance("treats agent variant as model-scoped setting (not provider option)", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      agent: {
+        test_agent: {
+          model: "openai/gpt-5.2",
+          variant: "xhigh",
+          max_tokens: 123,
+        },
+      },
+    })
+    const config = yield* Config.use.get()
+    const agent = config.agent?.["test_agent"]
 
-      await Filesystem.write(
-        path.join(agentDir, "test.md"),
-        `---
+    expect(agent?.variant).toBe("xhigh")
+    expect(agent?.options).toMatchObject({
+      max_tokens: 123,
+    })
+    expect(agent?.options).not.toHaveProperty("variant")
+  }),
+)
+
+it.instance("handles command configuration", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      command: {
+        test_command: {
+          template: "test template",
+          description: "test command",
+          agent: "test_agent",
+        },
+      },
+    })
+    const config = yield* Config.use.get()
+    expect(config.command?.["test_command"]).toEqual({
+      template: "test template",
+      description: "test command",
+      agent: "test_agent",
+    })
+  }),
+)
+
+it.instance("migrates autoshare to share field", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      autoshare: true,
+    })
+    const config = yield* Config.use.get()
+    expect(config.share).toBe("auto")
+    expect(config.autoshare).toBe(true)
+  }),
+)
+
+it.instance("migrates mode field to agent field", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      mode: {
+        test_mode: {
+          model: "test/model",
+          temperature: 0.5,
+        },
+      },
+    })
+    const config = yield* Config.use.get()
+    expect(config.agent?.["test_mode"]).toEqual({
+      model: "test/model",
+      temperature: 0.5,
+      mode: "primary",
+      options: {},
+      permission: {},
+    })
+  }),
+)
+
+it.instance("accepts the deprecated reference field", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://opencode.ai/config.json",
+      reference: {
+        local: { path: "../library" },
+        sdk: { repository: "github.com/example/sdk", branch: "main" },
+        shorthand: "github.com/example/docs",
+      },
+    })
+    const config = yield* Config.use.get()
+    expect(config.reference).toEqual({
+      local: { path: "../library" },
+      sdk: { repository: "github.com/example/sdk", branch: "main" },
+      shorthand: "github.com/example/docs",
+    })
+  }),
+)
+
+// kilocode_change start
+it.instance("loads config from .kilo directory", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* FSUtil.use.writeWithDirs(
+      path.join(test.directory, ".kilo", "agent", "test.md"), // kilocode_change
+      `---
 model: test/model
 ---
 Test agent prompt`,
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.agent?.["test"]).toEqual(
-        expect.objectContaining({
-          name: "test",
-          model: "test/model",
-          prompt: "Test agent prompt",
-        }),
-      )
-    },
-  })
-})
+    )
 
-test("loads agents from .opencode/agents (plural)", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      const opencodeDir = path.join(dir, ".opencode")
-      await fs.mkdir(opencodeDir, { recursive: true })
+    const config = yield* Config.use.get()
+    expect(config.agent?.["test"]).toEqual(
+      expect.objectContaining({
+        name: "test",
+        model: "test/model",
+        prompt: "Test agent prompt",
+      }),
+    )
+  }),
+)
+// kilocode_change end
 
-      const agentsDir = path.join(opencodeDir, "agents")
-      await fs.mkdir(path.join(agentsDir, "nested"), { recursive: true })
+it.instance("agent markdown permission config preserves user key order", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* FSUtil.use.writeWithDirs(
+      path.join(test.directory, ".kilo", "agent", "ordered.md"), // kilocode_change
+      `---
+permission:
+  bash: allow
+  "*": deny
+  edit: ask
+---
+Ordered permissions`,
+    )
 
-      await Filesystem.write(
-        path.join(agentsDir, "helper.md"),
-        `---
+    const config = yield* Config.use.get()
+    expect(Object.keys(config.agent?.ordered?.permission ?? {})).toEqual(["bash", "*", "edit"])
+  }),
+)
+
+// kilocode_change start
+it.instance("loads agents from .kilo/agents (plural)", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* FSUtil.use.writeWithDirs(
+      path.join(test.directory, ".kilo", "agents", "helper.md"), // kilocode_change
+      `---
 model: test/model
 mode: subagent
 ---
 Helper agent prompt`,
-      )
+    )
 
-      await Filesystem.write(
-        path.join(agentsDir, "nested", "child.md"),
-        `---
+    yield* FSUtil.use.writeWithDirs(
+      path.join(test.directory, ".kilo", "agents", "nested", "child.md"), // kilocode_change
+      `---
 model: test/model
 mode: subagent
 ---
 Nested agent prompt`,
-      )
-    },
-  })
+    )
 
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
+    const config = yield* Config.use.get()
 
-      expect(config.agent?.["helper"]).toMatchObject({
-        name: "helper",
-        model: "test/model",
-        mode: "subagent",
-        prompt: "Helper agent prompt",
-      })
+    expect(config.agent?.["helper"]).toMatchObject({
+      name: "helper",
+      model: "test/model",
+      mode: "subagent",
+      prompt: "Helper agent prompt",
+    })
 
-      expect(config.agent?.["nested/child"]).toMatchObject({
-        name: "nested/child",
-        model: "test/model",
-        mode: "subagent",
-        prompt: "Nested agent prompt",
-      })
-    },
-  })
-})
+    expect(config.agent?.["nested/child"]).toMatchObject({
+      name: "nested/child",
+      model: "test/model",
+      mode: "subagent",
+      prompt: "Nested agent prompt",
+    })
+  }),
+)
+// kilocode_change end
 
-test("loads commands from .opencode/command (singular)", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      const opencodeDir = path.join(dir, ".opencode")
-      await fs.mkdir(opencodeDir, { recursive: true })
-
-      const commandDir = path.join(opencodeDir, "command")
-      await fs.mkdir(path.join(commandDir, "nested"), { recursive: true })
-
-      await Filesystem.write(
-        path.join(commandDir, "hello.md"),
-        `---
+// kilocode_change start
+it.instance("loads commands from .kilo/command (singular)", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* FSUtil.use.writeWithDirs(
+      path.join(test.directory, ".kilo", "command", "hello.md"), // kilocode_change
+      `---
 description: Test command
 ---
 Hello from singular command`,
-      )
+    )
 
-      await Filesystem.write(
-        path.join(commandDir, "nested", "child.md"),
-        `---
+    yield* FSUtil.use.writeWithDirs(
+      path.join(test.directory, ".kilo", "command", "nested", "child.md"), // kilocode_change
+      `---
 description: Nested command
 ---
 Nested command template`,
-      )
-    },
-  })
+    )
 
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
+    const config = yield* Config.use.get()
 
-      expect(config.command?.["hello"]).toEqual({
-        description: "Test command",
-        template: "Hello from singular command",
-      })
+    expect(config.command?.["hello"]).toEqual({
+      description: "Test command",
+      template: "Hello from singular command",
+    })
 
-      expect(config.command?.["nested/child"]).toEqual({
-        description: "Nested command",
-        template: "Nested command template",
-      })
-    },
-  })
-})
+    expect(config.command?.["nested/child"]).toEqual({
+      description: "Nested command",
+      template: "Nested command template",
+    })
+  }),
+)
+// kilocode_change end
 
-test("loads commands from .opencode/commands (plural)", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      const opencodeDir = path.join(dir, ".opencode")
-      await fs.mkdir(opencodeDir, { recursive: true })
-
-      const commandsDir = path.join(opencodeDir, "commands")
-      await fs.mkdir(path.join(commandsDir, "nested"), { recursive: true })
-
-      await Filesystem.write(
-        path.join(commandsDir, "hello.md"),
-        `---
+// kilocode_change start
+it.instance("loads commands from .kilo/commands (plural)", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* FSUtil.use.writeWithDirs(
+      path.join(test.directory, ".kilo", "commands", "hello.md"), // kilocode_change
+      `---
 description: Test command
 ---
 Hello from plural commands`,
-      )
+    )
 
-      await Filesystem.write(
-        path.join(commandsDir, "nested", "child.md"),
-        `---
+    yield* FSUtil.use.writeWithDirs(
+      path.join(test.directory, ".kilo", "commands", "nested", "child.md"), // kilocode_change
+      `---
 description: Nested command
 ---
 Nested command template`,
-      )
-    },
-  })
+    )
 
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
+    const config = yield* Config.use.get()
 
-      expect(config.command?.["hello"]).toEqual({
-        description: "Test command",
-        template: "Hello from plural commands",
-      })
+    expect(config.command?.["hello"]).toEqual({
+      description: "Test command",
+      template: "Hello from plural commands",
+    })
 
-      expect(config.command?.["nested/child"]).toEqual({
-        description: "Nested command",
-        template: "Nested command template",
-      })
-    },
-  })
-})
+    expect(config.command?.["nested/child"]).toEqual({
+      description: "Nested command",
+      template: "Nested command template",
+    })
+  }),
+)
+// kilocode_change end
 
-test("prefers .kilo commands over legacy .kilocode commands", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(
-        path.join(dir, ".kilocode", "command", "hello.md"),
-        `---
+// kilocode_change start
+it.instance("prefers .kilo commands over legacy .kilocode commands", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* FSUtil.use.writeWithDirs(
+      path.join(test.directory, ".kilocode", "command", "hello.md"),
+      `---
 description: Legacy command
 ---
 Hello from legacy command`,
-      )
-      await Filesystem.write(
-        path.join(dir, ".kilo", "command", "hello.md"),
-        `---
+    )
+    yield* FSUtil.use.writeWithDirs(
+      path.join(test.directory, ".kilo", "command", "hello.md"),
+      `---
 description: New command
 ---
 Hello from new command`,
-      )
-    },
-  })
+    )
 
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-
-      expect(config.command?.["hello"]).toEqual({
-        description: "New command",
-        template: "Hello from new command",
-      })
-    },
-  })
-})
-
-test("updates config and writes to file", async () => {
-  await using tmp = await tmpdir()
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const newConfig = { model: "updated/model" }
-      await Config.update(newConfig as any)
-
-      const writtenConfig = await Filesystem.readJson(path.join(tmp.path, "config.json"))
-      expect(writtenConfig.model).toBe("updated/model")
-    },
-  })
-})
-
-test("gets config directories", async () => {
-  await using tmp = await tmpdir()
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const dirs = await Config.directories()
-      expect(dirs.length).toBeGreaterThanOrEqual(1)
-    },
-  })
-})
-
-test("does not try to install dependencies in read-only KILO_CONFIG_DIR", async () => {
-  if (process.platform === "win32") return
-
-  await using tmp = await tmpdir<string>({
-    init: async (dir) => {
-      const ro = path.join(dir, "readonly")
-      await fs.mkdir(ro, { recursive: true })
-      await fs.chmod(ro, 0o555)
-      return ro
-    },
-    dispose: async (dir) => {
-      const ro = path.join(dir, "readonly")
-      await fs.chmod(ro, 0o755).catch(() => {})
-      return ro
-    },
-  })
-
-  const prev = process.env.KILO_CONFIG_DIR
-  process.env.KILO_CONFIG_DIR = tmp.extra
-
-  try {
-    await Instance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        await Config.get()
-      },
+    const config = yield* Config.use.get()
+    expect(config.command?.["hello"]).toEqual({
+      description: "New command",
+      template: "Hello from new command",
     })
-  } finally {
-    if (prev === undefined) delete process.env.KILO_CONFIG_DIR
-    else process.env.KILO_CONFIG_DIR = prev
-  }
-})
+  }),
+)
+// kilocode_change end
 
-test("installs dependencies in writable KILO_CONFIG_DIR", async () => {
-  await using tmp = await tmpdir<string>({
-    init: async (dir) => {
-      const cfg = path.join(dir, "configdir")
-      await fs.mkdir(cfg, { recursive: true })
-      return cfg
+it.instance("updates config and writes to file", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* Config.Service.use((svc) =>
+      svc.update(ConfigParse.schema(ConfigV1.Info, { model: "updated/model" }, "test:config")),
+    )
+
+    const writtenConfig = yield* FSUtil.use.readJson(
+      path.join(test.directory, ".kilo", "kilo.jsonc"), // kilocode_change
+    )
+    expect(writtenConfig).toMatchObject({ model: "updated/model" })
+  }),
+)
+
+it.instance("gets config directories", () =>
+  Effect.gen(function* () {
+    const dirs = yield* Config.use.directories()
+    expect(dirs.length).toBeGreaterThanOrEqual(1)
+  }),
+)
+
+it.effect("does not try to install dependencies in read-only KILO_CONFIG_DIR", () =>
+  Effect.gen(function* () {
+    if (process.platform === "win32") return
+
+    const dir = yield* tmpdirScoped()
+    const readonly = path.join(dir, "readonly")
+    yield* FSUtil.use.ensureDir(readonly)
+    yield* FSUtil.use.chmod(readonly, 0o555)
+    yield* Effect.addFinalizer(() => FSUtil.use.chmod(readonly, 0o755).pipe(Effect.ignore))
+
+    yield* withProcessEnv("KILO_CONFIG_DIR", readonly, Config.use.get().pipe(provideInstanceEffect(dir)))
+  }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
+)
+
+it.effect("ignores an inaccessible KILO_CONFIG_DIR", () =>
+  Effect.gen(function* () {
+    if (process.platform === "win32") return
+
+    const dir = yield* tmpdirScoped()
+    const configDir = path.join(dir, "inaccessible")
+    yield* FSUtil.use.ensureDir(configDir)
+    yield* FSUtil.use.chmod(configDir, 0o000)
+    yield* Effect.addFinalizer(() => FSUtil.use.chmod(configDir, 0o755).pipe(Effect.ignore))
+
+    yield* withProcessEnv("KILO_CONFIG_DIR", configDir, Config.use.get().pipe(provideInstanceEffect(dir)))
+  }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
+)
+
+it.effect("creates a missing KILO_CONFIG_DIR", () =>
+  Effect.gen(function* () {
+    const dir = yield* tmpdirScoped()
+    const configDir = path.join(dir, "configdir")
+
+    yield* withProcessEnv("KILO_CONFIG_DIR", configDir, Config.use.get().pipe(provideInstanceEffect(dir)))
+
+    expect(yield* FSUtil.use.readFileString(path.join(configDir, ".gitignore"))).toContain("node_modules")
+  }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
+)
+
+it.effect("installs dependencies in writable KILO_CONFIG_DIR", () =>
+  Effect.gen(function* () {
+    const dir = yield* tmpdirScoped()
+    const configDir = path.join(dir, "configdir")
+    yield* FSUtil.use.ensureDir(configDir)
+
+    yield* withProcessEnv(
+      "KILO_CONFIG_DIR",
+      configDir,
+      Config.Service.use((svc) => svc.get().pipe(Effect.andThen(svc.waitForDependencies()))).pipe(
+        provideInstanceEffect(dir),
+      ),
+    )
+
+    expect(yield* FSUtil.use.readFileString(path.join(configDir, ".gitignore"))).toContain("package-lock.json")
+  }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(LayerNode.compile(CrossSpawnSpawner.node))),
+)
+
+// Note: deduplication and serialization of npm installs is now handled by the
+// core Npm.Service (via EffectFlock). Those behaviors are tested in the core
+// package's npm tests, not here.
+
+it.instance("resolves scoped npm plugins in config", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const pluginDir = path.join(test.directory, "node_modules", "@scope", "plugin")
+    yield* FSUtil.use.writeWithDirs(
+      path.join(test.directory, "package.json"),
+      JSON.stringify({ name: "config-fixture", version: "1.0.0", type: "module" }, null, 2),
+    )
+    yield* FSUtil.use.writeWithDirs(
+      path.join(pluginDir, "package.json"),
+      JSON.stringify(
+        {
+          name: "@scope/plugin",
+          version: "1.0.0",
+          type: "module",
+          main: "./index.js",
+        },
+        null,
+        2,
+      ),
+    )
+    yield* FSUtil.use.writeWithDirs(path.join(pluginDir, "index.js"), "export default {}\n")
+    yield* writeConfigEffect(test.directory, { plugin: ["@scope/plugin"] })
+
+    const config = yield* Config.use.get()
+    expect(config.plugin ?? []).toContain("@scope/plugin")
+  }),
+)
+
+it.effect("merges plugin arrays from global and local configs", () =>
+  withConfigTree(
+    {
+      global: { plugin: ["global-plugin-1", "global-plugin-2"] },
+      local: { plugin: ["local-plugin-1"] },
     },
-  })
+    Effect.gen(function* () {
+      const plugins = (yield* Config.use.get()).plugin ?? []
 
-  const prev = process.env.KILO_CONFIG_DIR
-  process.env.KILO_CONFIG_DIR = tmp.extra
-
-  try {
-    await Instance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        await Config.get()
-        await Config.waitForDependencies()
-      },
-    })
-
-    expect(await Filesystem.exists(path.join(tmp.extra, "package.json"))).toBe(true)
-    expect(await Filesystem.exists(path.join(tmp.extra, ".gitignore"))).toBe(true)
-  } finally {
-    if (prev === undefined) delete process.env.KILO_CONFIG_DIR
-    else process.env.KILO_CONFIG_DIR = prev
-  }
-})
-
-test("resolves scoped npm plugins in config", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      const pluginDir = path.join(dir, "node_modules", "@scope", "plugin")
-      await fs.mkdir(pluginDir, { recursive: true })
-
-      await Filesystem.write(
-        path.join(dir, "package.json"),
-        JSON.stringify({ name: "config-fixture", version: "1.0.0", type: "module" }, null, 2),
-      )
-
-      await Filesystem.write(
-        path.join(pluginDir, "package.json"),
-        JSON.stringify(
-          {
-            name: "@scope/plugin",
-            version: "1.0.0",
-            type: "module",
-            main: "./index.js",
-          },
-          null,
-          2,
-        ),
-      )
-
-      await Filesystem.write(path.join(pluginDir, "index.js"), "export default {}\n")
-
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({ $schema: "https://app.kilo.ai/config.json", plugin: ["@scope/plugin"] }, null, 2),
-      )
-    },
-  })
-
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      const pluginEntries = config.plugin ?? []
-
-      const baseUrl = pathToFileURL(path.join(tmp.path, "opencode.json")).href
-      const expected = pathToFileURL(path.join(tmp.path, "node_modules", "@scope", "plugin", "index.js")).href
-
-      expect(pluginEntries.includes(expected)).toBe(true)
-
-      const scopedEntry = pluginEntries.find((entry) => entry === expected)
-      expect(scopedEntry).toBeDefined()
-      expect(scopedEntry?.includes("/node_modules/@scope/plugin/")).toBe(true)
-    },
-  })
-})
-
-test("merges plugin arrays from global and local configs", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      // Create a nested project structure with local .opencode config
-      const projectDir = path.join(dir, "project")
-      const opencodeDir = path.join(projectDir, ".opencode")
-      await fs.mkdir(opencodeDir, { recursive: true })
-
-      // Global config with plugins
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          plugin: ["global-plugin-1", "global-plugin-2"],
-        }),
-      )
-
-      // Local .opencode config with different plugins
-      await Filesystem.write(
-        path.join(opencodeDir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          plugin: ["local-plugin-1"],
-        }),
-      )
-    },
-  })
-
-  await Instance.provide({
-    directory: path.join(tmp.path, "project"),
-    fn: async () => {
-      const config = await Config.get()
-      const plugins = config.plugin ?? []
-
-      // Should contain both global and local plugins
       expect(plugins.some((p) => p.includes("global-plugin-1"))).toBe(true)
       expect(plugins.some((p) => p.includes("global-plugin-2"))).toBe(true)
       expect(plugins.some((p) => p.includes("local-plugin-1"))).toBe(true)
+      expect(
+        plugins.filter((p) => p.includes("global-plugin") || p.includes("local-plugin")).length,
+      ).toBeGreaterThanOrEqual(3)
+    }),
+  ),
+)
 
-      // Should have all 3 plugins (not replaced, but merged)
-      const pluginNames = plugins.filter((p) => p.includes("global-plugin") || p.includes("local-plugin"))
-      expect(pluginNames.length).toBeGreaterThanOrEqual(3)
+it.effect("global config remains global when project config is disabled", () =>
+  withConfigTree(
+    {
+      global: { model: "global/model", plugin: ["global-plugin"] },
+      project: { model: "project/model" },
+      local: { model: "local/model" },
     },
-  })
-})
+    withProcessEnv(
+      "KILO_DISABLE_PROJECT_CONFIG",
+      "true",
+      Effect.gen(function* () {
+        const config = yield* Config.use.get()
+        expect(config.model).toBe("global/model")
+        expect(config.plugin_origins?.find((item) => item.spec === "global-plugin")?.scope).toBe("global")
+      }),
+    ),
+  ),
+)
 
-test("does not error when only custom agent is a subagent", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      const opencodeDir = path.join(dir, ".opencode")
-      await fs.mkdir(opencodeDir, { recursive: true })
-      const agentDir = path.join(opencodeDir, "agent")
-      await fs.mkdir(agentDir, { recursive: true })
-
-      await Filesystem.write(
-        path.join(agentDir, "helper.md"),
-        `---
+it.instance("does not error when only custom agent is a subagent", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* FSUtil.use.writeWithDirs(
+      path.join(test.directory, ".kilo", "agent", "helper.md"), // kilocode_change
+      `---
 model: test/model
 mode: subagent
 ---
 Helper subagent prompt`,
-      )
+    )
+
+    const config = yield* Config.use.get()
+    expect(config.agent?.["helper"]).toMatchObject({
+      name: "helper",
+      model: "test/model",
+      mode: "subagent",
+      prompt: "Helper subagent prompt",
+    })
+  }),
+)
+
+it.effect("merges instructions arrays from global and local configs", () =>
+  withConfigTree(
+    {
+      global: { instructions: ["global-instructions.md", "shared-rules.md"] },
+      local: { instructions: ["local-instructions.md"] },
     },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.agent?.["helper"]).toMatchObject({
-        name: "helper",
-        model: "test/model",
-        mode: "subagent",
-        prompt: "Helper subagent prompt",
-      })
+    Effect.gen(function* () {
+      expect((yield* Config.use.get()).instructions).toEqual([
+        "global-instructions.md",
+        "shared-rules.md",
+        "local-instructions.md",
+      ])
+    }),
+  ),
+)
+
+it.effect("deduplicates duplicate instructions from global and local configs", () =>
+  withConfigTree(
+    {
+      global: { instructions: ["duplicate.md", "global-only.md"] },
+      local: { instructions: ["duplicate.md", "local-only.md"] },
     },
-  })
-})
+    Effect.gen(function* () {
+      expect((yield* Config.use.get()).instructions).toEqual(["duplicate.md", "global-only.md", "local-only.md"])
+    }),
+  ),
+)
 
-test("merges instructions arrays from global and local configs", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      const projectDir = path.join(dir, "project")
-      const opencodeDir = path.join(projectDir, ".opencode")
-      await fs.mkdir(opencodeDir, { recursive: true })
-
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          instructions: ["global-instructions.md", "shared-rules.md"],
-        }),
-      )
-
-      await Filesystem.write(
-        path.join(opencodeDir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          instructions: ["local-instructions.md"],
-        }),
-      )
+it.effect("deduplicates duplicate plugins from global and local configs", () =>
+  withConfigTree(
+    {
+      global: { plugin: ["duplicate-plugin", "global-plugin-1"] },
+      local: { plugin: ["duplicate-plugin", "local-plugin-1"] },
     },
-  })
+    Effect.gen(function* () {
+      const plugins = (yield* Config.use.get()).plugin ?? []
 
-  await Instance.provide({
-    directory: path.join(tmp.path, "project"),
-    fn: async () => {
-      const config = await Config.get()
-      const instructions = config.instructions ?? []
-
-      expect(instructions).toContain("global-instructions.md")
-      expect(instructions).toContain("shared-rules.md")
-      expect(instructions).toContain("local-instructions.md")
-      expect(instructions.length).toBe(3)
-    },
-  })
-})
-
-test("deduplicates duplicate instructions from global and local configs", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      const projectDir = path.join(dir, "project")
-      const opencodeDir = path.join(projectDir, ".opencode")
-      await fs.mkdir(opencodeDir, { recursive: true })
-
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          instructions: ["duplicate.md", "global-only.md"],
-        }),
-      )
-
-      await Filesystem.write(
-        path.join(opencodeDir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          instructions: ["duplicate.md", "local-only.md"],
-        }),
-      )
-    },
-  })
-
-  await Instance.provide({
-    directory: path.join(tmp.path, "project"),
-    fn: async () => {
-      const config = await Config.get()
-      const instructions = config.instructions ?? []
-
-      expect(instructions).toContain("global-only.md")
-      expect(instructions).toContain("local-only.md")
-      expect(instructions).toContain("duplicate.md")
-
-      const duplicates = instructions.filter((i) => i === "duplicate.md")
-      expect(duplicates.length).toBe(1)
-      expect(instructions.length).toBe(3)
-    },
-  })
-})
-
-test("deduplicates duplicate plugins from global and local configs", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      // Create a nested project structure with local .opencode config
-      const projectDir = path.join(dir, "project")
-      const opencodeDir = path.join(projectDir, ".opencode")
-      await fs.mkdir(opencodeDir, { recursive: true })
-
-      // Global config with plugins
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          plugin: ["duplicate-plugin", "global-plugin-1"],
-        }),
-      )
-
-      // Local .opencode config with some overlapping plugins
-      await Filesystem.write(
-        path.join(opencodeDir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          plugin: ["duplicate-plugin", "local-plugin-1"],
-        }),
-      )
-    },
-  })
-
-  await Instance.provide({
-    directory: path.join(tmp.path, "project"),
-    fn: async () => {
-      const config = await Config.get()
-      const plugins = config.plugin ?? []
-
-      // Should contain all unique plugins
       expect(plugins.some((p) => p.includes("global-plugin-1"))).toBe(true)
       expect(plugins.some((p) => p.includes("local-plugin-1"))).toBe(true)
-      expect(plugins.some((p) => p.includes("duplicate-plugin"))).toBe(true)
+      expect(plugins.filter((p) => p.includes("duplicate-plugin")).length).toBe(1)
+      expect(
+        plugins.filter(
+          (p) => p.includes("global-plugin") || p.includes("local-plugin") || p.includes("duplicate-plugin"),
+        ).length,
+      ).toBe(3)
+    }),
+  ),
+)
 
-      // Should deduplicate the duplicate plugin
-      const duplicatePlugins = plugins.filter((p) => p.includes("duplicate-plugin"))
-      expect(duplicatePlugins.length).toBe(1)
-
-      // Should have exactly 3 unique plugins
-      const pluginNames = plugins.filter(
-        (p) => p.includes("global-plugin") || p.includes("local-plugin") || p.includes("duplicate-plugin"),
-      )
-      expect(pluginNames.length).toBe(3)
+it.effect("keeps plugin origins aligned with merged plugin list", () =>
+  withConfigTree(
+    {
+      global: { plugin: [["shared-plugin@1.0.0", { source: "global" }], "global-only@1.0.0"] },
+      local: { plugin: [["shared-plugin@2.0.0", { source: "local" }], "local-only@1.0.0"] },
     },
-  })
-})
+    Effect.gen(function* () {
+      const config = yield* Config.use.get()
+      const plugins = config.plugin ?? []
+      const origins = config.plugin_origins ?? []
+      const names = plugins.map((item) => ConfigPlugin.pluginSpecifier(item))
+
+      expect(names).toContain("shared-plugin@2.0.0")
+      expect(names).not.toContain("shared-plugin@1.0.0")
+      expect(names).toContain("global-only@1.0.0")
+      expect(names).toContain("local-only@1.0.0")
+      // kilocode_change start - bundled plugins intentionally have no external plugin origins
+      expect(origins.map((item) => item.spec)).toEqual(
+        plugins.filter((item) => !isIndexingPlugin(item) && !isAtomicChatPlugin(item)),
+      )
+      // kilocode_change end
+      expect(origins.find((item) => ConfigPlugin.pluginSpecifier(item.spec) === "shared-plugin@2.0.0")?.scope).toBe(
+        "local",
+      )
+    }),
+  ),
+)
 
 // Legacy tools migration tests
 
-test("migrates legacy tools config to permissions - allow", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          agent: {
-            test: {
-              tools: {
-                bash: true,
-                read: true,
-              },
-            },
-          },
-        }),
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.agent?.["test"]?.permission).toEqual({
-        bash: "allow",
-        read: "allow",
-      })
-    },
-  })
-})
+it.instance("migrates legacy tools config to permissions - allow", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      agent: { test: { tools: { bash: true, read: true } } },
+    })
 
-test("migrates legacy tools config to permissions - deny", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          agent: {
-            test: {
-              tools: {
-                bash: false,
-                webfetch: false,
-              },
-            },
-          },
-        }),
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.agent?.["test"]?.permission).toEqual({
-        bash: "deny",
-        webfetch: "deny",
-      })
-    },
-  })
-})
+    const config = yield* Config.use.get()
+    expect(config.agent?.["test"]?.permission).toEqual({
+      bash: "allow",
+      read: "allow",
+    })
+  }),
+)
 
-test("migrates legacy write tool to edit permission", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          agent: {
-            test: {
-              tools: {
-                write: true,
-              },
-            },
-          },
-        }),
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.agent?.["test"]?.permission).toEqual({
-        edit: "allow",
-      })
-    },
-  })
-})
+it.instance("migrates legacy tools config to permissions - deny", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      agent: { test: { tools: { bash: false, webfetch: false } } },
+    })
+
+    const config = yield* Config.use.get()
+    expect(config.agent?.["test"]?.permission).toEqual({
+      bash: "deny",
+      webfetch: "deny",
+    })
+  }),
+)
+
+it.instance("migrates legacy write tool to edit permission", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      agent: { test: { tools: { write: true } } },
+    })
+
+    const config = yield* Config.use.get()
+    expect(config.agent?.["test"]?.permission).toEqual({ edit: "allow" })
+  }),
+)
 
 // Managed settings tests
-// Note: preload.ts sets KILO_TEST_MANAGED_CONFIG which Global.Path.managedConfig uses
+// kilocode_change - Note: preload.ts sets KILO_TEST_MANAGED_CONFIG which Global.Path.managedConfig uses
 
-test("managed settings override user settings", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
-        model: "user/model",
-        share: "auto",
-        username: "testuser",
-      })
-    },
-  })
+it.instance(
+  "managed settings override user settings",
+  Effect.gen(function* () {
+    yield* writeManagedSettingsEffect({
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      model: "managed/model",
+      share: "disabled",
+    })
 
-  await writeManagedSettings({
-    $schema: "https://app.kilo.ai/config.json",
-    model: "managed/model",
-    share: "disabled",
-  })
+    const config = yield* Config.use.get()
+    expect(config.model).toBe("managed/model")
+    expect(config.share).toBe("disabled")
+    expect(config.username).toBe("testuser")
+  }),
+  { config: { model: "user/model", share: "auto", username: "testuser" } },
+)
 
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.model).toBe("managed/model")
-      expect(config.share).toBe("disabled")
-      expect(config.username).toBe("testuser")
-    },
-  })
-})
+it.instance(
+  "managed settings override project settings",
+  Effect.gen(function* () {
+    yield* writeManagedSettingsEffect({
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      autoupdate: false,
+      disabled_providers: ["openai"],
+    })
 
-test("managed settings override project settings", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
-        autoupdate: true,
-        disabled_providers: [],
-      })
-    },
-  })
+    const config = yield* Config.use.get()
+    expect(config.autoupdate).toBe(false)
+    expect(config.disabled_providers).toEqual(["openai"])
+  }),
+  { config: { autoupdate: true, disabled_providers: [] } },
+)
 
-  await writeManagedSettings({
-    $schema: "https://app.kilo.ai/config.json",
-    autoupdate: false,
-    disabled_providers: ["openai"],
-  })
+it.instance("managed jsonc settings override managed json settings", () =>
+  Effect.gen(function* () {
+    yield* writeManagedSettingsEffect({ model: "managed/json" })
+    yield* writeManagedSettingsEffect({ model: "managed/jsonc" }, "opencode.jsonc")
 
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.autoupdate).toBe(false)
-      expect(config.disabled_providers).toEqual(["openai"])
-    },
-  })
-})
+    const config = yield* Config.use.get()
+    expect(config.model).toBe("managed/jsonc")
+  }),
+)
 
-test("missing managed settings file is not an error", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
-        model: "user/model",
-      })
-    },
-  })
+it.instance(
+  "missing managed settings file is not an error",
+  Effect.gen(function* () {
+    const config = yield* Config.use.get()
+    expect(config.model).toBe("user/model")
+  }),
+  { config: { model: "user/model" } },
+)
 
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.model).toBe("user/model")
-    },
-  })
-})
+it.instance("migrates legacy edit tool to edit permission", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      agent: { test: { tools: { edit: false } } },
+    })
 
-test("migrates legacy edit tool to edit permission", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          agent: {
-            test: {
-              tools: {
-                edit: false,
-              },
-            },
-          },
-        }),
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.agent?.["test"]?.permission).toEqual({
-        edit: "deny",
-      })
-    },
-  })
-})
+    const config = yield* Config.use.get()
+    expect(config.agent?.["test"]?.permission).toEqual({ edit: "deny" })
+  }),
+)
 
-test("migrates legacy patch tool to edit permission", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          agent: {
-            test: {
-              tools: {
-                patch: true,
-              },
-            },
-          },
-        }),
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.agent?.["test"]?.permission).toEqual({
-        edit: "allow",
-      })
-    },
-  })
-})
+it.instance("migrates legacy patch tool to edit permission", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      agent: { test: { tools: { patch: true } } },
+    })
 
-test("migrates legacy multiedit tool to edit permission", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          agent: {
-            test: {
-              tools: {
-                multiedit: false,
-              },
-            },
-          },
-        }),
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.agent?.["test"]?.permission).toEqual({
-        edit: "deny",
-      })
-    },
-  })
-})
+    const config = yield* Config.use.get()
+    expect(config.agent?.["test"]?.permission).toEqual({ edit: "allow" })
+  }),
+)
 
-test("migrates mixed legacy tools config", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          agent: {
-            test: {
-              tools: {
-                bash: true,
-                write: true,
-                read: false,
-                webfetch: true,
-              },
-            },
-          },
-        }),
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.agent?.["test"]?.permission).toEqual({
+it.instance("migrates mixed legacy tools config", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      agent: { test: { tools: { bash: true, write: true, read: false, webfetch: true } } },
+    })
+
+    const config = yield* Config.use.get()
+    expect(config.agent?.["test"]?.permission).toEqual({
+      bash: "allow",
+      edit: "allow",
+      read: "deny",
+      webfetch: "allow",
+    })
+  }),
+)
+
+it.instance("merges legacy tools with existing permission config", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      agent: { test: { permission: { glob: "allow" }, tools: { bash: true } } },
+    })
+
+    const config = yield* Config.use.get()
+    expect(config.agent?.["test"]?.permission).toEqual({
+      glob: "allow",
+      bash: "allow",
+    })
+  }),
+)
+
+it.instance("permission config preserves user key order", () =>
+  // Permission precedence follows the order users write in config, so parsing
+  // must not canonicalise known keys ahead of wildcard or custom keys.
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    // kilocode_change start — isolate from global config to prevent cross-test contamination
+    // (migrateBashPermission may write permission.bash to a global config file created by other
+    // test files running in parallel, which mergeDeep then prepends to the project permission keys)
+    const globalTmp = yield* tmpdirScoped()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp
+    // kilocode_change end
+    yield* Effect.addFinalizer(() =>
+      Effect.gen(function* () {
+        // kilocode_change start
+        ;(Global.Path as { config: string }).config = prev
+        yield* Config.use.invalidate()
+        // kilocode_change end
+      }),
+    )
+    yield* Config.use.invalidate()
+    yield* writeConfigEffect(
+      test.directory,
+      {
+        $schema: "https://app.kilo.ai/config.json", // kilocode_change
+        permission: {
+          "*": "deny",
+          edit: "ask",
+          write: "ask",
+          external_directory: "ask",
+          read: "allow",
+          todowrite: "allow",
+          "thoughts_*": "allow",
+          "reasoning_model_*": "allow",
+          "tools_*": "allow",
+          "pr_comments_*": "allow",
+        },
+      },
+      "kilo.json", // kilocode_change
+    )
+
+    const config = yield* Config.use.get()
+    expect(Object.keys(config.permission!)).toEqual([
+      "*",
+      "edit",
+      "write",
+      "external_directory",
+      "read",
+      "todowrite",
+      "thoughts_*",
+      "reasoning_model_*",
+      "tools_*",
+      "pr_comments_*",
+    ])
+  }),
+)
+
+test("config parser preserves permission order while ignoring unknown top-level keys", () => {
+  const config = ConfigParse.schema(
+    ConfigV1.Info,
+    {
+      permission: {
         bash: "allow",
-        edit: "allow",
-        read: "deny",
-        webfetch: "allow",
-      })
+        "*": "deny",
+        edit: "ask",
+      },
+      plugins: ["example"],
     },
-  })
+    "test",
+  )
+
+  expect(Object.keys(config.permission!)).toEqual(["bash", "*", "edit"])
+  expect(config).not.toHaveProperty("plugins")
 })
 
-test("merges legacy tools with existing permission config", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          agent: {
-            test: {
-              permission: {
-                glob: "allow",
-              },
-              tools: {
-                bash: true,
-              },
-            },
-          },
-        }),
-      )
+// kilocode_change start - preserve legacy agent requirement declarations without forwarding them
+test("config parser ignores legacy agent requirements", () => {
+  const config = ConfigParse.schema(
+    ConfigAgentV1.Info,
+    {
+      name: "demo",
+      requirements: { skills: ["needed"] },
+      custom: true,
     },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.agent?.["test"]?.permission).toEqual({
-        glob: "allow",
-        bash: "allow",
-      })
-    },
-  })
-})
+    "agent/demo.md",
+  )
 
-test("permission config preserves key order", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          permission: {
-            "*": "deny",
-            edit: "ask",
-            write: "ask",
-            external_directory: "ask",
-            read: "allow",
-            todowrite: "allow",
-            todoread: "allow",
-            "thoughts_*": "allow",
-            "reasoning_model_*": "allow",
-            "tools_*": "allow",
-            "pr_comments_*": "allow",
-          },
-        }),
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(Object.keys(config.permission!)).toEqual([
-        "*",
-        "edit",
-        "write",
-        "external_directory",
-        "read",
-        "todowrite",
-        "todoread",
-        "thoughts_*",
-        "reasoning_model_*",
-        "tools_*",
-        "pr_comments_*",
-      ])
-    },
-  })
+  expect(config.options).toEqual({ custom: true })
+  expect(config.options).not.toHaveProperty("requirements")
 })
+// kilocode_change end
 
 // MCP config merging tests
 
-test("project config can override MCP server enabled status", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      // Simulates a base config (like from remote .well-known) with disabled MCP
-      await Filesystem.write(
-        path.join(dir, "opencode.jsonc"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          mcp: {
-            jira: {
-              type: "remote",
-              url: "https://jira.example.com/mcp",
-              enabled: false,
-            },
-            wiki: {
-              type: "remote",
-              url: "https://wiki.example.com/mcp",
-              enabled: false,
-            },
-          },
-        }),
-      )
-      // Project config enables just jira
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          mcp: {
-            jira: {
-              type: "remote",
-              url: "https://jira.example.com/mcp",
-              enabled: true,
-            },
-          },
-        }),
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      // jira should be enabled (overridden by project config)
-      expect(config.mcp?.jira).toEqual({
-        type: "remote",
-        url: "https://jira.example.com/mcp",
-        enabled: true,
-      })
-      // wiki should still be disabled (not overridden)
-      expect(config.mcp?.wiki).toEqual({
-        type: "remote",
-        url: "https://wiki.example.com/mcp",
-        enabled: false,
-      })
-    },
-  })
-})
-
-test("MCP config deep merges preserving base config properties", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      // Base config with full MCP definition
-      await Filesystem.write(
-        path.join(dir, "opencode.jsonc"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          mcp: {
-            myserver: {
-              type: "remote",
-              url: "https://myserver.example.com/mcp",
-              enabled: false,
-              headers: {
-                "X-Custom-Header": "value",
-              },
-            },
-          },
-        }),
-      )
-      // Override just enables it, should preserve other properties
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          mcp: {
-            myserver: {
-              type: "remote",
-              url: "https://myserver.example.com/mcp",
-              enabled: true,
-            },
-          },
-        }),
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.mcp?.myserver).toEqual({
-        type: "remote",
-        url: "https://myserver.example.com/mcp",
-        enabled: true,
-        headers: {
-          "X-Custom-Header": "value",
+// kilocode_change start - regression for `env` alias on local MCP entries
+it.instance("local mcp accepts `env` as an alias for `environment`", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json",
+      mcp: {
+        context7: {
+          type: "local",
+          command: ["npx", "-y", "@upstash/context7-mcp"],
+          env: { CONTEXT7_API_KEY: "test-key" },
+          enabled: true,
         },
-      })
-    },
-  })
-})
-
-test("local .opencode config can override MCP from project config", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      // Project config with disabled MCP
-      await Filesystem.write(
-        path.join(dir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          mcp: {
-            docs: {
-              type: "remote",
-              url: "https://docs.example.com/mcp",
-              enabled: false,
-            },
-          },
-        }),
-      )
-      // Local .opencode directory config enables it
-      const opencodeDir = path.join(dir, ".opencode")
-      await fs.mkdir(opencodeDir, { recursive: true })
-      await Filesystem.write(
-        path.join(opencodeDir, "opencode.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          mcp: {
-            docs: {
-              type: "remote",
-              url: "https://docs.example.com/mcp",
-              enabled: true,
-            },
-          },
-        }),
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await Config.get()
-      expect(config.mcp?.docs?.enabled).toBe(true)
-    },
-  })
-})
-
-test("project config overrides remote well-known config", async () => {
-  const originalFetch = globalThis.fetch
-  let fetchedUrl: string | undefined
-  const mockFetch = mock((url: string | URL | Request) => {
-    const urlStr = url.toString()
-    if (urlStr.includes(".well-known/opencode")) {
-      fetchedUrl = urlStr
-      return Promise.resolve(
-        new Response(
-          JSON.stringify({
-            config: {
-              mcp: {
-                jira: {
-                  type: "remote",
-                  url: "https://jira.example.com/mcp",
-                  enabled: false,
-                },
-              },
-            },
-          }),
-          { status: 200 },
-        ),
-      )
-    }
-    return originalFetch(url)
-  })
-  globalThis.fetch = mockFetch as unknown as typeof fetch
-
-  const originalAuthAll = Auth.all
-  Auth.all = mock(() =>
-    Promise.resolve({
-      "https://example.com": {
-        type: "wellknown" as const,
-        key: "TEST_TOKEN",
-        token: "test-token",
       },
+    })
+    const config = yield* Config.use.get()
+    expect(config.mcp?.context7).toEqual({
+      type: "local",
+      command: ["npx", "-y", "@upstash/context7-mcp"],
+      environment: { CONTEXT7_API_KEY: "test-key" },
+      enabled: true,
+    })
+  }),
+)
+
+it.instance("local mcp prefers `environment` over `env` when both are present", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json",
+      mcp: {
+        context7: {
+          type: "local",
+          command: ["npx", "-y", "@upstash/context7-mcp"],
+          environment: { CONTEXT7_API_KEY: "from-environment" },
+          env: { CONTEXT7_API_KEY: "from-env" },
+        },
+      },
+    })
+    const config = yield* Config.use.get()
+    expect(config.mcp?.context7).toEqual({
+      type: "local",
+      command: ["npx", "-y", "@upstash/context7-mcp"],
+      environment: { CONTEXT7_API_KEY: "from-environment" },
+    })
+  }),
+)
+// kilocode_change end
+
+it.instance("project config can override MCP server enabled status", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    // kilocode_change - base config in .json, override in .jsonc (jsonc loads second and wins)
+    // Simulates a base config (like from remote .well-known) with disabled MCP.
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      mcp: {
+        jira: {
+          type: "remote",
+          url: "https://jira.example.com/mcp",
+          enabled: false,
+        },
+        wiki: {
+          type: "remote",
+          url: "https://wiki.example.com/mcp",
+          enabled: false,
+        },
+      },
+    })
+    // Project config enables just jira.
+    yield* writeConfigEffect(
+      test.directory,
+      {
+        $schema: "https://app.kilo.ai/config.json", // kilocode_change
+        mcp: {
+          jira: {
+            type: "remote",
+            url: "https://jira.example.com/mcp",
+            enabled: true,
+          },
+        },
+      },
+      "kilo.jsonc", // kilocode_change
+    )
+
+    const config = yield* Config.use.get()
+    expect(config.mcp?.jira).toEqual({
+      type: "remote",
+      url: "https://jira.example.com/mcp",
+      enabled: true,
+    })
+    expect(config.mcp?.wiki).toEqual({
+      type: "remote",
+      url: "https://wiki.example.com/mcp",
+      enabled: false,
+    })
+  }),
+)
+
+it.instance("MCP config deep merges preserving base config properties", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    // kilocode_change - base config in .json, override in .jsonc (jsonc loads second and wins)
+    // kilocode_change - Base config with full MCP definition
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      mcp: {
+        myserver: {
+          type: "remote",
+          url: "https://myserver.example.com/mcp",
+          enabled: false,
+          headers: {
+            "X-Custom-Header": "value",
+          },
+        },
+      },
+    })
+    // kilocode_change - Override just enables it, should preserve other properties
+    yield* writeConfigEffect(
+      test.directory,
+      {
+        $schema: "https://app.kilo.ai/config.json", // kilocode_change
+        mcp: {
+          myserver: {
+            type: "remote",
+            url: "https://myserver.example.com/mcp",
+            enabled: true,
+          },
+        },
+      },
+      "kilo.jsonc", // kilocode_change
+    )
+
+    const config = yield* Config.use.get()
+    expect(config.mcp?.myserver).toEqual({
+      type: "remote",
+      url: "https://myserver.example.com/mcp",
+      enabled: true,
+      headers: {
+        "X-Custom-Header": "value",
+      },
+    })
+  }),
+)
+
+// kilocode_change start
+it.instance("local .kilo config can override MCP from project config", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      mcp: {
+        docs: {
+          type: "remote",
+          url: "https://docs.example.com/mcp",
+          enabled: false,
+        },
+      },
+    })
+    yield* writeConfigEffect(
+      path.join(test.directory, ".kilo"), // kilocode_change
+      {
+        $schema: "https://app.kilo.ai/config.json", // kilocode_change
+        mcp: {
+          docs: {
+            type: "remote",
+            url: "https://docs.example.com/mcp",
+            enabled: true,
+          },
+        },
+      },
+      "kilo.json", // kilocode_change
+    )
+
+    const config = yield* Config.use.get()
+    expect(config.mcp?.docs?.enabled).toBe(true)
+  }),
+)
+// kilocode_change end
+
+const remoteProjectOverride = wellKnown({
+  config: {
+    mcp: { jira: { type: "remote", url: "https://jira.example.com/mcp", enabled: false } },
+  },
+})
+
+remoteProjectOverride.it.instance(
+  "project config overrides remote well-known config",
+  () =>
+    Effect.gen(function* () {
+      const config = yield* Config.use.get()
+      expect(remoteProjectOverride.seen.wellKnown).toBe("https://example.com/.well-known/opencode")
+      expect(config.mcp?.jira?.enabled).toBe(true)
     }),
-  )
+  {
+    git: true,
+    config: { mcp: { jira: { type: "remote", url: "https://jira.example.com/mcp", enabled: true } } },
+  },
+)
+
+const trailingSlashWellKnown = wellKnown({
+  authUrl: "https://example.com/",
+  config: {
+    mcp: { slack: { type: "remote", url: "https://slack.example.com/mcp", enabled: true } },
+  },
+})
+
+trailingSlashWellKnown.it.instance("wellknown URL with trailing slash is normalized", () =>
+  Effect.gen(function* () {
+    yield* Config.use.get()
+    expect(trailingSlashWellKnown.seen.wellKnown).toBe("https://example.com/.well-known/opencode")
+  }),
+)
+
+test("remote well-known config can use FetchHttpClient layer", async () => {
+  let fetchedUrl: string | undefined
+  const server = Bun.serve({
+    port: 0,
+    fetch: (request) => {
+      fetchedUrl = request.url
+      return new Response(
+        JSON.stringify({
+          config: {
+            mcp: { jira: { type: "remote", url: "https://jira.example.com/mcp", enabled: true } },
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      )
+    },
+  })
 
   try {
-    await using tmp = await tmpdir({
-      git: true,
-      init: async (dir) => {
-        // Project config enables jira (overriding remote default)
-        await Filesystem.write(
-          path.join(dir, "opencode.json"),
-          JSON.stringify({
-            $schema: "https://app.kilo.ai/config.json",
-            mcp: {
-              jira: {
-                type: "remote",
-                url: "https://jira.example.com/mcp",
-                enabled: true,
-              },
-            },
+    await provideTmpdirInstance(
+      () =>
+        Config.Service.use((svc) =>
+          Effect.gen(function* () {
+            const config = yield* svc.get()
+            expect(fetchedUrl).toBe(`${server.url.origin}/.well-known/opencode`)
+            expect(config.mcp?.jira?.enabled).toBe(true)
           }),
-        )
-      },
-    })
-    await Instance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        const config = await Config.get()
-        // Verify fetch was called for wellknown config
-        expect(fetchedUrl).toBe("https://example.com/.well-known/opencode")
-        // Project config (enabled: true) should override remote (enabled: false)
-        expect(config.mcp?.jira?.enabled).toBe(true)
-      },
-    })
+        ),
+      { git: true },
+    ).pipe(
+      Effect.scoped,
+      Effect.provide(
+        Layer.mergeAll(
+          LayerNode.compile(LayerNode.group([Config.node, FSUtil.node, Env.node, CrossSpawnSpawner.node]), [
+            [Auth.node, wellKnownAuth(server.url.origin)],
+            [Account.node, AccountTest.empty],
+            [Npm.node, NpmTest.noop],
+            [httpClient, FetchHttpClient.layer],
+          ]),
+          testInstanceStoreLayer,
+        ),
+      ),
+      Effect.runPromise,
+    )
   } finally {
-    globalThis.fetch = originalFetch
-    Auth.all = originalAuthAll
+    await server.stop(true)
   }
 })
 
-test("wellknown URL with trailing slash is normalized", async () => {
-  const originalFetch = globalThis.fetch
-  let fetchedUrl: string | undefined
-  const mockFetch = mock((url: string | URL | Request) => {
-    const urlStr = url.toString()
-    if (urlStr.includes(".well-known/opencode")) {
-      fetchedUrl = urlStr
-      return Promise.resolve(
-        new Response(
-          JSON.stringify({
-            config: {
-              mcp: {
-                slack: {
-                  type: "remote",
-                  url: "https://slack.example.com/mcp",
-                  enabled: true,
-                },
-              },
-            },
-          }),
-          { status: 200 },
-        ),
-      )
-    }
-    return originalFetch(url)
-  })
-  globalThis.fetch = mockFetch as unknown as typeof fetch
+const templatedHeaderWellKnown = wellKnown({
+  remoteConfig: {
+    url: "https://config.example.com/opencode.json",
+    headers: { Authorization: "Bearer {env:TEST_TOKEN}" },
+  },
+  remote: {
+    mcp: { confluence: { type: "remote", url: "https://confluence.example.com/mcp", enabled: true } },
+  },
+})
 
-  const originalAuthAll = Auth.all
-  Auth.all = mock(() =>
-    Promise.resolve({
-      "https://example.com/": {
-        type: "wellknown" as const,
-        key: "TEST_TOKEN",
-        token: "test-token",
-      },
+templatedHeaderWellKnown.it.instance("wellknown remote_config supports templated env vars in headers", () =>
+  Effect.gen(function* () {
+    const config = yield* Config.use.get()
+    expect(templatedHeaderWellKnown.seen.wellKnown).toBe("https://example.com/.well-known/opencode")
+    expect(templatedHeaderWellKnown.seen.remote).toBe("https://config.example.com/opencode.json")
+    expect(templatedHeaderWellKnown.seen.authorization).toBe("Bearer test-token")
+    expect(config.mcp?.confluence?.enabled).toBe(true)
+  }),
+)
+
+const remotePrecedenceWellKnown = wellKnown({
+  config: {
+    mcp: { confluence: { type: "remote", url: "https://confluence.example.com/mcp", enabled: false } },
+  },
+  remoteConfig: { url: "https://config.example.com/{env:TEST_TOKEN}/opencode.json" },
+  remote: {
+    config: { mcp: { confluence: { type: "remote", url: "https://confluence.example.com/mcp", enabled: true } } },
+  },
+})
+
+remotePrecedenceWellKnown.it.instance(
+  "wellknown remote_config url tokens and nested config override embedded config",
+  () =>
+    Effect.gen(function* () {
+      const config = yield* Config.use.get()
+      expect(remotePrecedenceWellKnown.seen.remote).toBe("https://config.example.com/test-token/opencode.json")
+      expect(config.mcp?.confluence?.enabled).toBe(true)
     }),
-  )
+)
 
-  try {
+const envIsolationWellKnown = wellKnown({
+  remoteConfig: {
+    url: "https://config.example.com/opencode.json",
+    headers: { Authorization: "Bearer {env:TEST_TOKEN}" },
+  },
+  remote: {
+    mcp: { confluence: { type: "remote", url: "https://confluence.example.com/mcp", enabled: true } },
+  },
+})
+
+envIsolationWellKnown.it.instance(
+  "wellknown token env substitution does not mutate process env",
+  () =>
+    Effect.gen(function* () {
+      process.env.TEST_TOKEN = "preexisting-token"
+      const config = yield* Config.use.get()
+      // The well-known header (trusted source) resolves the auth-provided token...
+      expect(envIsolationWellKnown.seen.authorization).toBe("Bearer test-token")
+      // ...but the project config token is untrusted and must not be substituted.
+      expect(config.username).not.toBe("test-token")
+      // ...and the auth env used for substitution must not leak into the real process env.
+      expect(process.env.TEST_TOKEN).toBe("preexisting-token")
+    }),
+  { git: true, config: { username: "{env:TEST_TOKEN}" } },
+)
+
+const nullConfigWellKnown = wellKnown({
+  wellKnown: {
+    config: null,
+    remote_config: { url: "https://config.example.com/opencode.json" },
+  },
+  remote: {
+    mcp: { confluence: { type: "remote", url: "https://confluence.example.com/mcp", enabled: true } },
+  },
+})
+
+nullConfigWellKnown.it.instance("wellknown config null is treated as absent", () =>
+  Effect.gen(function* () {
+    const config = yield* Config.use.get()
+    expect(nullConfigWellKnown.seen.remote).toBe("https://config.example.com/opencode.json")
+    expect(config.mcp?.confluence?.enabled).toBe(true)
+  }),
+)
+
+const invalidRemoteWellKnown = wellKnown({
+  remoteConfig: { url: "https://config.example.com/opencode.json" },
+  remote: "not an object",
+})
+
+invalidRemoteWellKnown.it.instance("wellknown remote_config rejects non-object config responses", () =>
+  Effect.gen(function* () {
+    const exit = yield* Config.use.get().pipe(Effect.exit)
+    expect(invalidRemoteWellKnown.seen.remote).toBe("https://config.example.com/opencode.json")
+    expect(Exit.isFailure(exit)).toBe(true)
+  }),
+)
+
+const loginPageWellKnown = wellKnown({
+  remoteConfig: { url: "https://config.example.com/opencode.json" },
+  remoteHtml: "<!DOCTYPE html><html><head><title>Sign in</title></head><body>Login required</body></html>",
+})
+
+loginPageWellKnown.it.instance(
+  "wellknown remote_config surfaces an actionable auth error when the gateway returns an HTML login page",
+  () =>
+    Effect.gen(function* () {
+      const exit = yield* Config.use.get().pipe(Effect.exit)
+      expect(loginPageWellKnown.seen.remote).toBe("https://config.example.com/opencode.json")
+      expect(Exit.isFailure(exit)).toBe(true)
+      const error = Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined
+      expect(NamedError.hasName(error, "ConfigRemoteAuthError")).toBe(true)
+      expect((error as { data?: { url?: string } }).data?.url).toBe("https://example.com")
+    }),
+)
+
+describe("resolvePluginSpec", () => {
+  test("keeps package specs unchanged", async () => {
+    await using tmp = await tmpdir()
+    const file = path.join(tmp.path, "kilo.json") // kilocode_change
+    expect(await ConfigPlugin.resolvePluginSpec("oh-my-opencode@2.4.3", file)).toBe("oh-my-opencode@2.4.3")
+    expect(await ConfigPlugin.resolvePluginSpec("@scope/pkg", file)).toBe("@scope/pkg")
+  })
+
+  test("resolves windows-style relative plugin directory specs", async () => {
+    if (process.platform !== "win32") return
+
     await using tmp = await tmpdir({
-      git: true,
       init: async (dir) => {
-        await Filesystem.write(
-          path.join(dir, "opencode.json"),
-          JSON.stringify({
-            $schema: "https://opencode.ai/config.json",
-          }),
-        )
+        const plugin = path.join(dir, "plugin")
+        await fs.mkdir(plugin, { recursive: true })
+        await Filesystem.write(path.join(plugin, "index.ts"), "export default {}")
       },
     })
-    await Instance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        await Config.get()
-        // Trailing slash should be stripped — no double slash in the fetch URL
-        expect(fetchedUrl).toBe("https://example.com/.well-known/opencode")
+
+    const file = path.join(tmp.path, "opencode.json")
+    const hit = await ConfigPlugin.resolvePluginSpec(".\\plugin", file)
+    expect(ConfigPlugin.pluginSpecifier(hit)).toBe(pathToFileURL(path.join(tmp.path, "plugin", "index.ts")).href)
+  })
+
+  test("resolves relative file plugin paths to file urls", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Filesystem.write(path.join(dir, "plugin.ts"), "export default {}")
       },
     })
-  } finally {
-    globalThis.fetch = originalFetch
-    Auth.all = originalAuthAll
-  }
+
+    const file = path.join(tmp.path, "kilo.json") // kilocode_change
+    const hit = await ConfigPlugin.resolvePluginSpec("./plugin.ts", file)
+    expect(ConfigPlugin.pluginSpecifier(hit)).toBe(pathToFileURL(path.join(tmp.path, "plugin.ts")).href)
+  })
+
+  test("resolves plugin directory paths to directory urls", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        const plugin = path.join(dir, "plugin")
+        await fs.mkdir(plugin, { recursive: true })
+        await Filesystem.writeJson(path.join(plugin, "package.json"), {
+          name: "demo-plugin",
+          type: "module",
+          main: "./index.ts",
+        })
+        await Filesystem.write(path.join(plugin, "index.ts"), "export default {}")
+      },
+    })
+
+    const file = path.join(tmp.path, "kilo.json") // kilocode_change
+    const hit = await ConfigPlugin.resolvePluginSpec("./plugin", file)
+    expect(ConfigPlugin.pluginSpecifier(hit)).toBe(pathToFileURL(path.join(tmp.path, "plugin")).href)
+  })
+
+  test("resolves plugin directories without package.json to index.ts", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        const plugin = path.join(dir, "plugin")
+        await fs.mkdir(plugin, { recursive: true })
+        await Filesystem.write(path.join(plugin, "index.ts"), "export default {}")
+      },
+    })
+
+    const file = path.join(tmp.path, "opencode.json")
+    const hit = await ConfigPlugin.resolvePluginSpec("./plugin", file)
+    expect(ConfigPlugin.pluginSpecifier(hit)).toBe(pathToFileURL(path.join(tmp.path, "plugin", "index.ts")).href)
+  })
 })
 
-describe("getPluginName", () => {
-  test("extracts name from file:// URL", () => {
-    expect(Config.getPluginName("file:///path/to/plugin/foo.js")).toBe("foo")
-    expect(Config.getPluginName("file:///path/to/plugin/bar.ts")).toBe("bar")
-    expect(Config.getPluginName("file:///some/path/my-plugin.js")).toBe("my-plugin")
-  })
+describe("deduplicatePluginOrigins", () => {
+  const dedupe = (plugins: ConfigPluginV1.Spec[]) =>
+    ConfigPlugin.deduplicatePluginOrigins(
+      plugins.map((spec) => ({
+        spec,
+        source: "",
+        scope: "global" as const,
+      })),
+    ).map((item) => item.spec)
 
-  test("extracts name from npm package with version", () => {
-    expect(Config.getPluginName("oh-my-opencode@2.4.3")).toBe("oh-my-opencode")
-    expect(Config.getPluginName("some-plugin@1.0.0")).toBe("some-plugin")
-    expect(Config.getPluginName("plugin@latest")).toBe("plugin")
-  })
-
-  test("extracts name from scoped npm package", () => {
-    expect(Config.getPluginName("@scope/pkg@1.0.0")).toBe("@scope/pkg")
-    expect(Config.getPluginName("@opencode/plugin@2.0.0")).toBe("@opencode/plugin")
-  })
-
-  test("returns full string for package without version", () => {
-    expect(Config.getPluginName("some-plugin")).toBe("some-plugin")
-    expect(Config.getPluginName("@scope/pkg")).toBe("@scope/pkg")
-  })
-})
-
-describe("deduplicatePlugins", () => {
   test("removes duplicates keeping higher priority (later entries)", () => {
     const plugins = ["global-plugin@1.0.0", "shared-plugin@1.0.0", "local-plugin@2.0.0", "shared-plugin@2.0.0"]
 
-    const result = Config.deduplicatePlugins(plugins)
+    const result = dedupe(plugins)
 
     expect(result).toContain("global-plugin@1.0.0")
     expect(result).toContain("local-plugin@2.0.0")
@@ -1744,315 +2259,292 @@ describe("deduplicatePlugins", () => {
     expect(result.length).toBe(3)
   })
 
-  test("prefers local file over npm package with same name", () => {
-    const plugins = ["oh-my-opencode@2.4.3", "file:///project/.opencode/plugin/oh-my-opencode.js"]
+  test("keeps path plugins separate from package plugins", () => {
+    const plugins = ["oh-my-opencode@2.4.3", "file:///project/.kilo/plugin/oh-my-opencode.js"] // kilocode_change
 
-    const result = Config.deduplicatePlugins(plugins)
+    const result = dedupe(plugins)
 
-    expect(result.length).toBe(1)
-    expect(result[0]).toBe("file:///project/.opencode/plugin/oh-my-opencode.js")
+    expect(result).toEqual(plugins)
+  })
+
+  test("deduplicates direct path plugins by exact spec", () => {
+    const plugins = ["file:///project/.kilo/plugin/demo.ts", "file:///project/.kilo/plugin/demo.ts"] // kilocode_change
+
+    const result = dedupe(plugins)
+
+    expect(result).toEqual(["file:///project/.kilo/plugin/demo.ts"]) // kilocode_change
   })
 
   test("preserves order of remaining plugins", () => {
     const plugins = ["a-plugin@1.0.0", "b-plugin@1.0.0", "c-plugin@1.0.0"]
 
-    const result = Config.deduplicatePlugins(plugins)
+    const result = dedupe(plugins)
 
     expect(result).toEqual(["a-plugin@1.0.0", "b-plugin@1.0.0", "c-plugin@1.0.0"])
   })
 
-  test("local plugin directory overrides global opencode.json plugin", async () => {
-    await using tmp = await tmpdir({
-      init: async (dir) => {
-        const projectDir = path.join(dir, "project")
-        const opencodeDir = path.join(projectDir, ".opencode")
-        const pluginDir = path.join(opencodeDir, "plugin")
-        await fs.mkdir(pluginDir, { recursive: true })
-
-        await Filesystem.write(
-          path.join(dir, "opencode.json"),
-          JSON.stringify({
-            $schema: "https://app.kilo.ai/config.json",
-            plugin: ["my-plugin@1.0.0"],
-          }),
+  it.effect("loads auto-discovered local plugins as file urls", () =>
+    withConfigTree(
+      { global: { plugin: ["my-plugin@1.0.0"] } },
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        yield* FSUtil.use.writeWithDirs(
+          path.join(test.directory, ".kilo", "plugin", "my-plugin.js"), // kilocode_change
+          "export default {}",
         )
 
-        await Filesystem.write(path.join(pluginDir, "my-plugin.js"), "export default {}")
-      },
-    })
-
-    await Instance.provide({
-      directory: path.join(tmp.path, "project"),
-      fn: async () => {
-        const config = await Config.get()
-        const plugins = config.plugin ?? []
-
-        const myPlugins = plugins.filter((p) => Config.getPluginName(p) === "my-plugin")
-        expect(myPlugins.length).toBe(1)
-        expect(myPlugins[0].startsWith("file://")).toBe(true)
-      },
-    })
-  })
+        const plugins = (yield* Config.use.get()).plugin ?? []
+        expect(plugins.some((p) => ConfigPlugin.pluginSpecifier(p) === "my-plugin@1.0.0")).toBe(true)
+        expect(plugins.some((p) => ConfigPlugin.pluginSpecifier(p).startsWith("file://"))).toBe(true)
+      }),
+    ),
+  )
 })
 
 describe("KILO_DISABLE_PROJECT_CONFIG", () => {
-  test("skips project config files when flag is set", async () => {
-    const originalEnv = process.env["KILO_DISABLE_PROJECT_CONFIG"]
-    process.env["KILO_DISABLE_PROJECT_CONFIG"] = "true"
+  // kilocode_change start
+  it.instance("skips project config files when flag is set", () =>
+    withProcessEnv(
+      "KILO_DISABLE_PROJECT_CONFIG",
+      "true",
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        yield* writeConfigEffect(test.directory, { model: "project/model", username: "project-user" })
+        const config = yield* Config.use.get()
+        expect(config.model).not.toBe("project/model")
+        expect(config.username).not.toBe("project-user")
+      }),
+    ),
+  )
 
-    try {
-      await using tmp = await tmpdir({
-        init: async (dir) => {
-          // Create a project config that would normally be loaded
-          await Filesystem.write(
-            path.join(dir, "opencode.json"),
-            JSON.stringify({
-              $schema: "https://app.kilo.ai/config.json",
-              model: "project/model",
-              username: "project-user",
-            }),
-          )
-        },
-      })
-      await Instance.provide({
-        directory: tmp.path,
-        fn: async () => {
-          const config = await Config.get()
-          // Project config should NOT be loaded - model should be default, not "project/model"
-          expect(config.model).not.toBe("project/model")
-          expect(config.username).not.toBe("project-user")
-        },
-      })
-    } finally {
-      if (originalEnv === undefined) {
-        delete process.env["KILO_DISABLE_PROJECT_CONFIG"]
-      } else {
-        process.env["KILO_DISABLE_PROJECT_CONFIG"] = originalEnv
-      }
-    }
-  })
+  it.instance("skips project .kilo directory when flag is set", () =>
+    withProcessEnv(
+      "KILO_DISABLE_PROJECT_CONFIG",
+      "true",
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        yield* FSUtil.use.writeWithDirs(
+          path.join(test.directory, ".kilo", "command", "test-cmd.md"),
+          "# Test Command\nThis is a test command.",
+        )
+        const directories = yield* Config.use.directories()
+        expect(directories.some((d) => d.startsWith(test.directory))).toBe(false)
+      }),
+    ),
+  )
+  // kilocode_change end
 
-  test("skips project .opencode/ directories when flag is set", async () => {
-    const originalEnv = process.env["KILO_DISABLE_PROJECT_CONFIG"]
-    process.env["KILO_DISABLE_PROJECT_CONFIG"] = "true"
+  it.instance("still loads global config when flag is set", () =>
+    withProcessEnv(
+      "KILO_DISABLE_PROJECT_CONFIG",
+      "true",
+      Effect.gen(function* () {
+        const config = yield* Config.use.get()
+        expect(config).toBeDefined()
+        expect(config.username).toBeDefined()
+      }),
+    ),
+  )
 
-    try {
-      await using tmp = await tmpdir({
-        init: async (dir) => {
-          // Create a .opencode directory with a command
-          const opencodeDir = path.join(dir, ".opencode", "command")
-          await fs.mkdir(opencodeDir, { recursive: true })
-          await Filesystem.write(path.join(opencodeDir, "test-cmd.md"), "# Test Command\nThis is a test command.")
-        },
-      })
-      await Instance.provide({
-        directory: tmp.path,
-        fn: async () => {
-          const directories = await Config.directories()
-          // Project .opencode should NOT be in directories list
-          const hasProjectOpencode = directories.some((d) => d.startsWith(tmp.path))
-          expect(hasProjectOpencode).toBe(false)
-        },
-      })
-    } finally {
-      if (originalEnv === undefined) {
-        delete process.env["KILO_DISABLE_PROJECT_CONFIG"]
-      } else {
-        process.env["KILO_DISABLE_PROJECT_CONFIG"] = originalEnv
-      }
-    }
-  })
-
-  test("still loads global config when flag is set", async () => {
-    const originalEnv = process.env["KILO_DISABLE_PROJECT_CONFIG"]
-    process.env["KILO_DISABLE_PROJECT_CONFIG"] = "true"
-
-    try {
-      await using tmp = await tmpdir()
-      await Instance.provide({
-        directory: tmp.path,
-        fn: async () => {
-          // Should still get default config (from global or defaults)
-          const config = await Config.get()
-          expect(config).toBeDefined()
-          expect(config.username).toBeDefined()
-        },
-      })
-    } finally {
-      if (originalEnv === undefined) {
-        delete process.env["KILO_DISABLE_PROJECT_CONFIG"]
-      } else {
-        process.env["KILO_DISABLE_PROJECT_CONFIG"] = originalEnv
-      }
-    }
-  })
-
-  test("skips relative instructions with warning when flag is set but no config dir", async () => {
-    const originalDisable = process.env["KILO_DISABLE_PROJECT_CONFIG"]
-    const originalConfigDir = process.env["KILO_CONFIG_DIR"]
-
-    try {
-      // Ensure no config dir is set
-      delete process.env["KILO_CONFIG_DIR"]
-      process.env["KILO_DISABLE_PROJECT_CONFIG"] = "true"
-
-      await using tmp = await tmpdir({
-        init: async (dir) => {
-          // Create a config with relative instruction path
-          await Filesystem.write(
-            path.join(dir, "opencode.json"),
-            JSON.stringify({
-              $schema: "https://app.kilo.ai/config.json",
-              instructions: ["./CUSTOM.md"],
-            }),
-          )
-          // Create the instruction file (should be skipped)
-          await Filesystem.write(path.join(dir, "CUSTOM.md"), "# Custom Instructions")
-        },
-      })
-
-      await Instance.provide({
-        directory: tmp.path,
-        fn: async () => {
+  it.instance(
+    "skips relative instructions with warning when flag is set but no config dir",
+    () =>
+      withProcessEnvs(
+        { KILO_CONFIG_DIR: undefined, KILO_DISABLE_PROJECT_CONFIG: "true" },
+        Effect.gen(function* () {
+          const test = yield* TestInstance
+          yield* FSUtil.use.writeWithDirs(path.join(test.directory, "CUSTOM.md"), "# Custom Instructions")
           // The relative instruction should be skipped without error
-          // We're mainly verifying this doesn't throw and the config loads
-          const config = await Config.get()
+          const config = yield* Config.use.get()
           expect(config).toBeDefined()
-          // The instruction should have been skipped (warning logged)
-          // We can't easily test the warning was logged, but we verify
-          // the relative path didn't cause an error
-        },
-      })
-    } finally {
-      if (originalDisable === undefined) {
-        delete process.env["KILO_DISABLE_PROJECT_CONFIG"]
-      } else {
-        process.env["KILO_DISABLE_PROJECT_CONFIG"] = originalDisable
-      }
-      if (originalConfigDir === undefined) {
-        delete process.env["KILO_CONFIG_DIR"]
-      } else {
-        process.env["KILO_CONFIG_DIR"] = originalConfigDir
-      }
-    }
-  })
+        }),
+      ),
+    { config: { instructions: ["./CUSTOM.md"] } },
+  )
 
-  test("KILO_CONFIG_DIR still works when flag is set", async () => {
-    const originalDisable = process.env["KILO_DISABLE_PROJECT_CONFIG"]
-    const originalConfigDir = process.env["KILO_CONFIG_DIR"]
-
-    try {
-      await using configDirTmp = await tmpdir({
-        init: async (dir) => {
-          // Create config in the custom config dir
-          await Filesystem.write(
-            path.join(dir, "opencode.json"),
-            JSON.stringify({
-              $schema: "https://app.kilo.ai/config.json",
-              model: "configdir/model",
-            }),
-          )
-        },
-      })
-
-      await using projectTmp = await tmpdir({
-        init: async (dir) => {
-          // Create config in project (should be ignored)
-          await Filesystem.write(
-            path.join(dir, "opencode.json"),
-            JSON.stringify({
-              $schema: "https://app.kilo.ai/config.json",
-              model: "project/model",
-            }),
-          )
-        },
-      })
-
-      process.env["KILO_DISABLE_PROJECT_CONFIG"] = "true"
-      process.env["KILO_CONFIG_DIR"] = configDirTmp.path
-
-      await Instance.provide({
-        directory: projectTmp.path,
-        fn: async () => {
-          const config = await Config.get()
-          // Should load from KILO_CONFIG_DIR, not project
-          expect(config.model).toBe("configdir/model")
-        },
-      })
-    } finally {
-      if (originalDisable === undefined) {
-        delete process.env["KILO_DISABLE_PROJECT_CONFIG"]
-      } else {
-        process.env["KILO_DISABLE_PROJECT_CONFIG"] = originalDisable
-      }
-      if (originalConfigDir === undefined) {
-        delete process.env["KILO_CONFIG_DIR"]
-      } else {
-        process.env["KILO_CONFIG_DIR"] = originalConfigDir
-      }
-    }
-  })
+  it.instance(
+    "KILO_CONFIG_DIR still works when flag is set",
+    () =>
+      Effect.gen(function* () {
+        const configDir = yield* tmpdirScoped()
+        // kilocode_change start
+        yield* writeConfigEffect(configDir, {
+          $schema: "https://app.kilo.ai/config.json",
+          model: "configdir/model",
+        })
+        // kilocode_change end
+        yield* withProcessEnvs(
+          { KILO_DISABLE_PROJECT_CONFIG: "true", KILO_CONFIG_DIR: configDir },
+          Effect.gen(function* () {
+            const config = yield* Config.use.get()
+            expect(config.model).toBe("configdir/model")
+          }),
+        )
+      }),
+    { config: { model: "project/model" } },
+  )
 })
 
-describe("OPENCODE_CONFIG_CONTENT token substitution", () => {
-  test("substitutes {env:} tokens in OPENCODE_CONFIG_CONTENT", async () => {
-    const originalEnv = process.env["OPENCODE_CONFIG_CONTENT"]
-    const originalTestVar = process.env["TEST_CONFIG_VAR"]
-    process.env["TEST_CONFIG_VAR"] = "test_api_key_12345"
-    process.env["OPENCODE_CONFIG_CONTENT"] = JSON.stringify({
-      $schema: "https://opencode.ai/config.json",
-      username: "{env:TEST_CONFIG_VAR}",
-    })
+// Regression for #28206: malformed KILO_PERMISSION JSON used to crash
+// the app on startup with an unhandled SyntaxError. Loading the config with
+// an invalid JSON value in this env var should not throw.
+describe("KILO_PERMISSION env var", () => {
+  it.instance("does not crash when KILO_PERMISSION contains invalid JSON", () =>
+    withProcessEnv(
+      "KILO_PERMISSION",
+      "{invalid",
+      Effect.gen(function* () {
+        const config = yield* Config.use.get()
+        // Regression: load() used to throw before returning anything.
+        expect(config).toBeDefined()
+      }),
+    ),
+  )
+})
 
-    try {
-      await using tmp = await tmpdir()
-      await Instance.provide({
-        directory: tmp.path,
-        fn: async () => {
-          const config = await Config.get()
+describe("KILO_CONFIG_CONTENT token substitution", () => {
+  it.instance("substitutes {env:} tokens in KILO_CONFIG_CONTENT", () =>
+    withProcessEnv(
+      "TEST_CONFIG_VAR",
+      "test_api_key_12345",
+      withProcessEnv(
+        "KILO_CONFIG_CONTENT",
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          username: "{env:TEST_CONFIG_VAR}",
+        }),
+        Effect.gen(function* () {
+          const config = yield* Config.use.get()
           expect(config.username).toBe("test_api_key_12345")
-        },
-      })
-    } finally {
-      if (originalEnv !== undefined) {
-        process.env["OPENCODE_CONFIG_CONTENT"] = originalEnv
-      } else {
-        delete process.env["OPENCODE_CONFIG_CONTENT"]
-      }
-      if (originalTestVar !== undefined) {
-        process.env["TEST_CONFIG_VAR"] = originalTestVar
-      } else {
-        delete process.env["TEST_CONFIG_VAR"]
-      }
-    }
-  })
+        }),
+      ),
+    ),
+  )
 
-  test("substitutes {file:} tokens in OPENCODE_CONFIG_CONTENT", async () => {
-    const originalEnv = process.env["OPENCODE_CONFIG_CONTENT"]
-
-    try {
-      await using tmp = await tmpdir({
-        init: async (dir) => {
-          await Filesystem.write(path.join(dir, "api_key.txt"), "secret_key_from_file")
-          process.env["OPENCODE_CONFIG_CONTENT"] = JSON.stringify({
-            $schema: "https://opencode.ai/config.json",
-            username: "{file:./api_key.txt}",
-          })
-        },
-      })
-      await Instance.provide({
-        directory: tmp.path,
-        fn: async () => {
-          const config = await Config.get()
+  it.instance("substitutes {file:} tokens in KILO_CONFIG_CONTENT", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      yield* FSUtil.use.writeWithDirs(path.join(test.directory, "api_key.txt"), "secret_key_from_file")
+      yield* withProcessEnv(
+        "KILO_CONFIG_CONTENT",
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          username: "{file:./api_key.txt}",
+        }),
+        Effect.gen(function* () {
+          const config = yield* Config.use.get()
           expect(config.username).toBe("secret_key_from_file")
-        },
-      })
-    } finally {
-      if (originalEnv !== undefined) {
-        process.env["OPENCODE_CONFIG_CONTENT"] = originalEnv
-      } else {
-        delete process.env["OPENCODE_CONFIG_CONTENT"]
-      }
-    }
-  })
+        }),
+      )
+    }),
+  )
+})
+
+// parseManagedPlist unit tests — pure function, no OS interaction
+
+test("parseManagedPlist strips MDM metadata keys", async () => {
+  const config = ConfigParse.schema(
+    ConfigV1.Info,
+    ConfigParse.jsonc(
+      await ConfigManaged.parseManagedPlist(
+        JSON.stringify({
+          PayloadDisplayName: "OpenCode Managed",
+          PayloadIdentifier: "ai.opencode.managed.test",
+          PayloadType: "ai.opencode.managed",
+          PayloadUUID: "AAAA-BBBB-CCCC",
+          PayloadVersion: 1,
+          _manualProfile: true,
+          share: "disabled",
+          model: "mdm/model",
+        }),
+      ),
+      "test:mobileconfig",
+    ),
+    "test:mobileconfig",
+  )
+  expect(config.share).toBe("disabled")
+  expect(config.model).toBe("mdm/model")
+  // MDM keys must not leak into the parsed config
+  expect((config as any).PayloadUUID).toBeUndefined()
+  expect((config as any).PayloadType).toBeUndefined()
+  expect((config as any)._manualProfile).toBeUndefined()
+})
+
+test("parseManagedPlist parses server settings", async () => {
+  const config = ConfigParse.schema(
+    ConfigV1.Info,
+    ConfigParse.jsonc(
+      await ConfigManaged.parseManagedPlist(
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          server: { hostname: "127.0.0.1", mdns: false },
+          autoupdate: true,
+        }),
+      ),
+      "test:mobileconfig",
+    ),
+    "test:mobileconfig",
+  )
+  expect(config.server?.hostname).toBe("127.0.0.1")
+  expect(config.server?.mdns).toBe(false)
+  expect(config.autoupdate).toBe(true)
+})
+
+test("parseManagedPlist parses permission rules", async () => {
+  const config = ConfigParse.schema(
+    ConfigV1.Info,
+    ConfigParse.jsonc(
+      await ConfigManaged.parseManagedPlist(
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          permission: {
+            "*": "ask",
+            bash: { "*": "ask", "rm -rf *": "deny", "curl *": "deny" },
+            grep: "allow",
+            glob: "allow",
+            webfetch: "ask",
+            "~/.ssh/*": "deny",
+          },
+        }),
+      ),
+      "test:mobileconfig",
+    ),
+    "test:mobileconfig",
+  )
+  expect(config.permission?.["*"]).toBe("ask")
+  expect(config.permission?.grep).toBe("allow")
+  expect(config.permission?.webfetch).toBe("ask")
+  expect(config.permission?.["~/.ssh/*"]).toBe("deny")
+  const bash = config.permission?.bash as Record<string, string>
+  expect(bash?.["rm -rf *"]).toBe("deny")
+  expect(bash?.["curl *"]).toBe("deny")
+})
+
+test("parseManagedPlist parses enabled_providers", async () => {
+  const config = ConfigParse.schema(
+    ConfigV1.Info,
+    ConfigParse.jsonc(
+      await ConfigManaged.parseManagedPlist(
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          enabled_providers: ["anthropic", "google"],
+        }),
+      ),
+      "test:mobileconfig",
+    ),
+    "test:mobileconfig",
+  )
+  expect(config.enabled_providers).toEqual(["anthropic", "google"])
+})
+
+test("parseManagedPlist handles empty config", async () => {
+  const config = ConfigParse.schema(
+    ConfigV1.Info,
+    ConfigParse.jsonc(
+      await ConfigManaged.parseManagedPlist(JSON.stringify({ $schema: "https://opencode.ai/config.json" })),
+      "test:mobileconfig",
+    ),
+    "test:mobileconfig",
+  )
+  expect(config.$schema).toBe("https://opencode.ai/config.json")
 })

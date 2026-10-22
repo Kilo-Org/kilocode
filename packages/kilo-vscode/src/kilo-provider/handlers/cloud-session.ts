@@ -8,6 +8,13 @@
 import type { KiloClient, Session, TextPartInput, FilePartInput } from "@kilocode/sdk/v2/client"
 import type { CloudSessionData, EditorContext } from "../../services/cli-backend/types"
 import { getErrorMessage, sessionToWebview, mapCloudSessionMessageToWebviewMessage } from "../../kilo-provider-utils"
+import type { MessageFile } from "../message-files"
+import { type ReviewMessageData } from "../../shared/review-comments"
+import { feedbackMetadata, type BrowserFeedbackData } from "../../shared/browser-feedback"
+import { mergeInjected } from "../../shared/injected-prompt"
+import { completesWithoutStatus } from "../command-completion"
+
+const TIMEOUT = 30_000
 
 export interface CloudSessionContext {
   readonly client: KiloClient | null
@@ -17,8 +24,14 @@ export interface CloudSessionContext {
     recordMessageSessionId(messageId: string, sessionId: string): void
   }
   postMessage(msg: unknown): void
+  notify?(message: string): void
   getWorkspaceDirectory(sessionId?: string): string
   gatherEditorContext(): Promise<EditorContext>
+  runWithMessageConfirmation?<T>(
+    messageID: string | undefined,
+    label: string,
+    run: () => Promise<T>,
+  ): Promise<T | undefined>
 }
 
 /** Fetch cloud sessions list and send to webview. */
@@ -67,7 +80,7 @@ export async function handleRequestCloudSessionData(ctx: CloudSessionContext, se
   }
 
   try {
-    const result = await ctx.client.kilo.cloud.session.get({ id: sessionId })
+    const result = await ctx.client.kilo.cloud.session.get({ id: sessionId }, { signal: AbortSignal.timeout(TIMEOUT) })
     const data = result.data as CloudSessionData | undefined
     if (!data) {
       ctx.postMessage({
@@ -78,7 +91,11 @@ export async function handleRequestCloudSessionData(ctx: CloudSessionContext, se
       return
     }
 
-    const messages = (data.messages ?? []).filter((m) => m.info).map(mapCloudSessionMessageToWebviewMessage)
+    // The export can invert same-millisecond ties; order by time, then id, like the CLI DB.
+    const messages = (data.messages ?? [])
+      .filter((m) => m.info)
+      .sort((a, b) => (a.info.time?.created ?? 0) - (b.info.time?.created ?? 0) || (a.info.id < b.info.id ? -1 : 1))
+      .map(mapCloudSessionMessageToWebviewMessage)
 
     ctx.postMessage({
       type: "cloudSessionDataLoaded",
@@ -110,9 +127,12 @@ export async function handleImportAndSend(
   modelID?: string,
   agent?: string,
   variant?: string,
-  files?: Array<{ mime: string; url: string }>,
+  files?: MessageFile[],
+  review?: ReviewMessageData,
   command?: string,
   commandArgs?: string,
+  browserFeedback?: BrowserFeedbackData,
+  injectedTitle?: string,
 ): Promise<void> {
   if (!ctx.client) {
     ctx.postMessage({
@@ -123,15 +143,19 @@ export async function handleImportAndSend(
     return
   }
 
+  const client = ctx.client
   const dir = ctx.getWorkspaceDirectory()
 
   // Step 1: Import the cloud session with fresh IDs
   let session: Session | undefined
   try {
-    const result = await ctx.client.kilo.cloud.session.import({
-      sessionId: cloudSessionId,
-      directory: dir,
-    })
+    const result = await ctx.client.kilo.cloud.session.import(
+      {
+        sessionId: cloudSessionId,
+        directory: dir,
+      },
+      { signal: AbortSignal.timeout(TIMEOUT) },
+    )
     session = result.data as Session | undefined
   } catch (error) {
     console.error("[Kilo New] KiloProvider: ❌ Cloud session import failed:", error)
@@ -163,38 +187,59 @@ export async function handleImportAndSend(
   })
 
   // Step 2: Send the user's message/command on the new local session
+  const run = ctx.runWithMessageConfirmation ?? ((_id, _label, fn) => fn())
   try {
-    if (messageID) {
-      ctx.connectionService.recordMessageSessionId(messageID, session.id)
-    }
+    await run(messageID, "Cloud import send", async () => {
+      if (messageID) {
+        ctx.connectionService.recordMessageSessionId(messageID, session.id)
+      }
 
-    if (command) {
-      const parts = files?.map((f) => ({ type: "file" as const, mime: f.mime, url: f.url }))
-      await ctx.client.session.command(
-        {
-          sessionID: session.id,
-          directory: dir,
-          command,
-          arguments: commandArgs ?? "",
-          messageID,
-          model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
-          agent,
-          variant,
-          parts,
-        },
-        { throwOnError: true },
-      )
-    } else {
+      if (command) {
+        const parts = files?.map((f) => ({
+          type: "file" as const,
+          mime: f.mime,
+          url: f.url,
+          filename: f.filename,
+          source: f.source,
+        }))
+        const result = await client.session.command(
+          {
+            sessionID: session.id,
+            directory: dir,
+            command,
+            arguments: commandArgs ?? "",
+            messageID,
+            model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
+            agent,
+            variant,
+            parts,
+          },
+          { throwOnError: true },
+        )
+        if (command === "goal" && !commandArgs?.trim()) {
+          const message = result.data.parts
+            .filter((part) => part.type === "text")
+            .map((part) => part.text)
+            .join("\n")
+          if (message) ctx.notify?.(message)
+        }
+        return
+      }
+
       const parts: Array<TextPartInput | FilePartInput> = []
       if (files) {
         for (const f of files) {
-          parts.push({ type: "file", mime: f.mime, url: f.url })
+          parts.push({ type: "file", mime: f.mime, url: f.url, filename: f.filename, source: f.source })
         }
       }
-      parts.push({ type: "text", text })
+      parts.push({
+        type: "text",
+        text,
+        metadata: mergeInjected(feedbackMetadata(review, browserFeedback), injectedTitle),
+      })
 
       const editorContext = await ctx.gatherEditorContext()
-      await ctx.client.session.promptAsync(
+      await client.session.promptAsync(
         {
           sessionID: session.id,
           directory: dir,
@@ -207,6 +252,9 @@ export async function handleImportAndSend(
         },
         { throwOnError: true },
       )
+    })
+    if (messageID && command && completesWithoutStatus(command)) {
+      ctx.postMessage({ type: "sessionCommandCompleted", messageID })
     }
   } catch (err) {
     console.error("[Kilo New] Failed to send message after cloud import:", err)
@@ -218,6 +266,8 @@ export async function handleImportAndSend(
       draftID: session.id,
       messageID,
       files,
+      review: command ? undefined : review,
+      browserFeedback: command ? undefined : browserFeedback,
     })
   }
 }

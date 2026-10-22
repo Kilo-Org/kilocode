@@ -9,6 +9,7 @@
 import { watch, chmodSync } from "node:fs"
 import { join, relative } from "node:path"
 import { $ } from "bun"
+import { copySandboxResources, copyTreeSitterResources } from "../src/services/cli-backend/cli-resources"
 
 const kiloVscodeDir = join(import.meta.dir, "..")
 const packagesDir = join(kiloVscodeDir, "..")
@@ -57,6 +58,8 @@ async function rebuild() {
 
     await $`mkdir -p ${targetBinDir}`
     await $`cp ${source} ${targetBinPath}`
+    await copyTreeSitterResources(source, targetBinPath)
+    await copySandboxResources(source, targetBinPath)
     chmodSync(targetBinPath, 0o755)
 
     const elapsed = ((performance.now() - start) / 1000).toFixed(1)
@@ -80,9 +83,8 @@ let timer: ReturnType<typeof setTimeout> | null = null
 
 watch(opencodeSrcDir, { recursive: true }, (_event, filename) => {
   if (!filename) return
-  // Skip non-source files and build-generated files
+  // Skip test files
   if (filename.endsWith(".test.ts") || filename.endsWith(".test.tsx")) return
-  if (filename.includes("models-snapshot")) return
 
   if (timer) clearTimeout(timer)
   timer = setTimeout(() => {

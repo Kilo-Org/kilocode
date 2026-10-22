@@ -26,13 +26,6 @@ Click the Kilo Code icon ({% kiloCodeIcon /%}) in VS Code's Primary Side Bar to 
 Open your terminal and run `kilo` to launch the interactive terminal interface (TUI). You'll see a prompt where you can start typing requests immediately. The TUI is fully keyboard-driven — no mouse required.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-Find the Kilo Code icon ({% kiloCodeIcon /%}) in VS Code's Primary Side Bar. Click it to open the chat panel.
-
-**Lost the panel?** Go to View > Open View... and search for "Kilo Code"
-
-{% /tab %}
 {% /tabs %}
 
 ## How to Talk to Kilo Code
@@ -70,11 +63,34 @@ Find the Kilo Code icon ({% kiloCodeIcon /%}) in VS Code's Primary Side Bar. Cli
 - **Input prompt** - Type your requests and press Enter to send
 - **Action buttons** - Approve or reject proposed changes, answer questions
 - **Agent dropdown** - Switch between agents (e.g. Code, Ask, Plan) from the sidebar
-- **Session management** - Start new sessions or resume previous ones
+- **Session management** - Start new sessions or [search and resume previous ones](/docs/code-with-ai/agents/session-history)
 
 **Providing context:**
 
-The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file autocomplete suggestions, or mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
+The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file and terminal autocomplete suggestions. Use `@filename` to attach a file. In the sidebar, `@terminal` includes the active VS Code terminal output. In Agent Manager, it includes the focused terminal for the selected session or worktree, including embedded **Run** and **Setup** tabs. You can also mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
+
+**Exporting local transcripts:**
+
+Run `/export` in chat, or open a local session's **History** context menu and choose **Export session transcript**. The save dialog lets you choose the Markdown (`.md`) destination.
+
+Kilo builds the export from the complete local session history, not only the messages currently loaded in the chat view.
+
+**Renaming sessions:**
+
+Double-click the current session title at the top of the chat to edit it inline. Press `Enter` or click outside the field to save, or press `Escape` to cancel.
+
+You can also rename local sessions from **History** using the edit button or the session's context menu.
+
+**Switching session tabs:**
+
+When more than one session is open, the sidebar and Kilo editor tabs show a session tab strip. Use these shortcuts while the chat has focus:
+
+| Shortcut (macOS) | Shortcut (Windows/Linux) | Action |
+|---|---|---|
+| `Cmd+Alt+Left` / `Right` | `Ctrl+Alt+Left` / `Right` | Previous / next session tab |
+| `Cmd+Shift+Left` / `Right` | `Ctrl+Shift+Left` / `Right` | Move the focused session tab left / right |
+
+Hover a session tab next to the active tab to see its shortcut. When the prompt is empty, its placeholder also shows the shortcut. To hide these prompt hints, turn off **Show shortcut hints** in **Settings > Display**. To change the keys, search for **Previous Session Tab** or **Next Session Tab** in **Keyboard Shortcuts**. These are the same keys that switch tabs in the Agent Manager, and each window acts on the surface that has focus.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -84,7 +100,7 @@ The extension automatically passes context from your editor, including your open
 - **Input prompt** - Type your requests and press Enter to send
 - **Action buttons** - Approve or reject proposed changes, answer questions
 - **Agent cycling** - Switch between agents using keybinds or slash commands
-- **Session management** - Start new sessions or resume previous ones
+- **Session management** - Start new sessions or [search and resume previous ones](/docs/code-with-ai/agents/session-history)
 - **New task** - Start a new task, available using the `+` button at the top or `New Task` button above the chat input
 - **Worktree** - Continue the current task with it's git state and session history in the Agent Manager in an isolated worktree
 - **File changes** - Shows the number of lines changed and opens a diff view
@@ -92,30 +108,6 @@ The extension automatically passes context from your editor, including your open
 **Providing context:**
 
 Type `@` in the TUI to get file autocomplete suggestions, or mention file paths directly in your message (e.g., "look at src/utils.ts") and the agent will read them. When using the non-interactive `kilo run` command, you can pass `-f path/to/file.ts` to explicitly include files. The agent can also discover files on its own using its built-in tools.
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-{% image src="/docs/img/the-chat-interface/the-chat-interface-1.png" alt="Chat interface components labeled with callouts" width="800" caption="Everything you need is right here" /%}
-
-**Essential controls:**
-
-- **Chat history** - See your conversation and task history
-- **Input field** - Type your requests here (press Enter to send)
-- **Action buttons** - Approve or reject Kilo's proposed changes
-- **Plus button** - Start a new task session
-- **Mode selector** - Choose how Kilo should approach your task
-
-**Providing context with @-mentions:**
-
-Reference files and other context directly in your message using `@`:
-
-- `@file` - Reference a specific file
-- `@url` - Include content from a URL
-- `@problems` - Include current VS Code problems
-- `@terminal` - Include terminal output
-- `@git-changes` - Include uncommitted changes
-- `@commit` - Reference a specific commit
 
 {% /tab %}
 {% /tabs %}
@@ -128,6 +120,8 @@ Reference files and other context directly in your message using `@`:
 - URLs → Opens in browser
 - Messages → Expand/collapse details
 - Code blocks → Copy button appears
+- Mermaid code blocks → Fenced `mermaid` blocks render as diagrams after the message finishes streaming. The source remains copyable, invalid Mermaid syntax stays visible in a contained error state, and the Zoom action opens a fullscreen viewer with zoom and pan controls.
+- Charts → In VS Code, asking for a chart, graph, or plot renders an inline chart in the conversation. Supported types include bar, line, scatter, pie, doughnut, radar, bubble, and polar area. Diagrams and flowcharts still render as Mermaid.
 
 **Status signals:**
 
@@ -137,12 +131,12 @@ Reference files and other context directly in your message using `@`:
 
 ## Common Mistakes to Avoid
 
-| Instead of this...                | Try this                                                                            |
-| --------------------------------- | ----------------------------------------------------------------------------------- |
-| "Fix the code"                    | "Fix the bug in `calculateTotal` that returns incorrect results"                    |
-| Assuming Kilo knows context       | Use `@` to reference specific files                                                 |
-| Multiple unrelated tasks          | Submit one focused request at a time                                                |
-| Technical jargon overload         | Clear, straightforward language works best                                          |
+| Instead of this... | Try this |
+|---|---|
+| "Fix the code" | "Fix the bug in `calculateTotal` that returns incorrect results" |
+| Assuming Kilo knows context | Use `@` to reference specific files |
+| Multiple unrelated tasks | Submit one focused request at a time |
+| Technical jargon overload | Clear, straightforward language works best |
 | Using chat for tiny code changes. | Use [autocomplete](/docs/code-with-ai/features/autocomplete) for inline completions |
 
 **Why it matters:** Kilo Code works best when you communicate like you're talking to a smart teammate who needs clear direction.
@@ -156,12 +150,6 @@ When Kilo Code needs more information to complete a task, it asks a follow-up qu
 1. **Question Appears** - Kilo Code asks a question using the `question` tool
 2. **Options Displayed** - Selectable options are presented that you can choose from
 3. **Selection** - Pick an option or type a custom response
-
-{% callout type="info" title="VSCode (Legacy)" collapsed=true %}
-In the legacy extension, Kilo Code uses the `ask_followup_question` tool instead. Suggestions appear as clickable buttons below the question. You can click a button to send the answer directly, or hold `Shift` and click (or click the pencil icon {% codicon name="edit" /%}) to copy the suggestion into the input box for editing before sending.
-
-{% image src="/docs/img/suggested-responses/suggested-responses.png" alt="Example of Kilo Code asking a question with suggested response buttons below it" width="800" caption="Suggested responses appear as clickable buttons below questions" /%}
-{% /callout %}
 
 **Benefits:**
 
@@ -203,19 +191,6 @@ This feature streamlines the interaction when Kilo Code requires clarification, 
 
 {% callout type="tip" %}
 **The TUI is keyboard-driven.** Navigate, approve changes, and switch agents entirely from the keyboard — no mouse needed.
-{% /callout %}
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-{% callout type="tip" %}
-**Move Kilo Code to the Secondary Side Bar** for a better layout. Right-click on the Kilo Code icon in the Activity Bar and select **Move To → Secondary Side Bar**. This lets you see the Explorer, Search, Source Control, etc. alongside Kilo Code.
-
-{% image src="/docs/img/move-to-secondary.png" alt="Move to Secondary Side Bar" width="600" caption="Move Kilo Code to the Secondary Side Bar for better workspace organization" /%}
-{% /callout %}
-
-{% callout type="tip" %}
-**Drag files directly into chat.** Once you have Kilo Code in a separate sidebar from the file explorer, you can drag files from the explorer into the chat window (even multiple at once). Just hold down the Shift key after you start dragging the files.
 {% /callout %}
 
 {% /tab %}

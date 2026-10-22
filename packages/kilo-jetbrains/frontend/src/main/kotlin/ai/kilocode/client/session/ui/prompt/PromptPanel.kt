@@ -1,0 +1,1379 @@
+package ai.kilocode.client.session.ui.prompt
+
+import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.actions.CycleModeAction
+import ai.kilocode.client.actions.CycleModelAction
+import ai.kilocode.client.actions.CycleReasoningAction
+import ai.kilocode.client.actions.KiloSettingsAction
+import ai.kilocode.client.actions.ResetModelAction
+import ai.kilocode.client.actions.SendPromptAction
+import ai.kilocode.client.actions.StopSessionAction
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SpinnerIcon
+import ai.kilocode.client.session.ui.ReasoningPicker
+import ai.kilocode.client.session.ui.SessionRootPanel
+import ai.kilocode.client.session.model.PromptAttachment
+import ai.kilocode.client.session.model.PromptAttachmentExtractor
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.ui.mode.ModePicker
+import ai.kilocode.client.session.ui.model.ModelPicker
+import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.editor.EditorFolds
+import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.iconButton
+import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
+import ai.kilocode.log.ChatLogSummary
+import ai.kilocode.log.KiloLog
+import ai.kilocode.rpc.dto.PromptPartDto
+import com.intellij.icons.AllIcons
+import com.intellij.codeInsight.completion.CodeCompletionHandlerBase
+import com.intellij.codeInsight.completion.CompletionType
+import com.intellij.codeInsight.lookup.LookupEx
+import com.intellij.codeInsight.lookup.LookupManager
+import com.intellij.codeInsight.lookup.LookupManagerListener
+import com.intellij.codeInsight.lookup.LookupPositionStrategy
+import com.intellij.codeInsight.lookup.LookupPresentation
+import com.intellij.ide.DataManager
+import com.intellij.ide.dnd.DnDEvent
+import com.intellij.ide.dnd.DnDSupport
+import com.intellij.ide.dnd.FileCopyPasteUtil
+import com.intellij.openapi.actionSystem.ActionGroup
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ActionUiKind
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.UiDataProvider
+import com.intellij.openapi.actionSystem.ex.ActionUtil
+import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.openapi.ui.popup.PopupShowOptions
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.Document
+import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
+import com.intellij.openapi.editor.colors.CodeInsightColors
+import com.intellij.openapi.editor.colors.TextAttributesKey
+import com.intellij.openapi.editor.event.CaretEvent
+import com.intellij.openapi.editor.event.CaretListener
+import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.editor.event.DocumentListener
+import com.intellij.openapi.editor.ex.EditorEx
+import com.intellij.openapi.editor.markup.HighlighterLayer
+import com.intellij.openapi.editor.markup.HighlighterTargetArea
+import com.intellij.openapi.editor.markup.RangeHighlighter
+import com.intellij.openapi.keymap.Keymap
+import com.intellij.openapi.keymap.KeymapManagerListener
+import com.intellij.openapi.keymap.KeymapUtil
+import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.IconLoader
+import com.intellij.ui.IslandsState
+import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.xml.util.XmlStringUtil
+import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
+import com.intellij.util.ui.components.BorderLayoutPanel
+import com.intellij.util.messages.MessageBusConnection
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.awt.BasicStroke
+import java.awt.BorderLayout
+import java.awt.Component
+import java.awt.Cursor
+import java.awt.Dimension
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
+import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.Transferable
+import java.awt.event.FocusAdapter
+import java.awt.event.FocusEvent
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
+import java.awt.geom.Path2D
+import java.util.concurrent.Future
+import javax.swing.Box
+import javax.swing.BoxLayout
+import javax.swing.Icon
+import javax.swing.JButton
+import javax.swing.JComponent
+import javax.swing.ScrollPaneConstants
+import javax.swing.SwingUtilities
+
+/**
+ * Prompt input panel with a borderless IntelliJ editor text field and
+ * mode/model controls in the full bottom session area.
+ */
+class PromptPanel(
+    private val project: Project,
+    private val onSend: (String, List<PromptPartDto>) -> Unit,
+    private val onAbort: () -> Unit,
+    private val onEnhance: (String, (Result<String>) -> Unit) -> Unit = { _, _ -> },
+    private val onMentions: suspend (String) -> List<PromptPartDto> = { emptyList() },
+    private val completion: KiloPromptCompletionProvider? = null,
+    private val selection: SessionSelection? = null,
+    private val cs: CoroutineScope = CoroutineScope(Dispatchers.Default),
+    private val rounded: Boolean = true,
+    private val showSubmit: Boolean = true,
+    private val approve: Boolean = true,
+    private val showEnhance: Boolean = true,
+    private val hostedInEditorTab: Boolean = false,
+) : BorderLayoutPanel(), SessionEditorStyleTarget, SendPromptContext, PromptSelectors, UiDataProvider {
+
+    companion object {
+        private val LOG = KiloLog.create(PromptPanel::class.java)
+        private val SEND_ICON: Icon = IconLoader.getIcon("/icons/send.svg", PromptPanel::class.java)
+        private val STOP_ICON: Icon = AllIcons.Actions.Suspend
+        private val SHIELD_ICON: Icon = IconLoader.getIcon("/icons/shield.svg", PromptPanel::class.java)
+        private val SHIELD_FILLED_ICON: Icon = IconLoader.getIcon("/icons/shield-filled.svg", PromptPanel::class.java)
+        private val WAND_ICON: Icon = IconLoader.getIcon("/icons/wand-sparkles.svg", PromptPanel::class.java)
+        private val MENTION_KEY = DefaultLanguageHighlighterColors.METADATA
+        private val COMMAND_KEY = DefaultLanguageHighlighterColors.KEYWORD
+        private val INVALID_KEY = CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES
+    }
+
+    // Prompt-bar pickers blend into the prompt background when idle and only show the standard
+    // hover fill on pointer-over (idleFill = null paints nothing behind the label).
+    override val mode = ModePicker().apply { idleFill = null }
+    override val model = ModelPicker().apply {
+        placement = ModelPicker.Placement.ABOVE
+        idleFill = null
+    }
+    override val reasoning = ReasoningPicker().apply { idleFill = null }
+    var onReset: () -> Unit = {}
+    var onChange: () -> Unit = {}
+    var onAutoApproveToggle: (Boolean) -> Unit = {}
+    var onFileDrag: (Boolean) -> Unit = {}
+    private var style = SessionEditorStyle.current()
+    private var focused = false
+    private val shell = BorderLayoutPanel().apply {
+        isOpaque = false
+        border = JBUI.Borders.empty(
+            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
+        )
+    }
+    private val attachments = mutableListOf<PromptAttachment>()
+    // The most recently submitted text + attachments, kept around so a send that the server
+    // rejects or that fails after the client already got a 2xx (prompt_async's async
+    // session.error) can be put back in the editor. Without this, clear() on submit followed
+    // by a failure permanently loses whatever the user typed -- there is no draft store or
+    // prompt history to fall back on.
+    private var lastSubmission: Pair<String, List<PromptAttachment>>? = null
+    // What restoreLastSubmission() put back, so it can be dropped again if the send turns out to
+    // have been persisted after all -- but only while the user has not touched it.
+    private var restoredSubmission: Pair<String, List<PromptAttachment>>? = null
+    private val highlighters = mutableListOf<RangeHighlighter>()
+    private val folds: EditorFolds = EditorFolds(live = { editor.getEditor(false) }, resize = ::syncEditorHeight)
+    private val strip = PromptAttachmentStrip(project) { removeAttachment(it) }
+    private var bus: MessageBusConnection? = null
+    private var lookupBus: MessageBusConnection? = null
+    private var commandJob: Job? = null
+    private var completionAction: AnAction? = null
+    private var completionTarget: JComponent? = null
+    private var mentionCaret = false
+    private var autoApprove = false
+    private var attachment = true
+    private var submitting = false
+    private var root: SessionRootPanel? = null
+    private val resize = object : ComponentAdapter() {
+        override fun componentResized(e: ComponentEvent) {
+            syncEditorHeight()
+        }
+    }
+
+    private val editor = PromptEditorTextField(project, this, completion, selection).apply {
+        border = JBUI.Borders.empty()
+        setFontInheritedFromLAF(false)
+        setPlaceholder(placeholder())
+        setShowPlaceholderWhenFocused(true)
+        setOneLineMode(false)
+        addSettingsProvider { ed ->
+            chrome(ed)
+            ed.settings.isUseSoftWraps = true
+            ed.settings.isPaintSoftWraps = false
+            ed.settings.isAdditionalPageAtBottom = false
+            ed.settings.setBlockCursor(false)
+            SpellCheckingEditorCustomizationProvider.getInstance().getDisabledCustomization()?.customize(ed)
+            ed.putUserData(PROMPT_ATTACHMENT_PASTE_HANDLER_KEY, PromptAttachmentPasteHandler { processPaste(it) })
+            ed.putUserData(PROMPT_TEXT_PASTE_HANDLER_KEY, PromptTextPasteHandler { handlePastedText(ed, it) })
+            ed.setHorizontalScrollbarVisible(false)
+            ed.scrollPane.verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
+            ed.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+            installCompletionShortcut(ed)
+            completion?.let { MentionNavigator(ed, it).install() }
+            installFileDrop(ed.contentComponent, "editor")
+            installFileDrop(ed.scrollPane, "scroll")
+            syncHighlights()
+            folds.install(ed)
+            ed.caretModel.addCaretListener(object : CaretListener {
+                override fun caretPositionChanged(e: CaretEvent) {
+                    val provider = completion ?: return
+                    val inside = provider.inside(ed.document.text, ed.caretModel.offset)
+                    if (mentionCaret == inside) return
+                    mentionCaret = inside
+                    syncHighlights()
+                }
+            })
+            ed.contentComponent.addFocusListener(object : FocusAdapter() {
+                override fun focusGained(e: FocusEvent) {
+                    syncFocus(true)
+                }
+
+                override fun focusLost(e: FocusEvent) {
+                    syncFocus(false)
+                }
+            })
+        }
+    }
+
+    private val button: SendButton = SendButton().apply {
+        icon = SEND_ICON
+        isFocusPainted = false
+        addActionListener {
+            syncTooltip()
+            val id = if (stopping()) StopSessionAction.ID else SendPromptAction.ID
+            val action = ActionManager.getInstance().getAction(id)
+                ?: return@addActionListener
+            val ctx = DataManager.getInstance().getDataContext(button)
+            val event = AnActionEvent.createEvent(action, ctx, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null)
+            ActionUtil.updateAction(action, event)
+            ActionUtil.performAction(action, event)
+        }
+    }
+
+    private val reset = HoverIcon().apply {
+        icon = AllIcons.Actions.Cancel
+        toolTipText = resetTooltip()
+        accessibleContext.accessibleName = KiloBundle.message("model.picker.reset")
+        isVisible = false
+        addActionListener { onReset() }
+    }
+
+    private val auto = AutoApproveButton().apply {
+        icon = SHIELD_ICON
+        addActionListener { onAutoApproveToggle(!autoApprove) }
+    }
+
+    private var issues = emptyList<SessionIssue>()
+    private val issuesButton = HoverIcon().apply {
+        icon = AllIcons.General.Warning
+        toolTipText = KiloBundle.message("prompt.issues.title")
+        accessibleContext.accessibleName = toolTipText
+        isVisible = false
+        addActionListener { showIssues() }
+    }
+    private val issuesSlot = issuesButton.align(HAlign.RIGHT, VAlign.TOP).apply { isVisible = false }
+
+    /**
+     * Opens the Kilo.Session.PromptMenu popup (auto-approve, sharing, Core). Resolves its context from
+     * DataManager, so it reads live SessionActionsKeys.ACTIONS from the session ancestor chain rather
+     * than needing SessionUi to wire anything through this panel directly.
+     */
+    private val menu = HoverIcon().apply {
+        icon = AllIcons.Actions.More
+        toolTipText = KiloBundle.message("prompt.action.menu")
+        accessibleContext.accessibleName = KiloBundle.message("prompt.action.menu")
+        addActionListener { showMenu() }
+    }
+
+    private val enhancingIcon = SpinnerIcon.icon
+    private val enhance = HoverIcon().apply {
+        icon = WAND_ICON
+        toolTipText = KiloBundle.message("prompt.action.enhance")
+        accessibleContext.accessibleName = KiloBundle.message("prompt.action.enhance")
+        addActionListener { enhance() }
+    }
+    private val separator = object : JComponent() {
+        override fun getPreferredSize() = JBUI.size(1, 16)
+        override fun getMinimumSize() = preferredSize
+        override fun getMaximumSize() = preferredSize
+    }.apply {
+        alignmentY = Component.CENTER_ALIGNMENT
+        border = JBUI.Borders.customLineLeft(SessionUiStyle.View.Prompt.separator())
+    }
+
+    @Volatile
+    private var busy = false
+    private var ready = false
+    private var enhancing = false
+    private var request = 0L
+    private var deferred = false
+
+    override val isSendEnabled: Boolean
+        get() = ready && !submitting && (text().isNotEmpty() || attachments.isNotEmpty())
+
+    override val isStopEnabled: Boolean
+        get() = busy
+
+    override val resettable: Boolean
+        get() = reset.isVisible
+
+    override fun resetModel() {
+        if (reset.isVisible) onReset()
+    }
+
+    init {
+        applyStyle(style)
+        syncBorder()
+        selection?.register(editor)
+        mode.onPickClose = ::focusLater
+        model.onPickClose = ::focusLater
+        reasoning.onPickClose = ::focusLater
+        mode.action = CycleModeAction.ID
+        model.action = CycleModelAction.ID
+        reasoning.action = CycleReasoningAction.ID
+        editor.text = ""
+        editor.addDocumentListener(object : DocumentListener {
+            override fun documentChanged(e: DocumentEvent) {
+                invalidateEnhancement()
+                if (e.document.isInBulkUpdate) {
+                    deferEditorSync()
+                    syncButton()
+                    onChange()
+                    return
+                }
+                folds.sync()
+                syncEditorHeight()
+                triggerCompletion(e)
+                syncHighlights()
+                syncButton()
+                onChange()
+            }
+
+            override fun bulkUpdateFinished(document: Document) {
+                deferEditorSync()
+            }
+        })
+        shell.add(strip, BorderLayout.NORTH)
+        val input = BorderLayoutPanel().apply {
+            isOpaque = false
+            add(editor, BorderLayout.CENTER)
+            add(issuesSlot, BorderLayout.EAST)
+        }
+        shell.add(input, BorderLayout.CENTER)
+
+        val bar = BorderLayoutPanel().apply {
+            layout = BoxLayout(this, BoxLayout.X_AXIS)
+            isOpaque = false
+            border = JBUI.Borders.emptyTop(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP))
+        }
+        bar.add(mode)
+        bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+        bar.add(model)
+        bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+        bar.add(reasoning)
+        bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+        bar.add(reset)
+        bar.add(Box.createHorizontalGlue())
+        if (approve) {
+            bar.add(menu)
+            bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+            bar.add(auto)
+            bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+        }
+        if (showEnhance) bar.add(enhance)
+        if (showSubmit) {
+            bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+            bar.add(separator)
+            bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+            bar.add(button)
+        }
+        shell.add(bar, BorderLayout.SOUTH)
+        add(shell, BorderLayout.CENTER)
+        addComponentListener(resize)
+        installFileDrop(shell, "shell")
+        syncTooltip()
+        syncAutoApprove()
+        syncEnhance()
+    }
+
+    override fun updateUI() {
+        super.updateUI()
+        syncBorder()
+    }
+
+    override fun getPreferredSize(): Dimension = promptSize(super.getPreferredSize())
+
+    override fun getMinimumSize(): Dimension = promptSize(super.getMinimumSize())
+
+    override fun getMaximumSize(): Dimension = Dimension(super.getMaximumSize().width, preferredSize.height)
+
+    private fun syncFocus(value: Boolean) {
+        if (focused == value) {
+            repaint()
+            return
+        }
+        focused = value
+        syncBorder()
+        revalidate()
+        repaint()
+    }
+
+    private fun syncBorder() {
+        border = JBUI.Borders.compound(
+            if (focused) {
+                JBUI.Borders.emptyTop(JBUI.scale(1))
+            } else {
+                JBUI.Borders.customLineTop(SessionUiStyle.View.Prompt.separator())
+            },
+            JBUI.Borders.empty(0, focusInset(), focusInset(), focusInset()),
+        )
+    }
+
+    private fun focusInset() = if (hostedInEditorTab) JBUI.scale(SessionUiStyle.View.Prompt.FOCUS_WIDTH) else 0
+
+    private fun promptSize(size: Dimension): Dimension {
+        val chrome = (shell.preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
+        val ins = insets
+        return Dimension(size.width, editor.preferredSize.height + chrome + ins.top + ins.bottom)
+    }
+
+    override fun paintComponent(g: Graphics) {
+        val g2 = g.create() as Graphics2D
+        try {
+            g2.color = SessionUiStyle.Colors.sessionBackground()
+            g2.fillRect(0, 0, width, height)
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            g2.color = SessionUiStyle.View.Prompt.bgColor(style)
+            g2.fill(surface(0f))
+        } finally {
+            g2.dispose()
+        }
+    }
+
+    override fun paintChildren(g: Graphics) {
+        super.paintChildren(g)
+        if (!editorFocused()) return
+        val g2 = g.create() as Graphics2D
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            val line = JBUI.scale(SessionUiStyle.View.Prompt.FOCUS_WIDTH)
+            g2.color = JBUI.CurrentTheme.Focus.focusColor()
+            g2.stroke = BasicStroke(line.toFloat(), BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND)
+            g2.draw(surface(line / 2f))
+        } finally {
+            g2.dispose()
+        }
+    }
+
+    private fun surface(inset: Float): Path2D.Float {
+        val top = inset
+        val left = inset + insets.left
+        val right = width - inset - insets.right
+        val bottom = height - inset - insets.bottom
+        val arc = if (rounded && IslandsState.isEnabled()) {
+            JBUI.scale(JBUI.getInt("Island.arc", SessionUiStyle.View.Prompt.CORNER_ARC)) / 2f
+        } else {
+            0f
+        }
+        val radius = arc
+            .coerceAtMost((right - left) / 2f)
+            .coerceAtMost(bottom - top)
+            .coerceAtLeast(0f)
+        return Path2D.Float().apply {
+            moveTo(left, top)
+            lineTo(right, top)
+            lineTo(right, bottom - radius)
+            if (radius > 0f) {
+                quadTo(right, bottom, right - radius, bottom)
+                lineTo(left + radius, bottom)
+                quadTo(left, bottom, left, bottom - radius)
+            } else {
+                lineTo(right, bottom)
+                lineTo(left, bottom)
+            }
+            closePath()
+        }
+    }
+
+    private fun editorFocused(): Boolean {
+        val ed = editor.getEditor(false) ?: return editor.hasFocus()
+        return editor.hasFocus() || ed.contentComponent.hasFocus()
+    }
+
+    @RequiresEdt
+    private fun chrome(ed: EditorEx) {
+        if (ed.isDisposed) return
+        style.applyPromptToEditor(ed, SessionUiStyle.View.Prompt.bgColor(style))
+        if (ed.isDisposed) return
+    }
+
+    @RequiresEdt
+    fun setReady(value: Boolean) {
+        ready = value
+        if (value) completion?.prewarm()
+        if (!value) invalidateEnhancement() else syncEnhance()
+    }
+
+    @RequiresEdt
+    fun setAttachmentEnabled(value: Boolean) {
+        attachment = value
+    }
+
+    @RequiresEdt
+    fun setBusy(value: Boolean) {
+        busy = value
+        if (value) invalidateEnhancement() else syncEnhance()
+        syncButton()
+    }
+
+    @RequiresEdt
+    fun setAutoApprove(value: Boolean) {
+        if (autoApprove == value) return
+        autoApprove = value
+        syncAutoApprove()
+    }
+
+    @RequiresEdt
+    fun setResetVisible(value: Boolean) {
+        reset.isVisible = value
+        revalidate()
+        repaint()
+    }
+
+    @RequiresEdt
+    internal fun setIssues(value: List<SessionIssue>) {
+        issues = value
+        val visible = value.isNotEmpty()
+        issuesButton.isVisible = visible
+        issuesSlot.isVisible = visible
+        revalidate()
+        repaint()
+    }
+
+    @RequiresEdt
+    fun text(): String = editor.text.trim()
+
+    @RequiresEdt
+    fun hasDraft(): Boolean = text().isNotEmpty() || attachments.isNotEmpty()
+
+    @RequiresEdt
+    fun attachments(): List<PromptAttachment> = attachments.toList()
+
+    @RequiresEdt
+    fun setText(value: String) {
+        editor.text = value
+        syncEditorHeight()
+        syncHighlights()
+    }
+
+    // Replaces the whole draft (text and attachments) at once, used to refill the box from a
+    // reverted message. Attachment chips are cleared first so the result is exactly [items].
+    @RequiresEdt
+    fun setDraft(text: String, items: List<PromptAttachment>) {
+        if (this.text() == text.trim() && attachments == items) return
+        setText(text)
+        attachments.clear()
+        strip.clear()
+        items.forEach(::addAttachment)
+        syncEditorHeight()
+        syncButton()
+    }
+
+    @RequiresEdt
+    override fun send() {
+        submit("action")
+    }
+
+    @RequiresEdt
+    override fun stop() {
+        if (!isStopEnabled) return
+        onAbort()
+    }
+
+    internal fun inputFont() = editor.font
+
+    internal fun resetVisibleForTest() = reset.isVisible
+
+    internal fun resetForTest(): JComponent = reset
+
+    internal fun issuesForTest(): List<SessionIssue> = issues
+
+    internal fun issuesButtonForTest(): JComponent = issuesButton
+
+    internal fun shellForTest(): JComponent = shell
+
+    internal fun buttonForTest(): JButton = button
+
+    internal fun attachmentCountForTest(): Int = attachments.size
+
+    internal val defaultFocusedComponent: JComponent get() = editor
+
+    override fun uiDataSnapshot(sink: DataSink) {
+        selection?.provideCopy(sink) { editor.text }
+        sink[PromptDataKeys.SELECTORS] = this
+    }
+
+    @RequiresEdt
+    override fun applyStyle(style: SessionEditorStyle) {
+        this.style = style
+        val bg = SessionUiStyle.View.Prompt.bgColor(style)
+        background = bg
+        shell.background = bg
+        style.applyTranscriptToField(editor)
+        editor.getEditor(false)?.let(::chrome)
+        editor.background = bg
+        syncEditorHeight()
+        syncAutoApprove()
+        syncHighlights()
+    }
+
+    @RequiresEdt
+    fun refreshHighlights() {
+        syncHighlights()
+    }
+
+    // Puts the most recently submitted prompt back in the editor after the server rejected it
+    // or the send failed, so the user doesn't lose what they typed. A no-op once consumed, or
+    // if the user already started a new draft in the meantime (we must not clobber that).
+    @RequiresEdt
+    fun restoreLastSubmission() {
+        val (text, items) = lastSubmission ?: return
+        lastSubmission = null
+        if (hasDraft()) return
+        setText(text)
+        items.forEach(::addAttachment)
+        restoredSubmission = text to items
+    }
+
+    // Drops a restored draft once the send is confirmed to have been persisted. Only clears while
+    // the draft still matches what was restored, so a user edit made in the meantime is kept.
+    @RequiresEdt
+    fun discardRestoredSubmission() {
+        val (text, items) = restoredSubmission ?: return
+        restoredSubmission = null
+        if (this.text() != text || attachments != items) return
+        clear()
+    }
+
+    // Drops the retained submission once the send is confirmed. A pasted image is held as a full
+    // base64 data URL, so keeping it past the point where it could still be restored would pin
+    // megabytes per send for the lifetime of the panel.
+    @RequiresEdt
+    fun clearLastSubmission() {
+        lastSubmission = null
+    }
+
+    @RequiresEdt
+    fun clear() {
+        editor.text = ""
+        folds.clear()
+        attachments.clear()
+        completion?.clearMentions()
+        completion?.prewarm()
+        strip.clear()
+        restoredSubmission = null
+        syncEditorHeight()
+        syncHighlights()
+        syncButton()
+    }
+
+    @RequiresEdt
+    private fun syncHighlights() {
+        val provider = completion ?: return
+        val ed = editor.getEditor(false) ?: return
+        highlighters.forEach(ed.markupModel::removeHighlighter)
+        highlighters.clear()
+        val length = ed.document.textLength
+        val text = ed.document.text
+        val caret = ed.caretModel.offset
+        provider.validate(text, caret) {
+            ApplicationManager.getApplication().invokeLater {
+                if (!project.isDisposed) refreshHighlights()
+            }
+        }
+        provider.highlights(text, caret).forEach { item ->
+            val start = item.start.coerceIn(0, length)
+            val end = item.end.coerceIn(start, length)
+            if (start == end) return@forEach
+            highlighters += ed.markupModel.addRangeHighlighter(
+                key(item.kind),
+                start,
+                end,
+                HighlighterLayer.SYNTAX + 1,
+                HighlighterTargetArea.EXACT_RANGE,
+            )
+        }
+        mentionCaret = provider.inside(text, caret)
+    }
+
+    private fun key(kind: KiloPromptCompletionProvider.HighlightKind): TextAttributesKey = when (kind) {
+        KiloPromptCompletionProvider.HighlightKind.MENTION -> MENTION_KEY
+        KiloPromptCompletionProvider.HighlightKind.COMMAND -> COMMAND_KEY
+        KiloPromptCompletionProvider.HighlightKind.INVALID -> INVALID_KEY
+    }
+
+    @RequiresEdt
+    fun addAttachmentForTest(item: PromptAttachment) {
+        addAttachment(item)
+    }
+
+    internal fun processPasteForTest(transferable: Transferable): Future<*> = processPaste(transferable)
+
+    @RequiresEdt
+    fun focus() {
+        editor.requestFocusInWindow()
+    }
+
+    private fun focusLater() {
+        ApplicationManager.getApplication().invokeLater {
+            if (project.isDisposed || !isShowing) return@invokeLater
+            focus()
+        }
+    }
+
+    override fun addNotify() {
+        super.addNotify()
+        bindRoot()
+        bindKeymap()
+        bindLookup()
+        bindCommandRefresh()
+    }
+
+    override fun removeNotify() {
+        root?.removeComponentListener(resize)
+        root = null
+        bus?.disconnect()
+        bus = null
+        lookupBus?.disconnect()
+        lookupBus = null
+        commandJob?.cancel()
+        commandJob = null
+        uninstallCompletionShortcut()
+        super.removeNotify()
+    }
+
+    @RequiresEdt
+    private fun showMenu() {
+        val group = ActionManager.getInstance().getAction("Kilo.Session.PromptMenu") as? ActionGroup ?: return
+        val ctx = DataManager.getInstance().getDataContext(menu)
+        val popup = JBPopupFactory.getInstance().createActionGroupPopup(
+            null,
+            // The nested Core submenu updates on the BGT (version/architecture footer), same as the
+            // tool window gear popup.
+            KiloSettingsAction.popupGroup(group),
+            ctx,
+            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
+            true,
+        )
+        popup.show(PopupShowOptions.aboveComponent(menu))
+    }
+
+    @RequiresEdt
+    private fun showIssues() {
+        if (issues.isEmpty()) return
+        val group = DefaultActionGroup()
+        issueActions().forEach(group::add)
+        JBPopupFactory.getInstance().createActionGroupPopup(
+            null,
+            group,
+            DataManager.getInstance().getDataContext(issuesButton),
+            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
+            true,
+        ).show(PopupShowOptions.aboveComponent(issuesButton))
+    }
+
+    @RequiresEdt
+    internal fun issueActions(): List<AnAction> = issues.map { issue ->
+        DefaultActionGroup(issue.title, true).apply {
+            for (item in issue.actions) {
+                add(object : DumbAwareAction(item.title, item.description, null) {
+                    override fun update(e: AnActionEvent) {
+                        e.presentation.isEnabled = item.enabled
+                    }
+
+                    override fun actionPerformed(e: AnActionEvent) {
+                        item.action()
+                    }
+                })
+            }
+        }
+    }
+
+    @RequiresEdt
+    private fun enhance() {
+        if (!enhance.isEnabled) return
+        val source = editor.text
+        if (source.isBlank()) {
+            editor.text = KiloBundle.message("prompt.action.enhance.description")
+            syncEditorHeight()
+            focus()
+            return
+        }
+        val id = ++request
+        enhancing = true
+        syncEnhance()
+        onEnhance(source.trim()) { result -> completeEnhancement(id, source, result) }
+    }
+
+    @RequiresEdt
+    private fun completeEnhancement(id: Long, source: String, result: Result<String>) {
+        if (id != request || editor.text != source) return
+        enhancing = false
+        syncEnhance()
+        result.onSuccess {
+            editor.text = it
+            syncEditorHeight()
+            focus()
+        }.onFailure {
+            if (it is CancellationException) return@onFailure
+            KiloNotifications.error(
+                project,
+                KiloBundle.message("prompt.action.enhance.failed"),
+                KiloBundle.message("prompt.action.enhance.failed.description"),
+            )
+        }
+    }
+
+    @RequiresEdt
+    private fun invalidateEnhancement() {
+        request++
+        enhancing = false
+        syncEnhance()
+    }
+
+    @RequiresEdt
+    private fun syncEnhance() {
+        enhance.isEnabled = ready && !busy && !enhancing
+        enhance.icon = if (enhancing) enhancingIcon else WAND_ICON
+        enhance.toolTipText = if (enhancing) {
+            KiloBundle.message("prompt.action.enhance.loading")
+        } else {
+            KiloBundle.message("prompt.action.enhance")
+        }
+    }
+
+    // A running session always offers Stop, even with a draft in the box: the turn is the thing the
+    // user may need to interrupt, and a draft (typed, or restored after a send) must not hide that.
+    // The draft can still be queued while busy through the Send shortcut, which the tooltip names.
+    // The click, icon, and tooltip all read this one decision so they cannot disagree.
+    private fun stopping() = busy
+
+    @RequiresEdt
+    private fun syncButton() {
+        button.icon = if (stopping()) STOP_ICON else SEND_ICON
+        syncTooltip()
+    }
+
+    @RequiresEdt
+    private fun submit(src: String) {
+        if (!isSendEnabled) return
+        val txt = text()
+        val items = attachments.toList()
+        submitting = true
+        cs.launch {
+            try {
+                val files = withContext(Dispatchers.IO) { items.map { it.part() } }
+                val mentioned = onMentions(txt)
+                withContext(Dispatchers.Main) {
+                    submitting = false
+                    if (project.isDisposed) return@withContext
+                    val parts = files + mentioned
+                    LOG.debug { "${ChatLogSummary.prompt(promptDto(txt, parts))} src=$src busy=$busy" }
+                    lastSubmission = txt to items
+                    onSend(txt, parts)
+                }
+            } catch (e: CancellationException) {
+                withContext(NonCancellable + Dispatchers.Main) {
+                    submitting = false
+                }
+                throw e
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    submitting = false
+                    if (project.isDisposed) return@withContext
+                    LOG.warn("kind=prompt-submit src=$src failed message=${e.message}", e)
+                    notify(KiloBundle.message("prompt.attachment.send.failed", e.message ?: e.javaClass.simpleName))
+                }
+            }
+        }
+    }
+
+    private fun triggerCompletion(e: DocumentEvent) {
+        if (project.isDisposed) return
+        val provider = completion ?: return
+        val value = e.newFragment.toString()
+        if (value.length != 1) return
+        val text = editor.text
+        val offset = (e.offset + value.length).coerceIn(0, text.length)
+        val initial = value == "@" || (value == "/" && text.take(offset).trim() == "/")
+        val ed = editor.getEditor(false)
+        val open = ed?.let { LookupManager.getActiveLookup(it) } != null
+        // Reopen when a keystroke lands inside a slash/mention token but the lookup has closed.
+        // Fast typing can drop the platform's completion restart: the @-mention path stays open
+        // because its backend search keeps the completion calculating, while the instant slash
+        // path settles and can disappear. Re-triggering self-heals it via the same manual path.
+        val retry = !initial && !open && provider.completing(text, offset)
+        if (!initial && !retry) return
+        ApplicationManager.getApplication().invokeLater {
+            if (project.isDisposed) return@invokeLater
+            editor.getEditor(false)?.let(::showCompletion)
+        }
+    }
+
+    @RequiresEdt
+    private fun bindCommandRefresh() {
+        if (completion == null || commandJob != null) return
+        commandJob = completion.watchCommands {
+            ApplicationManager.getApplication().invokeLater {
+                if (project.isDisposed) return@invokeLater
+                val ed = editor.getEditor(false) ?: return@invokeLater
+                if (LookupManager.getActiveLookup(ed) == null) return@invokeLater
+                if (!completion.completingSlash(ed.document.text, ed.caretModel.offset)) return@invokeLater
+                showCompletion(ed)
+            }
+        }
+    }
+
+    @RequiresEdt
+    @Suppress("UnstableApiUsage")
+    private fun showCompletion(ed: com.intellij.openapi.editor.Editor) {
+        // Run completion synchronously and locally on this frontend-only editor. The public entry
+        // points (ACTION_CODE_COMPLETION, AutoPopupController.scheduleAutoPopup) route through
+        // split-mode RD/autopopup machinery that targets a backend-shared editor: in split mode they
+        // either dispatch to the backend (which has no editor and asserts) or get cancelled before the
+        // popup shows. CodeCompletionHandlerBase is public (not @ApiStatus.Internal) and is the only
+        // API that drives the completion engine directly against this local editor.
+        CodeCompletionHandlerBase.createHandler(CompletionType.BASIC, true, false, true)
+            .invokeCompletion(project, ed, 1)
+    }
+
+    @RequiresEdt
+    private fun installCompletionShortcut(ed: com.intellij.openapi.editor.Editor) {
+        if (completion == null) return
+        val base = ActionManager.getInstance().getAction(IdeActions.ACTION_CODE_COMPLETION) ?: return
+        val action = completionAction ?: object : DumbAwareAction(KiloBundle.message("prompt.completion.action")) {
+            override fun actionPerformed(e: AnActionEvent) {
+                editor.getEditor(false)?.let(::showCompletion)
+            }
+        }.also { completionAction = it }
+        uninstallCompletionShortcut()
+        val target = ed.contentComponent
+        action.registerCustomShortcutSet(base.shortcutSet, target)
+        completionTarget = target
+    }
+
+    @RequiresEdt
+    private fun refreshCompletionShortcut() {
+        val ed = editor.getEditor(false) ?: return
+        installCompletionShortcut(ed)
+    }
+
+    @RequiresEdt
+    private fun uninstallCompletionShortcut() {
+        val target = completionTarget ?: return
+        completionAction?.unregisterCustomShortcutSet(target)
+        completionTarget = null
+    }
+
+    @RequiresEdt
+    private fun addAttachment(item: PromptAttachment) {
+        if (!attachment && !item.reference && PromptAttachmentExtractor.image(item.mime)) {
+            LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} blocked=unsupported-model" }
+            notify(KiloBundle.message("prompt.attachment.unsupported.model"))
+            return
+        }
+        if (attachments.any { it.id == item.id }) {
+            LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} blocked=duplicate" }
+            return
+        }
+        attachments += item
+        strip.add(item)
+        LOG.debug { "kind=prompt-attachment add name=${item.name} mime=${item.mime} count=${attachments.size}" }
+        syncEditorHeight()
+        syncButton()
+        onChange()
+    }
+
+    @RequiresEdt
+    private fun removeAttachment(item: PromptAttachment) {
+        if (!attachments.removeIf { it.id == item.id }) return
+        strip.remove(item)
+        syncEditorHeight()
+        syncButton()
+        onChange()
+    }
+
+    private fun promptDto(text: String, files: List<PromptPartDto>) = ai.kilocode.rpc.dto.PromptDto(
+        parts = buildList {
+            text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
+            addAll(files)
+        }
+    )
+
+    internal fun installFileDrop(target: JComponent, area: String) {
+        LOG.debug { "kind=prompt-dnd install area=$area component=${target.javaClass.name}" }
+        DnDSupport.createBuilder(target)
+            .enableAsNativeTarget()
+            .setTargetChecker { event ->
+                if (!FileCopyPasteUtil.isFileListFlavorAvailable(event)) {
+                    onFileDrag(false)
+                    LOG.debug { "kind=prompt-dnd check area=$area accept=false flavor=false" }
+                    return@setTargetChecker true
+                }
+                event.setDropPossible(true)
+                onFileDrag(true)
+                LOG.debug { "kind=prompt-dnd check area=$area accept=true flavor=true" }
+                false
+            }
+            .setCleanUpOnLeaveCallback {
+                onFileDrag(false)
+            }
+            .setDropHandlerWithResult { event ->
+                val start = System.nanoTime()
+                val files = dropFiles(event)
+                val ms = elapsedMs(start)
+                LOG.debug { "kind=prompt-dnd drop area=$area files=${files.size} extractMs=$ms queued=${files.isNotEmpty()}" }
+                onFileDrag(false)
+                if (files.isEmpty()) return@setDropHandlerWithResult false
+                processAttachments("prompt-dnd", area, files, null, ms)
+                true
+            }
+            .install()
+    }
+
+    private fun processPaste(transferable: Transferable): Future<*> {
+        return processAttachments("prompt-paste", "editor", null, transferable, 0)
+    }
+
+    /**
+     * Handles a paste large enough to collapse ([collapsible]) by inserting it and folding it behind
+     * a placeholder. Every such paste becomes its own fold, so a second one never disturbs the
+     * first even when the text is identical.
+     */
+    @RequiresEdt
+    private fun handlePastedText(ed: EditorEx, raw: String) {
+        val text = normalizePaste(raw)
+        val sel = ed.selectionModel
+        val start = if (sel.hasSelection()) sel.selectionStart else ed.caretModel.offset
+        val end = if (sel.hasSelection()) sel.selectionEnd else start
+        // Inserting can expand a neighbouring fold on its own; quiet keeps that from reading as the
+        // reader unfolding it.
+        folds.quiet {
+            WriteCommandAction.runWriteCommandAction(project) {
+                ed.document.replaceString(start, end, text)
+                ed.caretModel.moveToOffset(start + text.length)
+            }
+        }
+        folds.fold(ed, start, start + text.length, placeholder(text))
+        syncEditorHeight()
+    }
+
+    private fun normalizePaste(text: String): String = text.replace("\r\n", "\n").replace('\r', '\n')
+
+    private fun processAttachments(
+        kind: String,
+        area: String,
+        files: List<java.io.File>?,
+        transferable: Transferable?,
+        sourceMs: Long,
+    ): Future<*> {
+        return ApplicationManager.getApplication().executeOnPooledThread {
+            val start = System.nanoTime()
+            try {
+                val list = files ?: transferable?.let { FileCopyPasteUtil.getFileList(it).orEmpty() }.orEmpty()
+                val image = transferable?.takeIf { list.isEmpty() && it.isDataFlavorSupported(DataFlavor.imageFlavor) }
+                    ?.getTransferData(DataFlavor.imageFlavor)
+                    ?.let(PromptAttachmentExtractor::image)
+                val items = PromptAttachmentExtractor.files(list) + listOfNotNull(image)
+                val ms = elapsedMs(start)
+                LOG.debug { "kind=$kind extract area=$area files=${list.size} image=${image != null} attachments=${items.size} extractMs=$ms sourceMs=$sourceMs" }
+                if (items.isEmpty()) {
+                    if (list.isNotEmpty()) {
+                        ApplicationManager.getApplication().invokeLater {
+                            if (project.isDisposed) return@invokeLater
+                            notify(KiloBundle.message("prompt.attachment.drop.empty"))
+                        }
+                    }
+                    return@executeOnPooledThread
+                }
+                ApplicationManager.getApplication().invokeLater {
+                    if (project.isDisposed) return@invokeLater
+                    LOG.debug { "kind=$kind attach area=$area files=${list.size} image=${image != null} attachments=${items.size} extractMs=$ms sourceMs=$sourceMs" }
+                    items.forEach(::addAttachment)
+                }
+            } catch (e: Exception) {
+                LOG.warn("kind=$kind extract area=$area failed message=${e.message}", e)
+            }
+        }
+    }
+
+    private fun dropFiles(event: DnDEvent): List<java.io.File> {
+        if (!FileCopyPasteUtil.isFileListFlavorAvailable(event)) return emptyList()
+        val files = FileCopyPasteUtil.getFileListFromAttachedObject(event.attachedObject)
+        if (files.isNotEmpty()) return files
+        return FileCopyPasteUtil.getFileList(event).orEmpty()
+    }
+
+    private fun elapsedMs(start: Long) = (System.nanoTime() - start) / 1_000_000
+
+    private fun notify(text: String) {
+        com.intellij.notification.Notification("Kilo Code", text, com.intellij.notification.NotificationType.WARNING).notify(project)
+    }
+
+    @RequiresEdt
+    private fun bindKeymap() {
+        if (bus != null) return
+        val connection = ApplicationManager.getApplication().messageBus.connect()
+        bus = connection
+        connection.subscribe(KeymapManagerListener.TOPIC, object : KeymapManagerListener {
+            override fun activeKeymapChanged(keymap: Keymap?) {
+                editor.setPlaceholder(placeholder())
+                syncTooltip()
+                syncSelectorTooltips()
+                refreshCompletionShortcut()
+            }
+
+            override fun shortcutsChanged(keymap: Keymap, actionIds: Collection<String>, fromSettings: Boolean) {
+                if (SendPromptAction.ID in actionIds || StopSessionAction.ID in actionIds ||
+                    IdeActions.ACTION_EDITOR_START_NEW_LINE in actionIds) {
+                    editor.setPlaceholder(placeholder())
+                    syncTooltip()
+                }
+                if (IdeActions.ACTION_CODE_COMPLETION in actionIds) refreshCompletionShortcut()
+                if (CycleModeAction.ID in actionIds || CycleModelAction.ID in actionIds ||
+                    CycleReasoningAction.ID in actionIds || ResetModelAction.ID in actionIds) {
+                    syncSelectorTooltips()
+                }
+            }
+        })
+    }
+
+    @RequiresEdt
+    private fun syncSelectorTooltips() {
+        mode.syncTooltip()
+        model.syncTooltip()
+        reasoning.syncTooltip()
+        reset.toolTipText = resetTooltip()
+    }
+
+    @RequiresEdt
+    private fun bindLookup() {
+        if (lookupBus != null) return
+        val connection = project.messageBus.connect()
+        lookupBus = connection
+        connection.subscribe(LookupManagerListener.TOPIC, LookupManagerListener { _, next ->
+            // LookupPresentation/LookupPositionStrategy are @ApiStatus.Experimental (no stable API
+            // forces the lookup above the caret). LookupEx is the public lookup interface.
+            val lookup = next as? LookupEx ?: return@LookupManagerListener
+            if (lookup.editor !== editor.getEditor(false)) return@LookupManagerListener
+            lookup.presentation = LookupPresentation.Builder(lookup.presentation)
+                .withPositionStrategy(LookupPositionStrategy.ONLY_ABOVE)
+                .build()
+        })
+    }
+
+    @RequiresEdt
+    private fun syncTooltip() {
+        val tip = tooltip()
+        if (button.toolTipText != tip) button.toolTipText = tip
+    }
+
+    private fun syncAutoApprove() {
+        auto.isSelected = autoApprove
+        auto.icon = if (autoApprove) SHIELD_FILLED_ICON else SHIELD_ICON
+        auto.toolTipText = if (autoApprove) {
+            KiloBundle.message("prompt.action.autoApprove.enabled.tooltip")
+        } else {
+            KiloBundle.message("prompt.action.autoApprove.disabled.tooltip")
+        }
+        auto.accessibleContext.accessibleName = if (autoApprove) {
+            KiloBundle.message("prompt.action.autoApprove.disable")
+        } else {
+            KiloBundle.message("prompt.action.autoApprove.enable")
+        }
+        auto.repaint()
+    }
+
+    private fun tooltip(): String {
+        if (stopping()) {
+            val tip = KeymapUtil.createTooltipText(KiloBundle.message("prompt.button.stop"), StopSessionAction.ID)
+            if (!hasDraft()) return tip
+            return hint(tip, SendPromptAction.ID, "prompt.button.stop.tooltip.send")
+        }
+        val tip = KeymapUtil.createTooltipText(KiloBundle.message("prompt.button.send"), SendPromptAction.ID)
+        return hint(tip, StopSessionAction.ID, "prompt.button.send.tooltip.stop")
+    }
+
+    /** Appends a second line naming the other action's shortcut, when it has one. */
+    private fun hint(tip: String, id: String, key: String): String {
+        val shortcut = KeymapUtil.getFirstKeyboardShortcutText(id)
+        if (shortcut.isEmpty()) return tip
+        return XmlStringUtil.wrapInHtml(
+            XmlStringUtil.escapeString(tip) + "<br>" +
+                XmlStringUtil.escapeString(KiloBundle.message(key, shortcut))
+        )
+    }
+
+    private fun resetTooltip(): String = KeymapUtil.createTooltipText(KiloBundle.message("model.picker.reset"), ResetModelAction.ID)
+
+    private fun placeholder(): String {
+        val send = KeymapUtil.getFirstKeyboardShortcutText(SendPromptAction.ID)
+        val line = KeymapUtil.getFirstKeyboardShortcutText(IdeActions.ACTION_EDITOR_START_NEW_LINE)
+        if (send.isNotEmpty() && line.isNotEmpty()) {
+            return KiloBundle.message("prompt.placeholder.with.shortcuts", send, line)
+        }
+        if (send.isNotEmpty()) return KiloBundle.message("prompt.placeholder.with.send", send)
+        if (line.isNotEmpty()) return KiloBundle.message("prompt.placeholder.with.newline", line)
+        return KiloBundle.message("prompt.placeholder")
+    }
+
+    @RequiresEdt
+    private fun syncEditorHeight() {
+        if (editor.document.isInBulkUpdate) {
+            deferEditorSync()
+            return
+        }
+        val before = editor.preferredSize.height
+        val lower = editor.minimumSize.height
+        editor.setPreferredSize(null)
+        editor.setMinimumSize(null)
+        editor.getEditor(false)?.let {
+            it.contentComponent.invalidate()
+            it.component.invalidate()
+            it.scrollPane.invalidate()
+        }
+        editor.invalidate()
+        editor.ensureWillComputePreferredSize()
+        val view = editor.getEditor(false)
+        val line = view?.lineHeight ?: editor.getFontMetrics(editor.font).height
+        val min = line * SessionUiStyle.View.Prompt.EDITOR_LINES + JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+        val content = if (editor.text.isBlank()) min else editor.preferredSize.height
+        val sessionCap = rootCap(min)
+        val height = minOf(content, sessionCap ?: content).coerceAtLeast(min)
+        syncEditorScroll(view, content > height)
+        // height is already scaled px (from the editor lineHeight); assign with plain
+        // Dimension so IDE zoom does not scale it a second time via the user scale factor.
+        if (before == height && lower == height) {
+            editor.preferredSize = Dimension(0, height)
+            editor.minimumSize = Dimension(0, height)
+            return
+        }
+        editor.preferredSize = Dimension(0, height)
+        editor.minimumSize = Dimension(0, height)
+        revalidate()
+        repaint()
+    }
+
+    @RequiresEdt
+    private fun deferEditorSync() {
+        if (deferred) return
+        deferred = true
+        ApplicationManager.getApplication().invokeLater {
+            deferred = false
+            if (project.isDisposed || editor.document.isInBulkUpdate) return@invokeLater
+            folds.sync()
+            syncEditorHeight()
+            syncHighlights()
+            syncButton()
+        }
+    }
+
+    @RequiresEdt
+    private fun syncEditorScroll(ed: EditorEx?, overflow: Boolean) {
+        // AS_NEEDED keeps the standard auto-hiding editor scrollbar (appears on
+        // scroll/hover, fades on inactivity); NEVER hides it entirely when the
+        // content fits so no bar is shown at all.
+        ed?.scrollPane?.verticalScrollBarPolicy = if (overflow) {
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
+        } else {
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
+        }
+    }
+
+    @RequiresEdt
+    private fun rootCap(min: Int): Int? {
+        val root = root ?: return null
+        if (root.height <= 0) return null
+        val chrome = (shell.preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
+        return (root.height / 3 - chrome).coerceAtLeast(min)
+    }
+
+    @RequiresEdt
+    private fun bindRoot() {
+        val next = SwingUtilities.getAncestorOfClass(SessionRootPanel::class.java, this) as? SessionRootPanel
+        if (root === next) return
+        root?.removeComponentListener(resize)
+        root = next
+        root?.addComponentListener(resize)
+        syncEditorHeight()
+    }
+
+    private inner abstract class PromptButton : JButton() {
+        private var over = false
+
+        init {
+            iconButton(this)
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            addMouseListener(object : MouseAdapter() {
+                override fun mouseEntered(e: MouseEvent) {
+                    sync(true)
+                }
+
+                override fun mouseExited(e: MouseEvent) {
+                    sync(false)
+                }
+            })
+        }
+
+        override fun getPreferredSize() = JBUI.size(
+            SessionUiStyle.View.Prompt.SEND_BUTTON_SIZE,
+            SessionUiStyle.View.Prompt.SEND_BUTTON_SIZE,
+        )
+
+        override fun getMinimumSize() = preferredSize
+
+        override fun getMaximumSize() = preferredSize
+
+        override fun paintComponent(g: Graphics) {
+            if (over) paintHover(g)
+            super.paintComponent(g)
+        }
+
+        private fun paintHover(g: Graphics) {
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                g2.color = JBUI.CurrentTheme.ActionButton.hoverBackground()
+                val arc = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
+                g2.fillRoundRect(0, 0, width, height, arc, arc)
+            } finally {
+                g2.dispose()
+            }
+        }
+
+        private fun sync(value: Boolean) {
+            if (over == value) return
+            over = value
+            repaint()
+        }
+    }
+
+    private inner class SendButton : PromptButton(), UiDataProvider {
+        override fun uiDataSnapshot(sink: DataSink) {
+            sink.set(PromptDataKeys.SEND, this@PromptPanel)
+        }
+    }
+
+    private inner class AutoApproveButton : PromptButton()
+
+}

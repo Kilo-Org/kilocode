@@ -67,13 +67,13 @@ This dimension captures reach and rollout—how many team members are using AI a
 
 Your score falls into one of five tiers:
 
-| Score Range | Tier                     | What It Means                                                                                               |
-| ----------- | ------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| **0–20**    | Minimal adoption         | AI usage is sporadic or experimental. Most developers aren't using AI tools regularly.                      |
-| **21–50**   | Early adoption           | Some developers have incorporated AI into their workflow, but it's not yet team-wide.                       |
-| **51–75**   | Growing adoption         | AI is becoming a standard part of how the team works. Most developers use it, though depth varies.          |
-| **76–90**   | Strong adoption          | AI is deeply integrated into development workflows. Teams at this level trust and depend on AI suggestions. |
-| **91–100**  | AI-first engineering org | AI is central to how the team ships code. Usage is high, broad, and deeply integrated.                      |
+| Score Range | Tier | What It Means |
+|---|---|---|
+| **0–20** | Minimal adoption | AI usage is sporadic or experimental. Most developers aren't using AI tools regularly. |
+| **21–50** | Early adoption | Some developers have incorporated AI into their workflow, but it's not yet team-wide. |
+| **51–75** | Growing adoption | AI is becoming a standard part of how the team works. Most developers use it, though depth varies. |
+| **76–90** | Strong adoption | AI is deeply integrated into development workflows. Teams at this level trust and depend on AI suggestions. |
+| **91–100** | AI-first engineering org | AI is central to how the team ships code. Usage is high, broad, and deeply integrated. |
 
 ## How Scores Are Calculated
 

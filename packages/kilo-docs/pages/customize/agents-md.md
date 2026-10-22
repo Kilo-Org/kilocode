@@ -16,9 +16,9 @@ Legacy Memory Bank status indicators such as `[Memory Bank: Active]` and `[Memor
 
 If you'd like to migrate your memory bank content to AGENTS.md:
 
-1. Examine the contents in `.kilocode/rules/memory-bank/`
+1. Examine the contents in `.kilo/rules/memory-bank/` (or the legacy `.kilocode/rules/memory-bank/`)
 2. Move that content into your project's `AGENTS.md` file (or ask Kilo to do it for you)
-   {% /callout %}
+{% /callout %}
 
 ## What is AGENTS.md?
 
@@ -57,21 +57,25 @@ my-project/
 The filename must be uppercase (`AGENTS.md`), not lowercase (`agents.md`). This ensures consistency across different operating systems and tools.
 {% /callout %}
 
-### Subdirectory AGENTS.md Files
+### Per-Directory AGENTS.md Files
 
-You can also place AGENTS.md files in subdirectories to provide context-specific instructions:
+You can place AGENTS.md files in subdirectories to provide context-specific instructions when the agent accesses files in those locations:
 
 ```
 my-project/
 ├── AGENTS.md                    # Root-level instructions
 ├── src/
 │   └── backend/
-│       └── AGENTS.md            # Backend-specific instructions
+│       └── AGENTS.md            # Backend-specific instructions (loaded when reading backend files)
 └── docs/
-    └── AGENTS.md                # Documentation-specific instructions
+    └── AGENTS.md                # Documentation-specific instructions (loaded when reading docs files)
 ```
 
-When working in a subdirectory, Kilo Code will load both the root AGENTS.md and any subdirectory AGENTS.md files, with subdirectory files taking precedence for conflicting instructions.
+{% callout type="info" %}
+Per-directory AGENTS.md files are **dynamically loaded** when the agent reads files in that directory - they are not pre-loaded at session start. When the agent reads a file in `src/backend/`, the corresponding `AGENTS.md` is discovered and its contents are injected into the conversation as `<system-reminder>` tags.
+
+This is useful for providing context-specific guidance for different parts of a monorepo or project.
+{% /callout %}
 
 ## File Protection
 
@@ -143,39 +147,26 @@ When you start a task in Kilo Code:
 
 In the new platform, AGENTS.md is loaded alongside other instruction sources. The CLI also supports `.claude/` and `.agents/` directories for compatibility with other tools.
 
-| Source                                           | Scope     | Location                                   | Priority         |
-| ------------------------------------------------ | --------- | ------------------------------------------ | ---------------- |
-| **Agent prompt**                                 | Per-agent | `agent.<name>.prompt` in config            | 1 (Highest)      |
-| **[Instructions](/docs/customize/custom-rules)** | Project   | `instructions` key in project `kilo.jsonc` | 2                |
-| **AGENTS.md**                                    | Project   | `AGENTS.md` at project root                | 3                |
-| **[Instructions](/docs/customize/custom-rules)** | Global    | `instructions` key in global `kilo.jsonc`  | 4                |
-| **[Skills](/docs/customize/skills)**             | Both      | `.kilo/skills/`, config `skills` key       | Loaded on demand |
+| Source | Scope | Location | Priority |
+|---|---|---|---|
+| **Agent prompt** | Per-agent | `agent.<name>.prompt` in config | 1 (Highest) |
+| **[Instructions](/docs/customize/custom-rules)** | Project | `instructions` key in project `kilo.jsonc` | 2 |
+| **AGENTS.md** | Project | `AGENTS.md` at project root | 3 |
+| **[Instructions](/docs/customize/custom-rules)** | Global | `instructions` key in global `kilo.jsonc` | 4 |
+| **[Skills](/docs/customize/skills)** | Both | `.kilo/skills/`, config `skills` key | Loaded on demand |
 
 {% /tab %}
 {% tab label="CLI" %}
 
 In the new platform, AGENTS.md is loaded alongside other instruction sources. The CLI also supports `.claude/` and `.agents/` directories for compatibility with other tools.
 
-| Source                                           | Scope     | Location                                   | Priority         |
-| ------------------------------------------------ | --------- | ------------------------------------------ | ---------------- |
-| **Agent prompt**                                 | Per-agent | `agent.<name>.prompt` in config            | 1 (Highest)      |
-| **[Instructions](/docs/customize/custom-rules)** | Project   | `instructions` key in project `kilo.jsonc` | 2                |
-| **AGENTS.md**                                    | Project   | `AGENTS.md` at project root                | 3                |
-| **[Instructions](/docs/customize/custom-rules)** | Global    | `instructions` key in global `kilo.jsonc`  | 4                |
-| **[Skills](/docs/customize/skills)**             | Both      | `.kilo/skills/`, config `skills` key       | Loaded on demand |
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-AGENTS.md works alongside Kilo Code's other configuration systems:
-
-| Feature                                                        | Scope   | Location                  | Purpose                                   | Priority    |
-| -------------------------------------------------------------- | ------- | ------------------------- | ----------------------------------------- | ----------- |
-| **[Mode-specific Custom Rules](/docs/customize/custom-rules)** | Project | `.kilocode/rules-{mode}/` | Mode-specific rules and constraints       | 1 (Highest) |
-| **[Custom Rules](/docs/customize/custom-rules)**               | Project | `.kilocode/rules/`        | Kilo Code-specific rules and constraints  | 2           |
-| **[AGENTS.md](/docs/customize/agents-md)**                     | Project | `AGENTS.md`               | Universal standard for any AI coding tool | 3           |
-| **[Global Custom Rules](/docs/customize/custom-rules)**        | Global  | `~/.kilocode/rules/`      | Global Kilo Code rules                    | 4           |
-| **[Custom Instructions](/docs/customize/custom-instructions)** | Global  | IDE settings              | Personal preferences across all projects  | 5 (Lowest)  |
+| Source | Scope | Location | Priority |
+|---|---|---|---|
+| **Agent prompt** | Per-agent | `agent.<name>.prompt` in config | 1 (Highest) |
+| **[Instructions](/docs/customize/custom-rules)** | Project | `instructions` key in project `kilo.jsonc` | 2 |
+| **AGENTS.md** | Project | `AGENTS.md` at project root | 3 |
+| **[Instructions](/docs/customize/custom-rules)** | Global | `instructions` key in global `kilo.jsonc` | 4 |
+| **[Skills](/docs/customize/skills)** | Both | `.kilo/skills/`, config `skills` key | Loaded on demand |
 
 {% /tab %}
 {% /tabs %}
@@ -203,17 +194,6 @@ export KILO_DISABLE_EXTERNAL_SKILLS=true
 ```
 
 AGENTS.md itself cannot be individually disabled — it is always loaded if present. To override its instructions, use higher-priority sources like the `instructions` config key or agent-specific prompts.
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-AGENTS.md support is **enabled by default**. To disable it, edit `settings.json`:
-
-```json
-{
-  "kilocode.useAgentRules": false
-}
-```
 
 {% /tab %}
 {% /tabs %}

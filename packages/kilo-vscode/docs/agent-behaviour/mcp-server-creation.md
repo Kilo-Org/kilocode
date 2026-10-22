@@ -6,33 +6,33 @@ The legacy MCP Servers sub-tab (842 lines) had full server lifecycle management.
 
 ## Side-by-Side Comparison
 
-| Feature                 | Legacy                           | New                                                           |
-| ----------------------- | -------------------------------- | ------------------------------------------------------------- |
-| View server list        | Name + source badge + status dot | Name + command/URL                                            |
-| Add server              | Via edit config file buttons     | Not available                                                 |
-| Remove server           | Delete button + confirmation     | Remove button + confirmation                                  |
-| Edit server config      | Via edit config file buttons     | Not available                                                 |
-| Connection status       | Colored dot (green/yellow/red)   | Live status display                                           |
-| Enable/disable toggle   | `ToggleSwitch` per server        | Connect/disconnect toggle                                     |
-| Restart/refresh         | Per-server refresh button        | Not available                                                 |
-| Refresh all             | "Refresh All MCP Servers" button | Not available                                                 |
-| Edit Global MCP config  | Button to open file              | Not available                                                 |
-| Edit Project MCP config | Button to open file              | Not available                                                 |
-| Network timeout         | Per-server dropdown (15s–60min)  | Not available                                                 |
-| Server source badge     | Shows "global" / "project"       | Not displayed                                                 |
-| Empty state             | N/A                              | "No MCP servers configured. Edit the opencode config file..." |
+| Feature | Legacy | New |
+|---|---|---|
+| View server list | Name + source badge + status dot | Name + command/URL |
+| Add server | Via edit config file buttons | Not available |
+| Remove server | Delete button + confirmation | Remove button + confirmation |
+| Edit server config | Via edit config file buttons | Not available |
+| Connection status | Colored dot (green/yellow/red) | Live status display |
+| Enable/disable toggle | `ToggleSwitch` per server | Connect/disconnect toggle |
+| Restart/refresh | Per-server refresh button | Not available |
+| Refresh all | "Refresh All MCP Servers" button | Not available |
+| Edit Global MCP config | Button to open file | Not available |
+| Edit Project MCP config | Button to open file | Not available |
+| Network timeout | Per-server dropdown (15s–60min) | Not available |
+| Server source badge | Shows "global" / "project" | Not displayed |
+| Empty state | N/A | "No MCP servers configured. Edit the opencode config file..." |
 
 ### Expandable Server Detail (Legacy Only)
 
 When a server was connected and enabled, expanding it showed 5 tabs:
 
-| Tab          | Content                                                               |
-| ------------ | --------------------------------------------------------------------- |
-| Tools        | List of MCP tools with tool count                                     |
-| Resources    | List of resources + resource templates with count                     |
-| Instructions | Server-provided instruction text (if present)                         |
-| Logs         | Error/log entries sorted by timestamp with count                      |
-| Auth         | OAuth debug info: auth status, token expiration, scopes, refresh info |
+| Tab | Content |
+|---|---|
+| Tools | List of MCP tools with tool count |
+| Resources | List of resources + resource templates with count |
+| Instructions | Server-provided instruction text (if present) |
+| Logs | Error/log entries sorted by timestamp with count |
+| Auth | OAuth debug info: auth status, token expiration, scopes, refresh info |
 
 The new extension has none of this expandable detail.
 

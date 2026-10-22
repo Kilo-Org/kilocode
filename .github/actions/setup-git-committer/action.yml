@@ -21,7 +21,7 @@ runs:
   steps:
     - name: Create app token
       id: apptoken
-      uses: actions/create-github-app-token@v2
+      uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
       with:
         # kilocode_change start
         app-id: ${{ inputs['kilo-maintainer-app-id'] }}
@@ -39,6 +39,15 @@ runs:
     - name: Clear checkout auth
       run: |
         git config --local --unset-all http.https://github.com/.extraheader || true
+        # kilocode_change start
+        keys="$(git config --local --name-only --get-regexp '^includeIf\.gitdir:' || true)"
+        for key in $keys; do
+          path="$(git config --local --get "$key" || true)"
+          case "$path" in
+            *git-credentials-*.config) git config --local --unset-all "$key" || true ;;
+          esac
+        done
+        # kilocode_change end
       shell: bash
 
     - name: Configure git remote

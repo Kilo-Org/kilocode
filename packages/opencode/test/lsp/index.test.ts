@@ -1,0 +1,289 @@
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { describe, expect, spyOn, test } from "bun:test"
+import path from "path"
+import fs from "fs/promises"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { Deferred, Effect, Layer } from "effect"
+import { EventV2Bridge } from "@/event-v2-bridge"
+import { Config } from "@/config/config"
+import { RuntimeFlags } from "@/effect/runtime-flags"
+import { LSP } from "@/lsp/lsp"
+import * as LSPServer from "@/lsp/server"
+import * as launch from "../../src/lsp/launch" // kilocode_change - spy on spawn
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { provideTestInstance, provideTmpdirInstance, TestInstance, tmpdir } from "../fixture/fixture" // kilocode_change
+import { awaitWithTimeout, testEffect } from "../lib/effect"
+import { type InstanceContext } from "../../src/project/instance-context"
+import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
+import { TsCheck } from "../../src/kilocode/ts-check" // kilocode_change
+
+// kilocode_change - Typescript.spawn ignores ctx, so a cast is fine here.
+const fakeCtx = {} as InstanceContext
+const fakeFlags = {} as RuntimeFlags.Info
+
+const lspLayer = (flags: Parameters<typeof RuntimeFlags.layer>[0] = {}) =>
+  LayerNode.compile(LayerNode.group([LSP.node, Config.node, RuntimeFlags.node, EventV2Bridge.node]), [
+    [RuntimeFlags.node, RuntimeFlags.layer(flags)],
+  ])
+
+const it = testEffect(Layer.mergeAll(lspLayer(), LayerNode.compile(CrossSpawnSpawner.node)))
+const experimentalTyIt = testEffect(
+  Layer.mergeAll(lspLayer({ experimentalLspTy: true }), LayerNode.compile(CrossSpawnSpawner.node)),
+)
+const fakeServerPath = path.join(__dirname, "../fixture/lsp/fake-lsp-server.js")
+const disabledDownloadIt = testEffect(
+  Layer.mergeAll(lspLayer({ disableLspDownload: true }), LayerNode.compile(CrossSpawnSpawner.node)),
+)
+
+describe("lsp.spawn", () => {
+  it.instance(
+    "does not spawn builtin LSP for files outside instance",
+    () =>
+      LSP.Service.use((lsp) =>
+        Effect.gen(function* () {
+          const dir = (yield* TestInstance).directory
+          const spy = spyOn(LSPServer.Typescript, "spawn").mockResolvedValue(undefined)
+
+          try {
+            yield* lsp.touchFile(path.join(dir, "..", "outside.ts"))
+            yield* lsp.hover({
+              file: path.join(dir, "..", "hover.ts"),
+              line: 0,
+              character: 0,
+            })
+            expect(spy).toHaveBeenCalledTimes(0)
+          } finally {
+            spy.mockRestore()
+          }
+        }),
+      ),
+    { config: { lsp: true } },
+  )
+
+  it.instance("does not spawn builtin LSP for files inside instance when LSP is unset", () =>
+    LSP.Service.use((lsp) =>
+      Effect.gen(function* () {
+        const dir = (yield* TestInstance).directory
+        const spy = spyOn(LSPServer.Typescript, "spawn").mockResolvedValue(undefined)
+
+        try {
+          yield* lsp.hover({
+            file: path.join(dir, "src", "inside.ts"),
+            line: 0,
+            character: 0,
+          })
+          expect(spy).toHaveBeenCalledTimes(0)
+        } finally {
+          spy.mockRestore()
+        }
+      }),
+    ),
+  )
+
+  // kilocode_change start - provide the runtime flag so spawn() is reached past the TsClient short-circuit
+  const experimentalToolIt = testEffect(
+    Layer.mergeAll(lspLayer({ experimentalLspTool: true }), AppNodeBuilder.build(CrossSpawnSpawner.node)),
+  )
+
+  experimentalToolIt.live("would spawn builtin LSP for files inside instance when lsp is true", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        LSP.Service.use((lsp) =>
+          Effect.gen(function* () {
+            const spy = spyOn(LSPServer.Typescript, "spawn").mockResolvedValue(undefined)
+
+            try {
+              yield* lsp.hover({
+                file: path.join(dir, "src", "inside.ts"),
+                line: 0,
+                character: 0,
+              })
+              expect(spy).toHaveBeenCalledTimes(1)
+            } finally {
+              spy.mockRestore()
+            }
+          }),
+        ),
+      { config: { lsp: true } },
+    ),
+  )
+
+  it.live("publishes lsp.updated after custom LSP initialization", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const lsp = yield* LSP.Service
+          const updated = yield* Deferred.make<void>()
+          const events = yield* EventV2Bridge.Service
+          const unsubscribe = yield* events.listen((event) => {
+            if (event.type === LSP.Event.Updated.type) Deferred.doneUnsafe(updated, Effect.void)
+            return Effect.void
+          })
+          yield* Effect.addFinalizer(() => unsubscribe)
+
+          const file = path.join(dir, "sample.repro")
+          yield* Effect.promise(() => Bun.write(file, "sample\n"))
+          yield* lsp.touchFile(file)
+          yield* awaitWithTimeout(Deferred.await(updated), "lsp.updated event was not published")
+        }),
+      {
+        config: {
+          lsp: {
+            fake: {
+              command: [process.execPath, fakeServerPath],
+              extensions: [".repro"],
+            },
+          },
+        },
+      },
+    ),
+  )
+
+  experimentalToolIt.live("would spawn builtin LSP for files inside instance when config object is provided", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        LSP.Service.use((lsp) =>
+          Effect.gen(function* () {
+            const spy = spyOn(LSPServer.Typescript, "spawn").mockResolvedValue(undefined)
+
+            try {
+              yield* lsp.hover({
+                file: path.join(dir, "src", "inside.ts"),
+                line: 0,
+                character: 0,
+              })
+              expect(spy).toHaveBeenCalledTimes(1)
+            } finally {
+              spy.mockRestore()
+            }
+          }),
+        ),
+      {
+        config: {
+          lsp: {
+            eslint: { disabled: true },
+          },
+        },
+      },
+    ),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - Typescript spawn is gated behind KILO_EXPERIMENTAL_LSP_TOOL.
+  test("spawns tsgo LSP when KILO_EXPERIMENTAL_LSP_TOOL is enabled", async () => {
+    const saved = Flag.KILO_EXPERIMENTAL_LSP_TOOL
+    Flag.KILO_EXPERIMENTAL_LSP_TOOL = true
+    await using tmp = await tmpdir()
+
+    const spawnSpy = spyOn(launch, "spawn").mockImplementation(
+      () => ({ stdin: {}, stdout: {}, stderr: {}, on: () => {}, kill: () => {} }) as any,
+    )
+    const tsgoSpy = spyOn(TsCheck, "native_tsgo").mockResolvedValue("/fake/tsgo")
+
+    try {
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const result = await LSPServer.Typescript.spawn(tmp.path, fakeCtx, fakeFlags)
+          expect(result).toBeDefined()
+          expect(tsgoSpy).toHaveBeenCalledWith(tmp.path)
+          expect(spawnSpy).toHaveBeenCalled()
+          const args = spawnSpy.mock.calls[0][1] as string[]
+          expect(args).toContain("--lsp")
+          expect(args).toContain("--stdio")
+        },
+      })
+    } finally {
+      Flag.KILO_EXPERIMENTAL_LSP_TOOL = saved
+      spawnSpy.mockRestore()
+      tsgoSpy.mockRestore()
+    }
+  })
+
+  test("Typescript.spawn returns undefined when KILO_EXPERIMENTAL_LSP_TOOL is off", async () => {
+    const saved = Flag.KILO_EXPERIMENTAL_LSP_TOOL
+    Flag.KILO_EXPERIMENTAL_LSP_TOOL = false
+    try {
+      const result = await LSPServer.Typescript.spawn("/tmp/any", fakeCtx, fakeFlags)
+      expect(result).toBeUndefined()
+    } finally {
+      Flag.KILO_EXPERIMENTAL_LSP_TOOL = saved
+    }
+  })
+  // kilocode_change end
+  it.live("uses pyright instead of ty by default", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        LSP.Service.use((lsp) =>
+          Effect.gen(function* () {
+            const ty = spyOn(LSPServer.Ty, "spawn").mockResolvedValue(undefined)
+            const pyright = spyOn(LSPServer.Pyright, "spawn").mockResolvedValue(undefined)
+
+          try {
+            yield* lsp.hover({
+              file: path.join(dir, "src", "inside.py"),
+              line: 0,
+              character: 0,
+            })
+            expect(ty).toHaveBeenCalledTimes(0)
+            expect(pyright).toHaveBeenCalledTimes(1)
+          } finally {
+            ty.mockRestore()
+            pyright.mockRestore()
+          }
+        }),
+      ),
+      { config: { lsp: true } },
+    ),
+  )
+
+  experimentalTyIt.instance(
+    "uses ty instead of pyright when experimentalLspTy is enabled",
+    () =>
+      LSP.Service.use((lsp) =>
+        Effect.gen(function* () {
+          const dir = (yield* TestInstance).directory
+          const ty = spyOn(LSPServer.Ty, "spawn").mockResolvedValue(undefined)
+          const pyright = spyOn(LSPServer.Pyright, "spawn").mockResolvedValue(undefined)
+
+          try {
+            yield* lsp.hover({
+              file: path.join(dir, "src", "inside.py"),
+              line: 0,
+              character: 0,
+            })
+            expect(ty).toHaveBeenCalledTimes(1)
+            expect(pyright).toHaveBeenCalledTimes(0)
+          } finally {
+            ty.mockRestore()
+            pyright.mockRestore()
+          }
+        }),
+      ),
+    { config: { lsp: true } },
+  )
+
+  disabledDownloadIt.instance(
+    "passes disableLspDownload to builtin LSP spawn",
+    () =>
+      LSP.Service.use((lsp) =>
+        Effect.gen(function* () {
+          const dir = (yield* TestInstance).directory
+          const pyright = spyOn(LSPServer.Pyright, "spawn").mockResolvedValue(undefined)
+
+          try {
+            yield* lsp.hover({
+              file: path.join(dir, "src", "inside.py"),
+              line: 0,
+              character: 0,
+            })
+            expect(pyright).toHaveBeenCalledTimes(1)
+            expect(pyright.mock.calls[0]?.[2]).toMatchObject({ disableLspDownload: true })
+          } finally {
+            pyright.mockRestore()
+          }
+        }),
+      ),
+    { config: { lsp: true } },
+  )
+})

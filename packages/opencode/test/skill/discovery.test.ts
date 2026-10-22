@@ -1,22 +1,54 @@
-import { describe, test, expect, beforeAll, afterAll } from "bun:test"
+import { describe, expect, beforeAll, afterAll } from "bun:test"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { FSUtil } from "@opencode-ai/core/fs-util"
+import { Effect } from "effect"
 import { Discovery } from "../../src/skill/discovery"
-import { Filesystem } from "../../src/util/filesystem"
+import { Global } from "@opencode-ai/core/global"
+import { Filesystem } from "@/util/filesystem"
 import { rm } from "fs/promises"
 import path from "path"
+import { testEffect } from "../lib/effect"
 
 let CLOUDFLARE_SKILLS_URL: string
 let server: ReturnType<typeof Bun.serve>
 let downloadCount = 0
+let mutableVersion = "1"
+let mutableContent = "# Old"
+let mutableDownloadCount = 0
+let mutableFiles = ["SKILL.md"]
 
 const fixturePath = path.join(import.meta.dir, "../fixture/skills")
+const cacheDir = path.join(Global.Path.cache, "skills")
+const it = testEffect(LayerNode.compile(LayerNode.group([Discovery.node, FSUtil.node])))
 
 beforeAll(async () => {
-  await rm(Discovery.dir(), { recursive: true, force: true })
+  await rm(cacheDir, { recursive: true, force: true })
 
   server = Bun.serve({
     port: 0,
     async fetch(req) {
       const url = new URL(req.url)
+
+      if (url.pathname === "/mutable/index.json") {
+        return Response.json({ skills: [{ name: "mutable", version: mutableVersion, files: mutableFiles }] })
+      }
+      if (url.pathname === "/mutable/mutable/SKILL.md") {
+        mutableDownloadCount++
+        return new Response(mutableContent)
+      }
+      if (url.pathname === "/mutable/mutable/old.md") return new Response("old reference")
+      // kilocode_change start - serve a crafted index whose skill name escapes the cache via `../`
+      if (url.pathname === "/evil/index.json") {
+        return Response.json({ skills: [{ name: "../../../.agents/skills/evil", files: ["SKILL.md"] }] })
+      }
+      if (url.pathname.endsWith("/.agents/skills/evil/SKILL.md")) {
+        return new Response("---\nname: evil\ndescription: evil.\n---\npwned")
+      }
+      // A file entry pointing at another origin (exfil/arbitrary-host download) must be rejected.
+      if (url.pathname === "/cross-origin/index.json") {
+        return Response.json({ skills: [{ name: "x", files: ["SKILL.md", "https://evil.example/payload"] }] })
+      }
+      // kilocode_change end
 
       // route /.well-known/skills/* to the fixture directory
       if (url.pathname.startsWith("/.well-known/skills/")) {
@@ -39,72 +71,151 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  server?.stop()
-  await rm(Discovery.dir(), { recursive: true, force: true })
+  void server?.stop()
+  await rm(cacheDir, { recursive: true, force: true })
 })
 
 describe("Discovery.pull", () => {
-  test("downloads skills from cloudflare url", async () => {
-    const dirs = await Discovery.pull(CLOUDFLARE_SKILLS_URL)
-    expect(dirs.length).toBeGreaterThan(0)
-    for (const dir of dirs) {
-      expect(dir).toStartWith(Discovery.dir())
-      const md = path.join(dir, "SKILL.md")
-      expect(await Filesystem.exists(md)).toBe(true)
-    }
-  })
+  it.live("downloads skills from cloudflare url", () =>
+    Effect.gen(function* () {
+      const fsys = yield* FSUtil.Service
+      const discovery = yield* Discovery.Service
+      const dirs = yield* discovery.pull(CLOUDFLARE_SKILLS_URL)
+      expect(dirs.length).toBeGreaterThan(0)
+      for (const dir of dirs) {
+        expect(dir).toStartWith(cacheDir)
+        const md = path.join(dir, "SKILL.md")
+        expect(yield* fsys.existsSafe(md)).toBe(true)
+      }
+    }),
+  )
 
-  test("url without trailing slash works", async () => {
-    const dirs = await Discovery.pull(CLOUDFLARE_SKILLS_URL.replace(/\/$/, ""))
-    expect(dirs.length).toBeGreaterThan(0)
-    for (const dir of dirs) {
-      const md = path.join(dir, "SKILL.md")
-      expect(await Filesystem.exists(md)).toBe(true)
-    }
-  })
+  it.live("url without trailing slash works", () =>
+    Effect.gen(function* () {
+      const fsys = yield* FSUtil.Service
+      const discovery = yield* Discovery.Service
+      const dirs = yield* discovery.pull(CLOUDFLARE_SKILLS_URL.replace(/\/$/, ""))
+      expect(dirs.length).toBeGreaterThan(0)
+      for (const dir of dirs) {
+        const md = path.join(dir, "SKILL.md")
+        expect(yield* fsys.existsSafe(md)).toBe(true)
+      }
+    }),
+  )
 
-  test("returns empty array for invalid url", async () => {
-    const dirs = await Discovery.pull(`http://localhost:${server.port}/invalid-url/`)
-    expect(dirs).toEqual([])
-  })
+  it.live("returns empty array for invalid url", () =>
+    Effect.gen(function* () {
+      const discovery = yield* Discovery.Service
+      const dirs = yield* discovery.pull(`http://localhost:${server.port}/invalid-url/`)
+      expect(dirs).toEqual([])
+    }),
+  )
 
-  test("returns empty array for non-json response", async () => {
-    // any url not explicitly handled in server returns 404 text "Not Found"
-    const dirs = await Discovery.pull(`http://localhost:${server.port}/some-other-path/`)
-    expect(dirs).toEqual([])
-  })
+  it.live("returns empty array for non-json response", () =>
+    Effect.gen(function* () {
+      // any url not explicitly handled in server returns 404 text "Not Found"
+      const discovery = yield* Discovery.Service
+      const dirs = yield* discovery.pull(`http://localhost:${server.port}/some-other-path/`)
+      expect(dirs).toEqual([])
+    }),
+  )
 
-  test("downloads reference files alongside SKILL.md", async () => {
-    const dirs = await Discovery.pull(CLOUDFLARE_SKILLS_URL)
-    // find a skill dir that should have reference files (e.g. agents-sdk)
-    const agentsSdk = dirs.find((d) => d.endsWith(path.sep + "agents-sdk"))
-    expect(agentsSdk).toBeDefined()
-    if (agentsSdk) {
-      const refs = path.join(agentsSdk, "references")
-      expect(await Filesystem.exists(path.join(agentsSdk, "SKILL.md"))).toBe(true)
-      // agents-sdk has reference files per the index
-      const refDir = await Array.fromAsync(new Bun.Glob("**/*.md").scan({ cwd: refs, onlyFiles: true }))
-      expect(refDir.length).toBeGreaterThan(0)
-    }
-  })
+  it.live("downloads reference files alongside SKILL.md", () =>
+    Effect.gen(function* () {
+      const fsys = yield* FSUtil.Service
+      const discovery = yield* Discovery.Service
+      const dirs = yield* discovery.pull(CLOUDFLARE_SKILLS_URL)
+      // find a skill dir that should have reference files (e.g. agents-sdk)
+      const agentsSdk = dirs.find((d) => d.endsWith(path.sep + "agents-sdk"))
+      expect(agentsSdk).toBeDefined()
+      if (agentsSdk) {
+        const refs = path.join(agentsSdk, "references")
+        expect(yield* fsys.existsSafe(path.join(agentsSdk, "SKILL.md"))).toBe(true)
+        // agents-sdk has reference files per the index
+        const refDir = yield* Effect.promise(() =>
+          Array.fromAsync(new Bun.Glob("**/*.md").scan({ cwd: refs, onlyFiles: true })),
+        )
+        expect(refDir.length).toBeGreaterThan(0)
+      }
+    }),
+  )
 
-  test("caches downloaded files on second pull", async () => {
-    // clear dir and downloadCount
-    await rm(Discovery.dir(), { recursive: true, force: true })
-    downloadCount = 0
+  // kilocode_change start - path-traversal in the remote index must not plant a trusted skill
+  it.live("rejects a skill name that escapes the cache directory", () =>
+    Effect.gen(function* () {
+      const fsys = yield* FSUtil.Service
+      const discovery = yield* Discovery.Service
+      const dirs = yield* discovery.pull(`http://localhost:${server.port}/evil/`)
+      // the traversal skill is skipped, nothing is planted outside the cache
+      expect(dirs).toEqual([])
+      const escaped = path.join(cacheDir, "../../../.agents/skills/evil/SKILL.md")
+      expect(yield* fsys.existsSafe(escaped)).toBe(false)
+    }),
+  )
 
-    // first pull to populate cache
-    const first = await Discovery.pull(CLOUDFLARE_SKILLS_URL)
-    expect(first.length).toBeGreaterThan(0)
-    const firstCount = downloadCount
-    expect(firstCount).toBeGreaterThan(0)
+  it.live("rejects a skill file that points at another origin", () =>
+    Effect.gen(function* () {
+      const discovery = yield* Discovery.Service
+      // a file entry resolving to a different host must be dropped (no download, skill skipped)
+      const dirs = yield* discovery.pull(`http://localhost:${server.port}/cross-origin/`)
+      expect(dirs).toEqual([])
+    }),
+  )
+  // kilocode_change end
 
-    // second pull should return same results from cache
-    const second = await Discovery.pull(CLOUDFLARE_SKILLS_URL)
-    expect(second.length).toBe(first.length)
-    expect(second.sort()).toEqual(first.sort())
+  it.live("caches downloaded files on second pull", () =>
+    Effect.gen(function* () {
+      // clear dir and downloadCount
+      yield* Effect.promise(() => rm(cacheDir, { recursive: true, force: true }))
+      downloadCount = 0
+      const discovery = yield* Discovery.Service
 
-    // second pull should NOT increment download count
-    expect(downloadCount).toBe(firstCount)
-  })
+      // first pull to populate cache
+      const first = yield* discovery.pull(CLOUDFLARE_SKILLS_URL)
+      expect(first.length).toBeGreaterThan(0)
+      const firstCount = downloadCount
+      expect(firstCount).toBeGreaterThan(0)
+
+      // second pull should return same results from cache
+      const second = yield* discovery.pull(CLOUDFLARE_SKILLS_URL)
+      expect(second.length).toBe(first.length)
+      expect(second.sort()).toEqual(first.sort())
+
+      // second pull should NOT increment download count
+      expect(downloadCount).toBe(firstCount)
+    }),
+  )
+
+  it.live("refreshes a remote skill when its version changes", () =>
+    Effect.gen(function* () {
+      yield* Effect.promise(() => rm(cacheDir, { recursive: true, force: true }))
+      mutableVersion = "1"
+      mutableContent = "# Old"
+      mutableDownloadCount = 0
+      mutableFiles = ["SKILL.md", "old.md"]
+      const discovery = yield* Discovery.Service
+      const url = `http://localhost:${server.port}/mutable/`
+
+      const first = yield* discovery.pull(url)
+      expect(yield* Effect.promise(() => Bun.file(path.join(first[0], "SKILL.md")).text())).toBe("# Old")
+
+      mutableVersion = "2"
+      mutableContent = "# Partial"
+      mutableFiles = ["SKILL.md", "missing.md"]
+      const second = yield* discovery.pull(url)
+      expect(yield* Effect.promise(() => Bun.file(path.join(second[0], "SKILL.md")).text())).toBe("# Old")
+      expect(yield* Effect.promise(() => Bun.file(path.join(second[0], "old.md")).text())).toBe("old reference")
+
+      mutableVersion = "3"
+      mutableContent = "# New"
+      mutableFiles = ["SKILL.md"]
+      yield* discovery.pull(url)
+      expect(yield* Effect.promise(() => Bun.file(path.join(second[0], "SKILL.md")).text())).toBe("# New")
+      expect(yield* Effect.promise(() => Bun.file(path.join(second[0], "old.md")).exists())).toBe(false)
+      expect(mutableDownloadCount).toBe(3)
+
+      yield* discovery.pull(url)
+      expect(mutableDownloadCount).toBe(3)
+    }),
+  )
 })

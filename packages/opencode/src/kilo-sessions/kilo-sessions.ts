@@ -1,26 +1,104 @@
 import { Bus } from "@/bus"
+import { BusEvent } from "@/bus/bus-event"
+import { GlobalBus } from "@/bus/global"
 import { Provider } from "@/provider/provider"
-import { Session } from "@/session"
+import { Session } from "@/session/session"
+import { KiloSession } from "@/kilocode/session"
+import { SessionID } from "@/session/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { MessageV2 } from "@/session/message-v2"
 import { Storage } from "@/storage/storage"
-import { Log } from "@/util/log"
+import * as Log from "@opencode-ai/core/util/log"
 import { Auth } from "@/auth"
+import { makeRuntime } from "@/effect/run-service"
 import { IngestQueue } from "@/kilo-sessions/ingest-queue"
+import { StatusSync } from "@/kilo-sessions/status-sync"
+import { IngestDrain } from "@/kilo-sessions/ingest-drain"
 import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-cache"
 import type * as SDK from "@kilocode/sdk/v2"
 import z from "zod"
+import { Context, Effect, Layer, Schema } from "effect"
 import { KILO_API_BASE } from "@kilocode/kilo-gateway"
 import { Config } from "@/config/config"
-import { Instance } from "@/project/instance"
+import { InstanceState } from "@/effect/instance-state"
+import { Instance } from "@/kilocode/instance"
+import { iife } from "@/util/iife"
 import { Vcs } from "@/project/vcs"
-import simpleGit from "simple-git"
+import { Git } from "@/git"
+import { simpleGit } from "simple-git"
 import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
+import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
+import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
+import {
+  clearSessionLink,
+  enabled as prEnabled,
+  loadSessionLinks,
+  pruneLegacyWorktreeLinks,
+  readSessionPrLink,
+  recordPrCreate,
+  recordPush,
+} from "@/kilo-sessions/pr-link"
+import type { SessionPrLink } from "@/kilo-sessions/pr-link"
+import { refreshPrLink, startPrLinkPoll } from "@/kilo-sessions/pr-link-poller"
+import { AttachedState } from "@/kilo-sessions/attached-state"
+import { RemoteSessionLog } from "@/kilo-sessions/remote-session-log"
+import {
+  clear as clearRenameMarks,
+  consumeAutoTitle,
+  consumeRenameAdoption,
+  markAutoTitle,
+  markRenameAdopted,
+} from "@/kilo-sessions/rename-adoptions"
+import { KiloSessionTitle } from "@/kilocode/session/title"
+import { resolveDerivedSessionStatus, type DerivedSessionStatus } from "@/kilocode/session/scheduled"
+import { Wakeup } from "@/kilocode/wakeup"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
+import { Question } from "@/question"
+import { Permission } from "@/permission"
+import { withTimeout } from "@/util/timeout"
+import { Snapshot } from "@/snapshot"
+import { cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
+import { KiloShutdown } from "@/kilocode/cli/shutdown"
+
+async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
+  const { provide } = await import("@/kilocode/instance")
+  return provide(input)
+}
 
 export namespace KiloSessions {
+  export const Event = {
+    RemoteStatusChanged: BusEvent.define(
+      "kilo-sessions.remote-status-changed",
+      Schema.Struct({
+        enabled: Schema.Boolean,
+        connected: Schema.Boolean,
+      }),
+    ),
+  }
+
+  export interface Interface {
+    readonly init: () => Effect.Effect<void, unknown>
+    readonly sendAgentNotification: (
+      sessionID: string,
+      input: { id: string; message: string },
+    ) => Effect.Effect<{ ok: true } | { ok: false; reason: string }, never>
+    readonly reportSessionTitle: (
+      sessionID: string,
+      title: string,
+      opts: { generated: boolean },
+    ) => Effect.Effect<{ ok: true } | { ok: false; reason: string }, never>
+  }
+
+  export class Service extends Context.Service<Service, Interface>()("@kilocode/KiloSessions") {}
+
   const log = Log.create({ service: "kilo-sessions" })
+  const attachedLog = { warn: (msg: string, meta?: unknown) => log.warn(msg, meta as never) }
+  const runtime = makeRuntime(Auth.Service, Auth.defaultLayer)
 
   const Uuid = z.uuid()
   type Uuid = z.infer<typeof Uuid>
@@ -32,15 +110,69 @@ export namespace KiloSessions {
   const orgKey = "kilo-sessions:org"
   const clientKey = "kilo-sessions:client"
   const gitUrlKeyPrefix = "kilo-sessions:git-url:"
+  const gitBranchKeyPrefix = "kilo-sessions:git-branch:"
 
   const ttlMs = 10_000
+
+  /**
+   * Classify an `http_<status>` reason as a permanent (non-retryable) failure.
+   * 4xx client errors are permanent except 408 (Request Timeout) and 429
+   * (Too Many Requests), which are transient and should be retried.
+   */
+  function isPermanentHttpStatus(reason: string): boolean {
+    const match = reason.match(/^http_(\d+)$/)
+    if (!match) return false
+    return refusedByRelay(parseInt(match[1], 10))
+  }
+
+  /**
+   * A status the relay answered with is a definitive refusal: a permanent
+   * client error (4xx) other than 408 (Request Timeout) and 429 (Too Many
+   * Requests). Everything else — 5xx, 408, 429, a network failure — is
+   * transient and leaves the request retryable.
+   */
+  function refusedByRelay(status: number): boolean {
+    return status >= 400 && status < 500 && status !== 408 && status !== 429
+  }
+
+  function agentNotificationTimeoutMs(): number {
+    const value = process.env["KILO_AGENT_NOTIFICATION_TIMEOUT_MS"]
+    return value ? Number(value) : 10_000
+  }
+
+  // Per-session in-flight bootstrap tracker so concurrent calls to
+  // sendAgentNotification (and the watch(Session.Event.Created) path) share a
+  // single POST /api/session call. Entries resolve to the same share record or
+  // a thrown error; on bootstrap failure the rejection is captured as a
+  // `{ ok:false, reason }` outcome so callers can map it to the tool's failure
+  // text without re-throwing. `skipped` marks a bootstrap that never reached
+  // the relay (no credentials / ingest disabled) so the create_session gate
+  // below can tell "the relay refused this session" from "there was nothing to
+  // refuse". `refused` marks the explicit refusal itself: only that outcome may
+  // fail hosting, a transient failure must stay retryable.
+  type BootstrapOutcome =
+    | { ok: true; ingestPath: string }
+    | { ok: false; reason: string; skipped?: true; refused?: true }
+  const bootstrapInflight = new Map<string, Promise<BootstrapOutcome>>()
+
+  // kilocode_change - `bootstrap` rejects with this when the relay answered the
+  // ingest POST with a definitive refusal (a permanent 4xx). `trackBootstrap`
+  // marks the outcome `refused` from this type, and only a refused outcome may
+  // fail the create_session command: a transient failure (5xx/408/429 or a
+  // network error) leaves the session hosted and retried on the next attempt.
+  class RelayRefusal extends Error {}
 
   function clearCache() {
     clearInFlightCache(tokenKey)
     clearInFlightCache(tokenValidKey)
     clearInFlightCache(clientKey)
     clearInFlightCache(orgKey)
+    // The git-url and per-directory branch caches are keyed per directory
+    // (`<prefix><directory>`); only the launch-directory entry is cleared here.
+    // Entries for other session directories expire via ttlMs (10 s) — there is
+    // intentionally no prefix-clear API.
     clearInFlightCache(gitUrlKeyPrefix + Instance.worktree)
+    clearInFlightCache(gitBranchKeyPrefix + Instance.worktree)
   }
 
   async function authValid(token: string) {
@@ -69,17 +201,48 @@ export namespace KiloSessions {
 
   async function kilocodeToken() {
     return withInFlightCache(tokenKey, ttlMs, async () => {
-      const auth = await Auth.get("kilo")
+      const auth = await runtime.runPromise((svc) => svc.get("kilo"))
       if (auth?.type === "api" && auth.key.length > 0) return auth.key
       if (auth?.type === "oauth" && auth.access.length > 0) return auth.access
       if (auth?.type === "wellknown" && auth.token.length > 0) return auth.token
+
+      const key = process.env["KILO_API_KEY"]?.trim()
+      if (key) return key
       return undefined
     })
+  }
+
+  async function model(providerID: ProviderV2.ID, modelID: ModelV2.ID) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(Provider.Service.use((svc) => svc.getModel(providerID, modelID)))
+  }
+
+  async function models(refs: Array<{ providerID: string; modelID: string }>) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(
+      Provider.Service.use((svc) =>
+        Effect.all(refs.map((ref) => svc.getModel(ProviderV2.ID.make(ref.providerID), ModelV2.ID.make(ref.modelID)))),
+      ),
+    )
   }
 
   type Client = {
     url: string
     fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+  }
+
+  function transport(info: Session.Info): SDK.Session {
+    return {
+      ...info,
+      summary: info.summary
+        ? {
+            ...info.summary,
+            diffs: info.summary.diffs?.filter(
+              (diff): diff is typeof diff & { file: string } => diff.file !== undefined,
+            ),
+          }
+        : undefined,
+    }
   }
 
   async function getClient(): Promise<Client | undefined> {
@@ -132,92 +295,713 @@ export namespace KiloSessions {
     },
   })
 
+  // Process-level once-guard: overlapping shutdown paths must not double-POST.
+  // Do not call from per-directory instance finalizers — wrong granularity.
+  // Never-reject: serve/worker await this unguarded before dispose/stop.
+  const drainIngest = IngestDrain.create(
+    () => ingest.drain(),
+    (err) => log.warn("ingest drain failed", { err }),
+  )
+  KiloShutdown.register(drainIngest)
+
+  // Process-level, like the ingest drain: every exit path (Ctrl-C on
+  // `kilo remote`, TUI quit) closes the remote sessions this run started and
+  // still hosts, so a finished run always leaves an end line for what ran.
+  KiloShutdown.register(() => RemoteSessionLog.endAll(log, "shutdown"))
+
+  export async function drainIngestForShutdown() {
+    await drainIngest()
+  }
+
+  /** @internal - lifecycle regression coverage */
+  export function _queueIngestForTest(sessionId: string) {
+    return ingest.sync(sessionId, [{ type: "session_status", data: { status: "idle" } }])
+  }
+
   const remoteEnabled = process.env["KILO_REMOTE"] === "1"
-  let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender; heartbeat: () => Promise<void> } | undefined
+  let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender } | undefined
   let enabling: Promise<void> | undefined
   let remoteSeq = 0
-  let viewedSessionId: string | undefined
+  // kilocode_change - K1 W1: module-level instance advertisement flag.
+  // `enableRemote` can be triggered either by the explicit `kilo remote` command
+  // or by bootstrap auto-enable (`KILO_REMOTE=1` / `remote_control` config); it
+  // is idempotent/coalescing, so passing an {instance} arg on one specific call
+  // would race with whichever call happens first. A module-level flag flipped
+  // by either caller is the only race-free way to advertise the instance.
+  let instanceAdvertisement: RemoteProtocol.InstanceAdvertisement | undefined
+  // Separate presence-owned attached session ids from newly-created (pending)
+  // session announcements so a concurrent presence update cannot drop a pending
+  // id and a heartbeat failure cannot delete a presence-owned id. The heartbeat
+  // closure throws when no remote connection is available so `announce` cannot
+  // silently mark a session as attached; create_session's catch block turns that
+  // into the sanitized failure response and the user retries manually.
+  const attachedState = AttachedState.create({
+    heartbeat: (opts) =>
+      remote ? remote.conn.heartbeat(opts) : Promise.reject(new Error("attachRemoteSession: no remote connection")),
+    log: attachedLog,
+  })
 
-  export async function init() {
-    if (ingestDisabled) return
+  // kilocode_change - locally started sessions never announce to the remote
+  // connection, so the mobile live list (fed by per-connection attached ids)
+  // never shows them. Announce on the first turn (idempotent via
+  // AttachedState.announce) and detach on dispose, mirroring the create_session
+  // / exit_cli lifecycle for app-spawned sessions. Both are never-reject: the
+  // fire-and-forget event handlers log failures instead of surfacing them.
+  // Per-session in-flight local announce tracker. A delete that races the
+  // announce — while it awaits the in-flight enable, or while the attach
+  // heartbeat is in flight — must converge on the same outcome instead of
+  // no-oping and leaving the dead id attached forever. `deleted` is set by
+  // detachLocalSession so an announce that has not yet attached can skip.
+  type LocalAnnounce = { promise: Promise<void>; deleted: boolean }
+  const localAnnounceInflight = new Map<string, LocalAnnounce>()
 
-    Bus.subscribe(Session.Event.Created, (evt) => {
-      const sessionId = evt.properties.info.id
-      void create(sessionId).catch((error) => log.error("share init create failed", { sessionId, error }))
-    })
+  async function announceLocalSession(id: string) {
+    const existing = localAnnounceInflight.get(id)
+    if (existing) {
+      await existing.promise
+      return
+    }
+    const entry: LocalAnnounce = { promise: Promise.resolve(), deleted: false }
+    localAnnounceInflight.set(id, entry)
+    entry.promise = doAnnounceLocalSession(id, entry)
+    await entry.promise
+  }
 
-    Bus.subscribe(Session.Event.Updated, async (evt) => {
-      await ingest.sync(evt.properties.info.id, [
-        {
-          type: "kilo_meta",
-          data: await meta(evt.properties.info.id),
-        },
-        {
-          type: "session",
-          data: evt.properties.info,
-        },
-      ])
-    })
-
-    Bus.subscribe(MessageV2.Event.Updated, async (evt) => {
-      await ingest.sync(evt.properties.info.sessionID, [
-        {
-          type: "message",
-          data: evt.properties.info,
-        },
-      ])
-
-      if (evt.properties.info.role === "user") {
-        await ingest.sync(evt.properties.info.sessionID, [
-          {
-            type: "model",
-            data: [
-              await Provider.getModel(evt.properties.info.model.providerID, evt.properties.info.model.modelID).then(
-                (m) => m,
-              ),
-            ],
-          },
-        ])
+  async function doAnnounceLocalSession(id: string, entry: LocalAnnounce) {
+    try {
+      // Do not announce when remote is disabled. A first turn that races
+      // bootstrap auto-enable waits for the in-flight enable so the session
+      // still lands in the live list.
+      if (!remote && !enabling) return
+      const inflight = enabling
+      if (inflight) {
+        await inflight.catch(() => undefined)
+        if (!remote) return
       }
-    })
+      // A delete that fired while we awaited the enable must cancel this
+      // announce so the dead session never lands in the live list.
+      if (entry.deleted) return
+      await attachRemoteSession(id)
+    } catch (error) {
+      log.warn("local session announce failed", { sessionID: id, error: String(error) })
+    } finally {
+      if (localAnnounceInflight.get(id) === entry) localAnnounceInflight.delete(id)
+    }
+  }
 
-    Bus.subscribe(MessageV2.Event.PartUpdated, async (evt) => {
-      await ingest.sync(evt.properties.part.sessionID, [
-        {
-          type: "part",
-          data: evt.properties.part,
-        },
-      ])
-    })
+  // kilocode_change - detach a locally announced session on dispose so it leaves
+  // the live list. No-op for an unowned id (e.g. an app-spawned session already
+  // detached via exit_cli). Detaches the raw attached state without touching
+  // SessionStatus, because the session row is already gone on delete.
+  async function detachLocalSession(id: string) {
+    try {
+      // Converge with an in-flight announce: mark it deleted so it skips the
+      // attach, then wait for it to settle. If it already attached (the delete
+      // raced the attach heartbeat), the ownership check below still sees it
+      // and detaches it. Without this, a delete during the enable await no-ops
+      // (the id is not yet attached) and the announce then attaches the dead
+      // session forever.
+      const announce = localAnnounceInflight.get(id)
+      if (announce) {
+        announce.deleted = true
+        await announce.promise
+      }
+      if (!hasRemoteSession(id)) return
+      await attachedState.detach(id)
+    } catch (error) {
+      log.warn("local session detach failed", { sessionID: id, error: String(error) })
+    }
+  }
 
-    Bus.subscribe(Session.Event.Diff, async (evt) => {
-      await ingest.sync(evt.properties.sessionID, [
-        {
-          type: "session_diff",
-          data: evt.properties.diff,
-        },
-      ])
-    })
+  const statuses = StatusSync.create()
 
-    Bus.subscribe(Session.Event.TurnOpen, async (evt) => {
-      await ingest.sync(evt.properties.sessionID, [{ type: "session_open", data: {} }])
-    })
+  // Shared attention/status resolution for ingest sync and the remote heartbeat.
+  // The precedence lives in kilocode/session/scheduled so the HTTP status
+  // endpoint derives the same result.
+  type DerivedStatus = { status: DerivedSessionStatus; scheduledAt?: string }
 
-    Bus.subscribe(Session.Event.TurnClose, async (evt) => {
-      await ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }])
-    })
+  function deriveStatus(sessionID: string, override?: SessionStatus.Info) {
+    return Effect.gen(function* () {
+      const permissions = yield* Permission.Service.use((svc) => svc.list())
+      if (permissions.some((p) => p.sessionID === sessionID)) return { status: "permission" as const }
 
-    const cfg = await Config.getGlobal()
-    if (remoteEnabled || cfg.remote_control)
-      enableRemote().catch((err) => log.warn("remote not enabled", { error: String(err) }))
-    Bus.subscribe(Bus.InstanceDisposed, () => disableRemote())
+      const questions = yield* Question.Service.use((svc) => svc.list())
+      if (questions.some((q) => q.sessionID === sessionID)) return { status: "question" as const }
+
+      const id = SessionID.make(sessionID)
+      const status = override ?? (yield* SessionStatus.Service.use((svc) => svc.get(id)))
+      const due = status.type === "idle" ? yield* Wakeup.Service.use((svc) => svc.scheduled()) : undefined
+      const scheduledAt = due?.get(id)
+      const derived = resolveDerivedSessionStatus({
+        hasPermission: false,
+        hasQuestion: false,
+        statusType: status.type,
+        scheduledAt,
+      })
+      return derived === "scheduled" && scheduledAt !== undefined
+        ? { status: derived, scheduledAt: new Date(scheduledAt).toISOString() }
+        : { status: derived }
+    })
+  }
+
+  function deriveAndSyncStatus(sessionID: string, derived: DerivedStatus, occurredAt: string) {
+    const data = statuses.record(sessionID, derived, occurredAt)
+    return ingest.sync(sessionID, [{ type: "session_status", data }])
+  }
+
+  // kilocode_change - PR link advertise: a PR is linked to a session only on
+  // hard evidence the session itself produced (it created the PR or pushed its
+  // head branch), stored per session. The heartbeat reads each advertised
+  // session's own link and ingests its triple; it never resolves one worktree
+  // link and fans it out to every session in the checkout. A wrong link is
+  // worse than no link, so no branch-name discovery and no text scraping.
+  type PrLinkTriple = {
+    platform: string | null
+    prUrl: string | null
+    prNumber: number | null
+    // The evidence contract shared with the Kilo-Org/cloud item: the branch the
+    // session pushed and the commit it pushed. Null on a clear. Kept optional to
+    // older backends by sending them alongside the three legacy keys.
+    headRef: string | null
+    headSha: string | null
+  }
+
+  function tripleOf(record: SessionPrLink): PrLinkTriple {
+    return {
+      platform: record.link.platform,
+      prUrl: record.link.prUrl,
+      prNumber: record.link.prNumber,
+      headRef: record.headRef ?? null,
+      headSha: record.headSha ?? null,
+    }
+  }
+
+  // An all-null triple withdraws the session's link on the backend. The three
+  // legacy keys stay first so older backends keep working.
+  const clearedTriple: PrLinkTriple = {
+    platform: null,
+    prUrl: null,
+    prNumber: null,
+    headRef: null,
+    headSha: null,
+  }
+
+  // Last triple synced per session id so the ~10s heartbeat does not re-ingest
+  // an unchanged link. Module-level (process-wide) like the instance advertisement.
+  const lastPrLinkTriple = new Map<string, string>()
+
+  async function syncPrLinkTriple(sessionId: string, triple: PrLinkTriple) {
+    const key = JSON.stringify(triple)
+    if (lastPrLinkTriple.get(sessionId) === key) return
+    // The queue drops items without a share. Leave those triples retryable
+    // until bootstrap completes, just as ingest.sync does for a missing client.
+    if (!(await readShare(sessionId))) return
+    const accepted = await ingest.sync(sessionId, [{ type: "session_pr_link", data: triple }])
+    if (accepted) lastPrLinkTriple.set(sessionId, key)
+  }
+
+  // Ingest stored evidence without a remote heartbeat. Withdraw an absent
+  // record only if this process previously ingested the session's link.
+  async function syncPrLinkForSession(sessionId: string) {
+    const record = await readSessionPrLink(sessionId)
+    await syncSessionPrLink(sessionId, record, new Set())
+  }
+
+  // Sessions already cleared by the legacy sweep this process.
+  const legacyPruned = new Set<string>()
+
+  // Advertise and ingest the session's own link, or withdraw it when the session
+  // no longer owns one. A session that never had a link stays silent unless the
+  // legacy sweep is clearing a link it inherited from the dropped worktree
+  // records: `pending` names exactly the sessions that existed when the
+  // migration ran, so a session first advertised on a later heartbeat still gets
+  // its one clear.
+  async function syncSessionPrLink(sessionId: string, record: SessionPrLink | undefined, pending: Set<string>) {
+    if (record) {
+      await syncPrLinkTriple(sessionId, tripleOf(record))
+      // A candidate that already owns a real link owes no clear, so settle it
+      // now. Otherwise it never reaches `legacyPruned`, `settleLegacyPrLinks`
+      // can never satisfy its loop, and the persisted `{ pending }` set is
+      // re-read on every later process.
+      if (pending.has(sessionId)) legacyPruned.add(sessionId)
+      return
+    }
+    const sent = lastPrLinkTriple.get(sessionId)
+    if (sent !== undefined && sent !== JSON.stringify(clearedTriple)) {
+      await syncPrLinkTriple(sessionId, clearedTriple)
+      return
+    }
+    if (pending.has(sessionId) && !legacyPruned.has(sessionId)) {
+      await syncPrLinkTriple(sessionId, clearedTriple)
+      legacyPruned.add(sessionId)
+    }
+  }
+
+  // One migration per process: drop the per-worktree recorded links an older CLI
+  // wrote (they were never per-session evidence) and return the sessions that
+  // must each receive one clear. The candidate set is every session the project
+  // knew when the migration ran, persisted under a Storage marker, because a
+  // session may be first advertised on a heartbeat after the prune; writing the
+  // marker "done" on the first heartbeat would leave those sessions with the
+  // stale, inherited link. A marker already carried over (or `true`) means the
+  // prune has run and the persisted candidates are still owed their clear.
+  type PrMigrationMarker = true | { pending: string[] }
+  const prMigrationKey = ["session_pr_link_migration", "legacy-worktree-prune"]
+  let prMigration: Promise<Set<string>> | undefined
+  let prMigrationSettled = false
+
+  async function readMarker(): Promise<PrMigrationMarker | undefined> {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(Storage.Service.use((svc) => svc.read<PrMigrationMarker>(prMigrationKey))).catch(
+      () => undefined,
+    )
+  }
+
+  async function writeMarker(value: PrMigrationMarker): Promise<void> {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    await AppRuntime.runPromise(Storage.Service.use((svc) => svc.write(prMigrationKey, value))).catch(() => undefined)
+  }
+
+  async function pruneLegacyPrLinks(): Promise<Set<string>> {
+    if (prMigration) return prMigration
+    prMigration = (async () => {
+      const marker = await readMarker()
+      if (marker === true) return new Set<string>()
+      if (marker && Array.isArray(marker.pending)) return new Set(marker.pending)
+
+      const pruned = await pruneLegacyWorktreeLinks()
+      if (pruned === 0) {
+        await writeMarker(true)
+        return new Set<string>()
+      }
+      const { AppRuntime } = await import("@/effect/app-runtime")
+      const candidates = await AppRuntime.runPromise(Session.Service.use((svc) => svc.list())).then(
+        (list) => [...new Set(list.map((s) => s.id))],
+        () => [] as string[],
+      )
+      if (candidates.length === 0) {
+        await writeMarker(true)
+        return new Set<string>()
+      }
+      await writeMarker({ pending: candidates })
+      return new Set(candidates)
+    })().catch(() => new Set<string>())
+    return prMigration
+  }
+
+  // Record the migration done once every session that existed at the migration
+  // has been sent its clear. A candidate that was never advertised stays
+  // pending, so if it resurfaces later it still receives its one clear instead
+  // of inheriting the dropped worktree link.
+  async function settleLegacyPrLinks(pending: Set<string>) {
+    if (prMigrationSettled || pending.size === 0) return
+    for (const sessionId of pending) if (!legacyPruned.has(sessionId)) return
+    prMigrationSettled = true
+    await writeMarker(true)
+  }
+
+  /** @internal - test-only: forget the migration so an upgrade can be replayed */
+  export async function _resetPrLinkMigrationForTests() {
+    prMigration = undefined
+    prMigrationSettled = false
+    legacyPruned.clear()
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    await AppRuntime.runPromise(Storage.Service.use((svc) => svc.remove(prMigrationKey))).catch(() => undefined)
+  }
+
+  // Only a host CLI's create subcommand names a new PR; a listing (`gh pr list`),
+  // a view, a review, or a pasted link is a mention. `gh api` counts only when it
+  // POSTs to the pulls collection.
+  function isPrCreateCommand(command: string): boolean {
+    if (/(?:^|[\s;&|(])gh\s+pr\s+create(?:\s|$)/.test(command)) return true
+    if (/(?:^|[\s;&|(])glab\s+mr\s+create(?:\s|$)/.test(command)) return true
+    if (/(?:^|[\s;&|(])hub\s+pull-request(?:\s|$)/.test(command)) return true
+    return (
+      /(?:^|[\s;&|(])gh\s+api\b/.test(command) &&
+      /\/pulls\b/.test(command) &&
+      /(?:-X\s*POST|--method[=\s]+POST|-f\b|--field\b|--raw-field\b)/.test(command)
+    )
+  }
+
+  function isPushCommand(command: string): boolean {
+    return /(?:^|[\s;&|(])git\s+push(?:\s|$)/.test(command)
+  }
+
+  async function cumulative(sessionId: string, local: Snapshot.FileDiff[]) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(
+      Storage.Service.use((storage) => cumulativeSessionDiff(storage, SessionID.make(sessionId), local)),
+    )
+  }
+
+  export const layer: Layer.Layer<Service, never, Config.Service | Session.Service> = Layer.effect(
+    Service,
+    Effect.gen(function* () {
+      const config = yield* Config.Service
+      const sessions = yield* Session.Service
+
+      const reportSessionTitle = Effect.fn("KiloSessions.reportSessionTitle")(function* (
+        sessionID: string,
+        title: string,
+        opts: { generated: boolean },
+      ) {
+        return yield* Effect.promise(() => reportTitleChange(sessionID, title, opts.generated))
+      })
+
+      const state = yield* InstanceState.make(
+        Effect.fn("KiloSessions.state")(function* (ctx) {
+          if (ingestDisabled) return
+
+          // Register event callbacks into a type→callback dispatch map, drained by a single
+          // GlobalBus listener installed below. GlobalBus is the unified channel that receives BOTH legacy Bus
+          // emissions (TurnOpen/TurnClose) and EventV2Bridge emissions (upstream moved Session/Message/Question/
+          // Status/Permission events to EventV2, which publishes only to GlobalBus, not the legacy typed Bus).
+          // Both channels emit the same { payload: { id, type, properties } } shape.
+          const handlers = new Map<string, (evt: { properties: any }) => unknown | Promise<unknown>>()
+          const watch = <D extends { type: string }>(
+            def: D,
+            fn: (evt: { properties: any }) => unknown | Promise<unknown>,
+          ) => {
+            handlers.set(def.type, fn)
+          }
+
+          // Last-known title per session so we only POST on actual title changes.
+          // Seed on Created and from existing rows at bootstrap so the first real
+          // rename (rename-before-prompt, or first rename after process restart)
+          // is not treated as a seed-only sighting and dropped (Decision 8).
+          const knownTitles = new Map<string, string>()
+          const tracked = new Set<string>()
+          yield* sessions.list().pipe(
+            Effect.map((list) => {
+              for (const s of list) {
+                knownTitles.set(s.id, s.title)
+                if (s.directory === ctx.directory) tracked.add(s.id)
+              }
+            }),
+            Effect.orElseSucceed(() => undefined),
+          )
+          watch(Session.Event.Created, (evt) => {
+            const info = evt.properties.info
+            const sessionID = info.id
+            tracked.add(sessionID)
+            const derived = sample(sessionID)
+            if (derived) statuses.record(sessionID, derived)
+            if (typeof info.title === "string") knownTitles.set(sessionID, info.title)
+            return create(sessionID).catch((error) => log.error("share init create failed", { sessionID, error }))
+          })
+          watch(Session.Event.Updated, async (evt) => {
+            const sessionID = evt.properties.sessionID
+            const session = await Effect.runPromise(sessions.get(sessionID).pipe(Effect.orElseSucceed(() => null)))
+            if (!session) return
+            // Consume marks before the network hop so the 60s TTL does not span
+            // token resolution + ingest.sync. Advance knownTitles optimistically
+            // so a concurrent Updated sees sameTitle (no duplicate POST with a
+            // wrong generated flag). On ingest or title-POST failure restore
+            // prev + consumed marks so the next Updated re-derives and retries.
+            const prev = knownTitles.get(sessionID)
+            const sameTitle = prev === session.title
+            // Same-title Updated (setTitle no-op / double session.renamed): still
+            // consume a matching rename adoption after sync so the mark cannot
+            // stick and swallow a later real local rename (Decision 8).
+            const outcome = ((): { kind: "same" } | { kind: "adopted" } | { kind: "report"; generated: boolean } => {
+              if (sameTitle) return { kind: "same" }
+              // Consume marks before the network hop so the 60s TTL does not span
+              // token resolution + ingest.sync. Checks run even when prev is
+              // unknown — an unseeded mark must not leak past this handler.
+              if (consumeRenameAdoption(sessionID, session.title)) return { kind: "adopted" }
+              return { kind: "report", generated: consumeAutoTitle(sessionID, session.title) }
+            })()
+            const restoreTitleState = () => {
+              // Only restore if this handler still owns the knownTitles slot.
+              // A concurrent handler may have advanced it to a newer title; in
+              // that case do not clobber it with this handler's stale prev.
+              if (knownTitles.get(sessionID) === session.title) {
+                if (prev === undefined) knownTitles.delete(sessionID)
+                else knownTitles.set(sessionID, prev)
+              }
+              if (outcome.kind === "adopted") markRenameAdopted(sessionID, session.title)
+              else if (outcome.kind === "report" && outcome.generated) markAutoTitle(sessionID, session.title)
+            }
+            knownTitles.set(sessionID, session.title)
+            try {
+              await ingest.sync(sessionID, [
+                { type: "kilo_meta", data: await meta(sessionID, session) },
+                { type: "session", data: transport(session) },
+              ])
+            } catch (error) {
+              restoreTitleState()
+              log.error("session updated ingest failed", { sessionID, error })
+              return
+            }
+            if (outcome.kind === "same") consumeRenameAdoption(sessionID, session.title)
+            if (outcome.kind !== "report") return
+            // Production path goes through the Interface method (not private helper).
+            const { AppRuntime } = await import("@/effect/app-runtime")
+            const reported = await AppRuntime.runPromise(
+              reportSessionTitle(sessionID, session.title, { generated: outcome.generated }),
+            )
+            if (!reported.ok) {
+              // Permanent failures (non-retryable 4xx client errors) mean the
+              // server rejected this title definitively; keep the new title so
+              // the next same-title Updated is a no-op instead of retrying
+              // forever. Transient failures (5xx, 408, 429, network errors,
+              // not_connected) still restore + retry.
+              const isPermanent = isPermanentHttpStatus(reported.reason)
+              if (isPermanent) {
+                log.warn("session title report permanent failure; title preserved", {
+                  sessionID,
+                  reason: reported.reason,
+                })
+              } else {
+                restoreTitleState()
+                log.warn("session title report failed; will retry on next Updated", {
+                  sessionID,
+                  reason: reported.reason,
+                })
+              }
+            }
+          })
+          watch(Session.Event.Deleted, (evt) => {
+            const sessionID = evt.properties.sessionID
+            statuses.delete(sessionID)
+            tracked.delete(sessionID)
+            knownTitles.delete(sessionID)
+            if (prEnabled()) {
+              lastPrLinkTriple.delete(sessionID)
+              legacyPruned.delete(sessionID)
+              // Drop the persisted link so it does not outlive the session.
+              void clearSessionLink(sessionID)
+            }
+            clearRenameMarks(sessionID)
+            KiloSessionTitle.clear(sessionID)
+            // kilocode_change - detach a locally announced session on dispose.
+            void detachLocalSession(sessionID)
+            // The row is gone, so this run stops hosting it. No-op unless this
+            // run started the session (see RemoteSessionLog.end).
+            RemoteSessionLog.end(log, { sessionID, reason: "deleted" })
+          })
+          watch(MessageV2.Event.Updated, async (evt) => {
+            await ingest.sync(evt.properties.info.sessionID, [{ type: "message", data: evt.properties.info }])
+            if (evt.properties.info.role !== "user") return
+            const mdl = await model(evt.properties.info.model.providerID, evt.properties.info.model.modelID)
+            await ingest.sync(evt.properties.info.sessionID, [{ type: "model", data: [mdl] }])
+          })
+          watch(MessageV2.Event.PartUpdated, async (evt) => {
+            const part = evt.properties.part
+            await ingest.sync(part.sessionID, [{ type: "part", data: part }])
+            if (!prEnabled()) return
+            // kilocode_change - A PR is linked only on the session's own hard
+            // evidence: the session ran a create command whose output returned
+            // the PR URL, it pushed the PR's head branch, or it explicitly
+            // linked the PR with link_pr. Agent text, a
+            // listing (`gh pr list`), a view, or a review is a mention, never a
+            // link, so only a completed evidence-producing tool is read.
+            if (part.type !== "tool" || part.state.status !== "completed") return
+            if (part.tool === "link_pr") return syncPrLinkForSession(part.sessionID)
+            if (part.tool !== "bash" && part.tool !== "shell") return
+            const raw = part.state.input["command"]
+            const command = typeof raw === "string" ? raw : undefined
+            if (!command) return
+            if (isPrCreateCommand(command)) {
+              await recordPrCreate(part.sessionID, Instance.worktree, part.state.output)
+              return syncPrLinkForSession(part.sessionID)
+            }
+            if (isPushCommand(command)) {
+              await recordPush(part.sessionID, Instance.worktree, command, part.state.output)
+              await syncPrLinkForSession(part.sessionID)
+            }
+          })
+          watch(Session.Event.Diff, (evt) =>
+            cumulative(evt.properties.sessionID, evt.properties.diff).then((diff) =>
+              ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: diff }]),
+            ),
+          )
+          watch(Session.Event.TurnOpen, (evt) => {
+            const sessionID = evt.properties.sessionID
+            // kilocode_change - announce a locally started session on its first
+            // turn so it appears in the mobile live list.
+            void announceLocalSession(sessionID)
+            return ingest.sync(sessionID, [{ type: "session_open", data: {} }])
+          })
+          watch(Session.Event.TurnClose, (evt) =>
+            ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }]),
+          )
+
+          const { AppRuntime } = yield* Effect.promise(() => import("@/effect/app-runtime"))
+          // Warm the instance caches so observing a transition never yields between its inputs.
+          yield* Effect.promise(() =>
+            AppRuntime.runPromise(
+              Effect.all([
+                Permission.Service.use((svc) => svc.list()),
+                Question.Service.use((svc) => svc.list()),
+                SessionStatus.Service.use((svc) => svc.list()),
+                Wakeup.Service.use((svc) => svc.scheduled()),
+              ]),
+            ),
+          )
+          // A read that cannot finish synchronously (e.g. a cache re-initialized after warm-up) has no
+          // event-time state; callers then leave the onset unknown instead of failing the dispatcher.
+          const sample = (sessionID: string, status?: SessionStatus.Info) =>
+            iife(() => {
+              try {
+                return AppRuntime.runSync(deriveStatus(sessionID, status))
+              } catch (error) {
+                log.warn("status not derivable synchronously", { sessionID, error: String(error) })
+              }
+            })
+          for (const sessionID of tracked) {
+            const derived = sample(sessionID)
+            if (derived) statuses.record(sessionID, derived)
+          }
+
+          const sync = (evt: { properties: { sessionID: string; status?: SessionStatus.Info } }) => {
+            const occurredAt = new Date().toISOString()
+            const sessionID = evt.properties.sessionID
+            tracked.add(sessionID)
+            // Status is published before busy/retry is stored; the event wins over that stale map entry.
+            const derived = sample(sessionID, evt.properties.status)
+            if (derived) return deriveAndSyncStatus(sessionID, derived, occurredAt)
+            // Without a same-tick read the event's onset is unknown, so only the live state is sent.
+            return statuses
+              .event(sessionID, () => AppRuntime.runPromise(deriveStatus(sessionID, evt.properties.status)))
+              .then((data) => ingest.sync(sessionID, [{ type: "session_status", data }]))
+          }
+          watch(SessionStatus.Event.Status, sync)
+          watch(Question.Event.Asked, sync)
+          watch(Question.Event.Replied, sync)
+          watch(Question.Event.Rejected, sync)
+          watch(Permission.Event.Asked, sync)
+          watch(Permission.Event.Replied, sync)
+
+          // One GlobalBus listener drains the dispatch map. This state is cached per-directory
+          // (InstanceState), matching the per-directory legacy Bus PubSub it replaced, so we filter process-wide
+          // GlobalBus events down to this instance's directory. A single listener (vs one per event type) keeps
+          // us well under GlobalBus's max-listeners cap when several worktrees are active.
+          yield* Effect.acquireRelease(
+            Effect.sync(() => {
+              const handler = (event: { directory?: string; payload?: { type?: string; properties?: unknown } }) => {
+                if (event.directory !== ctx.directory) return
+                const type = event.payload?.type
+                if (type === undefined) return
+                const fn = handlers.get(type)
+                if (!fn) return
+                // Instance.restore: handlers run async work after the emitting fiber's
+                // synchronous window, where fiber-scoped InstanceRef is no longer visible.
+                // Promise.try-equivalent: a synchronous handler throw must not escape into GlobalBus.emit,
+                // where it would fail the publisher and skip later listeners.
+                new Promise((resolve) =>
+                  resolve(Instance.restore(ctx, () => fn({ properties: event.payload!.properties }))),
+                ).catch((cause) => log.error("subscriber failed", { type, cause }))
+              }
+              GlobalBus.on("event", handler)
+              return handler
+            }),
+            (handler) => Effect.sync(() => void GlobalBus.off("event", handler)),
+          )
+
+          // One PR check per instance start plus one every 5 minutes. Never on a
+          // session update and never once per heartbeat/request.
+          if (prEnabled()) {
+            yield* Effect.acquireRelease(
+              Effect.sync(() =>
+                startPrLinkPoll(() =>
+                  Instance.restore(ctx, async () => {
+                    // Preserve evidence from the previous process before refresh can remove it.
+                    for (const sessionID of tracked) await syncPrLinkForSession(sessionID)
+                    await refreshPrLink()
+                    for (const sessionID of tracked) await syncPrLinkForSession(sessionID)
+                  }),
+                ),
+              ),
+              (stop) => Effect.sync(stop),
+            )
+          }
+
+          const cfg = yield* config.getGlobal()
+          if (remoteEnabled || cfg.remote_control) {
+            yield* Effect.sync(
+              () => void enableRemote().catch((err) => log.warn("remote not enabled", { error: String(err) })),
+            )
+          }
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              for (const sessionID of tracked) statuses.delete(sessionID)
+              disableRemote("shutdown")
+            }),
+          )
+        }),
+      )
+
+      const init = Effect.fn("KiloSessions.init")(function* () {
+        yield* InstanceState.get(state)
+      })
+
+      const sendAgentNotification = Effect.fn("KiloSessions.sendAgentNotification")(function* (
+        sessionID: string,
+        input: { id: string; message: string },
+      ) {
+        if (ingestDisabled) {
+          return { ok: false, reason: "not_connected" } as const
+        }
+
+        const readiness = yield* Effect.tryPromise({
+          try: () =>
+            withTimeout(
+              resolveReadiness(sessionID),
+              agentNotificationTimeoutMs(),
+              "agent notification readiness timed out",
+            ),
+          catch: () => ({ ok: false, reason: "not_connected" }) as const,
+        }).pipe(Effect.catch((value) => Effect.succeed(value)))
+
+        if (!readiness.ok) return readiness
+        return yield* Effect.promise(() =>
+          postAgentNotification(sessionID, readiness.ingestPath, readiness.client, input),
+        )
+      })
+
+      return Service.of({ init, sendAgentNotification, reportSessionTitle })
+    }),
+  )
+
+  export const defaultLayer = layer.pipe(
+    Layer.provide(Bus.layer),
+    Layer.provide(AppNodeBuilder.build(Config.node)),
+    Layer.provide(Session.defaultLayer),
+  )
+
+  // No-op service for unit tests. Avoids touching the real Bus/Config/Session
+  // graph and never initiates bootstrap or POSTs. `sendAgentNotification` reports `not_connected`
+  // so tests can assert the failure-text path without mocking fetch.
+  export const testLayer = Layer.succeed(Service, {
+    init: () => Effect.void,
+    sendAgentNotification: () => Effect.succeed({ ok: false, reason: "not_connected" } as const),
+    reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" } as const),
+  })
+
+  export const node = LayerNode.suspend(() =>
+    LayerNode.make({ service: Service, layer, deps: [Bus.node, Config.node, Session.node] }),
+  )
+
+  // kilocode_change - DEF-1: default advertisement for every successful
+  // enableRemote() entry (covers `/remote` after auto-enable already connected).
+  // No-op when an advertisement is already set — must not re-set or fire an
+  // extra heartbeat. Explicit setInstanceAdvertisement keeps replace semantics.
+  function ensureDefaultInstanceAdvertisement() {
+    if (instanceAdvertisement) return
+    setInstanceAdvertisement(buildInstanceAdvertisement(Instance.directory))
   }
 
   export async function enableRemote() {
-    if (remote) return
+    // ingestDisabled must not advertise. Every other successful entry — including
+    // already-connected and coalescing early returns — must ensure advertisement
+    // before returning, otherwise `/remote` after auto-enable never registers.
     if (ingestDisabled) return
+    ensureDefaultInstanceAdvertisement()
+    if (remote) return
     if (enabling) return enabling
     const seq = ++remoteSeq
+    void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: true, connected: false })
     enabling = (async () => {
       const token = await kilocodeToken()
       if (!token) {
@@ -234,57 +1018,213 @@ export namespace KiloSessions {
         .replace(/^https:\/\//, "wss://")
         .replace(/^http:\/\//, "ws://")
 
+      const [{ RemoteWS }, { RemoteSender }] = await Promise.all([
+        import("@/kilo-sessions/remote-ws"),
+        import("@/kilo-sessions/remote-sender"),
+      ])
+
       // Capture directory so the heartbeat timer can re-enter the Instance context
       // (setInterval runs outside AsyncLocalStorage scope)
       const directory = Instance.directory
-      const getSessions = async () => {
-        const [gitUrl, gitBranch] = await Promise.all([
-          getGitUrl().catch(() => undefined),
-          Vcs.branch().catch(() => undefined),
+      // kilocode_change - K1 W1: capture module-level advertisement so each
+      // heartbeat's `instance` field stays consistent with the flag at the
+      // moment of sending. The flag may be set after this closure is created
+      // (race-proof) — `getSessions` reads the current value each tick.
+      const getSessions = async (): Promise<RemoteProtocol.Heartbeat> => {
+        // The instance advertisement describes the host process's own project,
+        // so it keeps the launch-directory (Vcs) branch. Session rows derive
+        // their repository metadata from each session's own directory below.
+        const gitBranch = await branch().catch(() => undefined)
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        // Batch SessionStatus + attention lists once per heartbeat (not per session).
+        // Permission/Question list() feeds the same precedence as deriveStatus().
+        const [statusMap, permissions, questions, scheduled] = await Promise.all([
+          AppRuntime.runPromise(SessionStatus.listAll()),
+          AppRuntime.runPromise(Permission.Service.use((svc) => svc.list())),
+          AppRuntime.runPromise(Question.Service.use((svc) => svc.list())),
+          AppRuntime.runPromise(Wakeup.Service.use((svc) => svc.scheduled())),
         ])
-        const statuses = SessionStatus.list()
+        const statuses: Record<string, SessionStatus.Info> = Object.fromEntries(statusMap)
+        const permissionSessions = new Set(permissions.map((p) => p.sessionID as string))
+        const questionSessions = new Set(questions.map((q) => q.sessionID as string))
+        // Advertise both presence-owned and pending-created ids so the relay learns about new
+        // sessions before the next periodic heartbeat and the create_session response can be sent.
         const ids = new Set(Object.keys(statuses))
-        if (viewedSessionId) ids.add(viewedSessionId)
-        const results = await Promise.all(
-          [...ids].map(async (id) => {
-            const session = await Session.get(id).catch(() => undefined)
-            if (!session) return undefined
-            return {
-              id,
-              status: statuses[id]?.type ?? "idle",
-              title: session.title,
-              parentSessionId: session.parentID,
-              gitUrl,
-              gitBranch,
-            }
+        for (const id of attachedState.union()) ids.add(id)
+        const results = await AppRuntime.runPromise(
+          Session.Service.use((svc) =>
+            Effect.all(
+              [...ids].map((id) => {
+                const sid = SessionID.make(id)
+                const dueAt = scheduled.get(sid)
+                const status = resolveDerivedSessionStatus({
+                  hasPermission: permissionSessions.has(id),
+                  hasQuestion: questionSessions.has(id),
+                  statusType: statuses[id]?.type,
+                  scheduledAt: dueAt,
+                })
+                return svc.get(sid).pipe(
+                  Effect.map((session) => ({
+                    id,
+                    directory: session.directory,
+                    status,
+                    ...(status === "scheduled" && dueAt !== undefined
+                      ? { scheduledAt: new Date(dueAt).toISOString() }
+                      : {}),
+                    title: session.title,
+                    parentSessionId: session.parentID,
+                    // kilocode_change - K1 W1: per-session platform, mirrors
+                    // meta()'s resolution order so the live value always agrees
+                    // with the session's stored created_on_platform.
+                    platform: KiloSession.resolvePlatform(id) || process.env["KILO_PLATFORM"] || "cli",
+                  })),
+                  Effect.orElseSucceed(() => undefined),
+                )
+              }),
+            ),
+          ),
+        )
+        // Resolve repository metadata per distinct session directory: a host
+        // launched outside the selected repository must still publish each
+        // session's own repo. Directory-less sessions fall back to the launch
+        // worktree, and the in-flight cache collapses same-directory sessions
+        // into one git call per ttlMs.
+        const gitPairs = new Map<string, { gitUrl?: string; gitBranch?: string }>()
+        await Promise.all(
+          [...new Set(results.map((r) => r?.directory ?? Instance.worktree))].map(async (directory) => {
+            const [gitUrl, sessionGitBranch] = await Promise.all([
+              getGitUrl(directory).catch(() => undefined),
+              branchFor(directory).catch(() => undefined),
+            ])
+            gitPairs.set(directory, { gitUrl, gitBranch: sessionGitBranch })
           }),
         )
-        return results.filter((r): r is NonNullable<typeof r> => !!r)
+        const sessions = results
+          .filter((r): r is NonNullable<typeof r> => !!r)
+          .map((r) => ({
+            id: r.id,
+            status: r.status,
+            ...(r.scheduledAt !== undefined ? { scheduledAt: r.scheduledAt } : {}),
+            title: r.title,
+            parentSessionId: r.parentSessionId,
+            ...gitPairs.get(r.directory ?? Instance.worktree),
+            platform: r.platform,
+          }))
+        const instance = instanceAdvertisement && {
+          ...instanceAdvertisement,
+          // Truncate the launch-directory branch without splitting a surrogate pair.
+          gitBranch: gitBranch?.slice(0, 24).replace(/[\uD800-\uDBFF]$/, ""),
+        }
+        if (!prEnabled()) return { type: "heartbeat", sessions, ...(instance ? { instance } : {}) }
+
+        // kilocode_change - A PR link is per session and only from that
+        // session's own hard evidence (see the PartUpdated watcher). Read the
+        // stored links for exactly the advertised rows once and attach each to
+        // its own row; never resolve one worktree link and stamp it on every
+        // session in the checkout, and never read every record ever written.
+        // The one-time migration drops the old per-worktree records and sends
+        // one clear for the sessions that only inherited a link from them.
+        const [links, pending] = await Promise.all([
+          loadSessionLinks(sessions.map((row) => row.id)),
+          pruneLegacyPrLinks(),
+        ])
+        const advertised: RemoteProtocol.SessionInfo[] = []
+        for (const row of sessions) {
+          const record = links.get(row.id)
+          if (record) {
+            advertised.push({
+              ...row,
+              prLink: {
+                platform: record.link.platform,
+                prUrl: record.link.prUrl,
+                prNumber: record.link.prNumber,
+                ...(record.headRef ? { headRef: record.headRef } : {}),
+                ...(record.headSha ? { headSha: record.headSha } : {}),
+              },
+            })
+          } else {
+            advertised.push(row)
+          }
+          await syncSessionPrLink(row.id, record, pending)
+        }
+        await settleLegacyPrLinks(pending)
+        return { type: "heartbeat", sessions: advertised, ...(instance ? { instance } : {}) }
       }
 
       const conn = RemoteWS.connect({
         url,
         getToken: kilocodeToken,
-        withContext: (fn) => Instance.provide({ directory, fn }),
+        withContext: (fn) => provide({ directory, fn }),
         getSessions,
         log,
-        onMessage: (msg) => {
-          // Must run inside Instance.provide so Bus.subscribeAll can access
-          // the instance-scoped subscription map via Instance.state().
-          void Instance.provide({ directory, fn: () => sender.handle(msg) })
+        onOpen: () => {
+          void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: true, connected: true })
+          // kilocode_change - K1 W1: on reconnect, a headless `kilo remote` host
+          // preserves its module-level advertisement flag but would otherwise not
+          // be re-advertised until the next periodic heartbeat (up to ~10s).
+          // Fire one immediate out-of-band heartbeat when the flag is set.
+          // This is intentionally conditional: tests that do not set the flag
+          // must not see extra heartbeats.
+          if (instanceAdvertisement) {
+            void conn.heartbeat().catch((err) =>
+              log.warn("reconnect advertisement heartbeat failed", {
+                error: String(err),
+              }),
+            )
+          }
         },
-        onClose: () => disableRemote(),
+        onDisconnect: () => {
+          void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: !!remote, connected: false })
+        },
+        onMessage: (msg) => {
+          // Restore the directory context before dispatching an async remote message.
+          void provide({ directory, fn: () => sender.handle(msg) })
+        },
+        onClose: () => disableRemote("disconnected"),
       })
 
       const sender = RemoteSender.create({
         conn,
         directory: Instance.directory,
         log,
+        // kilocode_change - K1 W1: in-process attach/detach/ownership seams
+        // back to KiloSessions. The sender does NOT spawn a process per
+        // session — concurrent remote sessions share this CLI process with
+        // per-directory InstanceRef isolation.
+        attachSession: (id, opts) => KiloSessions.attachRemoteSession(id, opts),
+        detachSession: (id) => KiloSessions.detachRemoteSession(id),
+        hasSession: (id) => KiloSessions.hasRemoteSession(id),
+        ownedCount: () => KiloSessions.ownedRemoteSessionCount(),
+        cancelPrompt: async (id) => {
+          // kilocode_change - K1 W1: dynamic import breaks the module-load cycle
+          // (@/session/prompt reads KiloSessionPrompt at eval; a static edge here
+          // races that init). Mirrors remote-command.ts's lazy SessionPrompt use.
+          const [{ AppRuntime }, { SessionPrompt }] = await Promise.all([
+            import("@/effect/app-runtime"),
+            import("@/session/prompt"),
+          ])
+          await AppRuntime.runPromise(SessionPrompt.Service.use((svc) => svc.cancel(id)))
+        },
+        // kilocode_change - K1 W1 clone: import a cloud session in-process. The
+        // dynamic import keeps the HTTP handler graph out of the remote-sender
+        // module graph, mirroring the lazy cancelPrompt pattern.
+        importFromCloud: async (cloneId, opts) => {
+          const [{ CloudSessionImportInProcess }, { AppRuntime }] = await Promise.all([
+            import("@/kilocode/server/import-cloud-session-in-process"),
+            import("@/effect/app-runtime"),
+          ])
+          const { session, diffs, directory } = await AppRuntime.runPromise(
+            CloudSessionImportInProcess.importSessionWithoutRestore(cloneId, opts),
+          )
+          return {
+            session,
+            finalize: () =>
+              AppRuntime.runPromise(
+                CloudSessionImportInProcess.finalizeSessionImport({ sessionId: session.id, diffs, directory }),
+              ),
+          }
+        },
       })
-
-      const heartbeat = async () => {
-        conn.send({ type: "heartbeat", sessions: await getSessions() })
-      }
 
       if (seq !== remoteSeq) {
         sender.dispose()
@@ -292,44 +1232,232 @@ export namespace KiloSessions {
         return
       }
 
-      remote = { conn, sender, heartbeat }
-      log.info("remote connection enabled")
+      remote = { conn, sender }
+      log.info("remote connection enabled", { connected: conn.connected })
       Telemetry.trackRemoteConnectionOpened()
-    })().finally(() => {
-      if (remoteSeq === seq) enabling = undefined
-    })
+      void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: true, connected: conn.connected })
+    })()
+      .catch((err) => {
+        if (remoteSeq === seq && !remote)
+          void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: false, connected: false })
+        throw err
+      })
+      .finally(() => {
+        if (remoteSeq === seq) enabling = undefined
+      })
 
     return enabling
   }
 
-  export function disableRemote() {
+  // `reason` names why this run stopped hosting: "disabled" for the
+  // user-initiated `remote/disable` (the default — the caller turned remote off
+  // while the process stays up), "disconnected" when the relay connection went
+  // away, and "shutdown" for the process/instance teardown.
+  export function disableRemote(reason = "disabled") {
+    // kilocode_change - the attached state is cleared below, so this is the
+    // last moment this run hosts these sessions. Pair every open start line
+    // here; otherwise the entry survives the disconnect and a later `endAll`
+    // reports a stale end line whose duration spans the disconnected period.
+    RemoteSessionLog.endAll(log, reason)
     remoteSeq += 1
+    const pending = !!enabling
     enabling = undefined
-    if (!remote) return
+    // Clear both presence and pending-created ids so the next remote connection lifecycle starts
+    // with a clean slate and stale pending announcements from a previous connection do not leak.
+    attachedState.reset()
+    if (!remote) {
+      if (pending) void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: false, connected: false })
+      return
+    }
     remote.sender.dispose()
     remote.conn.close()
     remote = undefined
     log.info("remote connection disabled")
+    void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: false, connected: false })
   }
 
   export function remoteStatus() {
     return {
-      enabled: !!remote,
+      enabled: !!remote || !!enabling,
       connected: remote?.conn.connected ?? false,
     }
   }
-  export function setViewedSession(sessionID: string | undefined) {
-    viewedSessionId = sessionID
-    if (remote) void remote.heartbeat().catch((err) => log.warn("heartbeat failed", { error: String(err) }))
+  export function setAttachedSessions(ids: readonly string[]) {
+    // Delegate to the two-set state so a concurrent create announcement is not dropped by a presence
+    // clear+rebuild.
+    attachedState.setPresence(ids)
+  }
+
+  // kilocode_change - K1 W1: instance advertisement setter.
+  // Idempotent. If a remote connection is already established when the flag is
+  // flipped (typical for the race between bootstrap auto-enable and the
+  // explicit `kilo remote` command — `enableRemote` itself is coalescing), we
+  // fire one out-of-band heartbeat so the cloud side learns about the
+  // instance without waiting for the next 10s timer tick.
+  export function setInstanceAdvertisement(advertisement: RemoteProtocol.InstanceAdvertisement) {
+    instanceAdvertisement = advertisement
+    if (remote) {
+      void remote.conn.heartbeat().catch((err) =>
+        log.warn("instance advertisement heartbeat failed", {
+          error: String(err),
+        }),
+      )
+    }
+  }
+
+  // Test-only: the advertisement flag is intentionally one-way in production
+  // (once a process runs `kilo remote`, it keeps advertising for its whole
+  // lifetime, including across a transient disableRemote/enableRemote
+  // reconnect cycle — disableRemote() deliberately does not clear it). Tests
+  // that assert the "unset" default must reset the module-level flag
+  // themselves between cases.
+  export function resetInstanceAdvertisementForTests() {
+    instanceAdvertisement = undefined
+  }
+
+  // kilocode_change - create_session gate: hosting a session on the relay only
+  // means something once the relay accepted its ingest bootstrap (POST
+  // /api/session). `create` coalesces onto the POST the Session.Event.Created
+  // watcher already started, so a healthy create_session adds no second
+  // request; an explicit relay refusal (e.g. 409) surfaces here so the command
+  // rolls the local session back instead of advertising and logging a session
+  // the relay never accepted. A bootstrap that never reached the relay (no
+  // credentials, ingest disabled) resolves like a success, and so does a
+  // transient failure (5xx/408/429/network): only an explicit refusal blocks
+  // hosting.
+  export async function ensureSharedSession(sessionId: string): Promise<void> {
+    const inflight = bootstrapInflight.get(sessionId)
+    if (inflight) {
+      assertShared(await inflight)
+      return
+    }
+    // Owner path: `create` registers the in-flight bootstrap synchronously, so
+    // a concurrent watcher call joins this same POST. It rejects on every
+    // bootstrap failure — the import path depends on that — but its rejection
+    // cannot tell a refusal from a transient error, so read the tracked
+    // outcome instead.
+    const created = create(sessionId)
+    const tracked = bootstrapInflight.get(sessionId)
+    void created.catch(() => undefined)
+    if (tracked) assertShared(await tracked)
+  }
+
+  // kilocode_change - only an explicit relay refusal fails hosting. A skipped
+  // bootstrap (never reached the relay) or a transient failure resolves like a
+  // success so the session stays hosted locally.
+  function assertShared(outcome: BootstrapOutcome): void {
+    if (outcome.ok || outcome.skipped || !outcome.refused) return
+    throw new Error(outcome.reason)
+  }
+
+  // Duplicate-safe single-session attach used by the remote create_session command. Delegates to
+  // the two-set state so the announcement is preserved across a concurrent presence replacement
+  // and a heartbeat failure rolls back only the entry this call added (a presence-owned id is never
+  // reachable here because the factory guards it).
+  //
+  // `opts.requireShare` is set by the create_session path: the session was just
+  // created for the relay, so the relay must have accepted its ingest bootstrap
+  // before this CLI announces it (see ensureSharedSession). The clone path and
+  // locally started sessions pass no opts — their session already exists on the
+  // relay or was never created for it.
+  export async function attachRemoteSession(id: string, opts?: { requireShare?: boolean }) {
+    if (opts?.requireShare) await ensureSharedSession(id)
+    await attachedState.announce(id)
+  }
+
+  // kilocode_change - K1 W1: session-detach semantics. The exit_cli handler
+  // calls this after a verified owns-check + cancel-prompt; the heartbeat
+  // must confirm the id was removed from the next sent payload (negative-
+  // containment fence) before the handler ACKs the request.
+  //
+  // The SessionStatus entry is cleared to idle (which deletes the map entry)
+  // before the heartbeat fence runs, so the next getSessions() payload — and
+  // therefore the fence itself — deterministically omits the id regardless of
+  // whether the session was busy/retry/offline. On heartbeat-failure rollback,
+  // attachedState.detach restores the id to presence/pending; the session is
+  // still advertised (via the union) with an idle status until normal activity
+  // re-establishes a status, so the relay does not under-report an owned session.
+  export async function detachRemoteSession(id: string) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(SessionID.make(id), { type: "idle" })))
+    await attachedState.detach(id)
+    statuses.delete(id)
+  }
+
+  // kilocode_change - K1 W1: ownership probe used by the exit_cli handler
+  // before the cancel/detach sequence. Cheap and synchronous.
+  export function hasRemoteSession(id: string): boolean {
+    return attachedState.has(id)
+  }
+
+  // kilocode_change - K1 W1: count of "owned" sessions (presence ∪ pending).
+  // Used to drive the last-interactive-session exit decision: zero remaining
+  // + a registered RemoteExit callback => invoke it after the ACK can flush;
+  // zero remaining + no callback (kilo remote) => keep host alive. Sessions
+  // remain => stay alive regardless of callback state.
+  export function ownedRemoteSessionCount(): number {
+    return attachedState.union().size
   }
 
   export async function create(sessionId: string) {
-    const result = await bootstrap(sessionId)
+    const inflight = bootstrapInflight.get(sessionId)
+    if (inflight) {
+      const result = await inflight
+      if (!result.ok) return { id: "", ingestPath: "" }
+      return { id: sessionId, ingestPath: result.ingestPath }
+    }
+
+    // Synchronously register the in-flight bootstrap promise before any await
+    // so concurrent callers (e.g. sendAgentNotification racing the
+    // Session.Event.Created handler) deterministically coalesce onto the same
+    // POST /api/session.
+    const task = trackBootstrap(sessionId, () => bootstrap(sessionId))
+    const result = await task
     if (!result) return { id: "", ingestPath: "" }
 
     void fullSync(sessionId).catch((error) => log.error("share full sync failed", { sessionId, error }))
 
     return result
+  }
+
+  // Track an in-flight bootstrap for `sessionId` so callers that race the
+  // share ingest path (e.g. the `notify_user` tool calling
+  // sendAgentNotification before the Session.Event.Created handler has
+  // finished POSTing /api/session) can await the same outcome instead of
+  // firing their own bootstrap or failing. The bootstrap outcome promise is
+  // created and stored in `bootstrapInflight` synchronously before the first
+  // `await` so concurrent callers are deterministically coalesced.
+  function trackBootstrap(sessionId: string, start: () => Promise<{ id: string; ingestPath: string } | undefined>) {
+    // Build the task and derived outcome promise as synchronous expressions
+    // first; only then register the entry. This guarantees the value stored
+    // in `bootstrapInflight` is the real promise rather than `undefined`.
+    const task = start()
+    const tracked: Promise<BootstrapOutcome> = task
+      .then((value): BootstrapOutcome => {
+        if (!value) return { ok: false, reason: "not_connected", skipped: true }
+        return { ok: true, ingestPath: value.ingestPath }
+      })
+      .catch((error: unknown): BootstrapOutcome => {
+        const reason = error instanceof Error ? error.message : String(error)
+        log.warn("session bootstrap failed", { sessionId, reason })
+        // kilocode_change - only a definitive refusal is marked. A transient
+        // failure (5xx/408/429/network) stays retryable and must not fail the
+        // create_session command (see ensureSharedSession).
+        return error instanceof RelayRefusal ? { ok: false, reason, refused: true } : { ok: false, reason }
+      })
+
+    // Register synchronously before any async work starts so concurrent
+    // callers see the entry in `bootstrapInflight` immediately.
+    bootstrapInflight.set(sessionId, tracked)
+    tracked.finally(() => {
+      if (bootstrapInflight.get(sessionId) === tracked) bootstrapInflight.delete(sessionId)
+    })
+    return task
+  }
+
+  /** @internal - test-only helper */
+  export function _getBootstrapInflight(sessionId: string): Promise<BootstrapOutcome> | undefined {
+    return bootstrapInflight.get(sessionId)
   }
 
   export async function bootstrap(sessionId: string) {
@@ -352,12 +1480,16 @@ export namespace KiloSessions {
     })
 
     if (!response.ok) {
-      throw new Error(`Unable to create session ${sessionId}: ${response.status} ${response.statusText}`)
+      const message = `Unable to create session ${sessionId}: ${response.status} ${response.statusText}`
+      // kilocode_change - a permanent 4xx is the relay's answer and blocks
+      // hosting; 5xx/408/429 is transient and retried rather than rolled back.
+      if (refusedByRelay(response.status)) throw new RelayRefusal(message)
+      throw new Error(message)
     }
 
     const result = (await response.json()) as { id: string; ingestPath: string }
 
-    await Storage.write(["session_share", sessionId], result)
+    await save(sessionId, result)
 
     log.info("session bootstrap completed", { sessionId })
 
@@ -394,14 +1526,14 @@ export namespace KiloSessions {
       throw new Error(`Unable to share session ${sessionId}: ${response.status} ${response.statusText}`)
     }
 
-    const result = (await response.json()) as { public_id?: string }
-    if (!result.public_id) {
-      throw new Error(`Unable to share session ${sessionId}: server did not return a public id`)
+    const result = (await response.json()) as { share_token?: string }
+    if (!result.share_token) {
+      throw new Error(`Unable to share session ${sessionId}: server did not return a share token`)
     }
 
-    const url = `https://app.kilo.ai/s/${result.public_id}`
+    const url = `https://app.kilo.ai/s/${result.share_token}`
 
-    await Storage.write(["session_share", sessionId], {
+    await save(sessionId, {
       ...current,
       url,
     })
@@ -442,15 +1574,145 @@ export namespace KiloSessions {
     }
     delete next.url
 
-    await Storage.write(["session_share", sessionId], next)
+    await save(sessionId, next)
   }
 
-  function get(sessionId: string) {
-    return Storage.read<{
-      id: string
-      url?: string
-      ingestPath: string
-    }>(["session_share", sessionId])
+  type Share = {
+    id: string
+    url?: string
+    ingestPath: string
+  }
+
+  async function save(sessionId: string, share: Share) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(Storage.Service.use((svc) => svc.write(["session_share", sessionId], share)))
+  }
+
+  async function get(sessionId: string) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(Storage.Service.use((svc) => svc.read<Share>(["session_share", sessionId])))
+  }
+
+  // Read the current share; if missing, return undefined (the agent tool
+  // will then check the in-flight bootstrap tracker and only initiate a
+  // bootstrap when one is already running, never on its own).
+  async function readShare(sessionId: string) {
+    return get(sessionId).catch(() => undefined)
+  }
+
+  // Await any in-flight bootstrap for `sessionId` with a bounded timeout.
+  // Returns the share ingest path on success, `{ok:false, reason}` on
+  // failure, or `not_connected` if no bootstrap is in flight (this method
+  // never initiates a new one). Used by the `notify_user` tool's send path.
+  async function awaitBootstrapForAgent(
+    sessionId: string,
+    timeoutMs: number,
+  ): Promise<{ ok: true; ingestPath: string } | { ok: false; reason: string }> {
+    const inflight = bootstrapInflight.get(sessionId)
+    if (!inflight) return { ok: false, reason: "not_connected" }
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timeout = new Promise<{ ok: false; reason: string }>((resolve) => {
+      timer = setTimeout(() => resolve({ ok: false, reason: "not_connected" }), timeoutMs)
+    })
+    try {
+      return await Promise.race([inflight, timeout])
+    } finally {
+      if (timer) clearTimeout(timer)
+    }
+  }
+
+  // Resolve the authenticated client and session ingest path needed by the
+  // `notify_user` tool. This bundles auth/client resolution with any in-flight
+  // bootstrap wait so the whole readiness path can be bounded by one timeout.
+  async function resolveReadiness(
+    sessionID: string,
+  ): Promise<{ ok: true; client: Client; ingestPath: string } | { ok: false; reason: string }> {
+    const client = await getClient()
+    if (!client) return { ok: false, reason: "not_connected" }
+
+    const existing = await readShare(sessionID)
+    if (existing?.ingestPath) return { ok: true, client, ingestPath: existing.ingestPath }
+
+    const ready = await awaitBootstrapForAgent(sessionID, agentNotificationTimeoutMs())
+    if (!ready.ok) return ready
+    return { ok: true, client, ingestPath: ready.ingestPath }
+  }
+
+  // Dedicated immediate POST for a single `agent_notification` item to the
+  // session's ingest path. Reuses the shared authenticated client/base URL
+  // state. Per §4.13 the operation does not initiate a new bootstrap, fails
+  // closed with `not_connected` when disabled or unauthenticated or when the
+  // in-flight bootstrap wait times out, and maps any HTTP non-2xx (incl.
+  // network errors) to `ok:false` with the failure reason — no internal
+  // retry loop. ok:true ⇔ the ingest API returned HTTP 2xx.
+  async function postAgentNotification(
+    sessionID: string,
+    ingestPath: string,
+    client: Client,
+    item: { id: string; message: string },
+  ): Promise<{ ok: true } | { ok: false; reason: string }> {
+    try {
+      const response = await client.fetch(`${client.url}${ingestPath}?v=2`, {
+        method: "POST",
+        body: JSON.stringify({ data: [{ type: "agent_notification", data: item }] }),
+      })
+      if (response.ok) {
+        log.info("agent notification sent", { sessionID, notificationId: item.id })
+        return { ok: true }
+      }
+      const reason = `http_${response.status}`
+      log.error("agent notification failed", { sessionID, notificationId: item.id, status: response.status })
+      return { ok: false, reason }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      log.error("agent notification failed", { sessionID, notificationId: item.id, error: reason })
+      return { ok: false, reason }
+    }
+  }
+
+  async function reportTitleChange(
+    sessionID: string,
+    title: string,
+    generated: boolean,
+  ): Promise<{ ok: true } | { ok: false; reason: string }> {
+    if (ingestDisabled) {
+      return { ok: false, reason: "not_connected" }
+    }
+    const readiness = await withTimeout(
+      resolveReadiness(sessionID),
+      agentNotificationTimeoutMs(),
+      "session title readiness timed out",
+    ).catch(() => ({ ok: false, reason: "not_connected" }) as const)
+    if (!readiness.ok) {
+      log.warn("report session title skipped", { sessionID, reason: readiness.reason })
+      return readiness
+    }
+    return postSessionTitle(sessionID, readiness.client, title, generated)
+  }
+
+  async function postSessionTitle(
+    sessionID: string,
+    client: Client,
+    title: string,
+    generated: boolean,
+  ): Promise<{ ok: true } | { ok: false; reason: string }> {
+    try {
+      const response = await client.fetch(`${client.url}/api/session/${encodeURIComponent(sessionID)}/title`, {
+        method: "POST",
+        body: JSON.stringify({ title, generated }),
+      })
+      if (response.ok) {
+        log.info("session title reported", { sessionID, generated })
+        return { ok: true }
+      }
+      const reason = `http_${response.status}`
+      log.error("session title report failed", { sessionID, status: response.status })
+      return { ok: false, reason }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      log.error("session title report failed", { sessionID, error: reason })
+      return { ok: false, reason }
+    }
   }
 
   export async function remove(sessionId: string) {
@@ -482,31 +1744,41 @@ export namespace KiloSessions {
       return
     }
 
-    await Storage.remove(["session_share", sessionId])
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    await AppRuntime.runPromise(Storage.Service.use((svc) => svc.remove(["session_share", sessionId])))
   }
 
   async function fullSync(sessionId: string) {
     log.info("full sync", { sessionId })
 
-    const session = await Session.get(sessionId)
-    const diffs = await Session.diff(sessionId)
-    const messages = await Array.fromAsync(MessageV2.stream(sessionId))
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    const [session, local] = await AppRuntime.runPromise(
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const storage = yield* Storage.Service
+        return yield* Effect.all([
+          sessions.get(SessionID.make(sessionId)),
+          storage
+            .read<Snapshot.FileDiff[]>(["session_diff", sessionId])
+            .pipe(Effect.orElseSucceed((): Snapshot.FileDiff[] => [])),
+        ])
+      }),
+    )
+    const diffs = await cumulative(sessionId, local)
+    const messages = await AppRuntime.runPromise(MessageV2.stream(SessionID.make(sessionId)))
     messages.reverse()
-    const models = await Promise.all(
-      messages
-        .filter((m) => m.info.role === "user")
-        .map((m) => (m.info as SDK.UserMessage).model)
-        .map((m) => Provider.getModel(m.providerID, m.modelID).then((m) => m)),
+    const mdls = await models(
+      messages.filter((m) => m.info.role === "user").map((m) => (m.info as SDK.UserMessage).model),
     )
 
     await ingest.sync(sessionId, [
       {
         type: "kilo_meta",
-        data: await meta(sessionId),
+        data: await meta(sessionId, session),
       },
       {
         type: "session",
-        data: session,
+        data: transport(session),
       },
       ...messages.map((x) => ({
         type: "message" as const,
@@ -519,9 +1791,14 @@ export namespace KiloSessions {
       },
       {
         type: "model",
-        data: models,
+        data: mdls,
+      },
+      {
+        type: "session_status",
+        data: await statuses.snapshot(sessionId, () => AppRuntime.runPromise(deriveStatus(sessionId))),
       },
     ])
+    await syncPrLinkForSession(sessionId)
   }
 
   /** Normalize a git remote URL: strip credentials, query params, and hash. Returns undefined for unrecognized formats. */
@@ -541,9 +1818,9 @@ export namespace KiloSessions {
     }
   }
 
-  async function getGitUrl(): Promise<string | undefined> {
-    return withInFlightCache(gitUrlKeyPrefix + Instance.worktree, ttlMs, async () => {
-      const repo = simpleGit(Instance.worktree)
+  async function getGitUrl(directory: string): Promise<string | undefined> {
+    return withInFlightCache(gitUrlKeyPrefix + directory, ttlMs, async () => {
+      const repo = simpleGit(directory)
       const remotes = await repo.getRemotes(true).catch(() => [])
       if (remotes.length === 0) return undefined
 
@@ -563,12 +1840,48 @@ export namespace KiloSessions {
     })
   }
 
-  async function meta(sessionId?: string) {
-    const override = sessionId ? Session.getPlatformOverride(sessionId) : undefined
+  // Context-scoped branch for the instance advertisement: the ad describes the
+  // host process's own project, so it keeps the launch-directory Vcs branch.
+  async function branch() {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(Vcs.Service.use((svc) => svc.branch()))
+  }
+
+  // Per-directory branch for session rows and persisted kilo_meta: a session
+  // created in a nested repository must report that repository's branch, not
+  // the host's launch directory. `Git.branch` returns undefined for
+  // non-repositories, which collapses to "no branch metadata".
+  async function branchFor(directory: string) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return withInFlightCache(gitBranchKeyPrefix + directory, ttlMs, () =>
+      AppRuntime.runPromise(Git.Service.use((svc) => svc.branch(directory))),
+    )
+  }
+
+  // Non-throwing launch-directory read for `meta()`: when called outside any
+  // instance context (e.g. the API-robustness path where Session.get already
+  // failed), `Instance.worktree` throws synchronously — before, the only access
+  // sat inside an async closure so it degraded to "git metadata absent".
+  // Degrade the same way instead of throwing.
+  function launchDirectory(): string | undefined {
+    try {
+      return Instance.worktree
+    } catch {
+      return undefined
+    }
+  }
+
+  async function meta(sessionId?: string, info?: Session.Info | null) {
+    const override = sessionId ? KiloSession.resolvePlatform(sessionId) : undefined
     const platform = override || process.env["KILO_PLATFORM"] || "cli"
-    const orgId = await getOrgId()
-    const gitBranch = await Vcs.branch().catch(() => undefined)
-    const gitUrl = await getGitUrl().catch(() => undefined)
+    const orgId = await getOrgId(sessionId, info)
+    // Repository metadata follows the session's own directory (a `kilo remote`
+    // host launched outside the selected repository must still publish the
+    // session's repo); directory-less sessions fall back to the launch worktree
+    // when an instance context exists, else to "no git metadata".
+    const directory = info?.directory ?? launchDirectory()
+    const gitBranch = directory ? await branchFor(directory).catch(() => undefined) : undefined
+    const gitUrl = directory ? await getGitUrl(directory).catch(() => undefined) : undefined
 
     return {
       platform,
@@ -578,15 +1891,40 @@ export namespace KiloSessions {
     }
   }
 
-  async function getOrgId(): Promise<Uuid | undefined> {
+  /** Test seam: meta() without preloaded info (Session.get failure → env/auth fallback). */
+  export async function _metaForTests(sessionId?: string, info?: Session.Info | null) {
+    return meta(sessionId, info)
+  }
+
+  async function getOrgId(sessionId?: string, info?: Session.Info | null): Promise<Uuid | undefined> {
+    // Per-session org from metadata (remote create_session) wins over process-global env/auth.
+    const fromMeta = await resolveSessionOrg(sessionId, info)
+    if (fromMeta) return fromMeta
+
     const env = process.env["KILO_ORG_ID"]
     if (isUuid(env)) return env
 
     return withInFlightCache(orgKey, ttlMs, async () => {
-      const auth = await Auth.get("kilo")
+      const auth = await runtime.runPromise((svc) => svc.get("kilo"))
       if (auth?.type === "oauth" && isUuid(auth.accountId)) return auth.accountId
       return undefined
     })
+  }
+
+  async function resolveSessionOrg(sessionId?: string, info?: Session.Info | null): Promise<Uuid | undefined> {
+    if (!sessionId) return undefined
+    const resolved =
+      info !== undefined
+        ? info
+        : await (async () => {
+            const { AppRuntime } = await import("@/effect/app-runtime")
+            return AppRuntime.runPromise(Session.Service.use((svc) => svc.get(SessionID.make(sessionId)))).catch(
+              () => null,
+            )
+          })()
+    if (!resolved) return undefined
+    const raw = resolved.metadata?.orgId
+    return typeof raw === "string" && isUuid(raw) ? raw : undefined
   }
 
   function isUuid(value: string | undefined): value is Uuid {

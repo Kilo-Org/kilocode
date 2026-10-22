@@ -2,10 +2,15 @@
  * Provider action handlers extracted from KiloProvider to stay under max-lines.
  * These are pure async functions that operate on the SDK client — no vscode dependency.
  */
-import type { KiloClient } from "@kilocode/sdk/v2"
+import type { Config, KiloClient } from "@kilocode/sdk/v2"
 import { validateProviderID as validateProviderIDShared } from "./shared/custom-provider"
-import { resolveCustomProviderAuth, sanitizeCustomProviderConfig } from "./shared/custom-provider"
-import { KILO_AUTO, parseModelString } from "./shared/provider-model"
+import {
+  resolveCustomProviderAuth,
+  sanitizeCustomProviderConfig,
+  withCustomProviderDeletions,
+} from "./shared/custom-provider"
+import { isCustomProviderPackage, KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "./shared/provider-model"
+import { configFeatures, serverFeatures } from "./features"
 
 /**
  * Compute the default model selection from CLI config, VS Code settings, or hardcoded fallback.
@@ -13,7 +18,39 @@ import { KILO_AUTO, parseModelString } from "./shared/provider-model"
  */
 type AuthState = "api" | "oauth" | "wellknown"
 
-/** Fetch auth methods alongside the provider list. Auth states default to empty (endpoint not yet available). */
+/** API key retained extension-side for authenticated model fetches (#10139). */
+export interface StoredProviderKey {
+  key: string
+  baseURL: string
+}
+
+function disabledWithout(list: string[] | undefined, id: string) {
+  return (list ?? []).filter((item) => item !== id)
+}
+
+function record(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value)
+}
+
+function customProvider(config: unknown) {
+  return record(config) && isCustomProviderPackage(config.npm)
+}
+
+function same(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b)) return false
+    if (a.length !== b.length) return false
+    return a.every((value, index) => same(value, b[index]))
+  }
+  if (!record(a) || !record(b)) return false
+  const akeys = Object.keys(a).sort()
+  const bkeys = Object.keys(b).sort()
+  if (akeys.length !== bkeys.length) return false
+  return akeys.every((key, index) => key === bkeys[index] && same(a[key], b[key]))
+}
+
+/** Fetch provider availability and authentication state without exposing stored credentials. */
 export async function fetchProviderData(client: KiloClient, dir: string) {
   const authRequest =
     typeof client.provider.auth === "function"
@@ -22,23 +59,89 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
           .then((r) => r.data ?? {})
           .catch(() => ({}))
       : Promise.resolve({})
+  const kiloRequest = client.kilo
+    .authStatus({ directory: dir }, { throwOnError: true })
+    .then((r) => r.data)
+    .catch(() => undefined)
 
-  const [{ data: response }, authMethods] = await Promise.all([
+  const [{ data: response }, authMethods, kiloAuth] = await Promise.all([
     client.provider.list({ directory: dir }, { throwOnError: true }),
     authRequest,
+    kiloRequest,
   ])
   const authStates: Record<string, AuthState> = {}
+  const storedKeys: Record<string, StoredProviderKey> = {}
   const all = response.all.map((item) => {
     const raw = item as Record<string, unknown>
     if (typeof raw.id === "string" && typeof raw.key === "string" && raw.key) {
       authStates[raw.id] = "api"
+      // Retain the key on the extension side so model fetches for an existing
+      // provider can authenticate without the webview ever seeing the secret
+      // (#10139). Only providers with a configured baseURL are retained — the
+      // fetch handler requires a URL match before applying a stored key.
+      const options = record(raw.options) ? raw.options : undefined
+      const baseURL = options && typeof options.baseURL === "string" ? options.baseURL : undefined
+      if (baseURL) storedKeys[raw.id] = { key: raw.key, baseURL }
     }
     if (!("key" in raw)) return item
     const next = { ...raw }
     delete next.key
     return next as (typeof response.all)[number]
   })
-  return { response: { ...response, all }, authMethods, authStates }
+  delete authStates[KILO_PROVIDER_ID]
+  if (kiloAuth?.authenticated && kiloAuth.type) authStates[KILO_PROVIDER_ID] = kiloAuth.type
+  const organizationId = kiloAuth ? (kiloAuth.organizationId ?? null) : undefined
+  const defaults = { ...response.default }
+  if (organizationId) {
+    const models = all.find((item) => item.id === KILO_PROVIDER_ID)?.models ?? {}
+    const recommended = response.default[KILO_PROVIDER_ID]
+    const model = recommended && Object.hasOwn(models, recommended) ? recommended : Object.keys(models).at(0)
+    if (model) defaults[KILO_PROVIDER_ID] = model
+    if (!model) delete defaults[KILO_PROVIDER_ID]
+  }
+  if (!kiloAuth) delete defaults[KILO_PROVIDER_ID]
+  return {
+    response: {
+      ...response,
+      all: kiloAuth ? all : all.filter((item) => item.id !== KILO_PROVIDER_ID),
+      connected: kiloAuth ? response.connected : response.connected.filter((id) => id !== KILO_PROVIDER_ID),
+      default: defaults,
+    },
+    authMethods,
+    authStates,
+    storedKeys,
+    organizationId,
+    ready: !!kiloAuth,
+    unavailable: catalogUnavailable(response.failed, all, organizationId),
+  }
+}
+
+/** An organization's Kilo catalog failed to load, so Kilo has no models to pick. */
+function catalogUnavailable(
+  failed: string[] | undefined,
+  all: ReadonlyArray<{ id: string; models: Record<string, unknown> }>,
+  organizationId: string | null | undefined,
+) {
+  if (!organizationId || !failed?.includes(KILO_PROVIDER_ID)) return false
+  return Object.keys(all.find((item) => item.id === KILO_PROVIDER_ID)?.models ?? {}).length === 0
+}
+
+/**
+ * Resolve the stored API key for a model fetch on an existing provider.
+ * The key is only applied when the requested URL matches the provider's
+ * configured baseURL, so a stored secret can never be redirected to a
+ * different host (e.g. after the user edits the URL field).
+ */
+export function resolveStoredKey(
+  storedKeys: Record<string, StoredProviderKey>,
+  providerID: unknown,
+  url: string,
+): string | undefined {
+  if (typeof providerID !== "string" || !providerID) return undefined
+  const stored = storedKeys[providerID]
+  if (!stored) return undefined
+  const normalize = (value: string) => value.trim().replace(/\/+$/, "")
+  return normalize(stored.baseURL) === normalize(url) ? stored.key : undefined
 }
 
 export function buildActionContext(
@@ -89,6 +192,18 @@ export function validateFavorites(raw: unknown): Array<{ providerID: string; mod
   return raw.filter(isModelSelection).map((r) => ({ providerID: r.providerID, modelID: r.modelID }))
 }
 
+/** Validate and sanitize per-mode model selections from untrusted sources. */
+export function validateModelSelections(raw: unknown): Record<string, { providerID: string; modelID: string }> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
+  const result: Record<string, { providerID: string; modelID: string }> = {}
+  for (const [key, val] of Object.entries(raw as Record<string, unknown>)) {
+    if (isModelSelection(val)) {
+      result[key] = { providerID: val.providerID, modelID: val.modelID }
+    }
+  }
+  return result
+}
+
 export function computeDefaultSelection(
   cachedConfig: { config?: { model?: string } } | null,
   vscodePID: string,
@@ -102,6 +217,8 @@ export function computeDefaultSelection(
 
 type PostMessage = (message: unknown) => void
 type GetErrorMessage = (error: unknown) => string
+type SetCachedConfig = (msg: unknown) => void
+type AuthMetadata = Record<string, string>
 
 interface ActionContext {
   client: KiloClient
@@ -134,11 +251,81 @@ function validateID(
   return null
 }
 
-export async function connectProvider(ctx: ActionContext, requestId: string, providerID: string, apiKey: string) {
+function cleanMetadata(input?: Record<string, unknown>): AuthMetadata | undefined {
+  const entries = Object.entries(input ?? {})
+    .map(([key, value]) => [key, typeof value === "string" ? value.trim() : ""] as const)
+    .filter(([key, value]) => key !== "" && value !== "")
+  if (entries.length === 0) return undefined
+  return Object.fromEntries(entries)
+}
+
+async function configs(ctx: ActionContext) {
+  const [{ data: global }, { data: merged }] = await Promise.all([
+    ctx.client.global.config.get({ throwOnError: true }),
+    ctx.client.config.get({ directory: ctx.workspaceDir }, { throwOnError: true }),
+  ])
+  return { global: global ?? {}, merged: merged ?? {} }
+}
+
+async function refreshConfig(ctx: ActionContext, setCachedConfig: SetCachedConfig) {
+  const [{ data: config }, { data: global }] = await Promise.all([
+    ctx.client.config.get({ directory: ctx.workspaceDir }, { throwOnError: true }),
+    ctx.client.global.config.get({ throwOnError: true }),
+  ])
+  if (!config) return
+  const features = configFeatures(config, await serverFeatures(ctx.client, ctx.workspaceDir))
+  setCachedConfig({ type: "configLoaded", config, globalConfig: global, features })
+  ctx.postMessage({ type: "configUpdated", config, globalConfig: global, features })
+}
+
+async function saveGlobal(ctx: ActionContext, config: Config) {
+  await ctx.client.global.config.update({ config }, { throwOnError: true })
+}
+
+async function saveProject(ctx: ActionContext, config: Config) {
+  await ctx.client.config.update({ config, directory: ctx.workspaceDir }, { throwOnError: true })
+}
+
+async function removeAuth(ctx: ActionContext, id: string, configured: boolean) {
+  try {
+    await ctx.client.auth.remove({ providerID: id }, { throwOnError: true })
+  } catch (err) {
+    if (!configured) throw err
+    console.warn(`[Kilo New] auth.remove failed for configured provider ${id} (non-fatal):`, err)
+  }
+}
+
+async function removeConfigured(ctx: ActionContext, id: string, global: Config, merged: Config) {
+  const cfg = global.provider?.[id]
+  const effective = merged.provider?.[id]
+  const tasks = []
+  if (cfg) {
+    tasks.push(
+      saveGlobal(ctx, {
+        provider: { [id]: null },
+        disabled_providers: disabledWithout(global.disabled_providers, id),
+      }),
+    )
+  }
+  if (effective) {
+    tasks.push(saveProject(ctx, { provider: { [id]: null } }))
+  }
+  await Promise.all(tasks)
+}
+
+export async function connectProvider(
+  ctx: ActionContext,
+  requestId: string,
+  providerID: string,
+  apiKey: string,
+  metadata?: Record<string, unknown>,
+) {
   const id = validateID(ctx, requestId, providerID, "connect")
   if (!id) return
   try {
-    await ctx.client.auth.set({ providerID: id, auth: { type: "api", key: apiKey } }, { throwOnError: true })
+    const meta = cleanMetadata(metadata)
+    const auth = meta ? { type: "api" as const, key: apiKey, metadata: meta } : { type: "api" as const, key: apiKey }
+    await ctx.client.auth.set({ providerID: id, auth }, { throwOnError: true })
     await ctx.disposeGlobal(`provider connect (${id})`)
     await ctx.fetchAndSendProviders()
     ctx.postMessage({ type: "providerConnected", requestId, providerID: id })
@@ -152,12 +339,13 @@ export async function authorizeProviderOAuth(
   requestId: string,
   providerID: string,
   method: number,
+  inputs?: Record<string, string>,
 ) {
   const id = validateID(ctx, requestId, providerID, "authorize")
   if (!id) return
   try {
     const { data: authorization } = await ctx.client.provider.oauth.authorize(
-      { providerID: id, method, directory: ctx.workspaceDir },
+      { providerID: id, method, directory: ctx.workspaceDir, inputs },
       { throwOnError: true },
     )
     if (!authorization) {
@@ -209,49 +397,30 @@ export async function disconnectProvider(
   requestId: string,
   providerID: string,
   cachedConfigMessage: unknown,
-  setCachedConfig: (msg: unknown) => void,
+  setCachedConfig: SetCachedConfig,
 ) {
   const id = validateID(ctx, requestId, providerID, "disconnect")
   if (!id) return
   try {
-    const globalConfig = (await ctx.client.global.config.get({ throwOnError: true })).data ?? {}
-    const configured = !!globalConfig.provider?.[id]
-
-    // Remove auth store entry. Config-sourced providers may not have an auth
-    // store entry (credentials come from config or env), so failure is non-fatal.
-    // For auth-only providers, failure means disconnect failed.
-    try {
-      await ctx.client.auth.remove({ providerID: id }, { throwOnError: true })
-    } catch (err) {
-      if (!configured) throw err
-      console.warn(`[Kilo New] auth.remove failed for configured provider ${id} (non-fatal):`, err)
-    }
+    const config = await configs(ctx)
+    const cfg = config.global.provider?.[id]
+    const effective = config.merged.provider?.[id]
+    const configured = !!cfg || !!effective
+    const custom = customProvider(cfg) || customProvider(effective)
+    // Remove stored credentials and config so configured providers cannot
+    // reconnect automatically with an old key after logout.
+    await removeAuth(ctx, id, custom)
 
     if (id === "kilo") {
       ctx.postMessage({ type: "profileData", data: null })
     }
 
-    // Config-sourced providers stay "connected" after auth.remove because the
-    // server rebuilds state from config. Add to disabled_providers so the server
-    // excludes them. The config entry is preserved (user may re-enable later).
-    // This matches the desktop app's disableProvider() pattern.
     if (configured) {
-      const disabled = globalConfig.disabled_providers ?? []
-      if (!disabled.includes(id)) {
-        const merged = (
-          await ctx.client.global.config.update(
-            { config: { disabled_providers: [...disabled, id] } },
-            { throwOnError: true },
-          )
-        ).data
-        if (merged) {
-          setCachedConfig({ type: "configLoaded", config: merged })
-          ctx.postMessage({ type: "configUpdated", config: merged })
-        }
-      }
+      await removeConfigured(ctx, id, config.global, config.merged)
     }
 
     await ctx.disposeGlobal(`provider disconnect (${id})`)
+    if (configured) await refreshConfig(ctx, setCachedConfig)
     await ctx.fetchAndSendProviders()
     ctx.postMessage({ type: "providerDisconnected", requestId, providerID: id })
   } catch (error) {
@@ -287,19 +456,24 @@ export async function saveCustomProvider(
     const globalConfig = (await ctx.client.global.config.get({ throwOnError: true })).data ?? {}
     const disabled = globalConfig.disabled_providers ?? []
     const nextDisabled = disabled.filter((item: string) => item !== id)
+    const existing = (globalConfig.provider as Record<string, unknown> | undefined)?.[id]
+    const patch = withCustomProviderDeletions(existing, sanitized.value)
     const { data: updated } = await ctx.client.global.config.update(
       {
         config: {
-          provider: { [id]: sanitized.value },
+          provider: { [id]: patch },
           disabled_providers: nextDisabled,
         },
       },
       { throwOnError: true },
     )
 
-    const msg = { type: "configLoaded", config: updated }
+    const merged = await ctx.client.config.get({ directory: ctx.workspaceDir }, { throwOnError: true })
+    const config = merged.data ?? updated
+    const features = configFeatures(config, await serverFeatures(ctx.client, ctx.workspaceDir))
+    const msg = { type: "configLoaded", config, globalConfig: updated, features }
     setCachedConfig(msg)
-    ctx.postMessage({ type: "configUpdated", config: updated })
+    ctx.postMessage({ type: "configUpdated", config, globalConfig: updated, features })
 
     const auth = resolveCustomProviderAuth(apiKey, apiKeyChanged)
 

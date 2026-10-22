@@ -1,0 +1,1148 @@
+import { describe, expect, mock, spyOn, test } from "bun:test"
+import { Bus } from "@/bus"
+import { BackgroundProcess } from "@/kilocode/background-process"
+import { BackgroundProcessWindows } from "@/kilocode/background-process/windows"
+import { BackgroundProcessRunner } from "@/kilocode/background-process/runner"
+import { Process } from "@/util/process"
+import { SessionID } from "@/session/schema"
+import { Shell } from "@opencode-ai/core/shell"
+import { Filesystem } from "@/util/filesystem"
+import { Global } from "@opencode-ai/core/global"
+import { Hash } from "@opencode-ai/core/util/hash"
+import { Effect } from "effect"
+import { spawn } from "child_process"
+import { once } from "node:events"
+import fs from "fs/promises"
+import * as allfs from "fs/promises"
+import path from "path"
+import { provideTestInstance, TestInstance, tmpdir } from "../fixture/fixture"
+import { it } from "../lib/effect"
+
+function quote(input: string) {
+  const value = input.replaceAll("\\", "/")
+  if (process.platform === "win32") return `"${value.replaceAll('"', '""')}"`
+  return `'${value.replaceAll("'", "'\\''")}'`
+}
+
+async function script(dir: string, name: string, source: string, exec = process.execPath) {
+  const file = path.join(dir, name)
+  await Bun.write(file, source)
+  const bin = quote(exec)
+  const arg = quote(file)
+  if (Shell.ps(Shell.acceptable())) return `& ${bin} ${arg}`
+  return `${bin} ${arg}`
+}
+
+function port() {
+  const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response() })
+  const port = server.port
+  server.stop(true)
+  if (!port) throw new Error("Failed to reserve port")
+  return port
+}
+
+function artifacts(dir: string, id: BackgroundProcess.ID) {
+  const scope = `scope-${Hash.fast(`global\0${Filesystem.resolve(dir)}`)}`
+  return {
+    manifest: path.join(Global.Path.state, "background-process", scope, `${id}.json`),
+    log: path.join(Global.Path.log, "background-process", scope, `${id}.log`),
+  }
+}
+
+function alive(pid: number | undefined) {
+  if (!pid) return false
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function until(check: () => boolean | Promise<boolean>, message: string, timeout = 5_000) {
+  const end = Date.now() + timeout
+  while (Date.now() < end) {
+    if (await check()) return
+    await Bun.sleep(50)
+  }
+  throw new Error(message)
+}
+
+async function cleanupFixture(childState: string, childFile: string, text: typeof Process.text) {
+  if (!(await Bun.file(childState).exists())) return
+  const owned: unknown = JSON.parse(await Bun.file(childState).text())
+  if (
+    !owned ||
+    typeof owned !== "object" ||
+    !("pid" in owned) ||
+    !("started" in owned) ||
+    typeof owned.pid !== "number" ||
+    typeof owned.started !== "number"
+  )
+    throw new Error("own fixture record invalid")
+  const query = `Get-CimInstance Win32_Process -Filter "ProcessId = ${owned.pid}" | Select-Object ProcessId,CreationDate,CommandLine | ConvertTo-Json -Compress`
+  const found = await text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
+    nothrow: true,
+    timeout: 30_000,
+  })
+  if (found.code !== 0) throw new Error("own fixture identity could not be checked for cleanup")
+  if (found.text.trim()) {
+    const row: unknown = JSON.parse(found.text)
+    if (
+      !row ||
+      typeof row !== "object" ||
+      !("ProcessId" in row) ||
+      !("CreationDate" in row) ||
+      !("CommandLine" in row) ||
+      typeof row.CreationDate !== "string" ||
+      typeof row.CommandLine !== "string"
+    )
+      throw new Error("own fixture identity invalid")
+    const birth = Number(row.CreationDate.match(/\d+/)?.at(0))
+    if (row.ProcessId !== owned.pid || !row.CommandLine.includes(childFile) || Math.abs(birth - owned.started) > 2_000)
+      throw new Error("own fixture identity changed; refusing cleanup")
+    await Process.run(["taskkill", "/pid", String(owned.pid), "/f"], { nothrow: true })
+  }
+  const pid = owned.pid
+  await until(() => !alive(pid), "own fixture remained after cleanup", 10_000)
+  if (process.env.RUNNER_CLEANUP_PROOF)
+    await Bun.write(
+      process.env.RUNNER_CLEANUP_PROOF,
+      JSON.stringify({ pid: owned.pid, beforeAlive: true, afterAlive: false, birthVerified: true, childFile }),
+    )
+}
+
+function update(sessionID: SessionID) {
+  const state: { off?: () => void; timer?: ReturnType<typeof setTimeout> } = {}
+  const promise = new Promise<BackgroundProcess.Info>((resolve, reject) => {
+    state.timer = setTimeout(() => {
+      state.off?.()
+      reject(new Error("timed out waiting for process update"))
+    }, 5_000)
+    state.off = Bus.subscribe(BackgroundProcess.Event.Updated, (event) => {
+      const info = event.properties.info
+      if (info.sessionID !== sessionID) return
+      if (!info.output.includes("tick")) return
+      state.off?.()
+      if (state.timer) clearTimeout(state.timer)
+      resolve(info)
+    })
+  })
+  return {
+    promise,
+    dispose() {
+      state.off?.()
+      if (state.timer) clearTimeout(state.timer)
+    },
+  }
+}
+
+describe("BackgroundProcess", () => {
+  test("process exit and persistent stop remove each artifact once", async () => {
+    await using tmp = await tmpdir()
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const item = await BackgroundProcess.start({
+          sessionID: SessionID.descending(),
+          command: await script(tmp.path, "cleanup.mjs", 'console.log("ready"); setInterval(() => {}, 1000)'),
+          cwd: tmp.path,
+          lifetime: "persistent",
+          ready: { pattern: "ready", timeout: 10_000 },
+        })
+        const original = { ...allfs }
+        const removed: string[] = []
+        const remove: typeof fs.rm = async (...args) => {
+          removed.push(String(args[0]))
+          await Bun.sleep(100)
+          return original.rm(...args)
+        }
+        await mock.module("fs/promises", () => ({ ...original, rm: remove }))
+        try {
+          await BackgroundProcess.stop(item.id)
+          const files = removed.filter((file) => file.includes(item.id))
+          expect(files.length).toBeGreaterThan(0)
+          expect(new Set(files).size).toBe(files.length)
+        } finally {
+          await mock.module("fs/promises", () => original)
+          await BackgroundProcess.stop(item.id)
+        }
+      },
+    })
+  }, 30_000)
+
+  test.skipIf(process.platform !== "win32")(
+    "rollback waits for a persistent runner that exits five seconds after stop",
+    async () => {
+      await using tmp = await tmpdir()
+      const source = path.join(tmp.path, "rollback.mjs")
+      const captured: { control?: string } = {}
+      const input = spyOn(BackgroundProcessRunner, "command").mockImplementation((value) => {
+        captured.control = value.control
+        return [process.execPath, source, "__background-process", value.token, value.control]
+      })
+      await Bun.write(
+        source,
+        `console.log("ready")
+const timer = setInterval(async () => {
+  if (!(await Bun.file(process.argv[4]).exists())) return
+  clearInterval(timer)
+  await Bun.sleep(5_000)
+  process.exit(0)
+}, 20)
+`,
+      )
+      const pids: number[] = []
+      const probe = spyOn(BackgroundProcessWindows, "command").mockImplementation(async (pid) => {
+        if (!pids.includes(pid)) pids.push(pid)
+        return alive(pid) ? { live: true, terminating: true } : { live: false }
+      })
+      try {
+        await provideTestInstance({
+          directory: tmp.path,
+          fn: async () => {
+            let error: unknown
+            try {
+              await BackgroundProcess.start({
+                sessionID: SessionID.descending(),
+                command: "synthetic rollback runner",
+                cwd: tmp.path,
+                lifetime: "persistent",
+              })
+            } catch (cause) {
+              error = cause
+            }
+            expect(String(error)).toContain("Persistent process identity could not be verified")
+            expect(captured.control).toBeTruthy()
+            expect(pids.length).toBeGreaterThan(0)
+            expect(pids.every((pid) => !alive(pid))).toBe(true)
+            expect(await BackgroundProcess.list()).toEqual([])
+          },
+        })
+      } finally {
+        input.mockRestore()
+        probe.mockRestore()
+        for (const pid of pids) if (alive(pid)) process.kill(pid, "SIGKILL")
+      }
+    },
+    30_000,
+  )
+
+  test.skipIf(process.platform !== "win32")(
+    "waits for a persistent runner that exits five seconds after stop",
+    async () => {
+      await using tmp = await tmpdir()
+      const sessionID = SessionID.descending()
+      const id = BackgroundProcess.ID.ascending()
+      const files = artifacts(tmp.path, id)
+      const scope = `global\0${Filesystem.resolve(tmp.path)}`
+      const token = `late-${process.pid}-${Date.now()}`
+      const control = files.manifest.slice(0, -5) + ".stop"
+      const source = path.join(tmp.path, "late.mjs")
+      await fs.mkdir(path.dirname(files.manifest), { recursive: true })
+      await fs.mkdir(path.dirname(files.log), { recursive: true })
+      await Bun.write(
+        source,
+        `console.log("ready")
+const timer = setInterval(async () => {
+  if (!(await Bun.file(${JSON.stringify(control)}).exists())) return
+  clearInterval(timer)
+  await Bun.sleep(5_000)
+  process.exit(0)
+}, 20)
+`,
+      )
+      const child = spawn(process.execPath, [source, "__background-process", token], {
+        stdio: "ignore",
+        windowsHide: true,
+      })
+      const exit = once(child, "exit")
+      if (!child.pid) throw new Error("fixture runner did not start")
+      const now = Date.now()
+      await Bun.write(files.log, "ready\n")
+      await Bun.write(
+        files.manifest,
+        JSON.stringify({
+          scope: `scope:${Hash.fast(scope)}`,
+          token,
+          info: {
+            id,
+            sessionID,
+            pid: child.pid,
+            command: "synthetic late runner",
+            cwd: tmp.path,
+            ports: [],
+            status: "running",
+            lifetime: "persistent",
+            ready: false,
+            output: "",
+            time: { started: now, updated: now },
+          },
+          start: { sessionID, command: "synthetic late runner", cwd: tmp.path, lifetime: "persistent" },
+        }),
+      )
+      try {
+        await provideTestInstance({
+          directory: tmp.path,
+          fn: async () => {
+            expect((await BackgroundProcess.get(id))?.pid).toBe(child.pid)
+            const command = BackgroundProcessWindows.command
+            const probe = spyOn(BackgroundProcessWindows, "command").mockImplementation(async (pid) =>
+              pid === child.pid && (await Bun.file(control).exists()) && alive(pid)
+                ? { live: true, terminating: true }
+                : command(pid),
+            )
+            const walk = spyOn(Process, "text")
+            const started = Date.now()
+            try {
+              const stopped = await BackgroundProcess.stop(id)
+              expect(stopped?.status).toBe("stopped")
+              expect(Date.now() - started).toBeGreaterThanOrEqual(5_000)
+              expect(alive(child.pid)).toBe(false)
+              expect(await Bun.file(files.manifest).exists()).toBe(false)
+              expect(walk.mock.calls.filter(([args]) => args[0] === "powershell.exe")).toHaveLength(0)
+            } finally {
+              probe.mockRestore()
+              walk.mockRestore()
+            }
+          },
+        })
+      } finally {
+        if (alive(child.pid)) child.kill("SIGKILL")
+        await exit
+        await fs.rm(files.manifest, { force: true })
+        await fs.rm(files.log, { force: true })
+        await fs.rm(control, { force: true })
+      }
+    },
+    30_000,
+  )
+
+  test.skipIf(process.platform !== "win32")(
+    "an unconfirmed stop is reported before its guarded runner ends",
+    async () => {
+      await using tmp = await tmpdir()
+      const file = path.join(tmp.path, "unconfirmed.ts")
+      const childFile = path.join(tmp.path, "owned-child.mjs")
+      const childState = path.join(tmp.path, "owned-child.json")
+      await Bun.write(
+        childFile,
+        `import fs from "node:fs"
+fs.writeFileSync(${JSON.stringify(childState)}, JSON.stringify({ pid: process.pid, started: Date.now() - process.uptime() * 1000 }))
+setInterval(() => {}, 1000)
+`,
+      )
+      const processFile = path.resolve(import.meta.dirname, "../../src/util/process.ts")
+      const runnerFile = path.resolve(import.meta.dirname, "../../src/kilocode/background-process/runner.ts")
+      const windowsFile = path.resolve(import.meta.dirname, "../../src/kilocode/background-process/windows.ts")
+      await Bun.write(
+        file,
+        `import { mock } from "bun:test"
+import fs from "node:fs/promises"
+import * as helpers from ${JSON.stringify(processFile)}
+const original = { ...helpers }
+const text = async () => ({ code: 1, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0), text: "" })
+mock.module(${JSON.stringify(processFile)}, () => ({ ...original, text, Process: { ...original, text } }))
+const windows = await import(${JSON.stringify(windowsFile)})
+mock.module(${JSON.stringify(windowsFile)}, () => ({ BackgroundProcessWindows: { ...windows.BackgroundProcessWindows, job: async () => ({ reason: "test startup fallback" }) } }))
+const { BackgroundProcessRunner } = await import(${JSON.stringify(runnerFile)})
+await fs.writeFile(${JSON.stringify(path.join(tmp.path, "fixture-started.json"))}, JSON.stringify({ pid: process.pid, argv: process.argv }))
+await BackgroundProcessRunner.maybe(process.argv)
+await fs.writeFile(${JSON.stringify(path.join(tmp.path, "fixture-outcome.json"))}, JSON.stringify({ code: process.exitCode, pid: process.pid }))
+process.exit(process.exitCode ?? 0)
+`,
+      )
+      const original = BackgroundProcessRunner.command
+      let launched: string[] = []
+      const command = spyOn(BackgroundProcessRunner, "command").mockImplementation((value) => {
+        const argv = original(value)
+        launched = [process.execPath, file, ...argv.slice(argv.indexOf("__background-process-runner"))]
+        return launched
+      })
+      let pid: number | undefined
+      const text = Process.text
+      const identity = spyOn(Process, "text").mockImplementation(async (args, opts) => {
+        const query = args.find((arg) => arg.includes("Win32_Process") && arg.includes("-Filter"))
+        const match = query?.match(/ProcessId = (\d+)/)
+        const target = match ? Number(match[1]) : undefined
+        if (target && alive(target)) {
+          return {
+            code: 0,
+            stdout: Buffer.alloc(0),
+            stderr: Buffer.alloc(0),
+            text: JSON.stringify({ ProcessId: target, CommandLine: launched.join(" ") }),
+          }
+        }
+        return text(args, opts)
+      })
+      try {
+        await provideTestInstance({
+          directory: tmp.path,
+          fn: async () => {
+            const item = await BackgroundProcess.start({
+              sessionID: SessionID.descending(),
+              command: `& "${process.execPath}" "${childFile}"`,
+              cwd: tmp.path,
+              lifetime: "persistent",
+              ready: { pattern: "process walk failed", timeout: 10_000 },
+            })
+            pid = item.pid
+            let error: unknown
+            try {
+              await BackgroundProcess.stop(item.id)
+            } catch (cause) {
+              error = cause
+            }
+            expect(String(error)).toContain("Persistent process runner did not stop safely")
+            expect(alive(pid)).toBe(true)
+            await until(() => !alive(pid), "guarded runner did not end", 35_000)
+            await until(
+              async () => (await BackgroundProcess.get(item.id))?.exitCode !== undefined,
+              "runner completion was not surfaced",
+              10_000,
+            )
+            const outcome = JSON.parse(await Bun.file(path.join(tmp.path, "fixture-outcome.json")).text())
+            // Stored codes depend on whether the exit event or liveness watch wins; check the runner's own exit here.
+            expect(outcome.code).toBe(1)
+            const info = await BackgroundProcess.get(item.id)
+            expect(info?.output).toContain(`id=${item.id}`)
+            expect(info?.output).toContain("process table unavailable, descendants not verified")
+            expect(info?.output).toContain("walks=")
+          },
+        })
+      } finally {
+        identity.mockRestore()
+        command.mockRestore()
+        if (alive(pid)) await Process.run(["taskkill", "/pid", String(pid), "/f"], { nothrow: true })
+        await cleanupFixture(childState, childFile, text)
+      }
+    },
+    120_000,
+  )
+
+  it.instance("starts, reports readiness, and stops a process", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const sessionID = SessionID.descending()
+      const command = yield* Effect.promise(() =>
+        script(
+          test.directory,
+          "ready.mjs",
+          `console.log("ready")
+setInterval(() => {}, 1_000)
+`,
+        ),
+      )
+
+      const info = yield* Effect.promise(() =>
+        BackgroundProcess.start({
+          sessionID,
+          command,
+          cwd: test.directory,
+          description: "test server",
+          ready: { pattern: "ready", timeout: 5_000 },
+        }),
+      )
+
+      expect(info.status).toBe("ready")
+      expect(info.output).toContain("ready")
+
+      const list = yield* Effect.promise(() => BackgroundProcess.list({ sessionID }))
+      expect(list.map((item) => item.id)).toContain(info.id)
+
+      const stopped = yield* Effect.promise(() => BackgroundProcess.stop(info.id))
+      expect(stopped?.status).toBe("stopped")
+      if (process.platform !== "win32") {
+        expect(stopped?.exitCode).toBeUndefined()
+        expect(stopped?.signal).toBe("SIGTERM")
+      }
+
+      yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID))
+      const next = yield* Effect.promise(() => BackgroundProcess.list({ sessionID }))
+      expect(next).toEqual([])
+    }),
+  )
+
+  it.instance("reports explicit readiness ports for VS Code clients", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const sessionID = SessionID.descending()
+      const listen = port()
+      const command = yield* Effect.promise(() =>
+        script(
+          test.directory,
+          "vscode-ready-port.mjs",
+          `Bun.serve({ hostname: "127.0.0.1", port: ${listen}, fetch: () => new Response() })
+`,
+        ),
+      )
+      const client = process.env["KILO_CLIENT"]
+      process.env["KILO_CLIENT"] = "vscode"
+
+      try {
+        const info = yield* Effect.promise(() =>
+          BackgroundProcess.start({
+            sessionID,
+            command,
+            cwd: test.directory,
+            ready: { port: listen, timeout: 5_000 },
+          }),
+        )
+
+        expect(info.status).toBe("ready")
+        expect(info.ports).toEqual([listen])
+      } finally {
+        yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID))
+        if (client === undefined) delete process.env["KILO_CLIENT"]
+        else process.env["KILO_CLIENT"] = client
+      }
+    }),
+  )
+
+  it.instance("infers ports for CLI clients", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const sessionID = SessionID.descending()
+      const listen = port()
+      const command = yield* Effect.promise(() =>
+        script(
+          test.directory,
+          "cli-port.mjs",
+          `Bun.serve({ hostname: "127.0.0.1", port: ${listen}, fetch: () => new Response() })
+`,
+        ),
+      )
+      const client = process.env["KILO_CLIENT"]
+      const scans = process.env["KILO_BACKGROUND_PROCESS_PORTS"]
+      process.env["KILO_CLIENT"] = "cli"
+      process.env["KILO_BACKGROUND_PROCESS_PORTS"] = "true"
+
+      try {
+        const info = yield* Effect.promise(() =>
+          BackgroundProcess.start({
+            sessionID,
+            command,
+            cwd: test.directory,
+          }),
+        )
+
+        let found = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+        if (process.platform !== "win32") {
+          for (let attempt = 0; attempt < 40 && !found?.ports.includes(listen); attempt++) {
+            yield* Effect.promise(() => Bun.sleep(250))
+            found = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+          }
+        }
+        expect(found?.ports).toEqual(process.platform === "win32" ? [] : [listen])
+      } finally {
+        yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID))
+        if (client === undefined) delete process.env["KILO_CLIENT"]
+        else process.env["KILO_CLIENT"] = client
+        if (scans === undefined) delete process.env["KILO_BACKGROUND_PROCESS_PORTS"]
+        else process.env["KILO_BACKGROUND_PROCESS_PORTS"] = scans
+      }
+    }),
+  )
+
+  it.instance("does not infer ports for CLI clients without opt in", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const sessionID = SessionID.descending()
+      const listen = port()
+      const command = yield* Effect.promise(() =>
+        script(
+          test.directory,
+          "cli-no-port.mjs",
+          `Bun.serve({ hostname: "127.0.0.1", port: ${listen}, fetch: () => new Response() })
+`,
+        ),
+      )
+      const client = process.env["KILO_CLIENT"]
+      const scans = process.env["KILO_BACKGROUND_PROCESS_PORTS"]
+      process.env["KILO_CLIENT"] = "cli"
+      delete process.env["KILO_BACKGROUND_PROCESS_PORTS"]
+
+      try {
+        const info = yield* Effect.promise(() =>
+          BackgroundProcess.start({
+            sessionID,
+            command,
+            cwd: test.directory,
+          }),
+        )
+
+        yield* Effect.promise(() => Bun.sleep(1_000))
+        const found = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+        expect(found?.ports).toEqual([])
+      } finally {
+        yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID))
+        if (client === undefined) delete process.env["KILO_CLIENT"]
+        else process.env["KILO_CLIENT"] = client
+        if (scans === undefined) delete process.env["KILO_BACKGROUND_PROCESS_PORTS"]
+        else process.env["KILO_BACKGROUND_PROCESS_PORTS"] = scans
+      }
+    }),
+  )
+
+  it.instance("does not infer ports for VS Code clients", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const sessionID = SessionID.descending()
+      const listen = port()
+      const command = yield* Effect.promise(() =>
+        script(
+          test.directory,
+          "vscode-port.mjs",
+          `Bun.serve({ hostname: "127.0.0.1", port: ${listen}, fetch: () => new Response() })
+`,
+        ),
+      )
+      const client = process.env["KILO_CLIENT"]
+      process.env["KILO_CLIENT"] = "vscode"
+
+      try {
+        const info = yield* Effect.promise(() =>
+          BackgroundProcess.start({
+            sessionID,
+            command,
+            cwd: test.directory,
+          }),
+        )
+
+        yield* Effect.promise(() => Bun.sleep(2_500))
+        const found = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+        expect(found?.ports).toEqual([])
+      } finally {
+        yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID))
+        if (client === undefined) delete process.env["KILO_CLIENT"]
+        else process.env["KILO_CLIENT"] = client
+      }
+    }),
+  )
+
+  it.instance("publishes output updates from process callbacks", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const sessionID = SessionID.descending()
+      const command = yield* Effect.promise(() =>
+        script(
+          test.directory,
+          "tick.mjs",
+          `console.log("ready")
+setTimeout(() => console.log("tick"), 200)
+setInterval(() => {}, 1_000)
+`,
+        ),
+      )
+      const wait = update(sessionID)
+      const info = yield* Effect.promise(() =>
+        BackgroundProcess.start({
+          sessionID,
+          command,
+          cwd: test.directory,
+          ready: { pattern: "ready", timeout: 5_000 },
+        }),
+      )
+
+      try {
+        const event = yield* Effect.promise(() => wait.promise)
+        expect(event.id).toBe(info.id)
+        expect(event.output).toContain("tick")
+      } finally {
+        wait.dispose()
+        yield* Effect.promise(() => BackgroundProcess.stop(info.id))
+        yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID))
+      }
+    }),
+  )
+
+  it.instance("transfers inherited processes to the parent session", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const parentID = SessionID.descending()
+      const sessionID = SessionID.descending()
+      const command = yield* Effect.promise(() =>
+        script(
+          test.directory,
+          "inherited.mjs",
+          `console.log("ready")
+setInterval(() => {}, 1_000)
+`,
+        ),
+      )
+      const info = yield* Effect.promise(() =>
+        BackgroundProcess.start({
+          sessionID,
+          parentID,
+          command,
+          cwd: test.directory,
+          lifetime: "parent",
+          ready: { pattern: "ready", timeout: 5_000 },
+        }),
+      )
+
+      yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID))
+      const child = yield* Effect.promise(() => BackgroundProcess.list({ sessionID }))
+      const parent = yield* Effect.promise(() => BackgroundProcess.list({ sessionID: parentID }))
+      expect(child).toEqual([])
+      expect(parent).toHaveLength(1)
+      expect(parent[0]?.id).toBe(info.id)
+      expect(parent[0]?.lifetime).toBe("session")
+
+      yield* Effect.promise(() => BackgroundProcess.stopSession(parentID))
+      const stopped = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+      expect(stopped).toBeUndefined()
+    }),
+  )
+
+  it.instance("re-adopts persistent processes after instance reload", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const sessionID = SessionID.descending()
+      const command = yield* Effect.promise(() =>
+        script(
+          test.directory,
+          "persistent.mjs",
+          `console.log("ready")
+setInterval(() => console.log("tick"), 100)
+`,
+        ),
+      )
+      const info = yield* Effect.promise(() =>
+        BackgroundProcess.start({
+          sessionID,
+          command,
+          cwd: test.directory,
+          lifetime: "persistent",
+          ready: { pattern: "ready", timeout: 15_000 },
+        }),
+      )
+
+      try {
+        expect(info.status).toBe("ready")
+        const otherID = SessionID.descending()
+        const visible = yield* Effect.promise(() => BackgroundProcess.list({ sessionID: otherID }))
+        expect(visible.map((item) => item.id)).toContain(info.id)
+        const files = artifacts(test.directory, info.id)
+        yield* Effect.promise(() =>
+          until(async () => {
+            const log = Bun.file(files.log)
+            return (await log.exists()) && (await log.text()).includes("ready")
+          }, "persistent process output was not flushed before reload"),
+        )
+        yield* Effect.promise(() => BackgroundProcess.shutdown())
+        const adopted = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+        expect(adopted?.pid).toBe(info.pid)
+        expect(adopted?.lifetime).toBe("persistent")
+        expect(adopted?.output).toContain("ready")
+      } finally {
+        yield* Effect.promise(() => BackgroundProcess.stop(info.id))
+        yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID))
+      }
+    }),
+  )
+
+  it.live("isolates persistent processes between non-git directories", () =>
+    Effect.promise(async () => {
+      await using first = await tmpdir()
+      await using second = await tmpdir()
+      const sessionID = SessionID.descending()
+      const command = await script(
+        first.path,
+        "isolated.mjs",
+        `console.log("ready")
+setInterval(() => {}, 1_000)
+`,
+      )
+      const info = await provideTestInstance({
+        directory: first.path,
+        fn: () =>
+          BackgroundProcess.start({
+            sessionID,
+            command,
+            cwd: first.path,
+            lifetime: "persistent",
+            ready: { pattern: "ready", timeout: 15_000 },
+          }),
+      })
+
+      try {
+        const other = await provideTestInstance({
+          directory: second.path,
+          fn: () => BackgroundProcess.get(info.id),
+        })
+        expect(other).toBeUndefined()
+        const own = await provideTestInstance({
+          directory: first.path,
+          fn: () => BackgroundProcess.get(info.id),
+        })
+        expect(own?.pid).toBe(info.pid)
+      } finally {
+        await provideTestInstance({ directory: first.path, fn: () => BackgroundProcess.stop(info.id) })
+      }
+    }),
+  )
+
+  it.live(
+    "shares one persistent process manager across project directories",
+    () =>
+      Effect.promise(async () => {
+        await using tmp = await tmpdir({ git: true })
+        const nested = path.join(tmp.path, "nested")
+        await fs.mkdir(nested)
+        const sessionID = SessionID.descending()
+        const command = await script(
+          tmp.path,
+          "shared.mjs",
+          `console.log("ready")
+setInterval(() => {}, 1_000)
+`,
+        )
+        const info = await provideTestInstance({
+          directory: tmp.path,
+          fn: () =>
+            BackgroundProcess.start({
+              sessionID,
+              command,
+              cwd: tmp.path,
+              lifetime: "persistent",
+              ready: { pattern: "ready", timeout: 15_000 },
+            }),
+        })
+
+        try {
+          const shared = await provideTestInstance({ directory: nested, fn: () => BackgroundProcess.get(info.id) })
+          expect(shared?.pid).toBe(info.pid)
+          const restarted = await provideTestInstance({
+            directory: nested,
+            fn: () => BackgroundProcess.restart(info.id),
+          })
+          expect(restarted?.pid).not.toBe(info.pid)
+          const current = await provideTestInstance({ directory: tmp.path, fn: () => BackgroundProcess.get(info.id) })
+          expect(current?.pid).toBe(restarted?.pid)
+        } finally {
+          await provideTestInstance({ directory: tmp.path, fn: () => BackgroundProcess.stop(info.id) })
+        }
+      }),
+    // Windows verifies each persistent launch and stop through PowerShell/CIM.
+    // This test performs two complete lifecycles, so allow both probe budgets.
+    process.platform === "win32" ? 35_000 : 15_000,
+  )
+
+  it.instance(
+    "bounds and secures persistent process artifacts",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const sessionID = SessionID.descending()
+        const command = yield* Effect.promise(() =>
+          script(
+            test.directory,
+            "bounded.mjs",
+            `console.log("READY")
+await Bun.sleep(1_000)
+await new Promise((resolve) => process.stdout.write("x".repeat(1_100 * 1024) + "FINAL", resolve))
+setInterval(() => {}, 1_000)
+`,
+          ),
+        )
+        const info = yield* Effect.promise(() =>
+          BackgroundProcess.start({
+            sessionID,
+            command,
+            cwd: test.directory,
+            lifetime: "persistent",
+            ready: { pattern: "READY", timeout: 15_000 },
+          }),
+        )
+        const files = artifacts(test.directory, info.id)
+
+        try {
+          expect(info.status).toBe("ready")
+          yield* Effect.promise(() =>
+            until(
+              async () => (await Bun.file(files.log).text()).includes("FINAL"),
+              "bounded output did not flush",
+              15_000,
+            ),
+          )
+          yield* Effect.promise(() => Bun.sleep(600))
+          const current = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+          expect(current?.output).toContain("FINAL")
+          expect(Buffer.byteLength(current?.output ?? "")).toBeLessThanOrEqual(200 * 1024)
+
+          const log = yield* Effect.promise(() => fs.stat(files.log))
+          expect(log.size).toBeLessThanOrEqual(1024 * 1024)
+          const manifest = yield* Effect.promise(() => Bun.file(files.manifest).json())
+          expect(manifest.info.output).toBe("")
+          expect(manifest.info.ports).toEqual([])
+          if (process.platform !== "win32") {
+            expect(log.mode & 0o777).toBe(0o600)
+            expect((yield* Effect.promise(() => fs.stat(files.manifest))).mode & 0o777).toBe(0o600)
+            expect((yield* Effect.promise(() => fs.stat(path.dirname(files.log)))).mode & 0o777).toBe(0o700)
+            expect((yield* Effect.promise(() => fs.stat(path.dirname(files.manifest)))).mode & 0o777).toBe(0o700)
+          }
+          yield* Effect.promise(() => Bun.sleep(300))
+          const before = yield* Effect.promise(() => fs.stat(files.manifest))
+          yield* Effect.promise(() => Bun.sleep(1_200))
+          const after = yield* Effect.promise(() => fs.stat(files.manifest))
+          expect(after.mtimeMs).toBe(before.mtimeMs)
+        } finally {
+          yield* Effect.promise(() => BackgroundProcess.stop(info.id))
+        }
+        expect(yield* Effect.promise(() => Bun.file(files.manifest).exists())).toBe(false)
+        expect(yield* Effect.promise(() => Bun.file(files.log).exists())).toBe(false)
+      }),
+    35_000,
+  )
+
+  it.instance("rejects a persistent manifest for an unrelated live process", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const sessionID = SessionID.descending()
+      const command = yield* Effect.promise(() =>
+        script(
+          test.directory,
+          "owned.mjs",
+          `console.log("ready")
+setInterval(() => {}, 1_000)
+`,
+        ),
+      )
+      const info = yield* Effect.promise(() =>
+        BackgroundProcess.start({
+          sessionID,
+          command,
+          cwd: test.directory,
+          lifetime: "persistent",
+          ready: { pattern: "ready", timeout: 15_000 },
+        }),
+      )
+      const files = artifacts(test.directory, info.id)
+      const source = yield* Effect.promise(() => Bun.file(files.manifest).json())
+      const unrelated = yield* Effect.promise(async () => {
+        const command = await script(test.directory, "unrelated.mjs", "setInterval(() => {}, 1_000)\n")
+        const sh = Shell.acceptable()
+        return spawn(sh, Shell.args(sh, command, test.directory), {
+          cwd: test.directory,
+          detached: process.platform !== "win32",
+          stdio: "ignore",
+          windowsHide: true,
+        })
+      })
+      const fake = BackgroundProcess.ID.ascending("bgp_unrelated")
+      const forged = structuredClone(source)
+      forged.info.id = fake
+      forged.info.pid = unrelated.pid
+      const target = artifacts(test.directory, fake)
+      yield* Effect.promise(() => fs.writeFile(target.manifest, JSON.stringify(forged), { mode: 0o600 }))
+      yield* Effect.promise(() => fs.writeFile(target.log, "", { mode: 0o600 }))
+
+      try {
+        expect(yield* Effect.promise(() => BackgroundProcess.stop(fake))).toBeUndefined()
+        expect(alive(unrelated.pid)).toBe(true)
+        expect(yield* Effect.promise(() => Bun.file(target.manifest).exists())).toBe(false)
+      } finally {
+        yield* Effect.promise(async () => {
+          const exited =
+            unrelated.exitCode !== null || unrelated.signalCode !== null ? undefined : once(unrelated, "exit")
+          if (unrelated.pid && alive(unrelated.pid)) {
+            if (process.platform === "win32") unrelated.kill("SIGKILL")
+            else process.kill(-unrelated.pid, "SIGKILL")
+          }
+          await exited
+        })
+        yield* Effect.promise(() => BackgroundProcess.stop(info.id))
+      }
+    }),
+  )
+
+  it.instance(
+    "keeps persistent descendants manageable after the leader exits",
+    () =>
+      Effect.gen(function* () {
+        if (!["linux", "darwin", "win32"].includes(process.platform)) return
+        const test = yield* TestInstance
+        const sessionID = SessionID.descending()
+        const child = path.join(test.directory, "descendant.mjs")
+        const ready = path.join(test.directory, "descendant-ready")
+        const leaderPid = path.join(test.directory, "descendant-leader-pid")
+        yield* Effect.promise(() =>
+          Bun.write(
+            child,
+            `import { writeFileSync } from "fs"
+writeFileSync(${JSON.stringify(ready)}, "ready")
+setInterval(() => {}, 1_000)
+`,
+          ),
+        )
+        // Use Node so child process-group inheritance is consistent across Bun versions.
+        const exec = "node"
+        const command = yield* Effect.promise(() =>
+          script(
+            test.directory,
+            "leader.cjs",
+            `const { spawn } = require("child_process")
+const { existsSync, writeFileSync } = require("fs")
+console.log("leader:" + process.pid)
+writeFileSync(${JSON.stringify(leaderPid)}, String(process.pid))
+const child = spawn(process.execPath, [${JSON.stringify(child)}], {
+  stdio: "ignore",
+  detached: process.platform === "win32",
+  windowsHide: true,
+})
+child.unref()
+const timer = setInterval(() => {
+  if (!existsSync(${JSON.stringify(ready)})) return
+  clearInterval(timer)
+  console.log("child:" + child.pid)
+}, 10)
+if (process.platform === "win32") setTimeout(() => {}, 5_000)
+`,
+            exec,
+          ),
+        )
+        const info = yield* Effect.promise(() =>
+          BackgroundProcess.start({
+            sessionID,
+            command,
+            cwd: test.directory,
+            lifetime: "persistent",
+            ready: { pattern: "child:", timeout: 15_000 },
+          }),
+        )
+        // Read the leader pid from the file it writes, not from captured output: the leader
+        // writes it before spawning, while the captured stream can still be missing the first
+        // line when the ready pattern matches on a loaded Windows runner.
+        const leader = Number(yield* Effect.promise(() => Bun.file(leaderPid).text()))
+        const pid = Number(info.output.match(/child:(\d+)/)?.[1])
+        const runner = info.pid
+        try {
+          expect(info.status).toBe("ready")
+          expect(leader).toBeGreaterThan(0)
+          expect(pid).toBeGreaterThan(0)
+          yield* Effect.promise(() => until(() => !alive(leader), "persistent command leader did not exit", 10_000))
+          if (process.platform === "win32") {
+            // Assert after the runner's one-second ancestry grace window has elapsed.
+            yield* Effect.promise(() => Bun.sleep(2_000))
+            expect(alive(runner)).toBe(true)
+          }
+          if (process.platform !== "win32") {
+            yield* Effect.promise(() => until(() => !alive(runner), "persistent runner did not exit"))
+          }
+          const current = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+          if (!current) throw new Error("Persistent process disappeared while its descendant was running")
+          expect(["running", "ready"]).toContain(current.status)
+          expect(alive(pid)).toBe(true)
+          yield* Effect.promise(() => BackgroundProcess.stop(info.id))
+          yield* Effect.promise(() => until(() => !alive(pid), "persistent descendant was not terminated"))
+        } finally {
+          yield* Effect.promise(async () => {
+            await Promise.allSettled([BackgroundProcess.stop(info.id)])
+            for (const item of [pid, runner]) {
+              if (!item || !alive(item)) continue
+              try {
+                process.kill(item, "SIGKILL")
+              } catch (err) {
+                if (alive(item)) throw err
+              }
+            }
+          })
+        }
+      }),
+    // The Windows leader intentionally stays alive for five seconds, so it needs a larger outer budget.
+    process.platform === "win32" ? 60_000 : 30_000,
+  )
+  ;(process.platform === "win32" ? it.instance : it.instance.skip)(
+    "ends the Windows runner once the last descendant is gone",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const sessionID = SessionID.descending()
+        const child = path.join(test.directory, "last.mjs")
+        yield* Effect.promise(() => Bun.write(child, "setInterval(() => {}, 1_000)\n"))
+        const command = yield* Effect.promise(() =>
+          script(
+            test.directory,
+            "last-leader.cjs",
+            `const { spawn } = require("child_process")
+const child = spawn(process.execPath, [${JSON.stringify(child)}], { stdio: "ignore", detached: true, windowsHide: true })
+child.unref()
+console.log("child:" + child.pid)
+`,
+            "node",
+          ),
+        )
+        const info = yield* Effect.promise(() =>
+          BackgroundProcess.start({
+            sessionID,
+            command,
+            cwd: test.directory,
+            lifetime: "persistent",
+            ready: { pattern: "child:", timeout: 15_000 },
+          }),
+        )
+        const pid = Number(info.output.match(/child:(\d+)/)?.[1])
+        const runner = info.pid
+        try {
+          expect(pid).toBeGreaterThan(0)
+          // The leader has exited by now; the detached child keeps the runner alive.
+          yield* Effect.promise(() => Bun.sleep(1_500))
+          expect(alive(runner)).toBe(true)
+          process.kill(pid, "SIGKILL")
+          yield* Effect.promise(() =>
+            until(() => !alive(runner), "runner did not end after its last descendant", 5_000),
+          )
+          // Poll inside the instance context: `get` reads instance state and must not run in a
+          // detached promise callback.
+          const end = Date.now() + 5_000
+          while (Date.now() < end) {
+            const current = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+            if (!current || current.status === "exited") break
+            yield* Effect.promise(() => Bun.sleep(100))
+          }
+          const last = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+          expect(!last || last.status === "exited").toBe(true)
+        } finally {
+          yield* Effect.promise(async () => {
+            await Promise.allSettled([BackgroundProcess.stop(info.id)])
+            for (const item of [pid, runner]) {
+              if (!item || !alive(item)) continue
+              try {
+                process.kill(item, "SIGKILL")
+              } catch (err) {
+                if (alive(item)) throw err
+              }
+            }
+          })
+        }
+      }),
+    30_000,
+  )
+
+  it.instance("rejects invalid readiness patterns before launching", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const sessionID = SessionID.descending()
+
+      const err = yield* Effect.promise(async () => {
+        try {
+          await BackgroundProcess.start({
+            sessionID,
+            command: "printf 'ready\n'",
+            cwd: test.directory,
+            ready: { pattern: "[", timeout: 1_000 },
+          })
+        } catch (err) {
+          return err
+        }
+      })
+
+      expect(err).toBeInstanceOf(Error)
+      expect((err as Error).message).toContain("Invalid ready pattern")
+
+      const list = yield* Effect.promise(() => BackgroundProcess.list({ sessionID }))
+      expect(list).toEqual([])
+    }),
+  )
+})

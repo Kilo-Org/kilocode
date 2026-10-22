@@ -11,12 +11,16 @@ export * from "./utils/logger"
 export * from "./utils/config"
 export * from "./utils/version"
 export * from "./utils/report"
+export * from "./utils/upstream"
+export * from "./utils/markers"
+export * from "./utils/reset"
 
 // Transforms
 export { transformAll as transformPackageNames, transformFile } from "./transforms/package-names"
 export { preserveAllVersions, preserveVersion, getCurrentVersion } from "./transforms/preserve-versions"
 export { keepOursFiles, resetToOurs, shouldKeepOurs } from "./transforms/keep-ours"
 export { skipFiles, skipSpecificFiles, shouldSkip } from "./transforms/skip-files"
+export { removeKiloWeb, transformKiloWeb } from "./transforms/remove-kilo-web"
 export {
   transformAllI18n,
   transformConflictedI18n,
@@ -34,14 +38,6 @@ export {
   applyBrandingTransforms,
   matchesPattern,
 } from "./transforms/transform-take-theirs"
-
-export {
-  transformConflictedTauri,
-  transformTauriFile,
-  transformAllTauri,
-  isTauriFile,
-  applyTauriTransforms,
-} from "./transforms/transform-tauri"
 
 export {
   transformConflictedPackageJson,

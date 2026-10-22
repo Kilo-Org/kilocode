@@ -1,0 +1,6 @@
+allowBuilds:
+  core-js: true
+
+# mermaid still pins katex ^0.16, which is affected by GHSA-238p-pmpm-9mq7.
+overrides:
+  katex: 0.19.0

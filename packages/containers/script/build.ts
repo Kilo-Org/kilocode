@@ -17,7 +17,7 @@ const manager = pkg.packageManager ?? ""
 const bun = manager.startsWith("bun@") ? manager.slice(4) : ""
 if (!bun) throw new Error("packageManager must be bun@<version>")
 
-const images = ["base", "bun-node", "rust", "tauri-linux", "publish"]
+const images = ["base", "bun-node", "jetbrains", "rust", "tauri-linux", "publish"] // kilocode_change
 
 const setup = async () => {
   if (!push) return

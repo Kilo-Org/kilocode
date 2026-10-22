@@ -1,45 +1,58 @@
 import type { AssistantMessage } from "@kilocode/sdk/v2"
 
-export function unwrapError(message: string): string {
-  const text = message.replace(/^Error:\s*/, "").trim()
-  const tryParse = (v: string) => {
-    try {
-      return JSON.parse(v) as unknown
-    } catch {
-      return undefined
-    }
+function parse(value: string) {
+  try {
+    return JSON.parse(value) as unknown
+  } catch {
+    return undefined
   }
-  const read = (v: string) => {
-    const first = tryParse(v)
-    if (typeof first !== "string") return first
-    return tryParse(first.trim())
+}
+
+function read(value: string) {
+  const first = parse(value)
+  if (typeof first !== "string") return first
+  return parse(first.trim())
+}
+
+function detail(err: Record<string, unknown>) {
+  const type = typeof err.type === "string" ? err.type : undefined
+  const code = typeof err.code === "string" ? err.code : undefined
+  const msg = typeof err.message === "string" && err.message.trim() ? err.message : undefined
+  if (type && msg) return `${type}: ${msg}`
+  if (msg) return msg
+  if (code === "rate_limit_exceeded") return "Provider rate limit exceeded. Please try again shortly."
+  if (code) return code
+  return type
+}
+
+function format(value: unknown, depth: number): string | undefined {
+  if (depth > 3) return
+  if (typeof value === "string") {
+    const nested = read(value.trim())
+    return nested === undefined ? value : format(nested, depth + 1)
   }
-  let json = read(text)
-  if (json === undefined) {
-    const start = text.indexOf("{")
-    const end = text.lastIndexOf("}")
-    if (start !== -1 && end > start) json = read(text.slice(start, end + 1))
-  }
-  if (!json || typeof json !== "object" || Array.isArray(json)) return message
-  const rec = json as Record<string, unknown>
+  if (!value || typeof value !== "object" || Array.isArray(value)) return
+
+  const rec = value as Record<string, unknown>
   const err =
     rec.error && typeof rec.error === "object" && !Array.isArray(rec.error)
       ? (rec.error as Record<string, unknown>)
       : undefined
-  if (err) {
-    const type = typeof err.type === "string" ? err.type : undefined
-    const msg = typeof err.message === "string" ? err.message : undefined
-    if (type && msg) return `${type}: ${msg}`
-    if (msg) return msg
-    if (type) return type
-    const code = typeof err.code === "string" ? err.code : undefined
-    if (code) return code
-  }
-  const msg = typeof rec.message === "string" ? rec.message : undefined
-  if (msg) return msg
-  const reason = typeof rec.error === "string" ? rec.error : undefined
-  if (reason) return reason
-  return message
+  const message = err ? detail(err) : undefined
+  if (message) return message
+  if (typeof rec.message === "string" && rec.message.trim()) return format(rec.message, depth + 1)
+  if (typeof rec.error === "string" && rec.error.trim()) return rec.error
+}
+
+export function unwrapError(message: string): string {
+  const text = message.replace(/^Error:\s*/, "").trim()
+  const direct = read(text)
+  if (direct !== undefined) return format(direct, 0) ?? message
+
+  const start = text.indexOf("{")
+  const end = text.lastIndexOf("}")
+  if (start === -1 || end <= start) return message
+  return format(read(text.slice(start, end + 1)), 0) ?? message
 }
 
 const errorCodes = {
@@ -51,6 +64,11 @@ export interface ParsedError {
   statusCode?: number
   code?: string
   message?: string
+}
+
+export interface ParsedProviderAuthError {
+  providerID: string
+  message: string
 }
 
 export function parseAssistantError(error: AssistantMessage["error"] | null | undefined): ParsedError | null {
@@ -79,6 +97,20 @@ export function parseAssistantError(error: AssistantMessage["error"] | null | un
   }
 
   return { statusCode, code, message }
+}
+
+export function parseProviderAuthError(
+  error: AssistantMessage["error"] | null | undefined,
+): ParsedProviderAuthError | null {
+  if (!error) return null
+  if (error.name !== "ProviderAuthError") return null
+
+  const data = error.data
+  if (!data) return null
+  const providerID = typeof data.providerID === "string" ? data.providerID : undefined
+  const message = typeof data.message === "string" ? data.message : undefined
+  if (!providerID || !message) return null
+  return { providerID, message }
 }
 
 export function isUnauthorizedPaidModelError(parsed: ParsedError | null): boolean {

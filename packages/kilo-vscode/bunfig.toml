@@ -1,2 +1,2 @@
 [test]
-preload = ["./tests/setup/vscode-mock.ts"]
+preload = ["./tests/setup/vscode-mock.ts", "./tests/setup/worker-url.ts"]

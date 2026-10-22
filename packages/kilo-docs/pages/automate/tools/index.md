@@ -11,20 +11,17 @@ Kilo Code implements a sophisticated tool system that allows AI models to intera
 
 ### Tool Groups
 
-{% tabs %}
-{% tab label="VSCode" %}
-
 Tools are organized into logical groups based on their functionality:
 
-| Category           | Purpose                           | Tools                                                        | Common Use                              |
-| ------------------ | --------------------------------- | ------------------------------------------------------------ | --------------------------------------- |
-| **Read Group**     | File system reading and searching | `read`, `glob`, `grep`                                       | Code exploration and analysis           |
-| **Edit Group**     | File system modifications         | `edit`, `multiedit`, `write`, `apply_patch`                  | Code changes and file manipulation      |
-| **Execute Group**  | Shell command execution           | `bash`                                                       | Running scripts, building projects      |
-| **Web Group**      | Fetch and search web content      | `webfetch`, `websearch`, `codesearch`                        | Research, documentation lookup          |
-| **Browser Group**  | Web browser automation            | `kilo-playwright_*` (via built-in Playwright MCP)            | Browser testing and interaction         |
-| **MCP Group**      | External tool integration         | MCP server tools (namespaced as `{server}_{tool}`)           | Specialized functionality via MCP       |
-| **Workflow Group** | Sub-agents and task management    | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill` | Context switching and task organization |
+| Category | Purpose | Tools | Common Use |
+|---|---|---|---|
+| **Read Group** | File system reading and searching | `read`, `glob`, `grep` | Code exploration and analysis |
+| **Edit Group** | File system modifications | `edit`, `write`, `apply_patch` | Code changes and file manipulation |
+| **Execute Group** | Shell command execution | `bash` | Running scripts, building projects |
+| **Web Group** | Fetch and search web content | `webfetch`, `websearch` | Research, documentation lookup |
+| **Browser Preview** | Agent Manager's built-in browser preview | `browser_open` | Previewing and checking locally running apps |
+| **MCP Group** | External tool integration | MCP server tools (namespaced as `{server}_{tool}`) | Specialized functionality via MCP |
+| **Workflow Group** | Sub-agents and task management | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill`, `agent_manager`, `board_post`, `board_read` | Context switching and task organization |
 
 ### Always Available Tools
 
@@ -49,9 +46,10 @@ These tools help Kilo Code understand your code and project:
 These tools help Kilo Code make changes to your code:
 
 - `edit` - Makes precise text replacements in a file
-- `multiedit` - Multiple edits in a single call
 - `write` - Creates new files or fully overwrites existing ones
 - `apply_patch` - Applies unified diffs (used with certain models)
+
+For multiple replacements in one file, Kilo uses repeated `edit` calls or a patch-style edit when the model supports it.
 
 ### Execute Tools
 
@@ -59,25 +57,50 @@ These tools help Kilo Code run commands:
 
 - `bash` - Runs shell commands with configurable timeout and working directory
 
+{% callout type="info" %}
+The `interactive_terminal` tool and the in-session terminal controls were removed, along with their API endpoints and SDK types. Run commands that need keyboard input in your own terminal, and use the `bash` tool for non-interactive shell commands. See [Shell Integration](/docs/automate/extending/shell-integration) for details.
+{% /callout %}
+
 ### Web Tools
 
 These tools help Kilo Code access web content:
 
 - `webfetch` - Fetches a URL and returns the content
-- `websearch` - Searches the web (available to Kilo/OpenRouter users)
-- `codesearch` - Semantic code search (available to Kilo/OpenRouter users)
+- `websearch` - Searches the web
+
+#### Web Search Availability
+
+`websearch` is available automatically with the Kilo provider. For models from other providers it is off by default; enable it for all providers by setting `web_search` in `kilo.jsonc`:
+
+```json
+{
+  "web_search": true
+}
+```
+
+In the VS Code extension, the same option lives under **Settings → Web Tools → Web Search → Enable for All Providers**. The `KILO_ENABLE_EXA` and `KILO_ENABLE_PARALLEL` environment flags also enable it.
+
+#### Web Search Providers
+
+`websearch` routes through the Exa or Parallel search providers. When the Exa provider is used and you are signed into Kilo, requests go through the Kilo proxy automatically — no separate Exa API key is required. Setting `EXA_API_KEY` uses your own Exa key instead. Exa searches return at most 10 results.
+
+Set the `KILO_WEBSEARCH_PROVIDER` environment variable to force a provider:
+
+| Value | Behavior |
+|---|---|
+| `exa` | Use Exa — through the Kilo proxy when signed in, through `EXA_API_KEY` when set |
+| `parallel` | Use Parallel |
+| `kilo-exa` | Always route Exa searches through the Kilo proxy (requires Kilo sign-in) |
 
 ### Browser Tools
 
-The VS Code extension has a built-in browser automation tool powered by [Playwright MCP](https://www.npmjs.com/package/@playwright/mcp). Enable it in Settings → Browser Automation. When enabled, it registers an MCP server named `kilo-playwright` and exposes tools such as:
+The VS Code extension has a built-in browser automation tool powered by [Playwright MCP](https://www.npmjs.com/package/@playwright/mcp). Enable it in **Settings → Web Tools → Browser Automation**. When enabled, it registers an MCP server named `kilo-playwright` and exposes browser tools that follow the same permission model as all MCP tools.
 
-- `kilo-playwright_browser_navigate` - Navigate to a URL
-- `kilo-playwright_browser_click` - Click an element
-- `kilo-playwright_browser_type` - Type text into an element
-- `kilo-playwright_browser_screenshot` - Capture a screenshot
-- `kilo-playwright_browser_snapshot` - Capture an accessibility snapshot
+The VS Code extension's experimental `browser_open` tool opens a local application in Agent Manager's Integrated Browser panel and returns a screenshot and diagnostics. Enable **Integrated Browser** under **Settings > Experimental**. It requires installed Chrome or compatible Playwright Chromium. It is independent from Playwright MCP.
 
-These follow the same permission model as all MCP tools (see below).
+The `browser_open` automation browser accepts HTTP URLs on `localhost` or `127.0.0.1` only, and blocks resources from other origins. See [Browser previews](/docs/automate/agent-manager#browser-previews) for setup and element feedback.
+
+This restriction is specific to `browser_open`, not Kilo's web access in general. Use `websearch` and `webfetch` to find and read public web pages. Browser tools from a separately configured MCP server can provide interactive web browsing according to that server's capabilities and permissions.
 
 ### MCP Tools
 
@@ -93,81 +116,52 @@ These tools help manage the conversation and task flow:
 - `todoread` - Reads the current session TODO list
 - `plan` - Enters structured planning mode
 - `skill` - Invokes a reusable skill (Markdown instruction module)
+- `open_plan` - Opens a saved plan for review in the VS Code extension
+- `agent_manager` - Starts Agent Manager local or worktree sessions in VS Code
+- `board_post` / `board_read` - Exchange messages on the Kilo Swarm board
 
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
+### Task tool
 
-Tools are organized into logical groups based on their functionality:
+Full-tool primary agents can use `task` to delegate a focused subtask without switching to the deprecated `orchestrator` agent. A task child runs in a separate session and transcript, but it uses the same project directory or worktree as its parent. `task` does not create a git worktree.
 
-| Category           | Purpose                           | Tools                                                                                                                                                                                                                                                                                     | Common Use                                         |
-| ------------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| **Read Group**     | File system reading and searching | [read_file](/docs/automate/tools/read-file), [search_files](/docs/automate/tools/search-files), [list_files](/docs/automate/tools/list-files), [list_code_definition_names](/docs/automate/tools/list-code-definition-names)                                                              | Code exploration and analysis                      |
-| **Edit Group**     | File system modifications         | [apply_diff](/docs/automate/tools/apply-diff), [delete_file](/docs/automate/tools/delete-file), [write_to_file](/docs/automate/tools/write-to-file)                                                                                                                                       | Code changes and file manipulation                 |
-| **Browser Group**  | Web automation                    | [browser_action](/docs/automate/tools/browser-action)                                                                                                                                                                                                                                     | Web testing and interaction                        |
-| **Command Group**  | System command execution          | [execute_command](/docs/automate/tools/execute-command)                                                                                                                                                                                                                                   | Running scripts, building projects                 |
-| **MCP Group**      | External tool integration         | [use_mcp_tool](/docs/automate/tools/use-mcp-tool), [access_mcp_resource](/docs/automate/tools/access-mcp-resource)                                                                                                                                                                        | Specialized functionality through external servers |
-| **Workflow Group** | Mode and task management          | [switch_mode](/docs/automate/tools/switch-mode), [new_task](/docs/automate/tools/new-task), [ask_followup_question](/docs/automate/tools/ask-followup-question), [attempt_completion](/docs/automate/tools/attempt-completion), [update_todo_list](/docs/automate/tools/update-todo-list) | Context switching and task organization            |
+Task children are non-interactive delegates. They cannot ask the end user a question directly, but they can use the tools allowed by their agent and session permissions. Their result is returned to the parent session, and the child transcript can be inspected from its task card in VS Code.
 
-### Always Available Tools
+There are two execution modes:
 
-Certain tools are accessible regardless of the current mode:
+| Mode | Behavior | Use it when |
+|---|---|---|
+| Foreground (default) | The parent waits for the child and receives its result before continuing. | Later work depends on the child output. |
+| Background (`background: true`) | The tool returns immediately. Kilo delivers a completion or error result to the parent session when the child finishes. | The work is independent and can run while the parent continues. |
 
-- [ask_followup_question](/docs/automate/tools/ask-followup-question): Gather additional information from users
-- [attempt_completion](/docs/automate/tools/attempt-completion): Signal task completion
-- [switch_mode](/docs/automate/tools/switch-mode): Change operational modes
-- [new_task](/docs/automate/tools/new-task): Create subtasks
-- [update_todo_list](/docs/automate/tools/update-todo-list): Manage step-by-step task tracking
+For example, a primary agent can start independent background research with a call shaped like this:
 
-## Available Tools
+```json
+{
+  "description": "Audit API routes",
+  "prompt": "Inspect the API routes and report authentication risks. Do not edit files.",
+  "subagent_type": "explore",
+  "background": true
+}
+```
 
-### Read Tools
+Background subagents are available when the server exposes the background capability. Do not poll for progress or duplicate work in the same files. If Kilo returns a `task_id` after a failed or interrupted child, use it to resume that child when the current session and permissions allow it. A child can create more task children only when its configured depth and `task` permission allow it.
 
-These tools help Kilo Code understand your code and project:
+### Kilo Swarm board tools
 
-- [read_file](/docs/automate/tools/read-file) - Examines the contents of files
-- [search_files](/docs/automate/tools/search-files) - Finds patterns across multiple files
-- [list_files](/docs/automate/tools/list-files) - Maps your project's file structure
-- [list_code_definition_names](/docs/automate/tools/list-code-definition-names) - Creates a structural map of your code
+Kilo Swarm is a shared board for one main session and its `task` descendants, including nested descendants. It is on by default; turn it off in **Settings > Agent Behaviour** or set `shared_agent_board` to `false` in `kilo.jsonc`. The board is not shared by unrelated sessions, even when they use the same repository or worktree.
 
-### Edit Tools
+- `board_post` stores a concise material update for another participant. Use it for findings, questions, results, blockers, or corrections.
+- `board_read` reads board messages explicitly. Use the cursor from the previous read for incremental reads instead of polling.
+- Board activity notices are best-effort and do not prove that a recipient read or acted on a message.
+- Board messages are coordination data, not user approval. Posting does not start, wake, assign, resume, stop, or cancel an agent.
 
-These tools help Kilo Code make changes to your code:
+See [Kilo Swarm communication](/docs/automate/agent-manager#kilo-swarm-communication) for how the board relates to background agents and Agent Manager sessions.
 
-- [apply_diff](/docs/automate/tools/apply-diff) - Makes precise, surgical changes to your code
-- [delete_file](/docs/automate/tools/delete-file) - Removes files from your workspace
-- [write_to_file](/docs/automate/tools/write-to-file) - Creates new files or completely rewrites existing ones
+### Agent Manager tool
 
-### Browser Tools
+The `agent_manager` tool is available in the VS Code extension. It creates visible Agent Manager sessions in either isolated `worktree` mode or shared `local` mode, and it can inspect and control existing sessions. Use it when you need separate branches, separate terminals, or multiple independent conversations. Use `task` when a child should remain part of the current session's task tree.
 
-These tools help Kilo Code interact with web applications:
-
-- [browser_action](/docs/automate/tools/browser-action) - Automates browser interactions
-
-### Command Tools
-
-These tools help Kilo Code execute commands:
-
-- [execute_command](/docs/automate/tools/execute-command) - Runs system commands and programs
-
-### MCP Tools
-
-These tools help Kilo Code connect with external services:
-
-- [use_mcp_tool](/docs/automate/tools/use-mcp-tool) - Uses specialized external tools
-- [access_mcp_resource](/docs/automate/tools/access-mcp-resource) - Accesses external data sources
-
-### Workflow Tools
-
-These tools help manage the conversation and task flow:
-
-- [ask_followup_question](/docs/automate/tools/ask-followup-question) - Gets additional information from you
-- [attempt_completion](/docs/automate/tools/attempt-completion) - Presents final results
-- [switch_mode](/docs/automate/tools/switch-mode) - Changes to a different mode for specialized tasks
-- [new_task](/docs/automate/tools/new-task) - Creates a new subtask
-- [update_todo_list](/docs/automate/tools/update-todo-list) - Tracks task progress with step-by-step checklists
-
-{% /tab %}
-{% /tabs %}
+For existing sessions, call `action: "list"` to discover exact session, worktree, and section IDs before using `prompt`, `stop`, `move`, or `answer`. A targeted prompt is queued for a busy session and returns when accepted; it does not wait for the session to finish or broadcast to other sessions. See [Starting and orchestrating sessions from chat](/docs/automate/agent-manager#starting-and-orchestrating-sessions-from-chat) for the full workflow.
 
 ## Tool Calling Mechanism
 
@@ -300,24 +294,24 @@ Tools are made available based on the current mode:
 1. **Information Gathering**
 
    ```
-   [ask_followup_question](/docs/automate/tools/ask-followup-question) → [read_file](/docs/automate/tools/read-file) → [search_files](/docs/automate/tools/search-files)
+   `question` → `read` → `grep`
    ```
 
 2. **Code Modification**
 
    ```
-   [read_file](/docs/automate/tools/read-file) → [apply_diff](/docs/automate/tools/apply-diff) → [attempt_completion](/docs/automate/tools/attempt-completion)
+   `read` → `edit` → final response
    ```
 
 3. **Task Management**
 
    ```
-   [new_task](/docs/automate/tools/new-task) → [switch_mode](/docs/automate/tools/switch-mode) → [execute_command](/docs/automate/tools/execute-command)
+   `task` → `bash` → final response
    ```
 
 4. **Progress Tracking**
    ```
-   [update_todo_list](/docs/automate/tools/update-todo-list) → [execute_command](/docs/automate/tools/execute-command) → [update_todo_list](/docs/automate/tools/update-todo-list)
+   `todowrite` → `bash` → `todowrite`
    ```
 
 ## Error Handling and Recovery

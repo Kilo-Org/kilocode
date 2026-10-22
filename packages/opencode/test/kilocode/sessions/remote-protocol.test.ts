@@ -1,0 +1,659 @@
+import { describe, expect, test } from "bun:test"
+import { RemoteProtocol } from "../../../src/kilo-sessions/remote-protocol"
+
+describe("RemoteProtocol", () => {
+  // --- Outbound (CLI → DO) ---
+
+  test("valid heartbeat parses", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "ses_1", status: "busy", title: "Fix auth" }],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions).toHaveLength(1)
+      expect(result.data.sessions[0].id).toBe("ses_1")
+    }
+  })
+
+  test("heartbeat with parentSessionId parses", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "ses_child", status: "busy", title: "Sub task", parentSessionId: "ses_root" }],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].parentSessionId).toBe("ses_root")
+    }
+  })
+
+  test("heartbeat serializes sessions only", () => {
+    const msg = { type: "heartbeat", sessions: [{ id: "ses_1", status: "idle", title: "t" }] }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data).not.toHaveProperty("focused")
+      expect(result.data).not.toHaveProperty("open")
+    }
+  })
+
+  test("valid event parses", () => {
+    const msg = {
+      type: "event",
+      sessionId: "ses_1",
+      event: "message.updated",
+      data: { text: "hello" },
+    }
+    const result = RemoteProtocol.Event.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessionId).toBe("ses_1")
+      expect(result.data.event).toBe("message.updated")
+    }
+  })
+
+  test("valid response parses", () => {
+    const msg = { type: "response", id: "req_1", result: { ok: true } }
+    const result = RemoteProtocol.Response.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.id).toBe("req_1")
+      expect(result.data.result).toEqual({ ok: true })
+      expect(result.data.error).toBeUndefined()
+    }
+  })
+
+  test("response with error parses", () => {
+    const msg = { type: "response", id: "req_2", error: "not found" }
+    const result = RemoteProtocol.Response.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.error).toBe("not found")
+      expect(result.data.result).toBeUndefined()
+    }
+  })
+
+  // --- Inbound (DO → CLI) ---
+
+  test("valid subscribe parses", () => {
+    const msg = { type: "subscribe", sessionId: "ses_1" }
+    const result = RemoteProtocol.Subscribe.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessionId).toBe("ses_1")
+    }
+  })
+
+  test("valid unsubscribe parses", () => {
+    const msg = { type: "unsubscribe", sessionId: "ses_1" }
+    const result = RemoteProtocol.Unsubscribe.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessionId).toBe("ses_1")
+    }
+  })
+
+  test("valid command parses", () => {
+    const msg = {
+      type: "command",
+      id: "cmd_1",
+      command: "send_message",
+      sessionId: "ses_1",
+      data: { text: "hi" },
+    }
+    const result = RemoteProtocol.Command.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.id).toBe("cmd_1")
+      expect(result.data.command).toBe("send_message")
+      expect(result.data.sessionId).toBe("ses_1")
+    }
+  })
+
+  test("command without sessionId parses", () => {
+    const msg = {
+      type: "command",
+      id: "cmd_2",
+      command: "list_sessions",
+      data: null,
+    }
+    const result = RemoteProtocol.Command.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessionId).toBeUndefined()
+    }
+  })
+
+  test("valid system parses", () => {
+    const msg = {
+      type: "system",
+      event: "cli.connected",
+      data: { pid: 1234 },
+    }
+    const result = RemoteProtocol.System.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.event).toBe("cli.connected")
+    }
+  })
+
+  // --- Discriminated unions ---
+
+  test("outbound union picks heartbeat", () => {
+    const msg = { type: "heartbeat", sessions: [] }
+    const result = RemoteProtocol.Outbound.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.type).toBe("heartbeat")
+    }
+  })
+
+  test("outbound union picks event", () => {
+    const msg = {
+      type: "event",
+      sessionId: "ses_1",
+      event: "session.updated",
+      data: {},
+    }
+    const result = RemoteProtocol.Outbound.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.type).toBe("event")
+    }
+  })
+
+  test("outbound union picks response", () => {
+    const msg = { type: "response", id: "r1" }
+    const result = RemoteProtocol.Outbound.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.type).toBe("response")
+    }
+  })
+
+  test("inbound union picks subscribe", () => {
+    const msg = { type: "subscribe", sessionId: "ses_1" }
+    const result = RemoteProtocol.Inbound.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.type).toBe("subscribe")
+    }
+  })
+
+  test("inbound union picks command", () => {
+    const msg = {
+      type: "command",
+      id: "c1",
+      command: "ping",
+      data: null,
+    }
+    const result = RemoteProtocol.Inbound.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.type).toBe("command")
+    }
+  })
+
+  test("inbound union picks system", () => {
+    const msg = { type: "system", event: "shutdown", data: null }
+    const result = RemoteProtocol.Inbound.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.type).toBe("system")
+    }
+  })
+
+  // --- Rejection ---
+
+  test("outbound rejects unknown type", () => {
+    const msg = { type: "bogus", data: 1 }
+    const result = RemoteProtocol.Outbound.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("inbound rejects unknown type", () => {
+    const msg = { type: "bogus", data: 1 }
+    const result = RemoteProtocol.Inbound.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("heartbeat rejects missing sessions", () => {
+    const msg = { type: "heartbeat" }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("event rejects missing sessionId", () => {
+    const msg = { type: "event", event: "x", data: null }
+    const result = RemoteProtocol.Event.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("command rejects missing id", () => {
+    const msg = { type: "command", command: "ping", data: null }
+    const result = RemoteProtocol.Command.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("subscribe rejects missing sessionId", () => {
+    const msg = { type: "subscribe" }
+    const result = RemoteProtocol.Subscribe.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("session info rejects missing fields", () => {
+    const result = RemoteProtocol.SessionInfo.safeParse({ id: "x" })
+    expect(result.success).toBe(false)
+  })
+
+  test("valid heartbeat_ack parses", () => {
+    const msg = { type: "heartbeat_ack" }
+    const result = RemoteProtocol.HeartbeatAck.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.type).toBe("heartbeat_ack")
+    }
+  })
+
+  test("inbound union picks heartbeat_ack", () => {
+    const msg = { type: "heartbeat_ack" }
+    const result = RemoteProtocol.Inbound.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.type).toBe("heartbeat_ack")
+    }
+  })
+
+  // kilocode_change - K1 W1: instance advertisement + per-session platform
+
+  test("heartbeat without instance still parses (legacy compatibility)", () => {
+    const msg = { type: "heartbeat", sessions: [{ id: "ses_1", status: "busy", title: "Fix auth" }] }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.instance).toBeUndefined()
+    }
+  })
+
+  test("heartbeat round-trips instance advertisement", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [],
+      instance: { name: "mbp-igor", projectName: "cloud", version: "1.2.3" },
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.instance).toEqual({ name: "mbp-igor", projectName: "cloud", version: "1.2.3" })
+    }
+    // round-trip via JSON
+    const json = JSON.parse(JSON.stringify(result.success ? result.data : null))
+    const result2 = RemoteProtocol.Heartbeat.safeParse(json)
+    expect(result2.success).toBe(true)
+    if (result2.success) {
+      expect(result2.data.instance).toEqual({ name: "mbp-igor", projectName: "cloud", version: "1.2.3" })
+    }
+  })
+
+  test.each(["cli", "remote"])("heartbeat preserves full %s instance metadata and capabilities", (kind) => {
+    const msg = {
+      type: "heartbeat" as const,
+      protocolVersion: "1.0.0",
+      sessions: [{ id: "s1", status: "busy", title: "Task", gitBranch: "feature/session-branch-is-not-truncated" }],
+      instance: {
+        name: "host",
+        projectName: "project",
+        version: "1.2.3",
+        kind,
+        startedAt: "2024-02-29T12:34:56.789Z",
+        gitBranch: "feature/current",
+      },
+      capabilities: { attachments: true, sessionClone: true, sessionCloneAtMessage: true },
+    }
+    expect(RemoteProtocol.Outbound.parse(JSON.parse(JSON.stringify(msg)))).toEqual(msg)
+  })
+
+  test("legacy instance field limits remain accepted", () => {
+    const instance = { name: "h".repeat(64), projectName: "p".repeat(64), version: "v".repeat(32) }
+    expect(RemoteProtocol.InstanceAdvertisement.parse(instance)).toEqual(instance)
+  })
+
+  test.each(["terminal", "REMOTE", "", null, 1])("rejects invalid instance kind %j", (kind) => {
+    expect(RemoteProtocol.InstanceAdvertisement.safeParse({ name: "h", projectName: "p", kind }).success).toBe(false)
+  })
+
+  test.each([
+    "2026-08-28T12:34:56Z",
+    "2026-08-28T12:34:56.78Z",
+    "2026-08-28T12:34:56.7890Z",
+    "2026-08-28T12:34:56.789+00:00",
+    "2026-08-28T12:34:56.789",
+    "2026-02-29T12:34:56.789Z",
+    "2026-08-32T12:34:56.789Z",
+    "2026-13-01T12:34:56.789Z",
+    "2026-08-28T24:00:00.000Z",
+    "2026-08-28T12:60:00.000Z",
+    "2026-08-28T12:34:60.000Z",
+    "2026-08-28t12:34:56.789z",
+    "not-a-timestamp",
+    null,
+    0,
+  ])("rejects invalid instance start time %j", (startedAt) => {
+    expect(RemoteProtocol.InstanceAdvertisement.safeParse({ name: "h", projectName: "p", startedAt }).success).toBe(
+      false,
+    )
+  })
+
+  test.each(["a".repeat(24), '"\\\n\u0001'.repeat(6), "界".repeat(24), "\u{10400}".repeat(12)])(
+    "accepts 24 UTF-16 branch units and rejects one more: %j",
+    (gitBranch) => {
+      const instance = { name: "h", projectName: "p", gitBranch }
+      expect(RemoteProtocol.InstanceAdvertisement.parse(JSON.parse(JSON.stringify(instance)))).toEqual(instance)
+      expect(RemoteProtocol.InstanceAdvertisement.safeParse({ ...instance, gitBranch: gitBranch + "a" }).success).toBe(
+        false,
+      )
+    },
+  )
+
+  test("instance branch can be empty but cannot be null", () => {
+    const instance = { name: "h", projectName: "p", gitBranch: "" }
+    expect(RemoteProtocol.InstanceAdvertisement.parse(instance)).toEqual(instance)
+    expect(RemoteProtocol.InstanceAdvertisement.safeParse({ ...instance, gitBranch: null }).success).toBe(false)
+  })
+
+  test("instance advertisement version is optional", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [],
+      instance: { name: "h", projectName: "p" },
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.instance?.version).toBeUndefined()
+    }
+  })
+
+  test("instance advertisement rejects empty name", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [],
+      instance: { name: "", projectName: "p" },
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("instance advertisement rejects oversized name", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [],
+      instance: { name: "x".repeat(65), projectName: "p" },
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("instance advertisement rejects oversized projectName", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [],
+      instance: { name: "h", projectName: "p".repeat(65) },
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("instance advertisement rejects oversized version", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [],
+      instance: { name: "h", projectName: "p", version: "v".repeat(33) },
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("session info accepts optional platform", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "s1", status: "busy", title: "t", platform: "vscode" }],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].platform).toBe("vscode")
+    }
+  })
+
+  test("session info platform optional (legacy)", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "s1", status: "busy", title: "t" }],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].platform).toBeUndefined()
+    }
+  })
+
+  test("session info rejects oversized platform", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "s1", status: "busy", title: "t", platform: "p".repeat(33) }],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("full heartbeat round-trips sessions + instance", () => {
+    const msg = {
+      type: "heartbeat",
+      protocolVersion: "1.0.0",
+      sessions: [
+        { id: "ses_1", status: "busy", title: "Fix auth", platform: "cli" },
+        { id: "ses_2", status: "idle", title: "Sub task", parentSessionId: "ses_1", platform: "vscode" },
+      ],
+      instance: { name: "mbp-igor", projectName: "cloud", version: "1.2.3" },
+    }
+    const json = JSON.parse(JSON.stringify(msg))
+    const result = RemoteProtocol.Heartbeat.safeParse(json)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions).toHaveLength(2)
+      expect(result.data.sessions[0].platform).toBe("cli")
+      expect(result.data.sessions[1].platform).toBe("vscode")
+      expect(result.data.instance).toEqual({ name: "mbp-igor", projectName: "cloud", version: "1.2.3" })
+      expect(result.data.protocolVersion).toBe("1.0.0")
+    }
+  })
+
+  test("heartbeat without capabilities parses", () => {
+    const result = RemoteProtocol.Heartbeat.safeParse({
+      type: "heartbeat",
+      sessions: [],
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.capabilities).toBeUndefined()
+    }
+  })
+
+  test("heartbeat with capabilities.attachments parses", () => {
+    const result = RemoteProtocol.Heartbeat.safeParse({
+      type: "heartbeat",
+      sessions: [],
+      capabilities: { attachments: true },
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.capabilities?.attachments).toBe(true)
+    }
+  })
+
+  test("heartbeat with capabilities and no attachments key parses", () => {
+    const result = RemoteProtocol.Heartbeat.safeParse({
+      type: "heartbeat",
+      sessions: [],
+      capabilities: {},
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.capabilities?.attachments).toBeUndefined()
+    }
+  })
+
+  test("heartbeat rejects non-boolean capabilities.attachments", () => {
+    const result = RemoteProtocol.Heartbeat.safeParse({
+      type: "heartbeat",
+      sessions: [],
+      capabilities: { attachments: "yes" },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  test("outbound union accepts heartbeat with capabilities", () => {
+    const result = RemoteProtocol.Outbound.safeParse({
+      type: "heartbeat",
+      sessions: [],
+      capabilities: { attachments: true },
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.type).toBe("heartbeat")
+    }
+  })
+
+  // kilocode_change - PR link advertise (plan 8.4)
+
+  test("session info accepts optional prLink", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [
+        {
+          id: "s1",
+          status: "busy",
+          title: "t",
+          prLink: { platform: "github", prUrl: "https://github.com/o/r/pull/1", prNumber: 1 },
+        },
+      ],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].prLink).toEqual({
+        platform: "github",
+        prUrl: "https://github.com/o/r/pull/1",
+        prNumber: 1,
+      })
+    }
+  })
+
+  test("session info prLink optional (legacy)", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "s1", status: "busy", title: "t" }],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].prLink).toBeUndefined()
+    }
+  })
+
+  test("session info rejects empty prLink platform", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [
+        { id: "s1", status: "busy", title: "t", prLink: { platform: "", prUrl: "https://x/pull/1", prNumber: 1 } },
+      ],
+    }
+    expect(RemoteProtocol.Heartbeat.safeParse(msg).success).toBe(false)
+  })
+
+  test("session info rejects oversized prLink prUrl", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [
+        {
+          id: "s1",
+          status: "busy",
+          title: "t",
+          prLink: { platform: "github", prUrl: "https://x/" + "a".repeat(2048), prNumber: 1 },
+        },
+      ],
+    }
+    expect(RemoteProtocol.Heartbeat.safeParse(msg).success).toBe(false)
+  })
+
+  test("session info rejects non-positive prLink prNumber", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [
+        {
+          id: "s1",
+          status: "busy",
+          title: "t",
+          prLink: { platform: "github", prUrl: "https://x/pull/0", prNumber: 0 },
+        },
+      ],
+    }
+    expect(RemoteProtocol.Heartbeat.safeParse(msg).success).toBe(false)
+  })
+
+  test("full heartbeat round-trips prLink", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [
+        {
+          id: "s1",
+          status: "busy",
+          title: "t",
+          prLink: { platform: "gitlab", prUrl: "https://gitlab.com/g/p/-/merge_requests/7", prNumber: 7 },
+        },
+      ],
+    }
+    const json = JSON.parse(JSON.stringify(msg))
+    const result = RemoteProtocol.Heartbeat.safeParse(json)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].prLink).toEqual({
+        platform: "gitlab",
+        prUrl: "https://gitlab.com/g/p/-/merge_requests/7",
+        prNumber: 7,
+      })
+    }
+  })
+
+  // scheduled wakeups: a scheduled row carries its due time on the wire
+
+  test("session info round-trips scheduledAt with scheduled status", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "s1", status: "scheduled", title: "t", scheduledAt: "2026-08-28T12:34:56.789Z" }],
+    }
+    const json = JSON.parse(JSON.stringify(msg))
+    const result = RemoteProtocol.Heartbeat.safeParse(json)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].status).toBe("scheduled")
+      expect(result.data.sessions[0].scheduledAt).toBe("2026-08-28T12:34:56.789Z")
+    }
+  })
+
+  test("session info omits scheduledAt when not set (legacy)", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "s1", status: "idle", title: "t" }],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].scheduledAt).toBeUndefined()
+      expect(result.data.sessions[0]).not.toHaveProperty("scheduledAt")
+    }
+  })
+})

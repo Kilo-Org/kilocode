@@ -1,5 +1,15 @@
 import { describe, it, expect } from "bun:test"
-import { reorderTabs, applyTabOrder, firstOrderedTitle } from "../../webview-ui/agent-manager/tab-order"
+import {
+  reorderTabs,
+  applyTabOrder,
+  applyPinnedTabs,
+  togglePinnedTab,
+  firstOrderedTitle,
+  replaceInTabOrder,
+  insertInTabOrderAfter,
+} from "../../webview-ui/agent-manager/tab-order"
+import { reorderPinnedTabs } from "../../webview-ui/src/utils/tab-order"
+import { moveTab } from "../../webview-ui/src/utils/tab-order"
 
 describe("reorderTabs", () => {
   const tabs = ["a", "b", "c", "d"]
@@ -76,6 +86,15 @@ describe("reorderTabs", () => {
   })
 })
 
+describe("moveTab", () => {
+  it("moves one position without wrapping", () => {
+    expect(moveTab(["a", "b", "c"], "b", -1)).toEqual(["b", "a", "c"])
+    expect(moveTab(["a", "b", "c"], "b", 1)).toEqual(["a", "c", "b"])
+    expect(moveTab(["a", "b", "c"], "a", -1)).toBeUndefined()
+    expect(moveTab(["a", "b", "c"], "c", 1)).toBeUndefined()
+  })
+})
+
 describe("applyTabOrder", () => {
   const items = [
     { id: "a", name: "Alice" },
@@ -118,6 +137,84 @@ describe("applyTabOrder", () => {
   })
 })
 
+describe("applyPinnedTabs", () => {
+  const items = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }]
+
+  it("moves pinned items to the front in pin order", () => {
+    expect(applyPinnedTabs(items, ["c", "a"]).map((i) => i.id)).toEqual(["c", "a", "b", "d"])
+  })
+
+  it("keeps the relative order of unpinned items", () => {
+    expect(applyPinnedTabs(items, ["d"]).map((i) => i.id)).toEqual(["d", "a", "b", "c"])
+  })
+
+  it("ignores pinned ids that are not open", () => {
+    expect(applyPinnedTabs(items, ["x", "b"]).map((i) => i.id)).toEqual(["b", "a", "c", "d"])
+  })
+
+  it("returns the original array when nothing is pinned", () => {
+    expect(applyPinnedTabs(items, undefined)).toBe(items)
+    expect(applyPinnedTabs(items, [])).toBe(items)
+    expect(applyPinnedTabs(items, ["x"])).toBe(items)
+  })
+
+  it("layers on top of a custom tab order", () => {
+    const ordered = applyTabOrder(items, ["d", "c", "b", "a"])
+    expect(applyPinnedTabs(ordered, ["a"]).map((i) => i.id)).toEqual(["a", "d", "c", "b"])
+  })
+})
+
+describe("togglePinnedTab", () => {
+  it("pins at the end of the pinned group", () => {
+    expect(togglePinnedTab(["a"], "b")).toEqual(["a", "b"])
+  })
+
+  it("pins into an empty list", () => {
+    expect(togglePinnedTab(undefined, "a")).toEqual(["a"])
+  })
+
+  it("unpins an already pinned tab", () => {
+    expect(togglePinnedTab(["a", "b", "c"], "b")).toEqual(["a", "c"])
+  })
+
+  it("does not mutate the input", () => {
+    const pinned = ["a", "b"]
+    togglePinnedTab(pinned, "c")
+    expect(pinned).toEqual(["a", "b"])
+  })
+})
+
+describe("reorderPinnedTabs", () => {
+  const ids = ["a", "b", "c", "d"]
+
+  it("reorders inside the pinned group without touching the stored order", () => {
+    expect(reorderPinnedTabs(ids, ["c", "d"], "d", "c")).toEqual({ ids, pinned: ["d", "c"] })
+  })
+
+  it("reorders unpinned tabs without touching the pin order", () => {
+    expect(reorderPinnedTabs(ids, ["d"], "b", "a")).toEqual({ ids: ["b", "a", "c", "d"], pinned: ["d"] })
+  })
+
+  it("rejects a move that crosses the pinned boundary", () => {
+    expect(reorderPinnedTabs(ids, ["d"], "a", "d")).toBeUndefined()
+    expect(reorderPinnedTabs(ids, ["d"], "d", "a")).toBeUndefined()
+  })
+
+  it("rejects a repeated or missing id", () => {
+    expect(reorderPinnedTabs(ids, [], "a", "a")).toBeUndefined()
+    expect(reorderPinnedTabs(ids, ["x"], "x", "a")).toBeUndefined()
+    expect(reorderPinnedTabs(ids, [], "missing", "a")).toBeUndefined()
+  })
+
+  it("does not mutate the inputs", () => {
+    const order = ["a", "b"]
+    const pins = ["b"]
+    expect(reorderPinnedTabs(order, pins, "b", "b")).toBeUndefined()
+    expect(order).toEqual(["a", "b"])
+    expect(pins).toEqual(["b"])
+  })
+})
+
 describe("firstOrderedTitle", () => {
   const items = [{ id: "a", title: "Alpha" }, { id: "b", title: "Beta" }, { id: "c", title: "" }, { id: "d" }]
 
@@ -143,6 +240,63 @@ describe("firstOrderedTitle", () => {
 
   it("returns fallback for empty items", () => {
     expect(firstOrderedTitle([], ["a"], "fallback")).toBe("fallback")
+  })
+})
+
+describe("replaceInTabOrder", () => {
+  it("replaces an id while preserving position", () => {
+    expect(replaceInTabOrder(["a", "b", "c"], "b", "B")).toEqual(["a", "B", "c"])
+  })
+
+  it("replaces at the head", () => {
+    expect(replaceInTabOrder(["a", "b"], "a", "A")).toEqual(["A", "b"])
+  })
+
+  it("replaces at the tail", () => {
+    expect(replaceInTabOrder(["a", "b"], "b", "B")).toEqual(["a", "B"])
+  })
+
+  it("returns undefined when oldId is not in order", () => {
+    expect(replaceInTabOrder(["a", "b"], "x", "X")).toBeUndefined()
+  })
+
+  it("returns undefined when order is undefined", () => {
+    expect(replaceInTabOrder(undefined, "a", "A")).toBeUndefined()
+  })
+
+  it("does not mutate the original array", () => {
+    const order = ["a", "b"]
+    replaceInTabOrder(order, "a", "A")
+    expect(order).toEqual(["a", "b"])
+  })
+})
+
+describe("insertInTabOrderAfter", () => {
+  it("inserts directly after the anchor", () => {
+    expect(insertInTabOrderAfter(["a", "b", "c"], "b", "B2")).toEqual(["a", "b", "B2", "c"])
+  })
+
+  it("inserts after the last item", () => {
+    expect(insertInTabOrderAfter(["a", "b"], "b", "c")).toEqual(["a", "b", "c"])
+  })
+
+  it("appends when anchor is missing", () => {
+    expect(insertInTabOrderAfter(["a", "b"], "x", "c")).toEqual(["a", "b", "c"])
+  })
+
+  it("appends when order is undefined", () => {
+    expect(insertInTabOrderAfter(undefined, "x", "c")).toEqual(["c"])
+  })
+
+  it("returns the base unchanged when id is already present", () => {
+    const order = ["a", "b"]
+    expect(insertInTabOrderAfter(order, "a", "b")).toBe(order)
+  })
+
+  it("does not mutate the original array", () => {
+    const order = ["a", "b"]
+    insertInTabOrderAfter(order, "a", "c")
+    expect(order).toEqual(["a", "b"])
   })
 })
 

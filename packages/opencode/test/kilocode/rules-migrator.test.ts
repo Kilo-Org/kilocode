@@ -6,12 +6,16 @@ import fs from "fs/promises"
 
 async function withHome<T>(home: string, fn: () => Promise<T>): Promise<T> {
   const prev = process.env.HOME
+  const prevTest = process.env.KILO_TEST_HOME
   process.env.HOME = home
+  process.env.KILO_TEST_HOME = home
   try {
     return await fn()
   } finally {
     if (prev) process.env.HOME = prev
     else delete process.env.HOME
+    if (prevTest) process.env.KILO_TEST_HOME = prevTest
+    else delete process.env.KILO_TEST_HOME
   }
 }
 
@@ -76,7 +80,7 @@ describe("RulesMigrator", () => {
 
       // Only one main.md should be found (.kilo wins)
       expect(mainRules).toHaveLength(1)
-      expect(mainRules[0].path).toContain(".kilo/")
+      expect(mainRules[0].path).toContain(`.kilo${path.sep}`)
     })
 
     test("discovers mode-specific directory rules", async () => {

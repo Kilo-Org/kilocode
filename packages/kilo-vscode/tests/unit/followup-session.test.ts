@@ -35,4 +35,11 @@ describe("followup-session", () => {
     expect(matchFollowup({ pending, dir: "c:/repo/.kilo/worktrees/other", now: 2 })).toBe(false)
     expect(matchFollowup({ pending, dir: "c:/repo/.kilo/worktrees/feature", now: 30_002 })).toBe(false)
   })
+
+  it("never matches a subagent session", () => {
+    const pending = { dir: "/repo", time: 1 }
+
+    expect(matchFollowup({ pending, dir: "/repo", now: 2, parentID: "root" })).toBe(false)
+    expect(matchFollowup({ pending, dir: "/repo", now: 2, parentID: "" })).toBe(false)
+  })
 })

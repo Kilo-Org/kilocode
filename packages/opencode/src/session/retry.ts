@@ -1,108 +1,195 @@
-import type { NamedError } from "@opencode-ai/util/error"
+import type { NamedError } from "@opencode-ai/core/util/error"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
+import { Cause, Clock, Duration, Effect, Schedule } from "effect"
 import { MessageV2 } from "./message-v2"
 import { isKiloError } from "@/kilocode/kilo-errors" // kilocode_change
+import { SessionNetwork } from "./network" // kilocode_change
 import { iife } from "@/util/iife"
+import { isRecord } from "@/util/record"
 
-export namespace SessionRetry {
-  export const RETRY_INITIAL_DELAY = 2000
-  export const RETRY_BACKOFF_FACTOR = 2
-  export const RETRY_MAX_DELAY_NO_HEADERS = 30_000 // 30 seconds
-  export const RETRY_MAX_DELAY = 2_147_483_647 // max 32-bit signed integer for setTimeout
+export type Err = ReturnType<NamedError["toObject"]>
 
-  export async function sleep(ms: number, signal: AbortSignal): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const abortHandler = () => {
-        clearTimeout(timeout)
-        reject(new DOMException("Aborted", "AbortError"))
+export type RetryReason = string & {} // kilocode_change - Kilo does not support OpenCode Go upsell reasons
+
+export type Retryable = {
+  message: string
+  action?: {
+    reason: RetryReason
+    provider: string
+    title: string
+    message: string
+    label: string
+    link?: string
+  }
+}
+
+export const RETRY_INITIAL_DELAY = 2000
+export const RETRY_BACKOFF_FACTOR = 2
+export const RETRY_JITTER_FACTOR = 0.25
+export const RETRY_MAX_DELAY_NO_HEADERS = 30_000 // 30 seconds
+export const RETRY_MAX_DELAY = 2_147_483_647 // max 32-bit signed integer for setTimeout
+export const RETRY_MAX_RETRIES = 5
+
+const RETRYABLE_MESSAGE_PATTERNS = [
+  /\b(?:429|500|502|503|504|524)\b/i, // kilocode_change
+  /rate increased too quickly|rate limit|rate-limit|rate_limit|too many requests/i,
+  /overloaded|service unavailable|service_unavailable|service-unavailable|internal error|internal_error|internal server error|server error|server_error|server-error|provider returned error|provider_returned_error|provider-returned-error/i,
+  /terminated|fetch failed|failed to fetch|network[-_\s]error|upstream connect|connection error|connection refused|connection lost|socket connection was closed|socket hang up|reset before headers|getaddrinfo|enotfound|eai_again|econnrefused|econnreset|etimedout/i,
+  /^timeout$|\b(?:request|response|connection|network|stream|read) (?:timeout|timed out|time out)\b/i,
+  /try your request again|retry your request|resource exhausted|resource_exhausted/i,
+  /\btry again (?:later|in\b)|\b(?:currently|temporarily) at capacity\b/i,
+]
+
+function cap(ms: number) {
+  return Math.min(ms, RETRY_MAX_DELAY)
+}
+
+export function delay(attempt: number, error?: SessionV1.APIError, random = Math.random()) {
+  if (error) {
+    const headers = error.data.responseHeaders
+    if (headers) {
+      const retryAfterMs = headers["retry-after-ms"]
+      if (retryAfterMs) {
+        const parsedMs = Number.parseFloat(retryAfterMs)
+        if (!Number.isNaN(parsedMs)) {
+          return cap(parsedMs)
+        }
       }
-      const timeout = setTimeout(
-        () => {
-          signal.removeEventListener("abort", abortHandler)
-          resolve()
-        },
-        Math.min(ms, RETRY_MAX_DELAY),
-      )
-      signal.addEventListener("abort", abortHandler, { once: true })
-    })
+
+      const retryAfter = headers["retry-after"]
+      if (retryAfter) {
+        const parsedSeconds = Number.parseFloat(retryAfter)
+        if (!Number.isNaN(parsedSeconds)) {
+          // convert seconds to milliseconds
+          return cap(Math.ceil(parsedSeconds * 1000))
+        }
+        // Try parsing as HTTP date format
+        const parsed = Date.parse(retryAfter) - Date.now()
+        if (!Number.isNaN(parsed) && parsed > 0) {
+          return cap(Math.ceil(parsed))
+        }
+      }
+
+      return cap(exponential(attempt, random))
+    }
   }
 
-  export function delay(attempt: number, error?: MessageV2.APIError) {
-    if (error) {
-      const headers = error.data.responseHeaders
-      if (headers) {
-        const retryAfterMs = headers["retry-after-ms"]
-        if (retryAfterMs) {
-          const parsedMs = Number.parseFloat(retryAfterMs)
-          if (!Number.isNaN(parsedMs)) {
-            return parsedMs
-          }
-        }
+  return cap(Math.min(exponential(attempt, random), RETRY_MAX_DELAY_NO_HEADERS))
+}
 
-        const retryAfter = headers["retry-after"]
-        if (retryAfter) {
-          const parsedSeconds = Number.parseFloat(retryAfter)
-          if (!Number.isNaN(parsedSeconds)) {
-            // convert seconds to milliseconds
-            return Math.ceil(parsedSeconds * 1000)
-          }
-          // Try parsing as HTTP date format
-          const parsed = Date.parse(retryAfter) - Date.now()
-          if (!Number.isNaN(parsed) && parsed > 0) {
-            return Math.ceil(parsed)
-          }
-        }
+function exponential(attempt: number, random: number) {
+  const base = RETRY_INITIAL_DELAY * Math.pow(RETRY_BACKOFF_FACTOR, attempt - 1)
+  return Math.ceil(base + base * RETRY_JITTER_FACTOR * random)
+}
 
-        return RETRY_INITIAL_DELAY * Math.pow(RETRY_BACKOFF_FACTOR, attempt - 1)
-      }
-    }
+// kilocode_change - Kilo does not emit OpenCode Go actions
+export function retryable(error: Err, _provider?: string): Retryable | undefined {
+  // context overflow errors should not be retried
+  if (SessionV1.ContextOverflowError.isInstance(error)) return undefined
+  if (SessionV1.APIError.isInstance(error)) {
+    const status = error.data.statusCode
+    // kilocode_change start - Current Kilo errors require user action (login/signup), don't retry
+    if (isKiloError(error)) return undefined
+    if (error.data.isRetryable === false && (status === undefined || status < 500) && !error.data.responseBody) return undefined
+    // kilocode_change end
 
-    return Math.min(RETRY_INITIAL_DELAY * Math.pow(RETRY_BACKOFF_FACTOR, attempt - 1), RETRY_MAX_DELAY_NO_HEADERS)
+    // 5xx errors are transient server failures and should always be retried,
+    // even when the provider SDK doesn't explicitly mark them as retryable.
+    if (
+      !error.data.isRetryable &&
+      !(status !== undefined && status >= 500) &&
+      !matchesRetryableMessage(error.data.message) &&
+      !matchesRetryableMessage(error.data.responseBody)
+    )
+      return undefined
+
+    // kilocode_change start - Kilo does not support OpenCode Go upsells. FreeUsageLimitError is not retryable: retrying
+    // the same capped model is futile and the backoff loop cannot be broken by switching models in the chat selector
+    // because the retry loop holds a stale model ref.
+    if (error.data.responseBody?.includes("FreeUsageLimitError")) return undefined
+    // kilocode_change end
+    return { message: error.data.message.includes("Overloaded") ? "Provider is overloaded" : error.data.message }
   }
 
-  export function retryable(error: ReturnType<NamedError["toObject"]>) {
-    // context overflow errors should not be retried
-    if (MessageV2.ContextOverflowError.isInstance(error)) return undefined
-    if (MessageV2.APIError.isInstance(error)) {
-      // kilocode_change start - Current Kilo errors require user action (login/signup), don't retry
-      if (isKiloError(error)) return undefined
-      // kilocode_change end
-      if (!error.data.isRetryable) return undefined
-      // kilocode_change start - FreeUsageLimitError is not retryable: retrying the same
-      // capped model is futile and the backoff loop cannot be broken by switching
-      // models in the chat selector (the retry loop holds a stale model ref).
-      if (error.data.responseBody?.includes("FreeUsageLimitError")) return undefined
-      // kilocode_change end
-      return error.data.message.includes("Overloaded") ? "Provider is overloaded" : error.data.message
-    }
+  const message = isRecord(error.data) ? error.data.message : undefined
+  if (typeof message !== "string") return undefined
+  const lower = message.toLowerCase()
+  if (lower.includes("too_many_requests")) return { message: "Too Many Requests" }
+  if (lower.includes("exhausted") || lower.includes("unavailable")) return { message: "Provider is overloaded" }
+  if (matchesRetryableMessage(message)) return { message }
+  return undefined
+}
 
-    const json = iife(() => {
-      try {
-        if (typeof error.data?.message === "string") {
-          const parsed = JSON.parse(error.data.message)
-          return parsed
-        }
+function matchesRetryableMessage(value: unknown) {
+  return typeof value === "string" && RETRYABLE_MESSAGE_PATTERNS.some((pattern) => pattern.test(value))
+}
 
-        return JSON.parse(error.data.message)
-      } catch {
-        return undefined
-      }
-    })
+function parseJSON(value: unknown) {
+  return iife(() => {
     try {
-      if (!json || typeof json !== "object") return undefined
-      const code = typeof json.code === "string" ? json.code : ""
-
-      if (json.type === "error" && json.error?.type === "too_many_requests") {
-        return "Too Many Requests"
-      }
-      if (code.includes("exhausted") || code.includes("unavailable")) {
-        return "Provider is overloaded"
-      }
-      if (json.type === "error" && json.error?.code?.includes("rate_limit")) {
-        return "Rate Limited"
-      }
-      return JSON.stringify(json)
+      if (typeof value !== "string") return undefined
+      return JSON.parse(value)
     } catch {
       return undefined
     }
-  }
+  })
 }
+
+export function policy(opts: {
+  provider: string
+  parse: (error: unknown) => Err
+  set: (input: { attempt: number; message: string; action?: Retryable["action"]; next: number }) => Effect.Effect<void>
+  // kilocode_change start
+  limit?: number
+  offline?: (input: { error: unknown; message: string }) => Effect.Effect<"retry" | "blocked" | "aborted">
+  // kilocode_change end
+}) {
+  const state = { offline: 0 } // kilocode_change
+  return Schedule.fromStepWithMetadata(
+    Effect.succeed((meta: Schedule.InputMetadata<unknown>) => {
+      // kilocode_change start — enforce retry limit
+      if (opts.limit !== undefined && meta.attempt > opts.limit) {
+        return Cause.done(meta.attempt)
+      }
+      // kilocode_change end
+
+      const error = opts.parse(meta.input)
+      const retry = retryable(error, opts.provider)
+      if (!retry) return Cause.done(meta.attempt)
+      return Effect.gen(function* () {
+        // kilocode_change start — handle network disconnect via offline handler
+        // A retryable connection reset is a transient server-side failure: retry
+        // it through the normal backoff path instead of the offline wait.
+        if (opts.offline && SessionNetwork.disconnected(meta.input) && !SessionNetwork.serverReset(error)) {
+          const result = yield* opts.offline({
+            error: meta.input,
+            message: SessionNetwork.message(meta.input),
+          })
+          if (result !== "retry") {
+            return yield* Cause.done(meta.attempt)
+          }
+          state.offline += 1
+          yield* opts.set({ attempt: 0, message: "Reconnected", next: Date.now() })
+          return [0, Duration.zero] as [number, Duration.Duration]
+        }
+        // kilocode_change end
+
+        // kilocode_change start
+        const attempt = opts.limit === undefined ? meta.attempt - state.offline : meta.attempt
+        if (opts.limit === undefined && attempt > RETRY_MAX_RETRIES) return yield* Cause.done(attempt)
+        // kilocode_change end
+        const wait = delay(attempt, SessionV1.APIError.isInstance(error) ? error : undefined) // kilocode_change
+        const now = yield* Clock.currentTimeMillis
+        yield* opts.set({
+          attempt, // kilocode_change
+          message: retry.message,
+          action: retry.action,
+          next: now + wait,
+        })
+        return [attempt, Duration.millis(wait)] as [number, Duration.Duration] // kilocode_change
+      })
+    }),
+  )
+}
+
+export * as SessionRetry from "./retry"

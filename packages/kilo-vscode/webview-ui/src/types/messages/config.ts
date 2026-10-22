@@ -1,0 +1,204 @@
+import type { PermissionConfig } from "./permissions"
+import type { AgentConfig } from "./agents"
+import type { ProviderConfig } from "./providers"
+
+type SdkIndexingStatus = import("@kilocode/sdk/v2/client").IndexingStatus
+
+export interface McpOAuthConfig {
+  clientId?: string
+  clientSecret?: string
+  scope?: string
+  callbackPort?: number
+  redirectUri?: string
+}
+
+export interface McpConfig {
+  type?: "local" | "remote"
+  command?: string[] | string
+  args?: string[]
+  env?: Record<string, string>
+  environment?: Record<string, string>
+  url?: string
+  headers?: Record<string, string>
+  enabled?: boolean
+  timeout?: number
+  /** `false` disables OAuth auto-detection; an object configures a pre-registered client; absent/`null` is automatic discovery. */
+  oauth?: McpOAuthConfig | false | null
+}
+
+export type ConfigOrigin = "project" | "global" | "system" | "default"
+
+export interface ConfigCollectionEntry {
+  key: string
+  source: ConfigOrigin
+}
+
+export type ConfigCollections = Record<string, ConfigCollectionEntry[]>
+
+export interface CommandConfig {
+  template?: string
+  description?: string
+  agent?: string
+  model?: string | null
+  variant?: string | null
+  subtask?: boolean
+}
+
+export interface SkillsConfig {
+  paths?: string[]
+  urls?: string[]
+}
+
+export interface CompactionConfig {
+  auto?: boolean
+  threshold_percent?: number | null
+  prune?: boolean
+}
+
+export interface WatcherConfig {
+  ignore?: string[]
+}
+
+export interface ExperimentalConfig {
+  batch_tool?: boolean
+  image_generation?: boolean
+  image_generation_model?: string
+  code_mode?: boolean
+  native_notebook_tools?: boolean
+  glob_include_ignored?: string[]
+  speech_to_text_model?: string
+  speech_to_text_base_url?: string
+  speech_to_text_api_key?: string
+  primary_tools?: string[]
+  continue_loop_on_deny?: boolean
+  mcp_timeout?: number
+  disable_paste_summary?: boolean
+}
+
+export interface SandboxConfig {
+  enabled?: boolean
+  network?: "allow" | "deny"
+  writable_paths?: string[]
+  allowed_hosts?: string[]
+}
+
+export interface CommitMessageConfig {
+  prompt?: string
+}
+
+export type IndexingProvider =
+  | "kilo"
+  | "openai"
+  | "ollama"
+  | "openai-compatible"
+  | "gemini"
+  | "mistral"
+  | "vercel-ai-gateway"
+  | "bedrock"
+  | "openrouter"
+  | "voyage"
+
+export interface IndexingConfig {
+  enabled?: boolean
+  provider?: IndexingProvider
+  model?: string | null
+  dimension?: number | null
+  vectorStore?: "lancedb" | "qdrant"
+  kilo?: { apiKey?: string; baseUrl?: string; organizationId?: string }
+  openai?: { apiKey?: string }
+  ollama?: { baseUrl?: string }
+  "openai-compatible"?: { baseUrl?: string; apiKey?: string }
+  gemini?: { apiKey?: string }
+  mistral?: { apiKey?: string }
+  "vercel-ai-gateway"?: { apiKey?: string }
+  bedrock?: { region?: string; profile?: string }
+  openrouter?: { apiKey?: string; specificProvider?: string }
+  voyage?: { apiKey?: string }
+  qdrant?: { url?: string; apiKey?: string }
+  lancedb?: { directory?: string }
+  searchMinScore?: number
+  searchMaxResults?: number
+  embeddingBatchSize?: number
+  scannerMaxBatchRetries?: number
+  fileExtensions?: string[]
+}
+
+export type KiloEmbeddingModel = {
+  id: string
+  name: string
+  dimension: number
+  scoreThreshold: number
+  note?: string
+}
+
+export type KiloEmbeddingModelCatalog = {
+  defaultModel: string
+  models: KiloEmbeddingModel[]
+  aliases: Record<string, string>
+}
+
+export type IndexingStatus = SdkIndexingStatus
+
+export interface BrowserSettings {
+  enabled: boolean
+  useSystemChrome: boolean
+  headless: boolean
+}
+
+export type TerminalCommandDisplay = "expanded" | "collapsed"
+export type CodeEditDisplay = "expanded" | "collapsed"
+export type McpToolDisplay = "expanded" | "collapsed"
+export type ReasoningDisplay = "expanded" | "preview" | "headline"
+
+export interface RetentionConfig {
+  enabled?: boolean
+  maxAgeDays?: number
+}
+
+export interface Config {
+  permission?: PermissionConfig
+  model?: string | null
+  small_model?: string | null
+  subagent_model?: string | null
+  subagent_variant?: string | null
+  subagent_variant_overrides?: Record<string, string | null> | null
+  memory_model?: string | null
+  default_agent?: string | null
+  agent?: Record<string, AgentConfig>
+  provider?: Record<string, ProviderConfig>
+  disabled_providers?: string[]
+  enabled_providers?: string[]
+  mcp?: Record<string, McpConfig>
+  command?: Record<string, CommandConfig>
+  instructions?: string[]
+  skills?: SkillsConfig
+  snapshot?: boolean
+  retention?: RetentionConfig
+  remote_control?: boolean
+  terminal_command_display?: TerminalCommandDisplay
+  code_edit_display?: CodeEditDisplay
+  mcp_tool_display?: McpToolDisplay
+  hide_prompt_training_models?: boolean
+  share?: "manual" | "auto" | "disabled"
+  username?: string
+  watcher?: WatcherConfig
+  formatter?: false | Record<string, unknown>
+  lsp?: false | Record<string, unknown>
+  compaction?: CompactionConfig
+  commit_message?: CommitMessageConfig
+  tools?: Record<string, boolean>
+  web_search?: boolean
+  auto_collapse_reasoning?: boolean
+  reasoning_display?: ReasoningDisplay
+  shared_agent_board?: boolean
+  experimental?: ExperimentalConfig
+  sandbox?: SandboxConfig
+  indexing?: IndexingConfig
+}
+
+export interface FeatureFlags {
+  indexing: boolean
+  sandboxControls: boolean
+  backgroundSubagents: boolean
+  speechToText: boolean
+}

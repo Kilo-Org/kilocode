@@ -1,4 +1,6 @@
 ---
+title: "Using Groq with Kilo Code | Fast LLM Inference"
+description: "Run Llama, Mixtral, and other models at ultra-low latency by configuring Groq in Kilo Code. Setup guide for VS Code and the CLI."
 sidebar_label: Groq
 ---
 
@@ -21,14 +23,6 @@ Kilo Code will attempt to fetch the list of available models from the Groq API.
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2.  **Select Provider:** Choose "Groq" from the "API Provider" dropdown.
-3.  **Enter API Key:** Paste your Groq API key into the "Groq API Key" field.
-4.  **Select Model:** Choose your desired model from the "Model" dropdown.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add Groq and enter your API key.
@@ -73,13 +67,13 @@ Then set your default model:
 
 Kilo Code supports the following models through Groq:
 
-| Model ID                      | Provider    | Context Window | Notes                                 |
-| ----------------------------- | ----------- | -------------- | ------------------------------------- |
-| `moonshotai/kimi-k2-instruct` | Moonshot AI | 128K tokens    | Optimized max_tokens limit configured |
-| `llama-3.3-70b-versatile`     | Meta        | 128K tokens    | High-performance Llama model          |
-| `llama-3.1-70b-versatile`     | Meta        | 128K tokens    | Versatile reasoning capabilities      |
-| `llama-3.1-8b-instant`        | Meta        | 128K tokens    | Fast inference for quick tasks        |
-| `mixtral-8x7b-32768`          | Mistral AI  | 32K tokens     | Mixture of experts architecture       |
+| Model ID | Provider | Context Window | Notes |
+|---|---|---|---|
+| `moonshotai/kimi-k2-instruct` | Moonshot AI | 128K tokens | Optimized max_tokens limit configured |
+| `llama-3.3-70b-versatile` | Meta | 128K tokens | High-performance Llama model |
+| `llama-3.1-70b-versatile` | Meta | 128K tokens | Versatile reasoning capabilities |
+| `llama-3.1-8b-instant` | Meta | 128K tokens | Fast inference for quick tasks |
+| `mixtral-8x7b-32768` | Mistral AI | 32K tokens | Mixture of experts architecture |
 
 **Note:** Model availability may change. Refer to the [Groq documentation](https://console.groq.com/docs/models) for the latest model list and specifications.
 

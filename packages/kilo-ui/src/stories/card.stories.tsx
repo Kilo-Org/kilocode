@@ -1,6 +1,7 @@
 /** @jsxImportSource solid-js */
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { Card } from "@opencode-ai/ui/card"
+import { Card, CardDescription, CardHeader, CardTitle } from "../components/card"
+import { Tag } from "../components/tag"
 
 const meta: Meta<typeof Card> = {
   title: "Components/Card",
@@ -31,6 +32,20 @@ export const Success: Story = {
 
 export const Info: Story = {
   args: { variant: "info", children: "This is an info card" },
+}
+
+export const WithHeader: Story = {
+  render: () => (
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle icon={false}>MiniMax</CardTitle>
+          <CardDescription>Token Plan Plus</CardDescription>
+        </div>
+        <Tag>Direct</Tag>
+      </CardHeader>
+    </Card>
+  ),
 }
 
 export const AllVariants: Story = {

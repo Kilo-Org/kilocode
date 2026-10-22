@@ -3,6 +3,7 @@ import type { AssistantMessage } from "@kilocode/sdk/v2"
 import {
   unwrapError,
   parseAssistantError,
+  parseProviderAuthError,
   isUnauthorizedPaidModelError,
   isUnauthorizedPromotionLimitError,
 } from "../../webview-ui/src/utils/errorUtils"
@@ -26,6 +27,26 @@ describe("unwrapError", () => {
   it("strips leading 'Error: ' prefix before parsing", () => {
     const json = JSON.stringify({ message: "connection refused" })
     expect(unwrapError(`Error: ${json}`)).toBe("connection refused")
+  })
+
+  it("formats empty provider rate-limit errors", () => {
+    const body = {
+      type: "error",
+      sequence_number: 2,
+      error: { type: "tokens", code: "rate_limit_exceeded", message: "", param: null },
+    }
+    const input = JSON.stringify({ message: JSON.stringify(body) })
+
+    expect(unwrapError(input)).toBe("Provider rate limit exceeded. Please try again shortly.")
+  })
+
+  it("preserves provider details when a rate-limit message is present", () => {
+    const input = JSON.stringify({
+      type: "error",
+      error: { type: "tokens", code: "rate_limit_exceeded", message: "Try again in 30 seconds." },
+    })
+
+    expect(unwrapError(input)).toBe("tokens: Try again in 30 seconds.")
   })
 })
 
@@ -94,6 +115,26 @@ describe("parseAssistantError", () => {
     }
     const result = parseAssistantError(error)
     expect(result).toEqual({ statusCode: 403, code: undefined, message: "Forbidden" })
+  })
+})
+
+describe("parseProviderAuthError", () => {
+  it("extracts provider auth errors", () => {
+    const error: AssistantError = {
+      name: "ProviderAuthError",
+      data: { providerID: "openai", message: "Sign in again" },
+    }
+
+    expect(parseProviderAuthError(error)).toEqual({ providerID: "openai", message: "Sign in again" })
+  })
+
+  it("returns null for non-provider-auth errors", () => {
+    const error: AssistantError = {
+      name: "APIError",
+      data: { statusCode: 401, message: "Unauthorized", isRetryable: false },
+    }
+
+    expect(parseProviderAuthError(error)).toBeNull()
   })
 })
 

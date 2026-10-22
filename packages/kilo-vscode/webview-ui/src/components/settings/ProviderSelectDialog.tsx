@@ -4,6 +4,7 @@ import { List } from "@kilocode/kilo-ui/list"
 import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
 import { Tag } from "@kilocode/kilo-ui/tag"
 import { Show, createMemo } from "solid-js"
+import type { ProviderFailure } from "@kilocode/sdk/v2/client"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
@@ -15,6 +16,8 @@ import {
   isPopularProvider,
   kiloFallbackProvider,
   popularProviderIndex,
+  providerFailure,
+  providerFailureMessageKey,
   providerIcon,
 } from "./provider-catalog"
 import CustomProviderDialog from "./CustomProviderDialog"
@@ -23,6 +26,8 @@ import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
 type ProviderItem = {
   id: string
   name: string
+  provider?: Provider
+  failure?: ProviderFailure
 }
 
 const ProviderSelectDialog = () => {
@@ -40,6 +45,7 @@ const ProviderSelectDialog = () => {
     const all = Object.values(provider.providers())
     const withKilo = all.some((item) => item.id === KILO_PROVIDER_ID) ? all : [kiloFallbackProvider(), ...all]
     const available = withKilo.filter((item) => !disabled.has(item.id) && !connected.has(item.id))
+    const failures = provider.failures()
 
     return [
       {
@@ -49,6 +55,8 @@ const ProviderSelectDialog = () => {
       ...available.map((item) => ({
         id: item.id,
         name: item.name,
+        provider: item,
+        failure: providerFailure(item.id, failures),
       })),
     ]
   })
@@ -61,7 +69,8 @@ const ProviderSelectDialog = () => {
 
     if (item.id === KILO_PROVIDER_ID) {
       dialog.close()
-      server.startLogin()
+      // Navigate to the Profile view so the full device-auth UI is visible.
+      server.goToLogin()
       return
     }
 
@@ -78,20 +87,20 @@ const ProviderSelectDialog = () => {
         items={items()}
         filterKeys={["id", "name"]}
         groupBy={(item) =>
-          item.id !== CUSTOM_PROVIDER_ID && isPopularProvider(item.id)
-            ? language.t("dialog.provider.group.recommended")
+          item.id !== CUSTOM_PROVIDER_ID && isPopularProvider(item.provider ?? item.id)
+            ? language.t("settings.providers.group.recommended")
             : language.t("dialog.provider.group.other")
         }
         sortBy={(a, b) => {
           if (a.id === CUSTOM_PROVIDER_ID) return -1
           if (b.id === CUSTOM_PROVIDER_ID) return 1
 
-          const rank = popularProviderIndex(a.id) - popularProviderIndex(b.id)
+          const rank = popularProviderIndex(a.provider ?? a.id) - popularProviderIndex(b.provider ?? b.id)
           if (rank !== 0) return rank
           return a.name.localeCompare(b.name)
         }}
         sortGroupsBy={(a, b) => {
-          const recommended = language.t("dialog.provider.group.recommended")
+          const recommended = language.t("settings.providers.group.recommended")
           if (a.category === recommended && b.category !== recommended) return -1
           if (b.category === recommended && a.category !== recommended) return 1
           return 0
@@ -103,25 +112,52 @@ const ProviderSelectDialog = () => {
       >
         {(item) => (
           <div style={{ display: "flex", gap: "10px", "align-items": "center", width: "100%", "min-width": 0 }}>
-            <ProviderIcon id={providerIcon(item.id)} width={18} height={18} data-slot="list-item-extra-icon" />
-            <div
-              style={{
-                display: "flex",
-                gap: "8px",
-                "align-items": "center",
-                "min-width": 0,
-                flex: 1,
-                "flex-wrap": "wrap",
-              }}
-            >
-              <span style={{ "font-size": "14px", "line-height": "20px", color: "var(--vscode-foreground)" }}>
-                {item.name}
-              </span>
-              <Show when={item.id === KILO_PROVIDER_ID}>
-                <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
-              </Show>
-              <Show when={item.id === CUSTOM_PROVIDER_ID}>
-                <Tag>{language.t("settings.providers.tag.custom")}</Tag>
+            <ProviderIcon
+              id={providerIcon(item.provider ?? item.id)}
+              width={18}
+              height={18}
+              data-slot="list-item-extra-icon"
+            />
+            <div style={{ display: "flex", "flex-direction": "column", "min-width": 0, flex: 1 }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  "align-items": "center",
+                  "min-width": 0,
+                  "flex-wrap": "wrap",
+                }}
+              >
+                <span
+                  style={{
+                    "font-size": "var(--kilo-font-size-14)",
+                    "line-height": "var(--kilo-font-size-20)",
+                    color: "var(--vscode-foreground)",
+                  }}
+                >
+                  {item.name}
+                </span>
+                <Show when={item.id === KILO_PROVIDER_ID}>
+                  <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
+                </Show>
+                <Show when={item.id === CUSTOM_PROVIDER_ID}>
+                  <Tag>{language.t("settings.providers.tag.custom")}</Tag>
+                </Show>
+              </div>
+              <Show when={item.failure}>
+                {(failure) => {
+                  const { key, vars } = providerFailureMessageKey(failure())
+                  return (
+                    <span
+                      style={{
+                        "font-size": "var(--kilo-font-size-12)",
+                        color: "var(--vscode-errorForeground)",
+                      }}
+                    >
+                      {language.t(key, vars)}
+                    </span>
+                  )
+                }}
               </Show>
             </div>
           </div>

@@ -1,0 +1,534 @@
+// kilocode_change - new file
+import { Telemetry, type ReviewCommand } from "@kilocode/kilo-telemetry"
+import { SessionNetwork } from "@/session/network"
+import type { SessionID } from "@/session/schema"
+import type { SessionStatus } from "@/session/status"
+import { MessageV2 } from "@/session/message-v2"
+import { isRecord } from "@/util/record"
+import { parseReviewCommand, reviewCommandName } from "@/kilocode/review/command"
+import * as Log from "@opencode-ai/core/util/log"
+import { Cause, Duration, Effect, Exit } from "effect"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { EffectBridge } from "@/effect/bridge"
+import type { LLMEvent, ProviderMetadata, Usage } from "@opencode-ai/llm"
+import type { ProviderV2 } from "@opencode-ai/core/provider"
+import { SessionRetry } from "@/session/retry"
+import { computeMetrics as computeMetricsHelper, type TokenRates } from "@/kilocode/session/metrics"
+import { InvalidArgumentsError } from "@/tool/tool"
+
+export type ReviewTelemetry = {
+  mode: "review"
+  feature: "code_reviews"
+  command: ReviewCommand
+  tool?: "suggest"
+}
+
+export namespace KiloSessionProcessor {
+  const log = Log.create({ service: "session.processor.kilo" })
+  export const INCOMPLETE_RESPONSE_RETRIES = 2
+  export const INCOMPLETE_RESPONSE_MESSAGE =
+    "The provider repeatedly ended the response before returning usable output."
+  export class IncompleteResponseError extends Error {
+    constructor(readonly vercelID?: string) {
+      super(INCOMPLETE_RESPONSE_MESSAGE)
+      this.name = "IncompleteResponseError"
+    }
+  }
+  export type Attempt = {
+    text: boolean
+    reasoning: boolean
+    tool: boolean
+    usage: boolean
+    finished: boolean
+    finish?: string
+  }
+  export const OUTPUT_LENGTH_WARNING = "The model hit its output limit, so this response may be incomplete."
+  export const REASONING_LENGTH_WARNING =
+    "The model hit its output limit while reasoning and produced no actionable output. Try disabling reasoning or increasing the output limit."
+  export const PROVIDER_FINISH_ERROR_MESSAGE =
+    "The provider ended the response with an error before returning details. Start a new message to retry; Kilo will compact the oversized conversation first if needed."
+
+  export function reviewTelemetry(command: string | undefined): ReviewTelemetry | undefined {
+    const cmd = reviewCommandName(command)
+    if (!cmd) return
+    return { mode: "review", feature: "code_reviews", command: cmd }
+  }
+
+  /**
+   * Tag the text parts of a prompt with review telemetry metadata so that
+   * downstream LLM completions in the same turn (including child sessions
+   * spawned by subtask commands) are attributed to the originating review
+   * command. No-op when the command is not a recognized review command.
+   */
+  export function markReviewTelemetry(
+    parts: Array<{ type: string; metadata?: Record<string, unknown> }>,
+    command: string | undefined,
+  ): ReviewTelemetry | undefined {
+    const tel = reviewTelemetry(command)
+    if (!tel) return
+    for (const part of parts) {
+      if (part.type !== "text") continue
+      part.metadata = { ...part.metadata, ...tel }
+    }
+    return tel
+  }
+
+  /**
+   * Tag the expanded slash-command template so clients can show the user the
+   * command they typed (`/review branch`) instead of the full template, while
+   * keeping the template inspectable. Shape matches
+   * `packages/kilo-vscode/src/shared/injected-prompt.ts`.
+   */
+  export function markCommand(
+    parts: Array<{ type: string; metadata?: Record<string, unknown> }>,
+    command: string,
+    args: string,
+  ) {
+    const title = `/${command} ${args}`.trim()
+    for (const part of parts) {
+      if (part.type !== "text") continue
+      const kilo = isRecord(part.metadata?.kilo) ? part.metadata.kilo : {}
+      part.metadata = { ...part.metadata, kilo: { ...kilo, injected: { title } } }
+    }
+  }
+
+  export function extractReviewTelemetry(parts: MessageV2.Part[]): ReviewTelemetry | undefined {
+    for (const part of parts) {
+      if (part.type !== "text") continue
+      const meta: Record<string, unknown> | undefined = part.metadata
+      if (!meta) continue
+      if (meta.mode !== "review") continue
+      if (meta.feature !== "code_reviews") continue
+      const tel = reviewTelemetry(typeof meta.command === "string" ? meta.command : undefined)
+      if (tel) return tel
+    }
+  }
+
+  export function suggestionReviewTelemetry(metadata: unknown): ReviewTelemetry | undefined {
+    if (!isRecord(metadata)) return
+    if (!isRecord(metadata.accepted)) return
+    const prompt = typeof metadata.accepted.prompt === "string" ? metadata.accepted.prompt : undefined
+    const tel = reviewTelemetry(parseReviewCommand(prompt))
+    if (!tel) return
+    return { ...tel, tool: "suggest" }
+  }
+
+  export function extractSuggestionReviewTelemetry(parts: MessageV2.Part[]): ReviewTelemetry | undefined {
+    for (const part of parts) {
+      if (part.type !== "tool") continue
+      if (part.tool !== "suggest") continue
+      if (part.state.status !== "completed") continue
+      const tel = suggestionReviewTelemetry(part.state.metadata)
+      if (tel) return tel
+    }
+  }
+
+  /**
+   * Track LLM completion telemetry for a finished step.
+   * Only fires if at least one token bucket is non-zero.
+   */
+  export function trackStep(input: {
+    sessionID: string
+    model: { providerID: string; id: string }
+    tokens: { input: number; output: number; cache: { read: number; write: number } }
+    cost: number
+    elapsed: number
+    telemetry?: ReviewTelemetry
+  }) {
+    const { tokens } = input
+    if (tokens.input > 0 || tokens.output > 0 || tokens.cache.write > 0 || tokens.cache.read > 0) {
+      Telemetry.trackLlmCompletion({
+        taskId: input.sessionID,
+        ...(input.telemetry ?? {}),
+        apiProvider: input.model.providerID,
+        modelId: input.model.id,
+        inputTokens: tokens.input,
+        outputTokens: tokens.output,
+        cacheReadTokens: tokens.cache.read,
+        cacheWriteTokens: tokens.cache.write,
+        cost: input.cost,
+        completionTime: input.elapsed,
+      })
+    }
+  }
+
+  /** Pure throughput helper re-exported for namespace symmetry. */
+  export const computeMetrics: typeof computeMetricsHelper = computeMetricsHelper
+  /** Returned shape for downstream consumers that prefer the namespace. */
+  export type Metrics = TokenRates
+
+  export function generationID(meta: ProviderMetadata | undefined) {
+    const value = meta?.gateway?.generationId
+    if (typeof value !== "string") return
+    const id = value.trim()
+    if (!/^gen_[A-Za-z0-9_-]{1,200}$/.test(id)) return
+    return id
+  }
+
+  /**
+   * Effect-based offline handler for the retry schedule.
+   * Shows offline status, waits for network reconnection or user rejection.
+   *
+   * Returns:
+   * - "retry"   → network restored, retry immediately
+   * - "blocked" → user rejected reconnection
+   * - "aborted" → abort signal fired
+   */
+  export function handleOffline(input: {
+    error: unknown
+    sessionID: SessionID
+    abort: AbortSignal
+    set: (sessionID: SessionID, status: SessionStatus.Info) => Effect.Effect<void>
+  }): Effect.Effect<"retry" | "blocked" | "aborted"> {
+    return Effect.gen(function* () {
+      const msg = SessionNetwork.message(input.error)
+
+      const { id, promise } = yield* EffectBridge.fromPromise(() =>
+        SessionNetwork.ask({
+          sessionID: input.sessionID,
+          message: msg,
+          abort: input.abort,
+        }),
+      )
+
+      log.warn("session offline", {
+        sessionID: input.sessionID,
+        requestID: id,
+        message: msg,
+      })
+
+      yield* input.set(input.sessionID, {
+        type: "offline",
+        requestID: id,
+        message: msg,
+      })
+
+      return yield* Effect.promise(() =>
+        promise
+          .then(() => "retry" as const)
+          .catch((err) => {
+            if (err instanceof SessionNetwork.RejectedError) return "blocked" as const
+            if (err instanceof DOMException && err.name === "AbortError") return "aborted" as const
+            throw err
+          }),
+      )
+    })
+  }
+
+  /** How long a stream may stay silent before the guard probes connectivity. */
+  export const STALL_MS = 10_000
+
+  /** True only for calls whose local execution started; pending input must not hold the guard back. */
+  export function executingTools(calls: Record<string, { executing?: boolean }>) {
+    return Object.values(calls).some((call) => call.executing)
+  }
+
+  /** resolveSDK's env pass: ${VAR} names resolve from the environment or stay intact. */
+  export function expandEnv(url: string) {
+    return url.replace(/\$\{([^}]+)\}/g, (match, key) => process.env[String(key)] ?? match)
+  }
+
+  // Dynamic import: app-runtime depends on this module, so a static import would
+  // be circular; the annotated return type keeps the AppLayer type graph acyclic.
+  async function providerBaseURL(id: ProviderV2.ID | undefined, apiUrl: string | undefined): Promise<string | undefined> {
+    const url = (id ? await configured(id) : undefined) ?? apiUrl
+    if (!url) return url
+    // varsLoaders vars from resolveSDK are unreachable here; unexpanded names
+    // fail the endpoint probe and fall back to the public probe.
+    return expandEnv(url)
+  }
+
+  async function configured(id: ProviderV2.ID): Promise<string | undefined> {
+    const [runtime, provider] = await Promise.all([
+      import("@/effect/app-runtime").catch(() => undefined),
+      import("@/provider/provider").catch(() => undefined),
+    ])
+    if (!runtime || !provider) return undefined
+    // Bound the lookup: a wedged runtime must not stall the watchdog. The lookup
+    // keeps its own catch, so a rejection after the deadline is still handled,
+    // and the timer is cleared whichever side wins.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const deadline = new Promise<undefined>((resolve) => {
+      timer = setTimeout(() => resolve(undefined), 2_000)
+    })
+    const lookup = Promise.resolve()
+      .then(() =>
+        runtime.AppRuntime.runPromise(
+          Effect.gen(function* () {
+            const svc = yield* provider.Provider.Service
+            return yield* svc.getProvider(id)
+          }),
+        ),
+      )
+      .catch((err) => {
+        log.warn("offline probe provider lookup failed", { err })
+        return undefined
+      })
+    const info = await Promise.race([lookup, deadline]).finally(() => clearTimeout(timer))
+    // Same resolution as resolveSDK: configured baseURL wins over the catalog URL.
+    const base = info?.options?.baseURL
+    return typeof base === "string" && base !== "" ? base : undefined
+  }
+
+  /** Synthetic stall failure; its message is matched by SessionNetwork.disconnected(). */
+  export class DisconnectedError extends Error {
+    constructor() {
+      super("network connection was lost")
+      this.name = "DisconnectedError"
+    }
+  }
+
+  /**
+   * Fails an attempt stalled for `stallMs` with DisconnectedError when the
+   * connectivity probe also fails. A passing probe resets the clock; only
+   * executing tool calls hold it back.
+   */
+  export function offlineGuard(input: {
+    busy?: () => boolean
+    stallMs?: number
+    tickMs?: number
+    check?: () => Promise<boolean>
+    providerID?: ProviderV2.ID
+    apiUrl?: string
+  }) {
+    const stall = input.stallMs ?? STALL_MS
+    const tick = input.tickMs ?? 1_000
+    const check =
+      input.check ??
+      (async () => {
+        const baseURL = await providerBaseURL(input.providerID, input.apiUrl)
+        return SessionNetwork.probeProvider(baseURL)
+      })
+    const state = { at: Date.now() }
+    return {
+      touch() {
+        state.at = Date.now()
+      },
+      watch: Effect.gen(function* () {
+        while (true) {
+          yield* Effect.sleep(Duration.millis(tick))
+          if (Date.now() - state.at < stall) continue
+          if (input.busy?.()) {
+            state.at = Date.now()
+            continue
+          }
+          // a rejected probe can't confirm connectivity either
+          const ok = yield* Effect.tryPromise({
+            try: check,
+            catch: () => new DisconnectedError(),
+          })
+          if (ok) {
+            state.at = Date.now()
+            continue
+          }
+          // stream activity during the probe proves the connection is alive
+          if (Date.now() - state.at < stall) continue
+          return yield* Effect.fail(new DisconnectedError())
+        }
+      }),
+    }
+  }
+
+  /**
+   * Returns the Kilo-specific retry policy options (limit + offline handler).
+   * Designed to be spread into SessionRetry.policy() opts.
+   *
+   * The `abort` signal is used by the offline handler to cancel the network
+   * reconnection wait when the session is interrupted.
+   */
+  export function retryOpts(input: {
+    sessionID: SessionID
+    abort: AbortSignal
+    set: (sessionID: SessionID, status: SessionStatus.Info) => Effect.Effect<void>
+    used?: number
+  }) {
+    const limit = Flag.KILO_SESSION_RETRY_LIMIT
+    return {
+      limit: limit === undefined ? undefined : Math.max(0, limit - (input.used ?? 0)),
+      offline: (info: { error: unknown; message: string }) =>
+        handleOffline({
+          error: info.error,
+          sessionID: input.sessionID,
+          abort: input.abort,
+          set: input.set,
+        }),
+    }
+  }
+
+  export function hasUsage(usage: Usage | undefined) {
+    if (!usage) return false
+    return [
+      usage.inputTokens,
+      usage.outputTokens,
+      usage.nonCachedInputTokens,
+      usage.cacheReadInputTokens,
+      usage.cacheWriteInputTokens,
+      usage.reasoningTokens,
+      usage.totalTokens,
+    ].some((value) => value !== undefined && value !== 0)
+  }
+
+  export function attempt(): Attempt {
+    return { text: false, reasoning: false, tool: false, usage: false, finished: false }
+  }
+
+  /**
+   * Consecutive invalid-argument failures allowed in one turn before it is
+   * aborted. A model that keeps re-issuing malformed calls never makes
+   * progress, so retrying it again only burns tokens (#14143).
+   */
+  export const REPEATED_TOOL_FAILURE_LIMIT = 3
+
+  /**
+   * Per-turn failure counts. A turn spans several `SessionProcessor.create`
+   * calls (one per model step), so the count is keyed by the parent user
+   * message rather than held in the processor instance. Entries clear on a
+   * completed tool call, a non-validation failure, or when they trip. A turn
+   * that ends without any of those leaves its entry for the 64-entry cache
+   * bound to evict; entries are small and the map is never unbounded.
+   */
+  const malformed = new Map<string, number>()
+
+  export function malformedToolFailure(tool: string) {
+    return new MessageV2.APIError({
+      message: `Stopped after ${REPEATED_TOOL_FAILURE_LIMIT} consecutive invalid-argument failures for the "${tool}" tool. The model kept re-issuing malformed input, so the turn was aborted to avoid burning tokens.`,
+      isRetryable: false,
+    }).toObject()
+  }
+
+  /**
+   * Circuit breaker for stuck tool validation. `inspect` returns a ready abort
+   * error once the turn accumulates `REPEATED_TOOL_FAILURE_LIMIT` consecutive
+   * invalid-argument failures, regardless of which tool failed or how the
+   * malformed input differed. A completed tool call or any other tool failure
+   * clears the count, so unrelated errors and progress cannot trip it. Call
+   * `reset` when a tool call completes.
+   */
+  export const malformedToolGuard = {
+    inspect(key: string, error: unknown) {
+      if (!(error instanceof InvalidArgumentsError)) {
+        malformed.delete(key)
+        return undefined
+      }
+      const count = (malformed.get(key) ?? 0) + 1
+      if (count < REPEATED_TOOL_FAILURE_LIMIT) {
+        if (malformed.size >= 64 && !malformed.has(key)) {
+          const oldest = malformed.keys().next()
+          if (!oldest.done) malformed.delete(oldest.value)
+        }
+        malformed.set(key, count)
+        return undefined
+      }
+      malformed.delete(key)
+      return malformedToolFailure(error.tool)
+    },
+    reset(key: string) {
+      malformed.delete(key)
+    },
+  }
+
+  export function observe(attempt: Attempt, event: LLMEvent) {
+    if (event.type === "text-delta" && event.text.trim()) attempt.text = true
+    if (event.type === "reasoning-delta" && event.text.trim()) attempt.reasoning = true
+    if (event.type === "tool-call" || event.type === "tool-result" || event.type === "tool-error") attempt.tool = true
+    if (event.type === "step-finish") {
+      attempt.finished = true
+      attempt.finish = event.reason
+      attempt.usage ||= hasUsage(event.usage)
+    }
+    if (event.type === "finish" && !attempt.finished) {
+      attempt.finish = event.reason
+      attempt.usage ||= hasUsage(event.usage)
+    }
+  }
+
+  export function replayable(input: {
+    finish?: string
+    text: boolean
+    reasoning: boolean
+    tool: boolean
+    usage: boolean
+  }) {
+    if (input.finish !== undefined && input.finish !== "unknown") return false
+    if (input.text || input.tool) return false
+    // Reasoning without text or tools has no actionable output. Retry it through
+    // the existing bounded recovery budget instead of silently settling unknown.
+    // Keeping this decision here avoids the unbounded loop caused by continuing
+    // every unknown finish at the prompt-loop boundary.
+    if (input.reasoning) return true
+    return !input.usage
+  }
+
+  export function blockRetry(error: ReturnType<typeof MessageV2.fromError>) {
+    const message = MessageV2.APIError.isInstance(error) ? error.data.message : "Response interrupted after output"
+    return new MessageV2.APIError({ message, isRetryable: false }).toObject()
+  }
+
+  export function recover(input: {
+    run: () => Effect.Effect<void, unknown>
+    replayable: () => boolean
+    discard: () => Effect.Effect<void>
+    set: (info: { attempt: number; message: string; next: number }) => Effect.Effect<void>
+  }) {
+    return Effect.gen(function* () {
+      for (const index of Array.from({ length: INCOMPLETE_RESPONSE_RETRIES + 1 }, (_, index) => index)) {
+        const result = yield* input.run().pipe(Effect.exit)
+        const error = Exit.isFailure(result) ? Cause.squash(result.cause) : undefined
+        if (error && !(error instanceof IncompleteResponseError)) return yield* Effect.fail(error)
+        if (!error && !input.replayable()) return
+
+        yield* input.discard()
+        if (index === INCOMPLETE_RESPONSE_RETRIES) return yield* Effect.fail(error ?? new IncompleteResponseError())
+        const wait = SessionRetry.delay(index + 1)
+        yield* input.set({ attempt: index + 1, message: INCOMPLETE_RESPONSE_MESSAGE, next: Date.now() + wait })
+        yield* Effect.sleep(`${wait} millis`)
+      }
+    })
+  }
+
+  export function parseError(error: unknown, input: { providerID: ProviderV2.ID; aborted: boolean }) {
+    if (!(error instanceof IncompleteResponseError)) return MessageV2.fromError(error, input)
+    return new MessageV2.APIError({
+      message: error.message,
+      isRetryable: true,
+      responseHeaders: error.vercelID ? { "x-vercel-id": error.vercelID } : undefined,
+    }).toObject()
+  }
+
+  /**
+   * Guard: if finish reason is "tool-calls" but no tool parts exist,
+   * downgrade to "stop" to prevent an infinite loop (#7756).
+   */
+  export function guardEmptyToolCalls(msg: MessageV2.Assistant, parts: MessageV2.Part[]) {
+    if (msg.finish === "tool-calls" && !parts.some((p) => p.type === "tool")) {
+      log.warn("empty tool-calls", { messageID: msg.id })
+      msg.finish = "stop"
+    }
+  }
+
+  export function lengthWarning(input: {
+    msg: MessageV2.Assistant
+    step: { reasoning: boolean; text: boolean; tool: boolean }
+  }) {
+    if (input.msg.summary) return
+    if (input.msg.finish !== "length") return
+    if (input.step.reasoning && !input.step.text && !input.step.tool) {
+      log.warn("reasoning-only length stop", { messageID: input.msg.id })
+      return REASONING_LENGTH_WARNING
+    }
+    log.warn("length stop", { messageID: input.msg.id })
+    return OUTPUT_LENGTH_WARNING
+  }
+
+  export function providerFinishError(msg: MessageV2.Assistant) {
+    if (msg.finish !== "error") return false
+    if (msg.error) return false
+    const err = new MessageV2.APIError({
+      message: PROVIDER_FINISH_ERROR_MESSAGE,
+      isRetryable: true,
+    }).toObject()
+    msg.error = err
+    log.warn("provider finish error", { messageID: msg.id })
+    return err
+  }
+}

@@ -3,13 +3,14 @@ import { defineConfig, devices } from "@playwright/test"
 export default defineConfig({
   testDir: "./tests",
   testMatch: "**/*.spec.ts",
+  snapshotPathTemplate: "../kilo-docs/public/img/screenshot-tests/kilo-vscode/{arg}{ext}",
   fullyParallel: true,
   forbidOnly: !!process.env["CI"],
   retries: process.env["CI"] ? 1 : 0,
   workers: process.env["PLAYWRIGHT_WORKERS"]
     ? Number.parseInt(process.env["PLAYWRIGHT_WORKERS"]!, 10) || undefined
     : undefined,
-  reporter: [["html", { open: "never" }], ["list"]],
+  reporter: process.env["CI"] ? [["dot"]] : [["list"]],
   use: {
     baseURL: "http://localhost:6007",
     // VS Code sidebar is typically 350-450px wide

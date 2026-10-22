@@ -13,7 +13,7 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 
 **Other AI coding vendors** hide their true costs behind opaque subscription models, leaving you wondering what you're actually paying for.
 
-**Kilo Teams** and **Kilo Enterprise** show you exactly what each AI request costs - no markup, no hidden fees, complete transparency.
+**Kilo Teams** and **Kilo Enterprise** show you what each AI request costs. Model inference is charged at provider rates with no markup, and credit purchases have a disclosed 5% payment-processing fee.
 
 ### No Rate Limiting
 
@@ -78,14 +78,14 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 
 ### Cursor Feature Mapping
 
-| Cursor Feature         | Kilo Equivalent                                                |
-| ---------------------- | -------------------------------------------------------------- |
-| AI Chat                | Chat interface with multiple modes                             |
-| Code Generation        | Code mode with advanced tools                                  |
-| Code Editing           | Fast edits and surgical modifications                          |
-| Codebase Understanding | Codebase indexing and search                                   |
-| Team Management        | Comprehensive team dashboard (Enterprise adds SSO, audit logs) |
-| Usage Analytics        | Detailed usage and cost analytics                              |
+| Cursor Feature | Kilo Equivalent |
+|---|---|
+| AI Chat | Chat interface with multiple modes |
+| Code Generation | Code mode with advanced tools |
+| Code Editing | Fast edits and surgical modifications |
+| Codebase Understanding | Codebase indexing and search |
+| Team Management | Comprehensive team dashboard (Enterprise adds SSO, audit logs) |
+| Usage Analytics | Detailed usage and cost analytics |
 
 ## Migrating from GitHub Copilot
 
@@ -131,13 +131,13 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 
 ### GitHub Copilot Feature Comparison
 
-| GitHub Copilot   | Kilo                             | Advantage                     |
-| ---------------- | -------------------------------- | ----------------------------- |
-| Code suggestions | AI-powered code generation       | ✅ More model choices         |
-| Chat interface   | Multi-mode chat system           | ✅ Specialized modes          |
-| Team admin       | Comprehensive team management    | ✅ Enterprise adds audit logs |
-| Usage insights   | Detailed usage and cost tracking | ✅ Transparent pricing        |
-| Model selection  | 18+ AI providers and models      | ✅ No vendor lock-in          |
+| GitHub Copilot | Kilo | Advantage |
+|---|---|---|
+| Code suggestions | AI-powered code generation | ✅ More model choices |
+| Chat interface | Multi-mode chat system | ✅ Specialized modes |
+| Team admin | Comprehensive team management | ✅ Enterprise adds audit logs |
+| Usage insights | Detailed usage and cost tracking | ✅ Transparent pricing |
+| Model selection | 18+ AI providers and models | ✅ No vendor lock-in |
 
 ## Migrating from Other AI Coding Tools
 
@@ -193,12 +193,12 @@ Kilo Code uses a compatible rules system that supports Cursor and Windsurf patte
 
 **Quick Overview:**
 
-- **Project rules**: `.cursor/rules/*.mdc` → `.kilocode/rules/*.md` (remove YAML frontmatter, keep Markdown content)
-- **Legacy rules**: `.cursorrules` → `.kilocode/rules/legacy-rules.md`
+- **Project rules**: `.cursor/rules/*.mdc` → `.kilo/rules/*.md` (remove YAML frontmatter, keep Markdown content)
+- **Legacy rules**: `.cursorrules` → `.kilo/rules/legacy-rules.md`
 - **AGENTS.md**: Works identically in Kilo Code (no conversion needed)
-- **Global rules**: Recreate in `~/.kilocode/rules/*.md` directory
+- **Global rules**: Recreate in `~/.kilo/rules/*.md` directory
 
-Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which Cursor and Windsurf don't have. This allows different rules for different workflows (e.g., Code mode vs Debug mode).
+Kilo Code also supports mode-specific rules (`.kilo/rules-{mode}/`), which Cursor and Windsurf don't have. This allows different rules for different workflows (e.g., Code mode vs Debug mode).
 
 **👉 For detailed step-by-step instructions, format conversion examples, troubleshooting, and advanced migration scenarios, see our [Technical Migration Guide](/docs/getting-started/migrating).**
 

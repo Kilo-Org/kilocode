@@ -1,0 +1,12 @@
+@import "@kilocode/kilo-ui/styles";
+@import "./theme.css";
+@import "./button.css";
+@import "./card.css";
+@import "./tag.css";
+@import "./form.css";
+@import "./keyboard.css";
+@import "./console.css";
+@import "./console-shell.css";
+@import "./sheet.css";
+@import "./misc.css";
+@import "./responsive.css";

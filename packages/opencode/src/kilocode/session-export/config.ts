@@ -1,0 +1,17 @@
+export const Config = {
+  maxPayloadBytes: 50 * 1024 * 1024,
+  maxSnapshotBytes: 1 * 1024 * 1024 * 1024,
+  chunkBytes: 1 * 1024 * 1024,
+  inlineThresholdBytes: 64 * 1024,
+  flushIntervalMs: 60_000,
+  flushSizeBytes: 25 * 1024 * 1024,
+  uploadRateLimitPerMinute: 180,
+  uploadRateLimitWindowMs: 60_000,
+  uploadRateLimitIntervalMs: Math.ceil(60_000 / 180),
+  bufferCapBytes: 50 * 1024 * 1024 * 1024,
+  ringBufferBytes: 256 * 1024 * 1024,
+  baselineWaitMs: 3_000,
+  retryBackoffMinMs: 1_000,
+  retryBackoffMaxMs: 5 * 60_000,
+  shutdownFlushTimeoutMs: 15_000,
+} as const

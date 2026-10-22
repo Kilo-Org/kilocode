@@ -12,13 +12,13 @@ export const AiProvidersNav: NavSection[] = [
     title: "AI Labs",
     links: [
       { href: "/ai-providers/anthropic", children: "Anthropic" },
-      { href: "/ai-providers/claude-code", children: "Claude Code" },
       { href: "/ai-providers/openai", children: "OpenAI" },
       {
         href: "/ai-providers/openai-chatgpt-plus-pro",
-        children: "ChatGPT Plus/Pro",
+        children: "ChatGPT Go/Plus/Pro",
       },
       { href: "/ai-providers/gemini", children: "Google Gemini" },
+      { href: "/ai-providers/poolside", children: "Poolside" },
       { href: "/ai-providers/mistral", children: "Mistral AI" },
       { href: "/ai-providers/deepseek", children: "DeepSeek" },
       { href: "/ai-providers/xai", children: "xAI (Grok)" },
@@ -28,13 +28,16 @@ export const AiProvidersNav: NavSection[] = [
     title: "AI Gateways",
     links: [
       { href: "/ai-providers/openrouter", children: "OpenRouter" },
-      { href: "/ai-providers/glama", children: "Glama" },
+      { href: "/ai-providers/trustedrouter", children: "TrustedRouter" },
       { href: "/ai-providers/requesty", children: "Requesty" },
+      { href: "/ai-providers/daoxe", children: "DaoXE" },
       { href: "/ai-providers/unbound", children: "Unbound" },
+      { href: "/ai-providers/zenmux", children: "ZenMux" },
       {
         href: "/ai-providers/vercel-ai-gateway",
         children: "Vercel AI Gateway",
       },
+      { href: "/ai-providers/edenai", children: "Eden AI" },
     ],
   },
   {
@@ -42,9 +45,13 @@ export const AiProvidersNav: NavSection[] = [
     links: [
       { href: "/ai-providers/vertex", children: "Google Vertex AI" },
       { href: "/ai-providers/bedrock", children: "AWS Bedrock" },
+      { href: "/ai-providers/alibaba", children: "Alibaba Cloud" },
+      { href: "/ai-providers/cloudflare", children: "Cloudflare" },
       { href: "/ai-providers/groq", children: "Groq" },
       { href: "/ai-providers/cerebras", children: "Cerebras" },
       { href: "/ai-providers/fireworks", children: "Fireworks AI" },
+      { href: "/ai-providers/mixlayer", children: "Mixlayer" },
+      { href: "/ai-providers/nebius", children: "Nebius Token Factory" },
     ],
   },
   {
@@ -52,7 +59,11 @@ export const AiProvidersNav: NavSection[] = [
     links: [
       { href: "/ai-providers/ollama", children: "Ollama" },
       { href: "/ai-providers/lmstudio", children: "LM Studio" },
-      { href: "/ai-providers/vscode-lm", children: "VS Code LM API" },
+      { href: "/ai-providers/atomic-chat", children: "Atomic Chat" },
+      {
+        href: "/ai-providers/anaconda-desktop",
+        children: "Anaconda Desktop",
+      },
       {
         href: "/ai-providers/openai-compatible",
         children: "OpenAI Compatible",
@@ -68,18 +79,14 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/moonshot", children: "Moonshot" },
       { href: "/ai-providers/ovhcloud", children: "OVHcloud" },
       { href: "/ai-providers/sap-ai-core", children: "SAP AI Core" },
+      { href: "/ai-providers/venice", children: "Venice AI" },
     ],
   },
   {
     title: "Special Modes",
     links: [
       { href: "/ai-providers/v0", children: "v0" },
-      { href: "/ai-providers/human-relay", children: "Human Relay" },
       { href: "/ai-providers/synthetic", children: "Synthetic Provider" },
-      {
-        href: "/ai-providers/virtual-quota-fallback",
-        children: "Virtual Quota Fallback",
-      },
     ],
   },
 ]

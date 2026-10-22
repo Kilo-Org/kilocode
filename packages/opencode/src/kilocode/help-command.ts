@@ -1,13 +1,15 @@
 import { cmd } from "../cli/cmd/cmd"
 import { generateHelp } from "./help"
 import type { Argv } from "yargs"
+import { markLazyCommandSelection } from "@/kilocode/cli/lazy-commands"
 
 export function createHelpCommand(root?: () => Argv) {
   return cmd({
     command: "help [command]",
     describe: "show full CLI reference",
-    builder: (yargs) =>
-      yargs
+    builder: (yargs) => {
+      markLazyCommandSelection()
+      return yargs
         .positional("command", {
           describe: "command to show help for",
           type: "string",
@@ -22,7 +24,8 @@ export function createHelpCommand(root?: () => Argv) {
           type: "string",
           choices: ["md", "text"] as const,
           default: "md" as const,
-        }),
+        })
+    },
     async handler(args) {
       if (!args.command && !args.all) {
         if (root) {

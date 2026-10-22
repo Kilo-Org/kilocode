@@ -1,156 +1,130 @@
-import z from "zod"
-import { text } from "node:stream/consumers"
-import { Tool } from "./tool"
-import { Filesystem } from "../util/filesystem"
-import { Ripgrep } from "../file/ripgrep"
-import { Process } from "../util/process"
-
-import DESCRIPTION from "./grep.txt"
-import { Instance } from "../project/instance"
 import path from "path"
-import { assertExternalDirectory } from "./external-directory"
+import { Effect, Schema } from "effect"
+import { InstanceState } from "@/effect/instance-state"
+import { FSUtil } from "@opencode-ai/core/fs-util"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
+import * as KiloGrep from "@/kilocode/tool/grep-signal-controls" // kilocode_change
+import { assertExternalDirectoryEffect } from "./external-directory"
+import DESCRIPTION from "./grep.txt"
+import * as Tool from "./tool"
 
-const MAX_LINE_LENGTH = 2000
-
-export const GrepTool = Tool.define("grep", {
-  description: DESCRIPTION,
-  parameters: z.object({
-    pattern: z.string().describe("The regex pattern to search for in file contents"),
-    path: z.string().optional().describe("The directory to search in. Defaults to the current working directory."),
-    include: z.string().optional().describe('File pattern to include in the search (e.g. "*.js", "*.{ts,tsx}")'),
+export const Parameters = Schema.Struct({
+  pattern: Schema.String.annotate({ description: "Pattern to search for in file contents (regex by default)" }), // kilocode_change
+  path: Schema.optional(Schema.String).annotate({
+    description: "The directory to search in. Defaults to the current working directory.",
   }),
-  async execute(params, ctx) {
-    if (!params.pattern) {
-      throw new Error("pattern is required")
-    }
-
-    await ctx.ask({
-      permission: "grep",
-      patterns: [params.pattern],
-      always: ["*"],
-      metadata: {
-        pattern: params.pattern,
-        path: params.path,
-        include: params.include,
-      },
-    })
-
-    let searchPath = params.path ?? Instance.directory
-    searchPath = path.isAbsolute(searchPath) ? searchPath : path.resolve(Instance.directory, searchPath)
-    await assertExternalDirectory(ctx, searchPath, { kind: "directory" })
-
-    const rgPath = await Ripgrep.filepath()
-    const args = ["-nH", "--hidden", "--no-messages", "--field-match-separator=|", "--regexp", params.pattern]
-    if (params.include) {
-      args.push("--glob", params.include)
-    }
-    args.push(searchPath)
-
-    const proc = Process.spawn([rgPath, ...args], {
-      stdout: "pipe",
-      stderr: "pipe",
-      abort: ctx.abort,
-    })
-
-    if (!proc.stdout || !proc.stderr) {
-      throw new Error("Process output not available")
-    }
-
-    const output = await text(proc.stdout)
-    const errorOutput = await text(proc.stderr)
-    const exitCode = await proc.exited
-
-    // Exit codes: 0 = matches found, 1 = no matches, 2 = errors (but may still have matches)
-    // With --no-messages, we suppress error output but still get exit code 2 for broken symlinks etc.
-    // Only fail if exit code is 2 AND no output was produced
-    if (exitCode === 1 || (exitCode === 2 && !output.trim())) {
-      return {
-        title: params.pattern,
-        metadata: { matches: 0, truncated: false },
-        output: "No files found",
-      }
-    }
-
-    if (exitCode !== 0 && exitCode !== 2) {
-      throw new Error(`ripgrep failed: ${errorOutput}`)
-    }
-
-    const hasErrors = exitCode === 2
-
-    // Handle both Unix (\n) and Windows (\r\n) line endings
-    const lines = output.trim().split(/\r?\n/)
-    const matches = []
-
-    for (const line of lines) {
-      if (!line) continue
-
-      const [filePath, lineNumStr, ...lineTextParts] = line.split("|")
-      if (!filePath || !lineNumStr || lineTextParts.length === 0) continue
-
-      const lineNum = parseInt(lineNumStr, 10)
-      const lineText = lineTextParts.join("|")
-
-      const stats = Filesystem.stat(filePath)
-      if (!stats) continue
-
-      matches.push({
-        path: filePath,
-        modTime: stats.mtime.getTime(),
-        lineNum,
-        lineText,
-      })
-    }
-
-    matches.sort((a, b) => b.modTime - a.modTime)
-
-    const limit = 100
-    const truncated = matches.length > limit
-    const finalMatches = truncated ? matches.slice(0, limit) : matches
-
-    if (finalMatches.length === 0) {
-      return {
-        title: params.pattern,
-        metadata: { matches: 0, truncated: false },
-        output: "No files found",
-      }
-    }
-
-    const totalMatches = matches.length
-    const outputLines = [`Found ${totalMatches} matches${truncated ? ` (showing first ${limit})` : ""}`]
-
-    let currentFile = ""
-    for (const match of finalMatches) {
-      if (currentFile !== match.path) {
-        if (currentFile !== "") {
-          outputLines.push("")
-        }
-        currentFile = match.path
-        outputLines.push(`${match.path}:`)
-      }
-      const truncatedLineText =
-        match.lineText.length > MAX_LINE_LENGTH ? match.lineText.substring(0, MAX_LINE_LENGTH) + "..." : match.lineText
-      outputLines.push(`  Line ${match.lineNum}: ${truncatedLineText}`)
-    }
-
-    if (truncated) {
-      outputLines.push("")
-      outputLines.push(
-        `(Results truncated: showing ${limit} of ${totalMatches} matches (${totalMatches - limit} hidden). Consider using a more specific path or pattern.)`,
-      )
-    }
-
-    if (hasErrors) {
-      outputLines.push("")
-      outputLines.push("(Some paths were inaccessible and skipped)")
-    }
-
-    return {
-      title: params.pattern,
-      metadata: {
-        matches: totalMatches,
-        truncated,
-      },
-      output: outputLines.join("\n"),
-    }
-  },
+  include: Schema.optional(Schema.String).annotate({
+    description: 'File pattern to include in the search (e.g. "*.js", "*.{ts,tsx}")',
+  }),
+  ...KiloGrep.fields, // kilocode_change
 })
+
+export const GrepTool = Tool.define(
+  "grep",
+  Effect.gen(function* () {
+    const fs = yield* FSUtil.Service
+    const ripgrep = yield* Ripgrep.Service
+    return {
+      description: KiloGrep.describe(DESCRIPTION), // kilocode_change
+      parameters: Parameters,
+      execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
+        Effect.gen(function* () {
+          const limit = params.limit ?? KiloGrep.DEFAULT_LIMIT // kilocode_change
+          const context = params.context ?? 0 // kilocode_change
+          const empty = {
+            title: params.pattern,
+            metadata: { matches: 0, truncated: false },
+            output: "No files found",
+          }
+          if (!params.pattern) {
+            throw new Error("pattern is required")
+          }
+
+          yield* ctx.ask({
+            permission: "grep",
+            patterns: [params.pattern],
+            always: ["*"],
+            metadata: {
+              pattern: params.pattern,
+              path: params.path,
+              include: params.include,
+              ...KiloGrep.metadata(params, limit, context), // kilocode_change
+            },
+          })
+
+          const ins = yield* InstanceState.context
+          const requested = path.isAbsolute(params.path ?? ins.directory)
+            ? (params.path ?? ins.directory)
+            : path.join(ins.directory, params.path ?? ".")
+          const requestedInfo = yield* fs.stat(requested).pipe(Effect.catch(() => Effect.succeed(undefined)))
+          yield* assertExternalDirectoryEffect(ctx, requested, {
+            bypass: false,
+            kind: requestedInfo?.type === "Directory" ? "directory" : "file",
+          })
+
+          const search = FSUtil.resolve(requested)
+          const info = yield* fs.stat(search).pipe(Effect.catch(() => Effect.succeed(undefined)))
+          if (!info || (info.type !== "File" && info.type !== "Directory")) return empty // kilocode_change
+          const cwd = info?.type === "Directory" ? search : path.dirname(search)
+          const result = yield* ripgrep.grep({
+            cwd,
+            file: info?.type === "File" ? path.basename(search) : undefined, // kilocode_change - constrain exact-file searches
+            pattern: params.pattern,
+            include: params.include,
+            ...KiloGrep.options(params, limit, context), // kilocode_change
+            signal: ctx.abort, // kilocode_change - stop ripgrep when the tool call is cancelled
+          })
+          // kilocode_change start
+          const matches = result.items
+          if (matches.length === 0) return empty
+          // kilocode_change end
+
+          const rows = matches.map((item) => ({
+            // kilocode_change
+            path: path.resolve(
+              requestedInfo?.type === "Directory" ? requested : path.dirname(requested),
+              item.entry.path,
+            ),
+            line: item.line,
+            text: item.text,
+            context: item.context, // kilocode_change
+            textTruncated: item.textTruncated, // kilocode_change
+          }))
+
+          const truncated = result.truncated // kilocode_change
+          const final = rows
+          if (final.length === 0) return empty
+
+          const total = rows.filter((row) => !row.context).length // kilocode_change
+          const hasMore = truncated // kilocode_change
+          const output = [`Found ${total} matches${hasMore ? " (more matches available)" : ""}`]
+
+          let current = ""
+          for (const match of final) {
+            if (current !== match.path) {
+              if (current !== "") output.push("")
+              current = match.path
+              output.push(`${match.path}:`)
+            }
+            output.push(KiloGrep.line(match, context)) // kilocode_change
+          }
+
+          if (truncated) {
+            output.push("")
+            output.push(KiloGrep.limitNotice(limit)) // kilocode_change
+          }
+          output.push(...KiloGrep.notices(rows)) // kilocode_change
+          if (result.partial) output.push("", "(Some paths were inaccessible.)") // kilocode_change
+
+          return {
+            title: params.pattern,
+            metadata: {
+              matches: total,
+              truncated,
+            },
+            output: output.join("\n"),
+          }
+        }).pipe(Effect.orDie),
+    }
+  }),
+)

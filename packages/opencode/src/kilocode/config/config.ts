@@ -1,0 +1,744 @@
+import path from "path"
+import { pathToFileURL } from "url"
+import { existsSync } from "fs"
+import { Effect, Schema } from "effect"
+import { applyEdits, modify, parse as parseJsonc, type ParseError } from "jsonc-parser"
+import { mergeDeep } from "remeda"
+import * as Log from "@opencode-ai/core/util/log"
+import { Global } from "@opencode-ai/core/global"
+import { NamedError } from "@opencode-ai/core/util/error"
+import type { FSUtil } from "@opencode-ai/core/fs-util"
+import { InstanceRef } from "@/effect/instance-ref"
+import { isRecord } from "@/util/record"
+import { ConfigErrorV1 as ConfigError } from "@opencode-ai/core/v1/config/error"
+import type { Config } from "../../config/config"
+import type { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
+import { ModesMigrator } from "../modes-migrator"
+import { fetchOrganizationModes } from "@kilocode/kilo-gateway"
+import { RulesMigrator } from "../rules-migrator"
+import { WorkflowsMigrator } from "../workflows-migrator"
+import { McpMigrator } from "../mcp-migrator"
+import { IgnoreMigrator } from "../ignore-migrator"
+
+export namespace KilocodeConfig {
+  const log = Log.create({ service: "kilocode.config" })
+
+  // ── Config schema extensions ─────────────────────────────────────────
+
+  /** Schema for AI-generated commit message configuration. */
+  export const CommitMessageSchema = Schema.optional(
+    Schema.Struct({
+      prompt: Schema.optional(Schema.String).annotate({
+        description:
+          "Custom system prompt for AI commit message generation. When set, replaces the default conventional commits prompt entirely.",
+      }),
+    }),
+  ).annotate({ description: "Configuration for AI-generated commit messages" })
+
+  // ── Config file constants ────────────────────────────────────────────
+
+  /** All config file names in precedence order (kilo + opencode). */
+  export const ALL_CONFIG_FILES = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"] as const
+
+  /** Config directory suffixes in update-target preference order. */
+  export const KILO_DIR_SUFFIXES = [".kilo", ".kilocode"] as const
+
+  /**
+   * List every project config file the read chain can merge: config files in
+   * ancestor config directories, then root config files, in update-target
+   * preference order.
+   */
+  export const projectConfigFiles = Effect.fn("KilocodeConfig.projectConfigFiles")(function* (input: {
+    fs: FSUtil.Interface
+    directory: string
+    worktree?: string
+  }) {
+    const dirs = yield* input.fs
+      .up({ targets: [...KILO_DIR_SUFFIXES], start: input.directory, stop: input.worktree })
+      .pipe(Effect.orDie)
+    const roots = yield* input.fs
+      .up({ targets: [...ALL_CONFIG_FILES], start: input.directory, stop: input.worktree })
+      .pipe(Effect.orDie)
+    return [...dirs.flatMap((dir) => ALL_CONFIG_FILES.map((file) => path.join(dir, file))), ...roots]
+  })
+
+  export const updateProjectConfig = Effect.fn("KilocodeConfig.updateProjectConfig")(function* (input: {
+    fs: FSUtil.Interface
+    directory: string
+    worktree?: string
+    config: Config.Info
+    read: (file: string) => Effect.Effect<string | undefined>
+    parse: (input: string, file: string) => Config.Info
+    patch: (input: string, config: Config.Info) => string
+    writable: (config: Config.Info) => Config.Info
+  }) {
+    const files = yield* projectConfigFiles(input)
+    const file = files.find((item) => existsSync(item)) ?? path.join(input.directory, ".kilo", "kilo.jsonc")
+    const source = yield* input.read(file)
+    const before = source ?? "{}"
+    const patch = input.writable(input.config)
+
+    if (file.endsWith(".jsonc")) {
+      if (!(source === undefined && Object.keys(mergeConfig({}, patch)).length === 0)) {
+        const updated = input.patch(before, patch)
+        yield* input.fs.writeWithDirs(file, updated).pipe(Effect.orDie)
+      }
+    } else {
+      const existing = input.parse(before, file)
+      const merged = mergeConfig(input.writable(existing), patch)
+      if (!(source === undefined && Object.keys(merged).length === 0)) {
+        yield* input.fs
+          .writeWithDirs(file, JSON.stringify(preserve(parseJsonc(before), patch, file), null, 2))
+          .pipe(Effect.orDie)
+      }
+    }
+
+    // Reads merge every project config file, so a delete sentinel applied only
+    // to the update target leaves lower-precedence copies of the key visible.
+    yield* propagateUnset({ fs: input.fs, files, exclude: file, patch })
+  })
+
+  export function preserve(input: unknown, patch: Config.Info, source: string) {
+    const raw = retireExperimentalFlags(isRecord(input) ? input : {}, source)
+    return mergeConfig(raw as Config.Info, patch)
+  }
+
+  /** Collect the leaf paths of null delete sentinels in a config patch. */
+  export function unsetPaths(patch: unknown, prefix: string[] = []): string[][] {
+    if (!isRecord(patch)) return []
+    return Object.entries(patch).flatMap(([key, value]) => {
+      const parts = [...prefix, key]
+      if (value === null) return [parts]
+      return unsetPaths(value, parts)
+    })
+  }
+
+  const blocked = new Set(["__proto__", "constructor", "prototype"])
+
+  function sentinel(out: Record<string, unknown>, parts: string[]) {
+    const [head, ...tail] = parts
+    if (!head || blocked.has(head)) return
+    if (tail.length === 0) {
+      out[head] = null
+      return
+    }
+    const next = isRecord(out[head]) ? out[head] : {}
+    out[head] = next
+    sentinel(next, tail)
+  }
+
+  function has(input: unknown, parts: string[]) {
+    let cur = input
+    for (const part of parts) {
+      if (!isRecord(cur) || !(part in cur)) return false
+      cur = cur[part]
+    }
+    return true
+  }
+
+  /**
+   * Remove null delete-sentinel keys from every layered config file that still
+   * contains them. Reads merge all candidate files, so deleting a key from only
+   * the primary write target leaves lower-precedence copies of it visible and
+   * the "unset" appears to have no effect. Returns true when a file changed.
+   */
+  export const propagateUnset = Effect.fn("KilocodeConfig.propagateUnset")(function* (input: {
+    fs: FSUtil.Interface
+    files: readonly string[]
+    exclude: string
+    patch: Config.Info
+  }) {
+    const paths = unsetPaths(input.patch)
+    if (paths.length === 0) return false
+    let changed = false
+    for (const file of input.files) {
+      if (file === input.exclude || !existsSync(file)) continue
+      const text = yield* input.fs.readFileStringSafe(file).pipe(Effect.orDie)
+      if (!text) continue
+      const parsed = parseJsonc(text)
+      const hits = paths.filter((parts) => has(parsed, parts))
+      if (hits.length === 0) continue
+      if (file.endsWith(".jsonc")) {
+        const updated = hits.reduce(
+          (acc, parts) =>
+            applyEdits(acc, modify(acc, parts, undefined, { formattingOptions: { insertSpaces: true, tabSize: 2 } })),
+          text,
+        )
+        if (updated === text) continue
+        yield* input.fs.writeFileString(file, updated).pipe(Effect.orDie)
+        changed = true
+        continue
+      }
+      const patch = hits.reduce(
+        (acc, parts) => {
+          sentinel(acc, parts)
+          return acc
+        },
+        {} as Record<string, unknown>,
+      )
+      const next = mergeConfig(parsed as Config.Info, patch as Config.Info)
+      yield* input.fs.writeFileString(file, JSON.stringify(next, null, 2)).pipe(Effect.orDie)
+      changed = true
+    }
+    return changed
+  })
+
+  export function scopeIndexing(info: Config.Info, scope: "global" | "local"): Config.Info {
+    if (scope !== "global") return info
+    return stripGlobalIndexing(info)
+  }
+
+  /**
+   * Merge discovered agent markdown while preserving routing explicitly defined
+   * in config. Tracking config entries separately keeps normal directory
+   * precedence between markdown files intact.
+   */
+  export function mergeAgentMarkdown(
+    existing: Record<string, ConfigAgentV1.Info>,
+    incoming: Record<string, ConfigAgentV1.Info>,
+    configured: Record<string, ConfigAgentV1.Info>,
+  ) {
+    const result = { ...existing }
+    for (const [name, agent] of Object.entries(incoming)) {
+      const current = result[name]
+      if (!current) {
+        result[name] = agent
+        continue
+      }
+
+      const config = configured[name]
+      if (agent.mode === "primary" && config && config.mode !== "primary") {
+        result[name] = mergeDeep(mergeDeep(current, agent), { ...config, mode: config.mode ?? "all" })
+        continue
+      }
+
+      result[name] = mergeDeep(current, agent)
+    }
+    return result
+  }
+
+  export function retireExperimentalFlags(info: Record<string, unknown>, source: string) {
+    if (!isRecord(info.experimental)) return info
+    const indexing = "semantic_indexing" in info.experimental
+    const codebase = "codebase_search" in info.experimental
+    const board = "shared_agent_board" in info.experimental
+    if (!indexing && !codebase && !board) return info
+    const experimental = { ...info.experimental }
+    if (indexing) {
+      delete experimental.semantic_indexing
+      log.warn("ignored retired experimental.semantic_indexing config; use indexing.enabled instead", { path: source })
+    }
+    if (codebase) {
+      delete experimental.codebase_search
+      log.warn("ignored retired experimental.codebase_search config", { path: source })
+    }
+    if (board) {
+      delete experimental.shared_agent_board
+      log.warn(
+        "ignored retired experimental.shared_agent_board config; use the top-level shared_agent_board key instead",
+        {
+          path: source,
+        },
+      )
+    }
+    return { ...info, experimental }
+  }
+
+  function stripGlobalIndexing(info: Config.Info): Config.Info {
+    // Indexing provider/storage settings can be global, but enablement is exposed separately from project enablement.
+    if (info.indexing?.enabled === undefined) return info
+    const indexing = Object.fromEntries(Object.entries(info.indexing).filter(([key]) => key !== "enabled"))
+    if (Object.keys(indexing).length > 0) return { ...info, indexing }
+    const copy = { ...info }
+    delete copy.indexing
+    return copy
+  }
+
+  // ── Warning helpers ──────────────────────────────────────────────────
+
+  /** Convert known config-loading error types into a Warning.  Returns undefined for unknown errors. */
+  export function toWarning(err: unknown): Config.Warning | undefined {
+    if (ConfigError.JsonError.isInstance(err))
+      return {
+        path: err.data.path,
+        message: `Config file at ${err.data.path} is not valid JSON(C)`,
+        detail: err.data.message || undefined,
+      }
+    if (ConfigError.InvalidError.isInstance(err)) {
+      const text = err.data.issues ? formatIssues(err.data.issues) : err.data.message
+      return {
+        path: err.data.path,
+        message: text
+          ? `Configuration is invalid at ${err.data.path}: ${text}`
+          : `Configuration is invalid at ${err.data.path}`,
+      }
+    }
+    return undefined
+  }
+
+  type Issue = { readonly message: string; readonly path: readonly string[]; readonly [key: string]: unknown }
+
+  /** Format schema issues into a human-readable string. */
+  export function formatIssues(issues: readonly Issue[]) {
+    return issues
+      .map((issue) => {
+        const loc = issue.path.map(String).join(".")
+        if (!loc) return issue.message
+        return `${loc}: ${issue.message}`
+      })
+      .join("\n")
+  }
+
+  /** Handle an invalid agent/command config: log, publish session error, collect warning. */
+  export async function handleInvalid(
+    kind: "agent" | "command",
+    item: string,
+    issues: readonly Issue[],
+    cause: Error,
+    warnings?: Config.Warning[],
+  ) {
+    const text = formatIssues(issues)
+    const message = text ? `Config file at ${item} is invalid: ${text}` : `Config file at ${item} is invalid`
+    const err = new ConfigError.InvalidError({ path: item, issues }, { cause })
+    if (warnings) warnings.push({ path: item, message, detail: text || undefined })
+    try {
+      const [{ Session }, { capture }, { AppRuntime }, { EventV2Bridge }] = await Promise.all([
+        import("@/session/session"),
+        import("@/kilocode/instance"),
+        import("@/effect/app-runtime"),
+        import("@/event-v2-bridge"),
+      ])
+      const ctx = capture()
+      if (ctx)
+        await AppRuntime.runPromise(
+          EventV2Bridge.Service.use((events) =>
+            events.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() }),
+          ).pipe(Effect.provideService(InstanceRef, ctx)),
+        )
+    } catch (e) {
+      log.warn("could not publish session error", { message, err: e })
+    }
+    if (kind === "command") {
+      log.error("failed to load command", { command: item, err, message })
+      return
+    }
+    log.error("failed to load agent", { agent: item, err, message })
+  }
+
+  /**
+   * Try running a callback. If it throws a known config error, convert to a
+   * warning and push it into the array. Unknown errors are re-thrown.
+   */
+  export function caught(warnings: Config.Warning[], source: string, err: unknown) {
+    const w = toWarning(err)
+    if (w) {
+      warnings.push(w)
+      log.warn("skipped config due to error", { source, err })
+      return
+    }
+    throw err
+  }
+
+  // ── Legacy config loading ────────────────────────────────────────────
+
+  type MergeFn = (target: Config.Info, source: Config.Info) => Config.Info
+
+  /**
+   * Load all Kilocode legacy configs (modes, workflows, rules, MCP, ignore).
+   * These have the lowest precedence in the config chain.
+   */
+  export async function loadLegacyConfigs(input: {
+    projectDir: string
+    merge: MergeFn
+  }): Promise<{ config: Config.Info; warnings: Config.Warning[] }> {
+    const warnings: Config.Warning[] = []
+    let result: Config.Info = {}
+
+    // Load Kilocode custom modes
+    try {
+      const migration = await ModesMigrator.migrate({ projectDir: input.projectDir })
+      if (Object.keys(migration.agents).length > 0) {
+        result = input.merge(result, { agent: migration.agents })
+        log.debug("loaded kilocode custom modes", {
+          count: Object.keys(migration.agents).length,
+          modes: Object.keys(migration.agents),
+        })
+      }
+      for (const skipped of migration.skipped) {
+        log.debug("skipped kilocode mode", { slug: skipped.slug, reason: skipped.reason })
+      }
+    } catch (err) {
+      log.warn("failed to load kilocode modes", { error: err })
+    }
+
+    // Load Kilocode workflows as commands
+    try {
+      const migration = await WorkflowsMigrator.migrate({ projectDir: input.projectDir })
+      if (Object.keys(migration.commands).length > 0) {
+        result = input.merge(result, { command: migration.commands })
+        log.debug("loaded kilocode workflows as commands", {
+          count: Object.keys(migration.commands).length,
+          commands: Object.keys(migration.commands),
+        })
+      }
+    } catch (err) {
+      log.warn("failed to load kilocode workflows", { error: err })
+    }
+
+    // Load Kilocode rules
+    try {
+      const migration = await RulesMigrator.migrate({ projectDir: input.projectDir })
+      if (migration.instructions.length > 0) {
+        result = input.merge(result, { instructions: migration.instructions })
+        log.debug("loaded kilocode rules", {
+          count: migration.instructions.length,
+          files: migration.instructions,
+        })
+      }
+      for (const warning of migration.warnings) {
+        log.debug("kilocode rules warning", { warning })
+      }
+    } catch (err) {
+      log.warn("failed to load kilocode rules", { error: err })
+    }
+
+    // Load Kilocode MCP servers (skip global VSCode extension paths unless running in an editor or Console daemon)
+    const skipGlobal = process.env["KILO_PLATFORM"] !== "vscode" && process.env["KILOCODE_FEATURE"] !== "daemon"
+    const mcp = await McpMigrator.loadMcpConfig(input.projectDir, skipGlobal)
+    if (Object.keys(mcp).length > 0) {
+      result = input.merge(result, { mcp })
+    }
+
+    // Load .kilocodeignore patterns
+    try {
+      const permission = await IgnoreMigrator.loadIgnoreConfig(input.projectDir)
+      if (Object.keys(permission).length > 0) {
+        result = input.merge(result, { permission })
+        log.debug("loaded kilocode ignore patterns", {
+          hasRead: !!(permission as Record<string, unknown>).read,
+          hasEdit: !!(permission as Record<string, unknown>).edit,
+        })
+      }
+    } catch (err) {
+      log.warn("failed to load kilocode ignore patterns", { error: err })
+    }
+
+    return { config: result, warnings }
+  }
+
+  // ── Organization modes ───────────────────────────────────────────────
+
+  /**
+   * Load organization custom modes from the Kilo Cloud API.
+   * Returns empty agents + warnings if the user is not authenticated.
+   */
+  export async function loadOrganizationModes(
+    auth: Record<string, any>,
+  ): Promise<{ agents: Record<string, ConfigAgentV1.Info>; warnings: Config.Warning[] }> {
+    const warnings: Config.Warning[] = []
+    try {
+      const kilo = auth["kilo"]
+      if (kilo?.type === "oauth" && kilo.access && kilo.accountId) {
+        const modes = await fetchOrganizationModes(kilo.access, kilo.accountId)
+        if (modes.length > 0) {
+          const agents = ModesMigrator.convertOrganizationModes(modes)
+          log.debug("loaded organization custom modes", {
+            count: modes.length,
+            modes: modes.map((m: any) => m.slug),
+          })
+          return { agents, warnings }
+        }
+      }
+    } catch (err) {
+      log.warn("failed to load organization custom modes", { error: err })
+    }
+    return { agents: {}, warnings }
+  }
+
+  // ── Bash permission migration ────────────────────────────────────────
+
+  /** Global config file names in read-merge order (lowest-to-highest precedence). */
+  export const GLOBAL_CONFIG_FILES = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"]
+  const BASH_PERMISSION_MIGRATION = ".bash-permission-migrated"
+
+  /**
+   * Migrate bash permission for existing users before config is consumed.
+   *
+   * Existing users (those with at least one global config file or the legacy TOML
+   * config) who have no explicit `permission.bash` setting get `bash: "allow"`
+   * written to their highest-precedence config file. This preserves their current
+   * behavior now that the new default is `bash: "ask"`. A completion marker makes
+   * the migration idempotent so subsequent user edits are not migrated again.
+   */
+  export async function migrateBashPermission() {
+    const marker = path.join(Global.Path.config, BASH_PERMISSION_MIGRATION)
+    if (existsSync(marker)) return
+    const done = () =>
+      Bun.write(marker, "").then(
+        () => undefined,
+        (err) => log.warn("failed to record bash permission migration", { path: marker, err }),
+      )
+    const files = GLOBAL_CONFIG_FILES.map((f) => path.join(Global.Path.config, f))
+    const legacy = path.join(Global.Path.config, "config")
+    const existing = files.filter((f) => existsSync(f))
+    const hasLegacy = existsSync(legacy)
+
+    // no global config → new user, they'll get the new bash:ask default
+    if (existing.length === 0 && !hasLegacy) return done()
+
+    const configs: Array<{ file: string; data: Record<string, unknown> }> = []
+    let hasFailure = false
+    // check if any config file already has an explicit bash permission
+    for (const file of existing) {
+      let text: string
+      try {
+        text = await Bun.file(file).text()
+      } catch (err) {
+        hasFailure = true
+        log.warn("skipping bash permission migration due to unreadable config", { file, err })
+        continue
+      }
+      if (text.trim() === "") {
+        const data: Record<string, unknown> = {}
+        configs.push({ file, data })
+        continue
+      }
+      const errors: ParseError[] = []
+      const data = (parseJsonc(text, errors, { allowTrailingComma: true }) as Record<string, unknown> | undefined) ?? {}
+      if (errors.length > 0) {
+        hasFailure = true
+        log.warn("skipping bash permission migration due to malformed config", { file, errors })
+        continue
+      }
+      configs.push({ file, data })
+      if (typeof data.permission === "string" || (isRecord(data.permission) && data.permission.bash)) return done()
+    }
+
+    if (hasFailure) return
+
+    // A schema-only file is generated for editor completion. It does not mean
+    // the user predates the bash permission default.
+    if (!hasLegacy && configs.every((item) => Object.keys(item.data).every((key) => key === "$schema"))) return done()
+
+    // also check legacy TOML config for bash permission
+    if (hasLegacy) {
+      try {
+        const toml = await import(pathToFileURL(legacy).href, { with: { type: "toml" } })
+        if (toml?.default?.permission?.bash) return done()
+      } catch (err) {
+        log.warn("skipping bash permission migration due to unreadable or malformed legacy config", {
+          path: legacy,
+          err,
+        })
+        return
+      }
+    }
+
+    // existing user without bash permission → write bash:allow to highest-precedence file
+    const target = existing.length > 0 ? existing[existing.length - 1] : path.join(Global.Path.config, "config.json")
+    const text = await Bun.file(target)
+      .text()
+      .catch(() => "{}")
+
+    if (target.endsWith(".jsonc")) {
+      const edits = modify(text, ["permission", "bash"], "allow", {
+        formattingOptions: { insertSpaces: true, tabSize: 2 },
+      })
+      await Bun.write(target, applyEdits(text, edits))
+      await done()
+      log.info("migrated bash permission to allow for existing user", { path: target })
+      return
+    }
+
+    const data = parseJsonc(text) ?? {}
+    const merged = { ...data, permission: { ...data.permission, bash: "allow" } }
+    await Bun.write(target, JSON.stringify(merged, null, 2))
+    await done()
+    log.info("migrated bash permission to allow for existing user", { path: target })
+  }
+
+  // ── Config merge utilities ───────────────────────────────────────────
+
+  /** Recursively remove null values and drop objects left empty after removal. */
+  export function stripNulls(obj: Record<string, unknown>): Record<string, unknown> {
+    const result: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(obj)) {
+      if (value === null) continue
+      if (isRecord(value)) {
+        const stripped = stripNulls(value)
+        if (Object.keys(stripped).length > 0) result[key] = stripped
+      } else {
+        result[key] = value
+      }
+    }
+    return result
+  }
+
+  /**
+   * Merge a patch into an existing config:
+   * 1. Normalize permission scalars → objects when the patch has an object
+   *    (e.g. existing `"bash": "ask"` + patch `"bash": { "npm *": "allow" }`
+   *    → promotes existing to `"bash": { "*": "ask" }` so mergeDeep works)
+   * 2. Deep-merge
+   * 3. Strip null delete sentinels
+   */
+  export function mergeConfig(existing: Config.Info, patch: Config.Info): Config.Info {
+    return merge(existing, patch, true)
+  }
+
+  /** Merge an untrusted project layer without changing generic config merge semantics. */
+  export function mergeProject(existing: Config.Info, patch: Config.Info): Config.Info {
+    return merge(existing, patch, false)
+  }
+
+  function merge(existing: Config.Info, patch: Config.Info, clean: boolean): Config.Info {
+    const e = { ...existing } as Record<string, unknown>
+    // Shallow-copy patch so MCP extraction (delete p.mcp) never mutates the caller's object.
+    // Callers may probe with mergeConfig({}, patch) then reuse the same patch for a write.
+    const p = { ...patch } as Record<string, unknown>
+
+    // Normalize permission scalars before merge
+    const existingPerm = e.permission
+    const patchPerm = p.permission
+    if (clean && isRecord(existingPerm) && isRecord(patchPerm)) {
+      const cloned = { ...existingPerm }
+      for (const [key, value] of Object.entries(patchPerm)) {
+        const existing = cloned[key]
+        if (typeof existing === "string" && isRecord(value)) {
+          cloned[key] = { "*": existing }
+        }
+      }
+      e.permission = cloned
+    }
+
+    // MCP servers merge by name; project URL retargets must not inherit base headers.
+    const existingMcp = e.mcp
+    const patchMcp = p.mcp
+    if (!isRecord(existingMcp) && !isRecord(patchMcp)) {
+      return (clean ? stripNulls(mergeDeep(e, p) as Record<string, unknown>) : mergeDeep(e, p)) as Config.Info
+    }
+
+    delete e.mcp
+    delete p.mcp
+    const merged = (clean ? stripNulls(mergeDeep(e, p) as Record<string, unknown>) : mergeDeep(e, p)) as Config.Info
+    const baseMcp = isRecord(existingMcp) ? (existingMcp as NonNullable<Config.Info["mcp"]>) : undefined
+    const srcMcp = isRecord(patchMcp) ? (patchMcp as NonNullable<Config.Info["mcp"]>) : undefined
+    if (!srcMcp) {
+      if (baseMcp) merged.mcp = baseMcp
+      return merged
+    }
+    if (!baseMcp) {
+      merged.mcp = srcMcp
+      return merged
+    }
+
+    const out: NonNullable<Config.Info["mcp"]> = { ...baseMcp }
+    for (const [name, src] of Object.entries(srcMcp)) {
+      if (src === null) {
+        delete out[name]
+        continue
+      }
+
+      const base = baseMcp[name]
+      if (!isRecord(src) || !isRecord(base)) {
+        out[name] = src
+        continue
+      }
+
+      const kind = "type" in base && (base.type === "local" || base.type === "remote") ? base.type : undefined
+      const next = "type" in src && (src.type === "local" || src.type === "remote") ? src.type : undefined
+      const changed = next !== undefined && next !== kind
+      const seed = changed
+        ? {
+            ...("enabled" in base ? { enabled: base.enabled } : {}),
+            ...("timeout" in base ? { timeout: base.timeout } : {}),
+          }
+        : base
+      const entry = mergeDeep(seed, src) as (typeof out)[string]
+      const srcUrl = "url" in src && typeof src.url === "string" ? src.url : undefined
+      const baseUrl = "url" in base && typeof base.url === "string" ? base.url : undefined
+      const retargeted =
+        kind === "remote" && next !== "local" && srcUrl !== undefined && baseUrl !== undefined && srcUrl !== baseUrl
+      if (!retargeted || !isRecord(entry)) {
+        out[name] = entry
+        continue
+      }
+
+      const { headers: _headers, oauth: _oauth, ...rest } = entry as Record<string, unknown>
+      if ("headers" in src) rest.headers = src.headers
+      if ("oauth" in src) rest.oauth = src.oauth
+      out[name] = rest as (typeof out)[string]
+    }
+    merged.mcp = out
+    return merged
+  }
+
+  // ── Directory check helper ───────────────────────────────────────────
+
+  /** Check whether a directory path should be treated as a config directory (for loading config files). */
+  export function isConfigDir(dir: string, flagDir?: string): boolean {
+    return dir.endsWith(".kilo") || dir.endsWith(".kilocode") || dir === flagDir
+  }
+
+  // ── Opencode config migration notice ─────────────────────────────────
+
+  /** Client-neutral docs page describing where Kilo reads configuration from. */
+  export const CONFIG_DOCS_URL = "https://kilo.ai/docs/getting-started/settings"
+
+  /** Stable id for the synthetic "move your opencode config" notification (used for client-side dismissal). */
+  export const OPENCODE_NOTIFICATION_ID = "kilo.local.opencode-config-detected"
+
+  /**
+   * Detect leftover opencode config directories. Kilo used to fall back to
+   * opencode configuration but no longer reads `.opencode` directories.
+   * Returns the existing `.opencode` locations (global + project), highest first.
+   */
+  export function detectOpencodeConfig(input: {
+    directory: string
+    worktree?: string
+    scanProject: boolean
+  }): string[] {
+    const found: string[] = []
+
+    // Global opencode config dir (sibling of the kilo global config dir, e.g. ~/.config/opencode).
+    const globalDir = path.join(path.dirname(Global.Path.config), "opencode")
+    if (existsSync(globalDir)) found.push(globalDir)
+
+    // Project `.opencode` directories, walked from the working directory up to the worktree root.
+    if (input.scanProject) {
+      let current = input.directory
+      while (true) {
+        const candidate = path.join(current, ".opencode")
+        if (existsSync(candidate) && !found.includes(candidate)) found.push(candidate)
+        if (input.worktree === current) break
+        const parent = path.dirname(current)
+        if (parent === current) break
+        current = parent
+      }
+    }
+
+    return found
+  }
+
+  /**
+   * Build the synthetic notification shown when a leftover `.opencode` config
+   * directory is found. Returns undefined when nothing needs migrating.
+   * The shape matches the gateway `Notification` schema so it can be appended
+   * to the cloud notifications list and reuse each client's dismissal path.
+   */
+  export function opencodeConfigNotification(input: { directory: string; worktree?: string; scanProject: boolean }) {
+    const found = detectOpencodeConfig(input)
+    if (found.length === 0) return undefined
+    const suffix = found.length > 1 ? ` (and ${found.length - 1} more)` : ""
+    return {
+      id: OPENCODE_NOTIFICATION_ID,
+      title: "Move your opencode configuration",
+      message:
+        `Kilo no longer falls back to opencode configuration. ` +
+        `Found opencode config at ${found[0]}${suffix}. ` +
+        `Move it into a .kilo directory (project) or ${Global.Path.config} (global).`,
+      action: { actionText: "Learn more", actionURL: CONFIG_DOCS_URL },
+      showIn: ["cli", "extension"],
+    }
+  }
+}

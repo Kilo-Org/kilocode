@@ -6,7 +6,6 @@ type Language = Parser.Language
 type SyntaxNode = Parser.SyntaxNode
 type Query = Parser.Query
 type Tree = Parser.Tree
-import { SymbolWithRange } from ".."
 import { getUriFileExtension } from "./uri"
 
 export enum LanguageName {
@@ -258,88 +257,4 @@ async function loadLanguageForFileExt(fileExtension: string): Promise<Language> 
   }
 
   return await Language.load(wasmPath)
-}
-
-// See https://tree-sitter.github.io/tree-sitter/using-parsers
-const GET_SYMBOLS_FOR_NODE_TYPES: SyntaxNode["type"][] = [
-  "class_declaration",
-  "class_definition",
-  "function_item", // function name = first "identifier" child
-  "function_definition",
-  "method_declaration", // method name = first "identifier" child
-  "method_definition",
-  "generator_function_declaration",
-  // property_identifier
-  // field_declaration
-  // "arrow_function",
-]
-
-export async function getSymbolsForFile(filepath: string, contents: string): Promise<SymbolWithRange[] | undefined> {
-  //MINIMAL_REPO - continue doesn't use this in autocomplete
-  const parser = await getParserForFile(filepath)
-  if (!parser) {
-    return
-  }
-
-  let tree: Tree | null
-  try {
-    tree = parser.parse(contents)
-  } catch {
-    console.log(`Error parsing file: ${filepath}`)
-    return
-  }
-
-  if (!tree) {
-    console.log(`Failed to parse file: ${filepath}`)
-    return
-  }
-  // console.log(`file: ${filepath}`);
-
-  // Function to recursively find all named nodes (classes and functions)
-  const symbols: SymbolWithRange[] = []
-  function findNamedNodesRecursive(node: SyntaxNode) {
-    // console.log(`node: ${node.type}, ${node.text}`);
-    if (GET_SYMBOLS_FOR_NODE_TYPES.includes(node.type)) {
-      // console.log(`parent: ${node.type}, ${node.text.substring(0, 200)}`);
-      // node.children.forEach((child) => {
-      //   console.log(`child: ${child.type}, ${child.text}`);
-      // });
-
-      // Empirically, the actual name is the last identifier in the node
-      // Especially with languages where return type is declared before the name
-      // TODO use findLast in newer version of node target
-      let identifier: SyntaxNode | undefined = undefined
-      for (let i = node.children.length - 1; i >= 0; i--) {
-        const child = node.children[i]
-        if (child && (child.type === "identifier" || child.type === "property_identifier")) {
-          identifier = child
-          break
-        }
-      }
-
-      if (identifier?.text) {
-        symbols.push({
-          filepath,
-          type: node.type,
-          name: identifier.text,
-          range: {
-            start: {
-              character: node.startPosition.column,
-              line: node.startPosition.row,
-            },
-            end: {
-              character: node.endPosition.column + 1,
-              line: node.endPosition.row + 1,
-            },
-          },
-          content: node.text,
-        })
-      }
-    }
-    node.children.forEach((child) => {
-      if (child) findNamedNodesRecursive(child)
-    })
-  }
-  findNamedNodesRecursive(tree.rootNode)
-  return symbols
 }

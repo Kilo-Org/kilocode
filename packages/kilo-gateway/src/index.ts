@@ -29,11 +29,41 @@ export {
   fetchProfileWithBalance,
   fetchDefaultModel,
   getKiloProfile,
+  defaultOrganizationId,
   getKiloBalance,
   getKiloDefaultModel,
   promptOrganizationSelection,
 } from "./api/profile.js"
-export { fetchKiloModels } from "./api/models.js"
+export { fetchKiloPassState } from "./api/kilo-pass.js"
+export {
+  fetchKiloModels,
+  type KiloModelsResult,
+  fetchKiloImageModels,
+  type KiloImageModel,
+  type KiloImageModelsResult,
+  fetchKiloTranscriptionModels,
+  type KiloTranscriptionModel,
+  type KiloTranscriptionModelsResult,
+  supportsTools,
+} from "./api/models.js"
+export {
+  EMPTY_KILO_EMBEDDING_MODEL_CATALOG,
+  fetchKiloEmbeddingModelCatalog,
+  type KiloEmbeddingModel,
+  type KiloEmbeddingModelCatalog,
+  type KiloEmbeddingModelCatalogIssue,
+} from "./api/embedding-models.js"
+export { resolveKiloGatewayBaseUrl, resolveKiloGatewayUrl, resolveKiloOpenRouterBaseUrl } from "./api/url.js"
+export {
+  AUTOCOMPLETE_MODELS,
+  DEFAULT_AUTOCOMPLETE_MODEL,
+  getAutocompleteModel,
+  getAutocompleteModelById,
+  validAutocompleteModel,
+  validAutocompleteProvider,
+  type AutocompleteModelDef,
+  type AutocompleteProviderID,
+} from "./autocomplete.js"
 export {
   fetchOrganizationModes,
   clearModesCache,
@@ -41,11 +71,93 @@ export {
   type OrganizationModeConfig,
 } from "./api/modes.js"
 export { fetchKilocodeNotifications, type KilocodeNotification } from "./api/notifications.js"
+export {
+  AUTO_DECISION_HEADER,
+  AUTO_ROUTING_CUSTOM_ROUTERS_PATH,
+  AUTO_ROUTING_ORGANIZATION_HEADER,
+  CUSTOM_ROUTER_DECIDE_PATH,
+  CUSTOM_ROUTER_EVAL_CASE_PATH,
+  CUSTOM_ROUTER_EVAL_PLAN_PATH,
+  CUSTOM_ROUTER_EVAL_RESULT_PATH,
+  CUSTOM_ROUTER_MODEL_PREFIX,
+  CUSTOM_ROUTER_SLUG_PATTERN,
+  MAX_CUSTOM_ROUTER_ENTRIES,
+  ClientCustomRouterEntrySchema,
+  CustomRouterDecideResponseSchema,
+  CustomRouterDecisionSchema,
+  CustomRouterErrorCodeSchema,
+  CustomRouterErrorResponseSchema,
+  CustomRouterEntryRefSchema,
+  CustomRouterEntrySchema,
+  CustomRouterListEntrySchema,
+  CustomRouterListResponseSchema,
+  CustomRouterReferenceSchema,
+  CustomRouterSummarySchema,
+  customRouterCandidateModel,
+  customRouterClientEntriesPath,
+  customRouterEntryKey,
+  customRouterModelId,
+  customRouterPath,
+  isCustomRouterModelId,
+  parseCustomRouterCandidateModel,
+  parseCustomRouterModelId,
+  type ClientCustomRouterEntry,
+  type ClientEvalCaseResponse,
+  type ClientEvalPlanItem,
+  type ClientEvalPlanResponse,
+  type CustomRouterDecideRequest,
+  type CustomRouterDecideResponse,
+  type CustomRouterDecision,
+  type CustomRouterClientEntryId,
+  type CustomRouterEntry,
+  type CustomRouterEntryRef,
+  type CustomRouterErrorCode,
+  type CustomRouterListEntry,
+  type CustomRouterListResponse,
+  type CustomRouterReference,
+  type CustomRouterSummary,
+} from "./api/custom-router.js"
+export {
+  CustomRouterRequestError,
+  decideCustomRouter,
+  fetchClientEvalCase,
+  fetchClientEvalPlan,
+  fetchCustomRouters,
+  registerCustomRouterClientEntry,
+  removeCustomRouterClientEntry,
+  uploadClientEvalResult,
+  type FetchLike,
+} from "./api/custom-router-api.js"
+export {
+  fetchByokEntries,
+  fetchCodingPlanSubscriptions,
+  fetchCodingPlanUsage,
+  type ByokEntry,
+  type CodingPlanSubscription,
+  type CodingPlanQuotaWindow,
+} from "./api/trpc.js"
+export {
+  fetchCloudSession,
+  fetchCloudSessionForImport,
+  SessionImportValidationError,
+  prepareSessionImport,
+  importSessionToDb,
+} from "./cloud-sessions.js"
 
 // ============================================================================
 // Server Routes (optional - requires hono and OpenCode dependencies)
 // ============================================================================
 export { createKiloRoutes } from "./server/routes.js"
+export {
+  GatewayError,
+  UnauthorizedError,
+  getOrganizationId,
+  getCloudSessions,
+  getNotifications,
+  getProfile,
+  getToken,
+  setOrganization,
+} from "./server/handlers.js"
 
 // ============================================================================
 // Note: TUI exports moved to separate entry point
@@ -63,6 +175,7 @@ export type {
   Organization,
   KilocodeProfile,
   KilocodeBalance,
+  KiloPassState,
   PollOptions,
   PollResult,
   // Provider types
@@ -71,7 +184,7 @@ export type {
   KiloMetadata,
   CustomLoaderResult,
   ProviderInfo,
-  LanguageModelV2,
+  LanguageModelV3,
 } from "./types.js"
 
 // ============================================================================
@@ -81,6 +194,15 @@ export {
   ENV_KILO_API_URL,
   DEFAULT_KILO_API_URL,
   KILO_API_BASE,
+  ENV_KILO_AI_GATEWAY_URL,
+  DEFAULT_KILO_AI_GATEWAY_URL,
+  KILO_AI_GATEWAY_BASE,
+  resolveKiloAiGatewayBase,
+  ENV_KILO_AUTO_ROUTING_URL,
+  DEFAULT_KILO_AUTO_ROUTING_URL,
+  KILO_AUTO_ROUTING_BASE,
+  resolveKiloAutoRoutingBase,
+  KILO_EVENT_SERVICE_URL,
   KILO_OPENROUTER_BASE,
   POLL_INTERVAL_MS,
   DEFAULT_MODEL,
@@ -93,6 +215,7 @@ export {
   MODELS_FETCH_TIMEOUT_MS,
   HEADER_ORGANIZATIONID,
   HEADER_TASKID,
+  HEADER_PARENT_TASKID,
   HEADER_PROJECTID,
   HEADER_TESTER,
   HEADER_EDITORNAME,

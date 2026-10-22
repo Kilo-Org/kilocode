@@ -82,6 +82,7 @@ const preview: Preview = {
     theme: "kilo-vscode",
     colorScheme: "dark",
     vscodeTheme: "dark-modern",
+    a11y: { manual: true },
   },
 }
 

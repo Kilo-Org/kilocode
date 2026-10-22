@@ -5,7 +5,7 @@ description: "Share and collaborate on Kilo Code sessions"
 
 # Sessions & Sharing
 
-A session is your platform-agnostic interaction with Kilo. It remembers your repository, your task, and the conversation so you can pause and resume work without losing context. Sessions are private to your account by default; you can optionally share a link with others who can read or fork your session.
+A session is your platform-agnostic interaction with Kilo. It remembers your repository, your task, and the conversation so you can pause and resume work without losing context. Local sessions stay on the machine where Kilo runs. Account-backed cloud sessions are private to your account by default. You can optionally share a session link with others who can read or fork it.
 
 ## What a session keeps for you
 
@@ -26,6 +26,16 @@ This information lets Kilo show your recent sessions and continue right from the
 
 1. Open Cloud Agents → Recent Sessions and select the session you want to resume.
 2. The chat will load with your previous messages and context so the agent can keep going without re-explaining your task.
+
+### Resume on another device
+
+Web and mobile session screens track the session and the message on screen, so you can pick the same session up somewhere else. Use the **Copy link** action in the session header to copy a link to the current position, then open that link on another device to land on the same message.
+
+- A link that points at an older message loads older history, up to a bounded number of pages, to reach it.
+- A link whose recorded message can no longer be reached opens at the end of the transcript.
+- A link to a session your signed-in account cannot see shows **Not found** or **Access denied** with a **Back to sessions** action.
+- If you open the link while signed out, the recorded position is kept through sign-in.
+- After you send a message or command from a resumed position, the transcript follows the new output.
 
 ## Share a session (read‑only)
 
@@ -49,7 +59,9 @@ Forking creates a new session in your account, with its own ID, and copies over 
 
 ## Where your session data lives
 
-To keep sessions fast and resumable, Kilo stores small JSON blobs associated with your session. These include your conversation history and task metadata. If you share a session, Kilo keeps a public copy used by the share link while your private session remains under your account.
+Kilo stores local session history and metadata in an SQLite database on the machine where Kilo runs. Cloud sessions and shared-session copies use Kilo's cloud services and are separate from the local database. If you share a session, Kilo keeps a public copy for the share link while the original session remains private.
+
+See [Session History and Search](/docs/code-with-ai/agents/session-history) to find the local database, search session titles or transcripts, and inspect sessions with the CLI or SQLite.
 
 Good practice:
 

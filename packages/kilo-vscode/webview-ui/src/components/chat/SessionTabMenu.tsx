@@ -1,0 +1,79 @@
+import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
+import { Icon } from "@kilocode/kilo-ui/icon"
+import { Show, type JSX, type ParentComponent } from "solid-js"
+import { useLanguage } from "../../context/language"
+
+export const SessionTabMenu: ParentComponent<{
+  showFork?: boolean
+  onFork?: () => void
+  onClose: () => void
+  onCloseOthers?: () => void
+  onCloseToRight?: () => void
+  pinned?: boolean
+  onTogglePin?: () => void
+  closeable?: boolean
+  closeShortcut?: JSX.Element
+  /** Extra items rendered above the fork/pin/close actions, e.g. per-tab copy actions. */
+  leading?: JSX.Element
+}> = (props) => {
+  const { t } = useLanguage()
+  return (
+    <ContextMenu>
+      <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
+        {props.children}
+      </ContextMenu.Trigger>
+      <ContextMenu.Portal>
+        <ContextMenu.Content class="session-tab-menu am-ctx-menu">
+          <Show when={props.leading}>
+            {(items) => (
+              <>
+                {items()}
+                <ContextMenu.Separator />
+              </>
+            )}
+          </Show>
+          <Show when={props.showFork}>
+            <ContextMenu.Item disabled={!props.onFork} onSelect={() => props.onFork?.()}>
+              <Icon name="fork" size="small" />
+              <ContextMenu.ItemLabel>{t("agentManager.tab.forkSession")}</ContextMenu.ItemLabel>
+            </ContextMenu.Item>
+            <Show when={props.closeable !== false || props.onCloseOthers || props.onTogglePin}>
+              <ContextMenu.Separator />
+            </Show>
+          </Show>
+          <Show when={props.onTogglePin}>
+            <ContextMenu.Item onSelect={() => props.onTogglePin?.()}>
+              <Icon name={props.pinned ? "pin-filled" : "pin"} size="small" />
+              <ContextMenu.ItemLabel>
+                {props.pinned ? t("agentManager.tab.unpin") : t("agentManager.tab.pin")}
+              </ContextMenu.ItemLabel>
+              <span class="session-tab-menu-hint">{t("session.tabs.pinHint")}</span>
+            </ContextMenu.Item>
+            <Show when={props.closeable !== false || props.onCloseOthers}>
+              <ContextMenu.Separator />
+            </Show>
+          </Show>
+          <Show when={props.closeable !== false}>
+            <ContextMenu.Item onSelect={props.onClose}>
+              <Icon name="close" size="small" />
+              <ContextMenu.ItemLabel>{t("agentManager.tab.close")}</ContextMenu.ItemLabel>
+              {props.closeShortcut}
+            </ContextMenu.Item>
+          </Show>
+          <Show when={props.onCloseOthers}>
+            <ContextMenu.Item onSelect={() => props.onCloseOthers?.()}>
+              <Icon name="close" size="small" />
+              <ContextMenu.ItemLabel>{t("agentManager.tab.closeOthers")}</ContextMenu.ItemLabel>
+            </ContextMenu.Item>
+          </Show>
+          <Show when={props.onCloseToRight}>
+            <ContextMenu.Item onSelect={() => props.onCloseToRight?.()}>
+              <Icon name="arrow-right" size="small" />
+              <ContextMenu.ItemLabel>{t("agentManager.tab.closeToRight")}</ContextMenu.ItemLabel>
+            </ContextMenu.Item>
+          </Show>
+        </ContextMenu.Content>
+      </ContextMenu.Portal>
+    </ContextMenu>
+  )
+}

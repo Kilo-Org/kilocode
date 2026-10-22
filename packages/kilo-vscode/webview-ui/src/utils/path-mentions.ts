@@ -47,6 +47,11 @@ export function convertToMentionPath(path: string, cwd: string): string {
   return cleaned
 }
 
+export function insertPathMentions(text: string, cursor: number, paths: string[]) {
+  const inserted = paths.map((path) => `@${path}`).join(" ") + " "
+  return { text: text.substring(0, cursor) + inserted + text.substring(cursor), pos: cursor + inserted.length }
+}
+
 /** Returns true when the line looks like a file URI or absolute path. */
 function isFilePath(line: string): boolean {
   if (line.startsWith("file://") || line.startsWith("vscode-remote://")) return true
@@ -58,16 +63,30 @@ function isFilePath(line: string): boolean {
 }
 
 /**
+ * Custom MIME type used for internal drag-and-drop of relative file paths
+ * (e.g. from diff panel file headers). Unlike VS Code's URI list, these
+ * are workspace-relative paths that can be used directly as @mentions.
+ */
+export const KILO_FILE_PATH_MIME = "application/x-kilo-file-path"
+
+/**
  * Extract file paths from a drop's DataTransfer.
- * Only considers the URI-list data type (set by VS Code when dragging files
- * from the explorer or editor tabs). Falls back to text/plain but only when
- * every non-empty line looks like a file URI or absolute path, to avoid
- * intercepting normal text drags from the editor.
+ * Checks (in order):
+ * 1. Internal relative-path drag (application/x-kilo-file-path)
+ * 2. VS Code URI-list (application/vnd.code.uri-list)
+ * 3. text/plain — only when every line looks like an absolute file path
  *
  * Returns null if no file paths are found.
  */
 export function extractDropPaths(dt: DataTransfer): string[] | null {
-  // Prefer the VS Code-specific URI list — this is always file paths
+  // Internal relative-path drag from diff file headers etc.
+  const kilo = dt.getData(KILO_FILE_PATH_MIME)
+  if (kilo) {
+    const paths = kilo.split(/\r?\n/).filter((line) => line.trim() !== "")
+    if (paths.length > 0) return paths
+  }
+
+  // VS Code-specific URI list (explorer, editor tabs)
   const uri = dt.getData("application/vnd.code.uri-list")
   if (uri) {
     const paths = uri.split(/\r?\n/).filter((line) => line.trim() !== "")

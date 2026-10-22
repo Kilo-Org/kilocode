@@ -1,9 +1,0 @@
-use tauri_plugin_window_state::StateFlags;
-
-pub const SETTINGS_STORE: &str = "kilo.settings.dat";
-pub const DEFAULT_SERVER_URL_KEY: &str = "defaultServerUrl";
-pub const UPDATER_ENABLED: bool = option_env!("TAURI_SIGNING_PRIVATE_KEY").is_some();
-
-pub fn window_state_flags() -> StateFlags {
-    StateFlags::all() - StateFlags::DECORATIONS - StateFlags::VISIBLE
-}

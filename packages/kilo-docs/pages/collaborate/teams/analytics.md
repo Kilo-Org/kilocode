@@ -13,6 +13,8 @@ Access your organization’s usage analytics through the **Usage Details** secti
 
 {% callout type="info" title="Usage Scope" %}
 This usage overview includes all of your usage of the Kilo Gateway provider. It does **NOT** include any usage made via the Kilo Code extension to other, non-Kilo Code providers. You can choose which API provider to use from the extension's main settings page.
+
+Sign in with ChatGPT requests routed through Kilo are included. Filter **Usage → Provider → `openai-chatgpt`** to isolate those requests and token totals. Cost is **$0** for every Sign in with ChatGPT request.
 {% /callout %}
 
 ## Summary Metrics
@@ -88,9 +90,9 @@ For example, if the following were in your `.git/config`:
 
 The project name would be `example-repo`.
 
-You can also manually override the project name in the `.kilocode/config.json` file in your project.
+You can also manually override the project name in the `.kilo/config.json` file in your project (the legacy `.kilocode/config.json` is still read as a fallback).
 
-To set the project identifier to `my-project`, create a `.kilocode/config.json` file with the following contents:
+To set the project identifier to `my-project`, create a `.kilo/config.json` file with the following contents:
 
 ```json
 {

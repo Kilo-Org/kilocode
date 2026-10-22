@@ -1,0 +1,165 @@
+package ai.kilocode.client.session.model
+
+import ai.kilocode.rpc.dto.PromptPartDto
+import java.awt.Image
+import java.awt.image.BufferedImage
+import java.awt.image.MultiResolutionImage
+import java.io.ByteArrayOutputStream
+import java.net.URI
+import java.util.Base64
+import java.util.UUID
+import javax.imageio.ImageIO
+import java.nio.file.Path
+import kotlin.io.path.name
+import kotlin.io.path.readBytes
+
+data class PromptAttachment(
+    val id: String,
+    val name: String,
+    val mime: String,
+    val url: String,
+    val path: Path? = null,
+    val reference: Boolean = false,
+) {
+    fun part(): PromptPartDto {
+        if (reference) {
+            return PromptPartDto(
+                type = "file",
+                mime = mime,
+                url = url,
+                filename = name,
+            )
+        }
+        return PromptPartDto(
+            type = "file",
+            mime = mime,
+            url = path?.let { data(it, mime) } ?: url,
+            filename = name,
+        )
+    }
+}
+
+object PromptAttachmentExtractor {
+    private const val MAX_BYTES = 10 * 1024 * 1024
+
+    fun files(files: List<java.io.File>): List<PromptAttachment> = files
+        .filter { it.exists() && it.canRead() }
+        .mapNotNull { file ->
+            val path = file.toPath()
+            val mime = mime(file)
+            if (image(mime)) {
+                if (!file.isFile || file.length() > MAX_BYTES) return@mapNotNull null
+                return@mapNotNull PromptAttachment(
+                    id = path.toAbsolutePath().normalize().toString(),
+                    name = path.fileName?.toString() ?: path.name,
+                    mime = mime,
+                    url = path.toUri().toString(),
+                    path = path,
+                )
+            }
+            return@mapNotNull PromptAttachment(
+                id = path.toAbsolutePath().normalize().toString(),
+                name = path.fileName?.toString() ?: path.name,
+                mime = if (file.isDirectory) mime else "text/plain",
+                url = path.toUri().toString(),
+                path = path,
+                reference = true,
+            )
+        }
+
+    // Only bitmap formats the server can actually decode and resize (Photon) and that
+    // model providers accept as an inline image. SVG and other non-raster "image/*" mimes
+    // are not in this set -- they're treated as source text instead (see mime() below) so
+    // an unsupported format cannot kill the whole prompt after the message is sent
+    // (ImageDecodeError used to die the request before the user's text was persisted).
+    private val RASTER_IMAGE_MIMES = setOf("image/png", "image/jpeg", "image/gif", "image/webp")
+
+    fun image(mime: String): Boolean = mime in RASTER_IMAGE_MIMES
+
+    fun image(raw: Any): PromptAttachment? {
+        val image = when (raw) {
+            is MultiResolutionImage -> raw.resolutionVariants.firstOrNull()?.buffered()
+            is BufferedImage -> raw
+            is Image -> raw.buffered()
+            else -> null
+        } ?: return null
+        val out = ByteArrayOutputStream()
+        ImageIO.write(image, "png", out)
+        val id = UUID.randomUUID().toString()
+        val data = Base64.getEncoder().encodeToString(out.toByteArray())
+        return PromptAttachment(
+            id = "clipboard-image:$id",
+            name = "pasted-image-$id.png",
+            mime = "image/png",
+            url = "data:image/png;base64,$data",
+        )
+    }
+
+    private fun mime(file: java.io.File): String {
+        if (file.isDirectory) return "application/x-directory"
+        return when (file.extension.lowercase()) {
+            "png" -> "image/png"
+            "jpg", "jpeg" -> "image/jpeg"
+            "gif" -> "image/gif"
+            "webp" -> "image/webp"
+            "pdf" -> "application/pdf"
+            // bmp and svg are not in RASTER_IMAGE_MIMES (bmp: the server's decoder can't open it and no
+            // provider accepts it as an image mime; svg: it's markup, not a raster), so attach their source as text
+            "txt", "md", "kt", "kts", "java", "js", "jsx", "ts", "tsx", "json", "xml", "html", "css", "scss", "yml", "yaml", "toml", "sh", "py", "rb", "go", "rs", "c", "cc", "cpp", "h", "hpp", "svg", "bmp" -> "text/plain"
+            else -> "application/octet-stream"
+        }
+    }
+
+    private fun Image.buffered(): BufferedImage? {
+        if (this is BufferedImage) return this
+        val width = getWidth(null)
+        val height = getHeight(null)
+        if (width <= 0 || height <= 0) return null
+        val image = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        try {
+            g.drawImage(this, 0, 0, null)
+        } finally {
+            g.dispose()
+        }
+        return image
+    }
+}
+
+private fun data(path: Path, mime: String) = "data:$mime;base64,${Base64.getEncoder().encodeToString(path.readBytes())}"
+
+// Rebuilds a prompt attachment from what a sent user message persisted, so reverting the message
+// puts the same chips back in the prompt box that were there when it was sent.
+
+/** A file or image the message carried. Prefers the on-disk path so the rebuilt chip is editable. */
+internal fun FileAttachment.toPromptAttachment(): PromptAttachment {
+    val path = filePath(url)
+    val name = filename?.takeIf { it.isNotBlank() } ?: path?.fileName?.toString() ?: "file"
+    return PromptAttachment(
+        id = path?.toAbsolutePath()?.normalize()?.toString() ?: "attachment:$id",
+        name = name,
+        mime = mime,
+        url = path?.toUri()?.toString() ?: url,
+        path = path,
+        reference = path == null || !PromptAttachmentExtractor.image(mime),
+    )
+}
+
+/** An attachment the CLI could not read: only its source path was persisted, in the notice. */
+internal fun Notice.toPromptAttachment(): PromptAttachment? {
+    val raw = path ?: return null
+    val path = runCatching { Path.of(raw) }.getOrNull()
+    return PromptAttachment(
+        id = raw,
+        name = name ?: path?.fileName?.toString() ?: raw,
+        mime = "text/plain",
+        url = path?.toUri()?.toString() ?: raw,
+        path = path,
+        reference = true,
+    )
+}
+
+private fun filePath(url: String): Path? {
+    if (!url.startsWith("file:")) return null
+    return runCatching { Path.of(URI(url)) }.getOrNull()
+}

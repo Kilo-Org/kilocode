@@ -51,6 +51,11 @@ export default function Custom404() {
           <div className="message-section">
             <h1 className="message-title">Page not found</h1>
             {subtitle && <p className="message-subtitle">{subtitle}</p>}
+            <p className="message-subtitle">
+              Browse the{" "}
+              <a href="/docs">documentation index</a> or fetch the{" "}
+              <a href="/docs/llms.txt">llms.txt</a> for a full page listing.
+            </p>
           </div>
 
           {/* Actions */}
@@ -61,6 +66,9 @@ export default function Custom404() {
             <Link href="/getting-started" className="btn btn-secondary">
               Getting Started
             </Link>
+            <a href="/docs/llms.txt" className="btn btn-secondary">
+              llms.txt Index
+            </a>
           </div>
         </div>
 
@@ -138,7 +146,7 @@ export default function Custom404() {
           }
 
           .prompt {
-            color: #f8f674;
+            color: var(--kilo-yellow);
           }
 
           .command {
@@ -163,7 +171,7 @@ export default function Custom404() {
           .error-bar {
             width: 4px;
             height: 80px;
-            background: #f8f674;
+            background: var(--kilo-yellow);
             margin-right: 1.5rem;
             border-radius: 2px;
           }
@@ -172,7 +180,7 @@ export default function Custom404() {
             font-family: "JetBrains Mono", monospace;
             font-size: 4.5rem;
             font-weight: 700;
-            color: #f8f674;
+            color: var(--kilo-yellow);
             line-height: 1;
           }
 

@@ -26,19 +26,6 @@ export async function kiloCustomLoader(provider: ProviderInfo): Promise<CustomLo
   const initialCount = Object.keys(provider.models).length
   console.log(`[kilo-provider] Loaded ${initialCount} models, hasAuth: ${hasKey}`)
 
-  // If no key, remove paid models
-  if (!hasKey) {
-    for (const [key, value] of Object.entries(provider.models)) {
-      if (value.cost?.input > 0 || value.cost?.output > 0) {
-        delete provider.models[key]
-      }
-    }
-    const freeCount = Object.keys(provider.models).length
-    console.log(
-      `[kilo-provider] Filtered to ${freeCount} free models (removed ${initialCount - freeCount} paid models)`,
-    )
-  }
-
   const autoload = Object.keys(provider.models).length > 0
   console.log(`[kilo-provider] Autoload: ${autoload}`)
 

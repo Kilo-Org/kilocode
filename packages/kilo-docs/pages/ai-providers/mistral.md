@@ -1,4 +1,6 @@
 ---
+title: "Using Mistral AI with Kilo Code"
+description: "Configure Mistral AI models, including Codestral, in Kilo Code. Guide to getting an API key and setup for VS Code and the CLI."
 sidebar_label: Mistral AI
 ---
 
@@ -10,22 +12,15 @@ Kilo Code supports accessing models through the Mistral AI API, including both s
 
 ## Getting an API Key
 
-1.  **Sign Up/Sign In:** Go to the [Mistral Platform](https://console.mistral.ai/). Create an account or sign in. You may need to go through a verification process.
-2.  **Create an API Key:**
-    - [La Plateforme API Key](https://console.mistral.ai/api-keys/) and/or
-    - [Codestral API Key](https://console.mistral.ai/codestral)
+1. Sign in to [Mistral AI Studio](https://console.mistral.ai/).
+2. Open **API Keys** and create a standard Studio API key.
+3. Copy the key and store it securely. Mistral only shows the full key once.
+
+You do not need a separate Codestral key. See Mistral's [API key setup guide](https://docs.mistral.ai/getting-started/quickstarts/studio/activate-and-generate-api-key) for the current steps.
 
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2.  **Select Provider:** Choose "Mistral" from the "API Provider" dropdown.
-3.  **Enter API Key:** Paste your Mistral API key into the "Mistral API Key" field if you're using a `mistral` model. If you intend to use `codestral-latest`, see the "Codestral" section below.
-4.  **Select Model:** Choose your desired model from the "Model" dropdown.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add Mistral and enter your API key.
@@ -66,14 +61,14 @@ Then set your default model:
 {% /tab %}
 {% /tabs %}
 
+## Reasoning Variants
+
+Mistral's adjustable reasoning support is exposed only for reasoning-capable Mistral Small 4 models: `mistral-small-2603` and `mistral-small-latest`. When one of these models is selected, Kilo offers a `high` variant that sends `reasoningEffort: "high"` to the Mistral provider.
+
+Other Mistral models do not get automatic reasoning variants, even if they appear in the same provider. See Mistral's [reasoning documentation](https://docs.mistral.ai/studio-api/conversations/reasoning) for provider-level details.
+
 ## Using Codestral
 
-[Codestral](https://docs.mistral.ai/capabilities/code_generation/) is a model specifically designed for code generation and interaction.
-Only for Codestral you could use different endpoints (Default: codestral.mistral.ai).
-For the La Platforme API Key change the **Codestral Base Url** to: https://api.mistral.ai
+[Codestral](https://docs.mistral.ai/models/codestral-25-08) supports code completion through Mistral's [FIM API](https://docs.mistral.ai/api/endpoint/fim). Use a standard Studio API key for requests to `https://api.mistral.ai`.
 
-To use Codestral:
-
-1.  **Select "Mistral" as the API Provider.**
-2.  **Select a Codestral Model**
-3.  **Enter your Codestral (codestral.mistral.ai) or La Plateforme (api.mistral.ai) API Key.**
+For autocomplete through Kilo Gateway, add the key under **Mistral AI** on the Kilo BYOK page and select Codestral as your autocomplete model. Follow the [Mistral autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup) for the steps and legacy-key troubleshooting.

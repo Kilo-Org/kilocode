@@ -1,0 +1,756 @@
+package ai.kilocode.backend.app
+
+import ai.kilocode.backend.cli.KiloCliDataParser
+import ai.kilocode.log.ChatLogSummary
+import ai.kilocode.log.KiloLog
+import ai.kilocode.jetbrains.api.client.DefaultApi
+import ai.kilocode.jetbrains.api.model.GlobalSession
+import ai.kilocode.jetbrains.api.model.SessionStatus
+import ai.kilocode.rpc.dto.BackgroundJobDto
+import ai.kilocode.rpc.dto.CloudSessionListDto
+import ai.kilocode.rpc.dto.SessionBoardDto
+import ai.kilocode.rpc.dto.SessionChangeDto
+import ai.kilocode.rpc.dto.SessionChangeKindDto
+import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionListDto
+import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.SessionShareDto
+import ai.kilocode.rpc.dto.SessionStatusDto
+import ai.kilocode.rpc.dto.SessionSummaryDto
+import ai.kilocode.rpc.dto.SessionTimeDto
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.serialization.json.JsonPrimitive
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.util.concurrent.ConcurrentHashMap
+
+/**
+ * Session gateway that handles session CRUD and live status tracking
+ * across all directories (workspace roots and worktrees).
+ *
+ * **Not an IntelliJ service** — owned by [KiloBackendAppService] which
+ * calls [start] after the CLI server reaches [KiloAppState.Ready] and
+ * [stop] on disconnect. The API client is guaranteed non-null between
+ * start/stop — no defensive null checks in CRUD methods.
+ *
+ * SSE `session.status` events are consumed directly from the events
+ * flow passed to [start], keeping the live [statuses] map current.
+ *
+ * All raw JSON parsing is delegated to [KiloCliDataParser].
+ */
+class KiloBackendSessionManager(
+    private val cs: CoroutineScope,
+    private val log: KiloLog,
+) {
+    companion object {
+        private const val FAST_POLL_MS = 1_000L
+        private const val SLOW_POLL_MS = 5_000L
+    }
+
+    /** Per-session directory overrides (sessionId → worktree path). */
+    private val directories = ConcurrentHashMap<String, String>()
+
+    /** Session directory cache populated while mapping CLI sessions. */
+    private val owned = ConcurrentHashMap<String, String>()
+
+    private val _statuses = MutableStateFlow<Map<String, SessionStatusDto>>(emptyMap())
+    val statuses: StateFlow<Map<String, SessionStatusDto>> = _statuses.asStateFlow()
+
+    // Field, not created in start(), so frontend subscribers survive a disconnect/reconnect.
+    private val _changes = MutableSharedFlow<SessionChangeDto>(extraBufferCapacity = 64)
+    val changes: SharedFlow<SessionChangeDto> = _changes.asSharedFlow()
+
+    private var client: DefaultApi? = null
+    private var http: OkHttpClient? = null
+    private var base: String? = null
+    private var watcher: Job? = null
+
+    /** One shared, poll-backed flow per (directory, parent session) key — see [backgroundJobs]. */
+    private val jobFlows = ConcurrentHashMap<String, Flow<List<BackgroundJobDto>>>()
+
+    fun start(api: DefaultApi, httpClient: OkHttpClient, port: Int, events: SharedFlow<SseEvent>) {
+        client = api
+        http = httpClient
+        base = "http://127.0.0.1:$port"
+        if (watcher?.isActive == true) return
+        watcher = cs.launch {
+            events.collect { event ->
+                if (event.type == "session.status") {
+                    val pair = KiloCliDataParser.parseSessionStatus(event.data)
+                    if (pair != null) {
+                        val prev = _statuses.value[pair.first]
+                        _statuses.update { it + pair }
+                        val total = _statuses.value.size
+                        log.debug { "${ChatLogSummary.sid(pair.first)} evt=session.status ${ChatLogSummary.status(pair.second)}" }
+                        if (pair.second.type != "busy") {
+                            log.info(
+                                "${ChatLogSummary.sid(pair.first)} kind=status route=session-map " +
+                                    "${ChatLogSummary.status(pair.second)} prev=${prev?.type ?: "none"} total=$total bytes=${event.data.length}",
+                            )
+                        }
+                    }
+                }
+                KiloCliDataParser.parseSessionChange(event.type, event.data)?.let { track(it) }
+            }
+        }
+        log.info("Session manager started")
+    }
+
+    fun stop() {
+        val active = _statuses.value.filterValues { it.type != "idle" }
+        if (active.isNotEmpty()) {
+            log.warn("Session manager stopping with active sessions count=${active.size} statuses=${active.values.map { it.type }.distinct()}")
+        }
+        watcher?.cancel()
+        watcher = null
+        client = null
+        http = null
+        base = null
+        owned.clear()
+        jobFlows.clear()
+        _statuses.value = emptyMap()
+        log.info("Session manager stopped")
+    }
+
+    private fun requireClient(): DefaultApi =
+        client ?: throw IllegalStateException("Session manager not started")
+
+    /**
+     * Records a session lifecycle change and republishes it.
+     *
+     * Keeping [owned] current from events — not just from listings — is what lets
+     * [KiloBackendActivityManager] resolve a directory for a session this frame never listed, so
+     * Agent Manager can badge a worktree whose session was started in another project frame.
+     *
+     * Publishing is non-blocking: this runs on the collector that also feeds [statuses], and a slow
+     * change subscriber must never stall status handling. A dropped change only costs a list
+     * refresh, which the next change or a reopened tab recovers.
+     */
+    private fun track(change: SessionChangeDto) {
+        if (change.kind == SessionChangeKindDto.DELETED) {
+            owned.remove(change.id)
+            directories.remove(change.id)
+        } else {
+            owned[change.id] = change.directory
+        }
+        val kind = change.kind.name.lowercase()
+        log.debug { "${ChatLogSummary.sid(change.id)} evt=session.$kind ${ChatLogSummary.dir(change.directory)}" }
+        if (!_changes.tryEmit(change)) {
+            log.warn("${ChatLogSummary.sid(change.id)} kind=session-change evt=session.$kind dropped=true")
+        }
+    }
+
+    // ------ session CRUD ------
+
+    fun list(dir: String): SessionListDto {
+        seed(dir)
+        val raw = requireClient().sessionList(directory = dir, roots = JsonPrimitive(true))
+        val mapped = raw.map(::dto)
+        val ids = mapped.map { it.id }.toSet()
+        val relevant = _statuses.value.filterKeys { it in ids }
+        return SessionListDto(mapped, relevant)
+    }
+
+    /**
+     * Recent root sessions for the worktree containing [dir].
+     *
+     * `worktrees=true` resolves the git worktree family (and applies `archived=false`, which plain
+     * `GET /session` does not); `current=true` then narrows that family to the one worktree [dir]
+     * lives in, so a chat opened on a worktree never lists the main checkout's sessions.
+     */
+    fun recent(dir: String, limit: Int): SessionListDto {
+        seed(dir)
+        val raw = requireClient().experimentalSessionList(
+            directory = dir,
+            worktrees = true,
+            current = DefaultApi.CurrentExperimentalSessionList.TRUE,
+            roots = JsonPrimitive(true),
+            limit = limit.toDouble(),
+            archived = JsonPrimitive(false),
+        )
+        val mapped = raw.map(::dto)
+        val ids = mapped.map { it.id }.toSet()
+        val relevant = _statuses.value.filterKeys { it in ids }
+        return SessionListDto(mapped, relevant)
+    }
+
+    /**
+     * Create a new session in the given directory.
+     *
+     * Uses raw HTTP because the generated client sends malformed JSON
+     * for the optional request body (Content-Type set but empty body).
+     */
+    fun create(dir: String): SessionDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val encoded = java.net.URLEncoder.encode(dir, "UTF-8")
+        log.info("Creating session: POST $url/session?directory=$encoded")
+
+        val request = Request.Builder()
+            .url("$url/session?directory=$encoded")
+            .post("{}".toRequestBody("application/json".toMediaType()))
+            .build()
+
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                log.warn("Session create failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Session create failed: HTTP ${response.code} — $raw")
+            }
+            val dto = KiloCliDataParser.parseSession(raw!!)
+            val meta = if (log.isDebugEnabled) ChatLogSummary.dir(dir) else "kind=session"
+            log.info("${ChatLogSummary.sid(dto.id)} kind=session $meta created=true code=${response.code}")
+            owned[dto.id] = dto.directory
+            return dto
+        }
+    }
+
+    /**
+     * Fork session [id] into [dir] via `POST /session/{id}/fork?directory={dir}`. Without [messageId]
+     * the request carries no body at all and the whole transcript is copied; with one the CLI
+     * truncates the fork at that message.
+     *
+     * Uses raw HTTP for the same reason as [create]: the generated client sends a malformed empty
+     * body. The CLI accepts a bodyless fork and `?directory=` overrides the source session directory
+     * (see packages/opencode/src/kilocode/server/httpapi/session-fork.ts and fork-routing.ts).
+     */
+    fun fork(id: String, dir: String, messageId: String? = null): SessionDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val target = url.toHttpUrl().newBuilder()
+            .addPathSegment("session")
+            .addPathSegment(id)
+            .addPathSegment("fork")
+            .addQueryParameter("directory", dir)
+            .build()
+        log.info("Forking session: POST $target message=${messageId != null}")
+        val body = messageId
+            ?.let { KiloCliDataParser.buildForkJson(it).toRequestBody("application/json".toMediaType()) }
+            ?: ByteArray(0).toRequestBody(null)
+        val request = Request.Builder()
+            .url(target)
+            .post(body)
+            .build()
+
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                log.warn("Session fork failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Session fork failed: HTTP ${response.code} — $raw")
+            }
+            val dto = KiloCliDataParser.parseSession(raw!!)
+            log.info("${ChatLogSummary.sid(dto.id)} kind=session forkedFrom=${ChatLogSummary.sid(id)} code=${response.code}")
+            owned[dto.id] = dto.directory
+            return dto
+        }
+    }
+
+    /**
+     * Load the shared agent board for root session [id] via
+     * `GET /kilocode/session/{id}/board`.
+     *
+     * Uses raw HTTP because these routes are newer than the generated client built from the
+     * pinned CLI release (see [ai.kilocode.jetbrains.api.client.DefaultApi]). Throws when [id]
+     * is not the board's root session, matching the ownership guard in
+     * `packages/kilo-vscode/src/kilo-provider/session-board.ts`.
+     */
+    fun sessionBoard(id: String, dir: String, before: String?, limit: Int?): SessionBoardDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val target = url.toHttpUrl().newBuilder()
+            .addPathSegment("kilocode")
+            .addPathSegment("session")
+            .addPathSegment(id)
+            .addPathSegment("board")
+            .addQueryParameter("directory", dir)
+            .apply {
+                if (!before.isNullOrBlank()) addQueryParameter("before", before)
+                if (limit != null) addQueryParameter("limit", limit.toString())
+            }
+            .build()
+        log.info("Loading session board: GET $target")
+        val request = Request.Builder().url(target).get().build()
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                log.warn("Session board load failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Session board load failed: HTTP ${response.code} — $raw")
+            }
+            val board = KiloCliDataParser.parseSessionBoard(raw!!)
+            if (board.ownerSessionID != id) {
+                log.warn("Session board ownership mismatch: requested=$id owner=${board.ownerSessionID}")
+                throw IllegalStateException("Session $id is not the board's root session")
+            }
+            return board
+        }
+    }
+
+    /**
+     * Clear the shared agent board for root session [id] via
+     * `POST /kilocode/session/{id}/board/reset`, guarded by [revision]. Returns null on HTTP 409
+     * (the board changed since [revision] was read) so the caller reloads instead of retrying
+     * blindly; throws on any other failure or ownership mismatch.
+     */
+    fun resetSessionBoard(id: String, dir: String, revision: Int): SessionBoardDto? {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val target = url.toHttpUrl().newBuilder()
+            .addPathSegment("kilocode")
+            .addPathSegment("session")
+            .addPathSegment(id)
+            .addPathSegment("board")
+            .addPathSegment("reset")
+            .addQueryParameter("directory", dir)
+            .build()
+        log.info("Resetting session board: POST $target revision=$revision")
+        val body = KiloCliDataParser.buildResetSessionBoardJson(revision).toRequestBody("application/json".toMediaType())
+        val request = Request.Builder().url(target).post(body).build()
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (response.code == 409) {
+                log.info("Session board reset conflict: HTTP 409, body=$raw")
+                return null
+            }
+            if (!response.isSuccessful) {
+                log.warn("Session board reset failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Session board reset failed: HTTP ${response.code} — $raw")
+            }
+            val board = KiloCliDataParser.parseSessionBoard(raw!!)
+            if (board.ownerSessionID != id) {
+                log.warn("Session board ownership mismatch: requested=$id owner=${board.ownerSessionID}")
+                throw IllegalStateException("Session $id is not the board's root session")
+            }
+            return board
+        }
+    }
+
+    // ------ background subagents ------
+
+    /**
+     * Observe background subagent jobs owned by root session [id] in [dir].
+     *
+     * Backed by a single poller per (directory, id) pair, shared across every subscriber via
+     * [kotlinx.coroutines.flow.shareIn] with [SharingStarted.WhileSubscribed] — the underlying
+     * `flow{}` coroutine starts on first collector and stops automatically once the last one leaves,
+     * so an open session's own subscription and a re-opened editor tab reuse the same poll loop
+     * instead of hitting the CLI twice. [http]/[base] are read fresh every iteration, so the poller
+     * pauses while disconnected (both go null in [stop]) and resumes on the next [start] without
+     * needing to be recreated. Cadence adapts: 1 s while any job is running, 5 s once the list is
+     * empty or every job is terminal, matching the VS Code webview's poll rate for the fast case.
+     */
+    fun backgroundJobs(id: String, dir: String): Flow<List<BackgroundJobDto>> {
+        val key = jobKey(dir, id)
+        return jobFlows.getOrPut(key) {
+            pollBackgroundJobs(id, dir)
+                // [SharingStarted.WhileSubscribed] stops the poll loop when the last collector
+                // leaves, which cancels this upstream and runs onCompletion — the point to drop the
+                // cache entry. Without it the SharedFlow and its replayed jobs list would be retained
+                // for every session opened during a long IDE run. A collector arriving in the same
+                // instant keeps working (sharing simply restarts); the next caller shares a fresh
+                // flow, so the race costs at most one extra poller, never correctness.
+                .onCompletion { jobFlows.remove(key) }
+                .shareIn(cs, SharingStarted.WhileSubscribed(), replay = 1)
+        }
+    }
+
+    private fun jobKey(dir: String, id: String) = "$dir\u0000$id"
+
+    private fun pollBackgroundJobs(id: String, dir: String): Flow<List<BackgroundJobDto>> = flow {
+        var cadence = FAST_POLL_MS
+        while (true) {
+            val h = http
+            val url = base
+            if (h != null && url != null) {
+                val jobs = withContext(Dispatchers.IO) {
+                    runCatching { fetchBackgroundJobs(h, url, id, dir) }
+                        .onFailure { log.warn("${ChatLogSummary.sid(id)} kind=background-jobs poll=true failed message=${it.message}", it) }
+                        .getOrNull()
+                }
+                if (jobs != null) {
+                    emit(jobs)
+                    cadence = if (jobs.any { it.status == "running" }) FAST_POLL_MS else SLOW_POLL_MS
+                }
+            }
+            delay(cadence)
+        }
+    }.distinctUntilChanged()
+
+    private fun fetchBackgroundJobs(h: OkHttpClient, url: String, id: String, dir: String): List<BackgroundJobDto> {
+        val target = url.toHttpUrl().newBuilder()
+            .addPathSegment("kilocode")
+            .addPathSegment("background-jobs")
+            .addQueryParameter("directory", dir)
+            .addQueryParameter("sessionID", id)
+            .build()
+        val request = Request.Builder().url(target).get().build()
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                throw RuntimeException("Background jobs list failed: HTTP ${response.code} — $raw")
+            }
+            return KiloCliDataParser.parseBackgroundJobs(raw!!)
+        }
+    }
+
+    /**
+     * Cancel background job [id] via `POST /kilocode/background-jobs/{id}/cancel?directory={dir}`.
+     * Cancels the job's child session tree, not just the job entry. Raw HTTP — these routes are
+     * newer than the generated client built from the pinned CLI release, matching [sessionBoard].
+     */
+    fun cancelBackgroundJob(id: String, dir: String): Boolean =
+        postBackgroundJobAction(id, dir, "cancel")
+
+    /**
+     * Continue background job [id] in the background via
+     * `POST /kilocode/background-jobs/{id}/promote?directory={dir}`. Returns `false` when the CLI's
+     * `KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS` kill switch is off — callers must not assume success.
+     */
+    fun promoteBackgroundJob(id: String, dir: String): Boolean =
+        postBackgroundJobAction(id, dir, "promote")
+
+    private fun postBackgroundJobAction(id: String, dir: String, action: String): Boolean {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val target = url.toHttpUrl().newBuilder()
+            .addPathSegment("kilocode")
+            .addPathSegment("background-jobs")
+            .addPathSegment(id)
+            .addPathSegment(action)
+            .addQueryParameter("directory", dir)
+            .build()
+        log.info("Background job $action: POST $target")
+        val request = Request.Builder().url(target).post(ByteArray(0).toRequestBody(null)).build()
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                log.warn("Background job $action failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Background job $action failed: HTTP ${response.code} — $raw")
+            }
+            return raw?.trim() == "true"
+        }
+    }
+
+    fun get(id: String, dir: String): SessionDto {
+        val all = requireClient().sessionList(directory = dir)
+        val raw = all.firstOrNull { it.id == id }
+            ?: throw IllegalArgumentException("Session $id not found")
+        return dto(raw)
+    }
+
+    fun delete(id: String, dir: String) {
+        requireClient().sessionDelete(sessionID = id, directory = dir)
+        directories.remove(id)
+        owned.remove(id)
+    }
+
+    /**
+     * Rename a session by sending `PATCH /session/{id}?directory={dir}` with `{"title":"..."}`.
+     *
+     * Uses raw HTTP because the generated Kotlin client is build-time only and
+     * this repo already uses raw HTTP for session create and cloud operations.
+     */
+    fun rename(id: String, dir: String, title: String): SessionDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val json = """{"title":"${escape(title)}"}"""
+        val patch = url.toHttpUrl().newBuilder()
+            .addPathSegment("session")
+            .addPathSegment(id)
+            .addQueryParameter("directory", dir)
+            .build()
+        val request = Request.Builder()
+            .url(patch)
+            .method("PATCH", json.toRequestBody("application/json".toMediaType()))
+            .build()
+
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                log.warn("Session rename failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Session rename failed: HTTP ${response.code} — $raw")
+            }
+            val dto = KiloCliDataParser.parseSession(raw!!)
+            owned[dto.id] = dto.directory
+            return dto
+        }
+    }
+
+    /**
+     * Share session [id] via `POST /session/{id}/share?directory={dir}` with an empty body, returning
+     * the updated session carrying `share.url`.
+     *
+     * Raw HTTP for the same reason as [fork]. The CLI requires Kilo credentials and refuses when
+     * `share` is disabled by config, but it maps every cause to a bare HTTP 500 with no body detail,
+     * so the message thrown here is all the UI can report.
+     */
+    fun share(id: String, dir: String): SessionDto = shareCall(id, dir, on = true)
+
+    /** Revoke a session share via `DELETE /session/{id}/share?directory={dir}`. */
+    fun unshare(id: String, dir: String): SessionDto = shareCall(id, dir, on = false)
+
+    private fun shareCall(id: String, dir: String, on: Boolean): SessionDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val target = url.toHttpUrl().newBuilder()
+            .addPathSegment("session")
+            .addPathSegment(id)
+            .addPathSegment("share")
+            .addQueryParameter("directory", dir)
+            .build()
+        log.info("Session share: on=$on $target")
+        val builder = Request.Builder().url(target)
+        val request = (if (on) builder.post(ByteArray(0).toRequestBody(null)) else builder.delete()).build()
+
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                log.warn("Session share failed: on=$on HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Session share failed: HTTP ${response.code} — $raw")
+            }
+            val dto = KiloCliDataParser.parseSession(raw!!)
+            log.info("${ChatLogSummary.sid(dto.id)} kind=session share=${dto.share != null} code=${response.code}")
+            owned[dto.id] = dto.directory
+            return dto
+        }
+    }
+
+    fun cloudSessions(dir: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val params = listOfNotNull(
+            "directory=${encode(dir)}",
+            cursor?.let { "cursor=${encode(it)}" },
+            "limit=$limit",
+            gitUrl?.let { "gitUrl=${encode(it)}" },
+        ).joinToString("&")
+        val path = "$url/kilo/cloud-sessions?$params"
+
+        val request = Request.Builder()
+            .url(path)
+            .get()
+            .build()
+
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                log.warn("Cloud sessions failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Cloud sessions failed: HTTP ${response.code} — $raw")
+            }
+            return KiloCliDataParser.parseCloudSessions(raw)
+        }
+    }
+
+    fun importCloudSession(id: String, dir: String): SessionDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val json = """{"sessionId":"${escape(id)}"}"""
+        val request = Request.Builder()
+            .url("$url/kilo/cloud/session/import?directory=${encode(dir)}")
+            .post(json.toRequestBody("application/json".toMediaType()))
+            .build()
+
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                log.warn("Cloud session import failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Cloud session import failed: HTTP ${response.code} — $raw")
+            }
+            val dto = KiloCliDataParser.parseSession(raw)
+            owned[dto.id] = dto.directory
+            return dto
+        }
+    }
+
+    fun seed(dir: String) {
+        try {
+            val raw = requireClient().sessionStatus(directory = dir)
+            val mapped = raw.mapValues { (_, v) -> statusDto(v) }
+            _statuses.update { it + mapped }
+            val meta = if (log.isDebugEnabled) ChatLogSummary.dir(dir) else "kind=status"
+            log.info("kind=status $meta seeded=${mapped.size}")
+        } catch (e: Exception) {
+            log.warn("kind=status dir=${ChatLogSummary.dir(dir)} seed=true failed message=${e.message}", e)
+        }
+    }
+
+    // ------ worktree directory management ------
+
+    fun setDirectory(id: String, dir: String) {
+        directories[id] = dir
+    }
+
+    fun getDirectory(id: String, fallback: String): String =
+        directories[id] ?: fallback
+
+    fun sessionDirectory(id: String): String? =
+        directories[id] ?: owned[id]
+
+    // ------ mapping (generated API model → DTO) ------
+
+    private fun dto(s: ai.kilocode.jetbrains.api.model.Session) = dto(
+        id = s.id,
+        project = s.projectID,
+        dir = s.directory,
+        parent = s.parentID,
+        title = s.title,
+        version = s.version,
+        created = s.time.created,
+        updated = s.time.updated,
+        archived = s.time.archived,
+        summary = s.summary?.let { summary(it.additions, it.deletions, it.files) },
+        revert = revertDto(s.revert),
+        share = s.share?.url,
+    )
+
+    private fun dto(s: ai.kilocode.jetbrains.api.model.Session1) = dto(
+        id = s.id,
+        project = s.projectID,
+        dir = s.directory,
+        parent = s.parentID,
+        title = s.title,
+        version = s.version,
+        created = s.time.created,
+        updated = s.time.updated,
+        archived = s.time.archived,
+        summary = s.summary?.let { summary(it.additions, it.deletions, it.files) },
+        revert = revertDto(s.revert),
+        share = s.share?.url,
+    )
+
+    private fun dto(s: GlobalSession) = dto(
+        id = s.id,
+        project = s.projectID,
+        dir = s.directory,
+        parent = s.parentID,
+        title = s.title,
+        version = s.version,
+        created = s.time.created,
+        updated = s.time.updated,
+        archived = s.time.archived,
+        summary = s.summary?.let { summary(it.additions, it.deletions, it.files) },
+        revert = revertDto(s.revert),
+        share = s.share?.url,
+    )
+
+    private fun dto(
+        id: String,
+        project: String,
+        dir: String,
+        parent: String?,
+        title: String,
+        version: String,
+        created: Number?,
+        updated: Number?,
+        archived: Double?,
+        summary: SessionSummaryDto?,
+        revert: SessionRevertDto?,
+        share: String?,
+    ): SessionDto {
+        owned[id] = dir
+        return SessionDto(
+            id = id,
+            projectID = project,
+            directory = dir,
+            parentID = parent,
+            title = title,
+            version = version,
+            time = SessionTimeDto(
+                created = time(id, "created", created),
+                updated = time(id, "updated", updated),
+                archived = archived,
+            ),
+            summary = summary,
+            revert = revert,
+            share = share?.takeIf { it.isNotBlank() }?.let(::SessionShareDto),
+        )
+    }
+
+    private fun summary(add: Double?, del: Double?, files: Double?) = SessionSummaryDto(
+        additions = count(add),
+        deletions = count(del),
+        files = count(files),
+    )
+
+    private fun revertDto(s: Any?) = when (s) {
+        null -> null
+        is ai.kilocode.jetbrains.api.model.SessionRevert ->
+            revertDto(s.messageID, s.partID, s.snapshot, s.diff, s.workspace?.value)
+        else -> runCatching {
+            val cls = s.javaClass
+            fun str(name: String) = cls.methods.firstOrNull { it.name == name && it.parameterCount == 0 }?.invoke(s) as? String
+            fun enumStr(name: String): String? {
+                val raw = cls.methods.firstOrNull { it.name == name && it.parameterCount == 0 }?.invoke(s) ?: return null
+                if (raw is String) return raw
+                val value = raw.javaClass.methods.firstOrNull { it.name == "getValue" && it.parameterCount == 0 }
+                return value?.invoke(raw) as? String ?: raw.toString()
+            }
+            val message = str("getMessageID")
+                ?: return@runCatching null.also { log.info("revertDto reflective getMessageID missing on ${cls.name}") }
+            revertDto(message, str("getPartID"), str("getSnapshot"), str("getDiff"), enumStr("getWorkspace"))
+        }.onFailure { log.info("revertDto reflective decode failed for ${s.javaClass.name}: ${it.message}") }.getOrNull()
+    }
+
+    private fun revertDto(message: String, part: String?, snapshot: String?, diff: String?, workspace: String? = null) =
+        SessionRevertDto(
+            messageID = message,
+            partID = part,
+            snapshot = snapshot,
+            diff = diff,
+            workspace = workspace,
+        )
+
+    private fun statusDto(s: SessionStatus) = SessionStatusDto(
+        type = s.type.value,
+        message = s.message.ifBlank { null },
+        attempt = s.attempt.safeInt(),
+        next = s.next,
+        requestID = s.requestID.ifBlank { null },
+    )
+
+    private fun encode(value: String) = java.net.URLEncoder.encode(value, Charsets.UTF_8)
+
+    private fun count(value: Double?) = value?.safeInt() ?: 0
+
+    private fun time(id: String, field: String, value: Number?): Double {
+        if (value != null) return value.toDouble()
+        log.warn("Session $id missing $field timestamp; defaulting to 0.0")
+        return 0.0
+    }
+
+    private fun escape(value: String) = buildString {
+        for (c in value) {
+            when (c) {
+                '\\' -> append("\\\\")
+                '"' -> append("\\\"")
+                '\n' -> append("\\n")
+                '\r' -> append("\\r")
+                '\t' -> append("\\t")
+                else -> if (c < '\u0020') append("\\u%04x".format(c.code)) else append(c)
+            }
+        }
+    }
+
+    private fun Long.safeInt() = coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
+    private fun Double.safeInt() = toLong().safeInt()
+}

@@ -1,0 +1,268 @@
+package ai.kilocode.rpc.dto
+
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+
+@Serializable
+enum class KiloAppStatusDto {
+    DISCONNECTED,
+    DOWNLOADING,
+    CONNECTING,
+    LOADING,
+    MIGRATION_REQUIRED,
+    READY,
+    ERROR,
+}
+
+@Serializable
+enum class ProfileStatusDto {
+    PENDING,
+    LOADED,
+    NOT_LOGGED_IN,
+}
+
+@Serializable
+data class LoadProgressDto(
+    val config: Boolean = false,
+    val notifications: Boolean = false,
+    val profile: ProfileStatusDto = ProfileStatusDto.PENDING,
+)
+
+@Serializable
+data class LoadErrorDto(
+    val resource: String,
+    val status: Int? = null,
+    val detail: String? = null,
+)
+
+@Serializable
+data class ConfigWarningDto(
+    val path: String,
+    val message: String,
+    val detail: String? = null,
+)
+
+@Serializable
+data class AgentConfigDto(
+    val model: String? = null,
+    val variant: String? = null,
+    val prompt: String? = null,
+    val description: String? = null,
+    val mode: String? = null,
+    val hidden: Boolean? = null,
+    val disable: Boolean? = null,
+    val temperature: Double? = null,
+    val top_p: Double? = null,
+    val steps: Long? = null,
+    val permission: PermissionConfigDto? = null,
+)
+
+@Serializable
+data class ConfigDto(
+    val model: String? = null,
+    val smallModel: String? = null,
+    val subagentModel: String? = null,
+    val subagentVariant: String? = null,
+    val defaultAgent: String? = null,
+    val watcher: WatcherConfigDto? = null,
+    val compaction: CompactionConfigDto? = null,
+    val instructions: List<String> = emptyList(),
+    val skills: SkillsConfigDto? = null,
+    val mcp: Map<String, McpConfigDto> = emptyMap(),
+    val agent: Map<String, AgentConfigDto> = emptyMap(),
+    val permission: PermissionConfigDto? = null,
+    /** Kilo Swarm. Null means unset, which the CLI treats as enabled. */
+    val shared_agent_board: Boolean? = null,
+    /** Snapshot tracking. Null means unset, which the CLI treats as enabled. */
+    val snapshot: Boolean? = null,
+    /** Machine-wide session retention policy. Null means disabled with a 30-day default. */
+    val retention: RetentionConfigDto? = null,
+)
+
+@Serializable
+data class WatcherConfigDto(
+    val ignore: List<String> = emptyList(),
+)
+
+@Serializable
+data class CompactionConfigDto(
+    val auto: Boolean? = null,
+    val threshold_percent: Double? = null,
+    val prune: Boolean? = null,
+)
+
+@Serializable
+data class SkillsConfigDto(
+    val paths: List<String> = emptyList(),
+    val urls: List<String> = emptyList(),
+)
+
+@Serializable
+data class SkillsPatchDto(
+    val paths: List<String>? = null,
+    val urls: List<String>? = null,
+)
+
+@Serializable
+data class McpConfigDto(
+    val type: String? = null,
+    val command: List<String>? = null,
+    val url: String? = null,
+    val environment: Map<String, String>? = null,
+    val headers: Map<String, String>? = null,
+    val enabled: Boolean? = null,
+    val timeout: Long? = null,
+    val oauth: McpOAuthDto? = null,
+)
+
+@Serializable
+data class McpOAuthDto(
+    val enabled: Boolean? = null,
+    val clientId: String? = null,
+    val clientSecret: String? = null,
+    val scope: String? = null,
+    val callbackPort: Int? = null,
+    val redirectUri: String? = null,
+    val clear: Boolean = false,
+) {
+    /**
+     * Redacts [clientSecret].
+     *
+     * The generated `toString` of a data class prints every field, and this DTO travels through RPC
+     * logging and exception messages, so the secret would otherwise end up in the IDE log.
+     */
+    override fun toString(): String =
+        "McpOAuthDto(enabled=$enabled, clientId=$clientId, clientSecret=${if (clientSecret == null) "null" else "***"}, " +
+            "scope=$scope, callbackPort=$callbackPort, redirectUri=$redirectUri, clear=$clear)"
+}
+
+typealias PermissionConfigDto = Map<String, PermissionRuleDto>
+
+@Serializable
+sealed class PermissionRuleDto {
+    @Serializable
+    @SerialName("level")
+    data class Level(val value: String? = null) : PermissionRuleDto()
+
+    @Serializable
+    @SerialName("patterns")
+    data class Patterns(val map: Map<String, String?> = emptyMap()) : PermissionRuleDto()
+}
+
+@Serializable
+data class ConfigPatchDto(
+    val values: Map<String, String?> = emptyMap(),
+    val watcher: WatcherPatchDto? = null,
+    val compaction: CompactionPatchDto? = null,
+    val instructions: List<String>? = null,
+    val skills: SkillsPatchDto? = null,
+    val mcp: Map<String, McpConfigDto?>? = null,
+    val agents: Map<String, AgentConfigPatchDto> = emptyMap(),
+    val permission: PermissionConfigDto? = null,
+    /** Kilo Swarm. Always written as an explicit boolean, matching the VS Code toggle. */
+    val shared_agent_board: Boolean? = null,
+    /** Snapshot tracking. Always written as an explicit boolean, matching the VS Code toggle. */
+    val snapshot: Boolean? = null,
+    /** Machine-wide session retention policy. */
+    val retention: RetentionPatchDto? = null,
+)
+
+@Serializable
+data class RetentionConfigDto(
+    val enabled: Boolean? = null,
+    val maxAgeDays: Int? = null,
+)
+
+@Serializable
+data class RetentionPatchDto(
+    val enabled: Boolean? = null,
+    val maxAgeDays: Int? = null,
+)
+
+@Serializable
+data class WatcherPatchDto(
+    val ignore: List<String>? = null,
+)
+
+@Serializable
+data class CompactionPatchDto(
+    val clear: List<String> = emptyList(),
+    val auto: Boolean? = null,
+    val threshold_percent: Double? = null,
+    val prune: Boolean? = null,
+)
+
+@Serializable
+data class AgentConfigPatchDto(
+    val clear: List<String> = emptyList(),
+    val model: String? = null,
+    val variant: String? = null,
+    val prompt: String? = null,
+    val description: String? = null,
+    val mode: String? = null,
+    val hidden: Boolean? = null,
+    val disable: Boolean? = null,
+    val temperature: Double? = null,
+    val top_p: Double? = null,
+    val steps: Long? = null,
+    val permission: PermissionConfigDto? = null,
+)
+
+@Serializable
+data class ProfileOrganizationDto(
+    val id: String,
+    val name: String,
+    val role: String,
+)
+
+@Serializable
+data class ProfileBalanceDto(
+    val balance: Double,
+)
+
+@Serializable
+data class ProfileKiloPassDto(
+    val currentPeriodBaseCreditsUsd: Double,
+    val currentPeriodUsageUsd: Double,
+    val currentPeriodBonusCreditsUsd: Double,
+    val nextBillingAt: String? = null,
+)
+
+@Serializable
+data class ProfileDto(
+    val email: String,
+    val name: String? = null,
+    val organizations: List<ProfileOrganizationDto> = emptyList(),
+    val hasPersonalAccount: Boolean = true,
+    val balance: ProfileBalanceDto? = null,
+    val kiloPass: ProfileKiloPassDto? = null,
+    val currentOrgId: String? = null,
+)
+
+@Serializable
+data class DeviceAuthDto(
+    val code: String?,
+    val verificationUrl: String,
+    val expiresIn: Int = 900,
+)
+
+@Serializable
+data class KiloAppStateDto(
+    val status: KiloAppStatusDto,
+    val error: String? = null,
+    val errors: List<LoadErrorDto> = emptyList(),
+    val progress: LoadProgressDto? = null,
+    val downloadPercent: Int? = null,
+    val downloadVersion: String? = null,
+    val downloadPlatform: String? = null,
+    val config: ConfigDto? = null,
+    val profile: ProfileDto? = null,
+    val migration: LegacyMigrationDetectionDto? = null,
+    /**
+     * Whether the connected CLI allows background subagents, from `GET /experimental/capabilities`.
+     * Driven by the CLI's `KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS` kill switch (default on), not by
+     * Kilo config, so it is app state rather than a [ConfigDto] field. False when the capability
+     * could not be read, matching VS Code's `features()` fallback.
+     */
+    val backgroundSubagents: Boolean = false,
+)

@@ -1,21 +1,12 @@
-import { describe, test, expect, beforeEach } from "bun:test"
+import { arch, platform, release, tmpdir } from "node:os"
+import { chmod, mkdtemp, mkdir, rm } from "node:fs/promises"
+import { join } from "node:path"
+import { describe, test, expect, beforeEach, spyOn } from "bun:test"
+import { Client } from "../client.js"
+import { Conda } from "../conda.js"
 import { Identity } from "../identity.js"
 import { TelemetryEvent } from "../events.js"
-import { PostHogSpanExporter } from "../otel-exporter.js"
-import { ExportResultCode } from "@opentelemetry/core"
-import type { ReadableSpan } from "@opentelemetry/sdk-trace-base"
-import type { PostHog } from "posthog-node"
-
-function createMockPostHogClient(): PostHog {
-  return {
-    capture: () => {},
-    alias: () => {},
-    flush: async () => {},
-    shutdown: async () => {},
-    optIn: () => {},
-    optOut: () => {},
-  } as unknown as PostHog
-}
+import { Telemetry } from "../telemetry.js"
 
 describe("Identity", () => {
   beforeEach(() => {
@@ -64,6 +55,16 @@ describe("TelemetryEvent", () => {
     expect(TelemetryEvent.COMMAND_USED).toBeDefined()
     expect(TelemetryEvent.TOOL_USED).toBeDefined()
     expect(TelemetryEvent.AGENT_USED).toBeDefined()
+    expect(TelemetryEvent.SUGGESTION_SHOWN).toBeDefined()
+    expect(TelemetryEvent.SUGGESTION_ACCEPTED).toBeDefined()
+  })
+
+  test("indexing events are defined", () => {
+    expect(TelemetryEvent.INDEXING_STARTED).toBeDefined()
+    expect(TelemetryEvent.INDEXING_COMPLETED).toBeDefined()
+    expect(TelemetryEvent.INDEXING_FILE_COUNT).toBeDefined()
+    expect(TelemetryEvent.INDEXING_BATCH_RETRY).toBeDefined()
+    expect(TelemetryEvent.INDEXING_ERROR).toBeDefined()
   })
 
   test("auth events are defined", () => {
@@ -74,6 +75,10 @@ describe("TelemetryEvent", () => {
   test("MCP events are defined", () => {
     expect(TelemetryEvent.MCP_SERVER_CONNECTED).toBeDefined()
     expect(TelemetryEvent.MCP_SERVER_ERROR).toBeDefined()
+    // Reporting models select these names; renaming them breaks dashboards.
+    const names: string[] = Object.values(TelemetryEvent)
+    expect(names).toContain("MCP Auth Started")
+    expect(names).toContain("MCP Auth Completed")
   })
 
   test("share events are defined", () => {
@@ -86,114 +91,117 @@ describe("TelemetryEvent", () => {
   })
 })
 
-describe("PostHogSpanExporter", () => {
-  function createMockSpan(name: string, attributes: Record<string, unknown>): ReadableSpan {
-    return {
-      name,
-      attributes,
-      spanContext: () => ({
-        traceId: "trace-123",
-        spanId: "span-456",
-        traceFlags: 1,
+describe("Telemetry", () => {
+  test("skips identity updates when disabled", async () => {
+    const enabled = spyOn(Client, "isEnabled").mockReturnValue(false)
+    const update = spyOn(Identity, "updateFromKiloAuth").mockResolvedValue()
+
+    try {
+      await Telemetry.updateIdentity("token")
+      expect(update).not.toHaveBeenCalled()
+    } finally {
+      enabled.mockRestore()
+      update.mockRestore()
+    }
+  })
+
+  test("includes host OS properties", () => {
+    const capture = spyOn(Client, "capture").mockImplementation(() => {})
+
+    Telemetry.track(TelemetryEvent.CLI_START)
+
+    expect(capture).toHaveBeenCalledWith(
+      TelemetryEvent.CLI_START,
+      expect.objectContaining({
+        os_name: platform(),
+        os_version: release(),
+        os_arch: arch(),
       }),
-      parentSpanId: undefined,
-      startTime: [1000, 0],
-      endTime: [1001, 0],
-      status: { code: 0 },
-      kind: 0,
-      resource: { attributes: {} },
-      instrumentationLibrary: { name: "test" },
-      events: [],
-      links: [],
-      ended: true,
-      duration: [1, 0],
-      droppedAttributesCount: 0,
-      droppedEventsCount: 0,
-      droppedLinksCount: 0,
-    } as unknown as ReadableSpan
+    )
+    capture.mockRestore()
+  })
+
+  test("ignores a forwarded conda client ID", () => {
+    const capture = spyOn(Client, "capture").mockImplementation(() => {})
+    try {
+      Telemetry.track(TelemetryEvent.CLI_START, { aauClientToken: "supplied" })
+      expect(capture.mock.calls[0]?.[1]).not.toHaveProperty("aauClientToken")
+    } finally {
+      capture.mockRestore()
+    }
+  })
+
+  test("indexing helpers are exposed", () => {
+    expect(typeof Telemetry.trackIndexingStarted).toBe("function")
+    expect(typeof Telemetry.trackIndexingCompleted).toBe("function")
+    expect(typeof Telemetry.trackIndexingFileCount).toBe("function")
+    expect(typeof Telemetry.trackIndexingBatchRetry).toBe("function")
+    expect(typeof Telemetry.trackIndexingError).toBe("function")
+  })
+
+  test("suggestion helper is exposed", () => {
+    expect(typeof Telemetry.trackSuggestionShown).toBe("function")
+    expect(typeof Telemetry.trackSuggestionAccepted).toBe("function")
+  })
+
+  test("trackToolUsed sends Tool Used event with tool name and sessionId", () => {
+    const capture = spyOn(Client, "capture").mockImplementation(() => {})
+
+    try {
+      Telemetry.trackToolUsed("chart", "session-123")
+      expect(capture).toHaveBeenCalledWith(
+        TelemetryEvent.TOOL_USED,
+        expect.objectContaining({ tool: "chart", sessionId: "session-123" }),
+      )
+    } finally {
+      capture.mockRestore()
+    }
+  })
+})
+
+const shell = process.platform === "win32" ? test.skip : test
+
+shell("uses conda's effective client ID in events", async () => {
+  const root = await mkdtemp(join(tmpdir(), "kilo-aau-"))
+  const home = process.env.HOME
+  const exe = process.env.CONDA_EXE
+  const token = "abcdefghijklmnopqrstuv"
+  const conda = join(root, "conda")
+  const capture = spyOn(Client, "capture").mockImplementation(() => {})
+  const machine = spyOn(Identity, "getMachineId").mockResolvedValue(undefined)
+
+  try {
+    await mkdir(join(root, ".conda"))
+    await Bun.write(join(root, ".conda", "aau_token"), token)
+    await Bun.write(conda, `#!/bin/sh\nprintf '%s\\n' '{"user_agent":"conda/26.1 c/${token}"}'\n`)
+    await chmod(conda, 0o755)
+    process.env.HOME = root
+    process.env.CONDA_EXE = conda
+
+    expect(await Conda.clientToken()).toBe(token)
+    await Telemetry.init({ dataPath: root, version: "test", enabled: true })
+    Telemetry.trackCliStart()
+    expect(capture).toHaveBeenCalledWith(TelemetryEvent.CLI_START, expect.objectContaining({ aauClientToken: token }))
+
+    await Bun.write(conda, "#!/bin/sh\nprintf '%s\\n' '{\"user_agent\":\"conda/26.1\"}'\n")
+    expect(await Conda.clientToken()).toBeUndefined()
+
+    Telemetry.setEnabled(false)
+    capture.mockClear()
+    Telemetry.trackCliStart()
+    expect(capture).toHaveBeenCalledTimes(1)
+    expect(capture.mock.calls.at(0)?.at(1)).not.toHaveProperty("aauClientToken")
+  } finally {
+    // Clear conda properties while the client is still active; shutdown alone
+    // leaves them behind for tests that run later in randomized order.
+    Telemetry.setEnabled(false)
+    capture.mockRestore()
+    machine.mockRestore()
+    await Client.shutdown()
+    if (home === undefined) delete process.env.HOME
+    else process.env.HOME = home
+    if (exe === undefined) delete process.env.CONDA_EXE
+    else process.env.CONDA_EXE = exe
+    await rm(root, { recursive: true, force: true })
   }
-
-  test("export returns success when disabled", () => {
-    const exporter = new PostHogSpanExporter(createMockPostHogClient(), {
-      appName: "test",
-      appVersion: "1.0.0",
-      platform: "test",
-    })
-    exporter.setEnabled(false)
-
-    const span = createMockSpan("ai.generateText", { "ai.model.id": "gpt-4" })
-    let result: { code: number } | null = null
-
-    exporter.export([span], (r) => {
-      result = r
-    })
-
-    expect(result).not.toBeNull()
-    expect(result!.code).toBe(ExportResultCode.SUCCESS)
-  })
-
-  test("sensitive attributes are not included in exported properties", () => {
-    // This test verifies the filtering logic by checking the SENSITIVE_ATTRIBUTES set
-    // and the mapAttributes method behavior through the export function
-    const exporter = new PostHogSpanExporter(createMockPostHogClient(), {
-      appName: "test",
-      appVersion: "1.0.0",
-      platform: "test",
-    })
-
-    // Create a span with both safe and sensitive attributes
-    const span = createMockSpan("ai.generateText", {
-      // Safe attributes (should be passed through)
-      "ai.model.id": "gpt-4",
-      "ai.model.provider": "openai",
-      "gen_ai.request.model": "gpt-4",
-      "gen_ai.usage.input_tokens": 100,
-      "gen_ai.usage.output_tokens": 50,
-      // Sensitive attributes (should be filtered)
-      "ai.prompt": '{"messages": [{"role": "user", "content": "secret data"}]}',
-      "ai.prompt.messages": '[{"role": "user", "content": "secret"}]',
-      "ai.response.text": "This is a secret response",
-      "ai.toolCall.args": '{"secret": "value"}',
-      "ai.toolCall.result": '{"result": "secret"}',
-      "gen_ai.prompt": "secret prompt",
-      "gen_ai.completion": "secret completion",
-    })
-
-    // The exporter should complete successfully
-    let result: { code: number } | null = null
-    exporter.export([span], (r) => {
-      result = r
-    })
-
-    expect(result).not.toBeNull()
-    expect(result!.code).toBe(ExportResultCode.SUCCESS)
-  })
-
-  test("SENSITIVE_ATTRIBUTES blocklist contains all required patterns", () => {
-    // Verify all sensitive attribute patterns are in the blocklist
-    const sensitivePatterns = [
-      "ai.prompt",
-      "ai.prompt.messages",
-      "ai.response.text",
-      "ai.response.toolCalls",
-      "ai.toolCall.args",
-      "ai.toolCall.result",
-      "ai.value",
-      "ai.values",
-      "ai.embedding",
-      "ai.embeddings",
-      "ai.prompt.tools",
-      "gen_ai.prompt",
-      "gen_ai.completion",
-      "gen_ai.input.messages",
-      "gen_ai.output.messages",
-      "gen_ai.system_instructions",
-      "gen_ai.tool.definitions",
-    ]
-
-    // Import the module to check the exported constant exists
-    // Since SENSITIVE_ATTRIBUTES is not exported, we verify through behavior
-    // by ensuring the exporter handles these attributes correctly
-    expect(sensitivePatterns.length).toBe(17)
-  })
 })

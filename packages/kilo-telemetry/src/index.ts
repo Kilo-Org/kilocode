@@ -1,6 +1,9 @@
 export { Telemetry } from "./telemetry.js"
 export { TelemetryEvent } from "./events.js"
 export { Identity } from "./identity.js"
-export { TracerSetup } from "./tracer.js"
-export { PostHogSpanExporter } from "./otel-exporter.js"
-export type { TelemetryProperties } from "./telemetry.js"
+export type {
+  McpAuthCompletedProperties,
+  McpAuthStartedProperties,
+  ReviewCommand,
+  TelemetryProperties,
+} from "./telemetry.js"

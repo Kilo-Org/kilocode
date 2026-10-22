@@ -5,18 +5,18 @@
  * Header/back button are owned by the parent HistoryView.
  */
 
-import { Component, Show, createSignal, onMount, type JSX } from "solid-js"
+import { Component, Show, createMemo, createSignal, onMount, type Accessor, type JSX } from "solid-js"
 import { List } from "@kilocode/kilo-ui/list"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { InlineInput } from "@kilocode/kilo-ui/inline-input"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { formatRelativeDate } from "../../utils/date"
 import type { SessionInfo } from "../../types/messages"
+import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 
 const DATE_GROUP_KEYS = ["time.today", "time.yesterday", "time.thisWeek", "time.thisMonth", "time.older"] as const
 
@@ -38,6 +38,9 @@ function dateGroupKey(iso: string): (typeof DATE_GROUP_KEYS)[number] {
 
 interface SessionListProps {
   onSelectSession: (id: string) => void
+  sessionIds?: Accessor<ReadonlySet<string> | undefined>
+  /** Extra per-row actions rendered after rename/delete (e.g. Agent Manager menus). */
+  rowActions?: (session: SessionInfo) => JSX.Element
 }
 
 const SessionList: Component<SessionListProps> = (props) => {
@@ -46,7 +49,15 @@ const SessionList: Component<SessionListProps> = (props) => {
   const dialog = useDialog()
 
   const [renamingId, setRenamingId] = createSignal<string | null>(null)
-  const [renameValue, setRenameValue] = createSignal("")
+  const [pendingRenameId, setPendingRenameId] = createSignal<string | null>(null)
+  const [notice, setNotice] = createSignal("")
+  let seq = 0
+
+  const items = createMemo(() => {
+    const ids = props.sessionIds?.()
+    if (!ids) return session.sessions()
+    return session.sessions().filter((item) => ids.has(item.id))
+  })
 
   onMount(() => {
     console.log("[Kilo New] SessionList mounted, loading sessions")
@@ -55,69 +66,125 @@ const SessionList: Component<SessionListProps> = (props) => {
 
   const currentSession = (): SessionInfo | undefined => {
     const id = session.currentSessionID()
-    return session.sessions().find((s) => s.id === id)
+    return items().find((s) => s.id === id)
   }
 
   function startRename(s: SessionInfo) {
     setRenamingId(s.id)
-    setRenameValue(s.title || "")
   }
 
-  function saveRename() {
+  function saveRename(title: string) {
     const id = renamingId()
-    const title = renameValue().trim()
-    if (!id || !title) {
-      cancelRename()
-      return
-    }
+    if (!id) return
     const existing = session.sessions().find((s) => s.id === id)
-    if (!existing || title !== (existing.title || "")) {
-      session.renameSession(id, title)
-    }
+    if (!existing || title !== (existing.title || "")) session.renameSession(id, title)
     setRenamingId(null)
-    setRenameValue("")
   }
 
   function cancelRename() {
     setRenamingId(null)
-    setRenameValue("")
   }
 
-  function confirmDelete(s: SessionInfo) {
-    dialog.show(() => (
-      <Dialog title={language.t("session.delete.title")} fit>
-        <div class="dialog-confirm-body">
-          <span>{language.t("session.delete.confirm", { name: s.title || language.t("session.untitled") })}</span>
-          <div class="dialog-confirm-actions">
-            <Button variant="ghost" size="large" onClick={() => dialog.close()}>
-              {language.t("common.cancel")}
-            </Button>
-            <Button
-              variant="primary"
-              size="large"
-              onClick={() => {
-                session.deleteSession(s.id)
-                dialog.close()
-              }}
-            >
-              {language.t("session.delete.button")}
-            </Button>
+  function name(s: SessionInfo) {
+    return s.title || language.t("session.untitled")
+  }
+
+  function label(action: string, s: SessionInfo) {
+    return `${action}: ${name(s)}`
+  }
+
+  function announce(s: SessionInfo | undefined) {
+    const id = ++seq
+    setNotice("")
+    if (!s) return
+    queueMicrotask(() => {
+      if (id !== seq) return
+      const current = session.currentSessionID() === s.id ? `. ${language.t("session.current")}` : ""
+      setNotice(`${name(s)}${current}`)
+    })
+  }
+
+  function confirmDelete(s: SessionInfo, restore?: HTMLElement) {
+    dialog.show(
+      () => (
+        <Dialog title={language.t("session.delete.title")} fit>
+          <div class="dialog-confirm-body">
+            <span>{language.t("session.delete.confirm", { name: name(s) })}</span>
+            <div class="dialog-confirm-actions">
+              <Button variant="ghost" size="large" onClick={() => dialog.close()}>
+                {language.t("common.cancel")}
+              </Button>
+              <Button
+                variant="primary"
+                size="large"
+                onClick={() => {
+                  session.deleteSession(s.id)
+                  dialog.close()
+                }}
+              >
+                {language.t("session.delete.button")}
+              </Button>
+            </div>
           </div>
-        </div>
-      </Dialog>
-    ))
+        </Dialog>
+      ),
+      () => {
+        queueMicrotask(() => {
+          if (restore?.isConnected) restore.focus()
+        })
+      },
+    )
   }
 
   function wrapItem(item: SessionInfo, node: JSX.Element): JSX.Element {
     return (
       <ContextMenu>
-        <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
-          {node}
+        <ContextMenu.Trigger as="div" class="session-row">
+          <Show
+            when={renamingId() === item.id}
+            fallback={
+              <>
+                {node}
+                <IconButton
+                  data-slot="session-row-action"
+                  icon="edit"
+                  size="small"
+                  variant="ghost"
+                  aria-label={label(language.t("common.rename"), item)}
+                  onClick={() => startRename(item)}
+                />
+                <IconButton
+                  data-slot="session-row-action"
+                  icon="trash"
+                  size="small"
+                  variant="ghost"
+                  aria-label={label(language.t("session.delete.title"), item)}
+                  onClick={(event) => confirmDelete(item, event.currentTarget)}
+                />
+                <Show when={props.rowActions}>{props.rowActions?.(item)}</Show>
+              </>
+            }
+          >
+            <div data-slot="session-row-editor">
+              <SessionRenameEditor title={item.title || ""} fill onSave={saveRename} onCancel={cancelRename} />
+            </div>
+          </Show>
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
-          <ContextMenu.Content>
-            <ContextMenu.Item onSelect={() => startRename(item)}>
+          <ContextMenu.Content
+            class="session-list-menu"
+            onCloseAutoFocus={(event) => {
+              if (pendingRenameId() !== item.id) return
+              event.preventDefault()
+              setPendingRenameId(null)
+              startRename(item)
+            }}
+          >
+            <ContextMenu.Item onSelect={() => setPendingRenameId(item.id)}>
               <ContextMenu.ItemLabel>{language.t("common.rename")}</ContextMenu.ItemLabel>
+            </ContextMenu.Item>
+            <ContextMenu.Item onSelect={() => session.exportSessionTranscript(item.id)}>
+              <ContextMenu.ItemLabel>{language.t("command.session.export")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
             <ContextMenu.Separator />
             <ContextMenu.Item onSelect={() => confirmDelete(item)}>
@@ -132,16 +199,17 @@ const SessionList: Component<SessionListProps> = (props) => {
   return (
     <div class="session-list">
       <List<SessionInfo>
-        items={session.sessions()}
+        items={items()}
         key={(s) => s.id}
         filterKeys={["title"]}
         current={currentSession()}
+        onMove={announce}
         onSelect={(s) => {
           if (s && renamingId() !== s.id) {
             props.onSelectSession(s.id)
           }
         }}
-        search={{ placeholder: language.t("session.search.placeholder"), autofocus: false }}
+        search={{ placeholder: language.t("session.search.placeholder"), autofocus: true }}
         emptyMessage={language.t("session.empty")}
         groupBy={(s) => language.t(dateGroupKey(s.updatedAt))}
         sortGroupsBy={(a, b) => {
@@ -151,50 +219,32 @@ const SessionList: Component<SessionListProps> = (props) => {
         itemWrapper={wrapItem}
       >
         {(s) => (
-          <Show
-            when={renamingId() === s.id}
-            fallback={
-              <>
-                <span data-slot="list-item-title">{s.title || language.t("session.untitled")}</span>
-                <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>
-                <span
-                  data-slot="session-delete-button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    confirmDelete(s)
-                  }}
-                >
-                  <IconButton
-                    icon="trash"
-                    size="small"
-                    variant="ghost"
-                    aria-label={language.t("session.delete.title")}
-                  />
-                </span>
-              </>
-            }
-          >
-            <InlineInput
-              ref={(el) => requestAnimationFrame(() => el?.focus())}
-              value={renameValue()}
-              onInput={(e) => setRenameValue(e.currentTarget.value)}
-              onKeyDown={(e) => {
-                e.stopPropagation()
-                if (e.key === "Enter") {
-                  e.preventDefault()
-                  saveRename()
-                }
-                if (e.key === "Escape") {
-                  e.preventDefault()
-                  cancelRename()
-                }
-              }}
-              onBlur={() => saveRename()}
-              style={{ width: "100%" }}
-            />
-          </Show>
+          <>
+            <span data-slot="list-item-title" dir="auto">
+              {name(s)}
+            </span>
+            <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>
+            <Show when={session.currentSessionID() === s.id}>
+              <span class="sr-only">{language.t("session.current")}</span>
+            </Show>
+          </>
         )}
       </List>
+      <Show when={props.sessionIds?.() === undefined && session.sessionsHasMore()}>
+        <div class="session-list-load-more">
+          <Button
+            variant="ghost"
+            size="small"
+            disabled={session.sessionsLoadingMore()}
+            onClick={() => session.loadMoreSessions()}
+          >
+            {language.t("common.loadMore") ?? "Load more"}
+          </Button>
+        </div>
+      </Show>
+      <div data-slot="session-list-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {notice()}
+      </div>
     </div>
   )
 }

@@ -2,13 +2,27 @@ import * as nodePath from "path"
 import * as os from "os"
 import * as fs from "fs/promises"
 import { spawn } from "../util/process"
-import simpleGit from "simple-git"
-import { parseWorktreeList, normalizePath } from "./git-import"
+import type { GitExecutable } from "../util/git-executable"
+import { simpleGit } from "simple-git"
+import {
+  parseWorktreeList,
+  normalizePath,
+  parseForEachRefOutput,
+  buildBranchList,
+  type BranchListItem,
+} from "./git-import"
+import type { Semaphore } from "./semaphore"
+import { lines } from "./git-stats-snapshot"
+import { oid } from "../shared/pr-comment-preview"
 
 interface GitOpsOptions {
   log: (...args: unknown[]) => void
   /** Override git command execution for testing. */
   runGit?: (args: string[], cwd: string) => Promise<string>
+  /** Shared concurrency gate for child process spawning. */
+  semaphore?: Semaphore
+  /** Validated Git executable shared by Agent Manager operations. */
+  binary?: GitExecutable | string
 }
 
 export interface ApplyConflict {
@@ -31,13 +45,30 @@ interface ApplyPatchResult {
 interface ExecOptions {
   env?: NodeJS.ProcessEnv
   stdin?: string
+  timeout?: number
+  signal?: AbortSignal
+  priority?: boolean
 }
 
-interface ExecResult {
+export interface ExecResult {
   code: number
   stdout: string
   stderr: string
 }
+
+export interface ExecBufferResult {
+  code: number
+  stdout: Buffer
+  stderr: string
+}
+
+/**
+ * Fixed SSH command injected by {@link nonInteractiveEnv} when the user has
+ * not already configured their own. Exported so callers can check whether a
+ * `GIT_SSH_COMMAND` originated from Kilo (safe) or was inherited from the
+ * parent process (untrusted).
+ */
+export const KILO_NON_INTERACTIVE_SSH_COMMAND = "ssh -o BatchMode=yes"
 
 /**
  * Build environment variables that prevent git and SSH from opening interactive
@@ -54,15 +85,58 @@ export function nonInteractiveEnv(): NodeJS.ProcessEnv {
     GIT_TERMINAL_PROMPT: "0",
   }
   if (!process.env.GIT_SSH_COMMAND) {
-    env.GIT_SSH_COMMAND = "ssh -o BatchMode=yes"
+    env.GIT_SSH_COMMAND = KILO_NON_INTERACTIVE_SSH_COMMAND
+  }
+  delete env.GIT_CONFIG_COUNT
+  delete env.SSH_ASKPASS
+  delete env.GIT_ASKPASS
+  delete env.EDITOR
+  delete env.VISUAL
+  delete env.GIT_EDITOR
+  delete env.GIT_SEQUENCE_EDITOR
+  delete env.PAGER
+  delete env.GIT_PAGER
+  delete env.GIT_SSH
+  delete env.GIT_CONFIG_GLOBAL
+  delete env.GIT_CONFIG_SYSTEM
+  delete env.GIT_CONFIG
+  delete env.GIT_PROXY_COMMAND
+  delete env.GIT_EXTERNAL_DIFF
+  delete env.GIT_TEMPLATE_DIR
+  delete env.GIT_EXEC_PATH
+  delete env.PREFIX
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("GIT_CONFIG_KEY_") || key.startsWith("GIT_CONFIG_VALUE_")) {
+      delete env[key]
+    }
   }
   return env
+}
+
+/**
+ * True when `env.GIT_SSH_COMMAND` is the fixed value Kilo sets, rather than
+ * an inherited one from the parent process. Use this to decide whether it's
+ * safe to pass `allowUnsafeSshCommand: true` to simple-git.
+ */
+export function isKiloOwnedSshCommand(env: NodeJS.ProcessEnv): boolean {
+  return env.GIT_SSH_COMMAND === KILO_NON_INTERACTIVE_SSH_COMMAND
 }
 
 export class GitOps {
   private readonly log: (...args: unknown[]) => void
   private readonly runGit: (args: string[], cwd: string) => Promise<string>
   private readonly controller = new AbortController()
+  private readonly semaphore: Semaphore | undefined
+  private readonly binary: GitExecutable
+  private readonly injected: boolean
+  private executableCache: Promise<string> | undefined
+  private readonly resolutionCache = new Map<string, { value: string; expires: number }>()
+  private readonly conflictCache = new Map<string, { value: Promise<string[]>; expires: number }>()
+  private static readonly CACHE_TTL_MS = 60000
+  private static readonly DEFAULT_BRANCH_CACHE_TTL_MS = 10 * 60_000
+  private static readonly MAX_CACHE_SIZE = 100
+
+  public readonly path: string
 
   get disposed(): boolean {
     return this.controller.signal.aborted
@@ -70,42 +144,93 @@ export class GitOps {
 
   constructor(options: GitOpsOptions) {
     this.log = options.log
+    this.semaphore = options.semaphore
+    const configured = options.binary
+    this.path = typeof configured === "string" ? configured : "git"
+    this.binary =
+      typeof configured === "string"
+        ? () => Promise.resolve(configured)
+        : (configured ?? (() => Promise.resolve("git")))
+    this.injected = options.runGit !== undefined
     this.runGit =
       options.runGit ??
-      ((args, cwd) =>
-        simpleGit(cwd, { abort: this.controller.signal })
+      (async (args, cwd) => {
+        const binary = await this.executable()
+        return simpleGit(cwd, {
+          abort: this.controller.signal,
+          binary,
+          unsafe: { allowUnsafeCustomBinary: binary !== "git" },
+        })
           .raw(args)
-          .then((out) => out.trim()))
+          .then((out) => out.trim())
+      })
   }
 
   dispose(): void {
     if (!this.controller.signal.aborted) {
       this.controller.abort()
     }
+    this.resolutionCache.clear()
+    this.conflictCache.clear()
+  }
+
+  private getCached(key: string): string | undefined {
+    const entry = this.resolutionCache.get(key)
+    if (entry && entry.expires > Date.now()) {
+      return entry.value
+    }
+    return undefined
+  }
+
+  private setCached(key: string, value: string, ttl = GitOps.CACHE_TTL_MS): void {
+    if (this.resolutionCache.size >= GitOps.MAX_CACHE_SIZE) {
+      let oldestKey: string | undefined
+      let oldestExpiry = Infinity
+      for (const [k, v] of this.resolutionCache) {
+        if (v.expires < oldestExpiry) {
+          oldestExpiry = v.expires
+          oldestKey = k
+        }
+      }
+      if (oldestKey) this.resolutionCache.delete(oldestKey)
+    }
+    this.resolutionCache.set(key, { value, expires: Date.now() + ttl })
   }
 
   private raw(args: string[], cwd: string): Promise<string> {
     const signal = this.controller.signal
     if (signal.aborted) return Promise.reject(new Error("GitOps disposed"))
-    return new Promise<string>((resolve, reject) => {
-      const onAbort = () => reject(new Error("GitOps disposed"))
-      signal.addEventListener("abort", onAbort, { once: true })
-      this.runGit(args, cwd).then(
-        (value) => {
-          signal.removeEventListener("abort", onAbort)
-          resolve(value)
-        },
-        (err) => {
-          signal.removeEventListener("abort", onAbort)
-          reject(err)
-        },
-      )
+    return this.executable().then(() => {
+      if (signal.aborted) throw new Error("GitOps disposed")
+      const invoke = () => {
+        const pending = this.runGit(args, cwd)
+        if (!this.injected) return pending
+        return new Promise<string>((resolve, reject) => {
+          const onAbort = () => reject(new Error("GitOps disposed"))
+          signal.addEventListener("abort", onAbort, { once: true })
+          pending.then(
+            (value) => {
+              signal.removeEventListener("abort", onAbort)
+              resolve(value)
+            },
+            (err) => {
+              signal.removeEventListener("abort", onAbort)
+              reject(err)
+            },
+          )
+        })
+      }
+      return this.semaphore ? this.semaphore.run(invoke) : invoke()
     })
   }
 
   /** Return the name of the currently checked-out branch, or `"HEAD"` if detached. */
   async currentBranch(cwd: string): Promise<string> {
     return this.raw(["rev-parse", "--abbrev-ref", "HEAD"], cwd).catch(() => "")
+  }
+
+  async root(cwd: string): Promise<string | undefined> {
+    return this.raw(["rev-parse", "--show-toplevel"], cwd).catch(() => undefined)
   }
 
   /**
@@ -115,44 +240,106 @@ export class GitOps {
    * 3. Falls back to `origin`
    */
   async resolveRemote(cwd: string, branch?: string): Promise<string> {
+    const cacheKey = `remote:${cwd}:${branch}`
+    const cached = this.getCached(cacheKey)
+    if (cached) return cached
+
     const upstream = await this.raw(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], cwd).catch(
       () => "",
     )
-    if (upstream.includes("/")) return upstream.split("/")[0]
+    if (upstream.includes("/")) {
+      const result = upstream.split("/")[0]
+      this.setCached(cacheKey, result)
+      return result
+    }
 
     const name = branch || (await this.raw(["branch", "--show-current"], cwd).catch(() => ""))
     if (name) {
       const configured = await this.raw(["config", `branch.${name}.remote`], cwd).catch(() => "")
-      if (configured) return configured
+      if (configured) {
+        this.setCached(cacheKey, configured)
+        return configured
+      }
     }
 
-    return "origin"
+    const result = "origin"
+    this.setCached(cacheKey, result)
+    return result
   }
 
   /** Resolve the upstream tracking ref for `branch`, or `undefined` if none is set. Note: the `@{upstream}` check uses the current HEAD, not `branch`. */
   async resolveTrackingBranch(cwd: string, branch: string): Promise<string | undefined> {
+    const cacheKey = `tracking:${cwd}:${branch}`
+    const cached = this.getCached(cacheKey)
+    if (cached !== undefined) return cached === "" ? undefined : cached
+
     const upstream = await this.raw(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd).catch(() => "")
-    if (upstream) return upstream
+    if (upstream) {
+      this.setCached(cacheKey, upstream)
+      return upstream
+    }
 
     const remote = await this.resolveRemote(cwd, branch)
     const ref = `${remote}/${branch}`
     const resolved = await this.raw(["rev-parse", "--verify", ref], cwd).catch(() => "")
-    if (resolved) return ref
+    if (resolved) {
+      this.setCached(cacheKey, ref)
+      return ref
+    }
 
+    this.setCached(cacheKey, "")
     return undefined
   }
 
-  /** Resolve the repo's default branch via <remote>/HEAD. */
+  /** Resolve the repo's default branch from the remote, then local <remote>/HEAD. */
   async resolveDefaultBranch(cwd: string, branch?: string): Promise<string | undefined> {
     const remote = await this.resolveRemote(cwd, branch)
-    const head = await this.raw(["symbolic-ref", "--short", `refs/remotes/${remote}/HEAD`], cwd).catch(() => "")
-    return head || undefined
+    const cacheKey = `default-branch:${cwd}:${remote}`
+    const cached = this.getCached(cacheKey)
+    if (cached !== undefined) return cached === "" ? undefined : cached
+
+    const advertised = await this.remoteHead(cwd, remote)
+    const match = advertised.match(/^ref:\s+refs\/heads\/(.+)\s+HEAD$/m)
+    const current = match?.[1] ? `${remote}/${match[1]}` : undefined
+    const local = current
+      ? ""
+      : await this.raw(["symbolic-ref", "--short", `refs/remotes/${remote}/HEAD`], cwd).catch(() => "")
+    const result = current || local || undefined
+    this.setCached(cacheKey, result ?? "", GitOps.DEFAULT_BRANCH_CACHE_TTL_MS)
+    return result
   }
 
-  async hasRemoteRef(cwd: string, ref: string): Promise<boolean> {
-    return this.raw(["rev-parse", "--verify", "--quiet", `refs/remotes/${ref}`], cwd)
-      .then(() => true)
-      .catch(() => false)
+  private async remoteHead(cwd: string, remote: string): Promise<string> {
+    const args = ["ls-remote", "--symref", remote, "HEAD"]
+    if (this.injected) return this.raw(args, cwd).catch(() => "")
+
+    const result = await this.exec(args, cwd, { env: nonInteractiveEnv(), timeout: 5000 })
+    return result.code === 0 ? result.stdout.trim() : ""
+  }
+
+  /**
+   * List local branches and `origin/*` remotes sorted by last commit date,
+   * with the resolved default branch flagged. Mirrors WorktreeManager's
+   * `listBranches` shape but takes `cwd` per call so it works outside the
+   * worktree context (e.g. for the diff viewer's base branch picker).
+   */
+  async listBranches(cwd: string): Promise<{ branches: BranchListItem[]; defaultBranch: string }> {
+    const def = (await this.resolveDefaultBranch(cwd)) ?? ""
+    const raw = await this.raw(
+      [
+        "for-each-ref",
+        "--sort=-committerdate",
+        "--format=%(refname)\t%(committerdate:iso-strict)",
+        "refs/heads/",
+        "refs/remotes/origin/",
+      ],
+      cwd,
+    ).catch((err) => {
+      this.log("listBranches: for-each-ref failed", err instanceof Error ? err.message : String(err))
+      return ""
+    })
+    const { locals, remotes, dates } = parseForEachRefOutput(raw)
+    return { branches: buildBranchList(locals, remotes, dates, def), defaultBranch: def }
   }
 
   /** Return the set of worktree paths for the repo, excluding bare entries. */
@@ -200,20 +387,7 @@ export class GitOps {
     if (!untracked) return tracked
 
     const paths = untracked.split("\n").filter((line) => line.trim())
-    const counts = await Promise.all(
-      paths.map(async (p) => {
-        try {
-          const full = nodePath.resolve(cwd, p)
-          const stat = await fs.stat(full)
-          if (stat.size > 1_000_000) return 0
-          const content = await fs.readFile(full, "utf-8")
-          return content.split("\n").length
-        } catch (err) {
-          this.log(`Failed to read untracked file ${p}:`, err)
-          return 0
-        }
-      }),
-    )
+    const counts = await Promise.all(paths.map((file) => lines(nodePath.resolve(cwd, file))))
 
     return {
       files: tracked.files + paths.length,
@@ -284,6 +458,55 @@ export class GitOps {
     } finally {
       await fs.rm(tmp, { recursive: true, force: true })
     }
+  }
+
+  /**
+   * Revert a single file in a worktree back to the merge-base state.
+   * For modified/deleted files: restores the file from the merge-base commit.
+   * For added (new) files: removes the file from the worktree.
+   */
+  async revertFile(
+    cwd: string,
+    baseBranch: string,
+    file: string,
+    status?: "added" | "deleted" | "modified",
+  ): Promise<{ ok: boolean; message: string }> {
+    // Validate path: no absolute paths, no ".." traversal
+    if (nodePath.isAbsolute(file) || file.split(/[\\/]/).includes("..")) {
+      return { ok: false, message: "Invalid file path" }
+    }
+
+    const base = (await this.raw(["merge-base", "HEAD", baseBranch], cwd).catch(() => "")).trim()
+    if (!base) {
+      return { ok: false, message: "Could not resolve merge-base" }
+    }
+
+    if (status === "added") {
+      // New file — remove it from disk and unstage
+      const full = nodePath.resolve(cwd, file)
+      const root = await fs.realpath(cwd)
+      const resolved = await fs.realpath(full).catch(() => full)
+      if (resolved !== root && !resolved.startsWith(root + nodePath.sep)) {
+        return { ok: false, message: "File path outside worktree" }
+      }
+      await fs.rm(full, { force: true })
+      // Also remove from git index in case it was staged
+      await this.raw(["rm", "--cached", "--force", "--ignore-unmatch", "--", file], cwd).catch(() => "")
+      return { ok: true, message: "Removed added file" }
+    }
+
+    // Modified or deleted file — restore from merge-base
+    const result = await this.exec(["checkout", base, "--", file], cwd)
+    if (result.code !== 0) {
+      return { ok: false, message: result.stderr.trim() || "Failed to revert file" }
+    }
+    // Only unstage for modified files. For deleted files the checkout already
+    // restored the file into the index correctly — resetting to HEAD would drop
+    // it from the index and make it appear as a new untracked file.
+    if (status === "modified") {
+      await this.raw(["reset", "HEAD", "--", file], cwd).catch(() => "")
+    }
+    return { ok: true, message: "Reverted file to base" }
   }
 
   async checkApplyPatch(targetPath: string, patch: string): Promise<ApplyCheckResult> {
@@ -360,41 +583,188 @@ export class GitOps {
     return [{ reason: "Patch does not apply cleanly" }]
   }
 
-  private exec(args: string[], cwd: string, options?: ExecOptions): Promise<ExecResult> {
-    if (this.controller.signal.aborted) {
-      return Promise.resolve({ code: 1, stdout: "", stderr: "GitOps disposed" })
+  /**
+   * Conflicting file paths between two commits, computed with `git merge-tree`
+   * so the worktree, index, and stash stay untouched. Missing commits are
+   * fetched first because a conflicting PR head often only exists remotely.
+   */
+  conflicts(cwd: string, remote: string, base: string, head: string): Promise<string[]> {
+    if (!oid(base) || !oid(head)) return Promise.reject(new Error("Invalid pull request commit ID"))
+    if (!/^[A-Za-z0-9._-]+$/.test(remote)) return Promise.reject(new Error("Invalid Git remote"))
+    const key = `${cwd}\u0000${remote}\u0000${base}\u0000${head}`
+    const now = Date.now()
+    const cached = this.conflictCache.get(key)
+    if (cached && cached.expires > now) return cached.value
+    if (cached) this.conflictCache.delete(key)
+    const task = this.computeConflicts(cwd, remote, base, head)
+    if (this.conflictCache.size >= GitOps.MAX_CACHE_SIZE) {
+      let oldestKey: string | undefined
+      let oldestExpiry = Infinity
+      for (const [entryKey, entry] of this.conflictCache) {
+        if (entry.expires < oldestExpiry) {
+          oldestExpiry = entry.expires
+          oldestKey = entryKey
+        }
+      }
+      if (oldestKey) this.conflictCache.delete(oldestKey)
     }
-    return new Promise((resolve) => {
-      const child = spawn("git", args, {
+    this.conflictCache.set(key, { value: task, expires: now + GitOps.CACHE_TTL_MS })
+    void task.catch(() => {
+      if (this.conflictCache.get(key)?.value === task) this.conflictCache.delete(key)
+    })
+    return task
+  }
+
+  private async computeConflicts(cwd: string, remote: string, base: string, head: string): Promise<string[]> {
+    const missing: string[] = []
+    for (const sha of [base, head]) {
+      const probe = await this.exec(["cat-file", "-e", `${sha}^{commit}`], cwd)
+      if (probe.code !== 0) missing.push(sha)
+    }
+    if (missing.length > 0) {
+      const fetch = await this.exec(["fetch", "--no-tags", remote, "--", ...missing], cwd, {
+        env: nonInteractiveEnv(),
+        timeout: 60_000,
+      })
+      if (fetch.code !== 0) throw new Error(fetch.stderr.trim() || "Failed to fetch pull request commits")
+    }
+    const result = await this.exec(
+      ["-c", "core.quotePath=false", "merge-tree", "--write-tree", "--name-only", base, head],
+      cwd,
+    )
+    if (result.code === 0) return []
+    if (result.code !== 1) throw new Error(result.stderr.trim() || "Failed to compute merge conflicts")
+    return parseConflictPaths(result.stdout)
+  }
+
+  /**
+   * Run a git command returning `{code, stdout, stderr}`. Gated by the shared
+   * semaphore and respects the dispose abort signal. Never throws — commands
+   * with non-zero exit codes resolve normally (nothrow semantics), making this
+   * suitable for callers that need to tolerate legitimate failures (e.g.
+   * `merge-base` on an orphan branch, `ls-files --error-unmatch`).
+   */
+  execGit(
+    args: string[],
+    cwd: string,
+    options?: { stdin?: string; signal?: AbortSignal; priority?: boolean; env?: NodeJS.ProcessEnv },
+  ): Promise<ExecResult> {
+    return this.exec(args, cwd, options)
+  }
+
+  execGitBuffer(
+    args: string[],
+    cwd: string,
+    options?: { stdin?: string; signal?: AbortSignal; priority?: boolean },
+  ): Promise<ExecBufferResult> {
+    return this.execBuffer(args, cwd, options)
+  }
+
+  private async exec(args: string[], cwd: string, options?: ExecOptions): Promise<ExecResult> {
+    const result = await this.execBuffer(args, cwd, options)
+    return { code: result.code, stdout: result.stdout.toString("utf8"), stderr: result.stderr }
+  }
+
+  private async execBuffer(args: string[], cwd: string, options?: ExecOptions): Promise<ExecBufferResult> {
+    if (this.controller.signal.aborted || options?.signal?.aborted) {
+      return { code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" }
+    }
+    const cmd = await this.executable(options?.signal).catch(() => undefined)
+    if (!cmd || this.controller.signal.aborted || options?.signal?.aborted) {
+      return { code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" }
+    }
+    const invoke = () => this.invoke(cmd, args, cwd, options)
+    return this.semaphore ? this.semaphore.run(invoke, options?.signal, options?.priority) : invoke()
+  }
+
+  private executable(cancel?: AbortSignal): Promise<string> {
+    const signal = this.controller.signal
+    if (signal.aborted || cancel?.aborted) return Promise.reject(new Error("GitOps disposed"))
+
+    return new Promise<string>((resolve, reject) => {
+      const clear = () => {
+        signal.removeEventListener("abort", abort)
+        cancel?.removeEventListener("abort", abort)
+      }
+      const abort = () => {
+        clear()
+        reject(new Error("GitOps disposed"))
+      }
+      signal.addEventListener("abort", abort, { once: true })
+      cancel?.addEventListener("abort", abort, { once: true })
+      const cache = (this.executableCache ??= Promise.resolve().then(() => this.binary()))
+      cache.then(
+        (value) => {
+          clear()
+          resolve(value)
+        },
+        (err) => {
+          clear()
+          if (this.executableCache === cache) this.executableCache = undefined
+          reject(err)
+        },
+      )
+    })
+  }
+
+  private invoke(cmd: string, args: string[], cwd: string, options?: ExecOptions): Promise<ExecBufferResult> {
+    if (this.controller.signal.aborted || options?.signal?.aborted) {
+      return Promise.resolve({ code: 1, stdout: Buffer.alloc(0), stderr: "GitOps disposed" })
+    }
+
+    return new Promise<ExecBufferResult>((resolve) => {
+      const child = spawn(cmd, args, {
         cwd,
         env: options?.env,
-        signal: this.controller.signal,
         stdio: ["pipe", "pipe", "pipe"],
       })
-
-      if (options?.stdin !== undefined) {
-        if (!child.stdin) {
-          resolve({ code: 1, stdout: "", stderr: "stdin not available for git process" })
-          return
-        }
-        child.stdin.end(options.stdin)
-      }
-
       const out: Buffer[] = []
       const err: Buffer[] = []
+      let failure: string | undefined
+      const abort = () => child.kill("SIGTERM")
+      const timeout = options?.timeout
+        ? setTimeout(() => {
+            failure = `Git command timed out after ${options.timeout}ms`
+            child.kill("SIGTERM")
+          }, options.timeout)
+        : undefined
+
+      this.controller.signal.addEventListener("abort", abort, { once: true })
+      options?.signal?.addEventListener("abort", abort, { once: true })
       child.stdout?.on("data", (chunk: Buffer) => out.push(chunk))
       child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
 
       child.on("error", (error) => {
-        resolve({ code: 1, stdout: "", stderr: error.message })
+        failure = error.message
       })
       child.on("close", (code) => {
+        if (timeout) clearTimeout(timeout)
+        this.controller.signal.removeEventListener("abort", abort)
+        options?.signal?.removeEventListener("abort", abort)
         resolve({
           code: code ?? 1,
-          stdout: Buffer.concat(out).toString("utf8"),
-          stderr: Buffer.concat(err).toString("utf8"),
+          stdout: Buffer.concat(out),
+          stderr: failure ?? Buffer.concat(err).toString("utf8"),
         })
       })
+
+      if (options?.stdin === undefined) return
+      if (child.stdin) {
+        child.stdin.end(options.stdin)
+        return
+      }
+      failure = "stdin not available for git process"
+      child.kill("SIGTERM")
     })
   }
+}
+
+/** Conflicting paths from `git merge-tree --write-tree --name-only` output. */
+export function parseConflictPaths(output: string): string[] {
+  const files: string[] = []
+  for (const line of output.split(/\r?\n/).slice(1)) {
+    if (!line) break
+    files.push(line)
+  }
+  return files
 }

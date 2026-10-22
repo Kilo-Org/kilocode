@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@tsconfig/node22/tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "declaration": true,
+    "stripInternal": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["bun"], // kilocode_change - include Bun test globals in workspace typecheck
+    "noUncheckedIndexedAccess": false,
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "transform": "@effect/language-service/transform",
+        "namespaceImportPackages": ["effect", "@effect/*"]
+      }
+    ]
+  },
+  "include": ["src"]
+}

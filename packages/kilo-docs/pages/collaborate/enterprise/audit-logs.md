@@ -20,11 +20,11 @@ Use filters to narrow down results by action, user, or date range.
 
 ## Filters
 
-| Filter               | Description                                                                                                                                                                                                                                                                                        |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Actions**          | Choose one or more events to view. Options include: <br /> - `user login` / `logout` <br /> - `user invite`, `accept invite`, `revoke invite` <br /> - `settings change` <br /> - `purchase credits` <br /> - `member remove`, `member change role` <br /> - `sso set domain`, `sso remove domain` |
-| **Actor Email**      | Filter by the user who performed the action.                                                                                                                                                                                                                                                       |
-| **Start / End Date** | Specify a date and time range to view logs within that period.                                                                                                                                                                                                                                     |
+| Filter | Description |
+|---|---|
+| **Actions** | Choose one or more events to view. Options include: <br /> - `user login` / `logout` <br /> - `user invite`, `accept invite`, `revoke invite` <br /> - `settings change` <br /> - `purchase credits` <br /> - `member remove`, `member change role` <br /> - `sso set domain`, `sso remove domain` |
+| **Actor Email** | Filter by the user who performed the action. |
+| **Start / End Date** | Specify a date and time range to view logs within that period. |
 
 Multiple filters can be used together for precise auditing.
 
@@ -32,11 +32,11 @@ Multiple filters can be used together for precise auditing.
 
 Each event includes:
 
-| Field       | Description                                                                     |
-| ----------- | ------------------------------------------------------------------------------- |
-| **Time**    | When the action occurred (shown in your local timezone).                        |
-| **Action**  | The event type (e.g. `user.login`, `settings.change`).                          |
-| **Actor**   | The user who performed the action.                                              |
+| Field | Description |
+|---|---|
+| **Time** | When the action occurred (shown in your local timezone). |
+| **Action** | The event type (e.g. `user.login`, `settings.change`). |
+| **Actor** | The user who performed the action. |
 | **Details** | Context or additional data related to the event (e.g. models added or removed). |
 
 ## Logged Events

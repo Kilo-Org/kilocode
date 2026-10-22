@@ -752,11 +752,11 @@ export type Project = {
 }
 
 export type BadRequestError = {
-  data: unknown
-  errors: Array<{
-    [key: string]: unknown
-  }>
-  success: false
+  name: "BadRequest"
+  data: {
+    message: string
+    kind?: "Params" | "Headers" | "Query" | "Body" | "Payload"
+  }
 }
 
 export type NotFoundError = {
@@ -1065,7 +1065,7 @@ export type ProviderConfig = {
         output: Array<"text" | "audio" | "image" | "video" | "pdf">
       }
       experimental?: boolean
-      status?: "alpha" | "beta" | "deprecated"
+      status?: "alpha" | "beta" | "deprecated" | "active"
       options?: {
         [key: string]: unknown
       }
@@ -1342,6 +1342,23 @@ export type Config = {
      * Enterprise URL
      */
     url?: string
+  }
+  /**
+   * Sandbox configuration for agent tools
+   */
+  sandbox?: {
+    /**
+     * Enable sandbox confinement for new sessions (default: false)
+     */
+    enabled?: boolean
+    /**
+     * Control outbound network access from sandboxed tools (default: deny)
+     */
+    network?: "allow" | "deny"
+    /**
+     * Additional filesystem paths that sandboxed tools may write to
+     */
+    writable_paths?: Array<string>
   }
   experimental?: {
     hook?: {
@@ -1666,6 +1683,9 @@ export type OAuth = {
 export type ApiAuth = {
   type: "api"
   key: string
+  metadata?: {
+    [key: string]: string
+  }
 }
 
 export type WellKnownAuth = {
@@ -3012,7 +3032,7 @@ export type ProviderListResponses = {
             output: Array<"text" | "audio" | "image" | "video" | "pdf">
           }
           experimental?: boolean
-          status?: "alpha" | "beta" | "deprecated"
+          status?: "alpha" | "beta" | "deprecated" | "active"
           options: {
             [key: string]: unknown
           }
@@ -3029,6 +3049,7 @@ export type ProviderListResponses = {
       [key: string]: string
     }
     connected: Array<string>
+    failed: Array<string>
   }
 }
 

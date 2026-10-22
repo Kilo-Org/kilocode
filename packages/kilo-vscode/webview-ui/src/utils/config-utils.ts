@@ -17,6 +17,51 @@ export function deepMerge(target: Config, source: Partial<Config>): Config {
   return result as Config
 }
 
+function stripUndefined(value: unknown): unknown {
+  if (!isRecord(value)) return value
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, item]) => {
+      if (item === undefined) return []
+      return [[key, stripUndefined(item)]]
+    }),
+  )
+}
+
+/** Merge raw scoped config while preserving schema-valid indexing null overrides. */
+export function mergeScopedConfig(target: Config, source: Partial<Config>): Config {
+  const merged = deepMerge(target, source)
+  const result = stripNulls(merged)
+  if (isRecord(merged.indexing)) result.indexing = stripUndefined(merged.indexing) as Config["indexing"]
+  return result
+}
+
+function indexingNull(path: readonly string[]) {
+  return path.length === 2 && path[0] === "indexing" && (path[1] === "model" || path[1] === "dimension")
+}
+
+export function configUnsetPaths(value: unknown, prefix: string[] = []): string[][] {
+  if (!isRecord(value)) return []
+  return Object.entries(value).flatMap(([key, item]) => {
+    const path = [...prefix, key]
+    if (item === undefined || (item === null && !indexingNull(path))) return [path]
+    return configUnsetPaths(item, path)
+  })
+}
+
+/** Prepare an overlay set payload while preserving schema-valid indexing null overrides. */
+export function pruneConfigSet(value: unknown, prefix: string[] = []): unknown {
+  if (!isRecord(value)) return value
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, item]) => {
+      const path = [...prefix, key]
+      if (item === undefined || (item === null && !indexingNull(path))) return []
+      const next = pruneConfigSet(item, path)
+      if (path[0] === "indexing" && isRecord(next) && Object.keys(next).length === 0) return []
+      return [[key, next]]
+    }),
+  )
+}
+
 /** Recursively remove keys whose value is null (null = "deleted"). */
 export function stripNulls(obj: Config): Config {
   const result: Record<string, unknown> = {}
@@ -39,6 +84,26 @@ export function stripNulls(obj: Config): Config {
 export function resolveConfig(server: Config, draft: Partial<Config>, dirty: boolean): Config {
   if (dirty) return stripNulls(deepMerge(server, draft))
   return server
+}
+
+/** Remove one MCP server from resolved, saved, or draft config state. */
+export function removeMcpConfig(config: Config, name: string): Config {
+  if (!config.mcp || !(name in config.mcp)) return config
+  const mcp = { ...config.mcp }
+  delete mcp[name]
+  const next: Config = { ...config, mcp }
+  if (Object.keys(mcp).length === 0) delete next.mcp
+  return next
+}
+
+export function hideRemovedMcp(config: Config, names: Iterable<string>): Config {
+  let next = config
+  for (const name of names) next = removeMcpConfig(next, name)
+  return next
+}
+
+export function retainUnconfirmedMcpRemovals(names: Iterable<string>, config: Config): Set<string> {
+  return new Set([...names].filter((name) => Boolean(config.mcp?.[name])))
 }
 
 /**
@@ -68,6 +133,13 @@ export class ConfigState {
     this.loading = false
   }
 
+  removeMcp(name: string) {
+    this.config = removeMcpConfig(this.config, name)
+    this.saved = removeMcpConfig(this.saved, name)
+    this.draft = removeMcpConfig(this.draft as Config, name)
+    this.dirty = Object.keys(this.draft).length > 0
+  }
+
   /** Handle an incoming configUpdated push from the extension. */
   handleConfigUpdated(server: Config) {
     if (this.saving) {
@@ -81,9 +153,26 @@ export class ConfigState {
     this.saved = server
   }
 
+  /** Handle a confirmed save when merged config refresh is still pending. */
+  handleConfigSaved() {
+    if (!this.saving) return
+    this.saving = false
+    this.draft = {}
+    this.dirty = false
+    this.saved = this.config
+  }
+
+  /** Handle an explicit save failure from the extension. */
+  handleConfigSaveFailed(server: Config) {
+    if (!this.saving) return
+    this.saving = false
+    this.saved = server
+    this.config = resolveConfig(server, this.draft, this.dirty)
+  }
+
   /** Send the draft to the backend. */
   saveConfig() {
-    if (Object.keys(this.draft).length === 0) return
+    if (this.saving || Object.keys(this.draft).length === 0) return
     this.saving = true
   }
 

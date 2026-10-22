@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { sizes, MAX_HEIGHT } from "../../webview-ui/src/utils/timeline/sizes"
+import { sizes, pinned, MAX_HEIGHT } from "../../webview-ui/src/utils/timeline/sizes"
 import type { Part, TextPart, ToolPart, StepFinishPart } from "../../webview-ui/src/types/messages"
 
 function mkText(text: string): TextPart {
@@ -88,5 +88,11 @@ describe("timeline sizes", () => {
     for (const bar of result) {
       expect(Number.isInteger(bar.height)).toBe(true)
     }
+  })
+
+  it("detects whether scrolling should follow new bars", () => {
+    expect(pinned({ scrollLeft: 100, scrollWidth: 200, clientWidth: 100 })).toBe(true)
+    expect(pinned({ scrollLeft: 88, scrollWidth: 200, clientWidth: 100 })).toBe(true)
+    expect(pinned({ scrollLeft: 87, scrollWidth: 200, clientWidth: 100 })).toBe(false)
   })
 })

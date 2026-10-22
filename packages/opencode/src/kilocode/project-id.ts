@@ -1,4 +1,7 @@
-import { Instance } from "@/project/instance"
+import { Cache, Context, Effect, Layer } from "effect"
+import { Instance } from "@/kilocode/instance"
+import { registerDisposer } from "@/effect/instance-registry"
+import { makeRuntime } from "@/effect/run-service"
 import path from "path"
 import { $ } from "bun"
 
@@ -80,9 +83,7 @@ async function getProjectIdFromGit(directory: string): Promise<string | undefine
  * Resolve project ID with priority: .kilo/config.json -> .kilocode/config.json -> git origin URL
  * @returns Normalized project ID or undefined
  */
-async function resolveProjectId(): Promise<string | undefined> {
-  const dir = Instance.directory
-
+async function resolveProjectId(dir: string): Promise<string | undefined> {
   // Priority 1: .kilo/config.json (falls back to .kilocode/config.json)
   const id = await getProjectIdFromConfig(dir)
   if (id) return id
@@ -91,18 +92,38 @@ async function resolveProjectId(): Promise<string | undefined> {
   return getProjectIdFromGit(dir)
 }
 
-/**
- * Per-project cached state for project ID
- */
-const state = Instance.state(async () => {
-  const id = await resolveProjectId()
-  return { id }
-})
+export namespace KiloProjectID {
+  export interface Interface {
+    readonly get: () => Effect.Effect<string | undefined>
+  }
+
+  export class Service extends Context.Service<Service, Interface>()("@kilocode/KiloProjectID") {}
+
+  export const layer = Layer.effect(
+    Service,
+    Effect.gen(function* () {
+      const cache = yield* Cache.make<string, string | undefined>({
+        capacity: Number.POSITIVE_INFINITY,
+        lookup: (directory) => Effect.promise(() => resolveProjectId(directory)),
+      })
+      const off = registerDisposer((directory) => Effect.runPromise(Cache.invalidate(cache, directory)))
+      yield* Effect.addFinalizer(() => Effect.sync(off))
+
+      return Service.of({
+        get: () => Cache.get(cache, Instance.directory),
+      })
+    }),
+  )
+
+  export const defaultLayer = layer
+}
+
+const { runPromise } = makeRuntime(KiloProjectID.Service, KiloProjectID.defaultLayer)
 
 /**
  * Get the project ID for the current Instance context (cached per-project)
  * @returns Normalized project ID or undefined
  */
 export async function getKiloProjectId(): Promise<string | undefined> {
-  return (await state()).id
+  return runPromise((svc) => svc.get())
 }

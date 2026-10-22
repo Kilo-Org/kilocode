@@ -7,12 +7,15 @@
  * ModeSwitcher     — thin wrapper wired to session context for chat usage.
  */
 
-import { Component, createSignal, onCleanup, For, Show } from "solid-js"
+import { type Accessor, Component, createEffect, createSignal, onCleanup, For, Show } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
+import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { AgentInfo } from "../../types/messages"
+import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
+import { createTypeahead, isTypeaheadChar } from "../../utils/typeahead"
 
 /** Format an agent for display. Uses displayName if available, otherwise title-cases the slug. */
 function formatAgentLabel(agent: AgentInfo): string {
@@ -34,6 +37,14 @@ export interface ModeSwitcherBaseProps {
   value: string
   /** Called when the user picks an agent */
   onSelect: (name: string) => void
+  /** Render inline instead of through a portal when nested in a dialog. */
+  portal?: boolean
+  /** Delay outside dismissal while the popover opens inside a dialog. */
+  deferDismiss?: boolean
+  /** Only respond to picker events from this prompt scope. */
+  trigger?: string
+  /** Disable this prompt-scoped selector while a permission owns the prompt. */
+  blocked?: boolean
 }
 
 export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
@@ -41,11 +52,26 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
   const [focused, setFocused] = createSignal(-1)
   const language = useLanguage()
   let listRef: HTMLDivElement | undefined
+  // True while the picker was opened by the slash command rather than a click,
+  // so dismissal returns focus to the prompt like the model/variant pickers.
+  let slash = false
 
   // Listen for slash command trigger
-  const onTrigger = () => setOpen(true)
-  window.addEventListener("openModePicker", onTrigger)
-  onCleanup(() => window.removeEventListener("openModePicker", onTrigger))
+  const onTrigger = (event: Event) => {
+    const source = (event as CustomEvent<{ source?: string }>).detail?.source
+    if (source !== props.trigger || props.blocked) return
+    slash = true
+    openSelected()
+  }
+  createEffect(() => {
+    if (props.blocked) {
+      setOpen(false)
+      slash = false
+      return
+    }
+    window.addEventListener("openModePicker", onTrigger)
+    onCleanup(() => window.removeEventListener("openModePicker", onTrigger))
+  })
 
   const hasAgents = () => props.agents.length > 1
 
@@ -62,11 +88,28 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
     items[clamped]?.focus()
   }
 
+  const typeahead = createTypeahead(() => props.agents.map(formatAgentLabel))
+
+  function openSelected() {
+    if (props.blocked) return
+    const idx = props.agents.findIndex((a) => a.name === props.value)
+    setFocused(idx >= 0 ? idx : 0)
+    typeahead.reset()
+    setOpen(true)
+  }
+
   function onOpen(val: boolean) {
-    setOpen(val)
     if (val) {
-      const idx = props.agents.findIndex((a) => a.name === props.value)
-      requestAnimationFrame(() => focusItem(idx >= 0 ? idx : 0))
+      if (props.blocked) return
+      // A click on the trigger opens without the slash flag.
+      slash = false
+      openSelected()
+      return
+    }
+    setOpen(false)
+    if (slash) {
+      slash = false
+      requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
     }
   }
 
@@ -85,9 +128,19 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
     } else if (e.key === "End") {
       e.preventDefault()
       focusItem(len - 1)
-    } else if (e.key === "Enter" || e.key === " ") {
+    } else if (e.key === " " && typeahead.active()) {
+      e.preventDefault()
+      const idx = typeahead.type(e.key)
+      if (idx >= 0) focusItem(idx)
+    } else if (e.key === " " || isEnterKeyCommitNotIme(e)) {
       e.preventDefault()
       if (cur >= 0 && cur < len) pick(props.agents[cur].name)
+    } else if (isTypeaheadChar(e)) {
+      const idx = typeahead.type(e.key)
+      if (idx >= 0) {
+        e.preventDefault()
+        focusItem(idx)
+      }
     }
   }
 
@@ -103,14 +156,26 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
         expanded={false}
         placement="top-start"
         minHeight={100}
+        portal={props.portal}
+        deferDismiss={props.deferDismiss}
         open={open()}
         onOpenChange={onOpen}
         triggerAs={Button}
-        triggerProps={{ variant: "ghost", size: "small" }}
+        triggerProps={{ variant: "ghost", size: "small", disabled: props.blocked }}
         trigger={
           <>
-            <span class="mode-switcher-trigger-label">{triggerLabel()}</span>
-            <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" style={{ "flex-shrink": "0" }}>
+            {/* Keyed so the label remounts on change and the prompt pill can animate it. */}
+            <Show when={triggerLabel()} keyed>
+              {(label) => <span class="mode-switcher-trigger-label">{label}</span>}
+            </Show>
+            <svg
+              class="selector-trigger-chevron"
+              width="10"
+              height="10"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              style={{ "flex-shrink": "0" }}
+            >
               <path d="M8 4l4 5H4l4-5z" />
             </svg>
           </>
@@ -131,6 +196,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
                   role="option"
                   aria-selected={agent.name === props.value}
                   tabindex={focused() === i() ? 0 : -1}
+                  data-autofocus={focused() === i() ? "" : undefined}
                   onClick={() => pick(agent.name)}
                   onFocus={() => setFocused(i())}
                 >
@@ -139,7 +205,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
                     <Show when={agent.deprecated}>
                       <span
                         style={{
-                          "font-size": "10px",
+                          "font-size": "var(--kilo-font-size-10)",
                           padding: "1px 5px",
                           "border-radius": "3px",
                           background: "var(--vscode-editorWarning-foreground, #cca700)",
@@ -167,17 +233,34 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
 // Chat-specific wrapper (backwards-compatible)
 // ---------------------------------------------------------------------------
 
-export const ModeSwitcher: Component = () => {
+interface ModeSwitcherProps {
+  sessionID?: Accessor<string | undefined>
+  blocked?: boolean
+  /** Tooltip with the mode cycle shortcut. */
+  hint?: { title: string; keybind: string }
+}
+
+export const ModeSwitcher: Component<ModeSwitcherProps> = (props) => {
   const session = useSession()
+  const id = () => props.sessionID?.()
 
   return (
-    <ModeSwitcherBase
-      agents={session.agents()}
-      value={session.selectedAgent()}
-      onSelect={(name) => {
-        session.selectAgent(name)
-        requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
-      }}
-    />
+    <TooltipKeybind
+      title={props.hint?.title ?? ""}
+      keybind={props.hint?.keybind ?? ""}
+      placement="top"
+      openDelay={0}
+      inactive={!props.hint?.keybind}
+    >
+      <ModeSwitcherBase
+        agents={session.agents()}
+        value={session.selectedAgent(id())}
+        blocked={props.blocked}
+        onSelect={(name) => {
+          session.selectAgent(name, id())
+          requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
+        }}
+      />
+    </TooltipKeybind>
   )
 }

@@ -32,6 +32,8 @@ Costs are determined by the upstream provider's pricing based on token usage:
 
 ## Balance management
 
+Model inference is deducted from your balance at the upstream provider's rate with no markup. A 5% payment-processing fee applies when you purchase Kilo credits; the fee is charged separately and does not increase your balance. For example, $1 of purchased credits funds $1 of usage.
+
 ### Individual accounts
 
 Your account balance is the difference between total credits purchased and total usage. Check your balance in the [Kilo dashboard](https://app.kilo.ai).
@@ -94,8 +96,8 @@ Set a maximum daily spend per organization member. When a member reaches their d
 
 All free model requests (both anonymous and authenticated) are rate-limited by IP address:
 
-| Scope              | Limit                 |
-| ------------------ | --------------------- |
+| Scope | Limit |
+|---|---|
 | Free models per IP | 200 requests per hour |
 
 When rate-limited, you receive HTTP 429:
@@ -117,17 +119,17 @@ Paid model requests are not rate-limited by the gateway itself, but may be rate-
 
 Usage data is tracked per request and includes:
 
-| Field                 | Description                                |
-| --------------------- | ------------------------------------------ |
-| `model`               | Model ID used                              |
-| `provider`            | Inference provider that served the request |
-| `input_tokens`        | Number of input/prompt tokens              |
-| `output_tokens`       | Number of output/completion tokens         |
-| `cache_write_tokens`  | Tokens written to cache                    |
-| `cache_hit_tokens`    | Tokens served from cache                   |
-| `cost_microdollars`   | Cost in microdollars (1 USD = 1,000,000)   |
-| `time_to_first_token` | Latency to first token (streaming only)    |
-| `is_byok`             | Whether a BYOK key was used                |
+| Field | Description |
+|---|---|
+| `model` | Model ID used |
+| `provider` | Inference provider that served the request |
+| `input_tokens` | Number of input/prompt tokens |
+| `output_tokens` | Number of output/completion tokens |
+| `cache_write_tokens` | Tokens written to cache |
+| `cache_hit_tokens` | Tokens served from cache |
+| `cost_microdollars` | Cost in microdollars (1 USD = 1,000,000) |
+| `time_to_first_token` | Latency to first token (streaming only) |
+| `is_byok` | Whether a BYOK key was used |
 
 ## Token counting
 

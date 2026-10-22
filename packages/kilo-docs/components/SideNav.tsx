@@ -16,7 +16,7 @@ const sectionNavItems: SectionNav = {
   contributing: Nav.ContributingNav,
   "ai-providers": Nav.AiProvidersNav,
   gateway: Nav.GatewayNav,
-  kiloclaw: Nav.KiloClawNav,
+  desktop: Nav.DesktopNav,
 }
 
 // Main nav items with their section keys
@@ -29,7 +29,7 @@ const mainNavItems = [
   { label: "Automate", href: "/automate", sectionKey: "automate" },
   { label: "Deploy & Secure", href: "/deploy-secure", sectionKey: "deploy-secure" },
   { label: "AI Gateway", href: "/gateway", sectionKey: "gateway" },
-  { label: "KiloClaw", href: "/kiloclaw", sectionKey: "kiloclaw" },
+  { label: "Kilo Desktop", href: "/desktop", sectionKey: "desktop" },
   { label: "Contributing", href: "/contributing", sectionKey: "contributing" },
 ]
 
@@ -69,10 +69,9 @@ const ChevronLeft = () => (
 
 function PlatformBadge({ platform }: { platform?: Platform }) {
   if (!platform || platform === "all") return null
-  const label = platform === "legacy" ? "Legacy" : "New"
   return (
     <span className="platform-badge" data-platform={platform}>
-      {label}
+      New
     </span>
   )
 }
@@ -503,11 +502,6 @@ export function SideNav({ isMobileOpen = false, onMobileClose }: SideNavProps) {
           margin-left: 0.375rem;
           vertical-align: middle;
           line-height: 1.4;
-        }
-
-        .nav-links :global(.platform-badge[data-platform="legacy"]) {
-          background-color: rgba(139, 92, 246, 0.12);
-          color: rgb(139, 92, 246);
         }
 
         .nav-links :global(.platform-badge[data-platform="new"]) {

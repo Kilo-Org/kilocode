@@ -1,18 +1,72 @@
-import { useMarked, deferredHighlight, fnv1a } from "../context/marked"
+import { useMarked } from "../context/marked"
+import { deferredHighlight, fnv1a } from "../context/marked" // kilocode_change
 import { useI18n } from "../context/i18n"
 import DOMPurify from "dompurify"
 import morphdom from "morphdom"
-import { checksum } from "@opencode-ai/util/encode"
-import { ComponentProps, createEffect, createResource, createSignal, onCleanup, splitProps } from "solid-js"
+import { checksum } from "@opencode-ai/core/util/encode"
+import {
+  ComponentProps,
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  createUniqueId,
+  onCleanup,
+  splitProps,
+} from "solid-js"
 import { isServer } from "solid-js/web"
+import { bundledLanguages } from "shiki"
+import { canReusePendingBlock, project, type Block, type Projection } from "./markdown-stream"
+import {
+  disposeStreamingCode,
+  highlightStreamingCode,
+  MarkdownWorkerDisposedError,
+  MarkdownWorkerSupersededError,
+  MarkdownWorkerUnavailableError,
+} from "./markdown-worker"
+import { markdownBlockKey, type MarkdownToken } from "./markdown-worker-protocol"
+import { shouldResetCodeTokens, type RenderedCodeState } from "./markdown-code-state"
+// kilocode_change start: Mermaid rendering and morphdom guards for highlighted blocks
+import {
+  cleanupMermaidActions,
+  hasMermaid,
+  preserveMermaid,
+  renderMermaid,
+  type MermaidLabels,
+} from "../kilocode/mermaid/markdown-mermaid"
+import { preserveStreamingHighlight } from "../kilocode/markdown-stream-highlight"
+import { patchCodeTokens } from "../kilocode/markdown-code-tokens"
+// kilocode_change end
 
 type Entry = {
+  raw: string
   hash: string
   html: string
 }
 
+type RenderedBlock =
+  | (Entry & { key: string; mode: Exclude<Block["mode"], "code"> })
+  | {
+      key: string
+      mode: "code"
+      raw: string
+      src: string // kilocode_change - Mermaid consumes delimiter-free source while raw preserves stream identity
+      hash: string
+      language: string
+      complete: boolean
+      generation: number
+      stable: MarkdownToken[]
+      unstable: MarkdownToken[]
+    }
+
+type RenderResult = {
+  text: string
+  blocks: RenderedBlock[]
+}
+
 const max = 200
 const cache = new Map<string, Entry>()
+const renderedCodeTokens = new WeakMap<HTMLDivElement, RenderedCodeState>()
 
 if (typeof window !== "undefined" && DOMPurify.isSupported) {
   DOMPurify.addHook("afterSanitizeAttributes", (node: Element) => {
@@ -32,6 +86,8 @@ const config = {
   SANITIZE_NAMED_PROPS: true,
   FORBID_TAGS: ["style"],
   FORBID_CONTENTS: ["style", "script"],
+  ADD_TAGS: ["svg", "path"],
+  ADD_ATTR: ["d", "viewBox", "preserveAspectRatio", "xmlns", "target"],
 }
 
 const iconPaths = {
@@ -49,12 +105,28 @@ function escape(text: string) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
+    .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;")
 }
 
 function fallback(markdown: string) {
   return escape(markdown).replace(/\r\n?/g, "\n").replace(/\n/g, "<br>")
+}
+
+async function code(text: string, language: string | undefined, key: string, complete = false) {
+  const name = language && language in bundledLanguages ? language : "text"
+  try {
+    const result = await highlightStreamingCode(key, text, name, complete)
+    return { language: name, generation: result.generation, stable: result.stable, unstable: result.unstable }
+  } catch (error) {
+    if (
+      !(error instanceof MarkdownWorkerDisposedError) &&
+      !(error instanceof MarkdownWorkerSupersededError) &&
+      !(error instanceof MarkdownWorkerUnavailableError)
+    )
+      console.error("Markdown highlighting worker failed", error)
+    return { language: name, generation: 0, stable: [], unstable: [[text, ""] as MarkdownToken] }
+  }
 }
 
 type CopyLabels = {
@@ -180,10 +252,11 @@ function decorate(root: HTMLDivElement, labels: CopyLabels) {
   markCodeLinks(root)
 }
 
-function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
+function setupCodeCopy(root: HTMLDivElement, getLabels: () => CopyLabels) {
   const timeouts = new Map<HTMLButtonElement, ReturnType<typeof setTimeout>>()
 
   const updateLabel = (button: HTMLButtonElement) => {
+    const labels = getLabels()
     const copied = button.getAttribute("data-copied") === "true"
     setCopyState(button, labels, copied)
   }
@@ -200,14 +273,13 @@ function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
     const clipboard = navigator?.clipboard
     if (!clipboard) return
     await clipboard.writeText(content)
+    const labels = getLabels()
     setCopyState(button, labels, true)
     const existing = timeouts.get(button)
     if (existing) clearTimeout(existing)
     const timeout = setTimeout(() => setCopyState(button, labels, false), 2000)
     timeouts.set(button, timeout)
   }
-
-  decorate(root, labels)
 
   const buttons = Array.from(root.querySelectorAll('[data-slot="markdown-copy-button"]'))
   for (const button of buttons) {
@@ -235,145 +307,516 @@ function touch(key: string, value: Entry) {
   cache.delete(first)
 }
 
+function initialResult(text: string, key: string | undefined, projection: Projection, owner: string): RenderResult {
+  if (!text) return { text, blocks: [] }
+  const base = key ?? checksum(text)
+  if (base) {
+    const blocks = projection.blocks.flatMap((block, index) => {
+      if (block.mode === "code") return []
+      const cacheKey = `${base}:${index}:${block.mode}`
+      const cached = cache.get(cacheKey)
+      if (cached?.raw !== block.raw) return []
+      return [{ key: `${owner}:${cacheKey}`, mode: block.mode, ...cached }]
+    })
+    if (blocks.length === projection.blocks.length) return { text, blocks }
+  }
+  return {
+    text,
+    blocks: [
+      {
+        key: "initial",
+        mode: "full",
+        raw: text,
+        hash: checksum(text) ?? "",
+        html: fallback(text),
+      },
+    ],
+  }
+}
+
 export function Markdown(
   props: ComponentProps<"div"> & {
     text: string
     cacheKey?: string
+    streaming?: boolean
     class?: string
     classList?: Record<string, boolean>
   },
 ) {
-  const [local, others] = splitProps(props, ["text", "cacheKey", "class", "classList"])
+  const [local, others] = splitProps(props, ["text", "cacheKey", "streaming", "class", "classList"])
   const marked = useMarked()
   const i18n = useI18n()
   const [root, setRoot] = createSignal<HTMLDivElement>()
+  const owner = createUniqueId()
+  const activeCodeKeys = new Set<string>()
+  const completedCode = new Map<string, Extract<RenderedBlock, { mode: "code" }>>()
+  const projection = createMemo((previous: Projection | undefined) =>
+    project(previous, local.text, local.streaming ?? false),
+  )
   const [html] = createResource(
-    () => local.text,
-    async (markdown) => {
-      if (isServer) return fallback(markdown)
-
-      const hash = checksum(markdown)
-      const key = local.cacheKey ?? hash
-
-      if (key && hash) {
-        const cached = cache.get(key)
-        if (cached && cached.hash === hash) {
-          touch(key, cached)
-          return cached.html
-        }
+    () => {
+      return {
+        text: local.text,
+        key: local.cacheKey,
+        projection: projection(),
+        streaming: local.streaming ?? false, // kilocode_change - recover failed worker highlights when unchanged text settles
       }
-
-      const next = await marked.parse(markdown)
-      const safe = sanitize(next)
-      if (key && hash) touch(key, { hash, html: safe })
-      return safe
     },
-    { initialValue: isServer ? fallback(local.text) : "" },
+    async (src) => {
+      if (isServer)
+        return {
+          text: src.text,
+          blocks: [
+            {
+              key: "server",
+              mode: "full" as const,
+              raw: src.text,
+              hash: checksum(src.text) ?? "",
+              html: fallback(src.text),
+            },
+          ],
+        } satisfies RenderResult
+      if (!src.text) return { text: src.text, blocks: [] } satisfies RenderResult
+
+      const base = src.key ?? checksum(src.text)
+      return Promise.all(
+        src.projection.blocks.map(async (block, index) => {
+          const key = base ? `${base}:${index}:${block.mode}` : undefined
+          const blockKey = markdownBlockKey(owner, src.key, index, block.mode)
+
+          if (block.mode === "code") {
+            // kilocode_change start: mermaid blocks are rendered as diagrams by
+            // kickMermaid, not Shiki-highlighted by the worker. Return plain
+            // text tokens so updateCodeBlock can emit a <pre data-lang="mermaid">
+            // source block for renderMermaid to transform.
+            if (block.language === "mermaid") {
+              return {
+                key: blockKey,
+                mode: block.mode,
+                raw: block.raw,
+                src: block.src, // kilocode_change
+                hash: String(block.raw.length),
+                complete: !!block.complete,
+                language: "mermaid",
+                generation: 0,
+                stable: [],
+                unstable: [[block.src, ""] as MarkdownToken],
+              }
+            }
+            // kilocode_change end
+            const cached = completedCode.get(blockKey)
+            if (block.complete && cached?.raw === block.raw && (src.streaming || cached.generation > 0)) return cached // kilocode_change - retry failed highlights only when the message settles
+            const result = await code(block.src, block.language, blockKey, block.complete)
+            // kilocode_change start: defer failed worker highlights until the message settles.
+            if (!src.streaming && result.generation === 0) {
+              const html = sanitize(await Promise.resolve(marked.parse(block.raw)))
+              return { key: blockKey, mode: "full" as const, raw: block.raw, hash: checksum(block.raw) ?? "", html }
+            }
+            // kilocode_change end
+            const rendered = {
+              key: blockKey,
+              mode: block.mode,
+              raw: block.raw,
+              src: block.src, // kilocode_change
+              hash: String(block.raw.length),
+              complete: !!block.complete,
+              ...result,
+            }
+            if (block.complete) completedCode.set(blockKey, rendered)
+            return rendered
+          }
+
+          if (key) {
+            const cached = cache.get(key)
+            if (cached?.raw === block.raw) {
+              touch(key, cached)
+              return { key: blockKey, mode: block.mode, ...cached }
+            }
+          }
+
+          const hash = checksum(block.raw)
+          const safe = sanitize(await Promise.resolve(marked.parse(block.src)))
+          if (key && hash) touch(key, { raw: block.raw, hash, html: safe })
+          return { key: blockKey, mode: block.mode, raw: block.raw, hash: hash ?? "", html: safe }
+        }),
+      )
+        .then((blocks) => ({ text: src.text, blocks }) satisfies RenderResult)
+        .catch(
+          () =>
+            ({
+              text: src.text,
+              blocks: [
+                {
+                  key: base ?? "fallback",
+                  mode: "full" as const,
+                  raw: src.text,
+                  hash: checksum(src.text) ?? "",
+                  html: fallback(src.text),
+                },
+              ],
+            }) satisfies RenderResult,
+        )
+    },
+    {
+      initialValue: initialResult(local.text, local.cacheKey, projection(), owner),
+    },
   )
 
   let copyCleanup: (() => void) | undefined
   // kilocode_change start: generation counter prevents stale deferredHighlight
   // callbacks from overwriting copyCleanup set by a newer render (issue #6221).
-  // The abort signal cancels the previous in-flight highlight pass so rapid
-  // streaming tokens don't spawn concurrent passes racing on the same DOM nodes.
   const highlightState = { gen: 0, signal: { aborted: false } }
+  // kilocode_change end
+
+  // kilocode_change start: Mermaid diagram rendering
+  const mermaidState = { gen: 0, signal: { aborted: false } }
   // kilocode_change end
 
   createEffect(() => {
     const container = root()
-    const content = html()
+    const result = html.latest ?? html()
+    const projected = projection()
+    const content = local.text ? pendingBlocks(result, projected, local.cacheKey, owner) : []
     if (!container) return
     if (isServer) return
-
-    if (!content) {
+    if (content.length === 0) {
       container.innerHTML = ""
+      // kilocode_change start: Mermaid diagram rendering
+      mermaidState.signal.aborted = true
+      mermaidState.gen++
+      // kilocode_change end
       return
     }
 
-    const temp = document.createElement("div")
-    temp.innerHTML = content
     const labels = {
       copy: i18n.t("ui.message.copy"),
       copied: i18n.t("ui.message.copied"),
     }
-    decorate(temp, labels)
-
-    // kilocode_change start: morphdom guard for highlighted blocks (issue #6221)
-    // During streaming, morphdom re-runs on every token. Without this guard,
-    // it would revert already-highlighted <pre> blocks back to plain code.
-    morphdom(container, temp, {
-      childrenOnly: true,
-      onBeforeElUpdated: (fromEl, toEl) => {
-        if (fromEl.isEqualNode(toEl)) return false
-        // Preserve Shiki-highlighted blocks — don't let morphdom revert them
-        // to plain <pre><code> during streaming re-renders.
-        // Note: "shiki" class is on <pre> (set by Shiki's codeToHtml output).
-        // We compare data-source-hash (a lightweight FNV-1a hash stored by
-        // deferredHighlight on the highlighted <pre>) against a hash of the
-        // incoming code text to detect mid-stream content changes: if the code
-        // changed, we let morphdom update so the block can be re-queued for
-        // highlighting with the new content.
-        if (
-          fromEl instanceof HTMLElement &&
-          fromEl.tagName === "PRE" &&
-          fromEl.classList.contains("shiki") &&
-          toEl instanceof HTMLElement &&
-          toEl.tagName === "PRE" &&
-          !toEl.classList.contains("shiki")
-        ) {
-          const fromHash = fromEl.getAttribute("data-source-hash")
-          const toCode = toEl.querySelector("code")?.textContent ?? ""
-          if (fromHash === fnv1a(toCode)) return false
-          // Source changed during streaming — fall through so morphdom replaces
-          // the stale highlighted block with the updated plain block, which will
-          // be re-highlighted on the next deferredHighlight pass.
-        }
-        return true
-      },
+    const nextCodeKeys = new Set(content.filter((block) => block.mode === "code").map((block) => block.key))
+    activeCodeKeys.forEach((key) => {
+      if (!nextCodeKeys.has(key)) disposeCode(key)
     })
-    // kilocode_change end
+    activeCodeKeys.clear()
+    nextCodeKeys.forEach((key) => activeCodeKeys.add(key))
+    content.forEach((block, index) => updateBlock(container, index, block, labels, local.streaming ?? false)) // kilocode_change
+    while (container.children.length > content.length) container.lastElementChild?.remove()
+    container
+      .querySelectorAll<HTMLButtonElement>('[data-slot="markdown-copy-button"]')
+      .forEach((button) => setCopyState(button, labels, button.dataset.copied === "true"))
+    if (!copyCleanup)
+      copyCleanup = setupCodeCopy(container, () => ({
+        copy: i18n.t("ui.message.copy"),
+        copied: i18n.t("ui.message.copied"),
+      }))
 
-    // kilocode_change start: deferred syntax highlighting (issue #6221)
-    // DOM is now painted with plain <pre><code> blocks.
-    // Progressively highlight via setTimeout(0) to avoid blocking.
-    // onComplete re-runs setupCodeCopy since highlighting replaces DOM nodes.
-    // The generation counter ensures a stale in-flight highlight run (from a
-    // previous streaming token) doesn't overwrite the cleanup set by a newer run.
-    // Cancel any in-flight highlight pass before starting a new one — prevents
-    // concurrent passes from racing to replace the same DOM nodes.
+    // kilocode_change start: progressive Shiki highlighting for non-streaming
+    // "full" blocks and Mermaid diagram rendering. The parser emits plain
+    // <pre><code data-lang="..."> blocks; deferredHighlight upgrades them
+    // via setTimeout(0) so initial paint is instant. Mermaid blocks are
+    // detected and rendered as SVG diagrams when not streaming.
+    const mermaid = {
+      rendering: i18n.t("ui.mermaid.rendering"),
+      renderError: (message: string) => i18n.t("ui.mermaid.renderError", { message }),
+      errorDefault: i18n.t("ui.mermaid.errorDefault"),
+      errorEmpty: i18n.t("ui.mermaid.errorEmpty"),
+      copied: i18n.t("ui.message.copied"),
+      copy: i18n.t("ui.message.copy"),
+      download: i18n.t("ui.mermaid.download"),
+      copySource: i18n.t("ui.mermaid.copySource"),
+      copySvg: i18n.t("ui.mermaid.copySvg"),
+      copyPng: i18n.t("ui.mermaid.copyPng"),
+      downloadSvg: i18n.t("ui.mermaid.downloadSvg"),
+      downloadPng: i18n.t("ui.mermaid.downloadPng"),
+      zoom: i18n.t("ui.mermaid.zoom"),
+      zoomIn: i18n.t("ui.mermaid.zoomIn"),
+      zoomOut: i18n.t("ui.mermaid.zoomOut"),
+      zoomReset: i18n.t("ui.mermaid.zoomReset"),
+      close: i18n.t("ui.common.close"),
+    }
+    kickHighlight(container, labels)
+    kickMermaid(container, local.streaming ?? false, mermaid)
+    // kilocode_change end
+  })
+
+  // kilocode_change start: progressive Shiki highlighting (issue #6221, PR #7102).
+  // Parser emits plain <pre><code data-lang="..."> blocks; we upgrade them to
+  // Shiki-highlighted <pre class="shiki"> here via setTimeout(0) so initial
+  // paint is instant and session switches with many code blocks don't freeze.
+  // The generation counter + abort signal cancel a previous in-flight pass
+  // when streaming tokens (or session switches) spawn a new render.
+  function kickHighlight(container: HTMLDivElement, labels: { copy: string; copied: string }) {
     highlightState.signal.aborted = true
     const gen = ++highlightState.gen
     const signal = { aborted: false }
     highlightState.signal = signal
-    deferredHighlight(
+    void deferredHighlight(
       container,
       () => {
         if (gen !== highlightState.gen) return
         if (copyCleanup) copyCleanup()
-        copyCleanup = setupCodeCopy(container, labels)
+        copyCleanup = setupCodeCopy(container, () => labels)
       },
       signal,
     )
-    // kilocode_change end
-  })
+  }
+  // kilocode_change end
+
+  // kilocode_change start: Mermaid diagram rendering
+  function kickMermaid(container: HTMLDivElement, streaming: boolean, labels: MermaidLabels) {
+    mermaidState.signal.aborted = true
+    mermaidState.gen++
+    if (!hasMermaid(container)) return
+    if (streaming) return
+
+    const gen = mermaidState.gen
+    const signal = { aborted: false }
+    mermaidState.signal = signal
+    void renderMermaid(container, signal, labels).catch((err) => {
+      if (gen !== mermaidState.gen || signal.aborted) return
+      console.warn("Mermaid render failed", err)
+    })
+  }
+  // kilocode_change end
 
   onCleanup(() => {
-    // Invalidate any in-flight deferredHighlight callbacks so they don't call
-    // setupCodeCopy on a disconnected container after the component unmounts.
+    // kilocode_change: cancel any in-flight deferredHighlight pass so its
+    // completion callback doesn't touch the unmounted DOM.
     highlightState.signal.aborted = true
     highlightState.gen++
+    // kilocode_change start: Mermaid diagram rendering
+    mermaidState.signal.aborted = true
+    mermaidState.gen++
+    // kilocode_change end
     if (copyCleanup) copyCleanup()
+    activeCodeKeys.forEach(disposeCode)
+    completedCode.clear()
   })
 
   return (
     <div
       data-component="markdown"
+      dir={"auto" /* kilocode_change */}
       classList={{
-        ...(local.classList ?? {}),
+        ...local.classList,
         [local.class ?? ""]: !!local.class,
       }}
       ref={setRoot}
       {...others}
     />
   )
+}
+
+function pendingBlocks(
+  result: RenderResult | undefined,
+  projection: Projection | undefined,
+  cacheKey: string | undefined,
+  owner: string,
+) {
+  if (!result) return []
+  if (!projection || result.text === projection.text) return result.blocks
+  const initial = result.blocks.length === 1 && result.blocks[0]?.key === "initial"
+  return projection.blocks.map((block, index) => {
+    const current = initial ? undefined : result.blocks[index]
+    if (current && canReusePendingBlock(current, block)) return current
+    const key = markdownBlockKey(owner, cacheKey, index, block.mode)
+    if (block.mode !== "code")
+      return { key, mode: block.mode, raw: block.raw, hash: String(block.raw.length), html: fallback(block.src) }
+    return {
+      key,
+      mode: block.mode,
+      raw: block.raw,
+      src: block.src, // kilocode_change
+      hash: String(block.raw.length),
+      language: block.language ?? "text",
+      complete: !!block.complete,
+      stable: [],
+      generation: 0,
+      unstable: [[block.src, ""] as MarkdownToken],
+    }
+  })
+}
+
+function disposeCode(key: string) {
+  disposeStreamingCode(key)
+}
+
+function updateBlock(
+  container: HTMLDivElement,
+  index: number,
+  block: RenderedBlock,
+  labels: CopyLabels,
+  streaming: boolean, // kilocode_change
+) {
+  const current = container.children[index]
+  if (block.mode === "code") {
+    updateCodeBlock(container, current, block, labels)
+    return
+  }
+  if (
+    current instanceof HTMLDivElement &&
+    current.dataset.markdownKey === block.key &&
+    current.dataset.markdownHash === block.hash
+  )
+    return
+
+  const next = document.createElement("div")
+  next.dataset.markdownBlock = ""
+  next.dataset.markdownKey = block.key
+  next.dataset.markdownHash = block.hash
+  next.style.display = "contents"
+  next.innerHTML = block.html
+  decorate(next, labels)
+
+  if (!(current instanceof HTMLDivElement)) {
+    container.appendChild(next)
+    return
+  }
+
+  morphdom(current, next, {
+    onBeforeElUpdated: (fromEl, toEl) => {
+      if (
+        fromEl instanceof HTMLButtonElement &&
+        toEl instanceof HTMLButtonElement &&
+        fromEl.getAttribute("data-slot") === "markdown-copy-button" &&
+        toEl.getAttribute("data-slot") === "markdown-copy-button"
+      ) {
+        // kilocode_change start: preserve "copied" visual state across re-renders
+        if (fromEl.getAttribute("data-copied") === "true") setCopyState(toEl, labels, true)
+        // kilocode_change end
+        return false
+      }
+      if (fromEl.isEqualNode(toEl)) return false
+      // kilocode_change start: preserve rendered Mermaid diagrams across
+      // morphdom refreshes so they do not flicker back to source code.
+      if (preserveMermaid(fromEl, toEl)) return false
+      // kilocode_change end
+      // kilocode_change start: preserve Shiki-highlighted blocks — don't let
+      // morphdom revert them to plain <pre><code> during streaming re-renders.
+      // Compare data-source-hash (stored by deferredHighlight on the highlighted
+      // <pre>) against a hash of the incoming code text to detect mid-stream
+      // content changes: if the code changed, let morphdom update so the block
+      // can be re-queued for highlighting.
+      if (
+        fromEl instanceof HTMLElement &&
+        fromEl.tagName === "PRE" &&
+        fromEl.classList.contains("shiki") &&
+        toEl instanceof HTMLElement &&
+        toEl.tagName === "PRE" &&
+        !toEl.classList.contains("shiki")
+      ) {
+        const fromHash = fromEl.getAttribute("data-source-hash")
+        const toCode = toEl.querySelector("code")?.textContent ?? ""
+        if (fromHash === fnv1a(toCode)) return false
+        if (preserveStreamingHighlight(fromEl, toEl, streaming)) return false
+      }
+      // kilocode_change end
+      return true
+    },
+  })
+}
+
+function updateCodeBlock(
+  container: HTMLDivElement,
+  current: Element | undefined,
+  block: Extract<RenderedBlock, { mode: "code" }>,
+  labels: CopyLabels,
+) {
+  const existing = current instanceof HTMLDivElement && current.dataset.markdownKey === block.key ? current : undefined
+  const next = existing ?? document.createElement("div")
+  next.dataset.markdownBlock = ""
+  next.dataset.markdownKey = block.key
+  next.dataset.markdownHash = block.hash
+  next.dataset.markdownComplete = block.complete ? "true" : "false"
+  next.style.display = "contents"
+
+  // kilocode_change start: mermaid blocks render as a source <pre> for
+  // kickMermaid to transform into SVG diagrams, not as Shiki-highlighted code.
+  if (block.language === "mermaid") {
+    cleanupMermaidActions(next) // kilocode_change - dispose an open viewer before rebuilding the block
+    next.replaceChildren()
+    const wrapper = document.createElement("div")
+    wrapper.setAttribute("data-component", "markdown-code")
+    const pre = document.createElement("pre")
+    pre.setAttribute("dir", "auto")
+    const codeElement = document.createElement("code")
+    codeElement.setAttribute("data-lang", "mermaid")
+    codeElement.textContent = block.src // kilocode_change - Mermaid rejects fenced Markdown as diagram source
+    pre.appendChild(codeElement)
+    wrapper.appendChild(pre)
+    wrapper.appendChild(createCopyButton(labels))
+    next.appendChild(wrapper)
+    if (current && current !== next) current.replaceWith(next)
+    else if (!current) container.appendChild(next)
+    return
+  }
+  // kilocode_change end
+
+  const code = existing?.querySelector("code")
+  if (code instanceof HTMLElement) {
+    code.className = `language-${block.language}`
+    const previous = renderedCodeTokens.get(next)
+    const reset = shouldResetCodeTokens(previous, {
+      language: block.language,
+      generation: block.generation,
+      stableCount: block.stable.length,
+      raw: block.raw,
+    })
+    const stableCount = reset ? 0 : previous!.stableCount
+    const tail = [...block.stable.slice(stableCount), ...block.unstable]
+    const prior = reset ? [] : previous!.unstable
+    const prefix = prior.findIndex((token, index) => !sameToken(token, tail[index]))
+    const keep = stableCount + (prefix < 0 ? Math.min(prior.length, tail.length) : prefix)
+    // kilocode_change start: a reset re-tokenizes the whole block; patch the
+    // spans in place instead of recreating them so a selection survives.
+    if (reset && previous) patchCodeTokens(code, tail, createTokenSpan)
+    else {
+      while (code.children.length > keep) code.lastElementChild?.remove()
+      tail
+        .slice(keep - stableCount)
+        .map(createTokenSpan)
+        .forEach((span) => code.appendChild(span))
+    }
+    // kilocode_change end
+    renderedCodeTokens.set(next, {
+      language: block.language,
+      generation: block.generation,
+      stableCount: block.stable.length,
+      unstable: block.unstable,
+      raw: block.raw,
+    })
+    return
+  }
+
+  const wrapper = document.createElement("div")
+  wrapper.setAttribute("data-component", "markdown-code")
+  const pre = document.createElement("pre")
+  pre.className = "shiki Kilo"
+  pre.setAttribute("dir", "auto") // kilocode_change
+  const codeElement = document.createElement("code")
+  codeElement.className = `language-${block.language}`
+  ;[...block.stable, ...block.unstable].map(createTokenSpan).forEach((span) => codeElement.appendChild(span))
+  pre.appendChild(codeElement)
+  wrapper.appendChild(pre)
+  wrapper.appendChild(createCopyButton(labels))
+  next.appendChild(wrapper)
+  renderedCodeTokens.set(next, {
+    language: block.language,
+    generation: block.generation,
+    stableCount: block.stable.length,
+    unstable: block.unstable,
+    raw: block.raw,
+  })
+  if (current) current.replaceWith(next)
+  else container.appendChild(next)
+}
+
+function sameToken(left: MarkdownToken, right: MarkdownToken | undefined) {
+  return !!right && left[0] === right[0] && left[1] === right[1]
+}
+
+function createTokenSpan(token: MarkdownToken) {
+  const span = document.createElement("span")
+  span.setAttribute("style", token[1])
+  span.textContent = token[0]
+  return span
 }

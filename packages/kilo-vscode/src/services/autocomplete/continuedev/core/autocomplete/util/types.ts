@@ -1,5 +1,5 @@
-import { Position, Range, RangeInFile, TabAutocompleteOptions } from "../.."
-import { AutocompleteCodeSnippet } from "../types"
+import type { Position, Range, RangeInFile } from "../.."
+import type { AutocompleteCodeSnippet } from "../types"
 
 export type RecentlyEditedRange = RangeInFile & {
   timestamp: number
@@ -11,6 +11,7 @@ export interface AutocompleteInput {
   isUntitledFile: boolean
   completionId: string
   filepath: string
+  languageId?: string
   pos: Position
   recentlyVisitedRanges: AutocompleteCodeSnippet[]
   recentlyEditedRanges: RecentlyEditedRange[]
@@ -23,25 +24,4 @@ export interface AutocompleteInput {
     range: Range
   }
   injectDetails?: string
-}
-
-export interface AutocompleteOutcome extends TabAutocompleteOptions {
-  accepted?: boolean
-  time: number
-  prefix: string
-  suffix: string
-  prompt: string
-  completion: string
-  modelProvider: string
-  modelName: string
-  completionOptions: any
-  cacheHit: boolean
-  numLines: number
-  filepath: string
-  gitRepo?: string
-  completionId: string
-  uniqueId: string
-  timestamp: string
-  enabledStaticContextualization?: boolean
-  profileType?: "local" | "platform" | "control-plane"
 }

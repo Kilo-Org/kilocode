@@ -1,5 +1,26 @@
 import type { Session, Agent, Event, ProviderListResponse } from "@kilocode/sdk/v2/client"
-import type { CloudSessionMessage } from "./services/cli-backend/types"
+import type { SyncPayload } from "./services/cli-backend/sdk-sse-adapter"
+import { prettifyError } from "zod/v4"
+import type { CloudSessionMessage, IndexingStatus } from "./services/cli-backend/types"
+import type { PartBatch, PartUpdate } from "./kilo-provider/session-stream-scheduler"
+import type { PartRemove } from "./shared/stream-messages"
+import {
+  createSessionPageState,
+  mergeSessions,
+  type SessionPage,
+  type SessionPageState,
+} from "./kilo-provider/session-page"
+import * as path from "path"
+
+export { SessionStreamScheduler } from "./kilo-provider/session-stream-scheduler"
+
+type SyncEventMessageUpdated = Extract<SyncPayload, { name: "message.updated.1" }>
+type SyncEventMessageRemoved = Extract<SyncPayload, { name: "message.removed.1" }>
+type SyncEventMessagePartUpdated = Extract<SyncPayload, { name: "message.part.updated.1" }>
+type SyncEventMessagePartRemoved = Extract<SyncPayload, { name: "message.part.removed.1" }>
+type SyncEventSessionCreated = Extract<SyncPayload, { name: "session.created.1" }>
+type SyncEventSessionUpdated = Extract<SyncPayload, { name: "session.updated.1" }>
+type SyncEventSessionDeleted = Extract<SyncPayload, { name: "session.deleted.1" }>
 
 /** A single provider entry as returned by the /provider list endpoint. */
 export type ProviderInfo = ProviderListResponse["all"][number]
@@ -14,62 +35,216 @@ export type ProviderInfo = ProviderListResponse["all"][number]
  * - NotFoundError: { name: "NotFoundError", data: { message: "..." } }
  * - Plain string (raw text response)
  */
+/** Extract a message from the first element of an array of strings or `{ message }` objects. */
+function firstMessage(arr: unknown): string | undefined {
+  if (!Array.isArray(arr) || arr.length === 0) return undefined
+  const first = arr[0]
+  if (typeof first === "string") return first
+  if (first && typeof first === "object") {
+    const msg = (first as Record<string, unknown>).message
+    if (typeof msg === "string") return msg
+  }
+  return undefined
+}
+
+/** Extract a message from SDK error `data` field shapes (NotFoundError, ConfigInvalidError, Hono validator). */
+function messageFromData(data: Record<string, unknown>): string | undefined {
+  if (typeof data.message === "string") return data.message
+  // ConfigInvalidError: { path, issues: [{ message, path, code }] }
+  const fromIssues = firstMessage(data.issues)
+  if (fromIssues) return fromIssues
+  // Hono validator: { data, error: [...], success: false }
+  return firstMessage(data.error)
+}
+
+function safeStringify(value: unknown): string | undefined {
+  try {
+    const json = JSON.stringify(value)
+    if (json !== "{}" && json.length < 500) return json
+  } catch (err) {
+    console.warn("[Kilo New] getErrorMessage: JSON.stringify failed", err)
+  }
+  return undefined
+}
+
 export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
   if (typeof error === "string") return error
-  if (error && typeof error === "object") {
-    const obj = error as Record<string, unknown>
-    // Direct .message field
-    if (typeof obj.message === "string") return obj.message
-    // Direct .error field (string)
-    if (typeof obj.error === "string") return obj.error
-    // SDK throwOnError shape: { error: { message: "..." } } or { error: { ... } }
-    if (obj.error && typeof obj.error === "object") {
-      const nested = obj.error as Record<string, unknown>
-      if (typeof nested.message === "string") return nested.message
-    }
-    // NotFoundError shape: { data: { message: "..." } }
-    if (obj.data && typeof obj.data === "object") {
-      const data = obj.data as Record<string, unknown>
-      if (typeof data.message === "string") return data.message
-      // Hono validator shape: { data: ..., error: [...], success: false }
-      if (Array.isArray(data.error) && data.error.length > 0) {
-        const first = data.error[0]
-        if (typeof first === "string") return first
-        if (first && typeof first === "object" && typeof (first as Record<string, unknown>).message === "string") {
-          return (first as Record<string, unknown>).message as string
-        }
-      }
-    }
-    // BadRequestError shape: { errors: [{ message: "..." }] }
-    if (Array.isArray(obj.errors) && obj.errors.length > 0) {
-      const first = obj.errors[0]
-      if (typeof first === "string") return first
-      if (first && typeof first.message === "string") return first.message
-    }
-    // Last resort: try JSON.stringify for debuggability
-    try {
-      const json = JSON.stringify(error)
-      if (json !== "{}" && json.length < 500) return json
-    } catch (err) {
-      console.warn("[Kilo New] getErrorMessage: JSON.stringify failed", err)
-    }
+  if (!error || typeof error !== "object") return String(error)
+
+  const obj = error as Record<string, unknown>
+  if (typeof obj.message === "string") return obj.message
+  if (typeof obj.error === "string") return obj.error
+
+  // SDK throwOnError shape: { error: { message: "..." } }
+  if (obj.error && typeof obj.error === "object") {
+    const nested = (obj.error as Record<string, unknown>).message
+    if (typeof nested === "string") return nested
   }
-  return String(error)
+
+  if (obj.data && typeof obj.data === "object") {
+    const fromData = messageFromData(obj.data as Record<string, unknown>)
+    if (fromData) return fromData
+  }
+
+  // BadRequestError: { errors: [...] }
+  const fromErrors = firstMessage(obj.errors)
+  if (fromErrors) return fromErrors
+
+  return safeStringify(error) ?? String(error)
 }
 
-export function sessionToWebview(session: Session) {
+/**
+ * Format a full human-readable breakdown of a config save failure, including
+ * the file path and every Zod issue. Used as the expandable details next to
+ * the short getErrorMessage() summary.
+ *
+ * Zod issues are formatted via zod's built-in `prettifyError` so the output
+ * matches Zod's canonical format (array indices rendered as `foo[0].bar`, etc).
+ *
+ * Returns undefined when the error doesn't carry structured config data —
+ * callers should omit the details section in that case.
+ */
+export function getConfigErrorDetails(error: unknown): string | undefined {
+  if (!error || typeof error !== "object") return undefined
+  const data = (error as Record<string, unknown>).data
+  if (!data || typeof data !== "object") return undefined
+  const scoped = data as Record<string, unknown>
+  const path = typeof scoped.path === "string" ? scoped.path : undefined
+  const shadowedBy = typeof scoped.shadowedBy === "string" ? scoped.shadowedBy : undefined
+  const issues = Array.isArray(scoped.issues) ? scoped.issues : undefined
+  if (!path && !shadowedBy && (!issues || issues.length === 0)) return undefined
+
+  const out: string[] = []
+  if (path) out.push(`File: ${path}`)
+  if (shadowedBy) out.push(`Shadowed by: ${shadowedBy}`)
+  if (issues && issues.length > 0) {
+    if (out.length > 0) out.push("")
+    // prettifyError accepts any object with an `issues` array; the cast is
+    // safe because it only reads the issues field.
+    out.push(prettifyError({ issues } as Parameters<typeof prettifyError>[0]))
+  }
+  return out.join("\n")
+}
+
+export class MessageConfirmation {
+  private readonly ids = new Map<string, { confirmed: boolean; waits: Set<() => void> }>()
+
+  track(id?: string): () => void {
+    if (!id) return () => {}
+    const entry = this.ids.get(id) ?? { confirmed: false, waits: new Set<() => void>() }
+    this.ids.set(id, entry)
+    return () => {
+      this.ids.delete(id)
+    }
+  }
+
+  confirm(id: string): void {
+    const entry = this.ids.get(id)
+    if (!entry) return
+    entry.confirmed = true
+    for (const done of [...entry.waits]) {
+      done()
+    }
+  }
+
+  has(id?: string): boolean {
+    if (!id) return false
+    return this.ids.get(id)?.confirmed ?? false
+  }
+
+  wait(id?: string, timeout = 1_500): Promise<boolean> {
+    if (!id) return Promise.resolve(false)
+    const entry = this.ids.get(id)
+    if (!entry) return Promise.resolve(false)
+    if (entry.confirmed) return Promise.resolve(true)
+
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        cleanup()
+        resolve(entry.confirmed)
+      }, timeout)
+
+      const cleanup = () => {
+        clearTimeout(timer)
+        entry.waits.delete(done)
+      }
+
+      const done = () => {
+        cleanup()
+        resolve(true)
+      }
+
+      entry.waits.add(done)
+    })
+  }
+}
+
+export async function runWithMessageConfirmation<T>(
+  state: MessageConfirmation,
+  id: string | undefined,
+  label: string,
+  run: () => Promise<T>,
+): Promise<T | undefined> {
+  const release = state.track(id)
+  try {
+    return await run()
+  } catch (error) {
+    if (await state.wait(id)) {
+      console.warn(`[Kilo New] ${label} ended after server accepted it; ignoring transport error`, {
+        error: getErrorMessage(error),
+      })
+      return undefined
+    }
+    throw error
+  } finally {
+    release()
+  }
+}
+
+export function sessionToWebview(
+  session: Pick<Session, "id" | "parentID" | "title" | "time" | "summary" | "revert" | "metadata" | "agent" | "model">,
+) {
+  const goal = session.metadata?.["kilo.goal"]
   return {
     id: session.id,
     parentID: session.parentID ?? null,
     title: session.title,
     createdAt: new Date(session.time.created).toISOString(),
     updatedAt: new Date(session.time.updated).toISOString(),
+    // The agent and model the server last ran, so a reopened session shows
+    // them before its history loads. The server stores Default as "default".
+    agent: session.agent,
+    model: session.model && {
+      providerID: session.model.providerID,
+      modelID: session.model.id,
+      ...(session.model.variant && session.model.variant !== "default" ? { variant: session.model.variant } : {}),
+    },
     // Use null (not undefined) so the value survives postMessage JSON serialization.
     // Without this, unrevert responses lose the revert key entirely and the
     // SolidJS store merge never clears the existing revert state.
     revert: session.revert ?? null,
     summary: session.summary ?? null,
+    goal:
+      goal &&
+      typeof goal === "object" &&
+      "text" in goal &&
+      typeof goal.text === "string" &&
+      "active" in goal &&
+      typeof goal.active === "boolean"
+        ? {
+            text: goal.text,
+            active: goal.active,
+            ...("status" in goal &&
+            (goal.status === "active" ||
+              goal.status === "complete" ||
+              goal.status === "blocked" ||
+              goal.status === "paused")
+              ? { status: goal.status }
+              : {}),
+            ...("reason" in goal && typeof goal.reason === "string" ? { reason: goal.reason } : {}),
+          }
+        : null,
   }
 }
 
@@ -95,56 +270,141 @@ export interface SessionRefreshContext {
   pendingSessionRefresh: boolean
   connectionState: "connecting" | "connected" | "disconnected" | "error"
   listSessions: ((dir: string) => Promise<Session[]>) | null
+  listSessionPage?: ((dir: string, cursor?: number) => Promise<SessionPage>) | null
+  page?: SessionPageState
   sessionDirectories: Map<string, string>
+  worktreeDirectories?: () => string[]
   workspaceDirectory: string
+  isCurrent?: () => boolean
   postMessage(message: unknown): void
 }
 
-/**
- * Load sessions from the workspace and all registered worktree directories.
- * Sets pendingSessionRefresh when the HTTP client isn't ready yet.
- * Returns the resolved projectID (if any) so the caller can update its own state.
- */
-export async function loadSessions(ctx: SessionRefreshContext): Promise<string | undefined> {
+/** Prefer the paged lister, and fall back to wrapping a plain session list. */
+function pageSource(ctx: SessionRefreshContext): ((dir: string, cursor?: number) => Promise<SessionPage>) | null {
+  if (ctx.listSessionPage) return ctx.listSessionPage
   const list = ctx.listSessions
-  if (!list) {
-    ctx.pendingSessionRefresh = true
-    if (ctx.connectionState !== "connecting") {
-      ctx.postMessage({ type: "error", message: "Not connected to CLI backend" })
-    }
-    return
+  if (!list) return null
+  return (dir) => list(dir).then((sessions) => ({ sessions }))
+}
+
+/** Workspace root plus every registered worktree directory, deduplicated. */
+function sessionDirs(ctx: SessionRefreshContext): string[] {
+  const dirs = [ctx.workspaceDirectory]
+  const seen = new Set(dirs)
+  const extra = ctx.worktreeDirectories ? ctx.worktreeDirectories() : [...ctx.sessionDirectories.values()]
+  for (const dir of extra) {
+    if (seen.has(dir)) continue
+    seen.add(dir)
+    dirs.push(dir)
   }
+  return dirs
+}
 
-  ctx.pendingSessionRefresh = false
-
-  const sessions = await list(ctx.workspaceDirectory)
-  const projectID = sessions[0]?.projectID
-  const worktreeDirs = new Set(ctx.sessionDirectories.values())
-  const extra = await Promise.all(
-    [...worktreeDirs].map((dir) =>
-      list(dir).catch((err: unknown) => {
-        console.error(`[Kilo] Failed to list sessions for ${dir}:`, err)
-        return [] as Session[]
+async function listPages(
+  list: (dir: string, cursor?: number) => Promise<SessionPage>,
+  targets: Array<{ dir: string; cursor?: number }>,
+  fatal?: string,
+) {
+  const failed = new Set<string>()
+  let cause: unknown
+  const results = await Promise.all(
+    targets.map((target) =>
+      list(target.dir, target.cursor).catch((err: unknown) => {
+        console.error(`[Kilo] Failed to list sessions for ${target.dir}:`, err)
+        failed.add(target.dir)
+        if (target.dir === fatal) cause = err
+        return undefined
       }),
     ),
   )
-  const seen = new Set(sessions.map((s) => s.id))
-  for (const batch of extra) {
-    for (const s of batch) {
-      if (!seen.has(s.id) && (!projectID || s.projectID === projectID)) {
-        sessions.push(s)
-        seen.add(s.id)
-      }
+  return { results, failed, cause }
+}
+
+/**
+ * Load one page of sessions from the workspace and all registered worktree
+ * directories. `more` continues from the per-directory cursors and appends;
+ * otherwise it starts over and reconciles. Sets pendingSessionRefresh when the
+ * HTTP client isn't ready yet. Returns the resolved projectID (if any).
+ */
+async function loadPage(ctx: SessionRefreshContext, more: boolean): Promise<string | undefined> {
+  const list = pageSource(ctx)
+  if (!list) {
+    ctx.pendingSessionRefresh = true
+    if (!more && ctx.connectionState !== "connecting") {
+      ctx.postMessage({ type: "error", message: "Not connected to CLI backend" })
+    }
+    if (more) ctx.postMessage({ type: "sessionsLoaded", sessions: [], append: true, hasMore: false })
+    return
+  }
+  if (!more) ctx.pendingSessionRefresh = false
+
+  const page = ctx.page ?? (ctx.page = createSessionPageState())
+  const fatal = more ? undefined : ctx.workspaceDirectory
+  const targets = more
+    ? [...page.dirs.entries()].filter(([, entry]) => entry.more).map(([dir, entry]) => ({ dir, cursor: entry.cursor }))
+    : sessionDirs(ctx).map((dir) => ({ dir }))
+  if (more && targets.length === 0) {
+    page.hasMore = false
+    // Nothing left to page, so clear the load-more spinner in the webview.
+    ctx.postMessage({ type: "sessionsLoaded", sessions: [], append: true, hasMore: false })
+    return
+  }
+  if (!more) page.dirs = new Map()
+
+  const { results, failed, cause } = await listPages(list, targets, fatal)
+  if (ctx.isCurrent && !ctx.isCurrent()) return
+
+  // A failed workspace listing is fatal: posting a partial list would make the
+  // webview reconcile away root history it still holds. Let the caller surface
+  // the error instead.
+  if (fatal !== undefined && failed.has(fatal)) {
+    throw cause ?? new Error("Failed to list workspace sessions")
+  }
+
+  const batches: Session[][] = []
+  targets.forEach((target, index) => {
+    const result = results[index]
+    if (!result) {
+      // Keep the directory pageable so a later load-more retries it.
+      if (!more) page.dirs.set(target.dir, { more: true })
+      return
+    }
+    batches.push(result.sessions)
+    page.dirs.set(target.dir, { cursor: result.cursor, more: result.cursor != null })
+  })
+  page.hasMore = [...page.dirs.values()].some((entry) => entry.more)
+
+  if (more) {
+    ctx.postMessage({
+      type: "sessionsLoaded",
+      sessions: mergeSessions(batches).map((s) => sessionToWebview(s)),
+      append: true,
+      hasMore: page.hasMore,
+    })
+    return
+  }
+
+  // Sessions whose worktree directories failed to list — the webview must
+  // not delete these during reconciliation since the absence is transient.
+  const preserve: string[] = []
+  if (failed.size) {
+    for (const [sid, dir] of ctx.sessionDirectories) {
+      if (failed.has(dir)) preserve.push(sid)
     }
   }
 
   ctx.postMessage({
     type: "sessionsLoaded",
-    sessions: sessions.map((s) => sessionToWebview(s)),
+    sessions: mergeSessions(batches).map((s) => sessionToWebview(s)),
+    ...(preserve.length ? { preserveSessionIds: preserve } : {}),
+    hasMore: page.hasMore,
   })
 
-  return sessions[0]?.projectID
+  return results[0]?.sessions[0]?.projectID
 }
+
+export const loadSessions = (ctx: SessionRefreshContext) => loadPage(ctx, false)
+export const loadMoreSessions = (ctx: SessionRefreshContext) => loadPage(ctx, true)
 
 /**
  * Flush a deferred session refresh when the HTTP client becomes available.
@@ -152,13 +412,23 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
 export async function flushPendingSessionRefresh(ctx: SessionRefreshContext): Promise<string | undefined> {
   if (!ctx.pendingSessionRefresh) return
 
-  if (!ctx.listSessions) {
+  if (!pageSource(ctx)) {
     if (ctx.connectionState === "connecting") return
     ctx.postMessage({ type: "error", message: "Not connected to CLI backend" })
     return
   }
 
-  return loadSessions(ctx)
+  try {
+    return await loadSessions(ctx)
+  } catch (error) {
+    // Keep the refresh pending so the next flush retries, and surface the
+    // failure instead of leaving the history empty without feedback.
+    ctx.pendingSessionRefresh = true
+    if (ctx.connectionState !== "connecting") {
+      ctx.postMessage({ type: "error", message: getErrorMessage(error) || "Failed to load sessions" })
+    }
+    return
+  }
 }
 
 export function buildSettingPath(key: string): { section: string; leaf: string } {
@@ -186,7 +456,10 @@ export function resolveContextDirectory(input: {
   contextSessionID?: string
   sessionDirectories: Map<string, string>
   workspaceDirectory: string
+  forceWorkspaceRoot?: boolean
 }) {
+  if (input.forceWorkspaceRoot) return input.workspaceDirectory
+
   return resolveWorkspaceDirectory({
     sessionID: input.currentSessionID ?? input.contextSessionID,
     sessionDirectories: input.sessionDirectories,
@@ -194,19 +467,78 @@ export function resolveContextDirectory(input: {
   })
 }
 
+export function resolveNewSessionDirectory(input: {
+  sessionID?: string
+  currentSessionID?: string
+  contextSessionID?: string
+  agentManagerContext?: string
+  contextDirectory?: string
+  sessionDirectories: Map<string, string>
+  workspaceDirectory: string
+}) {
+  if (input.sessionID) {
+    return resolveWorkspaceDirectory({
+      sessionID: input.sessionID,
+      sessionDirectories: input.sessionDirectories,
+      workspaceDirectory: input.workspaceDirectory,
+    })
+  }
+
+  if (input.contextDirectory) return input.contextDirectory
+
+  return resolveContextDirectory({
+    currentSessionID: input.currentSessionID,
+    contextSessionID: input.contextSessionID,
+    sessionDirectories: input.sessionDirectories,
+    workspaceDirectory: input.workspaceDirectory,
+    forceWorkspaceRoot: input.agentManagerContext === "local",
+  })
+}
+
+export function sameDirectory(a: string, b: string): boolean {
+  if (!a || !b) return false
+
+  const left = path.resolve(a)
+  const right = path.resolve(b)
+  if (path.relative(left, right) === "") return true
+
+  if (process.platform !== "win32") return false
+  return path.relative(left.toLowerCase(), right.toLowerCase()) === ""
+}
+
+type SyncEvent =
+  | SyncEventMessageUpdated
+  | SyncEventMessageRemoved
+  | SyncEventMessagePartUpdated
+  | SyncEventMessagePartRemoved
+  | SyncEventSessionCreated
+  | SyncEventSessionUpdated
+  | SyncEventSessionDeleted
+
+// Error phase is envelope metadata, not part of the generated legacy SDK event.
+type StreamEvent = (Event | SyncEvent) & { metadata?: { phase?: "admission" | "execution" } }
+
 export type WebviewMessage =
+  | PartUpdate
+  | PartBatch
+  | PartRemove
   | {
-      type: "partUpdated"
-      sessionID: string
-      messageID: string
-      part: unknown
-      delta?: { type: "text-delta"; textDelta: string }
+      type: "indexingStatusLoaded"
+      status: IndexingStatus
     }
   | {
       type: "messageCreated"
       message: Record<string, unknown>
     }
   | { type: "sessionStatus"; sessionID: string; status: string; attempt?: number; message?: string; next?: number }
+  | { type: "sessionWakeup"; sessionID: string; pending: number }
+  | {
+      type: "sessionTurnClosed"
+      sessionID: string
+      eventID: string
+      reason: "completed" | "error" | "interrupted" | "superseded"
+      parentID?: string
+    }
   | {
       type: "permissionRequest"
       permission: {
@@ -221,41 +553,86 @@ export type WebviewMessage =
       }
     }
   | { type: "todoUpdated"; sessionID: string; items: unknown[] }
-  | { type: "questionRequest"; question: { id: string; sessionID: string; questions: unknown[]; tool?: unknown } }
+  | {
+      type: "questionRequest"
+      question: { id: string; sessionID: string; questions: unknown[]; blocking?: boolean; tool?: unknown }
+    }
   | { type: "questionResolved"; requestID: string }
+  | {
+      type: "suggestionRequest"
+      suggestion: {
+        id: string
+        sessionID: string
+        text: string
+        actions: unknown[]
+        blocking?: boolean
+        tool?: unknown
+      }
+    }
+  | { type: "suggestionResolved"; requestID: string }
+  | { type: "suggestionError"; requestID: string }
   | { type: "permissionResolved"; permissionID: string }
-  | { type: "permissionError"; permissionID: string }
+  | { type: "permissionError"; permissionID: string; stale?: boolean }
   | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview>; draftID?: string }
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
+  | { type: "sessionDeleted"; sessionID: string }
   | { type: "messageRemoved"; sessionID: string; messageID: string }
-  | { type: "sessionError"; sessionID?: string; error?: unknown }
+  | { type: "sessionError"; eventID: string; sessionID?: string; error?: unknown; phase?: "admission" | "execution" }
+  | {
+      type: "sandboxStatus"
+      sessionID: string
+      directory: string
+      enabled: boolean
+      available: boolean
+      reason?: string
+      version: number
+    }
   | null
 
-export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | undefined): WebviewMessage {
-  switch (event.type) {
-    case "message.part.updated": {
-      const part = event.properties.part as { messageID?: string; sessionID?: string }
-      if (!sessionID) return null
+type PartEvent =
+  | Extract<Event, { type: "message.part.delta" }>
+  | SyncEventMessagePartUpdated
+  | SyncEventMessagePartRemoved
+
+function mapPartEvent(event: PartEvent, sessionID: string | undefined): WebviewMessage {
+  if (event.type === "sync") {
+    if (event.name === "message.part.updated.1") {
+      const part = event.data.part
       return {
         type: "partUpdated",
-        sessionID,
-        messageID: part.messageID || "",
-        part: event.properties.part,
+        sessionID: event.data.sessionID,
+        messageID: part.messageID,
+        part,
       }
     }
-    case "message.part.delta": {
-      const props = event.properties
-      if (!sessionID) return null
-      return {
-        type: "partUpdated",
-        sessionID: props.sessionID,
-        messageID: props.messageID,
-        part: { id: props.partID, type: "text", messageID: props.messageID, text: props.delta },
-        delta: { type: "text-delta", textDelta: props.delta },
-      }
+    return {
+      type: "partRemoved",
+      sessionID: event.data.sessionID,
+      messageID: event.data.messageID,
+      partID: event.data.partID,
     }
-    case "message.updated": {
-      const info = event.properties.info
+  }
+  if (!sessionID) return null
+  const props = event.properties
+  return {
+    type: "partUpdated",
+    sessionID: props.sessionID,
+    messageID: props.messageID,
+    part: { id: props.partID, type: "text", messageID: props.messageID, text: props.delta },
+    delta: { type: "text-delta", textDelta: props.delta },
+  }
+}
+
+function statusExtra(info: Extract<Event, { type: "session.status" }>["properties"]["status"]) {
+  if (info.type === "retry") return { attempt: info.attempt, message: info.message, next: info.next }
+  if (info.type === "offline") return { message: info.message }
+  return {}
+}
+
+function mapSyncEvent(event: SyncEvent, sessionID: string | undefined): WebviewMessage {
+  switch (event.name) {
+    case "message.updated.1": {
+      const info = event.data.info
       return {
         type: "messageCreated",
         message: {
@@ -264,23 +641,61 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
         },
       }
     }
-    case "message.removed": {
-      const props = event.properties as { sessionID: string; messageID: string }
+    case "message.removed.1":
       return {
         type: "messageRemoved",
-        sessionID: props.sessionID,
-        messageID: props.messageID,
+        sessionID: event.data.sessionID,
+        messageID: event.data.messageID,
       }
-    }
+    case "message.part.updated.1":
+    case "message.part.removed.1":
+      return mapPartEvent(event, sessionID)
+    case "session.created.1":
+      return {
+        type: "sessionCreated",
+        session: sessionToWebview(event.data.info),
+      }
+    case "session.updated.1":
+      return null
+    case "session.deleted.1":
+      return {
+        type: "sessionDeleted",
+        sessionID: event.data.sessionID,
+      }
+    default:
+      return null
+  }
+}
+
+export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: string | undefined): WebviewMessage {
+  if (event.type === "sync") return mapSyncEvent(event, sessionID)
+  if (event.type === "message.part.delta") return mapPartEvent(event, sessionID)
+  switch (event.type) {
     case "session.status": {
       const info = event.properties.status
+      const status = info.type
+      const extra = statusExtra(info)
       return {
-        type: "sessionStatus",
+        type: "sessionStatus" as const,
         sessionID: event.properties.sessionID,
-        status: info.type,
-        ...(info.type === "retry" ? { attempt: info.attempt, message: info.message, next: info.next } : {}),
+        status,
+        ...extra,
       }
     }
+    case "session.wakeup":
+      return {
+        type: "sessionWakeup" as const,
+        sessionID: event.properties.sessionID,
+        pending: event.properties.pending,
+      }
+    case "session.turn.close":
+      return {
+        type: "sessionTurnClosed",
+        sessionID: event.properties.sessionID,
+        eventID: event.id,
+        reason: event.properties.reason,
+        ...(event.properties.parentID ? { parentID: event.properties.parentID } : {}),
+      }
     case "permission.asked":
       return {
         type: "permissionRequest",
@@ -313,6 +728,7 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
           id: event.properties.id,
           sessionID: event.properties.sessionID,
           questions: event.properties.questions,
+          blocking: event.properties.blocking,
           tool: event.properties.tool,
         },
       }
@@ -322,22 +738,47 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
         type: "questionResolved",
         requestID: event.properties.requestID,
       }
+    case "suggestion.shown":
+      return {
+        type: "suggestionRequest",
+        suggestion: {
+          id: event.properties.id,
+          sessionID: event.properties.sessionID,
+          text: event.properties.text,
+          actions: event.properties.actions,
+          blocking: event.properties.blocking,
+          tool: event.properties.tool,
+        },
+      }
+    case "suggestion.accepted":
+    case "suggestion.dismissed":
+      return {
+        type: "suggestionResolved",
+        requestID: event.properties.requestID,
+      }
     case "session.error": {
       return {
         type: "sessionError",
+        eventID: event.id,
         sessionID: event.properties.sessionID,
         error: event.properties.error,
+        ...(event.metadata?.phase ? { phase: event.metadata.phase } : {}),
       }
     }
-    case "session.created":
+    case "sandbox.status.changed":
       return {
-        type: "sessionCreated",
-        session: sessionToWebview(event.properties.info),
+        type: "sandboxStatus",
+        sessionID: event.properties.sessionID,
+        directory: event.properties.directory,
+        enabled: event.properties.enabled,
+        available: event.properties.available,
+        reason: event.properties.reason,
+        version: event.properties.version,
       }
-    case "session.updated":
+    case "indexing.status":
       return {
-        type: "sessionUpdated",
-        session: sessionToWebview(event.properties.info),
+        type: "indexingStatusLoaded",
+        status: event.properties.status,
       }
     default:
       return null
@@ -349,6 +790,7 @@ export function mapCloudSessionMessageToWebviewMessage(message: CloudSessionMess
     id: message.info.id,
     sessionID: message.info.sessionID,
     role: message.info.role as "user" | "assistant",
+    parentID: message.info.parentID,
     parts: message.parts,
     createdAt: message.info.time?.created
       ? new Date(message.info.time.created).toISOString()
@@ -364,10 +806,15 @@ export function mapCloudSessionMessageToWebviewMessage(message: CloudSessionMess
  * Returns true when the event carries a projectID that does not match the expected one.
  * When expectedProjectID is undefined (not yet resolved), nothing is filtered.
  */
-export function isEventFromForeignProject(event: Event, expectedProjectID: string | undefined): boolean {
-  if (!expectedProjectID) return false
-  if (event.type === "session.created" || event.type === "session.updated") {
-    return event.properties.info.projectID !== expectedProjectID
+export function isEventFromForeignProject(
+  event: StreamEvent | SyncPayload,
+  expectedProjectID: string | undefined,
+): boolean {
+  if (!expectedProjectID || event.type !== "sync") return false
+  if (event.name === "session.created.1" || event.name === "session.deleted.1") {
+    return event.data.info.projectID !== expectedProjectID
   }
-  return false
+  if (event.name !== "session.updated.1") return false
+  const project = event.data.info.projectID
+  return project !== undefined && project !== expectedProjectID
 }

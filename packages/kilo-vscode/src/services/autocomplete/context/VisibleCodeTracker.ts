@@ -24,8 +24,6 @@ import { extractDiffInfo as _extractDiffInfo } from "./visible-code-utils"
 const GIT_SCHEMES = ["git", "gitfs", "file", "vscode-remote"]
 
 export class VisibleCodeTracker {
-  private lastContext: VisibleCodeContext | null = null
-
   constructor(
     private workspacePath: string,
     private ignoreController: FileIgnoreController | null = null,
@@ -101,19 +99,10 @@ export class VisibleCodeTracker {
       })
     }
 
-    this.lastContext = {
+    return {
       timestamp: Date.now(),
       editors: editorInfos,
     }
-
-    return this.lastContext
-  }
-
-  /**
-   * Returns the last captured context, or null if never captured.
-   */
-  public getLastContext(): VisibleCodeContext | null {
-    return this.lastContext
   }
 
   /**

@@ -1,22 +1,26 @@
 {
   "name": "@kilocode/kilo-docs",
-  "version": "7.2.0",
+  "version": "7.8.15",
   "private": true,
   "scripts": {
     "dev": "next dev --webpack --port 3002",
     "build": "next build --webpack",
+    "lint": "bun run --cwd ../.. lint packages/kilo-docs",
     "start": "next start",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:ci": "mkdir -p .artifacts/unit && vitest run --reporter=junit --outputFile=.artifacts/unit/junit.xml",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@docsearch/css": "^4",
     "@docsearch/js": "^4",
     "@markdoc/markdoc": "^0.5.4",
     "@markdoc/next.js": "^0.5.0",
-    "js-yaml": "^4.1.0",
     "@vscode/codicons": "^0.0.44",
-    "mermaid": "11.12.3",
-    "next": "^16.1.5",
+    "@xyflow/react": "12.10.2",
+    "js-yaml": "^4.3.2",
+    "mermaid": "11.17.2",
+    "next": "^16.3.8",
     "posthog-js": "^1.335.3",
     "prismjs": "^1.30.0",
     "react": "^19.2.4",
@@ -31,6 +35,7 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.3"
-  }
+    "vitest": "4.1.11"
+  },
+  "peerDependencies": {}
 }

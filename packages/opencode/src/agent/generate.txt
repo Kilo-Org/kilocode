@@ -33,33 +33,17 @@ When a user describes what they want an agent to do, you will:
 
 6 **Example agent descriptions**:
 
-- in the 'whenToUse' field of the JSON object, you should include examples of when this agent should be used.
-- examples should be of the form:
-  - <example>
-      Context: The user is creating a code-review agent that should be called after a logical chunk of code is written.
-      user: "Please write a function that checks if a number is prime"
-      assistant: "Here is the relevant function: "
-      <function call omitted for brevity only for this example>
-      <commentary>
-      Since the user is greeting, use the Task tool to launch the greeting-responder agent to respond with a friendly joke. 
-      </commentary>
-      assistant: "Now let me use the code-reviewer agent to review the code"
-    </example>
-  - <example>
-      Context: User is creating an agent to respond to the word "hello" with a friendly jok.
-      user: "Hello"
-      assistant: "I'm going to use the Task tool to launch the greeting-responder agent to respond with a friendly joke"
-      <commentary>
-      Since the user is greeting, use the greeting-responder agent to respond with a friendly joke. 
-      </commentary>
-    </example>
-- If the user mentioned or implied that the agent should be used proactively, you should include examples of this.
-- NOTE: Ensure that in the examples, you are making the assistant use the Agent tool and not simply respond directly to the task.
+- in the 'whenToUse' field of the JSON object, you should include a description of when the agent should be used. Include the following:
+  - Trigger conditions, not just capability. Anthropic's guidance: "Reviews code for security issues before commits" routes better than "security expert." Name the situation, not the persona.
+  - When to invoke, phrased actively. "Use immediately after writing or modifying code," "Use when analyzing data," "Use proactively when encountering any issues." The phrase use proactively (or the community convention MUST BE USED for…) measurably increases auto-delegation — the main agent otherwise tends to do tasks itself rather than spawn.
+  - Input signal. What should be true when this fires? "errors, test failures, and unexpected behavior" / "after code changes" / "before commits" — these cue Claude to match against the current context, not just the verb.
+  - Avoid generic role nouns. "frontend-engineer," "security expert," "backend specialist" are weak signals because they overlap with almost any task.
+- A good description will be 1-3 sentences on average, but there is no hard length limit. Ensure the description is complete enough to guide an agent on when to use it, but do not unnecessarily pad the length.
 
 Your output must be a valid JSON object with exactly these fields:
 {
 "identifier": "A unique, descriptive identifier using lowercase letters, numbers, and hyphens (e.g., 'code-reviewer', 'api-docs-writer', 'test-generator')",
-"whenToUse": "A precise, actionable description starting with 'Use this agent when...' that clearly defines the triggering conditions and use cases. Ensure you include examples as described above.",
+"whenToUse": "A precise, actionable description starting with 'Use this agent when...' that clearly defines the triggering conditions and use cases.",
 "systemPrompt": "The complete system prompt that will govern the agent's behavior, written in second person ('You are...', 'You will...') and structured for maximum clarity and effectiveness"
 }
 

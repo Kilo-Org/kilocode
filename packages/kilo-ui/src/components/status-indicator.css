@@ -4,7 +4,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
 
   &[data-status="completed"] {
     color: var(--icon-success-base);
@@ -17,7 +17,7 @@
 
   &[data-status="checkpoint"] {
     color: var(--text-weak);
-    font-size: 11px;
+    font-size: var(--kilo-font-size-11);
 
     &::before {
       content: "\2691";

@@ -1,5 +1,7 @@
 plugins {
+    alias(libs.plugins.rpc)
     alias(libs.plugins.kotlin)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -10,4 +12,10 @@ dependencies {
     intellijPlatform {
         intellijIdea(libs.versions.intellij.platform)
     }
+
+    testImplementation(kotlin("test"))
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

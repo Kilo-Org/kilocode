@@ -16,6 +16,15 @@ export enum TelemetryEvent {
   TOOL_USED = "Tool Used",
   AGENT_USED = "Agent Used",
   PLAN_FOLLOWUP = "Plan Followup",
+  SUGGESTION_SHOWN = "Suggestion Shown",
+  SUGGESTION_ACCEPTED = "Suggestion Accepted",
+
+  // Code Indexing
+  INDEXING_STARTED = "Indexing Started",
+  INDEXING_COMPLETED = "Indexing Completed",
+  INDEXING_FILE_COUNT = "Indexing File Count",
+  INDEXING_BATCH_RETRY = "Indexing Batch Retry",
+  INDEXING_ERROR = "Indexing Error",
 
   // Share Events
   SHARE_CREATED = "Share Created",
@@ -24,6 +33,8 @@ export enum TelemetryEvent {
   // MCP Events
   MCP_SERVER_CONNECTED = "MCP Server Connected",
   MCP_SERVER_ERROR = "MCP Server Error",
+  MCP_AUTH_STARTED = "MCP Auth Started",
+  MCP_AUTH_COMPLETED = "MCP Auth Completed",
 
   // Remote Events
   REMOTE_CONNECTION_OPENED = "Remote Connection Opened",
@@ -34,6 +45,9 @@ export enum TelemetryEvent {
 
   // Config Events
   TELEMETRY_DISABLED = "Telemetry Disabled",
+
+  // Feedback
+  FEEDBACK_SUBMITTED = "Feedback Submitted",
 
   // Errors
   ERROR = "Error",

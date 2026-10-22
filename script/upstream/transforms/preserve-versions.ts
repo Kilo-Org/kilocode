@@ -36,7 +36,7 @@ export async function getCurrentVersion(): Promise<string> {
  */
 export async function preserveVersion(filePath: string, options: PreserveOptions = {}): Promise<VersionPreserveResult> {
   const file = Bun.file(filePath)
-  let content = await file.text()
+  const content = await file.text()
 
   // Extract current version
   const versionMatch = content.match(/"version":\s*"([^"]+)"/)
@@ -61,6 +61,30 @@ export async function preserveVersion(filePath: string, options: PreserveOptions
   }
 }
 
+export async function preserveZedVersion(
+  filePath: string,
+  options: PreserveOptions = {},
+): Promise<VersionPreserveResult> {
+  const file = Bun.file(filePath)
+  const content = await file.text()
+  const versionMatch = content.match(/^version = "([^"]+)"/m)
+  const originalVersion = versionMatch ? versionMatch[1] : "unknown"
+  const targetVersion = options.targetVersion || (await getCurrentVersion())
+  const next = content
+    .replace(/^version = "[^"]+"/m, `version = "${targetVersion}"`)
+    .replace(/\/releases\/download\/v[^/]+\//g, `/releases/download/v${targetVersion}/`)
+  const changed = next !== content
+
+  if (changed && !options.dryRun) await Bun.write(filePath, next)
+
+  return {
+    file: filePath,
+    originalVersion,
+    preserved: changed,
+    dryRun: options.dryRun ?? false,
+  }
+}
+
 /**
  * Preserve versions in all package.json files
  */
@@ -75,24 +99,27 @@ export async function preserveAllVersions(options: PreserveOptions = {}): Promis
 
   info(`Target version: ${targetVersion}`)
 
+  const track = (result: VersionPreserveResult) => {
+    if (!result.preserved) return
+    results.push(result)
+    if (options.dryRun) {
+      info(`[DRY-RUN] Would preserve ${result.file}: ${result.originalVersion} -> ${targetVersion}`)
+      return
+    }
+    success(`Preserved ${result.file}: ${result.originalVersion} -> ${targetVersion}`)
+  }
+
   for await (const path of glob.scan({ absolute: true })) {
     // Skip excluded paths
     if (excludes.some((ex) => path.includes(ex.replace(/\*\*/g, "")))) {
       continue
     }
 
-    const result = await preserveVersion(path, { ...options, targetVersion })
-
-    if (result.preserved) {
-      results.push(result)
-
-      if (options.dryRun) {
-        info(`[DRY-RUN] Would preserve ${result.file}: ${result.originalVersion} -> ${targetVersion}`)
-      } else {
-        success(`Preserved ${result.file}: ${result.originalVersion} -> ${targetVersion}`)
-      }
-    }
+    track(await preserveVersion(path, { ...options, targetVersion }))
   }
+
+  const zed = "packages/extensions/zed/extension.toml"
+  if (await Bun.file(zed).exists()) track(await preserveZedVersion(zed, { ...options, targetVersion }))
 
   return results
 }

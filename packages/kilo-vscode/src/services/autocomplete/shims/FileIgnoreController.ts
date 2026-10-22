@@ -14,6 +14,7 @@ const SENSITIVE_PATTERNS = [".env", ".env.*"]
 // path.isAbsolute() on POSIX does not recognise these, so we check explicitly
 // to avoid passing them to the `ignore` package which throws a RangeError.
 const WINDOWS_DRIVE = /^[a-zA-Z]:[/\\]/
+const REALPATH_CACHE_MAX = 1_000
 
 function toPosix(filePath: string): string {
   return filePath.replace(/\\/g, "/")
@@ -22,7 +23,6 @@ function toPosix(filePath: string): string {
 export class FileIgnoreController {
   private workspacePath: string
   private ignoreInstance: Ignore = ignore()
-  private loadedContents: Array<{ file: string; content: string }> = []
   private readonly realpathCache = new Map<string, string>()
 
   constructor(workspacePath?: string) {
@@ -31,7 +31,7 @@ export class FileIgnoreController {
 
   async initialize(): Promise<void> {
     this.ignoreInstance = ignore()
-    this.loadedContents = []
+    this.realpathCache.clear()
 
     if (!this.workspacePath) {
       return
@@ -46,7 +46,6 @@ export class FileIgnoreController {
       if (kilocodeignoreContent.trim()) {
         this.ignoreInstance.add(kilocodeignoreContent)
         this.ignoreInstance.add(KILOCODEIGNORE)
-        this.loadedContents.push({ file: KILOCODEIGNORE, content: kilocodeignoreContent })
         return
       }
     }
@@ -57,12 +56,19 @@ export class FileIgnoreController {
       const gitignoreContent = fs.readFileSync(gitignorePath, "utf-8")
       if (gitignoreContent.trim()) {
         this.ignoreInstance.add(gitignoreContent)
-        this.loadedContents.push({ file: GITIGNORE, content: gitignoreContent })
       }
     }
 
     // Always add sensitive patterns in the fallback path.
     this.ignoreInstance.add(SENSITIVE_PATTERNS)
+  }
+
+  private cacheRealpath(input: string, resolved: string): void {
+    if (this.realpathCache.size >= REALPATH_CACHE_MAX) {
+      const key = this.realpathCache.keys().next().value
+      if (key !== undefined) this.realpathCache.delete(key)
+    }
+    this.realpathCache.set(input, resolved)
   }
 
   private toRelativePath(filePath: string): string | null {
@@ -85,7 +91,7 @@ export class FileIgnoreController {
     } else {
       try {
         resolved = fs.realpathSync(absoluteInput)
-        this.realpathCache.set(absoluteInput, resolved)
+        this.cacheRealpath(absoluteInput, resolved)
       } catch {
         // Keep unresolved path when file does not exist yet.
       }
@@ -117,31 +123,8 @@ export class FileIgnoreController {
     return !this.ignoreInstance.ignores(relative)
   }
 
-  /**
-   * Filter a list of candidate paths to those allowed.
-   * When no workspace path was provided, returns an empty array.
-   */
-  filterPaths(paths: string[]): string[] {
-    if (!this.workspacePath) {
-      return []
-    }
-    return paths.filter((candidate) => this.validateAccess(candidate))
-  }
-
-  /**
-   * Returns user-facing instructions explaining why access is restricted.
-   */
-  getInstructions(): string | undefined {
-    if (this.loadedContents.length === 0) {
-      return undefined
-    }
-
-    const sections = this.loadedContents.map(({ file, content }) => `# ${file}\n\n${content.trimEnd()}`)
-    return sections.join("\n\n")
-  }
-
   dispose(): void {
-    this.loadedContents = []
+    this.realpathCache.clear()
     this.ignoreInstance = ignore()
   }
 }

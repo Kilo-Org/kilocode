@@ -1,9 +1,11 @@
 import { describe, it, expect } from "bun:test"
 import {
+  pickOutcome,
   resolveOptimisticQuestionAgent,
   resolveQuestionMode,
   resolveSelectedQuestionMode,
   toggleAnswer,
+  tr,
 } from "../../webview-ui/src/components/chat/question-dock-utils"
 
 describe("toggleAnswer", () => {
@@ -103,6 +105,67 @@ describe("resolveSelectedQuestionMode", () => {
   })
 })
 
+describe("plan follow-up Continue here option", () => {
+  it("resolves to code mode when option carries mode: code matching the Continue here label", () => {
+    const questions = [
+      {
+        options: [
+          {
+            label: "Start new session",
+            description: "Implement in a fresh session",
+            labelKey: "plan.followup.answer.newSession",
+            descriptionKey: "plan.followup.answer.newSession.description",
+          },
+          {
+            label: "Continue here",
+            description: "Implement the plan in this session",
+            labelKey: "plan.followup.answer.continue",
+            descriptionKey: "plan.followup.answer.continue.description",
+            mode: "code",
+          },
+        ],
+      },
+    ]
+    expect(resolveSelectedQuestionMode(questions, [["Continue here"]])).toBe("code")
+  })
+
+  it("does not resolve a mode for Start new session (it carries no mode)", () => {
+    const questions = [
+      {
+        options: [
+          {
+            label: "Start new session",
+            description: "Implement in a fresh session",
+            labelKey: "plan.followup.answer.newSession",
+            descriptionKey: "plan.followup.answer.newSession.description",
+          },
+          {
+            label: "Continue here",
+            description: "Implement the plan in this session",
+            labelKey: "plan.followup.answer.continue",
+            descriptionKey: "plan.followup.answer.continue.description",
+            mode: "code",
+          },
+        ],
+      },
+    ]
+    expect(resolveSelectedQuestionMode(questions, [["Start new session"]])).toBeUndefined()
+  })
+
+  it("resolves optimistic agent to code when Continue here is picked while in plan mode", () => {
+    const mode = resolveSelectedQuestionMode(
+      [
+        {
+          options: [{ label: "Continue here", description: "Implement here", mode: "code" }],
+        },
+      ],
+      [["Continue here"]],
+    )
+    const result = resolveOptimisticQuestionAgent(undefined, "plan", mode)
+    expect(result).toEqual({ base: "plan", agent: "code" })
+  })
+})
+
 describe("resolveOptimisticQuestionAgent", () => {
   it("stores the previous agent when applying an optimistic mode", () => {
     const result = resolveOptimisticQuestionAgent(undefined, "ask", "code")
@@ -126,5 +189,56 @@ describe("resolveOptimisticQuestionAgent", () => {
     const result = resolveOptimisticQuestionAgent("ask", "code", "architect")
 
     expect(result).toEqual({ base: "ask", agent: "architect" })
+  })
+})
+
+describe("pickOutcome", () => {
+  it("keeps a single-question single-select option pick pending until explicit submit", () => {
+    expect(pickOutcome({ single: true, multi: false, custom: false })).toEqual({ kind: "stay" })
+  })
+
+  it("advances to the next tab on a multi-question single-select option pick", () => {
+    expect(pickOutcome({ single: false, multi: false, custom: false })).toEqual({ kind: "advance" })
+  })
+
+  it("stays on the current tab for a multi-select pick", () => {
+    expect(pickOutcome({ single: true, multi: true, custom: false })).toEqual({ kind: "stay" })
+  })
+
+  it("defers submission for a single-select custom-input pick (handleCustomSubmit owns the submit)", () => {
+    expect(pickOutcome({ single: true, multi: false, custom: true })).toEqual({ kind: "stay" })
+  })
+
+  it("stays on the current tab for a multi-select custom-input pick", () => {
+    expect(pickOutcome({ single: false, multi: true, custom: true })).toEqual({ kind: "stay" })
+  })
+})
+
+describe("tr", () => {
+  it("returns the translated value when the key is present", () => {
+    const dict: Record<string, string> = { "plan.followup.answer.continue": "Continuer ici" }
+    const t = (key: string) => dict[key] ?? key
+    expect(tr(t, "plan.followup.answer.continue", "Continue here")).toBe("Continuer ici")
+  })
+
+  it("returns the fallback when key is undefined", () => {
+    const t = (key: string) => key
+    expect(tr(t, undefined, "Continue here")).toBe("Continue here")
+  })
+
+  it("returns the fallback when the key is missing from the dict (language.t echoes the key)", () => {
+    const t = (key: string) => key
+    expect(tr(t, "plan.followup.answer.continue", "Continue here")).toBe("Continue here")
+  })
+
+  it("returns an empty string fallback when no key and no label are available", () => {
+    const t = (key: string) => key
+    expect(tr(t, undefined, "")).toBe("")
+  })
+
+  it("returns the translated value even when the fallback is empty", () => {
+    const dict: Record<string, string> = { "plan.followup.question": "Prêt à implémenter ?" }
+    const t = (key: string) => dict[key] ?? key
+    expect(tr(t, "plan.followup.question", "")).toBe("Prêt à implémenter ?")
   })
 })

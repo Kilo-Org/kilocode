@@ -1,9 +1,9 @@
-export type Platform = "legacy" | "new" | "all"
+export type Platform = "new" | "all"
 
 export interface NavLink {
   href: string
   children: string
-  platform?: Platform // "legacy" = stable VSCode only, "new" = new VSCode + CLI only, omitted = universal
+  platform?: Platform // "new" = current VS Code + CLI only, omitted = universal
   subLinks?: NavLink[] // Optional nested links for second-level navigation
 }
 

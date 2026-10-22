@@ -1,318 +1,392 @@
-// kilocode_change new file
-import { fetchKiloModels } from "@kilocode/kilo-gateway"
+// kilocode_change - new file
+import { fetchKiloModels, type KiloModelsResult } from "@kilocode/kilo-gateway"
+import { Context, Deferred, Duration, Effect, Exit, Fiber, Layer, Schema, Scope } from "effect"
+import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { Config } from "../config/config"
 import { Auth } from "../auth"
-import { Env } from "../env"
-import { Log } from "../util/log"
+import { compatible, organization, token } from "@/kilocode/provider/catalog"
+import { delay, retryable } from "@/kilocode/provider/catalog-recovery"
+import * as ModelsRefresh from "@opencode-ai/core/kilocode/models-refresh"
+import type { Provider } from "@opencode-ai/core/models-dev"
+import * as Log from "@opencode-ai/core/util/log"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
+import { httpClient } from "@opencode-ai/core/effect/app-node-platform" // kilocode_change
 
-export namespace ModelCache {
-  const log = Log.create({ service: "model-cache" })
+type Models = Provider["models"]
+type KiloOptions = NonNullable<Parameters<typeof fetchKiloModels>[0]>
+type Options = { -readonly [K in keyof KiloOptions]?: KiloOptions[K] } & { apiKey?: string }
+type Failure = NonNullable<KiloModelsResult["error"]>
+type Result = { readonly models: Models; readonly error?: Failure }
+type View = { models?: Models; timestamp?: number; empty?: boolean }
+type Flight = { readonly done: Deferred.Deferred<Result, unknown>; version: number }
 
-  // Cache structure
-  const cache = new Map<
-    string,
-    {
-      models: Record<string, any>
-      timestamp: number
-    }
-  >()
+export interface KiloModels {
+  readonly fetch: (options: KiloOptions) => Effect.Effect<KiloModelsResult, unknown>
+}
 
-  const TTL = 5 * 60 * 1000 // 5 minutes
-  const inFlightRefresh = new Map<string, Promise<Record<string, any>>>()
+export class KiloModelsService extends Context.Service<KiloModelsService, KiloModels>()(
+  "@kilocode/ModelCache/KiloModels",
+) {}
 
-  /**
-   * Get cached models if available and not expired
-   * @param providerID - Provider identifier (e.g., "kilo")
-   * @returns Cached models or undefined if cache miss or expired
-   */
-  export function get(providerID: string): Record<string, any> | undefined {
-    const cached = cache.get(providerID)
+export const kiloModelsLayer = Layer.succeed(
+  KiloModelsService,
+  KiloModelsService.of({ fetch: (options) => Effect.tryPromise(() => fetchKiloModels(options)) }),
+)
+type Cell = {
+  readonly providerID: string
+  readonly options: Options
+  readonly view: View
+  cached?: { readonly result: Result; readonly expires: number }
+  flight?: Flight
+  recovery?: Fiber.Fiber<void>
+}
 
-    if (!cached) {
-      log.debug("cache miss", { providerID })
-      return undefined
-    }
+export interface Interface {
+  readonly getFailure: (providerID: string) => Effect.Effect<Failure | undefined>
+  readonly failedProviders: () => Effect.Effect<string[]>
+  readonly get: (providerID: string) => Effect.Effect<Models | undefined>
+  readonly fetch: (providerID: string, options?: Options) => Effect.Effect<Models, unknown>
+  readonly refresh: (providerID: string, options?: Options) => Effect.Effect<Models, unknown>
+  readonly clear: (providerID: string) => Effect.Effect<void>
+}
 
-    const now = Date.now()
-    const age = now - cached.timestamp
+export class Service extends Context.Service<Service, Interface>()("@kilocode/ModelCache") {}
 
-    if (age > TTL) {
-      log.debug("cache expired", { providerID, age })
-      cache.delete(providerID)
-      return undefined
-    }
+const log = Log.create({ service: "model-cache" })
+const ttl = Duration.minutes(5)
+const APERTIS_BASE_URL = "https://api.apertis.ai/v1"
+const ApertisItem = Schema.Struct({ id: Schema.String, owned_by: Schema.optional(Schema.String) })
+const ApertisResponse = Schema.Struct({ data: Schema.optional(Schema.Array(ApertisItem)) })
+type ApertisItem = Schema.Schema.Type<typeof ApertisItem>
 
-    log.debug("cache hit", { providerID, age })
-    return cached.models
-  }
+export const layer: Layer.Layer<
+  Service,
+  never,
+  Auth.Service | Config.Service | KiloModelsService | HttpClient.HttpClient
+> = Layer.effect(
+  Service,
+  Effect.gen(function* () {
+    const auth = yield* Auth.Service
+    const cfg = yield* Config.Service
+    const kilo = yield* KiloModelsService
+    const http = yield* HttpClient.HttpClient
+    const scope = yield* Scope.Scope
+    const cells = new Map<string, Cell>()
+    const active = new Map<string, Cell>()
+    const selected = new Map<string, Cell>()
+    const versions = new Map<string, number>()
+    const failures = new Map<string, Failure>()
 
-  /**
-   * Fetch models with cache-first approach
-   * @param providerID - Provider identifier
-   * @param options - Provider options
-   * @returns Models from cache or freshly fetched
-   */
-  export async function fetch(providerID: string, options?: any): Promise<Record<string, any>> {
-    // Check cache first
-    const cached = get(providerID)
-    if (cached) {
-      return cached
-    }
-
-    // Cache miss - fetch models
-    log.info("fetching models", { providerID })
-
-    try {
-      const authOptions = await getAuthOptions(providerID)
-      const mergedOptions = { ...authOptions, ...options }
-
-      const models = await fetchModels(providerID, mergedOptions)
-
-      // Store in cache
-      cache.set(providerID, {
-        models,
-        timestamp: Date.now(),
-      })
-
-      log.info("models fetched and cached", { providerID, count: Object.keys(models).length })
-      return models
-    } catch (error) {
-      log.error("failed to fetch models", { providerID, error })
-      return {}
-    }
-  }
-
-  /**
-   * Force refresh models (bypass cache)
-   * Uses atomic refresh pattern to prevent race conditions
-   * @param providerID - Provider identifier
-   * @param options - Provider options
-   * @returns Freshly fetched models
-   */
-  export async function refresh(providerID: string, options?: any): Promise<Record<string, any>> {
-    // Check if refresh already in progress
-    const existing = inFlightRefresh.get(providerID)
-    if (existing) {
-      log.debug("refresh already in progress, returning existing promise", { providerID })
-      return existing
-    }
-
-    // Create new refresh promise
-    const refreshPromise = (async () => {
-      log.info("refreshing models", { providerID })
-
-      try {
-        const authOptions = await getAuthOptions(providerID)
-        const mergedOptions = { ...authOptions, ...options }
-
-        const models = await fetchModels(providerID, mergedOptions)
-
-        // Update cache with new models
-        cache.set(providerID, {
-          models,
-          timestamp: Date.now(),
-        })
-
-        log.info("models refreshed", { providerID, count: Object.keys(models).length })
-        return models
-      } catch (error) {
-        log.error("failed to refresh models", { providerID, error })
-
-        // Return existing cache or empty object
-        const cached = cache.get(providerID)
-        if (cached) {
-          log.debug("returning stale cache after refresh failure", { providerID })
-          return cached.models
-        }
-
-        return {}
-      }
-    })()
-
-    // Track in-flight refresh
-    inFlightRefresh.set(providerID, refreshPromise)
-
-    try {
-      return await refreshPromise
-    } finally {
-      // Clean up in-flight tracking
-      inFlightRefresh.delete(providerID)
-    }
-  }
-
-  /**
-   * Clear cached models for a provider
-   * @param providerID - Provider identifier
-   */
-  export function clear(providerID: string): void {
-    const deleted = cache.delete(providerID)
-    if (deleted) {
-      log.info("cache cleared", { providerID })
-    } else {
-      log.debug("no cache to clear", { providerID })
-    }
-  }
-
-  /**
-   * Fetch models based on provider type
-   * @param providerID - Provider identifier
-   * @param options - Provider options
-   * @returns Fetched models
-   */
-  async function fetchModels(providerID: string, options: any): Promise<Record<string, any>> {
-    if (providerID === "kilo") {
-      return fetchKiloModels(options)
-    }
-
-    // kilocode_change start
-    if (providerID === "apertis") {
-      return fetchApertisModels(options)
-    }
-    // kilocode_change end
-
-    // Other providers not implemented yet
-    log.debug("provider not implemented", { providerID })
-    return {}
-  }
-
-  // kilocode_change start
-  const APERTIS_BASE_URL = "https://api.apertis.ai/v1"
-
-  async function fetchApertisModels(options: any): Promise<Record<string, any>> {
-    const baseURL = options.baseURL ?? APERTIS_BASE_URL
-    const apiKey = options.apiKey
-
-    if (!apiKey) {
-      log.debug("no API key for apertis, skipping model fetch")
-      return {}
-    }
-
-    const url = `${baseURL.replace(/\/+$/, "")}/models`
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-      signal: AbortSignal.timeout(10_000),
+    const getFailure = Effect.fn("ModelCache.getFailure")(function* (providerID: string) {
+      return failures.get(providerID)
     })
 
-    if (!response.ok) {
-      log.error("apertis model fetch failed", { status: response.status })
-      return {}
+    const failedProviders = Effect.fn("ModelCache.failedProviders")(function* () {
+      return [...failures.keys()]
+    })
+
+    const aperture = (item: ApertisItem): Models[string] => ({
+      id: item.id,
+      name: item.id,
+      family: item.owned_by ?? "",
+      release_date: "",
+      attachment: true,
+      reasoning: false,
+      temperature: true,
+      tool_call: true,
+      cost: { input: 0, output: 0 },
+      limit: { context: 128000, output: 4096 },
+      modalities: { input: ["text", "image"], output: ["text"] },
+    })
+
+    const fetchApertisModels = Effect.fn("ModelCache.fetchApertisModels")(function* (options: Options) {
+      const baseURL = options.baseURL ?? APERTIS_BASE_URL
+      if (!options.apiKey) {
+        log.debug("no API key for apertis, skipping model fetch")
+        return {}
+      }
+
+      const url = `${baseURL.replace(/\/+$/, "")}/models`
+      const response = yield* HttpClientRequest.get(url).pipe(
+        HttpClientRequest.acceptJson,
+        HttpClientRequest.bearerToken(options.apiKey),
+        http.execute,
+        Effect.timeout("10 seconds"),
+      )
+      if (response.status < 200 || response.status >= 300) {
+        log.error("apertis model fetch failed", { status: response.status })
+        return {}
+      }
+
+      const json = yield* HttpClientResponse.schemaBodyJson(ApertisResponse)(response)
+      return Object.fromEntries((json.data ?? []).map((item) => [item.id, aperture(item)]))
+    })
+
+    const authOptions = Effect.fn("ModelCache.authOptions")(function* (providerID: string) {
+      if (providerID !== "kilo" && providerID !== "apertis") return {}
+      const config = yield* cfg.get()
+      const options: Options = {}
+
+      if (providerID === "kilo") {
+        const item = config.provider?.[providerID]
+        const info = yield* auth.get(providerID)
+        options.kilocodeOrganizationId = organization(item?.options, info)
+        options.kilocodeToken = token(item?.options, info)
+        log.debug("auth options resolved", {
+          providerID,
+          hasToken: !!options.kilocodeToken,
+          hasOrganizationId: !!options.kilocodeOrganizationId,
+        })
+      }
+
+      if (providerID === "apertis") {
+        const item = config.provider?.[providerID]
+        if (item?.options?.apiKey) options.apiKey = item.options.apiKey
+        if (item?.options?.baseURL) options.baseURL = item.options.baseURL
+
+        const info = yield* auth.get(providerID)
+        if (info?.type === "api") options.apiKey = info.key
+        if (process.env.APERTIS_API_KEY) options.apiKey = process.env.APERTIS_API_KEY
+        if (process.env.APERTIS_BASE_URL) options.baseURL = process.env.APERTIS_BASE_URL
+        log.debug("apertis auth options resolved", {
+          providerID,
+          hasKey: !!options.apiKey,
+          hasBaseURL: !!options.baseURL,
+        })
+      }
+
+      return options
+    })
+
+    const fetchModels = (providerID: string, options: Options): Effect.Effect<Result, unknown> => {
+      if (providerID === "kilo") return kilo.fetch(options)
+      if (providerID === "apertis") return fetchApertisModels(options).pipe(Effect.map((models) => ({ models })))
+      log.debug("provider not implemented", { providerID })
+      return Effect.succeed({ models: {} })
     }
 
-    const json = (await response.json()) as { data?: Array<{ id: string; owned_by?: string }> }
-    const models: Record<string, any> = {}
+    const load = Effect.fn("ModelCache.load")(function* (providerID: string, options: Options) {
+      if (providerID === "kilo" && !compatible(options)) return { models: {}, error: { kind: "schema" as const } }
+      return yield* fetchModels(providerID, options)
+    })
 
-    for (const model of json.data ?? []) {
-      models[model.id] = {
-        id: model.id,
-        name: model.id,
-        family: model.owned_by ?? "",
-        release_date: "",
-        attachment: false,
-        reasoning: false,
-        temperature: true,
-        tool_call: true,
-        cost: { input: 0, output: 0 },
-        limit: { context: 128000, output: 4096 },
-        options: {},
-        modalities: {
-          input: ["text"],
-          output: ["text"],
-        },
+    const resolve = Effect.fn("ModelCache.resolve")(function* (providerID: string, options: Options) {
+      const resolved = yield* authOptions(providerID).pipe(
+        Effect.catchCause((cause) =>
+          Effect.sync(() => {
+            log.warn("auth options failed", { providerID, cause })
+            return {}
+          }),
+        ),
+      )
+      return { ...resolved, ...options }
+    })
+
+    const key = (providerID: string, options?: Options) => {
+      if (providerID === "kilo") {
+        return JSON.stringify([providerID, options?.baseURL, options?.kilocodeOrganizationId, options?.kilocodeToken])
       }
+      if (providerID === "apertis") return JSON.stringify([providerID, options?.baseURL, options?.apiKey])
+      return providerID
     }
 
-    return models
-  }
-  // kilocode_change end
+    const cell = Effect.fn("ModelCache.cell")(function* (providerID: string, options: Options = {}) {
+      const input = yield* resolve(providerID, options)
+      const id = key(providerID, input)
+      const existing = cells.get(id)
+      if (existing) return existing
+      const view: View = {}
+      const next: Cell = { providerID, options: input, view }
+      cells.set(id, next)
+      return next
+    })
 
-  /**
-   * Get authentication options from multiple sources
-   * Priority: Config > Auth > Env
-   * @param providerID - Provider identifier
-   * @returns Options object with authentication credentials
-   */
-  async function getAuthOptions(providerID: string): Promise<any> {
-    const options: any = {}
+    const invalidate = (entry: Cell) =>
+      Effect.sync(() => {
+        entry.cached = undefined
+      })
 
-    if (providerID === "kilo") {
-      // Get from Config
-      const config = await Config.get()
-      const providerConfig = config.provider?.[providerID]
-      if (providerConfig?.options?.apiKey) {
-        options.kilocodeToken = providerConfig.options.apiKey
-      }
+    const detach = (entry: Cell) =>
+      invalidate(entry).pipe(
+        Effect.tap(() => (entry.recovery ? Fiber.interrupt(entry.recovery) : Effect.void)),
+        Effect.tap(() =>
+          Effect.sync(() => {
+            entry.flight = undefined
+          }),
+        ),
+      )
 
-      // kilocode_change start
-      if (providerConfig?.options?.kilocodeOrganizationId) {
-        options.kilocodeOrganizationId = providerConfig.options.kilocodeOrganizationId
-      }
-      // kilocode_change end
-
-      // Get from Auth
-      const auth = await Auth.get(providerID)
-      if (auth) {
-        if (auth.type === "api") {
-          options.kilocodeToken = auth.key
-        } else if (auth.type === "oauth") {
-          options.kilocodeToken = auth.access
-          // kilocode_change start - read org ID from OAuth accountId for enterprise model filtering
-          if (auth.accountId) {
-            options.kilocodeOrganizationId = auth.accountId
-          }
-          // kilocode_change end
+    const commit = (providerID: string, version: number, entry: Cell, result: Result) =>
+      Effect.gen(function* () {
+        if ((versions.get(providerID) ?? 0) !== version) return result.models
+        const empty = Object.keys(result.models).length === 0
+        const recovered = providerID === "kilo" && entry.view.empty && !empty && !result.error
+        if (result.error) {
+          failures.set(providerID, result.error)
+          log.warn("model fetch error", { providerID, error: result.error })
+        } else {
+          failures.delete(providerID)
         }
-      }
-
-      // Get from Env
-      const env = Env.all()
-      if (env.KILO_API_KEY) {
-        options.kilocodeToken = env.KILO_API_KEY
-      }
-      if (env.KILO_ORG_ID) {
-        options.kilocodeOrganizationId = env.KILO_ORG_ID
-      }
-
-      log.debug("auth options resolved", {
-        providerID,
-        hasToken: !!options.kilocodeToken,
-        hasOrganizationId: !!options.kilocodeOrganizationId,
+        entry.view.models = result.models
+        entry.view.timestamp = Date.now()
+        entry.view.empty = empty
+        active.set(providerID, entry)
+        log.info("models fetched and cached", { providerID, count: Object.keys(result.models).length })
+        if (recovered) yield* ModelsRefresh.notify()
+        return result.models
       })
-    }
 
-    // kilocode_change start
-    if (providerID === "apertis") {
-      const config = await Config.get()
-      const providerConfig = config.provider?.[providerID]
-      if (providerConfig?.options?.apiKey) {
-        options.apiKey = providerConfig.options.apiKey
-      }
-      if (providerConfig?.options?.baseURL) {
-        options.baseURL = providerConfig.options.baseURL
+    // A refresh belongs to the cache service, not the caller that happened to start it.
+    const evaluate = (entry: Cell, version: number): Effect.Effect<Result, unknown> =>
+      Effect.uninterruptibleMask((restore) =>
+        Effect.gen(function* () {
+          const cached = entry.cached
+          if (cached && cached.expires > Date.now()) {
+            yield* commit(entry.providerID, version, entry, cached.result)
+            yield* recover(entry, cached.result)
+            return cached.result
+          }
+
+          const existing = entry.flight
+          if (existing) {
+            existing.version = version
+            return yield* restore(Deferred.await(existing.done))
+          }
+
+          const done = yield* Deferred.make<Result, unknown>()
+          const flight = { done, version } satisfies Flight
+          entry.flight = flight
+          yield* Effect.uninterruptibleMask((restore) =>
+            Effect.gen(function* () {
+              const exit = yield* restore(load(entry.providerID, entry.options)).pipe(Effect.exit)
+              if (entry.flight === flight) {
+                entry.flight = undefined
+                if (Exit.isSuccess(exit)) {
+                  entry.cached = { result: exit.value, expires: Date.now() + Duration.toMillis(ttl) }
+                  yield* commit(entry.providerID, flight.version, entry, exit.value)
+                }
+              }
+              yield* Deferred.done(done, exit)
+              if (Exit.isSuccess(exit)) yield* recover(entry, exit.value)
+            }),
+          ).pipe(Effect.forkIn(scope, { startImmediately: true }))
+          return yield* restore(Deferred.await(done))
+        }),
+      )
+
+    const get = Effect.fn("ModelCache.get")(function* (providerID: string) {
+      const entry = active.get(providerID)
+      if (!entry?.view.models || entry.view.timestamp === undefined) {
+        log.debug("cache miss", { providerID })
+        return
       }
 
-      const auth = await Auth.get(providerID)
-      if (auth && auth.type === "api") {
-        options.apiKey = auth.key
+      const age = Date.now() - entry.view.timestamp
+      if (age > Duration.toMillis(ttl)) {
+        log.debug("cache expired", { providerID, age })
+        entry.view.models = undefined
+        entry.view.timestamp = undefined
+        yield* invalidate(entry)
+        return
       }
 
-      const env = Env.all()
-      if (env.APERTIS_API_KEY) {
-        options.apiKey = env.APERTIS_API_KEY
-      }
-      if (env.APERTIS_BASE_URL) {
-        options.baseURL = env.APERTIS_BASE_URL
-      }
+      log.debug("cache hit", { providerID, age })
+      return entry.view.models
+    })
 
-      log.debug("apertis auth options resolved", {
-        providerID,
-        hasKey: !!options.apiKey,
-        hasBaseURL: !!options.baseURL,
-      })
-    }
-    // kilocode_change end
+    const fetch = Effect.fn("ModelCache.fetch")(function* (providerID: string, options?: Options) {
+      const entry = yield* cell(providerID, options)
+      selected.set(providerID, entry)
+      const cached = active.get(providerID) === entry ? yield* get(providerID) : undefined
+      if (cached) {
+        if (entry.cached) yield* recover(entry, entry.cached.result)
+        return cached
+      }
+      const version = (versions.get(providerID) ?? 0) + 1
+      versions.set(providerID, version)
+      log.info("fetching models", { providerID })
+      const result = yield* evaluate(entry, version)
+      return result.models
+    })
 
-    return options
-  }
-}
+    const refresh = Effect.fn("ModelCache.refresh")(function* (providerID: string, options?: Options) {
+      const version = (versions.get(providerID) ?? 0) + 1
+      versions.set(providerID, version)
+      const entry = yield* cell(providerID, options)
+      selected.set(providerID, entry)
+      log.info("refreshing models", { providerID })
+      yield* invalidate(entry)
+      const result = yield* evaluate(entry, version)
+      return result.models
+    })
+
+    const recover = Effect.fn("ModelCache.recover")(function* (entry: Cell, result: Result) {
+      if (
+        entry.providerID !== "kilo" ||
+        selected.get(entry.providerID) !== entry ||
+        active.get(entry.providerID) !== entry ||
+        entry.recovery ||
+        !retryable(result)
+      )
+        return
+      entry.recovery = yield* Effect.gen(function* () {
+        let next = result
+        for (let attempt = 0; ; attempt++) {
+          yield* Effect.sleep(Duration.seconds(delay(next, attempt)))
+          // A newer account or endpoint must not be replaced by this retry.
+          if (selected.get(entry.providerID) !== entry || active.get(entry.providerID) !== entry) return
+          if (entry.cached && !retryable(entry.cached.result)) return
+          yield* invalidate(entry)
+          const version = (versions.get(entry.providerID) ?? 0) + 1
+          versions.set(entry.providerID, version)
+          // Catalog fetches report network and HTTP problems as results, so a failure
+          // here is unexpected: log it and stop instead of retrying it as a network error.
+          const value = yield* evaluate(entry, version).pipe(
+            Effect.catch((error) =>
+              Effect.sync(() => {
+                log.error("catalog recovery failed", { providerID: entry.providerID, error })
+                return undefined
+              }),
+            ),
+          )
+          if (!value) return
+          next = value
+          if (selected.get(entry.providerID) !== entry || active.get(entry.providerID) !== entry) return
+          if (retryable(next)) continue
+          return
+        }
+      }).pipe(Effect.ensuring(Effect.sync(() => (entry.recovery = undefined))), Effect.forkIn(scope))
+    })
+
+    const clear = Effect.fn("ModelCache.clear")(function* (providerID: string) {
+      versions.set(providerID, (versions.get(providerID) ?? 0) + 1)
+      const entries = [...cells.entries()].filter(([, entry]) => entry.providerID === providerID)
+      yield* Effect.all(
+        entries.map(([id, entry]) => detach(entry).pipe(Effect.tap(() => Effect.sync(() => cells.delete(id))))),
+        { discard: true },
+      )
+      active.delete(providerID)
+      selected.delete(providerID)
+      failures.delete(providerID)
+      if (entries.some(([, entry]) => entry.view.models)) {
+        log.info("cache cleared", { providerID })
+        return
+      }
+      log.debug("no cache to clear", { providerID })
+    })
+
+    return Service.of({ getFailure, failedProviders, get, fetch, refresh, clear })
+  }),
+)
+
+export const defaultLayer: Layer.Layer<Service> = Layer.suspend(() => AppNodeBuilder.build(node)) // kilocode_change - build from the LayerNode graph
+
+const kiloModels = LayerNode.make({ name: "kilo-models", layer: kiloModelsLayer, deps: [] })
+export const node = LayerNode.make({
+  service: Service,
+  layer,
+  deps: [Auth.node, Config.node, kiloModels, httpClient],
+})
+
+export * as ModelCache from "./model-cache"

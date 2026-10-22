@@ -1,62 +1,10 @@
 import { execFile } from "child_process"
-import type { DeviceAuthInitiateResponse, DeviceAuthPollResponse } from "../types.js"
+import type { DeviceAuthPollResponse } from "../types.js"
 import { poll } from "./polling.js"
-import { getKiloProfile, getKiloDefaultModel } from "../api/profile.js"
-import { KILO_API_BASE, POLL_INTERVAL_MS } from "../api/constants.js"
+import { initiateDeviceAuth, pollDeviceAuth } from "./device.js"
+import { getKiloProfile, getKiloDefaultModel, defaultOrganizationId } from "../api/profile.js"
+import { POLL_INTERVAL_MS } from "../api/constants.js"
 import type { AuthOuathResult } from "@kilocode/plugin"
-
-/**
- * Initiate device authorization flow
- * @returns Device authorization details
- * @throws Error if initiation fails
- */
-async function initiateDeviceAuth(): Promise<DeviceAuthInitiateResponse> {
-  const response = await fetch(`${KILO_API_BASE}/api/device-auth/codes`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    if (response.status === 429) {
-      throw new Error("Too many pending authorization requests. Please try again later.")
-    }
-    throw new Error(`Failed to initiate device authorization: ${response.status}`)
-  }
-
-  const data = await response.json()
-  return data as DeviceAuthInitiateResponse
-}
-
-/**
- * Poll for device authorization status
- * @param code The verification code
- * @returns Poll response with status and optional token
- * @throws Error if polling fails
- */
-async function pollDeviceAuth(code: string): Promise<DeviceAuthPollResponse> {
-  const response = await fetch(`${KILO_API_BASE}/api/device-auth/codes/${code}`)
-
-  if (response.status === 202) {
-    return { status: "pending" }
-  }
-
-  if (response.status === 403) {
-    return { status: "denied" }
-  }
-
-  if (response.status === 410) {
-    return { status: "expired" }
-  }
-
-  if (!response.ok) {
-    throw new Error(`Failed to poll device authorization: ${response.status}`)
-  }
-
-  const data = await response.json()
-  return data as DeviceAuthPollResponse
-}
 
 /**
  * TUI-compatible device authorization flow
@@ -127,13 +75,14 @@ export async function authenticateWithDeviceAuthTUI(inputs?: Record<string, stri
 
       const token = result.token
 
-      // For TUI version, complete with personal account by default
-      // Organization selection is handled by TUI after this callback completes
-      // The TUI will fetch the profile separately and show organization dialog if needed
-      const organizationId = undefined
+      // Apply the cloud-selected organization as the login-time default.
+      // After this, the stored accountId is authoritative; the user can switch
+      // freely and profile fetches never re-derive it from the cloud.
+      const profile = await getKiloProfile(token).catch(() => undefined)
+      const organizationId = profile ? defaultOrganizationId(profile) : undefined
 
       // Fetch default model
-      const model = await getKiloDefaultModel(token, organizationId)
+      await getKiloDefaultModel(token, organizationId)
 
       // Return success with OAuth credentials
       return {
@@ -142,6 +91,7 @@ export async function authenticateWithDeviceAuthTUI(inputs?: Record<string, stri
         refresh: token,
         access: token,
         expires: Date.now() + 365 * 24 * 60 * 60 * 1000, // 1 year
+        ...(organizationId && { accountId: organizationId }),
       }
     },
   }

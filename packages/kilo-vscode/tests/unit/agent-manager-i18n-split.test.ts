@@ -18,6 +18,7 @@ import { dict as appBs } from "../../webview-ui/src/i18n/bs"
 import { dict as appTr } from "../../webview-ui/src/i18n/tr"
 import { dict as appNl } from "../../webview-ui/src/i18n/nl"
 import { dict as appUk } from "../../webview-ui/src/i18n/uk"
+import { dict as appIt } from "../../webview-ui/src/i18n/it"
 import { dict as amEn } from "../../webview-ui/agent-manager/i18n/en"
 import { dict as amZh } from "../../webview-ui/agent-manager/i18n/zh"
 import { dict as amZht } from "../../webview-ui/agent-manager/i18n/zht"
@@ -37,6 +38,8 @@ import { dict as amBs } from "../../webview-ui/agent-manager/i18n/bs"
 import { dict as amTr } from "../../webview-ui/agent-manager/i18n/tr"
 import { dict as amNl } from "../../webview-ui/agent-manager/i18n/nl"
 import { dict as amUk } from "../../webview-ui/agent-manager/i18n/uk"
+import { dict as amIt } from "../../webview-ui/agent-manager/i18n/it"
+import { dict as amFa } from "../../webview-ui/agent-manager/i18n/fa"
 
 const PREFIX = "agentManager."
 
@@ -60,6 +63,8 @@ const locales = {
   tr: amTr,
   nl: amNl,
   uk: amUk,
+  it: amIt,
+  fa: amFa,
 }
 
 const appLocales = {
@@ -82,6 +87,7 @@ const appLocales = {
   tr: appTr,
   nl: appNl,
   uk: appUk,
+  it: appIt,
 }
 
 function placeholders(text: string): string[] {
@@ -136,6 +142,19 @@ describe("Agent Manager i18n split", () => {
         const localeVars = placeholders(localized)
         expect(localeVars, `placeholder mismatch for ${key} in locale ${locale}`).toEqual(baseVars)
       }
+    }
+  })
+
+  it("keeps introduction card captions short in every locale", () => {
+    for (const [locale, dict] of Object.entries(locales)) {
+      expect(dict["agentManager.intro.stage1.text"].length, `${locale}: repository caption`).toBeLessThanOrEqual(100)
+      expect(dict["agentManager.intro.stage3.text"].length, `${locale}: worktree caption`).toBeLessThanOrEqual(80)
+    }
+  })
+
+  it("references the base update command in every introduction locale", () => {
+    for (const [locale, dict] of Object.entries(locales)) {
+      expect(dict["agentManager.intro.updateText"], `${locale}: base update command`).toContain("/update-from-base")
     }
   })
 

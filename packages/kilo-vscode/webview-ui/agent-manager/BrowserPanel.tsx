@@ -1,0 +1,228 @@
+import { For, Show, createEffect, createMemo, createSignal, onCleanup, type Accessor, type Setter } from "solid-js"
+import { useLanguage } from "../src/context/language"
+import { useVSCode } from "../src/context/vscode"
+import type { ExtensionMessage, WebviewMessage } from "../src/types/messages"
+import { formatBrowserFeedback, type BrowserReference } from "../../src/shared/browser-feedback"
+import { BrowserPanel as BrowserPanelView } from "../browser"
+import {
+  browserCursorEvent,
+  browserDevtoolsEvent,
+  browserFrameEvent,
+  browserInspectionEvent,
+  browserLabels,
+  browserScope,
+  browserStateEvent,
+  browserTransport,
+} from "../browser"
+import type { BrowserCommand, BrowserEvent } from "../browser"
+import { SidePanel } from "./side-panel-layout"
+import { post } from "../src/utils/webview-message"
+import { browserScopeKey, browserScopeParts, evictBrowserScopes, rememberBrowserScope } from "./browser-panel-cache"
+
+export function createBrowserPanel(
+  current: Accessor<SidePanel | null>,
+  panel: Setter<SidePanel | null>,
+  history: Setter<boolean>,
+  review: Setter<boolean>,
+  sessions: Accessor<{ id: string }[]>,
+) {
+  const [enabled, configure] = createSignal(
+    (globalThis as typeof globalThis & { KILO_BROWSER_AUTOMATION?: boolean }).KILO_BROWSER_AUTOMATION === true,
+  )
+  const [cached, setCached] = createSignal(false)
+  const visible = () => current() === SidePanel.Browser
+  const close = () => panel((current) => (current === SidePanel.Browser ? null : current))
+  const open = () => {
+    history(false)
+    review(false)
+    panel(SidePanel.Browser)
+  }
+  const toggle = () => {
+    if (!enabled()) return
+    if (visible()) return close()
+    open()
+  }
+  return {
+    tabs: { browserOpen: visible, browserAutomation: enabled, onToggleBrowser: toggle },
+    bind: (current: Accessor<string | undefined>) => ({
+      browser: configure,
+      current,
+      closeBrowser: close,
+      openBrowser: open,
+    }),
+    render: (session: Accessor<string | undefined>, project: Accessor<string | undefined>) => (
+      <Show when={enabled()}>
+        <BrowserPanelCache
+          active={visible}
+          sessionId={session}
+          projectId={project}
+          sessions={sessions}
+          onClose={close}
+          onChange={setCached}
+        />
+      </Show>
+    ),
+    hasCache: cached,
+  }
+}
+
+function command(command: BrowserCommand): WebviewMessage {
+  if (command.type === "open") {
+    return { type: "agentManager.browser.open", ...command.scope, url: command.url }
+  }
+  if (command.type === "refresh") return { type: "agentManager.browser.refresh", ...command.scope }
+  if (command.type === "back") return { type: "agentManager.browser.back", ...command.scope }
+  if (command.type === "forward") return { type: "agentManager.browser.forward", ...command.scope }
+  if (command.type === "close") return { type: "agentManager.browser.close", ...command.scope }
+  if (command.type === "state") return { type: "agentManager.browser.state", ...command.scope }
+  if (command.type === "devtools") {
+    return { type: "agentManager.browser.devtools", ...command.scope, theme: command.theme }
+  }
+  if (command.type === "input") {
+    return { type: "agentManager.browser.input", ...command.scope, ...command.position, click: command.click }
+  }
+  if (command.type === "viewport") {
+    return {
+      type: "agentManager.browser.viewport",
+      ...command.scope,
+      browserId: command.browserId,
+      navigation: command.navigation,
+      viewport: command.viewport,
+    }
+  }
+  if (command.type === "interact") {
+    return { type: "agentManager.browser.interact", ...command.scope, identity: command.identity, event: command.event }
+  }
+  if (command.type === "acknowledge") {
+    return {
+      type: "agentManager.browser.acknowledge",
+      ...command.scope,
+      identity: command.identity,
+      sequence: command.sequence,
+    }
+  }
+  return {
+    type: "agentManager.browser.inspect",
+    ...command.scope,
+    ...command.position,
+    hover: command.hover,
+    requestId: command.requestId,
+  }
+}
+
+function event(message: ExtensionMessage): BrowserEvent | undefined {
+  if (message.type === "agentManager.browserCursor") {
+    return browserCursorEvent(browserScope(message.sessionId, message.projectId), message)
+  }
+  if (message.type === "agentManager.browserFrame") {
+    return browserFrameEvent(browserScope(message.sessionId, message.projectId), message)
+  }
+  if (message.type === "agentManager.browserState") {
+    return browserStateEvent(browserScope(message.sessionId, message.projectId), message)
+  }
+  if (message.type === "agentManager.browserInspection") {
+    return browserInspectionEvent(browserScope(message.sessionId, message.projectId), message)
+  }
+  if (message.type !== "agentManager.browserDevtools") return
+  return browserDevtoolsEvent(browserScope(message.sessionId, message.projectId), message)
+}
+
+function BrowserAdapter(props: {
+  sessionId: Accessor<string | undefined>
+  projectId: Accessor<string | undefined>
+  onClose: () => void
+}) {
+  const language = useLanguage()
+  const vscode = useVSCode()
+  const transport = browserTransport((message) => vscode.postMessage(message), vscode.onMessage, command, event)
+  const labels = createMemo(() => browserLabels(language.t))
+  const reference = (value: BrowserReference) => {
+    post({ type: "appendChatBoxMessage", text: formatBrowserFeedback([value]), browser: value })
+  }
+  const theme = () =>
+    document.body.classList.contains("vscode-light") || document.body.classList.contains("vscode-high-contrast-light")
+      ? "light"
+      : "dark"
+  return (
+    <BrowserPanelView
+      scope={() => {
+        const session = props.sessionId()
+        return session ? browserScope(session, props.projectId()) : undefined
+      }}
+      transport={transport}
+      labels={labels()}
+      theme={theme}
+      download={() => vscode.postMessage({ type: "openExternal", url: "https://www.google.com/chrome/" })}
+      settings={() => vscode.postMessage({ type: "openSettingsPanel", tab: "browser", projectId: props.projectId() })}
+      openExternal={(url) => vscode.postMessage({ type: "openExternal", url })}
+      onReference={reference}
+      onClose={props.onClose}
+    />
+  )
+}
+
+/**
+ * Keeps one browser panel alive per scope so switching to another worktree,
+ * project, or session and back does not reload the page in the iframe. Only the
+ * active scope is visible; the rest stay mounted but hidden.
+ *
+ * Eviction only drops the webview preview. The backend browser belongs to its
+ * session or project, so it is closed by the panel close action, session
+ * deletion, or project close, not by cache eviction.
+ */
+function BrowserPanelCache(props: {
+  active: Accessor<boolean>
+  sessionId: Accessor<string | undefined>
+  projectId: Accessor<string | undefined>
+  sessions: Accessor<{ id: string }[]>
+  onClose: () => void
+  onChange: (value: boolean) => void
+}) {
+  const [entries, setEntries] = createSignal<string[]>([])
+  const current = () => {
+    const session = props.sessionId()
+    return session ? browserScopeKey(props.projectId(), session) : undefined
+  }
+  const list = createMemo(() => {
+    const entry = props.active() ? current() : undefined
+    return entry ? rememberBrowserScope(entries(), entry) : entries()
+  })
+  createEffect(() => {
+    const entry = props.active() ? current() : undefined
+    if (!entry) return
+    setEntries((prev) => rememberBrowserScope(prev, entry))
+  })
+  createEffect(() => {
+    const known = new Set(props.sessions().map((item) => item.id))
+    setEntries((prev) => evictBrowserScopes(prev, known, props.projectId(), current()))
+  })
+  createEffect(() => props.onChange(list().length > 0))
+  onCleanup(() => props.onChange(false))
+  return (
+    <>
+      <For each={list()}>
+        {(entry) => {
+          const parts = browserScopeParts(entry)
+          const shown = createMemo(() => props.active() && current() === entry)
+          return (
+            <div class="am-browser-cache" classList={{ "am-browser-cache-active": shown() }} inert={!shown()}>
+              <BrowserAdapter
+                sessionId={() => parts.session}
+                projectId={() => (parts.project === "single" ? undefined : parts.project)}
+                onClose={() => {
+                  setEntries((prev) => prev.filter((item) => item !== entry))
+                  props.onClose()
+                }}
+              />
+            </div>
+          )
+        }}
+      </For>
+      <Show when={props.active() && !props.sessionId()}>
+        <div class="am-browser-cache am-browser-cache-active">
+          <BrowserAdapter sessionId={() => undefined} projectId={props.projectId} onClose={props.onClose} />
+        </div>
+      </Show>
+    </>
+  )
+}

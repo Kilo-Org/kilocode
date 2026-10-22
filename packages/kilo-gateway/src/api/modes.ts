@@ -77,7 +77,6 @@ export async function fetchOrganizationModes(token: string, organizationId: stri
     })
 
     if (!response.ok) {
-      console.warn(`[Kilo Gateway] Failed to fetch organization modes: ${response.status}`)
       return []
     }
 
@@ -85,7 +84,6 @@ export async function fetchOrganizationModes(token: string, organizationId: stri
     const parsed = ResponseSchema.safeParse(json)
 
     if (!parsed.success) {
-      console.warn("[Kilo Gateway] Organization modes response validation failed:", parsed.error.format())
       return []
     }
 

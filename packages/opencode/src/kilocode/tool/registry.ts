@@ -1,0 +1,457 @@
+import { RecallTool } from "../../tool/recall"
+import { GoalReportTool, GoalTool } from "../session/goal/tool"
+import { AgentManagerModelsTool } from "./agent-manager-models"
+import { AgentManagerTool } from "./agent-manager"
+import { BackgroundProcessTool } from "./background-process"
+import { BoardReadTool, BoardPostTool } from "./board"
+import { BrowserOpenTool } from "./browser-open"
+import { CancelWakeupTool } from "./cancel-wakeup"
+import { ChartTool } from "./chart"
+import { CronCreateTool, CronDeleteTool, CronListTool } from "./cron"
+import { GenerateImageTool } from "./generate-image"
+import { LinkPrTool } from "./link-pr"
+import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
+import { MemoryRecallTool } from "./memory-recall"
+import { MemorySaveTool } from "./memory-save"
+import { NotifyUserTool } from "./notify-user"
+import { OpenPlanTool } from "./open-plan"
+import { ScheduleWakeupTool } from "./schedule-wakeup"
+import { SendFileTool } from "./send-file"
+import * as Tool from "../../tool/tool"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { Effect } from "effect"
+import * as Network from "@/kilocode/sandbox/network"
+import { Notebook } from "@/kilocode/notebook/service"
+import { AgentManager, HostError } from "@/kilocode/agent-manager/service"
+import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
+import { enabled as prEnabled } from "@/kilo-sessions/pr-link"
+import * as Log from "@opencode-ai/core/util/log"
+import type { Config } from "@/config/config"
+import type { RuntimeFlags } from "@/effect/runtime-flags"
+import { BoardEnabled } from "@/kilocode/board/enabled"
+import { Agent } from "@/agent/agent"
+import * as Truncate from "@/tool/truncate"
+import { InstanceState } from "@/effect/instance-state"
+import { KiloMemory } from "@kilocode/kilo-memory/effect"
+import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
+
+const log = Log.create({ service: "kilocode-tool-registry" })
+type Deps = { agent: Agent.Interface; truncate: Truncate.Interface; indexing?: boolean }
+type Loaders = {
+  indexing?: () => Promise<{ KiloIndexing: { ready: () => boolean } }>
+  semantic?: () => Promise<Pick<typeof import("@/kilocode/tool/semantic-search"), "SemanticSearchTool">>
+}
+
+export namespace KiloToolRegistry {
+  const hint =
+    "- When you are doing an open-ended search where you do not know the exact symbol name, use the `semantic_search` tool first to narrow down the search scope, then follow up with `Grep` and/or `Read`"
+
+  export function indexing(
+    config: Pick<Config.Info, "indexing">,
+    global?: Pick<Config.Info, "indexing">,
+  ): boolean | undefined {
+    // VS Code enables indexing from project consent, not from config. Build the tool here and let
+    // applyVisibility check consent on each turn, because consent can change after the registry is built.
+    if (process.env["KILO_PLATFORM"] === "vscode") return true
+    return config.indexing?.enabled ?? global?.indexing?.enabled
+  }
+
+  /**
+   * Check VS Code project consent without failing tool resolution. Import lazily like semanticTool:
+   * indexing.ts imports AppRuntime, which imports the tool registry, and indexing load failures must not break tools.
+   */
+  function consented(dir: string) {
+    return Effect.tryPromise(() => import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.consented(dir))).pipe(
+      Effect.catch((err) =>
+        Effect.sync(() => {
+          log.warn("semantic search consent unavailable", { err })
+          return false
+        }),
+      ),
+    )
+  }
+
+  export function usePatch(input: { modelID: string; family?: string }) {
+    if (process.env["KILO_E2E_LLM_URL"]) return true
+
+    const id = input.modelID.toLowerCase()
+    const family = input.family?.toLowerCase()
+    if (id.includes("gpt-4") || family?.startsWith("gpt-4")) return false
+    if (id.includes("oss") || family?.includes("oss") || family === "gpt-image") return false
+    if (id.includes("gpt-")) return true
+    return family?.startsWith("gpt") ?? false
+  }
+
+  /** Resolve Kilo-specific tool Infos outside any InstanceState, so their Truncate/Agent deps are
+   * satisfied at the outer registry scope instead of leaking into InstanceState's Effect. */
+  const unavailable = AgentManager.Service.of({
+    request: () =>
+      Effect.fail(
+        new HostError({ code: "disconnected", detail: "Agent Manager orchestration is unavailable in this runtime" }),
+      ),
+    list: () => Effect.succeed([]),
+    reply: () => Effect.die(new Error("Agent Manager orchestration is unavailable in this runtime")),
+    reject: () => Effect.die(new Error("Agent Manager orchestration is unavailable in this runtime")),
+  })
+
+  export function infos(host?: AgentManager.Interface, notebook?: Notebook.Interface) {
+    return Effect.gen(function* () {
+      const recall = yield* RecallTool
+      const managerModels = yield* AgentManagerModelsTool
+      const memory = yield* MemoryRecallTool
+      const save = yield* MemorySaveTool
+      const manager = yield* AgentManagerTool.pipe(Effect.provideService(AgentManager.Service, host ?? unavailable))
+      const process = yield* BackgroundProcessTool
+      const browser = Flag.KILO_CLIENT === "vscode" ? yield* BrowserOpenTool : undefined
+      const chart = yield* ChartTool
+      const image = yield* GenerateImageTool
+      // The notify_user tool depends on KiloSessions.Service, which the tool-registry layer provides
+      // via KiloSessions.defaultLayer (see src/tool/registry.ts). Grabs the service from the surrounding
+      // context here and injects it into the tool's init Effect.
+      const sessions = yield* KiloSessions.Service
+      const notify = yield* NotifyUserTool.pipe(Effect.provideService(KiloSessions.Service, sessions))
+      const openPlan = yield* OpenPlanTool
+      const send = yield* SendFileTool
+      const linkPr = yield* LinkPrTool
+      // Wakeup.Service is provided by Wakeup.node in the tool-registry node graph.
+      const schedule = yield* ScheduleWakeupTool
+      const cancel = yield* CancelWakeupTool
+      const cronCreate = yield* CronCreateTool
+      const cronList = yield* CronListTool
+      const cronDelete = yield* CronDeleteTool
+      const board = yield* Effect.all({
+        boardRead: BoardReadTool,
+        boardPost: BoardPostTool,
+        goalReport: GoalReportTool,
+        goal: GoalTool,
+      })
+      if (!notebook)
+        return {
+          recall,
+          managerModels,
+          memory,
+          save,
+          manager,
+          process,
+          browser,
+          chart,
+          image,
+          notify,
+          openPlan,
+          send,
+          linkPr,
+          schedule,
+          cancel,
+          cronCreate,
+          cronList,
+          cronDelete,
+          ...board,
+        }
+      const tools = yield* Effect.all({
+        notebookRead: NotebookReadTool,
+        notebookEdit: NotebookEditTool,
+        notebookExecute: NotebookExecuteTool,
+      }).pipe(Effect.provideService(Notebook.Service, notebook))
+      return {
+        recall,
+        managerModels,
+        memory,
+        save,
+        manager,
+        process,
+        browser,
+        chart,
+        image,
+        notify,
+        openPlan,
+        send,
+        linkPr,
+        schedule,
+        cancel,
+        cronCreate,
+        cronList,
+        cronDelete,
+        ...board,
+        ...tools,
+      }
+    })
+  }
+
+  /** Finalize Kilo-specific tools into Tool.Defs. Call this inside the InstanceState state Effect —
+   * it has no Service deps beyond what Tool.init itself needs. */
+  export function build(
+    tools: {
+      recall: Tool.Info
+      managerModels: Tool.Info
+      memory: Tool.Info
+      save: Tool.Info
+      manager: Tool.Info
+      process: Tool.Info
+      browser?: Tool.Info
+      chart: Tool.Info
+      image: Tool.Info
+      notify: Tool.Info
+      openPlan?: Tool.Info
+      send: Tool.Info
+      linkPr: Tool.Info
+      schedule?: Tool.Info
+      cancel?: Tool.Info
+      cronCreate?: Tool.Info
+      cronList?: Tool.Info
+      cronDelete?: Tool.Info
+      boardRead?: Tool.Info
+      goalReport?: Tool.Info
+      goal?: Tool.Info
+      boardPost?: Tool.Info
+      notebookRead?: Tool.Info
+      notebookEdit?: Tool.Info
+      notebookExecute?: Tool.Info
+    },
+    deps: Deps,
+    loaders: Loaders = {},
+  ) {
+    return Effect.gen(function* () {
+      const base = yield* Effect.all({
+        recall: Tool.init(tools.recall),
+        managerModels: Tool.init(tools.managerModels),
+        memory: Tool.init(tools.memory),
+        save: Tool.init(tools.save),
+        manager: Tool.init(tools.manager),
+        process: Tool.init(tools.process),
+        chart: Tool.init(tools.chart),
+        image: Tool.init(tools.image),
+        notify: Tool.init(tools.notify),
+        send: Tool.init(tools.send),
+        linkPr: Tool.init(tools.linkPr),
+      })
+      const openPlan = tools.openPlan ? yield* Tool.init(tools.openPlan) : undefined
+      const schedule = tools.schedule ? yield* Tool.init(tools.schedule) : undefined
+      const cancel = tools.cancel ? yield* Tool.init(tools.cancel) : undefined
+      const cronCreate = tools.cronCreate ? yield* Tool.init(tools.cronCreate) : undefined
+      const cronList = tools.cronList ? yield* Tool.init(tools.cronList) : undefined
+      const cronDelete = tools.cronDelete ? yield* Tool.init(tools.cronDelete) : undefined
+      const report = tools.goalReport ? { goalReport: yield* Tool.init(tools.goalReport) } : {}
+      const goal = tools.goal ? { goal: yield* Tool.init(tools.goal) } : {}
+      const board =
+        tools.boardRead && tools.boardPost
+          ? yield* Effect.all({ boardRead: Tool.init(tools.boardRead), boardPost: Tool.init(tools.boardPost) })
+          : {}
+      const browser = tools.browser ? yield* Tool.init(tools.browser) : undefined
+      const notebooks =
+        tools.notebookRead && tools.notebookEdit && tools.notebookExecute
+          ? yield* Effect.all({
+              notebookRead: Tool.init(tools.notebookRead),
+              notebookEdit: Tool.init(tools.notebookEdit),
+              notebookExecute: Tool.init(tools.notebookExecute),
+            })
+          : {}
+      const semantic = yield* semanticTool(deps, loaders)
+      return {
+        ...base,
+        ...board,
+        ...report,
+        ...goal,
+        browser,
+        ...notebooks,
+        semantic,
+        openPlan,
+        schedule,
+        cancel,
+        cronCreate,
+        cronList,
+        cronDelete,
+        notify: base.notify,
+        send: base.send,
+      }
+    })
+  }
+
+  function semanticTool(deps: Deps, loaders: Loaders) {
+    return Effect.gen(function* () {
+      const ready = yield* deps.indexing === undefined
+        ? (() => {
+            const indexing = loaders.indexing ?? (() => import("@/kilocode/indexing"))
+            return Effect.tryPromise(() => indexing().then((mod) => mod.KiloIndexing.ready())).pipe(
+              Effect.catch((err) =>
+                Effect.sync(() => {
+                  log.warn("semantic search unavailable", { err })
+                  return false
+                }),
+              ),
+            )
+          })()
+        : Effect.succeed(deps.indexing)
+      if (!ready) return undefined
+
+      const semantic = loaders.semantic ?? (() => import("@/kilocode/tool/semantic-search"))
+      const mod = yield* Effect.tryPromise(() => semantic()).pipe(
+        Effect.catch((err) =>
+          Effect.sync(() => {
+            log.warn("semantic search tool unavailable", { err })
+            return undefined
+          }),
+        ),
+      )
+      if (!mod) return undefined
+
+      const info = yield* mod.SemanticSearchTool.pipe(
+        Effect.provideService(Agent.Service, deps.agent),
+        Effect.provideService(Truncate.Service, deps.truncate),
+      )
+      if (!info) return undefined
+      return yield* Tool.init(info)
+    })
+  }
+
+  export function available(tool: Tool.Def) {
+    if (tool.id === "notify_user") return KiloSessions.remoteStatus().enabled
+    if (tool.id === "send_file") return KiloSessions.remoteStatus().connected
+    return true
+  }
+
+  /** Kilo-specific tools to append to the builtin list */
+  export function extra(
+    tools: {
+      semantic?: Tool.Def
+      recall: Tool.Def
+      managerModels: Tool.Def
+      memory: Tool.Def
+      save: Tool.Def
+      manager: Tool.Def
+      process: Tool.Def
+      browser?: Tool.Def
+      chart: Tool.Def
+      image: Tool.Def
+      notify: Tool.Def
+      openPlan?: Tool.Def
+      send: Tool.Def
+      linkPr: Tool.Def
+      schedule?: Tool.Def
+      cancel?: Tool.Def
+      cronCreate?: Tool.Def
+      cronList?: Tool.Def
+      cronDelete?: Tool.Def
+      boardRead?: Tool.Def
+      goalReport?: Tool.Def
+      goal?: Tool.Def
+      boardPost?: Tool.Def
+      notebookRead?: Tool.Def
+      notebookEdit?: Tool.Def
+      notebookExecute?: Tool.Def
+    },
+    cfg: {
+      experimental?: {
+        image_generation?: boolean
+        native_notebook_tools?: boolean
+      }
+      shared_agent_board?: boolean
+    },
+    flags: Pick<RuntimeFlags.Info, "experimentalSharedAgentBoard">,
+  ): Tool.Def[] {
+    const enabled = BoardEnabled.on(cfg, flags)
+    return [
+      ...(tools.goalReport ? [tools.goalReport] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.goal ? [tools.goal] : []),
+      ...(cfg.experimental?.image_generation === true ? [tools.image] : []),
+      ...(enabled && tools.boardRead && tools.boardPost ? [tools.boardRead, tools.boardPost] : []),
+      ...(tools.semantic ? [tools.semantic] : []),
+      tools.memory,
+      tools.save,
+      tools.recall,
+      ...(Flag.KILO_CLIENT === "vscode" ? [tools.chart] : []),
+      ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.schedule ? [tools.schedule] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cancel ? [tools.cancel] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cronCreate ? [tools.cronCreate] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cronList ? [tools.cronList] : []),
+      ...((Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode") && tools.cronDelete ? [tools.cronDelete] : []),
+      tools.managerModels,
+      ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
+      ...(Flag.KILO_CLIENT === "vscode" && tools.browser ? [tools.browser] : []),
+      ...(Flag.KILO_CLIENT === "vscode" &&
+      cfg.experimental?.native_notebook_tools === true &&
+      tools.notebookRead &&
+      tools.notebookEdit &&
+      tools.notebookExecute
+        ? [tools.notebookRead, tools.notebookEdit, tools.notebookExecute]
+        : []),
+      tools.notify,
+      ...(Flag.KILO_CLIENT === "vscode" && tools.openPlan ? [tools.openPlan] : []),
+      tools.send,
+      ...(prEnabled() ? [tools.linkPr] : []),
+    ]
+  }
+
+  // Re-keyed to root string so invalidate() works across ctx identities.
+  const memoryEnabledCache = new Map<string, { enabled: boolean; deadline: number }>()
+  const MEMORY_ENABLED_CACHE_MAX = 512
+  const MEMORY_ENABLED_TTL_MS = 5_000
+
+  /** Drop the cached enabled flag for a root so the next probe re-reads fresh state.
+   * Called by the MemoryEvents subscriber in bootstrap on every state mutation. */
+  export function invalidateMemoryEnabled(root: string) {
+    memoryEnabledCache.delete(root)
+  }
+
+  /** Per-turn cache of `KiloMemory.toolEnabled` keyed by root string, with a short TTL so the
+   * step-loop coalesces probes inside a single turn. Cache is invalidated immediately on enable /
+   * disable / purge / rebuild via the MemoryEvents bus (subscribed in kilocode/bootstrap.ts). */
+  export function memoryToolsEnabled(input: { ctx: MemoryPaths.Ctx }) {
+    return Effect.gen(function* () {
+      const root = MemoryPaths.root({ ctx: input.ctx })
+      const cached = memoryEnabledCache.get(root)
+      if (cached && cached.deadline > Date.now()) return cached.enabled
+      const enabled = yield* Effect.tryPromise({
+        try: () => KiloMemory.toolEnabled({ ctx: input.ctx }),
+        catch: (err) => err,
+      }).pipe(
+        Effect.catch((err) =>
+          Effect.sync(() => {
+            log.warn("memory tools unavailable", { error: String(err) })
+            return false
+          }),
+        ),
+      )
+      memoryEnabledCache.set(root, { enabled, deadline: Date.now() + MEMORY_ENABLED_TTL_MS })
+      if (memoryEnabledCache.size > MEMORY_ENABLED_CACHE_MAX) {
+        const oldest = memoryEnabledCache.keys().next().value
+        if (oldest !== undefined) memoryEnabledCache.delete(oldest)
+      }
+      return enabled
+    })
+  }
+  /** Hide Kilo memory tools from the model when project memory is disabled. */
+  export const applyVisibility = Effect.fn("KiloToolRegistry.applyVisibility")(function* (tools: Tool.Def[]) {
+    const ctx = yield* InstanceState.context
+    const memoryEnabled = yield* memoryToolsEnabled({ ctx })
+    const browser = tools.some((tool) => tool.id === "browser_open")
+      ? yield* Effect.gen(function* () {
+          const base = process.env.KILO_BROWSER_BROKER_URL
+          const token = process.env.KILO_BROWSER_BROKER_TOKEN
+          if (!base || !token || !URL.canParse(base)) return false
+          return yield* Network.available(new URL(base), token)
+        })
+      : false
+    const semantic =
+      process.env["KILO_PLATFORM"] === "vscode" && tools.some((tool) => tool.id === "semantic_search")
+        ? yield* consented(ctx.directory)
+        : true
+    return tools.flatMap((tool) => {
+      if (tool.id.startsWith("kilo_memory_")) return memoryEnabled ? [tool] : []
+      if (tool.id === "browser_open") return browser ? [tool] : []
+      if (semantic) return [tool]
+      if (tool.id === "semantic_search") return []
+      if (tool.id !== "glob" && tool.id !== "grep") return [tool]
+      const next = { ...tool, description: tool.description.replace(`\n${hint}`, "") }
+      return [Network.isBuiltin(tool) ? Network.builtin(next) : next]
+    })
+  })
+
+  export function describe(tools: Tool.Def[], extra: { semantic?: Tool.Def }): Tool.Def[] {
+    if (!extra.semantic) return tools
+    return tools.map((tool) => {
+      if (tool.id !== "glob" && tool.id !== "grep") return tool
+      return { ...tool, description: `${tool.description}\n${hint}` }
+    })
+  }
+}

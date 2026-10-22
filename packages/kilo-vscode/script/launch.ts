@@ -3,16 +3,21 @@
  * Build the Kilo VS Code extension and launch it in a development host.
  *
  * Usage:
- *   bun script/launch.ts [options]
+ *   bun script/launch.ts [options] [workspace]
  *
  * Options:
  *   --no-build        Skip the build step (reuse last build)
  *   --workspace PATH  Folder to open in VS Code (default: repo root)
  *   --mode dev|vsix   "dev" uses --extensionDevelopmentPath, "vsix" packages a VSIX (default: dev)
  *   --app-path PATH   Explicit path to the VS Code executable (auto-detected if omitted)
+ *   --state-dir PATH  Directory for isolated VS Code user-data/extensions (default: OS temp per repo)
+ *   --kilo-storage-dir PATH  Directory for isolated Kilo XDG storage
+ *   --isolated        Shortcut for a persistent isolated instance under <repo>/.kilo-dev
  *   --insiders        Prefer VS Code Insiders over stable
  *   --wait            Block until the VS Code window is closed
- *   --clean           Wipe the user-data and extensions dirs before launching
+ *   --clean           Wipe isolated VS Code dirs and Kilo storage before launching
+ *   --preserve-settings  Merge defaults into existing VS Code user settings
+ *   --accessible      Enable VS Code accessibility support for assistive-technology testing
  *
  * Environment:
  *   VSCODE_EXEC_PATH  Path to VS Code executable (same as --app-path)
@@ -24,31 +29,32 @@
  */
 import { $ } from "bun"
 import { createHash } from "node:crypto"
-import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
+import { homedir, tmpdir } from "node:os"
 import { delimiter, join, resolve } from "node:path"
 import { spawn } from "node:child_process"
 
 const win = process.platform === "win32"
 const root = join(import.meta.dir, "..")
 const repo = resolve(root, "..", "..")
-
-// Stable per-repo directory under OS temp — no accumulation
-const hash = createHash("sha256").update(repo).digest("hex").slice(0, 12)
-const base = join(tmpdir(), `kilo-vscode-dev-${hash}`)
-const userDir = join(base, "user-data")
-const extDir = join(base, "extensions")
+const temp = tmpdir().trimEnd()
 
 // ---------------------------------------------------------------------------
 // Argument parsing
 // ---------------------------------------------------------------------------
 
+const valued = new Set(["workspace", "mode", "app-path", "state-dir", "kilo-storage-dir"])
+
 function parse(argv: string[]) {
   const result: Record<string, string | boolean> = {}
+  const values: string[] = []
 
   for (let i = 0; i < argv.length; i++) {
     const item = argv[i]!
-    if (!item.startsWith("--")) continue
+    if (!item.startsWith("--")) {
+      values.push(item)
+      continue
+    }
 
     if (item.startsWith("--no-")) {
       result[item.slice(5)] = false
@@ -64,7 +70,7 @@ function parse(argv: string[]) {
     }
 
     const next = argv[i + 1]
-    if (!next || next.startsWith("--")) {
+    if (!valued.has(key) || !next || next.startsWith("--")) {
       result[key] = true
       continue
     }
@@ -73,17 +79,45 @@ function parse(argv: string[]) {
     i++
   }
 
+  if (typeof result.workspace !== "string" && values[0]) result.workspace = values[0]
   return result
 }
 
+function expand(input: string) {
+  const value = input.trim()
+  if (value === "~") return homedir()
+  if (value.startsWith(`~${process.platform === "win32" ? "\\" : "/"}`)) return join(homedir(), value.slice(2))
+  return resolve(value)
+}
+
 const opts = parse(process.argv.slice(2))
+
+// --isolated defaults both the VS Code state and Kilo storage to <repo>/.kilo-dev
+const isolated = opts["isolated"] === true
+const dev = join(repo, ".kilo-dev")
+
+// Stable per-repo directory under OS temp — no accumulation
+const hash = createHash("sha256").update(repo).digest("hex").slice(0, 12)
+const base =
+  typeof opts["state-dir"] === "string"
+    ? expand(opts["state-dir"])
+    : isolated
+      ? join(dev, "vscode")
+      : join(temp, `kilo-vscode-dev-${hash}`)
+const userDir = join(base, "user-data")
+const extDir = join(base, "extensions")
+const kilo =
+  typeof opts["kilo-storage-dir"] === "string" ? expand(opts["kilo-storage-dir"]) : isolated ? dev : undefined
+
 const shouldBuild = opts["build"] !== false
-const mode = (opts["mode"] as string) ?? "dev"
-const workspace = opts["workspace"] ? resolve(opts["workspace"] as string) : repo
+const mode = typeof opts["mode"] === "string" ? opts["mode"] : "dev"
+const workspace = typeof opts["workspace"] === "string" && opts["workspace"].trim() ? expand(opts["workspace"]) : repo
 const insiders = opts["insiders"] === true
-const explicit = opts["app-path"] as string | undefined
+const explicit = typeof opts["app-path"] === "string" ? expand(opts["app-path"]) : undefined
 const blocking = opts["wait"] === true
 const clean = opts["clean"] === true
+const preserve = opts["preserve-settings"] === true
+const accessible = opts["accessible"] === true
 
 // ---------------------------------------------------------------------------
 // VS Code executable detection
@@ -202,14 +236,45 @@ function newest(paths: string[]) {
 // ---------------------------------------------------------------------------
 
 async function compile() {
-  if (!shouldBuild) {
+  if (!shouldBuild && existsSync(join(root, "dist", "extension.js"))) {
     console.log("[launch] Skipping build (--no-build)")
     return
   }
 
+  if (!shouldBuild) console.log("[launch] dist/extension.js is missing in this worktree, building first...")
+  await ensureDependencies()
   console.log("[launch] Building extension...")
-  await $`bun run package`.cwd(root)
+  await $`bun run build:launch`.cwd(root).env(cleanEnv(process.env))
   console.log("[launch] Build complete")
+}
+
+function cleanEnv(input: NodeJS.ProcessEnv) {
+  const env = { ...input, HOME: homedir().trim() }
+  for (const key of ["XDG_DATA_HOME", "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "KILO_TEST_HOME"]) {
+    const value = env[key]
+    if (value !== undefined) env[key] = value.trim()
+  }
+  return env
+}
+
+async function ensureDependencies() {
+  const required = [
+    { name: "esbuild", dir: root },
+    { name: "@opencode-ai/core/npm", dir: join(repo, "packages", "opencode") },
+    { name: "@hey-api/openapi-ts", dir: join(repo, "packages", "sdk", "js") },
+  ]
+  const ready = required.every((item) => {
+    try {
+      Bun.resolveSync(item.name, item.dir)
+      return true
+    } catch {
+      return false
+    }
+  })
+  if (ready) return
+
+  console.log("[launch] Worktree dependencies are missing, installing...")
+  await $`bun install --frozen-lockfile`.cwd(repo).env(cleanEnv(process.env))
 }
 
 // ---------------------------------------------------------------------------
@@ -240,29 +305,46 @@ async function installVsix(path: string, app: string) {
 // Settings for isolated instance
 // ---------------------------------------------------------------------------
 
-function settings() {
+function settings(keep: boolean, enabled: boolean) {
   const dir = join(userDir, "User")
+  const file = join(dir, "settings.json")
+  const defaults = {
+    "chat.disableAIFeatures": true,
+    "editor.accessibilitySupport": enabled ? "on" : "off",
+    "extensions.autoCheckUpdates": false,
+    "extensions.autoUpdate": false,
+    "extensions.ignoreRecommendations": true,
+    "security.workspace.trust.enabled": false,
+    "task.allowAutomaticTasks": "off",
+    "telemetry.telemetryLevel": "off",
+    "update.mode": "none",
+    "workbench.startupEditor": "none",
+    "workbench.tips.enabled": false,
+    "window.commandCenter": false,
+  }
+
   mkdirSync(dir, { recursive: true })
-  writeFileSync(
-    join(dir, "settings.json"),
-    JSON.stringify(
-      {
-        "editor.accessibilitySupport": "off",
-        "extensions.autoCheckUpdates": false,
-        "extensions.autoUpdate": false,
-        "extensions.ignoreRecommendations": true,
-        "security.workspace.trust.enabled": false,
-        "task.allowAutomaticTasks": "off",
-        "telemetry.telemetryLevel": "off",
-        "update.mode": "none",
-        "workbench.startupEditor": "none",
-        "workbench.tips.enabled": false,
-        "window.commandCenter": false,
-      },
-      null,
-      2,
-    ) + "\n",
-  )
+  const cfg =
+    keep && existsSync(file)
+      ? { ...defaults, ...load(file), ...(enabled ? { "editor.accessibilitySupport": "on" } : {}) }
+      : defaults
+
+  writeFileSync(file, JSON.stringify(cfg, null, 2) + "\n")
+}
+
+function load(file: string) {
+  try {
+    const cfg = JSON.parse(readFileSync(file, "utf8"))
+    if (cfg && typeof cfg === "object" && !Array.isArray(cfg)) return cfg as Record<string, unknown>
+  } catch (err) {
+    console.warn(
+      `[launch] Could not parse existing settings.json, rewriting defaults: ${err instanceof Error ? err.message : String(err)}`,
+    )
+    return {}
+  }
+
+  console.warn("[launch] Existing settings.json root is not an object, rewriting defaults")
+  return {}
 }
 
 // ---------------------------------------------------------------------------
@@ -275,6 +357,7 @@ async function launch() {
   if (clean) {
     console.log("[launch] Cleaning previous state...")
     rmSync(base, { recursive: true, force: true })
+    if (kilo) rmSync(kilo, { recursive: true, force: true })
   }
 
   mkdirSync(userDir, { recursive: true })
@@ -282,7 +365,7 @@ async function launch() {
 
   const app = detect()
 
-  settings()
+  settings(preserve, accessible)
 
   const args = [workspace, `--extensions-dir=${extDir}`, `--user-data-dir=${userDir}`, "--skip-release-notes"]
 
@@ -303,15 +386,30 @@ async function launch() {
     args.push("--wait")
   }
 
+  // Strip Electron/VS Code env vars so the spawned instance doesn't attach
+  // to the current Electron process (e.g. when launched from a VS Code task).
+  const env = cleanEnv(process.env)
+  if (kilo) {
+    env.XDG_DATA_HOME = join(kilo, "data")
+    env.XDG_CONFIG_HOME = join(kilo, "config")
+    env.XDG_STATE_HOME = join(kilo, "state")
+    env.XDG_CACHE_HOME = join(kilo, "cache")
+  }
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("ELECTRON_") || key.startsWith("VSCODE_")) delete env[key]
+  }
+
   console.log(`[launch] Starting VS Code (${mode} mode)`)
   console.log(`[launch] Executable: ${app}`)
   console.log(`[launch] Workspace:  ${workspace}`)
   console.log(`[launch] State:      ${base}`)
+  if (kilo) console.log(`[launch] Kilo state: ${kilo}`)
+  console.log(`[launch] Accessibility support: ${accessible ? "on" : "off"}`)
 
   if (blocking) {
     const result = Bun.spawnSync([app, ...args], {
       cwd: workspace,
-      env: process.env,
+      env,
       stdio: ["ignore", "inherit", "inherit"],
     })
     console.log(`[launch] VS Code exited (code ${result.exitCode})`)
@@ -321,7 +419,7 @@ async function launch() {
   const child = spawn(app, args, {
     cwd: workspace,
     detached: !win,
-    env: process.env,
+    env,
     stdio: "ignore",
     ...(win ? { shell: true } : {}),
   })

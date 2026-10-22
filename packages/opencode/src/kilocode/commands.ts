@@ -3,12 +3,12 @@
 // When upstream adds a new command to index.ts, add it here too.
 import { AcpCommand } from "../cli/cmd/acp"
 import { McpCommand } from "../cli/cmd/mcp"
-import { TuiThreadCommand } from "../cli/cmd/tui/thread"
-import { AttachCommand } from "../cli/cmd/tui/attach"
+import { TuiThreadCommand } from "../cli/cmd/tui"
+import { AttachCommand } from "../cli/cmd/attach"
 import { RunCommand } from "../cli/cmd/run"
 import { GenerateCommand } from "../cli/cmd/generate"
 import { DebugCommand } from "../cli/cmd/debug"
-import { AuthCommand } from "../cli/cmd/auth"
+import { ProvidersCommand } from "../cli/cmd/providers"
 import { AgentCommand } from "../cli/cmd/agent"
 import { UpgradeCommand } from "../cli/cmd/upgrade"
 import { UninstallCommand } from "../cli/cmd/uninstall"
@@ -17,12 +17,22 @@ import { ModelsCommand } from "../cli/cmd/models"
 import { StatsCommand } from "../cli/cmd/stats"
 import { ExportCommand } from "../cli/cmd/export"
 import { ImportCommand } from "../cli/cmd/import"
+import { GithubCommand } from "../cli/cmd/github"
 import { PrCommand } from "../cli/cmd/pr"
 import { SessionCommand } from "../cli/cmd/session"
 import { RemoteCommand } from "../cli/cmd/remote"
 import { DbCommand } from "../cli/cmd/db"
 import { ConfigCommand as ConfigCLICommand } from "../cli/cmd/config"
+import { PluginCommand } from "../cli/cmd/plug"
+import { DevSetupCommand, DevAliasCommand } from "./cli/dev-setup"
+import { RollCallCommand } from "./cli/cmd/roll-call"
+import { ProfileCommand } from "./cli/cmd/profile"
+import { AutoCommand } from "./cli/cmd/auto"
+import { DaemonCommand } from "./cli/cmd/daemon"
+import { KiloConsoleCommand } from "./cli/cmd/console"
+import { CloudCommand } from "./cli/cmd/cloud"
 import { HelpCommand } from "./help-command"
+import { InstallationBuildKind } from "@opencode-ai/core/installation/version"
 
 // Synthetic entry for the yargs built-in .completion() command so that
 // generateHelp --all and cli-reference.md include it automatically.
@@ -32,6 +42,12 @@ const CompletionCommand = {
   handler: () => {},
 }
 
+// Dev-only commands are spread in conditionally so release builds omit them
+// from `kilo help --all` and the docs table. They're also guarded the same way
+// at the yargs registration site in src/index.ts, so the commands-in-sync
+// regex in test/kilocode/help.test.ts sees DevSetup/DevAlias on neither side.
+const dev = InstallationBuildKind === "release" ? [] : [DevSetupCommand, DevAliasCommand]
+
 export const commands = [
   AcpCommand,
   McpCommand,
@@ -40,20 +56,29 @@ export const commands = [
   RunCommand,
   GenerateCommand,
   DebugCommand,
-  AuthCommand,
+  ProvidersCommand,
   AgentCommand,
   UpgradeCommand,
   UninstallCommand,
   ServeCommand,
   ModelsCommand,
+  RollCallCommand,
+  ProfileCommand,
+  AutoCommand,
   StatsCommand,
   ExportCommand,
   ImportCommand,
+  GithubCommand,
   PrCommand,
   SessionCommand,
   RemoteCommand,
+  DaemonCommand,
+  KiloConsoleCommand,
+  CloudCommand,
   DbCommand,
   ConfigCLICommand,
+  ...dev,
+  PluginCommand,
   HelpCommand,
   CompletionCommand,
 ]

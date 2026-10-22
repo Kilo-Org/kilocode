@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.0.4/schema.json",
+  "changelog": ["../script/changelog-github.cjs", { "repo": "Kilo-Org/kilocode" }],
+  "commit": false,
+  "fixed": [["kilo-code", "@kilocode/cli"]],
+  "linked": [],
+  "access": "restricted",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": []
+}

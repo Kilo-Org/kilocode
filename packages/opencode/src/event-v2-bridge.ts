@@ -1,0 +1,92 @@
+// Opencode publish boundary for core events. Attach routed instance location
+// so direct EventV2 consumers can isolate directory/workspace streams.
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { InstanceRef, WorkspaceRef } from "@/effect/instance-ref"
+import { GlobalBus } from "@/bus/global"
+import { EventManifest } from "@/event-manifest" // kilocode_change
+import * as EventWire from "@/kilocode/event-wire" // kilocode_change
+import { batch } from "@/kilocode/event-v2-bridge" // kilocode_change
+import { EventV2 } from "@opencode-ai/core/event"
+import { Location } from "@opencode-ai/core/location"
+import { Project } from "@opencode-ai/core/project"
+import { AbsolutePath } from "@opencode-ai/core/schema"
+import { Context, Effect, Layer } from "effect"
+
+export class Service extends Context.Service<Service, EventV2.Interface>()("@opencode/EventV2Bridge") {}
+
+export const layer = Layer.effect(
+  Service,
+  Effect.gen(function* () {
+    const events = yield* EventV2.Service
+
+    const publish: EventV2.Interface["publish"] = (definition, data, options) =>
+      Effect.gen(function* () {
+        if (options?.location) return yield* events.publish(definition, data, options)
+        const ctx = yield* InstanceRef
+        if (!ctx) return yield* events.publish(definition, data, options)
+        const workspaceID = yield* WorkspaceRef
+        return yield* events.publish(definition, data, {
+          ...options,
+          location: new Location.Info({
+            directory: AbsolutePath.make(ctx.directory),
+            ...(workspaceID ? { workspaceID } : {}),
+            project: { id: Project.ID.make(ctx.project.id), directory: AbsolutePath.make(ctx.worktree) },
+          }),
+        })
+      })
+
+    const unsubscribe = yield* events.listen((event) =>
+      Effect.gen(function* () {
+        const ctx = yield* InstanceRef
+        const workspaceID = (yield* WorkspaceRef) ?? event.location?.workspaceID
+        // kilocode_change start - legacy bus and SSE consumers require the schema's encoded representation
+        const definition = EventManifest.Latest.get(event.type) // kilocode_change
+        const data = definition ? EventWire.encode(definition.data, event.data) : event.data
+        // kilocode_change end
+        GlobalBus.emit("event", {
+          directory: event.location?.directory ?? ctx?.directory ?? "global", // kilocode_change - instance-less events are tagged "global" on the wire
+          project: ctx?.project.id,
+          workspace: workspaceID,
+          // kilocode_change start - preserve encoded data and error phase for legacy consumers
+          payload: {
+            id: event.id,
+            type: event.type,
+            properties: data,
+            ...(event.type === "session.error" &&
+              (event.metadata?.phase === "admission" || event.metadata?.phase === "execution") && {
+                metadata: { phase: event.metadata.phase },
+              }),
+          },
+          // kilocode_change end
+        })
+        if (event.durable === undefined) return
+        GlobalBus.emit("event", {
+          directory: event.location?.directory ?? ctx?.directory ?? "global", // kilocode_change - instance-less events are tagged "global" on the wire
+          project: ctx?.project.id,
+          workspace: workspaceID,
+          ...(event.metadata?.fork === true && { [EventWire.copied]: true }), // kilocode_change
+          payload: {
+            type: "sync",
+            syncEvent: {
+              id: event.id,
+              type: EventV2.versionedType(event.type, event.durable.version),
+              seq: event.durable.seq,
+              aggregateID: event.durable.aggregateID,
+              data, // kilocode_change - encoded
+            },
+          },
+        })
+      }),
+    )
+    yield* Effect.addFinalizer(() => unsubscribe)
+
+    return Service.of({ ...events, publish, publishAll: batch(events) }) // kilocode_change
+  }),
+)
+
+// kilocode_change - preserve legacy layer composition while EventV2 uses nodes
+export const defaultLayer = layer.pipe(Layer.provide(LayerNode.compile(EventV2.node)))
+
+export const node = LayerNode.make({ service: Service, layer: layer, deps: [EventV2.node] })
+
+export * as EventV2Bridge from "./event-v2-bridge"

@@ -5,6 +5,8 @@ import { createKiloClient } from "./client.js"
 import { createKiloServer } from "./server.js"
 import type { ServerOptions } from "./server.js"
 
+export * as data from "./data.js"
+
 export async function createKilo(options?: ServerOptions) {
   const server = await createKiloServer({
     ...options,

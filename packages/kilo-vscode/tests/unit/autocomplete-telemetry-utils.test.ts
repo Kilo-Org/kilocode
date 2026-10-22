@@ -6,29 +6,29 @@ import {
 
 describe("getSuggestionKey", () => {
   it("combines prefix, suffix, and text with pipe separators", () => {
-    const key = getSuggestionKey({ prefix: "hello ", suffix: "\n}", text: "world" })
+    const key = getSuggestionKey({ scope: "", prefix: "hello ", suffix: "\n}", text: "world" })
     expect(key).toBe("hello |\n}|world")
   })
 
   it("produces unique keys for different suggestions", () => {
-    const k1 = getSuggestionKey({ prefix: "a", suffix: "c", text: "b" })
-    const k2 = getSuggestionKey({ prefix: "a", suffix: "c", text: "x" })
+    const k1 = getSuggestionKey({ scope: "", prefix: "a", suffix: "c", text: "b" })
+    const k2 = getSuggestionKey({ scope: "", prefix: "a", suffix: "c", text: "x" })
     expect(k1).not.toBe(k2)
   })
 
   it("same content produces same key (stable)", () => {
-    const s = { prefix: "const x = ", suffix: ";", text: "42" }
+    const s = { scope: "", prefix: "const x = ", suffix: ";", text: "42" }
     expect(getSuggestionKey(s)).toBe(getSuggestionKey(s))
   })
 
   it("different prefix produces different key", () => {
-    const k1 = getSuggestionKey({ prefix: "a", suffix: "", text: "t" })
-    const k2 = getSuggestionKey({ prefix: "b", suffix: "", text: "t" })
+    const k1 = getSuggestionKey({ scope: "", prefix: "a", suffix: "", text: "t" })
+    const k2 = getSuggestionKey({ scope: "", prefix: "b", suffix: "", text: "t" })
     expect(k1).not.toBe(k2)
   })
 
   it("handles empty strings", () => {
-    const key = getSuggestionKey({ prefix: "", suffix: "", text: "" })
+    const key = getSuggestionKey({ scope: "", prefix: "", suffix: "", text: "" })
     expect(key).toBe("||")
   })
 })

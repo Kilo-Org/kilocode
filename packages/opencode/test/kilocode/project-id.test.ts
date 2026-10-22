@@ -2,8 +2,9 @@ import { test, expect, describe } from "bun:test"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
 import fs from "fs/promises"
-import { Instance } from "../../src/project/instance"
+import { provideTestInstance, withTestInstance } from "../fixture/fixture"
 import { getKiloProjectId } from "../../src/kilocode/project-id"
+import { disposeInstance } from "../../src/effect/instance-registry"
 
 describe("project-id", () => {
   describe("normalization", () => {
@@ -16,7 +17,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -33,7 +34,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -49,7 +50,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -65,7 +66,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -82,7 +83,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -112,7 +113,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -136,7 +137,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -158,7 +159,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -182,7 +183,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -208,7 +209,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -234,7 +235,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -258,7 +259,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -284,7 +285,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -297,7 +298,7 @@ describe("project-id", () => {
     test("returns undefined when no config and no git origin", async () => {
       await using tmp = await tmpdir({ git: true })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -308,7 +309,7 @@ describe("project-id", () => {
     test("returns undefined for non-git directory", async () => {
       await using tmp = await tmpdir()
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -327,7 +328,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -354,7 +355,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -365,26 +366,49 @@ describe("project-id", () => {
   })
 
   describe("caching", () => {
-    test("caches project ID per Instance", async () => {
-      await using tmp = await tmpdir({
-        git: true,
+    test("keeps project IDs isolated across active project contexts", async () => {
+      await using first = await tmpdir({
         init: async (dir) => {
-          await Bun.$`git remote add origin https://github.com/Kilo-Org/handbook.git`.cwd(dir).quiet()
+          await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+          await Bun.write(path.join(dir, ".kilo", "config.json"), JSON.stringify({ project: { id: "first" } }))
+        },
+      })
+      await using second = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+          await Bun.write(path.join(dir, ".kilo", "config.json"), JSON.stringify({ project: { id: "second" } }))
         },
       })
 
-      const id1 = await Instance.provide({
-        directory: tmp.path,
-        fn: () => getKiloProjectId(),
+      const ids = await Promise.all([
+        withTestInstance({ directory: first.path, fn: () => getKiloProjectId() }),
+        withTestInstance({ directory: second.path, fn: () => getKiloProjectId() }),
+      ])
+
+      expect(ids).toEqual(["first", "second"])
+    })
+
+    test("invalidates the cached project ID when the instance is disposed", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+          await Bun.write(path.join(dir, ".kilo", "config.json"), JSON.stringify({ project: { id: "first" } }))
+        },
       })
 
-      const id2 = await Instance.provide({
+      const ids = await provideTestInstance({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: async (ctx) => {
+          const first = await getKiloProjectId()
+          await Bun.write(path.join(tmp.path, ".kilo", "config.json"), JSON.stringify({ project: { id: "second" } }))
+          const cached = await getKiloProjectId()
+          await disposeInstance(ctx.directory)
+          const refreshed = await getKiloProjectId()
+          return { first, cached, refreshed }
+        },
       })
 
-      expect(id1).toBe(id2)
-      expect(id1).toBe("handbook")
+      expect(ids).toEqual({ first: "first", cached: "first", refreshed: "second" })
     })
   })
 
@@ -397,7 +421,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -420,7 +444,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -444,7 +468,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await provideTestInstance({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })

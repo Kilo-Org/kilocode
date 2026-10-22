@@ -23,7 +23,7 @@ Sessions are your platform-agnostic interaction with Kilo. They remember your re
 Kilo Code's paid plans provide powerful team management features:
 
 - [**About Plans**](/docs/collaborate/teams/about-plans) — Compare Teams and Enterprise plans
-- **Teams ($15/user/month)** — Zero markup on AI costs, centralized billing, team analytics
+- **Teams ($15/user/month)** — Inference at provider rates with no markup, centralized billing, team analytics; credit purchases have a 5% processing fee
 - **Enterprise ([Contact Sales](https://kilo.ai/contact-sales))** — Model controls, audit logs, SSO, dedicated support
 
 ### Team Management
@@ -39,6 +39,7 @@ Kilo Code's paid plans provide powerful team management features:
 
 Enterprise features for large organizations:
 
+- [**Sub-organizations**](/docs/collaborate/enterprise/sub-organizations) — Manage people, usage, credits, models, and permissions across business units
 - [**Audit Logs**](/docs/collaborate/enterprise/audit-logs) — Track and audit team activity
 - [**SSO**](/docs/collaborate/enterprise/sso) — Single sign-on with OIDC and SCIM
 - [**Model Access Controls**](/docs/collaborate/enterprise/model-access-controls) — Limit models and providers

@@ -1,22 +1,187 @@
+import org.jetbrains.changelog.Changelog
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
-import org.jetbrains.intellij.platform.gradle.tasks.aware.SplitModeAware.SplitModeTarget
+import org.jetbrains.intellij.platform.gradle.tasks.InstrumentCodeTask
+import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
+import org.jetbrains.intellij.platform.gradle.tasks.aware.SplitModeAware.PluginInstallationTarget
+import java.io.File
+import java.time.LocalDate
 
 group = "ai.kilocode.jetbrains"
-version = "7.0.1"
+
+fun port(value: String): Int {
+    val text = value.trim()
+    require(text.isNotEmpty()) {
+        "kilo.splitModeServerPort must be an integer from 0 to 65535; use 0 or omit it for a random port"
+    }
+    val n = text.toIntOrNull()
+        ?: error("kilo.splitModeServerPort must be an integer from 0 to 65535; use 0 or omit it for a random port")
+    require(n in 0..65535) {
+        "kilo.splitModeServerPort must be an integer from 0 to 65535; use 0 or omit it for a random port"
+    }
+    return n
+}
+
+fun checked(value: String): String {
+    if (value == "0.0.0-dev") return value
+    // The optional +<sha> is SemVer build metadata: it never affects release ordering (Release below
+    // parses only the part before it) and only ever comes from a local override, never from a release
+    // tag, so it cannot leak into a published version.
+    require(Regex("^[0-9]+\\.[0-9]+\\.[0-9]+(-rc\\.[0-9]+)?(\\+[0-9a-f]+)?$").matches(value)) {
+        "Invalid JetBrains plugin version: $value"
+    }
+    return value
+}
+
+data class Release(val major: Int, val minor: Int, val patch: Int, val rc: Int?) : Comparable<Release> {
+    val stable = rc == null
+    val base get() = if (stable) this else Release(major, minor, patch, null)
+    val text = listOfNotNull("$major.$minor.$patch", rc?.let { "rc.$it" }).joinToString("-")
+
+    override fun compareTo(other: Release): Int {
+        val cmp = compareValuesBy(this, other, Release::major, Release::minor, Release::patch)
+        if (cmp != 0) return cmp
+        return compareValues(rc ?: Int.MAX_VALUE, other.rc ?: Int.MAX_VALUE)
+    }
+}
+
+fun release(value: String): Release? {
+    val match = Regex("^(\\d+)\\.(\\d+)\\.(\\d+)(?:-rc\\.(\\d+))?$").matchEntire(value) ?: return null
+    return Release(
+        match.groupValues[1].toInt(),
+        match.groupValues[2].toInt(),
+        match.groupValues[3].toInt(),
+        match.groupValues[4].takeIf { it.isNotEmpty() }?.toInt(),
+    )
+}
+
+fun releases(): List<Release> {
+    val heading = Regex("^## \\[(.+?)](?: - .*)?$|^## ([^\\[]\\S*)$")
+    return file("CHANGELOG.md").readLines()
+        .mapNotNull { line ->
+            val match = heading.matchEntire(line.trim()) ?: return@mapNotNull null
+            release(match.groupValues[1].ifEmpty { match.groupValues[2] })
+        }
+        .distinctBy { it.text }
+}
+
+fun selected(value: String): List<String> {
+    val current = release(value) ?: return emptyList()
+    val entries = releases()
+    val rcs = if (current.stable) emptyList() else entries
+        .filter { !it.stable && it.base == current.base && it <= current }
+        .sortedDescending()
+    val stables = entries
+        .filter { it.stable && if (current.stable) it <= current else it < current.base }
+        .sortedDescending()
+        .take(5)
+    return (rcs + stables).map { it.text }
+}
+
+fun gitTag(): String? {
+    val text = providers.exec {
+        commandLine("git", "tag", "--points-at", "HEAD")
+    }.standardOutput.asText.get()
+    return text.lineSequence().map { it.trim() }.firstOrNull { it.startsWith("jetbrains/v") }
+}
+
+val release = providers.gradleProperty("production").map { it.toBoolean() }.orElse(false).get()
+val pinned = providers.gradleProperty("kilo.cli.pinned").map { it.trim().toBoolean() }.orElse(true).get()
+val override = providers.gradleProperty("kilo.version").orNull?.trim()?.takeIf { it.isNotEmpty() }
+val prop = providers.gradleProperty("kilo.jetbrains.version").orNull?.trim()?.takeIf { it.isNotEmpty() }
+val tag = gitTag()?.removePrefix("jetbrains/v")
+val ver = override?.let(::checked) ?: prop?.let(::checked) ?: if (release) checked(
+    tag ?: error("Missing JetBrains plugin version. Publish builds must set kilo.jetbrains.version or run from a jetbrains/v<version> tag."),
+) else checked(tag ?: "0.0.0-dev")
+
+if (release && !pinned) error(
+    "kilo.cli.pinned=false is a dev-only mode and cannot be released. Set kilo.cli.pinned=true before a production/publish build."
+)
+
+val channel = providers.gradleProperty("kilo.channel").map { it.trim() }.orElse("default")
+val splitPort = providers.gradleProperty("kilo.splitModeServerPort").map(::port).orElse(0)
+val isolated = providers.gradleProperty("kilo.dev.storage.isolated").map { it.toBoolean() }.orElse(false)
+val worktreeRoot = providers.gradleProperty("kilo.dev.worktree.root").orElse(
+    providers.provider { rootProject.layout.projectDirectory.asFile.parentFile.parentFile.canonicalPath }
+)
+
+val ides = file(".intellijPlatform/ides")
+val corrupt = ides.listFiles()
+    ?.filter { ide ->
+        // layoutIndex is the platform plugin's own layout cache (stored here since 2.19.0), not an IDE.
+        ide.isDirectory && ide.name != "layoutIndex" && (
+            ide.walkTopDown().none { it.name == "product-info.json" } ||
+                ide.resolve("lib").listFiles()?.any { jar -> jar.isFile && jar.extension == "jar" } != true
+        )
+    }
+    .orEmpty()
+
+if (corrupt.isNotEmpty()) {
+    val paths = corrupt.joinToString("\n") { ide -> "- ${ide.absolutePath}" }
+    error(
+        """
+        Incomplete IntelliJ Platform extraction detected:
+        $paths
+
+        Remove .intellijPlatform/ides, .intellijPlatform/localPlatformArtifacts, .intellijPlatform/layoutIndex,
+        and .intellijPlatform/coroutines-javaagent.jar, then rerun the Gradle task.
+        """.trimIndent(),
+    )
+}
+
+version = ver
 
 plugins {
     application
     id("java")
     alias(libs.plugins.intellij.platform)
+    alias(libs.plugins.detekt)
+    alias(libs.plugins.changelog)
 
     alias(libs.plugins.kotlin) apply false
     alias(libs.plugins.kotlin.serialization) apply false
-    alias(libs.plugins.compose.compiler) apply false
 }
+
+changelog {
+    version = ver
+    path = file("CHANGELOG.md").canonicalPath
+    header = provider { "[${version.get()}] - ${LocalDate.now()}" }
+    unreleasedTerm = "[Unreleased]"
+    keepUnreleasedSection = true
+    repositoryUrl = "https://github.com/Kilo-Org/kilocode"
+    groups = listOf("Added", "Changed", "Fixed", "Removed", "Security")
+    combinePreReleases = false
+}
+
+val notes = providers.gradleProperty("kilo.changeNotes").orElse(
+    provider {
+        val versions = selected(ver).filter { changelog.has(it) }
+        if (versions.isNotEmpty()) return@provider versions.joinToString("\n") { item ->
+            changelog.renderItem(
+                changelog.get(item).withHeader(true).withEmptySections(false),
+                Changelog.OutputType.HTML,
+            )
+        }
+        val item = if (changelog.has(ver)) changelog.get(ver) else changelog.getUnreleased()
+        changelog.renderItem(item.withHeader(false).withEmptySections(false), Changelog.OutputType.HTML)
+    },
+)
 
 subprojects {
     apply(plugin = "org.jetbrains.intellij.platform.module")
+    apply(plugin = "io.gitlab.arturbosch.detekt")
+
+    detekt {
+        config.setFrom(rootProject.file("detekt.yml"))
+        buildUponDefaultConfig = true
+        source.setFrom("src/main/kotlin")
+    }
+}
+
+detekt {
+    config.setFrom(file("detekt.yml"))
+    buildUponDefaultConfig = true
+    source.setFrom("src/main/kotlin")
 }
 
 allprojects {
@@ -42,19 +207,112 @@ dependencies {
 
 intellijPlatform {
     splitMode = true
-    splitModeTarget = SplitModeTarget.BOTH
+    pluginInstallationTarget = PluginInstallationTarget.BOTH
+
+    pluginConfiguration {
+        id = "ai.kilocode.jetbrains"
+        name = "Kilo Code"
+        version = provider { ver }
+        changeNotes = notes
+
+        ideaVersion {
+            untilBuild = provider { null }
+        }
+
+        vendor {
+            name = "Kilo Code"
+            url = "https://kilo.ai"
+        }
+    }
+
+    publishing {
+        token = providers.environmentVariable("JETBRAINS_MARKETPLACE_TOKEN")
+        channels = channel.map { value ->
+            if (value.isBlank() || value == "default") return@map listOf("default")
+            listOf(value)
+        }
+    }
+
+    signing {
+        // CI passes raw secret content so signing can run without writing secrets to disk.
+        // Local release builds can still point these properties at pre-existing secret files.
+        certificateChain = providers.environmentVariable("JETBRAINS_CERTIFICATE_CHAIN")
+        privateKey = providers.environmentVariable("JETBRAINS_PRIVATE_KEY")
+        certificateChainFile.fileProvider(providers.environmentVariable("JETBRAINS_CERTIFICATE_CHAIN_FILE").map { File(it) })
+        privateKeyFile.fileProvider(providers.environmentVariable("JETBRAINS_PRIVATE_KEY_FILE").map { File(it) })
+        password = providers.environmentVariable("JETBRAINS_PRIVATE_KEY_PASSWORD")
+    }
 
     pluginVerification {
         ides {
-            create(IntelliJPlatformType.IntellijIdeaCommunity, libs.versions.intellij.platform)
+            create(IntelliJPlatformType.IntellijIdea, libs.versions.intellij.platform)
         }
     }
 }
 
+tasks {
+    named("verifyPluginSignature") {
+        dependsOn("signPlugin")
+    }
+
+    withType<InstrumentCodeTask> {
+        enabled = false
+    }
+
+    runIdeBackend {
+        splitModeServerPort.set(splitPort)
+        dependsOn(":backend:processResources")
+    }
+
+    runIdeFrontend {
+        splitModeServerPort.set(splitPort)
+    }
+
+    runIdeSplitMode {
+        splitModeServerPort.set(splitPort)
+        dependsOn(":backend:processResources")
+    }
+}
+
+// Compile-only typecheck: verifies Kotlin compiles (including generated API client)
+// without running buildPlugin.
+tasks.register("typecheck") {
+    dependsOn(
+        ":shared:compileKotlin",
+        ":frontend:compileKotlin",
+        ":backend:compileKotlin",
+        ":frontend:compileTestKotlin",
+        ":backend:compileTestKotlin",
+    )
+}
+
 tasks.named<JavaExec>("runIde") {
+    dependsOn(":backend:processResources")
     jvmArgumentProviders += CommandLineArgumentProvider {
         listOf("-Dnosplash=true")
     }
 }
 
+tasks.withType<RunIdeTask> {
+    val level = providers.gradleProperty("kilo.dev.log.level").orNull ?: "DEBUG"
+    val content = providers.gradleProperty("kilo.dev.log.chat.content").orNull ?: "off"
+    val preview = providers.gradleProperty("kilo.dev.log.chat.preview.max").orNull ?: "160"
+    systemProperty("kilo.dev.log.level", level)
+    systemProperty("kilo.dev.log.chat.content", content)
+    systemProperty("kilo.dev.log.chat.preview.max", preview)
+    systemProperty("kilo.dev.storage.isolated", isolated.get().toString())
+    systemProperty("kilo.dev.worktree.root", worktreeRoot.get())
+    // Suppress IntelliJ feedback surveys ("Share Your Experience" / "Take Survey" popups) in dev runs.
+    // These are registry keys from platform/feedback; registry values can be overridden with -D<key>=<value>.
+    systemProperty("platform.feedback", "false")
+    systemProperty("csat.survey.enabled", "false")
+    systemProperty("editor.ux.survey.enabled", "false")
+    // Internal mode: enables the Split Mode latency widget and the Internal Actions menu.
+    // Property name is ApplicationManagerEx.IS_INTERNAL_PROPERTY; the embedded JetBrains Client
+    // inherits it from the backend (EmbeddedClientLauncher.passProperties).
+    systemProperty("idea.is.internal", "true")
+}
 
+tasks.named<Delete>("clean") {
+    delete(layout.buildDirectory)
+}

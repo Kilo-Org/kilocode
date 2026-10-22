@@ -4,11 +4,13 @@ export interface ModelAllocation {
   providerID: string
   modelID: string
   count: number
+  variant?: string
 }
 
 interface ModelRef {
   providerID: string
   modelID: string
+  variant?: string
 }
 
 /**
@@ -32,7 +34,7 @@ export function resolveVersionModels(
     for (const alloc of allocations) {
       const clamped = Math.min(Math.max(Math.floor(alloc.count) || 0, 0), MAX_MULTI_VERSIONS)
       for (let c = 0; c < clamped; c++) {
-        models.push({ providerID: alloc.providerID, modelID: alloc.modelID })
+        models.push({ providerID: alloc.providerID, modelID: alloc.modelID, variant: alloc.variant })
       }
       if (models.length >= MAX_MULTI_VERSIONS) break
     }
@@ -64,9 +66,12 @@ export interface InitialMessage {
   sessionId: string
   worktreeId: string
   text?: string
+  command?: string
+  arguments?: string
   providerID?: string
   modelID?: string
   agent?: string
+  variant?: string
   files?: Array<{ mime: string; url: string }>
 }
 
@@ -81,7 +86,9 @@ export function buildInitialMessages(
   fallback: { providerID?: string; modelID?: string },
   prompt?: string,
   agent?: string,
+  variant?: string,
   files?: Array<{ mime: string; url: string }>,
+  command?: { command: string; arguments: string },
 ): InitialMessage[] {
   return created.map((entry) => {
     const model = models[entry.versionIndex]
@@ -92,10 +99,16 @@ export function buildInitialMessages(
       worktreeId: entry.worktreeId,
       providerID: pid,
       modelID: mid,
+      agent,
+      // A per-allocation effort pick wins even when preparing an empty session.
+      variant: model?.variant ?? variant,
     }
-    if (prompt) {
+    if (command) {
+      msg.command = command.command
+      msg.arguments = command.arguments
+      msg.files = files
+    } else if (prompt) {
       msg.text = prompt
-      msg.agent = agent
       msg.files = files
     }
     return msg

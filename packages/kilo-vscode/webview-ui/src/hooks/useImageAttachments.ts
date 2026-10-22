@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js"
 import { ACCEPTED_IMAGE_TYPES, isAcceptedImageType, isDragLeavingComponent } from "./image-attachments-utils"
-import { extractDropPaths } from "../utils/path-mentions"
+import { extractDropPaths, KILO_FILE_PATH_MIME } from "../utils/path-mentions"
 
 export interface ImageAttachment {
   id: string
@@ -15,6 +15,7 @@ export type FilePathDropHandler = (paths: string[]) => void
 export function useImageAttachments() {
   const [images, setImages] = createSignal<ImageAttachment[]>([])
   const [dragging, setDragging] = createSignal(false)
+  const [pending, setPending] = createSignal(0)
   let onFilePaths: FilePathDropHandler | undefined
 
   /** Register a handler for file path drops (text/URI-list). */
@@ -25,6 +26,8 @@ export function useImageAttachments() {
   const add = (file: File) => {
     if (!isAcceptedImageType(file.type)) return
     const reader = new FileReader()
+    setPending((count) => count + 1)
+    reader.onloadend = () => setPending((count) => count - 1)
     reader.onload = () => {
       const attachment: ImageAttachment = {
         id: crypto.randomUUID(),
@@ -59,9 +62,10 @@ export function useImageAttachments() {
   const handleDragOver = (event: DragEvent) => {
     const types = event.dataTransfer?.types
     if (!types) return
-    // Accept file drops and VS Code URI-list drops (explorer, editor tabs).
+    // Accept file drops, VS Code URI-list drops, and internal file-path drags.
     // Do NOT accept bare text/plain here — that would intercept normal text drags.
-    const acceptable = types.includes("Files") || types.includes("application/vnd.code.uri-list")
+    const acceptable =
+      types.includes("Files") || types.includes("application/vnd.code.uri-list") || types.includes(KILO_FILE_PATH_MIME)
     if (!acceptable) return
     event.preventDefault()
     setDragging(true)
@@ -95,6 +99,7 @@ export function useImageAttachments() {
   return {
     images,
     dragging,
+    pending: () => pending() > 0,
     add,
     remove,
     clear,

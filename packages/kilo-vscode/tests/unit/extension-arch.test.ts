@@ -16,6 +16,26 @@ const PKG_JSON_FILE = path.join(ROOT, "package.json")
 const SRC_DIR = path.join(ROOT, "src")
 const EXTENSION_FILE = path.join(ROOT, "src/extension.ts")
 const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
+const SETTINGS_PROVIDER_FILE = path.join(ROOT, "src/SettingsEditorProvider.ts")
+const VSCODE_HOST_FILE = path.join(ROOT, "src/agent-manager/vscode-host.ts")
+
+function sliceBlock(source: string, start: number): string {
+  const open = source.indexOf("{", start)
+  expect(open, "block opening brace must exist").toBeGreaterThan(-1)
+
+  const state = { depth: 0, end: -1 }
+  Array.from(source.slice(open)).some((ch, i) => {
+    if (ch === "{") state.depth++
+    if (ch === "}") state.depth--
+    if (state.depth !== 0) return false
+    state.end = open + i
+    return true
+  })
+
+  if (state.end > -1) return source.slice(start, state.end + 1)
+
+  throw new Error("block closing brace not found")
+}
 
 function readSrcFiles(dir: string): string {
   const parts: string[] = []
@@ -85,6 +105,134 @@ describe("Extension — package.json command sync", () => {
       `Commands without "kilo-code.new." prefix — use the namespaced form:\n` + bad.map((b) => `  - ${b}`).join("\n"),
     ).toEqual([])
   })
+
+  it("scopes Agent Manager search to the panel and leaves the integrated terminal alone", () => {
+    const binding = pkg.contributes?.keybindings?.find(
+      (item: { command: string }) => item.command === "kilo-code.new.agentManager.search",
+    )
+    expect(binding).toMatchObject({
+      key: "ctrl+f",
+      mac: "cmd+f",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !terminalFocus",
+    })
+  })
+
+  it("keeps Agent Manager session and terminal shortcuts focus-aware", () => {
+    const terminal = pkg.contributes?.keybindings?.find(
+      (item: { command: string }) => item.command === "kilo-code.new.agentManager.showTerminal",
+    )
+    const create = pkg.contributes?.keybindings?.find(
+      (item: { command: string }) => item.command === "kilo-code.new.agentManager.newTerminalTab",
+    )
+    const sessionCreate = pkg.contributes?.keybindings?.find(
+      (item: { command: string }) => item.command === "kilo-code.new.agentManager.newTab",
+    )
+    expect(terminal).toMatchObject({
+      key: "ctrl+/",
+      mac: "cmd+/",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.sidebarFocused",
+    })
+    expect(create).toMatchObject({
+      key: "ctrl+shift+t",
+      mac: "cmd+shift+t",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.agentManagerSideTerminalFocused",
+    })
+    expect(sessionCreate).toMatchObject({
+      key: "ctrl+t",
+      mac: "cmd+t",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.agentManagerSideTerminalFocused",
+    })
+    const terminalCreate = pkg.contributes?.keybindings?.find(
+      (item: { command: string; key?: string; mac?: string; when?: string }) =>
+        item.command === "kilo-code.new.agentManager.newSideTerminal" && item.key === "ctrl+t",
+    )
+    expect(terminalCreate).toMatchObject({
+      key: "ctrl+t",
+      mac: "cmd+t",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && kilo-code.new.agentManagerSideTerminalFocused",
+    })
+    expect(
+      pkg.contributes?.keybindings?.some(
+        (item: { command: string }) =>
+          item.command === "kilo-code.new.agentManager.newTerminal" ||
+          item.command === "kilo-code.new.agentManager.newMainTerminal",
+      ),
+    ).toBe(false)
+  })
+
+  it("declares the Agent Manager terminal destination setting", () => {
+    const setting = pkg.contributes?.configuration?.properties?.["kilo-code.new.agentManager.terminalButtonDestination"]
+    expect(setting).toMatchObject({
+      type: "string",
+      scope: "application",
+      default: "agentManager",
+      enum: ["vscode", "agentManager"],
+    })
+    expect(setting.enumDescriptions).toHaveLength(setting.enum.length)
+  })
+
+  it("scopes the open PR shortcut to Agent Manager", () => {
+    const binding = pkg.contributes?.keybindings?.find(
+      (item: { command: string }) => item.command === "kilo-code.new.agentManager.openPR",
+    )
+    expect(binding).toMatchObject({
+      key: "ctrl+shift+r",
+      mac: "cmd+shift+r",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'",
+    })
+  })
+
+  it("scopes agent mode shortcuts to focused Kilo webviews", () => {
+    const bindings = pkg.contributes?.keybindings?.filter(
+      (item: { command: string }) =>
+        item.command === "kilo-code.new.cycleAgentMode" || item.command === "kilo-code.new.cyclePreviousAgentMode",
+    )
+    const when =
+      "kilo-code.new.sidebarFocused || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
+
+    expect(bindings).toHaveLength(2)
+    expect(bindings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ command: "kilo-code.new.cycleAgentMode", when }),
+        expect.objectContaining({ command: "kilo-code.new.cyclePreviousAgentMode", when }),
+      ]),
+    )
+  })
+
+  it("routes task-close commands to the focused Kilo surface", () => {
+    const commands = pkg.contributes?.commands ?? []
+    expect(commands).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ command: "kilo-code.new.closeTask", title: "Close Task", category: "Kilo Code" }),
+        expect.objectContaining({
+          command: "kilo-code.new.closeAllTasks",
+          title: "Close All Tasks",
+          category: "Kilo Code",
+        }),
+      ]),
+    )
+
+    const source = fs.readFileSync(EXTENSION_FILE, "utf-8")
+    const closeTask = sliceBlock(source, source.indexOf('vscode.commands.registerCommand("kilo-code.new.closeTask"'))
+    const closeAll = sliceBlock(source, source.indexOf('vscode.commands.registerCommand("kilo-code.new.closeAllTasks"'))
+    expect(closeTask).toContain('taskTarget().postMessage({ type: "action", action: "closeTask" })')
+    expect(closeAll).toContain('taskTarget().postMessage({ type: "action", action: "closeAllTasks" })')
+
+    // A panel can stay "active" while the user is in the sidebar, and on Agent
+    // Manager these commands stop sessions, so the remembered surface decides.
+    // It must be the tracked one, never focus sampled when the command runs:
+    // the Command Palette blurs the webview before it executes.
+    const target = sliceBlock(source, source.indexOf("const taskTarget = () =>"))
+    expect(target).toContain("focused: focus.current()")
+    expect(target).toContain("agentManager: agentManagerProvider.isActive() ? agentManagerProvider : undefined")
+
+    // Every surface has to report focus, or the remembered one goes stale and
+    // commands keep targeting a surface the user has already left.
+    for (const surface of ["sidebar", "tab", "agentManager"]) {
+      expect(source, `${surface} should report focus gains`).toContain(`focus.gained("${surface}")`)
+      expect(source, `${surface} should be forgotten when it goes away`).toContain(`focus.lost("${surface}")`)
+    }
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -112,10 +260,7 @@ describe("Extension — KiloProvider handler wiring", () => {
       instances.push(match.index)
     }
 
-    expect(
-      instances.length,
-      "expected at least 3 KiloProvider instances (sidebar, tab, deserializer)",
-    ).toBeGreaterThanOrEqual(3)
+    expect(instances.length, "expected sidebar and shared tab KiloProvider constructors").toBeGreaterThanOrEqual(2)
 
     const missing: string[] = []
     for (let i = 0; i < instances.length; i++) {
@@ -138,26 +283,66 @@ describe("Extension — KiloProvider handler wiring", () => {
     ).toEqual([])
   })
 
-  it("openKiloInNewTab wires setContinueInWorktreeHandler before resolveWebviewPanel", () => {
-    const fn = ext.indexOf("function openKiloInNewTab")
-    expect(fn, "openKiloInNewTab must exist").toBeGreaterThan(-1)
-    const body = ext.slice(fn, fn + 1500)
-    const handler = body.indexOf("setContinueInWorktreeHandler")
+  it("shared tab setup wires services and handlers before resolveWebviewPanel", () => {
+    const start = ext.indexOf("const attach =")
+    expect(start, "shared tab setup must exist").toBeGreaterThan(-1)
+    const body = sliceBlock(ext, start)
     const resolve = body.indexOf("resolveWebviewPanel")
-    expect(handler, "setContinueInWorktreeHandler must be called").toBeGreaterThan(-1)
     expect(resolve, "resolveWebviewPanel must be called").toBeGreaterThan(-1)
-    expect(handler, "handler must be wired before resolving the panel").toBeLessThan(resolve)
+    for (const name of [
+      "setRemoteService",
+      "setAutoApproveController",
+      "setContinueInWorktreeHandler",
+      "setCreateWorktreeHandler",
+      "setDiffVirtualProvider",
+      "setDiffViewerProvider",
+      "setReviewCommentsHandler",
+    ]) {
+      const handler = body.indexOf(name)
+      expect(handler, `${name} must be called`).toBeGreaterThan(-1)
+      expect(handler, `${name} must be wired before resolving the panel`).toBeLessThan(resolve)
+    }
+    expect(body).toContain("tabPanels.set(panel, tabProvider)")
+    expect(body).toContain("return tabProvider")
   })
 
-  it("TabPanel deserializer wires setContinueInWorktreeHandler before resolveWebviewPanel", () => {
-    const serializer = ext.indexOf('"kilo-code.new.TabPanel"')
-    expect(serializer, "TabPanel serializer must exist").toBeGreaterThan(-1)
-    const body = ext.slice(serializer, serializer + 800)
-    const handler = body.indexOf("setContinueInWorktreeHandler")
-    const resolve = body.indexOf("resolveWebviewPanel")
-    expect(handler, "setContinueInWorktreeHandler must be called in deserializer").toBeGreaterThan(-1)
-    expect(resolve, "resolveWebviewPanel must be called in deserializer").toBeGreaterThan(-1)
-    expect(handler, "handler must be wired before resolving the panel").toBeLessThan(resolve)
+  it("new and restored tabs use shared setup and retain disposal", () => {
+    expect(ext).toContain("openKiloInNewTab(context, tabPanels, attach)")
+    for (const name of ["function openKiloInNewTab", '"kilo-code.new.TabPanel"']) {
+      const start = ext.indexOf(name)
+      expect(start, `${name} must exist`).toBeGreaterThan(-1)
+      const body = sliceBlock(ext, start)
+      expect(body).toContain("const tabProvider = attach(panel)")
+      expect(body).toContain("panel.onDidDispose(")
+      expect(body).toContain("tabPanels.delete(panel)")
+      expect(body).toContain("tabProvider.dispose()")
+    }
+  })
+})
+
+describe("Extension — editor panel placement", () => {
+  const ext = fs.readFileSync(EXTENSION_FILE, "utf-8")
+  const settings = fs.readFileSync(SETTINGS_PROVIDER_FILE, "utf-8")
+
+  it("opens Kilo as a tab in the active editor group", () => {
+    const fn = ext.indexOf("function openKiloInNewTab")
+    expect(fn, "openKiloInNewTab must exist").toBeGreaterThan(-1)
+    const body = sliceBlock(ext, fn)
+
+    expect(body).toContain("vscode.ViewColumn.Active")
+    expect(body).not.toContain("visibleTextEditors")
+    expect(body).not.toContain("workbench.action.newGroupRight")
+    expect(body).not.toContain("workbench.action.lockEditorGroup")
+  })
+
+  it("opens and reveals Settings in the active editor group", () => {
+    const fn = settings.indexOf("openPanel(view")
+    expect(fn, "SettingsEditorProvider.openPanel must exist").toBeGreaterThan(-1)
+    const body = sliceBlock(settings, fn)
+
+    expect(body).toContain("existing.reveal(vscode.ViewColumn.Active)")
+    expect(body.match(/vscode\.ViewColumn\.Active/g)).toHaveLength(2)
+    expect(body).not.toContain("vscode.ViewColumn.One")
   })
 })
 
@@ -169,17 +354,41 @@ describe("Extension — KiloProvider handler wiring", () => {
 // it silently no-op'd, leaving the UI stuck.
 // ---------------------------------------------------------------------------
 
-describe("KiloProvider — continueInWorktree error fallback", () => {
+describe("Extension — Agent Manager remote wiring", () => {
+  const ext = fs.readFileSync(EXTENSION_FILE, "utf-8")
+  const host = fs.readFileSync(VSCODE_HOST_FILE, "utf-8")
+
+  it("passes the shared remote service to Agent Manager", () => {
+    expect(ext).toContain("new VscodeHost(context.extensionUri, connectionService, context, remoteService, controls)")
+  })
+
+  it("wires the remote service before attaching the Agent Manager webview", () => {
+    const remote = host.indexOf("provider.setRemoteService(this.remoteService)")
+    const attach = host.indexOf("provider.attachToWebview")
+    expect(remote).toBeGreaterThan(-1)
+    expect(attach).toBeGreaterThan(-1)
+    expect(remote).toBeLessThan(attach)
+  })
+})
+
+describe("KiloProvider — remote focus lifecycle", () => {
   const provider = fs.readFileSync(KILO_PROVIDER_FILE, "utf-8")
 
-  it("sends error progress when handler is missing", () => {
-    const caseStart = provider.indexOf('case "continueInWorktree"')
-    expect(caseStart, "continueInWorktree case must exist").toBeGreaterThan(-1)
-    const caseEnd = provider.indexOf("break", caseStart)
-    const block = provider.slice(caseStart, caseEnd)
+  it("registers newly created sessions and uses the synchronous session ID", () => {
+    const create = sliceBlock(provider, provider.indexOf("private async handleCreateSession"))
+    const resolve = sliceBlock(provider, provider.indexOf("private async resolveSession"))
+    expect(create).toContain("this.focusSession(session.id)")
+    expect(resolve).toContain("this.focusSession(session.id)")
+    expect(provider).toContain("this.focusSession(webviewView.visible ? this.contextSessionID : undefined)")
+  })
+})
 
-    expect(block, "must have else branch for missing handler").toContain("else if")
-    expect(block, "must send error status back to webview").toContain('"error"')
-    expect(block, "must use continueInWorktreeProgress message type").toContain("continueInWorktreeProgress")
+describe("KiloProvider — continueInWorktree error fallback", () => {
+  const helper = fs.readFileSync(path.join(ROOT, "src/kilo-provider/continue-worktree.ts"), "utf-8")
+
+  it("sends error progress when handler is missing", () => {
+    expect(helper, "must send error status back to webview").toContain('"error"')
+    expect(helper, "must use continueInWorktreeProgress message type").toContain("continueInWorktreeProgress")
+    expect(helper, "must handle missing handler case").toContain("no handler registered")
   })
 })

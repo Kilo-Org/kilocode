@@ -6,6 +6,7 @@ interface ImageProps {
   width?: string
   height?: string
   caption?: string
+  compact?: boolean
 }
 
 // Helper to add 'px' to numeric values that don't have units
@@ -17,7 +18,7 @@ function addPxIfNeeded(value: string): string {
   return value
 }
 
-export function Image({ src, alt, width, height, caption }: ImageProps) {
+export function Image({ src, alt, width, height, caption, compact }: ImageProps) {
   const imgStyle: React.CSSProperties = {
     maxWidth: "100%",
     height: "auto",
@@ -27,7 +28,7 @@ export function Image({ src, alt, width, height, caption }: ImageProps) {
   if (height) imgStyle.height = addPxIfNeeded(height)
 
   const figureStyle: React.CSSProperties = {
-    margin: "1.5rem 0",
+    margin: compact ? "0" : "1.5rem 0",
     maxWidth: "100%",
     overflow: "hidden",
   }

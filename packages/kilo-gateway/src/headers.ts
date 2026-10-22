@@ -1,6 +1,7 @@
 import {
   HEADER_ORGANIZATIONID,
   HEADER_TASKID,
+  HEADER_PARENT_TASKID,
   HEADER_PROJECTID,
   HEADER_TESTER,
   HEADER_EDITORNAME,
@@ -21,6 +22,7 @@ import {
  */
 export const X_KILOCODE_ORGANIZATIONID = HEADER_ORGANIZATIONID
 export const X_KILOCODE_TASKID = HEADER_TASKID
+export const X_KILOCODE_PARENT_TASKID = HEADER_PARENT_TASKID
 export const X_KILOCODE_PROJECTID = HEADER_PROJECTID
 export const X_KILOCODE_TESTER = HEADER_TESTER
 export const X_KILOCODE_EDITORNAME = HEADER_EDITORNAME
@@ -57,13 +59,15 @@ export function getDefaultHeaders(): Record<string, string> {
 
 /**
  * Get editor name header value
- * Defaults to "Kilo CLI" but can be customized via KILOCODE_EDITOR_NAME.
- * Appends the version from KILOCODE_VERSION when available.
+ * When KILOCODE_EDITOR_NAME is set explicitly, use it verbatim (the caller is
+ * responsible for including the version, e.g. "Visual Studio Code 1.114.0").
+ * Otherwise defaults to "Kilo CLI" and appends KILOCODE_VERSION when available.
  */
 export function getEditorNameHeader(): string {
-  const name = process.env[ENV_EDITOR_NAME] ?? DEFAULT_EDITOR_NAME
+  const custom = process.env[ENV_EDITOR_NAME]
+  if (custom) return custom
   const version = process.env[ENV_VERSION]
-  return version ? `${name} ${version}` : name
+  return version ? `${DEFAULT_EDITOR_NAME} ${version}` : DEFAULT_EDITOR_NAME
 }
 
 /**

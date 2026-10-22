@@ -2,17 +2,19 @@ import * as vscode from "vscode"
 import { KiloProvider } from "./KiloProvider"
 import { resolvePanelProjectDirectory } from "./project-directory"
 import type { KiloConnectionService } from "./services/cli-backend"
+import type { RemoteStatusService } from "./services/RemoteStatusService"
+import type { AgentManagerSettingsHandler } from "./kilo-provider/options"
 
-type PanelView = "settings" | "profile" | "marketplace"
+type PanelView = "settings" | "profile" | "indexing"
 
 const PANEL_TITLES: Record<PanelView, string> = {
   settings: "Kilo Settings",
   profile: "Kilo Profile",
-  marketplace: "Kilo Marketplace",
+  indexing: "Codebase Indexing",
 }
 
 /**
- * Opens Settings, Profile, or Marketplace as an editor-area WebviewPanel,
+ * Opens Settings or Profile as an editor-area WebviewPanel,
  * keeping the sidebar chat undisturbed.
  *
  * Each view type is a singleton panel — calling openPanel() again
@@ -26,14 +28,21 @@ export class SettingsEditorProvider implements vscode.Disposable {
   private panels = new Map<PanelView, vscode.WebviewPanel>()
   private providers = new Map<PanelView, KiloProvider>()
   private tabs = new Map<PanelView, string>()
+  private subtabs = new Map<PanelView, string>()
+  /** Pending deep-link focus (e.g. an MCP server name), consumed after the first navigate it is sent with. */
+  private focuses = new Map<PanelView, string>()
+  private projects = new Map<PanelView, string>()
+  private remoteService: RemoteStatusService | null = null
 
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: KiloConnectionService,
     private readonly context: vscode.ExtensionContext,
+    private readonly agentManagerSettings?: AgentManagerSettingsHandler,
   ) {}
 
-  private getProjectDirectory(): string | null {
+  private getProjectDirectory(projectId?: string): string | null {
+    if (projectId) return this.agentManagerSettings?.projectDirectory(projectId) ?? null
     const editor = vscode.window.activeTextEditor
     const active =
       editor?.document.uri.scheme === "file"
@@ -51,25 +60,34 @@ export class SettingsEditorProvider implements vscode.Disposable {
     return view
   }
 
-  openPanel(view: PanelView, tab?: string, directory?: string | null): void {
+  openPanel(view: PanelView, tab?: string, projectId?: string, subtab?: string, focus?: string): void {
     if (tab) this.tabs.set(view, tab)
+    if (subtab) this.subtabs.set(view, subtab)
+    if (focus) this.focuses.set(view, focus)
+    if (projectId) this.projects.set(view, projectId)
+    else this.projects.delete(view)
 
-    const projectDirectory = directory ?? this.getProjectDirectory()
+    const projectDirectory = this.getProjectDirectory(projectId)
     const existing = this.panels.get(view)
     if (existing) {
       this.providers.get(view)?.setProjectDirectory(projectDirectory)
-      if (tab) {
-        const provider = this.providers.get(view)
-        provider?.postMessage({ type: "navigate", view, tab })
-      }
-      existing.reveal(vscode.ViewColumn.One)
+      existing.reveal(vscode.ViewColumn.Active)
+      this.providers.get(view)?.postMessage({
+        type: "navigate",
+        view,
+        ...(tab ? { tab } : {}),
+        ...(subtab ? { subtab } : {}),
+        ...(focus ? { focus } : {}),
+        ...(projectId ? { projectId } : {}),
+      })
+      this.focuses.delete(view)
       return
     }
 
     const panel = vscode.window.createWebviewPanel(
       `kilo-code.new.${view}Panel`,
       PANEL_TITLES[view],
-      vscode.ViewColumn.One,
+      vscode.ViewColumn.Active,
       {
         enableScripts: true,
         retainContextWhenHidden: true,
@@ -80,6 +98,16 @@ export class SettingsEditorProvider implements vscode.Disposable {
     this.wirePanel(panel, view, projectDirectory)
   }
 
+  /** Open (or reveal) the Settings panel and focus its search field. */
+  focusSearch(): void {
+    this.openPanel("settings")
+    const provider = this.providers.get("settings")
+    if (!provider) return
+    void provider.waitForReady().then(() => {
+      provider.postMessage({ type: "action", action: "focusSettingsSearch" })
+    })
+  }
+
   /** Re-wire a deserialized panel after extension restart. */
   deserializePanel(panel: vscode.WebviewPanel): void {
     const view = SettingsEditorProvider.viewFromType(panel.viewType)
@@ -87,7 +115,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
       panel.dispose()
       return
     }
-    this.wirePanel(panel, view, this.getProjectDirectory())
+    this.wirePanel(panel, view, this.getProjectDirectory(this.projects.get(view)))
   }
 
   private wirePanel(panel: vscode.WebviewPanel, view: PanelView, projectDirectory: string | null): void {
@@ -100,7 +128,15 @@ export class SettingsEditorProvider implements vscode.Disposable {
     // backend connectivity (config, providers, agents, profile, auth).
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
       projectDirectory,
+      hideTopBar: true,
+      agentManagerSettings: view === "settings" ? this.agentManagerSettings : undefined,
+      settingsPanel:
+        view === "settings" ? () => ({ tab: this.tabs.get(view), projectId: this.projects.get(view) }) : undefined,
+      disableStatsPolling: view === "settings",
     })
+    if (this.remoteService) {
+      provider.setRemoteService(this.remoteService)
+    }
     provider.resolveWebviewPanel(panel)
 
     // Listen for closePanel from the webview (back button in panel mode)
@@ -114,10 +150,16 @@ export class SettingsEditorProvider implements vscode.Disposable {
     // "Developer: Reload Webviews" which re-creates the JS context).
     const readyDisposable = panel.webview.onDidReceiveMessage((msg) => {
       if (msg.type === "webviewReady") {
-        // Small delay to let KiloProvider's own webviewReady handler finish first
-        setTimeout(() => {
-          provider.postMessage({ type: "navigate", view, tab: this.tabs.get(view) })
-        }, 50)
+        const focus = this.focuses.get(view)
+        this.focuses.delete(view)
+        provider.postMessage({
+          type: "navigate",
+          view,
+          tab: this.tabs.get(view),
+          subtab: this.subtabs.get(view),
+          focus,
+          projectId: this.projects.get(view),
+        })
       }
     })
 
@@ -141,7 +183,18 @@ export class SettingsEditorProvider implements vscode.Disposable {
       this.panels.delete(view)
       this.providers.delete(view)
       this.tabs.delete(view)
+      this.subtabs.delete(view)
+      this.focuses.delete(view)
+      this.projects.delete(view)
     })
+  }
+
+  setRemoteService(service: RemoteStatusService): void {
+    this.remoteService = service
+    // Apply to any existing providers
+    for (const [, provider] of this.providers) {
+      provider.setRemoteService(service)
+    }
   }
 
   dispose(): void {
@@ -150,5 +203,9 @@ export class SettingsEditorProvider implements vscode.Disposable {
     }
     this.panels.clear()
     this.providers.clear()
+    this.tabs.clear()
+    this.subtabs.clear()
+    this.focuses.clear()
+    this.projects.clear()
   }
 }

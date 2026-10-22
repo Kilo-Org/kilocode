@@ -8,6 +8,7 @@ export interface ModelAllocationEntry {
   modelID: string
   name: string
   count: number
+  variant?: string
 }
 
 export type ModelAllocations = Map<string, ModelAllocationEntry>
@@ -25,7 +26,7 @@ export function totalAllocations(allocations: ModelAllocations): number {
 export function allocationsToArray(allocations: ModelAllocations): ModelAllocation[] {
   const result: ModelAllocation[] = []
   for (const entry of allocations.values()) {
-    result.push({ providerID: entry.providerID, modelID: entry.modelID, count: entry.count })
+    result.push({ providerID: entry.providerID, modelID: entry.modelID, count: entry.count, variant: entry.variant })
   }
   return result
 }
@@ -64,6 +65,20 @@ export function setAllocationCount(
   if (delta > 0 && delta > remaining(allocations)) return allocations
   const next = new Map(allocations)
   next.set(key, { ...existing, count })
+  return next
+}
+
+export function setAllocationVariant(
+  allocations: ModelAllocations,
+  providerID: string,
+  modelID: string,
+  variant: string | undefined,
+): ModelAllocations {
+  const key = allocationKey(providerID, modelID)
+  const existing = allocations.get(key)
+  if (!existing) return allocations
+  const next = new Map(allocations)
+  next.set(key, { ...existing, variant })
   return next
 }
 

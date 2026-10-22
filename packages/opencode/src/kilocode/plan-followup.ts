@@ -1,19 +1,68 @@
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Agent } from "@/agent/agent"
-import { Bus } from "@/bus"
-import { TuiEvent } from "@/cli/cmd/tui/event"
-import { Flag } from "@/flag/flag"
-import { Global } from "@/global"
+import { TuiEvent } from "@/server/tui-event"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { Identifier } from "@/id/id"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
+import { KilocodeModelState } from "@/kilocode/config/model-state"
 import { Provider } from "@/provider/provider"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Question } from "@/question"
-import { Session } from "@/session"
+import { Session } from "@/session/session"
+import { SessionID, MessageID, PartID } from "@/session/schema"
 import { LLM } from "@/session/llm"
+import { KiloLLM } from "@/kilocode/session/llm"
 import { MessageV2 } from "@/session/message-v2"
+import { SessionStatus } from "@/session/status"
 import { Todo } from "@/session/todo"
-import { Log } from "@/util/log"
-import path from "path"
+import { makeRuntime } from "@/effect/run-service"
+import { Effect } from "effect"
+import * as Log from "@opencode-ai/core/util/log"
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import { lazy } from "@/util/lazy"
+import { PlanFile } from "@/kilocode/plan-file"
+import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
+
+const agents = lazy(() => makeRuntime(Agent.Service, AppNodeBuilder.build(Agent.node)))
+const todo = lazy(() => makeRuntime(Todo.Service, Todo.defaultLayer))
+const llm = lazy(() => makeRuntime(LLM.Service, AppNodeBuilder.build(LLM.node)))
+const pending = new Map<SessionID, AbortController>()
+
+export const PlanFollowupRuntime = {
+  agent(name: string): Promise<Agent.Info | undefined> {
+    return agents().runPromise((svc) => svc.get(name))
+  },
+  async modelIfAvailable(providerID: ProviderV2.ID, modelID: ModelV2.ID): Promise<Provider.Model | undefined> {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(
+      Provider.Service.use((svc) =>
+        svc.getModel(providerID, modelID).pipe(
+          Effect.catchIf(Provider.ModelNotFoundError.isInstance, () => Effect.succeed(undefined)),
+        ),
+      ),
+    )
+  },
+  todo: {
+    get(sessionID: SessionID) {
+      return todo().runPromise((svc) => svc.get(sessionID))
+    },
+    update(input: Parameters<Todo.Interface["update"]>[0]) {
+      return todo().runPromise((svc) => svc.update(input))
+    },
+  },
+  handover(input: LLM.StreamInput, signal: AbortSignal) {
+    return llm().runPromise((svc) => KiloLLM.text(svc.stream(input)).pipe(Effect.orDie), { signal })
+  },
+  async session<A, E>(run: (svc: Session.Interface) => Effect.Effect<A, E>) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(Session.Service.use(run))
+  },
+  async loop(sessionID: SessionID) {
+    const [item, app] = await Promise.all([import("@/session/prompt"), import("@/effect/app-runtime")])
+    return app.AppRuntime.runPromise(item.SessionPrompt.Service.use((svc) => svc.loop({ sessionID })))
+  },
+}
 
 function toText(item: MessageV2.WithParts): string {
   return item.parts
@@ -62,14 +111,20 @@ export async function generateHandover(input: {
 }): Promise<string> {
   const log = Log.create({ service: "plan.followup" })
   try {
-    const agent = await Agent.get("compaction")
-    const model = agent?.model
-      ? await Provider.getModel(agent.model.providerID, agent.model.modelID)
-      : await Provider.getModel(input.model.providerID, input.model.modelID)
+    const entry = await PlanFollowupRuntime.agent("compaction")
+    const lookup = async (providerID: ProviderV2.ID, modelID: ModelV2.ID) =>
+      PlanFollowupRuntime.modelIfAvailable(providerID, modelID).catch((err) => {
+        log.warn("handover model lookup failed", { providerID, modelID, err })
+        return undefined
+      })
+    const model =
+      (entry?.model && (await lookup(entry.model.providerID, entry.model.modelID))) ||
+      (await lookup(input.model.providerID, input.model.modelID))
+    if (!model) return ""
 
-    const sessionID = Identifier.ascending("session")
+    const sessionID = SessionID.make(Identifier.ascending("session"))
     const userMsg: MessageV2.User = {
-      id: Identifier.ascending("message"),
+      id: MessageID.ascending(),
       sessionID,
       role: "user",
       time: { created: Date.now() },
@@ -77,33 +132,34 @@ export async function generateHandover(input: {
       model: input.model,
     }
 
-    const stream = await LLM.stream({
-      agent: agent ?? {
-        name: "compaction",
-        mode: "subagent",
-        permission: [],
-        options: {},
-      },
-      user: userMsg,
-      tools: {},
-      model,
-      small: true,
-      messages: [
-        ...MessageV2.toModelMessages(input.messages, model),
-        {
-          role: "user" as const,
-          content: HANDOVER_PROMPT,
+    const result = await PlanFollowupRuntime.handover(
+      {
+        agent: entry ?? {
+          name: "compaction",
+          mode: "subagent",
+          permission: [],
+          options: {},
         },
-      ],
-      abort: input.abort ? AbortSignal.any([input.abort, AbortSignal.timeout(60_000)]) : AbortSignal.timeout(60_000),
-      sessionID,
-      system: [],
-      retries: 1,
-    })
-
-    const result = await stream.text
+        user: userMsg,
+        tools: {},
+        model,
+        small: true,
+        messages: [
+          ...(await MessageV2.toModelMessages(input.messages, model)),
+          {
+            role: "user" as const,
+            content: HANDOVER_PROMPT,
+          },
+        ],
+        sessionID,
+        system: [],
+        retries: 1,
+      },
+      input.abort ? AbortSignal.any([input.abort, AbortSignal.timeout(60_000)]) : AbortSignal.timeout(60_000),
+    )
     return result.trim()
   } catch (error) {
+    if (input.abort?.aborted) return ""
     log.error("handover generation failed", { error })
     return ""
   }
@@ -114,56 +170,73 @@ export namespace PlanFollowup {
 
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
+  export const ANSWER_KEEP_REFINING = "Keep refining"
+
+  export function abort(sessionID: SessionID) {
+    const ctl = pending.get(sessionID)
+    if (!ctl) return false
+    pending.delete(sessionID)
+    ctl.abort()
+    return true
+  }
 
   function resolveVariant(value: string | undefined, model: Provider.Model | undefined) {
     if (!value) return undefined
-    if (!model?.variants?.[value]) return undefined
+    if (model && !model.variants?.[value]) return undefined
     return value
   }
 
-  async function resolveCodeModel(input: Pick<MessageV2.User, "model" | "variant">) {
-    const state =
-      Flag.KILO_CLIENT === "cli"
-        ? await Bun.file(path.join(Global.Path.state, "model.json"))
-            .text()
-            .then(
-              (raw) =>
-                JSON.parse(raw) as {
-                  model?: Record<string, MessageV2.User["model"]>
-                  variant?: Record<string, string | undefined>
-                },
-            )
-            .catch(() => undefined)
-        : undefined
-    const saved = state?.model?.code
-    if (saved) {
-      const full = await Provider.getModel(saved.providerID, saved.modelID).catch(() => undefined)
-      if (full) {
-        const key = `${saved.providerID}/${saved.modelID}`
-        return {
-          model: saved,
-          variant: resolveVariant(state?.variant?.[key], full),
-        }
-      }
+  async function stamp(ref: { providerID: string; modelID: string }, variant?: string) {
+    const model = {
+      providerID: ProviderV2.ID.make(ref.providerID),
+      modelID: ModelV2.ID.make(ref.modelID),
     }
+    try {
+      const full = await PlanFollowupRuntime.modelIfAvailable(model.providerID, model.modelID)
+      if (!full) return
+      return { ...model, variant: resolveVariant(variant, full) }
+    } catch (err) {
+      log.warn("code model catalog lookup failed", {
+        providerID: model.providerID,
+        modelID: model.modelID,
+        err,
+      })
+      return { ...model, variant: resolveVariant(variant, undefined) }
+    }
+  }
 
-    const agent = await Agent.get("code")
-    if (agent?.model) {
-      const full = await Provider.getModel(agent.model.providerID, agent.model.modelID).catch(() => undefined)
-      if (full) {
-        return {
-          model: agent.model,
-          variant: resolveVariant(agent.variant, full),
-        }
-      }
-    }
+  async function pick(
+    ref: { providerID: string; modelID: string } | undefined,
+    variant?: string,
+  ) {
+    if (!ref) return
+    return stamp(ref, variant)
+  }
+
+  async function resolveCodeModel(input: Pick<MessageV2.User, "model">) {
+    const state = Flag.KILO_CLIENT === "cli" ? await KilocodeModelState.get().catch(() => undefined) : undefined
+    const saved = state?.model.code
+    const entry = await PlanFollowupRuntime.agent("code")
+    const next =
+      (await pick(saved, saved && state.variant[`${saved.providerID}/${saved.modelID}`])) ??
+      (await pick(entry?.model, entry?.variant))
+    if (next) return { model: next }
     return input
+  }
+
+  async function locatePlan(sessionID: SessionID, messages: MessageV2.WithParts[]) {
+    const ctx = Instance.current
+    const session = await PlanFollowupRuntime.session((svc) => svc.get(sessionID))
+    const target = PlanFile.resolve(PlanFile.latest(messages), ctx) ?? Session.plan(session, ctx)
+    const agent = messages.findLast((m) => m.info.role === "user")?.info.agent
+    const file = await PlanFile.locate(target, messages, session, ctx, agent)
+    return { target, file }
   }
 
   async function resolvePlan(input: {
     assistant?: MessageV2.WithParts
     messages: MessageV2.WithParts[]
-    sessionID: string
+    sessionID: SessionID
   }) {
     // Fast path: check the last assistant message's text first (avoids array scanning)
     if (input.assistant) {
@@ -180,22 +253,26 @@ export namespace PlanFollowup {
     if (text) return text
 
     // Fall back to plan file on disk
-    const session = await Session.get(input.sessionID)
-    const file = Bun.file(Session.plan(session))
-    const plan = await file.text().catch(() => "")
+    const { target, file } = await locatePlan(input.sessionID, input.messages)
+    if (!file) {
+      log.warn("resolvePlan: no saved plan file found", { sessionID: input.sessionID, target })
+      return ""
+    }
+    const plan = await Bun.file(file)
+      .text()
+      .catch(() => "")
     return plan.trim()
   }
 
   async function inject(input: {
-    sessionID: string
+    sessionID: SessionID
     agent: string
     model: MessageV2.User["model"]
-    variant?: MessageV2.User["variant"]
     text: string
     synthetic?: boolean
   }) {
     const msg: MessageV2.User = {
-      id: Identifier.ascending("message"),
+      id: MessageID.ascending(),
       sessionID: input.sessionID,
       role: "user",
       time: {
@@ -203,35 +280,65 @@ export namespace PlanFollowup {
       },
       agent: input.agent,
       model: input.model,
-      variant: input.variant,
     }
-    await Session.updateMessage(msg)
-    await Session.updatePart({
-      id: Identifier.ascending("part"),
-      messageID: msg.id,
-      sessionID: input.sessionID,
-      type: "text",
-      text: input.text,
-      synthetic: input.synthetic ?? true,
-    } satisfies MessageV2.TextPart)
+    await PlanFollowupRuntime.session((svc) =>
+      Effect.gen(function* () {
+        yield* svc.updateMessage(msg)
+        yield* svc.updatePart({
+          id: PartID.ascending(),
+          messageID: msg.id,
+          sessionID: input.sessionID,
+          type: "text",
+          text: input.text,
+          synthetic: input.synthetic ?? true,
+        } satisfies MessageV2.TextPart)
+      }),
+    )
+    return msg
   }
 
-  function prompt(input: { sessionID: string; abort: AbortSignal }) {
-    const promise = Question.ask({
+  type QuestionRuntime = {
+    ask: (input: Parameters<Question.Interface["ask"]>[0]) => Promise<ReadonlyArray<Question.Answer>>
+    list: () => Promise<ReadonlyArray<Question.Request>>
+    reject: (requestID: Parameters<Question.Interface["reject"]>[0]) => Promise<void>
+  }
+
+  function prompt(input: { sessionID: SessionID; abort: AbortSignal; question: QuestionRuntime }) {
+    if (input.abort.aborted) return Promise.resolve(undefined)
+    const promise = input.question.ask({
       sessionID: input.sessionID,
       questions: [
         {
           question: "Ready to implement?",
+          questionKey: "plan.followup.question",
           header: "Implement",
-          custom: true,
+          headerKey: "plan.followup.header",
+          // On CLI the main prompt input is hidden while a blocking question is active,
+          // so we need the custom-answer row to allow a free-text reply. On VS Code the
+          // main prompt input below the dock already routes typed text as a question
+          // reply, so "Type your own answer" would be redundant (originally hidden in
+          // 65566af7f8, flipped back during the v1.4.4 upstream merge).
+          custom: Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "jetbrains",
           options: [
             {
               label: ANSWER_NEW_SESSION,
+              labelKey: "plan.followup.answer.newSession",
               description: "Implement in a fresh session with a clean context",
+              descriptionKey: "plan.followup.answer.newSession.description",
             },
             {
               label: ANSWER_CONTINUE,
+              labelKey: "plan.followup.answer.continue",
               description: "Implement the plan in this session",
+              descriptionKey: "plan.followup.answer.continue.description",
+              mode: "code",
+            },
+            {
+              label: ANSWER_KEEP_REFINING,
+              labelKey: "plan.followup.answer.keepRefining",
+              description: "Keep planning without implementing yet",
+              descriptionKey: "plan.followup.answer.keepRefining.description",
+              mode: "plan",
             },
           ],
         },
@@ -239,10 +346,15 @@ export namespace PlanFollowup {
     })
 
     const listener = () =>
-      Question.list().then((qs) => {
-        const match = qs.find((q) => q.sessionID === input.sessionID)
-        if (match) Question.reject(match.id)
-      })
+      input.question
+        .list()
+        .then((qs) => {
+          const match = qs.find((q) => q.sessionID === input.sessionID)
+          return match ? input.question.reject(match.id) : undefined
+        })
+        .catch((error) => {
+          log.warn("failed to reject aborted plan follow-up question", { sessionID: input.sessionID, error })
+        })
     input.abort.addEventListener("abort", listener, { once: true })
 
     return promise
@@ -256,72 +368,158 @@ export namespace PlanFollowup {
   }
 
   async function startNew(input: {
-    sessionID: string
-    plan: string
+    sessionID: SessionID
+    file?: string
     messages: MessageV2.WithParts[]
     model: MessageV2.User["model"]
-    variant?: MessageV2.User["variant"]
     abort?: AbortSignal
   }) {
-    const code = await resolveCodeModel({
-      model: input.model,
-      variant: input.variant,
-    })
-    const session = await Session.get(input.sessionID)
-    const [handover, todos] = await Promise.all([
-      generateHandover({ messages: input.messages, model: input.model, abort: input.abort }),
-      Todo.get(input.sessionID),
-    ])
+    const session = await PlanFollowupRuntime.session((svc) => svc.get(input.sessionID))
+    const { provide } = await import("@/kilocode/instance")
 
-    await Instance.provide({
+    await provide({
       directory: session.directory,
       fn: async () => {
-        const file = Session.plan(session)
-        const sections = [
-          `Plan file: ${file}\nRead this file first and treat it as the source of truth for implementation.`,
-          `Implement the following plan:\n\n${input.plan}`,
-        ]
-
-        if (handover) {
-          sections.push(`## Handover from Planning Session\n\n${handover}`)
-        }
-
-        const todoList = formatTodos(todos)
-        if (todoList) {
-          sections.push(`## Todo List\n\n${todoList}`)
-        }
-
-        const next = await Session.create({})
-        await inject({
-          sessionID: next.id,
-          agent: "code",
-          model: code.model,
-          variant: code.variant,
-          text: sections.join("\n\n"),
-          synthetic: false,
+        const code = await resolveCodeModel({
+          model: input.model,
         })
-        if (todos.length) {
-          await Todo.update({ sessionID: next.id, todos })
-        }
-        await Bus.publish(TuiEvent.SessionSelect, { sessionID: next.id })
-        void import("@/session/prompt")
-          .then((item) =>
-            Instance.provide({
-              directory: next.directory,
-              fn: () => item.SessionPrompt.loop({ sessionID: next.id }),
+        // Create the session FIRST so session.created fires immediately while the
+        // VS Code extension's pendingFollowup gate (30s TTL) is still fresh. The
+        // handover generation below can take tens of seconds and must not block
+        // the SSE event that drives the webview tab switch.
+        const next = await PlanFollowupRuntime.session((svc) =>
+          svc.create({
+            agent: "code",
+            model: {
+              id: code.model.modelID,
+              providerID: code.model.providerID,
+              variant: code.model.variant ?? "default",
+            },
+          }),
+        )
+        const ctl = new AbortController()
+        pending.set(next.id, ctl)
+        const [{ AppRuntime }, { EventV2Bridge }] = await Promise.all([
+          import("@/effect/app-runtime"),
+          import("@/event-v2-bridge"),
+        ])
+        await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "busy" })))
+        await AppRuntime.runPromise(
+          EventV2Bridge.Service.use((events) => events.publish(TuiEvent.SessionSelect, { sessionID: next.id })),
+        )
+
+        const idle = () =>
+          AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "idle" }))).catch((err) => {
+            log.warn("failed to clear follow-up busy status", { sessionID: next.id, err })
+          })
+
+        try {
+          const file = input.file ?? Session.plan(session, Instance.current)
+          const todos = await PlanFollowupRuntime.todo.get(input.sessionID)
+          const todoList = formatTodos(todos)
+
+          // Assemble the user message text with or without a handover section.
+          // The section order is fixed so the initial and final renders stay
+          // aligned; only the handover block grows in between.
+          const compose = (handover: string) => {
+            const sections = [
+              `Plan file: ${file}\nRead this file first and treat it as the source of truth for implementation.`,
+            ]
+            if (handover) sections.push(`## Handover from Planning Session\n\n${handover}`)
+            if (todoList) sections.push(`## Todo List\n\n${todoList}`)
+            return sections.join("\n\n")
+          }
+
+          // Inject the plan-file handoff and todos immediately so the new session tab
+          // shows useful content right away. The handover section is appended to this
+          // same part in-place once the slow LLM call resolves below.
+          const msg: MessageV2.User = {
+            id: MessageID.ascending(),
+            sessionID: next.id,
+            role: "user",
+            time: { created: Date.now() },
+            agent: "code",
+            model: code.model,
+          }
+          const pid = PartID.ascending()
+          await PlanFollowupRuntime.session((svc) =>
+            Effect.gen(function* () {
+              yield* svc.updateMessage(msg)
+              yield* svc.updatePart({
+                id: pid,
+                messageID: msg.id,
+                sessionID: next.id,
+                type: "text",
+                text: compose(""),
+                synthetic: false,
+              } satisfies MessageV2.TextPart)
             }),
           )
-          .catch((error) => {
-            log.error("failed to start follow-up session", { sessionID: next.id, error })
+
+          if (todos.length) {
+            await PlanFollowupRuntime.todo.update({ sessionID: next.id, todos })
+          }
+
+          const handover = await generateHandover({
+            messages: input.messages,
+            model: input.model,
+            abort: input.abort ? AbortSignal.any([input.abort, ctl.signal]) : ctl.signal,
           })
+          if (ctl.signal.aborted) {
+            await idle()
+            return
+          }
+
+          if (handover) {
+            await PlanFollowupRuntime.session((svc) =>
+              svc.updatePart({
+                id: pid,
+                messageID: msg.id,
+                sessionID: next.id,
+                type: "text",
+                text: compose(handover),
+                synthetic: false,
+              } satisfies MessageV2.TextPart),
+            )
+          }
+          if (ctl.signal.aborted) {
+            await idle()
+            return
+          }
+
+          const queue = provide({
+            directory: next.directory,
+            fn: async () => {
+              if (ctl.signal.aborted) {
+                await idle()
+                return
+              }
+              await PlanFollowupRuntime.loop(next.id)
+            },
+          })
+
+          void queue
+            .catch((error) => {
+              log.error("failed to start follow-up session", { sessionID: next.id, error })
+              void idle()
+            })
+            .finally(() => {
+              if (pending.get(next.id) === ctl) pending.delete(next.id)
+            })
+        } catch (error) {
+          if (pending.get(next.id) === ctl) pending.delete(next.id)
+          await idle()
+          throw error
+        }
       },
     })
   }
 
   export async function ask(input: {
-    sessionID: string
+    sessionID: SessionID
     messages: MessageV2.WithParts[]
     abort: AbortSignal
+    question: QuestionRuntime
   }): Promise<"continue" | "break"> {
     if (input.abort.aborted) return "break"
 
@@ -335,7 +533,7 @@ export namespace PlanFollowup {
     const user = latest.find((msg) => msg.info.role === "user")?.info
     if (!user || user.role !== "user" || !user.model) return "break"
 
-    const answers = await prompt({ sessionID: input.sessionID, abort: input.abort })
+    const answers = await prompt({ sessionID: input.sessionID, abort: input.abort, question: input.question })
     if (!answers) {
       Telemetry.trackPlanFollowup(input.sessionID, "dismissed")
       return "break"
@@ -349,12 +547,13 @@ export namespace PlanFollowup {
 
     if (answer === ANSWER_NEW_SESSION) {
       Telemetry.trackPlanFollowup(input.sessionID, "new_session")
+      const ctx = Instance.current
+      const { file } = await locatePlan(input.sessionID, input.messages)
       await startNew({
         sessionID: input.sessionID,
-        plan,
+        file: file ? PlanFile.display(file, ctx) : undefined,
         messages: input.messages,
         model: user.model,
-        variant: user.variant,
         abort: input.abort,
       })
       return "break"
@@ -364,26 +563,49 @@ export namespace PlanFollowup {
       Telemetry.trackPlanFollowup(input.sessionID, "continue")
       const code = await resolveCodeModel({
         model: user.model,
-        variant: user.variant,
       })
-      await inject({
+      const msg = await inject({
         sessionID: input.sessionID,
         agent: "code",
         model: code.model,
-        variant: code.variant,
         text: "Implement the plan above.",
       })
+      await PlanFollowupRuntime.session((svc) =>
+        svc.setAgentModel({
+          sessionID: input.sessionID,
+          agent: "code",
+          model: {
+            id: code.model.modelID,
+            providerID: code.model.providerID,
+            variant: code.model.variant ?? "default",
+          },
+          time: msg.time.created,
+        }),
+      )
+      KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
+      return "continue"
+    }
+
+    if (answer === ANSWER_KEEP_REFINING) {
+      Telemetry.trackPlanFollowup(input.sessionID, "keep_refining")
+      const msg = await inject({
+        sessionID: input.sessionID,
+        agent: "plan",
+        model: user.model,
+        text: "Continue refining the plan. Do not implement yet.",
+      })
+      KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
       return "continue"
     }
 
     Telemetry.trackPlanFollowup(input.sessionID, "custom")
-    await inject({
+    const msg = await inject({
       sessionID: input.sessionID,
       agent: "plan",
       model: user.model,
-      variant: user.variant,
       text: answer,
     })
+    KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
     return "continue"
   }
 }

@@ -1,0 +1,801 @@
+import { describe, expect, it } from "bun:test"
+import { createRoot, createSignal } from "solid-js"
+import { useSlashCommand, type SlashCommandEntry } from "../../webview-ui/src/hooks/useSlashCommand"
+import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/types/messages"
+
+function setup(
+  sandbox: () => void,
+  options: {
+    enabled?: () => boolean
+    exclude?: () => Set<string>
+    include?: Set<string>
+    extra?: SlashCommandEntry[]
+  } = {},
+) {
+  const sent: WebviewMessage[] = []
+  const handlers = new Set<(message: ExtensionMessage) => void>()
+  const root = createRoot((dispose) => ({
+    dispose,
+    slash: useSlashCommand(
+      {
+        postMessage: (message) => sent.push(message),
+        onMessage: (handler) => {
+          handlers.add(handler)
+          return () => handlers.delete(handler)
+        },
+      },
+      { action: sandbox, enabled: options.enabled ?? (() => true) },
+      options.exclude,
+      options.include,
+      undefined,
+      options.extra,
+    ),
+  }))
+  const fire = (message: ExtensionMessage) => {
+    for (const handler of handlers) handler(message)
+  }
+  return { ...root, fire, sent }
+}
+
+describe("worktree update slash action", () => {
+  it("activates a composer selection without turning the goal shortcut into a client action", () => {
+    let active = false
+    const ctx = setup(() => {}, {
+      extra: [
+        {
+          name: "goal",
+          hints: [],
+          select: () => {
+            active = true
+          },
+        },
+      ],
+    })
+    const textarea = {
+      value: "/goal\nKeep this objective",
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
+    ctx.slash.onInput(textarea.value, 5)
+    const entry = ctx.slash.results().find((item) => item.name === "goal")!
+    expect(entry.action).toBeUndefined()
+    ctx.slash.select(entry, textarea, () => {})
+    expect(active).toBe(true)
+    expect(textarea.value).toBe("\nKeep this objective")
+    expect(ctx.slash.show()).toBe(false)
+    ctx.dispose()
+  })
+
+  it("uses the current worktree selection and preserves text after the action", () => {
+    const state = { selected: "first", sent: "", text: "/update-from-base keep this draft" }
+    const ctx = setup(() => {}, {
+      extra: [
+        {
+          name: "update-from-base",
+          hints: [],
+          action: () => {
+            state.sent = state.selected
+          },
+        },
+      ],
+    })
+    const textarea = {
+      value: state.text,
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
+    ctx.slash.onInput(state.text, "/update-from-base".length)
+    state.selected = "second"
+    const entry = ctx.slash.results().find((item) => item.name === "update-from-base")!
+    ctx.slash.select(entry, textarea, (text) => {
+      state.text = text
+    })
+    expect(state.sent).toBe("second")
+    expect(state.text).toBe(" keep this draft")
+    expect(ctx.sent).toEqual([{ type: "requestCommands" }])
+    ctx.dispose()
+  })
+
+  it("keeps the draft when a worktree action becomes unavailable", () => {
+    const state = { text: "/update-from-base", sent: false }
+    const ctx = setup(() => {}, {
+      extra: [
+        {
+          name: "update-from-base",
+          hints: [],
+          enabled: () => false,
+          action: () => {
+            state.sent = true
+          },
+        },
+      ],
+    })
+    const textarea = { value: state.text } as HTMLTextAreaElement
+    ctx.slash.onInput(state.text, state.text.length)
+    ctx.slash.select(ctx.slash.results()[0]!, textarea, (text) => {
+      state.text = text
+    })
+    expect(state.sent).toBe(false)
+    expect(state.text).toBe("/update-from-base")
+    ctx.dispose()
+  })
+
+  it("hides the worktree action in Local and other prompt surfaces", () => {
+    const ctx = setup(() => {}, {
+      extra: [{ name: "update-from-base", hints: [], action: () => {} }],
+      exclude: () => new Set(["update-from-base"]),
+    })
+    ctx.slash.onInput("/update-from-base", 17)
+    expect(ctx.slash.results()).toEqual([])
+    ctx.dispose()
+  })
+})
+
+describe("useSlashCommand sandbox action", () => {
+  it("supports the singular model alias", () => {
+    const ctx = setup(() => {})
+
+    ctx.slash.onInput("/model", 6)
+
+    expect(ctx.slash.results()[0]).toEqual(expect.objectContaining({ name: "models", hints: ["model"] }))
+    ctx.dispose()
+  })
+
+  it("restricts client actions with include without hiding server commands", () => {
+    const ctx = setup(() => {}, { include: new Set(["models", "agents", "variant", "sandbox"]) })
+
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [
+        { name: "merge", description: "Merge changes", hints: [] },
+        { name: "models", description: "Server model command", hints: [] },
+      ],
+    })
+    // Server commands stay available so worktree-independent commands can run.
+    ctx.slash.onInput("/merge", 6)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["merge"])
+
+    ctx.slash.onInput("/models", 7)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["models"])
+
+    // Client actions outside the include set stay hidden.
+    ctx.slash.onInput("/review", 7)
+    expect(ctx.slash.results()).toEqual([])
+    ctx.dispose()
+  })
+
+  it("opens project memory actions from the top-level command", () => {
+    const ctx = setup(() => {})
+    const state = { text: "/mem" }
+    const textarea = {
+      value: state.text,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+
+    ctx.slash.onInput(state.text, state.text.length)
+
+    expect(ctx.slash.results()).toContainEqual(
+      expect.objectContaining({ name: "memory", description: "Manage project memory", hints: ["mem"] }),
+    )
+    ctx.slash.select(ctx.slash.results()[0]!, textarea, (text) => (state.text = text))
+    expect(state.text).toBe("/memory ")
+    expect(ctx.slash.results().map((command) => command.name)).toContain("memory inspect")
+    ctx.dispose()
+  })
+
+  it("offers memory actions after the parent command", () => {
+    const ctx = setup(() => {})
+
+    ctx.slash.onInput("/memory ", 8)
+
+    expect(ctx.slash.results().map((command) => command.name)).toEqual([
+      "memory status",
+      "memory show",
+      "memory on",
+      "memory off",
+      "memory inspect",
+      "memory rebuild",
+      "memory remember",
+      "memory correct",
+      "memory forget",
+      "memory auto on",
+      "memory auto off",
+      "memory purge confirm",
+    ])
+    ctx.dispose()
+  })
+
+  it("keeps nested memory actions out of root hint matching", () => {
+    const ctx = setup(() => {})
+    const nested = ctx.slash.commands().filter((command) => command.name.startsWith("memory "))
+
+    expect(nested.length).toBeGreaterThan(0)
+    expect(nested.every((command) => command.hints.length === 0)).toBe(true)
+    ctx.dispose()
+  })
+
+  it("completes nested memory actions and closes for free text", () => {
+    const ctx = setup(() => {})
+    const state = { text: "/mem rem" }
+    const textarea = {
+      value: state.text,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+
+    ctx.slash.onInput(state.text, state.text.length)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["memory remember"])
+    ctx.slash.select(ctx.slash.results()[0]!, textarea, (text) => (state.text = text))
+    expect(state.text).toBe("/memory remember ")
+
+    ctx.slash.onInput("/memory remember durable fact", 31)
+    expect(ctx.slash.show()).toBe(false)
+    ctx.dispose()
+  })
+
+  it("runs the sandbox toggle as a client command", () => {
+    const state = { toggles: 0, text: "/sandbox", prevented: 0 }
+    const ctx = setup(() => state.toggles++)
+    const textarea = {
+      value: state.text,
+      selectionStart: state.text.length,
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
+    const event = {
+      key: "Enter",
+      isComposing: false,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent
+
+    ctx.slash.onInput(state.text, state.text.length)
+    const handled = ctx.slash.onKeyDown(event, textarea, (text) => (state.text = text))
+
+    expect(handled).toBe(true)
+    expect(state.toggles).toBe(1)
+    expect(state.prevented).toBe(1)
+    expect(state.text).toBe("")
+    expect(textarea.value).toBe("")
+    expect(ctx.sent).toEqual([{ type: "requestCommands" }])
+    ctx.dispose()
+  })
+
+  it("keeps the command text when the sandbox control is disabled", () => {
+    const state = { toggles: 0, text: "/sandbox" }
+    const ctx = setup(() => state.toggles++, { enabled: () => false })
+    const textarea = {
+      value: state.text,
+      selectionStart: state.text.length,
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
+    const event = {
+      key: "Enter",
+      isComposing: false,
+      preventDefault: () => {},
+    } as unknown as KeyboardEvent
+
+    ctx.slash.onInput(state.text, state.text.length)
+    const handled = ctx.slash.onKeyDown(event, textarea, (text) => (state.text = text))
+
+    expect(handled).toBe(true)
+    expect(state.toggles).toBe(0)
+    expect(state.text).toBe("/sandbox")
+    expect(textarea.value).toBe("/sandbox")
+    ctx.dispose()
+  })
+
+  it("hides the client and server sandbox command when excluded", () => {
+    const state = { hidden: true }
+    const ctx = setup(() => {}, {
+      exclude: () => (state.hidden ? new Set(["sandbox"]) : new Set()),
+    })
+
+    ctx.slash.onInput("/sandbox", 8)
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [{ name: "sandbox", description: "Server sandbox command", hints: [] }],
+    })
+    expect(ctx.slash.results()).toEqual([])
+
+    state.hidden = false
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["sandbox"])
+    expect(ctx.slash.results()[0]?.description).toBe("Toggle sandbox")
+    ctx.dispose()
+  })
+
+  it("opens review options from the top-level command", () => {
+    const ctx = setup(() => {})
+    const state = { text: "/review" }
+    const textarea = {
+      value: state.text,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+
+    ctx.slash.onInput(state.text, state.text.length)
+
+    expect(ctx.slash.results()).toContainEqual(
+      expect.objectContaining({ name: "review", description: expect.stringContaining("Review code changes") }),
+    )
+    expect(ctx.slash.results().find((command) => command.name === "review")?.description).not.toContain("worktree")
+    ctx.slash.select(ctx.slash.results().find((c) => c.name === "review")!, textarea, (text) => (state.text = text))
+    expect(state.text).toBe("/review ")
+    expect(ctx.slash.results().map((command) => command.name)).toEqual([
+      "review worktree",
+      "review uncommitted",
+      "review staged",
+      "review unpushed",
+      "review branch",
+      "review quick",
+    ])
+    ctx.dispose()
+  })
+
+  it("completes nested review actions and closes for free text", () => {
+    const ctx = setup(() => {})
+    const state = { text: "/review unp" }
+    const textarea = {
+      value: state.text,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+
+    ctx.slash.onInput(state.text, state.text.length)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["review unpushed"])
+    ctx.slash.select(ctx.slash.results()[0]!, textarea, (text) => (state.text = text))
+    expect(state.text).toBe("/review unpushed ")
+
+    ctx.slash.onInput("/review focus on auth", 20)
+    expect(ctx.slash.show()).toBe(false)
+    ctx.dispose()
+  })
+
+  it("puts worktree review first when allowed and preserves the other options' order", () => {
+    const [allowed, setAllowed] = createSignal(false)
+    const ctx = setup(() => {}, { exclude: () => (allowed() ? new Set() : new Set(["review worktree"])) })
+
+    ctx.slash.onInput("/review ", 8)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual([
+      "review uncommitted",
+      "review staged",
+      "review unpushed",
+      "review branch",
+      "review quick",
+    ])
+
+    setAllowed(true)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual([
+      "review worktree",
+      "review uncommitted",
+      "review staged",
+      "review unpushed",
+      "review branch",
+      "review quick",
+    ])
+    ctx.dispose()
+  })
+
+  it("preserves model, agent, and variant metadata on loaded server commands", () => {
+    const ctx = setup(() => {})
+
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [
+        {
+          name: "ship",
+          description: "Ship PR",
+          agent: "code",
+          model: "openai/gpt-5.6-luna-fast",
+          variant: "xhigh",
+          hints: ["deploy"],
+        },
+      ],
+    })
+
+    ctx.slash.onInput("/ship", 5)
+    const matches = ctx.slash.results()
+    expect(matches).toHaveLength(1)
+    expect(matches[0]?.name).toBe("ship")
+    expect(matches[0]?.agent).toBe("code")
+    expect(matches[0]?.model).toBe("openai/gpt-5.6-luna-fast")
+    expect(matches[0]?.variant).toBe("xhigh")
+    ctx.dispose()
+  })
+})
+
+// Issue #14096: skills were listed as indistinguishable "Commands" rows.
+describe("skill entries in the slash menu", () => {
+  const loaded = (ctx: ReturnType<typeof setup>) =>
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [
+        { name: "foo", description: "custom command", source: "command", hints: [] },
+        { name: "foo", description: "skill with the same name", source: "skill", hints: [] },
+        { name: "grill", description: "a plain skill", source: "skill", hints: [] },
+        { name: "grill", description: "duplicate skill row", source: "skill", hints: [] },
+        { name: "notes", description: "mcp prompt", source: "mcp", hints: [] },
+      ],
+    })
+
+  it("orders skills after commands so the dropdown can render a Skills group", () => {
+    const ctx = setup(() => {})
+    loaded(ctx)
+    ctx.slash.onInput("/", 1)
+    const server = ctx.slash.results().filter((cmd) => !cmd.action)
+    const sources = server.map((cmd) => cmd.source ?? "command")
+    const first = sources.indexOf("skill")
+    expect(first).toBeGreaterThan(0)
+    expect(sources.slice(first).every((source) => source === "skill")).toBe(true)
+    expect(sources.slice(0, first).every((source) => source !== "skill")).toBe(true)
+    ctx.dispose()
+  })
+
+  it("suffixes a skill that clashes with a command and drops exact duplicate rows", () => {
+    const ctx = setup(() => {})
+    loaded(ctx)
+    ctx.slash.onInput("/", 1)
+    const rows = ctx.slash
+      .results()
+      .filter((cmd) => !cmd.action)
+      .map((cmd) => `${cmd.source ?? "command"}:${cmd.name}`)
+    expect(rows.filter((row) => row.endsWith(":foo"))).toEqual(["command:foo"])
+    expect(rows.filter((row) => row.startsWith("skill:"))).toEqual(["skill:foo:skill", "skill:grill"])
+    ctx.dispose()
+  })
+
+  it("inserts /name:skill when the clashing skill row is selected", () => {
+    const ctx = setup(() => {})
+    loaded(ctx)
+    let text = ""
+    const textarea = { value: "/foo", setSelectionRange: () => {}, focus: () => {} } as unknown as HTMLTextAreaElement
+    ctx.slash.onInput("/foo", 4)
+    const entry = ctx.slash.results().find((cmd) => cmd.source === "skill" && cmd.name.startsWith("foo"))!
+    ctx.slash.select(entry, textarea, (value) => (text = value))
+    expect(text.startsWith("/foo:skill")).toBe(true)
+    ctx.dispose()
+  })
+
+  it("still matches a clashing skill by its plain name", () => {
+    const ctx = setup(() => {})
+    loaded(ctx)
+    ctx.slash.onInput("/foo", 4)
+    const names = ctx.slash
+      .results()
+      .filter((cmd) => !cmd.action)
+      .map((cmd) => cmd.name)
+    expect(names).toEqual(["foo", "foo:skill"])
+    ctx.dispose()
+  })
+})
+
+describe("slash command keyboard selection", () => {
+  it.each(["sandbox", "verify"])("leaves Shift+Tab unhandled with /%s selected", (name) => {
+    const draft = `/${name} keep this draft`
+    const state = { text: draft, prevented: 0, selected: 0, toggles: 0 }
+    const ctx = setup(() => state.toggles++)
+    const cursor = name.length + 1
+    const textarea = {
+      value: draft,
+      selectionStart: cursor,
+      setSelectionRange: (start: number) => (textarea.selectionStart = start),
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const event = {
+      key: "Tab",
+      shiftKey: true,
+      isComposing: false,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent
+
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [{ name: "verify", description: "Verify changes", hints: [] }],
+    })
+    ctx.slash.onInput(draft, cursor)
+    expect(ctx.slash.results()[0]?.name).toBe(name)
+
+    const handled = ctx.slash.onKeyDown(
+      event,
+      textarea,
+      (text) => (state.text = text),
+      () => state.selected++,
+    )
+
+    expect(handled).toBe(false)
+    expect(state).toEqual({ text: draft, prevented: 0, selected: 0, toggles: 0 })
+    expect(textarea.value).toBe(draft)
+    expect(textarea.selectionStart).toBe(cursor)
+    expect(ctx.slash.show()).toBe(true)
+    expect(ctx.slash.index()).toBe(0)
+    expect(ctx.sent).toEqual([{ type: "requestCommands" }])
+    ctx.dispose()
+  })
+
+  it.each(["Enter", "Tab"] as const)("keeps %s selection aligned with the action-first menu", (key) => {
+    const state = { text: "/refresh", prevented: 0 }
+    const ctx = setup(() => {})
+    const textarea = {
+      value: state.text,
+      selectionStart: state.text.length,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const event = {
+      key,
+      isComposing: false,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent
+
+    ctx.slash.onInput(state.text, state.text.length)
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [{ name: "refresh", description: "Run the custom refresh command", hints: [] }],
+    })
+
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["reload", "refresh"])
+    const handled = ctx.slash.onKeyDown(event, textarea, (text) => (state.text = text))
+
+    expect(handled).toBe(true)
+    expect(state.prevented).toBe(1)
+    expect(state.text).toBe("")
+    expect(textarea.value).toBe("")
+    expect(ctx.sent).toEqual([{ type: "requestCommands" }, { type: "reload" }])
+    ctx.dispose()
+  })
+
+  it("selects the second displayed result after ArrowDown", () => {
+    const state = { text: "/refresh", prevented: 0 }
+    const ctx = setup(() => {})
+    const textarea = {
+      value: state.text,
+      selectionStart: state.text.length,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+
+    ctx.slash.onInput(state.text, state.text.length)
+    ctx.fire({
+      type: "commandsLoaded",
+      commands: [{ name: "refresh", description: "Run the custom refresh command", hints: [] }],
+    })
+
+    const down = {
+      key: "ArrowDown",
+      isComposing: false,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent
+    const enter = {
+      key: "Enter",
+      isComposing: false,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent
+
+    expect(ctx.slash.onKeyDown(down, textarea, (text) => (state.text = text))).toBe(true)
+    expect(ctx.slash.index()).toBe(1)
+    expect(ctx.slash.onKeyDown(enter, textarea, (text) => (state.text = text))).toBe(true)
+
+    expect(state.prevented).toBe(2)
+    expect(state.text).toBe("/refresh ")
+    expect(textarea.value).toBe("/refresh ")
+    expect(ctx.sent).toEqual([{ type: "requestCommands" }])
+    ctx.dispose()
+  })
+})
+
+describe("select", () => {
+  it("preserves trailing text for action commands", () => {
+    let actionCalls = 0
+    let currentText = "existing text"
+    const ctx = setup(() => {})
+
+    const textarea = {
+      value: "/newexisting text",
+      selectionStart: 4,
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
+    const setText = (text: string) => {
+      currentText = text
+    }
+
+    ctx.slash.select(
+      {
+        name: "new",
+        description: "Start a new session",
+        hints: [],
+        action: () => {
+          actionCalls++
+        },
+      },
+      textarea,
+      setText,
+    )
+
+    expect(textarea.value).toBe("existing text")
+    expect(currentText).toBe("existing text")
+    expect(actionCalls).toBe(1)
+    ctx.dispose()
+  })
+
+  it("preserves trailing text for server commands and sets cursor", () => {
+    const ctx = setup(() => {})
+    let currentText = ""
+    let selectionStart = 0
+
+    const textarea = {
+      value: "/docmdexisting text",
+      selectionStart: 6,
+      setSelectionRange: (start: number, end: number) => {
+        selectionStart = start
+      },
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const setText = (text: string) => {
+      currentText = text
+    }
+
+    ctx.slash.select({ name: "docmd", description: "Run doc command", hints: [] }, textarea, setText)
+
+    expect(textarea.value).toBe("/docmd existing text")
+    expect(currentText).toBe("/docmd existing text")
+    expect(selectionStart).toBe("/docmd ".length)
+    ctx.dispose()
+  })
+
+  it("uses slashEnd for server commands when onInput fired before select", () => {
+    const ctx = setup(() => {})
+    let currentText = ""
+    let selectionStart = 0
+
+    ctx.slash.onInput("/docmdexisting text", 6)
+
+    const textarea = {
+      value: "/docmdexisting text",
+      selectionStart: 2,
+      setSelectionRange: (start: number, end: number) => {
+        selectionStart = start
+      },
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const setText = (text: string) => {
+      currentText = text
+    }
+
+    ctx.slash.select({ name: "docmd", description: "Run doc command", hints: [] }, textarea, setText)
+
+    expect(textarea.value).toBe("/docmd existing text")
+    expect(currentText).toBe("/docmd existing text")
+    expect(selectionStart).toBe("/docmd ".length)
+    ctx.dispose()
+  })
+
+  it("preserves trailing text even when cursor moves after typing slash command", () => {
+    let actionCalls = 0
+    let currentText = "existing text"
+    const ctx = setup(() => {})
+
+    // Type slash command: cursor at 4, slashEnd stored as 4
+    ctx.slash.onInput("/newexisting text", 4)
+
+    // Simulate user moving cursor (e.g. ArrowLeft twice)
+    const textarea = {
+      value: "/newexisting text",
+      selectionStart: 2,
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
+    const setText = (text: string) => {
+      currentText = text
+    }
+
+    ctx.slash.select(
+      {
+        name: "new",
+        description: "Start a new session",
+        hints: [],
+        action: () => {
+          actionCalls++
+        },
+      },
+      textarea,
+      setText,
+    )
+
+    // Should preserve trailing text from original slashEnd (4), not stale selectionStart (2)
+    expect(textarea.value).toBe("existing text")
+    expect(currentText).toBe("existing text")
+    expect(actionCalls).toBe(1)
+    ctx.dispose()
+  })
+
+  it("preserves trailing text for memory commands when cursor moves", () => {
+    let currentText = ""
+    const ctx = setup(() => {})
+
+    // Type /memory rem: matches memory pattern, slashEnd set to end of text
+    const typed = "/memory rem"
+    ctx.slash.onInput(typed, typed.length)
+
+    // Simulate user moving cursor (no onInput fires for arrow keys)
+    const textarea = {
+      value: typed,
+      selectionStart: 3,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const setText = (text: string) => {
+      currentText = text
+    }
+
+    // Find the memory remember command (nested, no action)
+    const remembered = ctx.slash.results().find((c) => c.name === "memory remember")
+    expect(remembered).toBeDefined()
+
+    ctx.slash.select(remembered!, textarea, setText)
+
+    // Trailing text from slashEnd (end of typed text) — empty — should be preserved correctly
+    expect(currentText).toBe("/memory remember ")
+    expect(textarea.value).toBe("/memory remember ")
+    ctx.dispose()
+  })
+
+  it("preserves trailing text through the two-step nested command path", () => {
+    let currentText = ""
+    const ctx = setup(() => {})
+
+    ctx.slash.onInput("/mem", 4)
+
+    const textarea = {
+      value: "/mem",
+      selectionStart: 4,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const setText = (text: string) => {
+      currentText = text
+    }
+
+    const memory = ctx.slash.results().find((c) => c.name === "memory")
+    expect(memory).toBeDefined()
+    ctx.slash.select(memory!, textarea, setText)
+    expect(currentText).toBe("/memory ")
+    expect(textarea.value).toBe("/memory ")
+
+    const remember = ctx.slash.results().find((c) => c.name === "memory remember")
+    expect(remember).toBeDefined()
+    ctx.slash.select(remember!, textarea, setText)
+    expect(currentText).toBe("/memory remember ")
+    expect(textarea.value).toBe("/memory remember ")
+    ctx.dispose()
+  })
+
+  it("keeps trailing text and cursor before it through nested selection", () => {
+    const ctx = setup(() => {})
+    let currentText = "hello"
+    const textarea = {
+      value: "hello",
+      selectionStart: 0,
+      setSelectionRange: (start: number, _end: number) => {
+        textarea.selectionStart = start
+      },
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const setText = (text: string) => {
+      currentText = text
+    }
+
+    textarea.value = "/memhello"
+    textarea.selectionStart = 4
+    ctx.slash.onInput("/memhello", 4)
+
+    const memory = ctx.slash.results().find((c) => c.name === "memory")
+    expect(memory).toBeDefined()
+    ctx.slash.select(memory!, textarea, setText)
+    expect(textarea.value).toBe("/memory hello")
+    expect(textarea.selectionStart).toBe("/memory ".length)
+
+    const rebuild = ctx.slash.results().find((c) => c.name === "memory rebuild")
+    expect(rebuild).toBeDefined()
+    ctx.slash.select(rebuild!, textarea, setText)
+
+    expect(textarea.value).toBe("/memory rebuild hello")
+    expect(textarea.selectionStart).toBe("/memory rebuild ".length)
+    ctx.dispose()
+  })
+})

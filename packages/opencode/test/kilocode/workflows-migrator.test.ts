@@ -136,6 +136,78 @@ Actual description here.`
         workflows.some((w) => w.source === "global" && w.path.includes(path.join(".kilo", "workflows", "global.md"))),
       ).toBe(true)
     })
+
+    test("applies in-project file substitutions to project workflow content", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const workflowsDir = path.join(dir, ".kilo", "workflows")
+          await Bun.write(path.join(dir, "guide.md"), "file content")
+          await Bun.write(
+            path.join(workflowsDir, "workflow.md"),
+            ["# Workflow", "", "{file:../../guide.md}"].join("\n"),
+          )
+        },
+      })
+
+      const workflows = await WorkflowsMigrator.discoverWorkflows(tmp.path, true)
+
+      expect(workflows[0].content).toContain("file content")
+    })
+
+    test("skips environment substitutions in project workflows", async () => {
+      const name = "KILO_WORKFLOW_PROJECT_SECRET"
+      const prior = process.env[name]
+      process.env[name] = "environment secret"
+      try {
+        await using tmp = await tmpdir({
+          init: async (dir) => {
+            await Bun.write(path.join(dir, ".kilo", "workflows", "workflow.md"), `{env:${name}}`)
+            await Bun.write(path.join(dir, ".kilo", "workflows", "safe.md"), "safe workflow")
+          },
+        })
+
+        const warnings: string[] = []
+        const workflows = await WorkflowsMigrator.discoverWorkflows(tmp.path, true, warnings)
+        expect(workflows.map((item) => item.name)).toEqual(["safe"])
+        expect(
+          warnings.some((warning) => warning.includes("workflow") && warning.includes("environment references")),
+        ).toBe(true)
+      } finally {
+        if (prior === undefined) delete process.env[name]
+        else process.env[name] = prior
+      }
+    })
+
+    test("preserves file and environment substitutions in trusted global workflows", async () => {
+      const name = "KILO_WORKFLOW_GLOBAL_SECRET"
+      const prior = process.env[name]
+      process.env[name] = "environment secret"
+      try {
+        await using tmp = await tmpdir({
+          init: async (dir) => {
+            await Bun.write(path.join(dir, "secret.txt"), "file secret")
+            await Bun.write(
+              path.join(dir, ".kilo", "workflows", "trusted.md"),
+              [`{file:../../secret.txt}`, `{env:${name}}`].join("\n"),
+            )
+            await Bun.write(path.join(dir, "project", "README.md"), "project")
+            await Bun.write(path.join(dir, "project", ".kilo", "workflows", "trusted.md"), `{env:${name}}`)
+          },
+        })
+
+        const warnings: string[] = []
+        const workflows = await withHome(tmp.path, () =>
+          WorkflowsMigrator.discoverWorkflows(path.join(tmp.path, "project"), false, warnings),
+        )
+        const workflow = workflows.find((item) => item.source === "global" && item.name === "trusted")
+        expect(workflow?.content).toContain("file secret")
+        expect(workflow?.content).toContain("environment secret")
+        expect(warnings.some((warning) => warning.includes("trusted"))).toBe(true)
+      } finally {
+        if (prior === undefined) delete process.env[name]
+        else process.env[name] = prior
+      }
+    })
   })
 
   describe("convertToCommand", () => {

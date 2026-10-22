@@ -19,11 +19,33 @@ import path from "node:path"
 
 const MONOREPO_ROOT = path.resolve(import.meta.dir, "../../../..")
 const KILO_UI_DIR = path.join(MONOREPO_ROOT, "packages/kilo-ui")
+const WORKER_URL = path.join(MONOREPO_ROOT, "packages/kilo-vscode/tests/setup/worker-url.ts")
+const BASIC_TOOL_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/basic-tool.tsx")
 const DATA_CONTEXT_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/context/data.tsx")
 const MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/message-part.tsx")
+const KILO_MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-part.tsx")
+const KILO_MESSAGE_HIGHLIGHT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-highlight.ts")
+const KILO_BASIC_TOOL_CSS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/basic-tool.css")
+const KILO_MESSAGE_PART_CSS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-part.css")
+const SHELL_ROLLING_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/shell-rolling-results.tsx")
+const ASSISTANT_MESSAGE_FILE = path.join(
+  MONOREPO_ROOT,
+  "packages/kilo-vscode/webview-ui/src/components/chat/AssistantMessage.tsx",
+)
+const TASK_HEADER_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/components/chat/TaskHeader.tsx")
+const CONTEXT_TAB_FILE = path.join(
+  MONOREPO_ROOT,
+  "packages/kilo-vscode/webview-ui/src/components/settings/ContextTab.tsx",
+)
+const PROMPT_INPUT_FILE = path.join(
+  MONOREPO_ROOT,
+  "packages/kilo-vscode/webview-ui/src/components/chat/PromptInput.tsx",
+)
+const TRANSCRIPT_PARTS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/utils/transcript-parts.ts")
+const CHAT_LAYOUT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/styles/chat-layout.css")
 
 function check(code: string): { ok: boolean; output: string } {
-  const result = Bun.spawnSync(["bun", "--conditions=browser", "-e", code], {
+  const result = Bun.spawnSync(["bun", "--preload", WORKER_URL, "--conditions=browser", "-e", code], {
     cwd: KILO_UI_DIR,
     stdout: "pipe",
     stderr: "pipe",
@@ -118,6 +140,377 @@ describe("DataProvider contract (runtime)", () => {
     expect(src).toContain("OpenFileFn")
     expect(src).toMatch(/openFile:\s*props\.onOpenFile/)
   })
+
+  it("DataProvider accepts onOpenDiff prop and exports OpenDiffFn (source)", () => {
+    // onOpenDiff and OpenDiffFn are `kilocode_change` additions — TypeScript types
+    // erased at runtime, so we verify via source analysis
+    const src = fs.readFileSync(DATA_CONTEXT_FILE, "utf-8")
+    expect(src).toContain("onOpenDiff")
+    expect(src).toContain("OpenDiffFn")
+    expect(src).toMatch(/openDiff:\s*props\.onOpenDiff/)
+  })
+
+  it("DataProvider accepts onOpenContent prop and exports OpenContentFn (source)", () => {
+    const src = fs.readFileSync(DATA_CONTEXT_FILE, "utf-8")
+    expect(src).toContain("onOpenContent")
+    expect(src).toContain("OpenContentFn")
+    expect(src).toMatch(/openContent:\s*props\.onOpenContent/)
+  })
+})
+
+describe("Assistant Markdown streaming contract (source)", () => {
+  const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+  const block =
+    src.match(
+      /PART_MAPPING\["text"\]\s*=\s*function TextPartDisplay[\s\S]*?(?=\/\/ Expanded mode|PART_MAPPING\["reasoning"\])/,
+    )?.[0] ?? ""
+
+  it("passes active text streams through Markdown's streaming mode", () => {
+    expect(block).not.toBe("")
+    expect(block).toContain("streaming={streaming()}")
+  })
+})
+
+describe("Edit tool diff-first click contract (source)", () => {
+  const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+
+  const editBlockMatch = src.match(/ToolRegistry\.register\(\{\s*name:\s*"edit"[\s\S]*?(?=ToolRegistry\.register\(|$)/)
+  const editBlock = editBlockMatch?.[0] ?? ""
+
+  it("edit tool renders from filediff.patch and falls back to tool input", () => {
+    expect(editBlock).toContain("normalize(diff)")
+    expect(editBlock).toMatch(/props\.input\.oldString\s*\?\?\s*""/)
+    expect(editBlock).toMatch(/props\.input\.newString\s*\?\?\s*""/)
+  })
+
+  it("edit file names leave the parent trigger responsible for inline expansion", () => {
+    expect(editBlock).not.toContain("handleFileClick")
+    expect(editBlock).toContain("handleOpenDiffClick")
+  })
+})
+
+describe("Write and apply_patch patch rendering contracts (source)", () => {
+  const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+  const writeBlock =
+    src.match(/ToolRegistry\.register\(\{\s*name:\s*"write"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
+  const patchBlock =
+    src.match(/ToolRegistry\.register\(\{\s*name:\s*"apply_patch"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
+
+  it("write tool can render from filediff.patch when input.content is stripped", () => {
+    expect(writeBlock).toContain("normalize(diff)")
+    expect(writeBlock).toContain("props.input.content || view()")
+    expect(writeBlock).toContain('mode="diff"')
+  })
+
+  it("write file names leave the parent trigger responsible for inline expansion", () => {
+    expect(writeBlock).not.toContain("handleFileClick")
+    expect(writeBlock).toContain("handleOpenDiffClick")
+  })
+
+  it("apply_patch tool can render from patch metadata without before/after", () => {
+    expect(patchBlock).toContain("file.patch")
+    expect(patchBlock).toContain("normalize({")
+    expect(patchBlock).toContain("file: file.relativePath")
+    expect(patchBlock).toContain('mode="diff"')
+  })
+
+  it("apply_patch tool exposes the diff action for each file", () => {
+    expect(patchBlock).toContain("data.openDiff")
+    expect(patchBlock).toContain("const allDiffAction = ()")
+    expect(patchBlock).toContain("{allDiffAction()}")
+    expect(patchBlock).not.toContain("data.openFile(file.filePath)")
+  })
+
+  it("apply_patch skips files whose patch has no parsable hunks", () => {
+    expect(patchBlock).toContain("value.fileDiff.hunks.length")
+    expect(patchBlock).toContain('file.type === "add"')
+    expect(patchBlock).toContain("diff.additions === 0")
+    expect(patchBlock).toContain("diff.deletions === 0")
+    expect(patchBlock).toContain("hunk.additionLines")
+    expect(patchBlock).toContain("hunk.deletionLines")
+  })
+
+  it("apply_patch open action preserves every file in a multi-file payload", () => {
+    expect(patchBlock).toContain("const diffs = files().flatMap")
+    expect(patchBlock).toContain("files: diffs")
+    expect(patchBlock).toContain("diffs.length === 1 ? first")
+  })
+})
+
+describe("Bash tool static terminal preview (source)", () => {
+  const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+  const block =
+    src.match(/ToolRegistry\.register\(\{\s*name:\s*"bash"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
+
+  it("bash tool renders BashHighlightedOutput", () => {
+    expect(block).toContain("BashHighlightedOutput")
+  })
+
+  it("does not animate expanded bash details", () => {
+    expect(block).toMatch(/allowPendingToggle\s+trigger=/)
+    expect(block).not.toMatch(/allowPendingToggle\s+animated/)
+  })
+
+  it("BashHighlightedOutput syntax highlights the command next to the prompt", () => {
+    expect(src).toContain('data-slot="bash-terminal" data-kind="command"')
+    expect(src).toContain('data-slot="bash-prompt"')
+    expect(src).toContain('data-slot="bash-section-code" data-scrollable ref={cmdRef}')
+    expect(src).toContain('data-lang="shellscript"')
+    expect(src).toContain("escapeHtml(cmd)")
+  })
+
+  it("BashHighlightedOutput syntax highlights log output", () => {
+    expect(src).toContain('data-slot="bash-terminal" data-kind="output"')
+    expect(src).toContain('data-slot="bash-section-code" data-scrollable ref={bindOutput}')
+    expect(src).toContain('data-lang="log"')
+    expect(src).toContain("escapeHtml(out)")
+  })
+
+  it("BashHighlightedOutput highlights only while expanded", () => {
+    expect(src).toContain("if (!props.active) return")
+    // Also active when forceOpen fires from a virtualized remount that
+    // starts already open — `open()` alone only reflects the toggle
+    // transition, not that initial-mount case.
+    expect(block).toContain("active={open() || !!props.forceOpen}")
+  })
+
+  it("BashHighlightedOutput keeps command and output in separate terminal containers", () => {
+    const slots = src.match(/data-slot="bash-terminal"/g) ?? []
+    expect(slots).toHaveLength(2)
+  })
+
+  it("BashHighlightedOutput does not render shell section labels or a divider", () => {
+    expect(src).not.toMatch(/data-slot="mcp-section-label".*shell\./)
+    expect(src).not.toContain('data-slot="bash-divider"')
+  })
+
+  it("BashHighlightedOutput supports openContent for opening output in editor", () => {
+    expect(src).toContain("data.openContent")
+    expect(src).toContain("openInEditor")
+  })
+
+  it("BashHighlightedOutput opens full output file when truncated", () => {
+    // When the CLI truncates output, metadata.outputPath holds the full file.
+    // openInEditor should prefer openFile(outputPath) over openContent.
+    expect(src).toContain("props.outputPath")
+    expect(src).toMatch(/props\.outputPath.*data\.openFile/)
+  })
+
+  it("bash tool passes outputPath from metadata to BashHighlightedOutput", () => {
+    expect(block).toContain("props.metadata.outputPath")
+  })
+})
+
+describe("Expanded tool motion and typography (source)", () => {
+  const reasoning =
+    fs
+      .readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+      .match(/PART_MAPPING\["reasoning"\][\s\S]*?(?=\nfunction WebfetchMeta)/)?.[0] ?? ""
+
+  it("animates completed rolling shell details", () => {
+    const src = fs.readFileSync(SHELL_ROLLING_FILE, "utf-8")
+    expect(src).toContain("useCollapsible({")
+    expect(src).toContain("content: () => contentRef")
+    expect(src).toContain("body: () => bodyRef")
+  })
+
+  it("uses the assistant markdown line-height ratio for reasoning output", () => {
+    const css = fs.readFileSync(KILO_MESSAGE_PART_CSS_FILE, "utf-8")
+    const block = css.match(
+      /html\[data-theme="kilo-vscode"\] \[data-component="reasoning-part"\][\s\S]*?(?=@keyframes reasoning-pulse)/,
+    )?.[0]
+    expect(block).toMatch(/\[data-component="markdown"\]\s*\{[^}]*line-height:\s*160%;/)
+  })
+
+  it("animates reasoning details with the mounted collapsible hook", () => {
+    // forceMount is a Collapsible root prop; on Content it is a no-op attribute
+    // and Kobalte presence unmounts the details before the close can animate.
+    expect(reasoning).toMatch(/<Collapsible[^>]*\bforceMount\b[^>]*>/)
+    expect(reasoning).not.toMatch(/<Collapsible\.Content[^>]*forceMount/)
+    expect(reasoning).toContain("useCollapsible(")
+  })
+
+  it("keeps the reasoning viewport capped until a manual open", () => {
+    const css = fs.readFileSync(KILO_MESSAGE_PART_CSS_FILE, "utf-8")
+    const cap = css.match(
+      /\[data-component="reasoning-part"\]\[data-auto-collapse\]:not\(\[data-manual\]\)\s+\[data-slot="reasoning-content"\]\s*\{[^}]*\}/,
+    )?.[0]
+    expect(cap).toContain("max-height: 120px")
+    expect(cap).not.toContain("data-streaming")
+  })
+
+  it("renders the headline mode as a header-only block that opens on demand", () => {
+    expect(reasoning).toContain(`data-headline={headline() ? "" : undefined}`)
+    expect(reasoning).toContain(`const mode = () => props.reasoningDisplay ?? "expanded"`)
+    expect(reasoning).toContain(`const capped = () => mode() === "preview"`)
+    expect(reasoning).toContain(`const headline = () => mode() === "headline"`)
+    expect(reasoning).toContain("const trackable = () => capped() || headline()")
+    expect(reasoning).toContain(`if (headline() && !open()) return reasoningSummary(view().body)`)
+  })
+
+  it("derives the open state through reasoningOpenState and re-derives when the mode resolves", () => {
+    expect(reasoning).toContain("reasoningOpenState(")
+    expect(reasoning).toContain("const seed = () => derive() || !!props.forceOpen")
+    expect(reasoning).toContain("const [open, setOpen] = createSignal(seed())")
+    expect(reasoning).toContain("if (userOpened.has(id) || userCollapsed.has(id)) return")
+    expect(reasoning).toContain("setOpen(derive())")
+  })
+
+  it("does not smooth streaming reasoning scroll updates", () => {
+    const css = fs.readFileSync(KILO_MESSAGE_PART_CSS_FILE, "utf-8")
+    expect(css).not.toContain("scroll-behavior: smooth")
+  })
+
+  it("re-anchors the capped viewport to the bottom once the block settles", () => {
+    // A Markdown rebuild on the streaming flip or a fresh remount resizes the
+    // body after done(), when nothing resumes the streaming animation loop.
+    // The resize callback must snap synchronously, only while capped and only
+    // when the user has not scrolled away.
+    expect(reasoning).toContain("if (!capped() || scrolled || !ref) return")
+    expect(reasoning).toContain("ref.scrollTop = bottom()")
+    expect(reasoning).toContain("const bottom = () => (ref ? Math.max(0, ref.scrollHeight - ref.clientHeight) : 0)")
+    expect(reasoning).toMatch(/if \(!done\(\)\) \{[^}]*follow = requestAnimationFrame\(tick\)/)
+  })
+
+  it("settles encrypted reasoning summaries once the stream moved past them", () => {
+    // Encrypted reasoning items only set time.end on their summaries when the
+    // whole item finishes, so the transcript settles them from the part order.
+    expect(reasoning).toContain("if (props.settled) return true")
+    const src = fs.readFileSync(ASSISTANT_MESSAGE_FILE, "utf-8")
+    expect(src).toContain("if (props.message.time.completed) return true")
+    expect(src).toContain("return index >= 0 && index < all.length - 1")
+    expect(src).toContain("settled={settled()}")
+  })
+})
+
+describe("HighlightedText @mention regex fallback and click handler (source)", () => {
+  const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+  const helper = fs.readFileSync(KILO_MESSAGE_HIGHLIGHT_FILE, "utf-8")
+
+  it("detects @path patterns via regex when source offsets are missing", () => {
+    // detect is the regex fallback for when the backend doesn't populate FilePart.source.text.{start,end}
+    expect(src).toContain("buildHighlightedTextSegments")
+    expect(helper).toMatch(/MENTION_RE/)
+    expect(helper).toMatch(/refs\.length\s*>\s*0\s*\?\s*resolve\(text,\s*refs\)\s*:\s*detect\(text\)/)
+  })
+
+  it("prefers source offsets over regex when both are available", () => {
+    expect(helper).toMatch(/const refs = \[/)
+    expect(helper).toMatch(/refs\.length\s*>\s*0\s*\?\s*resolve\(text,\s*refs\)\s*:\s*detect\(text\)/)
+  })
+
+  it("file mention spans are clickable via data.openFile", () => {
+    expect(src).toContain("data-clickable")
+    expect(src).toMatch(/segment\.type\s*===\s*"file".*data\.openFile/)
+  })
+
+  it("click handler strips @ prefix before calling openFile", () => {
+    expect(src).toMatch(/segment\.text\.replace\(\/\^@\//)
+  })
+
+  it("does not duplicate HTML escaping helpers", () => {
+    expect(src).not.toMatch(/function escapeHtml/)
+  })
+})
+
+describe("AssistantMessage visible row contract (source)", () => {
+  const src = fs.readFileSync(ASSISTANT_MESSAGE_FILE, "utf-8")
+  const parts = fs.readFileSync(TRANSCRIPT_PARTS_FILE, "utf-8")
+
+  it("filters suppressed tools that have no visible renderer", () => {
+    expect(parts).toContain('part.state.status === "completed" && !!ToolRegistry.render(part.tool)')
+  })
+
+  it("holds a resolving question dock until its tool part completes", () => {
+    // The backend publishes question.replied before the tool part completes, so
+    // dropping the row the moment the request disappears collapsed the
+    // transcript for a frame. The dock now stays mounted while the part is busy.
+    expect(src).toContain(
+      'const liveQuestion = createMemo(() => matchToolRequest(part, "question", session.questions()))',
+    )
+    expect(src).toContain("liveQuestion() ?? (questionBusy(part) ? heldQuestion() : undefined)")
+  })
+
+  it("filters completed synthetic text and redaction-only reasoning", () => {
+    expect(parts).toContain("part.synthetic && message?.time.completed")
+    expect(parts).toContain('.text?.replace("[REDACTED]", "").trim()')
+  })
+
+  it("uses the plan exit card only when plan metadata is renderable", () => {
+    expect(src).toContain("if (!planExitInfo(part)) return")
+  })
+
+  it("keeps reasoning parts out of the wrapper grow-in clip", () => {
+    // The reasoning header and body bleed 6px past the wrapper, so a grow-in
+    // clip trims their sides while the text streams and releases them when it
+    // stops, resizing the block at the end of the stream.
+    const live = src.match(/const live =[\s\S]*?useGrowIn\(/)?.[0] ?? ""
+    expect(live).toContain('part.type === "text" && !!part.time && !part.time.end')
+    expect(live).not.toContain('part.type === "reasoning"')
+  })
+
+  it("uses the native recall tool without a separate memory badge", () => {
+    const tools = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+    expect(src).not.toContain("assistant-memory-badge")
+    expect(tools).toContain("ToolRegistry.render(part.tool) ?? McpTool")
+  })
+})
+
+describe("Native tool summary contract (source)", () => {
+  const tools = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+  const css = fs.readFileSync(KILO_BASIC_TOOL_CSS_FILE, "utf-8")
+
+  it("shows one secondary argument while preserving complete expanded input", () => {
+    const start = tools.indexOf("const inputArgs")
+    const end = tools.indexOf("const formatted", start)
+    expect(tools.slice(start, end)).toContain(".slice(0, 1)")
+    expect(tools).toContain("JSON.stringify(props.input, null, 2)")
+  })
+
+  it("gives the primary label remaining width and bounds secondary arguments", () => {
+    expect(css).toMatch(/\[data-slot="basic-tool-tool-info"\][\s\S]*?flex: 1 1 auto;/)
+    expect(css).toMatch(/\[data-slot="basic-tool-tool-subtitle"\][\s\S]*?flex: 1 1 auto;/)
+    expect(css).toMatch(/\[data-slot="basic-tool-tool-arg"\][\s\S]*?max-width: 24ch;/)
+  })
+})
+
+describe("Memory control placement contract (source)", () => {
+  const header = fs.readFileSync(TASK_HEADER_FILE, "utf-8")
+  const settings = fs.readFileSync(CONTEXT_TAB_FILE, "utf-8")
+  const prompt = fs.readFileSync(PROMPT_INPUT_FILE, "utf-8")
+
+  it("keeps memory controls out of the task header", () => {
+    expect(header).not.toContain("useMemory")
+    expect(header).not.toContain('name="memory"')
+  })
+
+  it("shows storage inspection in settings without a manual rebuild action", () => {
+    expect(settings).toContain("settings.context.memory.storage.title")
+    expect(settings).toContain("settings.context.memory.status.enabledTokens")
+    expect(settings).toContain("memory.inspect()")
+    expect(settings).not.toContain("memory.rebuild()")
+    expect(settings).not.toContain("lastOperationCount")
+    expect(settings).not.toContain("sessionTokens")
+  })
+
+  it("expands bare memory commands into inline completion", () => {
+    expect(prompt).toContain('const value = "/memory "')
+    expect(prompt).toContain("slash.onInput(value, value.length)")
+  })
+})
+
+describe("Assistant transcript spacing contract (source)", () => {
+  const css = fs.readFileSync(CHAT_LAYOUT_FILE, "utf-8")
+
+  it("uses a 6px gap between virtualized assistant rows", () => {
+    expect(css).toMatch(/\.vscode-session-turn\[data-row="assistant"\]\s*\{\s*padding-bottom: 6px;/)
+  })
+
+  it("removes spacing from assistant rows without visible content", () => {
+    expect(css).toMatch(
+      /\.vscode-session-turn\[data-row="assistant"\]:has\(> \.vscode-session-turn-assistant:empty\)\s*\{\s*padding-bottom: 0;/,
+    )
+  })
 })
 
 describe("BasicTool export contract (runtime)", () => {
@@ -136,5 +529,91 @@ describe("BasicTool export contract (runtime)", () => {
       process.exit(0)
     `)
     expect(result.ok, `BasicTool export check failed: ${result.output}`).toBe(true)
+  })
+})
+
+describe("Read tool file link contract (source)", () => {
+  const message = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+
+  it("opens the input file from the custom trigger detail", () => {
+    expect(message).toMatch(/name:\s*"read"[\s\S]*?<ToolTriggerRow[\s\S]*?onClick=/)
+    expect(message).toMatch(/event\.stopPropagation\(\)[\s\S]*?data\.openFile!\(props\.input\.filePath\)/)
+  })
+})
+
+describe("Collapsed deferred tool details contract (source)", () => {
+  const basic = fs.readFileSync(BASIC_TOOL_FILE, "utf-8")
+  const message = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+
+  it("uses an explicit details hint before touching deferred children", () => {
+    expect(basic).toContain("hasDetails?: boolean")
+    expect(basic).toContain("props.hasDetails ?? !!hasChildren()")
+    expect(basic).toMatch(/<Show when=\{!props\.defer \|\| ready\(\)\}>\{props\.children\}<\/Show>/)
+  })
+
+  it("opts edit-family transcript cards into collapsed lazy details", () => {
+    for (const name of ["edit", "write", "apply_patch"]) {
+      const block =
+        message.match(
+          new RegExp(`ToolRegistry\\.register\\(\\{\\s*name:\\s*"${name}"[\\s\\S]*?(?=ToolRegistry\\.register\\(|$)`),
+        )?.[0] ?? ""
+      expect(block).toContain("defer")
+      expect(block).toContain("hasDetails")
+    }
+  })
+
+  it("lazy-mounts completed bash output and retains it after first expansion", () => {
+    const block =
+      message.match(/ToolRegistry\.register\(\{\s*name:\s*"bash"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
+    expect(block).toContain("const [mounted, setMounted] = createSignal(open())")
+    expect(block).toMatch(/if \(open\(\) \|\| pending\(\) \|\| props\.forceOpen\) setMounted\(true\)/)
+    expect(block).toContain("hasDetails")
+    expect(block).toMatch(/<Show when=\{mounted\(\)\}>[\s\S]*?<BashHighlightedOutput/)
+  })
+})
+
+describe("Deferred tool card remount contract (source)", () => {
+  const basic = fs.readFileSync(BASIC_TOOL_FILE, "utf-8")
+  const wrapper = fs.readFileSync(path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/basic-tool.tsx"), "utf-8")
+  const css = fs.readFileSync(KILO_BASIC_TOOL_CSS_FILE, "utf-8")
+  const scroll = fs.readFileSync(path.join(MONOREPO_ROOT, "packages/kilo-ui/src/hooks/create-auto-scroll.tsx"), "utf-8")
+
+  it("reserves remembered-open card height while remounting its body later", () => {
+    // Restoring the measured height prevents the collapsed frame and
+    // virtualizer feedback loop without rebuilding Pierre inside the switch.
+    expect(wrapper).toContain("const cached = remount && id ? heights.get(id) : undefined")
+    expect(wrapper).toContain("const defer = () => props.defer && !(remount && initial() && size == null)")
+    expect(wrapper).toContain("deferredSize={size}")
+    expect(wrapper).toContain("cached.revision === revision()")
+    expect(wrapper).toContain("const value = props.revision")
+    expect(wrapper).toContain('if (typeof value === "string") return checksum(value)')
+    expect(wrapper).toContain("!mounted.has(id)")
+    expect(wrapper).toContain("if (open && !props.forceOpen) remember(key())")
+    expect(basic).toContain("deferredSize?: { height: number; width: number; font: string }")
+    expect(basic).toContain('data-deferred-height={state.restored ? "" : undefined}')
+    expect(basic).toContain('style={{ "min-height": reserve() }}')
+    expect(css).toMatch(/\[data-slot="collapsible-content"\]\[data-deferred-height\]\s*\{[^}]*animation:\s*none;/)
+    // The memory is separate from the user preference map: a display setting
+    // or search forceOpen must not become a durable per-card open state.
+    expect(wrapper).toContain("if (initial() && !props.forceOpen) remember(id)")
+    expect(wrapper).not.toContain("writeToolOpen(key(), true)")
+    // Remembering must happen after the remount check, or an initially-open
+    // card would skip deferral on its very first mount too.
+    expect(wrapper.indexOf("const remount = id !== undefined && mounted.has(id)")).toBeGreaterThan(-1)
+    expect(wrapper.indexOf("const remount = id !== undefined && mounted.has(id)")).toBeLessThan(
+      wrapper.indexOf("remember(id)"),
+    )
+  })
+
+  it("keeps the bottom independent of the working state", () => {
+    // A session waiting on a permission reports idle while its transcript
+    // still changes; corrections must not be gated on `active()`.
+    const scrollHandler = scroll.slice(scroll.indexOf("const handleScroll"), scroll.indexOf("const onContentResize"))
+    expect(scrollHandler).not.toContain("if (active()) bottom()")
+    const viewport = scroll.slice(scroll.indexOf("const onViewportResize"), scroll.indexOf("// Effects"))
+    // The post-click grace window must not block a resize re-pin, but a gesture
+    // in progress must still be protected.
+    expect(viewport).not.toContain("isRecent()")
+    expect(viewport).toContain("userActivity.isDragging()")
   })
 })

@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from "vitest"
 import { getProcessedSnippets } from "../getProcessedSnippets"
 import { AutocompleteInput, AutocompleteContextProvider } from "../../types"
 import { AutocompleteSnippetType } from "../../continuedev/core/autocomplete/types"
-import { AutocompleteModel } from "../../AutocompleteModel"
 import { RooIgnoreController } from "../../../../core/ignore/RooIgnoreController"
 import crypto from "crypto"
 import { ContextRetrievalService } from "../../continuedev/core/autocomplete/context/ContextRetrievalService"
@@ -56,9 +55,7 @@ vi.mock("../../continuedev/core/autocomplete/snippets/getAllSnippets", () => ({
     rootPathSnippets: [],
     recentlyEditedRangeSnippets: [],
     recentlyVisitedRangesSnippets: [],
-    diffSnippets: [],
     clipboardSnippets: [],
-    ideSnippets: [],
     staticSnippet: [],
   }),
 }))
@@ -85,15 +82,10 @@ function createAutocompleteInput(filepath: string = "/test.ts"): AutocompleteInp
 
 describe("AutocompleteContextProvider", () => {
   let contextProvider: AutocompleteContextProvider
-  let mockModel: AutocompleteModel
   let mockIgnoreController: Promise<RooIgnoreController> | undefined
 
   beforeEach(() => {
     vi.clearAllMocks()
-
-    mockModel = {
-      getModelName: vi.fn().mockReturnValue("codestral"),
-    } as any
 
     mockIgnoreController = undefined
 
@@ -102,7 +94,7 @@ describe("AutocompleteContextProvider", () => {
     contextProvider = {
       ide,
       contextService,
-      model: mockModel,
+      modelId: "codestral",
       ignoreController: mockIgnoreController,
     }
   })
@@ -114,7 +106,7 @@ describe("AutocompleteContextProvider", () => {
         input,
         "/test.ts",
         contextProvider.contextService,
-        contextProvider.model,
+        contextProvider.modelId,
         contextProvider.ide,
         contextProvider.ignoreController,
       )
@@ -139,9 +131,7 @@ describe("AutocompleteContextProvider", () => {
         rootPathSnippets: [],
         recentlyEditedRangeSnippets: [],
         recentlyVisitedRangesSnippets: [],
-        diffSnippets: [],
         clipboardSnippets: [],
-        ideSnippets: [],
         staticSnippet: [],
       })
 
@@ -150,7 +140,7 @@ describe("AutocompleteContextProvider", () => {
         input,
         "/test.ts",
         contextProvider.contextService,
-        contextProvider.model,
+        contextProvider.modelId,
         contextProvider.ide,
         contextProvider.ignoreController,
       )
@@ -184,9 +174,7 @@ describe("AutocompleteContextProvider", () => {
         rootPathSnippets: [],
         recentlyEditedRangeSnippets: [],
         recentlyVisitedRangesSnippets: [],
-        diffSnippets: [],
         clipboardSnippets: [],
-        ideSnippets: [],
         staticSnippet: [],
       })
 
@@ -195,7 +183,7 @@ describe("AutocompleteContextProvider", () => {
         input,
         "/test.ts",
         contextProvider.contextService,
-        contextProvider.model,
+        contextProvider.modelId,
         contextProvider.ide,
         contextProvider.ignoreController,
       )
@@ -225,7 +213,7 @@ describe("AutocompleteContextProvider", () => {
           input,
           "/test.ts",
           contextProvider.contextService,
-          contextProvider.model,
+          contextProvider.modelId,
           contextProvider.ide,
           contextProvider.ignoreController,
         ),
@@ -251,7 +239,7 @@ describe("AutocompleteContextProvider", () => {
       contextProvider = {
         ide,
         contextService,
-        model: mockModel,
+        modelId: "codestral",
         ignoreController: mockIgnoreController,
       }
     })
@@ -281,9 +269,7 @@ describe("AutocompleteContextProvider", () => {
         rootPathSnippets: [],
         recentlyEditedRangeSnippets: [],
         recentlyVisitedRangesSnippets: [],
-        diffSnippets: [],
         clipboardSnippets: [],
-        ideSnippets: [],
         staticSnippet: [],
       })
 
@@ -292,7 +278,7 @@ describe("AutocompleteContextProvider", () => {
         input,
         "/test.ts",
         contextProvider.contextService,
-        contextProvider.model,
+        contextProvider.modelId,
         contextProvider.ide,
         contextProvider.ignoreController,
       )
@@ -324,12 +310,6 @@ describe("AutocompleteContextProvider", () => {
         rootPathSnippets: [],
         recentlyEditedRangeSnippets: [],
         recentlyVisitedRangesSnippets: [],
-        diffSnippets: [
-          {
-            content: "diff content",
-            type: AutocompleteSnippetType.Diff,
-          },
-        ],
         clipboardSnippets: [
           {
             content: "clipboard content",
@@ -337,14 +317,12 @@ describe("AutocompleteContextProvider", () => {
             copiedAt: "2024-01-01",
           },
         ],
-        ideSnippets: [],
         staticSnippet: [],
       })
 
       const { getSnippets } = await import("../../continuedev/core/autocomplete/templating/filtering")
       ;(getSnippets as any).mockImplementation((_helper: any, payload: any) => [
         ...payload.recentlyOpenedFileSnippets,
-        ...payload.diffSnippets,
         ...payload.clipboardSnippets,
       ])
 
@@ -353,7 +331,7 @@ describe("AutocompleteContextProvider", () => {
         input,
         "/test.ts",
         contextProvider.contextService,
-        contextProvider.model,
+        contextProvider.modelId,
         contextProvider.ide,
         contextProvider.ignoreController,
       )
@@ -363,11 +341,9 @@ describe("AutocompleteContextProvider", () => {
         result.snippetsWithUris.some((s) => "filepath" in s && s.filepath && s.filepath.includes("blocked.ts")),
       ).toBe(false)
       // But should contain snippets without file paths
-      expect(result.snippetsWithUris).toHaveLength(2)
-      expect(result.snippetsWithUris[0].content).toBe("diff content")
-      expect(result.snippetsWithUris[0].type).toBe(AutocompleteSnippetType.Diff)
-      expect(result.snippetsWithUris[1].content).toBe("clipboard content")
-      expect(result.snippetsWithUris[1].type).toBe(AutocompleteSnippetType.Clipboard)
+      expect(result.snippetsWithUris).toHaveLength(1)
+      expect(result.snippetsWithUris[0].content).toBe("clipboard content")
+      expect(result.snippetsWithUris[0].type).toBe(AutocompleteSnippetType.Clipboard)
     })
 
     it("should allow all files when no ignore controller is provided", async () => {
@@ -377,7 +353,7 @@ describe("AutocompleteContextProvider", () => {
       contextProvider = {
         ide,
         contextService,
-        model: mockModel,
+        modelId: "codestral",
         ignoreController: undefined,
       }
 
@@ -395,9 +371,7 @@ describe("AutocompleteContextProvider", () => {
         rootPathSnippets: [],
         recentlyEditedRangeSnippets: [],
         recentlyVisitedRangesSnippets: [],
-        diffSnippets: [],
         clipboardSnippets: [],
-        ideSnippets: [],
         staticSnippet: [],
       })
 
@@ -406,7 +380,7 @@ describe("AutocompleteContextProvider", () => {
         input,
         "/test.ts",
         contextProvider.contextService,
-        contextProvider.model,
+        contextProvider.modelId,
         contextProvider.ide,
         contextProvider.ignoreController,
       )

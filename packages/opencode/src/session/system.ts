@@ -1,88 +1,200 @@
-import { Ripgrep } from "../file/ripgrep"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { Context, Effect, Layer } from "effect"
 
-import { Global } from "../global" // kilocode_change
-import { Instance } from "../project/instance"
+import { InstanceState } from "@/effect/instance-state"
 
 import PROMPT_ANTHROPIC from "./prompt/anthropic.txt"
-import PROMPT_ANTHROPIC_WITHOUT_TODO from "./prompt/qwen.txt"
+import PROMPT_DEFAULT from "./prompt/default.txt"
 import PROMPT_BEAST from "./prompt/beast.txt"
 import PROMPT_GEMINI from "./prompt/gemini.txt"
+import PROMPT_GPT from "./prompt/gpt.txt"
+import PROMPT_GPT55 from "./prompt/kilocode-gpt-5.5.txt" // kilocode_change
+import PROMPT_KIMI from "./prompt/kimi.txt"
+import PROMPT_LING from "./prompt/ling.txt" // kilocode_change
+import PROMPT_META from "./prompt/meta.txt"
 
-import PROMPT_CODEX from "./prompt/codex_header.txt"
+import PROMPT_CODEX from "./prompt/codex.txt"
 import PROMPT_TRINITY from "./prompt/trinity.txt"
 import type { Provider } from "@/provider/provider"
+import type { Agent } from "@/agent/agent"
+import { Permission } from "@/permission"
+import { Skill } from "@/skill"
+// kilocode_change
+import { LocationServiceMap, locationServiceMapLayer } from "@opencode-ai/core/location-services"
+import { MCP } from "@/mcp"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 
 // kilocode_change start
 import SOUL from "../kilocode/soul.txt"
-import { staticEnvLines, type EditorContext } from "../kilocode/editor-context"
+import type { EditorContext } from "../kilocode/editor-context"
+import { KilocodeSystemPrompt } from "../kilocode/system-prompt"
+import { isLing } from "../kilocode/model-match"
+import { Config } from "@/config/config"
+import * as KiloReference from "@/kilocode/reference"
 // kilocode_change end
 
-export namespace SystemPrompt {
-  export function instructions() {
-    return PROMPT_CODEX.trim()
-  }
+// kilocode_change start
+export function instructions() {
+  return PROMPT_CODEX.trim()
+}
 
+export function soul() {
+  return SOUL.trim()
+}
+// kilocode_change end
+
+export function provider(model: Provider.Model) {
   // kilocode_change start
-  export function soul() {
-    return SOUL.trim()
-  }
-  // kilocode_change end
-
-  export function provider(model: Provider.Model) {
-    // kilocode_change start
+  function prompt() {
     switch (model.prompt) {
       case "anthropic":
         return [PROMPT_ANTHROPIC]
       case "anthropic_without_todo":
-        return [PROMPT_ANTHROPIC_WITHOUT_TODO]
+        return [PROMPT_DEFAULT]
       case "beast":
         return [PROMPT_BEAST]
       case "codex":
         return [PROMPT_CODEX]
       case "gemini":
         return [PROMPT_GEMINI]
+      case "gpt55":
+        return [PROMPT_GPT55]
+      case "ling":
+        return [PROMPT_LING]
       case "trinity":
         return [PROMPT_TRINITY]
     }
-    // kilocode_change end
-
-    if (model.api.id.includes("gpt-5")) return [PROMPT_CODEX]
-    if (model.api.id.includes("gpt-") || model.api.id.includes("o1") || model.api.id.includes("o3"))
-      return [PROMPT_BEAST]
-    if (model.api.id.includes("gemini-")) return [PROMPT_GEMINI]
-    if (model.api.id.includes("claude")) return [PROMPT_ANTHROPIC]
-    if (model.api.id.toLowerCase().includes("trinity")) return [PROMPT_TRINITY]
-
-    return [PROMPT_ANTHROPIC_WITHOUT_TODO]
+    return undefined
   }
 
-  // kilocode_change start
-  export async function environment(model: Provider.Model, editorContext?: EditorContext) {
-    // kilocode_change end
-    const project = Instance.project
-    return [
-      [
-        `You are powered by the model named ${model.api.id}. The exact model ID is ${model.providerID}/${model.api.id}`,
-        `Here is some useful information about the environment you are running in:`,
-        `<env>`,
-        `  Working directory: ${Instance.directory}`,
-        `  Is directory a git repo: ${project.vcs === "git" ? "yes" : "no"}`,
-        `  Platform: ${process.platform}`,
-        `  Project config: .kilo/command/*.md, .kilo/agent/*.md, kilo.json, AGENTS.md. Put new commands and agents in .kilo/. Do not use .kilocode/ or .opencode/.`, // kilocode_change
-        `  Global config: ${Global.Path.config}/ (same structure)`, // kilocode_change
-        ...staticEnvLines(editorContext), // kilocode_change
-        `</env>`,
-        `<directories>`,
-        `  ${
-          project.vcs === "git" && false
-            ? await Ripgrep.tree({
-                cwd: Instance.directory,
-                limit: 50,
-              })
-            : ""
-        }`,
-        `</directories>`,
-      ].join("\n"),
-    ]
+  const kilo = prompt()
+  if (kilo) return kilo
+  // kilocode_change end
+  if (model.api.id.includes("muse")) {
+    const name = model.api.id.includes("muse-glimmer") ? "Muse Glimmer" : "Muse Spark"
+    return [PROMPT_META.replaceAll("{{MODEL_NAME}}", name)]
   }
+  if (model.api.id.includes("gpt-4") || model.api.id.includes("o1") || model.api.id.includes("o3"))
+    return [PROMPT_BEAST]
+  if (model.api.id.includes("gpt")) {
+    if (model.api.id.includes("codex")) {
+      return [PROMPT_CODEX]
+    }
+    return [PROMPT_GPT]
+  }
+  if (model.api.id.includes("gemini-")) return [PROMPT_GEMINI]
+  if (model.api.id.includes("claude")) return [PROMPT_ANTHROPIC]
+  if (model.api.id.toLowerCase().includes("trinity")) return [PROMPT_TRINITY]
+  if (
+    model.api.id.toLowerCase().includes("kimi") ||
+    ["kimi-for-coding", "moonshotai", "moonshotai-cn"].includes(model.providerID)
+  )
+    return [PROMPT_KIMI]
+  if (isLing(model.api.id)) return [PROMPT_LING] // kilocode_change
+  return [PROMPT_DEFAULT]
 }
+
+export interface Interface {
+  readonly environment: (model: Provider.Model, editorContext?: EditorContext) => Effect.Effect<string[]> // kilocode_change
+  readonly skills: (agent: Agent.Info) => Effect.Effect<string | undefined>
+  readonly mcp: (agent: Agent.Info, permission?: PermissionV1.Ruleset) => Effect.Effect<string | undefined>
+}
+
+export class Service extends Context.Service<Service, Interface>()("@opencode/SystemPrompt") {}
+
+const layer = Layer.effect(
+  Service,
+  Effect.gen(function* () {
+    const skill = yield* Skill.Service
+    const mcp = yield* MCP.Service
+    const locations = yield* LocationServiceMap.Service
+    const config = yield* Config.Service // kilocode_change
+
+    return Service.of({
+      // kilocode_change start
+      environment: Effect.fn("SystemPrompt.environment")(function* (
+        model: Provider.Model,
+        editorContext?: EditorContext,
+      ) {
+        const ctx = yield* InstanceState.context
+        const cfg = yield* config.get()
+        const references = yield* KiloReference.list(
+          {
+            references: cfg.references ?? cfg.reference ?? {},
+            directory: ctx.directory,
+            worktree: ctx.worktree,
+          },
+          locations,
+        ).pipe(Effect.map((references) => references.filter((reference) => reference.description !== undefined)))
+        return [
+          ...KilocodeSystemPrompt.environment({ ctx, model, editor: editorContext }),
+          references.length === 0
+            ? undefined
+            : [
+                "Project references provide additional directories that can be accessed when relevant.",
+                "<available_references>",
+                ...references
+                  .toSorted((a, b) => a.name.localeCompare(b.name))
+                  .flatMap((reference) => [
+                    "  <reference>",
+                    `    <name>${reference.name}</name>`,
+                    `    <path>${reference.path}</path>`,
+                    ...(reference.description === undefined
+                      ? []
+                      : [`    <description>${reference.description}</description>`]),
+                    "  </reference>",
+                  ]),
+                "</available_references>",
+              ].join("\n"),
+        ].filter((part): part is string => part !== undefined)
+      }),
+      // kilocode_change end
+
+      skills: Effect.fn("SystemPrompt.skills")(function* (agent: Agent.Info) {
+        if (Permission.disabled(["skill"], agent.permission).has("skill")) return
+
+        const list = yield* skill.available(agent)
+
+        return [
+          "Skills provide specialized instructions and workflows for specific tasks.",
+          "Use the skill tool to load a skill when a task matches its description.",
+          // the agents seem to ingest the information about skills a bit better if we present a more verbose
+          // version of them here and a less verbose version in tool description, rather than vice versa.
+          Skill.fmt(list, { verbose: true }),
+        ].join("\n")
+      }),
+
+      mcp: Effect.fn("SystemPrompt.mcp")(function* (agent: Agent.Info, permission?: PermissionV1.Ruleset) {
+        const ruleset = Permission.merge(agent.permission, permission ?? [])
+        const instructions = (yield* mcp.instructions()).filter(
+          (item) => item.tools.length === 0 || Permission.disabled(item.tools, ruleset).size < item.tools.length,
+        )
+        if (instructions.length === 0) return
+
+        return [
+          "<mcp_instructions>",
+          ...instructions.flatMap((item) => [
+            `  <server name="${item.name}">`,
+            ...item.instructions.split("\n").map((line) => `    ${line}`),
+            "  </server>",
+          ]),
+          "</mcp_instructions>",
+        ].join("\n")
+      }),
+    })
+  }),
+)
+
+const locationServiceMapNode = LayerNode.make({
+  service: LocationServiceMap.Service,
+  layer: locationServiceMapLayer,
+  deps: [],
+})
+
+export const node = LayerNode.make({
+  service: Service,
+  layer: layer,
+  deps: [Skill.node, MCP.node, Config.node, locationServiceMapNode], // kilocode_change
+})
+
+export * as SystemPrompt from "./system"

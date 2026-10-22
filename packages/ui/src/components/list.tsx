@@ -1,6 +1,7 @@
 import { type FilteredListProps, useFilteredList } from "@opencode-ai/ui/hooks"
-import { createEffect, createSignal, For, onCleanup, type JSX, on, Show } from "solid-js"
+import { createEffect, For, type JSX, on, Show } from "solid-js"
 import { createStore } from "solid-js/store"
+import { makeEventListener } from "@solid-primitives/event-listener"
 import { useI18n } from "../context/i18n"
 import { Icon, type IconProps } from "./icon"
 import { IconButton } from "./icon-button"
@@ -56,12 +57,16 @@ export interface ListRef {
 
 export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) {
   const i18n = useI18n()
-  const [scrollRef, setScrollRef] = createSignal<HTMLDivElement | undefined>(undefined)
-  const [internalFilter, setInternalFilter] = createSignal("")
   let inputRef: HTMLInputElement | HTMLTextAreaElement | undefined
   const [store, setStore] = createStore({
     mouseActive: false,
+    scrollRef: undefined as HTMLDivElement | undefined,
+    internalFilter: "",
   })
+  const scrollRef = () => store.scrollRef
+  const setScrollRef = (el: HTMLDivElement | undefined) => setStore("scrollRef", el)
+  const internalFilter = () => store.internalFilter
+  const setInternalFilter = (value: string) => setStore("internalFilter", value)
 
   const scrollIntoView = (container: HTMLDivElement, node: HTMLElement, block: "center" | "nearest") => {
     const containerRect = container.getBoundingClientRect()
@@ -102,7 +107,7 @@ export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) 
     // Force a refetch even if the value is unchanged.
     // This is important for programmatic changes like Tab completion.
     if (prev === value) {
-      refetch()
+      void refetch()
       return
     }
     queueMicrotask(() => refetch())
@@ -170,14 +175,16 @@ export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) 
 
     const all = flat()
     const selected = all.find((x) => props.key(x) === active())
-    const index = selected ? all.indexOf(selected) : -1
     props.onKeyEvent?.(e, selected)
 
     if (e.defaultPrevented) return
 
     if (e.key === "Enter" && !e.isComposing) {
       e.preventDefault()
-      if (selected) handleSelect(selected, index)
+      // kilocode_change start - fall back to first result when no item is active (noInitialSelection)
+      const target = selected ?? (props.noInitialSelection ? all[0] : undefined)
+      if (target) handleSelect(target, all.indexOf(target))
+      // kilocode_change end
     } else if (props.search) {
       if (e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && (e.key === "n" || e.key === "p")) {
         onKeyDown(e)
@@ -208,27 +215,28 @@ export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) 
   }
 
   function GroupHeader(groupProps: { group: { category: string; items: T[] } }): JSX.Element {
-    const [stuck, setStuck] = createSignal(false)
-    const [header, setHeader] = createSignal<HTMLDivElement | undefined>(undefined)
+    const [state, setState] = createStore({
+      stuck: false,
+      header: undefined as HTMLDivElement | undefined,
+    })
 
     createEffect(() => {
       const scroll = scrollRef()
-      const node = header()
+      const node = state.header
       if (!scroll || !node) return
 
       const handler = () => {
         const rect = node.getBoundingClientRect()
         const scrollRect = scroll.getBoundingClientRect()
-        setStuck(rect.top <= scrollRect.top + 1 && scroll.scrollTop > 0)
+        setState("stuck", rect.top <= scrollRect.top + 1 && scroll.scrollTop > 0)
       }
 
-      scroll.addEventListener("scroll", handler, { passive: true })
+      makeEventListener(scroll, "scroll", handler, { passive: true })
       handler()
-      onCleanup(() => scroll.removeEventListener("scroll", handler))
     })
 
     return (
-      <div data-slot="list-header" data-stuck={stuck()} ref={setHeader}>
+      <div data-slot="list-header" data-stuck={state.stuck} ref={(el) => setState("header", el)}>
         {props.groupHeader?.(groupProps.group) ?? groupProps.group.category}
       </div>
     )
@@ -299,7 +307,7 @@ export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) 
                 icon="circle-x"
                 variant="ghost"
                 onClick={() => {
-                  setInternalFilter("")
+                  applyFilter("") // kilocode_change
                   queueMicrotask(() => inputRef?.focus())
                 }}
                 aria-label={i18n.t("ui.list.clearFilter")}

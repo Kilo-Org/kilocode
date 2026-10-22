@@ -18,9 +18,11 @@ export type Locale =
   | "tr"
   | "nl"
   | "uk"
+  | "it"
+  | "fa"
 
 /** Locales that use right-to-left script. */
-export const RTL_LOCALES = new Set<Locale>(["ar"])
+export const RTL_LOCALES = new Set<Locale>(["ar", "fa"])
 
 /** Map internal locale IDs to valid BCP 47 language tags for the HTML lang attribute. */
 export const LOCALE_BCP47: Partial<Record<Locale, string>> = {
@@ -53,6 +55,8 @@ export const LOCALES: readonly Locale[] = [
   "tr",
   "nl",
   "uk",
+  "it",
+  "fa",
 ]
 
 /**

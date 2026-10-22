@@ -1,25 +1,32 @@
 import { describe, test, expect } from "bun:test"
 import path from "path"
+import yargs from "yargs"
 import { generateHelp, generateCommandTable } from "../../src/kilocode/help"
 import { AcpCommand } from "../../src/cli/cmd/acp"
 import { McpCommand } from "../../src/cli/cmd/mcp"
 import { RunCommand } from "../../src/cli/cmd/run"
 import { GenerateCommand } from "../../src/cli/cmd/generate"
 import { DebugCommand } from "../../src/cli/cmd/debug"
-import { AuthCommand } from "../../src/cli/cmd/auth"
+import { ProvidersCommand } from "../../src/cli/cmd/providers" // kilocode_change — upstream renamed auth → providers
 import { AgentCommand } from "../../src/cli/cmd/agent"
 import { UpgradeCommand } from "../../src/cli/cmd/upgrade"
 import { UninstallCommand } from "../../src/cli/cmd/uninstall"
 import { ServeCommand } from "../../src/cli/cmd/serve"
-import { WebCommand } from "../../src/cli/cmd/web"
 import { ModelsCommand } from "../../src/cli/cmd/models"
 import { StatsCommand } from "../../src/cli/cmd/stats"
 import { ExportCommand } from "../../src/cli/cmd/export"
 import { ImportCommand } from "../../src/cli/cmd/import"
 import { PrCommand } from "../../src/cli/cmd/pr"
 import { SessionCommand } from "../../src/cli/cmd/session"
+import { RemoteCommand } from "../../src/cli/cmd/remote"
+import { ConfigCommand as ConfigCLICommand } from "../../src/cli/cmd/config"
+import { PluginCommand } from "../../src/cli/cmd/plug"
 import { DbCommand } from "../../src/cli/cmd/db"
 import { HelpCommand } from "../../src/kilocode/help-command"
+import { ProfileCommand } from "../../src/kilocode/cli/cmd/profile"
+import { DaemonCommand } from "../../src/kilocode/cli/cmd/daemon"
+import { KiloConsoleCommand } from "../../src/kilocode/cli/cmd/console"
+import { CloudCommand } from "../../src/kilocode/cli/cmd/cloud"
 
 // Stand-in for TuiThreadCommand — the real one imports @opentui/solid which
 // doesn't resolve in the test environment. Only command/describe matter here.
@@ -36,6 +43,13 @@ const AttachStub = {
   handler() {},
 }
 
+// Synthetic entry for the yargs built-in .completion() command
+const CompletionStub = {
+  command: "completion",
+  describe: "generate shell completion script",
+  handler() {},
+}
+
 const commands = [
   AcpCommand,
   McpCommand,
@@ -44,26 +58,33 @@ const commands = [
   RunCommand,
   GenerateCommand,
   DebugCommand,
-  AuthCommand,
+  ProvidersCommand,
   AgentCommand,
   UpgradeCommand,
   UninstallCommand,
   ServeCommand,
-  WebCommand,
   ModelsCommand,
   StatsCommand,
   ExportCommand,
   ImportCommand,
   PrCommand,
   SessionCommand,
+  RemoteCommand,
   DbCommand,
+  ConfigCLICommand,
+  PluginCommand,
+  ProfileCommand,
+  DaemonCommand,
+  KiloConsoleCommand,
+  CloudCommand,
   HelpCommand,
+  CompletionStub,
 ] as any[]
 
 describe("kilo help --all (markdown)", () => {
   test("contains ## heading for each known top-level command", async () => {
     const output = await generateHelp({ all: true, format: "md", commands })
-    for (const cmd of ["run", "auth", "debug", "mcp", "session", "agent"]) {
+    for (const cmd of ["run", "auth", "debug", "mcp", "session", "agent", "profile"]) {
       expect(output).toContain(`## kilo ${cmd}`)
     }
   })
@@ -85,7 +106,7 @@ describe("kilo help --all (text)", () => {
 
   test("still contains each command name", async () => {
     const output = await generateHelp({ all: true, format: "text", commands })
-    for (const cmd of ["run", "auth", "debug", "mcp", "session", "agent"]) {
+    for (const cmd of ["run", "auth", "debug", "mcp", "session", "agent", "profile"]) {
       expect(output).toContain(`kilo ${cmd}`)
     }
   })
@@ -103,6 +124,57 @@ describe("kilo help <command>", () => {
     const output = await generateHelp({ command: "auth", format: "md", commands })
     expect(output).not.toContain("## kilo run")
     expect(output).not.toContain("## kilo debug")
+  })
+
+  test("documents pr subcommands", async () => {
+    const output = await generateHelp({ command: "pr", format: "md", commands })
+    expect(output).toContain("kilo pr checkout")
+    expect(output).toContain("kilo pr link")
+    expect(output).toContain("kilo pr unlink")
+    expect(output).toContain("kilo pr status")
+  })
+
+  test("documents console stop and foreground mode", async () => {
+    const output = await generateHelp({ command: "console", format: "md", commands })
+    expect(output).toContain("kilo console stop")
+    expect(output).toContain("--foreground")
+    expect(output).toContain("-f")
+  })
+
+  test("documents daemon foreground mode", async () => {
+    const output = await generateHelp({ command: "daemon", format: "md", commands })
+    expect(output).toContain("kilo daemon start")
+    expect(output).toContain("--foreground")
+    expect(output).toContain("-f")
+  })
+})
+
+describe("kilo cloud help", () => {
+  async function parser() {
+    const cli = yargs([])
+      .scriptName("kilo cloud")
+      .exitProcess(false)
+      .help()
+      .fail((msg, err) => {
+        throw err ?? new Error(msg)
+      })
+    if (typeof CloudCommand.builder !== "function") throw new Error("cloud command builder is missing")
+    return await CloudCommand.builder(cli)
+  }
+
+  test("requires a subcommand and exposes only the public Cloud Agent operations", async () => {
+    const bare = await parser()
+    await expect(Promise.resolve().then(() => bare.parseAsync([]))).rejects.toThrow()
+
+    const help = await (await parser()).getHelp()
+    const names = [...help.matchAll(/^\s*kilo cloud ([a-z][a-z-]*)\b/gm)].map((match) => match[1])
+    expect([...new Set(names)].sort()).toEqual(["result", "send", "start", "status"])
+  })
+
+  test("documents start prompt stdin", async () => {
+    const output = await generateHelp({ command: "cloud", format: "md", commands })
+    expect(output).toContain("kilo cloud start")
+    expect(output).toContain("--prompt-stdin")
   })
 })
 
@@ -157,10 +229,40 @@ describe("generateCommandTable", () => {
   })
 })
 
-describe("commands.ts stays in sync with index.ts", () => {
+describe("Kilo CLI customizations are wired into index.ts", () => {
+  const file = (rel: string) => Bun.file(path.resolve(import.meta.dir, rel)).text()
+  const INDEX = "../../src/index.ts"
+  const SETUP = "../../src/kilocode/cli/setup.ts"
+  const BARREL = "../../src/kilocode/commands.ts"
+
+  test("CLI is branded `kilo`, not `opencode`", async () => {
+    const index = await file(INDEX)
+    expect(index).toContain('.scriptName("kilo")')
+    expect(index).not.toContain('.scriptName("opencode")')
+  })
+
+  test("index.ts invokes the KiloCli integration points", async () => {
+    // These thin call-sites are the only wiring between upstream index.ts and the Kilo
+    // customizations in setup.ts. If a future upstream merge drops them, every Kilo command
+    // and the telemetry/lifecycle hooks silently disappear, exactly the regression this guards.
+    const index = await file(INDEX)
+    expect(index).toContain("KiloCli.register(")
+    expect(index).toContain("KiloCli.bootstrap(")
+    expect(index).toContain("KiloCli.shutdown(")
+  })
+
+  test("registers the local Kilo Console instead of the upstream account console", async () => {
+    const index = await file(INDEX)
+    const setup = await file(SETUP)
+    const barrel = await file(BARREL)
+    expect(setup).toContain("KiloConsoleCommand")
+    expect(index).not.toContain(".command(ConsoleCommand)")
+    expect(barrel).not.toContain('from "../cli/cmd/account"')
+  })
+
   test("every .command() in index.ts has an entry in the commands array", async () => {
-    const index = await Bun.file(path.resolve(import.meta.dir, "../../src/index.ts")).text()
-    const barrel = await Bun.file(path.resolve(import.meta.dir, "../../src/kilocode/commands.ts")).text()
+    const index = await file(INDEX)
+    const barrel = await file(BARREL)
 
     // Match uncommented .command(XxxCommand) calls in index.ts
     const registered = [...index.matchAll(/^\s*\.command\((\w+)\)/gm)].map((m) => m[1]!)
@@ -172,6 +274,33 @@ describe("commands.ts stays in sync with index.ts", () => {
     const entries = [...arrayMatch![1]!.matchAll(/\b(\w+Command)\b/g)].map((m) => m[1]!)
 
     const missing = registered.filter((name) => !entries.includes(name))
+    expect(missing).toEqual([])
+  })
+
+  test("every barrel command is registered in index.ts or setup.ts", async () => {
+    // Reverse direction of the test above: every source-of-truth command must actually be
+    // runnable. The merge dropped `daemon`/`profile`/`remote`/`config` from index.ts while the
+    // barrel still listed them, this catches that.
+    const index = await file(INDEX)
+    const setup = await file(SETUP)
+    const barrel = await file(BARREL)
+
+    const registered = new Set(
+      [...index.matchAll(/\.command\((\w+)\)/g), ...setup.matchAll(/\.command\((\w+)\)/g)].map((m) => m[1]!),
+    )
+
+    const arrayMatch = barrel.match(/export const commands\s*=\s*\[([\s\S]*?)\]/)
+    expect(arrayMatch).toBeTruthy()
+    // Strip comments first, the array body contains a comment mentioning `AuthCommand`.
+    const body = arrayMatch![1]!.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "")
+    const entries = [...body.matchAll(/\b(\w+Command)\b/g)].map((m) => m[1]!)
+
+    // Not registered as a bare `.command(Ident)`:
+    //  CompletionCommand - provided by yargs `.completion(...)`
+    //  HelpCommand       - registered via createHelpCommand(() => cli)
+    //  (DevSetup/DevAlias enter the array via `...dev`, so they aren't scraped here)
+    const except = new Set(["CompletionCommand", "HelpCommand"])
+    const missing = entries.filter((name) => !except.has(name) && !registered.has(name))
     expect(missing).toEqual([])
   })
 })

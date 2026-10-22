@@ -1,0 +1,676 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
+import { describe, expect } from "bun:test"
+import { Cause, Deferred, Effect, Exit, Fiber, Layer } from "effect"
+import fs from "node:fs/promises"
+import path from "node:path"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { Global } from "@opencode-ai/core/global"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
+import { Hash } from "@opencode-ai/core/util/hash"
+import { MessageV2 } from "@/session/message-v2"
+import { Instance } from "@/kilocode/instance"
+import { KiloSessionRevert } from "@/kilocode/session/revert"
+import { SessionRevert } from "@/session/revert"
+import { MessageID, PartID } from "@/session/schema"
+import { Session } from "@/session/session"
+import { Snapshot } from "@/snapshot"
+import { provideInstance, provideTmpdirInstance } from "../../fixture/fixture"
+import { testEffect } from "../../lib/effect"
+
+// plant an index.lock the way a concurrent git write would
+const snapshotGitdir = () => path.join(Global.Path.data, "snapshot", Instance.project.id, Hash.fast(Instance.worktree))
+
+const plantLock = Effect.fnUntraced(function* () {
+  const gitdir = snapshotGitdir()
+  yield* Effect.promise(() => fs.mkdir(gitdir, { recursive: true }))
+  const lock = path.join(gitdir, "index.lock")
+  yield* Effect.promise(() => fs.writeFile(lock, ""))
+  return lock
+})
+
+const env = LayerNode.compile(
+  LayerNode.group([
+    Session.node,
+    SessionProjector.node,
+    SessionRevert.node,
+    Snapshot.node,
+    CrossSpawnSpawner.node,
+  ]),
+)
+const it = testEffect(env)
+const guarded = process.platform === "win32" ? it.live.skip : it.live
+
+// flockOnly takes the real on-disk lock; impatientFlock fails givingUp keys without waiting
+const flockOnly = LayerNode.compile(LayerNode.group([EffectFlock.node]))
+
+const givingUp = new Set<string>()
+
+const impatientWithLock = <A, E, R>(body: Effect.Effect<A, E, R>, key: string) =>
+  givingUp.has(key) ? Effect.fail(new EffectFlock.LockTimeoutError({ key })) : body
+
+const impatientFlock = Layer.mock(EffectFlock.Service, {
+  acquire: (key: string) => (givingUp.has(key) ? Effect.fail(new EffectFlock.LockTimeoutError({ key })) : Effect.void),
+  withLock: impatientWithLock as unknown as EffectFlock.Interface["withLock"],
+})
+const impatient = testEffect(
+  LayerNode.compile(
+    LayerNode.group([
+      Session.node,
+      SessionProjector.node,
+      SessionRevert.node,
+      Snapshot.node,
+      EffectFlock.node,
+      CrossSpawnSpawner.node,
+    ]),
+    [[EffectFlock.node, impatientFlock]],
+  ),
+)
+const guardedImpatient = process.platform === "win32" ? impatient.live.skip : impatient.live
+
+const setup = Effect.fnUntraced(function* (dir: string, deleted = false) {
+  const sessions = yield* Session.Service
+  const revert = yield* SessionRevert.Service
+  const snapshot = yield* Snapshot.Service
+  const session = yield* sessions.create({})
+  const locked = path.join(dir, "locked")
+  const protectedFile = path.join(locked, "protected.txt")
+  const writableFile = path.join(dir, "writable.txt")
+  const providerID = ProviderV2.ID.make("test")
+  yield* Effect.promise(() => fs.mkdir(locked))
+  yield* Effect.promise(() => fs.writeFile(protectedFile, "before"))
+  yield* Effect.promise(() => fs.writeFile(writableFile, "before"))
+  const user = yield* sessions.updateMessage({
+    id: MessageID.ascending(),
+    sessionID: session.id,
+    role: "user",
+    agent: "default",
+    model: { providerID, modelID: ModelV2.ID.make("test") },
+    time: { created: Date.now() },
+  })
+  yield* sessions.updatePart({
+    id: PartID.ascending(),
+    messageID: user.id,
+    sessionID: session.id,
+    type: "text",
+    text: "change both files",
+  })
+  const assistant = yield* sessions.updateMessage({
+    id: MessageID.ascending(),
+    sessionID: session.id,
+    role: "assistant",
+    parentID: user.id,
+    mode: "default",
+    agent: "default",
+    path: { cwd: dir, root: dir },
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    modelID: ModelV2.ID.make("test"),
+    providerID,
+    time: { created: Date.now() },
+    finish: "end_turn",
+  })
+  const before = yield* snapshot.track()
+  if (!before) throw new Error("expected snapshot")
+  if (deleted) yield* Effect.promise(() => fs.rm(protectedFile))
+  if (!deleted) yield* Effect.promise(() => fs.writeFile(protectedFile, "after"))
+  yield* Effect.promise(() => fs.writeFile(writableFile, "after"))
+  const after = yield* snapshot.track()
+  if (!after) throw new Error("expected snapshot")
+  const patch = yield* snapshot.patch(before)
+  yield* sessions.updatePart({
+    id: PartID.ascending(),
+    messageID: assistant.id,
+    sessionID: session.id,
+    type: "step-start",
+    snapshot: before,
+  })
+  yield* sessions.updatePart({
+    id: PartID.ascending(),
+    messageID: assistant.id,
+    sessionID: session.id,
+    type: "step-finish",
+    reason: "stop",
+    snapshot: after,
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+  })
+  yield* sessions.updatePart({
+    id: PartID.ascending(),
+    messageID: assistant.id,
+    sessionID: session.id,
+    type: "patch",
+    hash: patch.hash,
+    files: patch.files,
+  })
+  return {
+    sessions,
+    revert,
+    snapshot,
+    session,
+    user,
+    after,
+    patch,
+    locked,
+    protected: protectedFile,
+    writable: writableFile,
+  }
+})
+
+describe("partial assistant revert", () => {
+  it.live(
+    "clears provider errors when the revert becomes permanent",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const session = yield* sessions.create({})
+          const providerID = ProviderV2.ID.make("test")
+          const user = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: Date.now() },
+          })
+          const assistant = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: session.id,
+            role: "assistant",
+            parentID: user.id,
+            mode: "default",
+            agent: "default",
+            path: { cwd: dir, root: dir },
+            cost: 1,
+            tokens: { input: 1, output: 1, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ModelV2.ID.make("test"),
+            providerID,
+            time: { created: Date.now(), completed: Date.now() },
+            finish: "error",
+            error: MessageV2.fromError(new Error("Provider returned error"), { providerID }),
+          })
+          const kept = yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: assistant.id,
+            sessionID: session.id,
+            type: "text",
+            text: "keep",
+          })
+          const boundary = yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: assistant.id,
+            sessionID: session.id,
+            type: "text",
+            text: "remove",
+          })
+
+          yield* sessions.setRevert({
+            sessionID: session.id,
+            revert: { messageID: assistant.id, partID: boundary.id },
+            summary: { additions: 0, deletions: 0, files: 0 },
+          })
+          yield* revert.cleanup(yield* sessions.get(session.id))
+
+          const messages = yield* sessions.messages({ sessionID: session.id })
+          const result = messages.find((message) => message.info.id === assistant.id)
+          expect(result?.parts.map((part) => part.id)).toEqual([kept.id])
+          expect(result?.info).not.toHaveProperty("error")
+        }),
+      { git: true },
+    ),
+  )
+})
+
+describe("workspace revert status", () => {
+  it.live(
+    "reports disabled snapshots when conversation-only revert leaves files unchanged",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const session = yield* sessions.create({})
+          const file = path.join(dir, "created.txt")
+          const providerID = ProviderV2.ID.make("test")
+          yield* Effect.promise(() => fs.writeFile(file, "created"))
+          const user = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: Date.now() },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: user.id,
+            sessionID: session.id,
+            type: "text",
+            text: "create a file",
+          })
+
+          const result = yield* revert.revert({ sessionID: session.id, messageID: user.id })
+
+          expect(result.revert?.workspace).toBe("snapshots-disabled")
+          expect(yield* Effect.promise(() => fs.readFile(file, "utf8"))).toBe("created")
+        }),
+      { git: true, config: { snapshot: false } },
+    ),
+  )
+
+  it.live(
+    "reports unavailable when historical turns have no file checkpoint",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const session = yield* sessions.create({})
+          const file = path.join(dir, "created.txt")
+          const providerID = ProviderV2.ID.make("test")
+          yield* Effect.promise(() => fs.writeFile(file, "created"))
+          const user = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: Date.now() },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: user.id,
+            sessionID: session.id,
+            type: "text",
+            text: "create a file",
+          })
+
+          const result = yield* revert.revert({ sessionID: session.id, messageID: user.id })
+
+          expect(result.revert?.workspace).toBe("unavailable")
+          expect(yield* Effect.promise(() => fs.readFile(file, "utf8"))).toBe("created")
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live(
+    "reports not-a-git-repo when the workspace is not a Git repository",
+    provideTmpdirInstance((dir) =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const revert = yield* SessionRevert.Service
+        const session = yield* sessions.create({})
+        const file = path.join(dir, "created.txt")
+        const providerID = ProviderV2.ID.make("test")
+        yield* Effect.promise(() => fs.writeFile(file, "created"))
+        const user = yield* sessions.updateMessage({
+          id: MessageID.ascending(),
+          sessionID: session.id,
+          role: "user",
+          agent: "default",
+          model: { providerID, modelID: ModelV2.ID.make("test") },
+          time: { created: Date.now() },
+        })
+        yield* sessions.updatePart({
+          id: PartID.ascending(),
+          messageID: user.id,
+          sessionID: session.id,
+          type: "text",
+          text: "create a file",
+        })
+
+        const result = yield* revert.revert({ sessionID: session.id, messageID: user.id })
+
+        expect(result.revert?.workspace).toBe("not-a-git-repo")
+        expect(yield* Effect.promise(() => fs.readFile(file, "utf8"))).toBe("created")
+      }),
+    ),
+  )
+
+  it.live(
+    "reports restored when historical patches restore a file",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const revert = yield* SessionRevert.Service
+          const snapshot = yield* Snapshot.Service
+          const session = yield* sessions.create({})
+          const file = path.join(dir, "tracked.txt")
+          const providerID = ProviderV2.ID.make("test")
+          yield* Effect.promise(() => fs.writeFile(file, "before"))
+          const user = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: session.id,
+            role: "user",
+            agent: "default",
+            model: { providerID, modelID: ModelV2.ID.make("test") },
+            time: { created: Date.now() },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: user.id,
+            sessionID: session.id,
+            type: "text",
+            text: "change a file",
+          })
+          const assistant = yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: session.id,
+            role: "assistant",
+            parentID: user.id,
+            mode: "default",
+            agent: "default",
+            path: { cwd: dir, root: dir },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ModelV2.ID.make("test"),
+            providerID,
+            time: { created: Date.now() },
+            finish: "end_turn",
+          })
+          const before = yield* snapshot.track()
+          if (!before) throw new Error("expected snapshot")
+          yield* Effect.promise(() => fs.writeFile(file, "after"))
+          const after = yield* snapshot.track()
+          if (!after) throw new Error("expected snapshot")
+          const patch = yield* snapshot.patch(before)
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: assistant.id,
+            sessionID: session.id,
+            type: "step-start",
+            snapshot: before,
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: assistant.id,
+            sessionID: session.id,
+            type: "step-finish",
+            reason: "stop",
+            snapshot: after,
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          })
+          yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: assistant.id,
+            sessionID: session.id,
+            type: "patch",
+            hash: patch.hash,
+            files: patch.files,
+          })
+
+          const result = yield* revert.revert({ sessionID: session.id, messageID: user.id })
+
+          expect(result.revert?.workspace).toBe("restored")
+          expect(yield* Effect.promise(() => fs.readFile(file, "utf8"))).toBe("before")
+        }),
+      { git: true },
+    ),
+  )
+
+  guarded(
+    "keeps the conversation and workspace unchanged when a checkpoint cannot be fully restored",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const item = yield* setup(dir)
+          yield* Effect.promise(() => fs.chmod(item.protected, 0o444))
+          yield* Effect.promise(() => fs.chmod(item.locked, 0o555))
+          const outcome = yield* item.revert.revert({ sessionID: item.session.id, messageID: item.user.id }).pipe(
+            Effect.exit,
+            Effect.ensuring(
+              Effect.promise(async () => {
+                await fs.chmod(item.locked, 0o755)
+                await fs.chmod(item.protected, 0o644)
+              }),
+            ),
+          )
+          const current = yield* item.sessions.get(item.session.id)
+          const actual = {
+            failed: Exit.isFailure(outcome),
+            reverted: current.revert !== undefined,
+            protected: yield* Effect.promise(() => fs.readFile(item.protected, "utf8")),
+            writable: yield* Effect.promise(() => fs.readFile(item.writable, "utf8")),
+          }
+
+          expect(actual).toEqual({
+            failed: true,
+            reverted: false,
+            protected: "after",
+            writable: "after",
+          })
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  guarded(
+    "keeps the reverted state when unrevert cannot fully restore files",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const item = yield* setup(dir)
+          yield* item.revert.revert({ sessionID: item.session.id, messageID: item.user.id })
+          yield* Effect.promise(() => fs.chmod(item.protected, 0o444))
+          yield* Effect.promise(() => fs.chmod(item.locked, 0o555))
+          const outcome = yield* item.revert.unrevert({ sessionID: item.session.id }).pipe(
+            Effect.exit,
+            Effect.ensuring(
+              Effect.promise(async () => {
+                await fs.chmod(item.locked, 0o755)
+                await fs.chmod(item.protected, 0o644)
+              }),
+            ),
+          )
+          const current = yield* item.sessions.get(item.session.id)
+
+          expect({
+            failed: Exit.isFailure(outcome),
+            reverted: current.revert !== undefined,
+            protected: yield* Effect.promise(() => fs.readFile(item.protected, "utf8")),
+            writable: yield* Effect.promise(() => fs.readFile(item.writable, "utf8")),
+          }).toEqual({ failed: true, reverted: true, protected: "before", writable: "before" })
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  guarded(
+    "keeps the prior revert when replacing its checkpoint cannot restore files",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const item = yield* setup(dir)
+          yield* item.revert.revert({ sessionID: item.session.id, messageID: item.user.id })
+          yield* Effect.promise(() => fs.chmod(item.protected, 0o444))
+          yield* Effect.promise(() => fs.chmod(item.locked, 0o555))
+          const outcome = yield* item.revert.revert({ sessionID: item.session.id, messageID: item.user.id }).pipe(
+            Effect.exit,
+            Effect.ensuring(
+              Effect.promise(async () => {
+                await fs.chmod(item.locked, 0o755)
+                await fs.chmod(item.protected, 0o644)
+              }),
+            ),
+          )
+          const current = yield* item.sessions.get(item.session.id)
+
+          expect({
+            failed: Exit.isFailure(outcome),
+            reverted: current.revert !== undefined,
+            protected: yield* Effect.promise(() => fs.readFile(item.protected, "utf8")),
+            writable: yield* Effect.promise(() => fs.readFile(item.writable, "utf8")),
+          }).toEqual({ failed: true, reverted: true, protected: "before", writable: "before" })
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  it.live(
+    "unreverts deleted files from a session rooted in a worktree subdirectory",
+    provideTmpdirInstance(
+      (root) =>
+        Effect.gen(function* () {
+          const dir = path.join(root, "nested")
+          yield* Effect.promise(() => fs.mkdir(dir))
+          const item = yield* setup(dir, true)
+          yield* item.revert.revert({ sessionID: item.session.id, messageID: item.user.id })
+          expect(yield* Effect.promise(() => fs.readFile(item.protected, "utf8"))).toBe("before")
+
+          yield* KiloSessionRevert.restore(item.snapshot, item.after, item.patch.files).pipe(provideInstance(dir))
+
+          expect(
+            yield* Effect.promise(() =>
+              fs.stat(item.protected).then(
+                () => true,
+                () => false,
+              ),
+            ),
+          ).toBe(false)
+          expect(yield* Effect.promise(() => fs.readFile(item.writable, "utf8"))).toBe("after")
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  // the pre-revert snapshot needs the index lock too, and without it there is no baseline
+  guarded(
+    "fails instead of rewinding when a locked index blocks the pre-revert snapshot",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const item = yield* setup(dir)
+          const lock = yield* plantLock()
+
+          const outcome = yield* item.revert
+            .revert({ sessionID: item.session.id, messageID: item.user.id })
+            .pipe(Effect.exit, Effect.ensuring(Effect.promise(() => fs.rm(lock, { force: true }))))
+          const current = yield* item.sessions.get(item.session.id)
+
+          expect({
+            failed: Exit.isFailure(outcome),
+            reverted: current.revert !== undefined,
+            protected: yield* Effect.promise(() => fs.readFile(item.protected, "utf8")),
+            writable: yield* Effect.promise(() => fs.readFile(item.writable, "utf8")),
+          }).toEqual({ failed: true, reverted: false, protected: "after", writable: "after" })
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  // a locked index leaves the workspace unchanged even when the rollback hits the same lock
+  it.live(
+    "keeps the workspace unchanged when a locked index blocks both the revert and its rollback",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const item = yield* setup(dir)
+          const lock = yield* plantLock()
+
+          const outcome = yield* KiloSessionRevert.apply(
+            item.snapshot,
+            item.after,
+            item.patch.files,
+            Effect.gen(function* () {
+              yield* item.snapshot.revert([item.patch])
+            }),
+          ).pipe(Effect.exit)
+
+          // git cannot take the index lock, so the revert fails rather than reporting a success it
+          // did not perform; the reason is on stderr in the log, not in the failure value.
+          expect(Exit.isFailure(outcome)).toBe(true)
+
+          expect(yield* Effect.promise(() => fs.readFile(item.protected, "utf8"))).toBe("after")
+          expect(yield* Effect.promise(() => fs.readFile(item.writable, "utf8"))).toBe("after")
+
+          // The failed rollback must still release the snapshot lock, or every later
+          // operation on this repository would hang instead of failing.
+          yield* Effect.promise(() => fs.rm(lock, { force: true }))
+          yield* item.snapshot.revert([item.patch])
+          expect(yield* Effect.promise(() => fs.readFile(item.protected, "utf8"))).toBe("before")
+        }),
+      { git: true },
+    ),
+    20_000,
+  )
+
+  // another agent snapshotting the same project delays a revert, not fails it
+  guarded(
+    "waits for a snapshot lock held elsewhere and reverts once it is released",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const item = yield* setup(dir)
+          const entered = yield* Deferred.make<void>()
+          const release = yield* Deferred.make<void>()
+          const key = `snapshot:${snapshotGitdir()}`
+          const held = yield* Effect.gen(function* () {
+            const flock = yield* EffectFlock.Service
+            yield* flock.withLock(
+              Effect.gen(function* () {
+                yield* Deferred.succeed(entered, undefined)
+                yield* Deferred.await(release)
+              }),
+              key,
+            )
+          }).pipe(Effect.provide(flockOnly), Effect.forkChild)
+          yield* Deferred.await(entered)
+
+          const reverting = yield* item.snapshot.revert([item.patch]).pipe(Effect.forkChild)
+          yield* Effect.sleep("500 millis")
+          expect({
+            done: reverting.pollUnsafe() !== undefined,
+            protected: yield* Effect.promise(() => fs.readFile(item.protected, "utf8")),
+          }).toEqual({ done: false, protected: "after" })
+
+          yield* Deferred.succeed(release, undefined)
+          yield* Fiber.join(held)
+          yield* Fiber.join(reverting)
+
+          expect(yield* Effect.promise(() => fs.readFile(item.protected, "utf8"))).toBe("before")
+          expect(yield* Effect.promise(() => fs.readFile(item.writable, "utf8"))).toBe("before")
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+
+  // a lock that never comes free is not actionable, so the revert aborts as a defect
+  guardedImpatient(
+    "aborts the revert without touching the workspace when the snapshot lock never comes free",
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const item = yield* setup(dir)
+          const key = `snapshot:${snapshotGitdir()}`
+          givingUp.add(key)
+
+          const outcome = yield* item.revert
+            .revert({ sessionID: item.session.id, messageID: item.user.id })
+            .pipe(Effect.exit, Effect.ensuring(Effect.sync(() => givingUp.delete(key))))
+          const current = yield* item.sessions.get(item.session.id)
+
+          expect(Exit.isFailure(outcome) && Cause.hasDies(outcome.cause)).toBe(true)
+          expect({
+            reverted: current.revert !== undefined,
+            protected: yield* Effect.promise(() => fs.readFile(item.protected, "utf8")),
+            writable: yield* Effect.promise(() => fs.readFile(item.writable, "utf8")),
+          }).toEqual({ reverted: false, protected: "after", writable: "after" })
+        }),
+      { git: true },
+    ),
+    30_000,
+  )
+})

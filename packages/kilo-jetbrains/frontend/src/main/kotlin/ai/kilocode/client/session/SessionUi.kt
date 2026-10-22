@@ -1,0 +1,1734 @@
+package ai.kilocode.client.session
+
+import ai.kilocode.client.KiloNotifications
+import ai.kilocode.client.actions.reloadCoreSettings
+import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloMcpAuthService
+import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.diff.KiloDiffComparison
+import ai.kilocode.client.diff.KiloDiffEditorKind
+import ai.kilocode.client.diff.openKiloDiff
+import ai.kilocode.client.diff.KiloInlineDiffStore
+import ai.kilocode.client.diff.diffParams
+import ai.kilocode.client.diff.ensureDiffEditorKind
+import ai.kilocode.client.onboarding.KiloOnboardingService
+import ai.kilocode.client.onboarding.OnboardingController
+import ai.kilocode.client.onboarding.OnboardingStep
+import ai.kilocode.client.onboarding.ui.OnboardingListCard
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloDocs
+import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.session.board.SessionBoardDialog
+import ai.kilocode.client.session.model.FileAttachment
+import ai.kilocode.client.session.model.Notice
+import ai.kilocode.client.session.model.PromptAttachment
+import ai.kilocode.client.session.model.SessionModelEvent
+import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.model.Text
+import ai.kilocode.client.session.model.toPromptAttachment
+import ai.kilocode.client.session.scroll.SessionScroll
+import ai.kilocode.client.session.subagent.SubagentSessionEditorKind
+import ai.kilocode.client.session.subagent.SubagentTitleCache
+import ai.kilocode.client.session.subagent.ensureSubagentSessionEditorKind
+import ai.kilocode.client.session.subagent.subagentSessionParams
+import ai.kilocode.client.session.ui.ConnectionPanel
+import ai.kilocode.client.session.ui.empty.EmptySessionPanel
+import ai.kilocode.client.session.ui.LoadingPanel
+import ai.kilocode.client.session.ui.ReasoningPicker
+import ai.kilocode.client.session.ui.RevertBanner
+import ai.kilocode.client.session.ui.mode.ModePicker
+import ai.kilocode.client.session.ui.model.ModelPicker
+import ai.kilocode.client.session.ui.prompt.KiloPromptCompletionProvider
+import ai.kilocode.client.session.ui.prompt.MentionAction
+import ai.kilocode.client.session.ui.prompt.PromptDataKeys
+import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.session.ui.prompt.SessionIssue
+import ai.kilocode.client.session.ui.prompt.SessionIssueAction
+import ai.kilocode.client.session.ui.prompt.SlashAction
+import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
+import ai.kilocode.client.session.ui.rail.PromptRailController
+import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
+import ai.kilocode.client.session.settings.TranscriptDisplayListener
+import ai.kilocode.client.session.ui.account.SessionAccountOverlay
+import ai.kilocode.client.session.ui.popup.HeaderPopupController
+import ai.kilocode.client.session.ui.SessionDropOverlay
+import ai.kilocode.client.session.ui.SessionHighlightOverlay
+import ai.kilocode.client.session.ui.SessionRootPanel
+import ai.kilocode.client.session.ui.SessionMessageListPanel
+import ai.kilocode.client.session.ui.attachment.AttachmentEditorKind
+import ai.kilocode.client.session.ui.attachment.attachmentParams
+import ai.kilocode.client.session.ui.attachment.ensureAttachmentEditorKind
+import ai.kilocode.client.session.ui.attachment.isEmbeddedAttachment
+import ai.kilocode.client.agentManager.worktree.GithubIntegrationListener
+import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
+import ai.kilocode.client.session.ui.header.BranchDock
+import ai.kilocode.client.session.ui.header.SessionHeaderPanel
+import ai.kilocode.client.session.ui.selection.SessionContextMenu
+import ai.kilocode.client.session.ui.selection.SessionHoverCopyOverlay
+import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.ui.held
+import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
+import ai.kilocode.client.session.controller.EVENT_FLUSH_MS
+import ai.kilocode.client.session.controller.PromptSelection
+import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.session.controller.SessionControllerEvent
+import ai.kilocode.client.session.context.EditorContextGatherer
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.BackgroundPromote
+import ai.kilocode.client.session.views.LoginRequiredView
+import ai.kilocode.client.session.views.SessionOutcomeView
+import ai.kilocode.client.session.views.permission.PermissionView
+import ai.kilocode.client.session.views.question.QuestionView
+import ai.kilocode.client.settings.KiloSettingsConfigurable
+import ai.kilocode.client.settings.agents.McpConfigurable
+import ai.kilocode.client.settings.checkpoints.CheckpointsConfigurable
+import ai.kilocode.client.settings.profile.UserProfileConfigurable
+import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.util.UiTimerSource
+import ai.kilocode.client.util.UiTimers
+import ai.kilocode.client.vfs.KiloVfsManager
+import ai.kilocode.log.ChatLogSummary
+import ai.kilocode.rpc.dto.BranchStatusDto
+import ai.kilocode.rpc.dto.GhAvailability
+import ai.kilocode.rpc.dto.ModelLimitDto
+import ai.kilocode.rpc.dto.DiffFileDto
+import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.PromptPartDto
+import ai.kilocode.rpc.dto.SessionRevertDto
+import ai.kilocode.rpc.dto.WorktreePrDto
+import com.intellij.util.ui.JBUI
+import ai.kilocode.log.KiloLog
+import com.intellij.ide.BrowserUtil
+import com.intellij.ide.TextCopyProvider
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.PlatformDataKeys
+import com.intellij.openapi.actionSystem.UiDataProvider
+import com.intellij.ide.ui.LafManagerListener
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.EDT
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.components.service
+import com.intellij.openapi.editor.colors.EditorColorsListener
+import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.options.ConfigurableWithId
+import com.intellij.openapi.options.ShowSettingsUtil
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.registry.Registry
+import com.intellij.openapi.wm.IdeFocusManager
+import com.intellij.util.concurrency.annotations.RequiresEdt
+import java.util.function.Predicate
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.awt.BorderLayout
+import java.awt.Rectangle
+import java.awt.datatransfer.StringSelection
+import java.awt.event.HierarchyEvent
+import java.net.URI
+import java.nio.file.Path
+import javax.swing.JComponent
+import javax.swing.JPanel
+import javax.swing.SwingUtilities
+
+/**
+ * Top-level session UI composition root.
+ *
+ * It builds the session panels, wires controller/model listeners, and swaps the
+ * center body between the empty state and the message list.
+ */
+class SessionUi(
+    project: Project,
+    workspace: Workspace,
+    sessions: KiloSessionService,
+    app: KiloAppService,
+    private val cs: CoroutineScope,
+    ref: SessionRef? = null,
+    displayMs: Long = SessionController.DISPLAY_DELAY_MS,
+    private val manager: SessionManager? = null,
+    private val workspaces: KiloWorkspaceService = service(),
+    private val onboarding: OnboardingController = service<KiloOnboardingService>(),
+    private val timers: UiTimerSource = UiTimers,
+) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget, UiDataProvider, SessionActions {
+
+    companion object {
+        private val LOG = KiloLog.create(SessionUi::class.java)
+        private const val HIDE_MS = 120
+    }
+
+    private val project = project
+    private val app = app
+    private val sessions = sessions
+    private val workspace = workspace
+    private var opening = ref != null
+    private var pending = false
+    private var loaded: Boolean? = null
+    private var revertDraft: Pair<String, List<PromptAttachment>>? = null
+    private var pendingRollback: String? = null
+    private var pendingRedo: String? = null
+    // See sendPrompt()/onStateChanged(): the ids of the user messages present when a prompt was
+    // dispatched, or null when nothing is in flight. Tracking identity rather than a count is what
+    // makes the restore reliable while a turn is streaming and across a revert: a queued send must
+    // not treat the *previous* turn's message as confirmation, and a revert removes a message, so a
+    // count baseline would be permanently too high for the next send.
+    private var pendingSend: Set<String>? = null
+    private val flushMs =
+        Registry.intValue("kilo.session.flushMs", EVENT_FLUSH_MS.toInt())
+            .takeIf { it > 0 }
+            ?.toLong()
+            ?: EVENT_FLUSH_MS
+
+    private val controller = SessionController(
+        parent = this,
+        ref = ref,
+        sessions = sessions,
+        workspace = workspace,
+        app = app,
+        cs = cs,
+        comp = this,
+        flushMs = flushMs,
+        condense = Registry.`is`("kilo.session.condense", true),
+        displayMs = displayMs,
+        open = { item -> manager?.openSession(item) },
+        beforeUpdate = { if (opening) false else scroll.following() },
+        afterUpdate = { if (!opening) scroll.followBottom(it) },
+        loaded = ::onSessionLoaded,
+        openProfileAction = ::openProfileSettings,
+        timers = timers,
+    )
+
+
+    private lateinit var root: SessionRootPanel
+    private lateinit var fileLinks: SessionFileLinks
+    private lateinit var account: SessionAccountOverlay
+    private lateinit var drop: SessionDropOverlay
+    private lateinit var overlay: SessionHoverCopyOverlay
+    internal lateinit var highlight: SessionHighlightOverlay
+    internal lateinit var promptRail: PromptRailController
+    private val hide = timers.timer(HIDE_MS, repeats = false) {
+        if (disposed || !this::drop.isInitialized) return@timer
+        drop.setActive(false)
+    }
+
+    private lateinit var sessionContent: JPanel
+
+    private lateinit var blankBody: JPanel
+
+    private lateinit var progressBody: JPanel
+
+    private lateinit var messageBody: SessionMessageListPanel
+
+    private lateinit var header: SessionHeaderPanel
+
+    private var dock: BranchDock? = null
+
+    private var bottom: JComponent? = null
+
+    internal lateinit var scroll: SessionScroll
+
+    private lateinit var question: QuestionView
+    private lateinit var permission: PermissionView
+    private lateinit var login: LoginRequiredView
+    private lateinit var outcome: SessionOutcomeView
+    private lateinit var connection: ConnectionPanel
+
+    private lateinit var prompt: PromptPanel
+    private lateinit var completion: KiloPromptCompletionProvider
+    private lateinit var load: LoadingPanel
+    private lateinit var onboardingCard: OnboardingListCard
+    private var empty: EmptySessionPanel? = null
+
+    /**
+     * Last observed branch/worktree status. Retained so an empty panel created after the fetch shows
+     * its tip immediately instead of waiting for the next refresh.
+     */
+    private var branch: BranchStatusDto? = null
+    private var modalFocus: (() -> JComponent)? = null
+    private var style = SessionEditorStyle.current()
+    private val selection = SessionSelection()
+    private val popup = HeaderPopupController(timers)
+    override val readonly: Boolean get() = manager?.readonly == true
+    private val provider = object : TextCopyProvider() {
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+
+        override fun getTextLinesToCopy(): Collection<String>? {
+            val text = selection.selectedText()?.takeIf { it.isNotEmpty() } ?: return null
+            return listOf(text)
+        }
+    }
+    private var wasBusy = false
+    private var refreshJob: Job? = null
+    private var branchJob: Job? = null
+    private var boardJob: Job? = null
+    private var issuesJob: Job? = null
+    private var boardHasMessages = false
+    private var disposed = false
+
+    init {
+        Disposer.register(this, popup)
+        buildUi()
+        Disposer.register(this, selection)
+        applyStyle(style)
+        scroll.show(body(controller.model.state))
+        bindUi()
+        bindStyle()
+        bindOnboarding()
+        onStateChanged(controller.model.state)
+        dock?.let {
+            syncDock()
+            refreshBranchChanges()
+        }
+        refreshBranch()
+        loaded?.let(::finishOpen)
+    }
+
+    override fun addNotify() {
+        if (disposed) return
+        super.addNotify()
+        resumeOpen()
+    }
+
+    override fun doLayout() {
+        super.doLayout()
+        if (disposed) return
+        resumeOpen()
+    }
+
+    internal val blank: Boolean get() = controller.blank
+
+    override val id: String? get() = controller.id
+
+    internal val cacheKey: String? get() = controller.refKey
+
+    internal fun currentStyle() = style
+
+    override val pr: WorktreePrDto? get() = branch?.pr
+
+    override val share: String? get() = controller.model.session?.share?.url
+
+    override val git: Boolean get() = branch.let { it != null && it.availability != GhAvailability.GIT_MISSING }
+
+    override val auto: Boolean get() = controller.autoApprove
+
+    /**
+     * Whether this surface offers forking at all. Decided per surface rather than per session, so the
+     * prompt bubbles can carry their fork button from the moment they render; [forkable] adds the
+     * "has a session yet" part that the action menus need.
+     */
+    private val forkSurface: Boolean get() = manager?.supportsFork == true && !readonly
+
+    override val forkable: Boolean get() = forkSurface && controller.id != null
+
+    /**
+     * Whether this session could own a board at all: enabled in config (Swarm is on unless config
+     * explicitly opts out, matching the CLI's `BoardEnabled.resolve`), created, writable, a root
+     * session rather than a subagent, and local rather than cloud — the CLI only serves a board to
+     * its owning top-level local session.
+     */
+    private val boardSurface: Boolean
+        get() {
+            if (readonly) return false
+            if (controller.id == null) return false
+            // Defensive: a still-unimported cloud ref already fails the id check above, because
+            // controller.id only resolves for a local ref. Once imported the session *is* local and
+            // legitimately owns a board, so this rejects only the pre-import window.
+            if (controller.refType == SessionRef.Type.CLOUD) return false
+            if (controller.model.session?.parentID != null) return false
+            return app.state.value.config?.shared_agent_board != false
+        }
+
+    /**
+     * Entry points only appear once the board actually has a message, matching VS Code. The board
+     * lives in the CLI and can be written by subagents whose posts never reach this transcript, so
+     * emptiness cannot be derived locally — [refreshBoard] probes for it.
+     */
+    override val board: Boolean get() = boardSurface && boardHasMessages
+
+    @RequiresEdt
+    override fun setAuto(value: Boolean) {
+        controller.setAutoApprove(value)
+        prompt.setAutoApprove(controller.autoApprove)
+    }
+
+    @RequiresEdt
+    override fun fork() {
+        forkMessage(null, "session_menu")
+    }
+
+    /** Single fork entry point for this session: the action menus pass no message, a prompt bubble does. */
+    @RequiresEdt
+    private fun forkMessage(messageId: String?, surface: String) {
+        if (!forkable) return
+        val session = controller.id ?: return
+        manager?.forkSession(session, messageId, surface)
+    }
+
+    @RequiresEdt
+    override fun compare() {
+        openBranchChanges()
+    }
+
+    @RequiresEdt
+    override fun startShare() {
+        controller.setShare(true) { url, err -> onShareResult(url, err, on = true) }
+    }
+
+    @RequiresEdt
+    override fun stopShare() {
+        controller.setShare(false) { _, err -> onShareResult(null, err, on = false) }
+    }
+
+    /**
+     * Reports a share toggle. The CLI collapses every refusal into a bare HTTP 500, so the failure
+     * text has to name both plausible causes rather than guessing one.
+     */
+    @RequiresEdt
+    private fun onShareResult(url: String?, err: Throwable?, on: Boolean) {
+        if (err != null) {
+            val key = if (on) "session.share.failed" else "session.unshare.failed"
+            KiloNotifications.error(project, KiloBundle.message(key))
+            return
+        }
+        if (!on) {
+            KiloNotifications.info(project, KiloBundle.message("session.unshare.done"))
+            return
+        }
+        val link = url ?: return
+        CopyPasteManager.getInstance().setContents(StringSelection(link))
+        KiloNotifications.info(
+            project,
+            KiloBundle.message("session.share.done"),
+            link,
+            KiloBundle.message("session.share.open"),
+        ) { BrowserUtil.browse(link) }
+    }
+
+    override fun uiDataSnapshot(sink: DataSink) {
+        sink[PlatformDataKeys.COPY_PROVIDER] = provider
+        sink[SessionActionsKeys.ACTIONS] = this
+        // The prompt panel is a sibling of the transcript, so its own SendPromptContext only resolves
+        // for clicks inside it. Republish here — SessionUi is an ancestor of the whole session — so
+        // the reused Kilo.StopSession action works from any right-click. Nearest-provider-wins keeps
+        // PromptPanel authoritative inside its own subtree, and both publish the same instance anyway.
+        if (this::prompt.isInitialized) {
+            sink[PromptDataKeys.SEND] = prompt
+            sink[PromptDataKeys.SELECTORS] = prompt
+        }
+    }
+
+    @RequiresEdt
+    internal fun activityKind(): SessionActivityKind? = when (val state = controller.model.state) {
+        is SessionState.Idle,
+        is SessionState.Loading,
+        is SessionState.Busy,
+        is SessionState.Reverting,
+        is SessionState.Retry,
+        is SessionState.Offline,
+        is SessionState.Error,
+        is SessionState.TurnEnded -> null
+        is SessionState.LoginRequired -> SessionActivityKind.LOGIN_REQUIRED
+        is SessionState.AwaitingPermission -> SessionActivityKind.PERMISSION
+        is SessionState.AwaitingQuestion ->
+            SessionActivityKind.PLAN.takeIf { state.question.items.any { it.planFollowup() } } ?: SessionActivityKind.QUESTION
+    }
+
+    @RequiresEdt
+    internal fun title(): String? = controller.model.session?.title?.takeIf { it.isNotBlank() }
+
+    @RequiresEdt
+    internal fun syncActivity() {
+        empty?.syncActivity()
+    }
+
+    val defaultFocusedComponent: JComponent get() {
+        modalFocus?.invoke()?.let { return it }
+        if (readonly) return scroll.component
+        return prompt.defaultFocusedComponent
+    }
+
+    internal val promptFocusedComponent: JComponent get() = if (readonly) scroll.component else prompt.defaultFocusedComponent
+
+    /**
+     * Sends [text] as the session's first message. Used by the New Worktree flow to auto-start a
+     * session with the prompt typed in the dialog, routing through the same path as a typed prompt.
+     * The optional [select] carries the mode / model / reasoning picked in the dialog so the first
+     * turn runs with them even before this session's own model state has loaded.
+     */
+    @RequiresEdt
+    internal fun submitPrompt(text: String, select: PromptSelection? = null) {
+        if (readonly) return
+        if (text.isBlank()) return
+        // Seed the session's agent/model/reasoning so the pickers and later turns reflect the pick,
+        // then send the first turn carrying it too (so it applies before workspace-ready resolves).
+        select?.let { controller.applySelection(it) }
+        sendPrompt(text, emptyList(), select)
+    }
+
+    @RequiresEdt
+    internal fun focusPrompt() {
+        val target = promptFocusedComponent
+        ApplicationManager.getApplication().invokeLater({
+            if (!disposed && !project.isDisposed) {
+                IdeFocusManager.getInstance(project).requestFocusInProject(target, project)
+            }
+        }, ModalityState.defaultModalityState())
+    }
+
+    internal fun setModalContent(content: JComponent?, maxW: (() -> Int)? = null, focus: (() -> JComponent)? = null) {
+        modalFocus = if (content == null) null else focus
+        root.setModalContent(content, maxW)
+    }
+
+    private fun buildUi() {
+        root = SessionRootPanel()
+        // Containers stay transparent over the single self-rendered session root backdrop.
+        fileLinks = SessionFileLinks(workspace.directory, workspaces, cs, root, ::openUrl)
+        SessionContextMenu.install(root, this)
+
+        onboardingCard = OnboardingListCard().apply {
+            onLater = { onboarding.later() }
+            onSkipAll = { onboarding.skipAll() }
+            onStart = { onboarding.start() }
+        }
+
+        account = SessionAccountOverlay(
+            select = { org -> controller.selectOrganization(org) },
+            profile = { controller.openProfile() },
+        )
+        root.addOverlay(account) { pane, child ->
+            val size = child.preferredSize
+            val top = JBUI.scale(SessionUiStyle.View.Prompt.PANEL_VERTICAL_PADDING)
+            val right = JBUI.scale(SessionUiStyle.View.Prompt.PANEL_HORIZONTAL_PADDING)
+            java.awt.Rectangle(
+                pane.width - size.width - right,
+                top,
+                size.width,
+                size.height,
+            )
+        }
+
+        sessionContent = JPanel(BorderLayout()).apply { isOpaque = false }
+
+        blankBody = JPanel(BorderLayout()).apply { isOpaque = false }
+
+        load = LoadingPanel()
+        progressBody = load
+        val focus = { manager?.focusPrompt() ?: focusPrompt() }
+        val questionView = if (readonly) null else QuestionView(
+            project = project,
+            reply = { id, dto, opts -> controller.replyQuestion(id, dto, opts) },
+            reject = { id -> controller.rejectQuestion(id) },
+            follow = { scroll.following() },
+            scroll = { scroll.followBottom(it) },
+            selection = selection,
+            focus = focus,
+        ).also { question = it }
+        val permissionView = if (readonly) null else PermissionView(
+            reply = { id, dto, rules -> controller.replyPermission(id, dto, rules) },
+            openFile = fileLinks::open,
+            selection = selection,
+            focus = focus,
+        ).also { permission = it }
+        val loginView = if (readonly) null else LoginRequiredView(
+            openProfile = { controller.openProfile() },
+            dismiss = { controller.dismissLoginRequired() },
+            selection = selection,
+            focus = focus,
+        ).also { login = it }
+        outcome = SessionOutcomeView(
+            selection = selection,
+            focus = focus,
+            retry = if (readonly) null else controller::retry,
+            retryable = controller::canRetry,
+            dismiss = if (readonly) null else controller::dismissError,
+        )
+        messageBody = SessionMessageListPanel(
+            controller.model,
+            this,
+            questionView,
+            permissionView,
+            loginView,
+            fileLinks::open,
+            ::openUrl,
+            selection,
+            ::openAttachment,
+            repo = workspace.directory,
+            resize = { anchor, fn -> scroll.preserve(anchor, fn) },
+            revert = if (readonly) null else ::revert,
+            fork = if (forkSurface) ({ id -> forkMessage(id, "message") }) else null,
+            cancelRevert = if (readonly) null else ::cancelRevert,
+            deleteQueued = if (readonly) null else { id -> controller.deleteQueuedMessage(id) },
+            banner = if (readonly) null else RevertBanner(
+                controller.model,
+                ::redo,
+                controller::redoAll,
+                ::cancelRevert,
+                focus,
+                openSettingsAction = ::openCheckpointsSettings,
+            ),
+            onOpenSubagent = ::openSubagent,
+            onPromoteBackgroundAgent = if (readonly) null else BackgroundPromote(
+                available = { app.state.value.backgroundSubagents },
+                promote = controller::promoteBackgroundAgent,
+            ),
+            visible = { isShowing },
+        ).also {
+            it.outcome = outcome
+            it.setDiffOpener(::openInlineDiff, controller.id)
+            it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
+        }
+        header = SessionHeaderPanel(
+            controller,
+            this,
+            readonly,
+            boardVisible = { board },
+            onShowBoard = ::showBoard,
+            onOpenSubagent = ::openSubagent,
+            onJumpTimeline = { message, part -> jumpTimeline(message, part) },
+        )
+        if (!readonly && showBranchDock()) {
+            val owner = manager
+            val newWorktree = if (owner?.supportsNewWorktree == true) owner::newWorktree else null
+            val move = if (owner?.supportsMoveToWorktree == true) ::moveToWorktree else null
+            // Editor-tab hosts that show the dock (the worktree editor) report the branch, its PR, and
+            // its changes in their own header at the top of the tab, so their dock is the action row
+            // alone rather than a second place those counts appear.
+            dock = BranchDock(
+                openDiff = ::openBranchChanges,
+                onMove = move,
+                onNewWorktree = newWorktree,
+                header = owner?.hostedInEditorTab != true,
+            )
+        }
+
+        scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
+        overlay = SessionHoverCopyOverlay(root, scroll.component, this)
+        root.addOverlay(overlay) { pane, child ->
+            overlay.bounds(pane, child)
+        }
+        highlight = SessionHighlightOverlay(scroll.component, this)
+        // Full pane: the outline is positioned by painting against live turn bounds, not by layout.
+        root.addOverlay(highlight) { pane, _ ->
+            Rectangle(0, 0, pane.width, pane.height)
+        }
+        messageBody.onReflow = { on -> if (on && !opening) scroll.followTail() }
+        // A chunked rebuild drains across EDT turns; the open handshake must wait for it or it would
+        // scroll to the bottom of a transcript that is still assembling.
+        messageBody.onRebuilt = { if (opening) resumeOpen() }
+        scroll.onScroll = {
+            overlay.clear()
+            popup.hideAll()
+        }
+        // Only a deliberate scroll clears the outline: onScroll also fires for the jump's own
+        // programmatic passes, which would clear the outline the jump just drew.
+        scroll.onGesture = { highlight.clear() }
+
+        completion = KiloPromptCompletionProvider(
+            workspace = workspace,
+            service = workspaces,
+            actions = slashActions(),
+            mentions = mentionActions(),
+            scope = cs,
+        )
+        prompt = PromptPanel(
+            project = project,
+            selection = selection,
+            onSend = { text, files -> sendPrompt(text, files) },
+            onAbort = { controller.abort() },
+            onEnhance = controller::enhancePrompt,
+            onMentions = ::mentionParts,
+            completion = completion,
+            cs = cs,
+            hostedInEditorTab = manager?.hostedInEditorTab == true,
+        )
+        connection = ConnectionPanel(this, controller)
+        // The banner reports a broken session, so it owns the pointer where it sits: the transcript
+        // under it must not stay hovered and keep a popup open behind it.
+        root.addOverlay(connection, blocks = true) { pane, child ->
+            val size = child.preferredSize
+            if (readonly) {
+                val gap = SessionUiStyle.View.contentGap()
+                return@addOverlay java.awt.Rectangle(
+                    gap,
+                    pane.height - size.height - gap,
+                    (pane.width - gap * 2).coerceAtLeast(0),
+                    size.height,
+                )
+            }
+            val point = SwingUtilities.convertPoint(prompt.parent ?: root.content, prompt.x, prompt.y, pane)
+            val gap = SessionUiStyle.View.contentGap()
+            val wide = (prompt.width - gap * 2).coerceAtLeast(0)
+            // Anchor above the whole bottom container (dock + prompt) so the banner floats over the
+            // dock rather than covering it; fall back to the prompt when there is no dock.
+            val anchor = bottom ?: prompt
+            val topY = SwingUtilities.convertPoint(anchor.parent ?: root.content, anchor.x, anchor.y, pane).y
+            // Fix the banner width before measuring so its word-wrapped detail height is known.
+            child.setSize(wide, child.height)
+            val height = child.preferredSize.height.coerceAtMost((topY - gap).coerceAtLeast(0))
+            java.awt.Rectangle(
+                point.x + gap,
+                topY - height - gap,
+                wide,
+                height,
+            )
+        }
+
+        drop = SessionDropOverlay()
+        root.addOverlay(drop) { pane, _ ->
+            java.awt.Rectangle(0, 0, pane.width, pane.height)
+        }
+        root.overlay.setComponentZOrder(drop, 0)
+        promptRail = PromptRailController(
+            root = root,
+            model = controller.model,
+            messages = messageBody,
+            scroll = scroll,
+            parent = this,
+            timers = timers,
+            onReveal = ::revealPrompt,
+        )
+        if (!readonly) {
+            prompt.onFileDrag = ::syncDrop
+            prompt.installFileDrop(root, "session-root")
+        }
+        // The visual overlay returns contains(false) so normal UI remains clickable.
+        // Registering it as a native DnD target makes IntelliJ resolve a null over-component.
+
+        sessionContent.add(header, BorderLayout.NORTH)
+        sessionContent.add(scroll.component, BorderLayout.CENTER)
+        root.content.add(sessionContent, BorderLayout.CENTER)
+        if (!readonly) {
+            // In the sidebar tool window the bottom panel fills the full width; editor tabs keep the
+            // readable-width centering used across the transcript — for the dock as much as the
+            // prompt, so the strip above the prompt does not run wider than the session it belongs to.
+            val tab = manager?.hostedInEditorTab == true
+            val aligned = if (tab) {
+                prompt.align(
+                    HAlign.CENTER,
+                    VAlign.FIT,
+                    maxW = { SessionUiStyle.SessionLayout.readableWidth(prompt, style.transcriptFont) },
+                )
+            } else {
+                prompt.align(HAlign.FIT, VAlign.FIT)
+            }
+            val container = Stack.vertical()
+            dock?.let {
+                val row = if (tab) {
+                    it.align(
+                        HAlign.CENTER,
+                        VAlign.FIT,
+                        maxW = { SessionUiStyle.SessionLayout.readableWidth(it, style.transcriptFont) },
+                    )
+                } else {
+                    it
+                }
+                container.next(row)
+            }
+            container.next(aligned)
+            bottom = container
+            root.content.add(container, BorderLayout.SOUTH)
+        }
+        add(root, BorderLayout.CENTER)
+    }
+
+    private fun bindUi() {
+        if (!readonly) {
+            prompt.mode.onSelect = { item -> controller.selectAgent(item.id) }
+            prompt.model.onSelect = { item ->
+                prompt.setAttachmentEnabled(item.attachment)
+                controller.selectModel(item.provider, item.id)
+            }
+            prompt.reasoning.onSelect = { item -> controller.selectVariant(item.id) }
+            prompt.onReset = { controller.clearModelOverride() }
+            prompt.onChange = { scroll.refresh() }
+            prompt.onAutoApproveToggle = ::setAuto
+            prompt.setAutoApprove(controller.autoApprove)
+            startMcpAuthTracking()
+            prompt.model.favorites = { app.favorites.value }
+            prompt.model.onFavoriteToggle = { item ->
+                Telemetry.send(
+                    "Model Favorite Toggled",
+                    mapOf("provider" to item.provider, "modelId" to item.id),
+                )
+                app.toggleModelFavorite(item.provider, item.id)
+            }
+        }
+
+        controller.addListener(this) { event ->
+            when (event) {
+                is SessionControllerEvent.WorkspaceReady -> {
+                    if (readonly) return@addListener
+                    val m = controller.model
+                    prompt.mode.setItems(m.agents.map {
+                        ModePicker.Item(
+                            it.name,
+                            it.display,
+                            it.description,
+                            it.deprecated,
+                        )
+                    }, m.agent)
+                    val items = m.models.map {
+                        ModelPicker.Item(
+                            id = it.id,
+                            display = it.display,
+                            provider = it.provider,
+                            providerName = it.providerName,
+                            inputPrice = it.inputPrice,
+                            outputPrice = it.outputPrice,
+                            contextLength = it.contextLength,
+                            releaseDate = it.releaseDate,
+                            latest = it.latest,
+                            recommendedIndex = it.recommendedIndex,
+                            free = it.free,
+                            byok = it.byok,
+                            variants = it.variants,
+                            limit = it.limit?.let { limit -> ModelLimitDto(limit.context, limit.input, limit.output) },
+                            cost = it.cost,
+                            capabilities = it.capabilities,
+                            options = it.options,
+                            autoRouting = it.autoRouting,
+                            terminalBench = it.terminalBench,
+                            reasoning = it.reasoning,
+                            attachment = it.attachment,
+                            mayTrainOnYourPrompts = it.mayTrainOnYourPrompts,
+                        )
+                    }
+                    val selected =
+                        m.model?.let { full -> items.firstOrNull { it.key == full }?.key }
+                    prompt.model.setItems(items, selected)
+                    prompt.setAttachmentEnabled(items.firstOrNull { it.key == selected }?.attachment ?: true)
+                    prompt.reasoning.setItems(m.variants.map { ReasoningPicker.Item(it, variantTitle(it)) }, m.variant)
+                    prompt.setResetVisible(m.modelOverride)
+                    prompt.setReady(m.isReady())
+                    prompt.refreshHighlights()
+                    cs.launch { service<KiloMcpAuthService>().refresh(workspace.directory) }
+                }
+
+                is SessionControllerEvent.ViewChanged.ShowProgress -> {
+                    empty = null
+                    scroll.show(progressBody)
+                }
+
+                is SessionControllerEvent.ViewChanged.ShowEmpty -> {
+                    val panel = manager?.emptyPanel(this, controller)
+                        ?: EmptySessionPanel(this, controller, controller.recents(), timers = timers)
+                    empty = panel
+                    panel.setBranch(branch)
+                    scroll.show(panel.view)
+                }
+
+                is SessionControllerEvent.ViewChanged.ShowSession -> {
+                    empty = null
+                    scroll.show(body(controller.model.state))
+                }
+
+                is SessionControllerEvent.AppChanged -> {
+                    if (readonly) return@addListener
+                    prompt.setReady(controller.model.isReady())
+                    // Config carries the Swarm toggle, so the entry points follow it without a restart.
+                    refreshBoard()
+                }
+
+                is SessionControllerEvent.WorkspaceChanged -> {
+                    if (readonly) return@addListener
+                    prompt.setReady(controller.model.isReady())
+                }
+
+                is SessionControllerEvent.RecentsChanged -> {
+                    // The empty panel is reused across view refreshes, so push the new snapshot into it
+                    // in place. Null when the transcript (not the empty view) is showing.
+                    empty?.setRecents(controller.recents())
+                }
+
+                is SessionControllerEvent.ConnectionChanged -> Unit
+
+                is SessionControllerEvent.AccountOverlayChanged -> account.onEvent(event)
+            }
+        }
+
+        controller.model.addListener(this) { event ->
+            when (event) {
+                is SessionModelEvent.StateChanged -> onStateChanged(event.state)
+
+                is SessionModelEvent.SessionUpdated -> onSessionUpdated()
+
+                is SessionModelEvent.RevertChanged -> onRevertChanged(event.revert)
+
+                is SessionModelEvent.MessageAdded -> {
+                    confirmPendingSend()
+                    syncDock()
+                    refreshBoardIfEmpty()
+                }
+
+                is SessionModelEvent.MessageRemoved,
+                is SessionModelEvent.HistoryLoaded,
+                is SessionModelEvent.Cleared -> {
+                    // A reload can surface the pending send's own message without a MessageAdded,
+                    // so re-check here too; otherwise the retained draft would linger until the
+                    // next submit.
+                    confirmPendingSend()
+                    syncDock()
+                    // Covers opening a session with an existing board, and this session's own first
+                    // board post; a subagent's post is caught by the busy->idle probe instead.
+                    refreshBoardIfEmpty()
+                }
+
+                is SessionModelEvent.QueueChanged -> Unit
+
+                is SessionModelEvent.TurnAdded,
+                is SessionModelEvent.TurnUpdated,
+                is SessionModelEvent.ContentAdded,
+                is SessionModelEvent.ContentDelta,
+                is SessionModelEvent.TurnRemoved,
+                is SessionModelEvent.MessageUpdated,
+                is SessionModelEvent.ContentUpdated,
+                is SessionModelEvent.ContentRemoved,
+                is SessionModelEvent.DiffUpdated,
+                is SessionModelEvent.TodosUpdated,
+                is SessionModelEvent.BackgroundAgentsUpdated,
+                is SessionModelEvent.HeaderUpdated,
+                is SessionModelEvent.Compacted -> Unit
+            }
+        }
+    }
+
+    @RequiresEdt
+    private fun syncDock() {
+        val dock = dock ?: return
+        dock.setHasMessages(controller.model.messages().isNotEmpty())
+        dock.setHasSession(controller.id != null)
+    }
+
+    @RequiresEdt
+    private fun syncDrop(value: Boolean) {
+        if (disposed) return
+        if (value) {
+            hide.stop()
+            drop.setActive(true)
+            return
+        }
+        hide.restart()
+    }
+
+    private fun bindOnboarding() {
+        cs.launch {
+            onboarding.steps.collect { steps ->
+                withContext(Dispatchers.Main) {
+                    applyOnboardingSteps(steps)
+                }
+            }
+        }
+    }
+
+    @RequiresEdt
+    private fun applyOnboardingSteps(steps: List<OnboardingStep>) {
+        // Only a blocking step keeps the session dead behind a modal card today — the session
+        // stays interactive while only non-blocking steps are pending. There is currently only one
+        // provider (v5 migration) and it is always blocking, so this always shows when non-empty.
+        if (steps.isEmpty() || steps.none { it.blocking }) {
+            if (root.blocker.isVisible) LOG.info("Onboarding: overlay hidden session=${id ?: cacheKey ?: "new"}")
+            setModalContent(null)
+            return
+        }
+        if (!root.blocker.isVisible) LOG.info("Onboarding: overlay shown session=${id ?: cacheKey ?: "new"} steps=${steps.size}")
+        onboardingCard.update(steps)
+        setModalContent(
+            onboardingCard,
+            maxW = { SessionUiStyle.SessionLayout.readableWidth(root, style.transcriptFont) },
+        ) { onboardingCard.preferredFocusComponent() }
+        onboardingCard.revalidate()
+        onboardingCard.repaint()
+    }
+
+    private fun bindStyle() {
+        addHierarchyListener { event ->
+            if ((event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong()) == 0L) return@addHierarchyListener
+            if (isShowing) {
+                refreshBranch()
+                // A question/permission asked while this session was hidden is applied immediately
+                // to the model (so history activity stays fresh) but the transcript catch-up flush
+                // is what actually re-renders it. Run after that catch-up is scheduled so the active
+                // prompt is surfaced and scrolled into view rather than left silently active off-screen.
+                ApplicationManager.getApplication().invokeLater { surfaceActivePrompt() }
+            } else {
+                popup.hideAll()
+                promptRail.hideAll()
+            }
+        }
+
+        val bus = ApplicationManager.getApplication().messageBus.connect(this)
+        bus.subscribe(EditorColorsManager.TOPIC, EditorColorsListener {
+            ApplicationManager.getApplication().invokeLater {
+                if (disposed) return@invokeLater
+                applyStyle(SessionEditorStyle.current())
+            }
+        })
+        bus.subscribe(LafManagerListener.TOPIC, LafManagerListener {
+            ApplicationManager.getApplication().invokeLater {
+                if (disposed) return@invokeLater
+                applyStyle(SessionEditorStyle.current())
+            }
+        })
+        bus.subscribe(ApprovalReasonVisibilityListener.TOPIC, ApprovalReasonVisibilityListener { visible ->
+            ApplicationManager.getApplication().invokeLater {
+                if (disposed) return@invokeLater
+                if (!this::messageBody.isInitialized) return@invokeLater
+                messageBody.syncApprovalReasons(visible)
+            }
+        })
+        bus.subscribe(TranscriptDisplayListener.TOPIC, TranscriptDisplayListener { display ->
+            ApplicationManager.getApplication().invokeLater {
+                if (disposed) return@invokeLater
+                if (!this::messageBody.isInitialized) return@invokeLater
+                messageBody.syncTranscriptDisplay(display)
+            }
+        })
+        // refreshBranch cancels the in-flight lookup first, so a flip both drops a running gh call
+        // and re-reads the branch without one.
+        bus.subscribe(GithubIntegrationListener.TOPIC, GithubIntegrationListener {
+            ApplicationManager.getApplication().invokeLater {
+                if (disposed) return@invokeLater
+                refreshBranch()
+            }
+        })
+    }
+
+    private fun onSessionLoaded(show: Boolean) {
+        loaded = show
+        if (!this::scroll.isInitialized) return
+        finishOpen(show)
+    }
+
+    private fun body(state: SessionState): JPanel {
+        if (controller.model.showSession) return messageBody
+        if (state is SessionState.Retry || state is SessionState.Offline) return progressBody
+        if (state is SessionState.Loading) return progressBody
+        return blankBody
+    }
+
+    private fun finishOpen(show: Boolean) {
+        loaded = show
+        if (!opening) return
+        if (!show) {
+            pending = false
+            opening = false
+            return
+        }
+        pending = true
+        resumeOpen()
+    }
+
+    private fun resumeOpen() {
+        if (!pending || !opening || !this::scroll.isInitialized) return
+        if (width <= 0 || height <= 0) return
+        if (body(controller.model.state) !== messageBody) return
+        // A chunked history rebuild assembles the transcript over several EDT turns; wait for it so
+        // openBottom lands on the finished transcript instead of a partial one.
+        if (messageBody.rebuilding) return
+        pending = false
+        messageBody.reflow()
+        scroll.openBottom {
+            opening = false
+        }
+    }
+
+    private fun sendPrompt(text: String, files: List<PromptPartDto>, select: PromptSelection? = null) {
+        if (readonly) return
+        if (text.isBlank() && files.isEmpty()) return
+        prompt.clear()
+        val follow = scroll.following()
+        val action = completion.clientAction(text)
+        if (action != null) {
+            action.action()
+            scroll.followBottom(follow)
+            return
+        }
+        val command = completion.serverCommand(text)
+        if (command != null) {
+            controller.command(command.first, command.second, files)
+            scroll.followBottom(follow)
+            return
+        }
+        cs.launch(Dispatchers.Main) {
+            // Only the prompt path uses editor context; gather after the command branches so slash
+            // commands and client actions don't pay the editor-context cost or hit its failure modes.
+            // Ignore-file VFS reads suspend on Dispatchers.IO before returning to the EDT.
+            val editor = EditorContextGatherer.gather(project, workspace.directory)
+            if (disposed || project.isDisposed) return@launch
+            val allFiles = files + editor.selection
+            LOG.debug {
+                val parts = buildList {
+                    text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
+                    addAll(allFiles)
+                }
+                val agent = controller.model.agent ?: "none"
+                val model = controller.model.model ?: "none"
+                "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
+            }
+            // Baseline the user-message ids for this send. onStateChanged uses it to tell a prompt
+            // that failed before the server ever created its message (restore the draft) apart from a
+            // turn that failed after the message was already persisted (nothing to restore -- it's in
+            // the transcript already). A queued send baselines the in-flight turn's message, so that
+            // turn cannot be mistaken for confirmation of this one.
+            pendingSend = userMessageIds()
+            controller.prompt(text, allFiles, editor.context, select)
+            scroll.followBottom(follow)
+        }
+    }
+
+    @RequiresEdt
+    private fun userMessageIds() = controller.model.messages()
+        .filter { it.info.role == "user" }
+        .map { it.info.id }
+        .toSet()
+
+    /**
+     * Marks the in-flight send as accepted once its own user message is persisted, which releases
+     * the retained draft. Scoped by the dispatch-time baseline so a message belonging to an earlier,
+     * still-streaming turn cannot confirm a queued send that has not landed yet. Keyed by id rather
+     * than count, so a revert removing a message cannot strand the next send above its baseline.
+     */
+    @RequiresEdt
+    private fun confirmPendingSend() {
+        val baseline = pendingSend ?: return
+        if (userMessageIds().all { it in baseline }) return
+        pendingSend = null
+        prompt.clearLastSubmission()
+    }
+
+    @RequiresEdt
+    private fun revert(id: String) {
+        pendingRollback = id
+        pendingRedo = null
+        controller.revert(id)
+    }
+
+    @RequiresEdt
+    private fun redo() {
+        pendingRedo = controller.model.revert()?.messageID
+        pendingRollback = null
+        controller.redo()
+    }
+
+    @RequiresEdt
+    private fun cancelRevert() {
+        pendingRollback = null
+        pendingRedo = null
+        controller.cancelRevert()
+    }
+
+    @RequiresEdt
+    private fun onRevertChanged(revert: SessionRevertDto?) {
+        refreshBranchChanges()
+        syncPromptRevert()
+        val rollback = pendingRollback
+        if (rollback != null) {
+            if (revert?.messageID == rollback) {
+                pendingRollback = null
+                scroll.followBottom(true)
+                return
+            }
+            pendingRollback = null
+        }
+        val redo = pendingRedo
+        if (redo == null) return
+        if (!controller.model.isRevertedMessage(redo)) {
+            pendingRedo = null
+            scroll.scrollMessageBottom(redo)
+            return
+        }
+        if (revert != null) pendingRedo = null
+    }
+
+    // Refills the prompt box from the message a revert landed on: its text plus every attachment it
+    // carried, including files the CLI could not read (their path survives in the notice). Stops
+    // managing the box once the user edits the draft, so a manual change is never overwritten.
+    @RequiresEdt
+    private fun syncPromptRevert() {
+        val saved = revertDraft
+        if (saved != null && (prompt.text() != saved.first || prompt.attachments() != saved.second)) {
+            revertDraft = null
+            return
+        }
+        if (saved == null && prompt.hasDraft()) return
+        val mark = controller.model.revert()
+        if (mark == null) {
+            prompt.clear()
+            revertDraft = null
+            return
+        }
+        val msg = controller.model.message(mark.messageID) ?: return
+        val text = msg.parts.values.filterIsInstance<Text>().firstOrNull()?.content?.toString() ?: ""
+        val items = msg.parts.values.mapNotNull { part ->
+            when (part) {
+                is FileAttachment -> part.toPromptAttachment()
+                is Notice -> part.toPromptAttachment()
+                else -> null
+            }
+        }
+        prompt.setDraft(text, items)
+        // Store what the box actually holds, not the raw part text: prompt.text() is trimmed, so a
+        // message whose text carries surrounding whitespace would otherwise never match the guard
+        // above and the revert would stop being tracked after the first sync.
+        revertDraft = prompt.text() to items
+    }
+
+    private fun slashActions(): List<SlashAction> {
+        val fns: Map<SlashAction.Spec, () -> Unit> = mapOf(
+            SlashAction.NEW to { manager?.newSession() },
+            SlashAction.SESSIONS to { manager?.showHistory() },
+            SlashAction.MODELS to { prompt.model.open() },
+            SlashAction.AGENTS to { prompt.mode.open() },
+            SlashAction.VARIANT to { prompt.reasoning.open() },
+            SlashAction.COMPACT to { controller.compact() },
+            SlashAction.RELOAD to { reloadCoreSettings(workspaces, workspace.directory, project, "slash_command") },
+            SlashAction.SETTINGS to { openKiloSettings() },
+            SlashAction.HELP to { BrowserUtil.browse(KiloDocs.BASE) },
+        )
+        return SlashAction.ALL.map { spec -> bind(spec, fns.getValue(spec)) }
+    }
+
+    private fun bind(spec: SlashAction.Spec, action: () -> Unit) = SlashAction(
+        spec.name,
+        KiloBundle.message(spec.descriptionKey),
+        spec.hints,
+        {
+            Telemetry.send("Slash Command Used", mapOf("slashCommandType" to "client", "command" to spec.name))
+            action()
+        },
+    )
+
+    private fun mentionActions(): List<MentionAction> = MentionAction.ALL.map(::bind)
+
+    private fun bind(spec: MentionAction.Spec) = MentionAction(
+        spec.name,
+        KiloBundle.message(spec.descriptionKey),
+        spec.hints,
+        spec.available,
+    )
+
+    private suspend fun mentionParts(text: String): List<PromptPartDto> {
+        val names = MentionAction.ALL.mapTo(mutableSetOf()) { it.name }
+        return promptMentionParts(
+            text = text,
+            directory = workspace.directory,
+            reserved = names,
+            resolve = { path -> workspaces.files(workspace.directory, path).isNotEmpty() },
+            gitChanges = { workspaces.gitChanges(workspace.directory) },
+        )
+    }
+
+    private fun openUrl(url: String) {
+        BrowserUtil.browse(url)
+    }
+
+    private fun openInlineDiff(files: List<DiffFileDto>, title: String, key: String) {
+        val dir = controller.sessionDirectory
+        cs.launch {
+            val branch = workspaces.branchName(dir)
+            val label = branch?.let { KiloBundle.message("diff.editor.inline.title.named", title, it) } ?: title
+            LOG.info("open inline diff session=${controller.id ?: "pending"} dir=${ChatLogSummary.dir(dir)} files=${files.size}")
+            withContext(Dispatchers.Main) {
+                ensureDiffEditorKind()
+                project.service<KiloInlineDiffStore>().put(key, files)
+                project.service<KiloVfsManager>().open(
+                    KiloDiffEditorKind.ID,
+                    diffParams("inline", dir, controller.id, label, token = key),
+                )
+                Telemetry.send("Diff Editor Opened", mapOf("source" to "inline"))
+            }
+        }
+    }
+
+    @RequiresEdt
+    override fun showBoard() {
+        openBoard()?.show()
+    }
+
+    /**
+     * Builds the board dialog and binds its lifetime, without showing it. Split from [showBoard] so
+     * the lifetime wiring is one statement both the caller and its test go through; showing a real
+     * window is the only part a test cannot exercise.
+     *
+     * Returns null when the board does not apply to this session.
+     */
+    @RequiresEdt
+    internal fun openBoard(): SessionBoardDialog? {
+        val session = controller.id ?: return null
+        if (!board) return null
+        val order = listOf("main") + controller.model.childSessions()
+        Telemetry.send("Swarm Board Opened", mapOf("sessionId" to session))
+        val dialog = SessionBoardDialog(this, project, session, title(), workspace.directory, order, sessions) { id, label ->
+            openSubagent(id, label ?: id)
+        }
+        // A non-modal dialog outlives show(), so bound it to this session: disposing the dialog's
+        // disposable calls DialogWrapper.dispose(), so closing the session tab closes the board too
+        // instead of leaving a window holding a disposed SessionUi and its coroutine scope.
+        Disposer.register(this, dialog.disposable)
+        // The board can be reset while the dialog is open, which must hide the entry points again,
+        // so re-probe when it closes. Skipped when the session itself is going away, since that path
+        // disposes the dialog too.
+        Disposer.register(dialog.disposable) { if (!disposed) refreshBoard() }
+        return dialog
+    }
+
+    @RequiresEdt
+    private fun openSubagent(sessionId: String, title: String) {
+        val color = AgentAvatarIdentity.palette(controller.model.childSessions())[sessionId]
+        service<SubagentTitleCache>().put(sessionId, title, color)
+        ensureSubagentSessionEditorKind()
+        project.service<KiloVfsManager>().open(
+            SubagentSessionEditorKind.ID,
+            subagentSessionParams(sessionId, workspace.directory),
+        )
+        Telemetry.send("Subagent Session Opened", mapOf("sessionId" to sessionId))
+    }
+
+    /**
+     * Jumps the transcript to a header-timeline step and outlines that step.
+     *
+     * The outline wraps the clicked part, not its turn: a turn is one user message plus the whole
+     * assistant response, which can span dozens of messages and every bar in it, so outlining the
+     * turn would draw the same box for almost every bar. The target resolution mirrors
+     * [ai.kilocode.client.session.scroll.SessionScroll.scrollPartTop] exactly — the part, or its
+     * message when the part has no renderer — so the outline always wraps what the scroll aimed at.
+     */
+    @RequiresEdt
+    private fun jumpTimeline(message: String, part: String) {
+        if (!scroll.scrollPartTop(message, part)) return
+        val step = messageBody.findPart(message, part) ?: messageBody.findMessage(message) ?: return
+        highlight.show(step)
+    }
+
+    /** Marks only the user prompt bubble a prompt-navigator jump landed on. */
+    @RequiresEdt
+    private fun revealPrompt(id: String) {
+        val prompt = messageBody.findPrompt(id) ?: return
+        highlight.show(prompt)
+    }
+
+    @RequiresEdt
+    private fun refreshBranchChanges() {
+        val dock = dock ?: return
+        if (disposed || project.isDisposed) return
+        val local = manager?.supportsMoveToWorktree == true || manager?.supportsNewWorktree == true
+        refreshJob?.cancel()
+        refreshJob = cs.launch {
+            launch {
+                val files = runCatching { workspaces.branchDiff(workspace.directory, patches = false) }
+                    .getOrElse {
+                        if (it is CancellationException) throw it
+                        LOG.warn("branch changes badge refresh failed dir=${workspace.directory}", it)
+                        emptyList()
+                    }
+                withContext(Dispatchers.Main) {
+                    if (disposed || project.isDisposed) return@withContext
+                    dock.setChanges(files)
+                }
+            }
+            if (local) launch {
+                val files = runCatching { workspaces.localDiff(workspace.directory, patches = false) }
+                    .getOrElse {
+                        if (it is CancellationException) throw it
+                        LOG.warn("local changes refresh failed dir=${workspace.directory}", it)
+                        emptyList()
+                    }
+                withContext(Dispatchers.Main) {
+                    if (disposed || project.isDisposed) return@withContext
+                    dock.setLocal(files)
+                }
+            }
+        }
+    }
+
+    /**
+     * Opens the branch diff editor. Reached from the changes badge and from the Compare to Base
+     * context-menu action, so it must not depend on [dock] — hosts that hide the dock still offer the
+     * action. Never cancelled by a background refresh.
+     */
+    @RequiresEdt
+    private fun openBranchChanges() {
+        if (disposed || project.isDisposed) return
+        refreshBranchChanges()
+        openBranchDiff()
+    }
+
+    /** Starts the Move to Worktree flow for the current session through the side-panel manager. */
+    @RequiresEdt
+    private fun moveToWorktree() {
+        manager?.moveToWorktree(controller.id, controller.sessionDirectory)
+    }
+
+    @RequiresEdt
+    private fun openBranchDiff() {
+        openKiloDiff(project, workspace.directory, KiloDiffComparison.BASE, parent = this)
+    }
+
+    private fun showBranchDock(): Boolean = manager?.showsBranchDock != false
+
+    /**
+     * Refreshes the branch/PR status. Uses the session's own [workspace] directory (the resolved
+     * backend path) — not `project.basePath`, which is a synthetic frontend path in split mode — so
+     * the PR always matches the branch checked out in this session's directory.
+     *
+     * Runs regardless of [dock] because the context-menu pull-request actions read [branch] too, and
+     * the hosts that hide the dock (Agent Manager worktree session editors) are exactly the ones most
+     * likely to have a PR. Skipped for readonly hosts, which offer no branch-scoped actions worth the
+     * `gh` round-trip.
+     *
+     * With the GitHub integration off, the backend resolves the branch from git alone and returns a
+     * null PR, so the dock keeps working while no `gh` process is spawned.
+     */
+    private fun refreshBranch() {
+        if (readonly) return
+        branchJob?.cancel()
+        val github = KiloPluginSettings.getGithub()
+        branchJob = cs.launch {
+            val status = runCatching { service<KiloWorktreeService>().branchStatus(workspace.directory, github) }
+                .getOrElse {
+                    if (it is CancellationException) throw it
+                    LOG.warn("branch status refresh failed dir=${workspace.directory}", it)
+                    return@launch
+                }
+            withContext(Dispatchers.Main) {
+                if (disposed || project.isDisposed) return@withContext
+                val next = held(status, branch)
+                branch = next
+                dock?.setBranch(next)
+                empty?.setBranch(next)
+            }
+        }
+    }
+
+    /**
+     * Probes whether this session's shared agent board holds anything, so the board entry points
+     * can hide on an empty board like VS Code's do. Asks for a single message because only the
+     * presence of one matters here.
+     *
+     * Not derivable from the transcript: a subagent's `board_post` is recorded in the subagent's own
+     * session, so the root transcript can stay empty while the board is not. Event-driven only —
+     * see the call sites — never polled.
+     */
+    @RequiresEdt
+    private fun refreshBoard() {
+        if (!boardSurface) {
+            setBoardHasMessages(false)
+            return
+        }
+        val session = controller.id ?: return
+        boardJob?.cancel()
+        boardJob = cs.launch {
+            val board = runCatching { sessions.sessionBoard(session, workspace.directory, before = null, limit = 1) }
+                .getOrElse {
+                    if (it is CancellationException) throw it
+                    LOG.warn("session board probe failed session=$session", it)
+                    return@launch
+                }
+            withContext(Dispatchers.Main) {
+                if (disposed || project.isDisposed) return@withContext
+                setBoardHasMessages(board.messages.isNotEmpty())
+            }
+        }
+    }
+
+    /**
+     * Probe only while the board is still believed empty. Message events fire many times per turn
+     * and the answer cannot change back to empty on its own, so re-probing once the icon already
+     * shows would be pure chatter.
+     */
+    @RequiresEdt
+    private fun refreshBoardIfEmpty() {
+        if (boardHasMessages) return
+        refreshBoard()
+    }
+
+    @RequiresEdt
+    private fun setBoardHasMessages(value: Boolean) {
+        if (boardHasMessages == value) return
+        boardHasMessages = value
+        // Re-runs the header sync so the icon's visibility follows the new value. The menu action
+        // reads `board` on demand and needs no notification.
+        if (::header.isInitialized) header.update(controller.model.header)
+    }
+
+    private fun openAttachment(messageId: String, item: FileAttachment) {
+        val url = item.url.takeIf { it.isNotBlank() } ?: run {
+            LOG.info("kind=attachment-open skipped=true reason=blank-url message=$messageId part=${item.id} name=${attachmentName(item)} mime=${item.mime}")
+            return
+        }
+        LOG.info(
+            "kind=attachment-open session=${controller.id ?: "none"} message=$messageId part=${item.id} " +
+                "name=${attachmentName(item)} mime=${item.mime} url=${attachmentUrl(url)} dir=${workspace.directory}"
+        )
+        if (isEmbeddedAttachment(url)) {
+            val id = controller.id ?: run {
+                LOG.info("kind=attachment-open skipped=true reason=missing-session message=$messageId part=${item.id} name=${attachmentName(item)}")
+                return
+            }
+            LOG.info("kind=attachment-open route=kilo-vfs session=$id message=$messageId part=${item.id} name=${attachmentName(item)}")
+            ensureAttachmentEditorKind()
+            project.service<KiloVfsManager>().open(
+                AttachmentEditorKind.ID,
+                attachmentParams(id, messageId, item, attachmentName(item), workspace.directory),
+            )
+            return
+        }
+        val uri = runCatching { URI.create(url) }.getOrNull() ?: run {
+            LOG.info("kind=attachment-open skipped=true reason=invalid-uri message=$messageId part=${item.id} url=${attachmentUrl(url)}")
+            return
+        }
+        if (uri.scheme == "file") {
+            val path = runCatching { Path.of(cleanAttachmentUri(uri)).toString() }.getOrNull() ?: run {
+                LOG.info("kind=attachment-open skipped=true reason=invalid-file-uri message=$messageId part=${item.id} url=${attachmentUrl(url)}")
+                return
+            }
+            val target = attachmentHref(path, item)
+            LOG.info("kind=attachment-open route=file session=${controller.id ?: "none"} message=$messageId part=${item.id} path=$target")
+            fileLinks.open(target, null)
+            return
+        }
+        LOG.info("kind=attachment-open route=browser session=${controller.id ?: "none"} message=$messageId part=${item.id} url=${attachmentUrl(url)}")
+        openUrl(url)
+    }
+
+    private fun attachmentName(item: FileAttachment) = item.filename?.takeIf { it.isNotBlank() }
+        ?: item.url.substringBefore(',').substringAfterLast('/').takeIf { it.isNotBlank() }
+        ?: "attachment"
+
+    private fun attachmentHref(path: String, item: FileAttachment): String {
+        val start = item.startLine ?: return path
+        val end = item.endLine ?: start
+        return "$path:$start-$end"
+    }
+
+    private fun cleanAttachmentUri(uri: URI): URI = URI(uri.scheme, uri.authority, uri.path, null, null)
+
+    private fun attachmentUrl(url: String): String {
+        val scheme = url.substringBefore(':', missingDelimiterValue = "none")
+        return "scheme=$scheme chars=${url.length} embedded=${isEmbeddedAttachment(url)}"
+    }
+
+    private fun onStateChanged(state: SessionState) {
+        if (disposed) return
+        val busy = state.isBusy()
+        if (wasBusy && !busy) {
+            refreshBranchChanges()
+            refreshBranch()
+            // A turn that ran subagents may have added board messages this transcript never saw.
+            refreshBoard()
+        }
+        wasBusy = busy
+        if (state is SessionState.Reverting) overlay.clear()
+        if (state is SessionState.Error || state is SessionState.TurnEnded) {
+            pendingRollback = null
+            pendingRedo = null
+        }
+        // Give the typed prompt back when a send errors before its message is persisted (rejected
+        // synchronously, or prompt_async's 204-then-session.error case). pendingSend is deliberately
+        // kept: some errors -- an unreadable attachment, for one -- are reported before the user
+        // message is written but the send still lands, so the draft has to be droppable again once
+        // that is confirmed (see the turn-open branch below). A genuine failure never persists a
+        // message, so its draft stays put.
+        if (pendingSend != null && state is SessionState.Error) {
+            prompt.restoreLastSubmission()
+        }
+        // A restored draft is a duplicate only once this send's own message landed. That is exactly
+        // when pendingSend is released (confirmPendingSend saw a user message id that was not in the
+        // dispatch baseline), so gate the discard on that rather than on any Busy. A retry, a login
+        // resume, or an auto-approval also enters Busy but proves nothing about this send, and must
+        // not drop the draft; a genuine failure never persists a message, so its draft stays put too.
+        if (state is SessionState.Busy && pendingSend == null) prompt.discardRestoredSubmission()
+        prompt.setBusy(busy)
+        dock?.setBusy(busy)
+        load.setState(state)
+        scroll.setQuestionPending(questionPending(state))
+        scroll.show(body(state))
+        manager?.activityChanged()
+        refresh()
+    }
+
+    private fun onSessionUpdated() {
+        syncDock()
+        manager?.activityChanged()
+    }
+
+    /**
+     * Re-surface an active question or permission after this session's component becomes visible.
+     * `SessionController.handleHidden()` applies `QuestionAsked`/`PermissionAsked` to the model
+     * immediately even while hidden, so history activity stays fresh, but the transcript catch-up
+     * flush only replays buffered message/part events — it does not re-run the state-driven view
+     * sync or scroll. Without this, a prompt that arrived while hidden stays correctly modeled but
+     * invisible/unscrolled when the user reopens the session.
+     */
+    private fun surfaceActivePrompt() {
+        if (disposed || !isShowing) return
+        if (!this::messageBody.isInitialized || !this::scroll.isInitialized) return
+        val state = controller.model.state
+        if (state !is SessionState.AwaitingQuestion && state !is SessionState.AwaitingPermission) return
+        messageBody.syncActiveState(state)
+        scroll.setQuestionPending(questionPending(state))
+        scroll.followBottom(true)
+        refresh()
+    }
+
+    private fun refresh() {
+        if (disposed) return
+        scroll.refresh()
+        root.revalidate()
+        root.repaint()
+    }
+
+    override fun applyStyle(style: SessionEditorStyle) {
+        if (disposed) return
+        this.style = style
+        selection.applyStyle(style)
+        load.applyStyle(style)
+        header.applyStyle(style)
+        dock?.applyStyle(style)
+        prompt.applyStyle(style)
+        connection.applyStyle(style)
+        scroll.applyStyle(style)
+        promptRail.applyStyle(style)
+        empty?.applyStyle(style)
+        refresh()
+    }
+
+    private fun openProfileSettings() {
+        ShowSettingsUtil.getInstance().showSettingsDialog(
+            project,
+            Predicate { cfg: Configurable ->
+                cfg is ConfigurableWithId && cfg.getId() == UserProfileConfigurable.ID
+            },
+            { cfg: Configurable -> cfg.focusOn(UserProfileConfigurable.FOCUS_ACCOUNT_COMBO) },
+        )
+    }
+
+    private fun openCheckpointsSettings() {
+        ShowSettingsUtil.getInstance().showSettingsDialog(
+            project,
+            Predicate { cfg: Configurable ->
+                cfg is ConfigurableWithId && cfg.getId() == CheckpointsConfigurable.ID
+            },
+            { _: Configurable -> },
+        )
+    }
+
+    /**
+     * Collects [KiloMcpAuthService] state for this session's directory and reflects it on the prompt
+     * issue actions. Refresh is event-driven (workspace ready, after a sign-in attempt) rather
+     * than polled.
+     */
+    private fun startMcpAuthTracking() {
+        val auth = service<KiloMcpAuthService>()
+        issuesJob?.cancel()
+        issuesJob = cs.launch {
+            auth.needsAuth.combine(auth.busy) { needs, busy ->
+                val servers = needs[workspace.directory].orEmpty()
+                val prefix = "${workspace.directory}\u0000"
+                val active = busy.mapNotNull { key -> if (key.startsWith(prefix)) key.removePrefix(prefix) else null }.toSet()
+                servers to active
+            }
+                .distinctUntilChanged()
+                .collect { (servers, active) ->
+                    withContext(Dispatchers.EDT) {
+                        prompt.setIssues(servers.sorted().map { name -> mcpAuthIssue(name, name in active) })
+                    }
+                }
+        }
+    }
+
+    @RequiresEdt
+    private fun mcpAuthIssue(name: String, busy: Boolean): SessionIssue {
+        val display = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        return SessionIssue(
+            id = "mcp-auth:$name",
+            title = KiloBundle.message("prompt.mcp.provider", display),
+            actions = listOfNotNull(
+                SessionIssueAction(
+                    title = KiloBundle.message(if (busy) "prompt.mcp.needsAuth.busy" else "settings.agentBehavior.mcp.signIn"),
+                    enabled = !busy,
+                    action = { signInFromPrompt(name) },
+                ),
+                SessionIssueAction(
+                    title = KiloBundle.message("settings.agentBehavior.mcp.signIn.cancel"),
+                    action = { cancelFromPrompt(name) },
+                ).takeIf { busy },
+                SessionIssueAction(
+                    title = KiloBundle.message("prompt.mcp.openSettings"),
+                    action = { openMcpSettings(name) },
+                ),
+            ),
+        )
+    }
+
+    @RequiresEdt
+    private fun openMcpSettings(name: String) {
+        ShowSettingsUtil.getInstance().showSettingsDialog(
+            project,
+            Predicate { cfg: Configurable -> cfg is ConfigurableWithId && cfg.getId() == McpConfigurable.ID },
+            { cfg: Configurable -> (cfg as? McpConfigurable)?.filter(name) },
+        )
+    }
+
+    private fun signInFromPrompt(name: String) {
+        val auth = service<KiloMcpAuthService>()
+        cs.launch {
+            val result = auth.signIn(workspace.directory, name)
+            withContext(Dispatchers.EDT) { auth.report(name, result) }
+        }
+    }
+
+    private fun cancelFromPrompt(name: String) {
+        cs.launch { service<KiloMcpAuthService>().cancel(workspace.directory, name) }
+    }
+
+    private fun openKiloSettings() {
+        ShowSettingsUtil.getInstance().showSettingsDialog(
+            project,
+            Predicate { cfg: Configurable ->
+                cfg is ConfigurableWithId && cfg.getId() == KiloSettingsConfigurable.ID
+            },
+            { _: Configurable -> },
+        )
+    }
+
+    override fun dispose() {
+        disposed = true
+        refreshJob?.cancel()
+        branchJob?.cancel()
+        issuesJob?.cancel()
+        hide.stop()
+        popup.hideAll()
+        if (this::promptRail.isInitialized) promptRail.hideAll()
+        modalFocus = null
+        empty = null
+        if (this::root.isInitialized) root.setModalContent(null)
+        removeAll()
+    }
+}
+
+private fun variantTitle(value: String): String = value.replaceFirstChar { it.titlecase() }
+
+private fun questionPending(state: SessionState): Boolean {
+    if (state !is SessionState.AwaitingQuestion) return false
+    return state.question.items.none { it.planFollowup() }
+}
+
+private fun ai.kilocode.client.session.model.QuestionItem.planFollowup() =
+    questionKey == "plan.followup.question" || headerKey == "plan.followup.header"

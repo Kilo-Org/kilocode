@@ -1,0 +1,157 @@
+import { createMemo, createSignal } from "solid-js"
+import type { WorktreeFileDiff } from "../src/types/messages"
+
+const sizeKeys = new WeakMap<
+  WorktreeFileDiff,
+  {
+    context: string | undefined
+    style: string
+    patch: string | undefined
+    before: string
+    after: string
+    key: object
+  }
+>()
+
+export function sameDiffMeta(left: WorktreeFileDiff, right: WorktreeFileDiff) {
+  return (
+    left.file === right.file &&
+    left.status === right.status &&
+    left.additions === right.additions &&
+    left.deletions === right.deletions &&
+    left.tracked === right.tracked &&
+    left.generatedLike === right.generatedLike &&
+    left.summarized === right.summarized &&
+    left.stamp === right.stamp &&
+    left.kind === right.kind
+  )
+}
+
+export function diffToken(diff: WorktreeFileDiff) {
+  const parts = [diff.status ?? "", diff.additions, diff.deletions, diff.tracked ?? "", diff.generatedLike ?? ""]
+  return diff.stamp ?? parts.join(":")
+}
+
+export function diffSizeKey(context: string | undefined, diff: WorktreeFileDiff, style: string) {
+  const cached = sizeKeys.get(diff)
+  if (
+    cached &&
+    cached.context === context &&
+    cached.style === style &&
+    cached.patch === diff.patch &&
+    cached.before === diff.before &&
+    cached.after === diff.after
+  )
+    return cached.key
+
+  const key = {}
+  sizeKeys.set(diff, { context, style, patch: diff.patch, before: diff.before, after: diff.after, key })
+  return key
+}
+
+// Keep each rendered row mounted while live detail refreshes replace its data.
+// Otherwise Solid's keyed <For> remounts the row and deferred rendering swaps a
+// previously rendered diff above the viewport for a short placeholder.
+export function createDiffRows(source: () => WorktreeFileDiff[], key: () => string | undefined) {
+  const cache = new Map<string, { diff: WorktreeFileDiff; set: (diff: WorktreeFileDiff) => void }>()
+  let current: string | undefined
+
+  return createMemo(() => {
+    const nextKey = key()
+    if (current !== nextKey) {
+      current = nextKey
+      cache.clear()
+    }
+
+    const files = new Set<string>()
+    const diffs = source().map((next) => {
+      files.add(next.file)
+      const cached = cache.get(next.file)
+      if (cached) {
+        cached.set(next)
+        return cached.diff
+      }
+
+      const [value, setValue] = createSignal(next)
+      const diff = new Proxy(next, {
+        get: (_, prop) => Reflect.get(value(), prop),
+      })
+      cache.set(next.file, { diff, set: setValue })
+      return diff
+    })
+
+    for (const file of cache.keys()) {
+      if (files.has(file)) continue
+      cache.delete(file)
+    }
+    return diffs
+  })
+}
+
+export function resolveDiffFile(diffs: WorktreeFileDiff[], file: string, detail?: WorktreeFileDiff | null) {
+  return diffs.map((diff) => {
+    if (diff.file !== (detail?.file ?? file)) return diff
+    const next = detail ?? diff
+    if (next.summarized === true) return { ...next, failed: true }
+    return next.failed ? { ...next, failed: undefined } : next
+  })
+}
+
+export interface MergeResult {
+  diffs: WorktreeFileDiff[]
+  /** Files whose metadata changed while we preserved cached content.
+   *  The caller should re-request fresh content for these. */
+  stale: Set<string>
+}
+
+export function mergeWorktreeDiffs(prev: WorktreeFileDiff[], next: WorktreeFileDiff[]): MergeResult {
+  const map = new Map(prev.map((diff) => [diff.file, diff]))
+  const stale = new Set<string>()
+  const diffs = next.map((diff) => {
+    const existing = map.get(diff.file)
+    if (!existing) return diff
+    if (existing.failed && diff.summarized && sameDiffMeta(existing, diff)) return existing
+    // Preserve referential identity when content hasn't changed — this
+    // prevents Solid's <For> from re-rendering unchanged <Diff> components,
+    // which avoids Pierre's full DOM teardown and the scroll reset it causes.
+    if (
+      existing.file === diff.file &&
+      existing.before === diff.before &&
+      existing.after === diff.after &&
+      existing.patch === diff.patch &&
+      existing.image === diff.image &&
+      sameDiffMeta(existing, diff)
+    )
+      return existing
+    if (existing.summarized) return diff
+    if (!diff.summarized) return diff
+    // Metadata matches — restore cached content as before.
+    if (sameDiffMeta({ ...existing, summarized: true }, diff)) {
+      const merged = {
+        ...diff,
+        before: existing.before,
+        after: existing.after,
+        patch: existing.patch,
+        image: existing.image,
+        summarized: false,
+      }
+      if (
+        existing.before === merged.before &&
+        existing.after === merged.after &&
+        existing.patch === merged.patch &&
+        existing.image === merged.image &&
+        sameDiffMeta(existing, merged)
+      )
+        return existing
+      return merged
+    }
+    // Metadata changed (agent edited the file) but we have cached content.
+    // Keep the existing reference so <For> doesn't re-render and cause a
+    // scroll jump. Track the file as stale so the caller re-requests fresh
+    // content. The header stats will be slightly behind until the detail
+    // arrives, which is an acceptable trade-off for scroll stability.
+    stale.add(diff.file)
+    return existing
+  })
+  return { diffs, stale }
+}

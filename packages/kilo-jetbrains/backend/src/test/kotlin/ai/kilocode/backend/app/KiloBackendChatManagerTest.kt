@@ -1,0 +1,302 @@
+package ai.kilocode.backend.app
+
+import ai.kilocode.backend.testing.MockCliServer
+import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
+import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.PromptPartDto
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import okhttp3.OkHttpClient
+import java.util.concurrent.CountDownLatch
+import kotlin.test.AfterTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+
+class KiloBackendChatManagerTest {
+
+    private val mock = MockCliServer()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    @AfterTest
+    fun tearDown() {
+        scope.cancel()
+        mock.close()
+    }
+
+    @Test
+    fun `compact posts summarize request with selected model`() {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+
+        chat.compact("ses_abc", "/test/project", ModelSelectionDto("anthropic", "claude-4"))
+
+        assertEquals(1, mock.requestCount("/session/ses_abc/summarize"))
+        assertNotNull(mock.lastSummarizePath)
+        assertTrue(mock.lastSummarizePath!!.startsWith("/session/ses_abc/summarize?directory="))
+        assertEquals("""{"providerID":"anthropic","modelID":"claude-4"}""", mock.lastSummarizeBody)
+    }
+
+    @Test
+    fun `revert posts message and part to revert endpoint`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+
+        chat.revert("ses_abc", "/test/project", "msg1", "prt1")
+
+        assertEquals(1, mock.requestCount("/session/ses_abc/revert"))
+        assertTrue(mock.lastRevertPath!!.startsWith("/session/ses_abc/revert?directory="))
+        assertEquals("""{"messageID":"msg1","partID":"prt1"}""", mock.lastRevertBody)
+    }
+
+    @Test
+    fun `revert omits part when absent`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+
+        chat.revert("ses_abc", "/test/project", "msg1", null)
+
+        assertEquals(1, mock.requestCount("/session/ses_abc/revert"))
+        assertTrue(mock.lastRevertPath!!.startsWith("/session/ses_abc/revert?directory="))
+        assertEquals("""{"messageID":"msg1"}""", mock.lastRevertBody)
+    }
+
+    @Test
+    fun `unrevert posts empty body to unrevert endpoint`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+
+        chat.unrevert("ses_abc", "/test/project")
+
+        assertEquals(1, mock.requestCount("/session/ses_abc/unrevert"))
+        assertTrue(mock.lastUnrevertPath!!.startsWith("/session/ses_abc/unrevert?directory="))
+        assertEquals("{}", mock.lastUnrevertBody)
+    }
+
+    @Test
+    fun `delete message sends queued message delete request`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+
+        val result = chat.deleteMessage("ses_abc", "/test/project", "msg1")
+
+        assertTrue(result)
+        assertEquals(1, mock.requestCount("/session/ses_abc/message/msg1"))
+        assertTrue(mock.lastMessageDeletePath!!.startsWith("/session/ses_abc/message/msg1?directory="))
+    }
+
+    @Test
+    fun `delete message returns false for queued drop miss`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        mock.messageDeleteResponse = "false"
+
+        val result = chat.deleteMessage("ses_abc", "/test/project", "msg1")
+
+        assertEquals(false, result)
+        assertEquals(1, mock.requestCount("/session/ses_abc/message/msg1"))
+    }
+
+    @Test
+    fun `revert failure throws on non successful response`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        mock.revertStatus = 500
+
+        val error = assertFailsWith<RuntimeException> {
+            chat.revert("ses_abc", "/test/project", "msg1", "prt1")
+        }
+
+        assertEquals("revert failed: HTTP 500", error.message)
+        assertEquals(1, mock.requestCount("/session/ses_abc/revert"))
+        assertEquals("""{"messageID":"msg1","partID":"prt1"}""", mock.lastRevertBody)
+    }
+
+    @Test
+    fun `unrevert failure throws on non successful response`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        mock.unrevertStatus = 500
+
+        val error = assertFailsWith<RuntimeException> {
+            chat.unrevert("ses_abc", "/test/project")
+        }
+
+        assertEquals("unrevert failed: HTTP 500", error.message)
+        assertEquals(1, mock.requestCount("/session/ses_abc/unrevert"))
+        assertEquals("{}", mock.lastUnrevertBody)
+    }
+
+    @Test
+    fun `pending prompt checks distinguish present absent and unavailable requests`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        mock.pendingPermissions =
+            """[{"id":"perm_1","sessionID":"ses_1","permission":"edit","patterns":[]}]"""
+        mock.pendingQuestions =
+            """[{"id":"q_1","sessionID":"ses_1","questions":[{"question":"Pick one","header":"Choice"}]}]"""
+
+        assertEquals(true, chat.permissionPending("perm_1", "/test/project"))
+        assertEquals(false, chat.permissionPending("perm_other", "/test/project"))
+        assertEquals(true, chat.questionPending("q_1", "/test/project"))
+        assertEquals(false, chat.questionPending("q_other", "/test/project"))
+
+        mock.pendingPermissions = "{}"
+        mock.pendingQuestions = "not json"
+        assertEquals(null, chat.permissionPending("perm_1", "/test/project"))
+        assertEquals(null, chat.questionPending("q_1", "/test/project"))
+
+        mock.pendingPermissionsStatus = 500
+        mock.pendingQuestionsStatus = 500
+        mock.pendingPermissions =
+            """[{"id":"perm_1","sessionID":"ses_1","permission":"edit","patterns":[]}]"""
+        mock.pendingQuestions =
+            """[{"id":"q_1","sessionID":"ses_1","questions":[{"question":"Pick one","header":"Choice"}]}]"""
+        assertEquals(null, chat.permissionPending("perm_1", "/test/project"))
+        assertEquals(null, chat.questionPending("q_1", "/test/project"))
+    }
+
+    @Test
+    fun `enhance prompt posts scoped request and returns rewritten text`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        mock.enhanced = """{"text":"Use a focused implementation plan"}"""
+
+        val result = chat.enhancePrompt("/test/project", "make a plan")
+
+        assertEquals("Use a focused implementation plan", result)
+        assertEquals(1, mock.requestCount("/enhance-prompt"))
+        assertTrue(mock.lastEnhancePath!!.startsWith("/enhance-prompt?directory="))
+        assertEquals("""{"text":"make a plan"}""", mock.lastEnhanceBody)
+    }
+
+    @Test
+    fun `enhance prompt hides provider response details`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        mock.enhanceStatus = 500
+        mock.enhanced = """{"error":"provider unavailable"}"""
+
+        val error = assertFailsWith<RuntimeException> {
+            chat.enhancePrompt("/test/project", "make a plan")
+        }
+
+        assertEquals("Enhance prompt failed: HTTP 500", error.message)
+    }
+
+    @Test
+    fun `prompt failure includes CLI response body summary`() {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        mock.promptStatus = 400
+        mock.promptResponse = """{"issues":[{"message":"invalid source type"}]}"""
+
+        val error = assertFailsWith<RuntimeException> {
+            chat.prompt("ses_abc", "/test/project", PromptDto(parts = listOf(PromptPartDto(type = "text", text = "hello"))))
+        }
+
+        assertTrue(error.message!!.contains("prompt_async failed: HTTP 400"), error.message)
+        assertTrue(error.message!!.contains("chars="), error.message)
+    }
+
+    @Test
+    fun `enhance prompt cancels the HTTP request with its coroutine`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        val gate = CountDownLatch(1)
+        mock.responseGate = gate
+        val request = async(Dispatchers.Default) { chat.enhancePrompt("/test/project", "make a plan") }
+        assertTrue(mock.awaitRequestCount("/enhance-prompt", 1))
+
+        request.cancelAndJoin()
+        gate.countDown()
+
+        assertTrue(request.isCancelled)
+    }
+
+    @Test
+    fun `malformed session error logs warning and keeps collecting`() = runBlocking {
+        val port = mock.start()
+        val log = TestLog()
+        val sse = MutableSharedFlow<SseEvent>(replay = 8)
+        val chat = KiloBackendChatManager(scope, log)
+        chat.start(OkHttpClient(), port, sse)
+
+        val received = async(start = CoroutineStart.UNDISPATCHED) { withTimeout(5_000) { chat.events.first() } }
+        withTimeout(5_000) { sse.subscriptionCount.first { it > 0 } }
+        sse.emit(SseEvent("session.error", """{"payload":{"properties":{"sessionID":"ses_abc","error":42}}}"""))
+        sse.emit(SseEvent("session.turn.open", """{"payload":{"properties":{"sessionID":"ses_abc"}}}"""))
+
+        val event = received.await()
+        assertTrue(event is ChatEventDto.TurnOpen)
+        assertEquals("ses_abc", event.sessionID)
+        assertTrue(log.messages.any { it.contains("route=chat-events parse=false type=session.error") }, log.messages.joinToString("\n"))
+    }
+
+    /**
+     * A cancellation the CLI starts on its own reaches the UI as the same `MessageAbortedError` a Stop
+     * produces, so the reason has to travel on its own event through the same stream.
+     */
+    @Test
+    fun `interrupt emits one reason event per running session`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+
+        // UNDISPATCHED runs the collector up to its first suspension on this thread, so the subscription
+        // is registered before interrupt() emits — the flow buffers rather than blocks, so a late
+        // subscriber would simply miss the event.
+        val received = async(start = CoroutineStart.UNDISPATCHED) {
+            chat.events.first { it is ChatEventDto.SessionInterrupted }
+        }
+        chat.interrupt(listOf("ses_abc"), ChatEventDto.SessionInterrupted.RELOAD)
+
+        val event = withTimeout(5_000) { received.await() }
+        assertTrue(event is ChatEventDto.SessionInterrupted)
+        assertEquals("ses_abc", event.sessionID)
+        assertEquals(ChatEventDto.SessionInterrupted.RELOAD, event.reason)
+    }
+
+    @Test
+    fun `global message event type is extracted from payload`() = runBlocking {
+        val port = mock.start()
+        val sse = MutableSharedFlow<SseEvent>(replay = 8)
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, sse)
+
+        val received = async(start = CoroutineStart.UNDISPATCHED) { withTimeout(5_000) { chat.events.first() } }
+        withTimeout(5_000) { sse.subscriptionCount.first { it > 0 } }
+        sse.emit(SseEvent("message", """{"payload":{"type":"session.queue.changed","properties":{"sessionID":"ses_abc","queued":["msg2"]}}}"""))
+
+        val event = received.await()
+        assertTrue(event is ChatEventDto.SessionQueueChanged)
+        assertEquals("ses_abc", event.sessionID)
+        assertEquals(listOf("msg2"), event.queued)
+    }
+}

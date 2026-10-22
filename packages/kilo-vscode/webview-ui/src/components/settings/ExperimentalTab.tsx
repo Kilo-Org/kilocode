@@ -1,11 +1,15 @@
-import { Component, For, Show, createMemo } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
+import { useImageModels } from "../../context/image-models"
+import type { ExtensionMessage } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
+import PatternList from "./PatternList"
 
 interface ShareOption {
   value: string
@@ -18,9 +22,29 @@ const SHARE_OPTIONS: ShareOption[] = [
   { value: "disabled", labelKey: "settings.experimental.share.disabled" },
 ]
 
+const LINK_OPTIONS: ShareOption[] = [
+  { value: "external", labelKey: "settings.experimental.browserLinks.external" },
+  { value: "integrated", labelKey: "settings.experimental.browserLinks.integrated" },
+]
+
 const ExperimentalTab: Component = () => {
-  const { config, updateConfig } = useConfig()
+  const { config, settings, updateConfig, applySetting } = useConfig()
   const language = useLanguage()
+  const imageModels = useImageModels()
+  const vscode = useVSCode()
+  const [active, setActive] = createSignal(false)
+
+  const handler = (msg: ExtensionMessage) => {
+    if (msg.type === "remoteStatus") {
+      setActive(msg.enabled)
+    }
+  }
+
+  onMount(() => {
+    const unsub = vscode.onMessage(handler)
+    vscode.postMessage({ type: "requestRemoteStatus" })
+    onCleanup(unsub)
+  })
 
   const experimental = createMemo(() => config().experimental ?? {})
 
@@ -33,6 +57,37 @@ const ExperimentalTab: Component = () => {
   return (
     <div>
       <Card>
+        {/* Remote control */}
+        <div data-component="remote-settings">
+          <div data-slot="remote-settings-header">
+            <div data-slot="settings-row-label-title">{language.t("settings.experimental.remote.title")}</div>
+            <div data-slot="settings-row-label-subtitle">{language.t("settings.experimental.remote.description")}</div>
+          </div>
+          <div data-slot="remote-settings-block">
+            <div data-slot="remote-settings-row">
+              <span data-slot="remote-settings-label">{language.t("settings.experimental.remote.current")}</span>
+              <span data-slot="remote-settings-status" data-active={active()}>
+                {active()
+                  ? language.t("settings.experimental.remote.active")
+                  : language.t("settings.experimental.remote.inactive")}
+              </span>
+            </div>
+            <div data-slot="remote-settings-hint">{language.t("settings.experimental.remote.hint")}</div>
+          </div>
+          <div data-slot="remote-settings-row">
+            <span data-slot="remote-settings-label">{language.t("settings.experimental.remote.startup")}</span>
+            <Switch
+              checked={config().remote_control ?? false}
+              onChange={(checked) => {
+                updateConfig({ remote_control: checked })
+              }}
+              hideLabel
+            >
+              {language.t("settings.experimental.remote.startup")}
+            </Switch>
+          </div>
+        </div>
+
         {/* Share mode */}
         <SettingsRow
           title={language.t("settings.experimental.share.title")}
@@ -82,19 +137,6 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.experimental.pasteSummary.title")}
-          description={language.t("settings.experimental.pasteSummary.description")}
-        >
-          <Switch
-            checked={experimental().disable_paste_summary ?? false}
-            onChange={(checked) => updateExperimental("disable_paste_summary", checked)}
-            hideLabel
-          >
-            {language.t("settings.experimental.pasteSummary.title")}
-          </Switch>
-        </SettingsRow>
-
-        <SettingsRow
           title={language.t("settings.experimental.batch.title")}
           description={language.t("settings.experimental.batch.description")}
         >
@@ -108,15 +150,50 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.experimental.codebaseSearch.title")}
-          description={language.t("settings.experimental.codebaseSearch.description")}
+          title={language.t("settings.experimental.imageGeneration.title")}
+          description={language.t("settings.experimental.imageGeneration.description")}
         >
           <Switch
-            checked={experimental().codebase_search ?? false}
-            onChange={(checked) => updateExperimental("codebase_search", checked)}
+            checked={experimental().image_generation ?? false}
+            onChange={(checked) => updateExperimental("image_generation", checked)}
             hideLabel
           >
-            {language.t("settings.experimental.codebaseSearch.title")}
+            {language.t("settings.experimental.imageGeneration.title")}
+          </Switch>
+        </SettingsRow>
+
+        <Show when={experimental().image_generation}>
+          <SettingsRow
+            title={language.t("settings.experimental.imageGenerationModel.title")}
+            description={language.t("settings.experimental.imageGenerationModel.description")}
+          >
+            <Select
+              options={imageModels.models().map((m) => ({ value: m.id, label: m.name }))}
+              current={imageModels
+                .models()
+                .map((m) => ({ value: m.id, label: m.name }))
+                .find((m) => m.value === experimental().image_generation_model)}
+              value={(item) => item.value}
+              label={(item) => item.label}
+              onSelect={(item) => updateExperimental("image_generation_model", item?.value ?? undefined)}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+              placeholder={language.t("settings.experimental.imageGenerationModel.placeholder")}
+            />
+          </SettingsRow>
+        </Show>
+
+        <SettingsRow
+          title={language.t("settings.experimental.nativeNotebookTools.title")}
+          description={language.t("settings.experimental.nativeNotebookTools.description")}
+        >
+          <Switch
+            checked={experimental().native_notebook_tools ?? false}
+            onChange={(checked) => updateExperimental("native_notebook_tools", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.nativeNotebookTools.title")}
           </Switch>
         </SettingsRow>
 
@@ -130,6 +207,99 @@ const ExperimentalTab: Component = () => {
             hideLabel
           >
             {language.t("settings.experimental.continueOnDeny.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.codeMode.title")}
+          description={language.t("settings.experimental.codeMode.description")}
+        >
+          <Switch
+            checked={experimental().code_mode ?? false}
+            onChange={(checked) => updateExperimental("code_mode", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.codeMode.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.claudeMigration.title")}
+          description={language.t("settings.experimental.claudeMigration.description")}
+        >
+          <Switch
+            checked={settings().claudeMigration === true}
+            onChange={(checked) => applySetting("claudeMigration", checked, "experimental.claudeMigration")}
+            hideLabel
+          >
+            {language.t("settings.experimental.claudeMigration.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.conversationPromptHistory.title")}
+          description={language.t("settings.experimental.conversationPromptHistory.description")}
+        >
+          <Switch
+            checked={settings().conversationPromptHistory === true}
+            onChange={(checked) =>
+              applySetting("conversationPromptHistory", checked, "experimental.conversationPromptHistory")
+            }
+            hideLabel
+          >
+            {language.t("settings.experimental.conversationPromptHistory.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.browserAutomation.title")}
+          description={language.t("settings.experimental.browserAutomation.description")}
+        >
+          <Switch
+            checked={settings().browserAutomation === true}
+            onChange={(checked) => applySetting("browserAutomation", checked, "experimental.browserAutomation")}
+            hideLabel
+          >
+            {language.t("settings.experimental.browserAutomation.title")}
+          </Switch>
+        </SettingsRow>
+
+        <Show when={settings().browserAutomation === true}>
+          <SettingsRow
+            title={language.t("settings.experimental.browserLinks.title")}
+            description={language.t("settings.experimental.browserLinks.description")}
+          >
+            <Select
+              options={LINK_OPTIONS}
+              current={LINK_OPTIONS.find(
+                (o) => o.value === (settings().agentManagerBrowserOpenLinksIn ?? "integrated"),
+              )}
+              value={(o) => o.value}
+              label={(o) => language.t(o.labelKey)}
+              onSelect={(o) => {
+                if (!o) return
+                if (o.value === (settings().agentManagerBrowserOpenLinksIn ?? "integrated")) return
+                applySetting("agentManagerBrowserOpenLinksIn", o.value, "agentManager.browser.openLinksIn")
+              }}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+            />
+          </SettingsRow>
+        </Show>
+
+        <SettingsRow
+          title={language.t("settings.experimental.browserAutomation.systemChrome.title")}
+          description={language.t("settings.experimental.browserAutomation.systemChrome.description")}
+        >
+          <Switch
+            checked={settings().agentManagerBrowserUseSystemChrome !== false}
+            onChange={(checked) =>
+              applySetting("agentManagerBrowserUseSystemChrome", checked, "agentManager.browser.useSystemChrome")
+            }
+            hideLabel
+          >
+            {language.t("settings.experimental.browserAutomation.systemChrome.title")}
           </Switch>
         </SettingsRow>
 
@@ -150,6 +320,19 @@ const ExperimentalTab: Component = () => {
           />
         </SettingsRow>
       </Card>
+
+      <h4
+        style={{ "margin-top": "16px", "margin-bottom": "8px" }}
+        data-search-label={language.t("settings.experimental.globIncludeIgnored.title")}
+      >
+        {language.t("settings.experimental.globIncludeIgnored.title")}
+      </h4>
+      <PatternList
+        patterns={experimental().glob_include_ignored ?? []}
+        description={language.t("settings.experimental.globIncludeIgnored.description")}
+        placeholder="e.g. packages/*/dist"
+        onChange={(patterns) => updateExperimental("glob_include_ignored", patterns)}
+      />
 
       {/* Tool toggles */}
       <Show when={config().tools && Object.keys(config().tools ?? {}).length > 0}>

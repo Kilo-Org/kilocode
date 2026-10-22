@@ -1,0 +1,163 @@
+// Simulated provider socket for the issue #8656 regression tests.
+//
+// Only the socket is simulated. The transport is injected as the provider's
+// `fetch` option, so Kilo's own fetch wrapper (connection timeout, first-byte
+// guard, SSE chunk watchdog), the openai-compatible SDK, SSE parsing, the
+// session processor and the agent loop are all the production ones.
+//
+// Request script:
+//   1. title request                  -> short text answer
+//   2. no tool result in the messages -> a bash tool call
+//   3. first request carrying a tool result -> SSE headers, body never sends a
+//      byte (the stall reported in #8656)
+//   4. later requests carrying a tool result -> final text answer, so a bounded
+//      stall can recover through the normal retry path
+//
+// Progress is mirrored to a JSON file so tests can assert what the provider saw
+// without sharing module state with the plugin that loads this file.
+
+import { rename } from "node:fs/promises"
+
+export type StallState = { calls: number; stalls: number; recovered: number }
+
+const HEAD = { id: "chatcmpl-stall", object: "chat.completion.chunk", created: 0, model: "mock-model" }
+
+const chunk = (obj: unknown) => `data: ${JSON.stringify(obj)}\n\n`
+
+const usage = () =>
+  chunk({ ...HEAD, choices: [], usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 } })
+
+function sse(body: BodyInit | null) {
+  return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } })
+}
+
+function answer(value: string) {
+  return sse(
+    [
+      chunk({ ...HEAD, choices: [{ index: 0, delta: { role: "assistant", content: value }, finish_reason: null }] }),
+      chunk({ ...HEAD, choices: [{ index: 0, delta: {}, finish_reason: "stop" }] }),
+      usage(),
+      "data: [DONE]\n\n",
+    ].join(""),
+  )
+}
+
+function toolCall(command: string) {
+  return sse(
+    [
+      chunk({
+        ...HEAD,
+        choices: [
+          {
+            index: 0,
+            delta: {
+              role: "assistant",
+              tool_calls: [
+                {
+                  index: 0,
+                  id: "call_1",
+                  type: "function",
+                  function: { name: "bash", arguments: JSON.stringify({ command }) },
+                },
+              ],
+            },
+            finish_reason: null,
+          },
+        ],
+      }),
+      chunk({ ...HEAD, choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] }),
+      usage(),
+      "data: [DONE]\n\n",
+    ].join(""),
+  )
+}
+
+/** Response headers arrive, then the body never produces a byte. */
+function stalling() {
+  return sse(
+    new ReadableStream<Uint8Array>({
+      start() {},
+      cancel() {
+        // the first-byte guard cancels this reader when it gives up
+      },
+    }),
+  )
+}
+
+const ZERO: StallState = { calls: 0, stalls: 0, recovered: 0 }
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const transient = (error: unknown) => {
+  if (typeof error !== "object" || error === null || !("code" in error)) return false
+  return ["EPERM", "EACCES", "EBUSY"].includes(String((error as { code: unknown }).code))
+}
+
+// Replacing the state file with rename fails transiently on Windows while the
+// test's state poll (every 200ms) or Defender holds the destination open. Retry
+// so a transient lock never drops a state update.
+async function persist(file: string, json: string) {
+  const tmp = `${file}.${crypto.randomUUID()}.tmp`
+  await Bun.write(tmp, json)
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await rename(tmp, file)
+      return
+    } catch (error) {
+      if (attempt >= 20 || !transient(error)) throw error
+      await sleep(50)
+    }
+  }
+}
+
+export function createStallTransport(input: { state: string; answer?: string; command?: string }) {
+  const state: StallState = { calls: 0, stalls: 0, recovered: 0 }
+  // The state file is test diagnostics, not provider protocol. Writes are
+  // serialized and best-effort, and the response never waits on them, so disk
+  // latency or a failed mirror can neither delay nor reject the simulated
+  // response. Every write stores the full current state, so a later write
+  // still lands anything an earlier failed one dropped. Tests poll the file.
+  let pending = Promise.resolve()
+  const save = () => {
+    const json = JSON.stringify(state)
+    pending = pending.then(() => persist(input.state, json)).catch((error) => {
+      console.error("[stall-transport] state write failed", error)
+    })
+  }
+
+  return async (_input: unknown, init?: { body?: unknown }) => {
+    const body = typeof init?.body === "string" ? init.body : ""
+    state.calls++
+
+    if (body.includes("Generate a title")) {
+      save()
+      return answer("Stall repro")
+    }
+
+    if (!body.includes('"role":"tool"')) {
+      save()
+      return toolCall(input.command ?? "echo repro-8656")
+    }
+
+    if (state.stalls === 0) {
+      state.stalls++
+      save()
+      return stalling()
+    }
+
+    state.recovered++
+    save()
+    return answer(input.answer ?? "recovered after the stall")
+  }
+}
+
+export async function readStallState(file: string): Promise<StallState> {
+  const handle = Bun.file(file)
+  if (!(await handle.exists())) return { ...ZERO }
+  try {
+    return JSON.parse(await handle.text()) as StallState
+  } catch {
+    // A concurrent replace can expose an empty or partial file for one poll.
+    return { ...ZERO }
+  }
+}

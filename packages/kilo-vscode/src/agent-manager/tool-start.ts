@@ -1,0 +1,417 @@
+import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
+import { sanitizeBranchName, versionedName } from "./branch-name"
+import type { CreateWorktreeResult } from "./WorktreeManager"
+import type { WorktreeStateManager } from "./WorktreeStateManager"
+import type { PanelContext } from "./host"
+import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
+import { sameDirectory } from "../kilo-provider-utils"
+import { attribute } from "./prompt-attribution"
+import { beginBoot, prepareSession, type CreationBoot } from "./provider-lifecycle"
+import { Timing } from "./creation-timing"
+import { plan } from "./creation-plan"
+import { sessionCreateBody } from "./session-create"
+
+const LABEL_MAX = 28
+const PREFIX = new Set(["feat", "fix", "chore", "bug", "issue", "task", "branch"])
+
+export interface ToolTask {
+  prompt?: string
+  name?: string
+  branchName?: string
+  agent?: string
+  model?: { providerID: string; modelID: string }
+  variant?: string
+}
+
+export interface ToolRequest {
+  requestID: string
+  projectId?: string
+  sessionID?: string
+  directory?: string
+  sandboxInheritanceToken?: string
+  mode: "worktree" | "local"
+  worktreeID?: string
+  versions?: boolean
+  tasks: ToolTask[]
+}
+
+export interface ToolSource {
+  sessionID?: string
+  sandboxInheritanceToken?: string
+}
+
+interface WorktreeCreated {
+  worktree: ReturnType<WorktreeStateManager["addWorktree"]>
+  result: CreateWorktreeResult
+}
+
+export interface ToolDeps {
+  getClient: () => KiloClient
+  getRoot: () => string | undefined
+  getState: () => WorktreeStateManager | undefined
+  getPanel: () => PanelContext | undefined
+  openPanel: (preserveFocus?: boolean) => void
+  waitReady: (context: string) => Promise<void>
+  createWorktree: (opts: {
+    groupId?: string
+    branchName?: string
+    name?: string
+    label?: string
+  }) => Promise<WorktreeCreated | null>
+  claimRequest?: (requestID: string) => boolean
+  cleanupWorktree: (wid: string, dir: string) => Promise<void>
+  hasScript: () => boolean
+  setup: (dir: string, branch?: string, id?: string, early?: () => Promise<void>) => Promise<void>
+  createSessionInWorktree: (
+    dir: string,
+    branch: string,
+    id?: string,
+    source?: ToolSource,
+    boot?: CreationBoot,
+    timing?: Timing,
+    agent?: string,
+  ) => Promise<Session | null>
+  sessionMetadata: (client: KiloClient, dir: string) => Promise<Record<string, unknown>>
+  registerWorktreeSession: (sid: string, dir: string) => void
+  notifyReady: (sid: string, result: CreateWorktreeResult, wid?: string) => void
+  push: () => void
+  post: (msg: unknown) => void
+  capture: (event: string, props?: Record<string, unknown>) => void
+  log: (...args: unknown[]) => void
+  error: (msg: string) => void
+}
+
+function text(task: ToolTask): string | undefined {
+  return task.prompt?.trim() || undefined
+}
+
+function clean(value: string | undefined): string | undefined {
+  return value?.trim() || undefined
+}
+
+function label(value: string | undefined): string | undefined {
+  const raw = clean(value)
+  if (!raw) return undefined
+  const words = raw
+    .toLowerCase()
+    .replace(/[/_.-]+/g, " ")
+    .replace(/[^a-z0-9 ]+/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+  const meaningful = words.filter((word) => !PREFIX.has(word))
+  const picked: string[] = []
+  for (const word of meaningful.length > 0 ? meaningful : words) {
+    const next = [...picked, word].join(" ")
+    if (next.length > LABEL_MAX) break
+    picked.push(word)
+    if (picked.length >= 3) break
+  }
+  return picked.join(" ") || words[0]?.slice(0, LABEL_MAX) || undefined
+}
+
+function branch(value: string | undefined): string | undefined {
+  const raw = clean(value)
+  if (!raw) return undefined
+  return sanitizeBranchName(raw) || undefined
+}
+
+function versionedLabel(base: string | undefined, index: number, total: number): string | undefined {
+  if (!base) return undefined
+  if (total > 1 && index > 0) return `${base} v${index + 1}`
+  return base
+}
+
+async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTask, source?: ToolSource) {
+  const body = text(task)
+  if (!body) return
+  await client.session.promptAsync(
+    {
+      sessionID: sid,
+      directory: dir,
+      parts: [{ type: "text", text: attribute(body, source?.sessionID) }],
+      model: task.model,
+      variant: task.variant,
+      agent: task.agent,
+      snapshotInitialization: SNAPSHOT_INITIALIZATION,
+    },
+    { throwOnError: true },
+  )
+}
+
+function locate(state: WorktreeStateManager, root: string, dir: string, wid: string) {
+  if (!sameDirectory(dir, root) && !state.findWorktreeByPath(dir)) {
+    throw new Error(`Unknown caller directory for managed worktree target: ${dir}`)
+  }
+  const wt = state.getWorktree(wid)
+  if (!wt) throw new Error(`Unknown managed worktree in the caller's project: ${wid}`)
+  return wt
+}
+
+async function local(
+  deps: ToolDeps,
+  client: KiloClient,
+  task: ToolTask,
+  directory?: string,
+  source?: ToolSource,
+  wid?: string,
+) {
+  const root = deps.getRoot()
+  const state = deps.getState()
+  if (!root || !state) return false
+
+  const dir = clean(directory) ?? root
+  const match = sameDirectory(dir, root)
+  const wt = wid ? locate(state, root, dir, wid) : match ? undefined : state.findWorktreeByPath(dir)
+  if (!match && !wt) {
+    deps.log("Agent Manager tool local request ignored unknown directory", dir)
+    deps.post({
+      type: "error",
+      message: `Agent Manager tool cannot start a local session for unknown directory: ${dir}`,
+    })
+    return false
+  }
+  const target = wt?.path ?? root
+  const metadata = await deps.sessionMetadata(client, target)
+  const { data } = await client.session.create(
+    sessionCreateBody({
+      directory: target,
+      metadata,
+      agent: task.agent,
+      sandboxInheritanceToken: source?.sandboxInheritanceToken,
+    }),
+    { throwOnError: true },
+  )
+  const session = data
+  state.addSession(session.id, wt?.id ?? null)
+  if (wt) deps.registerWorktreeSession(session.id, wt.path)
+  deps.push()
+  deps.getPanel()?.sessions.registerSession(session)
+  if (wt) deps.post({ type: "agentManager.sessionAdded", sessionId: session.id, worktreeId: wt.id })
+  await prompt(client, session.id, target, task, source)
+  deps.capture("Agent Manager Session Started", {
+    source: PLATFORM,
+    sessionId: session.id,
+    tool: true,
+    mode: "local",
+    worktreeId: wt?.id,
+  })
+  return true
+}
+
+async function worktree(
+  deps: ToolDeps,
+  client: KiloClient,
+  task: ToolTask,
+  index: number,
+  total: number,
+  groupId?: string,
+  versions?: boolean,
+  source?: ToolSource,
+) {
+  const baseBranch = task.branchName ?? branch(task.name)
+  const baseLabel = label(task.name) ?? label(task.branchName) ?? label(task.prompt)
+  const version = versionedName(baseBranch, versions ? index : 0, versions ? total : 1)
+  const timing = Timing.start(`create ${version.branch ?? "worktree"}`, deps.log)
+  const created = await deps.createWorktree({
+    groupId,
+    branchName: version.branch,
+    name: version.branch,
+    label: versionedLabel(baseLabel, versions ? index : 0, versions ? total : 1),
+  })
+  timing.mark("create")
+  if (!created) {
+    timing.end()
+    return false
+  }
+
+  const prepared = await prepareSession(
+    plan({ setupScript: deps.hasScript() }),
+    async (early) => {
+      await deps.setup(created.result.path, created.result.branch, created.worktree.id, early)
+      timing.mark("setup")
+    },
+    () => {
+      const boot = beginBoot(() => deps.sessionMetadata(client, created.result.path), timing)
+      return deps.createSessionInWorktree(
+        created.result.path,
+        created.result.branch,
+        created.worktree.id,
+        source,
+        boot,
+        timing,
+        task.agent,
+      )
+    },
+  )
+  const { session, ready } = prepared
+  if (!session) {
+    await prepared.done
+    await deps.cleanupWorktree(created.worktree.id, created.result.path)
+    timing.mark("cleanup")
+    timing.end()
+    return false
+  }
+
+  const state = deps.getState()
+  if (!state) {
+    await prepared.done
+    await deps.cleanupWorktree(created.worktree.id, created.result.path)
+    timing.mark("cleanup")
+    timing.end()
+    return false
+  }
+  state.addSession(session.id, created.worktree.id)
+  deps.registerWorktreeSession(session.id, created.result.path)
+  timing.mark("state")
+  deps.notifyReady(session.id, created.result, created.worktree.id)
+  deps.getPanel()?.sessions.registerSession(session)
+  timing.mark("ready")
+  await ready
+  try {
+    await prompt(client, session.id, created.result.path, task, source)
+  } finally {
+    await prepared.done
+  }
+  const span = timing.end()
+  deps.capture("Agent Manager Session Started", {
+    source: PLATFORM,
+    sessionId: session.id,
+    worktreeId: created.worktree.id,
+    branch: created.result.branch,
+    tool: true,
+    durationMs: span.total,
+    ...span.phases,
+  })
+  return true
+}
+
+export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<void> {
+  if (req.worktreeID != null && !parseToolRequest(req)) {
+    deps.error("Invalid Agent Manager worktree target. Use mode local without versions true or branchName.")
+    return
+  }
+  if (deps.claimRequest && !deps.claimRequest(req.requestID)) {
+    deps.log(`Agent Manager tool skipped duplicate request ${req.requestID}`)
+    return
+  }
+
+  deps.openPanel(true)
+  await deps.getPanel()?.waitForReady()
+  await deps.waitReady("startFromTool")
+  const client = deps.getClient()
+  const total = req.tasks.length
+  const versions = req.mode === "worktree" && req.versions === true && total > 1
+  const groupId = versions ? `grp-${Date.now()}` : undefined
+  const state = { ok: 0 }
+  const source = { sessionID: req.sessionID, sandboxInheritanceToken: req.sandboxInheritanceToken }
+
+  deps.post({
+    type: "agentManager.multiVersionProgress",
+    projectId: req.projectId,
+    status: "creating",
+    total,
+    completed: 0,
+    groupId,
+  })
+  for (let i = 0; i < req.tasks.length; i++) {
+    const task = req.tasks[i]!
+    try {
+      const done =
+        req.mode === "local"
+          ? await local(deps, client, task, req.directory, source, req.worktreeID)
+          : await worktree(deps, client, task, i, total, groupId, versions, source)
+      if (done) state.ok++
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      deps.log("Agent Manager tool task failed", msg)
+      deps.post({ type: "error", message: `Agent Manager tool task failed: ${msg}` })
+    }
+    deps.post({
+      type: "agentManager.multiVersionProgress",
+      projectId: req.projectId,
+      status: "creating",
+      total,
+      completed: state.ok,
+      groupId,
+    })
+  }
+
+  deps.post({
+    type: "agentManager.multiVersionProgress",
+    projectId: req.projectId,
+    status: "done",
+    total,
+    completed: state.ok,
+    groupId,
+  })
+  if (state.ok === 0) deps.error(`Failed to start any Agent Manager sessions for request ${req.requestID}.`)
+  deps.log(`Agent Manager tool request ${req.requestID} complete: ${state.ok}/${total}`)
+}
+
+function record(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object"
+}
+
+function model(value: unknown): ToolTask["model"] {
+  if (!record(value)) return undefined
+  const providerID = typeof value.providerID === "string" ? value.providerID.trim() : ""
+  const modelID = typeof value.modelID === "string" ? value.modelID.trim() : ""
+  if (!providerID || !modelID) return undefined
+  return { providerID, modelID }
+}
+
+// The server resolves the agent by exact key, so keep the canonical trimmed name.
+function agent(value: unknown): Pick<ToolTask, "agent"> {
+  if (typeof value !== "string" || !value.trim()) return {}
+  return { agent: value.trim() }
+}
+
+function task(value: unknown): ToolTask | undefined {
+  if (!record(value)) return undefined
+  const out: ToolTask = { ...agent(value.agent) }
+  for (const key of ["prompt", "name", "branchName"] as const) {
+    if (Object.hasOwn(value, key) && typeof value[key] === "string" && value[key].trim()) out[key] = value[key]
+  }
+  const hasModel = Object.hasOwn(value, "model")
+  const selected = hasModel ? model(value.model) : undefined
+  if (hasModel && !selected) return undefined
+  if (selected) out.model = selected
+
+  if (Object.hasOwn(value, "variant")) {
+    if (!selected || typeof value.variant !== "string" || !value.variant.trim()) return undefined
+    out.variant = value.variant.trim()
+  }
+  if (selected && !out.prompt) return undefined
+  if (!out.prompt && !out.name && !out.branchName) return undefined
+  return out
+}
+
+export function parseToolRequest(value: unknown): ToolRequest | undefined {
+  if (!record(value)) return undefined
+  const mode = value.mode
+  const tasks = value.tasks
+  if (mode !== "worktree" && mode !== "local") return undefined
+  if (!Array.isArray(tasks) || tasks.length === 0) return undefined
+  const limited = tasks.slice(0, 20)
+  if (value.worktreeID != null) {
+    if (typeof value.worktreeID !== "string" || !value.worktreeID.trim()) return undefined
+    if (mode !== "local" || value.versions === true) return undefined
+    if (tasks.some((item) => record(item) && item.branchName != null)) return undefined
+  }
+  const parsed = limited.map(task).filter((item): item is ToolTask => !!item)
+  if (parsed.length !== limited.length) return undefined
+  return {
+    requestID: typeof value.requestID === "string" ? value.requestID : `am-${Date.now()}`,
+    projectId: typeof value.projectId === "string" ? value.projectId : undefined,
+    sessionID: typeof value.sessionID === "string" ? value.sessionID : undefined,
+    directory: typeof value.directory === "string" ? value.directory : undefined,
+    sandboxInheritanceToken:
+      typeof value.sandboxInheritanceToken === "string" ? value.sandboxInheritanceToken : undefined,
+    mode,
+    ...(value.worktreeID != null ? { worktreeID: value.worktreeID as string } : {}),
+    versions: typeof value.versions === "boolean" ? value.versions : undefined,
+    tasks: parsed,
+  }
+}

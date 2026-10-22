@@ -1,4 +1,6 @@
 ---
+title: "Using DeepSeek with Kilo Code"
+description: "Connect DeepSeek's reasoning and coding models to Kilo Code. Setup guide for DeepSeek-V3 and DeepSeek-R1 in VS Code and the CLI."
 sidebar_label: DeepSeek
 ---
 
@@ -18,14 +20,6 @@ Kilo Code supports accessing models through the DeepSeek API, including `deepsee
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2.  **Select Provider:** Choose "DeepSeek" from the "API Provider" dropdown.
-3.  **Enter API Key:** Paste your DeepSeek API key into the "DeepSeek API Key" field.
-4.  **Select Model:** Choose your desired model from the "Model" dropdown.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add DeepSeek and enter your API key.

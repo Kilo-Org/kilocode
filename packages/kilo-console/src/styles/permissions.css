@@ -1,0 +1,135 @@
+.kilo-console .permissions,
+.kilo-console .permission-group,
+.kilo-console .permission-rules {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.kilo-console .permission-group [data-component="section-title"] {
+  margin: 0.75rem 0 0.25rem;
+}
+
+.kilo-console .permission-group-header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: 0.75rem 0 0.25rem;
+}
+
+.kilo-console .permission-group-copy {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.kilo-console .permission-group-copy h2,
+.kilo-console .permission-group-copy p {
+  margin: 0;
+}
+
+.kilo-console .permission-group-copy h2 {
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.kilo-console .permission-group-copy span {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-family: var(--font-family-mono);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .permission-group-copy p {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.kilo-console .permission-row-meta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.kilo-console .permission-section-actions {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.kilo-console .permission-section-actions [data-component="button"][data-variant="primary"] [data-component="icon"],
+.kilo-console .permission-section-actions [data-component="button"][data-variant="primary"] [data-slot="icon-svg"] {
+  color: var(--primary-foreground);
+}
+
+.kilo-console .permission-select {
+  width: 7.5rem;
+}
+
+.kilo-console .permission-form .permission-select {
+  width: 100%;
+}
+
+.kilo-console .permission-select.disabled summary {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.kilo-console .permission-pattern {
+  overflow-wrap: anywhere;
+  font-family: var(--font-family-mono);
+}
+
+.kilo-console .permission-subtitle {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.kilo-console .permissions [data-component="config-row"] {
+  align-items: flex-start;
+}
+
+.kilo-console .permissions [data-slot="config-row-subtitle"] {
+  overflow: visible;
+  white-space: normal;
+}
+
+.kilo-console .permission-empty {
+  margin: 0;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  padding: 0.75rem;
+}
+
+.kilo-console .permission-form {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  padding: 1rem;
+}
+
+.kilo-console .permission-form .wide {
+  grid-column: 1;
+}
+
+@media (max-width: 760px) {
+  .kilo-console .permission-group-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .kilo-console .permission-section-actions {
+    justify-content: space-between;
+  }
+}

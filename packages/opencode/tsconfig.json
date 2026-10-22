@@ -10,7 +10,8 @@
     "customConditions": ["browser"],
     "paths": {
       "@/*": ["./src/*"],
-      "@tui/*": ["./src/cli/cmd/tui/*"]
+      "@tui/*": ["../tui/src/*"], // kilocode_change - extracted TUI imports used by Kilo-owned components
+      "@test/*": ["./test/*"]
     }
   }
 }

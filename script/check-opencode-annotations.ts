@@ -1,77 +1,233 @@
 #!/usr/bin/env bun
 
 /**
- * Verifies that every Kilo-specific change in shared packages/opencode/ files
+ * Verifies that every Kilo-specific change in shared upstream-owned source files
  * is annotated with a kilocode_change marker.
  *
  * Usage:
- *   bun run script/check-opencode-annotations.ts                  # diff against origin/main
- *   bun run script/check-opencode-annotations.ts --base <ref>     # diff against <ref>
+ *   bun run script/check-opencode-annotations.ts                  # diff origin/main...HEAD
+ *   bun run script/check-opencode-annotations.ts --base <ref>     # diff <ref>...HEAD
+ *   bun run script/check-opencode-annotations.ts --worktree       # diff HEAD..worktree plus untracked files
  *
  * A line is "covered" if it:
- *   - contains // kilocode_change                        (inline annotation)
- *   - falls inside a // kilocode_change start/end block  (block annotation)
- *   - is in a file whose first non-empty line is         (whole-file annotation)
+ *   - contains a kilocode_change marker comment           (inline annotation)
+ *   - falls inside a kilocode_change start/end block      (block annotation)
+ *   - is in a file whose first non-shebang non-empty line is (whole-file annotation)
  *     // kilocode_change - new file
- *   - is empty / whitespace-only                         (skipped)
- *   - is itself a marker line                            (auto-covered)
+ *   - is empty / whitespace-only                          (skipped)
+ *   - is itself a marker line                             (auto-covered)
+ *
+ * JS (//), JSX ({/ * ... * /}), YAML (#), TOML (#), and shell (#) comment styles are recognized.
+ * Extensionless files with shebangs are treated as source files.
  *
  * Exempt paths (no markers needed — entirely Kilo-specific):
  *   - packages/opencode/src/kilocode/**
  *   - packages/opencode/test/kilocode/**
  *   - Any path containing "kilocode" in directory or filename
+ *   - Any path with a directory starting with "kilo-" (e.g. kilo-sessions/)
+ *   - script/upstream/**
+ *   - Kilo-specific annotation checker support files
  */
 
 import { spawnSync } from "node:child_process"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 
 const ROOT = path.resolve(import.meta.dir, "..")
-const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".jsx"])
+const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".yml", ".yaml", ".toml", ".sh", ".bash", ".zsh"])
+const SCOPES = [
+  "packages/opencode",
+  "packages/core",
+  "packages/llm",
+  "packages/schema",
+  "packages/protocol",
+  "packages/server",
+  "packages/tui",
+  "packages/extensions",
+  "packages/ui",
+  "packages/shared",
+  "packages/script",
+  "packages/storybook",
+  "script",
+  ".github",
+  "github",
+]
+const EXEMPT_SCOPES = [
+  "script/upstream",
+  "script/check-opencode-annotations.ts",
+  "packages/script/tests/check-opencode-annotations.test.ts",
+  ".github/workflows/check-opencode-annotations.yml",
+  ".github/workflows/watch-opencode-releases.yml",
+]
 
 const args = process.argv.slice(2)
+const unknown = args.find((arg, i) => arg !== "--base" && arg !== "--worktree" && args[i - 1] !== "--base")
+if (unknown) {
+  console.error(`Unknown argument: ${unknown}`)
+  process.exit(1)
+}
 const baseIdx = args.indexOf("--base")
-const base = baseIdx !== -1 ? args[baseIdx + 1] : "origin/main"
+const worktree = args.includes("--worktree")
+if (worktree && baseIdx !== -1) {
+  console.error("--base cannot be used with --worktree")
+  process.exit(1)
+}
+const base = (() => {
+  if (baseIdx === -1) return "origin/main"
+  const ref = args[baseIdx + 1]
+  if (ref && !ref.startsWith("--")) return ref
+  console.error("Missing value for --base")
+  process.exit(1)
+})()
 
 function run(cmd: string, args: string[]) {
   const result = spawnSync(cmd, args, { cwd: ROOT, encoding: "utf8" })
+  if (result.status !== 0) {
+    const msg = result.stderr?.trim() || result.stdout?.trim() || "unknown error"
+    console.error(`Command failed: ${cmd} ${args.join(" ")}\n${msg}`)
+    process.exit(1)
+  }
   return result.stdout?.trim() ?? ""
 }
 
-function changedFiles() {
-  const out = run("git", ["diff", "--name-only", "--diff-filter=AMRT", `${base}...HEAD`, "--", "packages/opencode"])
+const ref = worktree ? "HEAD" : `${base}...HEAD`
+
+function lines(out: string) {
   return out ? out.split("\n").filter(Boolean) : []
+}
+
+function untracked(file?: string) {
+  if (!worktree) return []
+  const pathspec = file ? [file] : SCOPES
+  return lines(run("git", ["ls-files", "--others", "--exclude-standard", "--", ...pathspec]))
+}
+
+function changedFiles() {
+  const out = run("git", ["diff", "--name-only", "--diff-filter=AMRT", ref, "--", ...SCOPES])
+  return [...new Set([...lines(out), ...untracked()])]
+}
+
+function isUpstreamMerge() {
+  const out = run("git", ["log", "--format=%P%x09%s", `${base}..HEAD`])
+  return out.split("\n").some((line) => {
+    const [parents = "", subject = ""] = line.split("\t")
+    if (!parents.includes(" ")) return false
+    const s = subject.toLowerCase()
+    return (
+      s.startsWith("merge: upstream ") ||
+      s.startsWith("merge: opencode ") ||
+      s.startsWith("merge: record upstream ") ||
+      s.startsWith("resolve merge conflict") ||
+      /^merge (?:remote-tracking )?branch '(?:[^/']+\/)*opencode-v\d/.test(s)
+    )
+  })
 }
 
 function isExempt(file: string) {
   const norm = file.replaceAll("\\", "/").toLowerCase()
-  return norm.split("/").some((part) => part.includes("kilocode"))
+  if (norm.split("/").some((part) => part.includes("kilocode") || part.startsWith("kilo-"))) return true
+  return EXEMPT_SCOPES.some((scope) => norm === scope || norm.startsWith(`${scope}/`))
+}
+
+function isChecked(file: string) {
+  const norm = file.replaceAll("\\", "/")
+  return SCOPES.some((scope) => norm === scope || norm.startsWith(`${scope}/`))
 }
 
 function isSource(file: string) {
-  return SOURCE_EXTS.has(path.extname(file))
+  const ext = path.extname(file)
+  if (SOURCE_EXTS.has(ext)) return true
+  if (ext) return false
+  return content(file).startsWith("#!") // kilocode_change
 }
 
-function addedLines(file: string): Set<number> {
-  const diff = run("git", ["diff", "--unified=0", "--diff-filter=AMRT", `${base}...HEAD`, "--", file])
-  const out = new Set<number>()
-  for (const line of diff.split("\n")) {
-    const m = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/)
-    if (!m) continue
-    const start = Number(m[1])
-    const count = m[2] !== undefined ? Number(m[2]) : 1
-    for (let i = 0; i < count; i++) out.add(start + i)
+// Parses the unified=0 diff for `file` against the selected target and returns:
+//   - added: every added line number on the checked version
+//   - revert: true when the file's diff removes any kilocode_change marker.
+//     In that case the changes are reverting Kilo modifications back to the
+//     upstream baseline, so newly added lines (which are restoring upstream
+//     content) should not require a marker. Refs that depended on a removed
+//     Kilo construct (e.g. `unixSkip(` → `unix(`) often live in different
+//     hunks than the marker itself, so we use file-level detection rather
+//     than hunk-level to avoid false positives on legitimate reverts.
+function addedLines(file: string): { added: Set<number>; revert: boolean } {
+  const added = new Set<number>()
+  if (untracked(file).includes(file)) {
+    const text = content(file)
+    const count = text.split(/\r?\n/).length
+    for (const n of Array.from({ length: count }, (_, i) => i + 1)) added.add(n)
+    return { added, revert: false }
   }
-  return out
+
+  const diff = run("git", ["diff", "--unified=0", "--diff-filter=AMRT", ref, "--", file])
+  let revert = false
+  const all = diff.split("\n")
+
+  let i = 0
+  while (i < all.length) {
+    const header = all[i] ?? ""
+    const m = header.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/)
+    if (!m) {
+      i++
+      continue
+    }
+
+    const start = Number(m[1])
+    let pos = 0
+    let j = i + 1
+    while (j < all.length) {
+      const hl = all[j] ?? ""
+      if (hl.startsWith("@@") || hl.startsWith("diff ")) break
+      if (hl.startsWith("+") && !hl.startsWith("+++")) {
+        added.add(start + pos)
+        pos++
+      } else if (hl.startsWith("-") && !hl.startsWith("---") && hasMarker(hl.slice(1))) {
+        revert = true
+      }
+      j++
+    }
+
+    i = j
+  }
+
+  return { added, revert }
+}
+
+// kilocode_change start
+function content(file: string) {
+  const abs = path.join(ROOT, file)
+  // The content must come from the SAME revision the added-line numbers come
+  // from. In `--worktree` mode that revision is the working tree; every other
+  // mode diffs `<base>...HEAD`, so it is HEAD. Reading the working tree while
+  // numbering its lines from HEAD mixes two revisions: a worktree dirty with the
+  // round's own edits (the driver commits the slice after the round) shifts the
+  // lines, and a properly marked added line then collides with an untouched
+  // upstream line and reports it as unannotated. Default mode is documented to
+  // ignore local edits; it must do so for the file content too.
+  if (worktree && existsSync(abs)) return readFileSync(abs, "utf8")
+
+  const out = run("git", ["show", `HEAD:${file}`])
+  const target = out.trim()
+  if (!target.startsWith("../")) return out
+
+  return readFileSync(path.resolve(path.dirname(abs), target), "utf8")
+}
+// kilocode_change end
+
+// Matches the start of a kilocode_change marker in JS, JSX, YAML, TOML, and shell comments.
+const MARKER_PREFIX = /(?:\/\/|\{?\s*\/\*|#)\s*kilocode_change\b/
+
+function hasMarker(line: string) {
+  return MARKER_PREFIX.test(line)
 }
 
 function coveredLines(text: string): { lines: string[]; covered: Set<number> } {
   const lines = text.split(/\r?\n/)
   const covered = new Set<number>()
 
-  // Whole-file annotation: first non-empty line is "// kilocode_change - new file"
-  const first = lines.find((x) => x.trim() !== "")
-  if (first?.match(/\/\/\s*kilocode_change\s*-\s*new\s*file\b/)) {
+  // Whole-file annotation: first non-shebang non-empty line is a kilocode_change - new file marker.
+  const first = lines.find((x) => x.trim() !== "" && !x.startsWith("#!"))
+  if (first?.match(/(?:\/\/|\{?\s*\/\*|#)\s*kilocode_change\s*-\s*new\s*file\b/)) {
     for (let i = 1; i <= lines.length; i++) covered.add(i)
     return { lines, covered }
   }
@@ -81,13 +237,13 @@ function coveredLines(text: string): { lines: string[]; covered: Set<number> } {
     const n = i + 1
     const line = lines[i] ?? ""
 
-    if (line.match(/\/\/\s*kilocode_change\s+start\b/)) {
+    if (line.match(/(?:\/\/|\{?\s*\/\*|#)\s*kilocode_change\s+start\b/)) {
       block = true
       covered.add(n)
       continue
     }
 
-    if (line.match(/\/\/\s*kilocode_change\s+end\b/)) {
+    if (line.match(/(?:\/\/|\{?\s*\/\*|#)\s*kilocode_change\s+end\b/)) {
       covered.add(n)
       block = false
       continue
@@ -98,7 +254,7 @@ function coveredLines(text: string): { lines: string[]; covered: Set<number> } {
       continue
     }
 
-    if (line.match(/\/\/\s*kilocode_change\b/)) covered.add(n)
+    if (hasMarker(line)) covered.add(n)
   }
 
   return { lines, covered }
@@ -106,44 +262,70 @@ function coveredLines(text: string): { lines: string[]; covered: Set<number> } {
 
 // --- main ---
 
-const files = changedFiles().filter((f) => !isExempt(f) && isSource(f))
+// CI only runs this check when a changed file matches the workflow's `paths:` filter, so a scope
+// missing there means PRs touching only that scope never get checked. Fail fast on that drift.
+const workflow = path.join(ROOT, ".github/workflows/check-opencode-annotations.yml")
+const filter = existsSync(workflow) ? readFileSync(workflow, "utf8") : undefined
+const unwatched = filter == null ? [] : SCOPES.filter((scope) => !filter.includes(`- "${scope}/**"`))
+if (unwatched.length > 0) {
+  console.error(
+    [
+      "Checked scopes missing from the `paths:` filter in .github/workflows/check-opencode-annotations.yml:",
+      "",
+      ...unwatched.map((scope) => `  - "${scope}/**"`),
+      "",
+      "Add them so pull requests touching these scopes run this check in CI.",
+    ].join("\n"),
+  )
+  process.exit(1)
+}
+
+if (!worktree && isUpstreamMerge()) {
+  console.log("Skipping shared upstream annotation check — upstream merge detected.")
+  process.exit(0)
+}
+
+const files = changedFiles().filter((f) => isChecked(f) && !isExempt(f) && isSource(f))
 
 if (files.length === 0) {
-  console.log("No shared opencode source files changed — nothing to check.")
+  console.log("No shared upstream source files changed — nothing to check.")
   process.exit(0)
 }
 
 const violations: string[] = []
 
 for (const file of files) {
-  const nums = addedLines(file)
-  if (nums.size === 0) continue
+  const { added, revert } = addedLines(file)
+  if (added.size === 0) continue
+  if (revert) continue // kilocode_change - file is reverting Kilo modifications back to upstream
 
-  const abs = path.join(ROOT, file)
-  const text = readFileSync(abs, "utf8")
+  const text = content(file) // kilocode_change
   const { lines, covered } = coveredLines(text)
 
-  for (const n of nums) {
+  for (const n of added) {
     const line = lines[n - 1] ?? ""
     const trim = line.trim()
     if (!trim) continue
-    if (trim.match(/\/\/\s*kilocode_change\b/)) continue
+    if (hasMarker(trim)) continue
     if (!covered.has(n)) violations.push(`  ${file}:${n}: ${trim}`)
   }
 }
 
 if (violations.length === 0) {
-  console.log("All shared opencode changes are annotated with kilocode_change markers.")
+  console.log("All shared upstream changes are annotated with kilocode_change markers.")
   process.exit(0)
 }
 
 console.error(
   [
-    "Unannotated Kilo changes found in shared opencode files:",
+    "Unannotated Kilo changes found in shared upstream files:",
     "",
     ...violations,
     "",
-    "Every Kilo-specific change in packages/opencode/ must be annotated.",
+    "Every Kilo-specific change in shared upstream source files must be annotated.",
+    "",
+    "Checked paths:",
+    ...SCOPES.map((scope) => `  - ${scope}/**`),
     "",
     "Inline (single line):",
     "  const url = Flag.KILO_MODELS_URL || 'https://models.dev' // kilocode_change",
@@ -153,6 +335,18 @@ console.error(
     "  ...",
     "  // kilocode_change end",
     "",
+    "JSX/TSX (inside JSX templates):",
+    "  {/* kilocode_change */}",
+    "  {/* kilocode_change start */}",
+    "  ...",
+    "  {/* kilocode_change end */}",
+    "",
+    "YAML/TOML/shell:",
+    "  # kilocode_change",
+    "  # kilocode_change start",
+    "  ...",
+    "  # kilocode_change end",
+    "",
     "New file:",
     "  // kilocode_change - new file",
     "",
@@ -160,6 +354,9 @@ console.error(
     "  - packages/opencode/src/kilocode/**",
     "  - packages/opencode/test/kilocode/**",
     "  - Any path containing 'kilocode' in the directory or filename",
+    "  - Any directory starting with 'kilo-' (e.g. kilo-sessions/)",
+    "  - script/upstream/**",
+    "  - Kilo-specific annotation checker support files",
     "",
     "See AGENTS.md for details.",
   ].join("\n"),

@@ -3,7 +3,7 @@
 // Content is inlined at compile time via Bun's static import of .md files.
 // Registered before all discovery phases so user skills with the same name override.
 
-import KILO_CONFIG from "./kilo-config.md"
+import KILO_CONFIG from "./kilo-config.md" with { type: "text" }
 
 export interface BuiltinSkill {
   name: string
@@ -15,7 +15,7 @@ export const BUILTIN_SKILLS: BuiltinSkill[] = [
   {
     name: "kilo-config",
     description:
-      "Guide for configuring Kilo CLI and locating config, command, agent, and skill paths (global, project, legacy), plus MCP servers, permissions, instructions, plugins, providers, kilo.json fields, and TUI settings (themes, appearance, keybinds, ctrl+p commands). Use when the user asks about configuring Kilo, where it loads things from, or how to change settings.",
+      "Guide for Kilo configuration: config paths, kilo.json fields, commands, agents, skills, permissions, MCPs, providers, TUI settings, plus Agent Manager worktree setup/run scripts, workflows, and state. Use for Kilo config questions, locating loaded config, changing settings, or Agent Manager questions about run/setup scripts, worktree setup/workflows, apply/merge/PR/conflicts, missing sessions/worktrees, and agent-manager.json recovery.",
     content: KILO_CONFIG,
   },
 ]

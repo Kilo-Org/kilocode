@@ -133,34 +133,18 @@ export function postprocessCompletion({
     }
   }
 
-  if (llm.model.includes("qwen3")) {
-    // Qwen3 always starts from special thinking markers, and we don't want them to output these contents
-    // Remove all content from "
-    completion = completion.replace(/<think>.*?<\/think>/s, "")
-    completion = completion.replace(/<\/think>/, "")
-
-    // Remove any number of newline characters at the beginning and end
-    completion = completion.replace(/^\n+|\n+$/g, "")
-  }
-
-  if (llm.model.includes("mercury") || llm.model.includes("granite")) {
+  if (llm.model.includes("mercury")) {
     completion = removePrefixOverlap(completion, prefix)
-  }
 
-  // // If completion starts with multiple whitespaces, but the cursor is at the end of the line
-  // // then it should probably be on a new line
-  if (
-    llm.model.includes("mercury") &&
-    (completion.startsWith("  ") || completion.startsWith("\t")) &&
-    !prefix.endsWith("\n") &&
-    (suffix.startsWith("\n") || suffix.trim().length === 0)
-  ) {
-    completion = "\n" + completion
-  }
-
-  if ((llm.model.includes("gemini") || llm.model.includes("gemma")) && completion.endsWith("<|file_separator|>")) {
-    // "<|file_separator|>" is 18 characters long
-    completion = completion.slice(0, -18)
+    // If completion starts with multiple whitespaces, but the cursor is at the
+    // end of the line then it should probably be on a new line
+    if (
+      (completion.startsWith("  ") || completion.startsWith("\t")) &&
+      !prefix.endsWith("\n") &&
+      (suffix.startsWith("\n") || suffix.trim().length === 0)
+    ) {
+      completion = "\n" + completion
+    }
   }
 
   // If prefix ends with space and so does completion, then remove the space from completion

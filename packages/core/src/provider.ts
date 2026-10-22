@@ -1,0 +1,26 @@
+export * as ProviderV2 from "./provider"
+
+import { Types } from "effect"
+import { Provider } from "@opencode-ai/schema/provider"
+
+// kilocode_change - preserve Kilo's well-known routing ID without forking the shared schema
+export const ID = Object.assign(Provider.ID, { kilo: Provider.ID.make("kilo") })
+export type ID = typeof ID.Type
+
+export const AISDK = Provider.AISDK
+
+export const Native = Provider.Native
+
+export const Api = Provider.Api
+export type Api = Provider.Api
+export type MutableApi<T extends Api = Api> = T extends Api
+  ? Omit<Types.DeepMutable<T>, "settings"> & (undefined extends T["settings"] ? { settings?: any } : { settings: any })
+  : never
+
+export const Request = Provider.Request
+export type Request = Provider.Request
+
+export const Info = Provider.Info
+export type Info = Provider.Info
+
+export type MutableInfo = Omit<Types.DeepMutable<Info>, "api"> & { api: MutableApi }

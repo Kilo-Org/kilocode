@@ -15,15 +15,15 @@ import {
 } from "../types"
 import {
   findMatchingSuggestion as _findMatchingSuggestion,
+  findCoveringPendingRequest,
   applyFirstLineOnly as _applyFirstLineOnly,
-  countLines as _countLines,
-  shouldShowOnlyFirstLine as _shouldShowOnlyFirstLine,
-  getFirstLine as _getFirstLine,
   calcDebounceDelay,
   MatchingSuggestionWithFillIn as _MatchingSuggestionWithFillIn,
 } from "./inline-utils"
 import { FimPromptBuilder } from "./FillInTheMiddle"
-import { AutocompleteModel } from "../AutocompleteModel"
+import { hasValidCredentials } from "../fim"
+import type { KiloConnectionService } from "../../cli-backend"
+import { getAutocompleteModelById } from "../../../shared/autocomplete-models"
 import { ContextRetrievalService } from "../continuedev/core/autocomplete/context/ContextRetrievalService"
 import { VsCodeIde } from "../continuedev/core/vscode-test-harness/src/VSCodeIde"
 import { RecentlyVisitedRangesService } from "../continuedev/core/vscode-test-harness/src/autocomplete/RecentlyVisitedRangesService"
@@ -33,9 +33,20 @@ import { postprocessAutocompleteSuggestion } from "./uselessSuggestionFilter"
 import { shouldSkipAutocomplete } from "./contextualSkip"
 import { FileIgnoreController } from "../shims/FileIgnoreController"
 import { AutocompleteTelemetry } from "./AutocompleteTelemetry"
+import {
+  autocompleteScope,
+  getNotebookContext,
+  notebookUri,
+  supportsNotebook,
+} from "../continuedev/core/autocomplete/notebook"
 import { ErrorBackoff } from "./ErrorBackoff"
 
 const MAX_SUGGESTIONS_HISTORY = 20
+
+export function accessible(controller: FileIgnoreController, document: vscode.TextDocument): boolean {
+  const uri = notebookUri(document.uri)
+  return controller.validateAccess(uri?.fsPath ?? document.fileName)
+}
 
 /**
  * Minimum debounce delay in milliseconds.
@@ -71,11 +82,12 @@ export type { CostTrackingCallback, AutocompletePrompt, MatchingSuggestionResult
 export type MatchingSuggestionWithFillIn = _MatchingSuggestionWithFillIn
 
 export function findMatchingSuggestion(
+  scope: string,
   prefix: string,
   suffix: string,
   suggestionsHistory: FillInAtCursorSuggestion[],
 ): MatchingSuggestionWithFillIn | null {
-  return _findMatchingSuggestion(prefix, suffix, suggestionsHistory)
+  return _findMatchingSuggestion(scope, prefix, suffix, suggestionsHistory)
 }
 
 export function applyFirstLineOnly(
@@ -90,18 +102,6 @@ export function applyFirstLineOnly(
  * This command is executed after the user accepts an inline completion.
  */
 export const INLINE_COMPLETION_ACCEPTED_COMMAND = "kilocode.autocomplete.inline-completion.accepted"
-
-export function countLines(text: string): number {
-  return _countLines(text)
-}
-
-export function shouldShowOnlyFirstLine(prefix: string, suggestion: string): boolean {
-  return _shouldShowOnlyFirstLine(prefix, suggestion)
-}
-
-export function getFirstLine(text: string): string {
-  return _getFirstLine(text)
-}
 
 export function stringToInlineCompletions(text: string, position: vscode.Position): vscode.InlineCompletionItem[] {
   if (text === "") {
@@ -120,19 +120,21 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   /** Tracks all pending/in-flight requests */
   private pendingRequests: PendingRequest[] = []
   private fimPromptBuilder: FimPromptBuilder
-  private model: AutocompleteModel
+  private contextProvider: AutocompleteContextProvider
+  private connectionService: KiloConnectionService
   private costTrackingCallback: CostTrackingCallback
   private getSettings: () => AutocompleteServiceSettings | null
-  private recentlyVisitedRangesService: RecentlyVisitedRangesService
+  public readonly recentlyVisitedRangesService: RecentlyVisitedRangesService
   private recentlyEditedTracker: RecentlyEditedTracker
   private debounceTimer: NodeJS.Timeout | null = null
   /** The pending request associated with the current debounce timer (if any) */
   private debouncedPendingRequest: PendingRequest | null = null
   private isFirstCall: boolean = true
-  private ignoreController: Promise<FileIgnoreController>
-  /** Abort controller for the current in-flight FIM request */
-  private fimAbortController: AbortController | null = null
+  public readonly ignoreController: Promise<FileIgnoreController>
+  /** Abort controllers for in-flight FIM requests, scoped by file/notebook context. */
+  private fimAbortControllers = new Map<string, AbortController>()
   private acceptedCommand: vscode.Disposable | null = null
+  private contextService: ContextRetrievalService | null = null
   private debounceDelayMs: number = INITIAL_DEBOUNCE_DELAY_MS
   private latencyHistory: number[] = []
   private telemetry: AutocompleteTelemetry | null
@@ -147,7 +149,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
 
   constructor(
     context: vscode.ExtensionContext,
-    model: AutocompleteModel,
+    modelId: string,
+    connectionService: KiloConnectionService,
     costTrackingCallback: CostTrackingCallback,
     getSettings: () => AutocompleteServiceSettings | null,
     workspacePath: string,
@@ -155,7 +158,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     onFatalError?: (status: number | null) => void,
   ) {
     this.telemetry = telemetry
-    this.model = model
+    this.connectionService = connectionService
     this.costTrackingCallback = costTrackingCallback
     this.getSettings = getSettings
     this.onFatalError = onFatalError ?? null
@@ -167,14 +170,14 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     })()
 
     const ide = new VsCodeIde(context)
-    const contextService = new ContextRetrievalService(ide)
-    const contextProvider: AutocompleteContextProvider = {
+    this.contextService = new ContextRetrievalService(ide)
+    this.contextProvider = {
       ide,
-      contextService,
-      model,
+      contextService: this.contextService,
+      modelId,
       ignoreController: this.ignoreController,
     }
-    this.fimPromptBuilder = new FimPromptBuilder(contextProvider)
+    this.fimPromptBuilder = new FimPromptBuilder(this.contextProvider)
 
     this.recentlyVisitedRangesService = new RecentlyVisitedRangesService(ide)
     this.recentlyEditedTracker = new RecentlyEditedTracker(ide)
@@ -188,6 +191,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   public updateSuggestions(fillInAtCursor: FillInAtCursorSuggestion): void {
     const isDuplicate = this.suggestionsHistory.some(
       (existing) =>
+        existing.scope === fillInAtCursor.scope &&
         existing.text === fillInAtCursor.text &&
         existing.prefix === fillInAtCursor.prefix &&
         existing.suffix === fillInAtCursor.suffix,
@@ -221,46 +225,64 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       recentlyEditedRanges,
     }
 
-    const autocompleteInput = contextToAutocompleteInput(context)
+    const input = contextToAutocompleteInput(context)
+    const notebook = getNotebookContext(document, position)
+    const autocompleteInput = notebook
+      ? {
+          ...input,
+          filepath: notebook.filepath,
+          pos: { line: notebook.position.line, character: notebook.position.character },
+          manuallyPassFileContents: notebook.contents,
+        }
+      : input
 
     const { prefix, suffix } = extractPrefixSuffix(document, position)
     const languageId = document.languageId
 
     const prompt = await this.fimPromptBuilder.getFimPrompts(
       autocompleteInput,
-      this.model.getModelName() ?? "codestral",
+      this.contextProvider.modelId || "codestral",
     )
 
     return { prompt, prefix, suffix }
   }
 
+  /**
+   * Update the autocomplete model ID. The context provider (shared with the
+   * FIM prompt builder) is mutated in place so downstream consumers pick up
+   * the new value on the next request.
+   */
+  public setModel(modelId: string): void {
+    this.contextProvider.modelId = modelId
+  }
+
   private processSuggestion(
     suggestionText: string,
+    scope: string,
     prefix: string,
     suffix: string,
-    model: AutocompleteModel,
     telemetryContext: AutocompleteContext,
     languageId?: string,
   ): FillInAtCursorSuggestion {
     if (!suggestionText) {
       this.telemetry?.captureSuggestionFiltered("empty_response", telemetryContext)
-      return { text: "", prefix, suffix }
+      return { text: "", scope, prefix, suffix }
     }
 
     const processedText = postprocessAutocompleteSuggestion({
       suggestion: suggestionText,
       prefix,
       suffix,
-      model: model.getModelName() || "",
+      model: this.contextProvider.modelId || "",
       languageId,
     })
 
     if (processedText) {
-      return { text: processedText, prefix, suffix }
+      return { text: processedText, scope, prefix, suffix }
     }
 
     this.telemetry?.captureSuggestionFiltered("filtered_by_postprocessing", telemetryContext)
-    return { text: "", prefix, suffix }
+    return { text: "", scope, prefix, suffix }
   }
 
   private async disposeIgnoreController(): Promise<void> {
@@ -299,11 +321,15 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       clearTimeout(this.debounceTimer)
       this.debounceTimer = null
     }
-    this.debouncedPendingRequest = null
+    this.settleDebouncedPendingRequest()
     this.pendingRequests.length = 0
-    this.fimAbortController?.abort()
-    this.fimAbortController = null
+    for (const controller of this.fimAbortControllers.values()) {
+      controller.abort()
+    }
+    this.fimAbortControllers.clear()
     this.telemetry?.dispose()
+    this.contextService?.dispose()
+    this.contextService = null
     this.recentlyVisitedRangesService.dispose()
     this.recentlyEditedTracker.dispose()
     void this.disposeIgnoreController()
@@ -336,18 +362,19 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     _token: vscode.CancellationToken,
   ): Promise<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
     vscode.commands.executeCommand("setContext", "kilo-code.new.autocomplete.hasSuggestions", false)
+    if (!supportsNotebook(document)) return []
 
     // Build telemetry context
     const telemetryContext: AutocompleteContext = {
       languageId: document.languageId,
-      modelId: this.model?.getModelName(),
-      provider: this.model?.getProviderDisplayName(),
+      modelId: this.contextProvider.modelId,
+      provider: getAutocompleteModelById(this.contextProvider.modelId).provider,
     }
 
     this.telemetry?.captureSuggestionRequested(telemetryContext)
 
-    if (!this.model || !this.model.hasValidCredentials()) {
-      // bail if no model is available or no valid API credentials configured
+    if (!hasValidCredentials(this.connectionService)) {
+      // bail if no valid API credentials configured
       // this prevents errors when autocomplete is enabled but no provider is set up
       return []
     }
@@ -361,8 +388,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       // instead of sending a probe FIM request. If the user has added credits,
       // reset the backoff so autocomplete resumes.
       if (this.backoff.getFatalStatus() === 402 && this.backoff.shouldProbe()) {
-        const funded = await this.model.hasBalance()
-        if (funded) {
+        if (await this.hasBalance()) {
           this.backoff.reset()
           this.fatalNotified = false
         }
@@ -390,8 +416,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
             return []
           }
 
-          const isAccessible = controller.validateAccess(document.fileName)
-          if (!isAccessible) {
+          if (!accessible(controller, document)) {
             return []
           }
         } catch {
@@ -400,10 +425,14 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
         }
       }
 
+      const scope = autocompleteScope(document)
       const { prefix, suffix } = extractPrefixSuffix(document, position)
 
       // Check cache first - allow mid-word lookups from cache
-      const matchingResult = applyFirstLineOnly(findMatchingSuggestion(prefix, suffix, this.suggestionsHistory), prefix)
+      const matchingResult = applyFirstLineOnly(
+        findMatchingSuggestion(scope, prefix, suffix, this.suggestionsHistory),
+        prefix,
+      )
 
       if (matchingResult !== null) {
         this.lastSuggestion = {
@@ -426,9 +455,12 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
 
       const { prompt, prefix: promptPrefix, suffix: promptSuffix } = await this.getPrompt(document, position)
 
-      await this.debouncedFetchAndCacheSuggestion(prompt, promptPrefix, promptSuffix, document.languageId)
+      await this.debouncedFetchAndCacheSuggestion(scope, prompt, promptPrefix, promptSuffix, document.languageId)
 
-      const cachedResult = applyFirstLineOnly(findMatchingSuggestion(prefix, suffix, this.suggestionsHistory), prefix)
+      const cachedResult = applyFirstLineOnly(
+        findMatchingSuggestion(scope, prefix, suffix, this.suggestionsHistory),
+        prefix,
+      )
       if (cachedResult) {
         this.lastSuggestion = {
           ...telemetryContext,
@@ -450,31 +482,6 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   }
 
   /**
-   * Find a pending request that covers the current prefix/suffix.
-   * A request covers the current position if:
-   * 1. The suffix matches (user hasn't changed text after cursor)
-   * 2. The current prefix either equals or extends the pending prefix
-   *    (user is typing forward, not backspacing or editing earlier)
-   *
-   * @returns The covering pending request, or null if none found
-   */
-  private findCoveringPendingRequest(prefix: string, suffix: string): PendingRequest | null {
-    for (const pendingRequest of this.pendingRequests) {
-      // Suffix must match exactly (text after cursor unchanged)
-      if (suffix !== pendingRequest.suffix) {
-        continue
-      }
-
-      // Current prefix must start with the pending prefix (user typed more)
-      // or be exactly equal (same position)
-      if (prefix.startsWith(pendingRequest.prefix)) {
-        return pendingRequest
-      }
-    }
-    return null
-  }
-
-  /**
    * Remove a pending request from the list when it completes.
    */
   private removePendingRequest(request: PendingRequest): void {
@@ -484,6 +491,15 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     }
   }
 
+  private settleDebouncedPendingRequest(): void {
+    const pending = this.debouncedPendingRequest
+    if (!pending) return
+
+    this.removePendingRequest(pending)
+    pending.resolve?.()
+    this.debouncedPendingRequest = null
+  }
+
   /**
    * Debounced fetch with leading edge execution and pending request reuse.
    * - First call executes immediately (leading edge)
@@ -491,13 +507,14 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
    * - If a pending request covers the current prefix/suffix, reuse it instead of starting a new one
    */
   private debouncedFetchAndCacheSuggestion(
+    scope: string,
     prompt: AutocompletePrompt,
     prefix: string,
     suffix: string,
     languageId: string,
   ): Promise<void> {
     // Check if any existing pending request covers this one
-    const coveringRequest = this.findCoveringPendingRequest(prefix, suffix)
+    const coveringRequest = findCoveringPendingRequest(scope, prefix, suffix, this.pendingRequests)
     if (coveringRequest) {
       // Wait for the existing request to complete - no need to start a new one
       return coveringRequest.promise
@@ -507,8 +524,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     // but still track it as a pending request so subsequent calls can reuse it
     if (this.isFirstCall && this.debounceTimer === null) {
       this.isFirstCall = false
-      const promise = this.fetchAndCacheSuggestion(prompt, prefix, suffix, languageId)
-      const leading: PendingRequest = { prefix, suffix, promise }
+      const promise = this.fetchAndCacheSuggestion(scope, prompt, prefix, suffix, languageId)
+      const leading: PendingRequest = { scope, prefix, suffix, promise }
       promise.finally(() => this.removePendingRequest(leading))
       this.pendingRequests.push(leading)
       return promise
@@ -519,28 +536,30 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     // otherwise linger with a never-resolving promise.
     if (this.debounceTimer !== null) {
       clearTimeout(this.debounceTimer)
-      if (this.debouncedPendingRequest) {
-        this.removePendingRequest(this.debouncedPendingRequest)
-        this.debouncedPendingRequest = null
-      }
+      this.debounceTimer = null
+      this.settleDebouncedPendingRequest()
     }
 
     // Create the pending request object first so we can reference it in the cleanup
     const pendingRequest: PendingRequest = {
+      scope,
       prefix,
       suffix,
       promise: null!, // Will be set immediately below
     }
 
     const requestPromise = new Promise<void>((resolve) => {
+      pendingRequest.resolve = resolve
       this.debounceTimer = setTimeout(async () => {
         this.debounceTimer = null
         this.debouncedPendingRequest = null
         this.isFirstCall = true // Reset for next sequence
-        await this.fetchAndCacheSuggestion(prompt, prefix, suffix, languageId)
-        // Remove this request from pending when done
-        this.removePendingRequest(pendingRequest)
-        resolve()
+        try {
+          await this.fetchAndCacheSuggestion(scope, prompt, prefix, suffix, languageId)
+        } finally {
+          this.removePendingRequest(pendingRequest)
+          resolve()
+        }
       }, this.debounceDelayMs)
     })
 
@@ -557,39 +576,40 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   }
 
   public async fetchAndCacheSuggestion(
+    scope: string,
     prompt: AutocompletePrompt,
     prefix: string,
     suffix: string,
     languageId: string,
   ): Promise<void> {
-    // Abort any previous in-flight FIM request before starting a new one
-    this.fimAbortController?.abort()
+    // Defense-in-depth: credentials may become invalid between the provider gate and the actual
+    // debounced execution. In that case, do not attempt an LLM call at all.
+    if (!hasValidCredentials(this.connectionService)) {
+      return
+    }
+
+    // Abort only the request superseded within this file/notebook scope.
+    this.fimAbortControllers.get(scope)?.abort()
     const controller = new AbortController()
-    this.fimAbortController = controller
+    this.fimAbortControllers.set(scope, controller)
 
     const startTime = performance.now()
 
     // Build telemetry context for this request
     const telemetryContext: AutocompleteContext = {
       languageId,
-      modelId: this.model?.getModelName(),
-      provider: this.model?.getProviderDisplayName(),
-    }
-
-    // Defense-in-depth: credentials may become invalid between the provider gate and the actual
-    // debounced execution (e.g., profile reload calling AutocompleteModel.cleanup()).
-    // In that case, do not attempt an LLM call at all.
-    if (!this.model || !this.model.hasValidCredentials()) {
-      return
+      modelId: this.contextProvider.modelId,
+      provider: getAutocompleteModelById(this.contextProvider.modelId).provider,
     }
 
     try {
-      // Curry processSuggestion with prefix, suffix, model, telemetry context, and languageId
+      // Curry processSuggestion with request context
       const curriedProcessSuggestion = (text: string) =>
-        this.processSuggestion(text, prefix, suffix, this.model, telemetryContext, languageId)
+        this.processSuggestion(text, scope, prefix, suffix, telemetryContext, languageId)
 
       const result = await this.fimPromptBuilder.getFromFIM(
-        this.model,
+        this.connectionService,
+        this.contextProvider.modelId,
         prompt,
         curriedProcessSuggestion,
         controller.signal,
@@ -639,6 +659,25 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
         this.fatalNotified = true
         this.onFatalError?.(this.backoff.getFatalStatus())
       }
+    } finally {
+      if (this.fimAbortControllers.get(scope) === controller) {
+        this.fimAbortControllers.delete(scope)
+      }
+    }
+  }
+
+  /**
+   * Check the user's credit balance via the profile endpoint.
+   * Returns true if the user has a positive balance, false otherwise.
+   * Returns false on any error (not connected, fetch failed, etc.).
+   */
+  private async hasBalance(): Promise<boolean> {
+    try {
+      const client = await this.connectionService.getClientAsync()
+      const result = await client.kilo.profile().catch(() => null)
+      return (result?.data?.balance?.balance ?? 0) > 0
+    } catch {
+      return false
     }
   }
 }

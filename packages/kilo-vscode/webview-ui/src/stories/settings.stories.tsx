@@ -3,16 +3,25 @@
  * Stories for Settings and ProvidersTab components.
  */
 
-import { onMount } from "solid-js"
+import { onMount, createSignal } from "solid-js"
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { StoryProviders, mockSessionValue } from "./StoryProviders"
+import { StoryProviders, mockSessionValue, t } from "./StoryProviders"
 import { SessionContext } from "../context/session"
+import { KiloEmbeddingModelsContext } from "../context/kilo-embedding-models"
 import Settings from "../components/settings/Settings"
 import ProvidersTab from "../components/settings/ProvidersTab"
+import ModelsTab from "../components/settings/ModelsTab"
+import DisplayTab from "../components/settings/DisplayTab"
 import AgentBehaviourTab from "../components/settings/AgentBehaviourTab"
+import AutoApproveTab from "../components/settings/AutoApproveTab"
 import ModeEditView from "../components/settings/ModeEditView"
 import McpEditView from "../components/settings/McpEditView"
-import type { AgentConfig, CommandConfig } from "../types/messages"
+import type { AgentConfig, CommandConfig, Config } from "../types/messages"
+import IndexingTab from "../components/settings/IndexingTab"
+import CustomProviderDialog from "../components/settings/CustomProviderDialog"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { SidebarEmptyState } from "../components/chat/SidebarEmptyState"
+import { WorkStyleContext, type WorkStyleContextValue } from "../context/work-style"
 
 const meta: Meta = {
   title: "Settings",
@@ -46,6 +55,66 @@ export const SettingsPanel: Story = {
   ),
 }
 
+export const AutoApproveBashOnly: Story = {
+  name: "AutoApproveTab — Bash-only config defaults",
+  render: () => (
+    <StoryProviders config={{ permission: { bash: { "*": "ask", "git status *": "allow" } } } as any}>
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <AutoApproveTab />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const SandboxingPanel: Story = {
+  name: "Settings — sandboxing controls",
+  render: () => (
+    <StoryProviders config={{ sandbox: { network: "deny" } }} features={{ sandboxControls: true }}>
+      <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+        <Settings tab="sandboxing" />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const SandboxingAllowlist: Story = {
+  name: "Settings — sandboxing with network destinations",
+  render: () => (
+    <StoryProviders
+      config={{
+        sandbox: {
+          enabled: true,
+          network: "deny",
+          allowed_hosts: ["github.com:443", "api.github.com:443"],
+          writable_paths: ["~/shared-output"],
+        },
+      }}
+      features={{ sandboxControls: true }}
+    >
+      <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+        <Settings tab="sandboxing" />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+/**
+ * The Display tab shows its session preview beside the controls only when the
+ * `@container (min-width: 1050px)` grid rule matches. This wrapper establishes
+ * the inline-size container, like the Tabs root does in the full settings panel,
+ * so the two-column layout renders.
+ */
+export const DisplayPreview: Story = {
+  name: "Display — session preview",
+  render: () => (
+    <StoryProviders config={{}}>
+      <div style={{ width: "1200px", height: "700px", overflow: "auto", "container-type": "inline-size" }}>
+        <DisplayTab />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 export const ProvidersConfigure: Story = {
   name: "ProvidersTab — no providers configured",
   render: () => (
@@ -57,13 +126,137 @@ export const ProvidersConfigure: Story = {
   ),
 }
 
+/** Opens the Disabled Providers collapsible on mount so the expanded list has coverage. */
+function OpenDisabledProviders() {
+  let ref: HTMLDivElement | undefined
+  onMount(() => {
+    requestAnimationFrame(() => {
+      ref?.querySelector<HTMLButtonElement>('[data-slot="collapsible-trigger"]')?.click()
+    })
+  })
+  return (
+    <div ref={ref} style={{ "max-height": "700px", overflow: "auto" }}>
+      <ProvidersTab />
+    </div>
+  )
+}
+
+export const ProvidersDisabledExpanded: Story = {
+  name: "ProvidersTab — disabled providers expanded",
+  render: () => (
+    <StoryProviders config={{ disabled_providers: ["openai", "anthropic"] } as any}>
+      <OpenDisabledProviders />
+    </StoryProviders>
+  ),
+}
+
+export const ModelsAutocompleteOpen: Story = {
+  name: "ModelsTab — autocomplete model picker open",
+  render: () => (
+    <StoryProviders config={{} as any}>
+      <OpenModelPicker>
+        <ModelsTab />
+      </OpenModelPicker>
+    </StoryProviders>
+  ),
+}
+
+export const ModelsAccessibleLabels: Story = {
+  name: "ModelsTab — accessible model labels",
+  render: () => (
+    <StoryProviders config={{} as any}>
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <ModelsTab />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const ModelsSpeechToText: Story = {
+  name: "ModelsTab — speech-to-text model",
+  render: () => (
+    <StoryProviders kiloAuth config={{ experimental: { speech_to_text_model: "google/chirp-3" } } as any}>
+      <ScrollToSpeechModels />
+    </StoryProviders>
+  ),
+}
+
+/**
+ * Scrolls the clipped ModelsTab to the speech-to-text rows on mount. The added
+ * rows push the model row below the 700px capture area otherwise.
+ */
+function ScrollToSpeechModels() {
+  let ref: HTMLDivElement | undefined
+  onMount(() => {
+    requestAnimationFrame(() => {
+      const rows = Array.from(ref?.querySelectorAll<HTMLElement>('[data-slot="settings-row"]') ?? [])
+      const title = t("settings.models.speechToTextModel.title")
+      for (const row of rows) {
+        if (!row.textContent?.includes(title)) continue
+        row.scrollIntoView({ block: "center" })
+        return
+      }
+    })
+  })
+  return (
+    <div ref={ref} style={{ "max-height": "700px", overflow: "auto" }}>
+      <ModelsTab />
+    </div>
+  )
+}
+
+function OpenModelPicker(props: { children: any }) {
+  let ref: HTMLDivElement | undefined
+  onMount(() => {
+    requestAnimationFrame(() => {
+      ref?.querySelector<HTMLButtonElement>('button[title="mistralai/codestral-2508"]')?.click()
+    })
+  })
+  return (
+    <div ref={ref} style={{ "max-height": "700px", overflow: "auto" }}>
+      {props.children}
+    </div>
+  )
+}
+
+const work: WorkStyleContextValue = {
+  style: () => "unset",
+  loading: () => false,
+  applying: () => false,
+  shouldShowOnboarding: () => true,
+  apply: noop,
+}
+
+function WorkStyleOnboarding() {
+  return (
+    <StoryProviders noPadding>
+      <WorkStyleContext.Provider value={work}>
+        <div style={{ height: "700px", overflow: "auto" }}>
+          <SidebarEmptyState />
+        </div>
+      </WorkStyleContext.Provider>
+    </StoryProviders>
+  )
+}
+
+export const WorkStyleOnboardingDefault: Story = {
+  name: "Work style onboarding — default width",
+  render: () => <WorkStyleOnboarding />,
+}
+
+export const WorkStyleOnboarding200: Story = {
+  name: "Work style onboarding — narrow width",
+  render: () => <WorkStyleOnboarding />,
+}
+
 export const AgentBehaviourAgents: Story = {
   name: "AgentBehaviourTab — available agents list",
   render: () => {
     const session = {
       ...mockSessionValue({ id: "agents-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
-      removeMode: noop,
+      allAgents: () => MOCK_AGENTS,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -87,7 +280,8 @@ export const AgentBehaviourEditCustomMode: Story = {
     const session = {
       ...mockSessionValue({ id: "edit-mode-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
-      removeMode: noop,
+      allAgents: () => MOCK_AGENTS,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -97,8 +291,17 @@ export const AgentBehaviourEditCustomMode: Story = {
       reviewer: {
         description: "Review code for quality and best practices",
         prompt: "You are a code reviewer. Focus on code quality, best practices, and potential bugs.",
-        model: "anthropic/claude-sonnet-4-20250514",
+        model: "kilo/anthropic/claude-sonnet-4-6",
+        variant: "high",
         temperature: 0.3,
+        permission: {
+          read: "allow",
+          grep: "allow",
+          glob: "allow",
+          edit: "deny",
+          bash: "deny",
+          task: "ask",
+        },
       },
     }
     return (
@@ -179,7 +382,8 @@ export const AgentBehaviourWorkflows: Story = {
     const session = {
       ...mockSessionValue({ id: "workflows-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
-      removeMode: noop,
+      allAgents: () => MOCK_AGENTS,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -201,7 +405,8 @@ export const AgentBehaviourWorkflowsEmpty: Story = {
     const session = {
       ...mockSessionValue({ id: "workflows-empty-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
-      removeMode: noop,
+      allAgents: () => MOCK_AGENTS,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -211,6 +416,51 @@ export const AgentBehaviourWorkflowsEmpty: Story = {
       <StoryProviders sessionID="workflows-empty-story" status="idle">
         <SessionContext.Provider value={session as any}>
           <SubtabWrapper tab="workflows" />
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+/** Skills subtab with seeded long paths/URLs in a narrow container — regression fixture for
+ *  the responsive overflow bug where value cells retained min-content width and pushed the
+ *  remove (×) IconButton off-screen. */
+export const AgentBehaviourSkillsOverflow: Story = {
+  name: "AgentBehaviourTab — skills subtab narrow overflow",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: "skills-overflow-story", status: "idle" }),
+      agents: () => MOCK_AGENTS,
+      allAgents: () => MOCK_AGENTS,
+      removeAgent: noop,
+      removeMcp: noop,
+      skills: () => [],
+      refreshSkills: noop,
+      removeSkill: noop,
+    }
+    return (
+      <StoryProviders
+        sessionID="skills-overflow-story"
+        status="idle"
+        config={
+          {
+            skills: {
+              paths: [
+                "/home/user/projects/very-long-directory-name/skills-collection/team-shared",
+                "./relative/path/to/skills/another/very/long/nested/directory",
+              ],
+              urls: [
+                "https://example.com/very/long/path/to/skills/registry/index.json?ref=main&token=abc123",
+                "https://other.example.org/skills/v2/registry.json?namespace=team&version=latest",
+              ],
+            },
+          } as any
+        }
+      >
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "320px", height: "700px", overflow: "auto" }}>
+            <SubtabWrapper tab="skills" />
+          </div>
         </SessionContext.Provider>
       </StoryProviders>
     )
@@ -284,6 +534,33 @@ export const McpEditViewRemote: Story = {
   ),
 }
 
+export const McpEditViewRemoteWithCustomOauth: Story = {
+  name: "McpEditView — remote server (custom OAuth client)",
+  render: () => (
+    <StoryProviders
+      config={
+        {
+          mcp: {
+            "remote-mcp": {
+              type: "remote",
+              url: "https://mcp.example.com/sse",
+              oauth: {
+                clientId: "my-registered-client",
+                scope: "mcp.read mcp.write",
+                callbackPort: 19999,
+              },
+            },
+          },
+        } as any
+      }
+    >
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <McpEditView name="remote-mcp" onBack={noop} onRemove={noop} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 export const ModeEditExport: Story = {
   name: "ModeEditView — export button",
   render: () => {
@@ -298,7 +575,8 @@ export const ModeEditExport: Story = {
     const session = {
       ...mockSessionValue({ id: "export-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
-      removeMode: noop,
+      allAgents: () => MOCK_AGENTS,
+      removeAgent: noop,
       removeMcp: noop,
       skills: () => [],
       refreshSkills: noop,
@@ -314,4 +592,216 @@ export const ModeEditExport: Story = {
       </StoryProviders>
     )
   },
+}
+
+export const ModeEditPermissions: Story = {
+  name: "ModeEditView — per-agent permissions",
+  render: () => {
+    const cfg: Record<string, AgentConfig> = {
+      reviewer: {
+        description: "Review code without editing it",
+        prompt: "Find bugs, regressions, and missing tests.",
+        permission: {
+          "*": "deny",
+          read: "allow",
+          grep: "allow",
+          glob: "allow",
+          edit: { "*": "deny", "**/*.md": "allow" },
+          bash: "deny",
+          task: "ask",
+          skill: "deny",
+        },
+      },
+    }
+    const session = {
+      ...mockSessionValue({ id: "permissions-story", status: "idle" }),
+      agents: () => MOCK_AGENTS,
+      allAgents: () => MOCK_AGENTS,
+      removeAgent: noop,
+      removeMcp: noop,
+      skills: () => [],
+      refreshSkills: noop,
+      removeSkill: noop,
+    }
+    return (
+      <StoryProviders
+        sessionID="permissions-story"
+        status="idle"
+        config={{ permission: { bash: "ask", external_directory: "ask" }, agent: cfg } as any}
+      >
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "460px", height: "760px", overflow: "auto" }}>
+            <ModeEditView name="reviewer" onBack={noop} onRemove={noop} />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const IndexingProviderBlurRace: Story = {
+  name: "IndexingTab",
+  render: () => {
+    const [saved, setSaved] = createSignal<Record<string, unknown>>({})
+    const cfg: Config = {
+      indexing: {
+        provider: "openai",
+        model: "text-embedding-3-large",
+        dimension: 3072,
+        openai: { apiKey: "" },
+        gemini: { apiKey: "" },
+      },
+    }
+    return (
+      <>
+        <StoryProviders
+          config={cfg}
+          onConfigChange={(next: Config) => setSaved((next.indexing ?? {}) as Record<string, unknown>)}
+        >
+          <div style={{ width: "420px", "max-height": "700px", overflow: "auto" }}>
+            <IndexingTab />
+          </div>
+        </StoryProviders>
+        <pre data-testid="indexing-provider-save">{JSON.stringify(saved(), null, 2)}</pre>
+      </>
+    )
+  },
+}
+
+export const IndexingScopeSwitch: Story = {
+  name: "IndexingTab - global and local scopes",
+  render: () => {
+    const [global, setGlobal] = createSignal<Record<string, unknown>>({})
+    const [project, setProject] = createSignal<Record<string, unknown>>({})
+    const globalConfig: Config = {
+      indexing: {
+        enabled: true,
+        provider: "openai",
+        model: "text-embedding-3-large",
+        dimension: 3072,
+        vectorStore: "qdrant",
+        openai: { apiKey: "global-secret" },
+        qdrant: { url: "http://global:6333", apiKey: "global-qdrant" },
+        searchMinScore: 0.4,
+      },
+    }
+    const projectConfig: Config = {
+      indexing: {
+        model: null,
+        qdrant: { apiKey: "project-qdrant" },
+      },
+    }
+    return (
+      <>
+        <StoryProviders
+          config={globalConfig}
+          globalConfig={globalConfig}
+          projectConfig={projectConfig}
+          onGlobalConfigChange={(next) => setGlobal((next.indexing ?? {}) as Record<string, unknown>)}
+          onProjectConfigChange={(next) => setProject((next.indexing ?? {}) as Record<string, unknown>)}
+        >
+          <div style={{ width: "420px", "max-height": "700px", overflow: "auto" }}>
+            <IndexingTab />
+          </div>
+        </StoryProviders>
+        <pre data-testid="indexing-global-save">{JSON.stringify(global(), null, 2)}</pre>
+        <pre data-testid="indexing-project-save">{JSON.stringify(project(), null, 2)}</pre>
+      </>
+    )
+  },
+}
+
+export const IndexingKiloModelPreset: Story = {
+  name: "IndexingTab - Kilo stale custom model fallback",
+  render: () => {
+    const cfg: Config = {
+      indexing: {
+        provider: "kilo",
+        model: "custom/model",
+        dimension: 2048,
+      },
+    }
+    const catalog = {
+      defaultModel: "provider/model",
+      models: [
+        { id: "provider/model", name: "Provider Model", dimension: 1024, scoreThreshold: 0.4 },
+        { id: "provider/compact", name: "Provider Compact", dimension: 512, scoreThreshold: 0.35 },
+      ],
+      aliases: {},
+    }
+    return (
+      <StoryProviders config={cfg}>
+        <KiloEmbeddingModelsContext.Provider value={{ catalog: () => catalog }}>
+          <div style={{ "max-height": "700px", overflow: "auto" }}>
+            <IndexingTab />
+          </div>
+        </KiloEmbeddingModelsContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const IndexingKiloCatalogLoading: Story = {
+  name: "IndexingTab - Kilo catalog loading",
+  render: () => {
+    const [saved, setSaved] = createSignal<Record<string, unknown>>({})
+    const cfg: Config = {
+      indexing: {},
+    }
+    return (
+      <>
+        <StoryProviders
+          config={cfg}
+          kiloAuth
+          onConfigChange={(next: Config) => setSaved((next.indexing ?? {}) as Record<string, unknown>)}
+        >
+          <div style={{ "max-height": "700px", overflow: "auto" }}>
+            <IndexingTab />
+          </div>
+        </StoryProviders>
+        <pre data-testid="indexing-kilo-loading-save">{JSON.stringify(saved(), null, 2)}</pre>
+      </>
+    )
+  },
+}
+
+function CustomProviderDialogMount(props: { existing?: Parameters<typeof CustomProviderDialog>[0]["existing"] }) {
+  const dialog = useDialog()
+  onMount(() => dialog.show(() => <CustomProviderDialog existing={props.existing} />))
+  return null
+}
+
+export const CustomProviderCreateDialog: Story = {
+  name: "Custom Provider — create dialog",
+  render: () => (
+    <StoryProviders>
+      <CustomProviderDialogMount />
+    </StoryProviders>
+  ),
+}
+
+export const CustomProviderEditDialog: Story = {
+  name: "Custom Provider — edit dialog",
+  render: () => (
+    <StoryProviders>
+      <CustomProviderDialogMount
+        existing={{
+          providerID: "custom-ollama",
+          name: "Local Ollama",
+          config: {
+            npm: "@ai-sdk/openai-compatible",
+            options: { baseURL: "http://localhost:11434/v1" },
+            models: {
+              "qwen2.5-coder:32b": {
+                name: "Qwen 2.5 Coder 32B",
+                reasoning: true,
+                modalities: { input: ["text", "image"] },
+              },
+              "llama3.3:70b": { name: "Llama 3.3 70B", reasoning: false },
+            },
+          },
+        }}
+      />
+    </StoryProviders>
+  ),
 }

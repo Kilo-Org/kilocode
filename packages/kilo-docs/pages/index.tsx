@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import Head from "next/head"
 import Link from "next/link"
 
 // Terminal content for each tab
@@ -21,7 +22,7 @@ const terminalContent = {
       {"\n"}
       <span className="terminal-prompt">$</span> export KILO_API_KEY="YOUR_API_KEY"
       {"\n"}
-      <span className="terminal-prompt">$</span> curl https://api.kilo.ai/api/gateway/chat/completions \{"\n"}
+      <span className="terminal-prompt">$</span> curl https://ai-gateway.kilo.ai/api/v1/chat/completions \{"\n"}
       -H "Authorization: Bearer $KILO_API_KEY" \{"\n"}
       -H "Content-Type: application/json" \{"\n"}
       {`  -d '{"model":"anthropic/claude-sonnet-4.5","messages":[{"role":"user","content":"Say hi from Kilo Gateway"}]}'`}
@@ -50,7 +51,7 @@ const terminalContent = {
     <>
       <span className="terminal-comment"># Create a custom rules file in your project</span>
       {"\n"}
-      <span className="terminal-prompt">$</span> touch .kilocode/rules.md
+      <span className="terminal-prompt">$</span> touch .kilo/rules/rules.md
       {"\n"}
       {"\n"}
       <span className="terminal-comment"># Or use the CLI to add rules</span>
@@ -149,7 +150,6 @@ const categories = [
     ),
     links: [
       { title: "Deploy", href: "/deploy-secure" },
-      { title: "Managed Indexing", href: "/deploy-secure" },
       { title: "Security Reviews", href: "/deploy-secure" },
     ],
   },
@@ -197,22 +197,26 @@ export default function HomePage() {
 
   return (
     <div className="homepage">
+      <Head>
+        <title>Kilo Code Docs: Setup, Models, MCP, Custom Modes & CLI</title>
+      </Head>
       {/* Dotted background pattern */}
       <div className="dot-pattern" />
 
       {/* Hero Section */}
       <section className="hero">
         <div className="hero-content">
-          <h1 className="hero-title">Kilo Code Documentation</h1>
+          <h1 className="hero-title">Kilo Documentation</h1>
           <p className="hero-subtitle">
-            Explore our guides and examples to build with Kilo Code, the most popular open source coding agent.
+            Explore guides and examples for the Kilo platform — from coding agents and AI-powered development to
+            automation and hosted agentic infrastructure.
           </p>
           <div className="hero-buttons">
             <Link href="/getting-started" className="btn btn-primary">
               Get started with Kilo Code →
             </Link>
-            <Link href="/code-with-ai" className="btn btn-secondary">
-              Explore all features
+            <Link href="/gateway" className="btn btn-secondary">
+              Explore Kilo Gateway
             </Link>
           </div>
         </div>
@@ -220,7 +224,7 @@ export default function HomePage() {
         {/* Quick Links Panel - Stripe style */}
         <div className="quick-panel">
           <div className="quick-section">
-            <h3 className="quick-title">POPULAR GUIDES</h3>
+            <h3 className="quick-title">KILO CODE</h3>
             <div className="quick-links">
               <Link href="/getting-started/installing" className="quick-link">
                 Installation Guide
@@ -250,10 +254,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Browse by Category - Three Column Layout */}
+      {/* Browse by Category - Four Column Layout */}
       <section className="categories-section">
         <div className="category-group">
-          {categories.slice(0, 3).map((category) => (
+          {categories.slice(0, 4).map((category) => (
             <div key={category.title} className="category-column">
               <h3 className="category-title">{category.title}</h3>
               <div className="category-links">
@@ -291,7 +295,7 @@ export default function HomePage() {
       <section className="terminal-section">
         <div className="terminal-intro">
           <h2 className="section-title">Try it out</h2>
-          <p className="terminal-description">Get started quickly with common Kilo Code commands</p>
+          <p className="terminal-description">Get started quickly with Kilo Code and Kilo Gateway</p>
         </div>
         <div className="terminal-container">
           <div className="terminal-tabs">
@@ -365,6 +369,20 @@ export default function HomePage() {
               <strong>Found a bug?</strong>
               <Link href="https://github.com/Kilo-Org/kilocode/issues" className="footer-link">
                 Report an issue
+              </Link>
+            </div>
+          </div>
+          <div className="footer-item">
+            <span className="footer-icon">🐍</span>
+            <div>
+              <strong>Kilo has been acquired by Anaconda</strong>
+              <Link
+                href="https://www.anaconda.com/blog/anaconda-acquires-kilo-code"
+                className="footer-link"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Read the announcement
               </Link>
             </div>
           </div>
@@ -445,14 +463,14 @@ export default function HomePage() {
         }
 
         .btn-primary {
-          background: #f8f674;
+          background: var(--kilo-yellow);
           color: #1a1a18;
-          border-color: #f8f674;
+          border-color: var(--kilo-yellow);
         }
 
         .btn-primary:hover {
-          background: #ffff8d;
-          border-color: #ffff8d;
+          background: var(--kilo-yellow-hover);
+          border-color: var(--kilo-yellow-hover);
           transform: translateY(-1px);
         }
 
@@ -473,8 +491,8 @@ export default function HomePage() {
         }
 
         :global(.dark) .btn-secondary:hover {
-          color: #f8f674;
-          border-color: #f8f674;
+          color: var(--kilo-yellow);
+          border-color: var(--kilo-yellow);
         }
 
         .btn-primary {
@@ -540,7 +558,7 @@ export default function HomePage() {
 
         .category-group {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(4, 1fr);
           gap: 3rem;
         }
 
@@ -587,7 +605,7 @@ export default function HomePage() {
 
         .cards-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(4, 1fr);
           gap: 1.5rem;
         }
 
@@ -786,7 +804,7 @@ export default function HomePage() {
 
         .footer-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(4, 1fr);
           gap: 2rem;
         }
 
@@ -826,7 +844,7 @@ export default function HomePage() {
 
           .quick-panel {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
           }
 
           .quick-section {

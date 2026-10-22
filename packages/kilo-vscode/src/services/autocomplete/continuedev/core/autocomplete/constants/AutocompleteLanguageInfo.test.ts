@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   languageForFilepath,
+  languageForId,
   LANGUAGES,
   Typescript,
   JavaScript,
@@ -31,6 +32,24 @@ import {
 } from "./AutocompleteLanguageInfo"
 
 describe("AutocompleteLanguageInfo", () => {
+  describe("languageForId", () => {
+    it("resolves VS Code language identifiers", () => {
+      expect(languageForId("typescript")).toBe(Typescript)
+      expect(languageForId("typescriptreact")).toBe(Typescript)
+      expect(languageForId("javascript")).toBe(JavaScript)
+      expect(languageForId("javascriptreact")).toBe(JavaScript)
+      expect(languageForId("jsonc")).toBe(Json)
+      expect(languageForId("python")).toBe(Python)
+      expect(languageForId("r")).toBe(R)
+      expect(languageForId("julia")).toBe(Julia)
+      expect(languageForId("luau")).toBe(Lua)
+    })
+
+    it("rejects unknown language identifiers", () => {
+      expect(languageForId("custom-language")).toBeUndefined()
+    })
+  })
+
   describe("languageForFilepath", () => {
     describe("TypeScript/JavaScript files", () => {
       it("should return TypeScript for .ts files", () => {

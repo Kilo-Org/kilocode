@@ -12,14 +12,21 @@ export interface McpInstallationMethod {
   prerequisites?: string[]
 }
 
+export interface MarketplaceSuggestFor {
+  filename?: string[]
+  // The CLI marketplace API returns extension ids either as strings or { name, id } objects.
+  vscode_extension?: Array<string | { name: string; id: string }>
+}
+
 export interface MarketplaceItemBase {
   id: string
   name: string
   description: string
+  category: string
   author?: string
   authorUrl?: string
-  tags?: string[]
   prerequisites?: string[]
+  suggest_for?: MarketplaceSuggestFor
 }
 
 export interface McpMarketplaceItem extends MarketplaceItemBase {
@@ -27,31 +34,38 @@ export interface McpMarketplaceItem extends MarketplaceItemBase {
   url: string
   content: string | McpInstallationMethod[]
   parameters?: McpParameter[]
+  skills?: Array<{ id: string; content: string }>
 }
 
-export interface ModeMarketplaceItem extends MarketplaceItemBase {
-  type: "mode"
-  content: string
-}
-
-export interface RawSkill {
-  id: string
+export interface AgentContent {
+  mode: "primary" | "subagent" | "all"
   description: string
-  category: string
-  githubUrl: string
-  content: string
+  prompt: string
+  options?: Record<string, unknown>
+  permission?: Record<string, unknown>
+}
+
+export interface AgentMarketplaceItem extends MarketplaceItemBase {
+  type: "agent"
+  content: AgentContent
 }
 
 export interface SkillMarketplaceItem extends MarketplaceItemBase {
   type: "skill"
-  category: string
   githubUrl: string
   content: string
   displayName: string
   displayCategory: string
 }
 
-export type MarketplaceItem = McpMarketplaceItem | ModeMarketplaceItem | SkillMarketplaceItem
+export interface PluginMarketplaceItem extends MarketplaceItemBase {
+  type: "plugin"
+  content: string
+  url?: string
+}
+
+export type MarketplaceItem = McpMarketplaceItem | AgentMarketplaceItem | SkillMarketplaceItem | PluginMarketplaceItem
+export type MarketplaceItemRef = Pick<MarketplaceItem, "id" | "type">
 
 export interface InstallMarketplaceItemOptions {
   target?: "global" | "project"
@@ -63,9 +77,17 @@ export interface MarketplaceInstalledMetadata {
   global: Record<string, { type: string }>
 }
 
+export interface MarketplaceRelevance {
+  filename?: string[]
+  vscodeExtension?: string[]
+}
+
+export type MarketplaceRelevanceMetadata = Record<string, MarketplaceRelevance>
+
 export interface MarketplaceDataResponse {
   marketplaceItems: MarketplaceItem[]
   marketplaceInstalledMetadata: MarketplaceInstalledMetadata
+  marketplaceRelevance: MarketplaceRelevanceMetadata
   errors?: string[]
 }
 
@@ -74,6 +96,7 @@ export interface InstallResult {
   slug: string
   error?: string
   filePath?: string
+  filePaths?: string[]
   line?: number
 }
 

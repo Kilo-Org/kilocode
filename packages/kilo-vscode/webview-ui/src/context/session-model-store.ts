@@ -2,17 +2,18 @@ import type { ModelSelection, Provider } from "../types/messages"
 import { resolveModelSelection } from "./model-selection"
 
 /**
- * Pure-logic helpers for per-session and global model selection.
+ * Pure-logic helpers for per-session and per-agent model selection.
  *
  * The SessionProvider delegates to these so the core state transitions
  * can be tested without SolidJS reactivity.
  */
 
+/** Scope key for the no-session composer. Cannot collide with `ses_*` IDs, UUID drafts, or `pending:` tabs. */
+export const COMPOSER = "composer"
+
 export interface ModelStore {
-  /** agentName -> model (global, extension-lifetime) */
-  modelSelections: Record<string, ModelSelection | null>
-  /** sessionID -> per-session model override */
-  sessionOverrides: Record<string, ModelSelection>
+  /** scope -> agent -> explicit model pick */
+  sessionOverrides: Record<string, Record<string, ModelSelection>>
   /** sessionID -> agent name */
   agentSelections: Record<string, string>
   recentModels: ModelSelection[]
@@ -21,6 +22,9 @@ export interface ModelStore {
 export interface ResolveEnv {
   providers: Record<string, Provider>
   connected: string[]
+  ready?: boolean
+  organizationId?: string | null
+  defaults?: Record<string, string>
   fallback: ModelSelection | null
   getModeModel: (agentName: string) => ModelSelection | null
   getGlobalModel: () => ModelSelection | null
@@ -29,13 +33,16 @@ export interface ResolveEnv {
 function resolveModel(
   env: ResolveEnv,
   agentName: string,
-  override?: ModelSelection | null,
+  session?: ModelSelection,
   recents?: ModelSelection[],
 ): ModelSelection | null {
   return resolveModelSelection({
     providers: env.providers,
     connected: env.connected,
-    override,
+    ready: env.ready,
+    organizationId: env.organizationId,
+    defaults: env.defaults,
+    session,
     mode: env.getModeModel(agentName),
     global: env.getGlobalModel(),
     recent: recents,
@@ -43,10 +50,15 @@ function resolveModel(
   })
 }
 
+/** Pick(scope, agent): the model the user explicitly chose in that scope while on that agent. */
+export function getPick(store: ModelStore, scope: string | undefined, agent: string): ModelSelection | undefined {
+  return scope ? store.sessionOverrides[scope]?.[agent] : undefined
+}
+
 /**
- * Returns the model for a specific session, honoring per-session overrides.
+ * Returns the model for a specific session, honoring its per-agent picks.
  *
- * Precedence: sessionOverride > global modelSelections[agent] > config/default.
+ * Precedence: Pick(session, agent) > agent config > global config > org/recents > fallback.
  */
 export function getSessionModel(
   store: ModelStore,
@@ -54,16 +66,14 @@ export function getSessionModel(
   sessionID: string,
   defaultAgent: string,
 ): ModelSelection | null {
-  const override = store.sessionOverrides[sessionID]
-  if (override) return override
   const agentName = store.agentSelections[sessionID] ?? defaultAgent
-  return resolveModel(env, agentName, store.modelSelections[agentName], store.recentModels)
+  return getSelected(store, env, sessionID, agentName)
 }
 
 /**
  * Returns the model for the "current" view (model picker display).
  *
- * Precedence: sessionOverride[sid] > global modelSelections[agent] > config/default.
+ * Precedence: Pick(scope, agent) > agent config > global config > org/recents > fallback.
  */
 export function getSelected(
   store: ModelStore,
@@ -71,43 +81,27 @@ export function getSelected(
   sessionID: string | undefined,
   agentName: string,
 ): ModelSelection | null {
-  if (sessionID) {
-    const session = store.sessionOverrides[sessionID]
-    if (session) return session
-  }
-  return resolveModel(env, agentName, store.modelSelections[agentName], store.recentModels)
+  return resolveModel(env, agentName, getPick(store, sessionID, agentName), store.recentModels)
+}
+
+/** Returns the effective model for an agent outside any pick scope. */
+export function getAgentModel(store: ModelStore, env: ResolveEnv, agentName: string): ModelSelection | null {
+  return resolveModel(env, agentName, undefined, store.recentModels)
 }
 
 export interface ApplyResult {
-  modelSelections: Record<string, ModelSelection | null>
-  sessionOverrides: Record<string, ModelSelection>
+  sessionOverrides: Record<string, Record<string, ModelSelection>>
 }
 
 /**
- * Apply a user-initiated model selection.
- *
- * When a session is active, writes ONLY to the per-session override so other
- * sessions are not affected. When no session is active (sidebar), writes to
- * the global modelSelections map.
+ * Apply a user-initiated model selection: write Pick(scope, agent).
  */
 export function applyModel(
   store: ModelStore,
   agentName: string,
   selection: ModelSelection,
-  sessionID: string | undefined,
+  sessionID: string,
 ): ApplyResult {
-  const modelSelections = { ...store.modelSelections }
-  const sessionOverrides = { ...store.sessionOverrides }
-
-  if (sessionID) {
-    // Per-session only — do NOT mutate the global map.  Writing globally
-    // here would cause every other session (that hasn't set its own
-    // override) to inherit this session's model.
-    sessionOverrides[sessionID] = selection
-  } else {
-    // No active session (sidebar) — write globally
-    modelSelections[agentName] = selection
-  }
-
-  return { modelSelections, sessionOverrides }
+  const agents = { ...store.sessionOverrides[sessionID], [agentName]: selection }
+  return { sessionOverrides: { ...store.sessionOverrides, [sessionID]: agents } }
 }

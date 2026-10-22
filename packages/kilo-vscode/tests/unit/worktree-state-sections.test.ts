@@ -44,8 +44,8 @@ describe("WorktreeStateManager sections", () => {
       const sec = mgr.addSection("Group", "Red", [wt1.id])
       expect(mgr.getWorktree(wt1.id)?.sectionId).toBe(sec.id)
       expect(mgr.getWorktree(wt2.id)?.sectionId).toBeUndefined()
-      // wt1 removed from top-level order, wt2 remains
-      expect(mgr.getWorktreeOrder()).not.toContain(wt1.id)
+      // Worktree ids stay in the persisted order so section member order can be restored.
+      expect(mgr.getWorktreeOrder()).toContain(wt1.id)
       expect(mgr.getWorktreeOrder()).toContain(wt2.id)
     })
   })
@@ -123,20 +123,20 @@ describe("WorktreeStateManager sections", () => {
   })
 
   describe("moveToSection", () => {
-    it("sets sectionId and removes from worktreeOrder", () => {
+    it("sets sectionId and keeps worktreeOrder for section member sorting", () => {
       const wt = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
       mgr.setWorktreeOrder([wt.id])
       const sec = mgr.addSection("Target", null)
 
       mgr.moveToSection([wt.id], sec.id)
       expect(mgr.getWorktree(wt.id)?.sectionId).toBe(sec.id)
-      expect(mgr.getWorktreeOrder()).not.toContain(wt.id)
+      expect(mgr.getWorktreeOrder()).toContain(wt.id)
     })
 
-    it("ungroups worktrees with null sectionId and adds back to order", () => {
+    it("ungroups worktrees with null sectionId and keeps them in order", () => {
       const wt = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
-      const sec = mgr.addSection("Temp", null, [wt.id])
-      expect(mgr.getWorktreeOrder()).not.toContain(wt.id)
+      mgr.addSection("Temp", null, [wt.id])
+      expect(mgr.getWorktreeOrder()).toContain(wt.id)
 
       mgr.moveToSection([wt.id], null)
       expect(mgr.getWorktree(wt.id)?.sectionId).toBeUndefined()
@@ -164,6 +164,49 @@ describe("WorktreeStateManager sections", () => {
       mgr.moveToSection([wt.id], null)
       const count = mgr.getWorktreeOrder().filter((id) => id === wt.id).length
       expect(count).toBe(1)
+    })
+  })
+
+  describe("setWorktreePinned", () => {
+    it("pins multi-version siblings together and keeps the section", () => {
+      const wt1 = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main", groupId: "g1" })
+      const wt2 = mgr.addWorktree({ branch: "b", path: "/tmp/b", parentBranch: "main", groupId: "g1" })
+      const wt3 = mgr.addWorktree({ branch: "c", path: "/tmp/c", parentBranch: "main" })
+      const sec = mgr.addSection("Work", null, [wt1.id, wt2.id])
+
+      mgr.setWorktreePinned(wt1.id, true)
+      expect(mgr.getWorktree(wt1.id)?.pinned).toBe(true)
+      expect(mgr.getWorktree(wt2.id)?.pinned).toBe(true)
+      expect(mgr.getWorktree(wt3.id)?.pinned).toBeUndefined()
+      expect(mgr.getWorktree(wt1.id)?.sectionId).toBe(sec.id)
+
+      mgr.setWorktreePinned(wt2.id, false)
+      expect(mgr.getWorktree(wt1.id)?.pinned).toBeUndefined()
+      expect(mgr.getWorktree(wt2.id)?.pinned).toBeUndefined()
+    })
+
+    it("keeps pinned section members with top-level worktrees so their order sticks", () => {
+      const wt1 = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
+      const wt2 = mgr.addWorktree({ branch: "b", path: "/tmp/b", parentBranch: "main" })
+      const sec = mgr.addSection("Work", null, [wt2.id])
+
+      mgr.setWorktreePinned(wt2.id, true)
+      mgr.setWorktreePinned(wt1.id, true)
+      mgr.setWorktreeOrder([wt2.id, wt1.id, sec.id])
+      expect(mgr.getWorktreeOrder()).toEqual([wt2.id, wt1.id, sec.id])
+
+      mgr.setWorktreePinned(wt2.id, false)
+      expect(mgr.getWorktreeOrder()).toEqual([wt1.id, sec.id, wt2.id])
+    })
+
+    it("persists the pin", async () => {
+      const wt = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
+      mgr.setWorktreePinned(wt.id, true)
+      await mgr.flush()
+
+      const loaded = new WorktreeStateManager(root, () => {})
+      await loaded.load()
+      expect(loaded.getWorktree(wt.id)?.pinned).toBe(true)
     })
   })
 
@@ -201,6 +244,14 @@ describe("WorktreeStateManager sections", () => {
       expect(mgr.getWorktreeOrder()).toEqual([wt.id, b.id, a.id])
     })
 
+    it("keeps ungrouped worktrees above moved sections", () => {
+      const wt = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
+      const a = mgr.addSection("A", null)
+      mgr.setWorktreeOrder([a.id, wt.id])
+
+      expect(mgr.getWorktreeOrder()).toEqual([wt.id, a.id])
+    })
+
     it("is a no-op at boundaries", () => {
       const a = mgr.addSection("A", null)
       const b = mgr.addSection("B", null)
@@ -229,6 +280,29 @@ describe("WorktreeStateManager sections", () => {
       const loaded = new WorktreeStateManager(root, () => {})
       await loaded.load()
       expect(loaded.getWorktreeOrder()).toEqual([b.id, a.id])
+    })
+
+    it("updates section order fields when moving", () => {
+      const a = mgr.addSection("A", null)
+      const b = mgr.addSection("B", null)
+
+      mgr.moveSection(b.id, -1)
+
+      expect(mgr.getSection(b.id)?.order).toBe(0)
+      expect(mgr.getSection(a.id)?.order).toBe(1)
+    })
+
+    it("repairs stale orders missing section ids before moving", () => {
+      const wt = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
+      const a = mgr.addSection("A", null)
+      const b = mgr.addSection("B", null)
+
+      mgr.setWorktreeOrder([wt.id])
+      mgr.moveSection(b.id, -1)
+
+      expect(mgr.getWorktreeOrder()).toContain(a.id)
+      expect(mgr.getWorktreeOrder()).toContain(b.id)
+      expect(mgr.getWorktreeOrder().indexOf(b.id)).toBeLessThan(mgr.getWorktreeOrder().indexOf(a.id))
     })
   })
 
@@ -281,6 +355,36 @@ describe("WorktreeStateManager sections", () => {
       const loaded = new WorktreeStateManager(root, () => {})
       await loaded.load()
       expect(loaded.getWorktreeOrder()).toContain(wt.id)
+    })
+
+    it("normalizes worktreeOrder on load to include section member worktrees", async () => {
+      const wt = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
+      const sec = mgr.addSection("S", null, [wt.id])
+      await mgr.flush()
+      await mgr.save()
+      const file = path.join(root, ".kilo", "agent-manager.json")
+      const data = JSON.parse(fs.readFileSync(file, "utf-8"))
+      data.worktreeOrder = [sec.id]
+      fs.writeFileSync(file, JSON.stringify(data))
+
+      const loaded = new WorktreeStateManager(root, () => {})
+      await loaded.load()
+      expect(loaded.getWorktreeOrder()).toContain(wt.id)
+    })
+
+    it("normalizes ungrouped worktrees above sections on load", async () => {
+      const wt = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
+      const sec = mgr.addSection("S", null)
+      await mgr.flush()
+      await mgr.save()
+      const file = path.join(root, ".kilo", "agent-manager.json")
+      const data = JSON.parse(fs.readFileSync(file, "utf-8"))
+      data.worktreeOrder = [sec.id, wt.id]
+      fs.writeFileSync(file, JSON.stringify(data))
+
+      const loaded = new WorktreeStateManager(root, () => {})
+      await loaded.load()
+      expect(loaded.getWorktreeOrder()).toEqual([wt.id, sec.id])
     })
   })
 })

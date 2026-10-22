@@ -1,22 +1,28 @@
 // kilocode_change - new file
 import { $ } from "bun"
+import { createTwoFilesPatch } from "diff"
 import fs from "node:fs/promises"
 import path from "node:path"
-import z from "zod"
-import { FileIgnore } from "@/file/ignore"
+import { Schema } from "effect"
+import { zod } from "@opencode-ai/core/effect-zod"
+import { Ignore } from "@opencode-ai/core/filesystem/ignore"
 import { Snapshot } from "@/snapshot"
-import { Log } from "@/util/log"
+import * as Log from "@opencode-ai/core/util/log"
+import { withStatics } from "@opencode-ai/core/schema"
 
 export namespace WorktreeDiff {
-  export const Item = Snapshot.FileDiff.extend({
-    tracked: z.boolean(),
-    generatedLike: z.boolean(),
-    summarized: z.boolean(),
-    stamp: z.string(),
-  }).meta({
-    ref: "WorktreeDiffItem",
+  export const Item = Schema.Struct({
+    ...Snapshot.FileDiff.fields,
+    before: Schema.String,
+    after: Schema.String,
+    tracked: Schema.Boolean,
+    generatedLike: Schema.Boolean,
+    summarized: Schema.Boolean,
+    stamp: Schema.String,
   })
-  export type Item = z.infer<typeof Item>
+    .annotate({ identifier: "WorktreeDiffItem" })
+    .pipe(withStatics((s) => ({ zod: zod(s) })))
+  export type Item = typeof Item.Type
 
   type Status = NonNullable<Snapshot.FileDiff["status"]>
 
@@ -31,7 +37,7 @@ export namespace WorktreeDiff {
   }
 
   function generatedLike(file: string) {
-    return FileIgnore.match(file)
+    return Ignore.match(file)
   }
 
   async function ancestor(dir: string, base: string, log: Log.Logger) {
@@ -242,6 +248,7 @@ export namespace WorktreeDiff {
     const additions = meta.status === "added" && meta.additions === 0 && !meta.tracked ? lines(after) : meta.additions
     return {
       file: meta.file,
+      patch: createTwoFilesPatch(meta.file, meta.file, before, after),
       before,
       after,
       additions,
@@ -257,6 +264,7 @@ export namespace WorktreeDiff {
   function summarize(meta: Meta): Item {
     return {
       file: meta.file,
+      patch: "",
       before: "",
       after: "",
       additions: meta.additions,

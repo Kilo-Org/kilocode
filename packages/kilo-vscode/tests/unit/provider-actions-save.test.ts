@@ -1,12 +1,21 @@
 import { describe, expect, it } from "bun:test"
-import { fetchProviderData, saveCustomProvider } from "../../src/provider-actions"
+import {
+  connectProvider,
+  disconnectProvider,
+  fetchProviderData,
+  resolveStoredKey,
+  saveCustomProvider,
+} from "../../src/provider-actions"
 
-function createCtx() {
+type ExistingGlobal = { disabled_providers?: string[]; provider?: Record<string, unknown> }
+
+function createCtx(existing: ExistingGlobal = { disabled_providers: [] }, merged: ExistingGlobal = existing) {
   const calls = {
-    set: [] as Array<{ providerID: string; auth: { type: string; key: string } }>,
+    set: [] as Array<{ providerID: string; auth: { type: string; key: string; metadata?: Record<string, string> } }>,
     remove: [] as Array<{ providerID: string }>,
     posts: [] as unknown[],
-    config: [] as unknown[],
+    config: [] as Array<{ config: Record<string, unknown> }>,
+    project: [] as Array<{ config: Record<string, unknown> }>,
     cached: [] as unknown[],
     refresh: 0,
     dispose: 0,
@@ -15,7 +24,10 @@ function createCtx() {
   const ctx = {
     client: {
       auth: {
-        set: async (input: { providerID: string; auth: { type: string; key: string } }) => {
+        set: async (input: {
+          providerID: string
+          auth: { type: string; key: string; metadata?: Record<string, string> }
+        }) => {
           calls.set.push(input)
           return { data: true }
         },
@@ -24,13 +36,41 @@ function createCtx() {
           return { data: true }
         },
       },
+      provider: {
+        list: async () => ({
+          data: {
+            all: [
+              {
+                id: "openai",
+                name: "OpenAI",
+                source: "custom",
+                env: [],
+                models: {},
+              },
+            ],
+            connected: ["openai"],
+            default: {},
+          },
+        }),
+        auth: async () => ({ data: {} }),
+      },
+      kilo: {
+        authStatus: async () => ({ data: { authenticated: false } }),
+      },
       global: {
         config: {
-          get: async () => ({ data: { disabled_providers: [] } }),
-          update: async (input: unknown) => {
+          get: async () => ({ data: existing }),
+          update: async (input: { config: Record<string, unknown> }) => {
             calls.config.push(input)
             return { data: input }
           },
+        },
+      },
+      config: {
+        get: async () => ({ data: merged }),
+        update: async (input: { config: Record<string, unknown> }) => {
+          calls.project.push(input)
+          return { data: input }
         },
       },
     },
@@ -62,6 +102,186 @@ function createProvider() {
   }
 }
 
+function createSavedProvider() {
+  return {
+    npm: "@ai-sdk/openai-compatible",
+    ...createProvider(),
+  }
+}
+
+describe("disconnectProvider", () => {
+  for (const scope of ["global", "project", "both"]) {
+    it(`deletes builtin provider config and literal credentials from ${scope} scope`, async () => {
+      const global = {
+        disabled_providers: ["groq"],
+        provider: {
+          groq: { options: { apiKey: "unrelated-test-key" } },
+          ...(scope !== "project" ? { vercel: { options: { apiKey: "global-old-test-key" } } } : {}),
+        },
+      }
+      const merged = {
+        ...global,
+        provider: {
+          ...global.provider,
+          vercel: { options: { apiKey: scope === "global" ? "global-old-test-key" : "project-old-test-key" } },
+        },
+      }
+      const { ctx, calls, setCachedConfig } = createCtx(global, merged)
+
+      await disconnectProvider(ctx, "req", "vercel", null, setCachedConfig)
+
+      expect(calls.remove).toEqual([{ providerID: "vercel" }])
+      expect(calls.config).toEqual(
+        scope === "project" ? [] : [{ config: { provider: { vercel: null }, disabled_providers: ["groq"] } }],
+      )
+      expect(calls.project).toEqual([{ config: { provider: { vercel: null } }, directory: "/tmp" }])
+      expect(calls.posts.at(-1)).toEqual({ type: "providerDisconnected", requestId: "req", providerID: "vercel" })
+    })
+  }
+
+  it("deletes an empty configured builtin entry so it is no longer config-connected", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx({}, { provider: { vercel: { options: {} } } })
+
+    await disconnectProvider(ctx, "req", "vercel", null, setCachedConfig)
+
+    expect(calls.config).toEqual([])
+    expect(calls.project).toEqual([{ config: { provider: { vercel: null } }, directory: "/tmp" }])
+    expect(calls.refresh).toBe(1)
+  })
+
+  it("allows a configured Vercel provider to reconnect with a new key without disabling it", async () => {
+    const existing = {
+      disabled_providers: ["groq"],
+      provider: { vercel: { models: { "test-model": { name: "Test Model" } } } },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    await connectProvider(ctx, "before", "vercel", "old-test-key")
+    await disconnectProvider(ctx, "logout", "vercel", null, setCachedConfig)
+    await connectProvider(ctx, "after", "vercel", "new-test-key")
+
+    expect(calls.remove).toEqual([{ providerID: "vercel" }])
+    expect(calls.config).toEqual([{ config: { provider: { vercel: null }, disabled_providers: ["groq"] } }])
+    expect(calls.project).toEqual([{ config: { provider: { vercel: null } }, directory: "/tmp" }])
+    expect(calls.set.map((call) => call.auth.key)).toEqual(["old-test-key", "new-test-key"])
+    expect(calls.posts).toContainEqual({ type: "providerDisconnected", requestId: "logout", providerID: "vercel" })
+    expect(calls.posts).toContainEqual({ type: "providerConnected", requestId: "after", providerID: "vercel" })
+    expect(calls.refresh).toBe(3)
+  })
+
+  it("waits for backend disposal before publishing refreshed config and disconnect success", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx({ provider: { vercel: {} } })
+    const entered = Promise.withResolvers<void>()
+    const disposed = Promise.withResolvers<void>()
+    ctx.disposeGlobal = async () => {
+      entered.resolve()
+      await disposed.promise
+    }
+
+    const pending = disconnectProvider(ctx, "req", "vercel", null, setCachedConfig)
+    await entered.promise
+    const cached = [...calls.cached]
+    const posts = [...calls.posts]
+    const refresh = calls.refresh
+    disposed.resolve()
+    await pending
+
+    expect(cached).toEqual([])
+    expect(posts).toEqual([])
+    expect(refresh).toBe(0)
+    expect(calls.cached).toHaveLength(1)
+    expect(calls.posts.at(-1)).toEqual({ type: "providerDisconnected", requestId: "req", providerID: "vercel" })
+    expect(calls.refresh).toBe(1)
+  })
+
+  it("reports credential cleanup failure instead of disabling a configured builtin", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx({ provider: { vercel: {} } })
+    ctx.client.auth.remove = async () => {
+      throw new Error("Credential cleanup failed")
+    }
+
+    await disconnectProvider(ctx, "req", "vercel", null, setCachedConfig)
+
+    expect(calls.config).toEqual([])
+    expect(calls.refresh).toBe(0)
+    expect(calls.posts).toEqual([
+      {
+        type: "providerActionError",
+        requestId: "req",
+        providerID: "vercel",
+        action: "disconnect",
+        message: "Credential cleanup failed",
+      },
+    ])
+  })
+
+  it("removes configured oauth providers without changing unrelated disabled providers", async () => {
+    const existing = {
+      disabled_providers: ["openai", "groq"],
+      provider: {
+        openai: {
+          options: { apiKey: "sk-test" },
+        },
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    await disconnectProvider(ctx, "req", "openai", null, setCachedConfig)
+
+    expect(calls.remove).toEqual([{ providerID: "openai" }])
+    expect(calls.config).toEqual([{ config: { provider: { openai: null }, disabled_providers: ["groq"] } }])
+    expect(calls.refresh).toBe(1)
+  })
+})
+
+describe("connectProvider", () => {
+  it("stores api auth metadata from provider prompts", async () => {
+    const { ctx, calls } = createCtx()
+
+    await connectProvider(ctx, "req", "azure", "sk-test", {
+      resourceName: " my-resource ",
+      empty: "   ",
+    })
+
+    expect(calls.set).toEqual([
+      {
+        providerID: "azure",
+        auth: {
+          type: "api",
+          key: "sk-test",
+          metadata: { resourceName: "my-resource" },
+        },
+      },
+    ])
+    expect(calls.refresh).toBe(1)
+    expect(calls.posts).toContainEqual({ type: "providerConnected", requestId: "req", providerID: "azure" })
+  })
+
+  it("stores azure endpoint URL metadata from provider prompts", async () => {
+    const { ctx, calls } = createCtx()
+
+    await connectProvider(ctx, "req", "azure", "sk-test", {
+      endpointType: "baseURL",
+      baseURL: " https://my-resource.openai.azure.com/openai ",
+      resourceName: "   ",
+    })
+
+    expect(calls.set).toEqual([
+      {
+        providerID: "azure",
+        auth: {
+          type: "api",
+          key: "sk-test",
+          metadata: {
+            endpointType: "baseURL",
+            baseURL: "https://my-resource.openai.azure.com/openai",
+          },
+        },
+      },
+    ])
+  })
+})
+
 describe("saveCustomProvider", () => {
   it("preserves auth when the api key field is unchanged", async () => {
     const { ctx, calls, setCachedConfig } = createCtx()
@@ -90,9 +310,371 @@ describe("saveCustomProvider", () => {
     expect(calls.remove).toHaveLength(0)
     expect(calls.set).toEqual([{ providerID: "myprovider", auth: { type: "api", key: "sk-test" } }])
   })
+
+  it("preserves opaque existing variant options through the save boundary", async () => {
+    const variant = {
+      thinking: { type: "adaptive", display: "summarized" },
+      reasoningEffort: "custom",
+      reasoningSummary: "auto",
+      include: ["reasoning.encrypted_content"],
+      customOption: { enabled: true },
+    }
+    const saved = {
+      ...createSavedProvider(),
+      models: { "model-1": { name: "Model One", reasoning: true, variants: { high: variant } } },
+    }
+    const existing = { disabled_providers: [], provider: { myprovider: saved } }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    await saveCustomProvider(ctx, "req", "myprovider", saved, undefined, false, null, setCachedConfig)
+
+    const provider = (calls.config[0]?.config.provider as Record<string, typeof saved>).myprovider
+    expect(provider.models["model-1"].variants.high).toEqual(variant)
+  })
+
+  // Regression tests for https://github.com/Kilo-Org/kilocode/issues/9186
+  //
+  // The CLI's config.update endpoint deep-merges its payload with the existing
+  // global config. When the user removes a model or variant from a custom
+  // provider and saves, the removed entry stays on disk because the save
+  // payload only lists the surviving entries. stripNulls in the merge layer
+  // will remove keys explicitly set to null — the save path must emit these
+  // sentinels for removed model ids and variant names.
+  it("emits null sentinels for models removed since last save", async () => {
+    const existing = {
+      disabled_providers: [],
+      provider: {
+        myprovider: {
+          npm: "@ai-sdk/openai-compatible",
+          name: "My Provider",
+          options: { baseURL: "https://example.com/v1" },
+          models: {
+            "model-keep": { name: "Keep" },
+            "model-gone": { name: "Gone" },
+          },
+        },
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    const next = {
+      name: "My Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        "model-keep": { name: "Keep" },
+      },
+    }
+    await saveCustomProvider(ctx, "req", "myprovider", next, undefined, false, null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    const payload = calls.config[0].config.provider as Record<string, { models: Record<string, unknown> }>
+    expect(payload.myprovider.models["model-keep"]).toBeDefined()
+    expect(payload.myprovider.models["model-gone"]).toBeNull()
+  })
+
+  it("emits null sentinels when reasoning and variants are removed from a model", async () => {
+    const existing = {
+      disabled_providers: [],
+      provider: {
+        myprovider: {
+          npm: "@ai-sdk/openai-compatible",
+          name: "My Provider",
+          options: { baseURL: "https://example.com/v1" },
+          models: {
+            "model-1": {
+              name: "Model One",
+              reasoning: true,
+              variants: {
+                high: { reasoningEffort: "high" },
+                low: { reasoningEffort: "low" },
+              },
+            },
+          },
+        },
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    const next = {
+      name: "My Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        "model-1": { name: "Model One" },
+      },
+    }
+    await saveCustomProvider(ctx, "req", "myprovider", next, undefined, false, null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    const model = (
+      calls.config[0].config.provider as Record<
+        string,
+        { models: Record<string, { reasoning?: boolean | null; variants?: Record<string, unknown> }> }
+      >
+    ).myprovider.models["model-1"]
+    expect(model.reasoning).toBeNull()
+    expect(model.variants?.high).toBeNull()
+    expect(model.variants?.low).toBeNull()
+  })
+
+  it("does not emit sentinels when the provider is new", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx()
+
+    await saveCustomProvider(ctx, "req", "myprovider", createProvider(), undefined, false, null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    const models = (calls.config[0].config.provider as Record<string, { models: Record<string, unknown> }>).myprovider
+      .models
+    expect(Object.values(models).every((v) => v !== null)).toBe(true)
+  })
+
+  it("removes saved custom providers from disabled_providers when reconnecting", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx({ disabled_providers: ["myprovider", "openai"] })
+
+    await saveCustomProvider(ctx, "req", "myprovider", createProvider(), undefined, false, null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    expect(calls.config[0].config.disabled_providers).toEqual(["openai"])
+  })
+})
+
+describe("disconnectProvider", () => {
+  it("removes configured providers without disabling them", async () => {
+    const existing = {
+      disabled_providers: ["openai"],
+      provider: {
+        myprovider: createProvider(),
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toEqual([{ config: { provider: { myprovider: null }, disabled_providers: ["openai"] } }])
+    expect(calls.project).toEqual([{ config: { provider: { myprovider: null } }, directory: "/tmp" }])
+    expect(calls.remove).toEqual([{ providerID: "myprovider" }])
+    expect(calls.refresh).toBe(1)
+    expect(calls.posts).toContainEqual({ type: "providerDisconnected", requestId: "req", providerID: "myprovider" })
+  })
+
+  it("removes the deleted configured provider from disabled providers", async () => {
+    const existing = {
+      disabled_providers: ["myprovider"],
+      provider: {
+        myprovider: createProvider(),
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toEqual([{ config: { provider: { myprovider: null }, disabled_providers: [] } }])
+    expect(calls.refresh).toBe(1)
+  })
+
+  it("deletes saved custom provider config when disconnecting", async () => {
+    const existing = {
+      disabled_providers: ["myprovider", "openai"],
+      provider: {
+        myprovider: createSavedProvider(),
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    expect(calls.config[0].config).toEqual({
+      provider: { myprovider: null },
+      disabled_providers: ["openai"],
+    })
+    expect(calls.project).toEqual([{ config: { provider: { myprovider: null } }, directory: "/tmp" }])
+    expect(calls.remove).toEqual([{ providerID: "myprovider" }])
+    expect(calls.refresh).toBe(1)
+  })
+
+  it("deletes project custom provider config when it is not in global config", async () => {
+    const merged = {
+      provider: {
+        myprovider: createSavedProvider(),
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx({ disabled_providers: [] }, merged)
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(0)
+    expect(calls.project).toEqual([{ config: { provider: { myprovider: null } }, directory: "/tmp" }])
+    expect(calls.remove).toEqual([{ providerID: "myprovider" }])
+    expect(calls.refresh).toBe(1)
+  })
+
+  it("deletes both global and project custom provider config when project overrides global", async () => {
+    const global = {
+      disabled_providers: ["myprovider", "openai"],
+      provider: {
+        myprovider: createSavedProvider(),
+      },
+    }
+    const merged = {
+      ...global,
+      provider: {
+        myprovider: {
+          ...createSavedProvider(),
+          name: "Project Provider",
+        },
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(global, merged)
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toEqual([
+      {
+        config: {
+          provider: { myprovider: null },
+          disabled_providers: ["openai"],
+        },
+      },
+    ])
+    expect(calls.project).toEqual([{ config: { provider: { myprovider: null } }, directory: "/tmp" }])
+    expect(calls.remove).toEqual([{ providerID: "myprovider" }])
+    expect(calls.refresh).toBe(1)
+  })
 })
 
 describe("fetchProviderData", () => {
+  for (const item of [
+    { name: "uses the allowed organization API default", recommended: "org/default", expected: "org/default" },
+    { name: "uses the first allowed model when no default exists", recommended: undefined, expected: "org/first" },
+    { name: "uses the first allowed model when the default is empty", recommended: "", expected: "org/first" },
+    {
+      name: "ignores a default outside the organization catalog",
+      recommended: "kilo-auto/free",
+      expected: "org/first",
+    },
+    { name: "ignores inherited catalog properties", recommended: "toString", expected: "org/first" },
+    {
+      name: "does not invent a default for an empty catalog",
+      empty: true,
+      recommended: "org/default",
+      expected: undefined,
+    },
+    {
+      name: "does not retain a default without a Kilo provider",
+      missing: true,
+      recommended: "org/default",
+      expected: undefined,
+    },
+  ]) {
+    it(item.name, async () => {
+      let calls = 0
+      const external = {
+        id: "anthropic",
+        name: "Anthropic",
+        models: { claude: { id: "claude" } },
+        metadata: { priority: 1 },
+      }
+      const client = {
+        provider: {
+          list: async () => ({
+            data: {
+              all: [
+                ...(item.missing
+                  ? []
+                  : [
+                      {
+                        id: "kilo",
+                        name: "Kilo Gateway",
+                        models: item.empty
+                          ? {}
+                          : { "org/first": { id: "org/first" }, "org/default": { id: "org/default" } },
+                      },
+                    ]),
+                { ...external, key: "sk-test" },
+              ],
+              connected: item.missing ? ["anthropic"] : ["kilo", "anthropic"],
+              default: { ...(item.recommended === undefined ? {} : { kilo: item.recommended }), anthropic: "claude" },
+            },
+          }),
+          auth: async () => ({ data: {} }),
+        },
+        kilo: {
+          authStatus: async () => ({ data: { authenticated: true, type: "oauth", organizationId: "org" } }),
+        },
+        config: {
+          providers: async () => {
+            calls++
+            return { data: { default: { kilo: "org/first", anthropic: "unrelated" } } }
+          },
+        },
+      } as unknown as Parameters<typeof fetchProviderData>[0]
+
+      const result = await fetchProviderData(client, "/workspace")
+      expect(result.response.default.kilo).toBe(item.expected)
+      expect(result.response.default.anthropic).toBe("claude")
+      expect(result.response.all.find((provider) => provider.id === "anthropic")).toEqual(external)
+      expect(result.response.connected).toEqual(item.missing ? ["anthropic"] : ["kilo", "anthropic"])
+      expect(result.authStates).toEqual({ kilo: "oauth", anthropic: "api" })
+      expect(result.organizationId).toBe("org")
+      expect(result.ready).toBe(true)
+      expect(calls).toBe(0)
+    })
+  }
+
+  it.each([false, true])("removes unverified Kilo data without auth context (failure: %s)", async (fail) => {
+    const client = {
+      provider: {
+        list: async () => ({
+          data: {
+            all: [
+              { id: "kilo", models: { "kilo-auto/free": {} } },
+              { id: "external", models: { model: {} } },
+            ],
+            connected: ["kilo", "external"],
+            default: { kilo: "kilo-auto/free", external: "model" },
+          },
+        }),
+        auth: async () => ({ data: {} }),
+      },
+      kilo: {
+        authStatus: async () => {
+          if (fail) throw new Error("Context unavailable")
+          return { data: undefined }
+        },
+      },
+    } as unknown as Parameters<typeof fetchProviderData>[0]
+
+    const result = await fetchProviderData(client, "/workspace")
+    expect(result.ready).toBe(false)
+    expect(result.organizationId).toBeUndefined()
+    expect(result.response.all.map((provider) => provider.id)).toEqual(["external"])
+    expect(result.response.connected).toEqual(["external"])
+    expect(result.response.default).toEqual({ external: "model" })
+  })
+
+  it("retains Personal defaults without fetching organization recommendations", async () => {
+    let calls = 0
+    const client = {
+      provider: {
+        list: async () => ({ data: { all: [], connected: [], default: { kilo: "kilo-auto/free" } } }),
+        auth: async () => ({ data: {} }),
+      },
+      kilo: { authStatus: async () => ({ data: { authenticated: true, type: "oauth" } }) },
+      config: {
+        providers: async () => {
+          calls++
+          return { data: { default: { kilo: "unexpected" } } }
+        },
+      },
+    } as unknown as Parameters<typeof fetchProviderData>[0]
+
+    const result = await fetchProviderData(client, "/workspace")
+    expect(result.ready).toBe(true)
+    expect(result.organizationId).toBeNull()
+    expect(calls).toBe(0)
+    expect(result.response.default).toEqual({ kilo: "kilo-auto/free" })
+  })
+
   it("derives api auth state and strips keys from provider payloads", async () => {
     const client = {
       provider: {
@@ -114,6 +696,9 @@ describe("fetchProviderData", () => {
         }),
         auth: async () => ({ data: {} }),
       },
+      kilo: {
+        authStatus: async () => ({ data: { authenticated: false } }),
+      },
     } as unknown as Parameters<typeof fetchProviderData>[0]
 
     const result = await fetchProviderData(client, "/tmp")
@@ -121,5 +706,117 @@ describe("fetchProviderData", () => {
 
     expect(result.authStates).toEqual({ "groq-test": "api" })
     expect("key" in item).toBe(false)
+  })
+
+  it("uses local Kilo auth status instead of profile availability", async () => {
+    const client = {
+      provider: {
+        list: async () => ({
+          data: {
+            all: [{ id: "kilo", name: "Kilo Gateway", source: "custom", env: [], models: {} }],
+            connected: ["kilo"],
+            default: { kilo: "kilo-auto/frontier" },
+          },
+        }),
+        auth: async () => ({ data: {} }),
+      },
+      kilo: {
+        authStatus: async () => ({ data: { authenticated: true, type: "oauth" } }),
+      },
+    } as unknown as Parameters<typeof fetchProviderData>[0]
+
+    const result = await fetchProviderData(client, "/tmp")
+
+    expect(result.authStates).toEqual({ kilo: "oauth" })
+  })
+
+  it("does not infer Kilo speech access without stored Gateway auth", async () => {
+    const client = {
+      provider: {
+        list: async () => ({
+          data: {
+            all: [{ id: "kilo", name: "Kilo Gateway", source: "config", key: "configured", env: [], models: {} }],
+            connected: ["kilo"],
+            default: { kilo: "kilo-auto/frontier" },
+          },
+        }),
+        auth: async () => ({ data: {} }),
+      },
+      kilo: {
+        authStatus: async () => ({ data: { authenticated: false } }),
+      },
+    } as unknown as Parameters<typeof fetchProviderData>[0]
+
+    const result = await fetchProviderData(client, "/tmp")
+
+    expect(result.authStates).toEqual({})
+  })
+
+  it("retains stripped keys for providers with a configured baseURL", async () => {
+    const client = {
+      provider: {
+        list: async () => ({
+          data: {
+            all: [
+              {
+                id: "myprovider",
+                name: "My Provider",
+                source: "config",
+                key: "sk-stored",
+                env: [],
+                options: { baseURL: "https://example.com/v1" },
+                models: {},
+              },
+              {
+                id: "no-url",
+                name: "No URL",
+                source: "config",
+                key: "sk-other",
+                env: [],
+                models: {},
+              },
+            ],
+            connected: [],
+            default: {},
+          },
+        }),
+        auth: async () => ({ data: {} }),
+      },
+      kilo: {
+        authStatus: async () => ({ data: { authenticated: false } }),
+      },
+    } as unknown as Parameters<typeof fetchProviderData>[0]
+
+    const result = await fetchProviderData(client, "/tmp")
+
+    expect(result.storedKeys).toEqual({
+      myprovider: { key: "sk-stored", baseURL: "https://example.com/v1" },
+    })
+    expect(result.response.all.every((item) => !("key" in (item as Record<string, unknown>)))).toBe(true)
+  })
+})
+
+describe("resolveStoredKey", () => {
+  const storedKeys = {
+    myprovider: { key: "sk-stored", baseURL: "https://example.com/v1" },
+  }
+
+  it("returns the stored key when the fetch URL matches the configured baseURL", () => {
+    expect(resolveStoredKey(storedKeys, "myprovider", "https://example.com/v1")).toBe("sk-stored")
+  })
+
+  it("tolerates trailing-slash differences", () => {
+    expect(resolveStoredKey(storedKeys, "myprovider", "https://example.com/v1/")).toBe("sk-stored")
+  })
+
+  it("refuses to apply the stored key to a different host or path", () => {
+    expect(resolveStoredKey(storedKeys, "myprovider", "https://evil.example.net/v1")).toBeUndefined()
+    expect(resolveStoredKey(storedKeys, "myprovider", "https://example.com/v2")).toBeUndefined()
+  })
+
+  it("returns undefined for unknown or missing provider ids", () => {
+    expect(resolveStoredKey(storedKeys, "other", "https://example.com/v1")).toBeUndefined()
+    expect(resolveStoredKey(storedKeys, undefined, "https://example.com/v1")).toBeUndefined()
+    expect(resolveStoredKey(storedKeys, "", "https://example.com/v1")).toBeUndefined()
   })
 })

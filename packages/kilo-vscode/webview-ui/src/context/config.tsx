@@ -8,117 +8,481 @@
  * changes into a single write (which triggers disposeAll on the CLI).
  */
 
-import { createContext, useContext, createSignal, onCleanup, ParentComponent, Accessor } from "solid-js"
+import { createContext, useContext, createSignal, createMemo, onCleanup } from "solid-js"
+import type { ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
-import type { Config, ExtensionMessage } from "../types/messages"
-import { deepMerge, stripNulls, resolveConfig } from "../utils/config-utils"
+import type {
+  Config,
+  ConfigCollections,
+  ExtensionMessage,
+  FeatureFlags,
+  SettingsConfigBinding,
+} from "../types/messages"
+import {
+  configUnsetPaths,
+  deepMerge,
+  hideRemovedMcp,
+  mergeScopedConfig,
+  pruneConfigSet,
+  removeMcpConfig,
+  retainUnconfirmedMcpRemovals,
+  stripNulls,
+  resolveConfig,
+} from "../utils/config-utils"
+import { splitConfigByScope } from "../utils/config-scope"
+
+function has(value: Record<string, unknown>) {
+  return Object.keys(value).length > 0
+}
+
+export interface SaveError {
+  message: string
+  details?: string
+}
 
 interface ConfigContextValue {
   config: Accessor<Config>
+  globalConfig: Accessor<Config>
+  globalDraft: Accessor<Partial<Config>>
+  projectConfig: Accessor<Config>
+  collections: Accessor<ConfigCollections>
+  settings: Accessor<Record<string, unknown>>
+  /** Shortcut labels and editor state for prompt shortcut hints. */
+  shortcuts: Accessor<{ bindings: Record<string, string>; selection: boolean }>
+  features: Accessor<FeatureFlags>
   loading: Accessor<boolean>
   isDirty: Accessor<boolean>
+  saving: Accessor<boolean>
+  saveError: Accessor<SaveError | null>
   updateConfig: (partial: Partial<Config>) => void
+  updateGlobalConfig: (partial: Partial<Config>) => void
+  updateProjectConfig: (partial: Partial<Config>) => void
+  updateSetting: (key: string, value: unknown) => void
+  applySetting: (key: string, value: unknown, writeKey?: string) => void
   saveConfig: () => void
   discardConfig: () => void
 }
 
 export const ConfigContext = createContext<ConfigContextValue>()
 
+function loadedSettings(message: ExtensionMessage): Record<string, unknown> | undefined {
+  if (message.type === "autocompleteSettingsLoaded") {
+    return {
+      "autocomplete.enableAutoTrigger": message.settings.enableAutoTrigger,
+      "autocomplete.enableSmartInlineTaskKeybinding": message.settings.enableSmartInlineTaskKeybinding,
+      "autocomplete.enableChatAutocomplete": message.settings.enableChatAutocomplete,
+      "autocomplete.provider": message.settings.provider,
+      "autocomplete.model": message.settings.model,
+    }
+  }
+  if (message.type === "indexingSettingsLoaded") {
+    return { "indexing.showButtonWhenDisabled": message.settings.showButtonWhenDisabled }
+  }
+  if (message.type === "chatSettingsLoaded") {
+    return {
+      "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
+      browserAutomation: message.settings.browserAutomation,
+      agentManagerBrowserOpenLinksIn: message.settings.agentManagerBrowserOpenLinksIn,
+      workspaceTrusted: message.settings.workspaceTrusted,
+    }
+  }
+  if (message.type === "throughputSettingLoaded") return { showTokenThroughput: message.visible }
+  if (message.type === "autoApprovalReasonSettingLoaded") return { showAutoApprovalReason: message.visible }
+  if (message.type === "pushFixesSettingLoaded") return { "agentManager.pushFixes": message.enabled }
+  if (message.type === "shortcutHintsSettingLoaded") return { showShortcutHints: message.visible }
+}
+
 export const ConfigProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
 
   const [config, setConfig] = createSignal<Config>({})
+  const [globalConfig, setGlobalConfig] = createSignal<Config>({})
+  const [projectConfig, setProjectConfig] = createSignal<Config>({})
+  const [collections, setCollections] = createSignal<ConfigCollections>({})
+  const [settings, setSettings] = createSignal<Record<string, unknown>>({})
+  const [shortcuts, setShortcuts] = createSignal({ bindings: {} as Record<string, string>, selection: false })
+  const [features, setFeatures] = createSignal<FeatureFlags>({
+    indexing: false,
+    sandboxControls: false,
+    backgroundSubagents: false,
+    speechToText: false,
+  })
   const [loading, setLoading] = createSignal(true)
   const [draft, setDraft] = createSignal<Partial<Config>>({})
-  const [isDirty, setIsDirty] = createSignal(false)
+  const [globalDraft, setGlobalDraft] = createSignal<Partial<Config>>({})
+  const [projectDraft, setProjectDraft] = createSignal<Partial<Config>>({})
+  const [removedMcp, setRemovedMcp] = createSignal<Set<string>>(new Set())
+  const [settingsDraft, setSettingsDraft] = createSignal<Record<string, unknown>>({})
+  const [bindings, setBindings] = createSignal<{ global?: SettingsConfigBinding; project?: SettingsConfigBinding }>({})
+  const isDirty = createMemo(
+    () =>
+      has(draft() as Record<string, unknown>) ||
+      has(globalDraft() as Record<string, unknown>) ||
+      has(projectDraft() as Record<string, unknown>) ||
+      has(settingsDraft()),
+  )
   // Last config received from the server — used to revert on discard
   const [saved, setSaved] = createSignal<Config>({})
+  const [savedGlobal, setSavedGlobal] = createSignal<Config>({})
+  const [savedProject, setSavedProject] = createSignal<Config>({})
+  const [savedSettings, setSavedSettings] = createSignal<Record<string, unknown>>({})
   // True while a saveConfig() write is in-flight — used to clear draft on success
   // and to guard against stale configLoaded messages overwriting optimistic state.
-  let saving = false
+  const [saving, setSaving] = createSignal(false)
+  // Error from the most recent saveConfig() attempt, or null if no error.
+  // Cleared when the user edits the draft again or starts a new save.
+  const [saveError, setSaveError] = createSignal<SaveError | null>(null)
+  const updateCollections = (next: ConfigCollections | undefined) => {
+    if (next !== undefined) setCollections(next)
+  }
 
   // Register handler immediately (not in onMount) so we never miss
   // a configLoaded message that arrives before the DOM mount.
+  const unsubscribeSettings = vscode.onMessage((message: ExtensionMessage) => {
+    const patch = loadedSettings(message)
+    if (patch) mergeSettings(patch)
+  })
+  const unsubscribeMcpLifecycle = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type === "mcpRemoved") {
+      setRemovedMcp((current) => new Set(current).add(message.name))
+      setConfig((value) => removeMcpConfig(value, message.name))
+      setSaved((value) => removeMcpConfig(value, message.name))
+      setDraft((value) => removeMcpConfig(value as Config, message.name))
+      setGlobalConfig((value) => removeMcpConfig(value, message.name))
+      setSavedGlobal((value) => removeMcpConfig(value, message.name))
+      setGlobalDraft((value) => removeMcpConfig(value as Config, message.name))
+      setProjectConfig((value) => removeMcpConfig(value, message.name))
+      setSavedProject((value) => removeMcpConfig(value, message.name))
+      setProjectDraft((value) => removeMcpConfig(value as Config, message.name))
+      return
+    }
+    if (message.type === "mcpInstalled") {
+      setRemovedMcp((current) => {
+        const next = new Set(current)
+        next.delete(message.name)
+        return next
+      })
+      vscode.postMessage({ type: "requestConfig" })
+    }
+  })
+  const unsubscribeShortcuts = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "shortcutContext") return
+    setShortcuts({ bindings: message.bindings, selection: message.selection })
+  })
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "configLoaded") {
       // Skip if a save is in-flight — a stale configLoaded must not overwrite
       // the optimistically-updated state while the write is being confirmed.
-      if (saving) return
+      if (saving()) return
       // Re-apply the draft on top so pending changes (e.g. a toggled switch the
       // user hasn't saved yet) stay visible instead of snapping back.
-      setConfig(resolveConfig(message.config, draft(), isDirty()))
-      setSaved(message.config)
+      const server = hideRemovedMcp(message.config, removedMcp())
+      const global = message.globalConfig === undefined ? undefined : hideRemovedMcp(message.globalConfig, removedMcp())
+      const project =
+        message.projectConfig === undefined ? undefined : hideRemovedMcp(message.projectConfig, removedMcp())
+      setConfig(
+        resolveConfig(server, hideRemovedMcp(draft() as Config, removedMcp()), has(draft() as Record<string, unknown>)),
+      )
+      setFeatures(message.features)
+      setSaved(server)
+      setBindings(message.bindings ?? bindings())
+      if (message.settings) mergeSettings(message.settings)
+      if (global !== undefined) {
+        setGlobalConfig(mergeScopedConfig(global, hideRemovedMcp(globalDraft() as Config, removedMcp())))
+        setSavedGlobal(global)
+      }
+      if (project !== undefined) {
+        setProjectConfig(mergeScopedConfig(project, hideRemovedMcp(projectDraft() as Config, removedMcp())))
+        setSavedProject(project)
+      }
+      setRemovedMcp((current) => retainUnconfirmedMcpRemovals(current, message.config))
+      updateCollections(message.collections)
       setLoading(false)
       return
     }
+    if (message.type === "globalConfigLoaded") {
+      if (saving()) return
+      const server = hideRemovedMcp(message.config, removedMcp())
+      setGlobalConfig(mergeScopedConfig(server, hideRemovedMcp(globalDraft() as Config, removedMcp())))
+      setSavedGlobal(server)
+      return
+    }
     if (message.type === "configUpdated") {
-      if (saving) {
+      if (saving()) {
         // This configUpdated is the confirmation of our saveConfig() write.
         // Clear the draft now that the server has confirmed the write.
-        saving = false
+        setSaving(false)
         setDraft({})
-        setIsDirty(false)
-        setConfig(message.config)
+        setGlobalDraft({})
+        setProjectDraft({})
+        setSaveError(null)
+        setConfig(hideRemovedMcp(message.config, removedMcp()))
+        if (message.globalConfig !== undefined) {
+          const global = hideRemovedMcp(message.globalConfig, removedMcp())
+          setGlobalConfig(global)
+          setSavedGlobal(global)
+        }
+        if (message.projectConfig !== undefined) {
+          const project = hideRemovedMcp(message.projectConfig, removedMcp())
+          setProjectConfig(project)
+          setSavedProject(project)
+        }
+        updateCollections(message.collections)
+        setFeatures(message.features)
+        setBindings(message.bindings ?? bindings())
       } else {
         // configUpdated from a different source (e.g. PermissionDock save).
         // Re-apply the draft on top so pending settings changes are preserved.
-        setConfig(resolveConfig(message.config, draft(), isDirty()))
+        setConfig(
+          resolveConfig(
+            hideRemovedMcp(message.config, removedMcp()),
+            hideRemovedMcp(draft() as Config, removedMcp()),
+            has(draft() as Record<string, unknown>),
+          ),
+        )
+        if (message.globalConfig !== undefined) {
+          const global = hideRemovedMcp(message.globalConfig, removedMcp())
+          setGlobalConfig(mergeScopedConfig(global, hideRemovedMcp(globalDraft() as Config, removedMcp())))
+          setSavedGlobal(global)
+        }
+        if (message.projectConfig !== undefined) {
+          const project = hideRemovedMcp(message.projectConfig, removedMcp())
+          setProjectConfig(mergeScopedConfig(project, hideRemovedMcp(projectDraft() as Config, removedMcp())))
+          setSavedProject(project)
+        }
+        updateCollections(message.collections)
+        setFeatures(message.features)
+        setBindings(message.bindings ?? bindings())
       }
-      setSaved(message.config)
+      if (message.settings) mergeSettings(message.settings)
+      setSaved(hideRemovedMcp(message.config, removedMcp()))
       return
     }
   })
-
-  onCleanup(unsubscribe)
-
-  // Request config in case the initial push was missed.
-  // Retry a few times because the extension's httpClient may
-  // not be ready yet when the first request arrives.
-  let retries = 0
-  const maxRetries = 5
-  const retryMs = 500
-
-  vscode.postMessage({ type: "requestConfig" })
-
-  const retryTimer = setInterval(() => {
-    retries++
-    if (!loading() || retries >= maxRetries) {
-      clearInterval(retryTimer)
+  const unsubscribeExpired = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "configBindingExpired") return
+    setBindings({})
+    if (isDirty()) {
+      setSaveError({ message: "The Settings project changed. Discard or reload before saving." })
       return
     }
     vscode.postMessage({ type: "requestConfig" })
-  }, retryMs)
+  })
+  const unsubscribeFailure = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "configUpdateFailed") return
+    setSaving(false)
+    if (message.completedScopes?.length) {
+      const split = splitConfigByScope(draft())
+      const remaining = message.completedScopes.includes("global")
+        ? split.project
+        : message.completedScopes.includes("project")
+          ? split.global
+          : draft()
+      setDraft(message.completedScopes.length === 2 ? {} : remaining)
+    }
+    if (message.completedScopes?.includes("global")) {
+      setGlobalDraft({})
+      if (message.globalConfig) {
+        setGlobalConfig(message.globalConfig)
+        setSavedGlobal(message.globalConfig)
+      }
+    }
+    if (message.completedScopes?.includes("project")) {
+      setProjectDraft({})
+      if (message.projectConfig) {
+        setProjectConfig(message.projectConfig)
+        setSavedProject(message.projectConfig)
+      }
+    }
+    if (message.config) {
+      setConfig(resolveConfig(message.config, draft(), has(draft() as Record<string, unknown>)))
+      setSaved(message.config)
+    }
+    if (message.bindings) setBindings(message.bindings)
+    setSaveError({ message: message.message, details: message.details })
+  })
+  const unsubscribeIndexing = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "indexingSettingsLoaded") return
+    mergeSettings({
+      "indexing.showButtonWhenDisabled": message.settings.showButtonWhenDisabled,
+      "indexing.consent": message.settings.consent,
+      "indexing.projects": message.settings.projects,
+      "indexing.projectId": message.settings.projectId,
+    })
+  })
+  const unsubscribeChat = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "chatSettingsLoaded") return
+    mergeSettings({
+      "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
+    })
+  })
 
-  onCleanup(() => clearInterval(retryTimer))
+  onCleanup(() => {
+    unsubscribeSettings()
+    unsubscribeMcpLifecycle()
+    unsubscribeShortcuts()
+    unsubscribe()
+    unsubscribeExpired()
+    unsubscribeFailure()
+    unsubscribeIndexing()
+    unsubscribeChat()
+  })
+
+  function mergeSettings(patch: Record<string, unknown>) {
+    setSavedSettings((prev) => ({ ...prev, ...patch }))
+    setSettings((prev) => ({ ...prev, ...patch, ...settingsDraft() }))
+  }
+
+  const requestInitialData = () => {
+    vscode.postMessage({ type: "requestConfig" })
+    vscode.postMessage({ type: "requestAutocompleteSettings" })
+    vscode.postMessage({ type: "requestIndexingSettings" })
+    vscode.postMessage({ type: "requestChatSettings" })
+  }
+
+  // Request config immediately; if the extension's httpClient is not yet ready,
+  // extensionDataReady will fire once initialization completes and we retry once.
+  requestInitialData()
+
+  const fallback = setTimeout(() => {
+    if (loading()) {
+      requestInitialData()
+    }
+  }, 3000)
+
+  const unsubReady = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "extensionDataReady") return
+    unsubReady()
+    clearTimeout(fallback)
+    if (loading()) {
+      requestInitialData()
+    }
+  })
+
+  onCleanup(() => {
+    unsubReady()
+    clearTimeout(fallback)
+  })
 
   function updateConfig(partial: Partial<Config>) {
     // Optimistically update local state with deep merge + null stripping
     setConfig((prev) => stripNulls(deepMerge(prev, partial)))
     // Accumulate in draft — will be sent on saveConfig()
     setDraft((prev) => deepMerge(prev as Config, partial))
-    setIsDirty(true)
+    // Clear any stale error from a previous failed save — the user is editing
+    // again, so the old error message no longer reflects the current draft.
+    setSaveError(null)
+  }
+
+  function updateGlobalConfig(partial: Partial<Config>) {
+    setGlobalConfig((prev) => mergeScopedConfig(prev, partial))
+    setGlobalDraft((prev) => deepMerge(prev as Config, partial))
+    setSaveError(null)
+  }
+
+  function updateProjectConfig(partial: Partial<Config>) {
+    setProjectConfig((prev) => mergeScopedConfig(prev, partial))
+    setProjectDraft((prev) => deepMerge(prev as Config, partial))
+    setSaveError(null)
+  }
+
+  function updateSetting(key: string, value: unknown) {
+    setSettings((prev) => ({ ...prev, [key]: value }))
+    setSettingsDraft((prev) => ({ ...prev, [key]: value }))
+    setSaveError(null)
+  }
+
+  /**
+   * Write a VS Code setting immediately, bypassing the save-bar draft.
+   * For app-level feature gates whose effect lives outside the settings page,
+   * where staging the change would make the control feel unresponsive.
+   * `key` is the local settings() property; `writeKey` is the VS Code
+   * configuration key when the two differ (e.g. namespaced experimental keys).
+   */
+  function applySetting(key: string, value: unknown, writeKey?: string) {
+    setSavedSettings((prev) => ({ ...prev, [key]: value }))
+    setSettings((prev) => ({ ...prev, [key]: value }))
+    setSettingsDraft((prev) => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+    setSaveError(null)
+    vscode.postMessage({ type: "updateSetting", key: writeKey ?? key, value })
   }
 
   function saveConfig() {
     const changes = draft()
-    if (Object.keys(changes).length === 0) return
+    const globals = globalDraft()
+    const projects = projectDraft()
+    const pending = settingsDraft()
+    const configDirty = has(changes as Record<string, unknown>)
+    const globalDirty = has(globals as Record<string, unknown>)
+    const projectDirty = has(projects as Record<string, unknown>)
+    const settingsDirty = has(pending)
+    if (!configDirty && !globalDirty && !projectDirty && !settingsDirty) return
     // Don't clear draft/isDirty yet — wait for configUpdated confirmation.
     // If the write fails, the save bar stays visible so the user can retry.
-    saving = true
-    vscode.postMessage({ type: "updateConfig", config: changes })
+    setSaving(true)
+    setSaveError(null)
+    if (settingsDirty) {
+      for (const [key, value] of Object.entries(pending)) {
+        vscode.postMessage({ type: "updateSetting", key, value })
+      }
+      setSavedSettings((prev) => ({ ...prev, ...pending }))
+      setSettingsDraft({})
+    }
+    if (!configDirty && !globalDirty && !projectDirty) {
+      setSaving(false)
+      return
+    }
+    // Split so per-project settings (e.g. commit_message.prompt) land in the
+    // workspace's kilo.json instead of the global one. Send one message so the
+    // extension confirms only after both scopes are saved.
+    const split = splitConfigByScope(changes)
+    const next = deepMerge(split.global as Config, globals)
+    const project = deepMerge(split.project as Config, projects)
+    vscode.postMessage({
+      type: "updateConfig",
+      config: pruneConfigSet(next) as Config,
+      projectConfig: pruneConfigSet(project) as Config,
+      globalUnset: configUnsetPaths(next),
+      projectUnset: configUnsetPaths(project),
+      globalBindingId: bindings().global?.id,
+      projectBindingId: bindings().project?.id,
+    })
   }
 
   function discardConfig() {
     setConfig(saved())
+    setGlobalConfig(savedGlobal())
+    setProjectConfig(savedProject())
     setDraft({})
-    setIsDirty(false)
+    setGlobalDraft({})
+    setProjectDraft({})
+    setSettings(savedSettings())
+    setSettingsDraft({})
+    setSaveError(null)
   }
 
   const value: ConfigContextValue = {
     config,
+    globalConfig,
+    globalDraft,
+    projectConfig,
+    collections,
+    settings,
+    shortcuts,
+    features,
     loading,
     isDirty,
+    saving,
+    saveError,
     updateConfig,
+    updateGlobalConfig,
+    updateProjectConfig,
+    updateSetting,
+    applySetting,
     saveConfig,
     discardConfig,
   }

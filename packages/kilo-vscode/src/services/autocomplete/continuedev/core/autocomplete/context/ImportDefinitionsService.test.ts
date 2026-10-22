@@ -25,6 +25,16 @@ describe("ImportDefinitionsService", () => {
     service = new ImportDefinitionsService(mockIde)
   })
 
+  it("should dispose active editor listener", () => {
+    const disposable = { dispose: vi.fn() }
+    mockIde.onDidChangeActiveTextEditor = vi.fn().mockReturnValue(disposable)
+    service = new ImportDefinitionsService(mockIde)
+
+    service.dispose()
+
+    expect(disposable.dispose).toHaveBeenCalledTimes(1)
+  })
+
   describe("Python Imports - Real Tree-sitter Parsing", () => {
     it("should extract named imports from 'from module import' statements", async () => {
       const pythonCode = `from os.path import join, exists

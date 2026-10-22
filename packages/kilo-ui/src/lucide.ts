@@ -3,4 +3,4 @@
  * Only add icons here that are actually used — esbuild/Vite will
  * tree-shake unused exports but explicit re-exports keep the API small.
  */
-export { WandSparkles } from "lucide-solid"
+export { default as WandSparkles } from "lucide-solid/icons/wand-sparkles"

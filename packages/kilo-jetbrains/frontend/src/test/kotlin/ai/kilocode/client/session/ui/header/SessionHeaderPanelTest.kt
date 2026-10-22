@@ -1,0 +1,1038 @@
+package ai.kilocode.client.session.ui.header
+
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.model.Reasoning
+import ai.kilocode.client.session.model.StepFinish
+import ai.kilocode.client.session.model.Tool
+import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.model.ToolKind
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.controller.SessionControllerTestBase
+import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.MessageTimeDto
+import ai.kilocode.rpc.dto.ModelDto
+import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.PartTimeDto
+import ai.kilocode.rpc.dto.ProviderDto
+import ai.kilocode.rpc.dto.TodoDto
+import ai.kilocode.rpc.dto.TokensDto
+import com.intellij.icons.AllIcons
+import com.intellij.ide.util.PropertiesComponent
+import ai.kilocode.rpc.dto.DiffFileDto
+import java.awt.Cursor
+import java.awt.Color
+import java.awt.Point
+import java.awt.event.MouseEvent
+import java.awt.event.MouseWheelEvent
+import java.awt.image.BufferedImage
+import ai.kilocode.client.ui.UiStyle
+import com.intellij.ide.IdeTooltipManager
+import com.intellij.openapi.ui.popup.Balloon
+import javax.swing.JComponent
+import javax.swing.RepaintManager
+import javax.swing.UIManager
+
+class SessionHeaderPanelTest : SessionControllerTestBase() {
+
+    override fun setUp() {
+        super.setUp()
+        reset()
+    }
+
+    override fun tearDown() {
+        try {
+            reset()
+        } finally {
+            super.tearDown()
+        }
+    }
+
+    fun `test starts hidden for empty header`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val c = controller()
+        flush()
+        val panel = SessionHeaderPanel(c, parent)
+
+        assertFalse(panel.isVisible)
+        assertEquals("New Session", panel.titleText())
+    }
+
+    fun `test shows populated session header`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val style = SessionEditorStyle.current()
+
+        assertTrue(panel.isVisible)
+        assertFalse(panel.isExpanded())
+        assertEquals("Generated title", panel.titleText())
+        assertEquals("$0.07", panel.costText())
+        assertEquals("$0.07 spent in this session", panel.costTip())
+        assertEquals("1%", panel.contextText())
+        assertEquals("Tokens 13.7K 2.5K cache write 25 cache read 75", panel.tokenText())
+        assertEquals("Tokens used by the latest assistant response: input, output, cache writes, and cache reads.", panel.tokenTip())
+        assertEquals("13.7K", panel.inputTokenText())
+        assertEquals("2.5K", panel.outputTokenText())
+        assertEquals("cache write 25", panel.cacheWriteText())
+        assertEquals("cache read 75", panel.cacheReadText())
+        assertEquals("1/2 todos complete", panel.todoText())
+        assertTrue(panel.todoVisible())
+        assertEquals(SessionUiStyle.Colors.sessionBackground(), panel.background)
+        assertEquals(
+            List(panel.foregrounds().size) { style.editorForeground },
+            panel.foregrounds(),
+        )
+        assertEquals("", panel.expandButton().text)
+        assertSame(AllIcons.General.ChevronRight, panel.expandButton().icon)
+        assertEquals(Cursor.HAND_CURSOR, panel.expandButton().cursor.type)
+        assertNotSame(panel.compactButton().parent, panel.expandButton().parent)
+    }
+
+    fun `test header has editor tab bottom separator`() {
+        val old = UIManager.getColor("EditorTabs.underTabsBorderColor")
+        val color = Color(12, 34, 56)
+
+        try {
+            UIManager.put("EditorTabs.underTabsBorderColor", color)
+            val c = promptedHeader()
+            val panel = SessionHeaderPanel(c, parent)
+            val ins = panel.border.getBorderInsets(panel)
+            val img = BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB)
+            val g = img.createGraphics()
+
+            panel.border.paintBorder(panel, g, 0, 0, img.width, img.height)
+            g.dispose()
+
+            assertEquals(0, ins.top)
+            assertEquals(1, ins.bottom)
+            assertEquals(color.rgb, img.getRGB(5, img.height - 1))
+        } finally {
+            UIManager.put("EditorTabs.underTabsBorderColor", old)
+        }
+    }
+
+    fun `test compact button follows eligibility and invokes controller`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        assertTrue(panel.compactButton().isEnabled)
+        panel.compactButton().doClick()
+        flush()
+        assertEquals(1, rpc.compacts.size)
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        assertFalse(panel.compactButton().isEnabled)
+        panel.compactButton().doClick()
+        flush()
+        assertEquals(1, rpc.compacts.size)
+    }
+
+    fun `test board button visibility follows the boardVisible callback`() {
+        val c = promptedHeader()
+        var visible = false
+        val panel = SessionHeaderPanel(c, parent, boardVisible = { visible })
+
+        assertFalse(panel.boardButton().isVisible)
+
+        visible = true
+        panel.update(c.model.header)
+
+        assertTrue(panel.boardButton().isVisible)
+    }
+
+    fun `test board button click invokes onShowBoard`() {
+        val c = promptedHeader()
+        var opened = 0
+        val panel = SessionHeaderPanel(c, parent, boardVisible = { true }, onShowBoard = { opened++ })
+
+        panel.boardButton().doClick()
+
+        assertEquals(1, opened)
+    }
+
+    fun `test clicking session title toggles expansion`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        assertFalse(panel.isExpanded())
+
+        click(panel.titleLabel())
+        assertTrue(panel.isExpanded())
+
+        click(panel.titleLabel())
+        assertFalse(panel.isExpanded())
+    }
+
+    fun `test top row places expand title and right controls`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val top = panel.expandButton().parent
+        val layout = top.layout as java.awt.BorderLayout
+
+        assertSame(panel.expandButton(), layout.getLayoutComponent(java.awt.BorderLayout.WEST))
+        assertSame(panel.titleLabel(), layout.getLayoutComponent(java.awt.BorderLayout.CENTER))
+        assertSame(panel.rightPanel(), layout.getLayoutComponent(java.awt.BorderLayout.EAST))
+        assertSame(panel.rightPanel(), panel.compactButton().parent)
+    }
+
+    fun `test agents strip stays hidden for a session with no background agents`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        // Never had a background agent, so the model fires no BackgroundAgentsUpdated event at all —
+        // the strip must still be hidden rather than showing an empty row.
+        assertTrue(panel.isVisible)
+        assertTrue(panel.todoVisible())
+        assertFalse(panel.agentStripPanel().isVisible)
+    }
+
+    fun `test agents strip hides again once the last agent is cleared`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        edt {
+            c.model.setBackgroundAgents(
+                listOf(
+                    ai.kilocode.client.session.background.BackgroundAgent(
+                        job = "job1",
+                        session = "ses_child1",
+                        title = "Explore",
+                        status = ai.kilocode.client.session.background.BackgroundAgentStatus.RUNNING,
+                    ),
+                ),
+            )
+        }
+        assertTrue(panel.agentStripPanel().isVisible)
+
+        edt { c.model.setBackgroundAgents(emptyList()) }
+
+        assertFalse(panel.agentStripPanel().isVisible)
+    }
+
+    fun `test stats body opens directly below the title row and above the strips`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val layout = panel.layout as java.awt.BorderLayout
+
+        click(panel.expandButton())
+        assertTrue(panel.isExpanded())
+
+        val south = layout.getLayoutComponent(java.awt.BorderLayout.SOUTH)
+
+        // Title row, then the expandable stats body, then the always-visible strips.
+        assertSame(panel.expandButton().parent, layout.getLayoutComponent(java.awt.BorderLayout.NORTH))
+        assertSame(panel.bodyComponents().first().parent, layout.getLayoutComponent(java.awt.BorderLayout.CENTER))
+        assertTrue(javax.swing.SwingUtilities.isDescendingFrom(panel.todoRowPanel(), south))
+        assertTrue(javax.swing.SwingUtilities.isDescendingFrom(panel.agentStripPanel(), south))
+    }
+
+    fun `test strips stay attached below the title row while the stats body is collapsed`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val layout = panel.layout as java.awt.BorderLayout
+        val south = layout.getLayoutComponent(java.awt.BorderLayout.SOUTH)
+
+        assertFalse(panel.isExpanded())
+        assertNull(layout.getLayoutComponent(java.awt.BorderLayout.CENTER))
+        assertTrue(javax.swing.SwingUtilities.isDescendingFrom(panel.todoRowPanel(), south))
+        assertTrue(panel.todoVisible())
+    }
+
+    fun `test todo list starts collapsed and toggles independently`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        click(panel.expandButton())
+        assertTrue(panel.isExpanded())
+        assertTrue(panel.todoVisible())
+        assertFalse(panel.todoListVisible())
+
+        click(panel.todoRowPanel())
+
+        assertTrue(panel.isExpanded())
+        assertTrue(panel.todoListVisible())
+        assertEquals(2, panel.todoListPanel().rowCount())
+        assertTrue(panel.todoListPanel().rowText(0).contains("Write tests"))
+        assertTrue(panel.todoListPanel().rowChecked(0))
+        assertFalse(panel.todoListPanel().rowChecked(1))
+
+        click(panel.todoLabel())
+        assertTrue(panel.isExpanded())
+        assertFalse(panel.todoListVisible())
+    }
+
+    fun `test all done todos use success foreground`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        emit(ChatEventDto.TodoUpdated("ses_test", listOf(TodoDto("Done", "completed", "high"))))
+
+        assertEquals("All 1 todos complete", panel.todoText())
+        assertEquals(SessionUiStyle.Timeline.SUCCESS, panel.foregrounds()[3])
+    }
+
+    fun `test timeline colors honor semantic named color keys`() {
+        val old = UIManager.getColor("Kilo.Session.Timeline.Read")
+        val color = Color(12, 34, 56)
+
+        try {
+            UIManager.put("Kilo.Session.Timeline.Read", color)
+
+            assertEquals(color.rgb, SessionUiStyle.Timeline.READ.rgb)
+        } finally {
+            UIManager.put("Kilo.Session.Timeline.Read", old)
+        }
+    }
+
+    fun `test retained labels update on later header event`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val button = panel.compactButton()
+
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "New title")))
+        emit(ChatEventDto.MessageUpdated("ses_test", assistant(cost = 0.2, tokens = TokensDto(1_000, 500, 0, 0, 0))))
+
+        assertSame(button, panel.compactButton())
+        assertEquals("New title", panel.titleText())
+        assertEquals("$0.20", panel.costText())
+        assertEquals("Tokens 1.0K 500", panel.tokenText())
+        assertEquals("1.0K", panel.inputTokenText())
+        assertEquals("500", panel.outputTokenText())
+    }
+
+    fun `test apply style updates header colors`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val style = SessionEditorStyle.current().copy(
+            editorForeground = Color(1, 2, 3),
+            editorBackground = Color(4, 5, 6),
+        )
+
+        panel.applyStyle(style)
+
+        assertEquals(SessionUiStyle.Colors.sessionBackground(), panel.background)
+        assertEquals(
+            List(panel.foregrounds().size) { style.editorForeground },
+            panel.foregrounds(),
+        )
+        assertEquals(
+            List(panel.contextBarForegrounds().size) { style.editorForeground },
+            panel.contextBarForegrounds(),
+        )
+    }
+
+    fun `test expanded body shows timeline context and token metrics`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val style = SessionEditorStyle.current()
+        val body = panel.bodyPanel()
+        val timeline = panel.timelinePanel()
+        val bar = panel.contextBar()
+
+        assertFalse(panel.isExpanded())
+        click(panel.expandButton())
+
+        assertTrue(panel.isExpanded())
+        assertSame(body, panel.bodyPanel())
+        assertSame(timeline, panel.timelinePanel())
+        assertSame(bar, panel.contextBar())
+        assertEquals(listOf(panel.timelineViewport(), panel.tokenPanel(), bar), panel.bodyComponents().take(3))
+        assertSame(timeline, panel.timelineViewport().view)
+        assertFalse(panel.timelineViewport().isOpaque)
+        assertEquals(4, panel.timelineCount())
+        val parts = panel.timelineParts()
+        assertTrue(parts[0] is Reasoning)
+        assertEquals("bash", (parts[1] as Tool).name)
+        assertEquals(ToolKind.GENERIC, (parts[1] as Tool).kind)
+        assertEquals(ToolExecState.ERROR, (parts[2] as Tool).state)
+        assertTrue(parts[3] is StepFinish)
+        assertTrue(panel.timelineActive(0))
+        assertTrue(panel.timelineActive(1))
+        assertFalse(panel.timelineActive(2))
+        assertFalse(panel.timelineActive(3))
+        assertTrue(panel.contextBarVisible())
+        assertEquals(16_300L, panel.contextBarUsed())
+        assertEquals(200_000L, panel.contextBarReserved())
+        assertEquals(1_783_700L, panel.contextBarAvailable())
+        assertEquals(2_000_000L, panel.contextBarLimit())
+        assertEquals(
+            List(panel.contextBarForegrounds().size) { style.editorForeground },
+            panel.contextBarForegrounds(),
+        )
+        assertEquals("16.3K / 2.0M tokens used\n200.0K reserved for output\n1.8M available", panel.contextBarTip())
+        assertNotSame(panel.contextBarTrackColor(), panel.contextBarReservedColor())
+        assertNotSame(panel.contextBarUsedColor(), panel.contextBarReservedColor())
+        assertEquals(panel.timelinePreferredSize().height, panel.timelineViewportPreferredSize().height)
+        assertEquals(0, panel.timelineViewportPreferredSize().width)
+        assertTrue(panel.timelinePreferredSize().height >= panel.contextBar().preferredSize.height)
+        assertTrue(panel.timelineBarHeight(1) < panel.timelineViewportPreferredSize().height)
+        assertTrue(panel.timelineBarHeight(0) < panel.timelineBarHeight(1))
+        assertEquals(panel.timelineBarHeight(1), panel.timelineBarHeight(2))
+        assertTrue(panel.timelineBarHeight(3) > panel.timelineBarHeight(1))
+
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_MOVED,
+            System.currentTimeMillis(),
+            0,
+            panel.timelineBarWidth() + 1,
+            panel.timelinePreferredSize().height - 1,
+            0,
+            false,
+        ))
+        assertEquals("Run tests", panel.timelineToolTip())
+        assertEquals(1, panel.timelineHover())
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_MOVED,
+            System.currentTimeMillis(),
+            0,
+            panel.timelineBarWidth() * 3 + 1,
+            panel.timelinePreferredSize().height - 1,
+            0,
+            false,
+        ))
+        assertEquals("Step finish", panel.timelineToolTip())
+        assertEquals(3, panel.timelineHover())
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_MOVED,
+            System.currentTimeMillis(),
+            0,
+            panel.timelineBarWidth() - 1,
+            0,
+            0,
+            false,
+        ))
+        assertNull(panel.timelineToolTip())
+        assertEquals(-1, panel.timelineHover())
+
+        click(panel.expandButton())
+
+        assertFalse(panel.isExpanded())
+        assertSame(body, panel.bodyPanel())
+        assertSame(timeline, panel.timelinePanel())
+        assertSame(bar, panel.contextBar())
+        assertEquals(4, panel.timelineCount())
+    }
+
+    fun `test read and write timeline tooltips show filename`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        emit(ChatEventDto.PartUpdated(
+            "ses_test",
+            tool("tool_read", "read", "completed", "Read file", input = mapOf("filePath" to "src/docs/README.md")),
+        ))
+        emit(ChatEventDto.PartUpdated(
+            "ses_test",
+            tool("tool_write", "write", "completed", "Write file", input = mapOf("filePath" to "src/main/App.kt")),
+        ))
+        val timeline = panel.timelinePanel()
+
+        move(panel, 4)
+        assertEquals("Read README.md", panel.timelineToolTip())
+        move(panel, 5)
+        assertEquals("Write App.kt", panel.timelineToolTip())
+
+        assertSame(timeline, panel.timelinePanel())
+    }
+
+    fun `test expand button owns expanded state across updates`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        assertFalse(panel.isExpanded())
+        assertEquals("Show session metrics", panel.expandTip())
+        assertEquals("", panel.expandButton().text)
+        assertSame(AllIcons.General.ChevronRight, panel.expandButton().icon)
+        assertNotSame(panel.compactButton().parent, panel.expandButton().parent)
+
+        click(panel.expandButton())
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "New title")))
+
+        assertTrue(panel.isExpanded())
+        assertEquals("Hide session metrics", panel.expandTip())
+        assertEquals("", panel.expandButton().text)
+        assertSame(AllIcons.General.ChevronDown, panel.expandButton().icon)
+
+        click(panel.expandButton())
+        emit(ChatEventDto.MessageUpdated("ses_test", assistant(cost = 0.2)))
+
+        assertFalse(panel.isExpanded())
+        assertEquals("Show session metrics", panel.expandTip())
+        assertEquals("", panel.expandButton().text)
+        assertSame(AllIcons.General.ChevronRight, panel.expandButton().icon)
+    }
+
+    fun `test collapse persists and new header starts collapsed`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        click(panel.expandButton())
+        click(panel.expandButton())
+
+        assertFalse(panel.isExpanded())
+        assertFalse(PropertiesComponent.getInstance().getBoolean(SessionHeaderPanel.EXPANDED_KEY, true))
+
+        val next = SessionHeaderPanel(c, parent)
+
+        assertFalse(next.isExpanded())
+        assertEquals("Show session metrics", next.expandTip())
+    }
+
+    fun `test expand persists and new header starts expanded`() {
+        PropertiesComponent.getInstance().setValue(SessionHeaderPanel.EXPANDED_KEY, "false")
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        assertFalse(panel.isExpanded())
+
+        click(panel.expandButton())
+
+        assertTrue(panel.isExpanded())
+        assertTrue(PropertiesComponent.getInstance().getBoolean(SessionHeaderPanel.EXPANDED_KEY, false))
+
+        val next = SessionHeaderPanel(c, parent)
+
+        assertTrue(next.isExpanded())
+        assertEquals("Hide session metrics", next.expandTip())
+    }
+
+    fun `test hidden empty header collapse keeps saved expansion preference`() {
+        PropertiesComponent.getInstance().setValue(SessionHeaderPanel.EXPANDED_KEY, "true")
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val c = controller()
+        flush()
+        val panel = SessionHeaderPanel(c, parent)
+
+        assertFalse(panel.isVisible)
+        assertFalse(panel.isExpanded())
+        assertTrue(PropertiesComponent.getInstance().getBoolean(SessionHeaderPanel.EXPANDED_KEY, true))
+
+        edt { c.prompt("go") }
+        flush()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "Generated title")))
+        emit(ChatEventDto.MessageUpdated("ses_test", assistant()))
+
+        assertTrue(panel.isVisible)
+        assertTrue(panel.isExpanded())
+    }
+
+    fun `test context bar uses neutral grey colors`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val color = panel.contextBarUsedColor()
+
+        emit(ChatEventDto.MessageUpdated("ses_test", assistant(tokens = TokensDto(1_200_000, 0, 0, 0, 0))))
+
+        assertEquals(color, panel.contextBarUsedColor())
+        assertNotSame(panel.contextBarTrackColor(), panel.contextBarUsedColor())
+        assertNotSame(panel.contextBarTrackColor(), panel.contextBarReservedColor())
+        assertNotSame(panel.contextBarUsedColor(), panel.contextBarReservedColor())
+    }
+
+    fun `test timeline width uses uniform bars and gaps`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val first = panel.timelinePreferredSize().width
+
+        emit(ChatEventDto.PartUpdated("ses_test", tool("tool_3", "bash", "running", "Short")))
+
+        val next = panel.timelinePreferredSize().width
+        assertTrue(first > 0)
+        assertEquals(5, panel.timelineCount())
+        assertEquals(panel.timelineBarWidth(), next - first)
+    }
+
+    fun `test a non-left click on a timeline bar does not jump`() {
+        val c = promptedHeader()
+        val jumps = mutableListOf<Pair<String, String>>()
+        val panel = SessionHeaderPanel(c, parent, onJumpTimeline = { message, part -> jumps.add(message to part) })
+        val timeline = panel.timelinePanel()
+        val x = panel.timelineBarWidth() + 1
+        val y = panel.timelinePreferredSize().height - 1
+
+        for (id in listOf(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) {
+            timeline.dispatchEvent(MouseEvent(timeline, id, System.currentTimeMillis(), 0, x, y, 1, false, MouseEvent.BUTTON3))
+        }
+
+        assertEquals(emptyList<Pair<String, String>>(), jumps)
+    }
+
+    fun `test timeline drags horizontally inside viewport`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        repeat(12) { idx ->
+            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_more_$idx", "bash", "running", "More $idx")), flush = false)
+        }
+        flush()
+        panel.timelineViewport().setSize(panel.timelineBarWidth() * 4, panel.timelineViewportPreferredSize().height)
+        panel.timelineViewport().doLayout()
+        panel.timelineViewport().viewPosition = Point(0, 0)
+
+        val x = panel.timelineViewport().viewPosition.x
+        val y = panel.timelineViewport().viewPosition.y
+        val timeline = panel.timelinePanel()
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_PRESSED,
+            System.currentTimeMillis(),
+            0,
+            panel.timelineBarWidth() * 3,
+            1,
+            1,
+            false,
+        ))
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_DRAGGED,
+            System.currentTimeMillis(),
+            0,
+            panel.timelineBarWidth(),
+            1,
+            0,
+            false,
+        ))
+
+        assertTrue(panel.timelineViewport().viewPosition.x > x)
+        assertEquals(y, panel.timelineViewport().viewPosition.y)
+    }
+
+    fun `test timeline touch scrolls horizontally inside viewport`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        repeat(12) { idx ->
+            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_touch_$idx", "bash", "running", "Touch $idx")), flush = false)
+        }
+        flush()
+        panel.timelineViewport().setSize(panel.timelineBarWidth() * 4, panel.timelineViewportPreferredSize().height)
+        panel.timelineViewport().doLayout()
+        panel.timelineViewport().viewPosition = Point(0, 0)
+
+        val x = panel.timelineViewport().viewPosition.x
+        val y = panel.timelineViewport().viewPosition.y
+        val timeline = panel.timelinePanel()
+        timeline.dispatchEvent(MouseWheelEvent(
+            timeline,
+            MouseWheelEvent.MOUSE_WHEEL,
+            System.currentTimeMillis(),
+            0,
+            1,
+            1,
+            1,
+            1,
+            0,
+            false,
+            3,
+            panel.timelineBarWidth(),
+            1,
+            panel.timelineBarWidth().toDouble(),
+        ))
+
+        assertTrue(panel.timelineViewport().viewPosition.x > x)
+        assertEquals(y, panel.timelineViewport().viewPosition.y)
+    }
+
+    fun `test timeline wheel scrolls horizontally inside viewport`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        repeat(12) { idx ->
+            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_wheel_$idx", "bash", "running", "Wheel $idx")), flush = false)
+        }
+        flush()
+        panel.timelineViewport().setSize(panel.timelineBarWidth() * 4, panel.timelineViewportPreferredSize().height)
+        panel.timelineViewport().doLayout()
+        panel.timelineViewport().viewPosition = Point(0, 0)
+
+        val x = panel.timelineViewport().viewPosition.x
+        val y = panel.timelineViewport().viewPosition.y
+        val timeline = panel.timelinePanel()
+        timeline.dispatchEvent(MouseWheelEvent(
+            timeline,
+            MouseWheelEvent.MOUSE_WHEEL,
+            System.currentTimeMillis(),
+            0,
+            1,
+            1,
+            1,
+            1,
+            0,
+            false,
+            MouseWheelEvent.WHEEL_UNIT_SCROLL,
+            1,
+            1,
+            1.0,
+        ))
+
+        assertTrue(panel.timelineViewport().viewPosition.x > x)
+        assertEquals(y, panel.timelineViewport().viewPosition.y)
+    }
+
+    fun `test timeline append scrolls viewport to end`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        repeat(12) { idx ->
+            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_more_$idx", "bash", "running", "More $idx")), flush = false)
+        }
+        flush()
+        panel.timelineViewport().setSize(panel.timelineBarWidth() * 4, panel.timelineViewportPreferredSize().height)
+        panel.timelineViewport().doLayout()
+        panel.timelineViewport().viewPosition = Point(0, 0)
+
+        emit(ChatEventDto.PartUpdated("ses_test", tool("tool_more_final", "bash", "running", "Final")))
+        panel.timelineViewport().doLayout()
+        flush()
+
+        val max = panel.timelinePreferredSize().width - panel.timelineViewport().extentSize.width
+        assertTrue(max > 0)
+        assertEquals(max, panel.timelineViewport().viewPosition.x)
+        assertEquals(0, panel.timelineViewport().viewPosition.y)
+    }
+
+    fun `test clicking a timeline bar jumps to its message and part`() {
+        val c = promptedHeader()
+        val jumps = mutableListOf<Pair<String, String>>()
+        val panel = SessionHeaderPanel(c, parent, onJumpTimeline = { message, part -> jumps.add(message to part) })
+        val timeline = panel.timelinePanel()
+
+        pressReleaseClick(timeline, panel, 1)
+
+        assertEquals(listOf("msg1" to "tool_1"), jumps)
+    }
+
+    fun `test clicking a different timeline bar jumps to that part`() {
+        val c = promptedHeader()
+        val jumps = mutableListOf<Pair<String, String>>()
+        val panel = SessionHeaderPanel(c, parent, onJumpTimeline = { message, part -> jumps.add(message to part) })
+        val timeline = panel.timelinePanel()
+
+        pressReleaseClick(timeline, panel, 3)
+
+        assertEquals(listOf("msg1" to "step_finish_1"), jumps)
+    }
+
+    fun `test dragging the timeline does not trigger a jump`() {
+        val c = promptedHeader()
+        val jumps = mutableListOf<Pair<String, String>>()
+        val panel = SessionHeaderPanel(c, parent, onJumpTimeline = { message, part -> jumps.add(message to part) })
+        repeat(12) { idx ->
+            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_more_$idx", "bash", "running", "More $idx")), flush = false)
+        }
+        flush()
+        panel.timelineViewport().setSize(panel.timelineBarWidth() * 4, panel.timelineViewportPreferredSize().height)
+        panel.timelineViewport().doLayout()
+        panel.timelineViewport().viewPosition = Point(0, 0)
+        val timeline = panel.timelinePanel()
+
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_PRESSED,
+            System.currentTimeMillis(),
+            0,
+            panel.timelineBarWidth() * 3,
+            1,
+            1,
+            false,
+            MouseEvent.BUTTON1,
+        ))
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_DRAGGED,
+            System.currentTimeMillis(),
+            0,
+            panel.timelineBarWidth(),
+            1,
+            0,
+            false,
+            MouseEvent.NOBUTTON,
+        ))
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_RELEASED,
+            System.currentTimeMillis(),
+            0,
+            panel.timelineBarWidth(),
+            1,
+            1,
+            false,
+            MouseEvent.BUTTON1,
+        ))
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_CLICKED,
+            System.currentTimeMillis(),
+            0,
+            panel.timelineBarWidth(),
+            1,
+            1,
+            false,
+            MouseEvent.BUTTON1,
+        ))
+
+        assertEquals(emptyList<Pair<String, String>>(), jumps)
+
+        // The guard is per gesture: the press that starts the next click must clear it, or the
+        // timeline would stay dead for the rest of the session after one pan.
+        pressReleaseClick(timeline, panel, 1)
+
+        assertEquals(listOf("msg1" to "tool_1"), jumps)
+    }
+
+    fun `test clicking between timeline bars does not trigger a jump`() {
+        val c = promptedHeader()
+        val jumps = mutableListOf<Pair<String, String>>()
+        val panel = SessionHeaderPanel(c, parent, onJumpTimeline = { message, part -> jumps.add(message to part) })
+        val timeline = panel.timelinePanel()
+
+        // Hits a gap column, not a bar — see barWidth() = WIDTH + GAP and index()'s per-bar hit test.
+        leftClick(timeline, panel.timelineBarWidth() * 100, panel.timelinePreferredSize().height - 1)
+
+        assertEquals(emptyList<Pair<String, String>>(), jumps)
+    }
+
+    /**
+     * The bars are navigation targets, so the label has to appear instantly and hang off the bottom
+     * of the strip. Each property here is defeated by a different platform default: the manager
+     * replaces the anchor with the component's centre for anything under 64px unless
+     * `toCenterIfSmall` is off, and the delays otherwise come from global registry values.
+     */
+    fun `test timeline tooltip anchors below the bar strip with no delay`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val timeline = panel.timelinePanel() as JComponent
+
+        move(panel, 1)
+
+        val tip = IdeTooltipManager.getInstance().getCustomTooltip(timeline)!!
+        assertFalse("the component centre must not override the anchor", tip.isToCenterIfSmall)
+        assertEquals(Balloon.Position.below, tip.preferredPosition)
+        assertEquals(0, tip.showDelay)
+        assertEquals(0, tip.initialReshowDelay)
+        val bottom = if (timeline.height > 0) timeline.height else timeline.preferredSize.height
+        assertEquals(bottom + UiStyle.Gap.xs(), tip.point.y)
+    }
+
+    /**
+     * Leaving the bars must clear the registration outright, which is the part of the teardown the
+     * leak depends on: `setCustomTooltip` also installs a dummy listener and a client property, and
+     * only a null registration removes them.
+     *
+     * Bar-to-bar replacement is deliberately not asserted here. It is not observable in this harness:
+     * `getCustomTooltip` reads back the client property that `setCustomTooltip` overwrites
+     * unconditionally, so a fresh tooltip is registered whether or not the previous one is dismissed
+     * first, and neither `IdeTooltipManager.hasCurrent()` nor the component's listener count differs
+     * between the two — measured, both read identically with and without the dismiss call. The
+     * disposal test below is what actually pins the change.
+     */
+    fun `test leaving the bars clears the registered tooltip`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val timeline = panel.timelinePanel() as JComponent
+        val manager = IdeTooltipManager.getInstance()
+
+        move(panel, 1)
+        assertNotNull(manager.getCustomTooltip(timeline))
+
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_EXITED,
+            System.currentTimeMillis(),
+            0,
+            0,
+            0,
+            0,
+            false,
+        ))
+
+        assertNull("leaving the bars must clear the registration", manager.getCustomTooltip(timeline))
+    }
+
+    /** A panel torn down mid-hover must not leave its tooltip registered on the manager. */
+    fun `test removing the timeline clears its registered tooltip`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val timeline = panel.timelinePanel() as JComponent
+
+        move(panel, 1)
+        assertNotNull(IdeTooltipManager.getInstance().getCustomTooltip(timeline))
+
+        panel.remove(timeline)
+        timeline.removeNotify()
+
+        assertNull(
+            "a disposed panel must not keep its tooltip registered",
+            IdeTooltipManager.getInstance().getCustomTooltip(timeline),
+        )
+    }
+
+    fun `test hovering a timeline bar shows a hand cursor`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+        val timeline = panel.timelinePanel()
+
+        move(panel, 1)
+        assertEquals(Cursor.HAND_CURSOR, timeline.cursor.type)
+
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_EXITED,
+            System.currentTimeMillis(),
+            0,
+            0,
+            0,
+            0,
+            false,
+        ))
+        assertEquals(Cursor.DEFAULT_CURSOR, timeline.cursor.type)
+    }
+
+    private fun promptedHeader(): ai.kilocode.client.session.controller.SessionController {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(
+            ai.kilocode.rpc.dto.KiloAppStatusDto.READY,
+            config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"),
+        )
+        projectRpc.state.value = workspaceReady(
+            providers = listOf(
+                ProviderDto(
+                    id = "kilo",
+                    name = "Kilo",
+                    models = mapOf(
+                        "gpt-5" to ModelDto(
+                            id = "gpt-5",
+                            name = "GPT-5",
+                            limit = ai.kilocode.rpc.dto.ModelLimitDto(context = 2_000_000, output = 200_000),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val c = controller()
+        flush()
+        edt { c.prompt("go") }
+        flush()
+
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "Generated title")), flush = false)
+        emit(ChatEventDto.MessageUpdated("ses_test", assistant()), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", reasoning(done = false, text = "Thinking")), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", tool("tool_1", "bash", "running", "Run tests", input = mapOf("cmd" to "test", "files" to "src"))), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", tool("tool_2", "edit", "error", "Edit file", input = mapOf("cmd" to "test", "files" to "src"))), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", stepFinish()), flush = false)
+        emit(ChatEventDto.TodoUpdated("ses_test", listOf(
+            TodoDto("Write tests", "completed", "high"),
+            TodoDto("Ship it", "pending", "medium"),
+        )), flush = false)
+        flush()
+        return c
+    }
+
+    private fun assistant(
+        cost: Double = 0.07,
+        tokens: TokensDto = TokensDto(13_700, 2_000, 500, 75, 25),
+    ) = MessageDto(
+        id = "msg1",
+        sessionID = "ses_test",
+        role = "assistant",
+        time = MessageTimeDto(created = 0.0),
+        cost = cost,
+        tokens = tokens,
+    )
+
+    private fun reasoning(done: Boolean, text: String) = PartDto(
+        id = "reasoning_1",
+        sessionID = "ses_test",
+        messageID = "msg1",
+        type = "reasoning",
+        text = text,
+        time = if (done) PartTimeDto(1.0, 2.0) else PartTimeDto(1.0, null),
+    )
+
+    private fun tool(
+        id: String,
+        name: String,
+        state: String,
+        title: String,
+        input: Map<String, String> = mapOf("cmd" to "test"),
+    ) = PartDto(
+        id = id,
+        sessionID = "ses_test",
+        messageID = "msg1",
+        type = "tool",
+        tool = name,
+        state = state,
+        title = title,
+        input = input,
+        time = PartTimeDto(1.0, 3.0),
+    )
+
+    private fun stepFinish() = PartDto(
+        id = "step_finish_1",
+        sessionID = "ses_test",
+        messageID = "msg1",
+        type = "step-finish",
+        reason = "stop",
+        cost = 0.07,
+        tokens = TokensDto(13_700, 2_000, 500, 75, 25),
+    )
+
+    private fun move(panel: SessionHeaderPanel, index: Int) {
+        val timeline = panel.timelinePanel()
+        timeline.dispatchEvent(MouseEvent(
+            timeline,
+            MouseEvent.MOUSE_MOVED,
+            System.currentTimeMillis(),
+            0,
+            panel.timelineBarWidth() * index + 1,
+            panel.timelinePreferredSize().height - 1,
+            0,
+            false,
+        ))
+    }
+
+    private fun click(component: java.awt.Component) {
+        component.dispatchEvent(MouseEvent(
+            component,
+            MouseEvent.MOUSE_CLICKED,
+            System.currentTimeMillis(),
+            0,
+            1,
+            1,
+            1,
+            false,
+        ))
+    }
+
+    /** Presses, releases, and clicks bar [index] without any drag — same coordinates as [move]. */
+    private fun pressReleaseClick(timeline: java.awt.Component, panel: SessionHeaderPanel, index: Int) {
+        val x = panel.timelineBarWidth() * index + 1
+        val y = panel.timelinePreferredSize().height - 1
+        leftClick(timeline, x, y)
+    }
+
+    private fun leftClick(component: java.awt.Component, x: Int, y: Int) {
+        component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(), 0, x, y, 1, false, MouseEvent.BUTTON1))
+        component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), 0, x, y, 1, false, MouseEvent.BUTTON1))
+        component.dispatchEvent(MouseEvent(component, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, x, y, 1, false, MouseEvent.BUTTON1))
+    }
+
+    private fun reset() {
+        PropertiesComponent.getInstance().unsetValue(SessionHeaderPanel.EXPANDED_KEY)
+    }
+
+    private class TrackingRepaintManager(private val watched: JComponent) : RepaintManager() {
+        val dirty = mutableListOf<JComponent>()
+        val invalid = mutableListOf<JComponent>()
+
+        override fun addDirtyRegion(c: JComponent, x: Int, y: Int, w: Int, h: Int) {
+            if (c === watched) dirty.add(c)
+            super.addDirtyRegion(c, x, y, w, h)
+        }
+
+        override fun addInvalidComponent(invalidComponent: JComponent) {
+            if (invalidComponent === watched) invalid.add(invalidComponent)
+            super.addInvalidComponent(invalidComponent)
+        }
+    }
+}

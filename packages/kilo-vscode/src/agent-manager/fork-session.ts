@@ -3,10 +3,12 @@ import { getErrorMessage } from "../kilo-provider-utils"
 import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import { PLATFORM } from "./constants"
+import { recordForkHandoff } from "./fork-handoff"
 
 export interface ForkContext {
   getClient: () => KiloClient
   state: WorktreeStateManager | undefined
+  directory: string | undefined
   postError: (message: string) => void
   registerWorktreeSession: (sessionId: string, directory: string) => void
   pushState: () => void
@@ -21,7 +23,12 @@ export interface ForkContext {
  *
  * Pure orchestration — no vscode imports.
  */
-export async function forkSession(ctx: ForkContext, sessionId: string, worktreeId?: string): Promise<null> {
+export async function forkSession(
+  ctx: ForkContext,
+  sessionId: string,
+  worktreeId?: string,
+  messageId?: string,
+): Promise<null> {
   let client: KiloClient
   try {
     client = ctx.getClient()
@@ -32,13 +39,14 @@ export async function forkSession(ctx: ForkContext, sessionId: string, worktreeI
   }
 
   const directory = (() => {
-    if (!worktreeId || !ctx.state) return undefined
-    return ctx.state.getWorktree(worktreeId)?.path
+    if (!worktreeId || !ctx.state) return ctx.directory
+    return ctx.state.getWorktree(worktreeId)?.path ?? ctx.directory
   })()
 
   let forked: Session
   try {
-    const { data } = await client.session.fork({ sessionID: sessionId, directory }, { throwOnError: true })
+    const input = { sessionID: sessionId, directory, ...(messageId ? { messageID: messageId } : {}) }
+    const { data } = await client.session.fork(input, { throwOnError: true })
     forked = data
   } catch (error) {
     const err = getErrorMessage(error)
@@ -56,6 +64,10 @@ export async function forkSession(ctx: ForkContext, sessionId: string, worktreeI
     ctx.state.addSession(forked.id, worktreeId)
     if (directory) ctx.registerWorktreeSession(forked.id, directory)
   }
+
+  await recordForkHandoff({ client, sessionId: forked.id, directory }).catch((err) => {
+    ctx.log("forkSession: failed to record fork handoff:", getErrorMessage(err))
+  })
 
   ctx.pushState()
   ctx.notifyForked(forked, sessionId, worktreeId)

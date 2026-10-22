@@ -4,10 +4,17 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 
 import { useConfig } from "../../../context/config"
 import { useLanguage } from "../../../context/language"
+import { useProvider } from "../../../context/provider"
+import { ModelSelectorBase } from "../../shared/ModelSelector"
+import { ThinkingSelectorBase } from "../../shared/ThinkingSelector"
+import { parseModelString } from "../../../../../src/shared/provider-model"
+import type { CommandConfig } from "../../../types/messages"
+import { preserveVariant } from "../../../context/session-variant-store"
 
 const WorkflowsTab: Component = () => {
   const language = useLanguage()
-  const { config } = useConfig()
+  const { config, globalConfig, globalDraft, updateGlobalConfig } = useConfig()
+  const provider = useProvider()
 
   const cmds = createMemo(() => Object.entries(config().command ?? {}))
   const [expanded, setExpanded] = createSignal<Record<string, boolean>>({})
@@ -16,12 +23,45 @@ const WorkflowsTab: Component = () => {
     setExpanded((prev) => ({ ...prev, [name]: !prev[name] }))
   }
 
+  const update = (name: string, patch: Partial<CommandConfig>) => {
+    updateGlobalConfig({ command: { [name]: patch } })
+  }
+
+  const scoped = (cmd: CommandConfig, name: string) => ({
+    ...cmd,
+    ...globalConfig().command?.[name],
+    ...globalDraft().command?.[name],
+  })
+
+  const model = (cmd: CommandConfig, name: string) => {
+    const value = scoped(cmd, name).model
+    return value === null ? null : parseModelString(value ?? undefined)
+  }
+
+  const variant = (cmd: CommandConfig, name: string) => {
+    const value = scoped(cmd, name).variant
+    return value === null ? undefined : (value ?? undefined)
+  }
+
+  const variants = (cmd: CommandConfig, name: string) =>
+    Object.keys(provider.findModel(model(cmd, name))?.variants ?? {})
+
+  const selectModel = (name: string, providerID: string, modelID: string) => {
+    const list = Object.keys(provider.findModel({ providerID, modelID })?.variants ?? {})
+    const current = variant(config().command?.[name] ?? {}, name)
+    const next = preserveVariant(current, list)
+    update(name, {
+      model: providerID && modelID ? `${providerID}/${modelID}` : null,
+      ...(current && !list.includes(current) ? { variant: next ?? null } : {}),
+    })
+  }
+
   return (
     <div>
       {/* Description */}
       <div
         style={{
-          "font-size": "12px",
+          "font-size": "var(--kilo-font-size-12)",
           color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
           "margin-bottom": "12px",
           "line-height": "1.5",
@@ -36,7 +76,7 @@ const WorkflowsTab: Component = () => {
           <Card>
             <div
               style={{
-                "font-size": "12px",
+                "font-size": "var(--kilo-font-size-12)",
                 color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
               }}
             >
@@ -87,7 +127,7 @@ const WorkflowsTab: Component = () => {
                       <Show when={cmd.description}>
                         <span
                           style={{
-                            "font-size": "12px",
+                            "font-size": "var(--kilo-font-size-12)",
                             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
                             overflow: "hidden",
                             "text-overflow": "ellipsis",
@@ -106,7 +146,7 @@ const WorkflowsTab: Component = () => {
                       style={{
                         "padding-left": "28px",
                         "padding-bottom": "8px",
-                        "font-size": "12px",
+                        "font-size": "var(--kilo-font-size-12)",
                         color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
                       }}
                     >
@@ -118,6 +158,38 @@ const WorkflowsTab: Component = () => {
                           {cmd.description}
                         </div>
                       </Show>
+                      <div
+                        style={{
+                          display: "flex",
+                          "flex-wrap": "wrap",
+                          gap: "8px",
+                          "margin-bottom": "8px",
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ModelSelectorBase
+                          value={model(cmd, name)}
+                          onSelect={(providerID, modelID) => selectModel(name, providerID, modelID)}
+                          placement="bottom-start"
+                          allowClear
+                          clearLabel={language.t("settings.providers.notSet")}
+                          label={`${name} ${language.t("settings.agentBehaviour.workflows.model")}`}
+                          description={language.t("settings.agentBehaviour.workflows.modelDescription")}
+                        />
+                        <Show when={variants(cmd, name).length > 0 || !!variant(cmd, name)}>
+                          <ThinkingSelectorBase
+                            variants={variants(cmd, name)}
+                            value={variant(cmd, name)}
+                            onSelect={(variant) => update(name, { variant })}
+                            onClear={() => update(name, { variant: null })}
+                            allowClear
+                            clearLabel={language.t("settings.providers.notSet")}
+                            placement="bottom-start"
+                            globalTrigger={false}
+                            label={`${name} ${language.t("settings.agentBehaviour.workflows.variant")}`}
+                          />
+                        </Show>
+                      </div>
                       <Show when={cmd.template}>
                         <div>
                           <span style={{ "font-weight": "500" }}>
@@ -127,7 +199,7 @@ const WorkflowsTab: Component = () => {
                             style={{
                               "margin-top": "4px",
                               "font-family": "var(--vscode-editor-font-family, monospace)",
-                              "font-size": "11px",
+                              "font-size": "var(--kilo-font-size-11)",
                               "white-space": "pre-wrap",
                               "word-break": "break-word",
                             }}

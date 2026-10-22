@@ -5,40 +5,89 @@ const fs = require("fs")
 const path = require("path")
 const os = require("os")
 
-function run(target) {
-  const result = childProcess.spawnSync(target, process.argv.slice(2), {
-    stdio: "inherit",
-  })
-  if (result.error) {
-    console.error(result.error.message)
-    process.exit(1)
+const forwardedSignals = ["SIGINT", "SIGTERM", "SIGHUP"]
+
+// kilocode_change start - point packaged binaries at co-located tree-sitter WASM resources
+function configureTreeSitterResources(target) {
+  const wasmDir = path.join(path.dirname(target), "tree-sitter")
+  if (!process.env.KILO_TREE_SITTER_WASM_DIR && fs.existsSync(path.join(wasmDir, "tree-sitter.wasm"))) {
+    process.env.KILO_TREE_SITTER_WASM_DIR = wasmDir
   }
-  const code = typeof result.status === "number" ? result.status : 0
-  process.exit(code)
+}
+// kilocode_change end
+
+function run(target, fallback) {
+  // kilocode_change - preserve cached binary fallback
+  configureTreeSitterResources(target) // kilocode_change
+  // kilocode_change start - fall through if the cached binary cannot be spawned
+  const child = (() => {
+    try {
+      return childProcess.spawn(target, process.argv.slice(2), {
+        stdio: "inherit",
+      })
+    } catch (error) {
+      const next = fallback?.()
+      if (next) {
+        run(next)
+        return
+      }
+      console.error(error.message)
+      process.exit(1)
+    }
+  })()
+  if (!child) return
+  // kilocode_change end
+
+  const forwarders = {}
+  const clear = () => {
+    // kilocode_change - remove listeners before cached binary fallback
+    for (const signal of forwardedSignals) {
+      process.removeListener(signal, forwarders[signal])
+    }
+  }
+
+  child.on("error", (error) => {
+    clear() // kilocode_change
+    // kilocode_change start - fall through to findBinary() if cached binary fails
+    const next = fallback?.()
+    if (next) {
+      run(next)
+      return
+    }
+    // kilocode_change end
+    console.error(error.message)
+    process.exit(1)
+  })
+
+  for (const signal of forwardedSignals) {
+    forwarders[signal] = () => {
+      try {
+        child.kill(signal)
+      } catch {
+        // The child may have already exited.
+      }
+    }
+    process.on(signal, forwarders[signal])
+  }
+
+  child.on("exit", (code, signal) => {
+    clear() // kilocode_change
+
+    if (signal) {
+      process.kill(process.pid, signal)
+      return
+    }
+
+    process.exit(typeof code === "number" ? code : 0)
+  })
 }
 
 const envPath = process.env.KILO_BIN_PATH
-if (envPath) {
-  run(envPath)
-}
 
 const scriptPath = fs.realpathSync(__filename)
 const scriptDir = path.dirname(scriptPath)
 
-// kilocode_change start - fall through to findBinary() if cached binary fails
 const cached = path.join(scriptDir, ".kilo")
-if (fs.existsSync(cached)) {
-  const result = childProcess.spawnSync(cached, process.argv.slice(2), {
-    stdio: "inherit",
-  })
-  if (!result.error) {
-    const code = typeof result.status === "number" ? result.status : 0
-    process.exit(code)
-  }
-  // cached binary failed (e.g. wrong platform/arch, missing dynamic linker),
-  // fall through to findBinary() which has better variant detection
-}
-// kilocode_change end
 
 const platformMap = {
   darwin: "darwin",
@@ -87,32 +136,14 @@ function supportsAvx2() {
   }
 
   if (platform === "windows") {
-    const cmd =
-      '(Add-Type -MemberDefinition "[DllImport(""kernel32.dll"")] public static extern bool IsProcessorFeaturePresent(int ProcessorFeature);" -Name Kernel32 -Namespace Win32 -PassThru)::IsProcessorFeaturePresent(40)'
-
-    for (const exe of ["powershell.exe", "pwsh.exe", "pwsh", "powershell"]) {
-      try {
-        const result = childProcess.spawnSync(exe, ["-NoProfile", "-NonInteractive", "-Command", cmd], {
-          encoding: "utf8",
-          timeout: 3000,
-          windowsHide: true,
-        })
-        if (result.status !== 0) continue
-        const out = (result.stdout || "").trim().toLowerCase()
-        if (out === "true" || out === "1") return true
-        if (out === "false" || out === "0") return false
-      } catch {
-        continue
-      }
-    }
-
-    return false
+    return require(path.join(scriptDir, "kilocode", "windows-avx2.cjs")).supportsAvx2(arch) // kilocode_change
   }
 
   return false
 }
 
-const names = (() => {
+let names // kilocode_change
+function candidates() /* kilocode_change */ {
   const avx2 = supportsAvx2()
   const baseline = arch === "x64" && !avx2
 
@@ -155,9 +186,10 @@ const names = (() => {
     return [base, `${base}-baseline`]
   }
   return [base]
-})()
+} // kilocode_change
 
 function findBinary(startDir) {
+  names ??= candidates() // kilocode_change
   let current = startDir
   for (;;) {
     const modules = path.join(current, "node_modules")
@@ -175,14 +207,25 @@ function findBinary(startDir) {
   }
 }
 
-const resolved = findBinary(scriptDir)
+// kilocode_change start
+const resolved = envPath || (fs.existsSync(cached) ? cached : findBinary(scriptDir))
 if (!resolved) {
-  console.error(
-    "It seems that your package manager failed to install the right version of the Kilo CLI for your platform. You can try manually installing " +
-      names.map((n) => `\"${n}\"`).join(" or ") +
-      " package",
-  )
+  if (platform === "windows" && arch === "arm64") {
+    console.error(
+      "The Kilo CLI native binary for Windows ARM64 could not be found.\n" +
+      "If the native package is unavailable, you can try downloading the pre-built x64 binary from the GitHub Releases page to run under Windows 11 emulation.\n" +
+      "Alternatively, use WSL2 with the Linux ARM64 build."
+    )
+  } else {
+    console.error(
+      "It seems that your package manager failed to install the right version of the Kilo CLI for your platform.\n" +
+      "You can try manually installing the " +
+        names.map((n) => `"${n}"`).join(" or ") +
+        " package, or download a pre-built binary from the GitHub Releases page."
+    )
+  }
   process.exit(1)
 }
+// kilocode_change end
 
-run(resolved)
+run(resolved, resolved === cached ? () => findBinary(scriptDir) : undefined) // kilocode_change - preserve cached binary fallback

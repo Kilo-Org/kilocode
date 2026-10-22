@@ -1,0 +1,7 @@
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant S as Server
+    C->>S: GET /users
+    S-->>C: 200 OK
+    C->>C: cache result

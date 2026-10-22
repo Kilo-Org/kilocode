@@ -12,7 +12,15 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { QuestionRequest } from "../../types/messages"
-import { resolveOptimisticQuestionAgent, resolveSelectedQuestionMode, toggleAnswer } from "./question-dock-utils"
+import {
+  pickOutcome,
+  resolveOptimisticQuestionAgent,
+  resolveSelectedQuestionMode,
+  toggleAnswer,
+  tr,
+} from "./question-dock-utils"
+import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
+import { isTextControl } from "../../utils/focus"
 
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
@@ -23,7 +31,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
 
   const [store, setStore] = createStore({
     tab: 0,
-    answers: [] as string[][],
+    answers: questions().map((q) => {
+      const option = !q.multiple && q.options.find((opt) => opt.label === q.default)
+      return option ? [option.label] : []
+    }),
     custom: [] as string[],
     kinds: [] as Record<string, "option" | "custom">[],
     editing: false,
@@ -51,8 +62,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   const input = createMemo(() => store.custom[store.tab] ?? "")
   const multi = createMemo(() => question()?.multiple === true)
   const customPicked = createMemo(() => {
+    if (!multi() && store.editing) return true
     const value = input()
     if (!value) return false
+    if (store.kinds[store.tab]?.[value] !== "custom") return false
     return store.answers[store.tab]?.includes(value) ?? false
   })
 
@@ -62,6 +75,25 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   const summary = createMemo(() => {
     const n = Math.min(store.tab + 1, total())
     return language.t("question.summary", { n, total: total() })
+  })
+
+  // Localized view of the current question. The wire-format `label` is preserved for reply
+  // matching; only the display text goes through `tr()`.
+  //
+  // translateOption returns accessor functions, not plain strings. SolidJS runs the <For>
+  // child callback in an untracked scope (via mapArray), so reading `language.t(...)` once
+  // at construction would freeze translations at the first render. Accessors force every
+  // JSX read to happen inside the binding's tracking scope, so switching the sidebar
+  // language while a question dock is visible re-renders the option labels.
+  const questionText = createMemo(() => tr(language.t, question()?.questionKey, question()?.question ?? ""))
+  const translateOption = (opt: {
+    label: string
+    description?: string
+    labelKey?: string
+    descriptionKey?: string
+  }) => ({
+    label: () => tr(language.t, opt.labelKey, opt.label),
+    description: () => (opt.description ? tr(language.t, opt.descriptionKey, opt.description) : ""),
   })
 
   const focusPrompt = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
@@ -77,19 +109,27 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
 
   const reject = () => {
     if (store.sending) return
+    if (prevAgent !== undefined) {
+      session.selectAgent(prevAgent)
+      prevAgent = undefined
+    }
     setStore("sending", true)
     session.rejectQuestion(props.request.id)
     focusPrompt()
   }
 
   const submit = () => {
+    if (store.sending) return
+    syncAgent(store.answers)
     reply(questions().map((_, i) => [...(store.answers[i] ?? [])]))
   }
+
+  const close = () => setStore("editing", false)
 
   const back = () => {
     if (store.sending || store.tab <= 0) return
     setStore("tab", store.tab - 1)
-    setStore("editing", false)
+    close()
   }
 
   const syncAgent = (answers: string[][], kinds: Record<string, "option" | "custom">[] = store.kinds) => {
@@ -119,7 +159,15 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
 
     syncAgent(answers, kinds)
 
-    if (!single() && !multi()) {
+    // Cost alerts use a single affirmative option and should respond on click.
+    // Normal questions keep the explicit Submit flow.
+    if (single() && props.request.autoSubmit) {
+      reply(answers)
+      return
+    }
+
+    const outcome = pickOutcome({ single: single(), multi: multi(), custom })
+    if (outcome.kind === "advance") {
       setStore("tab", store.tab + 1)
     }
   }
@@ -140,14 +188,32 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
 
   const selectTab = (index: number) => {
     setStore("tab", index)
-    setStore("editing", false)
+    close()
+  }
+
+  const selectCustom = () => {
+    if (store.sending) return
+    if (!multi()) {
+      const answer = store.answers[store.tab]?.[0]
+      if (answer && store.kinds[store.tab]?.[answer] !== "custom") {
+        const answers = [...store.answers]
+        answers[store.tab] = []
+        setStore("answers", answers)
+
+        const kinds = [...store.kinds]
+        kinds[store.tab] = {}
+        setStore("kinds", kinds)
+        syncAgent(answers, kinds)
+      }
+    }
+    setStore("editing", true)
   }
 
   const selectOption = (optIndex: number) => {
     if (store.sending) return
 
     if (optIndex === options().length) {
-      setStore("editing", true)
+      selectCustom()
       return
     }
 
@@ -157,10 +223,24 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       toggle(opt.label)
       return
     }
+    close()
     pick(opt.label)
   }
 
   const onKey = (e: KeyboardEvent) => {
+    if (
+      single() &&
+      question()?.options.some((opt) => opt.label === question()?.default) &&
+      isEnterKeyCommitNotIme(e) &&
+      !e.metaKey &&
+      !e.ctrlKey &&
+      (e.target as HTMLElement).matches("button[data-picked='true']:not([data-custom])")
+    ) {
+      e.preventDefault()
+      e.stopPropagation()
+      submit()
+      return
+    }
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return
     if ((e.target as HTMLElement).tagName === "INPUT") return
     e.preventDefault()
@@ -187,7 +267,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
 
     const value = input().trim()
     if (!value) {
-      setStore("editing", false)
+      close()
       return
     }
 
@@ -205,29 +285,41 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       kinds[store.tab] = current
       setStore("kinds", kinds)
       syncAgent(answers, kinds)
-      setStore("editing", false)
+      close()
       return
     }
 
     pick(value, true)
-    setStore("editing", false)
+    close()
     if (single()) submit()
   }
 
-  const toggleCollapse = () => setStore("collapsed", !store.collapsed)
+  const toggleCollapse = () => {
+    const collapsing = !store.collapsed
+    setStore("collapsed", collapsing)
+    // When collapsing inline, the content shrinks and can leave an empty gap
+    // below the viewport. Scroll the dock into view so the gap is eliminated.
+    if (collapsing) {
+      requestAnimationFrame(() => root?.scrollIntoView({ block: "nearest", behavior: "smooth" }))
+    }
+  }
 
   const onRoot = (e: KeyboardEvent) => {
     if (e.key === "Escape") {
       e.preventDefault()
       e.stopPropagation()
       if (store.editing) {
-        setStore("editing", false)
+        close()
+        return
+      }
+      if (props.request.dismissResponse === "continue") {
+        session.closeQuestion(props.request.id)
         return
       }
       reject()
       return
     }
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    if (isEnterKeyCommitNotIme(e) && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       e.stopPropagation()
       if (store.sending) return
@@ -237,13 +329,20 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     }
   }
 
-  // Auto-focus first option when dock appears, tab changes, or editing ends
+  // Keep keyboard navigation when the webview already has focus, but do not
+  // steal focus from the editor, terminal, or other VS Code surfaces.
+  // preventScroll avoids the browser's focus-into-view behavior fighting
+  // createAutoScroll (and yanking the viewport back to the dock while the
+  // user has scrolled up to read earlier context).
   createEffect(() => {
     void store.tab
     if (store.collapsed || store.editing || confirm()) return
     requestAnimationFrame(() => {
-      const btn = root?.querySelector<HTMLButtonElement>("button[data-slot='question-option']:not(:disabled)")
-      btn?.focus()
+      if (!document.hasFocus() || isTextControl(document.activeElement) || !root?.isConnected) return
+      const selector = "button[data-slot='question-option']:not(:disabled)"
+      const picked = root?.querySelector<HTMLButtonElement>(`${selector}[data-picked='true']`)
+      const btn = picked ?? root?.querySelector<HTMLButtonElement>(selector)
+      btn?.focus({ preventScroll: true })
     })
   })
 
@@ -252,6 +351,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       ref={root}
       data-component="question-dock"
       data-collapsed={store.collapsed ? "true" : "false"}
+      data-tone={props.request.tone}
       onClick={(e: MouseEvent) => e.stopPropagation()}
       onKeyDown={onRoot}
     >
@@ -260,7 +360,9 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
         <div data-slot="question-dock-header-content">
           <div data-slot="question-header-title">{summary()}</div>
           <Show when={store.collapsed}>
-            <div data-slot="question-collapsed-preview">{question()?.question}</div>
+            <div data-slot="question-collapsed-preview" dir="auto">
+              {questionText()}
+            </div>
           </Show>
         </div>
         <div data-slot="question-header-actions" onClick={(e: MouseEvent) => e.stopPropagation()}>
@@ -303,7 +405,9 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       <div data-slot="question-dock-body" inert={store.collapsed || undefined}>
         <div data-slot="question-dock-body-inner">
           <Show when={!confirm()}>
-            <div data-slot="question-text">{question()?.question}</div>
+            <div data-slot="question-text" dir="auto">
+              {questionText()}
+            </div>
             <Show when={multi()} fallback={<div data-slot="question-hint">{language.t("ui.question.singleHint")}</div>}>
               <div data-slot="question-hint">{language.t("ui.question.multiHint")}</div>
             </Show>
@@ -311,6 +415,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
               <For each={options()}>
                 {(opt, i) => {
                   const picked = () => store.answers[store.tab]?.includes(opt.label) ?? false
+                  const localized = translateOption(opt)
                   return (
                     <button
                       data-slot="question-option"
@@ -330,9 +435,13 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                         </span>
                       </span>
                       <span data-slot="question-option-main">
-                        <span data-slot="option-label">{opt.label}</span>
-                        <Show when={opt.description}>
-                          <span data-slot="option-description">{opt.description}</span>
+                        <span data-slot="option-label" dir="auto">
+                          {localized.label()}
+                        </span>
+                        <Show when={localized.description()}>
+                          <span data-slot="option-description" dir="auto">
+                            {localized.description()}
+                          </span>
                         </Show>
                       </span>
                     </button>
@@ -360,20 +469,28 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                   </span>
                   <span data-slot="question-option-main">
                     <span data-slot="option-label">{language.t("ui.messagePart.option.typeOwnAnswer")}</span>
-                    <span data-slot="option-description" data-placeholder={!input()}>
-                      {input() || language.t("ui.question.custom.placeholder")}
-                    </span>
+                    <Show when={!store.editing}>
+                      <span data-slot="option-description" data-placeholder={!input()}>
+                        {input() || language.t("ui.question.custom.placeholder")}
+                      </span>
+                    </Show>
                   </span>
                 </button>
                 <Show when={store.editing}>
                   <form data-slot="custom-input-form" onSubmit={handleCustomSubmit}>
                     <input
-                      ref={(el) => setTimeout(() => el.focus(), 0)}
+                      ref={(el) => {
+                        setTimeout(() => {
+                          if (!document.hasFocus()) return
+                          el.focus()
+                        }, 0)
+                      }}
                       type="text"
                       data-slot="custom-input"
                       placeholder={language.t("ui.question.custom.placeholder")}
                       value={input()}
                       disabled={store.sending}
+                      onFocus={selectCustom}
                       onInput={(e) => {
                         const inputs = [...store.custom]
                         inputs[store.tab] = e.currentTarget.value
@@ -383,13 +500,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                     <Button type="submit" variant="primary" size="small" disabled={store.sending}>
                       {multi() ? language.t("ui.common.add") : language.t("ui.common.submit")}
                     </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="small"
-                      disabled={store.sending}
-                      onClick={() => setStore("editing", false)}
-                    >
+                    <Button type="button" variant="ghost" size="small" disabled={store.sending} onClick={close}>
                       {language.t("ui.common.cancel")}
                     </Button>
                   </form>
@@ -407,8 +518,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                   const answered = () => Boolean(value())
                   return (
                     <div data-slot="review-item">
-                      <span data-slot="review-label">{q.question}</span>
-                      <span data-slot="review-value" data-answered={answered()}>
+                      <span data-slot="review-label" dir="auto">
+                        {tr(language.t, q.questionKey, q.question)}
+                      </span>
+                      <span data-slot="review-value" data-answered={answered()} dir="auto">
                         {answered() ? value() : language.t("ui.question.review.notAnswered")}
                       </span>
                     </div>
@@ -421,36 +534,38 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
           {/* Footer row — inside the same box */}
           <div data-slot="question-dock-footer">
             <Button variant="ghost" size="small" onClick={reject} disabled={store.sending}>
-              {language.t("ui.common.dismiss")}
+              {props.request.rejectLabel ?? language.t("ui.common.dismiss")}
             </Button>
-            <div data-slot="question-footer-actions">
-              <Show when={store.tab > 0}>
-                <Button variant="secondary" size="small" onClick={back} disabled={store.sending}>
-                  {language.t("ui.common.back")}
-                </Button>
-              </Show>
-              <Show
-                when={confirm()}
-                fallback={
-                  <Button
-                    variant={last() && single() ? "primary" : "secondary"}
-                    size="small"
-                    onClick={last() && single() ? submit : () => selectTab(store.tab + 1)}
-                    disabled={store.sending || (!confirm() && (store.answers[store.tab]?.length ?? 0) === 0)}
-                  >
-                    {last() && single()
-                      ? language.t("ui.common.submit")
-                      : last()
-                        ? language.t("common.review")
-                        : language.t("ui.common.next")}
+            <Show when={!store.editing}>
+              <div data-slot="question-footer-actions">
+                <Show when={store.tab > 0}>
+                  <Button variant="secondary" size="small" onClick={back} disabled={store.sending}>
+                    {language.t("ui.common.back")}
                   </Button>
-                }
-              >
-                <Button variant="primary" size="small" onClick={submit} disabled={store.sending}>
-                  {language.t("ui.common.submit")}
-                </Button>
-              </Show>
-            </div>
+                </Show>
+                <Show
+                  when={confirm()}
+                  fallback={
+                    <Button
+                      variant={last() && single() ? "primary" : "secondary"}
+                      size="small"
+                      onClick={last() && single() ? submit : () => selectTab(store.tab + 1)}
+                      disabled={store.sending || (!confirm() && (store.answers[store.tab]?.length ?? 0) === 0)}
+                    >
+                      {last() && single()
+                        ? language.t("ui.common.submit")
+                        : last()
+                          ? language.t("common.review")
+                          : language.t("ui.common.next")}
+                    </Button>
+                  }
+                >
+                  <Button variant="primary" size="small" onClick={submit} disabled={store.sending}>
+                    {language.t("ui.common.submit")}
+                  </Button>
+                </Show>
+              </div>
+            </Show>
           </div>
         </div>
       </div>

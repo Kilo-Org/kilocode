@@ -4,20 +4,16 @@
  */
 export function getKiloUrlFromToken(defaultUrl: string, token: string): string {
   // If token contains URL information, extract it
-  // This is a simplified version - adjust based on actual token format
   if (!token) return defaultUrl
 
-  try {
-    // Check if token has URL prefix (format: "url:base64token")
-    const parts = token.split(":")
-    if (parts.length > 1 && parts[0].startsWith("http")) {
-      return parts[0]
-    }
-  } catch (e) {
-    // If parsing fails, return default
-  }
+  const match = token.match(/^(https?:\/\/[^:]+(?::\d+)?(?:\/[^:]*)?):/)
+  if (!match) return defaultUrl
 
-  return defaultUrl
+  try {
+    return new URL(match[1]).toString().replace(/\/+$/, "")
+  } catch {
+    return defaultUrl
+  }
 }
 
 /**

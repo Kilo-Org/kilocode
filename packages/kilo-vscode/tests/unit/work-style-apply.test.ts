@@ -1,0 +1,156 @@
+import { describe, expect, it } from "bun:test"
+import { applyWorkStyle, type WorkStyleStore } from "../../src/kilo-provider/work-style-apply"
+import type { WorkStyleConfig } from "../../src/shared/work-style-presets"
+
+function setup(input?: {
+  config?: WorkStyleConfig
+  customized?: boolean
+  failPatch?: boolean
+  failWrite?: (key: string, value: unknown) => boolean
+}) {
+  const settings = new Map<string, unknown>([["agentWorkStyle", "unset"]])
+  const events: string[] = []
+  const patches: WorkStyleConfig[] = []
+  const store: WorkStyleStore = {
+    read: async () => input?.config ?? {},
+    inspect: (key) => ({
+      customized: key !== "agentWorkStyle" && (input?.customized ?? false),
+      global: settings.get(key),
+    }),
+    write: async (key, value) => {
+      events.push(`write:${key}:${String(value)}`)
+      settings.set(key, value)
+      if (input?.failWrite?.(key, value)) throw new Error(`Failed to write ${key}`)
+    },
+    patch: async (config) => {
+      events.push(`patch:${Object.keys(config).sort().join(",")}`)
+      patches.push(config)
+      if (input?.failPatch) throw new Error("Failed to patch config")
+    },
+  }
+  return { store, settings, events, patches }
+}
+
+describe("applyWorkStyle", () => {
+  it("applies extension settings before the CLI config in one operation", async () => {
+    const state = setup()
+
+    const result = await applyWorkStyle("human-in-the-loop", state.store)
+
+    expect(result).toEqual({ ok: true })
+    expect(state.settings.get("showTaskTimeline")).toBe(true)
+    expect(state.settings.get("showAutoApprovalReason")).toBe(true)
+    expect(state.settings.get("agentWorkStyle")).toBe("human-in-the-loop")
+    expect(state.events).toEqual([
+      "write:showTaskTimeline:true",
+      "write:showAutoApprovalReason:true",
+      "write:agentWorkStyle:human-in-the-loop",
+      "patch:code_edit_display,mcp_tool_display,permission,reasoning_display,terminal_command_display",
+    ])
+  })
+
+  it("does not write a top-level permission choice when creating global config", async () => {
+    const state = setup({ config: {} })
+
+    expect(await applyWorkStyle("human-in-the-loop", state.store)).toEqual({ ok: true })
+    expect(state.patches).toHaveLength(1)
+    expect(["ask", "allow", "deny"]).not.toContain(state.patches[0].permission?.["*"])
+    expect(state.patches[0].permission).toMatchObject({
+      edit: "ask",
+      glob: "allow",
+      grep: "allow",
+      bash: { "*": "ask" },
+    })
+  })
+
+  it("rolls extension settings back when the CLI config update fails", async () => {
+    const state = setup({ failPatch: true })
+
+    const result = await applyWorkStyle("autonomous", state.store)
+
+    expect(result).toEqual({ ok: false, error: "Failed to patch config", rollback: [] })
+    expect(state.settings.get("showTaskTimeline")).toBeUndefined()
+    expect(state.settings.get("showAutoApprovalReason")).toBeUndefined()
+    expect(state.settings.get("agentWorkStyle")).toBe("unset")
+    expect(state.events).toEqual([
+      "write:showTaskTimeline:true",
+      "write:showAutoApprovalReason:false",
+      "write:agentWorkStyle:autonomous",
+      "patch:code_edit_display,mcp_tool_display,reasoning_display,terminal_command_display",
+      "write:agentWorkStyle:unset",
+      "write:showAutoApprovalReason:undefined",
+      "write:showTaskTimeline:undefined",
+    ])
+  })
+
+  it("rolls back earlier writes when persisting the style fails", async () => {
+    const state = setup({ failWrite: (key, value) => key === "agentWorkStyle" && value === "human-in-the-loop" })
+
+    const result = await applyWorkStyle("human-in-the-loop", state.store)
+
+    expect(result).toEqual({ ok: false, error: "Failed to write agentWorkStyle", rollback: [] })
+    expect(state.settings.get("showTaskTimeline")).toBeUndefined()
+    expect(state.settings.get("showAutoApprovalReason")).toBeUndefined()
+    expect(state.settings.get("agentWorkStyle")).toBe("unset")
+    expect(state.patches).toEqual([])
+  })
+
+  it("continues rollback and reports settings that could not be restored", async () => {
+    const state = setup({
+      failPatch: true,
+      failWrite: (key, value) => key === "agentWorkStyle" && value === "unset",
+    })
+
+    const result = await applyWorkStyle("human-in-the-loop", state.store)
+
+    expect(result).toEqual({ ok: false, error: "Failed to patch config", rollback: ["agentWorkStyle"] })
+    expect(state.settings.get("showTaskTimeline")).toBeUndefined()
+    expect(state.settings.get("showAutoApprovalReason")).toBeUndefined()
+  })
+
+  it("preserves customized extension settings", async () => {
+    const state = setup({ customized: true })
+    state.settings.set("showTaskTimeline", false)
+    state.settings.set("showAutoApprovalReason", true)
+
+    const result = await applyWorkStyle("autonomous", state.store)
+
+    expect(result).toEqual({ ok: true })
+    expect(state.events[0]).toBe("write:agentWorkStyle:autonomous")
+    expect(state.events.some((event) => event.startsWith("write:showTaskTimeline"))).toBe(false)
+    expect(state.events.some((event) => event.startsWith("write:showAutoApprovalReason"))).toBe(false)
+    expect(state.settings.get("showTaskTimeline")).toBe(false)
+    expect(state.settings.get("showAutoApprovalReason")).toBe(true)
+  })
+
+  it("writes autonomous display settings without changing permissions", async () => {
+    const state = setup()
+
+    expect(await applyWorkStyle("autonomous", state.store)).toEqual({ ok: true })
+    expect(state.settings.get("showTaskTimeline")).toBe(true)
+    expect(state.settings.get("showAutoApprovalReason")).toBe(false)
+    expect(state.patches).toEqual([
+      {
+        reasoning_display: "preview",
+        terminal_command_display: "collapsed",
+        code_edit_display: "collapsed",
+        mcp_tool_display: "collapsed",
+      },
+    ])
+  })
+
+  it("restores existing auto-approval visibility if its write fails", async () => {
+    const state = setup({ failWrite: (key, value) => key === "showAutoApprovalReason" && value === false })
+    state.settings.set("showAutoApprovalReason", true)
+
+    expect(await applyWorkStyle("autonomous", state.store)).toEqual({
+      ok: false,
+      error: "Failed to write showAutoApprovalReason",
+      rollback: [],
+    })
+    expect(state.settings.get("showAutoApprovalReason")).toBe(true)
+    expect(state.settings.get("showTaskTimeline")).toBeUndefined()
+    expect(state.settings.get("agentWorkStyle")).toBe("unset")
+    expect(state.patches).toEqual([])
+  })
+})

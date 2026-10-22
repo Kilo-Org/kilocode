@@ -1,0 +1,282 @@
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { expect } from "bun:test"
+import { Effect } from "effect"
+import { Agent } from "../../src/agent/agent"
+import { deriveSubagentSessionPermission } from "../../src/agent/subagent-permissions"
+import { Permission } from "../../src/permission"
+import { KiloTask } from "../../src/kilocode/tool/task" // kilocode_change
+import { testEffect } from "../lib/effect"
+
+const it = testEffect(LayerNode.compile(Agent.node))
+
+function testAgent(input: {
+  name: string
+  mode: Agent.Info["mode"]
+  permission: Parameters<typeof Permission.fromConfig>[0]
+}) {
+  return {
+    name: input.name,
+    mode: input.mode,
+    permission: Permission.fromConfig(input.permission),
+    options: {},
+  } satisfies Agent.Info
+}
+
+// `deriveSubagentSessionPermission` is imported from production. The test
+// exercises the actual helper that task.ts uses to build the subagent's
+// session permission, so any regression in that helper trips this test.
+
+it.instance("subagent permissions take precedence over parent agent restrictions", () =>
+  Effect.gen(function* () {
+    const planAgent = yield* Agent.use.get("plan")
+    const generalAgent = yield* Agent.use.get("general")
+
+    expect(planAgent).toBeDefined()
+    expect(generalAgent).toBeDefined()
+    // Sanity: the plan agent itself blocks edit. (Note: `write` and
+    // `apply_patch` route through the `edit` permission at the runtime
+    // tool layer — see Permission.disabled / EDIT_TOOLS.)
+    expect(Permission.evaluate("edit", "/some/file.ts", planAgent!.permission).action).toBe("deny")
+
+    const parentSessionPermission: PermissionV1.Ruleset = []
+
+    const subagentSessionPermission = deriveSubagentSessionPermission({
+      parentSessionPermission,
+      subagent: generalAgent!,
+    })
+
+    // Mirror the runtime evaluation in session/prompt.ts (~line 410, 639):
+    //   ruleset: Permission.merge(agent.permission, session.permission ?? [])
+    const effective = Permission.merge(generalAgent!.permission, subagentSessionPermission)
+
+    expect(Permission.evaluate("edit", "/some/file.ts", effective).action).not.toBe("deny")
+    expect(Permission.disabled(["edit", "write", "apply_patch"], effective)).toEqual(new Set())
+  }),
+)
+
+it.instance("subagent's own read-only restriction remains effective", () =>
+  Effect.gen(function* () {
+    const explore = yield* Agent.use.get("explore")
+    expect(explore).toBeDefined()
+
+    const parentSessionPermission: PermissionV1.Ruleset = []
+    const subagentSessionPermission = deriveSubagentSessionPermission({
+      parentSessionPermission,
+      subagent: explore!,
+    })
+    const effective = Permission.merge(explore!.permission, subagentSessionPermission)
+
+    expect(Permission.evaluate("edit", "/x.ts", effective).action).toBe("deny")
+  }),
+)
+
+it.instance(
+  "custom subagent can explicitly enable edits denied to its parent agent",
+  () =>
+    Effect.gen(function* () {
+      const planAgent = yield* Agent.use.get("plan")
+      const my = yield* Agent.use.get("my_subagent")
+      expect(planAgent).toBeDefined()
+      expect(my).toBeDefined()
+
+      const parentSessionPermission: PermissionV1.Ruleset = []
+      const subagentSessionPermission = deriveSubagentSessionPermission({
+        parentSessionPermission,
+        subagent: my!,
+      })
+      const effective = Permission.merge(my!.permission, subagentSessionPermission)
+
+      expect(Permission.evaluate("edit", "/some/file.ts", planAgent!.permission).action).toBe("deny")
+      expect(Permission.evaluate("edit", "/some/file.ts", effective).action).toBe("allow")
+      expect(Permission.disabled(["edit", "write", "apply_patch"], effective)).toEqual(new Set())
+    }),
+  {
+    config: {
+      agent: {
+        my_subagent: {
+          description: "A user-defined subagent",
+          mode: "subagent",
+          permission: {
+            edit: "allow",
+          },
+        },
+      },
+    },
+  },
+)
+
+it.effect("subagent self permissions are preserved", () =>
+  Effect.sync(() => {
+    const executor = testAgent({
+      name: "executor",
+      mode: "subagent",
+      permission: {
+        "*": "deny",
+        read: "allow",
+        bash: "allow",
+        task: {
+          "*": "deny",
+          worker: "allow",
+        },
+        edit: "allow",
+      },
+    })
+
+    const effective = Permission.merge(
+      executor.permission,
+      deriveSubagentSessionPermission({
+        parentSessionPermission: [],
+        subagent: executor,
+      }),
+    )
+
+    expect(Permission.evaluate("read", "README.md", effective).action).toBe("allow")
+    expect(Permission.evaluate("bash", "git status", effective).action).toBe("allow")
+    expect(Permission.evaluate("task", "worker", effective).action).toBe("allow")
+    expect(Permission.evaluate("task", "other", effective).action).toBe("deny")
+    expect(Permission.disabled(["edit", "write", "apply_patch"], effective)).toEqual(new Set())
+  }),
+)
+
+it.effect("subagent inherits parent session deny rules as hard runtime ceilings", () =>
+  Effect.sync(() => {
+    const executor = testAgent({
+      name: "executor",
+      mode: "subagent",
+      permission: {
+        bash: "allow",
+      },
+    })
+    const effective = Permission.merge(
+      executor.permission,
+      deriveSubagentSessionPermission({
+        parentSessionPermission: Permission.fromConfig({ bash: "deny" }),
+        subagent: executor,
+      }),
+    )
+
+    expect(Permission.evaluate("bash", "git status", effective).action).toBe("deny")
+  }),
+)
+
+// kilocode_change start - preserve Plan edit/notebook ceilings across Kilo task delegation,
+// but do NOT project the caller's read-only bash allowlist onto a writable subagent (#11523)
+it.instance("Plan delegation preserves notebook ceilings without projecting bash denies", () =>
+  Effect.gen(function* () {
+    const caller = yield* Agent.use.get("plan")
+    expect(caller).toBeDefined()
+    const rules = KiloTask.inherited({
+      caller: caller!,
+      session: { permission: [] } as unknown as Parameters<typeof KiloTask.inherited>[0]["session"],
+      mcp: {},
+    })
+
+    expect(Permission.evaluate("notebook_edit", "notebook.ipynb", rules).action).toBe("deny")
+    expect(Permission.evaluate("notebook_execute", "notebook.ipynb", rules).action).toBe("deny")
+    expect(rules.filter((rule) => rule.permission === "bash")).toEqual([])
+  }),
+)
+
+it.instance(
+  "built-in Explore enforces read-only bash for Plan and orchestrator delegation",
+  () =>
+    Effect.gen(function* () {
+      const plan = yield* Agent.use.get("plan")
+      const orchestrator = yield* Agent.use.get("orchestrator")
+      const explore = yield* Agent.use.get("explore")
+      expect(plan).toBeDefined()
+      expect(orchestrator).toBeDefined()
+      expect(explore).toBeDefined()
+
+      const inherited = (caller: Agent.Info) =>
+        KiloTask.inherited({
+          caller,
+          session: { permission: [] } as unknown as Parameters<typeof KiloTask.inherited>[0]["session"],
+          mcp: {},
+        })
+      const effective = (caller: Agent.Info) =>
+        Permission.merge(explore!.permission, KiloTask.permissions(inherited(caller)))
+      const rules = effective(plan!)
+
+      expect(Permission.evaluate("bash", "git status", rules).action).toBe("allow")
+      expect(Permission.evaluate("bash", "rg TODO src", rules).action).toBe("allow")
+
+      const denied = [
+        "rm -rf src",
+        "git push origin main",
+        "git -c user.name=test push origin main",
+        "git commit -m test",
+        "touch output.txt",
+        "mv source target",
+        "cp source target",
+        "mkdir output",
+        "npm install",
+      ]
+      for (const command of denied) {
+        expect(Permission.evaluate("bash", command, rules).action).toBe("deny")
+      }
+
+      // Delegated agents cannot answer an `ask`: read-only gh forms are allowed outright,
+      // every other gh form is denied, and raw find can mutate via -exec/-delete.
+      expect(Permission.evaluate("bash", "gh repo view", rules).action).toBe("allow")
+      expect(Permission.evaluate("bash", "gh pr create --fill", rules).action).toBe("deny")
+      expect(Permission.evaluate("bash", "gh auth status --show-token", rules).action).toBe("deny")
+      expect(Permission.evaluate("bash", "find . -name '*.ts'", rules).action).toBe("deny")
+      expect(Permission.evaluate("bash", "touch output.txt", effective(orchestrator!)).action).toBe("deny")
+    }),
+  {
+    config: {
+      agent: {
+        explore: {
+          permission: {
+            bash: "allow",
+          },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
+  "read-only caller does not cap a writable subagent's own bash allowlist",
+  () =>
+    Effect.gen(function* () {
+      const caller = yield* Agent.use.get("plan")
+      const worker = yield* Agent.use.get("git_worker")
+      expect(caller).toBeDefined()
+      expect(worker).toBeDefined()
+
+      const rules = KiloTask.inherited({
+        caller: caller!,
+        session: { permission: [] } as unknown as Parameters<typeof KiloTask.inherited>[0]["session"],
+        mcp: {},
+      })
+      // The phantom deny rules the issue reports must not leak from the read-only caller.
+      expect(rules).not.toContainEqual({ permission: "bash", pattern: "git *", action: "deny" })
+      expect(rules).not.toContainEqual({ permission: "bash", pattern: "*", action: "deny" })
+
+      // Mirror task.ts: the subagent runs with its own permission plus the inherited ceilings.
+      const effective = Permission.merge(worker!.permission, KiloTask.permissions(rules))
+      expect(Permission.evaluate("bash", "git status", effective).action).toBe("allow")
+      expect(Permission.evaluate("bash", "touch output.txt", effective).action).toBe("allow")
+    }),
+  {
+    config: {
+      agent: {
+        git_worker: {
+          description: "A writable subagent that runs git",
+          mode: "subagent",
+          permission: {
+            bash: {
+              "*": "ask",
+              "git *": "allow",
+              "touch *": "allow",
+            },
+          },
+        },
+      },
+    },
+  },
+)
+// kilocode_change end

@@ -16,6 +16,11 @@ import { type ParentComponent } from "solid-js"
 import { StoryProviders, mockSessionValue } from "./StoryProviders"
 import { SessionContext } from "../context/session"
 import { PromptInput } from "../components/chat/PromptInput"
+import { SandboxTooltipContent } from "../components/shared/SandboxButton"
+import { contextDrafts } from "../utils/draft-store"
+import { Button } from "@kilocode/kilo-ui/button"
+import { Icon } from "@kilocode/kilo-ui/icon"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 
 const agents = [
   { name: "code", description: "Write, edit and review code", mode: "primary" as const },
@@ -23,9 +28,7 @@ const agents = [
   { name: "architect", description: "Plan and design before implementation", mode: "primary" as const },
 ]
 
-const noop = () => {}
-
-const PromptProviders: ParentComponent<{ variants?: boolean; modelOverride?: boolean }> = (props) => {
+const PromptProviders: ParentComponent<{ variants?: boolean; training?: boolean }> = (props) => {
   const base = mockSessionValue({ status: "idle" })
   const session = {
     ...base,
@@ -33,12 +36,10 @@ const PromptProviders: ParentComponent<{ variants?: boolean; modelOverride?: boo
     selectedAgent: () => "code",
     variantList: () => (props.variants ? ["low", "medium", "high"] : []),
     currentVariant: () => (props.variants ? ("medium" as string | undefined) : undefined),
-    hasModelOverride: () => props.modelOverride ?? false,
-    clearModelOverride: noop,
   }
 
   return (
-    <StoryProviders noPadding>
+    <StoryProviders noPadding training={props.training}>
       {/* overflow:hidden prevents margin-collapse so top/bottom borders are captured in screenshots */}
       <div style={{ overflow: "hidden" }}>
         <SessionContext.Provider value={session as any}>{props.children}</SessionContext.Provider>
@@ -81,6 +82,68 @@ export const Default200: Story = {
 }
 
 // ---------------------------------------------------------------------------
+// Stories — model whose prompts may be used for training
+// ---------------------------------------------------------------------------
+
+export const WithPromptTraining420: Story = {
+  name: "With prompt training indicator — 420px",
+  render: () => (
+    <PromptProviders training>
+      <PromptInput />
+    </PromptProviders>
+  ),
+}
+
+export const WithPromptTraining200: Story = {
+  name: "With prompt training indicator — 200px",
+  render: () => (
+    <PromptProviders training>
+      <PromptInput />
+    </PromptProviders>
+  ),
+}
+
+export const SandboxTooltipEnabled: Story = {
+  name: "Sandbox tooltip — enabled",
+  render: () => (
+    <StoryProviders>
+      <div style={{ padding: "120px 0 0 180px" }}>
+        <Tooltip
+          forceOpen
+          value={<SandboxTooltipContent enabled network />}
+          contentClass="prompt-sandbox-tooltip-content"
+          placement="top"
+        >
+          <Button variant="ghost" size="small" class="prompt-status-button prompt-status-button--active">
+            <Icon name="lock" size="small" />
+          </Button>
+        </Tooltip>
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const SandboxTooltipDisabled: Story = {
+  name: "Sandbox tooltip — disabled",
+  render: () => (
+    <StoryProviders>
+      <div style={{ padding: "120px 0 0 180px" }}>
+        <Tooltip
+          forceOpen
+          value={<SandboxTooltipContent enabled={false} network />}
+          contentClass="prompt-sandbox-tooltip-content"
+          placement="top"
+        >
+          <Button variant="ghost" size="small" class="prompt-status-button">
+            <Icon name="lock" size="small" />
+          </Button>
+        </Tooltip>
+      </div>
+    </StoryProviders>
+  ),
+}
+
+// ---------------------------------------------------------------------------
 // Stories — model with thinking-effort variants (ThinkingSelector visible)
 // ---------------------------------------------------------------------------
 
@@ -103,23 +166,68 @@ export const WithThinking200: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// Stories — model override active (reset button visible)
+// Stories — code context pills (added from the editor "Add as context" command)
 // ---------------------------------------------------------------------------
 
-export const WithModelOverride420: Story = {
-  name: "With model override — 420px",
-  render: () => (
-    <PromptProviders modelOverride>
-      <PromptInput />
-    </PromptProviders>
-  ),
+const CODE_CONTEXT_BOX = "story-code-context"
+const codeContexts = [
+  {
+    id: "context-1",
+    filePath: "tests/unit/services/test_subchannel_sharing.py",
+    startLine: 271,
+    endLine: 277,
+    text: 'writer_count.return_value = 2\nwith pytest.raises(Forbidden, match="Unpaid organizations can only have 2 collaborators"):',
+  },
+  {
+    id: "context-2",
+    filePath: "packages/kilo-vscode/webview-ui/src/components/chat/PromptInput.tsx",
+    startLine: 12,
+    endLine: 18,
+    text: "export const PromptInput: Component<PromptInputProps> = (props) => {",
+  },
+]
+
+const manyContexts = Array.from({ length: 8 }, (_, index) => ({
+  id: `many-${index}`,
+  filePath: `packages/kilo-vscode/src/services/code-actions/file-${index}.ts`,
+  startLine: index * 10 + 1,
+  endLine: index * 10 + 12,
+  text: `export function action${index}() {\n  return ${index}\n}`,
+}))
+
+const largeContext = {
+  id: "large-1",
+  filePath: "packages/opencode/src/session/session.ts",
+  startLine: 1,
+  endLine: 400,
+  text: Array.from({ length: 400 }, (_, index) => `const line${index + 1} = ${index + 1}`).join("\n"),
 }
 
-export const WithModelOverride200: Story = {
-  name: "With model override — 200px",
-  render: () => (
-    <PromptProviders modelOverride>
-      <PromptInput />
+function CodeContextPrompt(props: { box: string; contexts: typeof codeContexts }) {
+  contextDrafts.set(`${props.box}:session:story-session-001`, props.contexts)
+  return (
+    <PromptProviders>
+      <PromptInput boxId={props.box} />
     </PromptProviders>
-  ),
+  )
+}
+
+export const WithCodeContext420: Story = {
+  name: "With code context pills — 420px",
+  render: () => <CodeContextPrompt box={CODE_CONTEXT_BOX} contexts={codeContexts} />,
+}
+
+export const WithCodeContext200: Story = {
+  name: "With code context pills — 200px",
+  render: () => <CodeContextPrompt box={CODE_CONTEXT_BOX} contexts={codeContexts} />,
+}
+
+export const WithManyCodeContexts420: Story = {
+  name: "With many code contexts — 420px",
+  render: () => <CodeContextPrompt box="story-code-context-many" contexts={manyContexts} />,
+}
+
+export const WithLargeCodeContext420: Story = {
+  name: "With large code context — 420px",
+  render: () => <CodeContextPrompt box="story-code-context-large" contexts={[largeContext]} />,
 }

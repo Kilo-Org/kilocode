@@ -1,6 +1,6 @@
 import { IDE, TabAutocompleteOptions } from "../.."
 import { countTokens, pruneLinesFromBottom, pruneLinesFromTop } from "../../llm/countTokens"
-import { AutocompleteLanguageInfo, languageForFilepath } from "../constants/AutocompleteLanguageInfo"
+import { AutocompleteLanguageInfo, languageForFilepath, languageForId } from "../constants/AutocompleteLanguageInfo"
 import { constructInitialPrefixSuffix } from "../templating/constructPrefixSuffix"
 
 import { AstPath, getAst, getTreePathAtCursor } from "./ast"
@@ -35,7 +35,7 @@ export const HelperVars = {
     modelName: string,
     ide: IDE,
   ): Promise<HelperVars> => {
-    const lang = languageForFilepath(input.filepath)
+    const lang = (input.languageId && languageForId(input.languageId)) || languageForFilepath(input.filepath)
     const workspaceUris = await ide.getWorkspaceDirs()
     const fileContents = input.manuallyPassFileContents ?? (await ide.readFile(input.filepath))
     const fileLines = fileContents.split("\n")

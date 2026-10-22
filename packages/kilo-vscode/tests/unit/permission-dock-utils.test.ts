@@ -1,5 +1,24 @@
 import { describe, it, expect } from "bun:test"
-import { savedRuleStates } from "../../webview-ui/src/components/chat/permission-dock-utils"
+import { displaySkillCommand, savedRuleStates } from "../../webview-ui/src/components/chat/permission-dock-utils"
+
+describe("displaySkillCommand", () => {
+  it("leaves ordinary commands, including astral characters, untouched", () => {
+    expect(displaySkillCommand("git status && printf 'hi 😀'")).toBe("git status && printf 'hi 😀'")
+  })
+
+  it("escapes whitespace controls with readable shorthands", () => {
+    expect(displaySkillCommand("a\nb\rc\td")).toBe("a\\nb\\rc\\td")
+  })
+
+  it("escapes bidi/format controls so the visible text can't be reordered", () => {
+    // U+202E (RLO) would otherwise reverse the trailing text in the prompt.
+    expect(displaySkillCommand("rm \u202Etxt.exe")).toBe("rm \\u202etxt.exe")
+  })
+
+  it("uses \\x for C0/C1 controls and \\u for higher code points", () => {
+    expect(displaySkillCommand("\u0000\u009f\u2066")).toBe("\\x00\\x9f\\u2066")
+  })
+})
 
 describe("savedRuleStates", () => {
   it("returns empty map when rule is undefined", () => {

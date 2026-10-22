@@ -1,45 +1,63 @@
-import { Server } from "../../server/server"
-import { cmd } from "./cmd"
+import { Effect } from "effect"
+import { effectCmd } from "../effect-cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
-import { Flag } from "../../flag/flag"
-import { Instance } from "../../project/instance" // kilocode_change
-import { Workspace } from "../../control-plane/workspace"
-import { Project } from "../../project/project"
-import { Installation } from "../../installation"
+import { Flag } from "@opencode-ai/core/flag/flag"
 
-export const ServeCommand = cmd({
+export const ServeCommand = effectCmd({
   command: "serve",
   builder: (yargs) => withNetworkOptions(yargs),
-  describe: "starts a headless kilo server", // kilocode_change
-  handler: async (args) => {
+  describe: "starts a headless kilo server",
+  // Server loads instances per-request via x-kilo-directory header — no
+  // need for an ambient project InstanceContext at startup.
+  instance: false, // kilocode_change
+  handler: Effect.fn("Cli.serve")(function* (args) {
+    const { Server } = yield* Effect.promise(() => import("../../server/server"))
     if (!Flag.KILO_SERVER_PASSWORD) {
       console.log("Warning: KILO_SERVER_PASSWORD is not set; server is unsecured.")
     }
-    const opts = await resolveNetworkOptions(args)
-    const server = Server.listen(opts)
-    console.log(`kilo server listening on http://${server.hostname}:${server.port}`)
+    const opts = yield* resolveNetworkOptions(args)
+    const server = yield* Effect.promise(() => Server.listen(opts))
 
-    let workspaceSync: Array<ReturnType<typeof Workspace.startSyncing>> = []
-    // Only available in development right now
-    if (Installation.isLocal()) {
-      workspaceSync = Project.list().map((project) => Workspace.startSyncing(project))
-    }
+    // kilocode_change start
+    const urls = server.urls
+
+    console.log(`kilo server listening on ${urls.bind}`)
+    if (urls.local !== urls.bind) console.log(`  Local:   ${urls.local}`)
+    if (urls.network) console.log(`  Network: ${urls.network}`)
+    // kilocode_change end
 
     // kilocode_change start - graceful signal shutdown
-    const abort = new AbortController()
-    const shutdown = async () => {
-      try {
-        await Instance.disposeAll()
-        await server.stop(true)
-        await Promise.all(workspaceSync.map((item) => item.stop()))
-      } finally {
-        abort.abort()
-      }
-    }
-    process.on("SIGTERM", shutdown)
-    process.on("SIGINT", shutdown)
-    process.on("SIGHUP", shutdown)
-    await new Promise((resolve) => abort.signal.addEventListener("abort", resolve))
+    // yield* Effect.never
+    const { InstanceRuntime } = yield* Effect.promise(() => import("../../project/instance-runtime"))
+    const { startParentWatchdog } = yield* Effect.promise(() => import("../../kilocode/parent-watchdog"))
+    const { KiloSessions } = yield* Effect.promise(() => import("@/kilo-sessions/kilo-sessions"))
+    yield* Effect.promise(
+      () =>
+        new Promise<void>((resolve) => {
+          // Exit if the editor client that spawned us is hard-killed (no signal reaches us).
+          const stopWatchdog = startParentWatchdog(() => process.kill(process.pid, "SIGTERM"))
+          let stopping = false
+          const shutdown = async () => {
+            if (stopping) return
+            stopping = true
+            stopWatchdog()
+            // The editor may exit before its SIGKILL fallback can run.
+            const timeout = setTimeout(() => process.exit(1), 5000)
+            timeout.unref()
+            try {
+              await KiloSessions.drainIngestForShutdown() // kilocode_change
+              await InstanceRuntime.disposeAllInstances()
+              await server.stop(true)
+            } finally {
+              clearTimeout(timeout)
+              resolve()
+            }
+          }
+          process.once("SIGTERM", shutdown)
+          process.once("SIGINT", shutdown)
+          process.once("SIGHUP", shutdown)
+        }),
+    )
     // kilocode_change end
-  },
+  }),
 })

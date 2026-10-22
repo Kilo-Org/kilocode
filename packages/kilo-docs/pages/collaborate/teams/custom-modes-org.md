@@ -18,15 +18,15 @@ For example, Admins and Owners can extend these by creating **Custom Modes** wit
 3. Optionally select a **template** (e.g. _User Story Creator_, _Project Research_, _DevOps_).
 4. Fill in the following fields:
 
-| Field                              | Description                                                                                          |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Mode Name**                      | Display name for the new mode (e.g. _Security Reviewer_).                                            |
-| **Mode Slug**                      | A short identifier used internally (e.g. `security-reviewer`).                                       |
-| **Role Definition**                | Describe Kilo's role and personality for this mode. Shapes how it reasons and responds.              |
-| **Short Description**              | A brief summary shown in the mode selector.                                                          |
-| **When to Use (optional)**         | Guidance for when this mode should be used. Helps the Orchestrator choose the right mode for a task. |
-| **Custom Instructions (optional)** | Add behavioral guidelines specific to this mode.                                                     |
-| **Available Tools**                | Select which tools this mode can access (Read, Edit, Browser, Commands, MCP).                        |
+| Field | Description |
+|---|---|
+| **Mode Name** | Display name for the new mode (e.g. _Security Reviewer_). |
+| **Mode Slug** | A short identifier used internally (e.g. `security-reviewer`). |
+| **Role Definition** | Describe Kilo's role and personality for this mode. Shapes how it reasons and responds. |
+| **Short Description** | A brief summary shown in the mode selector. |
+| **When to Use (optional)** | Guidance for when this mode should be used. Helps the Orchestrator choose the right mode for a task. |
+| **Custom Instructions (optional)** | Add behavioral guidelines specific to this mode. |
+| **Available Tools** | Select which tools this mode can access (Read, Edit, Browser, Commands, MCP). |
 
 5. Click **Create Mode** to save.
 

@@ -5,6 +5,7 @@
  * actual execution to an injected RunTask callback (provided by the caller).
  */
 
+import * as path from "node:path"
 import { SetupScriptService, type SetupScriptInfo } from "./SetupScriptService"
 
 interface SetupScriptEnvironment {
@@ -47,11 +48,24 @@ export function buildSetupTaskCommand(script: SetupScriptInfo): { command: strin
   }
 }
 
+/**
+ * VS Code task identity for one worktree. VS Code reuses an active task with the
+ * same definition instead of starting a new one, so the worktree path must be part
+ * of it. Otherwise a concurrent setup attaches to another worktree's execution.
+ */
+export function setupTaskIdentity(config: SetupTaskConfig) {
+  return {
+    definition: { type: "kilo-worktree-setup", script: config.command, worktree: config.cwd },
+    name: `Worktree Setup (${path.basename(config.cwd)})`,
+  }
+}
+
 export class SetupScriptRunner {
   constructor(
     private readonly log: (msg: string) => void,
     private readonly service: SetupScriptService,
     private readonly run: RunTask,
+    private readonly failed: (message: string) => void = () => undefined,
   ) {}
 
   /**
@@ -92,6 +106,7 @@ export class SetupScriptRunner {
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       this.log(`Setup script execution failed: ${msg}`)
+      this.failed(msg)
       return true // Script was attempted
     }
   }

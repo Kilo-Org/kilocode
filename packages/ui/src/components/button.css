@@ -1,3 +1,4 @@
+/* kilocode_change - reverted to main */
 [data-component="button"] {
   display: inline-flex;
   align-items: center;
@@ -115,7 +116,7 @@
 
     font-size: var(--font-size-small);
     line-height: var(--line-height-large);
-    gap: 4px;
+    gap: 8px;
 
     /* text-12-medium */
     font-family: var(--font-family-sans);
@@ -135,7 +136,7 @@
     }
 
     font-size: var(--font-size-small);
-    gap: 6px;
+    gap: 8px;
 
     /* text-12-medium */
     font-family: var(--font-family-sans);
@@ -153,7 +154,7 @@
       padding: 0 12px 0 8px;
     }
 
-    gap: 4px;
+    gap: 8px;
 
     /* text-14-medium */
     font-family: var(--font-family-sans);

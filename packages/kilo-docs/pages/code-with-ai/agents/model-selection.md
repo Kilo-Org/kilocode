@@ -9,6 +9,37 @@ Here's the honest truth about AI model recommendations: by the time I write them
 
 Instead of maintaining a static list that's perpetually behind, we built something better — a real-time leaderboard showing which models Kilo Code users are actually having success with right now.
 
+## Model Routing and Configuration
+
+You can configure models separately for different tasks in the VS Code extension and kilo CLI:
+
+- **Main model** — the primary model your agent uses for coding tasks, chat, and reasoning. This is what you pick with the model selector, `/models`, or the `model` key in `kilo.jsonc`. See [How to Select and Switch Models](#how-to-select-and-switch-models) for the full precedence order and per-agent config.
+  - The main model is also used for todo-list generation, and for context compaction when no compaction model is set.
+- **Small model** — a lightweight model used for session title generation, commit message generation, and prompt enhancement. Configured with the `small_model` key in `kilo.jsonc`, or the **Small Model** field on the **Settings → Models** tab.
+  - If left unset, Kilo resolves it according to the following logic: 
+    1. Find a small/cheap variant on your current provider (e.g. Haiku on Anthropic, Flash on Gemini).
+    2. Fall back to [`kilo-auto/small`](/docs/gateway/models-and-providers#kilo-autosmall) if the Kilo Gateway provider is authenticated in your session.
+    3. Reuse your main model if you're not authenticated to the Kilo Gateway.
+- **Subagent model** — the default model for subagents launched by the `task` tool. Configured with the `subagent_model` key in `kilo.jsonc`, or the **Subagent Model** field on the **Settings → Models** tab.
+  - If left unset, inherits whichever model the parent agent session is currently using.
+- **Autocomplete model** — the model used for inline code completions as you type. See [Autocomplete: Provider and Model](/docs/code-with-ai/features/autocomplete#provider-and-model) for how to configure it.
+- **Memory model** — the model used for automatic [project memory](/docs/customize/context/memory#use-a-different-model-for-auto-save) saves. Configured with the `memory_model` key in `kilo.jsonc`.
+  - If left unset, uses whichever model the session is currently using.
+- **Compaction model** - the model used to summarize context. Set `agent.compaction.model` in `kilo.jsonc`, or choose **Compaction model** under **Settings → Models**. If unset, compaction uses the current session's model. See [Context Condensing](/docs/customize/context/context-condensing#use-a-different-model-for-compaction).
+
+### Configuring Local Usage
+
+If you want to use a private/local inference source, you can:
+
+1. Set your **main model** to a non-`kilo-auto` provider — a local model (Ollama, LM Studio) or a direct BYOK provider key.
+2. Explicitly set **`small_model`** to a model on that same provider. If you leave it unset while signed in to Kilo Gateway, it falls back to [`kilo-auto/small`](/docs/gateway/models-and-providers#kilo-autosmall) rather than reusing your main model.
+3. Leave **`subagent_model`** unset — it always inherits your main model rather than defaulting to Kilo Gateway, whether or not you're signed in.
+4. For **autocomplete**, switch the provider to a direct Mistral or Inception BYOK key or disable autocomplete.
+
+{% callout type="note" %}
+You can ensure no inference will go through the Kilo Gateway by logging out of the Kilo Gateway in the IDE extension or TUI.
+{% /callout %}
+
 ## Check the Live Models List
 
 **[👉 See what's working today at kilo.ai/models](https://kilo.ai/models)**
@@ -25,8 +56,11 @@ While the specifics change constantly, some principles stay consistent:
 {% tab label="VSCode" %}
 
 - Use the **model selector** in the chat prompt area to pick a model for the current session. You can also type `/models` to open the model picker.
+- When the selected model supports variants, type `/variant` to open the reasoning effort selector.
+- Press `Shift+Tab` in the prompt input to cycle to the next reasoning effort variant, wrapping after the last one. This works in the sidebar chat, the Agent Manager prompt, and the New Worktree dialog, and the variant selector tooltip shows the shortcut on hover. To keep `Shift+Tab` for keyboard focus navigation instead, disable the `kilo-code.new.chat.shiftTabCyclesVariant` setting (also available under **Settings → Display**).
 - Set per-agent defaults and a global default in the **Settings** panel (Models tab), or directly in the `kilo.jsonc` config file.
-- **Model precedence:** Session override → Per-agent config → Global config → Recent models → Kilo Auto (free).
+- **Model precedence:** Pick for the current session or draft and agent → Per-agent config → Global config → Organization recommendation (then the first available Kilo model), or the most recently used available model for individual users → [Auto Free](/docs/code-with-ai/agents/auto-model#tiers) (note: Auto Free may route to providers that log prompts — see the Auto Model page for details).
+- The model selector remembers the model you picked for each agent within a session or draft, so switching agents and back restores your choice. New sessions start from config or the default; existing sessions recover each agent's model and reasoning effort from its latest user message. A manual pick beats config only within the session or draft and agent where it was made.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -37,24 +71,27 @@ While the specifics change constantly, some principles stay consistent:
 - **Model precedence:** `--model` flag → Per-agent config → Last used in session → Global config → Recent models → First available.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-- Use the **model dropdown** in the chat panel to select a model for each conversation.
-- Configure **API profiles** in Settings to group provider + model combinations and switch between them quickly.
-- Models are **sticky per mode** — each mode (Code, Architect, Debug, etc.) remembers the last model you selected.
-
-{% /tab %}
 {% /tabs %}
 
 **For complex coding tasks**: Premium models (Claude Sonnet/Opus, GPT-5 class, Gemini Pro) typically handle nuanced requirements, large refactors, and architectural decisions better.
 
 **For everyday coding**: Mid-tier models often provide the best balance of speed, cost, and quality. They're fast enough to keep your flow state intact and capable enough for most tasks.
 
-**For budget-conscious work**: Newer efficient models keep surprising us with price-to-performance ratios. DeepSeek, Qwen, and similar models can handle more than you'd expect.
+**For budget-conscious work**: Newer efficient models keep surprising us with price-to-performance ratios. DeepSeek, Qwen, and similar models can handle more than you'd expect. See the [free and budget picks](#free-and-budget-model-picks) below.
 
 **For local/private work**: Ollama and LM Studio let you run models locally. The tradeoff is usually speed and capability for privacy and zero API costs.
 
 **Using an unlisted model?** You can register any model — including fine-tunes, newly released models, or custom local models — by adding it to your config file. See [Custom Models](/docs/code-with-ai/agents/custom-models) for details.
+
+## Free and Budget Model Picks
+
+You don't need a paid API key to use Kilo Code productively. For the lowest cost on paid work, [Auto Efficient](/docs/code-with-ai/agents/auto-model#tiers) (`kilo-auto/efficient`) routes each request to the cheapest model proven accurate enough for that task. The fastest way to start for free is [Auto Model Free](/docs/code-with-ai/agents/auto-model) (`kilo-auto/free`), which routes to the best available free models automatically. See [Using Kilo for Free](/docs/getting-started/using-kilo-for-free) for the full zero-cost setup.
+
+If you prefer to pick models yourself, type `free` in the model picker to filter by free models, or browse the full list at [kilo.ai/models](https://kilo.ai/models).
+
+{% callout type="info" %}
+Free model availability changes as providers adjust promotional periods. Check [kilo.ai/models](https://kilo.ai/models) for the live list.
+{% /callout %}
 
 ## Context Windows Matter
 
@@ -74,6 +111,119 @@ Check [our provider docs](/docs/ai-providers) for specific context limits on eac
 {% callout type="tip" %}
 **Recover from context limit errors:** If you hit the `input length and max tokens exceed context limit` error, you can recover by deleting a message, rolling back to a previous checkpoint, or switching over to a model with a long context window like Gemini for a message.
 {% /callout %}
+
+## Models During Delegation
+
+When an agent delegates work to a subagent (via the `task` tool), the subagent **inherits the parent agent's model** by default. You can override this per subagent in your config:
+
+{% tabs %}
+{% tab label="CLI" %}
+
+```json
+{
+  "agent": {
+    "explore": {
+      "model": "anthropic/claude-haiku-4-20250514"
+    }
+  }
+}
+```
+
+This sets the `explore` subagent to always use Haiku regardless of the parent's model. Any subagent without a `model` override uses whatever model the invoking agent is running.
+
+A bare model name without a provider prefix also works — for example `"model": "codestral (latest)"`. Kilo resolves the name against your configured providers and prefers the provider of the parent session when several providers offer a model with the same name. This applies to `agent.<name>.model` and `subagent_model`.
+
+{% /tab %}
+{% tab label="VSCode" %}
+
+Subagents inherit the model currently active in the primary agent session — the model shown in the selector at the bottom of the chat. To bypass inheritance and pin a specific model for a subagent:
+
+- **Via Settings** — open **Settings → Models → Model per Mode**, find the subagent, and pick its model.
+- **Via config file** — edit `kilo.jsonc`:
+
+```json
+{
+  "agent": {
+    "explore": {
+      "model": "anthropic/claude-haiku-4-5"
+    }
+  }
+}
+```
+
+The Settings UI writes the same `agent.<name>.model` entry, so either method produces the same override. Subagents without an explicit model continue to inherit whatever the invoking agent is running.
+
+{% /tab %}
+{% /tabs %}
+
+For details on configuring subagent models, see [Custom Subagents](/docs/customize/custom-subagents).
+
+### Per-task model selection
+
+Request a different model, provider, or reasoning effort for an individual subagent task. Overrides require your explicit request; the agent does not choose a different model on its own based on task complexity, cost, or latency.
+
+Invalid selections fail instead of silently falling back. Resumed tasks keep their last model and reasoning effort unless you request an override.
+
+## Selecting a Model or Agent via a Link (VS Code)
+
+The VS Code extension supports a `vscode://` protocol handler that lets you open VS Code and automatically select a model, an agent, or both — no manual picker interaction required. This is useful for sharing model recommendations, launching a specific model tier from a web page, or switching quickly to a preferred agent.
+
+### URL Format
+
+Include at least one of the `model` or `agent` parameters:
+
+```
+vscode://kilocode.kilo-code/kilocode/switch?model=<modelID>
+vscode://kilocode.kilo-code/kilocode/switch?agent=<agentName>
+vscode://kilocode.kilo-code/kilocode/switch?model=<modelID>&agent=<agentName>
+```
+
+Replace `<modelID>` with a Kilo Gateway model ID such as `kilo-auto/free`. Replace `<agentName>` with a visible primary agent ID such as `code` or `plan`, rather than its display name.
+
+### Example: Auto Free
+
+To open Kilo Code and switch to the [Auto Free](/docs/code-with-ai/agents/auto-model) tier (`kilo-auto/free`), use:
+
+```
+vscode://kilocode.kilo-code/kilocode/switch?model=kilo-auto%2Ffree
+```
+
+To switch only to Plan and use its normal model selection, specify the agent without a model:
+
+```
+vscode://kilocode.kilo-code/kilocode/switch?agent=plan
+```
+
+To select both at the same time, include both parameters:
+
+```
+vscode://kilocode.kilo-code/kilocode/switch?model=kilo-auto%2Ffree&agent=plan
+```
+
+{% callout type="tip" %}
+URL-encode the `/` in model IDs as `%2F` when embedding this URL in HTML links or other contexts where bare slashes may be misinterpreted.
+{% /callout %}
+
+### How It Works
+
+- **VS Code open**: the Kilo sidebar is focused and the linked selection is applied to the active session immediately.
+- **VS Code closed**: VS Code launches, then applies the selection once the extension is ready.
+- When `model` is provided, it must identify a model in the current Kilo Gateway catalog. Invalid or unavailable models cause the deep link to be ignored.
+- When `agent` is provided, it must identify a visible primary agent. Invalid or unavailable agents cause the deep link to be ignored.
+- An agent-only link uses the model that would normally be selected for that agent. When both parameters are present, the agent is selected first so the linked model applies to it.
+- The selection follows the same precedence as using the pickers: it updates the active session, or the next session when no session is active. It does **not** change your configured defaults in settings.
+
+### Sharing and Embedding
+
+You can embed these links in a web page:
+
+```html
+<a href="vscode://kilocode.kilo-code/kilocode/switch?model=kilo-auto%2Ffree&amp;agent=plan">
+  Open Kilo Code with Auto Free in Plan
+</a>
+```
+
+Or share as a plain URL that users can paste into their browser's address bar.
 
 ## Stay Current
 

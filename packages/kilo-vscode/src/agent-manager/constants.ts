@@ -13,6 +13,9 @@ export const MAX_MULTI_VERSIONS = 4
 /** Telemetry source identifier for all Agent Manager events. */
 export const PLATFORM = "agent-manager" as const
 
+/** Keep baseline snapshots without interrupting concurrently started agents. */
+export const SNAPSHOT_INITIALIZATION = "wait" as const
+
 /** Kilo config directory name (project-level and inside worktrees). */
 export const KILO_DIR = ".kilo"
 
@@ -115,20 +118,16 @@ async function isDirectory(filepath: string): Promise<boolean> {
  * When root/.git is a file (worktree), follows the gitdir pointer
  * up two levels to reach the shared git directory.
  */
-async function resolveGitDir(root: string): Promise<string | undefined> {
+export async function resolveGitDir(root: string): Promise<string> {
   const gitPath = path.join(root, ".git")
-  try {
-    const stat = await fs.promises.stat(gitPath)
-    if (stat.isDirectory()) return gitPath
+  const stat = await fs.promises.stat(gitPath)
+  if (stat.isDirectory()) return gitPath
 
-    const content = await fs.promises.readFile(gitPath, "utf-8")
-    const match = content.match(/^gitdir:\s*(.+)$/m)
-    if (!match?.[1]) return undefined
-    // gitdir points to e.g. /repo/.git/worktrees/foo — go up two levels to /repo/.git
-    return path.resolve(path.dirname(gitPath), match[1].trim(), "..", "..")
-  } catch {
-    return undefined
-  }
+  const content = await fs.promises.readFile(gitPath, "utf-8")
+  const match = content.match(/^gitdir:\s*(.+)$/m)
+  if (!match) throw new Error("Invalid .git file format")
+  // gitdir points to e.g. /repo/.git/worktrees/foo — go up two levels to /repo/.git
+  return path.resolve(path.dirname(gitPath), match[1].trim(), "..", "..")
 }
 
 /**
@@ -142,7 +141,7 @@ async function resolveGitDir(root: string): Promise<string | undefined> {
  * tell whether a VS Code git refresh is warranted.
  */
 async function fixGitWorktreeRefs(root: string, log: (msg: string) => void): Promise<number> {
-  const gitDir = await resolveGitDir(root)
+  const gitDir = await resolveGitDir(root).catch(() => undefined)
   if (!gitDir) {
     log("fixGitWorktreeRefs: could not resolve git directory")
     return 0

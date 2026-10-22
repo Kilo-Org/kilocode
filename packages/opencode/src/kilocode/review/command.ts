@@ -1,30 +1,26 @@
 import type { Command } from "@/command"
-import { Review } from "./review"
+import type { ReviewCommand } from "@kilocode/kilo-telemetry"
+import REVIEW from "./review.txt"
 
-/**
- * /local-review-uncommitted - local review (uncommitted changes)
- */
-export function localReviewUncommittedCommand(): Command.Info {
-  return {
-    name: "local-review-uncommitted",
-    description: "local review (uncommitted changes)",
-    get template() {
-      return Review.buildReviewPromptUncommitted()
-    },
-    hints: [],
-  }
+export function isReviewCommand(command: string | undefined): command is ReviewCommand {
+  return command === "review"
 }
 
-/**
- * /local-review - local review (current branch vs base)
- */
-export function localReviewCommand(): Command.Info {
+export function reviewCommandName(command: string | undefined): ReviewCommand | undefined {
+  if (isReviewCommand(command)) return command
+}
+
+export function parseReviewCommand(prompt: string | undefined): ReviewCommand | undefined {
+  if (!prompt?.startsWith("/")) return
+  const name = prompt.slice(1).split(/\s/, 1)[0]
+  return reviewCommandName(name)
+}
+
+export function reviewCommand(): Command.Info {
   return {
-    name: "local-review",
-    description: "local review (current branch)",
-    get template() {
-      return Review.buildReviewPromptBranch()
-    },
-    hints: [],
+    name: "review",
+    description: "review changes [uncommitted|staged|unpushed|branch|commit|pr]",
+    template: REVIEW,
+    hints: ["$ARGUMENTS"],
   }
 }

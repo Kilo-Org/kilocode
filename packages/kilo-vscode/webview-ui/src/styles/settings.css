@@ -1,0 +1,404 @@
+.settings-display {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+@container (min-width: 1050px) {
+  .settings-display {
+    grid-template-columns: minmax(320px, 1fr) minmax(360px, 1fr);
+  }
+
+  .settings-session-preview {
+    position: sticky;
+    top: 0;
+  }
+}
+
+.settings-display-controls {
+  min-width: 0;
+}
+
+.settings-display-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-block: 16px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+.settings-display-presets-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+
+.settings-display-presets-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-display-presets-description {
+  font-size: var(--font-size-small);
+  color: var(--text-weak-base);
+}
+
+.settings-session-preview {
+  min-width: 0;
+  border: 1px solid var(--border-weak-base);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--background-base);
+}
+
+.settings-session-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+.settings-session-preview-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  margin: 0;
+}
+
+.settings-session-preview-body {
+  padding: 16px;
+  height: min(640px, 65vh);
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+
+/* Matches .message-list-content; the rows bring their own turn spacing. */
+.settings-session-preview-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Settings save bar */
+.settings-save-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-weak-base);
+}
+
+.settings-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 16px;
+}
+
+.settings-save-bar-label {
+  font-size: var(--font-size-small);
+  color: var(--foreground-secondary);
+  margin-right: auto;
+}
+
+/* Save error — mirrors the startup-error-banner style */
+.settings-save-bar-error {
+  border: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  border-radius: 4px;
+  background: var(--vscode-inputValidation-errorBackground, rgba(241, 76, 76, 0.1));
+  margin: 8px 16px 0 16px;
+  font-size: var(--font-size-small);
+}
+
+.settings-save-bar-error-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  user-select: none;
+  min-width: 0;
+}
+
+.settings-save-bar-error-title {
+  flex: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.settings-save-bar-error-firstline {
+  font-weight: 400;
+}
+
+.settings-save-bar-error-chevron {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: transform 150ms;
+}
+
+.settings-save-bar-error-chevron-expanded {
+  transform: rotate(90deg);
+}
+
+.settings-save-bar-error-details {
+  margin: 0;
+  padding: 8px 10px;
+  border-top: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  background: var(--vscode-editor-background);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: var(--font-size-small);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+[data-slot="settings-row"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  [data-slot="settings-row-label"] {
+    flex: 1 1 0%;
+    min-width: 150px;
+
+    [data-slot="settings-row-label-title"] {
+      font-size: var(--font-size-base);
+      font-weight: 500;
+      min-height: var(--kilo-font-size-16);
+      margin-bottom: 4px;
+    }
+
+    [data-slot="settings-row-label-subtitle"] {
+      font-size: var(--font-size-small);
+      min-height: var(--kilo-font-size-14);
+      color: var(--text-weak-base, var(--vscode-descriptionForeground));
+    }
+  }
+
+  [data-slot="settings-row-input"] {
+    flex: 0 0 auto;
+    max-width: 160px;
+
+    & > * {
+      max-width: 100%;
+    }
+
+    [data-slot="popover-trigger"] {
+      min-width: 0;
+      max-width: 100%;
+    }
+  }
+}
+
+.settings-branch-trigger {
+  max-width: 160px;
+}
+
+.settings-branch-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Wider inputs inside cards with data-variant="wide-input" (e.g. edit mode config) */
+[data-variant="wide-input"] [data-slot="settings-row-input"] {
+  flex: 1 1 0%;
+  max-width: none;
+}
+
+.settings-font-size-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 160px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  span {
+    min-width: 34px;
+    color: var(--text-weak-base, var(--vscode-descriptionForeground));
+    font-size: var(--font-size-small);
+    text-align: right;
+  }
+}
+
+/* Skill Folder Paths / Skill URLs row: tooltip trigger that grows in the
+   flex row and lets the inner span truncate. Applied via Tooltip class. */
+.settings-skills-row-trigger {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Wrap long skill paths/URLs within the shared 320px tooltip width. */
+.settings-skills-tooltip-content {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Settings search */
+[data-slot="settings-search-slot"] {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 28px;
+  margin-bottom: 4px;
+}
+
+[data-component="settings-search"] {
+  width: 100%;
+}
+
+/* While searching, hide the tab bodies and show the results pane instead.
+   Keeping the content in place avoids remounting the active tab. */
+[data-searching="true"]
+  [data-component="tabs"]
+  > [data-slot="tabs-content"]:not([data-component="settings-search-results"]) {
+  display: none;
+}
+
+[data-slot="settings-search-box"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  min-height: 28px;
+  border: 1px solid var(--vscode-input-border, var(--border-weak-base));
+  border-radius: 4px;
+  background: var(--vscode-input-background, var(--background-base));
+  color: var(--vscode-input-foreground, var(--text-base));
+
+  &:focus-within {
+    border-color: var(--vscode-focusBorder);
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    font-size: var(--font-size-base);
+    font-family: inherit;
+
+    &::placeholder {
+      color: var(--vscode-input-placeholderForeground, var(--text-weak-base));
+    }
+  }
+
+  [data-slot="icon"] {
+    flex-shrink: 0;
+    color: var(--vscode-input-placeholderForeground, var(--text-weak-base));
+  }
+}
+
+[data-slot="settings-search-shortcut"] {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* Inline results replace the tab body while a query is active, so the
+   matching settings stay visible instead of being covered by a popup. */
+[data-component="settings-search-results"] {
+  [data-slot="settings-search-group"] {
+    margin-bottom: 12px;
+  }
+
+  [data-slot="settings-search-group-title"] {
+    margin: 4px 0 2px;
+    padding: 4px 8px;
+    font-size: var(--font-size-x-small, 11px);
+    font-weight: 500;
+    letter-spacing: normal;
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+  }
+}
+
+[data-slot="settings-search-result"] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  }
+
+  &[data-active="true"] {
+    background: var(
+      --surface-interactive-active,
+      var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
+    );
+    color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
+  }
+}
+
+[data-slot="settings-search-result"][data-active="true"] [data-slot="settings-search-result-description"],
+[data-slot="settings-search-result"][data-active="true"] [data-slot="settings-search-match"] {
+  color: inherit;
+}
+
+[data-slot="settings-search-result-title"] {
+  font-size: var(--font-size-base);
+}
+
+[data-slot="settings-search-result-description"] {
+  font-size: var(--font-size-small);
+  color: var(--text-weak-base, var(--vscode-descriptionForeground));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-slot="settings-search-match"] {
+  background: transparent;
+  color: var(--vscode-list-highlightForeground, var(--vscode-textLink-foreground, #3794ff));
+  font-weight: 600;
+}
+
+[data-slot="settings-search-empty"] {
+  padding: 10px 8px;
+  font-size: var(--font-size-small);
+  color: var(--text-weak-base, var(--vscode-descriptionForeground));
+}
+
+/* Flash the found row with a ring that sits outside the row, so it keeps a
+   margin from the content instead of overlaying or clipping it. */
+@keyframes settings-search-flash-ring {
+  0%,
+  40% {
+    outline-color: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 92, 0, 0.7));
+  }
+  100% {
+    outline-color: transparent;
+  }
+}
+
+.settings-search-flash {
+  border-radius: 6px;
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+  animation: settings-search-flash-ring 1.4s ease-out;
+}
+
+/* Cards clip their overflow. Some have no padding, so let the ring paint past the card edge. */
+[data-component="card"]:has(.settings-search-flash) {
+  overflow-clip-margin: 6px;
+}

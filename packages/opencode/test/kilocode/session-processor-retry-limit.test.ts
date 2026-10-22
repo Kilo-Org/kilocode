@@ -4,39 +4,70 @@
 // transitively load flag.ts to ensure the env is captured at load time.
 process.env.KILO_SESSION_RETRY_LIMIT = "2"
 
-import { afterEach, describe, expect, mock, spyOn, test } from "bun:test"
-
-mock.module("@/kilo-sessions/remote-sender", () => ({
-  RemoteSender: {
-    create() {
-      return {
-        queue() {},
-        flush: async () => undefined,
-      }
-    },
-  },
-}))
-
-// Modules that do NOT transitively import flag.ts can be statically imported.
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
+import { NodeFileSystem } from "@effect/platform-node"
+import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { APICallError } from "ai"
+import { Context, Effect, Exit, Fiber, Layer, Schedule } from "effect"
+import * as TestClock from "effect/testing/TestClock"
+import * as Stream from "effect/Stream"
+import type { LLMEvent } from "@opencode-ai/llm"
+import { Database } from "@opencode-ai/core/database/database"
+import path from "path"
+import { Agent as AgentSvc } from "../../src/agent/agent"
+import { Bus } from "../../src/bus"
+import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
+import { Image } from "../../src/image/image"
+import { Permission } from "../../src/permission"
+import { Plugin } from "../../src/plugin"
 import type { Provider } from "../../src/provider/provider"
-import type { LLM as LLMType } from "../../src/session/llm"
-import type { MessageV2 } from "../../src/session/message-v2"
-import { Log } from "../../src/util/log"
-import { tmpdir } from "../fixture/fixture"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { Session } from "../../src/session/session"
+import { LLM } from "../../src/session/llm"
+import { MessageV2 } from "../../src/session/message-v2"
+import { SessionProcessor } from "../../src/session/processor"
+import { SessionNetwork } from "../../src/session/network"
+import { SessionRetry } from "../../src/session/retry"
+import { MessageID } from "../../src/session/schema"
+import { SessionStatus } from "../../src/session/status"
+import { SessionSummary } from "../../src/session/summary"
+import { Snapshot } from "../../src/snapshot"
+import { SyncEvent } from "../../src/sync"
+import * as Log from "@opencode-ai/core/util/log"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
+import { provideTmpdirProject } from "../fixture/fixture"
+import { testEffect } from "../lib/effect"
 
 Log.init({ print: false })
 
-function createModel(): Provider.Model {
+const ref = {
+  providerID: ProviderV2.ID.make("test"),
+  modelID: ModelV2.ID.make("test-model"),
+}
+
+type Script = Stream.Stream<LLMEvent, unknown>
+
+class TestLLM extends Context.Service<
+  TestLLM,
+  {
+    readonly push: (stream: Script) => Effect.Effect<void>
+    readonly calls: Effect.Effect<number>
+  }
+>()("@test/RetryLimitLLM") {}
+
+class State extends Context.Service<State, { readonly queue: Script[]; calls: number }>()("@test/RetryLimitLLMState") {}
+
+function model(): Provider.Model {
   return {
-    id: "gpt-4",
-    providerID: "openai",
-    name: "GPT-4",
-    limit: {
-      context: 128000,
-      input: 0,
-      output: 4096,
-    },
+    id: "test-model",
+    providerID: "test",
+    name: "Test",
+    limit: { context: 128000, output: 4096 },
     cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
     capabilities: {
       toolcall: true,
@@ -46,163 +77,306 @@ function createModel(): Provider.Model {
       input: { text: true, image: false, audio: false, video: false },
       output: { text: true, image: false, audio: false, video: false },
     },
-    api: { id: "openai", url: "https://api.openai.com/v1", npm: "@ai-sdk/openai" },
+    api: { npm: "@ai-sdk/openai" },
     options: {},
-    headers: {},
   } as Provider.Model
 }
 
-function retryable429() {
+function retryable429(headers?: Record<string, string>) {
   return new APICallError({
     message: "429 status code (no body)",
     url: "https://api.openai.com/v1/chat/completions",
     requestBodyValues: {},
     statusCode: 429,
-    responseHeaders: { "content-type": "application/json" },
+    responseHeaders: headers ?? { "content-type": "application/json" },
     isRetryable: true,
   })
 }
 
-function sentinel() {
-  return new Error("unexpected extra llm call")
+function connectionReset() {
+  return { code: "ECONNRESET", syscall: "read", message: "read ECONNRESET connection reset by peer" }
 }
+
+const stateNode = LayerNode.make({
+  service: State,
+  layer: Layer.sync(State, () => State.of({ queue: [], calls: 0 })),
+  deps: [],
+})
+const llmNode = LayerNode.make({
+  service: LLM.Service,
+  layer: Layer.effect(
+    LLM.Service,
+    Effect.gen(function* () {
+      const state = yield* State
+      return LLM.Service.of({
+        stream: () => {
+          state.calls += 1
+          return state.queue.shift() ?? Stream.fail(new Error("unexpected extra llm call"))
+        },
+      })
+    }),
+  ),
+  deps: [stateNode],
+})
+const testNode = LayerNode.make({
+  service: TestLLM,
+  layer: Layer.effect(
+    TestLLM,
+    Effect.gen(function* () {
+      const state = yield* State
+      return TestLLM.of({
+        push: (item) => Effect.sync(() => state.queue.push(item)).pipe(Effect.asVoid),
+        calls: Effect.sync(() => state.calls),
+      })
+    }),
+  ),
+  deps: [stateNode],
+})
+const root = LayerNode.group([
+  SessionProcessor.node,
+  Session.node,
+  SessionProjector.node,
+  MessageV2.node,
+  Snapshot.node,
+  AgentSvc.node,
+  Permission.node,
+  Plugin.node,
+  Config.node,
+  SessionSummary.node,
+  Image.node,
+  SessionStatus.node,
+  EventV2Bridge.node,
+  Database.node,
+  CrossSpawnSpawner.node,
+  RuntimeFlags.node,
+  LLM.node,
+  testNode,
+])
+const env = LayerNode.compile(root, [
+  [LLM.node, llmNode],
+  [RuntimeFlags.node, RuntimeFlags.layer()],
+]).pipe(Layer.provideMerge(Layer.mergeAll(NodeFileSystem.layer, Bus.layer, SyncEvent.defaultLayer)))
+
+const it = testEffect(env)
 
 afterEach(() => {
   delete process.env.KILO_SESSION_RETRY_LIMIT
 })
 
 describe("session processor retry limit", () => {
-  test("stops after two retries with the normalized retryable error", async () => {
-    // Dynamic imports so that flag.ts sees KILO_SESSION_RETRY_LIMIT="2" set above
-    const { Bus } = await import("../../src/bus")
-    const { Identifier } = await import("../../src/id/id")
-    const { Instance } = await import("../../src/project/instance")
-    const { LLM } = await import("../../src/session/llm")
-    const { MessageV2 } = await import("../../src/session/message-v2")
-    const { SessionRetry } = await import("../../src/session/retry")
-    const { SessionStatus } = await import("../../src/session/status")
+  const run = (limit: number) =>
+    provideTmpdirProject(
+      (dir) =>
+        Effect.gen(function* () {
+          process.env.KILO_SESSION_RETRY_LIMIT = String(limit)
+          const test = yield* TestLLM
+          const processors = yield* SessionProcessor.Service
+          const session = yield* Session.Service
 
-    await using tmp = await tmpdir({ git: true })
+          yield* Effect.forEach(Array.from({ length: limit + 1 }), () => test.push(Stream.fail(retryable429())), {
+            discard: true,
+          })
+          yield* test.push(Stream.fail(new Error("unexpected extra llm call")))
 
-    await Instance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        const { Session } = await import("../../src/session")
-        const { SessionProcessor } = await import("../../src/session/processor")
-        const model = createModel()
-        const session = await Session.create({})
-        const user = (await Session.updateMessage({
-          id: Identifier.ascending("message"),
-          role: "user",
-          sessionID: session.id,
-          time: { created: Date.now() },
-          agent: "code",
-          model: { providerID: model.providerID, modelID: model.id },
-          tools: {},
-        })) as MessageV2.User
-        const assistant = (await Session.updateMessage({
-          id: Identifier.ascending("message"),
-          parentID: user.id,
-          role: "assistant",
-          mode: "code",
-          agent: "code",
-          path: {
-            cwd: Instance.directory,
-            root: Instance.worktree,
-          },
-          cost: 0,
-          tokens: {
-            input: 0,
-            output: 0,
-            reasoning: 0,
-            cache: { read: 0, write: 0 },
-          },
-          modelID: model.id,
-          providerID: model.providerID,
-          time: { created: Date.now() },
-          sessionID: session.id,
-        })) as MessageV2.Assistant
+          const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
 
-        const retry: number[] = []
-        const errors: Array<MessageV2.Assistant["error"]> = []
-        const unsubStatus = Bus.subscribe(SessionStatus.Event.Status, (event) => {
-          if (event.properties.sessionID !== session.id) return
-          if (event.properties.status.type !== "retry") return
-          retry.push(event.properties.status.attempt)
-        })
-        const unsubError = Bus.subscribe(Session.Event.Error, (event) => {
-          if (event.properties.sessionID !== session.id) return
-          errors.push(event.properties.error)
-        })
-        const llm = spyOn(LLM, "stream")
-          .mockRejectedValueOnce(retryable429())
-          .mockRejectedValueOnce(retryable429())
-          .mockRejectedValueOnce(retryable429())
-          .mockRejectedValue(sentinel())
-        const sleep = spyOn(SessionRetry, "sleep").mockResolvedValue(undefined)
-        const processor = SessionProcessor.create({
-          assistantMessage: assistant,
-          sessionID: session.id,
-          model,
-          abort: AbortSignal.any([]),
-        })
+          const chat = yield* session.create({})
+          const parent = yield* session.updateMessage({
+            id: MessageID.ascending(),
+            role: "user",
+            sessionID: chat.id,
+            agent: "code",
+            model: ref,
+            time: { created: Date.now() },
+          })
+          const msg: MessageV2.Assistant = {
+            id: MessageID.ascending(),
+            role: "assistant",
+            sessionID: chat.id,
+            parentID: parent.id,
+            mode: "code",
+            agent: "code",
+            path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ref.modelID,
+            providerID: ref.providerID,
+            time: { created: Date.now() },
+          }
+          yield* session.updateMessage(msg)
 
-        const inp: LLMType.StreamInput = {
-          user,
-          sessionID: session.id,
-          model,
-          agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
-          system: [],
-          abort: AbortSignal.any([]),
-          messages: [],
-          tools: {},
+          const mdl = model()
+          const handle = yield* processors.create({
+            assistantMessage: msg,
+            sessionID: chat.id,
+            model: mdl,
+          })
+
+          const input: LLM.StreamInput = {
+            user: parent as MessageV2.User,
+            sessionID: chat.id,
+            model: mdl,
+            agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+            system: [],
+            messages: [],
+            tools: {},
+          }
+
+          const expected = MessageV2.fromError(retryable429(), { providerID: ProviderV2.ID.make("test") })
+          try {
+            const result = yield* handle.process(input)
+            const calls = yield* test.calls
+
+            expect(result).toBe("stop")
+            expect(calls).toBe(limit + 1)
+            expect(handle.message.error).toStrictEqual(expected)
+          } finally {
+            delay.mockRestore()
+          }
+        }),
+      { git: true },
+    )
+
+  it.live("stops after two retries with the normalized retryable error", () => run(2), 15000)
+
+  it.live("honors a configured retry limit above the upstream default", () => run(10), 15000)
+
+  const policy = (items: ("offline" | "provider" | "reset")[], limit?: number) =>
+    Effect.gen(function* () {
+      const attempts: number[] = []
+      const state = { offline: 0, stopped: false }
+      const step = yield* Schedule.toStepWithMetadata(
+        SessionRetry.policy({
+          provider: "test",
+          limit,
+          parse: (error) => MessageV2.fromError(error, { providerID: ref.providerID }),
+          set: (info) => Effect.sync(() => attempts.push(info.attempt)).pipe(Effect.asVoid),
+          offline: () =>
+            Effect.sync(() => {
+              state.offline += 1
+              return "retry" as const
+            }),
+        }),
+      )
+
+      for (const item of items) {
+        const raw =
+          item === "offline"
+            ? new Error("fetch failed")
+            : item === "reset"
+              ? connectionReset()
+              : retryable429({ "retry-after-ms": "0" })
+        // the step sleeps for the decided backoff; advance the test clock past it
+        const fiber = yield* Effect.suspend(() => step(raw)).pipe(Effect.forkChild)
+        yield* TestClock.adjust("35 seconds")
+        const result = yield* Fiber.await(fiber)
+        if (Exit.isFailure(result)) {
+          state.stopped = true
+          break
         }
+      }
 
-        try {
-          const result = await processor.process(inp)
-          const expected = MessageV2.fromError(retryable429(), { providerID: "openai" })
-
-          expect(result).toBe("stop")
-          expect(llm).toHaveBeenCalledTimes(3)
-          expect(sleep).toHaveBeenCalledTimes(2)
-          expect(retry).toStrictEqual([1, 2])
-          expect(processor.message.error).toStrictEqual(expected)
-          expect(errors).toStrictEqual([expected])
-        } finally {
-          unsubStatus()
-          unsubError()
-          llm.mockRestore()
-          sleep.mockRestore()
-        }
-      },
+      return { attempts, ...state }
     })
+
+  it.effect("recovers beyond the default cap without consuming provider retries", () =>
+    Effect.gen(function* () {
+      const result = yield* policy([...Array.from({ length: 6 }, () => "offline" as const), "provider"])
+      expect(result.offline).toBe(6)
+      expect(result.attempts).toEqual([0, 0, 0, 0, 0, 0, 1])
+      expect(result.stopped).toBe(false)
+    }),
+  )
+
+  it.effect("preserves the upstream provider cap across mixed reconnects", () =>
+    Effect.gen(function* () {
+      const result = yield* policy(Array.from({ length: 6 }, () => ["provider", "offline"] as const).flat())
+      expect(result.offline).toBe(5)
+      expect(result.attempts).toEqual([1, 0, 2, 0, 3, 0, 4, 0, 5, 0])
+      expect(result.stopped).toBe(true)
+    }),
+  )
+
+  it.effect("preserves explicit raw attempt limits before reconnect handlers", () =>
+    Effect.gen(function* () {
+      const result = yield* policy(["offline", "provider", "offline", "provider", "offline", "offline"], 5)
+      expect(result.offline).toBe(3)
+      expect(result.attempts).toEqual([0, 2, 0, 4, 0])
+      expect(result.stopped).toBe(true)
+    }),
+  )
+
+  it.effect("retries retryable connection resets without the offline handler", () =>
+    Effect.gen(function* () {
+      const result = yield* policy(["reset", "reset", "provider"])
+      expect(result.offline).toBe(0)
+      expect(result.attempts).toEqual([1, 2, 3])
+      expect(result.stopped).toBe(false)
+    }),
+  )
+
+  it.effect("retryable connection resets count against the retry limit", () =>
+    Effect.gen(function* () {
+      const result = yield* policy(["reset", "reset", "reset"], 2)
+      expect(result.offline).toBe(0)
+      expect(result.attempts).toEqual([1, 2])
+      expect(result.stopped).toBe(true)
+    }),
+  )
+
+  test("serverReset matches only retryable connection-reset API errors", () => {
+    const reset = MessageV2.fromError(connectionReset(), { providerID: ref.providerID })
+    expect(SessionV1.APIError.isInstance(reset)).toBe(true)
+    expect(SessionNetwork.serverReset(reset)).toBe(true)
+
+    // undici-style wrapper: the reset sits in the cause chain, so fromError
+    // records no top-level metadata.code — the message must still match
+    const nested = MessageV2.fromError(new Error("fetch failed", { cause: connectionReset() }), {
+      providerID: ref.providerID,
+    })
+    expect(SessionNetwork.serverReset(nested)).toBe(true)
+
+    const blocked = new MessageV2.APIError({ message: "Connection reset by server", isRetryable: false }).toObject()
+    expect(SessionNetwork.serverReset(blocked)).toBe(false)
+
+    const refused = MessageV2.fromError(
+      { code: "ECONNREFUSED", syscall: "connect", message: "connect ECONNREFUSED 127.0.0.1:3000" },
+      { providerID: ref.providerID },
+    )
+    expect(SessionNetwork.serverReset(refused)).toBe(false)
+
+    expect(SessionNetwork.serverReset(new Error("fetch failed"))).toBe(false)
   })
 
-  test("only positive integers enable the limit", async () => {
-    const key = () => JSON.stringify({ time: Date.now(), rand: Math.random() })
+  it.effect("only positive integers enable the limit", () =>
+    Effect.promise(async () => {
+      const { Flag } = await import("@opencode-ai/core/flag/flag")
 
-    delete process.env.KILO_SESSION_RETRY_LIMIT
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+      delete process.env.KILO_SESSION_RETRY_LIMIT
+      expect(Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "0"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+      process.env.KILO_SESSION_RETRY_LIMIT = "0"
+      expect(Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "-1"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+      process.env.KILO_SESSION_RETRY_LIMIT = "-1"
+      expect(Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "abc"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+      process.env.KILO_SESSION_RETRY_LIMIT = "abc"
+      expect(Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "2"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBe(2)
-  })
+      process.env.KILO_SESSION_RETRY_LIMIT = "2"
+      expect(Flag.KILO_SESSION_RETRY_LIMIT).toBe(2)
+    }),
+  )
 
-  test("does not change after import", async () => {
-    delete process.env.KILO_SESSION_RETRY_LIMIT
-    const id = JSON.stringify({ time: Date.now(), rand: Math.random() })
-    const { Flag: loaded } = await import("../../src/flag/flag?" + id)
-    expect(loaded.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
-    process.env.KILO_SESSION_RETRY_LIMIT = "5"
-    expect(loaded.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
-  })
+  it.effect("reads env at access time (dynamic getter)", () =>
+    Effect.promise(async () => {
+      const { Flag } = await import("@opencode-ai/core/flag/flag")
+      delete process.env.KILO_SESSION_RETRY_LIMIT
+      expect(Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+      process.env.KILO_SESSION_RETRY_LIMIT = "5"
+      expect(Flag.KILO_SESSION_RETRY_LIMIT).toBe(5)
+      delete process.env.KILO_SESSION_RETRY_LIMIT
+    }),
+  )
 })

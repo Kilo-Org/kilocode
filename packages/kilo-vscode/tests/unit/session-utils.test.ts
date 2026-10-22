@@ -3,11 +3,32 @@ import {
   computeStatus,
   calcTotalCost,
   calcContextUsage,
+  calcTokenUsage,
+  aggregateMetrics,
+  latestMetrics,
+  messageMetrics,
+  messageThroughput,
+  sessionThroughput,
+  formatTG,
   buildFamilyCosts,
+  sessionCost,
+  buildFamilyParents,
+  buildFamilyParentsFromTools,
   buildFamilyLabels,
+  buildFamilyLabelsFromTools,
   buildCostBreakdown,
+  buildSessionToolParts,
+  collapseCostBreakdown,
+  childID,
+  removeSessionToolPart,
+  removeSessionToolPartsForMessage,
+  upsertSessionToolPart,
+  recentSessions,
+  optimistic,
+  revertPromptState,
 } from "../../webview-ui/src/context/session-utils"
-import type { Part } from "../../webview-ui/src/types/messages"
+import type { Message, Part, ToolPart } from "../../webview-ui/src/types/messages"
+import { formatBrowserFeedback } from "../../src/shared/browser-feedback"
 
 const t = (key: string) => key
 
@@ -74,6 +95,41 @@ describe("computeStatus", () => {
     const part: Part = { type: "text", id: "p1", text: "hello" }
     expect(computeStatus(part, t)).toBe("session.status.writingResponse")
   })
+
+  it("maps synthetic snapshot progress to snapshot status", () => {
+    const part: Part = { type: "text", id: "p1", text: "⠋ Initializing snapshot…", synthetic: true }
+    expect(computeStatus(part, t)).toBe("Initializing snapshot...")
+  })
+})
+
+describe("recentSessions", () => {
+  const at = (day: number) => `2026-01-${String(day).padStart(2, "0")}T00:00:00.000Z`
+  const info = (id: string, day: number, parentID?: string | null) => ({
+    id,
+    updatedAt: at(day),
+    ...(parentID === undefined ? {} : { parentID }),
+  })
+
+  it("keeps the newest root sessions after removing sub-agents", () => {
+    const result = recentSessions([
+      info("old-root", 1),
+      info("child", 6, "old-root"),
+      info("new-root", 5),
+      info("blank-parent", 4, ""),
+      info("mid-root", 3, null),
+      info("fourth-root", 2),
+    ])
+
+    expect(result.map((session) => session.id)).toEqual(["new-root", "mid-root", "fourth-root"])
+  })
+
+  it("does not mutate the session list while sorting recents", () => {
+    const sessions = [info("old", 1), info("new", 3), info("mid", 2)]
+
+    recentSessions(sessions)
+
+    expect(sessions.map((session) => session.id)).toEqual(["old", "new", "mid"])
+  })
 })
 
 describe("calcTotalCost", () => {
@@ -133,6 +189,35 @@ describe("calcContextUsage", () => {
   })
 })
 
+describe("calcTokenUsage", () => {
+  it("sums assistant message input, output, and cache read tokens", () => {
+    const result = calcTokenUsage([
+      { role: "assistant", tokens: { input: 100, output: 40, reasoning: 8, cache: { read: 10, write: 5 } } },
+      { role: "assistant", tokens: { input: 25, output: 15, cache: { read: 7, write: 3 } } },
+    ])
+
+    expect(result).toEqual({ input: 125, output: 55, cached: 17 })
+  })
+
+  it("ignores user messages, missing tokens, reasoning tokens, and cache writes", () => {
+    const result = calcTokenUsage([
+      { role: "user", tokens: { input: 999, output: 999, cache: { read: 999, write: 999 } } },
+      { role: "assistant" },
+      { role: "assistant", tokens: { input: 10, output: 4, reasoning: 30, cache: { read: 2, write: 20 } } },
+    ])
+
+    expect(result).toEqual({ input: 10, output: 4, cached: 2 })
+  })
+
+  it("returns undefined when there are no displayed token counts", () => {
+    const result = calcTokenUsage([
+      { role: "assistant", tokens: { input: 0, output: 0, reasoning: 12, cache: { read: 0, write: 6 } } },
+    ])
+
+    expect(result).toBeUndefined()
+  })
+})
+
 // ── Cost breakdown helpers ──────────────────────────────────────────────
 
 function msg(id: string, role: string, cost?: number) {
@@ -141,6 +226,7 @@ function msg(id: string, role: string, cost?: number) {
 
 function toolPart(tool: string, sessionId?: string, input?: { subagent_type?: string; description?: string }) {
   return {
+    id: `part-${tool}-${sessionId ?? "none"}`,
     type: "tool" as const,
     tool,
     state: {
@@ -150,31 +236,321 @@ function toolPart(tool: string, sessionId?: string, input?: { subagent_type?: st
   }
 }
 
-describe("buildFamilyCosts", () => {
-  it("returns empty map for empty family", () => {
-    expect(buildFamilyCosts(new Set(), {}).size).toBe(0)
+function textPart(id: string, text = "text"): Part {
+  return { id, type: "text" as const, text }
+}
+
+function indexMsg(id: string, role: "user" | "assistant", parts?: Part[]): Message {
+  return { id, role, sessionID: "s1", createdAt: id, parts }
+}
+
+describe("childID", () => {
+  it("reads session ID from top-level metadata", () => {
+    expect(childID({ type: "tool", tool: "task", metadata: { sessionId: "child1" } })).toBe("child1")
   })
 
-  it("sums costs per session, skipping zero-cost sessions", () => {
+  it("reads session ID from state metadata", () => {
+    expect(childID({ type: "tool", tool: "task", state: { metadata: { sessionId: "child2" } } })).toBe("child2")
+  })
+
+  it("prefers top-level metadata over state metadata", () => {
+    expect(
+      childID({
+        type: "tool",
+        tool: "task",
+        metadata: { sessionId: "top" },
+        state: { metadata: { sessionId: "nested" } },
+      }),
+    ).toBe("top")
+  })
+
+  it("ignores non-task tool parts", () => {
+    expect(childID({ type: "tool", tool: "read", state: { metadata: { sessionId: "child3" } } })).toBeUndefined()
+  })
+})
+
+describe("buildFamilyCosts", () => {
+  it("returns empty map for empty family", () => {
+    expect(buildFamilyCosts(new Set(), {}, {}).size).toBe(0)
+  })
+
+  it("returns own-cost per session when there are no parent links", () => {
     const family = new Set(["s1", "s2", "s3"])
     const messages = {
       s1: [msg("m1", "assistant", 0.05), msg("m2", "assistant", 0.03)],
       s2: [msg("m3", "user", 999), msg("m4", "assistant", 0)],
       s3: [msg("m5", "assistant", 0.1)],
     }
-    const costs = buildFamilyCosts(family, messages)
+    const sessions = { s1: {}, s2: {}, s3: {} }
+    const costs = buildFamilyCosts(family, messages, sessions)
     expect(costs.size).toBe(2)
     expect(costs.get("s1")).toBeCloseTo(0.08)
     expect(costs.has("s2")).toBe(false)
     expect(costs.get("s3")).toBeCloseTo(0.1)
   })
 
+  it("subtracts each subagent's propagated total from its parent (single child)", () => {
+    // Backend contract: parent's message.info.cost already includes the
+    // child's total. Parent total $0.15 = parent own $0.05 + child $0.10.
+    const family = new Set(["root", "child"])
+    const messages = {
+      root: [msg("m1", "assistant", 0.15)],
+      child: [msg("m2", "assistant", 0.1)],
+    }
+    const sessions = { root: {}, child: { parentID: "root" } }
+    const costs = buildFamilyCosts(family, messages, sessions)
+    expect(costs.get("root")).toBeCloseTo(0.05)
+    expect(costs.get("child")).toBeCloseTo(0.1)
+    // Sum of own-costs equals root's propagated total.
+    const sum = [...costs.values()].reduce((s, c) => s + c, 0)
+    expect(sum).toBeCloseTo(0.15)
+  })
+
+  it("subtracts every direct child from a parent with multiple subagents", () => {
+    // Parent total $0.18 = parent own $0.05 + childA $0.10 + childB $0.03.
+    const family = new Set(["root", "a", "b"])
+    const messages = {
+      root: [msg("m1", "assistant", 0.18)],
+      a: [msg("m2", "assistant", 0.1)],
+      b: [msg("m3", "assistant", 0.03)],
+    }
+    const sessions = { root: {}, a: { parentID: "root" }, b: { parentID: "root" } }
+    const costs = buildFamilyCosts(family, messages, sessions)
+    expect(costs.get("root")).toBeCloseTo(0.05)
+    expect(costs.get("a")).toBeCloseTo(0.1)
+    expect(costs.get("b")).toBeCloseTo(0.03)
+    const sum = [...costs.values()].reduce((s, c) => s + c, 0)
+    expect(sum).toBeCloseTo(0.18)
+  })
+
+  it("handles nested subagents (grandchildren) correctly", () => {
+    // root.total = root_own + child.total; child.total = child_own + grandchild.total.
+    // root.total = $0.05 + ($0.06 + $0.04) = $0.15.
+    const family = new Set(["root", "child", "grand"])
+    const messages = {
+      root: [msg("m1", "assistant", 0.15)],
+      child: [msg("m2", "assistant", 0.1)],
+      grand: [msg("m3", "assistant", 0.04)],
+    }
+    const sessions = {
+      root: {},
+      child: { parentID: "root" },
+      grand: { parentID: "child" },
+    }
+    const costs = buildFamilyCosts(family, messages, sessions)
+    expect(costs.get("root")).toBeCloseTo(0.05)
+    expect(costs.get("child")).toBeCloseTo(0.06)
+    expect(costs.get("grand")).toBeCloseTo(0.04)
+    const sum = [...costs.values()].reduce((s, c) => s + c, 0)
+    expect(sum).toBeCloseTo(0.15)
+  })
+
+  it("drops sessions whose own-cost rounds to zero (pure dispatcher)", () => {
+    // Wrapper session that only spawned a subagent with no LLM calls of its own.
+    const family = new Set(["root", "child"])
+    const messages = {
+      root: [msg("m1", "assistant", 0.1)],
+      child: [msg("m2", "assistant", 0.1)],
+    }
+    const sessions = { root: {}, child: { parentID: "root" } }
+    const costs = buildFamilyCosts(family, messages, sessions)
+    expect(costs.has("root")).toBe(false)
+    expect(costs.get("child")).toBeCloseTo(0.1)
+  })
+
+  it("ignores parent links that point outside the family", () => {
+    const family = new Set(["s1"])
+    const messages = { s1: [msg("m1", "assistant", 0.07)] }
+    const sessions = { s1: { parentID: "not-in-family" } }
+    const costs = buildFamilyCosts(family, messages, sessions)
+    expect(costs.get("s1")).toBeCloseTo(0.07)
+  })
+
   it("handles missing messages for a family member", () => {
     const family = new Set(["s1", "s2"])
     const messages = { s1: [msg("m1", "assistant", 0.01)] }
-    const costs = buildFamilyCosts(family, messages)
+    const sessions = { s1: {}, s2: { parentID: "s1" } }
+    const costs = buildFamilyCosts(family, messages, sessions)
     expect(costs.size).toBe(1)
     expect(costs.get("s1")).toBeCloseTo(0.01)
+  })
+
+  it("subtracts child totals using task parent links when session metadata is missing", () => {
+    const family = new Set(["root", "child"])
+    const messages = {
+      root: [msg("m1", "assistant", 0.15)],
+      child: [msg("m2", "assistant", 0.1)],
+    }
+    const parts = { m1: [toolPart("task", "child", { subagent_type: "explore" })] }
+    const parents = buildFamilyParents(family, messages, parts)
+    const costs = buildFamilyCosts(family, messages, { root: {} }, parents)
+    expect(costs.get("root")).toBeCloseTo(0.05)
+    expect(costs.get("child")).toBeCloseTo(0.1)
+  })
+
+  it("returns own costs for a nested propagated subagent chain", () => {
+    const ids = ["root", "a", "b", "c"]
+    const own = new Map<string, number>([
+      ["root", 1],
+      ["a", 2],
+      ["b", 3],
+      ["c", 4],
+    ])
+    const total = ids.reduce((sum, sid) => sum + own.get(sid)!, 0)
+    const subtree = (index: number) => ids.slice(index).reduce((sum, sid) => sum + own.get(sid)!, 0)
+    const messages = Object.fromEntries(ids.map((sid, index) => [sid, [msg(`m-${sid}`, "assistant", subtree(index))]]))
+    const sessions = Object.fromEntries(ids.map((sid, index) => [sid, index === 0 ? {} : { parentID: ids[index - 1] }]))
+
+    const costs = buildFamilyCosts(new Set(ids), messages, sessions)
+    const sum = [...costs.values()].reduce((acc, cost) => acc + cost, 0)
+    const bad = ids.reduce((acc, _sid, index) => acc + subtree(index), 0)
+
+    expect(bad).toBe(30)
+    expect(costs.get("root")).toBe(1)
+    expect(costs.get("a")).toBe(2)
+    expect(costs.get("b")).toBe(3)
+    expect(costs.get("c")).toBe(4)
+    expect(sum).toBe(total)
+  })
+
+  it("returns own costs for a nested chain using task-derived parent links", () => {
+    const ids = ["root", "a", "b", "c"]
+    const own = { root: 1, a: 2, b: 3, c: 4 }
+    const subtree = (index: number) => ids.slice(index).reduce((sum, sid) => sum + own[sid as keyof typeof own], 0)
+    const messages = Object.fromEntries(ids.map((sid, index) => [sid, [msg(`m-${sid}`, "assistant", subtree(index))]]))
+    const parts = Object.fromEntries(
+      ids
+        .slice(0, -1)
+        .map((sid, index) => [`m-${sid}`, [toolPart("task", ids[index + 1], { subagent_type: "explore" })]]),
+    )
+    const parents = buildFamilyParents(new Set(ids), messages, parts)
+    const costs = buildFamilyCosts(new Set(ids), messages, { root: {} }, parents)
+    const sum = [...costs.values()].reduce((acc, cost) => acc + cost, 0)
+
+    expect(parents.size).toBe(3)
+    expect(costs.get("root")).toBe(1)
+    expect(costs.get("a")).toBe(2)
+    expect(costs.get("b")).toBe(3)
+    expect(costs.get("c")).toBe(4)
+    expect(sum).toBe(10)
+  })
+})
+
+describe("sessionCost", () => {
+  const tokens = { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }
+  const usage = {
+    sessionIDs: ["root", "child", "grand", "sibling"],
+    sessionCost: 15,
+    totals: { cost: 15, steps: 4, tokens },
+  }
+
+  it("restores the total when older subagent costs fall outside the loaded page", () => {
+    const messages = Array.from({ length: 100 }, (_, i) => msg(`m${i}`, "assistant", i === 0 ? 15 : 0))
+    const costs = buildFamilyCosts(new Set(["root"]), { root: messages.slice(-80) }, { root: {} })
+    const items = [...costs.values()].map((cost) => ({ cost }))
+    expect(sessionCost(items, { id: "root" }, undefined)).toEqual({ total: 0, partial: false })
+    expect(sessionCost(items, { id: "root" }, usage)).toEqual({ total: 15, partial: true })
+    expect(sessionCost([{ cost: 15 }], { id: "root" }, usage)).toEqual({ total: 15, partial: false })
+  })
+
+  it("uses the child subtree cost, not the parent and siblings", () => {
+    expect(sessionCost([{ cost: 2 }], { id: "child", parentID: "root" }, { ...usage, sessionCost: 10 })).toEqual({
+      total: 10,
+      partial: true,
+    })
+  })
+
+  it("keeps newer live cost above a stale aggregate", () => {
+    expect(sessionCost([{ cost: 16 }], { id: "root" }, usage)).toEqual({ total: 16, partial: true })
+  })
+
+  it("ignores an unrelated usage response after switching sessions", () => {
+    expect(sessionCost([{ cost: 1 }], { id: "other" }, usage)).toEqual({ total: 1, partial: false })
+    expect(sessionCost([], undefined, usage)).toEqual({ total: 0, partial: false })
+  })
+
+  it("uses legacy tree totals only for root sessions", () => {
+    const legacy = { ...usage, sessionCost: undefined }
+    expect(sessionCost([{ cost: 1 }], { id: "root" }, legacy)).toEqual({ total: 15, partial: true })
+    expect(sessionCost([{ cost: 2 }], { id: "child", parentID: "root" }, legacy)).toEqual({ total: 2, partial: false })
+  })
+
+  it("treats rounding differences as a complete breakdown", () => {
+    expect(sessionCost([{ cost: 0.1 }, { cost: 0.2 }], { id: "root" }, { ...usage, sessionCost: 0.3 }).partial).toBe(
+      false,
+    )
+  })
+})
+
+describe("buildFamilyParents", () => {
+  it("derives child-to-parent links from task tool parts", () => {
+    const family = new Set(["root", "child"])
+    const messages = { root: [msg("m1", "assistant")], child: [msg("m2", "assistant")] }
+    const parts = { m1: [toolPart("task", "child", { subagent_type: "general" })] }
+    const parents = buildFamilyParents(family, messages, parts)
+    expect(parents.get("child")).toBe("root")
+  })
+
+  it("ignores task parts that point outside the family", () => {
+    const family = new Set(["root"])
+    const messages = { root: [msg("m1", "assistant")] }
+    const parts = { m1: [toolPart("task", "orphan", { subagent_type: "general" })] }
+    expect(buildFamilyParents(family, messages, parts).size).toBe(0)
+  })
+})
+
+describe("session tool indexes", () => {
+  it("builds tool parts in assistant message order", () => {
+    const messages = [
+      indexMsg("u1", "user", [toolPart("read") as ToolPart]),
+      indexMsg("a1", "assistant", [toolPart("read") as ToolPart, textPart("t1")]),
+      indexMsg("a2", "assistant", [toolPart("grep") as ToolPart]),
+    ]
+    const tools = buildSessionToolParts(messages)
+    expect(tools.map((part) => part.tool)).toEqual(["read", "grep"])
+    expect(tools.map((part) => part.messageID)).toEqual(["a1", "a2"])
+  })
+
+  it("uses a lookup so stashed loaded parts can feed the index", () => {
+    const messages = [indexMsg("a1", "assistant")]
+    const parts: Record<string, Part[]> = { a1: [toolPart("websearch") as ToolPart, textPart("t1")] }
+    const tools = buildSessionToolParts(messages, (item) => parts[item.id])
+    expect(tools.map((part) => part.tool)).toEqual(["websearch"])
+  })
+
+  it("upserts tool parts without duplicating and ignores text deltas", () => {
+    const first = { ...toolPart("bash"), id: "p1", state: { status: "running", input: {}, title: "old" } }
+    const next = { ...toolPart("bash"), id: "p1", state: { status: "running", input: {}, title: "new" } }
+    const indexed = upsertSessionToolPart([], first as ToolPart, { id: "m1", sessionID: "s1" })
+    const updated = upsertSessionToolPart(indexed, next as ToolPart, { id: "m1", sessionID: "s1" })
+    const text = upsertSessionToolPart(updated, textPart("t1"), { id: "m1", sessionID: "s1" })
+    expect(text).toHaveLength(1)
+    expect((text[0]!.state as { title?: string }).title).toBe("new")
+  })
+
+  it("removes indexed tools by part or message", () => {
+    const first = upsertSessionToolPart([], { ...toolPart("read"), id: "p1" } as ToolPart, {
+      id: "m1",
+      sessionID: "s1",
+    })
+    const second = upsertSessionToolPart(first, { ...toolPart("grep"), id: "p2" } as ToolPart, {
+      id: "m2",
+      sessionID: "s1",
+    })
+    expect(removeSessionToolPart(second, "p1").map((part) => part.id)).toEqual(["p2"])
+    expect(removeSessionToolPartsForMessage(second, "m2").map((part) => part.id)).toEqual(["p1"])
+  })
+
+  it("derives parents and labels from indexed tool parts", () => {
+    const family = new Set(["root", "child"])
+    const tools = new Map([
+      ["root", [toolPart("task", "child", { subagent_type: "explore" })]],
+      ["child", []],
+    ])
+    const parents = buildFamilyParentsFromTools(family, (sid) => tools.get(sid) ?? [])
+    const labels = buildFamilyLabelsFromTools(family, (sid) => tools.get(sid) ?? [])
+    expect(parents.get("child")).toBe("root")
+    expect(labels.get("child")).toBe("explore")
   })
 })
 
@@ -194,6 +570,23 @@ describe("buildFamilyLabels", () => {
     }
     const labels = buildFamilyLabels(family, messages as any, parts as any)
     expect(labels.get("child1")).toBe("explore")
+  })
+
+  it("extracts labels when session ID is top-level metadata", () => {
+    const family = new Set(["s1", "child1"])
+    const messages = { s1: [msg("m1", "assistant")] }
+    const parts = {
+      m1: [
+        {
+          type: "tool" as const,
+          tool: "task",
+          metadata: { sessionId: "child1" },
+          state: { input: { subagent_type: "general" } },
+        },
+      ],
+    }
+    const labels = buildFamilyLabels(family, messages as any, parts as any)
+    expect(labels.get("child1")).toBe("general")
   })
 
   it("falls back to description when subagent_type is absent", () => {
@@ -281,5 +674,442 @@ describe("buildCostBreakdown", () => {
     ])
     const result = buildCostBreakdown("s1", costs, new Map(), "This session")
     expect(result[1].label).toBe("abcdef12")
+  })
+})
+
+// ── collapseCostBreakdown ───────────────────────────────────────────────
+
+const summary = (n: number) => `${n} older sessions`
+
+describe("collapseCostBreakdown", () => {
+  it("returns items unchanged when there is only one entry", () => {
+    const items = [{ label: "This session", cost: 0.1 }]
+    expect(collapseCostBreakdown(items, summary)).toEqual(items)
+  })
+
+  it("returns items unchanged for empty array", () => {
+    expect(collapseCostBreakdown([], summary)).toEqual([])
+  })
+
+  it("shows all children in reverse order when count is small (snapshot: few subagents)", () => {
+    const items = [
+      { label: "This session", cost: 0.1 },
+      { label: "explore", cost: 0.02 },
+      { label: "general", cost: 0.03 },
+      { label: "docs", cost: 0.01 },
+    ]
+    expect(collapseCostBreakdown(items, summary)).toEqual([
+      { label: "This session", cost: 0.1 },
+      { label: "docs", cost: 0.01 },
+      { label: "general", cost: 0.03 },
+      { label: "explore", cost: 0.02 },
+    ])
+  })
+
+  it("shows root + 8 reversed children when exactly 8 children", () => {
+    const items = [
+      { label: "This session", cost: 0.5 },
+      ...Array.from({ length: 8 }, (_, i) => ({ label: `child-${i + 1}`, cost: 0.01 * (i + 1) })),
+    ]
+    const result = collapseCostBreakdown(items, summary)
+    expect(result.length).toBe(9)
+    expect(result[0].label).toBe("This session")
+    expect(result[1].label).toBe("child-8")
+    expect(result[8].label).toBe("child-1")
+  })
+
+  it("aggregates older sessions when children exceed 8 (snapshot: many subagents)", () => {
+    const items = [
+      { label: "This session", cost: 0.5 },
+      ...Array.from({ length: 15 }, (_, i) => ({ label: `agent-${i + 1}`, cost: 0.01 * (i + 1) })),
+    ]
+    const result = collapseCostBreakdown(items, summary)
+
+    // root + 8 visible + 1 aggregated = 10 entries
+    expect(result.length).toBe(10)
+
+    // root stays first
+    expect(result[0]).toEqual({ label: "This session", cost: 0.5 })
+
+    // most recent 8 children in reverse order
+    expect(result[1].label).toBe("agent-15")
+    expect(result[2].label).toBe("agent-14")
+    expect(result[8].label).toBe("agent-8")
+
+    // aggregated summary for the 7 oldest children (agent-1 through agent-7)
+    const aggregated = result[9]
+    expect(aggregated.label).toBe("7 older sessions")
+    const expected = 0.01 + 0.02 + 0.03 + 0.04 + 0.05 + 0.06 + 0.07
+    expect(aggregated.cost).toBeCloseTo(expected)
+  })
+
+  it("aggregates with 20 children (snapshot: large count)", () => {
+    const items = [
+      { label: "This session", cost: 1.0 },
+      ...Array.from({ length: 20 }, (_, i) => ({ label: `sub-${i + 1}`, cost: 0.05 })),
+    ]
+    const result = collapseCostBreakdown(items, summary)
+
+    expect(result.length).toBe(10)
+    expect(result[0].label).toBe("This session")
+    expect(result[1].label).toBe("sub-20")
+    expect(result[8].label).toBe("sub-13")
+
+    const aggregated = result[9]
+    expect(aggregated.label).toBe("12 older sessions")
+    expect(aggregated.cost).toBeCloseTo(0.05 * 12)
+  })
+
+  it("collapses older nested rows after own-cost correction, not subtree totals", () => {
+    const items = [
+      { label: "This session", cost: 1 },
+      ...Array.from({ length: 10 }, (_, i) => ({ label: "explore", cost: i + 2 })),
+    ]
+    const result = collapseCostBreakdown(items, summary)
+    const hidden = result.at(-1)
+    const shown = result.reduce((sum, item) => sum + item.cost, 0)
+
+    expect(hidden).toEqual({ label: "2 older sessions", cost: 2 + 3 })
+    expect(shown).toBe(1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 11)
+  })
+})
+
+// ── Throughput aggregation ─────────────────────────────────────────────
+
+type StepFinishOverrides = {
+  metrics?: NonNullable<Part["metrics"]>
+  tokens?: { input: number; output: number; reasoning?: number; cache?: { read: number; write: number } }
+  time?: { start: number; end: number; elapsed: number }
+}
+
+function stepFinish(id: string, metricsOrOverrides?: NonNullable<Part["metrics"]> | StepFinishOverrides): Part {
+  // Older call sites pass only metrics directly. Keep that signature so
+  // the existing latestMetrics / messageMetrics tests stay readable.
+  if (
+    metricsOrOverrides &&
+    "metrics" in metricsOrOverrides === false &&
+    "tokens" in metricsOrOverrides === false &&
+    "time" in metricsOrOverrides === false
+  ) {
+    return {
+      type: "step-finish",
+      id,
+      ...(metricsOrOverrides ? { metrics: metricsOrOverrides } : {}),
+    }
+  }
+  const overrides = (metricsOrOverrides ?? {}) as StepFinishOverrides
+  return {
+    type: "step-finish",
+    id,
+    ...(overrides.metrics ? { metrics: overrides.metrics } : {}),
+    ...(overrides.tokens ? { tokens: overrides.tokens } : {}),
+    ...(overrides.time ? { time: overrides.time } : {}),
+  }
+}
+
+describe("latestMetrics", () => {
+  it("returns undefined when no step-finish parts carry metrics", () => {
+    const parts: Part[] = [
+      { type: "step-start", id: "s1" },
+      stepFinish("f1"),
+      { type: "text", id: "t1", text: "hello" },
+    ]
+    expect(latestMetrics(parts)).toBeUndefined()
+  })
+
+  it("picks the last non-empty generation rate across every step in the session", () => {
+    const parts: Part[] = [
+      stepFinish("f1", { prompt: 100, generation: 20, source: "computed" }),
+      { type: "text", id: "t1", text: "mid" },
+      stepFinish("f2", { prompt: 412, generation: 38, source: "computed" }),
+    ]
+    expect(latestMetrics(parts)).toEqual({ generation: 38, source: "computed" })
+  })
+
+  it("uses the latest computed value when earlier steps report lower rates", () => {
+    const parts: Part[] = [
+      stepFinish("f1", { prompt: 500, generation: 50, source: "computed" }),
+      stepFinish("f2", { generation: 30, source: "computed" }),
+    ]
+    const result = latestMetrics(parts)
+    expect(result?.source).toBe("computed")
+    expect(result?.generation).toBe(30)
+  })
+
+  it("falls back to the only computed sample when no later one is present", () => {
+    const parts: Part[] = [stepFinish("f1", { generation: 12, source: "computed" }), stepFinish("f2")]
+    expect(latestMetrics(parts)).toEqual({ generation: 12, source: "computed" })
+  })
+
+  it("ignores non-step-finish parts even when they look like metrics", () => {
+    const parts: Part[] = [
+      { type: "text", id: "t1", text: "noise" },
+      stepFinish("f1", { prompt: 200, generation: 22, source: "computed" }),
+    ]
+    expect(latestMetrics(parts)).toEqual({ generation: 22, source: "computed" })
+  })
+})
+
+describe("aggregateMetrics", () => {
+  // Historical alias of latestMetrics — kept so external callers and tests
+  // that still use the original name keep working. Behaviour matches: the
+  // last non-empty step-finish generation rate wins.
+  it("matches latestMetrics for the same input", () => {
+    const parts: Part[] = [
+      stepFinish("f1", { generation: 25, source: "computed" }),
+      stepFinish("f2", { generation: 12, source: "computed" }),
+    ]
+    expect(aggregateMetrics(parts)).toEqual(latestMetrics(parts))
+  })
+})
+
+describe("messageMetrics", () => {
+  it("picks the last non-empty generation rate within a single assistant message", () => {
+    // An assistant turn that runs reasoning + answer produces two step-finish
+    // parts; the badge surfaces the final step's generation rate so the
+    // user sees the rate for the most recent reasoning or text generation
+    // in that turn.
+    const parts: Part[] = [
+      stepFinish("f1", { generation: 25, source: "computed" }),
+      stepFinish("f2", { generation: 12, source: "computed" }),
+    ]
+    expect(messageMetrics(parts)).toEqual({ generation: 12, source: "computed" })
+  })
+
+  it("matches latestMetrics behavior on the same input", () => {
+    const parts: Part[] = [
+      stepFinish("f1", { generation: 8, source: "computed" }),
+      stepFinish("f2", { prompt: 99, generation: 33, source: "computed" }),
+    ]
+    expect(messageMetrics(parts)).toEqual(latestMetrics(parts))
+  })
+
+  it("returns undefined when no throughput metrics are present", () => {
+    expect(messageMetrics([])).toBeUndefined()
+    expect(messageMetrics([{ type: "text", id: "t1", text: "no metrics here" }])).toBeUndefined()
+  })
+})
+
+describe("throughput formatters", () => {
+  const locale = "en-US"
+
+  it("renders the value with a t/s suffix", () => {
+    expect(formatTG(412, locale)).toBe("412 t/s")
+    expect(formatTG(28.7, locale)).toBe("28.7 t/s")
+  })
+
+  it("falls back to dash for missing or bogus values", () => {
+    expect(formatTG(undefined, locale)).toBe("–")
+    expect(formatTG(0, locale)).toBe("–")
+    expect(formatTG(-5, locale)).toBe("–")
+    expect(formatTG(Number.NaN, locale)).toBe("–")
+    expect(formatTG(Number.POSITIVE_INFINITY, locale)).toBe("–")
+  })
+})
+
+// Weighted throughput — the value rendered beneath each assistant message
+// after the v2 refactor. Behaves like a per-turn weighted average: total
+// generated tokens across step-finish parts divided by total active
+// model-generation duration, excluding tool-only or untimed steps.
+describe("messageThroughput", () => {
+  it("returns undefined when no step-finish parts carry timing", () => {
+    const parts: Part[] = [
+      { type: "step-start", id: "s1" },
+      stepFinish("f1", { metrics: { generation: 100, source: "computed" } }),
+    ]
+    expect(messageThroughput(parts)).toBeUndefined()
+  })
+
+  it("computes a single-step rate from tokens and elapsed ms", () => {
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 200, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 1000, elapsed: 1000 },
+      }),
+    ]
+    // (200 + 0) * 1000 / 1000 = 200
+    expect(messageThroughput(parts)).toEqual({ generation: 200, source: "computed" })
+  })
+
+  it("weights multiple steps by their elapsed time rather than averaging rates", () => {
+    // Discriminating case: weighted = (300 * 1000 / 5000) = 60 t/s,
+    // last-wins = 50 t/s. Confirms the formula doesn't just take the final
+    // step's value.
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 100, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 1000, elapsed: 1000 },
+      }),
+      stepFinish("f2", {
+        tokens: { input: 10, output: 200, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 1000, end: 5000, elapsed: 4000 },
+      }),
+    ]
+    expect(messageThroughput(parts)).toEqual({ generation: 60, source: "computed" })
+  })
+
+  it("includes reasoning tokens in the numerator", () => {
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 100, reasoning: 200, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 1000, elapsed: 1000 },
+      }),
+    ]
+    // (100 + 200) * 1000 / 1000 = 300
+    expect(messageThroughput(parts)).toEqual({ generation: 300, source: "computed" })
+  })
+
+  it("ignores step-finish parts without timing", () => {
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 200, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 1000, elapsed: 1000 },
+      }),
+      // No `time` field — older part shape, possibly replayed session.
+      stepFinish("f2", { metrics: { generation: 999, source: "computed" } }),
+    ]
+    expect(messageThroughput(parts)).toEqual({ generation: 200, source: "computed" })
+  })
+
+  it("ignores tool-only steps that produced no output tokens", () => {
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 500, elapsed: 500 },
+      }),
+      stepFinish("f2", {
+        tokens: { input: 10, output: 100, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 500, end: 1500, elapsed: 1000 },
+      }),
+    ]
+    expect(messageThroughput(parts)).toEqual({ generation: 100, source: "computed" })
+  })
+
+  it("returns undefined when only tool-only steps are present", () => {
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 500, elapsed: 500 },
+      }),
+    ]
+    expect(messageThroughput(parts)).toBeUndefined()
+  })
+
+  it("returns undefined when timing is non-positive across all steps", () => {
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 100, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 0, elapsed: 0 },
+      }),
+    ]
+    expect(messageThroughput(parts)).toBeUndefined()
+  })
+})
+
+describe("sessionThroughput", () => {
+  it("aggregates the same way as messageThroughput across a flat part array", () => {
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 100, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 1000, elapsed: 1000 },
+      }),
+      stepFinish("f2", {
+        tokens: { input: 10, output: 200, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 2000, end: 5000, elapsed: 3000 },
+      }),
+      // From the "next" message — still rolled up correctly.
+      stepFinish("f3", {
+        tokens: { input: 10, output: 500, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 6000, end: 11000, elapsed: 5000 },
+      }),
+    ]
+    // (800 * 1000) / 9000 = 88.888...
+    const result = sessionThroughput(parts)
+    expect(result?.source).toBe("computed")
+    expect(result?.generation).toBeCloseTo((800 * 1000) / 9000, 5)
+  })
+
+  it("returns undefined for empty input", () => {
+    expect(sessionThroughput([])).toBeUndefined()
+  })
+})
+
+describe("optimistic parts", () => {
+  it("preserves attachments and message ownership with unique part IDs", () => {
+    const file = {
+      mime: "image/png",
+      url: "data:image/png;base64,abc",
+      filename: "shot.png",
+      source: { type: "file" as const, path: "shot.png", text: { value: "@shot.png", start: 0, end: 9 } },
+    }
+    const parts = optimistic("message", "Hello", [file])
+    expect(parts).toMatchObject([
+      { type: "text", id: expect.any(String), messageID: "message", text: "Hello" },
+      { type: "file", id: expect.any(String), messageID: "message", ...file },
+    ])
+    expect(parts.at(0)?.id).not.toBe(parts.at(1)?.id)
+    expect(optimistic("empty", "")).toEqual([])
+  })
+})
+
+describe("revertPromptState", () => {
+  const text = (value: string, synthetic = false) =>
+    ({ type: "text", id: `t-${value}`, text: value, synthetic }) as Part
+  const file = (overrides: Partial<Extract<Part, { type: "file" }>>) =>
+    ({ type: "file", id: "f", mime: "text/plain", url: "", ...overrides }) as Extract<Part, { type: "file" }>
+
+  it("joins non-synthetic text parts and drops synthetic ones", () => {
+    const state = revertPromptState([text("Hello "), { ...text("hidden", true) } as Part, text("world")])
+    expect(state.text).toBe("Hello world")
+  })
+
+  it("restores inline image attachments from data URLs only", () => {
+    const state = revertPromptState([
+      file({ mime: "image/png", url: "data:image/png;base64,abc", filename: "shot.png" }),
+      file({ mime: "image/jpeg", url: "https://example.com/x.jpg" }),
+      file({ mime: "application/pdf", url: "data:application/pdf;base64,def" }),
+    ])
+    expect(state.images).toEqual([{ dataUrl: "data:image/png;base64,abc", mime: "image/png", filename: "shot.png" }])
+  })
+
+  it("collects mention paths but excludes session references from paths", () => {
+    const state = revertPromptState([
+      file({ source: { type: "file", path: "a b.txt", text: { value: "@a b.txt", start: 0, end: 8 } } }),
+      file({ url: "session:ses_1", filename: "Old chat" }),
+    ])
+    expect(state.paths).toEqual(["a b.txt"])
+  })
+
+  it("maps past-chat references to session items with title fallbacks", () => {
+    const state = revertPromptState([
+      file({
+        url: "session:ses_1",
+        source: { type: "file", path: "", text: { value: "@Renamed chat", start: 0, end: 13 } },
+      }),
+      file({ url: "session:ses_2", filename: "Fallback title" }),
+    ])
+    expect(state.sessions).toEqual([
+      { id: "ses_1", title: "Renamed chat", updated: 0 },
+      { id: "ses_2", title: "Fallback title", updated: 0 },
+    ])
+  })
+
+  it("returns empty collections for tool-only messages", () => {
+    const part: Part = { type: "tool", id: "p1", tool: "bash", state: { status: "running", input: {} } }
+    const state = revertPromptState([part])
+    expect(state).toEqual({ text: "", paths: [], sessions: [], images: [], review: [], browser: [] })
+  })
+
+  it("restores browser and review metadata without their formatted prefixes", () => {
+    const browser = {
+      version: 1 as const,
+      references: [{ id: "b", sessionId: "s1", selector: "#save", text: "Save" }],
+    }
+    const content = `${formatBrowserFeedback(browser.references)}\n\nPlease update it`
+    const parts = optimistic("message", content, undefined, undefined, browser)
+    expect(revertPromptState(parts)).toMatchObject({
+      text: "Please update it",
+      browser: browser.references,
+    })
   })
 })

@@ -5,6 +5,21 @@
   padding: 8px;
   border: 1px solid var(--border-weak-base);
 
+  [data-slot="card-header"] {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+
+  &[data-variant="error"] {
+    padding: 12px;
+    background-color: color-mix(in srgb, var(--surface-critical-strong) 10%, var(--surface-inset-base));
+    border-color: color-mix(in srgb, var(--border-critical-selected) 55%, var(--border-weaker-base));
+    color: var(--text-base);
+  }
+
   &[data-variant="warning"] {
     padding: 12px 14px;
   }

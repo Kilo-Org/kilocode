@@ -10,7 +10,7 @@ Kilo Code ships with a curated list of models for each provider, but you can use
 
 - Using a newly released model before it's added to the built-in catalog
 - Running a custom or fine-tuned model via LM Studio, Ollama, or another local provider
-- Connecting to a self-hosted model behind an OpenAI-compatible API
+- Connecting to a self-hosted model through a custom API endpoint
 - Configuring model-specific options like token limits, pricing, or reasoning settings
 
 ## Defining a Custom Model
@@ -32,9 +32,10 @@ Add custom models under the `provider.<provider_id>.models` key in your config f
 
 - **Provider ID** — A unique identifier using lowercase letters, numbers, hyphens, or underscores (e.g., `myprovider`). This becomes the `provider_id` in the `provider_id/model_id` format.
 - **Display name** — A human-readable name shown in the UI (e.g., `My AI Provider`).
-- **Base URL** — The OpenAI-compatible API endpoint (e.g., `https://api.myprovider.com/v1`). When a valid URL is entered, Kilo automatically fetches available models from the endpoint.
+- **Provider API** — The protocol used by the provider. Use **OpenAI Responses** for OpenAI and xAI models. Use **Anthropic Messages** for Anthropic and MiniMax models. **OpenAI Compatible** is the default for other OpenAI Chat Completions-compatible endpoints.
+- **Base URL** — The provider's API endpoint (e.g., `https://api.myprovider.com/v1`). When a valid URL is entered, Kilo automatically fetches available models from the endpoint if it exposes an OpenAI-compatible models endpoint.
 - **API key** — Your provider's API key. Optional — leave empty if you manage authentication via headers.
-- **Models** — Add models manually by ID and display name, or select from the auto-fetched list that appears after entering a valid base URL.
+- **Models** — Add models manually by ID and display name, or select from the auto-fetched list that appears after entering a valid base URL. Click **Fetch models** to trigger the fetch on demand, for example after the automatic fetch failed or the endpoint requires extra setup.
 - **Headers** (optional) — Add custom HTTP headers as key-value pairs if your provider requires them.
 
 4. Click **Submit** to save. Your custom provider appears in the provider list and its models become available in the model picker.
@@ -76,30 +77,51 @@ The `model` key uses the format `provider_id/model_id`, where:
 
 All fields are optional. When a model ID matches one already in the built-in catalog, your values are merged on top of the defaults — you only need to specify what you want to override.
 
-| Field         | Type      | Description                                                                   |
-| ------------- | --------- | ----------------------------------------------------------------------------- |
-| `name`        | `string`  | Display name shown in the model picker                                        |
-| `id`          | `string`  | API-facing model ID sent to the provider. Defaults to the config key          |
-| `tool_call`   | `boolean` | Whether the model supports tool/function calling                              |
-| `reasoning`   | `boolean` | Whether the model supports extended thinking                                  |
-| `temperature` | `boolean` | Whether the model supports the temperature parameter                          |
-| `attachment`  | `boolean` | Whether the model supports file attachments                                   |
-| `limit`       | `object`  | Token limits: `{ context, output, input? }`                                   |
-| `cost`        | `object`  | Pricing per million tokens: `{ input, output, cache_read?, cache_write? }`    |
-| `options`     | `object`  | Arbitrary provider-specific model options                                     |
-| `headers`     | `object`  | Custom HTTP headers to include in requests                                    |
-| `provider`    | `object`  | Override `{ npm?, api? }` — the AI SDK package or base API URL for this model |
-| `variants`    | `object`  | Named variant configurations (e.g., different reasoning efforts)              |
+| Field | Type | Description |
+|---|---|---|
+| `name` | `string` | Display name shown in the model picker |
+| `id` | `string` | API-facing model ID sent to the provider. Defaults to the config key |
+| `tool_call` | `boolean` | Whether the model supports tool/function calling |
+| `reasoning` | `boolean` | Whether the model supports extended thinking |
+| `temperature` | `boolean` | Whether the model supports the temperature parameter |
+| `attachment` | `boolean` | Whether the model supports file attachments |
+| `modalities` | `object` | Optional. Supported input and output types: `{ input, output }` |
+| `limit` | `object` | Token limits: `{ context, output, input? }` |
+| `cost` | `object` | Pricing per million tokens: `{ input, output, cache_read?, cache_write? }` |
+| `options` | `object` | Arbitrary provider-specific model options |
+| `headers` | `object` | Custom HTTP headers to include in requests |
+| `provider` | `object` | Override `{ npm?, api? }` — the AI SDK package or base API URL for this model |
+| `variants` | `object` | Named variant configurations (e.g., different reasoning efforts) |
+
+### Modalities (modalities)
+
+The `modalities` object declares which content types the model can receive and produce. It is optional — omit it to use defaults from the catalog or fallback to text-only. When `modalities` is provided, both `input` and `output` arrays are required. Each array can include `text`, `image`, `audio`, `video`, or `pdf`.
+
+| Sub-field | Type | Required | Description |
+|---|---|---|---|
+| `input` | `array` | Yes (if present) | Content types the model accepts from the user |
+| `output` | `array` | Yes (if present) | Content types the model can generate in response |
+
+For a standard text model that can also inspect images, use:
+
+```jsonc
+"modalities": {
+  "input": ["text", "image"],
+  "output": ["text"]
+}
+```
+
+If `modalities` is omitted and the model ID matches a models.dev catalog entry for that provider, Kilo uses the catalog's modalities. For completely custom models with no catalog match, Kilo defaults to text input and text output only. Set `attachment: true` alongside image, audio, video, or PDF input modalities when the provider supports sending those files as attachments.
 
 ### Token Limits (limit)
 
 The `limit` object controls how Kilo manages the model's context window and output length. These values are specified in **tokens**.
 
-| Sub-field | Type     | Required | Description                                                                                                                                                                                        |
-| --------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `context` | `number` | No       | The model's total context window size (e.g., `131072` for a 128K model). Used to determine when conversation history should be compacted to stay within the window.                                |
-| `output`  | `number` | No       | The maximum number of tokens the model can generate in a single response. Sent to the provider as `max_tokens` or equivalent. Capped at 32,000 by default.                                         |
-| `input`   | `number` | No       | An optional stricter input limit. Some providers enforce an input token ceiling that is lower than the full context window. When set, compaction triggers against this value instead of `context`. |
+| Sub-field | Type | Required | Description |
+|---|---|---|---|
+| `context` | `number` | No | The model's total context window size (e.g., `131072` for a 128K model). Used to determine when conversation history should be compacted to stay within the window. |
+| `output` | `number` | No | The maximum number of tokens the model can generate in a single response. Sent to the provider as `max_tokens` or equivalent. Capped at 32,000 by default. |
+| `input` | `number` | No | An optional stricter input limit. Some providers enforce an input token ceiling that is lower than the full context window. When set, compaction triggers against this value instead of `context`. |
 
 ```jsonc
 "limit": {
@@ -107,6 +129,8 @@ The `limit` object controls how Kilo manages the model's context window and outp
   "output": 16384
 }
 ```
+
+If a model stops because it reaches `limit.output`, Kilo shows a visible warning that the response may be incomplete. For reasoning models that spend the whole response reasoning and produce no text or tool call, the warning suggests disabling reasoning or increasing `limit.output`.
 
 #### How limits are resolved
 
@@ -230,7 +254,7 @@ Connect to any provider that exposes an OpenAI-compatible API:
 
 ### Configuring model options and variants
 
-Override options or define reasoning variants for a built-in model:
+Override options or define reasoning variants for a built-in model. Variant fields are provider-specific and are merged into the request when you select that variant.
 
 ```jsonc
 {
@@ -263,6 +287,18 @@ Override options or define reasoning variants for a built-in model:
 }
 ```
 
+MiniMax's OpenAI-compatible Chat Completions API supports the optional boolean `reasoning_split` field. Set it on the relevant variant to control how the API returns thinking content:
+
+```jsonc
+"variants": {
+  "thinking": {
+    "reasoning_split": true,
+  },
+}
+```
+
+With `true`, MiniMax returns thinking separately in `reasoning_content` and `reasoning_details`. This setting changes only the response format, not whether the model thinks. Leave it unset for providers that do not support it, including MiniMax using the Anthropic Messages API.
+
 ### Using the id field to map model names
 
 If the model key in your config differs from what the provider expects, use the `id` field:
@@ -286,6 +322,38 @@ If the model key in your config differs from what the provider expects, use the 
 
 Here `my-local-llama` is the key you use in your config and model picker, while `meta-llama-3.1-8b-instruct` is the actual model identifier sent to the LM Studio API.
 
+For Azure OpenAI, use the native `azure` provider and set `id` to your Azure deployment name when it differs from the model key. Do not configure Azure GPT-5 family deployments under `openai-compatible`, because that provider sends `max_tokens` and Azure GPT-5 expects `max_completion_tokens`.
+
+```jsonc
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "model": "azure/gpt-5.5",
+  "provider": {
+    "azure": {
+      "options": {
+        "apiKey": "{env:AZURE_API_KEY}",
+        "resourceName": "my-azure-resource",
+      },
+      "models": {
+        "gpt-5.5": {
+          "id": "my-gpt-5-5-deployment",
+          "name": "GPT-5.5 on Azure",
+          "reasoning": true,
+          "tool_call": true,
+          "temperature": false,
+          "limit": {
+            "context": 400000,
+            "output": 128000,
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+Here `azure/gpt-5.5` is the model you select in Kilo Code, while `my-gpt-5-5-deployment` is the Azure deployment name sent to Azure. If you prefer to configure the full Azure endpoint instead of a resource name, replace `resourceName` with `baseURL`, for example `"baseURL": "https://my-resource.openai.azure.com/openai"`. If both are configured, Kilo Code uses `baseURL` and ignores `resourceName` to avoid sending conflicting Azure SDK options.
+
 ## Model Loading Priority
 
 When Kilo starts, it resolves the active model in this order:
@@ -308,18 +376,23 @@ You can also set options that apply to all models from a provider:
       "options": {
         "apiKey": "{env:OPENAI_API_KEY}",
         "baseURL": "https://my-proxy.example.com/v1",
-        "timeout": 120000,
+        "timeout": 300000,
       },
     },
   },
 }
 ```
 
-| Option    | Type              | Description                                            |
-| --------- | ----------------- | ------------------------------------------------------ |
-| `apiKey`  | `string`          | API key (supports `{env:VAR}` syntax)                  |
-| `baseURL` | `string`          | Override the provider's base API URL                   |
-| `timeout` | `number \| false` | Request timeout in milliseconds, or `false` to disable |
+| Option | Type | Description |
+|---|---|---|
+| `apiKey` | `string` | API key (supports `{env:VAR}` and `{file:...}` syntax in trusted config — see note below) |
+| `baseURL` | `string` | Override the provider's base API URL |
+| `timeout` | `number \| false` | Request timeout in milliseconds, covering both the wait for response headers and the wait for the first byte of the response body. Defaults to `300000` (5 minutes); set to `false` to disable. Once data starts arriving the timeout no longer applies, so slow streaming responses are never cut short — use `chunkTimeout` for gaps inside a response |
+| `chunkTimeout` | `number` | Timeout in milliseconds between streamed response chunks. If no chunk arrives within this window, the request is aborted and retried. This catches silent provider dropouts where the TCP connection stays open but SSE streaming stops. Recommended: `15000`–`30000` (15–30 seconds) for providers with unreliable streaming. |
+
+{% callout type="warning" title="{env:} / {file:} only resolve in trusted config" %}
+`{env:VAR}` and `{file:...}` references in `apiKey` (or any option) are resolved **only** when the config lives in a trusted location: your global config (`~/.config/kilo`), a config passed via `KILO_CONFIG` / `KILO_CONFIG_CONTENT`, or organization/MDM-managed config. A project-level `kilo.json` / `opencode.json` committed to a repository **cannot** resolve `{env:VAR}` — the reference is ignored and a warning is logged, so a provider configured this way in a repo will not authenticate. This prevents a malicious repository from exfiltrating your secrets to an attacker-controlled `baseURL` just by being opened. `{file:...}` still works in project config, but only for files that resolve inside the project root — references that leave it (absolute paths outside the root, `../` traversal, and symlink escapes) are rejected. Keep provider credentials in your global config.
+{% /callout %}
 
 ## Filtering Available Models
 

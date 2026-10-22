@@ -6,15 +6,15 @@ The legacy extension had feature-complete Rules and Workflows sub-tabs with togg
 
 ## Rules Sub-Tab Comparison
 
-| Feature                        | Legacy                                                                                                                | New                                                             |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| Description text + docs link   | Yes                                                                                                                   | No                                                              |
-| Global rules section           | Toggle list of global rule files                                                                                      | Not separated — single flat list of instruction file paths      |
-| Workspace rules section        | Toggle list of workspace rule files                                                                                   | Same flat list                                                  |
-| Per-rule enable/disable toggle | `ToggleSwitch` per rule file                                                                                          | Not available — paths are either in the list or removed         |
-| Create new rule file           | Input field with validation (.md, .txt, or no extension) per section                                                  | Not available                                                   |
-| Add instruction file path      | Not available (auto-discovered from filesystem)                                                                       | `TextField` + "Add" button                                      |
-| Rule source discovery          | Auto-discovers from `.kilocode/rules/`, `.kilocoderules`, `.roorules`, `.clinerules`, mode-specific dirs, `AGENTS.md` | Only shows explicitly configured paths in `config.instructions` |
+| Feature | Legacy | New |
+|---|---|---|
+| Description text + docs link | Yes | No |
+| Global rules section | Toggle list of global rule files | Not separated — single flat list of instruction file paths |
+| Workspace rules section | Toggle list of workspace rule files | Same flat list |
+| Per-rule enable/disable toggle | `ToggleSwitch` per rule file | Not available — paths are either in the list or removed |
+| Create new rule file | Input field with validation (.md, .txt, or no extension) per section | Not available |
+| Add instruction file path | Not available (auto-discovered from filesystem) | `TextField` + "Add" button |
+| Rule source discovery | Auto-discovers from `.kilocode/rules/`, `.kilocoderules`, `.roorules`, `.clinerules`, mode-specific dirs, `AGENTS.md` | Only shows explicitly configured paths in `config.instructions` |
 
 ### Key Architectural Difference
 
@@ -22,14 +22,14 @@ The legacy extension auto-discovered rule files from well-known filesystem locat
 
 ## Workflows Sub-Tab Comparison
 
-| Feature                            | Legacy                                  | New                                       |
-| ---------------------------------- | --------------------------------------- | ----------------------------------------- |
-| Description text + docs link       | Yes                                     | Placeholder: "Not yet implemented."       |
-| Global workflows section           | Toggle list of global workflow files    | Not available                             |
-| Workspace workflows section        | Toggle list of workspace workflow files | Not available                             |
-| Per-workflow enable/disable toggle | `ToggleSwitch` per workflow file        | Not available                             |
-| Create new workflow file           | Input field per section                 | Not available                             |
-| Invoke workflow                    | Type `/workflow-name` in chat           | CLI has custom commands (similar concept) |
+| Feature | Legacy | New |
+|---|---|---|
+| Description text + docs link | Yes | Placeholder: "Not yet implemented." |
+| Global workflows section | Toggle list of global workflow files | Not available |
+| Workspace workflows section | Toggle list of workspace workflow files | Not available |
+| Per-workflow enable/disable toggle | `ToggleSwitch` per workflow file | Not available |
+| Create new workflow file | Input field per section | Not available |
+| Invoke workflow | Type `/workflow-name` in chat | CLI has custom commands (similar concept) |
 
 ## Remaining Work
 

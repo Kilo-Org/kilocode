@@ -4,10 +4,11 @@
  * Selection is now per-session — see session.tsx.
  */
 
-import { createContext, useContext, createSignal, createMemo, onCleanup, ParentComponent, Accessor } from "solid-js"
+import { batch, createContext, useContext, createSignal, createMemo, onCleanup } from "solid-js"
+import type { ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
 import type { Provider, ProviderModel, ModelSelection, ExtensionMessage, ProviderAuthState } from "../types/messages"
-import type { ProviderAuthMethod } from "@kilocode/sdk/v2/client"
+import type { ProviderAuthMethod, ProviderFailure } from "@kilocode/sdk/v2/client"
 import { flattenModels, findModel as _findModel, isModelValid as isValid } from "./provider-utils"
 import { KILO_AUTO } from "../../../src/shared/provider-model"
 
@@ -17,12 +18,18 @@ interface ProviderContextValue {
   providers: Accessor<Record<string, Provider>>
   connected: Accessor<string[]>
   defaults: Accessor<Record<string, string>>
+  organizationId: Accessor<string | null | undefined>
+  ready: Accessor<boolean>
   defaultSelection: Accessor<ModelSelection>
   models: Accessor<EnrichedModel[]>
   findModel: (selection: ModelSelection | null) => EnrichedModel | undefined
   authMethods: Accessor<Record<string, ProviderAuthMethod[]>>
   authStates: Accessor<Record<string, ProviderAuthState>>
   isModelValid: (selection: ModelSelection | null) => boolean
+  /** The organization's Kilo catalog failed to load; the host retries until it recovers. */
+  kiloUnavailable: Accessor<boolean>
+  /** Typed reasons providers failed to load, so the UI can explain why instead of hiding them. */
+  failures: Accessor<ProviderFailure[]>
 }
 
 export const ProviderContext = createContext<ProviderContextValue>()
@@ -33,9 +40,13 @@ export const ProviderProvider: ParentComponent = (props) => {
   const [providers, setProviders] = createSignal<Record<string, Provider>>({})
   const [connected, setConnected] = createSignal<string[]>([])
   const [defaults, setDefaults] = createSignal<Record<string, string>>({})
+  const [organizationId, setOrganizationId] = createSignal<string | null>()
+  const [ready, setReady] = createSignal(false)
   const [defaultSelection, setDefaultSelection] = createSignal<ModelSelection>(KILO_AUTO)
   const [authMethods, setAuthMethods] = createSignal<Record<string, ProviderAuthMethod[]>>({})
   const [authStates, setAuthStates] = createSignal<Record<string, ProviderAuthState>>({})
+  const [kiloUnavailable, setKiloUnavailable] = createSignal(false)
+  const [failures, setFailures] = createSignal<ProviderFailure[]>([])
 
   const models = createMemo<EnrichedModel[]>(() => flattenModels(providers()))
 
@@ -50,50 +61,81 @@ export const ProviderProvider: ParentComponent = (props) => {
   // Register handler immediately (not in onMount) so we never miss
   // a providersLoaded message that arrives before the DOM mount.
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type !== "providersLoaded") {
+    if (message.type === "providersLoading") {
+      batch(() => {
+        setReady(false)
+        setOrganizationId(undefined)
+        setProviders((prev) => {
+          const next = { ...prev }
+          delete next.kilo
+          return next
+        })
+        setDefaults((prev) => {
+          const next = { ...prev }
+          delete next.kilo
+          return next
+        })
+        setConnected((prev) => prev.filter((id) => id !== "kilo"))
+        setFailures((prev) => prev.filter((item) => item.providerID !== "kilo"))
+      })
       return
     }
+    if (message.type !== "providersLoaded") return
 
-    setProviders(message.providers)
-    setConnected(message.connected)
-    setDefaults(message.defaults)
-    setDefaultSelection(message.defaultSelection)
-    setAuthMethods(message.authMethods)
-    setAuthStates(message.authStates)
+    batch(() => {
+      setProviders(message.providers)
+      setConnected(message.connected)
+      setDefaults(message.defaults)
+      setOrganizationId(message.ready === false ? undefined : (message.organizationId ?? null))
+      setReady(message.ready ?? true)
+      setDefaultSelection(message.defaultSelection)
+      setAuthMethods(message.authMethods)
+      setAuthStates(message.authStates)
+      setKiloUnavailable(message.kiloUnavailable ?? false)
+      setFailures(message.failures ?? [])
+    })
   })
 
   onCleanup(unsubscribe)
 
-  // Request providers in case the initial push was missed.
-  // Retry a few times because the extension's httpClient may
-  // not be ready yet when the first request arrives.
-  let retries = 0
-  const maxRetries = 5
-  const retryMs = 500
-
+  // Request providers immediately; if the extension's httpClient is not yet ready,
+  // extensionDataReady will fire once initialization completes and we retry once.
   vscode.postMessage({ type: "requestProviders" })
 
-  const retryTimer = setInterval(() => {
-    retries++
-    if (Object.keys(providers()).length > 0 || retries >= maxRetries) {
-      clearInterval(retryTimer)
-      return
+  const fallback = setTimeout(() => {
+    if (Object.keys(providers()).length === 0) {
+      vscode.postMessage({ type: "requestProviders" })
     }
-    vscode.postMessage({ type: "requestProviders" })
-  }, retryMs)
+  }, 3000)
 
-  onCleanup(() => clearInterval(retryTimer))
+  const unsubReady = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "extensionDataReady") return
+    unsubReady()
+    clearTimeout(fallback)
+    if (Object.keys(providers()).length === 0) {
+      vscode.postMessage({ type: "requestProviders" })
+    }
+  })
+
+  onCleanup(() => {
+    unsubReady()
+    clearTimeout(fallback)
+  })
 
   const value: ProviderContextValue = {
     providers,
     connected,
     defaults,
+    organizationId,
+    ready,
     defaultSelection,
     models,
     findModel,
     authMethods,
     authStates,
     isModelValid,
+    kiloUnavailable,
+    failures,
   }
 
   return <ProviderContext.Provider value={value}>{props.children}</ProviderContext.Provider>

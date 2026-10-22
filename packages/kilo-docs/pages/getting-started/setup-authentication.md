@@ -1,18 +1,18 @@
 ---
-title: "Setup & Authentication"
+title: "Authentication"
 description: "Configure Kilo Code and connect to your AI providers"
 ---
 
-# Setup & Authentication
+# Authentication
 
-When you install Kilo Code, you'll be prompted to sign in or create a free account. This automatically configures everything you need to get started.
+When you install Kilo Code, you'll be prompted to sign in or create a free account. This automatically configures everything you need to get started. You can sign in with your email address, ChatGPT, Google, Apple, GitHub, GitLab, Discord, LinkedIn, or Anaconda, or through your organization's single sign-on.
 
 ## Quick Start with Kilo Account
 
 {% tabs %}
-{% tab label="VSCode" %}
+{% tab label="VS Code" %}
 
-The extension prompts you to sign in when you first open the sidebar. Click **Sign In** and complete the browser-based flow. The extension communicates with the CLI backend, so authentication is shared between the CLI and extension.
+The extension prompts you to sign in when you first open Kilo Code in VS Code. Click **Sign In** and complete the browser-based flow. Sign-in applies across extension surfaces, including the sidebar and Agent Manager.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -32,21 +32,14 @@ kilo auth list
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-1. Click **"Try Kilo Code for Free"** in the extension
-2. Sign in with your Google account
-3. Allow VS Code to open the authorization URL
-
-{% image src="/docs/img/signupflow.gif" alt="Sign up and registration flow with Kilo Code" /%}
-
-That's it! You're ready to [start your first task](/docs/getting-started/quickstart).
-
-{% /tab %}
 {% /tabs %}
 
-{% callout type="tip" title="Bonus Credits" %}
-[Add credits to your account](https://app.kilo.ai/profile) and get $20 bonus credits, or sign up for [Kilo Pass](https://kilo.ai/features/kilo-pass).
+### Sign in with ChatGPT
+
+You can use ChatGPT to sign in to Kilo, connect your subscription for model requests, or both. These are separate options and neither requires an OpenAI API key. See [using ChatGPT with Kilo](/docs/ai-providers/openai-chatgpt-plus-pro) for setup and billing details.
+
+{% callout type="tip" title="Add Credits" %}
+[Add credits to your account](https://app.kilo.ai/profile), or sign up for [Kilo Pass](https://kilo.ai/pricing/kilo-pass).
 {% /callout %}
 
 ## Kilo Gateway API Key
@@ -62,20 +55,16 @@ If you're using the [Kilo AI Gateway](/docs/gateway/) outside of the Kilo Code e
 
 If you prefer to use your own API key or existing subscription, Kilo Code supports **over 30 providers**. Here are some popular options to get started:
 
-| Provider                                                       | Best For                            | API Key Required |
-| -------------------------------------------------------------- | ----------------------------------- | ---------------- |
-| [ChatGPT Plus/Pro](/docs/ai-providers/openai-chatgpt-plus-pro) | Use your existing subscription      | No               |
-| [OpenRouter](/docs/ai-providers/openrouter)                    | Access multiple models with one key | Yes              |
-| [Anthropic](/docs/ai-providers/anthropic)                      | Direct access to Claude models      | Yes              |
-| [OpenAI](/docs/ai-providers/openai)                            | Access to GPT models                | Yes              |
+| Provider | Best For | API Key Required |
+|---|---|---|
+| [ChatGPT Go/Plus/Pro](/docs/ai-providers/openai-chatgpt-plus-pro) | Use your existing subscription | No |
+| [OpenRouter](/docs/ai-providers/openrouter) | Access multiple models with one key | Yes |
+| [Anthropic](/docs/ai-providers/anthropic) | Direct access to Claude models | Yes |
+| [OpenAI](/docs/ai-providers/openai) | Access to GPT models | Yes |
 
 {% callout type="info" title="Many More Providers Available" %}
 These are just a few examples! Kilo Code supports many more providers including Google Gemini, DeepSeek, Mistral, Ollama (for local models), AWS Bedrock, Google Vertex, and more. See the complete list at [AI Providers](/docs/ai-providers/).
 {% /callout %}
-
-### ChatGPT Plus/Pro Subscription
-
-Already have a ChatGPT subscription? You can use it with Kilo Code through the [OpenAI ChatGPT provider](/docs/ai-providers/openai-chatgpt-plus-pro)—no API key needed.
 
 ### OpenRouter
 
@@ -104,15 +93,15 @@ Already have a ChatGPT subscription? You can use it with Kilo Code through the [
 ### Configuring Your Provider
 
 {% tabs %}
-{% tab label="VSCode" %}
+{% tab label="VS Code" %}
 
-1. Open the Kilo Code sidebar in VS Code
-2. Click the gear icon ({% codicon name="gear" /%}) to open **Settings**
+1. Open Kilo Code in VS Code
+2. Click the gear icon ({% codicon name="gear" /%}) in the extension UI to open **Settings**
 3. Go to the **Providers** tab
 4. Select your provider and enter your API key
 5. Choose your model
 
-You can also use `kilo auth login` for providers that support OAuth (like GitHub Copilot). The extension reads from the same underlying config files as the CLI, so provider settings are shared.
+These settings apply across the extension, including the sidebar and Agent Manager. Agent Manager does not need separate provider or Kilo CLI authentication setup.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -123,7 +112,7 @@ Set the API key as an environment variable:
 export ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
-Or use `kilo auth login` for providers that support OAuth (like GitHub Copilot).
+Or use `kilo auth login` for providers that support OAuth, such as GitHub Copilot or ChatGPT Go, Plus, or Pro.
 
 To set a default model:
 
@@ -132,15 +121,6 @@ To set a default model:
   "model": "anthropic/claude-sonnet-4-20250514",
 }
 ```
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-1. Click the {% kilo-code-icon /%} icon in the VS Code sidebar
-2. Select your API provider from the dropdown
-3. Paste your API key
-4. Choose your model
-5. Click **"Let's go!"**
 
 {% /tab %}
 {% /tabs %}

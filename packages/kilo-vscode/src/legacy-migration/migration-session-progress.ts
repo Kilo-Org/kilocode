@@ -1,5 +1,5 @@
 import type { MigrationSessionInfo, MigrationSessionProgress } from "./legacy-types"
-import type { SessionProgressCallback } from "./migration-service"
+type SessionProgressCallback = (progress: MigrationSessionProgress) => void
 
 export interface MigrationSessionMeta {
   session: MigrationSessionInfo

@@ -10,6 +10,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useServer } from "../../context/server"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
+import { BalanceChip } from "./BalanceChip"
 
 const PERSONAL = "personal"
 
@@ -23,8 +24,9 @@ export const AccountSwitcher: Component<{ class?: string }> = (props) => {
 
   const profile = () => server.profileData()
   const orgs = () => profile()?.profile.organizations ?? []
+  const personal = () => profile()?.profile.hasPersonalAccount !== false
   const visible = () => !!profile() && orgs().length > 0
-  const current = () => profile()?.currentOrgId ?? PERSONAL
+  const current = () => profile()?.currentOrgId ?? (personal() ? PERSONAL : (orgs()[0]?.id ?? PERSONAL))
 
   const selected = createMemo(() => {
     const id = current()
@@ -92,6 +94,7 @@ export const AccountSwitcher: Component<{ class?: string }> = (props) => {
           }
         >
           <span class="account-switcher-label">{label()}</span>
+          <BalanceChip class="account-switcher-balance" />
           <span class="account-switcher-badges">
             <Show when={selected() && !switching()}>
               <span class="account-switcher-role">{selected()!.role.toUpperCase()}</span>
@@ -117,15 +120,17 @@ export const AccountSwitcher: Component<{ class?: string }> = (props) => {
 
         <Show when={open() && !switching()}>
           <div class="account-switcher-dropdown" role="listbox" aria-label="Account">
-            <button
-              type="button"
-              role="option"
-              aria-selected={current() === PERSONAL}
-              class="account-switcher-item"
-              onClick={() => pick(null)}
-            >
-              <span class="account-switcher-item-name">{language.t("profile.personalAccount")}</span>
-            </button>
+            <Show when={personal()}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={current() === PERSONAL}
+                class="account-switcher-item"
+                onClick={() => pick(null)}
+              >
+                <span class="account-switcher-item-name">{language.t("profile.personalAccount")}</span>
+              </button>
+            </Show>
             <For each={orgs()}>
               {(org) => (
                 <button

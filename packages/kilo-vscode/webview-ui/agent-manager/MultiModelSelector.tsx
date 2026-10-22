@@ -1,9 +1,16 @@
 import { type Component, createSignal, createMemo, For, Show, onMount } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useProvider } from "../src/context/provider"
 import type { EnrichedModel } from "../src/context/provider"
 import { useLanguage } from "../src/context/language"
-import { KILO_GATEWAY_ID, providerSortKey } from "../src/components/shared/model-selector-utils"
+import {
+  KILO_GATEWAY_ID,
+  freeDataLabel,
+  hasByok,
+  isDataCollectedModel,
+  providerSortKey,
+} from "../src/components/shared/model-selector-utils"
 import {
   type ModelAllocations,
   MAX_MULTI_VERSIONS,
@@ -11,6 +18,7 @@ import {
   totalAllocations,
   toggleModel,
   setAllocationCount,
+  setAllocationVariant,
   maxAllocationCount,
 } from "./multi-model-utils"
 
@@ -32,6 +40,8 @@ export const MultiModelSelector: Component<{
   const { t } = useLanguage()
   const [search, setSearch] = createSignal("")
   let searchRef: HTMLInputElement | undefined
+  const freeLabel = () => t("model.tag.free")
+  const dataLabel = () => freeDataLabel(t("model.tag.free"), t("model.tag.dataCollected"))
 
   const visibleModels = createMemo(() => {
     const c = connected()
@@ -87,6 +97,7 @@ export const MultiModelSelector: Component<{
                   const checked = () => props.allocations.has(key())
                   const entry = () => props.allocations.get(key())
                   const disabled = () => !checked() && totalAllocations(props.allocations) >= MAX_MULTI_VERSIONS
+                  const efforts = () => Object.keys(model.variants ?? {})
 
                   return (
                     <div
@@ -107,8 +118,46 @@ export const MultiModelSelector: Component<{
                           }
                         />
                         <span class="am-mm-item-name">{model.name}</span>
+                        <Show when={model.isFree || hasByok(model) || isDataCollectedModel(model)}>
+                          <span class="am-mm-free-data">
+                            <Show when={model.isFree && !hasByok(model)}>
+                              <span class="am-mm-free-badge">{freeLabel()}</span>
+                            </Show>
+                            <Show when={hasByok(model)}>
+                              <span class="am-mm-byok-badge">BYOK</span>
+                            </Show>
+                            <Show when={isDataCollectedModel(model)}>
+                              <Tooltip value={dataLabel()} placement="top">
+                                <span class="am-mm-free-data-icon" aria-label={dataLabel()}>
+                                  <Icon name="book-open-check" size="small" />
+                                </span>
+                              </Tooltip>
+                            </Show>
+                          </span>
+                        </Show>
                       </label>
                       <Show when={checked()}>
+                        <Show when={efforts().length > 0}>
+                          <select
+                            class="am-mm-count-select am-mm-variant-select"
+                            value={entry()?.variant ?? ""}
+                            title={t("agentManager.dialog.compareModels.effort")}
+                            aria-label={t("agentManager.dialog.compareModels.effort")}
+                            onChange={(e) =>
+                              props.onChange(
+                                setAllocationVariant(
+                                  props.allocations,
+                                  model.providerID,
+                                  model.id,
+                                  e.currentTarget.value || undefined,
+                                ),
+                              )
+                            }
+                          >
+                            <option value="">{t("agentManager.dialog.compareModels.effortDefault")}</option>
+                            <For each={efforts()}>{(v) => <option value={v}>{v}</option>}</For>
+                          </select>
+                        </Show>
                         <select
                           class="am-mm-count-select"
                           value={entry()?.count ?? 1}

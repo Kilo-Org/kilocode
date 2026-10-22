@@ -94,8 +94,9 @@ description: Nested skill
       })
 
       expect(result).toHaveLength(2)
-      expect(result.some((d) => d.includes("packages/nested"))).toBe(true)
-      expect(result.some((d) => !d.includes("packages/nested"))).toBe(true)
+      const nested = path.join("packages", "nested")
+      expect(result.some((d) => d.includes(nested))).toBe(true)
+      expect(result.some((d) => !d.includes(nested))).toBe(true)
     })
 
     test("handles .kilo directory without skills subdirectory", async () => {

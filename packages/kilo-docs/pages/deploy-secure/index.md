@@ -5,6 +5,8 @@ description: "Deploy applications and manage security with Kilo Code"
 
 # {% $markdoc.frontmatter.title %}
 
+{% partial file="deploy-eol.md" /%}
+
 {% callout type="generic" %}
 Deploy your applications directly from Kilo Code and manage security with AI-powered reviews and scans.
 {% /callout %}
@@ -32,15 +34,6 @@ Ship your applications with one-click deployment:
 - Real-time log streaming
 - Deployment history with one-click rollbacks
 
-## Managed Indexing
-
-Fast, scalable code indexing for better AI context:
-
-- [**Managed Indexing**](/docs/deploy-secure/managed-indexing) — Cloud-based code indexing
-- Improved context for large codebases
-- Faster initial indexing times
-- Reduced local resource usage
-
 ## Security Reviews
 
 AI-powered dependency vulnerability triage for your codebase:
@@ -61,8 +54,7 @@ AI-powered dependency vulnerability triage for your codebase:
 
 1. Enable [GitHub Integration](/docs/deploy-secure/deploy#prerequisites) for deployments
 2. Set up your first [deployment](/docs/deploy-secure/deploy) in the dashboard
-3. Configure [managed indexing](/docs/deploy-secure/managed-indexing) for large projects
-4. Enable the [Security Agent](/docs/deploy-secure/security-reviews) to triage your Dependabot alerts
+3. Enable the [Security Agent](/docs/deploy-secure/security-reviews) to triage your Dependabot alerts
 
 ## Best Practices
 

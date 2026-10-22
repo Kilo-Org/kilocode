@@ -1,6 +1,6 @@
 /** @jsxImportSource solid-js */
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { Font, MONO_NERD_FONTS } from "@opencode-ai/ui/font"
+import { Font } from "@opencode-ai/ui/font"
 
 const meta: Meta = {
   title: "Components/Font",
@@ -41,23 +41,6 @@ export const Default: Story = {
           </div>
         </div>
       </div>
-    </div>
-  ),
-}
-
-export const NerdFonts: Story = {
-  render: () => (
-    <div style={{ display: "flex", "flex-direction": "column", gap: "8px", "max-width": "700px" }}>
-      <Font />
-      <p style={{ "font-size": "13px", color: "var(--text-weak)", margin: "0 0 8px" }}>
-        All {MONO_NERD_FONTS.length} Nerd Font monospace families bundled via <code>MONO_NERD_FONTS</code>.
-      </p>
-      {MONO_NERD_FONTS.map((font) => (
-        <div>
-          <div style={{ "font-size": "11px", color: "var(--text-weak)", "margin-bottom": "2px" }}>{font.family}</div>
-          <div style={{ "font-family": `"${font.family}", monospace`, "font-size": "13px" }}>{codeText}</div>
-        </div>
-      ))}
     </div>
   ),
 }

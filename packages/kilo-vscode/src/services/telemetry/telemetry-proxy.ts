@@ -48,6 +48,7 @@ export class TelemetryProxy {
     if (!this.url || !this.password) return
 
     const built = buildTelemetryPayload(event, properties, this.provider?.getTelemetryProperties())
+    if (!built) return
     const payload = JSON.stringify(built)
     const auth = buildTelemetryAuthHeader(this.password)
 
@@ -59,6 +60,26 @@ export class TelemetryProxy {
       },
       body: payload,
     }).catch((err) => console.error("[Kilo New] Telemetry capture failed:", err))
+  }
+
+  /**
+   * Propagate runtime telemetry consent changes to the CLI. The CLI subprocess
+   * reads `KILO_TELEMETRY_LEVEL` once at spawn — without this call, toggling
+   * VS Code telemetry consent leaves the CLI's PostHog client stuck on its
+   * spawn-time state until the process restarts.
+   */
+  setEnabled(enabled: boolean) {
+    if (!this.url || !this.password) return
+
+    const auth = buildTelemetryAuthHeader(this.password)
+    fetch(`${this.url}/telemetry/setEnabled`, {
+      method: "POST",
+      headers: {
+        Authorization: auth,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ enabled }),
+    }).catch((err) => console.error("[Kilo New] Telemetry setEnabled failed:", err))
   }
 
   /**

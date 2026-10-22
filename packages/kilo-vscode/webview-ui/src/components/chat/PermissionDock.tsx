@@ -9,30 +9,53 @@
  * The command buttons (Deny / Run) control the current command.
  */
 
-import { Component, For, Show, createEffect, createMemo, createSignal } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { DockPrompt } from "@kilocode/kilo-ui/dock-prompt"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"
-import { describePatterns, resolveLabel, savedRuleStates, type RuleDecision } from "./permission-dock-utils"
+import {
+  describePatterns,
+  describeRule,
+  displaySkillCommand,
+  savedRuleStates,
+  type RuleDecision,
+} from "./permission-dock-utils"
 import { PermissionCommand } from "./PermissionCommand"
+import { PermissionDiff } from "./PermissionDiff"
+import { permissionDiffs } from "./permission-diff-utils"
+import { normalizeUrls } from "../../../../../opencode/src/kilocode/util/url"
 import type { PermissionRequest } from "../../types/messages"
+import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 
 let rulesExpandedPreference = false
 
 export const PermissionDock: Component<{
   request: PermissionRequest
   responding: boolean
-  onDecide: (response: "once" | "reject", approvedAlways: string[], deniedAlways: string[]) => void
+  onDecide: (
+    permissionID: string,
+    response: "once" | "reject",
+    approvedAlways: string[],
+    deniedAlways: string[],
+    feedback?: string,
+  ) => void
 }> = (props) => {
   const session = useSession()
   const language = useLanguage()
   const { config } = useConfig()
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
+  // Skill shell batches are never persisted, so they show no auto-approve rules. The command
+  // list is only shown for the bash ask; the sibling external_directory ask (same skillShell
+  // metadata) keeps its normal directory rendering.
+  const skillShell = () => props.request.args?.skillShell === true
+  const skillShellCommands = () =>
+    skillShell() && props.request.toolName === "bash" ? (props.request.args?.commands ?? []) : []
   // Bash sends fine-grained rules via metadata.rules; other tools use the always array.
   const rules = () => props.request.args?.rules ?? props.request.always ?? []
   // Rules like "git *" or "git log *" — strip the trailing wildcard for display.
@@ -40,22 +63,53 @@ export const PermissionDock: Component<{
   const label = (rule: string) => (rule === "*" ? "" : rule.replace(/ \*$/, ""))
   const command = () => {
     const cmd = props.request.args?.command
-    return typeof cmd === "string" ? cmd : undefined
+    if (typeof cmd !== "string") return undefined
+    // Normalize IDN/Unicode hostnames to punycode ASCII to prevent homograph attacks.
+    return normalizeUrls(cmd)
+  }
+  const text = (rule: string) => (command() ? label(rule) : describeRule(props.request.toolName, rule, language.t))
+  const external = () => props.request.toolName === "external_directory"
+  const sandboxEscalation = () => props.request.toolName === "sandbox_escalation"
+  const cmdDescription = () => {
+    const val = props.request.args?.description
+    return typeof val === "string" && val.length > 0 ? val : undefined
   }
   const description = createMemo(() =>
     command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
   )
 
+  // Dynamic MCP tools send their resolved input as metadata.mcpInput so the full
+  // request, including nested objects and arrays, is inspectable before approval.
+  const input = () => {
+    const value = props.request.args?.mcpInput
+    if (!value || typeof value !== "object") return undefined
+    if (Object.keys(value).length === 0) return undefined
+    return JSON.stringify(value, null, 2)
+  }
+
+  const diffs = createMemo(() => permissionDiffs(props.request))
+
   // Pre-populate toggle states from existing config rules so previously
   // approved/denied patterns show their saved state immediately.
   const saved = config().permission?.[props.request.toolName]
   const loadState = savedRuleStates(rules(), saved)
-  const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>(loadState)
+  // Saved rules are display-only; only explicit toggles can grant new permissions.
+  const [decisions, setDecisions] = createSignal<Record<number, RuleDecision>>({})
   const [expanded, setExpanded] = createSignal(rulesExpandedPreference)
+  // Rejecting is a two-step flow: Deny reveals an optional feedback field, then Reject confirms.
+  const [rejecting, setRejecting] = createSignal(false)
+  const [feedback, setFeedback] = createSignal("")
 
   let root!: HTMLDivElement
+  let feedbackRef: HTMLTextAreaElement | undefined
 
-  const hasRules = () => rules().length > 0
+  createEffect(() => {
+    void props.request.id
+    setRejecting(false)
+    setFeedback("")
+  })
+
+  const hasRules = () => rules().length > 0 && !skillShell()
 
   const toggleExpanded = () => {
     const next = !expanded()
@@ -77,13 +131,13 @@ export const PermissionDock: Component<{
   }
 
   const toggleRule = (index: number, decision: RuleDecision) => {
-    const current = decisions()[index]
+    const current = decisions()[index] ?? loadState[index] ?? "pending"
     const next = current === decision ? "pending" : decision
     const updated = { ...decisions(), [index]: next }
     setDecisions(updated)
   }
 
-  const decision = (index: number): RuleDecision => decisions()[index] ?? "pending"
+  const decision = (index: number): RuleDecision => decisions()[index] ?? loadState[index] ?? "pending"
 
   const approveTooltip = (index: number) =>
     decision(index) === "approved"
@@ -102,49 +156,114 @@ export const PermissionDock: Component<{
     return value
   }
 
-  const title = () =>
-    fromChild() ? language.t("notification.permission.titleSubagent") : language.t("notification.permission.title")
+  const title = () => {
+    if (sandboxEscalation()) return language.t("notification.permission.titleSandboxEscalation")
+    const skill = props.request.args?.skill
+    if (skillShell() && typeof skill === "string" && skill.length > 0)
+      // Escape the untrusted skill name so bidi/control chars can't reorder the header text.
+      return language.t("notification.permission.titleSkillShell", { skill: displaySkillCommand(skill) })
+    return fromChild()
+      ? language.t("notification.permission.titleSubagent")
+      : language.t("notification.permission.title")
+  }
 
   const focusPrompt = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
 
-  const onRoot = (e: KeyboardEvent) => {
-    const tag = (e.target as HTMLElement).tagName
+  const submit = (response: "once" | "reject") => {
+    if (props.responding) return
+    const { approved, denied } = collectRules()
+    props.onDecide(props.request.id, response, approved, denied, response === "reject" ? feedback() : undefined)
+    setRejecting(false)
+    setFeedback("")
+    focusPrompt()
+  }
 
-    // Escape always denies — even from focused buttons — and stopPropagation
-    // prevents ChatView's global Escape handler from calling session.abort().
-    if (e.key === "Escape") {
-      e.preventDefault()
-      e.stopPropagation()
-      if (props.responding) return
-      const { approved, denied } = collectRules()
-      props.onDecide("reject", approved, denied)
-      focusPrompt()
+  const startReject = () => {
+    if (props.responding) return
+    setRejecting(true)
+    requestAnimationFrame(() => feedbackRef?.focus())
+  }
+
+  const cancelReject = () => {
+    setRejecting(false)
+    setFeedback("")
+    focusPrompt()
+  }
+
+  const element = (e: KeyboardEvent) => (e.target instanceof Element ? e.target : undefined)
+
+  const control = (target: Element | undefined) =>
+    !!target?.closest(
+      "button, input, select, textarea, a[href], [contenteditable='true'], [role='button'], [role='menu'], [role='menuitem'], [role='listbox'], [role='option'], [role='combobox'], [role='textbox']",
+    )
+
+  const plain = (e: KeyboardEvent) => isEnterKeyCommitNotIme(e) && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey
+
+  const skip = (e: KeyboardEvent, target: Element | undefined) => {
+    const local = !!target?.closest("[data-component='permission-shortcuts']")
+    const prompt = !!target?.closest("textarea.prompt-input")
+    const modal = !!target?.closest("[data-component='dialog'], [data-component='dropdown-menu-content']")
+    if (local) return e.key === "Enter"
+    if (modal) return true
+    if (prompt) return false
+    return control(target)
+  }
+
+  const handle = (e: KeyboardEvent, response: "once" | "reject") => {
+    e.preventDefault()
+    e.stopPropagation()
+    submit(response)
+  }
+
+  const escape = (e: KeyboardEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (rejecting()) {
+      cancelReject()
       return
     }
+    startReject()
+  }
 
-    // Enter approves, but only when focus is on the dock wrapper itself.
-    // Skip buttons, inputs, and textareas so Enter activates the focused
-    // control (e.g. toggle/expand) instead of approving the permission.
-    if (tag === "BUTTON" || tag === "INPUT" || tag === "TEXTAREA") return
-    if (e.key === "Enter") {
-      e.preventDefault()
-      e.stopPropagation()
-      if (props.responding) return
-      const { approved, denied } = collectRules()
-      props.onDecide("once", approved, denied)
-      focusPrompt()
+  const onRoot = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      escape(e)
       return
     }
   }
 
-  // Auto-focus the dock when it appears so keyboard shortcuts work immediately
+  const onKey = (e: KeyboardEvent) => {
+    if (!document.hasFocus()) return
+    if (e.defaultPrevented) return
+    if (root.getClientRects().length === 0) return
+
+    const target = element(e)
+
+    // Preserve normal Enter behavior for controls inside the permission card,
+    // while allowing the shortcut when the prompt input still has focus.
+    if (skip(e, target)) return
+
+    if (e.key === "Escape") {
+      escape(e)
+      return
+    }
+
+    if (plain(e) && !rejecting()) {
+      handle(e, "once")
+      return
+    }
+  }
+
+  // Listen only while this permission is rendered. This keeps shortcuts working
+  // when the prompt input owns focus without forcing focus onto the dock.
   createEffect(() => {
     void props.request.id
-    requestAnimationFrame(() => root?.focus())
+    document.addEventListener("keydown", onKey, true)
+    onCleanup(() => document.removeEventListener("keydown", onKey, true))
   })
 
   return (
-    <div ref={root} tabIndex={-1} onKeyDown={onRoot} style={{ outline: "none" }}>
+    <div ref={root} data-component="permission-shortcuts" onKeyDown={onRoot}>
       <DockPrompt
         kind="permission"
         header={
@@ -179,36 +298,41 @@ export const PermissionDock: Component<{
                         <div data-slot="permission-rule-row" data-decision={decision(index())}>
                           <div data-slot="permission-rule-actions">
                             <Tooltip value={approveTooltip(index())} placement="top">
-                              <button
+                              <IconButton
+                                icon="check-small"
+                                variant="ghost"
+                                size="small"
                                 data-slot="permission-rule-toggle"
-                                data-variant="approve"
+                                tone="success"
                                 data-active={decision(index()) === "approved" ? "" : undefined}
+                                aria-pressed={decision(index()) === "approved"}
                                 disabled={props.responding}
                                 onClick={() => toggleRule(index(), "approved")}
                                 aria-label={approveTooltip(index())}
-                              >
-                                <Icon name="check-small" size="small" />
-                              </button>
+                              />
                             </Tooltip>
                             <Tooltip value={denyTooltip(index())} placement="top">
-                              <button
+                              <IconButton
+                                icon="close-small"
+                                variant="ghost"
+                                size="small"
                                 data-slot="permission-rule-toggle"
-                                data-variant="deny"
+                                tone="danger"
                                 data-active={decision(index()) === "denied" ? "" : undefined}
+                                aria-pressed={decision(index()) === "denied"}
                                 disabled={props.responding}
                                 onClick={() => toggleRule(index(), "denied")}
                                 aria-label={denyTooltip(index())}
-                              >
-                                <Icon name="close-small" size="small" />
-                              </button>
+                              />
                             </Tooltip>
                           </div>
-                          <code data-slot="permission-rule">
-                            {command()
-                              ? label(rule)
-                              : rule === "*"
-                                ? resolveLabel(props.request.toolName, language.t)
-                                : `${resolveLabel(props.request.toolName, language.t)} ${rule}`}
+                          <code data-slot="permission-rule" data-wrap={external() ? "" : undefined} title={text(rule)}>
+                            <Show when={external() && rule !== "*"} fallback={text(rule)}>
+                              <span data-slot="permission-rule-label">
+                                {language.t("ui.permission.toolLabel.externalDirectory")}{" "}
+                              </span>
+                              <span data-slot="permission-rule-path">{rule}</span>
+                            </Show>
                           </code>
                         </div>
                       )}
@@ -220,44 +344,135 @@ export const PermissionDock: Component<{
           </Show>
         }
       >
-        <Show when={command()}>{(cmd) => <PermissionCommand command={cmd()} />}</Show>
+        {/* Everything above the buttons scrolls: a long command or a large diff must never
+            push Allow/Deny out of the clipped chat view. */}
+        <div data-slot="permission-scroll">
+          {/* Pierre's virtualizer uses the scroll root's first child as its content
+              container, so keep all variable-height permission content in one wrapper. */}
+          <div data-slot="permission-scroll-content">
+            <Show
+              when={skillShellCommands().length > 0}
+              fallback={
+                <>
+                  <Show when={cmdDescription()}>
+                    {(desc) => (
+                      <div data-slot="permission-hint" data-wrap>
+                        {desc()}
+                      </div>
+                    )}
+                  </Show>
+                  <Show when={sandboxEscalation()}>
+                    <div data-slot="permission-hint">
+                      {language.t("notification.permission.descriptionSandboxEscalation")}
+                    </div>
+                  </Show>
+                  <Show when={command()}>
+                    {(cmd) => <PermissionCommand command={cmd()} plain={props.request.args.heredoc === true} />}
+                  </Show>
 
-        {(() => {
-          const desc = description()
-          if (!desc)
-            return !command() && toolDescription() ? <div data-slot="permission-hint">{toolDescription()}</div> : null
-          if (desc.kind === "single") return <div data-slot="permission-hint">{desc.text}</div>
-          return (
-            <div data-slot="permission-patterns">
-              <span data-slot="permission-patterns-title">{desc.title}</span>
-              <For each={desc.paths}>{(path) => <code data-slot="permission-pattern">{path}</code>}</For>
-            </div>
-          )
-        })()}
+                  {(() => {
+                    const desc = description()
+                    if (!desc)
+                      return !command() && toolDescription() ? (
+                        <div data-slot="permission-hint">{toolDescription()}</div>
+                      ) : null
+                    if (desc.kind === "single")
+                      return (
+                        <div
+                          data-slot="permission-hint"
+                          data-wrap={external() ? "" : undefined}
+                          title={external() ? desc.text : undefined}
+                        >
+                          {desc.text}
+                        </div>
+                      )
+                    return (
+                      <div data-slot="permission-patterns">
+                        <span data-slot="permission-patterns-title">{desc.title}</span>
+                        <For each={desc.paths}>{(path) => <code data-slot="permission-pattern">{path}</code>}</For>
+                      </div>
+                    )
+                  })()}
+                </>
+              }
+            >
+              {/* Verbatim commands (args.commands), control-char/bidi-escaped so the displayed command matches execution. */}
+              <For each={skillShellCommands()}>{(cmd) => <PermissionCommand command={displaySkillCommand(cmd)} />}</For>
+            </Show>
+
+            <Show when={input()}>
+              {(json) => (
+                <div data-slot="permission-input">
+                  <div data-slot="permission-input-label">{language.t("ui.messagePart.mcp.input")}</div>
+                  <div data-slot="permission-input-code">
+                    <code>{json()}</code>
+                  </div>
+                </div>
+              )}
+            </Show>
+
+            <Show when={diffs().length > 0}>
+              <div data-slot="permission-diffs" data-count={diffs().length}>
+                <For each={diffs()}>{(diff) => <PermissionDiff filediff={diff} />}</For>
+              </div>
+            </Show>
+          </div>
+        </div>
+
+        <Show when={rejecting()}>
+          <div data-slot="permission-feedback">
+            <textarea
+              ref={(el) => (feedbackRef = el)}
+              data-slot="permission-feedback-input"
+              value={feedback()}
+              placeholder={language.t("ui.permission.feedbackPlaceholder")}
+              onInput={(e) => setFeedback(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  cancelReject()
+                  return
+                }
+                // Enter confirms; Shift+Enter keeps the newline for multi-line feedback.
+                if (isEnterKeyCommitNotIme(e) && !e.shiftKey) {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  submit("reject")
+                }
+              }}
+            />
+            <div data-slot="permission-feedback-hint">{language.t("ui.permission.feedbackHint")}</div>
+          </div>
+        </Show>
 
         <div data-slot="permission-actions">
-          <Button
-            variant="primary"
-            size="small"
-            onClick={() => {
-              const { approved, denied } = collectRules()
-              props.onDecide("once", approved, denied)
-            }}
-            disabled={props.responding}
+          <Show
+            when={rejecting()}
+            fallback={
+              <>
+                <Button variant="primary" size="small" onClick={() => submit("once")} disabled={props.responding}>
+                  {language.t("ui.permission.allowOnce")}
+                </Button>
+                <Button variant="ghost" size="small" onClick={startReject} disabled={props.responding}>
+                  {language.t("ui.permission.deny")}
+                </Button>
+              </>
+            }
           >
-            {language.t("ui.permission.run")}
-          </Button>
-          <Button
-            variant="ghost"
-            size="small"
-            onClick={() => {
-              const { approved, denied } = collectRules()
-              props.onDecide("reject", approved, denied)
-            }}
-            disabled={props.responding}
-          >
-            {language.t("ui.permission.deny")}
-          </Button>
+            <Button
+              variant="primary"
+              size="small"
+              data-slot="permission-reject-confirm"
+              onClick={() => submit("reject")}
+              disabled={props.responding}
+            >
+              {language.t("ui.permission.reject")}
+            </Button>
+            <Button variant="ghost" size="small" onClick={cancelReject} disabled={props.responding}>
+              {language.t("ui.common.cancel")}
+            </Button>
+          </Show>
         </div>
       </DockPrompt>
     </div>

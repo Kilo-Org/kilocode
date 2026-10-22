@@ -14,13 +14,14 @@ Kilo's **Code Reviews** feature automatically analyzes your pull or merge reques
 - Automatic detection of bugs, security risks, and anti-patterns
 - Deep reasoning over changed files, diffs, and repo context
 - Customizable review strictness and focus areas
+- Repository-owned review guidance through `REVIEW.md`, including sub-agent usage
 
 ## Supported Platforms
 
-| Platform | Integration Type | Details                        |
-| -------- | ---------------- | ------------------------------ |
-| GitHub   | GitHub App       | [GitHub Setup Guide](./github) |
-| GitLab   | OAuth or PAT     | [GitLab Setup Guide](./gitlab) |
+| Platform | Integration Type | Details |
+|---|---|---|
+| GitHub | GitHub App | [GitHub Setup Guide](./github) |
+| GitLab | OAuth or PAT | [GitLab Setup Guide](./gitlab) |
 
 ## Prerequisites
 
@@ -36,6 +37,24 @@ Before enabling Code Reviews:
     - [Kilo Discord](https://discord.gg/hZnd57qN)
 - **Kilo Code credits are still used** when the agent performs model reasoning during a review.
 
+## Concurrent reviews
+
+Cloud Code Reviews limit how many reviews one owner can run at the same time. Reviews past that limit wait, then start when a slot opens. Local `/review` commands do not count toward this limit.
+
+The limit is per owner. For a personal account, it follows credit balance, not whether the selected model is free.
+
+{% callout type="note" %}
+A funded personal account running a free model still gets 3 concurrent reviews.
+{% /callout %}
+
+| Owner | Concurrent reviews |
+|---|---|
+| Personal account, credit balance of $5 or less | 1. Reviews run one at a time. |
+| Personal account, credit balance above $5 | Up to 3 |
+| Organization | Up to 20 |
+
+Organization reviews use the organization as the owner. A member's personal balance does not set the organization limit.
+
 ## Getting Started
 
 1. Go to the **Code Reviews** page in your [personal dashboard](https://app.kilo.ai/profile) or [organization dashboard](https://app.kilo.ai/organizations).
@@ -44,13 +63,72 @@ Before enabling Code Reviews:
 4. Select a **Review Style** — Strict, Balanced, or Lenient.
 5. Choose which **repositories** should receive automatic reviews.
 6. Optionally select **Focus Areas** such as security, performance, bugs, style, testing, or documentation.
-7. Set a **maximum review time** (5–30 minutes).
-8. Add **custom instructions** to shape how the agent reviews your code.
+7. Optionally enable **Use REVIEW.md** and add a `REVIEW.md` file at the repository root to shape how the agent reviews your code.
 
 Once configured, the Review Agent runs automatically on PR/MR events. For platform-specific setup, see:
 
 - [GitHub Code Reviews](./github)
 - [GitLab Code Reviews](./gitlab)
+
+## Repository Guidance with REVIEW.md
+
+Use `REVIEW.md` when review policy should live with the repository instead of only in the Kilo dashboard. This is the best place to document domain-specific rules, severity calibration, files to skip, verification expectations, summary style, and how Kilo should use sub-agents.
+
+To use it:
+
+1. Create `REVIEW.md` at the repository root.
+2. Commit it to the base branch used by pull requests or merge requests.
+3. Open Code Reviews settings in the [Kilo web app](https://app.kilo.ai/code-reviews) and enable **Use REVIEW.md**.
+4. Save the configuration and run a review.
+
+Kilo reads `REVIEW.md` from the PR/MR base branch, not the feature branch. That prevents an unreviewed change from rewriting the review policy used to evaluate itself. If the file is disabled, missing, empty, or unreadable, Kilo falls back to built-in guidance. If it is longer than 10,000 characters, Kilo truncates it and notes that in the review summary footer.
+
+### Default Sub-Agent Usage
+
+By default, Code Reviews uses sub-agents only when they materially improve coverage. After reading the diff, the reviewer estimates changed file count and changed lines, then chooses the largest tier triggered by either signal.
+
+| Diff size | Default behavior | Why |
+|---|---|---|
+| Tiny: up to 2 files and under 100 changed lines | Use 0 sub-agents and review directly | The coordination cost is higher than the coverage benefit for very small changes. |
+| Small: 3-5 files or 100-300 changed lines | Use at most 1 sub-agent for a distinct risky area | One focused second pass can help without creating duplicate or low-signal findings. |
+| Medium and larger: 6+ files or more than 300 changed lines | Use the full 6 sub-agents, sharded by independent areas | Larger diffs benefit from parallel coverage across files, domains, and risk categories. |
+
+The reviewer does not spawn sub-agents for a single-file or straightforward typo/config change. Sub-agents are read-only and do not post comments themselves. They return findings with path, line, severity, and rationale. The main reviewer remains responsible for verifying findings, removing duplicates, checking that inline comments target valid diff lines, and posting the final comments and summary.
+
+#### Changing Sub-Agent Behavior
+
+`REVIEW.md` can replace the default sub-agent guidance. Use it to change both how many sub-agents Kilo should use and what each one should inspect.
+
+Good sub-agent guidance is explicit about:
+
+- When to use 0 sub-agents.
+- When to use 1-2 targeted sub-agents.
+- When to use the full 6 sub-agents.
+- Which areas each sub-agent should own.
+- What each sub-agent should return to the main reviewer.
+- Which hard constraints still matter, such as read-only review and no direct commenting by sub-agents.
+
+Example `REVIEW.md` section:
+
+```markdown
+## Sub-agent usage
+
+Use 0 sub-agents for docs-only, formatting-only, dependency-lockfile-only, or single-file typo changes.
+
+Use 1 sub-agent for focused changes under 300 changed lines when the diff touches one risky area, such as authentication, billing, database migrations, or security-sensitive parsing.
+
+Use 3 sub-agents when a PR spans API, data model, and UI changes:
+
+1. API/data reviewer: check request validation, authorization, persistence, and migration safety.
+2. UI reviewer: check user-visible behavior, accessibility, empty states, and error states.
+3. Test reviewer: check that tests cover the observable behavior and important edge cases.
+
+Use the full 6 sub-agents only for large cross-cutting changes, security-sensitive work, or changes above 800 changed lines. Split them by independent domains rather than asking every sub-agent to review the same files.
+
+Each sub-agent must stay read-only, must not post comments, and must return findings with path, line, severity, rationale, and confidence. The main reviewer must verify every finding before posting it.
+```
+
+`REVIEW.md` can change review policy and sub-agent usage, but it cannot override Kilo's hard safety constraints, read-only mode, non-interactive execution, platform API instructions, diff-line rules, duplicate-comment rules, or output formatting requirements.
 
 ## Local Code Reviews
 
@@ -59,25 +137,25 @@ Code Reviewer is also available locally. This is valuable for developers who wan
 {% tabs %}
 {% tab label="VSCode" %}
 
-Two slash commands are available for local code reviews:
+Use `/review` for all local code reviews:
 
-- **`/local-review`** — Review all changes on your current branch vs the base branch
-- **`/local-review-uncommitted`** — Review uncommitted changes (staged + unstaged)
+- **`/review`** — Review uncommitted changes (staged, unstaged, and untracked) when run without arguments
+- **`/review uncommitted [guidance]`** — Review uncommitted changes with optional guidance
+- **`/review branch [base] [guidance]`** — Review your current branch vs. its detected or specified base, with optional guidance
+- **`/review worktree [guidance]`** - In an Agent Manager worktree session, review committed, staged, unstaged, and untracked changes against the recorded parent branch
+- **`/review <commit-hash>`** — Review a specific commit
+- **`/review <PR URL or number>`** — Review a pull request
 
 {% /tab %}
 {% tab label="CLI" %}
 
-Two slash commands are available for local code reviews:
+Use `/review` for all local code reviews:
 
-- **`/local-review`** — Review all changes on your current branch vs the base branch
-- **`/local-review-uncommitted`** — Review uncommitted changes (staged + unstaged)
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-Select 'Review' from the mode dropdown after making local changes, and click 'Send' for AI-powered feedback and suggestions.
-
-{% image src="/docs/img/code-reviewer/review-mode.png" alt="VS Code interface showing Review option in mode dropdown" width="800" caption="Review Mode" /%}
+- **`/review`** — Review uncommitted changes (staged, unstaged, and untracked) when run without arguments
+- **`/review uncommitted [guidance]`** — Review uncommitted changes with optional guidance
+- **`/review branch [base] [guidance]`** — Review your current branch vs. its detected or specified base, with optional guidance
+- **`/review <commit-hash>`** — Review a specific commit
+- **`/review <PR URL or number>`** — Review a pull request
 
 {% /tab %}
 {% /tabs %}
@@ -94,10 +172,13 @@ When a pull request or merge request is opened or updated:
    - Summary findings
    - Suggested fixes
    - Risk and severity tagging
-5. Reviews respect the **maximum time limit** you set.
-6. Only repositories you’ve selected will trigger automatic analysis.
+5. Only repositories you’ve selected will trigger automatic analysis.
 
 Reviews are posted directly in your platform (GitHub or GitLab) as if coming from a team reviewer.
+
+{% callout type="info" title="Bot-generated PRs are ignored by default" %}
+Kilo does not automatically review pull or merge requests opened by bots, such as Dependabot, Renovate, or other automation accounts. This keeps review credits and notifications focused on human-authored changes.
+{% /callout %}
 
 ## Review Styles
 
@@ -171,8 +252,10 @@ The Review Agent is ideal for:
 
 ## Limitations and Guidance
 
-- Reviews can run for **up to 30 minutes** depending on your setting.
+- Cloud reviews are limited per owner. See [Concurrent reviews](#concurrent-reviews).
+- Reviews are subject to a fixed time limit — consider splitting very large PRs into smaller ones.
 - The agent reviews **only the changed files**, not the entire repository.
-- Some highly dynamic or domain-specific code may require additional context in custom instructions.
+- Some highly dynamic or domain-specific code may require additional context in `REVIEW.md`.
 - The agent will only run on **selected repositories**.
 - During beta, review capacity may be throttled for extremely large PRs.
+- PRs/MRs opened by bots (e.g. Dependabot, Renovate) are ignored by default.

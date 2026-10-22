@@ -11,24 +11,24 @@
   }
 
   [data-slot="message-author"] {
-    font-size: 13px;
+    font-size: var(--font-size-base);
     font-weight: 500;
     color: var(--text-strong);
   }
 
   [data-slot="message-timestamp"] {
     color: var(--text-weak);
-    font-size: 11px;
+    font-size: var(--font-size-small);
   }
 
   [data-slot="message-cost"] {
     color: var(--text-weak);
-    font-size: 11px;
+    font-size: var(--font-size-small);
     margin-left: auto;
   }
 
   [data-slot="message-content"] {
-    font-size: 13px;
+    font-size: var(--font-size-base);
     line-height: 1.6;
     color: var(--text-base);
   }

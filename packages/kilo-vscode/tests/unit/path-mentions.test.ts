@@ -1,5 +1,11 @@
 import { describe, it, expect } from "bun:test"
-import { convertToMentionPath, extractDropPaths } from "../../webview-ui/src/utils/path-mentions"
+import { convertToMentionPath, extractDropPaths, insertPathMentions } from "../../webview-ui/src/utils/path-mentions"
+
+it("inserts dropped mentions without replacing following text", () => {
+  expect(insertPathMentions("ab", 1, ["x", "y z"])).toEqual({ text: "a@x @y z b", pos: 9 })
+  expect(insertPathMentions("a ", 1, ["x"])).toEqual({ text: "a@x  ", pos: 4 })
+  expect(insertPathMentions("", 0, [])).toEqual({ text: " ", pos: 1 })
+})
 
 describe("convertToMentionPath", () => {
   it("converts an absolute path under cwd to a relative path", () => {

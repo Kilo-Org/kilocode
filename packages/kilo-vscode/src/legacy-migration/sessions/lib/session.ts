@@ -7,10 +7,11 @@ export function createSession(
   item: LegacyHistoryItem | undefined,
   projectID: string,
   dir: string,
+  key = id,
 ): NonNullable<Session["body"]> {
   const session = makeSession()
 
-  session.id = createSessionID(id)
+  session.id = createSessionID(key)
 
   session.projectID = projectID
 

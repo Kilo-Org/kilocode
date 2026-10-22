@@ -1,5 +1,5 @@
 import type { LanguageModel, Provider, Provider as SDK } from "ai"
-import type { LanguageModelV2 } from "@openrouter/ai-sdk-provider"
+import type { LanguageModelV3 } from "@openrouter/ai-sdk-provider"
 
 // ============================================================================
 // Authentication Types
@@ -27,10 +27,19 @@ export interface KilocodeProfile {
   email: string
   name?: string
   organizations?: Organization[]
+  selectedOrganizationId?: string
+  hasPersonalAccount?: boolean
 }
 
 export interface KilocodeBalance {
   balance: number
+}
+
+export interface KiloPassState {
+  currentPeriodBaseCreditsUsd: number
+  currentPeriodUsageUsd: number
+  currentPeriodBonusCreditsUsd: number
+  nextBillingAt?: string | null
 }
 
 export interface PollOptions<T> {
@@ -74,9 +83,9 @@ export interface KiloProviderOptions {
   openRouterSpecificProvider?: string
 
   /**
-   * Base URL for the KiloCode API
-   * Can be overridden by KILO_API_URL environment variable
-   * @default "https://api.kilo.ai"
+   * Base URL for Kilo Gateway traffic
+   * Defaults to KILO_AI_GATEWAY_URL, or `${KILO_API_URL}/api/gateway/v1` when only KILO_API_URL is set
+   * @default "https://ai-gateway.kilo.ai/api/v1"
    */
   baseURL?: string
 
@@ -94,6 +103,11 @@ export interface KiloProviderOptions {
    * Provider name for identification
    */
   name?: string
+
+  /**
+   * Data collection preference for upstream provider routing
+   */
+  dataCollection?: "allow" | "deny"
 
   /**
    * Custom fetch function
@@ -138,7 +152,7 @@ export interface CustomLoaderResult {
   /**
    * Custom function to get a model instance
    */
-  getModel?: (sdk: SDK, modelID: string, options?: Record<string, any>) => Promise<LanguageModelV2>
+  getModel?: (sdk: SDK, modelID: string, options?: Record<string, any>) => Promise<LanguageModelV3>
 
   /**
    * Options to merge with provider configuration
@@ -165,5 +179,5 @@ export type KiloProvider = Provider & {
   openaiCompatible(modelId: string): LanguageModel
 }
 
-// Re-export LanguageModelV2 for convenience
-export type { LanguageModelV2 }
+// Re-export LanguageModelV3 for convenience
+export type { LanguageModelV3 }

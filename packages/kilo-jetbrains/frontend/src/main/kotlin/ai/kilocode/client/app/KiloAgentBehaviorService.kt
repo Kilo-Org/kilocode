@@ -1,0 +1,116 @@
+@file:Suppress("UnstableApiUsage")
+
+package ai.kilocode.client.app
+
+import ai.kilocode.log.KiloLog
+import ai.kilocode.rpc.KiloAgentBehaviorRpcApi
+import ai.kilocode.rpc.dto.AgentDetailDto
+import ai.kilocode.rpc.dto.AgentCreateDto
+import ai.kilocode.rpc.dto.CommandDto
+import ai.kilocode.rpc.dto.CommandFileDto
+import ai.kilocode.rpc.dto.McpAuthEventDto
+import ai.kilocode.rpc.dto.McpAuthResultDto
+import ai.kilocode.rpc.dto.McpConfigDto
+import ai.kilocode.rpc.dto.McpServerConfigDto
+import ai.kilocode.rpc.dto.McpStatusDto
+import ai.kilocode.rpc.dto.SkillDto
+import com.intellij.openapi.components.Service
+import fleet.rpc.client.durable
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
+
+@Service(Service.Level.APP)
+class KiloAgentBehaviorService internal constructor(
+    private val cs: CoroutineScope,
+    private val rpc: KiloAgentBehaviorRpcApi?,
+) {
+    constructor(cs: CoroutineScope) : this(cs, null)
+
+    companion object {
+        private val LOG = KiloLog.create(KiloAgentBehaviorService::class.java)
+    }
+
+    private suspend fun <T> call(block: suspend KiloAgentBehaviorRpcApi.() -> T): T {
+        val api = rpc
+        return if (api != null) block(api) else durable { block(KiloAgentBehaviorRpcApi.getInstance()) }
+    }
+
+    suspend fun agents(directory: String): List<AgentDetailDto> = safe(emptyList()) { call { agents(directory) } }
+
+    /**
+     * Re-reads the agent list after a write, keeping [fallback] when the read fails or comes back
+     * empty. Saving config can bounce the CLI, and the built-in agents mean an empty list is always a
+     * failed read rather than a real state, so returning one would blank the settings list.
+     */
+    suspend fun refreshAgents(directory: String, fallback: List<AgentDetailDto>): List<AgentDetailDto> =
+        safe(fallback) { call { agents(directory) } }.ifEmpty { fallback }
+
+    suspend fun loadSkills(directory: String): List<SkillDto> = call { skills(directory) }
+
+    suspend fun refreshSkills(directory: String, fallback: List<SkillDto>): List<SkillDto> = safe(fallback) { call { skills(directory) } }
+
+    suspend fun commands(directory: String): List<CommandDto> = safe(emptyList()) { call { commands(directory) } }
+
+    suspend fun loadCommandFiles(directory: String): List<CommandFileDto> = call { commandFiles(directory) }
+
+    suspend fun refreshCommandFiles(directory: String, fallback: List<CommandFileDto>): List<CommandFileDto> =
+        safe(fallback) { call { commandFiles(directory) } }
+
+    /**
+     * Loads MCP runtime status for [directory] as a strict read: a failed or cancelled RPC throws
+     * so callers can keep their last-known state instead of treating the failure as "no servers".
+     */
+    suspend fun mcpStatus(directory: String): List<McpStatusDto> = call { mcpStatus(directory) }
+
+    suspend fun mcpConfig(directory: String): Map<String, McpServerConfigDto> = safe(emptyMap()) { call { mcpConfig(directory) } }
+
+    suspend fun saveMcp(directory: String, name: String, scope: String, config: McpConfigDto?): Boolean =
+        safe(false) { call { saveMcp(directory, name, scope, config) } }
+
+    suspend fun removeSkill(directory: String, location: String): Boolean = safe(false) { call { removeSkill(directory, location) } }
+
+    suspend fun reloadSkills(directory: String): Boolean = safe(false) { call { reloadSkills(directory) } }
+
+    suspend fun saveSkills(directory: String, edits: Map<String, String>): Boolean =
+        safe(false) { call { saveSkills(directory, edits) } }
+
+    suspend fun removeCommand(directory: String, location: String): Boolean = safe(false) { call { removeCommand(directory, location) } }
+
+    suspend fun reloadCommands(directory: String): Boolean = safe(false) { call { reloadCommands(directory) } }
+
+    suspend fun saveCommands(directory: String, edits: Map<String, String>): Boolean =
+        safe(false) { call { saveCommands(directory, edits) } }
+
+    suspend fun removeAgent(directory: String, name: String): Boolean = safe(false) { call { removeAgent(directory, name) } }
+
+    suspend fun createAgent(directory: String, input: AgentCreateDto): Boolean = safe(false) { call { createAgent(directory, input) } }
+
+    suspend fun mcpConnect(directory: String, name: String): Boolean = safe(false) { call { mcpConnect(directory, name) } }
+
+    suspend fun mcpDisconnect(directory: String, name: String): Boolean = safe(false) { call { mcpDisconnect(directory, name) } }
+
+    suspend fun mcpAuthenticate(directory: String, name: String): McpAuthResultDto =
+        safe(McpAuthResultDto("failed", "RPC failed")) { call { mcpAuthenticate(directory, name) } }
+
+    suspend fun mcpAuthCancel(directory: String, name: String): Boolean =
+        safe(false) { call { mcpAuthCancel(directory, name) } }
+
+    suspend fun mcpAuthRemove(directory: String, name: String): Boolean =
+        safe(false) { call { mcpAuthRemove(directory, name) } }
+
+    suspend fun mcpAuthEvents(): Flow<McpAuthEventDto> = call { mcpAuthEvents() }
+
+    suspend fun claudeCodeCompat(): Boolean = safe(false) { call { claudeCodeCompat() } }
+
+    suspend fun setClaudeCodeCompat(value: Boolean): Boolean = safe(false) { call { setClaudeCodeCompat(value) } }
+
+    private suspend fun <T> safe(fallback: T, block: suspend () -> T): T = try {
+        block()
+    } catch (err: CancellationException) {
+        throw err
+    } catch (e: Exception) {
+        LOG.warn("agent behavior RPC failed", e)
+        fallback
+    }
+}

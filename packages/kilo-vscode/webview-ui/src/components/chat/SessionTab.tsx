@@ -1,0 +1,113 @@
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Icon } from "@kilocode/kilo-ui/icon"
+import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { Show, type Component, type JSX } from "solid-js"
+import { ActivityIcon } from "../shared/ActivityIcon"
+import { description, type Activity } from "../../utils/session-activity"
+import { useLanguage } from "../../context/language"
+
+export const SessionTab: Component<{
+  title: string
+  active: boolean
+  pinned?: boolean
+  pinnedLabel?: string
+  state: Activity
+  stateLabel: string
+  closeTitle: string
+  closeLabel: string
+  keybind?: string
+  closeKeybind?: string
+  role?: "tab"
+  selected?: boolean
+  tabIndex?: number
+  closeTabIndex?: number
+  keyShortcuts?: string
+  onSelect: () => void
+  onMiddleClick?: (event: MouseEvent) => void
+  onKeyDown?: JSX.EventHandlerUnion<HTMLDivElement, KeyboardEvent>
+  onClose: () => void
+  onTogglePin?: () => void
+}> = (props) => {
+  const { t } = useLanguage()
+  const hint = () => (props.onTogglePin ? t("session.tabs.pinHint") : "")
+  const tooltip = () => {
+    const base = props.state === "idle" ? props.title : `${props.title}: ${t(description(props.state))}`
+    return hint() ? `${base} · ${hint()}` : base
+  }
+  const click = (event: MouseEvent) => {
+    if (event.shiftKey && props.onTogglePin) {
+      event.preventDefault()
+      props.onTogglePin()
+      return
+    }
+    props.onSelect()
+  }
+  return (
+    <div
+      class={`am-tab ${props.active ? "am-tab-active" : ""}`}
+      data-activity={props.state}
+      data-pinned={props.pinned ? "true" : undefined}
+    >
+      <div
+        class="am-tab-target"
+        role={props.role}
+        aria-selected={props.selected}
+        aria-keyshortcuts={props.keyShortcuts}
+        tabIndex={props.tabIndex}
+        onClick={click}
+        onMouseDown={props.onMiddleClick}
+        onKeyDown={props.onKeyDown}
+      >
+        <TooltipKeybind
+          title={tooltip()}
+          keybind={props.keybind ?? ""}
+          placement="bottom"
+          gutter={8}
+          class="am-tab-tooltip"
+          openDelay={0}
+        >
+          <span class="am-tab-title">
+            <Show when={props.state !== "idle"}>
+              <span class="am-tab-icon" data-activity={props.state} aria-label={props.stateLabel}>
+                <ActivityIcon state={props.state} />
+              </span>
+            </Show>
+            <Show when={props.pinned}>
+              <span class="am-tab-pin" aria-label={props.pinnedLabel}>
+                <Icon name="pin-filled" size="small" />
+              </span>
+            </Show>
+            <span class="am-tab-label">{props.title}</span>
+          </span>
+        </TooltipKeybind>
+      </div>
+      {/* A pinned tab has no close button. The click that needed guarding is the
+          one on a control already sitting under the cursor, so the control is
+          removed rather than replaced. Close and Unpin live on the context
+          menu; Shift+click on the tab also toggles the pin. */}
+      <Show when={!props.pinned}>
+        <TooltipKeybind
+          title={props.closeTitle}
+          keybind={props.closeKeybind ?? ""}
+          placement="top"
+          gutter={8}
+          class="am-tab-close-wrap"
+          openDelay={0}
+        >
+          <IconButton
+            icon="close-small"
+            size="small"
+            variant="ghost"
+            aria-label={props.closeLabel}
+            tabIndex={props.closeTabIndex}
+            class="am-tab-close"
+            onClick={(event) => {
+              event.stopPropagation()
+              props.onClose()
+            }}
+          />
+        </TooltipKeybind>
+      </Show>
+    </div>
+  )
+}
