@@ -287,9 +287,19 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         return
       }
 
-      const profile = token ? yield* KiloProfile.get(api, token).pipe(Effect.option) : Option.none()
+      const fetchedProfile: { profile: Option.Option<KiloProfile.Info>; unauthorized: boolean } = token
+        ? yield* KiloProfile.get(api, token).pipe(
+            Effect.map((profile) => ({ profile: Option.some(profile), unauthorized: false })),
+            Effect.catch((error) =>
+              Effect.succeed({ profile: Option.none<KiloProfile.Info>(), unauthorized: error.message === "Invalid token" }),
+            ),
+          )
+        : { profile: Option.none<KiloProfile.Info>(), unauthorized: false }
+      const profile = fetchedProfile.profile
       if (targetEpoch !== epoch) return
-      if (current && !organizationID && Option.isNone(profile)) {
+      // An outage leaves the team-only status unknown, so fail closed. A rejected token keeps v1's catalog 401
+      // fallback to the anonymous free catalog rather than hiding free models from an expired credential.
+      if (current && !organizationID && Option.isNone(profile) && !fetchedProfile.unauthorized) {
         catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
         return
       }
