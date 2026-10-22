@@ -82,20 +82,17 @@ export function transformSseData(
     (payload.type === undefined &&
       payload.choices === undefined &&
       payload.id === undefined &&
-      payload.code !== undefined &&
-      typeof payload.message === "string")
+      typeof payload.message === "string" &&
+      (payload.code !== undefined || payload.message.trim().startsWith("{")))
   if (isErrorFrame) {
     const parsed = KiloErrors.parse(payload)
     if (!parsed) return rawData
     return JSON.stringify({
       ...payload,
       type: "error",
-      error: {
-        ...(isRecord(payload.error) ? payload.error : {}),
-        code: parsed.code,
-        type: parsed.code,
-        message: parsed.message,
-      },
+      // Anthropic reserves `message` for a message object, not a serialized error envelope.
+      message: typeof payload.message === "string" ? undefined : payload.message,
+      error: KiloErrors.toError(parsed),
     })
   }
 

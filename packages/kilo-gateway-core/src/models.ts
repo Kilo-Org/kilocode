@@ -167,7 +167,7 @@ export { EmbeddingCatalog } from "./embedding-catalog.js"
 const decodeEmbeddingCatalog = Schema.decodeUnknownOption(EmbeddingCatalog)
 
 export interface Failure {
-  readonly kind: "unauthorized" | "network" | "schema" | "http"
+  readonly kind: "unauthorized" | "network" | "schema" | "http" | "organization_missing"
   readonly status?: number
   readonly retryAfter?: number
 }

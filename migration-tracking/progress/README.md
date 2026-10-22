@@ -21,13 +21,13 @@ Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only
 
 Landed by rung, for patch cells closed by a done-proof: 20 plugin, 3 host, 0 seam, 0 patch.
 
-Ratchets: 9 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config/discovery`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 36 shared patches by rung: 20 seam, 16 patch (`script/upstream/shared-patches.json`).
+Ratchets: 12 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config/discovery`, `@opencode/core/effect/app-node-platform`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/rpc`, `@opencode/core/session/runner/model`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 36 shared patches by rung: 20 seam, 16 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
 ![Progress history](history.svg)
 
-One point per day from the committed `progress.json` on the first-parent history, plus the current state.
+One point per day from the committed `progress.json` on v2's first-parent history, plus the current state.
 
 | Date | Done | Total | % |
 |---|---:|---:|---:|
@@ -35,6 +35,7 @@ One point per day from the committed `progress.json` on the first-parent history
 | 2026-10-19 | 87 | 9829 | 0.9% |
 | 2026-10-20 | 87 | 9829 | 0.9% |
 | 2026-10-21 | 90 | 9829 | 0.9% |
+| 2026-10-22 | 92 | 9829 | 0.9% |
 | now | 92 | 9829 | 0.9% |
 
 ## Features

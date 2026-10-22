@@ -121,3 +121,15 @@ test(
   }),
   30_000,
 )
+
+test(
+  "catalog failure data crosses the generated client without private scope details",
+  boot({ KILO_API_KEY: "private-fixture-token", KILO_ORG_ID: "private-missing-team" }, async (gateway) => {
+    await expect(gateway.rpc.models({}, gateway.options)).rejects.toMatchObject({
+      type: "failed",
+      message: "The selected Kilo team is no longer available. Select another team or clear the team selection.",
+      data: { kind: "organization_missing" },
+    })
+  }),
+  30_000,
+)
