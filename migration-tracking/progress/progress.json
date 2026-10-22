@@ -4,19 +4,19 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 90,
+    "done": 93,
     "total": 9829,
     "percent": 0.9,
     "dropped": 25,
     "kinds": [
       {
         "kind": "module",
-        "done": 31,
+        "done": 32,
         "total": 3547
       },
       {
         "kind": "api",
-        "done": 0,
+        "done": 1,
         "total": 39
       },
       {
@@ -26,7 +26,7 @@
       },
       {
         "kind": "test",
-        "done": 21,
+        "done": 22,
         "total": 2798
       }
     ],
@@ -360,12 +360,12 @@
     },
     {
       "feature": "cli",
-      "done": 0,
+      "done": 2,
       "total": 148,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 1,
           "total": 72
         },
         "api": {
@@ -377,7 +377,7 @@
           "total": 25
         },
         "test": {
-          "done": 0,
+          "done": 1,
           "total": 51
         }
       }
@@ -1117,7 +1117,7 @@
     },
     {
       "feature": "marketplace",
-      "done": 0,
+      "done": 1,
       "total": 20,
       "dropped": 0,
       "kinds": {
@@ -1126,7 +1126,7 @@
           "total": 10
         },
         "api": {
-          "done": 0,
+          "done": 1,
           "total": 3
         },
         "patch": {
@@ -6104,6 +6104,7 @@
     "patch:unattributed:config:8cdbdec70393": "host"
   },
   "done": [
+    "api:GET /kilocode/marketplace",
     "module:packages/kilo-gateway/src/api/constants.ts",
     "module:packages/kilo-gateway/src/api/embedding-models.ts",
     "module:packages/kilo-gateway/src/api/kilo-pass.ts",
@@ -6147,11 +6148,13 @@
     "module:packages/kilo-gateway/test/responses.test.ts",
     "module:packages/opencode/src/kilocode/agent/index.ts",
     "module:packages/opencode/src/kilocode/balance-refresh.ts",
+    "module:packages/opencode/src/kilocode/commands.ts",
     "module:packages/opencode/src/kilocode/kilo-errors.ts",
     "module:packages/opencode/test/kilocode/agent-global-config-dirs.test.ts",
     "module:packages/opencode/test/kilocode/agent-permission-overrides.test.ts",
     "module:packages/opencode/test/kilocode/agent-skill-permissions.test.ts",
     "module:packages/opencode/test/kilocode/ask-agent-permissions.test.ts",
+    "module:packages/opencode/test/kilocode/cli/error.test.ts",
     "module:packages/opencode/test/kilocode/kilo-errors.test.ts",
     "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts",
     "patch:agent:2e5632e7bfc6",

@@ -8,14 +8,14 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**90 / 9829 cells done (0.9%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
+**93 / 9829 cells done (0.9%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 31 | 3547 | 0.9% |
-| api | 0 | 39 | 0% |
+| module | 32 | 3547 | 0.9% |
+| api | 1 | 39 | 2.6% |
 | patch | 38 | 3445 | 1.1% |
-| test | 21 | 2798 | 0.8% |
+| test | 22 | 2798 | 0.8% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
@@ -34,8 +34,8 @@ One point per day from the committed `progress.json` on the first-parent history
 | 2026-10-16 | 12 | 9854 | 0.1% |
 | 2026-10-19 | 87 | 9829 | 0.9% |
 | 2026-10-20 | 87 | 9829 | 0.9% |
-| 2026-10-21 | 89 | 9829 | 0.9% |
-| now | 90 | 9829 | 0.9% |
+| 2026-10-21 | 90 | 9829 | 0.9% |
+| now | 93 | 9829 | 0.9% |
 
 ## Features
 
@@ -55,7 +55,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | branch-name | 0/1 |  |  | 0/1 | 0/2 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | caffeination | 0/1 |  |  |  | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | cleanup |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| cli | 0/72 |  | 0/25 | 0/51 | 0/148 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| cli | 1/72 |  | 0/25 | 1/51 | 2/148 | 1.4% | `░░░░░░░░░░░░░░░░` |  |
 | cloud | 0/16 |  | 0/2 | 0/9 | 0/27 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | command | 0/3 | 0/2 |  | 0/3 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | commit-message | 0/4 |  |  | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -85,7 +85,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | instance | 0/3 |  | 0/8 | 0/8 | 0/19 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | jetbrains | 0/800 |  |  | 0/432 | 0/1232 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | markdown | 0/2 |  |  | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| marketplace | 0/10 | 0/3 | 0/1 | 0/6 | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| marketplace | 0/10 | 1/3 | 0/1 | 0/6 | 1/20 | 5% | `█░░░░░░░░░░░░░░░` |  |
 | mcp | 0/7 |  | 0/7 | 0/9 | 0/23 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | memory | 0/59 |  | 0/2 | 0/14 | 0/75 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | mermaid | 0/7 |  | 0/1 | 0/2 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
