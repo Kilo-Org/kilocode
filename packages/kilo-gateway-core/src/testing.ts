@@ -15,6 +15,7 @@ export function fixture() {
     pollStatus: 200,
     approved: { status: "approved", token: "fixture-token", userEmail: "device@example.test" } as unknown,
     profileStatus: 200,
+    profilePending: undefined as Promise<void> | undefined,
     profile: {
       user: { email: "profile@example.test", name: "Fixture" },
       organizations: [
@@ -291,7 +292,12 @@ export function fixture() {
         if (state.pending-- > 0) return new Response(null, { status: 202 })
         return Response.json(state.approved, { status: state.pollStatus })
       }
-      if (path === "/api/profile") return Response.json(state.profile, { status: state.profileStatus })
+      if (path === "/api/profile") {
+        const pending = state.profilePending
+        state.profilePending = undefined
+        if (pending) await pending
+        return Response.json(state.profile, { status: state.profileStatus })
+      }
       if (
         path === "/api/openrouter/models" ||
         path === "/api/gateway/models" ||

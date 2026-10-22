@@ -312,6 +312,8 @@ function gateway(
     port: 0,
     async fetch(request) {
       const pathname = new URL(request.url).pathname
+      if (pathname === "/api/profile")
+        return Response.json({ user: { email: "usage@example.test" }, organizations: [], hasPersonalAccount: true })
       if (pathname.endsWith("/models"))
         return Response.json({
           data: [

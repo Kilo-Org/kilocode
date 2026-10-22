@@ -104,6 +104,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     const instanceID = randomUUID()
     const lock = Semaphore.makeUnsafe(1)
     let server = KiloServer.fromEnv()
+    let gateway = server
     let epoch = 0
     let catalog: CatalogState = {
       envActive: false,
@@ -111,8 +112,8 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       failed: false,
       anonymous: true,
     }
-    const activeAccount = () =>
-      catalog.account && KiloAccount.compatible(catalog.account) ? catalog.account : undefined
+    const scopeCompatible = () => !catalog.account || KiloAccount.compatible(catalog.account)
+    const activeAccount = () => scopeCompatible() ? catalog.account : undefined
     const lastGood = new Map<string, Snapshot>()
     const sessionMetadata = new Map<string, KiloGatewayRpc.SessionMetadata>()
     let retryFiber: Fiber.Fiber<void, never> | undefined
@@ -190,7 +191,8 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         yield* ctx.storage.remove("organization:env")
       }
       return {
-        server: configuredServer,
+        server: KiloServer.apiBase(configuredServer),
+        gateway: configuredServer,
         envActive: Boolean(envInput || content !== undefined || (!saved && token)),
         connection: !envInput && content === undefined && saved ? connection : undefined,
         selectionKey: key,
@@ -244,10 +246,12 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       const resolved = yield* resolveCurrentAccount
       if (targetEpoch !== epoch) return
       server = resolved.server
+      gateway = resolved.gateway
       let current = resolved.account
       const connection = resolved.connection
       const envActive = resolved.envActive
-      const base = current?.server ?? server
+      const base = current?.baseURL ?? gateway
+      const api = current?.server ?? server
       let organizationID = current?.organizationID ?? null
       const token = current?.token
 
@@ -279,8 +283,12 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         return
       }
 
-      const profile = token ? yield* KiloProfile.get(base, token).pipe(Effect.option) : Option.none()
+      const profile = token ? yield* KiloProfile.get(api, token).pipe(Effect.option) : Option.none()
       if (targetEpoch !== epoch) return
+      if (current && !organizationID && Option.isNone(profile)) {
+        catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
+        return
+      }
       // A key login can have no saved organization. Team-only accounts must not request a personal catalog.
       if (current && !organizationID && Option.isSome(profile) && profile.value.hasPersonalAccount === false) {
         organizationID = KiloProfile.defaultOrganizationID(profile.value)
@@ -290,6 +298,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         }
         current = { ...current, organizationID }
         if (resolved.selectionKey) yield* ctx.storage.set(resolved.selectionKey, { organizationID })
+        if (targetEpoch !== epoch) return
       }
       // Membership in another team does not permit a catalog from this selected scope.
       if (
@@ -310,7 +319,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             version: ctx.app.version,
           }).pipe(Effect.result),
           KiloDefaults.get({
-            server: base,
+            server: api,
             token,
             organizationID,
           }),
@@ -335,6 +344,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         if (writeKey && models.length > 0) {
           yield* saveSnapshot(writeKey, { models, defaultModelID: resolvedDefault })
         }
+        if (targetEpoch !== epoch) return
         catalog = {
           account: current,
           connection,
@@ -408,11 +418,13 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       const targetEpoch = ++epoch
       const previous = catalog
       const previousServer = previous.account?.server ?? server
+      const previousGateway = previous.account?.baseURL ?? gateway
       const resolved = yield* resolveCurrentAccount
       if (targetEpoch !== epoch) return
       // Refreshes keep usable models; scope changes invalidate them before any Gateway request.
       if (
         previousServer !== (resolved.account?.server ?? resolved.server) ||
+        previousGateway !== (resolved.account?.baseURL ?? resolved.gateway) ||
         previous.account?.token !== resolved.account?.token ||
         previous.account?.organizationID !== resolved.account?.organizationID ||
         JSON.stringify(previous.connection) !== JSON.stringify(resolved.connection)
@@ -422,6 +434,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       }
       if (targetEpoch !== epoch) return
       server = resolved.server
+      gateway = resolved.gateway
       yield* cancelRetry
       yield* lock.withPermit(
         loadCatalog(targetEpoch, 0).pipe(
@@ -437,9 +450,10 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     // once, as a retry does. The first start (no stored catalog) and team scope, which fails closed, wait for it.
     const start = yield* resolveCurrentAccount
     server = start.server
+    gateway = start.gateway
     const stored = start.account?.organizationID
       ? undefined
-      : yield* readSnapshot(snapshotKey(start.account?.server ?? server, start.account?.token))
+      : yield* readSnapshot(snapshotKey(start.account?.baseURL ?? gateway, start.account?.token))
     if (stored) {
       catalog = {
         account: start.account,
@@ -458,7 +472,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     yield* ctx.provider.transform((editor) => {
       if (!editor.get(id)) return
       const account = catalog.account
-      const base = account?.server ?? server
+      const base = account?.baseURL ?? gateway
       const baseURL = KiloServer.openrouter(base)
       const headers = KiloHeaders.provider({ version: ctx.app.version, organizationID: account?.organizationID })
       const current = editor.get(id)
@@ -572,7 +586,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             machineID,
             mode: event.agent,
           })
-          event.baseURL = KiloServer.openrouter(catalog.account?.server ?? server)
+          event.baseURL = KiloServer.openrouter(catalog.account?.baseURL ?? gateway)
           Object.assign(event.headers, requestHeaders)
         }),
       { providerID: id },
@@ -648,11 +662,14 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     yield* ctx.rpc
       .register(KiloGatewayRpc.Definition, {
         authStatus: () =>
-          Effect.sync(() => ({
-            authenticated: Boolean(catalog.account),
-            organizationID: catalog.account?.organizationID ?? null,
-            server: catalog.account?.server ?? server,
-          })),
+          Effect.sync(() => {
+            const account = activeAccount()
+            return {
+              authenticated: Boolean(account),
+              organizationID: account?.organizationID ?? null,
+              server: catalog.account?.server ?? server,
+            }
+          }),
         profile: (_input, context) =>
           Effect.gen(function* () {
             const account = activeAccount()
@@ -726,13 +743,13 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             if (!KiloAccount.compatible({ ...resolved.account, organizationID: input.organizationID })) {
               return yield* Effect.fail(context.error("failed", "Organization conflicts with the Kilo token scope"))
             }
-            if (input.organizationID === null) {
-              const profile = yield* KiloProfile.get(resolved.account.server, resolved.account.token).pipe(
-                Effect.mapError((error) => context.error("failed", error.message)),
-              )
-              if (profile.hasPersonalAccount === false)
-                return yield* Effect.fail(context.error("failed", "This Kilo account has no personal account"))
-            }
+            const profile = yield* KiloProfile.get(resolved.account.server, resolved.account.token).pipe(
+              Effect.mapError((error) => context.error("failed", error.message)),
+            )
+            if (input.organizationID === null && profile.hasPersonalAccount === false)
+              return yield* Effect.fail(context.error("failed", "This Kilo account has no personal account"))
+            if (input.organizationID !== null && !profile.organizations.some((organization) => organization.id === input.organizationID))
+              return yield* Effect.fail(context.error("failed", "This Kilo account is not a member of the organization"))
             KiloModes.clearCache()
             yield* ctx.storage.set(resolved.selectionKey, { organizationID: input.organizationID })
             yield* reload
@@ -741,6 +758,8 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
               { organizationID: input.organizationID, source: instanceID },
               { global: true },
             )
+            if (catalog.failed)
+              return yield* Effect.fail(context.error("failed", "Organization selected, but its model catalog is unavailable"))
             return {}
           }),
         modes: (_input, context) =>
@@ -769,32 +788,45 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             return KiloModels.entries(catalog.models)
           }),
         "models.images": (_input, context) =>
-          KiloModels.imageModels({
-            server: catalog.account?.server ?? server,
-            token: catalog.account?.token,
-            organizationID: catalog.account?.organizationID,
-            version: ctx.app.version,
-          }).pipe(Effect.mapError(() => context.error("failed", "Unable to retrieve Kilo image models"))),
+          Effect.gen(function* () {
+            if (!scopeCompatible()) return yield* Effect.fail(context.error("unauthorized", "Organization conflicts with the Kilo token scope"))
+            return yield* KiloModels.imageModels({
+              server: catalog.account?.baseURL ?? gateway,
+              token: catalog.account?.token,
+              organizationID: catalog.account?.organizationID,
+              version: ctx.app.version,
+            }).pipe(Effect.mapError(() => context.error("failed", "Unable to retrieve Kilo image models")))
+          }),
         "models.transcriptions": (_input, context) =>
-          KiloModels.transcriptionModels({
-            server: catalog.account?.server ?? server,
-            token: catalog.account?.token,
-            organizationID: catalog.account?.organizationID,
-            version: ctx.app.version,
-          }).pipe(Effect.mapError(() => context.error("failed", "Unable to retrieve Kilo transcription models"))),
+          Effect.gen(function* () {
+            if (!scopeCompatible()) return yield* Effect.fail(context.error("unauthorized", "Organization conflicts with the Kilo token scope"))
+            return yield* KiloModels.transcriptionModels({
+              server: catalog.account?.baseURL ?? gateway,
+              token: catalog.account?.token,
+              organizationID: catalog.account?.organizationID,
+              version: ctx.app.version,
+            }).pipe(Effect.mapError(() => context.error("failed", "Unable to retrieve Kilo transcription models")))
+          }),
         "models.embeddings": (_input, context) =>
-          KiloModels.embeddingModels({
-            server: catalog.account?.server ?? server,
-            version: ctx.app.version,
-          }).pipe(Effect.mapError(() => context.error("failed", "Unable to retrieve Kilo embedding models"))),
-        "autocomplete.fimTarget": (input) =>
-          Effect.sync(() =>
-            KiloAutocomplete.resolveFimTarget(input.provider, input.model, catalog.account?.server ?? server),
-          ),
-        "autocomplete.editTarget": (input) =>
-          Effect.sync(() =>
-            KiloAutocomplete.resolveEditTarget(input.provider, input.model, catalog.account?.server ?? server),
-          ),
+          Effect.gen(function* () {
+            if (!scopeCompatible()) return yield* Effect.fail(context.error("unauthorized", "Organization conflicts with the Kilo token scope"))
+            return yield* KiloModels.embeddingModels({
+              server: catalog.account?.baseURL ?? gateway,
+              version: ctx.app.version,
+            }).pipe(Effect.mapError(() => context.error("failed", "Unable to retrieve Kilo embedding models")))
+          }),
+        "autocomplete.fimTarget": (input, context) =>
+          Effect.suspend(() => {
+            const target = KiloAutocomplete.resolveFimTarget(input.provider, input.model, catalog.account?.baseURL ?? gateway)
+            if (target.provider === "kilo" && !scopeCompatible()) return Effect.fail(context.error("unauthorized", "Organization conflicts with the Kilo token scope"))
+            return Effect.succeed(target)
+          }),
+        "autocomplete.editTarget": (input, context) =>
+          Effect.suspend(() => {
+            const target = KiloAutocomplete.resolveEditTarget(input.provider, input.model, catalog.account?.baseURL ?? gateway)
+            if (target.provider === "kilo" && !scopeCompatible()) return Effect.fail(context.error("unauthorized", "Organization conflicts with the Kilo token scope"))
+            return Effect.succeed(target)
+          }),
         "session.metadata": (input) =>
           Effect.sync(() => sessionMetadata.get(input.sessionID) ?? {}),
       })

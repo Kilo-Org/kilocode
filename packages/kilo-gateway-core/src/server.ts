@@ -61,6 +61,12 @@ export function apiUrl(raw: string, ...segments: string[]) {
   return url.toString().replace(/\/+$/, "")
 }
 
+// Account endpoints belong to the API app, not an `/api/...` inference route.
+export function apiBase(raw: string, env: Record<string, string | undefined> = process.env) {
+  const base = normalize(raw)
+  return apiUrl(base === aiGatewayFromEnv(env) ? fromEnv(env) : base).replace(/\/api$/, "")
+}
+
 export function isConfiguredBase(
   server: string | undefined,
   env: Record<string, string | undefined> = process.env,

@@ -14,6 +14,7 @@ export interface Input {
 export interface Info {
   readonly token: string
   readonly server: string
+  readonly baseURL: string
   readonly organizationID: string | null
 }
 
@@ -52,16 +53,17 @@ export function authContent(env: Record<string, string | undefined> = process.en
 // selected organization. `null` is an explicit personal selection, not a missing selection.
 export function resolve(input: Input, env: Record<string, string | undefined> = process.env): Info {
   const tokenServer = KiloServer.fromToken(input.token)
-  const server = tokenServer ?? (input.server ? KiloServer.normalize(input.server) : KiloServer.fromEnv(env))
-  const tokenOrg = KiloServer.organizationFromUrl(tokenServer ?? server)
+  const baseURL = tokenServer ?? (input.server ? KiloServer.normalize(input.server) : KiloServer.fromEnv(env))
+  const tokenOrg = KiloServer.organizationFromUrl(baseURL)
   return {
     token: input.token,
-    server,
+    server: KiloServer.apiBase(baseURL, env),
+    baseURL,
     organizationID: env.KILO_ORG_ID || (input.organizationID !== undefined ? input.organizationID : tokenOrg || null),
   }
 }
 
 export function compatible(account: Info) {
-  const organizationID = KiloServer.organizationFromUrl(account.server)
+  const organizationID = KiloServer.organizationFromUrl(account.baseURL)
   return !organizationID || organizationID === account.organizationID
 }

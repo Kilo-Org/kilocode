@@ -40,6 +40,8 @@ test("normalizes the server and resolves KILO_API_URL and KILO_AI_GATEWAY_URL li
   expect(KiloServer.apiUrl("https://staging.kilo.test/proxy?x=1#y", "gateway")).toBe(
     "https://staging.kilo.test/proxy/api/gateway",
   )
+  expect(KiloServer.apiBase("https://staging.kilo.test/proxy/api/gateway", {})).toBe("https://staging.kilo.test/proxy")
+  expect(KiloServer.apiBase("https://gateway.example.test/api/v1", env)).toBe("https://api.example.test")
 })
 
 test("reads the server from a token like v1", () => {
@@ -101,6 +103,7 @@ test("resolves the account server and team in v1 order", () => {
   expect(KiloAccount.resolve({ token: "plain" }, {})).toEqual({
     token: "plain",
     server: "https://api.kilo.ai",
+    baseURL: "https://api.kilo.ai",
     organizationID: null,
   })
   expect(
@@ -110,16 +113,17 @@ test("resolves the account server and team in v1 order", () => {
         KILO_API_URL: "https://env.example.test",
       },
     ),
-  ).toEqual({ token: "plain", server: "https://login.example.test", organizationID: "team" })
+  ).toEqual({ token: "plain", server: "https://login.example.test", baseURL: "https://login.example.test", organizationID: "team" })
   expect(
     KiloAccount.resolve(
       { token: "http://localhost:3000:secret", server: "https://login.example.test", organizationID: "saved-team" },
       { KILO_API_URL: "https://env.example.test", KILO_ORG_ID: "env-team" },
     ),
-  ).toEqual({ token: "http://localhost:3000:secret", server: "http://localhost:3000", organizationID: "env-team" })
+  ).toEqual({ token: "http://localhost:3000:secret", server: "http://localhost:3000", baseURL: "http://localhost:3000", organizationID: "env-team" })
   expect(KiloAccount.resolve({ token: "https://gateway.test/api/organizations/token-org:secret" }, {})).toEqual({
     token: "https://gateway.test/api/organizations/token-org:secret",
-    server: "https://gateway.test/api/organizations/token-org",
+    server: "https://gateway.test",
+    baseURL: "https://gateway.test/api/organizations/token-org",
     organizationID: "token-org",
   })
 })
@@ -128,7 +132,7 @@ test("keeps explicit organization selections and rejects conflicts with a scoped
   const token = "https://gateway.test/api/organizations/token-org:secret"
   const same = KiloAccount.resolve({ token, organizationID: "token-org" }, {})
   expect(KiloAccount.compatible(same)).toBe(true)
-  expect(KiloServer.openrouter(same.server, {})).toBe("https://gateway.test/api/openrouter")
+  expect(KiloServer.openrouter(same.baseURL, {})).toBe("https://gateway.test/api/openrouter")
   const different = KiloAccount.resolve({ token, organizationID: "selected-org" }, {})
   expect(different.organizationID).toBe("selected-org")
   expect(KiloAccount.compatible(different)).toBe(false)
@@ -139,6 +143,15 @@ test("keeps explicit organization selections and rejects conflicts with a scoped
   expect(override.organizationID).toBe("env-org")
   expect(KiloAccount.compatible(override)).toBe(false)
   expect(KiloAccount.compatible(KiloAccount.resolve({ token: "plain", organizationID: null }, {}))).toBe(true)
+})
+
+test("keeps account API and inference bases distinct without losing the token scope", () => {
+  const account = KiloAccount.resolve({ token: "plain", server: "https://private.test/proxy/api/gateway" }, {})
+  expect(account.server).toBe("https://private.test/proxy")
+  expect(account.baseURL).toBe("https://private.test/proxy/api/gateway")
+  const configured = KiloAccount.resolve({ token: "plain", server: KiloServer.DEFAULT_AI_GATEWAY_URL }, {})
+  expect(configured.server).toBe(KiloServer.DEFAULT_API_URL)
+  expect(configured.baseURL).toBe(KiloServer.DEFAULT_AI_GATEWAY_URL)
 })
 
 test("builds Kilo provider headers without OpenCode attribution", () => {
