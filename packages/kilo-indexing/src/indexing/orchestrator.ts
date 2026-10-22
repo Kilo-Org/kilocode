@@ -106,6 +106,11 @@ export class CodeIndexOrchestrator {
             workspacePath: this.workspacePath,
             filesInBatch: paths.length,
           })
+          // The watcher writes the store on its own after the scan, outside
+          // runIndexing. Re-check ownership before every batch: a heartbeat can
+          // lapse (event loop stall) long enough for another session to reclaim
+          // the lock, and this session must not keep committing without it.
+          void this._verifyWriter()
           if (this.stateManager.state !== "Indexing") {
             this.stateManager.setSystemState("Indexing", "Processing file changes...")
           }
@@ -193,6 +198,27 @@ export class CodeIndexOrchestrator {
     const writer = this._writer
     this._writer = undefined
     await writer?.release()
+  }
+
+  /**
+   * Stops the watcher when this session no longer owns the writer lock.
+   *
+   * The heartbeat stops beating after a takeover, but the watcher keeps
+   * receiving file events and writing the store. Checking once per batch
+   * bounds how much can be written after ownership is lost; shutting the
+   * watcher down turns a silent split-brain into a visible Error state.
+   */
+  private async _verifyWriter(): Promise<void> {
+    const writer = this._writer
+    if (!writer) return
+    if (await writer.owned()) return
+    if (this._writer !== writer) return
+    this._writer = undefined
+    log.error("writer lock lost; stopping the file watcher to avoid unlocked writes", {
+      workspacePath: this.workspacePath,
+    })
+    this.stateManager.setSystemState("Error", "Lost the indexing writer lock to another session. File watching stopped.")
+    this.stopWatcher()
   }
 
   private async runIndexing(trigger: IndexingTelemetryTrigger): Promise<void> {
@@ -537,6 +563,13 @@ export class CodeIndexOrchestrator {
     log.info("clearing index data", { workspacePath: this.workspacePath })
 
     try {
+      // A clear must not race an in-flight scan. Cancel it and wait for the
+      // scan to settle before deleting the collection: otherwise batches still
+      // running can re-add points after the clear and write under a lock this
+      // method is about to release (shutdown() waits the same way).
+      this._cancelRequested = true
+      this.scanner.cancel()
+      await this._active
       this.stopWatcher()
 
       try {

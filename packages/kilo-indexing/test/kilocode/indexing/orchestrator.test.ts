@@ -107,6 +107,7 @@ class Scanner {
 }
 
 class Watcher {
+  public disposed = 0
   public readonly onDidStartBatchProcessing = new Emitter<string[]>()
   public readonly onBatchProgressUpdate = new Emitter<{
     processedInBatch: number
@@ -128,6 +129,7 @@ class Watcher {
   }
 
   dispose(): void {
+    this.disposed += 1
     this.onDidStartBatchProcessing.dispose()
     this.onBatchProgressUpdate.dispose()
     this.onDidFinishBatchProcessing.dispose()
@@ -150,6 +152,28 @@ class BlockingScanner {
   cancel(): void {
     this.isCancelled = true
     this.gate.resolve()
+  }
+
+  updateBatchSegmentThreshold(_newThreshold: number): void {}
+}
+
+class StubbornScanner {
+  public isCancelled = false
+  public finished = false
+  readonly started = Promise.withResolvers<void>()
+  readonly gate = Promise.withResolvers<void>()
+
+  async scanDirectory(): Promise<{ stats: { processed: number; skipped: number }; totalBlockCount: number }> {
+    this.started.resolve()
+    await this.gate.promise
+    this.finished = true
+    return { stats: { processed: 0, skipped: 0 }, totalBlockCount: 0 }
+  }
+
+  cancel(): void {
+    // A real batch already in flight finishes its current work even after
+    // cancellation; only the caller releasing the gate ends this scan.
+    this.isCancelled = true
   }
 
   updateBatchSegmentThreshold(_newThreshold: number): void {}
@@ -558,6 +582,66 @@ describe("CodeIndexOrchestrator telemetry", () => {
     const next = await acquire(dir, "/tmp/ws")
     expect(next).toBeDefined()
     await next?.release()
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test("waits for the active scan before clearing data", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "indexing-lock-"))
+    const scanner = new StubbornScanner()
+    const store = new Store("complete", false)
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { dir, async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      scanner as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    const active = orchestrator.startIndexing("background")
+    await scanner.started.promise
+    const clearing = orchestrator.clearIndexData()
+    await Bun.sleep(20)
+    // The in-flight batch is still running, so nothing may be deleted yet.
+    expect(store.deleteCount).toBe(0)
+
+    scanner.gate.resolve()
+    await clearing
+    await active
+    expect(store.deleteCount).toBe(1)
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test("stops the watcher when the writer lock is lost during a batch", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "indexing-lock-"))
+    const store = new Store("complete", false)
+    const watcher = new Watcher()
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { dir, async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      watcher as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("background")
+    expect(orchestrator.state).toBe("Indexed")
+
+    const slot = path.join(dir, "locks", createHash("sha256").update("/tmp/ws").digest("hex").substring(0, 16))
+    await rm(slot, { recursive: true, force: true })
+    await mkdir(slot, { recursive: true })
+    await writeFile(path.join(slot, "meta.json"), JSON.stringify({ token: "rival", pid: process.pid, host: hostname() }))
+    await writeFile(path.join(slot, "heartbeat"), "")
+
+    watcher.onDidStartBatchProcessing.fire(["src/a.ts"])
+    await Bun.sleep(20)
+    // The watcher writes the store outside runIndexing, so a batch after the
+    // takeover must shut it down rather than commit unlocked.
+    expect(watcher.disposed).toBeGreaterThan(0)
+    expect(orchestrator.state).toBe("Error")
     await rm(dir, { recursive: true, force: true })
   })
 
