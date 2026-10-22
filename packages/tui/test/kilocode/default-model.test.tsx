@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { createComputed, createRoot } from "solid-js"
 import { agent, model, renderLocal, session } from "../fixture/local"
 import { directory, json } from "../fixture/tui-client"
 
@@ -127,6 +128,101 @@ test("refreshes the recommendation with the catalog without replacing a user sel
   await until(() => setup.local.model.catalogReady)
   expect(setup.local.model.current()?.modelID).toBe(first.id)
 })
+
+test.each(["catalog", "config"] as const)(
+  "retains the prompt model while a same-location %s refresh is pending",
+  async (refresh) => {
+    const response = Promise.withResolvers<Response>()
+    const started = Promise.withResolvers<void>()
+    let pending = false
+    await using setup = await renderLocal({
+      models: [first, recommended],
+      fetch: (url) => {
+        if (url.pathname !== "/api/model/default") return
+        if (!pending) return json({ location: { directory }, data: recommended })
+        started.resolve()
+        return response.promise.then((value) => value.clone())
+      },
+    })
+    const selection = { providerID: "kilo", modelID: recommended.id, variant: undefined }
+    expect(setup.local.model.selection()).toEqual(selection)
+    const observed = [{ selection: setup.local.model.selection(), ready: setup.local.model.catalogReady }]
+    const dispose = createRoot((dispose) => {
+      createComputed(() => {
+        observed.push({ selection: setup.local.model.selection(), ready: setup.local.model.catalogReady })
+      })
+      return dispose
+    })
+    try {
+      pending = true
+      const resource = refresh === "catalog" ? setup.data.location.model : setup.data.location.config
+      resource.invalidate()
+      await resource.sync()
+      await started.promise
+      expect(setup.local.model.selection()).toEqual(selection)
+      expect(setup.local.model.catalogReady).toBe(true)
+      expect(observed.every((value) => value.ready && value.selection?.modelID === recommended.id)).toBe(true)
+      response.resolve(json({ location: { directory }, data: first }))
+      await until(() => setup.local.model.current()?.modelID === first.id)
+    } finally {
+      dispose()
+      response.resolve(json({ location: { directory }, data: first }))
+    }
+  },
+)
+
+test("drops a retained recommendation removed from the visible catalog before applying the fallback", async () => {
+  const response = Promise.withResolvers<Response>()
+  const started = Promise.withResolvers<void>()
+  let pending = false
+  await using setup = await renderLocal({
+    fetch: (url) => {
+      if (url.pathname === "/api/model")
+        return json({ location: { directory }, data: pending ? [first] : [first, recommended] })
+      if (url.pathname !== "/api/model/default") return
+      if (!pending) return json({ location: { directory }, data: recommended })
+      started.resolve()
+      return response.promise.then((value) => value.clone())
+    },
+  })
+  expect(setup.local.model.current()?.modelID).toBe(recommended.id)
+  pending = true
+  setup.data.location.model.invalidate()
+  await setup.data.location.model.sync()
+  await started.promise
+  expect(setup.local.model.selection()).toBeUndefined()
+  expect(setup.local.model.catalogReady).toBe(false)
+  response.resolve(json({ location: { directory }, data: recommended }))
+  await until(() => setup.local.model.catalogReady)
+  expect(setup.local.model.current()).toEqual({ providerID: "kilo", modelID: first.id })
+})
+
+test.each([{ directory: `${directory}/other` }, { directory, workspaceID: "workspace_other" }])(
+  "does not retain the previous location's recommendation while %j loads",
+  async (other) => {
+    const response = Promise.withResolvers<Response>()
+    const started = Promise.withResolvers<void>()
+    await using setup = await renderLocal({
+      models: [first, recommended],
+      fetch: (url) => {
+        if (url.pathname !== "/api/model/default") return
+        if (url.searchParams.get("location[directory]") === directory && !url.searchParams.has("location[workspaceID]"))
+          return json({ location: { directory }, data: recommended })
+        started.resolve()
+        return response.promise.then((value) => value.clone())
+      },
+    })
+    expect(setup.local.model.current()?.modelID).toBe(recommended.id)
+    setup.location.set(other)
+    await setup.data.location.sync(other)
+    await started.promise
+    expect(setup.local.model.selection()).toBeUndefined()
+    expect(setup.local.model.catalogReady).toBe(false)
+    response.resolve(json({ location: other, data: first }))
+    await until(() => setup.local.model.catalogReady)
+    expect(setup.local.model.current()?.modelID).toBe(first.id)
+  },
+)
 
 test("a late default from another location cannot replace the current location's default", async () => {
   const response = Promise.withResolvers<Response>()

@@ -9,6 +9,8 @@ import type { HttpPrepared } from "@opencode/ai/route/transport/http"
 import { Effect, Schema } from "effect"
 import { HttpClientRequest } from "effect/http"
 import { Bus } from "@opencode/core/bus"
+import { Config } from "@opencode/core/config"
+import { ConfigProviderPlugin } from "@opencode/core/config/plugin/provider"
 import { Credential } from "@opencode/core/credential"
 import { Integration } from "@opencode/core/integration"
 import { Model } from "@opencode/core/model"
@@ -18,16 +20,20 @@ import { PluginHooks } from "@opencode/core/plugin/hooks"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { ProviderPlugins } from "@opencode/core/plugin/provider"
 import { KiloPlugin } from "@opencode/core/plugin/provider/kilo"
+import { VerbosityPlugin } from "@opencode/core/plugin/verbosity"
 import { Provider } from "@opencode/core/provider"
 import { Rpc } from "@opencode/core/rpc"
 import { Agent } from "@opencode/schema/agent"
+import { Document, Info } from "@opencode/schema/config"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { Session } from "@opencode/schema/session"
 import { Global } from "@opencode/util/global"
 import { withEnv } from "../../core/test/fixture/env"
 import { testEffect } from "../../core/test/lib/effect"
 import { PluginTestLayer } from "../../core/test/plugin/fixture"
+import { KiloPostPlugins } from "../src"
 import { KiloGatewayPlugin } from "../src/gateway"
+import { GatewayOptions } from "../src/gateway/options"
 
 const it = testEffect(PluginTestLayer)
 const kilo = Provider.ID.make("kilo")
@@ -783,6 +789,137 @@ describe("KiloGatewayPlugin", () => {
                           ...(dialect.provider === "openai" ? { forceReasoning: false } : {}),
                         },
                   )
+                }
+              }).pipe(Effect.provide(ModelResolver.layer))
+            }),
+          ),
+        (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+      ),
+    )
+  }
+
+  for (const selection of [
+    { name: "provider shared high", provider: { verbosity: "high" }, expected: "high" },
+    {
+      name: "model shared medium",
+      provider: { verbosity: "high" },
+      model: { verbosity: "medium" },
+      expected: "medium",
+    },
+    { name: "variant shared high", model: { verbosity: "medium" }, variant: { verbosity: "high" }, expected: "high" },
+    { name: "native model low", model: { verbosity: "high", textVerbosity: "low" }, expected: "low" },
+    {
+      name: "native variant low",
+      model: { verbosity: "high" },
+      variant: { verbosity: "medium", textVerbosity: "low" },
+      expected: "low",
+    },
+    {
+      name: "model shared over provider native",
+      provider: { textVerbosity: "low" },
+      model: { verbosity: "high" },
+      expected: "high",
+    },
+    {
+      name: "variant shared over model native",
+      model: { textVerbosity: "low" },
+      variant: { verbosity: "medium" },
+      expected: "medium",
+    },
+    {
+      name: "explicit request native low",
+      model: { verbosity: "high" },
+      options: { textVerbosity: "low" },
+      expected: "low",
+    },
+    {
+      name: "explicit request native high",
+      model: { verbosity: "medium" },
+      options: { textVerbosity: "high" },
+      expected: "high",
+    },
+    {
+      name: "explicit request native over request shared",
+      options: { verbosity: "high", textVerbosity: "low" },
+      expected: "low",
+    },
+    {
+      name: "request shared over variant native",
+      variant: { textVerbosity: "low" },
+      options: { verbosity: "medium" },
+      expected: "medium",
+    },
+    { name: "unconfigured native default", expected: "low" },
+  ]) {
+    it.live(`keeps ${selection.name} with the real config and verbosity plugins`, () =>
+      Effect.acquireUseRelease(
+        Effect.sync(() => fixture()),
+        (backend) =>
+          withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "token" }, () =>
+            Effect.gen(function* () {
+              const id = Model.ID.make("openai/gpt-5.4")
+              backend.state.models = {
+                data: [
+                  {
+                    id,
+                    name: "Native verbosity precedence",
+                    context_length: 128000,
+                    opencode: { ai_sdk_provider: "openai" },
+                  },
+                ],
+              }
+              const plugins = yield* Plugin.Service
+              yield* VerbosityPlugin.Plugin.effect(yield* PluginHost.make(plugins))
+              const host = yield* addPlugin()
+              yield* ConfigProviderPlugin.Plugin.effect(host).pipe(
+                Effect.provide(
+                  Config.testLayer([
+                    new Document({
+                      type: "document",
+                      info: Schema.decodeUnknownSync(Info)({
+                        providers: {
+                          kilo: {
+                            settings: selection.provider ?? {},
+                            models: {
+                              [id]: {
+                                settings: selection.model ?? {},
+                                variants: [{ id: "configured", settings: selection.variant ?? {} }],
+                              },
+                            },
+                          },
+                        },
+                      }),
+                    }),
+                  ]),
+                ),
+              )
+              expect(KiloPostPlugins).toContain(GatewayOptions.Plugin)
+              yield* GatewayOptions.Plugin.effect(host)
+              const session = yield* host.session.create({ title: "Native verbosity precedence" })
+              const hooks = yield* PluginHooks.Service
+              const ref = { providerID: kilo, id, variant: Model.VariantID.make("configured") }
+              yield* Effect.gen(function* () {
+                const resolver = yield* ModelResolver.Service
+                const resolved = yield* resolver.resolve(ref)
+                for (const hook of ["context", "compaction", "generate", "title"] as const) {
+                  const event = yield* hooks.trigger("session", hook, {
+                    sessionID: session.id,
+                    agent: Agent.ID.make("code"),
+                    model: ref,
+                    system: [],
+                    messages: [],
+                    tools: {},
+                    options: { ...selection.options },
+                  })
+                  expect(event.options.textVerbosity).toBe(selection.expected)
+                  const request = yield* compileRequest(
+                    LLM.request({
+                      model: resolved!.model,
+                      prompt: "Hello",
+                      providerOptions: event.options,
+                    }),
+                  )
+                  expect(request.body).toMatchObject({ text: { verbosity: selection.expected } })
                 }
               }).pipe(Effect.provide(ModelResolver.layer))
             }),

@@ -1,6 +1,6 @@
 import { createMemo, createResource } from "solid-js"
 import { useClient } from "../context/client"
-import { useData } from "../context/data"
+import { locationKey, useData } from "../context/data"
 import { useLocation } from "../context/location"
 
 export function createGatewayDefaultModel() {
@@ -21,13 +21,18 @@ export function createGatewayDefaultModel() {
       model: response?.data ? { providerID: response.data.providerID, modelID: response.data.id } : undefined,
     }
   })
+  const current = createMemo(() => {
+    const value = result()
+    const input = source()
+    if (!value?.model || !input || locationKey(value.source.location) !== locationKey(input.location)) return
+    const selected = value.model
+    return input.models.some((model) => model.providerID === selected.providerID && model.id === selected.modelID)
+      ? selected
+      : undefined
+  })
 
   return {
-    current() {
-      // A resource retains its last value during reloads, including a location switch.
-      const value = result()
-      return value?.source === source() ? value?.model : undefined
-    },
-    ready: () => !result.loading,
+    current,
+    ready: () => !!current() || !result.loading,
   }
 }

@@ -10,6 +10,7 @@ import { Effect, Layer } from "effect"
 import { location } from "../../core/test/fixture/location"
 import { testEffect } from "../../core/test/lib/effect"
 import { KiloSmallModel } from "../src/small-model"
+import { KiloHost } from "../src/host"
 
 const it = testEffect(
   Layer.fresh(
@@ -46,6 +47,30 @@ const seed = Effect.fn(function* (items: Model.Info[]) {
   })
   return yield* Model.Service
 })
+
+testEffect(
+  Layer.fresh(
+    AppNodeBuilder.build(LayerNode.group([Provider.node, Model.node]), [
+      ...KiloHost.overrides,
+      Location.node.replace(
+        Layer.succeed(
+          Location.Service,
+          Location.Service.of(location({ directory: AbsolutePath.make(import.meta.dir) })),
+        ),
+      ),
+    ]),
+  ),
+).effect("the actual host overrides wire exact and cross-provider small selection", () =>
+  Effect.gen(function* () {
+    const models = yield* seed([
+      primary,
+      model("kilo", "native-small", { family: Model.Family.make("gemini-flash") }),
+      router,
+    ])
+    expect((yield* models.small(router.providerID))?.id).toBe(router.id)
+    expect((yield* models.small(primary.providerID))?.id).toBe(router.id)
+  }),
+)
 
 it.effect("prefers the exact Kilo small router despite its backend family and missing credentials", () =>
   Effect.gen(function* () {

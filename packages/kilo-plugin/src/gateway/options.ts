@@ -1,7 +1,35 @@
 export * as GatewayOptions from "./options.js"
 
 import type { KiloModels } from "@kilocode/gateway-core"
-import { Option, Schema } from "effect"
+import { define } from "@opencode/plugin/effect/plugin"
+import { Effect, Option, Schema } from "effect"
+
+// Config model transforms run after the Gateway. Normalize their final settings before native hooks read them.
+export const Plugin = define({
+  id: "kilocode.gateway.options",
+  effect: Effect.fn(function* (ctx) {
+    yield* ctx.model.transform((editor) => {
+      for (const model of editor.list("kilo")) {
+        const provider =
+          model.package === "@opencode/ai/providers/anthropic"
+            ? "anthropic"
+            : model.package === "@opencode/ai/providers/openai"
+              ? "openai"
+              : model.package === "@opencode/ai/providers/openai-compatible"
+                ? "openai-compatible"
+                : undefined
+        if (!provider) continue
+        model.settings = {
+          ...model.settings,
+          ...request(provider, [editor.provider.get("kilo")?.provider.settings, model.settings]),
+        }
+        for (const variant of model.variants) {
+          if (variant.settings) variant.settings = lower(provider, variant.settings)
+        }
+      }
+    })
+  }),
+})
 
 const decode = Schema.decodeUnknownOption(
   Schema.Struct({
