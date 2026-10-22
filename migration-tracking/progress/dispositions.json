@@ -197,8 +197,8 @@
   },
   "module:packages/opencode/src/kilocode/kilo-errors.ts": {
     "state": "ported",
-    "note": "packages/kilo-gateway-core/src/errors.ts KiloErrors (codes, messages, retryable, x-should-retry: false for errors that need user action). The session shows the message instead of a v1 toast.",
-    "by": "gateway-finish"
+    "note": "packages/kilo-gateway-core/src/errors.ts preserves numeric/string codes, billing metadata, outer error precedence and messages; stream.ts shares its error serializer. packages/kilo-cli/src/gateway-errors.ts decorates the existing LLMClient node for Kilo-only terminal/top-up overrides across streamed, buffered and native trigger-compaction calls. Generic validation/quota/unknown errors retain v2 native retry classification rather than v1 prose heuristics. The session shows the message instead of a v1 toast.",
+    "by": "gateway-error-parity"
   },
   "module:packages/opencode/test/kilocode/agent-global-config-dirs.test.ts": {
     "state": "native",
@@ -226,8 +226,8 @@
   },
   "module:packages/opencode/test/kilocode/kilo-errors.test.ts": {
     "state": "ported",
-    "note": "packages/kilo-gateway-core/test/requests-errors.test.ts (KiloErrors) and packages/core/test/kilocode/gateway.test.ts (no retry for Kilo errors that need user action).",
-    "by": "gateway-finish"
+    "note": "packages/kilo-gateway-core/test/requests-errors.test.ts and packages/kilo-cli/test/gateway-errors.test.ts cover actual parser, native classification and SessionRunnerRetry.policy for terminal HTTP/SSE auth/promotion, numeric/string billing/rate/server errors, outer JSON precedence, bare-frame types, generic validation/quota and unknown defaults, free caps, Retry-After, counted buffered/native trigger-compaction calls and interruption.",
+    "by": "gateway-error-parity"
   },
   "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts": {
     "state": "ported",

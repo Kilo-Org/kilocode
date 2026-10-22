@@ -36,7 +36,7 @@
       "seam": 0,
       "patch": 0
     },
-    "coreImports": 17,
+    "coreImports": 20,
     "sharedPatches": {
       "seam": 24,
       "patch": 17
@@ -56,6 +56,7 @@
     "@opencode/core/app",
     "@opencode/core/bus",
     "@opencode/core/config/discovery",
+    "@opencode/core/effect/app-node-platform",
     "@opencode/core/model",
     "@opencode/core/permission",
     "@opencode/core/plugin/sdk",
@@ -64,6 +65,8 @@
     "@opencode/core/plugin/system-prompt/gpt.txt",
     "@opencode/core/plugin/system-prompt/kimi.txt",
     "@opencode/core/plugin/system-prompt/trinity.txt",
+    "@opencode/core/rpc",
+    "@opencode/core/session/runner/model",
     "@opencode/core/session/runner/prompt/system.txt",
     "@opencode/core/session/system-prompt",
     "@opencode/core/shell",
