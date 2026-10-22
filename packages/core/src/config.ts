@@ -120,7 +120,15 @@ export const layer = (options?: Options) =>
           })
           return
         }
-        const result = ConfigNormalize.normalize(input)
+        // kilocode_change start - config seam: host decoders share the normalization diagnostic pipeline
+        const normalized = ConfigNormalize.normalize(input)
+        const result = { ...normalized, diagnostics: [...normalized.diagnostics] }
+        const info = result.type === "rejected"
+          ? undefined
+          : layout.parse
+            ? layout.parse(input, result.encoded, (diagnostic) => result.diagnostics.push(diagnostic))
+            : Option.getOrUndefined(decodeInfo(result.encoded))
+        // kilocode_change end
         yield* Effect.forEach(result.diagnostics, (diagnostic) =>
           Effect.logWarning("configuration normalization diagnostic", {
             source,
@@ -130,7 +138,6 @@ export const layer = (options?: Options) =>
           }),
         )
         if (result.type === "rejected") return
-        const info = layout.parse ? layout.parse(input, result.encoded) : Option.getOrUndefined(decodeInfo(result.encoded)) // kilocode_change(config) seam - host document decoder
         if (info) return info
         yield* Effect.logWarning("configuration normalization diagnostic", {
           source,

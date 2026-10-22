@@ -23,10 +23,26 @@ test.each(["true", null, 0])("invalid Kilo flag %p preserves canonical settings 
   } as const
   const normalized = ConfigNormalize.normalize(input)
   if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
-  const parsed = KiloConfigPolicy.parse(input, normalized.encoded)
+  const diagnostics: ConfigNormalize.Diagnostic[] = []
+  const parsed = KiloConfigPolicy.parse(input, normalized.encoded, (diagnostic) => diagnostics.push(diagnostic))
   expect(parsed?.shell).toBe("valid")
   expect(parsed?.policies).toEqual(input.policies)
   expect(parsed?.hide_prompt_training_models).toBeUndefined()
+  expect(diagnostics).toEqual([
+    {
+      kind: "invalid",
+      path: ["hide_prompt_training_models"],
+      message: expect.stringContaining("expected a boolean"),
+    },
+  ])
+})
+
+test("valid and omitted privacy values do not produce a diagnostic", () => {
+  const diagnostics: ConfigNormalize.Diagnostic[] = []
+  for (const value of [undefined, false, true]) {
+    KiloConfigPolicy.parse({ hide_prompt_training_models: value }, {}, (diagnostic) => diagnostics.push(diagnostic))
+  }
+  expect(diagnostics).toEqual([])
 })
 
 it.effect("reads fresh effective entries without filesystem, global paths or plugin storage services", () =>

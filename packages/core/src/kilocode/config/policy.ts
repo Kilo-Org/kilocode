@@ -4,6 +4,7 @@ import { Config } from "@opencode/schema/config"
 import { optional } from "@opencode/schema/schema"
 import { Effect, Option, Schema } from "effect"
 import type { Interface } from "../../config.js"
+import type { ConfigNormalize } from "../../config/normalize.js"
 
 export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
   hide_prompt_training_models: Schema.Boolean.pipe(optional).annotate({
@@ -15,9 +16,21 @@ const decode = Schema.decodeUnknownOption(Info, { errors: "all", onExcessPropert
 const policy = Schema.Struct({ hide_prompt_training_models: Schema.optional(Schema.Boolean) })
 
 /** Decode Kilo settings alongside the canonical fields produced by upstream normalization. */
-export function parse(input: unknown, normalized: Readonly<Record<string, unknown>>) {
+export function parse(
+  input: unknown,
+  normalized: Readonly<Record<string, unknown>>,
+  report?: (diagnostic: ConfigNormalize.Diagnostic) => void,
+) {
   // A malformed Kilo-only field must not discard canonical managed permission policies.
-  const raw = Option.getOrElse(Schema.decodeUnknownOption(policy)(input), () => ({}))
+  const decoded = Schema.decodeUnknownOption(policy)(input)
+  if (Option.isNone(decoded))
+    report?.({
+      path: ["hide_prompt_training_models"],
+      kind: "invalid",
+      message:
+        "ignored invalid hide_prompt_training_models; expected a boolean (true or false), so prompt-training protection was not applied from this field",
+    })
+  const raw = Option.getOrElse(decoded, () => ({}))
   // Managed policy splitting clears optional fields with undefined; the encoded schema requires omitted keys.
   return Option.getOrUndefined(
     decode(Object.fromEntries(Object.entries({ ...normalized, ...raw }).filter(([, value]) => value !== undefined))),

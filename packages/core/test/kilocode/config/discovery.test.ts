@@ -1,7 +1,7 @@
 import path from "path"
 import fs from "fs/promises"
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Effect, Layer, Logger } from "effect"
 import { Config } from "@opencode/core/config"
 import { ConfigDiscovery } from "@opencode/core/config/discovery"
 import { Bus } from "@opencode/core/bus"
@@ -154,6 +154,46 @@ describe("Kilo config discovery", () => {
         expect(yield* KiloConfigPolicy.get(config)).toEqual({ hide_prompt_training_models: false })
       }).pipe(Effect.provide(configLayer({ directory: project, global, git: true })))
     }),
+  )
+
+  it.live(
+    "warns about a malformed managed privacy flag without dropping permission policies or logging its value",
+    () => {
+      const messages: unknown[] = []
+      const logger = Logger.map(Logger.formatStructured, (entry) => messages.push(entry.message))
+      return Effect.gen(function* () {
+        const tmp = yield* tmpdirScoped()
+        const project = path.join(tmp.path, "repo")
+        const global = path.join(tmp.path, "global")
+        const managed = path.join(tmp.path, "managed")
+        const file = path.join(managed, "kilo2.json")
+        yield* write(path.join(project, "kilo2.json"), { hide_prompt_training_models: false })
+        yield* write(file, {
+          hide_prompt_training_models: "sensitive-invalid-value",
+          policies: [{ effect: "deny", action: "tool.use", resource: "shell:*" }],
+        })
+        yield* Effect.gen(function* () {
+          const config = yield* Config.Service
+          const entries = yield* config.entries()
+          expect(
+            entries.flatMap((entry) =>
+              entry.type === "document" && entry.path === file ? (entry.info.policies ?? []) : [],
+            ),
+          ).toEqual([{ effect: "deny", action: "tool.use", resource: "shell:*" }])
+          expect(yield* KiloConfigPolicy.get(config)).toEqual({ hide_prompt_training_models: false })
+        }).pipe(Effect.provide(configLayer({ directory: project, global, options: { system: managed } })))
+        expect(messages).toContainEqual([
+          "configuration normalization diagnostic",
+          expect.objectContaining({
+            source: file,
+            path: "$.hide_prompt_training_models",
+            kind: "invalid",
+            action: expect.stringContaining("expected a boolean"),
+          }),
+        ])
+        expect(JSON.stringify(messages)).not.toContain("sensitive-invalid-value")
+      }).pipe(Effect.provide(Logger.layer([logger])))
+    },
   )
 
   const mac = process.platform === "darwin" ? it.live : it.live.skip

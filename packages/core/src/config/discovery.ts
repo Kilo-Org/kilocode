@@ -10,6 +10,7 @@ import { Location } from "../location.js"
 import { AbsolutePath } from "../schema.js"
 import type { Options } from "../config.js"
 import type { Info } from "@opencode/schema/config" // kilocode_change(config) seam - host document decoder
+import type { ConfigNormalize } from "./normalize.js" // kilocode_change(config) seam - host decoder diagnostics
 
 export const names = ["opencode.json", "opencode.jsonc"]
 
@@ -26,7 +27,11 @@ export interface Layout {
   readonly systemFiles?: readonly string[]
   readonly walk: (input: Walk) => Effect.Effect<readonly string[]>
   readonly systemDirectory?: (platform: NodeJS.Platform, env: NodeJS.ProcessEnv) => AbsolutePath
-  readonly parse?: (input: unknown, normalized: Readonly<Record<string, unknown>>) => Info | undefined
+  readonly parse?: (
+    input: unknown,
+    normalized: Readonly<Record<string, unknown>>,
+    report?: (diagnostic: ConfigNormalize.Diagnostic) => void,
+  ) => Info | undefined
 }
 type Walk = { readonly ancestors: readonly string[]; readonly location: Location.Interface; readonly fs: FSUtil.Interface }
 const defaults: Layout = { names, directories: [".opencode"], directoryFiles: names, walk: (input) => Effect.succeed(input.ancestors) }

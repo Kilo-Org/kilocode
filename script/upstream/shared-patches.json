@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 37,
-    "markedLines": 270,
+    "markedLines": 283,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -81,7 +81,7 @@
     },
     "packages/core/src/config/discovery.ts": {
       "rung": 3,
-      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound). Optional systemDirectory, systemFiles and parse hooks let a host select platform managed directories and file order and decode its own config schema. Explicit system options keep priority and existing macOS ai.opencode.managed preferences are unchanged. Generic: no Kilo name, import or condition; without the hooks, discovery and parsing behave as upstream. The Kilo host supplies kilo2 names, v1 file orders, the worktree boundary, /etc/kilo, /Library/Application Support/kilo, ProgramData/kilo and its Kilo-owned config schema. Tests inject a directory through explicit system options or the layout, not an ambient test environment override. Rungs 1 and 2 cannot do it alone: discovery and parsing run before plugins load, and replacing Config.node would lose the server's configured options."
+      "seam": "Config discovery layout (feature `config`): `ConfigDiscovery.LayoutService`, a global node with upstream defaults (`opencode.json`, `opencode.jsonc`, `.opencode`, no walk bound). Optional systemDirectory, systemFiles and parse hooks let a host select platform managed directories and file order and decode its own config schema. A decoder may report field diagnostics through the existing source-aware normalization warning pipeline, retaining valid fields instead of silently dropping an extension setting or the whole document. Explicit system options keep priority and existing macOS ai.opencode.managed preferences are unchanged. Generic: no Kilo name, import or condition; without the hooks, discovery and parsing behave as upstream. The Kilo host supplies kilo2 names, v1 file orders, the worktree boundary, /etc/kilo, /Library/Application Support/kilo, ProgramData/kilo and its Kilo-owned config schema. Tests inject a directory through explicit system options or the layout, not an ambient test environment override. Rungs 1 and 2 cannot do it alone: discovery and parsing run before plugins load, and replacing Config.node would lose the server's configured options."
     },
     "packages/core/src/plugin/sdk.ts": {
       "rung": 3,
