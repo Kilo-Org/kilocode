@@ -151,7 +151,7 @@ export const layer = Layer.effectDiscard(
       // container writes, so the instance's explicit choices win over globals.
       const pre = [
         ...internal.pre.map((plugin) => ({ ...plugin, revision: "internal", source: { type: "builtin" as const } })),
-        ...sdk.all(),
+        ...sdk.all().map(internal.provide), // kilocode_change(gateway) seam - provide Location services to embedder plugins
         ...instance.all(),
       ]
       const post = internal.post.map((plugin) => ({
@@ -159,7 +159,7 @@ export const layer = Layer.effectDiscard(
         revision: "internal",
         source: { type: "builtin" as const },
       }))
-      ;(post as Plugin.Generation[]).push(...sdk.all("post")) // kilocode_change(agent) seam - host plugins after the internal post plugins
+      ;(post as Plugin.Generation[]).push(...sdk.all("post").map(internal.provide)) // kilocode_change(agent) seam - host plugins after the internal post plugins; kilocode_change(gateway) seam - provide Location services
       const operations = yield* sources.operations()
       // Activate everything available locally before waiting on missing package installs.
       const immediate = yield* resolve(modules, pre, post, operations, false, running)
