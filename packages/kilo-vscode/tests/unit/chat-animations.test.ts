@@ -9,11 +9,23 @@
  */
 
 import { describe, expect, it } from "bun:test"
-import fs from "node:fs"
-import path from "node:path"
-import { reduceMotion, resolveAnimations } from "../../webview-ui/src/animations"
+import { Window } from "happy-dom"
+import { applyAnimations, reduceMotion, resolveAnimations } from "../../webview-ui/src/animations"
 
-const ROOT = path.resolve(import.meta.dir, "../..")
+/** Install the happy-dom globals the webview code relies on, and return a restore function. */
+function useDom(window: Window, names: string[]) {
+  const restore: Array<() => void> = []
+  for (const name of names) {
+    const previous = Object.getOwnPropertyDescriptor(globalThis, name)
+    const value = name === "window" ? window : (window as unknown as Record<string, unknown>)[name]
+    Object.defineProperty(globalThis, name, { value, configurable: true, writable: true })
+    restore.push(() => {
+      if (previous) Object.defineProperty(globalThis, name, previous)
+      else Reflect.deleteProperty(globalThis, name)
+    })
+  }
+  return () => restore.forEach((fn) => fn())
+}
 
 describe("resolveAnimations", () => {
   it("keeps the full motion while the window is focused", () => {
@@ -49,14 +61,52 @@ describe("reduceMotion", () => {
   })
 })
 
-describe("the host's reduce-motion class", () => {
+describe("applyAnimations", () => {
   // VS Code puts vscode-reduce-motion on the webview body when the user asked
   // for reduced motion, and it removes the class again on every style change.
   // Writing on it would take that setting away from the user.
-  it("is only read, never written", () => {
-    const source = fs.readFileSync(path.join(ROOT, "webview-ui/src/animations.ts"), "utf-8")
-    expect(source).not.toContain('toggle("vscode-reduce-motion"')
-    expect(source).not.toContain('add("vscode-reduce-motion"')
-    expect(source).not.toContain('remove("vscode-reduce-motion"')
+  it("marks the chat without touching the host's class", () => {
+    const window = new Window()
+    const restore = useDom(window, ["window", "document"])
+    const body = window.document.body
+    body.classList.add("vscode-reduce-motion")
+    try {
+      applyAnimations("off", true)
+      expect(body.classList.contains("kilo-reduce-motion")).toBe(true)
+      expect(body.classList.contains("vscode-reduce-motion")).toBe(true)
+
+      applyAnimations("full", true)
+      expect(body.classList.contains("kilo-reduce-motion")).toBe(false)
+      expect(body.classList.contains("vscode-reduce-motion")).toBe(true)
+    } finally {
+      restore()
+    }
+  })
+
+  it("pauses the chat while the window is not focused", () => {
+    const window = new Window()
+    const restore = useDom(window, ["window", "document"])
+    const body = window.document.body
+    try {
+      applyAnimations("full", false)
+      expect(body.classList.contains("kilo-reduce-motion")).toBe(true)
+    } finally {
+      restore()
+    }
+  })
+
+  it("puts the budget on the root element for the stylesheet", () => {
+    const window = new Window()
+    const restore = useDom(window, ["window", "document"])
+    const root = window.document.documentElement
+    try {
+      applyAnimations("reduced", true)
+      expect(root.dataset.animations).toBe("reduced")
+
+      applyAnimations("full", true)
+      expect(root.dataset.animations).toBeUndefined()
+    } finally {
+      restore()
+    }
   })
 })
