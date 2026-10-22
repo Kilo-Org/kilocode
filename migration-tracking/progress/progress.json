@@ -36,7 +36,7 @@
       "seam": 0,
       "patch": 0
     },
-    "coreImports": 12,
+    "coreImports": 15,
     "sharedPatches": {
       "seam": 21,
       "patch": 16
@@ -58,9 +58,12 @@
     "@opencode/core/config",
     "@opencode/core/config/discovery",
     "@opencode/core/config/normalize",
+    "@opencode/core/effect/app-node-platform",
     "@opencode/core/permission",
     "@opencode/core/plugin/sdk",
+    "@opencode/core/rpc",
     "@opencode/core/schema",
+    "@opencode/core/session/runner/model",
     "@opencode/core/shell",
     "@opencode/core/tool-output",
     "@opencode/core/util/wildcard",
