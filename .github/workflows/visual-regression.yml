@@ -107,7 +107,10 @@ jobs:
         working-directory: packages/kilo-ui
 
       - name: Install Playwright system deps
-        run: bunx playwright install-deps chromium
+        run: |
+          # Avoid Azure mirror stalls during browser dependency downloads.
+          printf '%s\n' 'https://archive.ubuntu.com/ubuntu' | sudo tee /etc/apt/apt-mirrors.txt
+          bunx playwright install-deps chromium
         working-directory: packages/kilo-ui
 
       - name: Cache Storybook build
@@ -272,7 +275,10 @@ jobs:
         working-directory: packages/kilo-vscode
 
       - name: Install Playwright system deps
-        run: bunx playwright install-deps chromium
+        run: |
+          # Avoid Azure mirror stalls during browser dependency downloads.
+          printf '%s\n' 'https://archive.ubuntu.com/ubuntu' | sudo tee /etc/apt/apt-mirrors.txt
+          bunx playwright install-deps chromium
         working-directory: packages/kilo-vscode
 
       - name: Cache Storybook build

@@ -104,6 +104,8 @@ bun run compile
 bun run package
 ```
 
+Linux visual CI installs Playwright system packages from Ubuntu's official HTTPS archive.
+
 ### Documentation checks
 
 From the repo root:
