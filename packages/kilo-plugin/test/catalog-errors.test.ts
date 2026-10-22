@@ -49,15 +49,19 @@ for (const scenario of ["http", "network", "schema", "missing-team"] as const) {
             yield* KiloGatewayPlugin.effect(host).pipe(Effect.provide(Global.layerWith({})))
             const rpc = yield* Rpc.Service
             const failure = yield* rpc.client(KiloGatewayRpc.Definition).models({}).pipe(Effect.flip)
-            const reason = scenario === "http" ? "HTTP 503" : scenario === "missing-team" ? "HTTP 403" : scenario
+            const reason = scenario === "http" ? "HTTP 503" : scenario
             expect(failure).toEqual({
               type: "failed",
-              message: `Failed to load the Kilo model catalog (${reason}). Check your connection and credentials.`,
+              message:
+                scenario === "missing-team"
+                  ? "The selected Kilo team is no longer available. Select another team or clear the team selection."
+                  : `Failed to load the Kilo model catalog (${reason}). Check your connection and credentials.`,
               data: {
-                kind: scenario === "http" ? "http" : scenario === "missing-team" ? "unauthorized" : scenario,
-                ...(scenario === "http" ? { status: 503 } : scenario === "missing-team" ? { status: 403 } : {}),
+                kind: scenario === "http" ? "http" : scenario === "missing-team" ? "organization_missing" : scenario,
+                ...(scenario === "http" ? { status: 503 } : {}),
               },
             })
+            if (scenario === "missing-team") expect(failure).not.toHaveProperty("data.status")
             expect((yield* providers.available()).some((provider) => provider.id === kilo)).toBe(false)
             const models = yield* Model.Service
             expect((yield* models.available()).filter((model) => model.providerID === kilo)).toEqual([])

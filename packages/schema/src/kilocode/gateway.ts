@@ -220,7 +220,7 @@ export const ModelEntry = Schema.Struct({
 export type ModelEntry = typeof ModelEntry.Type
 
 export const CatalogFailure = Schema.Struct({
-  kind: Schema.Literals(["unauthorized", "network", "schema", "http"]),
+  kind: Schema.Literals(["unauthorized", "network", "schema", "http", "organization_missing"]),
   status: optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(100), Schema.isLessThanOrEqualTo(599))),
 }).annotate({ identifier: "KiloGateway.CatalogFailure" })
 

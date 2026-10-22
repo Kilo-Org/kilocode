@@ -85,13 +85,7 @@ export function transformSseData(
       type: "error",
       // Anthropic reserves `message` for a message object, not a serialized error envelope.
       message: typeof payload.message === "string" ? undefined : payload.message,
-      error: {
-        ...parsed.details,
-        code: parsed.code,
-        type: typeof parsed.details.type === "string" ? parsed.details.type : String(parsed.code),
-        message: parsed.message,
-        retryable: parsed.retryable,
-      },
+      error: KiloErrors.toError(parsed),
     })
   }
 

@@ -242,7 +242,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             envActive,
             models: [],
             failed: true,
-            failure: { kind: "unauthorized", status: 403 },
+            failure: { kind: "organization_missing" },
             anonymous: false,
           }
           return
@@ -327,7 +327,6 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           // Kilo API is down, so it must not replace the stored default.
           defaultModelID: stored.defaultModelID ?? defaultModelID,
           failed: false,
-          failure: fetched.failure,
           anonymous: !token,
         }
       } else {
@@ -688,7 +687,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
               return yield* Effect.fail(
                 context.error("failed", KiloErrors.catalogMessage(failure), {
                   kind: failure.kind,
-                  status: failure.status,
+                  ...(failure.status === undefined ? {} : { status: failure.status }),
                 }),
               )
             }

@@ -127,8 +127,8 @@ test(
   boot({ KILO_API_KEY: "private-fixture-token", KILO_ORG_ID: "private-missing-team" }, async (gateway) => {
     await expect(gateway.rpc.models({}, gateway.options)).rejects.toMatchObject({
       type: "failed",
-      message: "Failed to load the Kilo model catalog (HTTP 403). Check your connection and credentials.",
-      data: { kind: "unauthorized", status: 403 },
+      message: "The selected Kilo team is no longer available. Select another team or clear the team selection.",
+      data: { kind: "organization_missing" },
     })
   }),
   30_000,

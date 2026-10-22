@@ -124,7 +124,9 @@ describe("Kilo Gateway native error path", () => {
           const cause = yield* LLM.stream(request()).pipe(
             Stream.runCollect,
             Effect.flip,
-            Effect.provide(runtime(() => response({ error: { code: entry.code, message: "Fixture guidance" } }, status))),
+            Effect.provide(
+              runtime(() => response({ error: { code: entry.code, message: "Fixture guidance" } }, status)),
+            ),
           )
           const result = yield* decide(cause)
           expect(result.decision.retry).toBe(entry.retry)
@@ -186,8 +188,18 @@ describe("Kilo Gateway native error path", () => {
     }),
   )
 
-  it.effect("leaves an unknown non-Kilo provider error retryable", () =>
+  it.effect("leaves unknown Kilo and non-Kilo provider errors on the native retry default", () =>
     Effect.gen(function* () {
+      const kiloCause = yield* LLM.stream(request()).pipe(
+        Stream.runCollect,
+        Effect.flip,
+        Effect.provide(
+          runtime(() => response({ error: { code: "new_provider_error", message: "Unrecognized failure" } })),
+        ),
+      )
+      expect(kiloCause.reason._tag).toBe("UnknownProvider")
+      expect(kiloCause.reason.http?.headers["x-should-retry"]).toBeUndefined()
+      expect((yield* decide(kiloCause)).decision.retry).toBe(true)
       const selected = LanguageModel.update(model, { provider: "other" })
       const cause = yield* LLM.stream(request(selected)).pipe(
         Stream.runCollect,
@@ -202,12 +214,12 @@ describe("Kilo Gateway native error path", () => {
     }),
   )
 
-  it.effect("distinguishes HTTP quota throttles from SSE quota and respects explicit retry headers", () =>
+  it.effect("keeps exhausted quota terminal in HTTP and SSE and respects explicit retry headers", () =>
     Effect.gen(function* () {
       for (const entry of [
-        { code: "insufficient_quota", status: 429, retry: true, override: undefined },
+        { code: "insufficient_quota", status: 429, retry: false, override: undefined },
         { code: "insufficient_quota", status: 200, retry: false, override: undefined },
-        { code: "PAID_MODEL_AUTH_REQUIRED", status: 200, retry: true, override: "true" },
+        { code: "PAID_MODEL_AUTH_REQUIRED", status: 200, retry: false, override: "true" },
         { code: "top_up_in_progress", status: 200, retry: false, override: "false" },
         { code: "server_error", status: 503, retry: false, override: "false" },
         { code: "PAID_MODEL_AUTH_REQUIRED", status: 401, retry: false, override: "true" },
@@ -226,8 +238,81 @@ describe("Kilo Gateway native error path", () => {
           ),
         )
         expect((yield* decide(cause)).decision.retry).toBe(entry.retry)
-        expect(cause.reason.http?.headers["x-should-retry"]).toBe(String(entry.retry))
+        if (entry.override !== undefined) expect(cause.reason.http?.headers["x-should-retry"]).toBe(String(entry.retry))
+        else expect(cause.reason.http?.headers["x-should-retry"]).not.toBe("true")
       }
+    }),
+  )
+
+  it.effect("retains the explicit free-usage cap for generic api_error bodies", () =>
+    Effect.gen(function* () {
+      for (const status of [200, 500]) {
+        const cause = yield* LLM.stream(request()).pipe(
+          Stream.runCollect,
+          Effect.flip,
+          Effect.provide(runtime(() => response({ error: { message: "FreeUsageLimitError" } }, status))),
+        )
+        expect((yield* decide(cause)).decision.retry).toBe(false)
+        expect(cause.reason.http?.headers["x-should-retry"]).toBe("false")
+      }
+    }),
+  )
+
+  it.effect("does not promote deterministic native failures through message heuristics or generic api_error", () =>
+    Effect.gen(function* () {
+      for (const dialect of dialects) {
+        for (const entry of [
+          { status: 400, body: { error: { code: "invalid_request_error", message: "Input has 500 tokens" } } },
+          { status: 400, body: { error: { code: "invalid_request_error", message: "Provider returned error" } } },
+          { status: 400, body: { message: "Provider returned error" } },
+          ...["insufficient_quota", "usage_not_included", "billing_error", "creditlimitexceeded"].map((code) => ({
+            status: 429,
+            body: { error: { code, message: "Quota exhausted" } },
+          })),
+        ]) {
+          const cause = yield* LLM.stream(request(dialect.model)).pipe(
+            Stream.runCollect,
+            Effect.flip,
+            Effect.provide(runtime(() => response(entry.body, entry.status))),
+          )
+          expect((yield* decide(cause, dialect.model)).decision.retry).toBe(false)
+          expect(cause.reason.http?.headers["x-should-retry"]).not.toBe("true")
+        }
+      }
+    }),
+  )
+
+  it.effect("preserves a terminal outer error when its message also contains an unrelated JSON object", () =>
+    Effect.gen(function* () {
+      for (const dialect of dialects) {
+        for (const status of [200, 429]) {
+          const cause = yield* LLM.stream(request(dialect.model)).pipe(
+            Stream.runCollect,
+            Effect.flip,
+            Effect.provide(
+              runtime(() =>
+                response({ error: { code: "PROMOTION_MODEL_LIMIT_REACHED" }, message: '{"foo":"bar"}' }, status),
+              ),
+            ),
+          )
+          const result = yield* decide(cause, dialect.model)
+          expect(result.decision.retry).toBe(false)
+          expect(result.error.message).toContain("sign up")
+        }
+      }
+    }),
+  )
+
+  it.effect("keeps the error code rather than the frame marker in bare Anthropic errors", () =>
+    Effect.gen(function* () {
+      const selected = dialects[2].model
+      const cause = yield* LLM.stream(request(selected)).pipe(
+        Stream.runCollect,
+        Effect.flip,
+        Effect.provide(runtime(() => response({ type: "error", code: "rate_limit_exceeded", message: "Slow down" }))),
+      )
+      expect(toSessionError(cause).message).toBe("rate_limit_exceeded: Slow down")
+      expect((yield* decide(cause, selected)).decision.retry).toBe(true)
     }),
   )
 
@@ -300,6 +385,59 @@ describe("Kilo Gateway native error path", () => {
         expect(calls).toBe(permanent ? 1 : 2)
         if (result._tag === "Success") expect(result.success.text).toBe("Recovered")
         expect(result._tag).toBe(permanent ? "Failure" : "Success")
+      }
+    }),
+  )
+
+  it.effect("retries native trigger compaction once for a top-up and stops permanent errors after one call", () =>
+    Effect.gen(function* () {
+      const input = request(dialects[1].model)
+      if (!LLMClient.canCompact(input, { mechanism: "trigger" }))
+        throw new Error("Fixture must support trigger compaction")
+      for (const frame of ["error", "response.failed"]) {
+        for (const code of ["PAID_MODEL_AUTH_REQUIRED", "PROMOTION_MODEL_LIMIT_REACHED", "top_up_in_progress"]) {
+          const permanent = code !== "top_up_in_progress"
+          let calls = 0
+          const failed = yield* Deferred.make<void>()
+          const program = LLMClient.compact(input, { mechanism: "trigger" }).pipe(
+            Effect.tapError(() => Deferred.succeed(failed, undefined)),
+            ModelRetry.retry,
+            Effect.result,
+            Effect.provide(
+              runtime(() => {
+                calls++
+                if (calls === 1) {
+                  const error = { code, ...(permanent ? {} : { type: "invalid_request_error" }), message: "Pending" }
+                  return response(
+                    frame === "error"
+                      ? { type: frame, error }
+                      : { type: frame, response: { id: "resp_failed", error } },
+                  )
+                }
+                return response({
+                  type: "response.completed",
+                  response: {
+                    id: "resp_compacted",
+                    output: [{ type: "compaction", id: "cmp_compacted", encrypted_content: "fixture" }],
+                  },
+                })
+              }),
+            ),
+          )
+          const fiber = yield* program.pipe(Effect.forkChild)
+          yield* Deferred.await(failed)
+          yield* TestClock.adjust("3 seconds")
+          const result = yield* Fiber.join(fiber)
+          expect(calls).toBe(permanent ? 1 : 2)
+          expect(result._tag).toBe(permanent ? "Failure" : "Success")
+          if (result._tag === "Failure") {
+            expect((yield* decide(result.failure, dialects[1].model)).decision.retry).toBe(false)
+          }
+          if (result._tag === "Success") {
+            expect(result.success.responseID).toBe("resp_compacted")
+            expect(result.success.checkpoint).toMatchObject({ id: "cmp_compacted", encrypted: "fixture" })
+          }
+        }
       }
     }),
   )

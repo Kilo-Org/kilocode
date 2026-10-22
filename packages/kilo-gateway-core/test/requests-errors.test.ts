@@ -192,10 +192,24 @@ describe("KiloErrors", () => {
     expect((await rewrite({ error: { message: "Request Timeout" } }, 408)).headers.has("x-should-retry")).toBe(false)
     expect((await rewrite({ error: { message: "Conflict" } }, 409)).headers.has("x-should-retry")).toBe(false)
     expect(
-      (await rewrite({ error: "Auto top-up in progress", error_type: "top_up_in_progress" }, 503)).headers.get(
+      (await rewrite({ error: "Auto top-up in progress", error_type: "top_up_in_progress" }, 503)).headers.has(
         "x-should-retry",
       ),
-    ).toBe("true")
+    ).toBe(false)
+  })
+
+  test("retains structured outer errors instead of replacing them with a JSON message", async () => {
+    for (const outer of [
+      { error: { code: "PROMOTION_MODEL_LIMIT_REACHED" } },
+      { error_type: "PROMOTION_MODEL_LIMIT_REACHED" },
+      { code: "PROMOTION_MODEL_LIMIT_REACHED" },
+      { type: "response.failed", response: { error: { code: "PROMOTION_MODEL_LIMIT_REACHED" } } },
+    ]) {
+      const body = { ...outer, message: '{"foo":"bar"}' }
+      expect(KiloErrors.parse(body)).toMatchObject({ code: "PROMOTION_MODEL_LIMIT_REACHED", retryable: false })
+      const result = await KiloErrors.rewriteHttpResponse(Response.json(body, { status: 429 }))
+      expect(result.headers.get("x-should-retry")).toBe("false")
+    }
   })
 
   test("classifies top_up_in_progress as retryable and policy/allow-list errors as non-retryable", () => {

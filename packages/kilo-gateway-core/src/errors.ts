@@ -23,12 +23,15 @@ export const CODES = {
 
 export interface ParsedError {
   readonly code: string | number
+  readonly type: string
   readonly message: string
-  readonly retryable: boolean
+  readonly retryable?: boolean
   readonly details: Record<string, unknown>
 }
 
 export function catalogMessage(failure: KiloModels.Failure) {
+  if (failure.kind === "organization_missing")
+    return "The selected Kilo team is no longer available. Select another team or clear the team selection."
   const reason = failure.status ? `HTTP ${failure.status}` : failure.kind
   return `Failed to load the Kilo model catalog (${reason}). Check your connection and credentials.`
 }
@@ -42,7 +45,15 @@ export function catalogMessage(failure: KiloModels.Failure) {
 export function parse(rawBody: string | unknown, status?: number): ParsedError | undefined {
   const decoded = typeof rawBody === "string" ? Option.getOrUndefined(decodeJson(rawBody)) : rawBody
   if (!isRecord(decoded)) return undefined
-  const inner = typeof decoded.message === "string" ? Option.getOrUndefined(decodeJson(decoded.message)) : undefined
+  // A serialized message is a wrapper only when it does not replace a structured outer error.
+  const inner =
+    decoded.error === undefined &&
+    decoded.error_type === undefined &&
+    decoded.code === undefined &&
+    decoded.type !== "response.failed" &&
+    typeof decoded.message === "string"
+      ? Option.getOrUndefined(decodeJson(decoded.message))
+      : undefined
   const value = isRecord(inner) ? inner : decoded
 
   // Unwrap `response.failed` terminal SSE frame (`/responses`).
@@ -68,11 +79,20 @@ export function parse(rawBody: string | unknown, status?: number): ParsedError |
 
   return {
     code: normalizedCode,
+    type: asString(nestedError?.type) ?? code,
     message,
-    retryable:
-      !JSON.stringify(value).includes("FreeUsageLimitError") &&
-      isRetryable(code, message, status, asString(nestedError?.type)),
+    retryable: !JSON.stringify(value).includes("FreeUsageLimitError") && retryOverride(code),
     details: nestedError ?? unwrapped,
+  }
+}
+
+export function toError(parsed: ParsedError) {
+  return {
+    ...parsed.details,
+    code: parsed.code,
+    type: parsed.type,
+    message: parsed.message,
+    retryable: parsed.retryable,
   }
 }
 
@@ -92,19 +112,11 @@ export async function rewriteHttpResponse(response: Response): Promise<Response>
   headers.set("content-type", "application/json")
   headers.delete("content-length")
   headers.delete("content-encoding")
-  // kilo_port(gateway:1995b11b5cdd) As in v1 retry.ts, Kilo errors that need user action are not retried, also on a
-  // 429 such as PROMOTION_MODEL_LIMIT_REACHED. The upstream retry policy reads this header. A body without a Kilo
-  // code parses as `api_error`; it must keep the upstream retry decision for 408 and 409.
-  if (parsed.code !== "api_error" && (!parsed.retryable || !headers.has("x-should-retry")))
-    headers.set("x-should-retry", String(parsed.retryable))
+  // kilo_port(gateway:1995b11b5cdd) Known Kilo action and quota errors remain terminal, including HTTP 429.
+  // Other provider errors keep native retry decisions; prose must not promote deterministic failures.
+  if (parsed.retryable === false) headers.set("x-should-retry", "false")
   const body = JSON.stringify({
-    error: {
-      ...parsed.details,
-      code: parsed.code,
-      type: typeof parsed.details.type === "string" ? parsed.details.type : String(parsed.code),
-      message: parsed.message,
-      retryable: parsed.retryable,
-    },
+    error: toError(parsed),
     error_type: parsed.code,
   })
   return new Response(body, {
@@ -145,12 +157,7 @@ function formatMessage(
   return rawMessage
 }
 
-const RETRYABLE_CODE =
-  /top_up_in_progress|rate.?limit|too.?many.?requests|rate increased too quickly|exhausted|overload|server|unavailable|timeout/i
-const RETRYABLE_TEXT =
-  /\b(?:429|500|502|503|504|524)\b|rate increased too quickly|rate.?limit|too.?many.?requests|overloaded|service[-_ ]unavailable|internal[-_ ]error|server[-_ ]error|provider[-_ ]returned[-_ ]error|terminated|fetch failed|failed to fetch|network[-_\s]error|upstream connect|connection (?:error|refused|lost)|socket (?:connection was closed|hang up)|reset before headers|getaddrinfo|enotfound|eai_again|econnrefused|econnreset|etimedout|^timeout$|\b(?:request|response|connection|network|stream|read) (?:timeout|timed out|time out)\b|try your request again|retry your request|resource[-_ ]exhausted|try again (?:later|in\b)|(?:currently|temporarily) at capacity|temporarily unavailable/i
-
-function isRetryable(code: string, message: string, status?: number, type?: string): boolean {
+function retryOverride(code: string): boolean | undefined {
   if (code === CODES.TOP_UP_IN_PROGRESS) return true
   if (
     code === CODES.PAID_MODEL_AUTH_REQUIRED ||
@@ -162,16 +169,13 @@ function isRetryable(code: string, message: string, status?: number, type?: stri
     code === CODES.MODEL_NOT_ALLOWED ||
     code === CODES.PROVIDER_NOT_ALLOWED ||
     code === CODES.DATA_COLLECTION_REQUIRED ||
-    code === CODES.UPGRADE_REQUIRED
+    code === CODES.UPGRADE_REQUIRED ||
+    code === "402"
   ) {
     return false
   }
-  if (status === 408 || status === 409 || status === 429 || (status !== undefined && status >= 500 && status < 600))
-    return true
-  const numeric = Number(code)
-  if (numeric === 429 || (numeric >= 500 && numeric < 600)) return true
-  if (RETRYABLE_CODE.test(code) || (type && RETRYABLE_CODE.test(type))) return true
-  return RETRYABLE_TEXT.test(message)
+  // Other provider errors, including quota and rate limits, keep their native classification.
+  return undefined
 }
 
 function asCode(value: unknown): string | number | undefined {

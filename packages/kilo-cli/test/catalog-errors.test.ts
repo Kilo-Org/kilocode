@@ -127,7 +127,7 @@ it.effect("formats typed failure data without exposing arbitrary RPC messages or
   Effect.gen(function* () {
     const rpc = yield* Rpc.Service
     const resolver = { resolve: () => Effect.undefined, resolveModel: () => Effect.die("Unexpected model resolution") }
-    for (const kind of ["network", "schema"] as const) {
+    for (const kind of ["network", "schema", "http", "unauthorized"] as const) {
       yield* Effect.scoped(
         Effect.gen(function* () {
           yield* rpc.register(Definition, {
