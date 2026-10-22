@@ -11190,6 +11190,377 @@
         ]
       }
     },
+    "/kilocode/agent-usage/summary": {
+      "get": {
+        "tags": ["agent-usage"],
+        "operationId": "agentUsage.summary",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "agent",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Per-agent usage rollup for the project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "agent": {
+                        "type": "string"
+                      },
+                      "runs": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "sessions": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "cost": {
+                        "type": "number"
+                      },
+                      "activeMs": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "tokens": {
+                        "type": "object",
+                        "properties": {
+                          "input": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "output": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "reasoning": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "cache": {
+                            "type": "object",
+                            "properties": {
+                              "read": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "write": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": ["read", "write"],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["input", "output", "reasoning", "cache"],
+                        "additionalProperties": false
+                      },
+                      "errors": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "lastRunAt": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["agent", "runs", "sessions", "cost", "activeMs", "tokens", "errors", "lastRunAt"],
+                    "additionalProperties": false
+                  },
+                  "description": "Per-agent usage rollup for the project"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get a per-agent rollup of runs, sessions, direct cost, active time, tokens, errors, and the last run time for the routed project.",
+        "summary": "Get agent usage summary",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.agentUsage.summary({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/agent-usage/runs": {
+      "get": {
+        "tags": ["agent-usage"],
+        "operationId": "agentUsage.runs",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "agent",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of agent runs, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^msg"
+                          },
+                          "agent": {
+                            "type": "string"
+                          },
+                          "sessionID": {
+                            "type": "string",
+                            "pattern": "^ses"
+                          },
+                          "rootSessionID": {
+                            "type": "string",
+                            "pattern": "^ses"
+                          },
+                          "parentSessionID": {
+                            "type": "string",
+                            "pattern": "^ses"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string"
+                          },
+                          "model": {
+                            "type": "object",
+                            "properties": {
+                              "providerID": {
+                                "type": "string"
+                              },
+                              "modelID": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["providerID", "modelID"],
+                            "additionalProperties": false
+                          },
+                          "startedAt": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "completedAt": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "activeMs": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "cost": {
+                            "type": "number"
+                          },
+                          "tokens": {
+                            "type": "object",
+                            "properties": {
+                              "input": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "output": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "reasoning": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "cache": {
+                                "type": "object",
+                                "properties": {
+                                  "read": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "write": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": ["read", "write"],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": ["input", "output", "reasoning", "cache"],
+                            "additionalProperties": false
+                          },
+                          "outcome": {
+                            "type": "string",
+                            "enum": ["completed", "cancelled", "errored", "running"]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "agent",
+                          "sessionID",
+                          "rootSessionID",
+                          "parentSessionID",
+                          "title",
+                          "role",
+                          "model",
+                          "startedAt",
+                          "completedAt",
+                          "activeMs",
+                          "cost",
+                          "tokens",
+                          "outcome"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "next": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["items"],
+                  "additionalProperties": false,
+                  "description": "One page of agent runs, newest first"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "List agent runs newest first by start time, with optional agent and time window filters. Pages by the opaque `next` cursor returned by the previous page.",
+        "summary": "List agent runs",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.agentUsage.runs({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/background-process": {
       "get": {
         "tags": ["background-process"],
@@ -43938,6 +44309,9 @@
                     "branchName": {
                       "type": "string"
                     },
+                    "agent": {
+                      "type": "string"
+                    },
                     "model": {
                       "type": "object",
                       "properties": {
@@ -62054,6 +62428,10 @@
     {
       "name": "agent-builder",
       "description": "Kilo agent builder routes."
+    },
+    {
+      "name": "agent-usage",
+      "description": "Kilo agent usage routes."
     },
     {
       "name": "background-process",
