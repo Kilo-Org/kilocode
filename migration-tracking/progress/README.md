@@ -8,20 +8,20 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**90 / 9829 cells done (0.9%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
+**92 / 9829 cells done (0.9%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 31 | 3547 | 0.9% |
+| module | 32 | 3547 | 0.9% |
 | api | 0 | 39 | 0% |
 | patch | 38 | 3445 | 1.1% |
-| test | 21 | 2798 | 0.8% |
+| test | 22 | 2798 | 0.8% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
 Landed by rung, for patch cells closed by a done-proof: 20 plugin, 3 host, 0 seam, 0 patch.
 
-Ratchets: 10 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 28 shared patches by rung: 21 seam, 7 patch (`script/upstream/shared-patches.json`).
+Ratchets: 10 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 37 shared patches by rung: 21 seam, 16 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -35,7 +35,8 @@ One point per day from the committed `progress.json` on the first-parent history
 | 2026-10-19 | 87 | 9829 | 0.9% |
 | 2026-10-20 | 87 | 9829 | 0.9% |
 | 2026-10-21 | 90 | 9829 | 0.9% |
-| now | 90 | 9829 | 0.9% |
+| 2026-10-22 | 92 | 9829 | 0.9% |
+| now | 92 | 9829 | 0.9% |
 
 ## Features
 
@@ -75,7 +76,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | fff | 0/1 |  | 0/4 | 0/1 | 0/6 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | filesystem-containment |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | fixture |  |  |  | 0/10 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| gateway | 30/35 |  | 12/18 | 17/22 | 59/75 | 78.7% | `█████████████░░░` | 11 plugin |
+| gateway | 31/35 |  | 12/18 | 18/22 | 61/75 | 81.3% | `█████████████░░░` | 11 plugin |
 | global | 0/2 |  | 1/4 | 0/1 | 1/7 | 14.3% | `██░░░░░░░░░░░░░░` | 1 host |
 | goals | 0/9 |  | 0/6 | 0/6 | 0/21 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | i18n | 0/20 |  |  |  | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |

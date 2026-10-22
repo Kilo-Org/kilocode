@@ -355,7 +355,12 @@ export const layer = Layer.effect(
       const prepared = yield* prepare(context, context.messages, budget, "session")
 
       const toResult = (window: ReadonlyArray<Message>, usage: Usage | undefined) =>
-        spend(context.session.id, usage && SessionUsage.record(usage, context.model.cost)).pipe(
+        // kilocode_change start - gateway: native compaction uses the same reported billing policy.
+        spend(
+          context.session.id,
+          usage && SessionUsage.record(usage, context.model.cost, context.model.ref.providerID),
+        ).pipe(
+          // kilocode_change end
           Effect.as<Result>({
             text: "",
             // Plain JSON, not the schema encoder: provider metadata can hold undefined entries, which it rejects.
@@ -550,7 +555,12 @@ export const layer = Layer.effect(
             }
 
             if (LLMEvent.is.stepFinish(event)) {
-              return spend(sessionID, SessionUsage.record(event.usage, context.model.cost)).pipe(Effect.as(streamed))
+              // kilocode_change start - gateway: streamed compaction uses the same reported billing policy.
+              return spend(
+                sessionID,
+                SessionUsage.record(event.usage, context.model.cost, context.model.ref.providerID),
+              ).pipe(Effect.as(streamed))
+              // kilocode_change end
             }
 
             if (!LLMEvent.is.finish(event)) return Effect.succeed(streamed)
