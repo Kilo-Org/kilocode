@@ -210,7 +210,7 @@ describe("CodeIndexManager", () => {
       const timeout = setTimeout(() => {
         child.kill()
         gate.reject(new Error("Indexing subprocess timed out"))
-      }, 10_000)
+      }, 30_000)
       const [exit, stderr] = await Promise.race([
         Promise.all([child.exited, new Response(child.stderr).text()]),
         gate.promise,

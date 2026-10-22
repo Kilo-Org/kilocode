@@ -162,13 +162,23 @@ export class CodeIndexOrchestrator {
    * reuse it instead of contending with themselves.
    */
   private async _acquire(): Promise<Writer | undefined> {
-    if (this._writer) return this._writer
+    if (this._writer) {
+      // The session caches its writer across runs. Verify ownership before
+      // reusing it: a heartbeat that saw another session's token stops beating,
+      // but only a fresh check here stops this orchestrator from writing the
+      // store after it has lost the lock.
+      if (await this._writer.owned()) return this._writer
+      log.warn("lost the writer lock since the last run; reacquiring", {
+        workspacePath: this.workspacePath,
+      })
+      this._writer = undefined
+    }
     const dir = this.cacheManager.dir
     if (!dir) {
       log.warn("no cache directory for the writer lock, proceeding unlocked", {
         workspacePath: this.workspacePath,
       })
-      return { release: async () => {} }
+      return { release: async () => {}, owned: async () => true }
     }
     const writer = await acquire(dir, this.workspacePath)
     if (writer) {
@@ -505,10 +515,9 @@ export class CodeIndexOrchestrator {
 
   public async clearIndexData(): Promise<void> {
     // Reuse the session-held lock when this session owns it: acquiring again
-    // would contend with ourselves. A fresh lock is released below; the
-    // session-held one stays acquired for the watcher's ongoing writes.
-    const owned = this._writer !== undefined
-    const writer = this._writer ?? (await this._acquire())
+    // would contend with ourselves. Whatever the source, the watcher is
+    // stopped below, so no writes remain and the lock is released afterwards.
+    const writer = await this._acquire()
     if (!writer) {
       // A user-requested clear must not vanish silently when another session
       // holds the lock: surface contention as an error event with a
@@ -548,7 +557,9 @@ export class CodeIndexOrchestrator {
       }
     } finally {
       this._isProcessing = false
-      if (!owned) await this._releaseWriter()
+      // stopWatcher() above means this session no longer writes the store, so
+      // a session-held lock must be handed back rather than kept until exit.
+      await this._releaseWriter()
       log.info("finished clearing index data", {
         workspacePath: this.workspacePath,
         state: this.stateManager.state,

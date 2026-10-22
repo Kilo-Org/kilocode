@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
-import { mkdtemp, rm } from "fs/promises"
-import { tmpdir } from "os"
+import { mkdir, mkdtemp, rm, writeFile } from "fs/promises"
+import { createHash } from "crypto"
+import { hostname, tmpdir } from "os"
 import path from "path"
 import { CodeIndexConfigManager } from "../../../src/indexing/config-manager"
 import { CodeIndexOrchestrator } from "../../../src/indexing/orchestrator"
@@ -532,6 +533,62 @@ describe("CodeIndexOrchestrator telemetry", () => {
     const next = await acquire(dir, "/tmp/ws")
     expect(next).toBeDefined()
     await next?.release()
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test("releases the session-held writer lock after clear", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "indexing-lock-"))
+    const store = new Store("empty", false)
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { dir, async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("background")
+    expect(orchestrator.state).toBe("Indexed")
+
+    await orchestrator.clearIndexData()
+    // The watcher is stopped by clear, so no writes remain: keeping the lock
+    // would starve every other session for the rest of this one's lifetime.
+    const next = await acquire(dir, "/tmp/ws")
+    expect(next).toBeDefined()
+    await next?.release()
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test("stops writing when another session takes over the cached lock", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "indexing-lock-"))
+    const store = new Store("complete", false)
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { dir, async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("background")
+    expect(orchestrator.state).toBe("Indexed")
+
+    const slot = path.join(dir, "locks", createHash("sha256").update("/tmp/ws").digest("hex").substring(0, 16))
+    const before = store.deleteCount
+    await rm(slot, { recursive: true, force: true })
+    await mkdir(slot, { recursive: true })
+    await writeFile(path.join(slot, "meta.json"), JSON.stringify({ token: "rival", pid: process.pid, host: hostname() }))
+    await writeFile(path.join(slot, "heartbeat"), "")
+
+    await orchestrator.clearIndexData()
+    // The cached writer is no longer the owner, so the clear must not write
+    // the store. It re-acquires and reports contention instead.
+    expect(store.deleteCount).toBe(before)
+    expect(orchestrator.state).toBe("Error")
     await rm(dir, { recursive: true, force: true })
   })
 

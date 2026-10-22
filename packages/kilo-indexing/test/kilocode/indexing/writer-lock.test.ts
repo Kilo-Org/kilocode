@@ -60,6 +60,18 @@ describe("writer lock", () => {
     await writer?.release()
   })
 
+  test("reports ownership only while the lock still belongs to this writer", async () => {
+    const writer = await acquire(dir, WS)
+    expect(await writer?.owned()).toBe(true)
+
+    // A takeover rewrites the metadata; the cached writer must notice instead
+    // of continuing to write the store as if the lock were still its own.
+    const current = await meta()
+    await writeFile(path.join(slot(), "meta.json"), JSON.stringify({ ...current, token: "rival" }))
+    expect(await writer?.owned()).toBe(false)
+    await writer?.release()
+  })
+
   test("takes over a lock whose heartbeat stopped", async () => {
     await plant({ token: "dead", pid: process.pid, host: "elsewhere" }, true)
 

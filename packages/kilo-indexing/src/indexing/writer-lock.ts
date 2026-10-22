@@ -11,6 +11,7 @@ const BEAT_MS = Math.floor(STALE_MS / 3)
 
 export type Writer = {
   release: () => Promise<void>
+  owned: () => Promise<boolean>
 }
 
 type Meta = {
@@ -163,7 +164,16 @@ export async function acquire(dir: string, workspacePath: string): Promise<Write
   }, BEAT_MS)
   timer.unref?.()
 
+  // A caller may cache this writer across runs. Reading the metadata rather
+  // than trusting the heartbeat timer lets it learn about a takeover before
+  // writing the store under a lock another session now owns.
+  const owned = async () => {
+    const current = await read(path.join(lockdir, "meta.json"))
+    return current?.token === token
+  }
+
   return {
+    owned,
     release: async () => {
       held = false
       clearInterval(timer)
