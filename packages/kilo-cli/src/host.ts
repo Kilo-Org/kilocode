@@ -5,6 +5,7 @@ import { App } from "@opencode/core/app"
 import { Bus } from "@opencode/core/bus"
 import { ConfigDiscovery } from "@opencode/core/config/discovery"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
+import { Model } from "@opencode/core/model"
 import { SdkPlugins } from "@opencode/core/plugin/sdk"
 import type { Plugin } from "@opencode/plugin/effect/plugin"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
@@ -12,6 +13,7 @@ import type { LayerNode } from "@opencode/util/effect/layer-node"
 import { Global } from "@opencode/util/global"
 import { Context, Duration, Effect, Layer, type Scope } from "effect"
 import { KiloApp } from "./app"
+import { KiloSmallModel } from "./small-model"
 
 /**
  * The duration in milliseconds of the last activation of each Kilo plugin, by plugin ID. The startup ratchet
@@ -59,6 +61,17 @@ const plugins = makeGlobalNode({
 export const overrides: LayerNode.Replacements = [
   SdkPlugins.node.replace(plugins),
   App.node.replace(App.configured(KiloApp)),
+  Model.node.replace(
+    Model.node.mapLayer((layer) =>
+      Layer.effect(
+        Model.Service,
+        Effect.gen(function* () {
+          const models = yield* Model.Service
+          return { ...models, small: (providerID) => KiloSmallModel.select(models, providerID) }
+        }),
+      ).pipe(Layer.provide(layer)),
+    ),
+  ),
   // kilo_port(unattributed:config:546539fc1643) kilo_port(unattributed:config:8cdbdec70393)
   ConfigDiscovery.node.replace(Layer.succeed(ConfigDiscovery.LayoutService, KiloConfigDiscovery.layout)),
 ]

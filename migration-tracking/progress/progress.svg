@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 334" width="1000" height="334">
 <style>rect{stroke:#0d1117;stroke-width:.5}.d{fill:#2ea043}.o{fill:#6e7681}.x{fill:#d29922}.b{fill:none;stroke-width:2}text{font-family:sans-serif;fill:#fff;stroke:#0d1117;stroke-width:3;paint-order:stroke}</style>
 <rect x="0" y="0" width="1000" height="334" fill="#0d1117" stroke="none"/>
-<text x="4.00" y="21.00" font-size="16">Features: 1.2% (67/5677)</text>
+<text x="4.00" y="21.00" font-size="16">Features: 1.2% (68/5677)</text>
 <g><title>vscode: 0/2057 (0%)</title>
 <rect class="o" x="1.00" y="31.00" width="14.74" height="15.44"/>
 <rect class="o" x="15.74" y="31.00" width="14.74" height="15.44"/>
@@ -1512,7 +1512,7 @@
 <rect class="b" x="286.08" y="151.35" width="39.61" height="59.03"/>
 <text x="291.08" y="167.35" font-size="12">serv</text>
 </g>
-<g><title>gateway: 59/75 (78.7%), 12 dropped</title>
+<g><title>gateway: 60/75 (80%), 12 dropped</title>
 <rect class="d" x="287.08" y="211.38" width="4.70" height="4.68"/>
 <rect class="d" x="291.78" y="211.38" width="4.70" height="4.68"/>
 <rect class="d" x="296.48" y="211.38" width="4.70" height="4.68"/>
@@ -1572,7 +1572,7 @@
 <rect class="d" x="287.08" y="244.15" width="4.70" height="4.68"/>
 <rect class="d" x="291.78" y="244.15" width="4.70" height="4.68"/>
 <rect class="d" x="296.48" y="244.15" width="4.70" height="4.68"/>
-<rect class="o" x="301.18" y="244.15" width="4.70" height="4.68"/>
+<rect class="d" x="301.18" y="244.15" width="4.70" height="4.68"/>
 <rect class="o" x="305.88" y="244.15" width="4.70" height="4.68"/>
 <rect class="o" x="310.58" y="244.15" width="4.70" height="4.68"/>
 <rect class="o" x="315.28" y="244.15" width="4.70" height="4.68"/>
@@ -6770,5 +6770,5 @@
 <rect class="d" x="4" y="316" width="12" height="12"/><text x="20.00" y="327.00" font-size="12">done</text>
 <rect class="o" x="60" y="316" width="12" height="12"/><text x="76.00" y="327.00" font-size="12">open</text>
 <rect class="x" x="112" y="316" width="12" height="12"/><text x="128.00" y="327.00" font-size="12">dropped</text>
-<text x="190.00" y="327.00" font-size="12">Landed by rung: 20 plugin, 3 host, 0 seam, 0 patch</text>
+<text x="190.00" y="327.00" font-size="12">Landed by rung: 21 plugin, 3 host, 0 seam, 0 patch</text>
 </svg>

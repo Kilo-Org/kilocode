@@ -14,6 +14,7 @@ export const ACCOUNT_BODY_KEYS = new Set([
   "email",
   "hasPersonalAccount",
   "key",
+  "kiloCredentials",
   "name",
   "organizationID",
   "organizationName",

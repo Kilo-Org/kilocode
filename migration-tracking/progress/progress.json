@@ -4,7 +4,7 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 90,
+    "done": 91,
     "total": 9829,
     "percent": 0.9,
     "dropped": 25,
@@ -21,7 +21,7 @@
       },
       {
         "kind": "patch",
-        "done": 38,
+        "done": 39,
         "total": 3445
       },
       {
@@ -31,15 +31,15 @@
       }
     ],
     "landed": {
-      "plugin": 20,
+      "plugin": 21,
       "host": 3,
       "seam": 0,
       "patch": 0
     },
-    "coreImports": 9,
+    "coreImports": 17,
     "sharedPatches": {
-      "seam": 20,
-      "patch": 7
+      "seam": 24,
+      "patch": 8
     }
   },
   "notCounted": {
@@ -56,8 +56,16 @@
     "@opencode/core/app",
     "@opencode/core/bus",
     "@opencode/core/config/discovery",
+    "@opencode/core/model",
     "@opencode/core/permission",
     "@opencode/core/plugin/sdk",
+    "@opencode/core/plugin/system-prompt/anthropic.txt",
+    "@opencode/core/plugin/system-prompt/gpt-astra.txt",
+    "@opencode/core/plugin/system-prompt/gpt.txt",
+    "@opencode/core/plugin/system-prompt/kimi.txt",
+    "@opencode/core/plugin/system-prompt/trinity.txt",
+    "@opencode/core/session/runner/prompt/system.txt",
+    "@opencode/core/session/system-prompt",
     "@opencode/core/shell",
     "@opencode/core/tool-output",
     "@opencode/core/util/wildcard",
@@ -865,7 +873,7 @@
     },
     {
       "feature": "gateway",
-      "done": 59,
+      "done": 60,
       "total": 75,
       "dropped": 12,
       "kinds": {
@@ -878,7 +886,7 @@
           "total": 0
         },
         "patch": {
-          "done": 12,
+          "done": 13,
           "total": 18
         },
         "test": {
@@ -887,7 +895,7 @@
         }
       },
       "landed": {
-        "plugin": 11,
+        "plugin": 12,
         "host": 0,
         "seam": 0,
         "patch": 0
@@ -6089,6 +6097,7 @@
     "patch:gateway:73ba28ce78a5": "plugin",
     "patch:gateway:742c02b40457": "plugin",
     "patch:gateway:d29cb22ad5f6": "plugin",
+    "patch:gateway:e19fc2acea57": "plugin",
     "patch:gateway:e8673ed1650b": "plugin",
     "patch:gateway:f983d8f993c8": "plugin",
     "patch:global:0e189a57d108": "host",
@@ -6167,6 +6176,7 @@
     "patch:gateway:742c02b40457",
     "patch:gateway:a120a4aeb745",
     "patch:gateway:d29cb22ad5f6",
+    "patch:gateway:e19fc2acea57",
     "patch:gateway:e8673ed1650b",
     "patch:gateway:f983d8f993c8",
     "patch:global:0e189a57d108",
