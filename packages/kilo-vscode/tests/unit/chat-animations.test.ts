@@ -9,7 +9,11 @@
  */
 
 import { describe, expect, it } from "bun:test"
+import fs from "node:fs"
+import path from "node:path"
 import { reduceMotion, resolveAnimations } from "../../webview-ui/src/animations"
+
+const ROOT = path.resolve(import.meta.dir, "../..")
 
 describe("resolveAnimations", () => {
   it("keeps the full motion while the window is focused", () => {
@@ -42,5 +46,17 @@ describe("reduceMotion", () => {
   it("leaves the one-shot motion alone when the budget is reduced", () => {
     expect(reduceMotion("full")).toBe(false)
     expect(reduceMotion("reduced")).toBe(false)
+  })
+})
+
+describe("the host's reduce-motion class", () => {
+  // VS Code puts vscode-reduce-motion on the webview body when the user asked
+  // for reduced motion, and it removes the class again on every style change.
+  // Writing on it would take that setting away from the user.
+  it("is only read, never written", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/src/animations.ts"), "utf-8")
+    expect(source).not.toContain('toggle("vscode-reduce-motion"')
+    expect(source).not.toContain('add("vscode-reduce-motion"')
+    expect(source).not.toContain('remove("vscode-reduce-motion"')
   })
 })

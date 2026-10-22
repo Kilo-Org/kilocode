@@ -32,11 +32,28 @@ export function reduceMotion(mode: Motion): boolean {
   return mode === "off" || mode === "paused"
 }
 
+/**
+ * VS Code owns `vscode-reduce-motion`: it puts the class on the webview body
+ * when the user asked for reduced motion, and it takes the class off again on
+ * every style change. Kilo adds its own marker instead of writing on that
+ * one, so the budget can stop the motion without taking the host's setting
+ * away from the user.
+ */
+export const KILO_REDUCE_MOTION = "kilo-reduce-motion"
+
+/** True when either the host or the motion budget asks for less motion. */
+export function reduceMotionEnabled() {
+  if (typeof document === "undefined") return false
+  const body = document.body
+  if (!body) return false
+  return body.classList.contains("vscode-reduce-motion") || body.classList.contains(KILO_REDUCE_MOTION)
+}
+
 export function applyAnimations(user: Animations, focused: boolean) {
   if (typeof document === "undefined") return
   const root = document.documentElement
   const mode = resolveAnimations(user, focused, document.visibilityState === "hidden")
   if (mode === "full") delete root.dataset.animations
   else root.dataset.animations = mode
-  document.body?.classList.toggle("vscode-reduce-motion", reduceMotion(mode))
+  document.body?.classList.toggle(KILO_REDUCE_MOTION, reduceMotion(mode))
 }
