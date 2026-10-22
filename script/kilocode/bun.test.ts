@@ -46,6 +46,15 @@ test("manifest pins all twelve immutable npm tarballs with SHA-512", () => {
   expect(new Set(Object.values(pin.artifacts).map((item) => item.integrity)).size).toBe(12)
 })
 
+test("active workflows do not bypass the pinned runtime bootstrap", async () => {
+  const dir = new URL("../../.github/workflows/", import.meta.url)
+  for (const file of await readdir(dir)) {
+    if (!/\.ya?ml$/.test(file)) continue
+    const text = await readFile(new URL(file, dir), "utf8")
+    expect(text).not.toMatch(/^\s*(?:-\s*)?uses:\s*["']?oven-sh\/setup-bun@/m)
+  }
+})
+
 test("rejects unsupported targets before staging", async () => {
   for (const input of [
     { os: "freebsd", arch: "x64" },
