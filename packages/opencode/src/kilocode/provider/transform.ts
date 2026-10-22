@@ -51,8 +51,10 @@ export function isFirstPartyOpenAIEndpoint(model: EndpointModel, options: Record
   try {
     host = new URL(endpoint).hostname.toLowerCase()
   } catch {
-    // Unexpanded config placeholders ({env:...}, ${...}) cannot be judged.
-    return true
+    // A configured but unexpanded endpoint ({env:...}, ${...}) cannot be
+    // proven first-party. Gate conservatively: offering tiers the endpoint may
+    // reject is worse than omitting tiers a first-party endpoint would accept.
+    return false
   }
   return host === "openai.com" || host.endsWith(".openai.com")
 }

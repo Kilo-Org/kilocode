@@ -215,4 +215,17 @@ describe("ProviderTransform.variants - gpt-5 rollout-tier gate", () => {
     )
     expect(Object.keys(result)).toEqual(["low", "medium", "high"])
   })
+
+  test("unexpanded baseURL placeholder is gated conservatively", () => {
+    const result = ProviderTransform.variants(
+      model({
+        id: "grok-4.6",
+        providerID: "openai",
+        api: { id: "grok-4.6", url: "https://api.openai.com", npm: "@ai-sdk/openai" },
+        release_date: "2026-08-12",
+      }),
+      { baseURL: "https://{env:XAI_HOST}/v1" },
+    )
+    expect(Object.keys(result)).toEqual(["low", "medium", "high"])
+  })
 })
