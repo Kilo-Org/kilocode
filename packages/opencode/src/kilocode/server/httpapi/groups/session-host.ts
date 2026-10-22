@@ -22,7 +22,6 @@ import {
   UpstreamError,
 } from "@/server/routes/instance/httpapi/errors"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
-import { SchemaErrorMiddleware } from "@/server/routes/instance/httpapi/middleware/schema-error"
 import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 
@@ -179,7 +178,7 @@ export const SessionHostApi = HttpApi.make("session-host")
           }),
         ),
         HttpApiEndpoint.delete("detach", SessionHostPaths.attachment, {
-          params: { attachmentID: AttachmentID },
+          params: { attachmentID: Schema.String },
           success: described(SessionHostDetached, "Attachment disposed"),
           error: [...SessionErrors, SessionHostGoneError],
         }).annotateMerge(
@@ -196,8 +195,7 @@ export const SessionHostApi = HttpApi.make("session-host")
           description: "Kilo hosted session control routes.",
         }),
       )
-      .middleware(Authorization)
-      .middleware(SchemaErrorMiddleware),
+      .middleware(Authorization),
   )
   .annotateMerge(
     OpenApi.annotations({

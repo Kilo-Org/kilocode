@@ -19024,7 +19024,7 @@ export type SessionHostAttachResponse = SessionHostAttachResponses[keyof Session
 export type SessionHostDetachData = {
   body?: never
   path: {
-    attachmentID: SessionHostAttachmentId
+    attachmentID: string
   }
   query?: never
   url: "/kilocode/session-host/attachment/{attachmentID}"

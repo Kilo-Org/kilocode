@@ -20,10 +20,12 @@ import {
 } from "@/server/routes/instance/httpapi/errors"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { Effect } from "effect"
+import * as Log from "@opencode-ai/core/util/log"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { SessionHostGoneError, SessionHostPaymentRequiredError } from "../groups/session-host"
 
 const SERVICE = "kilo-cloud"
+const log = Log.create({ service: "session-host" })
 const hostedDown = {
   state: "unavailable",
   reason: "unreachable",
@@ -45,6 +47,8 @@ function mapFailure(error: HostedFailure) {
       return new ConflictError({ message: error.message })
     case "invalid_response":
       return new UpstreamError({ message: error.message, service: SERVICE })
+    case "auth_unavailable":
+      return new ServiceUnavailableError({ message: error.message, service: SERVICE })
     default:
       return new ServiceUnavailableError({ message: error.message, service: SERVICE })
   }
@@ -63,7 +67,7 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
           state,
           ...(reason ? { reason } : {}),
         })
-        .pipe(Effect.catchCause(() => Effect.void))
+        .pipe(Effect.catchCause((cause) => Effect.sync(() => log.error("availability event publish failed", { cause }))))
 
     const require = (id: ProviderID) => host.registry.require(id).pipe(Effect.mapError(mapFailure))
 
@@ -104,7 +108,12 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
             // discovery into a server error, so an unexpected effect failure is a
             // reported unavailable state instead.
             availability: yield* provider.availability.pipe(
-              Effect.catchCause(() => Effect.succeed(hostedDown)),
+              Effect.catchCause((cause) =>
+                Effect.sync(() => {
+                  log.error("provider availability failed", { providerID: provider.id, cause })
+                  return hostedDown
+                }),
+              ),
             ),
             transport: yield* provider.transport,
           }
@@ -185,7 +194,9 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
         )
       }
       Attachments.store.dispose(ctx.params.attachmentID)
-      yield* announce(found.entry, "unavailable", "detached")
+      if (Attachments.store.count(found.entry.session) === 0) {
+        yield* announce(found.entry, "unavailable", "detached")
+      }
       return { detached: true }
     })
 

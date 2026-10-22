@@ -81,11 +81,7 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     const detach = SessionHostPaths.attachment.replace(":attachmentID", "{attachmentID}")
     const params = spec.paths[detach]?.delete?.parameters as Parameter[] | undefined
     expect(params?.find((param) => param.name === "attachmentID")?.schema).toMatchObject({
-      $ref: "#/components/schemas/SessionHostAttachmentID",
-    })
-    expect(spec.components?.schemas?.SessionHostAttachmentID).toMatchObject({
       type: "string",
-      pattern: "^wrk_att_[0-9A-Za-z]{26}$",
     })
 
     // The hosted surface must not grow M2 contracts.

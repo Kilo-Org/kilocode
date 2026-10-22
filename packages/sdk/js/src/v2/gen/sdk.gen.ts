@@ -413,7 +413,6 @@ import type {
   SessionGetErrors,
   SessionGetResponses,
   SessionHostAttachErrors,
-  SessionHostAttachmentId,
   SessionHostAttachResponses,
   SessionHostDetachErrors,
   SessionHostDetachResponses,
@@ -9701,7 +9700,7 @@ export class SessionHost extends HeyApiClient {
    */
   public detach<ThrowOnError extends boolean = false>(
     parameters: {
-      attachmentID: SessionHostAttachmentId
+      attachmentID: string
     },
     options?: Options<never, ThrowOnError>,
   ) {

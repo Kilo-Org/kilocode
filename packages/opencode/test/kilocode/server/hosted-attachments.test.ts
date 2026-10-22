@@ -68,4 +68,37 @@ describe("hosted attachments", () => {
     expect(store.lookup(entry.id).kind).toBe("disposed")
     expect(store.dispose(entry.id)).toBe(false)
   })
+
+  test("evicts the oldest live attachment when the registry reaches its bound", () => {
+    const store = Attachments.create()
+    const fake = provider("alpha")
+    const first = store.mint({
+      provider: fake.value,
+      session: hosted("alpha", "ses_00000000000000000000000001"),
+      expiresAt: Date.now() + 60_000,
+    })
+    for (let index = 0; index < 256; index++) {
+      store.mint({
+        provider: fake.value,
+        session: hosted("alpha", `ses_${String(index).padStart(26, "0")}`),
+        expiresAt: Date.now() + 60_000,
+      })
+    }
+
+    expect(store.lookup(first.id).kind).toBe("expired")
+  })
+
+  test("counts only live attachments for one hosted session", () => {
+    const store = Attachments.create()
+    const fake = provider("alpha")
+    const session = hosted("alpha", "ses_00000000000000000000000001")
+    const first = store.mint({ provider: fake.value, session, expiresAt: Date.now() + 60_000 })
+    const second = store.mint({ provider: fake.value, session, expiresAt: Date.now() + 60_000 })
+
+    expect(store.count(session)).toBe(2)
+    store.dispose(first.id)
+    expect(store.count(session)).toBe(1)
+    store.dispose(second.id)
+    expect(store.count(session)).toBe(0)
+  })
 })

@@ -55,7 +55,7 @@ function native(path: string, options: { method?: string; query?: string; body?:
     path: url.pathname,
     query: url.searchParams,
     headers,
-    ...(options.body ? { body: options.body } : {}),
+    ...(options.body ? { body: new TextEncoder().encode(options.body) } : {}),
   }
 }
 
@@ -66,11 +66,11 @@ it.effect("maps only the proven native allowlist onto the Cloud facade", () => {
     const route = cloud.route
     if (!route) throw new Error("kilo-cloud must implement native routing")
 
-    yield* route(native(`/session/${SESSION}`))
+    yield* route(native(`/session/${SESSION}`, { query: "trace=detail&workspace=wrk_local" }))
     yield* route(native(`/session/${SESSION}/message`, { query: "limit=2&before=cursor-1&directory=%2Ftmp" }))
-    yield* route(native(`/session/${SESSION}/prompt_async`, { body: '{"parts":[]}' }))
-    yield* route(native(`/session/${SESSION}/abort`, { body: "{}" }))
-    yield* route(native(`/session/${SESSION}/command`, { body: '{"command":"init"}' }))
+    yield* route(native(`/session/${SESSION}/prompt_async`, { query: "trace=prompt", body: '{"parts":[]}' }))
+    yield* route(native(`/session/${SESSION}/abort`, { query: "scope=session", body: "{}" }))
+    yield* route(native(`/session/${SESSION}/command`, { query: "trace=command", body: '{"command":"init"}' }))
     yield* route(native(`/session/${SESSION}/todo`))
     yield* route(native(`/session/${SESSION}/diff`))
     yield* route(native("/session/status", { query: "workspace=wrk_att_x" }))
@@ -98,13 +98,13 @@ it.effect("maps only the proven native allowlist onto the Cloud facade", () => {
       "POST /kilo/permission/per_1/reply",
     ])
 
-    // Id-scoped reads keep pagination only; every other selector is dropped.
+    // Non-selector query parameters survive while every local selector is dropped.
     expect(app.calls.map((call) => call.search.toString())).toEqual([
-      "",
+      "trace=detail",
       "limit=2&before=cursor-1",
-      "",
-      "",
-      "",
+      "trace=prompt",
+      "scope=session",
+      "trace=command",
       "",
       "",
       `directory=${encodeURIComponent(`/cloud-agent/sessions/${SESSION}`)}`,
@@ -153,6 +153,27 @@ it.effect("rejects unsupported and mismatched native requests without a Cloud re
     const unknown = yield* Effect.flip(route(native("/session/not-a-route")))
     expect(unknown.code).toBe("invalid_request")
 
+    const message = yield* Effect.flip(route(native(`/session/${SESSION}/message/msg_1`)))
+    expect(message.code).toBe("invalid_request")
+
+    const rules = yield* Effect.flip(route(native("/permission/per_1/always-rules", { method: "POST", body: "{}" })))
+    expect(rules.code).toBe("invalid_request")
+
     expect(app.calls).toHaveLength(0)
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("distinguishes credential storage failures from a signed-out provider", () => {
+  const broken = {
+    get: () => Effect.fail(new Auth.AuthError({ message: "disk read failed" })),
+    all: () => Effect.succeed<Record<string, Auth.Info>>({}),
+    set: () => Effect.void,
+    remove: () => Effect.void,
+  } satisfies Auth.Interface
+  const cloud = kiloCloud({ auth: broken })
+  return Effect.gen(function* () {
+    expect(yield* cloud.availability).toMatchObject({ state: "unavailable", reason: "unreachable" })
+    const failure = yield* Effect.flip(cloud.list({}))
+    expect(failure).toMatchObject({ code: "auth_unavailable", retryable: true })
+  })
 })

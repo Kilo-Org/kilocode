@@ -70,6 +70,9 @@ export function provider(options: Options): Provider {
         if (error.kind === "missing") {
           return new HostedFailure({ code: "signed_out", message: error.message, retryable: false })
         }
+        if (error.kind === "unavailable") {
+          return new HostedFailure({ code: "auth_unavailable", message: error.message, retryable: true })
+        }
         return new HostedFailure({ code: "rejected", message: error.message, retryable: false })
       }),
     )
@@ -79,15 +82,8 @@ export function provider(options: Options): Provider {
     Effect.catchTag("CloudAuthResolutionError", (error) =>
       Effect.succeed({
         state: "unavailable",
-        reason: error.kind === "missing" ? "signed_out" : "rejected",
+        reason: error.kind === "missing" ? "signed_out" : error.kind === "unavailable" ? "unreachable" : "rejected",
         message: error.message,
-      } as Availability),
-    ),
-    Effect.catchTag("AuthError", () =>
-      Effect.succeed({
-        state: "unavailable",
-        reason: "unreachable",
-        message: "Kilo credentials could not be read",
       } as Availability),
     ),
   )
@@ -371,19 +367,18 @@ export function provider(options: Options): Provider {
         )
       }
       const auth = yield* resolve(input.organizationID)
-      const headers: Record<string, string> = {}
+      const headers: Record<string, string> = {
+        ...buildKiloHeaders(undefined, auth.organizationID ? { kilocodeOrganizationId: auth.organizationID } : undefined),
+      }
       for (const [key, value] of input.headers.entries()) headers[key] = value
-      // Provider identity headers win over anything the local client sent.
-      Object.assign(
-        headers,
-        buildKiloHeaders(undefined, auth.organizationID ? { kilocodeOrganizationId: auth.organizationID } : undefined),
-      )
       const query = mapped.query.toString()
       return yield* request(auth, {
         method: mapped.method,
         path: query.length === 0 ? mapped.remote : `${mapped.remote}?${query}`,
         headers,
-        ...(input.body && input.body.length > 0 ? { body: input.body } : {}),
+        ...(input.body && input.body.length > 0
+          ? { body: new Blob([new Uint8Array(input.body).buffer]) }
+          : {}),
         // The native event stream is long-lived; every other call keeps the default bound.
         ...(mapped.remote === "/kilo/event" ? { timeoutMs: 0 } : {}),
       })

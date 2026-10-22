@@ -26,14 +26,15 @@ export type Route = {
 
 export type Result = Route | { readonly kind: "mismatch" } | undefined
 
+const SELECTOR_QUERY = new Set(["directory", "workspace", "location[directory]", "location[workspace]"])
+
 const SESSION_ROUTES: ReadonlyArray<{
   readonly method: "GET" | "POST"
   readonly suffix: string
   readonly remote: (id: string) => `/${string}`
-  readonly pagination?: boolean
 }> = [
   { method: "GET", suffix: "", remote: (id) => `/kilo/session/${id}` },
-  { method: "GET", suffix: "/message", remote: (id) => `/kilo/session/${id}/message`, pagination: true },
+  { method: "GET", suffix: "/message", remote: (id) => `/kilo/session/${id}/message` },
   { method: "POST", suffix: "/prompt_async", remote: (id) => `/kilo/session/${id}/prompt_async` },
   { method: "POST", suffix: "/abort", remote: (id) => `/kilo/session/${id}/abort` },
   { method: "POST", suffix: "/command", remote: (id) => `/kilo/session/${id}/command` },
@@ -61,11 +62,11 @@ function session(path: string) {
   return { id: match[1], suffix: match[2] ?? "" }
 }
 
-function pagination(candidates: readonly string[], inbound: URLSearchParams) {
+function forwarded(inbound: URLSearchParams) {
   const query = new URLSearchParams()
-  for (const key of candidates) {
-    const value = inbound.get(key)
-    if (value !== null) query.set(key, value)
+  for (const [key, value] of inbound) {
+    if (SELECTOR_QUERY.has(key)) continue
+    query.append(key, value)
   }
   return query
 }
@@ -95,11 +96,11 @@ export function classify(id: RemoteSessionID, method: string, path: string, inbo
     if (rule.method !== method) continue
     if ("path" in rule) {
       if (path !== rule.path) continue
-      return { kind: "route", method: rule.method, remote: rule.remote, query: selector(id) }
+      return { kind: "route", method: rule.method, remote: rule.remote, query: selector(id, inbound) }
     }
     const match = rule.pattern.exec(path)
     if (!match?.[1]) continue
-    return { kind: "route", method: rule.method, remote: rule.remote(match[1]), query: selector(id) }
+    return { kind: "route", method: rule.method, remote: rule.remote(match[1]), query: selector(id, inbound) }
   }
 
   const parsed = session(path)
@@ -117,14 +118,14 @@ export function classify(id: RemoteSessionID, method: string, path: string, inbo
       kind: "route",
       method: rule.method,
       remote: rule.remote(decoded),
-      query: rule.pagination ? pagination(["limit", "before"], inbound) : new URLSearchParams(),
+      query: forwarded(inbound),
     }
   }
   return undefined
 }
 
-function selector(id: RemoteSessionID) {
-  const query = new URLSearchParams()
+function selector(id: RemoteSessionID, inbound: URLSearchParams) {
+  const query = forwarded(inbound)
   query.set("directory", publicDirectory(id))
   return query
 }

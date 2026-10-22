@@ -1,5 +1,5 @@
 import * as Attachments from "@/kilocode/server/hosted-attachments"
-import type { NativeRequest } from "@/kilocode/session-hosting/types"
+import { HostedFailure, type NativeRequest } from "@/kilocode/session-hosting/types"
 import * as HttpApiServer from "@/server/routes/instance/httpapi/server"
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { ConfigProvider, Effect, Layer } from "effect"
@@ -88,8 +88,54 @@ describe("hosted attachment routing", () => {
     })
 
     expect(response.status).toBe(200)
-    expect(fake.calls[0]?.body).toBe(JSON.stringify({ parts: [{ type: "text", text: "hello" }] }))
+    expect(new TextDecoder().decode(fake.calls[0]?.body)).toBe(
+      JSON.stringify({ parts: [{ type: "text", text: "hello" }] }),
+    )
     expect(fake.calls[0]?.headers.get("content-type")).toBe("application/json")
+  })
+
+  test("stops reading a chunked request as soon as it exceeds the body budget", async () => {
+    const api = app()
+    const fake = provider("alpha")
+    const entry = attach(fake)
+    let pulls = 0
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls += 1
+        controller.enqueue(new Uint8Array(128 * 1024))
+        if (pulls >= 4) controller.close()
+      },
+    })
+
+    const response = await api.request(`/session/${SESSION}/prompt_async?workspace=${entry.id}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+    })
+
+    expect(response.status).toBe(413)
+    expect(pulls).toBeGreaterThanOrEqual(3)
+    expect(fake.calls).toHaveLength(0)
+  })
+
+  test("rejects attached session subroutes outside the provider allowlist instead of running them locally", async () => {
+    const api = app()
+    const fake = provider("alpha", {
+      route: () =>
+        Effect.fail(
+          new HostedFailure({ code: "invalid_request", message: "unsupported native route", retryable: false }),
+        ),
+    })
+    const entry = attach(fake)
+
+    const message = await api.request(`/session/${SESSION}/message/msg_1?workspace=${entry.id}`)
+    expect(message.status).toBe(400)
+    const rules = await api.request(`/permission/per_1/always-rules?workspace=${entry.id}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    })
+    expect(rules.status).toBe(400)
   })
 
   test("fails explicitly without local fallback for every unresolvable attachment", async () => {

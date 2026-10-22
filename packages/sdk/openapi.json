@@ -19859,7 +19859,7 @@
             "name": "attachmentID",
             "in": "path",
             "schema": {
-              "$ref": "#/components/schemas/SessionHostAttachmentID"
+              "type": "string"
             },
             "required": true
           }

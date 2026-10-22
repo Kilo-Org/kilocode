@@ -227,6 +227,39 @@ describe("session host HttpApi", () => {
         HttpClientRequest.delete(SessionHostPaths.attachment.replace(":attachmentID", Attachments.createID())),
       )
       expect(missing.status).toBe(404)
+
+      const malformed = yield* HttpClient.execute(
+        HttpClientRequest.delete(SessionHostPaths.attachment.replace(":attachmentID", "not-an-attachment")),
+      )
+      expect(malformed.status).toBe(404)
+    }),
+  )
+
+  it.live("keeps the session available until its final attachment is detached", () =>
+    Effect.gen(function* () {
+      const events: string[] = []
+      const handler = (event: GlobalEvent) => {
+        const payload: unknown = event.payload
+        if (typeof payload !== "object" || payload === null || !("type" in payload)) return
+        if (payload.type !== "session.host.availability" || !("properties" in payload)) return
+        const properties = Object(payload.properties)
+        if (properties.state === "unavailable") events.push(String(properties.state))
+      }
+      yield* Effect.acquireRelease(
+        Effect.sync(() => GlobalBus.on("event", handler)),
+        () => Effect.sync(() => GlobalBus.off("event", handler)),
+      )
+      const path = SessionHostPaths.attach.replace(":providerID", "kilo-cloud").replace(":sessionID", SESSION)
+      const first = Object(yield* (yield* HttpClient.post(path)).json)
+      const second = Object(yield* (yield* HttpClient.post(path)).json)
+
+      yield* HttpClient.execute(HttpClientRequest.delete(SessionHostPaths.attachment.replace(":attachmentID", first.attachmentID)))
+      expect(events).toEqual([])
+      yield* HttpClient.execute(HttpClientRequest.delete(SessionHostPaths.attachment.replace(":attachmentID", second.attachmentID)))
+      yield* pollWithTimeout(
+        Effect.sync(() => (events.length === 1 ? true : undefined)),
+        "the final detach should publish unavailable",
+      )
     }),
   )
 

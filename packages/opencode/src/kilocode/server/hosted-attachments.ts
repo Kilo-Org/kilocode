@@ -16,6 +16,7 @@ export const PREFIX = "wrk_att_"
 export const LEASE_MS = 10 * 60_000
 
 const ENDED_LIMIT = 256
+const LIVE_LIMIT = 256
 
 export const ID = Schema.String.check(Schema.isPattern(/^wrk_att_[0-9A-Za-z]{26}$/))
   .pipe(Schema.brand("SessionHostAttachmentID"))
@@ -89,6 +90,11 @@ export function create(options: Options = {}) {
       leaseExpiresAt: now() + LEASE_MS,
     }
     live.set(entry.id, entry)
+    while (live.size > LIVE_LIMIT) {
+      const oldest = live.keys().next().value
+      if (oldest === undefined) break
+      end(oldest, "expired")
+    }
     ended.delete(entry.id)
     return entry
   }
@@ -104,6 +110,17 @@ export function create(options: Options = {}) {
     if (reason === "expired") return { kind: "expired" }
     if (reason === "disposed") return { kind: "disposed" }
     return { kind: "unknown" }
+  }
+
+  const count = (session: HostedSessionID) => {
+    const current = now()
+    for (const entry of live.values()) {
+      if (entry.leaseExpiresAt <= current) end(entry.id, "expired")
+    }
+    return Array.from(live.values()).filter(
+      (entry) =>
+        entry.session.providerID === session.providerID && entry.session.sessionID === session.sessionID,
+    ).length
   }
 
   const renew = (entry: Entry, input: { expiresAt: number }) => {
@@ -123,7 +140,7 @@ export function create(options: Options = {}) {
     ended.clear()
   }
 
-  return { mint, lookup, renew, dispose, clear }
+  return { mint, lookup, count, renew, dispose, clear }
 }
 
 export type Store = ReturnType<typeof create>

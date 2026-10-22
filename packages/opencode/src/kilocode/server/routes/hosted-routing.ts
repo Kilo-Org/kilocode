@@ -31,6 +31,13 @@ const STRIP_RESPONSE_HEADERS = new Set([
 ])
 
 const CLOUD_DIRECTORY = /^\/cloud-agent\/sessions\/[^/]+$/
+const LOCAL_PATHS = new Set(["/session", "/experimental/workspace", "/session/viewed"])
+
+class BodyError {
+  readonly _tag = "BodyError"
+
+  constructor(readonly kind: "too_large" | "invalid") {}
+}
 
 export type Failure = "unknown" | "expired" | "disposed" | "unavailable" | "too_large" | "invalid_request"
 
@@ -47,7 +54,7 @@ interface ServerRequest {
   readonly method: string
   readonly url: string
   readonly headers: Headers
-  readonly text: HttpServerRequest.HttpServerRequest["text"]
+  readonly stream: HttpServerRequest.HttpServerRequest["stream"]
 }
 
 /** The attachment id carried in the existing workspace selector slot. */
@@ -68,7 +75,7 @@ export function attachmentID(url: URL, headers: Headers) {
 export function isLocalRoute(method: string, path: string) {
   if (isNativePath(method, path)) return false
   return (
-    isLocalWorkspaceRoute(method, path) ||
+    (LOCAL_PATHS.has(path) && isLocalWorkspaceRoute(method, path)) ||
     path === "/console" ||
     path.startsWith("/console/") ||
     path === "/kilocode/session-host" ||
@@ -135,7 +142,7 @@ export function respond(plan: Routed, request: ServerRequest): Effect.Effect<Htt
       path: url.pathname,
       query: url.searchParams,
       headers: forward(request.headers),
-      ...(body.text ? { body: body.text } : {}),
+      ...(body.bytes ? { body: body.bytes } : {}),
       ...(plan.entry.organizationID ? { organizationID: plan.entry.organizationID } : {}),
     }
     return yield* route(native).pipe(
@@ -156,13 +163,28 @@ function forward(headers: Headers) {
 
 function payload(request: ServerRequest) {
   return Effect.gen(function* () {
+    if (request.method === "GET") return { kind: "ok" } as const
     const declared = Number(request.headers["content-length"] ?? "")
     if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) return { kind: "too_large" } as const
-    const text = yield* request.text.pipe(Effect.catch(() => Effect.succeed(undefined)))
-    if (text === undefined) return { kind: "invalid" } as const
-    if (text.length === 0) return { kind: "ok" } as const
-    if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) return { kind: "too_large" } as const
-    return { kind: "ok", text } as const
+    return yield* request.stream.pipe(
+      Stream.runFoldEffect(
+        () => new Uint8Array(),
+        (bytes, chunk) => {
+          if (bytes.byteLength + chunk.byteLength > MAX_BODY_BYTES) {
+            return Effect.fail(new BodyError("too_large"))
+          }
+          const next = new Uint8Array(bytes.byteLength + chunk.byteLength)
+          next.set(bytes)
+          next.set(chunk, bytes.byteLength)
+          return Effect.succeed(next)
+        },
+      ),
+      Effect.catch((error) => Effect.fail(error instanceof BodyError ? error : new BodyError("invalid"))),
+      Effect.match({
+        onFailure: (error) => ({ kind: error.kind } as const),
+        onSuccess: (bytes) => ({ kind: "ok", ...(bytes.byteLength > 0 ? { bytes } : {}) } as const),
+      }),
+    )
   })
 }
 
@@ -188,6 +210,7 @@ const STATUS: Record<Failure | FailureCode, number> = {
   unavailable: 503,
   too_large: 413,
   invalid_request: 400,
+  auth_unavailable: 503,
   signed_out: 401,
   unauthorized: 502,
   payment_required: 402,
@@ -204,6 +227,7 @@ const MESSAGE: Record<Failure | FailureCode, string> = {
   unavailable: "Hosted session is unavailable",
   too_large: "Native request body is too large",
   invalid_request: "Native request is not supported for this attachment",
+  auth_unavailable: "Kilo Cloud credentials could not be read",
   signed_out: "Kilo Cloud credentials are unavailable",
   unauthorized: "Hosted session rejected these credentials",
   payment_required: "Hosted session requires additional balance",

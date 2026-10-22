@@ -78,6 +78,7 @@ export const FailureCode = Schema.Literals([
   "not_found",
   "invalid_request",
   "invalid_response",
+  "auth_unavailable",
   "rejected",
   "unavailable",
   "unknown_provider",
@@ -200,8 +201,8 @@ export interface NativeRequest {
   readonly path: string
   readonly query: URLSearchParams
   readonly headers: Headers
-  /** Native request bodies are JSON text; binary content travels base64 inside it. */
-  readonly body?: string
+  /** Native request bodies are JSON bytes; binary content travels base64 inside JSON. */
+  readonly body?: Uint8Array
   readonly organizationID?: string
 }
 
