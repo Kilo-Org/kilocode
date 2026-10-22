@@ -384,7 +384,8 @@ for (const item of targets) {
     await KiloSandboxNetwork.copy(kiloSandboxNetwork, path.resolve(dir, `dist/${name}/bin`), item.arch)
   }
 
-  if (item.os === "linux") {
+  // Preserve the loader from Nix's already-patched native runtime.
+  if (item.os === "linux" && runtime !== process.execPath) {
     const interpreters: Record<string, string> = {
       x64: "/lib64/ld-linux-x86-64.so.2",
       arm64: "/lib/ld-linux-aarch64.so.1",
