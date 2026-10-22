@@ -672,7 +672,15 @@ type Point = { date: string; done: number; total: number; percent: number }
  * is the same before and after the commit that stores it, which keeps `--check` stable.
  */
 export async function history(current: string, read = git) {
-  const log = await read(["log", "--first-parent", "--format=%H %cs", "origin/v2", "--", "migration-tracking/progress/progress.json"]).catch(() => "")
+  // A fork's origin/v2 can lag behind CI. Select the integration remote by repository identity, not its name.
+  const remotes = await read(["config", "--get-regexp", "^remote\\..*\\.url$"]).catch(() => "")
+  const remote = remotes.split("\n")
+    .map((line) => line.match(/^remote\.(.+)\.url\s+(.+)$/))
+    .find((entry) => entry && /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)Kilo-Org\/kilocode(?:\.git)?\/?$/i.test(entry[2]))?.[1]
+  if (!remote) throw new Error("Migration history requires a remote for Kilo-Org/kilocode. Add one and fetch its v2 branch before generating the map.")
+  const log = await read(["log", "--first-parent", "--format=%H %cs", `refs/remotes/${remote}/v2`, "--", "migration-tracking/progress/progress.json"]).catch((cause) => {
+    throw new Error(`Couldn't read canonical v2 migration history. Run \`git fetch ${remote} v2\` and retry.`, { cause })
+  })
   const points: Point[] = []
   const seen = new Set<string>()
   for (const line of log.split("\n").filter(Boolean)) {

@@ -20,11 +20,17 @@ import {
 
 const split = { "session/steering": "steering", "kilo-ui": "ui", plugins: "plugin" }
 
-test("history uses v2 rather than feature-branch or synthetic merge ancestry", async () => {
+test.each([
+  ["remote.origin.url https://github.com/Kilo-Org/kilocode", "origin"],
+  ["remote.origin.url git@github.com:gilsharon321/kilocode.git\nremote.upstream.url https://github.com/Kilo-Org/kilocode.git", "upstream"],
+  ["remote.origin.url https://github.com/example/kilocode.git\nremote.canonical.url git@github.com:Kilo-Org/kilocode.git", "canonical"],
+  ["remote.kilo.url ssh://git@github.com/Kilo-Org/kilocode.git", "kilo"],
+])("history uses canonical v2 rather than fork or feature ancestry: %s", async (remotes, remote) => {
   const current = JSON.stringify({ summary: { done: 92, total: 9829, percent: 0.9 }, coreImports: 12 }) + "\n"
   const points = await history(current, async (args) => {
+    if (args[0] === "config") return remotes
     if (args[0] === "log") {
-      expect(args).toEqual(["log", "--first-parent", "--format=%H %cs", "origin/v2", "--", "migration-tracking/progress/progress.json"])
+      expect(args).toEqual(["log", "--first-parent", "--format=%H %cs", `refs/remotes/${remote}/v2`, "--", "migration-tracking/progress/progress.json"])
       return "current 2026-10-22\nbase 2026-10-22\nolder 2026-10-21"
     }
     if (args[1].startsWith("current:")) return current.trimEnd()
@@ -37,6 +43,25 @@ test("history uses v2 rather than feature-branch or synthetic merge ancestry", a
     { date: "2026-10-21", done: 90, total: 9829, percent: 0.9 },
     { date: "2026-10-22", done: 92, total: 9829, percent: 0.9 },
   ])
+})
+
+test.each([
+  "remote.origin.url https://github.com/example/kilocode.git",
+  "remote.origin.url https://github.com/Kilo-Org/kilocode-other.git",
+  "remote.origin.url https://github.com/Kilo-Org/kilocode.git/untrusted",
+  "",
+])("history refuses a missing canonical remote instead of using fork history: %s", async (remotes) => {
+  await expect(history("{}", async (args) => {
+    expect(args[0]).toBe("config")
+    return remotes
+  })).rejects.toThrow("Migration history requires a remote for Kilo-Org/kilocode")
+})
+
+test("history reports missing canonical v2 history rather than silently omitting it", async () => {
+  await expect(history("{}", async (args) => {
+    if (args[0] === "config") return "remote.upstream.url https://github.com/Kilo-Org/kilocode.git"
+    throw new Error("unknown revision")
+  })).rejects.toThrow("git fetch upstream v2")
 })
 
 test("featureOf: packages, directories, split table and loose files", () => {
