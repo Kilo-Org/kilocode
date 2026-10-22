@@ -15,13 +15,29 @@ sidebar_label: SOKKAN Router
 
 ## Configure Kilo Code
 
+{% callout type="note" %}
+The **SOKKAN Router** entry in the provider list, in `/connect` and in `kilo auth login --provider sokkan` comes from the [models.dev](https://models.dev) catalogue that Kilo Code refreshes. It appears there only once SOKKAN Router is published in that catalogue ([models.dev pull request](https://github.com/anomalyco/models.dev/pull/11031), not merged yet). Until then, use the custom-provider steps below: they work with any Kilo Code version.
+{% /callout %}
+
 {% tabs %}
 {% tab label="VSCode" %}
+
+**From the catalogue:**
 
 1. Open **Settings** in the Kilo Code extension.
 2. Go to the **Providers** tab and add **SOKKAN Router**. If it is not visible, click **Show more providers**.
 3. Enter your SOKKAN API key.
 4. Select a model.
+
+**If SOKKAN Router is not listed yet:** in the **Providers** tab, add a **Custom provider** with:
+
+- **Provider ID:** `sokkan`
+- **Display name:** `SOKKAN Router`
+- **Provider API:** OpenAI Compatible
+- **Base URL:** `https://router.sokkan.ch/v1`
+- **API key:** your SOKKAN key
+
+Then click **Fetch models** and keep the ids you need (see [Using a model that is not in the picker](#using-a-model-that-is-not-in-the-picker) for `cost` and `limit`).
 
 The provider credentials are stored in Kilo's `auth.json` store.
 
@@ -37,6 +53,8 @@ The provider credentials are stored in Kilo's `auth.json` store.
 kilo auth login --provider sokkan
 ```
 
+If SOKKAN Router is not in the catalogue yet, `--provider sokkan` fails with `Unknown provider "sokkan"`. Run `/connect` (or `kilo auth login` without `--provider`), choose **Other**, enter the provider id `sokkan` and paste your key. This only stores the credential: also declare the provider with its base URL as in **Manual configuration** below.
+
 Then pick a model from the model picker, or set a default model in `provider-id/model-id` form:
 
 ```jsonc
@@ -45,7 +63,7 @@ Then pick a model from the model picker, or set a default model in `provider-id/
 }
 ```
 
-**Manual configuration (optional):** keep the key in the environment and declare the provider in `~/.config/kilo/kilo.json` or `./kilo.json`, so the secret never lands in the project file:
+**Manual configuration:** keep the key in the environment and declare the provider in `~/.config/kilo/kilo.json` or `./kilo.json`, so the secret never lands in the project file. The `baseURL` is required while SOKKAN Router is not in the catalogue, and harmless afterwards:
 
 ```bash
 export SOKKAN_API_KEY="skr_..."
@@ -55,7 +73,10 @@ export SOKKAN_API_KEY="skr_..."
 {
   "provider": {
     "sokkan": {
+      "name": "SOKKAN Router",
+      "npm": "@ai-sdk/openai-compatible",
       "env": ["SOKKAN_API_KEY"],
+      "options": { "baseURL": "https://router.sokkan.ch/v1" },
     },
   },
   "model": "sokkan/qwen/qwen3.8-27b",
@@ -67,7 +88,7 @@ export SOKKAN_API_KEY="skr_..."
 
 ## Using a model that is not in the picker
 
-The model picker lists the SOKKAN models published in the catalogue Kilo refreshes. Any model id returned by [`GET /v1/models`](https://router.sokkan.ch/v1/models) can be used by declaring it yourself, as described in [Custom Models](/docs/code-with-ai/agents/custom-models). For example, the pay-per-token EU route of Qwen3.6 35B-A3B (prices as listed on 2026-10-22):
+Once SOKKAN Router is in the catalogue, the model picker lists the SOKKAN models published there. Any model id returned by [`GET /v1/models`](https://router.sokkan.ch/v1/models) can be used by declaring it yourself, as described in [Custom Models](/docs/code-with-ai/agents/custom-models). For example, the pay-per-token EU route of Qwen3.6 35B-A3B (prices as listed on 2026-10-22):
 
 ```jsonc
 {
@@ -92,13 +113,15 @@ Use the identifier exactly as it appears in the models endpoint. Declare `cost` 
 
 ## Data location (CH / EU)
 
-Every SOKKAN response carries an `x-sokkan-region` header naming the zone (`CH`, `EU` or `US`) that generated it. To restrict where a request may run, add the `X-Data-Location` header:
+Every SOKKAN response carries an `x-sokkan-region` header naming the zone (`CH`, `EU` or `US`) that generated it. To restrict where a request may run, send the `X-Data-Location` header through the provider options (or a model's own `headers` block to pin a single model):
 
 ```jsonc
 {
   "provider": {
     "sokkan": {
-      "headers": { "X-Data-Location": "CH" },
+      "options": {
+        "headers": { "X-Data-Location": "CH" },
+      },
     },
   },
 }
@@ -117,7 +140,7 @@ Some models on SOKKAN are sold as a prepaid throughput commitment rather than pe
 - **400 `secret_detected`:** the prompt contained credentials (API keys, tokens, private keys) and was refused before reaching the model. Remove the secret from the context (for example an `.env` file the agent read) and retry.
 - **402 `insufficient_balance`:** top up the balance in your account, or lower `max_tokens`.
 - **400 `no_provider`:** the model does not run in the zone you restricted with `X-Data-Location`. Drop the header or pick a model listed for that zone.
-- **Provider not visible:** refresh Kilo Code's provider catalogue, then check **Show more providers**.
+- **Provider not visible / `Unknown provider "sokkan"`:** SOKKAN Router is not in your models.dev catalogue yet. Use **Custom provider** (VS Code) or `/connect` → **Other** with the provider id `sokkan`, and set `options.baseURL` as shown in [Configure Kilo Code](#configure-kilo-code).
 
 {% callout type="note" %}
 This documentation was contributed by SOKKAN Router, the provider it describes.
