@@ -9,6 +9,7 @@ import { makeGlobalNode } from "@opencode/util/effect/app-node" // kilocode_chan
 import { Location } from "../location.js"
 import { AbsolutePath } from "../schema.js"
 import type { Options } from "../config.js"
+import type { Info } from "@opencode/schema/config" // kilocode_change(config) seam - host document decoder
 
 export const names = ["opencode.json", "opencode.jsonc"]
 
@@ -22,7 +23,10 @@ export interface Layout {
   readonly names: readonly string[]
   readonly directories: readonly string[]
   readonly directoryFiles: readonly string[]
+  readonly systemFiles?: readonly string[]
   readonly walk: (input: Walk) => Effect.Effect<readonly string[]>
+  readonly systemDirectory?: (platform: NodeJS.Platform, env: NodeJS.ProcessEnv) => AbsolutePath
+  readonly parse?: (input: unknown, normalized: Readonly<Record<string, unknown>>) => Info | undefined
 }
 type Walk = { readonly ancestors: readonly string[]; readonly location: Location.Interface; readonly fs: FSUtil.Interface }
 const defaults: Layout = { names, directories: [".opencode"], directoryFiles: names, walk: (input) => Effect.succeed(input.ancestors) }
@@ -83,7 +87,7 @@ export const discover = Effect.fn("ConfigDiscovery.discover")(function* (options
   const system = (() => {
     if (options?.system === false) return
     if (typeof options?.system === "string") return AbsolutePath.make(path.resolve(options.system))
-    return systemDirectory()
+    return (layout.systemDirectory ?? systemDirectory)(process.platform, process.env) // kilocode_change(config) seam - host system directory
   })()
   const globalDirectory = AbsolutePath.make(global.config)
   const globalAgentsDirectory = AbsolutePath.make(path.join(global.home, ".agents"))

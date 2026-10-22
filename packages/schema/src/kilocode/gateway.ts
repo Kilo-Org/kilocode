@@ -195,6 +195,9 @@ export const EditTarget = Schema.Struct({
 export const ModelEntry = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
+  recommended: Schema.optional(Schema.Boolean).annotate({
+    description: "The current Gateway scope's default model, not a catalog ranking.",
+  }),
   isFree: Schema.Boolean,
   recommendedIndex: Schema.optional(Schema.Number),
   hasUserByokAvailable: Schema.optional(Schema.Boolean),

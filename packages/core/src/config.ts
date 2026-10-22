@@ -130,7 +130,7 @@ export const layer = (options?: Options) =>
           }),
         )
         if (result.type === "rejected") return
-        const info = Option.getOrUndefined(decodeInfo(result.encoded))
+        const info = layout.parse ? layout.parse(input, result.encoded) : Option.getOrUndefined(decodeInfo(result.encoded)) // kilocode_change(config) seam - host document decoder
         if (info) return info
         yield* Effect.logWarning("configuration normalization diagnostic", {
           source,
@@ -249,7 +249,7 @@ export const layer = (options?: Options) =>
         // in reverse load order, so managed policies split off and load first
         // to keep final file-based authority.
         const managed = [
-          ...(sources.system?.present ? yield* loadDirectory(sources.system.path).pipe(Effect.orDie) : []),
+          ...(sources.system?.present ? yield* loadDirectory(sources.system.path, layout.systemFiles).pipe(Effect.orDie) : []), // kilocode_change(config) seam - host system file order
           ...(sources.preferences ? yield* loadPreferences(sources.preferences).pipe(Effect.orDie) : []),
         ]
         const managedPolicies = managed
@@ -267,7 +267,7 @@ export const layer = (options?: Options) =>
           .toReversed()
         const managedSettings = managed.map((entry) =>
           entry.type === "document" && entry.info.policies
-            ? new Document({ ...entry, info: new Info({ ...entry.info, policies: undefined }) })
+            ? new Document({ ...entry, info: layout.parse?.(entry.info, { ...entry.info, policies: undefined }) ?? new Info({ ...entry.info, policies: undefined }) }) // kilocode_change(config) seam - preserve host settings when splitting policies
             : entry,
         )
         // Global entries sit below explicit and direct files; project directories rank above them.

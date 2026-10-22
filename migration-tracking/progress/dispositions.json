@@ -1,4 +1,9 @@
 {
+  "module:packages/opencode/test/kilocode/config/hide-prompt-training-models.test.ts": {
+    "state": "ported",
+    "note": "packages/core/test/kilocode/config/policy.test.ts checks the exact top-level boolean setting, true, false, omission, and rejection of string values against KiloConfigPolicy.Info. Gateway request enforcement and managed precedence are covered by packages/kilo-plugin/test/organization-modes.test.ts and packages/core/test/kilocode/config/discovery.test.ts.",
+    "by": "gateway-enterprise-parity"
+  },
   "module:packages/kilo-gateway/src/api/constants.ts": {
     "state": "ported",
     "note": "The constants moved next to their use in packages/kilo-gateway-core/src: server.ts (API URL), headers.ts (header and env names, User-Agent), defaults.ts (default models), device.ts (poll interval, token lifetime), account.ts (anonymous key), models.ts (timeout, AI SDK providers). The event service URL goes with event-service/client.ts. PROMPTS is tracked by #15108. The signed-in fallback model in defaults.ts is kilo-auto/frontier, not kilo-auto/free as on v1.",

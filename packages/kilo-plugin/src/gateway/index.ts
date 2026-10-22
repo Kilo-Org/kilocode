@@ -19,8 +19,10 @@ import {
 } from "@kilocode/gateway-core"
 import type { ConnectionInfo } from "@opencode/client"
 // Core internals with no public surface: the global Bus (the organization event reaches the plugin instances of other
-// Locations) and the upstream reasoning variants of a model.
+// Locations), effective config entries for enterprise policy, and upstream reasoning variants of a model.
 import { Bus } from "@opencode/core/bus"
+import { Config } from "@opencode/core/config"
+import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Variant } from "@opencode/core/variant"
 import type { IntegrationOAuthMethodRegistration } from "@opencode/plugin/effect/integration"
 import { define } from "@opencode/plugin/effect/plugin"
@@ -31,6 +33,7 @@ import { Model } from "@opencode/schema/model"
 import { Money } from "@opencode/schema/money"
 import { Provider } from "@opencode/schema/provider"
 import { Global } from "@opencode/util/global"
+import { KiloOrganizationModes } from "./modes"
 import { createHash, randomUUID } from "node:crypto"
 import { Clock, Duration, Effect, Fiber, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
 
@@ -89,6 +92,10 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
   effect: Effect.fn(function* (ctx) {
     const bus = yield* Bus.Service
     const global = yield* Global.Service
+    const configService = yield* Effect.serviceOption(Config.Service)
+    if (Option.isNone(configService)) return yield* Effect.die(new Error("Kilo Gateway requires location config"))
+    const config = configService.value
+    let policy = yield* KiloConfigPolicy.get(config)
     const scope = yield* Scope.Scope
     const instanceID = randomUUID()
     const lock = Semaphore.makeUnsafe(1)
@@ -105,6 +112,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     let retryFiber: Fiber.Fiber<void, never> | undefined
     let cachedProjectID: string | null | undefined
     let cachedMachineID: string | null | undefined
+    let organizationModes: readonly KiloModes.OrganizationMode[] = []
 
     const getProjectID = Effect.gen(function* () {
       if (cachedProjectID !== undefined) return cachedProjectID ?? undefined
@@ -240,6 +248,13 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         }
       }
 
+      // Organization agents share the same resolved account as the catalog. Errors and empty responses
+      // remove them, as v1 loadOrganizationModes did, instead of retaining another scope's instructions.
+      const modes = token && organizationID ? yield* KiloModes.get(base, token, organizationID, ctx.app.version) : []
+      if (targetEpoch !== epoch) return
+      organizationModes = modes
+      yield* ctx.agent.reload()
+
       const [fetched, defaultModelID] = yield* Effect.all(
         [
           KiloModels.get({
@@ -345,7 +360,16 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
 
     const reload = Effect.suspend(() => {
       const targetEpoch = ++epoch
-      return cancelRetry.pipe(
+      KiloModes.clearCache()
+      organizationModes = []
+      return ctx.agent.reload().pipe(
+        Effect.andThen(KiloConfigPolicy.get(config)),
+        Effect.tap((next) =>
+          Effect.sync(() => {
+            policy = next
+          }),
+        ),
+        Effect.andThen(cancelRetry),
         Effect.andThen(
           lock.withPermit(
             loadCatalog(targetEpoch, 0).pipe(
@@ -377,6 +401,20 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       }
     }
     yield* stored ? Effect.forkIn(reload, scope) : lock.withPermit(loadCatalog(++epoch, 0))
+
+    // v1 loaded organization modes above built-ins and below local agent definitions. This transform
+    // occupies that same pre-config position; replay restores built-ins when a mode is removed.
+    yield* ctx.agent.transform((editor) => {
+      for (const mode of organizationModes) {
+        editor.update(mode.slug, (agent) => {
+          const { permissions, ...definition } = KiloOrganizationModes.convert(mode)
+          Object.assign(agent, definition, { hidden: false })
+          const start = agent.permissions.length
+          agent.permissions.push(...permissions)
+          KiloOrganizationModes.permissionSpans.set(agent.permissions, [start, agent.permissions.length])
+        })
+      }
+    })
 
     // kilo_port(gateway:73ba28ce78a5) Gateway base URL, Kilo referer and title, team header, and the token or the
     // anonymous key, which v1 kilo.ts set on the provider.
@@ -452,7 +490,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           settings,
           headers: mergedHeaders,
         },
-        models: catalog.models.map((item) => toModelInfo(item, baseURL, mergedHeaders)),
+        models: catalog.models
+          .filter((item) => !policy.hide_prompt_training_models || item.mayTrainOnYourPrompts !== true)
+          .map((item) => toModelInfo(item, baseURL, mergedHeaders)),
         ...(sourceConnection ? { sourceConnection } : {}),
       })
     })
@@ -469,7 +509,15 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         models.list(id).some((model) => model.id === Model.ID.make(catalog.defaultModelID!))
       ) {
         models.default.set(id, Model.ID.make(catalog.defaultModelID))
+        return
       }
+      if (
+        !policy.hide_prompt_training_models ||
+        !catalog.models.some((model) => model.id === catalog.defaultModelID && model.mayTrainOnYourPrompts === true)
+      )
+        return
+      const allowed = models.list(id).find((model) => model.enabled !== false && model.status === "active")
+      if (allowed) models.default.set(id, allowed.id)
     })
 
     // Per-request attribution headers (`X-KILOCODE-TASKID`, `X-KILOCODE-PARENT-TASKID`, `X-KILOCODE-PROJECTID`,
@@ -507,14 +555,15 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     yield* ctx.session.hook(
       "http.request",
       (event) =>
-        Effect.promise(async () => {
+        Effect.gen(function* () {
+          const current = yield* KiloConfigPolicy.get(config)
           const dataCollection =
-            process.env.KILO_DATA_COLLECTION === "deny"
+            current.hide_prompt_training_models || process.env.KILO_DATA_COLLECTION === "deny"
               ? ("deny" as const)
               : process.env.KILO_DATA_COLLECTION === "allow"
                 ? ("allow" as const)
                 : undefined
-          event.request = await KiloRequests.rewriteRequest(event.request, { dataCollection })
+          event.request = yield* Effect.promise(() => KiloRequests.rewriteRequest(event.request, { dataCollection }))
         }),
       { providerID: id },
     )
@@ -642,7 +691,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             const account = catalog.account
             if (!account) return yield* Effect.fail(context.error("unauthorized", "Not signed in to Kilo Gateway"))
             if (!account.organizationID) return []
-            return yield* KiloModes.get(account.server, account.token, account.organizationID, ctx.app.version)
+            return organizationModes
           }),
         notifications: () =>
           Effect.gen(function* () {
@@ -660,7 +709,10 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             if (catalog.failed) {
               return yield* Effect.fail(context.error("failed", "Unable to retrieve Kilo model catalog"))
             }
-            return KiloModels.entries(catalog.models)
+            return KiloModels.entries(catalog.models).map((model) => ({
+              ...model,
+              ...(model.id === catalog.defaultModelID ? { recommended: true } : {}),
+            }))
           }),
         "models.images": (_input, context) =>
           KiloModels.imageModels({
@@ -698,9 +750,10 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       Stream.filter(
         (event) =>
           (event.type === "credential.switched" && event.data.integrationID === integrationID) ||
+          event.type === "config.updated" ||
           (event.type === OrganizationEvent.type && event.data.source !== instanceID),
       ),
-      Stream.runForEach(() => reload),
+      Stream.runForEach(() => Effect.forkIn(reload, scope, { startImmediately: true }).pipe(Effect.asVoid)),
       Effect.forkScoped({ startImmediately: true }),
     )
 

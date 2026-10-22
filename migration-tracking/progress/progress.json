@@ -4,7 +4,7 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 90,
+    "done": 92,
     "total": 9829,
     "percent": 0.9,
     "dropped": 25,
@@ -21,22 +21,22 @@
       },
       {
         "kind": "patch",
-        "done": 38,
+        "done": 39,
         "total": 3445
       },
       {
         "kind": "test",
-        "done": 21,
+        "done": 22,
         "total": 2798
       }
     ],
     "landed": {
-      "plugin": 20,
+      "plugin": 21,
       "host": 3,
       "seam": 0,
       "patch": 0
     },
-    "coreImports": 9,
+    "coreImports": 11,
     "sharedPatches": {
       "seam": 21,
       "patch": 7
@@ -55,9 +55,11 @@
   "coreImports": [
     "@opencode/core/app",
     "@opencode/core/bus",
+    "@opencode/core/config",
     "@opencode/core/config/discovery",
     "@opencode/core/permission",
     "@opencode/core/plugin/sdk",
+    "@opencode/core/schema",
     "@opencode/core/shell",
     "@opencode/core/tool-output",
     "@opencode/core/util/wildcard",
@@ -504,7 +506,7 @@
     },
     {
       "feature": "config",
-      "done": 0,
+      "done": 1,
       "total": 64,
       "dropped": 0,
       "kinds": {
@@ -521,7 +523,7 @@
           "total": 10
         },
         "test": {
-          "done": 0,
+          "done": 1,
           "total": 29
         }
       }
@@ -2617,7 +2619,7 @@
     },
     {
       "feature": "unattributed:config",
-      "done": 2,
+      "done": 3,
       "total": 130,
       "dropped": 0,
       "kinds": {
@@ -2630,7 +2632,7 @@
           "total": 0
         },
         "patch": {
-          "done": 2,
+          "done": 3,
           "total": 130
         },
         "test": {
@@ -2639,7 +2641,7 @@
         }
       },
       "landed": {
-        "plugin": 0,
+        "plugin": 1,
         "host": 2,
         "seam": 0,
         "patch": 0
@@ -6101,6 +6103,7 @@
     "patch:unattributed:agent:a91ca8efa1b6": "plugin",
     "patch:unattributed:agent:b6727a425792": "plugin",
     "patch:unattributed:config:546539fc1643": "host",
+    "patch:unattributed:config:73db79553730": "plugin",
     "patch:unattributed:config:8cdbdec70393": "host"
   },
   "done": [
@@ -6152,6 +6155,7 @@
     "module:packages/opencode/test/kilocode/agent-permission-overrides.test.ts",
     "module:packages/opencode/test/kilocode/agent-skill-permissions.test.ts",
     "module:packages/opencode/test/kilocode/ask-agent-permissions.test.ts",
+    "module:packages/opencode/test/kilocode/config/hide-prompt-training-models.test.ts",
     "module:packages/opencode/test/kilocode/kilo-errors.test.ts",
     "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts",
     "patch:agent:2e5632e7bfc6",
@@ -6193,6 +6197,7 @@
     "patch:unattributed:agent:e4427a3d9c64",
     "patch:unattributed:agent:fbbd4a8ba315",
     "patch:unattributed:config:546539fc1643",
+    "patch:unattributed:config:73db79553730",
     "patch:unattributed:config:8cdbdec70393"
   ],
   "dropped": [
