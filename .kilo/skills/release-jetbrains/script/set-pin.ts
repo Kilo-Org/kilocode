@@ -128,19 +128,23 @@ async function ensure(branch: string, sha: string) {
 // by regenerating locally), so patch that line directly through the API
 // instead of cloning the repo and re-running install.
 async function pushLock(version: string, previous: string, branch: string) {
-  const entry = (await $`gh api ${`repos/${repo}/contents/bun.lock?ref=${branch}`} --jq .content`.text()).trim()
-  const text = Buffer.from(entry, "base64").toString("utf8")
-  const anchor = `"packages/kilo-jetbrains": {\n      "name": "@kilocode/kilo-jetbrains",\n      "version": "${previous}",`
+  const path = `repos/${repo}/contents/bun.lock`
+  // The JSON `content` field is empty for files above 1 MB, which bun.lock is
+  // approaching. The raw media type returns the bytes regardless of size.
+  const text = await $`gh api ${`${path}?ref=${branch}`} -H "Accept: application/vnd.github.raw"`.text()
+  // Replace the workspace entry's current version rather than anchoring on
+  // origin/main's version: an already-stale lockfile must heal, not silently
+  // skip the update and fail the lockfile guard.
   const patched = text.replace(
-    anchor,
-    `"packages/kilo-jetbrains": {\n      "name": "@kilocode/kilo-jetbrains",\n      "version": "${version}",`,
+    /("packages\/kilo-jetbrains": \{\n\s*"name": "@kilocode\/kilo-jetbrains",\n\s*"version": ")[^"]+(")/,
+    `$1${version}$2`,
   )
   if (patched === text) {
     console.warn("bun.lock workspace entry not found; skipping bun.lock update")
     return
   }
-  const current = (await $`gh api ${`repos/${repo}/contents/bun.lock?ref=${branch}`}`.json()) as { sha: string }
-  await $`gh api --method PUT ${`repos/${repo}/contents/bun.lock`} -f message=${`chore(jetbrains): bump CLI pin to v${version}`} -f content=${Buffer.from(patched).toString("base64")} -f branch=${branch} -f sha=${current.sha}`.quiet()
+  const current = (await $`gh api ${`${path}?ref=${branch}`} --jq .sha`.text()).trim()
+  await $`gh api --method PUT ${path} -f message=${`chore(jetbrains): bump CLI pin to v${version}`} -f content=${Buffer.from(patched).toString("base64")} -f branch=${branch} -f sha=${current}`.quiet()
   console.log(`Updated bun.lock for pin v${previous} -> v${version}`)
 }
 

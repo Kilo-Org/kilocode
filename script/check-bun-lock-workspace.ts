@@ -17,7 +17,7 @@
  * Usage: bun script/check-bun-lock-workspace.ts
  */
 
-import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs"
+import { readFileSync, writeFileSync } from "node:fs"
 import { execSync } from "node:child_process"
 import path from "node:path"
 import os from "node:os"
