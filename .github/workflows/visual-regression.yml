@@ -108,8 +108,11 @@ jobs:
 
       - name: Install Playwright system deps
         run: |
-          # Avoid Azure mirror stalls during browser dependency downloads.
-          printf '%s\n' 'https://archive.ubuntu.com/ubuntu' | sudo tee /etc/apt/apt-mirrors.txt
+          # Prefer the public archive and retain Azure as a lower-priority fallback.
+          printf '%s\tpriority:%s\n' \
+            'https://archive.ubuntu.com/ubuntu' 1 \
+            'http://azure.archive.ubuntu.com/ubuntu' 2 |
+            sudo tee /etc/apt/apt-mirrors.txt
           bunx playwright install-deps chromium
         working-directory: packages/kilo-ui
 
@@ -276,8 +279,11 @@ jobs:
 
       - name: Install Playwright system deps
         run: |
-          # Avoid Azure mirror stalls during browser dependency downloads.
-          printf '%s\n' 'https://archive.ubuntu.com/ubuntu' | sudo tee /etc/apt/apt-mirrors.txt
+          # Prefer the public archive and retain Azure as a lower-priority fallback.
+          printf '%s\tpriority:%s\n' \
+            'https://archive.ubuntu.com/ubuntu' 1 \
+            'http://azure.archive.ubuntu.com/ubuntu' 2 |
+            sudo tee /etc/apt/apt-mirrors.txt
           bunx playwright install-deps chromium
         working-directory: packages/kilo-vscode
 

@@ -104,7 +104,7 @@ bun run compile
 bun run package
 ```
 
-Linux visual CI installs Playwright system packages from Ubuntu's official HTTPS archive.
+Linux visual CI prefers Ubuntu's official HTTPS archive for Playwright system packages and retains the Azure mirror as a fallback.
 
 ### Documentation checks
 
