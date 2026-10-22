@@ -14,7 +14,10 @@ export default Runtime.handler(
     )
     const record = yield* Effect.try({ try: () => selectUninstall(records, input), catch: (error) => error })
     yield* uninstall(marketplace, record)
-    yield* print([`Uninstalled ${record.kind} ${record.id} (${record.scope})`])
+    yield* print([
+      `Uninstalled ${record.kind} ${record.id} (${record.scope})`,
+      ...(record.kind === "mcp" ? ["Sign-in retained because it may be shared with other installations."] : []),
+    ])
   }),
 )
 
@@ -35,7 +38,7 @@ export function selectUninstall(
     const hint =
       recordsForItem.length > 0
         ? ` It is installed in ${recordsForItem[0].scope} scope; rerun with --${recordsForItem[0].scope}.`
-        : " Run `market installed` to see installed items and their scopes."
+        : " Run `kilo marketplace installed` to see installed items and their scopes."
     throw new UserError({
       message: `${input.id} is not installed from a marketplace${scope ? ` (${scope})` : ""}.${hint}`,
     })
@@ -50,32 +53,12 @@ export function selectUninstall(
 }
 
 export function uninstall(marketplace: Connection, record: KiloMarketplaceRpc.Installed) {
-  return Effect.gen(function* () {
-    // Resolve credentials before the config disappears, but never delete them when uninstall fails.
-    const credentials = record.server
-      ? yield* call(async () => {
-          const servers = await marketplace.client.mcp.list({ location: marketplace.location })
-          const integrationID = servers.data.find((server) => server.name === record.server)?.integrationID
-          if (!integrationID) return []
-          const integration = await marketplace.client.integration.get({
-            integrationID,
-            location: marketplace.location,
-          })
-          return integration.data?.connections.filter((connection) => connection.type === "credential") ?? []
-        }).pipe(Effect.orElseSucceed(() => []))
-      : []
-    yield* call(() =>
-      marketplace.rpc
-        .uninstall(
-          { registry: record.registry, kind: record.kind, id: record.id, scope: record.scope },
-          marketplace.options,
-        )
-        .then(validateResponse("uninstall")),
-    )
-    yield* call(() =>
-      Promise.all(
-        credentials.map((connection) => marketplace.client.credential.remove({ credentialID: connection.id })),
-      ),
-    ).pipe(Effect.ignore)
-  })
+  return call(() =>
+    marketplace.rpc
+      .uninstall(
+        { registry: record.registry, kind: record.kind, id: record.id, scope: record.scope },
+        marketplace.options,
+      )
+      .then(validateResponse("uninstall")),
+  )
 }

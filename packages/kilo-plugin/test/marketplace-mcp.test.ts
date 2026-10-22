@@ -1,14 +1,68 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
 import fs from "node:fs/promises"
+import { createServer } from "node:http"
 import os from "node:os"
 import path from "node:path"
 import { Installer } from "../src/marketplace/installer"
-import { McpError, build, configFile, parameters, remove, write } from "../src/marketplace/mcp"
+import {
+  MarketplaceMcp,
+  McpError,
+  build,
+  configFile,
+  fingerprint,
+  parameters,
+  remove,
+  write,
+} from "../src/marketplace/mcp"
 
 const param = (key: string, optional = false) => ({ key, name: key, optional })
 const tmp = () => fs.mkdtemp(path.join(os.tmpdir(), "kilo-marketplace-mcp-"))
+const skillEntry = (archive: string) => ({
+  item: {
+    registry: "kilo",
+    kind: "skill" as const,
+    id: "demo",
+    name: "Demo",
+    description: "",
+    tags: [],
+    prerequisites: [],
+    parameters: [],
+    options: [],
+  },
+  payloads: [],
+  archive,
+})
+const mcpEntry = {
+  item: {
+    registry: "kilo",
+    kind: "mcp" as const,
+    id: "demo",
+    name: "Demo",
+    description: "",
+    tags: [],
+    prerequisites: [],
+    parameters: [],
+    options: [],
+  },
+  payloads: ['{"command":"node"}'],
+}
 
 describe("MCP config translation", () => {
+  test("malformed templates return invalid_params without including substituted secrets", () => {
+    try {
+      build({
+        template: '{"command":"{{TOKEN}}", broken}',
+        parameters: [param("TOKEN")],
+        params: { TOKEN: "super-secret" },
+      })
+      throw new Error("expected malformed template to fail")
+    } catch (error) {
+      expect(error).toBeInstanceOf(McpError)
+      expect(error).toMatchObject({ reason: "invalid_params" })
+      expect(String(error)).not.toContain("super-secret")
+      expect(String(error)).not.toContain("broken")
+    }
+  })
   test("converts a v1 local config and fills parameters", () => {
     expect(
       build({
@@ -129,14 +183,44 @@ describe("MCP config translation", () => {
 })
 
 describe("MCP config files", () => {
+  test("fingerprints normalize JSON object ordering but protect changed and legacy entries", async () => {
+    const file = path.join(await tmp(), "kilo2.jsonc")
+    await write({
+      file,
+      name: "demo",
+      server: { type: "local", command: ["node"], environment: { TOKEN: "secret", MODE: "safe" } },
+      replace: false,
+    })
+    const owned = (await fingerprint(file, "demo"))!
+    await Bun.write(
+      file,
+      '{ // retain comments\n "mcp":{"servers":{"demo":{"environment":{"MODE":"safe","TOKEN":"secret"},"command":["node"],"type":"local"},"foreign":{"type":"local","command":["x"]}}}}',
+    )
+    expect(await fingerprint(file, "demo")).toBe(owned)
+    await expect(remove({ file, name: "demo" })).rejects.toMatchObject({ reason: "conflict" })
+    await expect(
+      write({ file, name: "demo", server: { type: "local", command: ["x"] }, replace: true }),
+    ).rejects.toMatchObject({ reason: "conflict" })
+    await write({ file, name: "demo", server: { type: "local", command: ["x"] }, replace: true, fingerprints: [owned] })
+    await expect(remove({ file, name: "demo", fingerprints: [owned] })).rejects.toMatchObject({ reason: "conflict" })
+    await remove({ file, name: "demo", fingerprints: [(await fingerprint(file, "demo"))!] })
+    expect(await Bun.file(file).text()).toContain("retain comments")
+    expect(await fingerprint(file, "foreign")).toBeDefined()
+  })
   test.skipIf(process.platform === "win32")("keeps new and replaced secret-bearing configs private", async () => {
     const file = path.join(await tmp(), "kilo2.json")
     await write({ file, name: "demo", server: { type: "local", command: ["x"] }, replace: false })
     expect((await fs.stat(file)).mode & 0o777).toBe(0o600)
     await fs.chmod(file, 0o600)
-    await write({ file, name: "demo", server: { type: "local", command: ["y"] }, replace: true })
+    await write({
+      file,
+      name: "demo",
+      server: { type: "local", command: ["y"] },
+      replace: true,
+      fingerprints: [(await fingerprint(file, "demo"))!],
+    })
     expect((await fs.stat(file)).mode & 0o777).toBe(0o600)
-    await remove({ file, name: "demo" })
+    await remove({ file, name: "demo", fingerprints: [(await fingerprint(file, "demo"))!] })
     expect((await fs.stat(file)).mode & 0o777).toBe(0o600)
   })
 
@@ -159,7 +243,7 @@ describe("MCP config files", () => {
     expect(text).toContain("// keep me")
     expect(text).toContain(`"demo"`)
 
-    await remove({ file, name: "demo" })
+    await remove({ file, name: "demo", fingerprints: [(await fingerprint(file, "demo"))!] })
     const after = await Bun.file(file).text()
     expect(after).toContain("// keep me")
     expect(after).toContain(`"mine"`)
@@ -203,6 +287,289 @@ describe("MCP config files", () => {
 })
 
 describe("MCP install with companion skills", () => {
+  test("preflights all resources before the checkpoint and any target writes", async () => {
+    const archive = await new Bun.Archive({ "SKILL.md": "guide" }).bytes()
+    using server = Bun.serve({ port: 0, fetch: () => new Response(archive) })
+    const directory = await tmp()
+    const skills = path.join(directory, "skills")
+    const config = path.join(directory, "config.json")
+    const entry = { ...mcpEntry, companions: [{ id: "guide", archive: server.url.href }] }
+    await Bun.write(config, '{"mcp":{"servers":{"demo":{"type":"local","command":["foreign"]}}}}')
+    let calls = 0
+    await expect(
+      Installer.install({
+        entry,
+        skills,
+        config,
+        beforeWrite: async () => {
+          calls++
+        },
+      }),
+    ).rejects.toMatchObject({ reason: "conflict" })
+    expect(calls).toBe(0)
+    expect(await fs.readdir(directory)).toEqual(["config.json"])
+    await fs.rm(config)
+    const failure = new Error("checkpoint failed")
+    await expect(
+      Installer.install({
+        entry,
+        skills,
+        config,
+        beforeWrite: async (intent) => {
+          calls++
+          expect(await fs.readdir(directory)).toEqual([])
+          expect(intent.resources).toHaveLength(2)
+          expect(intent.resources!.every((resource) => resource.fingerprints?.length === 1)).toBe(true)
+          throw failure
+        },
+      }),
+    ).rejects.toBe(failure)
+    expect(calls).toBe(1)
+    expect(await fs.readdir(directory)).toEqual([])
+  })
+
+  test("checkpoint records old and new fingerprints and interrupted replacement stays recoverable", async () => {
+    let content = "old"
+    using server = Bun.serve({
+      port: 0,
+      fetch: async () => new Response(await new Bun.Archive({ "SKILL.md": content }).bytes()),
+    })
+    const directory = await tmp()
+    const skills = path.join(directory, "skills")
+    const config = path.join(directory, "config.json")
+    const entry = skillEntry(server.url.href)
+    const first = await Installer.install({ entry, skills, config })
+    const previous = {
+      registry: "kilo",
+      kind: "skill" as const,
+      id: "demo",
+      scope: "global" as const,
+      installedAt: 0,
+      ...first,
+    }
+    content = "new"
+    let intent: Installer.Written | undefined
+    const final = await Installer.install({
+      entry,
+      skills,
+      config,
+      previous,
+      beforeWrite: async (written) => {
+        intent = written
+        expect(await Bun.file(path.join(skills, "demo", "SKILL.md")).text()).toBe("old")
+        expect(written.resources![0].fingerprints).toContain(first.resources![0].fingerprints![0])
+        expect(written.resources![0].fingerprints).toHaveLength(2)
+      },
+    })
+    expect(final.resources![0].fingerprints).toHaveLength(1)
+    expect(await Installer.inspect({ id: "demo", ...final })).toEqual({ status: "ready", warnings: [] })
+    expect((await Installer.inspect({ id: "demo", ...intent!, recovering: true })).status).toBe("incomplete")
+    // Either old or new content is owned by the durable replacement intent.
+    await Installer.uninstall({ id: "demo", ...intent! })
+    expect((await Installer.inspect({ id: "demo", ...final })).status).toBe("missing")
+  })
+
+  test("uninstall attempts active and pending resources after errors and preserves modified resources", async () => {
+    const directory = await tmp()
+    const skills = path.join(directory, "skills")
+    const config = path.join(directory, "config.json")
+    const broken = path.join(directory, "broken.json")
+    const archive = await new Bun.Archive({ "SKILL.md": "original" }).bytes()
+    using server = Bun.serve({ port: 0, fetch: () => new Response(archive) })
+    const written = await Installer.install({
+      entry: { ...mcpEntry, companions: [{ id: "guide", archive: server.url.href }] },
+      skills,
+      config,
+    })
+    await Bun.write(broken, "{ malformed")
+    const record = { id: "demo", ...written, pending: [{ config: broken, server: "demo" }] }
+    // Pending resources warn but do not participate in the active installation status.
+    expect((await Installer.inspect(record)).status).toBe("ready")
+    await Bun.write(path.join(skills, "guide", "added.txt"), "keep")
+    const result = await Installer.uninstall(record).catch((error: unknown) => error)
+    expect(result).toBeInstanceOf(AggregateError)
+    expect((result as AggregateError).errors).toHaveLength(2)
+    expect((await Bun.file(config).json()).mcp.servers).toEqual({})
+    expect(await Bun.file(path.join(skills, "guide", "added.txt")).text()).toBe("keep")
+    expect((await Installer.inspect(record)).status).toBe("modified")
+    expect((await Installer.inspect(record)).warnings.join(" ")).toContain("awaiting cleanup")
+    expect(record.resources).toEqual(written.resources)
+  })
+
+  test("MCP replacement checkpoints both content versions and refuses externally changed entries", async () => {
+    const directory = await tmp()
+    const skills = path.join(directory, "skills")
+    const config = path.join(directory, "config.json")
+    const first = await Installer.install({ entry: mcpEntry, skills, config })
+    const previous = {
+      registry: "kilo",
+      kind: "mcp" as const,
+      id: "demo",
+      scope: "global" as const,
+      installedAt: 0,
+      ...first,
+    }
+    let calls = 0
+    const written = await Installer.install({
+      entry: { ...mcpEntry, payloads: ['{"command":"changed"}'] },
+      skills,
+      config,
+      previous,
+      beforeWrite: async (intent) => {
+        calls++
+        expect(intent.resources![0].fingerprints).toHaveLength(2)
+        expect(intent.resources![0].fingerprints).toContain(first.resources![0].fingerprints![0])
+        expect((await Bun.file(config).json()).mcp.servers.demo.command).toEqual(["node"])
+      },
+    })
+    expect(calls).toBe(1)
+    expect(written.resources![0].fingerprints).toHaveLength(1)
+    await Bun.write(config, '{"mcp":{"servers":{"demo":{"type":"local","command":["user-edited"]}}}}')
+    expect((await Installer.inspect({ id: "demo", ...written })).status).toBe("modified")
+    await expect(Installer.uninstall({ id: "demo", ...written })).rejects.toBeInstanceOf(AggregateError)
+    await expect(
+      Installer.install({
+        entry: mcpEntry,
+        skills,
+        config,
+        previous: { ...previous, ...written },
+        beforeWrite: async () => {
+          calls++
+        },
+      }),
+    ).rejects.toMatchObject({ reason: "conflict" })
+    expect(calls).toBe(1)
+    expect((await Bun.file(config).json()).mcp.servers.demo.command).toEqual(["user-edited"])
+  })
+
+  test("rolls back every newly created companion without deleting previously owned companions", async () => {
+    const archive = await new Bun.Archive({ "SKILL.md": "guide" }).bytes()
+    using server = Bun.serve({ port: 0, fetch: () => new Response(archive) })
+    const directory = await tmp()
+    const skills = path.join(directory, "skills")
+    const config = path.join(directory, "config.json")
+    const first = await Installer.install({
+      entry: { ...mcpEntry, companions: [{ id: "owned", archive: server.url.href }] },
+      skills,
+      config,
+    })
+    const previous = {
+      registry: "kilo",
+      kind: "mcp" as const,
+      id: "demo",
+      scope: "global" as const,
+      installedAt: 0,
+      ...first,
+    }
+    await expect(
+      Installer.install({
+        entry: { ...mcpEntry, companions: ["owned", "new-a", "new-b"].map((id) => ({ id, archive: server.url.href })) },
+        skills,
+        config,
+        previous,
+        beforeWrite: async () => {
+          await fs.rm(config)
+          await fs.mkdir(config)
+        },
+      }),
+    ).rejects.toMatchObject({ code: "EISDIR" })
+    expect(await fs.readdir(skills)).toEqual(["owned"])
+    expect(await Bun.file(path.join(skills, "owned", "SKILL.md")).text()).toBe("guide")
+  })
+
+  test("rollback settles every resource and reports cleanup errors alongside the original error", async () => {
+    const archive = await new Bun.Archive({ "SKILL.md": "guide" }).bytes()
+    using server = Bun.serve({ port: 0, fetch: () => new Response(archive) })
+    const directory = await tmp()
+    const skills = path.join(directory, "skills")
+    const original = new Error("config write failed")
+    let intent: Installer.Written | undefined
+    // Inject an edit at the failing write boundary; cleanup still uses the real filesystem and fingerprints.
+    const failure = spyOn(MarketplaceMcp, "write").mockImplementation(async () => {
+      await Bun.write(path.join(skills, "new-a", "user.txt"), "user content")
+      throw original
+    })
+    try {
+      const error = await Installer.install({
+        entry: { ...mcpEntry, companions: ["new-a", "new-b"].map((id) => ({ id, archive: server.url.href })) },
+        skills,
+        config: path.join(directory, "config.json"),
+        beforeWrite: async (written) => {
+          intent = written
+        },
+      }).catch((error: unknown) => error)
+      expect(error).toBeInstanceOf(AggregateError)
+      expect((error as AggregateError).cause).toBe(original)
+      expect((error as AggregateError).errors[0]).toBe(original)
+      expect((error as AggregateError).errors[1]).toMatchObject({ reason: "conflict" })
+      expect(String(error)).toContain("config write failed")
+      expect(String(error)).toContain("new-a")
+      expect(await fs.readdir(skills)).toEqual(["new-a"])
+      expect(intent!.resources).toHaveLength(3)
+      await fs.rm(path.join(skills, "new-a", "user.txt"))
+      await Installer.uninstall({ id: "demo", ...intent! })
+      expect(await fs.readdir(skills)).toEqual([])
+    } finally {
+      failure.mockRestore()
+    }
+  })
+
+  test("bounds streamed downloads, rejects oversized headers early, and wraps body failures", async () => {
+    const chunk = new Uint8Array(1024 * 1024)
+    let pulls = 0
+    using server = Bun.serve({
+      port: 0,
+      fetch() {
+        return new Response(
+          new ReadableStream({
+            pull(controller) {
+              pulls++
+              controller.enqueue(chunk)
+            },
+          }),
+        )
+      },
+      error: () => new Response("failure", { status: 500 }),
+    })
+    const directory = await tmp()
+    await expect(
+      Installer.install({
+        entry: skillEntry(server.url.href),
+        skills: path.join(directory, "skills"),
+        config: path.join(directory, "config.json"),
+      }),
+    ).rejects.toBeInstanceOf(Installer.FetchError)
+    expect(pulls).toBeLessThan(80)
+    const broken = createServer((request, response) => {
+      if (request.url === "/header") {
+        response.writeHead(200, { "content-length": String(33 * 1024 * 1024) })
+        // The response never finishes: it can only complete by rejecting the header and canceling.
+        response.write("x")
+        return
+      }
+      response.writeHead(200, { "content-length": "100", connection: "close" })
+      response.end("short")
+    })
+    await new Promise<void>((resolve) => broken.listen(0, "127.0.0.1", resolve))
+    try {
+      const address = broken.address()
+      if (!address || typeof address === "string") throw new Error("Missing HTTP fixture address")
+      for (const route of ["header", "failure"]) {
+        await expect(
+          Installer.install({
+            entry: skillEntry(`http://127.0.0.1:${address.port}/${route}`),
+            skills: path.join(directory, "skills"),
+            config: path.join(directory, "config.json"),
+          }),
+        ).rejects.toBeInstanceOf(Installer.FetchError)
+      }
+    } finally {
+      broken.closeAllConnections()
+      if (broken.listening) await new Promise<void>((resolve) => broken.close(() => resolve()))
+    }
+    expect(await fs.readdir(directory)).toEqual([])
+  })
+
   test("installs the server and its skills, rolls back on conflict, and uninstalls everything", async () => {
     const archive = await new Bun.Archive(
       { "guide/SKILL.md": "---\nname: guide\ndescription: Guide\n---\n" },
@@ -237,7 +604,8 @@ describe("MCP install with companion skills", () => {
     expect(await fs.readdir(directory)).toEqual([])
 
     const written = await Installer.install({ entry, skills, config, option: "Remote", params: { TOKEN: "t" } })
-    expect(written).toEqual({ paths: [path.join(skills, "guide")], config, server: "demo" })
+    expect(written).toMatchObject({ paths: [path.join(skills, "guide")], config, server: "demo" })
+    expect(written.resources).toHaveLength(2)
     expect((await Bun.file(config).json()).mcp.servers.demo).toEqual({ type: "remote", url: "https://x" })
 
     // A second install without a previous record conflicts and leaves the first install intact.
@@ -293,11 +661,11 @@ describe("MCP install with companion skills", () => {
       config: second,
       previous: { registry: "kilo", kind: "mcp", id: "demo", scope: "global", installedAt: 0, ...written },
     })
-    expect(again).toEqual({
+    expect(again).toMatchObject({
       paths: [path.join(skills, "guide")],
       config: second,
       server: "demo",
-      pending: [{ path: path.join(skills, "extra") }, { config: first, server: "demo" }],
+      pending: written.resources!.filter((resource) => !("path" in resource) || resource.path.endsWith("extra")),
     })
     expect((await fs.readdir(skills)).toSorted()).toEqual(["extra", "guide"])
     expect((await Bun.file(first).json()).mcp.servers.demo).toBeDefined()
@@ -343,13 +711,23 @@ describe("MCP install with companion skills", () => {
 
     const again = await Installer.install({ entry, skills, config: second, previous: { ...previous, ...written } })
     expect(again.pending).toEqual(written.pending)
-    await expect(Installer.uninstall({ id: "demo", ...again })).rejects.toMatchObject({ reason: "invalid_params" })
+    await expect(Installer.uninstall({ id: "demo", ...again })).rejects.toBeInstanceOf(AggregateError)
+    expect((await Bun.file(second).json()).mcp.servers).toEqual({})
     await Bun.write(
       first,
       JSON.stringify({ mcp: { servers: { demo: { type: "remote", url: "https://old.example.com" } } } }),
     )
-    const reclaimed = await Installer.install({ entry, skills, config: first, previous: { ...previous, ...again } })
-    expect(reclaimed.pending).toEqual([{ config: second, server: "demo" }])
+    // A legacy path-only pending record cannot authorize reclaiming a foreign entry.
+    await expect(
+      Installer.install({ entry, skills, config: first, previous: { ...previous, ...again } }),
+    ).rejects.toMatchObject({ reason: "conflict" })
+    const owned = {
+      ...previous,
+      ...again,
+      pending: [{ config: first, server: "demo", fingerprints: [(await fingerprint(first, "demo"))!] }],
+    }
+    const reclaimed = await Installer.install({ entry, skills, config: first, previous: owned })
+    expect(reclaimed.pending).toEqual(again.resources)
     await Installer.uninstall({ id: "demo", ...reclaimed })
     expect((await Bun.file(first).json()).mcp.servers).toEqual({})
     expect((await Bun.file(second).json()).mcp.servers).toEqual({})

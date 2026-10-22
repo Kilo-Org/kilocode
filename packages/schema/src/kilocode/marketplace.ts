@@ -61,6 +61,13 @@ export const Item = Schema.Struct({
 })
 export type Item = typeof Item.Type
 
+/** Content evidence for a managed resource. During recovery both the previous and planned contents may be owned. */
+export const Resource = Schema.Union([
+  Schema.Struct({ path: Schema.String, fingerprints: optional(Schema.Array(Schema.String)) }),
+  Schema.Struct({ config: Schema.String, server: Schema.String, fingerprints: optional(Schema.Array(Schema.String)) }),
+])
+export type Resource = typeof Resource.Type
+
 /** A marketplace install recorded by the plugin, so that uninstall removes exactly what install wrote. */
 export const Installed = Schema.Struct({
   registry: Schema.String,
@@ -75,15 +82,15 @@ export const Installed = Schema.Struct({
   config: optional(Schema.String),
   /** The `mcp.servers` key of an MCP install, which clients need for status and sign-in. */
   server: optional(Schema.String),
+  /** Fingerprints authorize destructive operations, not just the resource's path or server name. */
+  resources: optional(Schema.Array(Resource)),
+  /** An intent persisted before mutations; a retry or uninstall can recover an interrupted installation. */
+  recovering: optional(Schema.Boolean),
+  /** Reconciled with the filesystem when installations are listed. */
+  status: optional(Schema.Literals(["ready", "missing", "modified", "incomplete"])),
+  warnings: optional(Schema.Array(Schema.String)),
   /** Obsolete resources still owned until cleanup succeeds, including across reinstalls. */
-  pending: optional(
-    Schema.Array(
-      Schema.Union([
-        Schema.Struct({ path: Schema.String }),
-        Schema.Struct({ config: Schema.String, server: Schema.String }),
-      ]),
-    ),
-  ),
+  pending: optional(Schema.Array(Resource)),
   installedAt: Schema.Number,
 })
 export type Installed = typeof Installed.Type

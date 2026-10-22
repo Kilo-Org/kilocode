@@ -28,8 +28,8 @@ export default Runtime.handler(
     const items = lists.flatMap((list) => list.items)
     const failures = lists.flatMap((list) => list.failures)
     // A registry that failed does not hide the others; report it on stderr so the list stays parseable.
-    for (const failure of failures) process.stderr.write(`warning: ${failure.message}\n`)
-    if (items.length === 0) return yield* print(["No marketplace items found"])
+    for (const failure of failures) process.stderr.write(`warning: ${failure.registry}: ${failure.message}\n`)
+    if (items.length === 0) return yield* print(["No marketplace items found in the enabled registries that responded"])
     const width = Math.max(...items.map((item) => item.id.length))
     const registries = Math.max(...items.map((item) => item.registry.length))
     yield* print(

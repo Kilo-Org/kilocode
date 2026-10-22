@@ -51,10 +51,11 @@ test("filters the requested item and registry before inferring scope", () => {
 test("missing installations produce expected user errors", () => {
   expect(() => selectUninstall([], input)).toThrow("not installed from a marketplace")
   expect(() => selectUninstall([], input)).toThrow(UserError)
+  expect(() => selectUninstall([], input)).toThrow("kilo marketplace installed")
 })
 
 test.each([true, false])(
-  "only removes captured credentials after successful uninstall (success=%s)",
+  "never looks up or removes shared credentials during uninstall (success=%s)",
   async (success) => {
     const calls: string[] = []
     using server = Bun.serve({
@@ -63,7 +64,12 @@ test.each([true, false])(
         const pathname = new URL(request.url).pathname
         calls.push(`${request.method} ${pathname}`)
         if (pathname === "/api/mcp")
-          return Response.json({ data: [{ name: "demo", integrationID: "integration-demo" }] })
+          return Response.json({
+            data: [
+              { name: "demo", integrationID: "integration-demo" },
+              { name: "another-project-demo", integrationID: "integration-demo" },
+            ],
+          })
         if (pathname === "/api/integration/integration-demo")
           return Response.json({
             data: {
@@ -94,11 +100,6 @@ test.each([true, false])(
     )
     if (success) await result
     if (!success) await expect(result).rejects.toThrow("Fix the config first")
-    expect(calls).toEqual([
-      "GET /api/mcp",
-      "GET /api/integration/integration-demo",
-      "POST /api/rpc/kilocode.marketplace/uninstall",
-      ...(success ? ["DELETE /api/credential/credential-demo"] : []),
-    ])
+    expect(calls).toEqual(["POST /api/rpc/kilocode.marketplace/uninstall"])
   },
 )

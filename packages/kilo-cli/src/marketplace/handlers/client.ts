@@ -58,3 +58,18 @@ export function scopesOf(installed: readonly KiloMarketplaceRpc.Installed[], ite
     .filter((record) => record.registry === item.registry && record.kind === item.kind && record.id === item.id)
     .map((record) => record.scope)
 }
+
+export function recordMessages(record: KiloMarketplaceRpc.Installed) {
+  return [
+    ...(record.status ? [`Status: ${record.status}`] : []),
+    ...(record.recovering ? ["Warning: Installation is incomplete; reinstall to repair it."] : []),
+    ...(record.warnings?.length
+      ? record.warnings
+      : (record.pending ?? []).map((resource) =>
+          "path" in resource
+            ? `Pending cleanup: ${resource.path}`
+            : `Pending cleanup: ${resource.config} (MCP server ${resource.server})`,
+        )
+    ).map((warning) => `Warning: ${warning}`),
+  ]
+}

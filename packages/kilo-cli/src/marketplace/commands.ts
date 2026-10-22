@@ -23,7 +23,6 @@ const registry = Flag.String("registry").pipe(
 
 export const Marketplace = Spec.make("marketplace", {
   description: "Browse and install skills and MCP servers from marketplaces",
-  aliases: ["market"],
   commands: [
     Spec.make("list", {
       description: "List marketplace items",

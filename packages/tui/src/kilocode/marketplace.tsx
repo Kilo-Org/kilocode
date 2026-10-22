@@ -39,7 +39,7 @@ export default Plugin.define({
               description: "Browse and install skills, MCP servers and agents",
               group: "Kilo",
               palette: true,
-              slash: { name: "marketplace", aliases: ["market", "skills-marketplace"] },
+              slash: { name: "marketplace" },
               run: () => marketplace(context),
             },
           ],
@@ -118,8 +118,29 @@ async function browse(context: Plugin.Context, kind: Kind, query?: string): Prom
   if (!loaded) return
   const [listed, installed, sources] = loaded
   const items = listed.items
-  // A registry that failed does not hide the others; say which one is missing.
-  for (const failure of listed.failures) context.ui.toast.show({ variant: "warning", message: failure.message })
+  // Keep diagnostics together so a later toast cannot hide a failed source or pending cleanup.
+  const warnings = [
+    ...listed.failures.map((failure) => `${failure.registry}: ${failure.message}`),
+    ...installed
+      .filter((record) => record.kind === kind)
+      .flatMap((record) => recordNotes(record).map((note) => `${record.id} (${record.scope}): ${note}`)),
+  ]
+  if (warnings.length > 0 || items.length === 0) {
+    context.ui.toast.show({
+      variant: warnings.length > 0 ? "warning" : "info",
+      message: [
+        ...warnings,
+        ...(items.length === 0
+          ? [
+              "No items found in the enabled registries that responded.",
+              ...sources
+                .filter((source) => !source.enabled && source.kinds.includes(kind))
+                .map((source) => `${source.name} is disabled; enable it under Marketplace > Registries.`),
+            ]
+          : []),
+      ].join("\n"),
+    })
+  }
   const searchable = sources.filter((source) => source.enabled && source.searchable && source.kinds.includes(kind))
   const label = kinds.find((entry) => entry.kind === kind)?.title ?? kind
   const choice = await context.ui.dialog.select<Choice>({
@@ -129,7 +150,7 @@ async function browse(context: Plugin.Context, kind: Kind, query?: string): Prom
       ...(searchable.length > 0
         ? [
             {
-              title: "Search all registries...",
+              title: "Search enabled registries...",
               value: { type: "search" as const },
               description: `Search the full catalogs of ${searchable.map((source) => source.name).join(", ")}`,
             },
@@ -149,7 +170,18 @@ async function browse(context: Plugin.Context, kind: Kind, query?: string): Prom
           category: scopes.length > 0 ? "Installed" : source?.curated ? (item.category ?? "Other") : source?.name,
           footer:
             [
-              scopes.length > 0 ? `installed (${scopes.join(", ")})` : undefined,
+              scopes.length > 0
+                ? installed
+                    .filter(
+                      (record) =>
+                        record.registry === item.registry && record.kind === item.kind && record.id === item.id,
+                    )
+                    .map(
+                      (record) =>
+                        `${record.scope}: ${record.status ?? (record.recovering ? "incomplete" : "installed")}${recordNotes(record).length ? " (see details)" : ""}`,
+                    )
+                    .join(", ")
+                : undefined,
               source && !source.curated ? source.name : undefined,
               twins.length > 0 ? `also in ${twins.join(", ")}` : undefined,
             ]
@@ -197,28 +229,59 @@ async function act(
   const scopes = scopesOf(installed, item)
   const actions = [
     ...(installable.has(item.kind)
-      ? (["global", "project"] as const)
-          .filter((scope) => !scopes.includes(scope))
-          .map((scope) => ({
-            title: scope === "global" ? "Install globally" : "Install in this project",
-            value: { type: "install" as const, scope },
-            description: scope === "global" ? "Available in every project" : "Only in this project's .kilo2 directory",
-          }))
+      ? (["global", "project"] as const).flatMap((scope) => {
+          const record = installed.find(
+            (entry) =>
+              entry.registry === item.registry &&
+              entry.kind === item.kind &&
+              entry.id === item.id &&
+              entry.scope === scope,
+          )
+          if (record?.status === "modified") return []
+          const repair = record?.status === "missing" || record?.status === "incomplete" || record?.recovering
+          return [
+            {
+              title: record
+                ? `${repair ? "Repair / reinstall" : "Reinstall"} (${scope})`
+                : scope === "global"
+                  ? "Install globally"
+                  : "Install in this project",
+              value: { type: "install" as const, scope },
+              description: record
+                ? "Install the current catalog entry again; this is not version management"
+                : scope === "global"
+                  ? "Available in every project"
+                  : "Only in this project's .kilo2 directory",
+            },
+          ]
+        })
       : []),
     ...scopes.map((scope) => ({
       title: `Uninstall (${scope})`,
       value: { type: "uninstall" as const, scope },
-      description:
-        item.kind === "mcp"
-          ? "Remove the server config, its companion skills and its sign-in"
-          : "Remove the files the marketplace installed",
+      description: item.kind === "mcp" ? "Keeps sign-in; /mcps first" : "Remove the files the marketplace installed",
     })),
     { title: "Details", value: { type: "details" as const, scope: "global" as const }, description: undefined },
   ]
   const choice = await context.ui.dialog.select<Action>({ title: item.name, options: actions })
   if (!choice) return
   const source = sources.find((entry) => entry.id === item.registry)
-  if (choice.type === "details") return context.ui.dialog.alert({ title: item.name, message: details(item, source) })
+  if (choice.type === "details")
+    return context.ui.dialog.alert({
+      title: item.name,
+      message: [
+        details(item, source),
+        ...installed
+          .filter((entry) => entry.registry === item.registry && entry.kind === item.kind && entry.id === item.id)
+          .flatMap((record) => [
+            `Installed (${record.scope})${record.status === "ready" ? ": ready" : ""}`,
+            ...recordNotes(record),
+            ...(record.status === "modified"
+              ? ["Local changes are retained. Review them before reinstalling or uninstalling."]
+              : []),
+          ]),
+      ].join("\n"),
+    })
   if (choice.type === "install") {
     if (source && !source.curated) {
       const confirmed = await context.ui.dialog.confirm({
@@ -230,11 +293,17 @@ async function act(
     }
     const answers = await ask(context, item)
     if (!answers) return
-    const result = await rpc.install({ ...ref, scope: choice.scope, ...answers }, options).then(
-      () => undefined,
-      (error: Error) => error.message || "Unknown error",
-    )
-    if (result) return context.ui.toast.show({ variant: "error", message: result })
+    const result = await rpc.install({ ...ref, scope: choice.scope, ...answers }, options).catch((error: Error) => {
+      context.ui.toast.show({ variant: "error", message: error.message || "Unknown error" })
+      return undefined
+    })
+    if (!result) return
+    const notes = recordNotes(result)
+    if (notes.length > 0)
+      return context.ui.dialog.alert({
+        title: `Installed ${item.name} (${choice.scope})`,
+        message: [...(result.status === "ready" ? ["Status: ready"] : []), ...notes].join("\n"),
+      })
     return context.ui.toast.show({
       variant: "success",
       message:
@@ -243,25 +312,15 @@ async function act(
           : `Installed ${item.name} (${choice.scope})`,
     })
   }
-  const record = installed.find(
-    (entry) =>
-      entry.registry === item.registry &&
-      entry.kind === item.kind &&
-      entry.id === item.id &&
-      entry.scope === choice.scope,
-  )
-  const credentials = record?.server ? await credentialsOf(context, record.server, options.location) : []
   const result = await rpc.uninstall({ ...ref, scope: choice.scope }, options).then(
     () => undefined,
     (error: Error) => error.message || "Unknown error",
   )
   if (result) return context.ui.toast.show({ variant: "error", message: result })
-  await Promise.all(
-    credentials.map((connection) =>
-      context.client.credential.remove({ credentialID: connection.id }).catch(() => undefined),
-    ),
-  )
-  context.ui.toast.show({ variant: "success", message: `Uninstalled ${item.name}` })
+  context.ui.toast.show({
+    variant: "success",
+    message: `Uninstalled ${item.name}${item.kind === "mcp" ? ". Sign-in retained because it may be shared with other installations." : ""}`,
+  })
 }
 
 /** Asks for the install option and the parameter values of an MCP server. `undefined` when the user cancels. */
@@ -307,13 +366,18 @@ async function ask(context: Plugin.Context, item: Item) {
   return { option: option.name, params }
 }
 
-// Capture credentials before the config disappears; only delete them after uninstall succeeds.
-async function credentialsOf(context: Plugin.Context, name: string, location: { directory: string }) {
-  const servers = await context.client.mcp.list({ location }).catch(() => undefined)
-  const integrationID = servers?.data.find((server) => server.name === name)?.integrationID
-  if (!integrationID) return []
-  const integration = await context.client.integration.get({ integrationID, location }).catch(() => undefined)
-  return integration?.data?.connections.filter((connection) => connection.type === "credential") ?? []
+function recordNotes(record: Installed) {
+  return [
+    ...(record.status && record.status !== "ready" ? [`Status: ${record.status}`] : []),
+    ...(record.recovering ? ["Installation is incomplete; reinstall to repair it."] : []),
+    ...(record.warnings?.length
+      ? record.warnings
+      : (record.pending ?? []).map((resource) =>
+          "path" in resource
+            ? `Pending cleanup: ${resource.path}`
+            : `Pending cleanup: ${resource.config} (MCP server ${resource.server})`,
+        )),
+  ]
 }
 
 function scopesOf(installed: readonly Installed[], item: Item) {

@@ -1,9 +1,9 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloMarketplaceRegistry } from "../src/marketplace/kilo"
-import { SkillError, extract, install, remove } from "../src/marketplace/skill"
+import { SkillError, bounded, extract, fingerprint, install, remove } from "../src/marketplace/skill"
 
 const SKILLS = `
 items:
@@ -91,6 +91,22 @@ describe("Kilo marketplace registry", () => {
 })
 
 describe("skill archives", () => {
+  test("cancels bounded streams as soon as their byte budget is exceeded", async () => {
+    let canceled = false
+    let pulls = 0
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls++
+        controller.enqueue(new Uint8Array(3))
+      },
+      cancel() {
+        canceled = true
+      },
+    })
+    await expect(bounded(stream, 4)).rejects.toThrow(/byte limit/)
+    expect(canceled).toBe(true)
+    expect(pulls).toBeLessThanOrEqual(3)
+  })
   test("strips the single top-level directory", async () => {
     const files = await extract(await tarball({ "demo/SKILL.md": "# demo", "demo/ref/a.md": "a" }))
     expect(files.map((file) => file.path).toSorted()).toEqual(["SKILL.md", "ref/a.md"])
@@ -110,9 +126,126 @@ describe("skill archives", () => {
       /unsafe path/,
     )
   })
+
+  test("limits archive entries and expanded bytes before writing files", async () => {
+    await expect(
+      extract(
+        await tarball({
+          "SKILL.md": "demo",
+          ...Object.fromEntries(Array.from({ length: 4096 }, (_, index) => [`files/${index}`, "x"])),
+        }),
+      ),
+    ).rejects.toThrow(/too many entries/)
+    await expect(extract(await tarball({ "SKILL.md": "demo", large: "x".repeat(33 * 1024 * 1024) }))).rejects.toThrow(
+      /byte limit/,
+    )
+    await expect(extract(await tarball({ "SKILL.md": "x".repeat(65 * 1024 * 1024) }))).rejects.toThrow(/byte limit/)
+  })
 })
 
 describe("skill install", () => {
+  test("retries partially deleted owned trash after a project move without rehashing it", async () => {
+    const directory = await tmp()
+    const root = path.join(directory, "original", "skills")
+    const target = await install({
+      root,
+      id: "demo",
+      archive: await tarball({ "SKILL.md": "owned", "ref/a.txt": "keep until deleted" }),
+      replace: false,
+    })
+    const owned = (await fingerprint(target))!
+    const original = fs.rm
+    const interrupted = Object.assign(new Error("recursive deletion interrupted"), { code: "EACCES" })
+    const failure = spyOn(fs, "rm").mockImplementation(async (location, options) => {
+      if (
+        String(location).includes(".marketplace-trash") &&
+        (await Bun.file(path.join(String(location), "SKILL.md")).exists())
+      ) {
+        await original(path.join(String(location), "SKILL.md"))
+        throw interrupted
+      }
+      await original(location, options)
+    })
+    try {
+      await expect(remove(target, [owned])).rejects.toBe(interrupted)
+    } finally {
+      failure.mockRestore()
+    }
+    expect(await fingerprint(target)).toBeUndefined()
+    const trash = path.join(directory, "original", ".marketplace-trash")
+    expect(await fs.readdir(trash)).toHaveLength(1)
+    const abandoned = path.join(trash, (await fs.readdir(trash))[0])
+    expect(await fingerprint(abandoned)).not.toBe(owned)
+    expect(await Bun.file(path.join(abandoned, "ref/a.txt")).text()).toBe("keep until deleted")
+    await fs.rename(path.join(directory, "original"), path.join(directory, "moved"))
+    await remove(path.join(directory, "moved", "skills", "demo"), [owned])
+    expect(await fs.readdir(path.join(directory, "moved"))).toEqual(["skills"])
+  })
+
+  test("replacement retries cleanup of interrupted old contents before installing the new tree", async () => {
+    const directory = await tmp()
+    const root = path.join(directory, "skills")
+    const target = await install({
+      root,
+      id: "demo",
+      archive: await tarball({ "SKILL.md": "old", "ref/a.txt": "old reference" }),
+      replace: false,
+    })
+    const owned = (await fingerprint(target))!
+    const archive = await tarball({ "SKILL.md": "new" })
+    const original = fs.rm
+    const interrupted = Object.assign(new Error("recursive deletion interrupted"), { code: "EACCES" })
+    const failure = spyOn(fs, "rm").mockImplementation(async (location, options) => {
+      if (
+        String(location).includes(".marketplace-trash") &&
+        (await Bun.file(path.join(String(location), "SKILL.md")).exists())
+      ) {
+        await original(path.join(String(location), "SKILL.md"))
+        throw interrupted
+      }
+      await original(location, options)
+    })
+    try {
+      await expect(install({ root, id: "demo", archive, replace: true, fingerprints: [owned] })).rejects.toBe(
+        interrupted,
+      )
+    } finally {
+      failure.mockRestore()
+    }
+    expect(await fingerprint(target)).toBeUndefined()
+    expect((await fs.readdir(directory)).toSorted()).toEqual([".marketplace-trash", "skills"])
+    await install({ root, id: "demo", archive, replace: true, fingerprints: [owned] })
+    expect(await Bun.file(path.join(target, "SKILL.md")).text()).toBe("new")
+    expect(await fs.readdir(directory)).toEqual(["skills"])
+    await remove(target, [(await fingerprint(target))!])
+  })
+
+  test("fingerprints protect changed contents, added files, empty directories, and symbolic links", async () => {
+    const root = path.join(await tmp(), "skills")
+    const archive = await tarball({ "SKILL.md": "original", "ref/a.txt": "reference" })
+    const target = await install({ root, id: "demo", archive, replace: false })
+    const owned = (await fingerprint(target))!
+    await expect(remove(target)).rejects.toMatchObject({ reason: "conflict" })
+    await expect(install({ root, id: "demo", archive, replace: true })).rejects.toMatchObject({ reason: "conflict" })
+    await Bun.write(path.join(target, "SKILL.md"), "edited")
+    await expect(remove(target, [owned])).rejects.toMatchObject({ reason: "conflict" })
+    await expect(install({ root, id: "demo", archive, replace: true, fingerprints: [owned] })).rejects.toMatchObject({
+      reason: "conflict",
+    })
+    await Bun.write(path.join(target, "SKILL.md"), "original")
+    expect(await fingerprint(target)).toBe(owned)
+    await Bun.write(path.join(target, "user.txt"), "keep")
+    await expect(remove(target, [owned])).rejects.toMatchObject({ reason: "conflict" })
+    await fs.rm(path.join(target, "user.txt"))
+    await fs.mkdir(path.join(target, "empty"))
+    await expect(remove(target, [owned])).rejects.toMatchObject({ reason: "conflict" })
+    await fs.rmdir(path.join(target, "empty"))
+    await fs.symlink(path.join(target, "SKILL.md"), path.join(target, "link"))
+    await expect(remove(target, [owned])).rejects.toMatchObject({ reason: "conflict" })
+    await fs.rm(path.join(target, "link"))
+    await remove(target, [owned])
+  })
+
   test("installs, refuses to overwrite foreign directories, replaces its own, and removes", async () => {
     const root = path.join(await tmp(), "skills")
     const archive = await tarball({ "demo/SKILL.md": "---\nname: demo\n---\nv1" })
@@ -125,10 +258,16 @@ describe("skill install", () => {
       reason: "conflict",
     })
 
-    await install({ root, id: "demo", archive: await tarball({ "SKILL.md": "v2" }), replace: true })
+    await install({
+      root,
+      id: "demo",
+      archive: await tarball({ "SKILL.md": "v2" }),
+      replace: true,
+      fingerprints: [(await fingerprint(target))!],
+    })
     expect(await Bun.file(path.join(target, "SKILL.md")).text()).toBe("v2")
 
-    await remove(target)
+    await remove(target, [(await fingerprint(target))!])
     expect(await fs.readdir(root)).toEqual([])
     await remove(target)
   })

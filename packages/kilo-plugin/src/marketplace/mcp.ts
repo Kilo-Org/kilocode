@@ -2,7 +2,9 @@ import { Mcp } from "@opencode/schema/mcp"
 import type { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { applyEdits, modify, parse, type ParseError } from "jsonc-parser"
-import { randomUUID } from "node:crypto"
+export * as MarketplaceMcp from "./mcp"
+
+import { createHash, randomUUID } from "node:crypto"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { Option, Schema } from "effect"
@@ -61,7 +63,9 @@ export function build(input: {
       throw new McpError("invalid_params", `The server config uses undeclared parameters: ${key}`)
     return JSON.stringify(value).slice(1, -1)
   })
-  const raw: unknown = JSON.parse(filled)
+  const decodedJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))(filled)
+  if (Option.isNone(decodedJson)) throw new McpError("invalid_params", "The server config is not valid JSON")
+  const raw = decodedJson.value
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new McpError("invalid_params", "The server config is not a JSON object")
   }
@@ -113,23 +117,61 @@ export async function configFile(directory: string, global: boolean) {
 }
 
 /** Adds `mcp.servers.<name>`. Fails with `conflict` when the entry exists and `replace` is not set. */
-export function write(input: { file: string; name: string; server: Mcp.ServerConfig; replace: boolean }) {
+export function write(input: {
+  file: string
+  name: string
+  server: Mcp.ServerConfig
+  replace: boolean
+  fingerprints?: readonly string[]
+}) {
   return serialized(input.file, async () => {
     const text = await read(input.file)
-    if (!input.replace && entry(text, input.file, input.name) !== undefined) {
-      throw new McpError("conflict", `MCP server "${input.name}" is already configured in ${input.file}`)
-    }
+    check(text, input.file, input.name, input.replace ? input.fingerprints : [])
     await save(input.file, text, ["mcp", "servers", input.name], input.server)
   })
 }
 
 /** Removes `mcp.servers.<name>`. A missing file or entry is not an error: the user may have removed it already. */
-export function remove(input: { file: string; name: string }) {
+export function remove(input: { file: string; name: string; fingerprints?: readonly string[] }) {
   return serialized(input.file, async () => {
     const text = await read(input.file)
     if (entry(text, input.file, input.name) === undefined) return
+    check(text, input.file, input.name, input.fingerprints)
     await save(input.file, text, ["mcp", "servers", input.name], undefined)
   })
+}
+
+export async function preflight(input: { file: string; name: string; fingerprints?: readonly string[] }) {
+  check(await read(input.file), input.file, input.name, input.fingerprints)
+}
+
+function check(text: string, file: string, name: string, fingerprints: readonly string[] = []) {
+  const current = entry(text, file, name)
+  if (current !== undefined && !fingerprints.includes(serverFingerprint(current))) {
+    throw new McpError("conflict", `MCP server "${name}" in ${file} is modified or not owned by this install`)
+  }
+}
+
+export async function fingerprint(file: string, name: string) {
+  const value = entry(await read(file), file, name)
+  return value === undefined ? undefined : serverFingerprint(value)
+}
+
+export function serverFingerprint(value: unknown): string {
+  function normalized(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(normalized)
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value)
+          .toSorted(([a], [b]) => a.localeCompare(b))
+          .map(([key, value]) => [key, normalized(value)]),
+      )
+    }
+    return value
+  }
+  return createHash("sha256")
+    .update(JSON.stringify(normalized(value)))
+    .digest("hex")
 }
 
 // Read-modify-write of one config file runs one at a time in this process, so two installs started together (the
@@ -165,6 +207,16 @@ async function save(file: string, text: string, key: string[], value: unknown) {
   const next = applyEdits(text, modify(text, key, value, { formattingOptions: { tabSize: 2, insertSpaces: true } }))
   await fs.mkdir(path.dirname(file), { recursive: true })
   const temporary = `${file}.${randomUUID()}.tmp`
-  await fs.writeFile(temporary, next, { mode: 0o600, flag: "wx" })
-  await fs.rename(temporary, file)
+  try {
+    await fs.writeFile(temporary, next, { mode: 0o600, flag: "wx" })
+    await fs.rename(temporary, file)
+  } catch (error) {
+    const cleanup = await Promise.allSettled([fs.rm(temporary, { force: true })])
+    if (cleanup[0].status === "rejected") {
+      throw new AggregateError([error, cleanup[0].reason], `MCP config write and temporary cleanup failed at ${file}`, {
+        cause: error,
+      })
+    }
+    throw error
+  }
 }
