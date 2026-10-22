@@ -101,6 +101,21 @@ describe("MCP config translation", () => {
 
   test("rejects placeholders that no parameter declares", () => {
     expect(() => build({ template: `{ "command": "{{BIN}}/x" }`, parameters: [], params: {} })).toThrow(McpError)
+    expect(() => build({ template: '{ "command": "${BIN}/x" }', parameters: [], params: {} })).toThrow(McpError)
+  })
+
+  test("substitutes only original placeholders and preserves placeholder-like parameter values", () => {
+    const value = '{{SECOND}} ${SECOND} {{UNKNOWN}} ${UNKNOWN} "quoted" \\path'
+    expect(
+      build({
+        template: JSON.stringify({
+          command: "x",
+          env: { FIRST: "{{FIRST}}", LEGACY: "${FIRST}", SECOND: "{{SECOND}}" },
+        }),
+        parameters: [param("FIRST"), param("SECOND")],
+        params: { FIRST: value, SECOND: "resolved" },
+      }),
+    ).toEqual({ type: "local", command: ["x"], environment: { FIRST: value, LEGACY: value, SECOND: "resolved" } })
   })
 
   test("merges item and option parameters, the option winning", () => {
@@ -177,6 +192,13 @@ describe("MCP config files", () => {
       write({ file, name: "demo", server: { type: "remote", url: "https://x" }, replace: false }),
     ).rejects.toMatchObject({ reason: "invalid_params" })
     expect(await Bun.file(file).text()).toBe("{ broken")
+    await expect(remove({ file, name: "demo" })).rejects.toMatchObject({ reason: "invalid_params" })
+  })
+
+  test("remove ignores missing files but propagates other filesystem read errors", async () => {
+    const directory = await tmp()
+    await remove({ file: path.join(directory, "missing.json"), name: "demo" })
+    await expect(remove({ file: directory, name: "demo" })).rejects.toMatchObject({ code: "EISDIR" })
   })
 })
 
@@ -229,7 +251,7 @@ describe("MCP install with companion skills", () => {
     expect(await fs.readdir(skills)).toEqual([])
   })
 
-  test("a reinstall removes companions the catalog dropped and the entry in a config it no longer uses", async () => {
+  test("a reinstall reports obsolete resources without removing them before ownership is persisted", async () => {
     const archive = (name: string) =>
       new Bun.Archive(
         { [`${name}/SKILL.md`]: `---\nname: ${name}\ndescription: ${name}\n---\n` },
@@ -271,9 +293,65 @@ describe("MCP install with companion skills", () => {
       config: second,
       previous: { registry: "kilo", kind: "mcp", id: "demo", scope: "global", installedAt: 0, ...written },
     })
-    expect(again).toEqual({ paths: [path.join(skills, "guide")], config: second, server: "demo" })
+    expect(again).toEqual({
+      paths: [path.join(skills, "guide")],
+      config: second,
+      server: "demo",
+      pending: [{ path: path.join(skills, "extra") }, { config: first, server: "demo" }],
+    })
+    expect((await fs.readdir(skills)).toSorted()).toEqual(["extra", "guide"])
+    expect((await Bun.file(first).json()).mcp.servers.demo).toBeDefined()
+    for (const resource of again.pending ?? []) await Installer.cleanup(resource)
     expect(await fs.readdir(skills)).toEqual(["guide"])
     expect(await Bun.file(first).json()).toEqual({ mcp: { servers: {} } })
     expect((await Bun.file(second).json()).mcp.servers.demo).toEqual({ type: "remote", url: "https://x" })
+  })
+
+  test("reinstall retains failed cleanup, can reclaim pending resources, and uninstall retries them", async () => {
+    const directory = await tmp()
+    const first = path.join(directory, "first.json")
+    const second = path.join(directory, "second.json")
+    const skills = path.join(directory, "skills")
+    const entry = {
+      item: {
+        registry: "kilo",
+        kind: "mcp" as const,
+        id: "demo",
+        name: "Demo",
+        description: "",
+        tags: [],
+        prerequisites: [],
+        parameters: [],
+        options: [],
+      },
+      payloads: ['{"url":"https://new.example.com"}'],
+    }
+    await Bun.write(first, "{ broken")
+    const previous = {
+      registry: "kilo",
+      kind: "mcp" as const,
+      id: "demo",
+      scope: "global" as const,
+      installedAt: 0,
+      paths: [],
+      config: first,
+    }
+    const written = await Installer.install({ entry, skills, config: second, previous })
+    expect(written.pending).toEqual([{ config: first, server: "demo" }])
+    await expect(Installer.cleanup(written.pending![0])).rejects.toMatchObject({ reason: "invalid_params" })
+    expect((await Bun.file(second).json()).mcp.servers.demo.url).toBe("https://new.example.com")
+
+    const again = await Installer.install({ entry, skills, config: second, previous: { ...previous, ...written } })
+    expect(again.pending).toEqual(written.pending)
+    await expect(Installer.uninstall({ id: "demo", ...again })).rejects.toMatchObject({ reason: "invalid_params" })
+    await Bun.write(
+      first,
+      JSON.stringify({ mcp: { servers: { demo: { type: "remote", url: "https://old.example.com" } } } }),
+    )
+    const reclaimed = await Installer.install({ entry, skills, config: first, previous: { ...previous, ...again } })
+    expect(reclaimed.pending).toEqual([{ config: second, server: "demo" }])
+    await Installer.uninstall({ id: "demo", ...reclaimed })
+    expect((await Bun.file(first).json()).mcp.servers).toEqual({})
+    expect((await Bun.file(second).json()).mcp.servers).toEqual({})
   })
 })

@@ -1,7 +1,7 @@
 import { Runtime } from "@opencode/cli/framework/runtime"
 import { Effect, Option } from "effect"
 import { Marketplace } from "../commands"
-import { call, connect, print } from "./client"
+import { call, connect, print, validateResponse } from "./client"
 
 export default Runtime.handler(
   Marketplace.commands.registries,
@@ -13,8 +13,8 @@ export default Runtime.handler(
     })
     const registries = yield* call(() =>
       change
-        ? marketplace.rpc["registries.set"](change, marketplace.options)
-        : marketplace.rpc.registries({}, marketplace.options),
+        ? marketplace.rpc["registries.set"](change, marketplace.options).then(validateResponse("registries.set"))
+        : marketplace.rpc.registries({}, marketplace.options).then(validateResponse("registries")),
     )
     const width = Math.max(...registries.map((registry) => registry.id.length))
     yield* print(

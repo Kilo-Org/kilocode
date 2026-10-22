@@ -1,10 +1,17 @@
 import { expect, test } from "bun:test"
+import { OpenCode } from "@opencode/client"
 import { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
-import { Option } from "effect"
+import { Effect, Option } from "effect"
 import { UserError } from "../src/error"
-import { selectUninstall } from "../src/marketplace/handlers/uninstall"
+import { selectUninstall, uninstall } from "../src/marketplace/handlers/uninstall"
 
-const input = { kind: "skill" as const, id: "theme-factory", project: false, global: false, registry: Option.none<string>() }
+const input = {
+  kind: "skill" as const,
+  id: "theme-factory",
+  project: false,
+  global: false,
+  registry: Option.none<string>(),
+}
 const project: KiloMarketplaceRpc.Installed = {
   kind: "skill",
   id: "theme-factory",
@@ -45,3 +52,53 @@ test("missing installations produce expected user errors", () => {
   expect(() => selectUninstall([], input)).toThrow("not installed from a marketplace")
   expect(() => selectUninstall([], input)).toThrow(UserError)
 })
+
+test.each([true, false])(
+  "only removes captured credentials after successful uninstall (success=%s)",
+  async (success) => {
+    const calls: string[] = []
+    using server = Bun.serve({
+      port: 0,
+      fetch: (request) => {
+        const pathname = new URL(request.url).pathname
+        calls.push(`${request.method} ${pathname}`)
+        if (pathname === "/api/mcp")
+          return Response.json({ data: [{ name: "demo", integrationID: "integration-demo" }] })
+        if (pathname === "/api/integration/integration-demo")
+          return Response.json({
+            data: {
+              connections: [
+                { type: "credential", id: "credential-demo" },
+                { type: "environment", id: "env-demo" },
+              ],
+            },
+          })
+        if (pathname === "/api/rpc/kilocode.marketplace/uninstall")
+          return success
+            ? Response.json({ output: {} })
+            : Response.json(
+                { _tag: "RpcError", type: "invalid_params", message: "Fix the config first" },
+                { status: 400 },
+              )
+        if (pathname === "/api/credential/credential-demo") return new Response(null, { status: 204 })
+        return new Response("Unexpected request", { status: 500 })
+      },
+    })
+    const client = OpenCode.make({ baseUrl: server.url.origin })
+    const location = { directory: "/project" }
+    const result = Effect.runPromise(
+      uninstall(
+        { client, rpc: client.rpc(KiloMarketplaceRpc.Definition), options: { location }, location },
+        { ...project, kind: "mcp", server: "demo" },
+      ),
+    )
+    if (success) await result
+    if (!success) await expect(result).rejects.toThrow("Fix the config first")
+    expect(calls).toEqual([
+      "GET /api/mcp",
+      "GET /api/integration/integration-demo",
+      "POST /api/rpc/kilocode.marketplace/uninstall",
+      ...(success ? ["DELETE /api/credential/credential-demo"] : []),
+    ])
+  },
+)

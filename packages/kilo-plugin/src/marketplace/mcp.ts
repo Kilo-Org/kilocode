@@ -52,16 +52,15 @@ export function build(input: {
   if (missing.length > 0) {
     throw new McpError("invalid_params", `Missing required parameters: ${missing.map((p) => p.name).join(", ")}`)
   }
-  const values = Object.fromEntries(
-    input.parameters.map((parameter) => [parameter.key, input.params[parameter.key] ?? ""]),
-  )
-  const filled = Object.entries(values).reduce((text, [key, value]) => {
-    const escaped = JSON.stringify(value).slice(1, -1)
-    return text.replaceAll(`{{${key}}}`, () => escaped).replaceAll(`\${${key}}`, () => escaped)
-  }, input.template)
-  const unknown = [...new Set([...filled.matchAll(/\{\{([A-Za-z0-9_]+)\}\}/g)].map((match) => match[1]))]
-  if (unknown.length > 0)
-    throw new McpError("invalid_params", `The server config uses undeclared parameters: ${unknown.join(", ")}`)
+  const values = new Map(input.parameters.map((parameter) => [parameter.key, input.params[parameter.key] ?? ""]))
+  // Only visit the original template: inserted values can contain literal placeholders themselves.
+  const filled = input.template.replace(/\{\{([^{}]+)\}\}|\$\{([^{}]+)\}/g, (_, current: string, legacy: string) => {
+    const key = current ?? legacy
+    const value = values.get(key)
+    if (value === undefined)
+      throw new McpError("invalid_params", `The server config uses undeclared parameters: ${key}`)
+    return JSON.stringify(value).slice(1, -1)
+  })
   const raw: unknown = JSON.parse(filled)
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new McpError("invalid_params", "The server config is not a JSON object")
@@ -127,7 +126,7 @@ export function write(input: { file: string; name: string; server: Mcp.ServerCon
 /** Removes `mcp.servers.<name>`. A missing file or entry is not an error: the user may have removed it already. */
 export function remove(input: { file: string; name: string }) {
   return serialized(input.file, async () => {
-    const text = await read(input.file).catch(() => "{}")
+    const text = await read(input.file)
     if (entry(text, input.file, input.name) === undefined) return
     await save(input.file, text, ["mcp", "servers", input.name], undefined)
   })

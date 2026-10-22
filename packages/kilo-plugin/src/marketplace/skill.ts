@@ -36,38 +36,34 @@ export async function install(input: {
   }
   const files = await extract(input.archive, input.select)
   const staging = path.join(path.dirname(input.root), ".marketplace-staging", randomUUID())
-  await Promise.all(
-    files.map(async (file) => {
-      const destination = path.join(staging, file.path)
-      await fs.mkdir(path.dirname(destination), { recursive: true })
-      await Bun.write(destination, file.data)
-    }),
-  )
-  await fs.mkdir(input.root, { recursive: true })
-  if (input.replace) await remove(target)
-  await fs.rename(staging, target)
-  // Only removes the staging parent when it is empty: a concurrent install or remove may still use it.
-  await fs.rmdir(path.dirname(staging)).catch(() => undefined)
-  return target
+  try {
+    const writes = await Promise.allSettled(
+      files.map(async (file) => {
+        const destination = path.join(staging, file.path)
+        await fs.mkdir(path.dirname(destination), { recursive: true })
+        await Bun.write(destination, file.data)
+      }),
+    )
+    const failed = writes.find((write) => write.status === "rejected")
+    if (failed) throw failed.reason
+    await fs.mkdir(input.root, { recursive: true })
+    if (input.replace) await remove(target)
+    await fs.rename(staging, target)
+    return target
+  } finally {
+    // All writers have settled before cleanup, so none can recreate a failed staging directory.
+    await fs.rm(staging, { recursive: true, force: true })
+    // Concurrent installs may still use the staging parent.
+    await fs.rmdir(path.dirname(staging)).catch(() => undefined)
+  }
 }
 
 /**
- * Removes an installed skill directory. A directory that is already gone is not an error. The directory is first
- * renamed out of the scanned `skills` directory, so the skill disappears in one step even while the recursive delete
- * of its files is still running (observed on macOS with a watched directory).
+ * Removes an installed skill directory. Keep the recorded path until deletion finishes: moving it into random trash
+ * would lose ownership if recursive deletion failed. A directory that is already gone is not an error.
  */
 export async function remove(target: string) {
-  const trash = path.join(path.dirname(path.dirname(target)), ".marketplace-staging", randomUUID())
-  await fs.mkdir(path.dirname(trash), { recursive: true })
-  const moved = await fs.rename(target, trash).then(
-    () => true,
-    (error: NodeJS.ErrnoException) => {
-      if (error.code === "ENOENT") return false
-      throw error
-    },
-  )
-  if (moved) await fs.rm(trash, { recursive: true, force: true })
-  await fs.rmdir(path.dirname(trash)).catch(() => undefined)
+  await fs.rm(target, { recursive: true, force: true })
 }
 
 /**

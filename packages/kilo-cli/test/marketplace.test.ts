@@ -13,20 +13,55 @@ import os from "node:os"
 import path from "node:path"
 import { McpRegistry } from "../../kilo-plugin/src/marketplace/mcp-registry"
 import { KiloHost } from "../src/host"
-import { validateList } from "../src/marketplace/handlers/client"
+import { validateResponse } from "../src/marketplace/handlers/client"
 import { selectUninstall } from "../src/marketplace/handlers/uninstall"
 
 test.each([[], { items: [] }, { items: [], failures: [undefined] }])(
   "rejects incompatible marketplace list responses with restart instructions: %j",
   async (response) => {
-    await expect(validateList(response)).rejects.toThrow("bun run dev service restart")
+    await expect(validateResponse("list")(response)).rejects.toThrow("bun dev service restart")
   },
 )
 
 test("accepts empty marketplace lists and preserves registry warnings", async () => {
-  expect(await validateList({ items: [], failures: [] })).toEqual({ items: [], failures: [] })
+  expect(await validateResponse("list")({ items: [], failures: [] })).toEqual({ items: [], failures: [] })
   const response = { items: [], failures: [{ registry: "kilo", message: "Registry unavailable" }] }
-  expect(await validateList(response)).toEqual(response)
+  expect(await validateResponse("list")(response)).toEqual(response)
+})
+
+test.each([
+  ["installed", [{ id: "demo" }]],
+  ["registries", [{ id: "kilo" }]],
+  ["registries.set", {}],
+  ["install", { id: "demo" }],
+  ["uninstall", null],
+] as const)("rejects incompatible marketplace %s responses", async (method, value) => {
+  await expect(validateResponse(method)(value)).rejects.toThrow("kilo service restart")
+})
+
+test("accepts compatible non-list responses", async () => {
+  const record: KiloMarketplaceRpc.Installed = {
+    registry: "kilo",
+    kind: "skill",
+    id: "demo",
+    scope: "global",
+    paths: [],
+    installedAt: 1,
+  }
+  const registry: KiloMarketplaceRpc.RegistryInfo = {
+    id: "kilo",
+    name: "Kilo",
+    description: "",
+    kinds: ["skill"],
+    curated: true,
+    searchable: false,
+    enabled: true,
+  }
+  expect(await validateResponse("installed")([record])).toEqual([record])
+  expect(await validateResponse("install")(record)).toEqual(record)
+  expect(await validateResponse("registries")([registry])).toEqual([registry])
+  expect(await validateResponse("registries.set")([registry])).toEqual([registry])
+  expect(await validateResponse("uninstall")({})).toEqual({})
 })
 
 // The `kilocode.marketplace` RPC end to end: the host registers the marketplace plugin, the generated client calls it,
@@ -171,6 +206,32 @@ test("lists, installs and uninstalls marketplace skills and MCP servers through 
             })
             expect(await rpc.uninstall(mcp, options)).toEqual({})
             expect(await Bun.file(config).json()).toEqual({ mcp: { servers: {} } })
+
+            // Failed obsolete-config cleanup must not lose the newly installed server or its pending ownership.
+            const obsolete = path.join(directory, "obsolete.json")
+            await Bun.write(obsolete, "{ broken")
+            await Effect.runPromise(
+              store.set(
+                `installed:kilo:mcp:demo-mcp:project:${directory}`,
+                JSON.stringify({ ...server, config: obsolete }),
+              ),
+            )
+            const reinstalled = await rpc.install({ ...mcp, params: { API_KEY: "replacement" } }, options)
+            expect(reinstalled).toMatchObject({
+              config,
+              pending: [{ config: obsolete, server: "demo-mcp" }],
+            })
+            expect(await rpc.installed({}, options)).toContainEqual(reinstalled)
+            expect((await Bun.file(config).json()).mcp.servers["demo-mcp"].environment.API_KEY).toBe("replacement")
+            await expect(rpc.uninstall(mcp, options)).rejects.toMatchObject({ type: "invalid_params" })
+            expect(await rpc.installed({}, options)).toContainEqual(reinstalled)
+            await Bun.write(
+              obsolete,
+              JSON.stringify({ mcp: { servers: { "demo-mcp": { type: "local", command: ["old"] } } } }),
+            )
+            await rpc.uninstall(mcp, options)
+            expect(await Bun.file(obsolete).json()).toEqual({ mcp: { servers: {} } })
+            expect((await rpc.installed({}, options)).some((record) => record.id === mcp.id)).toBe(false)
 
             // Only the curated registry is on by default; community registries are opt-in.
             const enabled = (list: readonly { id: string; enabled: boolean }[]) =>

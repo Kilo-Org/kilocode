@@ -4,7 +4,7 @@ import { ProjectID } from "@opencode/schema/project-id"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { Global } from "@opencode/util/global"
 import path from "node:path"
-import { Effect, Option, Result, Schema, Scope } from "effect"
+import { Effect, Exit, Option, Result, Schema, Scope } from "effect"
 import { KiloMarketplaceRegistry } from "./kilo"
 import { McpRegistry } from "./mcp-registry"
 import { SkillsShRegistry } from "./skills-sh"
@@ -244,7 +244,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                 return context.error(name, message)
               }),
             )
-            const record: KiloMarketplaceRpc.Installed = {
+            let record: KiloMarketplaceRpc.Installed = {
               registry: input.registry,
               kind: input.kind,
               id: input.id,
@@ -253,9 +253,32 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
               paths: written.paths,
               config: written.config,
               server: written.server,
+              pending: written.pending,
               installedAt: Date.now(),
             }
             yield* ctx.storage.set(key, JSON.stringify(record))
+            for (const resource of written.pending ?? []) {
+              const cleaned = yield* Effect.tryPromise(() => Installer.cleanup(resource)).pipe(Effect.result)
+              if (Result.isFailure(cleaned)) {
+                yield* Effect.logWarning(
+                  "Marketplace obsolete resource cleanup failed; retained for retry",
+                  resource,
+                  cleaned.failure,
+                )
+                continue
+              }
+              const pending = record.pending?.filter((entry) => entry !== resource)
+              const next = { ...record, pending: pending?.length ? pending : undefined }
+              const saved = yield* ctx.storage.set(key, JSON.stringify(next)).pipe(Effect.exit)
+              if (Exit.isFailure(saved)) {
+                yield* Effect.logWarning(
+                  "Marketplace cleanup progress could not be saved; retained for retry",
+                  saved.cause,
+                )
+                break
+              }
+              record = next
+            }
             return record
           }),
         uninstall: (input, context) =>

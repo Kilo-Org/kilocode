@@ -250,12 +250,17 @@ async function act(
       entry.id === item.id &&
       entry.scope === choice.scope,
   )
-  if (record?.server) await signOut(context, record.server, options.location)
+  const credentials = record?.server ? await credentialsOf(context, record.server, options.location) : []
   const result = await rpc.uninstall({ ...ref, scope: choice.scope }, options).then(
     () => undefined,
     (error: Error) => error.message || "Unknown error",
   )
   if (result) return context.ui.toast.show({ variant: "error", message: result })
+  await Promise.all(
+    credentials.map((connection) =>
+      context.client.credential.remove({ credentialID: connection.id }).catch(() => undefined),
+    ),
+  )
   context.ui.toast.show({ variant: "success", message: `Uninstalled ${item.name}` })
 }
 
@@ -302,20 +307,13 @@ async function ask(context: Plugin.Context, item: Item) {
   return { option: option.name, params }
 }
 
-// Removes the stored OAuth credentials of an MCP server before its config entry goes away, as `mcp logout` does.
-// The server plugin cannot do this: the plugin API does not expose credential removal. Best effort: a server that
-// is not connected or has no sign-in has nothing to remove.
-async function signOut(context: Plugin.Context, name: string, location: { directory: string }) {
+// Capture credentials before the config disappears; only delete them after uninstall succeeds.
+async function credentialsOf(context: Plugin.Context, name: string, location: { directory: string }) {
   const servers = await context.client.mcp.list({ location }).catch(() => undefined)
   const integrationID = servers?.data.find((server) => server.name === name)?.integrationID
-  if (!integrationID) return
+  if (!integrationID) return []
   const integration = await context.client.integration.get({ integrationID, location }).catch(() => undefined)
-  const credentials = integration?.data?.connections.filter((connection) => connection.type === "credential") ?? []
-  await Promise.all(
-    credentials.map((connection) =>
-      context.client.credential.remove({ credentialID: connection.id }).catch(() => undefined),
-    ),
-  )
+  return integration?.data?.connections.filter((connection) => connection.type === "credential") ?? []
 }
 
 function scopesOf(installed: readonly Installed[], item: Item) {

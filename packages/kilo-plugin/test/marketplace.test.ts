@@ -141,4 +141,29 @@ describe("skill install", () => {
       reason: "invalid",
     })
   })
+
+  test("cleans staging after all writes settle when an archive has conflicting file and directory paths", async () => {
+    const directory = await tmp()
+    const root = path.join(directory, "skills")
+    const archive = await tarball({
+      "SKILL.md": "demo",
+      conflict: "file",
+      "conflict/child.txt": "child",
+      ...Object.fromEntries(Array.from({ length: 32 }, (_, index) => [`resources/${index}/data.txt`, "resource"])),
+    })
+    await expect(install({ root, id: "demo", archive, replace: false })).rejects.toBeDefined()
+    expect(await fs.readdir(directory)).toEqual([])
+  })
+
+  test("cleans staging when the skills root is not a directory", async () => {
+    const directory = await tmp()
+    // A file cannot be used as the skills root; failure occurs after staging is written.
+    const blocked = path.join(directory, "blocked")
+    await Bun.write(blocked, "not a directory")
+    await expect(
+      install({ root: blocked, id: "demo", archive: await tarball({ "SKILL.md": "new" }), replace: true }),
+    ).rejects.toBeDefined()
+    expect(await fs.readdir(directory)).toEqual(["blocked"])
+    expect(await Bun.file(blocked).text()).toBe("not a directory")
+  })
 })

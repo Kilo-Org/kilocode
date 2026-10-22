@@ -3,21 +3,17 @@ import { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
 import { Effect, Option } from "effect"
 import { UserError } from "../../error"
 import { Marketplace } from "../commands"
-import { call, connect, print, type Connection } from "./client"
+import { call, connect, print, validateResponse, type Connection } from "./client"
 
 export default Runtime.handler(
   Marketplace.commands.uninstall,
   Effect.fn("cli.marketplace.uninstall")(function* (input) {
     const marketplace = yield* connect
-    const records = yield* call(() => marketplace.rpc.installed({}, marketplace.options))
-    const record = yield* Effect.try({ try: () => selectUninstall(records, input), catch: (error) => error })
-    if (record.server) yield* signOut(marketplace, record.server)
-    yield* call(() =>
-      marketplace.rpc.uninstall(
-        { registry: record.registry, kind: record.kind, id: record.id, scope: record.scope },
-        marketplace.options,
-      ),
+    const records = yield* call(() =>
+      marketplace.rpc.installed({}, marketplace.options).then(validateResponse("installed")),
     )
+    const record = yield* Effect.try({ try: () => selectUninstall(records, input), catch: (error) => error })
+    yield* uninstall(marketplace, record)
     yield* print([`Uninstalled ${record.kind} ${record.id} (${record.scope})`])
   }),
 )
@@ -53,17 +49,33 @@ export function selectUninstall(
   return matches[0]
 }
 
-// Removes the server's stored OAuth credentials first, as `mcp logout` and the TUI do: the plugin API cannot remove
-// credentials, so the client does it. Best effort: a server without a sign-in has nothing to remove.
-function signOut(marketplace: Connection, name: string) {
-  return call(async () => {
-    const servers = await marketplace.client.mcp.list({ location: marketplace.location })
-    const integrationID = servers.data.find((server) => server.name === name)?.integrationID
-    if (!integrationID) return
-    const integration = await marketplace.client.integration.get({ integrationID, location: marketplace.location })
-    const credentials = integration.data?.connections.filter((connection) => connection.type === "credential") ?? []
-    await Promise.all(
-      credentials.map((connection) => marketplace.client.credential.remove({ credentialID: connection.id })),
+export function uninstall(marketplace: Connection, record: KiloMarketplaceRpc.Installed) {
+  return Effect.gen(function* () {
+    // Resolve credentials before the config disappears, but never delete them when uninstall fails.
+    const credentials = record.server
+      ? yield* call(async () => {
+          const servers = await marketplace.client.mcp.list({ location: marketplace.location })
+          const integrationID = servers.data.find((server) => server.name === record.server)?.integrationID
+          if (!integrationID) return []
+          const integration = await marketplace.client.integration.get({
+            integrationID,
+            location: marketplace.location,
+          })
+          return integration.data?.connections.filter((connection) => connection.type === "credential") ?? []
+        }).pipe(Effect.orElseSucceed(() => []))
+      : []
+    yield* call(() =>
+      marketplace.rpc
+        .uninstall(
+          { registry: record.registry, kind: record.kind, id: record.id, scope: record.scope },
+          marketplace.options,
+        )
+        .then(validateResponse("uninstall")),
     )
-  }).pipe(Effect.ignore)
+    yield* call(() =>
+      Promise.all(
+        credentials.map((connection) => marketplace.client.credential.remove({ credentialID: connection.id })),
+      ),
+    ).pipe(Effect.ignore)
+  })
 }

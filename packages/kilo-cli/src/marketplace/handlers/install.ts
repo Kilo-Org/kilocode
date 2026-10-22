@@ -2,7 +2,7 @@ import { Runtime } from "@opencode/cli/framework/runtime"
 import { Effect, Option } from "effect"
 import { UserError } from "../../error"
 import { Marketplace } from "../commands"
-import { call, connect, print } from "./client"
+import { call, connect, print, validateResponse } from "./client"
 
 export default Runtime.handler(
   Marketplace.commands.install,
@@ -14,7 +14,9 @@ export default Runtime.handler(
       onNone: () =>
         // Search by the last id segment: searchable registries list only a top slice without a query.
         call(() =>
-          marketplace.rpc.list({ kind: input.kind, query: input.id.split("/").at(-1) }, marketplace.options),
+          marketplace.rpc
+            .list({ kind: input.kind, query: input.id.split("/").at(-1) }, marketplace.options)
+            .then(validateResponse("list")),
         ).pipe(
           Effect.flatMap((listed) => {
             const registries = [
@@ -23,22 +25,26 @@ export default Runtime.handler(
             if (registries.length === 1) return Effect.succeed(registries[0])
             if (registries.length === 0)
               return Effect.fail(new UserError({ message: `No ${input.kind} ${input.id} in any marketplace` }))
-            return Effect.fail(new UserError({ message: `${input.id} is in ${registries.join(", ")}; pass --registry` }))
+            return Effect.fail(
+              new UserError({ message: `${input.id} is in ${registries.join(", ")}; pass --registry` }),
+            )
           }),
         ),
     })
     const record = yield* call(() =>
-      marketplace.rpc.install(
-        {
-          registry,
-          kind: input.kind,
-          id: input.id,
-          scope: input.project ? "project" : "global",
-          option: Option.getOrUndefined(input.option),
-          params: Option.getOrUndefined(input.param),
-        },
-        marketplace.options,
-      ),
+      marketplace.rpc
+        .install(
+          {
+            registry,
+            kind: input.kind,
+            id: input.id,
+            scope: input.project ? "project" : "global",
+            option: Option.getOrUndefined(input.option),
+            params: Option.getOrUndefined(input.param),
+          },
+          marketplace.options,
+        )
+        .then(validateResponse("install")),
     )
     yield* print([
       `Installed ${record.kind} ${record.id} from ${record.registry} (${record.scope})`,

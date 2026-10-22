@@ -75,6 +75,15 @@ export const Installed = Schema.Struct({
   config: optional(Schema.String),
   /** The `mcp.servers` key of an MCP install, which clients need for status and sign-in. */
   server: optional(Schema.String),
+  /** Obsolete resources still owned until cleanup succeeds, including across reinstalls. */
+  pending: optional(
+    Schema.Array(
+      Schema.Union([
+        Schema.Struct({ path: Schema.String }),
+        Schema.Struct({ config: Schema.String, server: Schema.String }),
+      ]),
+    ),
+  ),
   installedAt: Schema.Number,
 })
 export type Installed = typeof Installed.Type

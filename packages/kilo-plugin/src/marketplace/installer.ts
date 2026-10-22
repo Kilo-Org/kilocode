@@ -19,6 +19,7 @@ export interface Written {
   readonly config?: string
   /** The `mcp.servers` key that holds the MCP entry. */
   readonly server?: string
+  readonly pending?: KiloMarketplaceRpc.Installed["pending"]
 }
 
 export async function install(input: {
@@ -40,10 +41,15 @@ export async function install(input: {
       // A registry id can have slashes (`owner/repo/skill`); the directory is named after the skill itself.
       id: input.entry.select ?? item.id,
       archive: await download(input.entry.archive),
-      replace: input.previous !== undefined,
+      replace:
+        (input.previous?.paths.includes(path.join(input.skills, input.entry.select ?? item.id)) ?? false) ||
+        (input.previous?.pending?.some(
+          (resource) => "path" in resource && resource.path === path.join(input.skills, input.entry.select ?? item.id),
+        ) ??
+          false),
       select: input.entry.select,
     })
-    return { paths: [target] }
+    return withPending({ paths: [target] }, input.previous)
   }
   if (item.kind === "mcp") return installMcp(input)
   throw new McpError("invalid_params", `Installing ${item.kind} items is not supported yet`)
@@ -58,7 +64,10 @@ async function installMcp(input: Parameters<typeof install>[0]): Promise<Written
   }
   // Build before any write, so invalid parameters leave nothing behind.
   const server = build({ template, parameters: parameters(item, item.options[index]), params: input.params ?? {} })
-  const owned = new Set(input.previous?.paths ?? [])
+  const owned = new Set([
+    ...(input.previous?.paths ?? []),
+    ...(input.previous?.pending?.flatMap((resource) => ("path" in resource ? [resource.path] : [])) ?? []),
+  ])
   const created: string[] = []
   try {
     for (const companion of input.entry.companions ?? []) {
@@ -76,7 +85,14 @@ async function installMcp(input: Parameters<typeof install>[0]): Promise<Written
       file: input.config,
       name: serverName(item.id),
       server,
-      replace: input.previous?.config === input.config,
+      replace:
+        (input.previous?.config === input.config &&
+          (input.previous.server ?? serverName(item.id)) === serverName(item.id)) ||
+        (input.previous?.pending?.some(
+          (resource) =>
+            "config" in resource && resource.config === input.config && resource.server === serverName(item.id),
+        ) ??
+          false),
     })
   } catch (error) {
     // Roll back the companion skills this install created. Skills of a previous install are not touched.
@@ -84,23 +100,34 @@ async function installMcp(input: Parameters<typeof install>[0]): Promise<Written
     throw error
   }
   const name = serverName(item.id)
-  const previous = input.previous
-  if (previous) {
-    // Drop what the previous install owned that this one no longer covers: companions the catalog dropped, and the
-    // server entry when the config file or key changed. Runs only after success, so a failed reinstall keeps it.
-    const kept = new Set(created)
-    await Promise.all(previous.paths.filter((target) => !kept.has(target)).map((target) => removeSkill(target)))
-    const server = previous.server ?? name
-    if (previous.config && (previous.config !== input.config || server !== name)) {
-      await removeServer({ file: previous.config, name: server })
-    }
-  }
-  return { paths: created, config: input.config, server: name }
+  return withPending({ paths: created, config: input.config, server: name }, input.previous)
+}
+
+// Cleanup runs only after the plugin durably records both the new install and its obsolete resources.
+function withPending(written: Written, previous: KiloMarketplaceRpc.Installed | undefined): Written {
+  if (!previous) return written
+  const resources = [
+    ...(previous.pending ?? []),
+    ...previous.paths.map((target) => ({ path: target })),
+    ...(previous.config ? [{ config: previous.config, server: previous.server ?? serverName(previous.id) }] : []),
+  ].filter((resource) =>
+    "path" in resource
+      ? !written.paths.includes(resource.path)
+      : resource.config !== written.config || resource.server !== written.server,
+  )
+  const pending = [...new Map(resources.map((resource) => [JSON.stringify(resource), resource])).values()]
+  return { ...written, ...(pending.length > 0 ? { pending } : {}) }
+}
+
+export async function cleanup(resource: NonNullable<Written["pending"]>[number]) {
+  if ("path" in resource) return removeSkill(resource.path)
+  await removeServer({ file: resource.config, name: resource.server })
 }
 
 export async function uninstall(record: Written & { readonly id: string }) {
   if (record.config) await removeServer({ file: record.config, name: record.server ?? serverName(record.id) })
   for (const target of record.paths) await removeSkill(target)
+  for (const resource of record.pending ?? []) await cleanup(resource)
 }
 
 async function download(url: string) {
