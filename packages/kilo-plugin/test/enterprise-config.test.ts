@@ -11,6 +11,8 @@ import { Permission } from "@opencode/core/permission"
 import { Plugin } from "@opencode/core/plugin"
 import { AgentPlugin } from "@opencode/core/plugin/agent"
 import { PluginHost } from "@opencode/core/plugin/host"
+import { PluginHooks } from "@opencode/core/plugin/hooks"
+import { SystemPart } from "@opencode/ai"
 import { PlanPlugin } from "@opencode/core/plugin/plan"
 import { Provider } from "@opencode/core/provider"
 import { Document, Event } from "@opencode/schema/config"
@@ -109,6 +111,40 @@ const setup = Effect.fn(function* (info: KiloConfigPolicy.Info, managedPrivacy =
   yield* KiloAgentPlugin.Ceiling.effect(host)
   return { agents, models, host, config, gateway: host.rpc(KiloGatewayRpc.Definition) }
 })
+
+it.live("provides the selected organization agent identity from the first request without storage discovery", () =>
+  enterprise((backend) =>
+    Effect.gen(function* () {
+      const reviewer = Agent.ID.make("code-reviewer")
+      backend.state.modes = { modes: [{ ...mode(reviewer, ["read"]), name: "Code-Reviewer" }] }
+      const { agents, host } = yield* setup(new KiloConfigPolicy.Info({}))
+      const session = yield* host.session.create({})
+      const hooks = yield* PluginHooks.Service
+      const request = (agent: Agent.ID) =>
+        hooks.trigger("session", "context", {
+          sessionID: session.id,
+          agent,
+          model: { providerID: kilo, id: Model.ID.make("anthropic/claude-sonnet-4.6") },
+          system: [SystemPart.make("# Code Mode\nUse execute to call tools.")],
+          messages: [],
+          options: {},
+          tools: {},
+        })
+      const rules = (yield* agents.get(reviewer))?.permissions
+      expect((yield* request(reviewer)).system).toContainEqual(
+        SystemPart.make(
+          'Your active agent is "Code-Reviewer" (ID: "code-reviewer"). ' +
+            "This is your selected agent/mode identity, not the Code Mode tool-calling mechanism. " +
+            "Answer agent/mode identity questions from this context without using tools or inspecting session or credential storage.",
+        ),
+      )
+      expect((yield* agents.get(reviewer))?.permissions).toEqual(rules)
+      const current = yield* request(code)
+      expect(current.system.map((part) => part.text).join("\n")).toContain('Your active agent is "Code" (ID: "code").')
+      expect(current.system.map((part) => part.text).join("\n")).not.toContain("Code-Reviewer")
+    }),
+  ),
+)
 
 const permission = Effect.fn(function* (id: string, action: string, resource = "*") {
   const agents = yield* Agent.Service
