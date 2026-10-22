@@ -42,6 +42,7 @@ const LogLevelRef = Schema.Literals(["DEBUG", "INFO", "WARN", "ERROR"]).annotate
   description: "Log level",
 })
 const Percent = Schema.Number.check(Schema.isGreaterThan(0), Schema.isLessThanOrEqualTo(100)) // kilocode_change
+const NonNegativeMoney = Schema.Number.check(Schema.isGreaterThanOrEqualTo(0)) // kilocode_change - autonomous goal budgets
 
 const IndexingRef = KiloIndexingSchema.annotate({ [ZodOverride]: KiloIndexingConfig }) // kilocode_change
 
@@ -95,6 +96,74 @@ export const Info = Schema.Struct({
   ).annotate({
     description: "Machine-wide session retention. Evaluated by the backend; clients only trigger runs.",
   }),
+  // kilocode_change start - autonomous goal engine
+  autonomous_goal: Schema.optional(
+    Schema.Struct({
+      enabled: Schema.optional(Schema.Boolean).annotate({
+        description: "Route /goal to the autonomous engine (planner, task DAG, checks, review, repair). Defaults false.",
+      }),
+      models: Schema.optional(
+        Schema.Struct({
+          local_small: Schema.optional(Schema.String).annotate({
+            description: "provider/model for trivial tasks. Defaults to small_model.",
+          }),
+          local_coder: Schema.optional(Schema.String).annotate({
+            description: "provider/model for implementation tasks. Defaults to subagent_model, then model.",
+          }),
+          cloud_reasoner: Schema.optional(Schema.String).annotate({
+            description: "provider/model for planning, escalation and final review. Defaults to model.",
+          }),
+        }),
+      ),
+      worker_max_attempts: Schema.optional(PositiveInt.annotate({
+        description: "Local attempts per task before escalation. Defaults 2.",
+      })),
+      routing: Schema.optional(
+        Schema.Struct({
+          local_small_max_complexity: Schema.optional(NonNegativeInt.annotate({
+            description: "Highest task complexity routed to local_small. Defaults 0.",
+          })),
+          local_coder_max_complexity: Schema.optional(NonNegativeInt.annotate({
+            description: "Highest task complexity routed to local_coder. Defaults 2.",
+          })),
+          planner_cloud: Schema.optional(Schema.Boolean).annotate({
+            description: "Honor the planner asking for cloud_reasoner on a task. Defaults true.",
+          }),
+        }),
+      ),
+      steps: Schema.optional(
+        Schema.Struct({
+          planner: Schema.optional(PositiveInt.annotate({ description: "Model steps per planner turn. Defaults 40." })),
+          worker: Schema.optional(PositiveInt.annotate({ description: "Model steps per worker turn. Defaults 60." })),
+          reviewer: Schema.optional(PositiveInt.annotate({
+            description: "Model steps per review, goal check and final review turn. Defaults 25.",
+          })),
+        }),
+      ),
+      stuck: Schema.optional(
+        Schema.Struct({
+          same_error_limit: Schema.optional(PositiveInt.annotate({
+            description: "Identical failures before escalating. Defaults 2.",
+          })),
+        }),
+      ),
+      budget: Schema.optional(
+        Schema.Struct({
+          cloud_task_max_usd: Schema.optional(NonNegativeMoney.annotate({ description: "Defaults 2." })),
+          cloud_goal_max_usd: Schema.optional(NonNegativeMoney.annotate({ description: "Defaults 10." })),
+          max_cloud_calls_per_task: Schema.optional(NonNegativeInt.annotate({ description: "Defaults 3." })),
+          max_cloud_calls_per_goal: Schema.optional(NonNegativeInt.annotate({ description: "Defaults 20." })),
+        }),
+      ),
+      final_review_cloud_at_complexity: Schema.optional(NonNegativeInt.annotate({
+        description: "Use cloud_reasoner for the final review when any task complexity reaches this. Defaults 3.",
+      })),
+      checks: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
+        description: "Shell commands run as mechanical checks. Overrides automatic detection.",
+      }),
+    }),
+  ).annotate({ description: "Autonomous goal engine (experimental)." }),
+  // kilocode_change end
   // kilocode_change end
   plugin: Schema.optional(Schema.mutable(Schema.Array(ConfigPluginV1.Spec))),
   share: Schema.optional(Schema.Literals(["manual", "auto", "disabled"])).annotate({
