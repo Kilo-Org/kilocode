@@ -570,6 +570,24 @@ export class CodeIndexOrchestrator {
       this._cancelRequested = true
       this.scanner.cancel()
       await this._active
+      // The scan's error path releases the writer lock. Re-acquire before
+      // deleting: otherwise another session can take the lock between that
+      // release and this clear, and we would delete its collection unlocked.
+      if (!this._writer) {
+        const retry = await this._acquire()
+        if (!retry) {
+          this.emitError(
+            "orchestrator:clearIndexData",
+            new Error("Another session is indexing this workspace; index data was not cleared."),
+            "scan",
+          )
+          this.stateManager.setSystemState(
+            "Error",
+            "Another session is indexing this workspace; index data was not cleared.",
+          )
+          return
+        }
+      }
       // The watcher's drainTask is separate from _active: shutdown() waits for
       // it before returning, so a batch already writing cannot upsert after
       // deleteCollection() or after the lock is released below.

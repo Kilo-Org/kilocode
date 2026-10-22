@@ -179,6 +179,25 @@ class StubbornScanner {
   updateBatchSegmentThreshold(_newThreshold: number): void {}
 }
 
+class FailingBlockingScanner {
+  public isCancelled = false
+  readonly started = Promise.withResolvers<void>()
+  readonly gate = Promise.withResolvers<void>()
+
+  async scanDirectory(): Promise<{ stats: { processed: number; skipped: number }; totalBlockCount: number }> {
+    this.started.resolve()
+    await this.gate.promise
+    throw new Error("scan failed")
+  }
+
+  cancel(): void {
+    this.isCancelled = true
+    this.gate.resolve()
+  }
+
+  updateBatchSegmentThreshold(_newThreshold: number): void {}
+}
+
 class FailScanner {
   public readonly isCancelled = false
 
@@ -610,6 +629,41 @@ describe("CodeIndexOrchestrator telemetry", () => {
     await clearing
     await active
     expect(store.deleteCount).toBe(1)
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test("re-acquires the writer lock before clearing after a failed scan", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "indexing-lock-"))
+    const scanner = new FailingBlockingScanner()
+    const store = new Store("complete", false)
+    let heldDuringDelete = false
+    const remove = store.deleteCollection.bind(store)
+    store.deleteCollection = async () => {
+      heldDuringDelete = (await acquire(dir, "/tmp/ws")) === undefined
+      await remove()
+    }
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { dir, async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      scanner as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    const active = orchestrator.startIndexing("background")
+    await scanner.started.promise
+    // The scan's error path releases the session lock; the clear must take it
+    // again rather than deleting the collection unlocked.
+    await orchestrator.clearIndexData()
+    await active
+
+    expect(store.deleteCount).toBe(1)
+    expect(heldDuringDelete).toBe(true)
+    const next = await acquire(dir, "/tmp/ws")
+    expect(next).toBeDefined()
+    await next?.release()
     await rm(dir, { recursive: true, force: true })
   })
 
