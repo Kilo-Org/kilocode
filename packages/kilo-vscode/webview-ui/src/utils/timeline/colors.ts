@@ -1,0 +1,87 @@
+/**
+ * Timeline bar color classification.
+ *
+ * Maps Part types (text, tool, reasoning, step-start, step-finish, etc.)
+ * to VS Code CSS variable–based colors, mirroring the legacy extension's
+ * taskTimelineColorPalette from messageColors.ts.
+ */
+
+import type { Message, Part, ToolPart } from "../../types/messages"
+
+// ── Color palette (VS Code CSS variables) ────────────────────────────
+// These mirror the legacy extension's taskTimelineColorPalette exactly.
+
+export const palette = {
+  user: "var(--tl-user, color-mix(in srgb, var(--vscode-editor-findMatchBackground) 50%, var(--vscode-errorForeground)))",
+  read: "var(--tl-read, var(--vscode-textLink-foreground))",
+  write: "var(--tl-write, var(--vscode-focusBorder))",
+  tool: "var(--tl-tool, var(--vscode-activityBarBadge-background))",
+  success: "var(--tl-success, var(--vscode-editorGutter-addedBackground))",
+  error: "var(--tl-error, var(--vscode-errorForeground))",
+  text: "var(--tl-text, var(--vscode-descriptionForeground))",
+  reasoning: "var(--tl-reasoning, var(--vscode-descriptionForeground))",
+  step: "var(--tl-step, var(--vscode-badge-background))",
+  fallback: "var(--tl-fallback, var(--vscode-badge-background))",
+} as const
+
+export type TimelineColor = (typeof palette)[keyof typeof palette]
+
+// ── File operation detection ─────────────────────────────────────────
+
+const READ_TOOLS = new Set(["read", "glob", "grep", "find", "ls", "diagnostics"])
+const WRITE_TOOLS = new Set(["edit", "write", "patch", "multi_edit", "multiedit", "apply_patch"])
+
+// ── Part → color ─────────────────────────────────────────────────────
+
+export function color(part: Part): TimelineColor {
+  switch (part.type) {
+    case "text":
+      return palette.text
+
+    case "reasoning":
+      return palette.reasoning
+
+    case "tool": {
+      const tp = part as ToolPart
+      if (tp.state.status === "error") return palette.error
+      const name = tp.tool
+      if (READ_TOOLS.has(name) || READ_TOOLS.has(name.toLowerCase())) return palette.read
+      if (WRITE_TOOLS.has(name) || WRITE_TOOLS.has(name.toLowerCase())) return palette.write
+      return palette.tool
+    }
+
+    case "step-start":
+      return palette.step
+
+    case "step-finish":
+      return palette.success
+
+    default:
+      return palette.fallback
+  }
+}
+
+// ── Label for tooltip ────────────────────────────────────────────────
+
+function auto(msg?: Message) {
+  return msg?.providerID === "kilo" && msg.modelID?.startsWith("kilo-auto/")
+}
+
+export function label(part: Part, msg?: Message): string {
+  switch (part.type) {
+    case "text":
+      return "Text"
+    case "reasoning":
+      return "Reasoning"
+    case "tool": {
+      const tp = part as ToolPart
+      return tp.tool
+    }
+    case "step-start":
+      return "Step start"
+    case "step-finish":
+      return auto(msg) && part.model?.modelID ? `Step finish · ${part.model.modelID}` : "Step finish"
+    default:
+      return "Unknown"
+  }
+}

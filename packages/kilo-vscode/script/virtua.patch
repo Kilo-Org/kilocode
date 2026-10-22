@@ -1,0 +1,132 @@
+diff --git a/lib/solid/Virtualizer.d.ts b/lib/solid/Virtualizer.d.ts
+index 144dd7fba894d440069a8dc0415f4b778a98793d..819aab92c5727d3bca4ef51da08ab05ec1af452f 100644
+--- a/lib/solid/Virtualizer.d.ts
++++ b/lib/solid/Virtualizer.d.ts
+@@ -38,6 +38,10 @@ export interface VirtualizerHandle {
+      * @param index index of item
+      */
+     getItemSize(index: number): number;
++    /**
++     * Synchronously measure currently mounted items and update cached item sizes.
++     */
++    measure(): void;
+     /**
+      * Scroll to the item specified by index.
+      * @param index index of item
+diff --git a/lib/solid/index.js b/lib/solid/index.js
+index dbf44b0231abaf594c026488dd0261a3fa3fafc7..2fb3544c283a2f241a65be574ad01d0f21db4e3a 100644
+--- a/lib/solid/index.js
++++ b/lib/solid/index.js
+@@ -306,7 +306,7 @@ const b = null, {min: z, max: w, abs: x, floor: y} = Math, _ = (e, t, r) => z(r,
+     }, r);
+     const c = q(r.data.length, o, void 0, i, !o), l = ((e, t) => {
+         let r;
+-        const n = t ? "width" : "height", o = new WeakMap, s = D(t => {
++        const n = t ? "width" : "height", o = new WeakMap, m = new Map, s = D(t => {
+             const s = [];
+             for (const {target: i, contentRect: c} of t) if (i.offsetParent) if (i === r) e.H(4, c[n]); else {
+                 const e = o.get(i);
+@@ -318,9 +318,15 @@ const b = null, {min: z, max: w, abs: x, floor: y} = Math, _ = (e, t, r) => z(r,
+             G(e) {
+                 s.q(r = e);
+             },
+-            K: (e, t) => (o.set(e, t), s.q(e), () => {
+-                o.delete(e), s.N(e);
++            K: (e, t) => (o.set(e, t), m.set(t, e), s.q(e), () => {
++                o.delete(e), m.get(t) === e && m.delete(t), s.N(e);
+             }),
++            ae() {
++                const t = [];
++                m.forEach((e, r) => {
++                    e.offsetParent && t.push([ r, e.getBoundingClientRect()[n] ]);
++                }), t.length && e.H(3, t);
++            },
+             p: s.W
+         };
+     })(c, s), $ = ((e, t) => {
+@@ -397,6 +403,7 @@ const b = null, {min: z, max: w, abs: x, floor: y} = Math, _ = (e, t, r) => z(r,
+             findItemIndex: c.$,
+             getItemOffset: c.I,
+             getItemSize: c.k,
++            measure: l.ae,
+             scrollToIndex: $.ne,
+             scrollTo: $.te,
+             scrollBy: $.re
+diff --git a/lib/solid/index.jsx b/lib/solid/index.jsx
+index 029201a2c88fe71645242b3f6f11493a7f91fa86..3949cd43438aae3edc5f8c9cdd6c75fb7c091e83 100644
+--- a/lib/solid/index.jsx
++++ b/lib/solid/index.jsx
+@@ -1085,6 +1085,7 @@ const createResizer = (store, isHorizontal) => {
+     let viewportElement;
+     const sizeKey = isHorizontal ? "width" : "height";
+     const mountedIndexes = new WeakMap();
++    const mountedItems = new Map();
+     const resizeObserver = createResizeObserver((entries) => {
+         const resizes = [];
+         for (const { target, contentRect } of entries) {
+@@ -1111,12 +1112,27 @@ const createResizer = (store, isHorizontal) => {
+         },
+         $observeItem: (el, i) => {
+             mountedIndexes.set(el, i);
++            mountedItems.set(i, el);
+             resizeObserver._observe(el);
+             return () => {
+                 mountedIndexes.delete(el);
++                if (mountedItems.get(i) === el) {
++                    mountedItems.delete(i);
++                }
+                 resizeObserver._unobserve(el);
+             };
+         },
++        $measureItems: () => {
++            const resizes = [];
++            mountedItems.forEach((el, index) => {
++                if (!el.offsetParent)
++                    return;
++                resizes.push([index, el.getBoundingClientRect()[sizeKey]]);
++            });
++            if (resizes.length) {
++                store.$update(ACTION_ITEM_RESIZE, resizes);
++            }
++        },
+         $dispose: resizeObserver._dispose,
+     };
+ };
+@@ -1354,6 +1370,8 @@ const Virtualizer = (props) => {
+     const range = createMemo((prev) => {
+         stateVersion();
+         const next = store.$getRange(props.bufferSize);
++        next[0] = Math.max(0, next[0]);
++        next[1] = Math.min(props.data.length - 1, next[1]);
+         if (prev && isSameRange(prev, next)) {
+             return prev;
+         }
+@@ -1380,6 +1398,7 @@ const Virtualizer = (props) => {
+                 findItemIndex: store.$findItemIndex,
+                 getItemOffset: store.$getItemOffset,
+                 getItemSize: store.$getItemSize,
++                measure: resizer.$measureItems,
+                 scrollToIndex: scroller.$scrollToIndex,
+                 scrollTo: scroller.$scrollTo,
+                 scrollBy: scroller.$scrollBy,
+@@ -1417,6 +1436,11 @@ const Virtualizer = (props) => {
+         const indexes = [];
+         if (props.keepMounted) {
+             const mounted = new Set(props.keepMounted);
++            mounted.forEach((index) => {
++                if (index < 0 || index >= count) {
++                    mounted.delete(index);
++                }
++            });
+             for (let [i, j] = range(); i <= j; i++) {
+                 mounted.add(i);
+             }
+@@ -1528,6 +1552,8 @@ const WindowVirtualizer = (props) => {
+     const range = createMemo((prev) => {
+         stateVersion();
+         const next = store.$getRange(props.bufferSize);
++        next[0] = Math.max(0, next[0]);
++        next[1] = Math.min(props.data.length - 1, next[1]);
+         if (prev && isSameRange(prev, next)) {
+             return prev;
+         }

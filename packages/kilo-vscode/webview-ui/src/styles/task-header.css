@@ -1,0 +1,510 @@
+/* ============================================
+   Task Header Rename
+   ============================================ */
+
+[data-slot="task-header-title"] {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+[data-slot="task-header-title-trigger"] {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  border-radius: var(--radius-md);
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+[data-slot="task-header-title-trigger"][data-renamable] {
+  margin: -4px -6px;
+  padding: 4px 6px;
+  cursor: text;
+}
+
+[data-slot="task-header-title-trigger"][data-renamable] [data-slot="task-header-title-label"] {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: color-mix(in srgb, var(--text-weak) 45%, transparent);
+  text-underline-offset: 5px;
+  transition: text-decoration-color 0.15s ease;
+}
+
+[data-slot="task-header-title-trigger"][data-renamable]:hover,
+[data-slot="task-header-title-trigger"][data-renamable]:focus-visible {
+  background-color: var(--surface-interactive-hover, var(--vscode-toolbar-hoverBackground));
+  outline: none;
+}
+
+[data-slot="task-header-title-trigger"][data-renamable]:hover [data-slot="task-header-title-label"],
+[data-slot="task-header-title-trigger"][data-renamable]:focus-visible [data-slot="task-header-title-label"] {
+  text-decoration-color: var(--text-weak);
+}
+
+/* The hover box and the rename editor extend past the title line. Do not clip
+   them. The label truncates on its own. */
+[data-component="task-header"] [data-slot="task-header-title"] {
+  overflow: visible;
+}
+
+/* The rename editor uses the same box as the title hover state. Negative
+   margins cancel its padding and border, so the header height and the text
+   position do not change while renaming. */
+[data-component="task-header"] [data-slot="session-title-editor"] {
+  margin: -4px -7px;
+  padding: 3px 6px;
+}
+
+[data-component="task-header"] .session-title-input {
+  font-size: inherit;
+}
+
+[data-slot="task-header-title-label"] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 360px) {
+  [data-component="task-header"] {
+    padding-inline: 8px;
+  }
+}
+
+/* Subagent model and reasoning effort. The title and the model share the
+   space that is left, so both truncate in narrow panels. The title shrinks
+   faster because the subagent tab already shows it. */
+[data-component="task-header"]:has(.task-header-model) [data-slot="task-header-title"] {
+  flex: 1 3 auto;
+}
+
+.task-header-model {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-inline-end: 4px;
+  font-size: var(--kilo-font-size-13);
+  color: var(--text-weak);
+  white-space: nowrap;
+}
+
+[data-slot="task-header-model-name"] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-slot="task-header-model-variant"] {
+  flex-shrink: 0;
+
+  &::before {
+    content: "·";
+    margin-inline-end: 4px;
+  }
+}
+
+/* ============================================
+   Task Timeline
+   ============================================ */
+
+.task-timeline-outer {
+  width: 100%;
+  overflow: hidden;
+  padding: 0 8px;
+}
+
+.task-timeline {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+  cursor: grab;
+  touch-action: pan-x;
+  scrollbar-width: none; /* Firefox */
+}
+
+.task-timeline:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.task-timeline::-webkit-scrollbar {
+  display: none;
+}
+
+.task-timeline-content {
+  position: relative;
+}
+
+.task-timeline-svg {
+  display: block;
+  overflow: visible;
+}
+
+.task-timeline-bar {
+  position: absolute;
+  bottom: 0;
+  box-sizing: border-box;
+  border-radius: 2px 2px 0 0;
+  background: var(--timeline-color);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.task-timeline-bar--active {
+  opacity: 1;
+  animation: timeline-pulse 2s ease-in-out infinite 0.5s;
+}
+
+.task-timeline-tooltip {
+  position: fixed;
+  max-width: min(320px, calc(100vw - 16px));
+  transform: translate(-50%, calc(-100% - 4px));
+  white-space: normal;
+  pointer-events: none;
+}
+
+@keyframes timeline-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* ============================================
+   Context Progress Bar
+   ============================================ */
+
+.context-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  height: 16px;
+  white-space: nowrap;
+  font-size: var(--kilo-font-size-11);
+  color: var(--vscode-descriptionForeground);
+}
+
+.context-progress-count {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.context-progress-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--vscode-foreground) 20%, transparent);
+}
+
+.context-progress-used {
+  height: 100%;
+  background: var(--vscode-foreground);
+  transition:
+    width 0.3s ease-out,
+    background 0.3s ease-out;
+}
+
+.context-progress-used--hot {
+  background: color-mix(in srgb, var(--vscode-errorForeground) 60%, rgba(128, 0, 0, 1));
+}
+
+.context-progress-reserved {
+  height: 100%;
+  background: color-mix(in srgb, var(--vscode-foreground) 30%, transparent);
+  transition: width 0.3s ease-out;
+}
+
+.context-progress-available {
+  height: 100%;
+}
+
+/* ============================================
+   Task Header Graph Section
+   ============================================ */
+
+[data-component="task-header-graph"] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0 6px;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+[data-slot="task-header-graph-row"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 16px;
+  padding: 0 8px;
+}
+
+/* Skeleton placeholders for the graph rows. Each row keeps its final height at
+   all times, so the header never changes height and the transcript never moves.
+   A skeleton is a loading state and only renders while a turn is running.
+   Same pulse as the Agent Manager worktree skeletons. */
+@keyframes task-header-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 0.28;
+  }
+}
+
+.task-header-skeleton {
+  height: 8px;
+  border-radius: 3px;
+  background: var(--text-base);
+  animation: task-header-skeleton-pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+/* Mirrors .task-timeline: 26px tall, bars bottom-aligned, 12px wide, 4px gap. */
+.task-header-skeleton-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+}
+
+.task-header-skeleton-chart .task-header-skeleton {
+  width: 12px;
+  border-radius: 2px 2px 0 0;
+}
+
+/* ============================================
+   Transcript Search
+   ============================================ */
+
+[data-component="task-header-search"] {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-weak-base);
+  background-color: var(--background-base);
+}
+
+[data-component="transcript-search"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+[data-slot="transcript-search-box"] {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+[data-slot="transcript-search-input"] {
+  box-sizing: border-box;
+  width: 100%;
+  height: 26px;
+  padding: 0 82px 0 8px;
+  border: 1px solid var(--vscode-input-border, var(--border-weak-base));
+  border-radius: 3px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font-size: var(--kilo-font-size-12);
+  outline: none;
+}
+
+[data-slot="transcript-search-input"]:focus {
+  border-color: var(--vscode-focusBorder);
+}
+
+[data-slot="transcript-search-inline-options"] {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+[data-slot="transcript-search-option"] {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 20px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  font-size: var(--kilo-font-size-10);
+  font-family: var(--font-family-sans);
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  user-select: none;
+}
+
+[data-slot="transcript-search-option"]:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+[data-slot="transcript-search-option"][data-active] {
+  background: var(--vscode-inputOption-activeBackground, var(--vscode-toolbar-hoverBackground));
+  color: var(--vscode-inputOption-activeForeground, var(--vscode-foreground));
+  border-color: var(--vscode-inputOption-activeBorder, transparent);
+  font-weight: 600;
+}
+
+[data-slot="transcript-search-counter"] {
+  font-size: var(--kilo-font-size-11);
+  color: var(--vscode-descriptionForeground);
+  font-variant-numeric: tabular-nums;
+  min-width: 42px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+[data-slot="transcript-search-error"] {
+  font-size: var(--kilo-font-size-11);
+  color: var(--vscode-errorForeground, #f14c4c);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+[data-slot="transcript-search-empty"] {
+  font-size: var(--kilo-font-size-11);
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+[data-slot="transcript-search-nav"] {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+/* Token breakdown in expanded state */
+.task-header-tokens {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  min-height: 24px;
+  padding: 0 8px;
+  font-size: var(--kilo-font-size-11);
+  color: var(--vscode-descriptionForeground);
+}
+
+.task-header-tokens-label {
+  font-weight: 600;
+}
+
+.task-header-tokens-value {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.task-header-usage-trigger {
+  display: flex;
+  align-items: center;
+  width: calc(100% - 16px);
+  min-height: 24px;
+  height: auto;
+  margin: 0 8px;
+  padding: 0;
+  border-radius: 3px;
+  color: inherit;
+}
+
+.task-header-usage-trigger:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.task-header-usage-trigger:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 1px;
+}
+
+.task-header-usage-trigger .task-header-tokens {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+.task-header-usage [data-slot="collapsible-arrow"] {
+  opacity: 1;
+}
+
+.task-header-usage-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(320px, 45vh);
+  margin: 4px 8px 2px;
+  padding-left: 8px;
+  overflow-y: auto;
+  border-left: 1px solid var(--border-weak-base);
+}
+
+.task-header-usage-provider {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.task-header-usage-provider h4 {
+  margin: 0;
+  color: var(--vscode-foreground);
+  font-size: var(--kilo-font-size-11);
+  font-weight: 600;
+}
+
+.task-header-usage-model {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.task-header-usage-model + .task-header-usage-model {
+  padding-top: 4px;
+}
+
+.task-header-usage-model-name {
+  overflow: hidden;
+  color: var(--vscode-foreground);
+  font-size: var(--kilo-font-size-11);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-header-usage-meta {
+  color: var(--vscode-descriptionForeground);
+  font-size: var(--kilo-font-size-11);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Expand toggle */
+[data-slot="task-header-expand"] {
+  flex-shrink: 0;
+}
+
+[data-slot="task-header-expand"][aria-expanded="true"] [data-slot="icon-svg"] {
+  transform: rotate(180deg);
+}

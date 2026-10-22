@@ -8,14 +8,14 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**90 / 9829 cells done (0.9%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
+**920 / 9829 cells done (9.4%)**, 25 dropped. `█░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 31 | 3547 | 0.9% |
+| module | 712 | 3547 | 20.1% |
 | api | 0 | 39 | 0% |
 | patch | 38 | 3445 | 1.1% |
-| test | 21 | 2798 | 0.8% |
+| test | 170 | 2798 | 6.1% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
@@ -34,8 +34,8 @@ One point per day from the committed `progress.json` on the first-parent history
 | 2026-10-16 | 12 | 9854 | 0.1% |
 | 2026-10-19 | 87 | 9829 | 0.9% |
 | 2026-10-20 | 87 | 9829 | 0.9% |
-| 2026-10-21 | 89 | 9829 | 0.9% |
-| now | 90 | 9829 | 0.9% |
+| 2026-10-21 | 90 | 9829 | 0.9% |
+| now | 920 | 9829 | 9.4% |
 
 ## Features
 
@@ -78,7 +78,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | gateway | 30/35 |  | 12/18 | 17/22 | 59/75 | 78.7% | `█████████████░░░` | 11 plugin |
 | global | 0/2 |  | 1/4 | 0/1 | 1/7 | 14.3% | `██░░░░░░░░░░░░░░` | 1 host |
 | goals | 0/9 |  | 0/6 | 0/6 | 0/21 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| i18n | 0/20 |  |  |  | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| i18n | 20/20 |  |  |  | 20/20 | 100% | `████████████████` |  |
 | image-size | 0/1 |  | 0/2 | 0/1 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | indexing | 0/99 |  | 0/6 | 0/44 | 0/149 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | installation | 0/2 |  | 0/2 | 0/1 | 0/5 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -135,10 +135,10 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | ts-check | 0/2 |  | 0/2 | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | tui | 0/15 |  | 0/6 | 0/24 | 0/45 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | tui-sync | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| ui | 0/248 |  | 0/1 | 0/18 | 0/267 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| ui | 149/248 |  | 0/1 | 14/18 | 163/267 | 61% | `██████████░░░░░░` |  |
 | usage-cost | 0/4 |  |  | 0/5 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | util | 0/8 |  | 0/4 | 0/8 | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| vscode | 0/1439 |  |  | 0/618 | 0/2057 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| vscode | 512/1439 |  |  | 135/618 | 647/2057 | 31.5% | `█████░░░░░░░░░░░` |  |
 | wakeup | 0/5 | 0/1 | 0/1 | 0/4 | 0/11 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | web-ui | 0/154 |  |  |  | 0/154 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | worktree | 0/4 | 0/1 | 0/1 | 0/6 | 0/12 | 0% | `░░░░░░░░░░░░░░░░` |  |

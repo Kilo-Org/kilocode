@@ -1,0 +1,345 @@
+/* ============================================
+   Prompt Rail
+   ============================================ */
+
+.prompt-rail {
+  --prompt-rail-width: 16px;
+  --prompt-rail-step: 14px;
+  --prompt-rail-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Clears the pane splitter. Agent Manager's sidebar resize handle is 8px wide
+     and straddles the boundary, so it reaches 4px into the transcript; without
+     this gutter, aiming slightly wide of the splitter lands on a tick instead of
+     starting a drag. */
+  --prompt-rail-edge: 8px;
+
+  position: absolute;
+  /* Against the panel edge rather than tracking the readable lane: on a wide
+     editor tab the lane is centered, so a lane-hugging rail would sit right
+     next to the prose the pointer travels over and open on the way past. The
+     far edge is somewhere the pointer only goes deliberately. */
+  left: var(--prompt-rail-edge);
+  top: 0;
+  bottom: 0;
+  width: var(--prompt-rail-width);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* Guards the rail against ever painting outside its own column, whatever
+     the tick count or panel height. */
+  overflow: hidden;
+  padding: 12px 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.5;
+  transition: opacity 0.25s var(--prompt-rail-ease);
+}
+
+.prompt-rail[data-side="right"] {
+  left: auto;
+  right: var(--prompt-rail-edge);
+}
+
+.prompt-rail[data-side="right"] .prompt-rail-tick {
+  justify-content: right;
+}
+
+.prompt-rail[data-side="right"] .prompt-rail-tick-line {
+  transform-origin: right center;
+}
+
+.prompt-rail:hover,
+.prompt-rail:focus-within {
+  opacity: 1;
+}
+
+.prompt-rail-tick {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: left;
+  height: var(--prompt-rail-step);
+  min-height: 4px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  /* No outline box: the focus ring is drawn on the line itself, so a focused
+     tick reads as part of the rail instead of a rectangle floating over it. */
+  outline: none;
+}
+
+/* Ticks grow by transform, not by width and height: a rail can hold a hundred
+   of them, and a compositor-only transition keeps the hover response smooth
+   instead of laying out the line on every frame. The box is the full 16px x 2px
+   target and the resting scale draws it as the 9px x 1.5px hairline. */
+.prompt-rail-tick-line {
+  display: block;
+  height: 2px;
+  width: var(--prompt-rail-width);
+  border-radius: 1px;
+  background: var(--icon-base);
+  opacity: 0.7;
+  transform: scale(0.5625, 0.75);
+  transform-origin: left center;
+  transition:
+    transform 0.24s var(--prompt-rail-ease),
+    opacity 0.2s var(--prompt-rail-ease),
+    background-color 0.2s var(--prompt-rail-ease),
+    box-shadow 0.2s var(--prompt-rail-ease);
+}
+
+.prompt-rail-tick[data-queued] .prompt-rail-tick-line {
+  background: var(--icon-weaker);
+  opacity: 0.5;
+}
+
+/* The summary tick keeps a real width: scaling would squash its dash pattern
+   along with it. At most a couple of these exist, so the width transition is
+   free here. */
+.prompt-rail-tick--overflow .prompt-rail-tick-line {
+  width: 6px;
+  transform: scale(1, 0.75);
+  transition:
+    width 0.24s var(--prompt-rail-ease),
+    transform 0.24s var(--prompt-rail-ease),
+    opacity 0.2s var(--prompt-rail-ease),
+    background-color 0.2s var(--prompt-rail-ease),
+    box-shadow 0.2s var(--prompt-rail-ease);
+  background: repeating-linear-gradient(
+    to right,
+    var(--icon-weaker) 0,
+    var(--icon-weaker) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+}
+
+/* Scroll position: subtle, always-on cue. */
+.prompt-rail-tick--active .prompt-rail-tick-line {
+  transform: scale(0.8125, 0.75);
+  opacity: 1;
+  background: var(--icon-strong-base);
+}
+
+.prompt-rail-tick--overflow.prompt-rail-tick--active .prompt-rail-tick-line {
+  width: 13px;
+  transform: scale(1, 0.75);
+}
+
+/* Pointer or keyboard target: the loud state, full width. */
+.prompt-rail-tick:hover .prompt-rail-tick-line,
+.prompt-rail-tick--open .prompt-rail-tick-line {
+  transform: none;
+  opacity: 1;
+  background: var(--icon-strong-base);
+}
+
+.prompt-rail-tick--overflow:hover .prompt-rail-tick-line,
+.prompt-rail-tick--overflow.prompt-rail-tick--open .prompt-rail-tick-line,
+.prompt-rail-tick--overflow:focus-visible .prompt-rail-tick-line {
+  width: var(--prompt-rail-width);
+}
+
+.prompt-rail-tick:focus-visible .prompt-rail-tick-line {
+  transform: none;
+  opacity: 1;
+  background: var(--icon-strong-base);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--vscode-focusBorder) 50%, transparent);
+}
+
+/* ============================================
+   Prompt Rail card
+   ============================================ */
+
+.prompt-rail-card {
+  position: fixed;
+  z-index: 1000;
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - var(--prompt-rail-width, 16px) - 40px));
+  max-height: min(calc(100vh - 24px), var(--prompt-rail-card-height, calc(100vh - 24px)));
+  overflow-y: auto;
+  padding: 6px;
+  border-radius: 12px;
+  /* Reads as floating glass rather than a panel pasted over the transcript:
+     the text behind stays faintly perceptible through the blur, so the card
+     feels like it belongs to the same surface. Falls back to an opaque fill
+     where backdrop-filter is unavailable. */
+  background: color-mix(in srgb, var(--surface-float-base) 78%, transparent);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--text-strong) 7%, transparent),
+    0 2px 6px -2px rgba(0, 0, 0, 0.22),
+    0 12px 32px -8px rgba(0, 0, 0, 0.4);
+  animation: prompt-rail-in 0.22s var(--prompt-rail-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  transform-origin: left center;
+}
+
+.prompt-rail-card[data-side="right"] {
+  --prompt-rail-enter: 6px;
+  transform-origin: right center;
+}
+
+.prompt-rail-card[data-virtualized] {
+  display: flex;
+  flex-direction: column;
+  height: min(calc(100vh - 24px), var(--prompt-rail-card-height));
+  overflow: hidden;
+  background: var(--surface-float-base);
+}
+
+.prompt-rail-card-header {
+  position: sticky;
+  top: -6px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 5px 4px 11px;
+  background: color-mix(in srgb, var(--surface-float-base) 88%, transparent);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+}
+
+.prompt-rail-card-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
+  font-weight: var(--font-weight-medium, 500);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-rail-card-actions {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 2px;
+}
+
+.prompt-rail-loading {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 0 8px;
+  color: var(--text-weaker);
+  font-size: var(--kilo-font-size-12);
+}
+
+.prompt-rail-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.prompt-rail-list-static {
+  min-width: 0;
+}
+
+/* A floating popover should not paint an OS scrollbar over its own glass; the
+   rail already shows where you are in the session. */
+.prompt-rail-card,
+.prompt-rail-list {
+  scrollbar-width: none;
+}
+
+.prompt-rail-card::-webkit-scrollbar,
+.prompt-rail-list::-webkit-scrollbar {
+  display: none;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .prompt-rail-card {
+    background: var(--surface-float-base);
+  }
+}
+
+@keyframes prompt-rail-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--prompt-rail-enter, -6px)) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.prompt-rail-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  background: none;
+  padding: 9px 11px;
+  border-radius: 8px;
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.16s var(--prompt-rail-ease, ease);
+}
+
+.prompt-rail-row--hover,
+.prompt-rail-row:hover {
+  background: color-mix(in srgb, var(--text-strong) 8%, transparent);
+}
+
+.prompt-rail-row:active {
+  background: color-mix(in srgb, var(--text-strong) 12%, transparent);
+}
+
+.prompt-rail-row-prompt {
+  font-size: var(--kilo-font-size-13);
+  line-height: var(--line-height-normal);
+  color: var(--text-strong);
+  font-weight: var(--font-weight-medium, 500);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  min-width: 0;
+  width: 100%;
+}
+
+.prompt-rail-row-prompt[data-queued] {
+  color: var(--text-weak);
+}
+
+.prompt-rail-row-status {
+  color: var(--text-weaker);
+  font-weight: 400;
+}
+
+.prompt-rail-row-answer {
+  font-size: var(--kilo-font-size-12);
+  line-height: var(--line-height-large, 1.5);
+  color: var(--text-weak);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  min-width: 0;
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prompt-rail,
+  .prompt-rail-tick-line,
+  .prompt-rail-row {
+    transition: none;
+  }
+  .prompt-rail-card {
+    animation: none;
+  }
+}

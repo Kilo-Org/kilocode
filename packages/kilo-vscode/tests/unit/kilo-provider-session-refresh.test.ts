@@ -1,0 +1,521 @@
+import { describe, it, expect } from "bun:test"
+import {
+  loadSessions,
+  loadMoreSessions,
+  flushPendingSessionRefresh,
+  type SessionRefreshContext,
+} from "../../src/kilo-provider-utils"
+import { createSessionPageState } from "../../src/kilo-provider/session-page"
+
+// vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
+const { KiloProvider } = await import("../../src/KiloProvider")
+
+type State = "connecting" | "connected" | "disconnected" | "error"
+
+type ProviderInternals = {
+  connectionState: State
+  pendingSessionRefresh: boolean
+  projectID: string | undefined
+  webview: { postMessage: (message: unknown) => Promise<unknown> } | null
+  initializeConnection: () => Promise<void>
+  handleLoadSessions: () => Promise<void>
+  isWebviewReady: boolean
+  syncWebviewState: (reason: string) => Promise<void>
+  handleMigrationMessage: (message: { type: string }) => boolean
+  seedSessionWakeups: () => Promise<void>
+  handleEvent: (event: unknown, directory?: string) => void
+  wakeupSessions: Set<string>
+}
+
+function deferred<T>() {
+  let resolve: (value: T) => void = () => {}
+  const promise = new Promise<T>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
+}
+
+function createContext(overrides?: Partial<SessionRefreshContext>): SessionRefreshContext & { sent: unknown[] } {
+  const sent: unknown[] = []
+  return {
+    pendingSessionRefresh: false,
+    connectionState: "connecting",
+    listSessions: null,
+    page: createSessionPageState(),
+    sessionDirectories: new Map(),
+    workspaceDirectory: "/repo",
+    postMessage: (msg: unknown) => sent.push(msg),
+    sent,
+    ...overrides,
+  }
+}
+
+function createListSessions() {
+  const calls: string[] = []
+  const fn = async (dir: string) => {
+    calls.push(dir)
+    return []
+  }
+  return { calls, fn }
+}
+
+function createClient() {
+  const calls: string[] = []
+  return {
+    calls,
+    session: {
+      status: async () => ({ data: {} }),
+    },
+    experimental: {
+      session: {
+        list: async (params: { directory: string }) => {
+          calls.push(params.directory)
+          return { data: [], response: { headers: new Headers() } }
+        },
+      },
+    },
+    provider: {
+      list: async () => ({ data: { all: [], connected: {}, default: {} } }),
+    },
+    app: {
+      agents: async () => ({ data: [] }),
+      skills: async () => ({ data: [] }),
+    },
+    config: {
+      get: async () => ({ data: {} }),
+    },
+    indexing: {
+      status: async () => ({ data: { state: "disabled" } }),
+    },
+    kilo: {
+      notifications: async () => ({ data: [] }),
+      profile: async () => ({ data: {} }),
+    },
+    kilocode: {
+      wakeups: async (_params: {
+        directory: string
+      }): Promise<{ data: Array<{ sessionID: string; pending: number }> }> => ({
+        data: [],
+      }),
+    },
+  }
+}
+
+function createConnection(client: ReturnType<typeof createClient>) {
+  let current: ReturnType<typeof createClient> | null = null
+  return {
+    connect: async () => {
+      current = client
+    },
+    getClient: () => {
+      if (!current) {
+        throw new Error("Not connected")
+      }
+      return current
+    },
+    onEventFiltered: () => () => undefined,
+    onStateChange: (_listener: (state: State) => void) => () => undefined,
+    onNotificationDismissed: () => () => undefined,
+    onLanguageChanged: () => () => undefined,
+    onProfileChanged: () => () => undefined,
+    onFavoritesChanged: () => () => undefined,
+    onModelSelectorExpandedChanged: () => () => undefined,
+    onClearPendingPrompts: () => () => undefined,
+    registerDirectoryProvider: () => () => undefined,
+    getKnownDirectories: () => ["/repo"],
+    getServerInfo: () => ({ port: 12345 }),
+    getServerConfig: () => ({ baseUrl: "http://127.0.0.1:12345", password: "test" }),
+    getConnectionState: () => "connected" as const,
+    getConnectionError: () => null,
+    resolveEventSessionId: () => undefined,
+    recordMessageSessionId: () => undefined,
+    notifyNotificationDismissed: () => undefined,
+  }
+}
+
+describe("KiloProvider pending session refresh", () => {
+  it("syncs startup state without reading legacy credentials or exposing legacy actions", async () => {
+    const client = createClient()
+    const connection = createConnection(client)
+    await connection.connect()
+    const reads: string[] = []
+    const ctx = {
+      globalStorageUri: { fsPath: "/storage/kilocode.kilo-code" },
+      globalState: { get: (_key: string, fallback?: unknown) => fallback },
+      secrets: {
+        get: async (key: string) => {
+          reads.push(key)
+          return undefined
+        },
+      },
+    }
+    const provider = new KiloProvider({} as never, connection as never, ctx as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+    internal.connectionState = "connected"
+    internal.isWebviewReady = true
+    internal.webview = { postMessage: async (message) => sent.push(message) }
+
+    for (const reason of ["initializeConnection", "sse-connected", "webviewReady"]) {
+      await internal.syncWebviewState(reason)
+    }
+
+    expect(reads).toEqual([])
+    expect(sent).toContainEqual(expect.objectContaining({ type: "ready" }))
+    expect(sent).not.toContainEqual(expect.objectContaining({ type: "migrationState" }))
+  })
+
+  it("does not let a late listing restore the previous project's identity", async () => {
+    const client = createClient()
+    const pending = new Map<string, ReturnType<typeof deferred<{ data: unknown[]; response: { headers: Headers } }>>>()
+    client.experimental.session.list = async (params: { directory: string }) => {
+      const next = deferred<{ data: unknown[]; response: { headers: Headers } }>()
+      pending.set(params.directory, next)
+      return next.promise as never
+    }
+    const connection = createConnection(client)
+    await connection.connect()
+    let active = "a"
+    const provider = new KiloProvider({} as never, connection as never, undefined, {
+      rootDirectory: () => `/repo/${active}`,
+      projectQualifier: () => ({ projectId: active }),
+    })
+    const internal = provider as unknown as ProviderInternals
+    internal.connectionState = "connected"
+
+    const first = internal.handleLoadSessions()
+    active = "b"
+    const second = internal.handleLoadSessions()
+
+    pending.get("/repo/b")!.resolve({
+      data: [{ id: "ses-b", projectID: "backend-b", time: { created: 1, updated: 1 } }],
+      response: { headers: new Headers() },
+    })
+    await second
+    pending.get("/repo/a")!.resolve({
+      data: [{ id: "ses-a", projectID: "backend-a", time: { created: 1, updated: 1 } }],
+      response: { headers: new Headers() },
+    })
+    await first
+
+    expect(internal.projectID).toBe("backend-b")
+  })
+
+  it("qualifies a session list with the project captured before the request", async () => {
+    const client = createClient()
+    const pending = Promise.withResolvers<{ data: unknown[]; response: { headers: Headers } }>()
+    client.experimental.session.list = async () => pending.promise as never
+    const connection = createConnection(client)
+    await connection.connect()
+    let active = "a"
+    const provider = new KiloProvider({} as never, connection as never, undefined, {
+      rootDirectory: () => `/repo/${active}`,
+      projectQualifier: () => ({ projectId: active }),
+    })
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+    internal.connectionState = "connected"
+    internal.isWebviewReady = true
+    internal.webview = { postMessage: async (message) => sent.push(message) }
+
+    const request = internal.handleLoadSessions()
+    active = "b"
+    pending.resolve({
+      data: [{ id: "ses-a", projectID: "backend-a", time: { created: 1, updated: 1 } }],
+      response: { headers: new Headers() },
+    })
+    await request
+
+    expect(sent).toContainEqual(
+      expect.objectContaining({
+        type: "sessionsLoaded",
+        projectId: "a",
+        sessions: [expect.objectContaining({ id: "ses-a" })],
+      }),
+    )
+    expect(internal.projectID).toBeUndefined()
+  })
+
+  it("keeps worktree sessions with legacy project ids", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([["ses_worktree", "/worktree"]]),
+      listSessions: async (dir) => {
+        if (dir === "/repo") {
+          return [
+            {
+              id: "ses_root",
+              projectID: "project-new",
+              title: "root",
+              directory: "/repo",
+              time: { created: 1, updated: 1 },
+            },
+          ] as never
+        }
+        return [
+          {
+            id: "ses_worktree",
+            projectID: "project-old",
+            title: "worktree",
+            directory: "/worktree",
+            time: { created: 2, updated: 2 },
+          },
+        ] as never
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    const project = await loadSessions(ctx)
+
+    expect(project).toBe("project-new")
+    expect(sent).toHaveLength(1)
+    expect((sent[0] as { sessions: { id: string }[] }).sessions.map((s) => s.id)).toEqual(["ses_worktree", "ses_root"])
+  })
+
+  it("does not use legacy worktree sessions as canonical project", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([["ses_worktree", "/worktree"]]),
+      listSessions: async (dir) => {
+        if (dir === "/repo") return [] as never
+        return [
+          {
+            id: "ses_worktree",
+            projectID: "project-old",
+            title: "worktree",
+            directory: "/worktree",
+            time: { created: 2, updated: 2 },
+          },
+        ] as never
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    const project = await loadSessions(ctx)
+
+    expect(project).toBeUndefined()
+    expect(sent).toHaveLength(1)
+    expect((sent[0] as { sessions: { id: string }[] }).sessions.map((s) => s.id)).toEqual(["ses_worktree"])
+  })
+
+  it("preserves session ids when worktree directory listing fails", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([
+        ["ses_wt1", "/worktree1"],
+        ["ses_wt2", "/worktree2"],
+      ]),
+      listSessions: async (dir) => {
+        if (dir === "/repo") {
+          return [
+            {
+              id: "ses_root",
+              projectID: "project",
+              title: "root",
+              directory: "/repo",
+              time: { created: 1, updated: 1 },
+            },
+          ] as never
+        }
+        if (dir === "/worktree1") throw new Error("backend not ready")
+        return [
+          {
+            id: "ses_wt2",
+            projectID: "project",
+            title: "wt2",
+            directory: "/worktree2",
+            time: { created: 2, updated: 2 },
+          },
+        ] as never
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await loadSessions(ctx)
+
+    expect(sent).toHaveLength(1)
+    const msg = sent[0] as { sessions: { id: string }[]; preserveSessionIds?: string[] }
+    expect(msg.sessions.map((s) => s.id)).toEqual(["ses_wt2", "ses_root"])
+    expect(msg.preserveSessionIds).toEqual(["ses_wt1"])
+  })
+
+  it("omits preserveSessionIds when all directories succeed", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([["ses_wt", "/worktree"]]),
+      listSessions: async (dir) => {
+        if (dir === "/repo") {
+          return [
+            {
+              id: "ses_root",
+              projectID: "project",
+              title: "root",
+              directory: "/repo",
+              time: { created: 1, updated: 1 },
+            },
+          ] as never
+        }
+        return [
+          {
+            id: "ses_wt",
+            projectID: "project",
+            title: "wt",
+            directory: "/worktree",
+            time: { created: 2, updated: 2 },
+          },
+        ] as never
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await loadSessions(ctx)
+
+    expect(sent).toHaveLength(1)
+    const msg = sent[0] as { sessions: { id: string }[]; preserveSessionIds?: string[] }
+    expect(msg.sessions.map((s) => s.id)).toEqual(["ses_wt", "ses_root"])
+    expect(msg.preserveSessionIds).toBeUndefined()
+  })
+
+  it("pages older sessions per directory and appends them", async () => {
+    const sent: unknown[] = []
+    const calls: Array<{ dir: string; cursor?: number }> = []
+    const ctx = createContext({
+      connectionState: "connected",
+      listSessionPage: async (dir, cursor) => {
+        calls.push({ dir, cursor })
+        if (cursor === undefined) {
+          return { sessions: [{ id: "ses_1", projectID: "p", time: { created: 1, updated: 2 } }] as never, cursor: 2 }
+        }
+        return { sessions: [{ id: "ses_old", projectID: "p", time: { created: 1, updated: 1 } }] as never }
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await loadSessions(ctx)
+    expect(ctx.page?.hasMore).toBe(true)
+
+    await loadMoreSessions(ctx)
+
+    expect(calls).toEqual([
+      { dir: "/repo", cursor: undefined },
+      { dir: "/repo", cursor: 2 },
+    ])
+    const appended = sent[1] as { sessions: { id: string }[]; append?: boolean }
+    expect(appended.append).toBe(true)
+    expect(appended.sessions.map((s) => s.id)).toEqual(["ses_old"])
+    expect(ctx.page?.hasMore).toBe(false)
+  })
+
+  it("does not post a partial list when the workspace listing fails", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([["ses_wt", "/worktree"]]),
+      listSessionPage: async (dir) => {
+        if (dir === "/repo") throw new Error("workspace offline")
+        return { sessions: [{ id: "ses_wt", projectID: "p", time: { created: 1, updated: 1 } }] as never }
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await expect(loadSessions(ctx)).rejects.toThrow("workspace offline")
+    expect(sent).toEqual([])
+  })
+
+  it("clears load-more when there is nothing left to page", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      page: createSessionPageState(),
+      listSessionPage: async () => ({ sessions: [] }),
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await loadMoreSessions(ctx)
+
+    expect(sent).toEqual([{ type: "sessionsLoaded", sessions: [], append: true, hasMore: false }])
+  })
+
+  it("keeps the refresh pending and reports an error when a deferred flush fails", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      pendingSessionRefresh: true,
+      connectionState: "connected",
+      listSessionPage: async () => {
+        throw new Error("offline")
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await flushPendingSessionRefresh(ctx)
+
+    expect(ctx.pendingSessionRefresh).toBe(true)
+    expect(sent).toContainEqual({ type: "error", message: "offline" })
+  })
+
+  it("flushes deferred refresh via flushPendingSessionRefresh", async () => {
+    const { calls, fn } = createListSessions()
+    const ctx = createContext()
+    ctx.sessionDirectories.set("ses_1", "/worktree")
+
+    await loadSessions(ctx)
+    expect(ctx.pendingSessionRefresh).toBe(true)
+
+    ctx.listSessions = fn
+    ctx.connectionState = "connected"
+
+    await flushPendingSessionRefresh(ctx)
+
+    expect(calls).toEqual(["/repo", "/worktree"])
+    expect(ctx.pendingSessionRefresh).toBe(false)
+  })
+
+  it("flushes deferred refresh in initializeConnection without relying on connected event callback", async () => {
+    const client = createClient()
+    const connection = createConnection(client)
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+
+    provider.setSessionDirectory("ses_1", "/worktree")
+
+    await internal.handleLoadSessions()
+    expect(internal.pendingSessionRefresh).toBe(true)
+
+    await internal.initializeConnection()
+
+    expect(client.calls).toEqual(["/repo", "/worktree"])
+    expect(internal.pendingSessionRefresh).toBe(false)
+  })
+
+  it("does not post not-connected errors while still connecting", async () => {
+    const client = createClient()
+    const connection = createConnection(client)
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as ProviderInternals
+    const sent: unknown[] = []
+
+    internal.webview = {
+      postMessage: async (message: unknown) => {
+        sent.push(message)
+      },
+    }
+
+    internal.connectionState = "connecting"
+    await internal.handleLoadSessions()
+
+    const errors = sent.filter((msg) => {
+      if (typeof msg !== "object" || !msg) {
+        return false
+      }
+
+      return "type" in msg && (msg as { type?: unknown }).type === "error"
+    })
+
+    expect(errors).toEqual([])
+  })
+
+})

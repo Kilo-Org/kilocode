@@ -3,7 +3,7 @@
   "limits": {
     "files": 27,
     "markedLines": 204,
-    "unmarkedLines": 39,
+    "unmarkedLines": 40,
     "deletedFiles": 0
   },
   "files": {
@@ -38,7 +38,7 @@
     },
     "package.json": {
       "rung": 3,
-      "seam": "Root `dev` script runs script/dev-isolated.ts, which starts the Kilo host entry (packages/kilo-cli) with an isolated profile, so `bun dev` never uses the installed OpenCode or Kilo data. Stays after U-E0-01: `bun dev` from the root reads the upstream root package.json, and upstream's script runs the upstream CLI with the real data. Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check `packages/gui-extensions`, which Kilo removed (`skipFiles`). Root `install:alpha` script runs script/kilocode/install-alpha.ts (Kilo-owned), which installs the host executable built by the `kilo-v2` workflow; it goes away when v2 is mainline.",
+      "seam": "Root `dev` script runs script/dev-isolated.ts, which starts the Kilo host entry (packages/kilo-cli) with an isolated profile, so `bun dev` never uses the installed OpenCode or Kilo data. Stays after U-E0-01: `bun dev` from the root reads the upstream root package.json, and upstream's script runs the upstream CLI with the real data. Root `extension` script runs packages/kilo-vscode/script/launch.ts (Kilo-owned), which builds the v2 VS Code extension and opens it in a separate VS Code instance with an isolated profile, as `bun run extension` does on v1. Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check `packages/gui-extensions`, which Kilo removed (`skipFiles`). Root `install:alpha` script runs script/kilocode/install-alpha.ts (Kilo-owned), which installs the host executable built by the `kilo-v2` workflow; it goes away when v2 is mainline.",
       "unmarked": "JSON has no comments."
     },
     "packages/cli/package.json": {

@@ -1,0 +1,1134 @@
+import { createEffect, createSignal, onCleanup } from "solid-js"
+import type { Accessor } from "solid-js"
+import type {
+  FileAttachment,
+  FileSearchItem,
+  SessionSearchItem,
+  WebviewMessage,
+  ExtensionMessage,
+} from "../types/messages"
+import {
+  AT_PATTERN,
+  syncMentionedPaths as _syncMentionedPaths,
+  buildFileAttachments,
+  buildMentionResults,
+  defaultMentionIndex,
+  filePickerNamed,
+  filterSessions,
+  buildSessionAttachments,
+  filterMentionResults,
+  isCursorAtMentionEnd,
+  getMentionRemovalRange,
+  findMentionRange,
+  mentionNamed,
+  mentionSettled,
+  modelReferenceToken,
+  sessionMentionText,
+  sessionMentionToken,
+  syncMentionedSessions as _syncMentionedSessions,
+  type MentionResult,
+  type PromptMentionDrop,
+} from "./file-mention-utils"
+import { GIT_CHANGES_MENTION } from "./git-changes-context-utils"
+import { convertToMentionPath } from "../utils/path-mentions"
+
+const FILE_SEARCH_DEBOUNCE_MS = 150
+/** Past chats offered to the ranking, bounded so chats cannot flood the list. */
+const SESSION_RESULT_LIMIT = 3
+/** How long a spaced query waits for past chats before it counts as prose. */
+const SESSION_FETCH_GRACE_MS = 3000
+const FILE_SEARCH_CACHE_MS = 5000
+const FILE_SEARCH_CACHE_LIMIT = 8
+
+type FileSearchCache = {
+  items: Array<FileSearchItem | string>
+  updated: number
+  revision: number
+}
+
+type FileSearchRequest = {
+  id: string
+  query: string
+  scope: string
+  revision: number
+}
+
+interface VSCodeContext {
+  postMessage: (message: WebviewMessage) => void
+  onMessage: (handler: (message: ExtensionMessage) => void) => () => void
+}
+
+export interface FileMention {
+  mentionedPaths: Accessor<Set<string>>
+  /** Mentioned past chats, keyed by their `@title` token in the text. */
+  mentionedSessions: Accessor<Map<string, SessionSearchItem>>
+  /** Mentioned model references, keyed by their `@providerID/modelID` token. */
+  mentionedModels: Accessor<Set<string>>
+  /** Whether the past-chat session picker (AM-style search) is open. */
+  sessionPicker: Accessor<boolean>
+  /** Directory-scoped past chats shown in the session picker. */
+  sessionCandidates: Accessor<SessionSearchItem[]>
+  /** Whether the inline model reference picker is open. */
+  modelPicker: Accessor<boolean>
+  mentionResults: Accessor<MentionResult[]>
+  mentionIndex: Accessor<number>
+  /** The in-progress query, or null when the menu is closed. Empty for a bare "@". */
+  mentionQuery: Accessor<string | null>
+  showMention: Accessor<boolean>
+  onInput: (val: string, cursor: number) => void
+  onKeyDown: (
+    e: KeyboardEvent,
+    textarea: HTMLTextAreaElement | undefined,
+    setText: (text: string) => void,
+    onSelect?: () => void,
+  ) => boolean
+  selectMention: (
+    result: MentionResult,
+    textarea: HTMLTextAreaElement,
+    setText: (text: string) => void,
+    onSelect?: () => void,
+  ) => void
+  setMentionIndex: (index: number) => void
+  closeMention: () => void
+  parseFileAttachments: (text: string) => FileAttachment[]
+  /** Register paths as active mentions (used by drag-and-drop). Pass cwd to ensure buildFileAttachments resolves correctly. */
+  addPaths: (paths: string[], cwd: string) => void
+  /**
+   * Handle backspace for atomic mention removal. Returns true if the
+   * event was consumed.
+   */
+  handleBackspace: (
+    e: KeyboardEvent,
+    textarea: HTMLTextAreaElement | undefined,
+    setText: (text: string) => void,
+    adjust?: () => void,
+  ) => boolean
+  /**
+   * Skip the cursor over a mention when pressing ArrowLeft/ArrowRight.
+   * Returns true if the event was consumed.
+   */
+  handleArrowKey: (e: KeyboardEvent, textarea: HTMLTextAreaElement | undefined) => boolean
+  /**
+   * Snap a partial text selection so it fully covers any mention that is
+   * only partially selected. Call from the textarea's onSelect handler.
+   */
+  snapSelection: (textarea: HTMLTextAreaElement) => void
+  /** Seed known paths from existing text (e.g. after undo restores a draft). */
+  seedFromText: (text: string) => void
+  /** Insert a file-picker result at the stored cursor position. Ignored unless requestId matches the pending request. */
+  insertFilePickerResult: (path: string, requestId: string) => void
+  /**
+   * Seed known paths from a set of already-confirmed exact paths (e.g. a
+   * reverted message's file attachments), then prune against `text`. Prefer
+   * this over seedFromText when exact paths are available, since seedFromText
+   * cannot correctly rediscover paths containing spaces from raw text alone.
+   */
+  seedFromParts: (paths: string[], text: string) => void
+  /**
+   * Seed mentioned past chats (e.g. from a reverted message's session
+   * attachments), then prune against `text`.
+   */
+  seedSessions: (sessions: SessionSearchItem[], text: string) => void
+  /** Insert a session picked from the past-chat picker as an @-mention. */
+  selectSession: (
+    session: SessionSearchItem,
+    textarea: HTMLTextAreaElement,
+    setText: (text: string) => void,
+    onSelect?: () => void,
+  ) => void
+  /** Insert a model reference picked from the model picker as an @-mention. */
+  selectModelReference: (providerID: string, modelID: string, onSelect?: () => void) => void
+  /** Insert a dragged reference at the caret (no open @ query). Returns true when inserted. */
+  insertDrop: (
+    drop: PromptMentionDrop,
+    textarea: HTMLTextAreaElement,
+    setText: (text: string) => void,
+    cwd: string,
+    onSelect?: () => void,
+  ) => boolean
+}
+
+export function useFileMention(
+  vscode: VSCodeContext,
+  sessionID?: Accessor<string | undefined>,
+  git?: Accessor<boolean>,
+  modelKeys?: Accessor<Set<string>>,
+): FileMention {
+  const [mentionedPaths, setMentionedPaths] = createSignal<Set<string>>(new Set())
+  const [mentionedSessions, setMentionedSessions] = createSignal<Map<string, SessionSearchItem>>(new Map())
+  const [mentionedModels, setMentionedModels] = createSignal<Set<string>>(new Set())
+  const [mentionQuery, setMentionQuery] = createSignal<string | null>(null)
+  const [mentionResults, setMentionResults] = createSignal<MentionResult[]>([])
+  const [mentionIndex, setMentionIndex] = createSignal(0)
+  const [sessionPicker, setSessionPicker] = createSignal(false)
+  const [sessionCandidates, setSessionCandidates] = createSignal<SessionSearchItem[]>([])
+  const [modelPicker, setModelPicker] = createSignal(false)
+  let workspaceDir = ""
+  const cache = new Map<string, FileSearchCache>()
+  const dirs = new Map<string, string>()
+  // Accumulates every path ever mentioned so syncMentionedPaths can
+  // rediscover them after a native undo restores the text.
+  const knownPaths = new Set<string>()
+  // Same accumulation for past-chat mentions, keyed by their exact visible
+  // token. Duplicate titles receive a numeric suffix so they cannot overwrite.
+  const knownSessions = new Map<string, SessionSearchItem>()
+  // Model references are kept apart from knownPaths: they are inline text
+  // tokens, not files, so they must never turn into file attachments.
+  const knownModels = new Set<string>()
+  // Past chats rank into the main list like files do, so an "@" query finds a
+  // chat by title without first opening the dedicated picker. Only a query can
+  // match a title; an empty "@" keeps offering the Past chats entry instead of
+  // burying the file list under every recent session.
+  const sessionResults = (query: string): MentionResult[] => {
+    if (!query) return []
+    return filterSessions(sessionCandidates(), query)
+      .slice(0, SESSION_RESULT_LIMIT)
+      .map((session) => ({ type: "session", value: sessionMentionToken(session, knownSessions), session }))
+  }
+  const results = (query: string, items: Array<FileSearchItem | string>) => {
+    return buildMentionResults(query, items, git?.() ?? true, sessionResults(query))
+  }
+  /** The file-ish entries of a result list, in the shape the builder accepts. */
+  const files = (items: MentionResult[]): FileSearchItem[] =>
+    items.flatMap((item) =>
+      item.type === "file" || item.type === "folder" || item.type === "opened-file"
+        ? [{ path: item.value, type: item.type, root: item.root, relative: item.relative }]
+        : [],
+    )
+
+  let fileSearchTimer: ReturnType<typeof setTimeout> | undefined
+  let fileSearchCounter = 0
+  let fileSearchRevision = 0
+  let fileSearchRequest: FileSearchRequest | undefined
+  let prewarmRequest: FileSearchRequest | undefined
+  let filePickerCounter = 0
+  let sessionSearchCounter = 0
+  // Scope whose past chats have been fetched, so opening "@" loads the list
+  // once per session instead of on every keystroke, plus the fetch state a
+  // spaced query consults before deciding it is prose rather than a title.
+  let sessionScope: string | undefined
+  let sessionsInFlight = false
+  let sessionTimer: ReturnType<typeof setTimeout> | undefined
+  let pending: { query: string } | undefined
+  let pickerState: {
+    requestId: string
+    textarea: HTMLTextAreaElement
+    atStart: number
+    atEnd: number
+    setText: (text: string) => void
+    onSelect?: () => void
+  } | null = null
+  // The `@query` range that the open model picker will replace on selection.
+  let modelPickerState: { textarea: HTMLTextAreaElement; atStart: number; atEnd: number } | null = null
+  let pendingArrowSnap: { timer: ReturnType<typeof setTimeout>; prevValue: string; prevPosition: number } | undefined
+  // Offset of the "@" that opened the current query, and the last query at
+  // that "@" the dropdown closed on: prose past a completed mention, a spaced
+  // query nothing answered, or one the user dismissed with Escape. Since a
+  // query may contain spaces, ordinary prose typed after a mention still
+  // matches AT_PATTERN, so remembering the dead query keeps the dropdown shut
+  // on every following keystroke until the user edits back into a match.
+  let at = 0
+  let dead: { at: number; query: string } | undefined
+  // Mentions inserted by selection, keyed by how many "@" the text holds before
+  // them rather than by absolute offset: an edit before the mention shifts its
+  // offset but not that count. Entries are pruned as soon as their token leaves
+  // the text, so deleting a picked mention cannot close a later query that
+  // happens to reuse the same "@" count.
+  const inserted = new Map<number, string>()
+  // Whether the user has moved the selection themselves, which later results
+  // must not undo. Typing a new query hands the choice back to the default.
+  let touched = false
+
+  const showMention = () => mentionQuery() !== null
+  const scope = () => sessionID?.() ?? ""
+  let activeScope = scope()
+
+  const syncScope = () => {
+    const value = scope()
+    if (value === activeScope) return value
+    activeScope = value
+    dead = undefined
+    inserted.clear()
+    if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    fileSearchRevision++
+    fileSearchRequest = undefined
+    prewarmRequest = undefined
+    workspaceDir = dirs.get(value) ?? ""
+    sessionScope = undefined
+    sessionsInFlight = false
+    pending = undefined
+    if (sessionTimer) clearTimeout(sessionTimer)
+    sessionTimer = undefined
+    setSessionCandidates([])
+    setModelPicker(false)
+    modelPickerState = null
+    setMentionResults([])
+    setMentionIndex(0)
+    return value
+  }
+
+  const readCache = (dir: string): Array<FileSearchItem | string> => {
+    if (!dir) return []
+    const entry = cache.get(dir)
+    if (!entry) return []
+    if (Date.now() - entry.updated <= FILE_SEARCH_CACHE_MS) return entry.items
+    cache.delete(dir)
+    return []
+  }
+
+  const writeCache = (dir: string, items: Array<FileSearchItem | string>, revision: number) => {
+    if (!dir) return
+    const entry = cache.get(dir)
+    if (entry && entry.revision > revision) return
+    cache.delete(dir)
+    cache.set(dir, { items, updated: Date.now(), revision })
+    while (cache.size > FILE_SEARCH_CACHE_LIMIT) {
+      const oldest = cache.keys().next().value
+      if (!oldest) return
+      cache.delete(oldest)
+    }
+  }
+
+  const writeDir = (id: string, dir: string) => {
+    dirs.delete(id)
+    dirs.set(id, dir)
+    while (dirs.size > FILE_SEARCH_CACHE_LIMIT) {
+      const oldest = dirs.keys().next().value
+      if (oldest === undefined) return
+      dirs.delete(oldest)
+    }
+  }
+
+  const replaceResults = (items: MentionResult[]) => {
+    const index = mentionIndex()
+    const selected = mentionResults()[index]
+    setMentionResults(items)
+    // An untouched selection follows the results in: it sat on Browse files
+    // only for want of a candidate, so an arriving one should take it.
+    if (!touched || !selected) {
+      setMentionIndex(defaultMentionIndex(items, mentionQuery() ?? ""))
+      return
+    }
+    const next = items.findIndex((item) => item.type === selected.type && item.value === selected.value)
+    setMentionIndex(next >= 0 ? next : Math.min(index, Math.max(items.length - 1, 0)))
+  }
+
+  /** Move the selection on the user's behalf, pinning it against later results. */
+  const chooseIndex = (index: number) => {
+    touched = true
+    setMentionIndex(index)
+  }
+
+  createEffect(() => {
+    if (!showMention()) {
+      touched = false
+      setMentionIndex(0)
+    }
+  })
+
+  createEffect(() => {
+    const id = syncScope()
+    if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    fileSearchRequest = undefined
+    setMentionQuery(null)
+    setMentionResults([])
+    setMentionIndex(0)
+    const revision = ++fileSearchRevision
+    const requestId = `file-search-prewarm-${revision}`
+    prewarmRequest = { id: requestId, query: "", scope: id, revision }
+    vscode.postMessage({
+      type: "requestFileSearch",
+      query: "",
+      requestId,
+      ...(id ? { sessionID: id } : {}),
+    })
+  })
+
+  /**
+   * Apply a prose-close that was held back until the past chats which could
+   * still rescue the query were known. Re-ranking first keeps a query that a
+   * chat title matches open, so only a query nothing answers is closed.
+   */
+  const resolvePending = () => {
+    if (!pending) return
+    const query = pending.query
+    pending = undefined
+    if (mentionQuery() !== query) return
+    const next = results(query, files(mentionResults()))
+    const chat = next.some((item) => item.type === "session")
+    if (!chat && (settled(query, next) || next.every((item) => item.type === "file-picker"))) {
+      dead = { at, query }
+      closeMention()
+      return
+    }
+    replaceResults(next)
+  }
+
+  /** How many "@" the text holds before `position`. */
+  const atIndex = (text: string, position: number) => {
+    let count = 0
+    for (let i = 0; i < position; i++) if (text[i] === "@") count++
+    return count
+  }
+
+  // Record the mention selected at an "@", bounded so a long session cannot
+  // grow the map without limit. Entries whose "@" is edited to a different
+  // occurrence simply stop matching, which only costs the synchronous close.
+  const remember = (text: string, offset: number, token: string) => {
+    const index = atIndex(text, offset)
+    inserted.delete(index)
+    inserted.set(index, token)
+    while (inserted.size > 16) {
+      const oldest = inserted.keys().next().value
+      if (oldest === undefined) return
+      inserted.delete(oldest)
+    }
+  }
+
+  /** Drop records whose mention is no longer present in the text. */
+  const pruneInserted = () => {
+    const live = mentionTokens()
+    for (const [index, token] of inserted) {
+      if (!live.has(token)) inserted.delete(index)
+    }
+  }
+
+  /**
+   * Whether a spaced query is prose past a completed mention, judged against
+   * the files on offer and, for a query typed after a picked mention, the
+   * mention inserted at this "@". Folders are offered with a trailing slash
+   * that a hand-typed `@agents ` does not have, so both forms count.
+   *
+   * This is the synchronous check: it must not read mentions elsewhere in the
+   * text, because the results on screen can still belong to the previous query
+   * and a new `@src utils` would then close on an earlier `@src` before the
+   * search that could extend it has answered. Late results settle through
+   * `settled`, which knows the files the query actually answers to.
+   */
+  const settledByOffer = (query: string, items: MentionResult[], index: number) => {
+    if (!/\s/.test(query)) return false
+    const tokens = new Set<string>([GIT_CHANGES_MENTION])
+    const picked = inserted.get(index)
+    if (picked) tokens.add(picked)
+    for (const file of files(items)) {
+      tokens.add(file.path)
+      tokens.add(file.path.replace(/\/$/, ""))
+    }
+    return mentionSettled(query, tokens)
+  }
+
+  /**
+   * Whether a spaced query is prose past a completed mention, judged against
+   * every mention present in the text and the files a finished search returned.
+   * Used once results are known, so a query that a longer offered path still
+   * extends stays open.
+   */
+  const settled = (query: string, items: MentionResult[]) => {
+    if (!/\s/.test(query)) return false
+    const tokens = new Set([...mentionTokens(), GIT_CHANGES_MENTION])
+    for (const file of files(items)) {
+      tokens.add(file.path)
+      tokens.add(file.path.replace(/\/$/, ""))
+    }
+    return mentionSettled(query, tokens)
+  }
+
+  const applyFiles = (query: string, items: FileSearchItem[]) => {
+    const next = results(query, items)
+    // The folder the query names may only arrive now, when the space was typed
+    // before the search for the name came back.
+    const prose = /\s/.test(query) && !filePickerNamed(query) && next.every((item) => item.type === "file-picker")
+    if (settled(query, next) || prose) {
+      // Unless this scope's past chats are still on the way: a chat title is
+      // exactly the kind of spaced query that no file can answer, so hold the
+      // close until the list that could match it has arrived.
+      if (sessionsInFlight) {
+        pending = { query }
+        replaceResults(next)
+        return
+      }
+      dead = { at, query }
+      closeMention()
+      return
+    }
+    pending = undefined
+    replaceResults(next)
+  }
+
+  const applySessions = (sessions: SessionSearchItem[]) => {
+    // Most recently updated first; with a query the List re-ranks by fuzzy score.
+    setSessionCandidates(
+      sessions
+        .map((session) => ({ ...session, title: sessionMentionText(session.title) }))
+        .filter((session) => session.title)
+        .sort((a, b) => b.updated - a.updated),
+    )
+    if (sessionTimer) clearTimeout(sessionTimer)
+    sessionTimer = undefined
+    sessionsInFlight = false
+    resolvePending()
+    // The list can land while the menu is already open on a query that could
+    // match a chat title, so re-rank what is on screen.
+    const open = mentionQuery()
+    if (open) replaceResults(results(open, files(mentionResults())))
+  }
+
+  const unsubscribe = vscode.onMessage((message) => {
+    if (message.type === "sessionSearchResult") {
+      if (message.requestId === `session-search-${sessionSearchCounter}`) applySessions(message.sessions)
+      return
+    }
+    if (message.type !== "fileSearchResult") return
+    const request =
+      message.requestId === fileSearchRequest?.id
+        ? fileSearchRequest
+        : message.requestId === prewarmRequest?.id
+          ? prewarmRequest
+          : undefined
+    if (!request || request.scope !== scope()) return
+    if (request === fileSearchRequest) fileSearchRequest = undefined
+    if (request === prewarmRequest) prewarmRequest = undefined
+    if (request.revision < fileSearchRevision) return
+
+    const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
+    if (message.dir) {
+      writeDir(request.scope, message.dir)
+      workspaceDir = message.dir
+    }
+    if (!request.query) writeCache(message.dir, items, request.revision)
+    if (!showMention() || request.query !== mentionQuery()) return
+    applyFiles(request.query, items)
+  })
+
+  onCleanup(() => {
+    unsubscribe()
+    if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    if (sessionTimer) clearTimeout(sessionTimer)
+    if (pendingArrowSnap) clearTimeout(pendingArrowSnap.timer)
+  })
+
+  const requestFileSearch = (query: string) => {
+    if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    const revision = ++fileSearchRevision
+    const request = {
+      id: `file-search-${++fileSearchCounter}`,
+      query,
+      scope: syncScope(),
+      revision,
+    }
+    fileSearchRequest = request
+    const send = () => {
+      vscode.postMessage({
+        type: "requestFileSearch",
+        query,
+        requestId: request.id,
+        ...(request.scope ? { sessionID: request.scope } : {}),
+      })
+    }
+    if (!query) {
+      send()
+      return
+    }
+    fileSearchTimer = setTimeout(send, FILE_SEARCH_DEBOUNCE_MS)
+  }
+
+  const closeMention = () => {
+    if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    fileSearchRevision++
+    fileSearchRequest = undefined
+    setMentionQuery(null)
+    setMentionResults([])
+    setSessionPicker(false)
+    setModelPicker(false)
+  }
+
+  const closeSessionPicker = () => {
+    setSessionPicker(false)
+  }
+
+  const syncMentionedPaths = (text: string) => {
+    if (!text) {
+      setMentionedPaths((prev) => (prev.size ? new Set<string>() : prev))
+      setMentionedSessions((prev) => (prev.size ? new Map<string, SessionSearchItem>() : prev))
+      setMentionedModels((prev) => (prev.size ? new Set<string>() : prev))
+      return
+    }
+    reclassifyModels()
+    setMentionedPaths(() => _syncMentionedPaths(knownPaths, text))
+    setMentionedSessions(() => _syncMentionedSessions(knownSessions, text))
+    setMentionedModels(() => _syncMentionedPaths(knownModels, text))
+  }
+
+  // A restored draft can be seeded before the model catalog has loaded, so the
+  // seed-time split between files and models is not final. Re-run it against the
+  // live catalog so a model reference that was momentarily treated as a file
+  // moves to the model set instead of becoming a bogus attachment.
+  const reclassifyModels = () => {
+    if (!knownPaths.size) return
+    const keys = modelKeys?.()
+    if (!keys?.size) return
+    for (const key of knownPaths) {
+      if (!keys.has(key)) continue
+      knownPaths.delete(key)
+      knownModels.add(key)
+    }
+  }
+
+  // Past chats are searched client-side (fuzzysort, same as the Agent Manager
+  // session search) over a directory-scoped list fetched from the extension.
+  // The same list backs both the inline results and the dedicated picker.
+  const requestSessions = () => {
+    sessionSearchCounter++
+    sessionsInFlight = true
+    // A reply that never arrives must not leave the prose-close disabled for
+    // the rest of the session, so the wait is bounded.
+    if (sessionTimer) clearTimeout(sessionTimer)
+    sessionTimer = setTimeout(() => {
+      sessionTimer = undefined
+      sessionsInFlight = false
+      resolvePending()
+    }, SESSION_FETCH_GRACE_MS)
+    const id = sessionID?.()
+    vscode.postMessage({
+      type: "requestSessionSearch",
+      requestId: `session-search-${sessionSearchCounter}`,
+      ...(id ? { sessionID: id } : {}),
+    })
+  }
+
+  /** Load the scope's past chats once, so an "@" query can rank titles. */
+  const loadSessions = () => {
+    const id = syncScope()
+    if (sessionScope === id) return
+    sessionScope = id
+    requestSessions()
+  }
+
+  const openSessionPicker = () => {
+    setSessionPicker(true)
+    requestSessions()
+  }
+
+  // Replace a textarea range through execCommand so the change lands on the
+  // browser's native undo stack. Restore focus first: pickers and drags can
+  // leave the textarea unfocused, which makes execCommand silently no-op.
+  const replaceRange = (textarea: HTMLTextAreaElement, start: number, end: number, value: string) => {
+    textarea.focus()
+    suppress = true
+    try {
+      textarea.setSelectionRange(start, end)
+      document.execCommand("insertText", false, value)
+    } finally {
+      suppress = false
+    }
+  }
+
+  const selectMention = (
+    result: MentionResult,
+    textarea: HTMLTextAreaElement,
+    _setText: (text: string) => void,
+    onSelect?: () => void,
+  ) => {
+    const val = textarea.value
+    const cursor = textarea.selectionStart ?? val.length
+    const before = val.substring(0, cursor)
+    const after = val.substring(cursor)
+
+    if (result.type === "file-picker") {
+      const match = before.match(AT_PATTERN)!
+      const prefix = /^\s/.test(match[0]) ? 1 : 0
+      const atPos = match.index! + prefix
+      filePickerCounter++
+      const requestId = `file-picker-${filePickerCounter}`
+      pickerState = { requestId, textarea, atStart: atPos, atEnd: cursor, setText: _setText, onSelect }
+      closeMention()
+      vscode.postMessage({ type: "requestFilePicker", requestId })
+      return
+    }
+
+    if (result.type === "past-chats") {
+      // Switch the dropdown into the AM-style session search; the actual
+      // insertion happens when a session is picked there.
+      openSessionPicker()
+      return
+    }
+
+    if (result.type === "model") {
+      // Switch the dropdown into the model picker; the actual insertion
+      // happens when a model is picked there.
+      const match = before.match(AT_PATTERN)!
+      const prefix = /^\s/.test(match[0]) ? 1 : 0
+      const atPos = match.index! + prefix
+      modelPickerState = { textarea, atStart: atPos, atEnd: cursor }
+      closeMention()
+      setModelPicker(true)
+      return
+    }
+
+    // Past chats resolve their token again here: inline results are built from
+    // a shared candidate list, so two chats with the same title would otherwise
+    // insert the same token and overwrite each other in knownSessions.
+    const token = result.type === "session" ? sessionMentionToken(result.session, knownSessions) : result.value
+
+    // Add to knownPaths BEFORE execCommand so syncMentionedPaths (triggered
+    // by the input event) can discover the new path.
+    if (result.type === "file" || result.type === "folder" || result.type === "opened-file") knownPaths.add(token)
+    if (result.type === "session") knownSessions.set(token, result.session)
+
+    // Replace the @query with the selected @path via execCommand so the
+    // change lands on the browser's native undo stack. AT_PATTERN is
+    // guaranteed to match here — the dropdown only opens when it matched.
+    const match = before.match(AT_PATTERN)!
+    const prefix = /^\s/.test(match[0]) ? 1 : 0
+    const atPos = match.index! + prefix
+    const suffix = /^\s/.test(after) ? "" : " "
+    remember(textarea.value, atPos, token)
+    replaceRange(textarea, atPos, cursor, `@${token}${suffix}`)
+
+    textarea.focus()
+
+    if (result.type === "file" || result.type === "folder" || result.type === "opened-file")
+      setMentionedPaths((prev) => new Set([...prev, token]))
+    if (result.type === "session") setMentionedSessions((prev) => new Map(prev).set(token, result.session))
+    closeMention()
+    onSelect?.()
+  }
+
+  const selectSession = (
+    session: SessionSearchItem,
+    textarea: HTMLTextAreaElement,
+    setText: (text: string) => void,
+    onSelect?: () => void,
+  ) =>
+    selectMention(
+      { type: "session", value: sessionMentionToken(session, knownSessions), session },
+      textarea,
+      setText,
+      onSelect,
+    )
+
+  const selectModelReference = (providerID: string, modelID: string, onSelect?: () => void) => {
+    const state = modelPickerState
+    modelPickerState = null
+    setModelPicker(false)
+    if (!state) return
+    const textarea = state.textarea
+    if (!textarea.isConnected) return
+    const token = modelReferenceToken(providerID, modelID)
+    const after = textarea.value.substring(state.atEnd)
+    const suffix = /^\s/.test(after) ? "" : " "
+    // Add to knownModels BEFORE execCommand so syncMentionedPaths (triggered by
+    // the input event) can discover the new reference. Model tokens stay out of
+    // knownPaths so they are never turned into file attachments.
+    knownModels.add(token)
+    remember(textarea.value, state.atStart, token)
+    // Restore focus before execCommand: the picker's search field owns focus,
+    // which makes execCommand silently no-op.
+    textarea.focus()
+    suppress = true
+    try {
+      textarea.setSelectionRange(state.atStart, state.atEnd)
+      document.execCommand("insertText", false, `@${token}${suffix}`)
+    } finally {
+      suppress = false
+    }
+    setMentionedModels((prev) => new Set([...prev, token]))
+    onSelect?.()
+  }
+
+  // When true, onInput skips dropdown logic (used during execCommand changes)
+  let suppress = false
+
+  const insertToken = (
+    token: string,
+    textarea: HTMLTextAreaElement,
+    setText: (text: string) => void,
+    onSelect?: () => void,
+  ): boolean => {
+    const val = textarea.value
+    const start = textarea.selectionStart ?? val.length
+    const end = textarea.selectionEnd ?? start
+    const before = val.substring(0, start)
+    const after = val.substring(end)
+    const prefix = before.length > 0 && !/\s$/.test(before) ? " " : ""
+    // Always leave a trailing space so the user can keep typing after a drop.
+    const suffix = /^\s/.test(after) ? "" : " "
+    remember(val, start + prefix.length, token)
+    replaceRange(textarea, start, end, `${prefix}@${token}${suffix}`)
+    // The browser fires an input event for execCommand, but tests and some edge
+    // paths do not, so sync from the textarea to register the mention.
+    syncMentionedPaths(textarea.value)
+    setText(textarea.value)
+    closeMention()
+    onSelect?.()
+    // execCommand can silently no-op when the editor is not editable. Report the
+    // drop as unhandled when the text did not change so callers do not treat a
+    // failed insert as a consumed drag.
+    return textarea.value !== val
+  }
+
+  const insertDrop = (
+    drop: PromptMentionDrop,
+    textarea: HTMLTextAreaElement,
+    setText: (text: string) => void,
+    cwd: string,
+    onSelect?: () => void,
+  ): boolean => {
+    if (drop.kind === "session") {
+      const normalized = { ...drop.session, title: sessionMentionText(drop.session.title) }
+      const token = sessionMentionToken(normalized, knownSessions)
+      // Register before execCommand so the input sync finds the token.
+      knownSessions.set(token, normalized)
+      return insertToken(token, textarea, setText, onSelect)
+    }
+    const resolved = convertToMentionPath(drop.path, cwd)
+    if (cwd) workspaceDir = cwd
+    // Register before execCommand so the input sync finds the path.
+    knownPaths.add(resolved)
+    return insertToken(resolved, textarea, setText, onSelect)
+  }
+
+  const onInput = (val: string, cursor: number) => {
+    syncScope()
+    syncMentionedPaths(val)
+    if (suppress) return
+    pruneInserted()
+    closeSessionPicker()
+    setModelPicker(false)
+    const before = val.substring(0, cursor)
+    const match = before.match(AT_PATTERN)
+    if (!match) {
+      closeMention()
+      return
+    }
+    const query = match[1] ?? ""
+    at = (match.index ?? 0) + (/^\s/.test(match[0]) ? 1 : 0)
+    if (dead && dead.at === at && query.startsWith(dead.query)) {
+      closeMention()
+      return
+    }
+    // The query already covers a mention at this "@" plus more text, so the
+    // rest is prose being written after it, not a longer filename. Only what is
+    // already on offer can decide this synchronously; anything else waits for
+    // the search, so a new query is not closed by an earlier mention in the text.
+    if (settledByOffer(query, mentionResults(), atIndex(before, at))) {
+      dead = { at, query }
+      closeMention()
+      return
+    }
+    dead = undefined
+    touched = false
+    setMentionQuery(query)
+    const items = readCache(workspaceDir)
+    if (!query) {
+      const empty = results("", items)
+      setMentionResults(empty)
+      setMentionIndex(defaultMentionIndex(empty, ""))
+      requestFileSearch("")
+      return
+    }
+    // Only a typed query can match a chat title, so the list is fetched on the
+    // first character rather than on every bare "@".
+    loadSessions()
+    setMentionResults((prev) => {
+      const base = prev.length ? prev : results("", items)
+      return results(query, files(filterMentionResults(query, base)))
+    })
+    setMentionIndex(defaultMentionIndex(mentionResults(), query))
+    requestFileSearch(query)
+  }
+
+  const onKeyDown = (
+    e: KeyboardEvent,
+    textarea: HTMLTextAreaElement | undefined,
+    setText: (text: string) => void,
+    onSelect?: () => void,
+  ): boolean => {
+    if (!showMention()) return false
+    if (e.isComposing) return false
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      touched = true
+      setMentionIndex((i) => Math.min(i + 1, Math.max(mentionResults().length - 1, 0)))
+      return true
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault()
+      touched = true
+      setMentionIndex((i) => Math.max(i - 1, 0))
+      return true
+    }
+    if (e.key === "Enter" || e.key === "Tab") {
+      const result = mentionResults()[mentionIndex()]
+      if (!result) return false
+      // Browse files always stays on offer, so a spaced query that found
+      // nothing else leaves it highlighted with nothing behind it. Sending the
+      // message wins there, unless the query actually names the entry.
+      const query = mentionQuery() ?? ""
+      if (result.type === "file-picker" && /\s/.test(query) && !filePickerNamed(query)) return false
+      // A spaced query the highlighted result only loosely fits is prose the
+      // close has not caught up with, so Enter sends the message rather than
+      // trading the draft for a fuzzy hit. Choosing the result by hand still wins.
+      if (/\s/.test(query) && !touched && !mentionNamed(query, result)) return false
+      e.preventDefault()
+      if (textarea) selectMention(result, textarea, setText, onSelect)
+      return true
+    }
+    if (e.key === "Escape") {
+      e.preventDefault()
+      e.stopPropagation()
+      // Dismissing the query dismisses everything typed onward from it too, so
+      // the dropdown does not return on the very next keystroke.
+      dead = { at, query: mentionQuery() ?? "" }
+      closeMention()
+      return true
+    }
+
+    return false
+  }
+
+  const addPaths = (paths: string[], cwd: string) => {
+    if (cwd) workspaceDir = cwd
+    for (const p of paths) knownPaths.add(p)
+    setMentionedPaths((prev) => {
+      const next = new Set(prev)
+      for (const p of paths) next.add(p)
+      return next
+    })
+  }
+
+  // Mention tokens that count as atomic units for cursor movement, deletion
+  // and selection snapping: file paths, past-chat title tokens and model
+  // references.
+  const mentionTokens = () => new Set([...mentionedPaths(), ...mentionedSessions().keys(), ...mentionedModels()])
+
+  const parseFileAttachments = (text: string): FileAttachment[] => {
+    if (!text) return []
+    reclassifyModels()
+    const keys = modelKeys?.()
+    const paths = new Set([..._syncMentionedPaths(knownPaths, text)].filter((path) => !keys?.has(path)))
+    return [...buildFileAttachments(text, paths, workspaceDir), ...buildSessionAttachments(text, mentionedSessions())]
+  }
+
+  const handleBackspace = (
+    e: KeyboardEvent,
+    textarea: HTMLTextAreaElement | undefined,
+    _setText: (text: string) => void,
+    _adjust?: () => void,
+  ): boolean => {
+    if (e.key !== "Backspace" || e.isComposing || !textarea) return false
+
+    const val = textarea.value
+    const cursor = textarea.selectionStart ?? 0
+    if (textarea.selectionStart !== textarea.selectionEnd) return false
+
+    const charBefore = val[cursor - 1]
+    if (charBefore !== " " && charBefore !== "\n") return false
+    if (!isCursorAtMentionEnd(val, cursor - 1, mentionTokens())) return false
+
+    // Cursor is on the space right after a mention — remove the entire
+    // mention + trailing space in one step via execCommand so the change
+    // lands on the browser's native undo stack.
+    const range = getMentionRemovalRange(val, cursor - 1, mentionTokens())
+    if (!range) return false
+
+    e.preventDefault()
+    suppress = true
+    try {
+      textarea.setSelectionRange(range.start, range.end)
+      document.execCommand("insertText", false, "")
+    } finally {
+      suppress = false
+    }
+    return true
+  }
+
+  const resolvePendingArrowSnap = (textarea: HTMLTextAreaElement) => {
+    const pending = pendingArrowSnap
+    if (!pending) return
+
+    clearTimeout(pending.timer)
+    pendingArrowSnap = undefined
+
+    if (textarea.value !== pending.prevValue) return
+    const start = textarea.selectionStart ?? 0
+    const end = textarea.selectionEnd ?? 0
+    if (start !== end) return
+
+    if (start === pending.prevPosition) return
+
+    const range = findMentionRange(pending.prevValue, start, mentionTokens())
+    if (!range) return
+
+    const pos = start > pending.prevPosition ? range.end : range.start
+    if (pos === start) return
+
+    textarea.setSelectionRange(pos, pos)
+  }
+
+  const handleArrowKey = (e: KeyboardEvent, textarea: HTMLTextAreaElement | undefined): boolean => {
+    if (!textarea) return false
+    resolvePendingArrowSnap(textarea)
+
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return false
+    // Don't interfere with selection (Shift) or word/line navigation (Ctrl/Cmd/Alt)
+    if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return false
+    // Only when there's no active selection
+    if (textarea.selectionStart !== textarea.selectionEnd) return false
+
+    const prevPosition = textarea.selectionStart ?? 0
+    const prevValue = textarea.value
+
+    // Let the textarea perform its native bidi-aware caret move,
+    // then read the updated selection and snap only if it landed inside a mention.
+    const timer = setTimeout(() => {
+      resolvePendingArrowSnap(textarea)
+    }, 0)
+    pendingArrowSnap = { timer, prevValue, prevPosition }
+    return false
+  }
+
+  let snapping = false
+  let last: { start: number; end: number } | undefined
+  const snapSelection = (textarea: HTMLTextAreaElement): void => {
+    if (snapping) return
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const dir = textarea.selectionDirection
+    if (start === end) {
+      last = undefined
+      return // cursor, not a selection
+    }
+
+    const val = textarea.value
+    const paths = mentionTokens()
+    let snapped = start
+    let snappedEnd = end
+
+    const startRange = findMentionRange(val, start, paths)
+    if (startRange) {
+      const shrink = dir === "backward" && last?.start === startRange.start && last.end === end
+      snapped = shrink ? startRange.end : startRange.start
+    }
+
+    const endRange = findMentionRange(val, end, paths)
+    if (endRange) {
+      const shrink = dir === "forward" && last?.start === start && last.end === endRange.end
+      snappedEnd = shrink ? endRange.start : endRange.end
+    }
+
+    if (snapped !== start || snappedEnd !== end) {
+      snapping = true
+      textarea.setSelectionRange(snapped, snappedEnd, dir)
+      snapping = false
+    }
+    last = { start: snapped, end: snappedEnd }
+  }
+
+  const seedFromText = (text: string) => {
+    // The optional drive-letter prefix is scoped to a single letter directly after
+    // @ (e.g. "C:") so a colon elsewhere in the match (as in "@https://example.com")
+    // doesn't get mistaken for a Windows path.
+    const re = /@((?:[A-Za-z]:)?(?:[\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+))/g
+    let m: RegExpExecArray | null
+    while ((m = re.exec(text))) {
+      const token = m[1]!
+      // A known model reference is inline text, not a path, so it must not be
+      // seeded into knownPaths where it would become a file attachment.
+      if (modelKeys?.().has(token)) knownModels.add(token)
+      else knownPaths.add(token)
+    }
+    syncMentionedPaths(text)
+  }
+
+  const insertFilePickerResult = (path: string, requestId: string) => {
+    const state = pickerState
+    if (!state || state.requestId !== requestId) return
+    if (!path) {
+      pickerState = null
+      return
+    }
+    const norm = path.replaceAll("\\", "/")
+    pickerState = null
+    const textarea = state.textarea
+    if (!textarea.isConnected) return
+    const after = textarea.value.substring(state.atEnd)
+    const suffix = /^\s/.test(after) ? "" : " "
+    // Insert as a styled @mention so it renders like any other file reference and
+    // is clickable to preview (openFile is a plain editor action on the user's own
+    // disk, unrelated to the AI permission system). The actual security boundary
+    // lives in buildFileAttachments: paths outside the workspace are never turned
+    // into an auto-read FileAttachment, regardless of how they were mentioned, so
+    // a prior "deny" decision can't be bypassed by picking/attaching this way. If
+    // the model wants the file's contents it must call the Read tool, which
+    // enforces the normal external-directory permission checks.
+    // Restore focus before execCommand: after the native dialog closes the textarea
+    // is no longer the active element, so execCommand would otherwise silently no-op.
+    remember(textarea.value, state.atStart, norm)
+    textarea.focus()
+    suppress = true
+    try {
+      textarea.setSelectionRange(state.atStart, state.atEnd)
+      document.execCommand("insertText", false, `@${norm}${suffix}`)
+    } finally {
+      suppress = false
+    }
+    knownPaths.add(norm)
+    setMentionedPaths((prev) => new Set([...prev, norm]))
+    syncMentionedPaths(textarea.value)
+    state.setText(textarea.value)
+    state.onSelect?.()
+  }
+
+  // Seed known paths from a set of already-confirmed exact paths (e.g. the
+  // file attachments of a message being restored after a revert), then prune
+  // mentionedPaths against the current text. Unlike seedFromText, this does
+  // not re-derive candidate paths from the text via regex: that regex cannot
+  // distinguish a complete mention from a truncated prefix when the real
+  // path contains a space (e.g. it would discover only "dir/my" from
+  // "@dir/my report.txt", which then passes syncMentionedPaths' boundary
+  // check too, since a real space genuinely follows "my" in the full name).
+  const seedFromParts = (paths: string[], text: string) => {
+    for (const p of paths) knownPaths.add(p)
+    syncMentionedPaths(text)
+  }
+
+  const seedSessions = (sessions: SessionSearchItem[], text: string) => {
+    for (const session of sessions) {
+      const token = sessionMentionText(session.title)
+      if (token) knownSessions.set(token, { ...session, title: token })
+    }
+    syncMentionedPaths(text)
+  }
+
+  return {
+    mentionedPaths,
+    mentionedSessions,
+    mentionedModels,
+    sessionPicker,
+    sessionCandidates,
+    modelPicker,
+    mentionResults,
+    mentionIndex,
+    showMention,
+    onInput,
+    onKeyDown,
+    selectMention,
+    mentionQuery,
+    setMentionIndex: chooseIndex,
+    closeMention,
+    parseFileAttachments,
+    addPaths,
+    handleBackspace,
+    handleArrowKey,
+    snapSelection,
+    seedFromText,
+    insertFilePickerResult,
+    seedFromParts,
+    seedSessions,
+    selectSession,
+    selectModelReference,
+    insertDrop,
+  }
+}

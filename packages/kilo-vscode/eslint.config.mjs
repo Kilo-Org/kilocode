@@ -1,0 +1,111 @@
+import typescriptEslint from "typescript-eslint"
+import eslintConfigPrettier from "eslint-config-prettier"
+
+export default [
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+  },
+  {
+    plugins: {
+      "@typescript-eslint": typescriptEslint.plugin,
+    },
+
+    languageOptions: {
+      parser: typescriptEslint.parser,
+      ecmaVersion: 2022,
+      sourceType: "module",
+    },
+
+    rules: {
+      "@typescript-eslint/naming-convention": [
+        "warn",
+        {
+          selector: "import",
+          format: ["camelCase", "PascalCase"],
+        },
+      ],
+
+      curly: "warn",
+      // Nullish checks intentionally cover both null and undefined.
+      eqeqeq: ["warn", "always", { null: "ignore" }],
+      "no-throw-literal": "warn",
+      "max-lines": ["error", 3000],
+      complexity: ["error", 20],
+    },
+  },
+
+  // ── Complexity exceptions ─────────────────────────────────────────
+  // Existing complexity violations are capped at their current max.
+  // New code must stay ≤ 20. Do not raise complexity caps; refactor instead.
+  {
+    files: ["src/KiloProvider.ts"],
+    // This is the extension integration surface; do not gate feature work on line-count churn.
+    rules: { complexity: ["error", 150], "max-lines": "off" },
+  },
+  {
+    files: ["webview-ui/agent-manager/AgentManagerApp.tsx"],
+    // Lowered 3210 → 2800 after extracting the sidebar body (SidebarBody.tsx)
+    // and the tab bar (TabBar.tsx) into components. The keybinding defaults
+    // (keybind-defaults.ts) extraction offsets the terminal-ux additions; keep
+    // shrinking as more logic moves out; do not raise.
+    rules: { complexity: ["error", 74], "max-lines": ["error", 2800] },
+  },
+  {
+    files: ["src/agent-manager/AgentManagerProvider.ts"],
+    rules: { complexity: ["error", 64] },
+  },
+  {
+    files: ["webview-ui/src/components/chat/PromptInput.tsx"],
+    rules: { complexity: ["error", 48] },
+  },
+  {
+    files: ["src/legacy-migration/migration-service.ts"],
+    rules: { complexity: ["error", 45] },
+  },
+  {
+    files: ["webview-ui/src/components/migration/MigrationWizard.tsx"],
+    rules: { complexity: ["error", 37] },
+  },
+  {
+    files: ["webview-ui/src/context/session.tsx"],
+    // Raised from the default 3000 as this session context grew past the cap
+    // after upstream merges; kept as a targeted override rather than loosening
+    // the global limit. Pinned to the file's current size, so growth is a
+    // deliberate edit here; shrink it when logic moves out, do not raise it
+    // for convenience.
+    rules: { complexity: ["error", 31], "max-lines": ["error", 3109] },
+  },
+  {
+    files: ["src/services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider.ts"],
+    rules: { complexity: ["error", 30] },
+  },
+  {
+    files: ["src/agent-manager/WorktreeManager.ts", "webview-ui/src/components/chat/QuestionDock.tsx"],
+    rules: { complexity: ["error", 28] },
+  },
+  {
+    files: [
+      "src/kilo-provider-utils.ts",
+      "src/services/autocomplete/continuedev/core/autocomplete/postprocessing/index.ts",
+    ],
+    rules: { complexity: ["error", 27] },
+  },
+  {
+    files: ["src/agent-manager/WorktreeStateManager.ts"],
+    rules: { complexity: ["error", 24] },
+  },
+  {
+    files: ["webview-ui/src/utils/errorUtils.ts"],
+    rules: { complexity: ["error", 23] },
+  },
+  {
+    files: ["src/services/autocomplete/continuedev/core/autocomplete/filtering/BracketMatchingService.ts"],
+    rules: { complexity: ["error", 22] },
+  },
+  {
+    files: ["webview-ui/src/context/server.tsx"],
+    rules: { complexity: ["error", 21] },
+  },
+
+  eslintConfigPrettier,
+]
