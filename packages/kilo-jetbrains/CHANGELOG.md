@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.8.15
+
+### Patch Changes
+
+- [#15204](https://github.com/Kilo-Org/kilocode/pull/15204) [`b3c52ec`](https://github.com/Kilo-Org/kilocode/commit/b3c52ecf08539cd796436953056b8ada1977ca0d) - Fetch the latest base branch when creating JetBrains worktrees.
+
 ## 7.8.13
 
 ### Patch Changes
@@ -619,6 +625,24 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.1.12] - 2026-10-22
+
+### Added
+- Added project-scoped agent usage aggregation to the bundled CLI, backed by a pageable agent usage HTTP API.
+- Added custom auto routers with client models and local evals.
+- Added a session host registry and Kilo Cloud session adapter.
+- Agent Manager now fetches the base branch before creating new worktrees.
+
+### Fixed
+- Kept the prompt navigator in sync with the hovered stripe and stopped following the prompt after manual scrolling.
+- Preserved MCP prompt content so server-provided prompts render correctly.
+- Kept edit tools available to subagents of allowlist callers.
+- Mapped audio formats correctly in custom router decision input.
+- Ingested PR links without requiring remote control.
+
+### Changed
+- Bumped the bundled Kilo CLI pin to v7.8.15 (via v7.8.14).
 
 ## [7.1.11] - 2026-10-16
 
