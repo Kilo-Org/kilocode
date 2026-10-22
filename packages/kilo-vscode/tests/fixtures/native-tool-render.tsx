@@ -147,7 +147,8 @@ try {
   await settle()
   click(glob.root, '[data-slot="collapsible-trigger"]')
   await settle()
-  assert.match(glob.root.textContent ?? "", /match\.ts/)
+  const results = glob.root.querySelector('[data-component="tool-output"][data-variant="preview"]')
+  assert.match(results?.textContent ?? "", /match\.ts/)
 
   const shell = mount(part("bash", { command: "printf fixture" }, {}, "shell result"))
   await settle()

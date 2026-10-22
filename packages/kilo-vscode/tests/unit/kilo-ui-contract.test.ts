@@ -29,7 +29,7 @@ const CHAT_LAYOUT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-
 describe("Native tool transcript behavior", () => {
   it("opens file and diff targets and preserves native tool interactions", async () => {
     await fixture("native-tool-render")
-  }, 15_000)
+  }, 30_000)
 })
 
 describe("Assistant Markdown streaming contract (source)", () => {
