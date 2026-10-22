@@ -1,4 +1,5 @@
-import type { FileContent } from "@kilocode/sdk/v2"
+/** File content as the media preview reads it. */
+export type FileContent = { type: "text" | "binary"; content: string; encoding?: "base64"; mimeType?: string }
 
 export type MediaKind = "image" | "audio" | "svg"
 

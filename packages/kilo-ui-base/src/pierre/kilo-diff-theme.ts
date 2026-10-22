@@ -25,11 +25,12 @@ export const KILO_DIFF_THEME = "Kilo"
 
 const registrations = (() => {
   const key = Symbol.for("kilocode.ui.pierre.kilo-diff-theme")
-  const existing = Reflect.get(globalThis, key)
+  const store = globalThis as typeof globalThis & Record<symbol, unknown>
+  const existing = store[key]
   if (existing instanceof WeakSet) return existing as WeakSet<typeof registerCustomTheme>
 
   const value = new WeakSet<typeof registerCustomTheme>()
-  Reflect.set(globalThis, key, value)
+  store[key] = value
   return value
 })()
 
