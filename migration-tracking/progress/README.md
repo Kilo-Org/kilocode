@@ -8,35 +8,34 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**93 / 9829 cells done (0.9%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
+**96 / 9829 cells done (1%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 32 | 3547 | 0.9% |
+| module | 33 | 3547 | 0.9% |
 | api | 1 | 39 | 2.6% |
-| patch | 38 | 3445 | 1.1% |
-| test | 22 | 2798 | 0.8% |
+| patch | 39 | 3445 | 1.1% |
+| test | 23 | 2798 | 0.8% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
-Landed by rung, for patch cells closed by a done-proof: 20 plugin, 3 host, 0 seam, 0 patch.
+Landed by rung, for patch cells closed by a done-proof: 21 plugin, 3 host, 0 seam, 0 patch.
 
-Ratchets: 9 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config/discovery`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 27 shared patches by rung: 19 seam, 8 patch (`script/upstream/shared-patches.json`).
+Ratchets: 20 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config/discovery`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/rpc`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 41 shared patches by rung: 23 seam, 18 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
 ![Progress history](history.svg)
 
-One point per day from the committed `progress.json` on the first-parent history, plus the current state.
+One point per day from the committed `progress.json` on v2's first-parent history, plus the current state.
 
 | Date | Done | Total | % |
 |---|---:|---:|---:|
 | 2026-10-16 | 12 | 9854 | 0.1% |
 | 2026-10-19 | 87 | 9829 | 0.9% |
 | 2026-10-20 | 87 | 9829 | 0.9% |
-| 2026-10-21 | 90 | 9829 | 0.9% |
-| 2026-10-22 | 93 | 9829 | 0.9% |
-| now | 93 | 9829 | 0.9% |
+| 2026-10-21 | 89 | 9829 | 0.9% |
+| now | 96 | 9829 | 1% |
 
 ## Features
 
@@ -76,7 +75,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | fff | 0/1 |  | 0/4 | 0/1 | 0/6 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | filesystem-containment |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | fixture |  |  |  | 0/10 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| gateway | 30/35 |  | 12/18 | 17/22 | 59/75 | 78.7% | `█████████████░░░` | 11 plugin |
+| gateway | 31/35 |  | 13/18 | 18/22 | 62/75 | 82.7% | `█████████████░░░` | 12 plugin |
 | global | 0/2 |  | 1/4 | 0/1 | 1/7 | 14.3% | `██░░░░░░░░░░░░░░` | 1 host |
 | goals | 0/9 |  | 0/6 | 0/6 | 0/21 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | i18n | 0/20 |  |  |  | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -318,7 +317,7 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 - `module:packages/kilo-gateway/test/provider.test.ts`: It tested v1 buildRequestHeaders, where request headers replace the defaults. v2 merges the Kilo headers last on purpose, so that they replace the OpenCode referer and title of the upstream KiloPlugin; packages/core/test/kilocode/gateway.test.ts checks the result. (gateway-finish)
 - `module:packages/opencode/src/kilocode/agent/scout.txt`: Scout prompt. Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
 - `patch:agent:063e034b577a`: Scout prompt import. Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
-- `patch:gateway:0468bd6d3d9e`: v1 config schema fields prompt, isFree and ai_sdk_provider for models. v2 does not read them from config: the Gateway catalog sets the dialect and isFree (models metadata RPC), and v2 has no prompt enum (#15108 tracks family overrides). (gateway-finish)
+- `patch:gateway:0468bd6d3d9e`: v1 config schema fields prompt, isFree and ai_sdk_provider for models are not native v2 config fields. The Gateway catalog owns dialect, free status, and backend prompt directives; models.ts parses the prompt enum and kilo-plugin/src/gateway/prompt.ts applies it through session context hooks. Native v2 model package/settings/variant overlays remain configurable. This disposition does not claim that legacy config model.prompt is implemented. (gateway-model-parity)
 - `patch:gateway:d783ce7945b8`: Import for the v1 config schema fields prompt and ai_sdk_provider (see patch:gateway:0468bd6d3d9e). (gateway-finish)
 - `patch:unattributed:agent:09375914c157`: Rule for the `suggest` tool, which v2 does not have yet. The suggest unit (U-E2-16) adds the rule with the tool (#14999, differences table). (agents-plugin)
 - `patch:unattributed:agent:0faa6c731275`: Kilo `whenToUse` guidance in the LLM agent generation prompt (`kilo agent create`). v2 has no agent generation and no `generate.txt`. (agents-plugin)

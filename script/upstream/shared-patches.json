@@ -1,12 +1,20 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 27,
-    "markedLines": 237,
+    "files": 41,
+    "markedLines": 301,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
   "files": {
+    "packages/cli/src/commands/commands.ts": {
+      "rung": 3,
+      "seam": "Optional full-TUI --model/-m argument, passed to the existing TUI Args.model selector. The CLI command specification is closed and has no host extension for root parameters; no default changes when omitted. Two generic lines across the root specification and default handler replace a custom argument parser or a second host command mirror."
+    },
+    "packages/cli/src/commands/handlers/default.ts": {
+      "rung": 3,
+      "seam": "Pass the optional model flag into the existing TUI Args.model input. The root handler's private run() options cannot be supplied by the server host or a TUI plugin. Omitted input preserves the upstream behavior."
+    },
     ".github/actions/setup-bun/action.yml": {
       "rung": 3,
       "seam": "Windows CI setup: exclude the workspace, temp and Bun directories from Defender real-time scanning before the install. Carried over from v1 (`main`). The Windows Bun cache skip that Kilo also carried is upstream since v2.0.31 (anomalyco/opencode#55866). No seam: the composite action has no input to run a step before the install, and every job that installs dependencies uses it."
@@ -104,9 +112,21 @@
       "rung": 4,
       "seam": "Prompt for Personal Account vs Team (`chooseKiloAccount`) after a Kilo Gateway login completes, before closing or chaining the integration dialog. `TuiPlugin` has no post-integration-connect hook. Marketplace auth also needs a targeted native OAuth cancellation fix: cancel attempts returned after OAuthStarting unmounts, ignore late OAuthAuto polls, and guard OAuth completion UI after unmount during refresh. Plugin hooks and host composition cannot guard these private component-local async continuations; a seam or copied dialog would be larger than the guards."
     },
+    "packages/tui/src/context/local.tsx": {
+      "rung": 4,
+      "seam": "Full TUI default selection (Gateway): call the Kilo-owned default-model loader, then use SDK model.default after CLI/config and recent models, within the existing user/agent selection precedence. Keep the first catalog model when the server supplies no valid default. Without a higher-priority selection, catalog readiness waits for the default request so --prompt cannot submit the catalog's first model before the recommendation arrives. Rungs 1 and 2 cannot reach LocalProvider's private fallback memo or readiness flag; the TUI plugin API has no model-default resolver, and the host runs in the server process. A generic seam would add a resolver registration API for this single SDK read instead of these small call-outs. Loading, refresh and location isolation stay in tui/src/kilocode/default-model.ts."
+    },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 3,
       "seam": "Register the built-in `KiloTeams` TUI plugin (`/teams`, `/team`, `/org`, `/orgs`) and the `KiloMarketplace` TUI plugin (`/marketplace`, U-E2-23). Stays after U-E0-01: the TUI loads its built-in list in the TUI process, which `SdkPlugins` (a server store) does not reach. The config-driven path (`plugins` in the TUI config, loaded by `tui/src/plugin/context.tsx`) loads only npm packages or local files, which a compiled binary does not have. A generic seam needs an `@opencode/tui` export of the list (package.json) plus an extension point in this file, which is not fewer shared lines than these two."
+    },
+    "packages/tui/test/fixture/local.tsx": {
+      "rung": 3,
+      "seam": "Wait for model catalog readiness in the shared LocalProvider test fixture, now that its last fallback includes an asynchronous SDK default. Existing test assertions stay unchanged. The optional waitForDefault flag lets Kilo-owned tests hold that request pending to check startup and location races. Rungs 1 and 2 cannot extend the fixture's private initialization sequence."
+    },
+    "packages/tui/test/fixture/tui-client.ts": {
+      "rung": 3,
+      "seam": "Neutral SDK model.default response for the shared HTTP test fixture: no model data, so upstream selection assertions keep testing their original first-model fallback. The full TUI now reads this existing API to obtain the host's recommendation. No Kilo model or assertion change. Rungs 1 and 2 cannot extend the fixture's closed route dispatcher; without this route Bun.serve reports its unexpected-request throw before the client's fallback can handle the failed request."
     },
     "packages/util/src/global.ts": {
       "rung": 3,
@@ -120,6 +140,42 @@
     "packages/cli/src/services/updater.ts": {
       "rung": 4,
       "seam": "Kilo config names for the autoupdate policy (feature `config`): read the `update` or legacy `autoupdate` key from Kilo's global config names (`kilo2.json`, `kilo2.jsonc`, last defined policy wins) instead of `config.json`/`opencode.json(c)` or v1 `kilo.json(c)`. Internal releases have no v1 filename fallback (decision 12). Rung 4: one import and one marked line in an upstream CLI service; the CLI may not import Core (`test/import-boundaries.test.ts`), so it calls out to `util/src/kilocode/config/files.ts`. No hook or node for the updater policy."
+    },
+    "packages/core/src/session/usage.ts": {
+      "rung": 4,
+      "seam": "The static SessionUsage function has no plugin hook or replaceable service for provider-reported billing. Its optional provider ID invokes Kilo-owned session/usage.ts before unchanged token pricing; callers that omit it retain upstream behavior. A new generic billing framework would require a larger API than this call-out."
+    },
+    "packages/core/src/session/runner/publish-llm-event.ts": {
+      "rung": 4,
+      "seam": "The publisher discards raw usage after normalization and no public response-finish hook can amend the settlement. Pass the Kilo-owned cost and minimal response identity into the existing step record/native fields, without adding durable events or projections."
+    },
+    "packages/core/src/session/runner/step.ts": {
+      "rung": 4,
+      "seam": "Step settlement has no hook or replaceable service between the publisher record and Step.Ended/Failed. Prefer the optional provider charge from the existing finish record, including zero, before unchanged catalog pricing. Policy is in the Kilo-owned usage module."
+    },
+    "packages/core/src/session/title.ts": {
+      "rung": 4,
+      "seam": "Title usage calls the static SessionUsage.record function outside primary step settlement. Pass the already selected provider ID to the same Kilo-owned billing policy; no title-spend hook or service override exists."
+    },
+    "packages/core/src/session/compaction.ts": {
+      "rung": 4,
+      "seam": "Native and streamed compaction settle their usage through static SessionUsage.record outside the step runner. Pass the selected provider ID to the same Kilo-owned policy. A compaction transform replaces the operation, not these settlement calls, and would duplicate upstream compaction."
+    },
+    "packages/core/src/session/stats.ts": {
+      "rung": 4,
+      "seam": "Statistics construct their grouping SQL locally with no model-identity hook or service override. One Kilo-owned SQL expression reads the durable actual route for Kilo steps and keeps the requested model fallback and all non-Kilo grouping unchanged."
+    },
+    "packages/tui/src/routes/session/index.tsx": {
+      "rung": 4,
+      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering."
+    },
+    "packages/tui/src/routes/session/group-view.tsx": {
+      "rung": 4,
+      "seam": "Collapsed reasoning, exploration, and activity groups do not expose a plugin label slot. A Kilo-owned badge reads each group's assistant identities so hidden reasoning/tool steps do not lose their routes."
+    },
+    "packages/tui/src/util/session.ts": {
+      "rung": 4,
+      "seam": "The static context-usage resolver has no plugin hook. A Kilo-owned actual-model lookup supplies the served model's context limit when available, with the original requested model lookup as fallback."
     }
   }
 }

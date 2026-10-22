@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 93,
+    "done": 96,
     "total": 9829,
-    "percent": 0.9,
+    "percent": 1,
     "dropped": 25,
     "kinds": [
       {
         "kind": "module",
-        "done": 32,
+        "done": 33,
         "total": 3547
       },
       {
@@ -21,25 +21,25 @@
       },
       {
         "kind": "patch",
-        "done": 38,
+        "done": 39,
         "total": 3445
       },
       {
         "kind": "test",
-        "done": 22,
+        "done": 23,
         "total": 2798
       }
     ],
     "landed": {
-      "plugin": 20,
+      "plugin": 21,
       "host": 3,
       "seam": 0,
       "patch": 0
     },
-    "coreImports": 9,
+    "coreImports": 20,
     "sharedPatches": {
-      "seam": 19,
-      "patch": 8
+      "seam": 23,
+      "patch": 18
     }
   },
   "notCounted": {
@@ -56,8 +56,19 @@
     "@opencode/core/app",
     "@opencode/core/bus",
     "@opencode/core/config/discovery",
+    "@opencode/core/effect/app-node-platform",
+    "@opencode/core/model",
     "@opencode/core/permission",
     "@opencode/core/plugin/sdk",
+    "@opencode/core/plugin/system-prompt/anthropic.txt",
+    "@opencode/core/plugin/system-prompt/gpt-astra.txt",
+    "@opencode/core/plugin/system-prompt/gpt.txt",
+    "@opencode/core/plugin/system-prompt/kimi.txt",
+    "@opencode/core/plugin/system-prompt/trinity.txt",
+    "@opencode/core/rpc",
+    "@opencode/core/session/runner/model",
+    "@opencode/core/session/runner/prompt/system.txt",
+    "@opencode/core/session/system-prompt",
     "@opencode/core/shell",
     "@opencode/core/tool-output",
     "@opencode/core/util/wildcard",
@@ -865,12 +876,12 @@
     },
     {
       "feature": "gateway",
-      "done": 59,
+      "done": 62,
       "total": 75,
       "dropped": 12,
       "kinds": {
         "module": {
-          "done": 30,
+          "done": 31,
           "total": 35
         },
         "api": {
@@ -878,16 +889,16 @@
           "total": 0
         },
         "patch": {
-          "done": 12,
+          "done": 13,
           "total": 18
         },
         "test": {
-          "done": 17,
+          "done": 18,
           "total": 22
         }
       },
       "landed": {
-        "plugin": 11,
+        "plugin": 12,
         "host": 0,
         "seam": 0,
         "patch": 0
@@ -6089,6 +6100,7 @@
     "patch:gateway:73ba28ce78a5": "plugin",
     "patch:gateway:742c02b40457": "plugin",
     "patch:gateway:d29cb22ad5f6": "plugin",
+    "patch:gateway:e19fc2acea57": "plugin",
     "patch:gateway:e8673ed1650b": "plugin",
     "patch:gateway:f983d8f993c8": "plugin",
     "patch:global:0e189a57d108": "host",
@@ -6122,6 +6134,7 @@
     "module:packages/kilo-gateway/src/edit-prompt.ts",
     "module:packages/kilo-gateway/src/edit.ts",
     "module:packages/kilo-gateway/src/fim.ts",
+    "module:packages/kilo-gateway/src/gateway-metadata.ts",
     "module:packages/kilo-gateway/src/headers.ts",
     "module:packages/kilo-gateway/src/index.ts",
     "module:packages/kilo-gateway/src/mistral-fim-endpoint.ts",
@@ -6144,6 +6157,7 @@
     "module:packages/kilo-gateway/test/edit-prompt.test.ts",
     "module:packages/kilo-gateway/test/edit.test.ts",
     "module:packages/kilo-gateway/test/fim.test.ts",
+    "module:packages/kilo-gateway/test/gateway-metadata.test.ts",
     "module:packages/kilo-gateway/test/mistral-fim-endpoint.test.ts",
     "module:packages/kilo-gateway/test/responses.test.ts",
     "module:packages/opencode/src/kilocode/agent/index.ts",
@@ -6170,6 +6184,7 @@
     "patch:gateway:742c02b40457",
     "patch:gateway:a120a4aeb745",
     "patch:gateway:d29cb22ad5f6",
+    "patch:gateway:e19fc2acea57",
     "patch:gateway:e8673ed1650b",
     "patch:gateway:f983d8f993c8",
     "patch:global:0e189a57d108",
