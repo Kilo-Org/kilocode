@@ -1,4 +1,5 @@
 import { describe, expect } from "bun:test"
+import type { Hooks } from "@kilocode/plugin"
 import { Cause, Deferred, Effect, Fiber, Layer } from "effect"
 import { AgentV2 } from "@opencode-ai/core/agent"
 import { Database } from "@opencode-ai/core/database/database"
@@ -6,6 +7,7 @@ import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { EventV2 } from "@opencode-ai/core/event"
 import { Location } from "@opencode-ai/core/location"
+import { PluginV2 } from "@opencode-ai/core/plugin"
 import { PermissionV2 } from "@opencode-ai/core/permission"
 import { PermissionTable } from "@opencode-ai/core/permission/sql"
 import { PermissionSaved } from "@opencode-ai/core/permission/saved"
@@ -102,7 +104,122 @@ function waitForRequest() {
   })
 }
 
+type PermissionHookCall =
+  | {
+      name: "permission.evaluate.before"
+      input: Parameters<Required<Hooks>["permission.evaluate.before"]>[0]
+      output: Parameters<Required<Hooks>["permission.evaluate.before"]>[1]
+    }
+  | {
+      name: "permission.evaluate.after"
+      input: Parameters<Required<Hooks>["permission.evaluate.after"]>[0]
+      output: Parameters<Required<Hooks>["permission.evaluate.after"]>[1]
+    }
+
 describe("PermissionV2", () => {
+  it.effect("invokes evaluate hooks with metadata and allows post-hook overrides", () =>
+    Effect.gen(function* () {
+      const calls: PermissionHookCall[] = []
+      const service = yield* PermissionV2.Service
+      const trigger: PluginV2.Interface["trigger"] = (name, input, output) => {
+        calls.push({ name, input, output } as PermissionHookCall)
+        if (name === "permission.evaluate.after") {
+          const after = output as Parameters<Required<Hooks>["permission.evaluate.after"]>[1]
+          after.effect = "deny"
+        }
+        return Effect.succeed(output)
+      }
+      const plugin = PluginV2.Service.of({
+        add: () => Effect.void,
+        remove: () => Effect.void,
+        wait: () => Effect.void,
+        trigger,
+      })
+      yield* setup([{ action: "read", resource: "*", effect: "allow" }])
+      const result = yield* service.ask(assertion()).pipe(Effect.provideService(PluginV2.Service, plugin))
+      expect(result).toEqual({ id: PermissionV2.ID.create("per_test"), effect: "deny" })
+      expect(calls[0]).toMatchObject({
+        name: "permission.evaluate.before",
+        input: {
+          phase: "execute",
+          sessionID: SessionV2.ID.make("ses_test"),
+          action: "read",
+          resources: ["src/index.ts"],
+        },
+      })
+      const before = calls[0] as Extract<PermissionHookCall, { name: "permission.evaluate.before" }>
+      expect(before.output.metadata).toEqual({})
+      expect(calls[1]).toMatchObject({
+        name: "permission.evaluate.after",
+        input: {
+          phase: "execute",
+          sessionID: SessionV2.ID.make("ses_test"),
+          action: "read",
+          resources: ["src/index.ts"],
+          decision: "allow",
+        },
+      })
+      expect(calls[1].output.effect).toBe("deny")
+    }),
+  )
+
+  it.effect("supports early short-circuit from the before hook and still runs the after hook", () =>
+    Effect.gen(function* () {
+      const calls: PermissionHookCall[] = []
+      const service = yield* PermissionV2.Service
+      const trigger: PluginV2.Interface["trigger"] = (name, input, output) => {
+        calls.push({ name, input, output } as PermissionHookCall)
+        if (name === "permission.evaluate.before") {
+          const before = output as Parameters<Required<Hooks>["permission.evaluate.before"]>[1]
+          before.effect = "deny"
+        }
+        if (name === "permission.evaluate.after") {
+          const after = output as Parameters<Required<Hooks>["permission.evaluate.after"]>[1]
+          after.effect = "allow"
+        }
+        return Effect.succeed(output)
+      }
+      const plugin = PluginV2.Service.of({
+        add: () => Effect.void,
+        remove: () => Effect.void,
+        wait: () => Effect.void,
+        trigger,
+      })
+      yield* setup([{ action: "read", resource: "*", effect: "allow" }])
+      const result = yield* service.ask(assertion()).pipe(Effect.provideService(PluginV2.Service, plugin))
+      expect(result).toEqual({ id: PermissionV2.ID.create("per_test"), effect: "allow" })
+      expect(calls[0]).toMatchObject({
+        name: "permission.evaluate.before",
+        input: { phase: "execute", action: "read" },
+      })
+      expect(calls[0].output.effect).toBe("deny")
+      expect(calls[1]).toMatchObject({
+        name: "permission.evaluate.after",
+        input: { phase: "execute", action: "read", decision: "deny" },
+      })
+      expect(calls[1].output.effect).toBe("allow")
+    }),
+  )
+
+  it.effect("keeps base evaluation when a permission hook throws", () =>
+    Effect.gen(function* () {
+      const service = yield* PermissionV2.Service
+      const plugin = PluginV2.Service.of({
+        add: () => Effect.void,
+        remove: () => Effect.void,
+        wait: () => Effect.void,
+        trigger: (name, input, output) => {
+          if (name === "permission.evaluate.before")
+            return Effect.fail(new Error("hook blew up")).pipe(Effect.catch(() => Effect.succeed(output)))
+          return Effect.succeed(output)
+        },
+      })
+      yield* setup([{ action: "read", resource: "*", effect: "allow" }])
+      const result = yield* service.ask(assertion()).pipe(Effect.provideService(PluginV2.Service, plugin))
+      expect(result).toEqual({ id: PermissionV2.ID.create("per_test"), effect: "allow" })
+    }),
+  )
+
   it.effect("returns the evaluated effect and only queues prompts", () =>
     Effect.gen(function* () {
       yield* setup([{ action: "read", resource: "*", effect: "allow" }])
