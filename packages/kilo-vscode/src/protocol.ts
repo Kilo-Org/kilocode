@@ -11,11 +11,23 @@ export type Request = {
   body?: string
 }
 
-export type ToHost = Request | { type: "abort"; id: number } | { type: "open"; url: string }
+export type ToHost = Request | { type: "abort"; id: number } | { type: "open"; url: string } | Ui
+
+/** Messages of the copied v1 UI that the host still handles. */
+export type Ui =
+  | { type: "copyToClipboard"; id: string; text: string }
+  | { type: "requestModelSelectorExpanded" }
+  | { type: "persistModelSelectorExpanded"; value: boolean }
+  | { type: "webviewFocusChanged"; focused: boolean }
+  | { type: "setLanguage"; locale: string }
+  | { type: "saveImage"; dataUrl: string; filename: string }
 
 export type ToWebview =
   | { type: "response"; id: number; status: number; statusText: string; headers: [string, string][] }
   | { type: "chunk"; id: number; data: Uint8Array }
   | { type: "end"; id: number }
   | { type: "error"; id: number; message: string }
-  | { type: "command"; name: "newSession" }
+  | { type: "command"; name: "newSession" | "history" }
+  | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }
+  | { type: "modelSelectorExpandedLoaded"; value: boolean }
+  | { type: "webviewActiveChanged"; active: boolean }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { formAnswer } from "../webview/form"
+import { formAnswer } from "../webview-ui/src/v2/form"
 
 describe("formAnswer", () => {
   test("builds typed answers and combines custom selections", () => {

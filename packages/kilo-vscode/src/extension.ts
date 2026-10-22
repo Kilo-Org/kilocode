@@ -24,6 +24,10 @@ export function activate(context: ExtensionContext) {
       await commands.executeCommand("kilo-code.v2.chat.focus")
       await view.post({ type: "command", name: "newSession" })
     }),
+    commands.registerCommand("kilo-code.v2.history", async () => {
+      await commands.executeCommand("kilo-code.v2.chat.focus")
+      await view.post({ type: "command", name: "history" })
+    }),
     // The webview reconnects on its own: its event stream fails, and the next request starts a new server.
     commands.registerCommand("kilo-code.v2.restartServer", () => server.stop()),
     { dispose: () => void server.stop() },

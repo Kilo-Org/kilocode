@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { bridge } from "../src/relay"
 import type { ToHost, ToWebview } from "../src/protocol"
-import { transport } from "../webview/transport"
+import { transport } from "../webview-ui/src/v2/transport"
 
 // Connects the webview transport to the host bridge in one process, with `server` as the upstream fetch.
 function pair(server: (request: Request) => Response | Promise<Response>) {

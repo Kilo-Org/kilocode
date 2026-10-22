@@ -1,9 +1,9 @@
-// The chat webview view. The webview talks to the server only through the fetch bridge, so it never sees the password.
+// The chat webview view. The webview talks to the server only through the relay, so it never sees the password.
 import { randomBytes } from "node:crypto"
-import { env, Uri, type ExtensionContext, type WebviewView, type WebviewViewProvider } from "vscode"
-import { bridge } from "./relay"
+import { env, Uri, workspace, type ExtensionContext, type WebviewView, type WebviewViewProvider } from "vscode"
 import { local } from "./local"
 import type { ToHost, ToWebview } from "./protocol"
+import { bridge } from "./relay"
 import type { Manager } from "./server"
 
 export function chat(input: { context: ExtensionContext; server: Manager; directory: string }) {
@@ -11,25 +11,46 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
   const provider: WebviewViewProvider = {
     resolveWebviewView(view) {
       state.view = view
-      const dist = Uri.joinPath(input.context.extensionUri, "dist")
-      view.webview.options = { enableScripts: true, localResourceRoots: [dist] }
+      const root = input.context.extensionUri
+      const dist = Uri.joinPath(root, "dist")
+      view.webview.options = { enableScripts: true, localResourceRoots: [dist, Uri.joinPath(root, "assets")] }
       const link = bridge({
         target: () => input.server.get(),
         post: (message) => void view.webview.postMessage(message),
         open: (url) => void env.openExternal(Uri.parse(url)),
         fetch: local,
       })
-      const subscription = view.webview.onDidReceiveMessage((message: ToHost) => link.receive(message))
+      const post = (message: ToWebview) => void view.webview.postMessage(message)
+      const subscription = view.webview.onDidReceiveMessage((message: ToHost) => {
+        if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
+        if (message.type === "copyToClipboard")
+          return void env.clipboard.writeText(message.text).then(
+            () => post({ type: "clipboardWriteResult", id: message.id, ok: true }),
+            (error: unknown) => post({ type: "clipboardWriteResult", id: message.id, ok: false, error: String(error) }),
+          )
+        if (message.type === "requestModelSelectorExpanded")
+          return post({ type: "modelSelectorExpandedLoaded", value: input.context.globalState.get(EXPANDED, true) })
+        if (message.type === "persistModelSelectorExpanded")
+          return void input.context.globalState.update(EXPANDED, message.value)
+      })
+      const visibility = view.onDidChangeVisibility(() => post({ type: "webviewActiveChanged", active: view.visible }))
       view.onDidDispose(() => {
         link.dispose()
         subscription.dispose()
+        visibility.dispose()
         if (state.view === view) state.view = undefined
       })
+      const uri = (...parts: string[]) => view.webview.asWebviewUri(Uri.joinPath(root, ...parts)).toString()
       view.webview.html = html({
         csp: view.webview.cspSource,
-        script: view.webview.asWebviewUri(Uri.joinPath(dist, "webview.js")).toString(),
-        style: view.webview.asWebviewUri(Uri.joinPath(dist, "webview.css")).toString(),
+        script: uri("dist", "webview.js"),
+        style: uri("dist", "webview.css"),
+        icons: uri("assets", "icons"),
+        worker: uri("dist", "shiki-worker.js"),
+        markdown: uri("dist", "markdown-shiki-worker.js"),
         directory: input.directory,
+        size: size(),
+        language: env.language,
       })
     },
   }
@@ -41,27 +62,71 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
   }
 }
 
-export function html(input: { csp: string; script: string; style: string; directory: string }) {
-  const nonce = randomBytes(16).toString("base64")
+const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
+const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+
+function size() {
+  const raw = workspace.getConfiguration("editor").get<number>("fontSize", 13)
+  return Number.isFinite(raw) ? Math.min(24, Math.max(10, Math.round(raw))) : 13
+}
+
+export function html(input: {
+  csp: string
+  script: string
+  style: string
+  icons: string
+  worker: string
+  markdown: string
+  directory: string
+  size: number
+  language: string
+}) {
+  const nonce = randomBytes(16).toString("hex")
   const policy = [
     "default-src 'none'",
-    `style-src ${input.csp} 'unsafe-inline'`,
-    `script-src 'nonce-${nonce}'`,
-    `img-src ${input.csp} data:`,
+    `style-src 'unsafe-inline' ${input.csp}`,
+    `script-src 'nonce-${nonce}' 'wasm-unsafe-eval'`,
+    `worker-src ${input.csp}`,
     `font-src ${input.csp}`,
+    `connect-src ${input.csp}`,
+    `img-src ${input.csp} data: https:`,
   ].join("; ")
+  const vars = SIZES.map((size) => `--kilo-font-size-${size}: ${(input.size * size) / 13}px;`).join(" ")
+  const globals = {
+    ICONS_BASE_URI: input.icons,
+    KILO_SHIKI_WORKER_URI: input.worker,
+    KILO_MARKDOWN_SHIKI_WORKER_URI: input.markdown,
+    KILO_TOP_BAR: false,
+    KILO_TOP_BAR_SURFACE: "sidebar_title",
+    KILO_AGENT_MANAGER_SETTINGS: false,
+    KILO_BROWSER_AUTOMATION: false,
+    KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
+    KILO_SETTINGS: {},
+  }
+  const script = Object.entries(globals)
+    .map(([key, value]) => `window.${key} = ${JSON.stringify(value).replace(/</g, "\\u003c")};`)
+    .join(" ")
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${escape(input.language)}" data-theme="kilo-vscode">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="${policy}">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="${policy}">
 <link rel="stylesheet" href="${input.style}">
-<title>Kilo</title>
+<title>Kilo Code</title>
+<style>
+  :root { ${vars} --kilo-font-scale: ${input.size / 13}; --font-size-x-small: var(--kilo-font-size-10); --font-size-small: var(--kilo-font-size-11); --font-size-base: var(--kilo-font-size-13); --font-size-large: var(--kilo-font-size-16); }
+  html { scrollbar-color: auto; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+  body { background-color: var(--vscode-sideBar-background, var(--vscode-editor-background)); color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
+  #root { height: 100%; }
+  .container { height: 100vh; }
+</style>
 </head>
 <body>
 <div id="root" data-directory="${escape(input.directory)}"></div>
-<script type="module" nonce="${nonce}" src="${input.script}"></script>
+<script nonce="${nonce}">${script}</script>
+<script nonce="${nonce}" src="${input.script}"></script>
 </body>
 </html>`
 }

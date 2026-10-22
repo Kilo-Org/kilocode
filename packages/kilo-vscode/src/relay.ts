@@ -49,7 +49,7 @@ export function bridge(input: {
     receive(message: ToHost) {
       if (message.type === "fetch") return void send(message)
       if (message.type === "abort") return requests.get(message.id)?.abort()
-      input.open?.(message.url)
+      if (message.type === "open") input.open?.(message.url)
     },
     dispose() {
       requests.forEach((abort) => abort.abort())
