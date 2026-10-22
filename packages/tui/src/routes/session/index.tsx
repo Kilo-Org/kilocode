@@ -130,6 +130,7 @@ import { SessionGroupView } from "./group-view"
 import { useEntryAnchor } from "./anchor-view"
 import { containsAnchor, createTimelineAnchors, groupID } from "./anchors"
 import { rowsAfter, rowsBefore, rowWeight } from "./mount-budget"
+import { RoutedModelBadge, RoutedStep, routedModelLabel } from "../../kilocode/routed-model" // kilocode_change(gateway)
 export { InlineToolRow } from "./message-parts"
 export { toolDisplay } from "./message-parts"
 
@@ -1616,6 +1617,7 @@ function TurnTokenUsage(props: {
   previousCache?: CacheUsage
   message: (messageID: string) => SessionMessageInfo | undefined
 }) {
+  const ctx = use() // kilocode_change(gateway)
   const config = useConfig()
   const theme = useTheme()
   const renderer = useRenderer()
@@ -1648,6 +1650,7 @@ function TurnTokenUsage(props: {
           cached: message.tokens.cache.read,
           total,
           reuseDrop,
+          route: routedModelLabel(message, ctx.models()), // kilocode_change(gateway)
         },
       ]
     })
@@ -1720,6 +1723,7 @@ function TurnTokenUsage(props: {
                   {item.cached.toLocaleString().padStart(columns().cached)}
                   {"  "}
                   {item.total.toLocaleString().padStart(columns().total)}
+                  <Show when={item.route}>{(route) => <span>{` · ${route()}`}</span>}</Show>{/* kilocode_change(gateway) */}
                 </text>
                 <TurnTokenToolCalls tools={item.tools} />
                 <Show when={item.reuseDrop !== undefined}>
@@ -1854,13 +1858,14 @@ function SessionPartView(props: {
   message: (messageID: string) => SessionMessageInfo | undefined
   images?: boolean
 }) {
+  const ctx = use() // kilocode_change(gateway)
   const message = createMemo(() => props.message(props.partRef.messageID))
   const part = createMemo(() => {
     const item = message()
     if (item?.type !== "assistant") return
     return resolvePart(item, props.partRef.partID)
   })
-  return (
+  const content = ( // kilocode_change(gateway)
     <Show when={part()}>
       {(item) => (
         <Switch>
@@ -1885,6 +1890,9 @@ function SessionPartView(props: {
       )}
     </Show>
   )
+  // kilocode_change start - gateway: show the route of intermediate assistant steps
+  return <RoutedStep message={message()} part={part()} models={ctx.models()}>{content}</RoutedStep>
+  // kilocode_change end
 }
 
 function AssistantFooter(props: { message: SessionMessageAssistant }) {
@@ -1923,6 +1931,7 @@ function AssistantFooter(props: { message: SessionMessageAssistant }) {
           </span>
           <Show when={ctx.terminal.width >= 28}>
             <span style={{ fg: theme.text.muted }}> · {model()}</span>
+            <RoutedModelBadge message={props.message} models={ctx.models()} />{/* kilocode_change(gateway) */}
           </Show>
           <Show when={duration() && (ctx.terminal.width < 28 || ctx.terminal.width >= 36)}>
             <span style={{ fg: theme.text.muted }}> · {Locale.duration(duration())}</span>

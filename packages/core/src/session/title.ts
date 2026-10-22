@@ -76,7 +76,7 @@ export const layer = Layer.effect(
           if (LLMEvent.is.providerError(event)) failed = true
           if (LLMEvent.is.textDelta(event)) chunks.push(event.text)
           if (LLMEvent.is.stepFinish(event)) {
-            const step = SessionUsage.record(event.usage, input.model.cost)
+            const step = SessionUsage.record(event.usage, input.model.cost, input.model.ref.providerID) // kilocode_change(gateway)
             usage = usage ? SessionUsage.add(usage, step) : step
           }
           return Effect.void

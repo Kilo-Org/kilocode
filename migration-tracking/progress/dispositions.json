@@ -4,6 +4,16 @@
     "note": "packages/core/test/kilocode/config/policy.test.ts checks the exact top-level boolean setting, true, false, omission, and rejection of string values against KiloConfigPolicy.Info. Gateway request enforcement and managed precedence are covered by packages/kilo-plugin/test/organization-modes.test.ts and packages/core/test/kilocode/config/discovery.test.ts.",
     "by": "gateway-enterprise-parity"
   },
+  "module:packages/kilo-gateway/src/gateway-metadata.ts": {
+    "state": "ported",
+    "note": "Current main 9e4e3a43c802bd2172cd23dbf2dbaeb6e109905e live native Gateway middleware is implemented by packages/kilo-gateway-core/src/stream.ts extractMetadata/transformResponse: successful routing attempts/canonical slugs, native Messages/Responses usage, market-cost metadata and request/response identity cross the existing Usage.providerMetadata path. packages/core/src/kilocode/session/usage.ts settles reported cost and retains only irreducible native.kilo identity on each existing assistant step. No raw envelope, second log, or selected-model replacement. TUI consumes durable identities instead of the latest-only metadata RPC.",
+    "by": "gateway-usage-parity"
+  },
+  "module:packages/kilo-gateway/test/gateway-metadata.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-gateway-core/test/usage-metadata.test.ts covers successful canonical routing, native nested Messages/Responses usage, cost strings/zero and chunk boundaries. packages/kilo-cli/test/gateway-usage.test.ts carries the real-host assertions through provider parsing, cost settlement, reasoning/tool steps, title/compaction costs, actual-model stats and SQLite reopen; core/test/kilocode/gateway-usage.test.ts covers precedence and malformed-cost fallback. Current main comparison 9e4e3a43c802bd2172cd23dbf2dbaeb6e109905e.",
+    "by": "gateway-usage-parity"
+  },
   "module:packages/kilo-gateway/src/api/constants.ts": {
     "state": "ported",
     "note": "The constants moved next to their use in packages/kilo-gateway-core/src: server.ts (API URL), headers.ts (header and env names, User-Agent), defaults.ts (default models), device.ts (poll interval, token lifetime), account.ts (anonymous key), models.ts (timeout, AI SDK providers). The event service URL goes with event-service/client.ts. PROMPTS is tracked by #15108. The signed-in fallback model in defaults.ts is kilo-auto/frontier, not kilo-auto/free as on v1.",
