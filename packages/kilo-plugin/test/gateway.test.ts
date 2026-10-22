@@ -4,8 +4,10 @@ import { EmbeddingCatalog } from "@kilocode/gateway-core/embedding-catalog"
 import { fixture } from "@kilocode/gateway-core/testing"
 import { isRetryable } from "@opencode/ai"
 import { httpFailure } from "@opencode/ai/route/executor"
-import { Effect, Schema } from "effect"
+import { Deferred, Effect, Fiber, Schema } from "effect"
+import { TestClock } from "effect/testing"
 import { Bus } from "@opencode/core/bus"
+import { Config } from "@opencode/core/config"
 import { Credential } from "@opencode/core/credential"
 import { Integration } from "@opencode/core/integration"
 import { Model } from "@opencode/core/model"
@@ -354,6 +356,73 @@ describe("KiloGatewayPlugin", () => {
               hasUserByokAvailable: true,
               mayTrainOnYourPrompts: false,
             })
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
+  it.effect("a stale policy lookup cannot cancel the latest catalog retry", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "fixture-token", KILO_ORG_ID: "selected" }, () =>
+          Effect.gen(function* () {
+            const config = yield* Config.Service
+            const entered = yield* Deferred.make<void>()
+            const release = yield* Deferred.make<void>()
+            let stall = false
+            const providers = yield* Provider.Service
+            yield* providers.transform((editor) => {
+              editor.update(kilo, (provider) => {
+                provider.integrationID = integrationID
+              })
+            })
+            const plugins = yield* Plugin.Service
+            const host = yield* PluginHost.make(plugins)
+            yield* KiloPlugin.effect(host)
+            yield* KiloGatewayPlugin.effect(host).pipe(
+              Effect.provideService(Config.Service, {
+                ...config,
+                entries: () =>
+                  Effect.gen(function* () {
+                    const entries = yield* config.entries()
+                    if (!stall) return entries
+                    stall = false
+                    yield* Deferred.succeed(entered, undefined)
+                    yield* Deferred.await(release)
+                    return entries
+                  }),
+              }),
+              Effect.provide(Global.layerWith({})),
+            )
+            const gateway = host.rpc(KiloGatewayRpc.Definition)
+            expect((yield* gateway.models({})).map((model) => model.id)).toEqual([
+              "anthropic/claude-sonnet-4.6",
+              "kilo-auto/small",
+            ])
+
+            // Reload A waits before the catalog lock while reload B fails and schedules its own retry.
+            stall = true
+            const stale = yield* gateway["organization.set"]({ organizationID: "selected" }).pipe(
+              Effect.forkChild({ startImmediately: true }),
+            )
+            yield* Deferred.await(entered)
+            backend.state.teamModelsStatus = 503
+            yield* gateway["organization.set"]({ organizationID: "selected" })
+            expect(yield* gateway.models({}).pipe(Effect.flip)).toMatchObject({ type: "failed" })
+
+            backend.state.teamModelsStatus = 200
+            yield* Deferred.succeed(release, undefined)
+            yield* Fiber.join(stale)
+            const requests = backend.requests.filter((request) => request.path.endsWith("/models")).length
+            yield* TestClock.adjust("30 seconds")
+            const recovered = yield* eventually(
+              gateway.models({}).pipe(Effect.orElseSucceed(() => [])),
+              (models) => models.length > 0,
+            )
+            expect(recovered.map((model) => model.id)).toEqual(["anthropic/claude-sonnet-4.6", "kilo-auto/small"])
+            expect(backend.requests.filter((request) => request.path.endsWith("/models"))).toHaveLength(requests + 1)
           }),
         ),
       (backend) => Effect.sync(() => backend[Symbol.dispose]()),

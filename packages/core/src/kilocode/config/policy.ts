@@ -12,17 +12,15 @@ export class Info extends Config.Info.extend<Info>("KiloConfigPolicy.Info")({
 }) {}
 
 const decode = Schema.decodeUnknownOption(Info, { errors: "all", onExcessProperty: "ignore" })
-const policy = Schema.Struct({ hide_prompt_training_models: Schema.optional(Schema.Unknown) })
+const policy = Schema.Struct({ hide_prompt_training_models: Schema.optional(Schema.Boolean) })
 
 /** Decode Kilo settings alongside the canonical fields produced by upstream normalization. */
 export function parse(input: unknown, normalized: Readonly<Record<string, unknown>>) {
-  const raw = Schema.decodeUnknownOption(policy)(input)
-  if (Option.isNone(raw)) return
+  // A malformed Kilo-only field must not discard canonical managed permission policies.
+  const raw = Option.getOrElse(Schema.decodeUnknownOption(policy)(input), () => ({}))
   // Managed policy splitting clears optional fields with undefined; the encoded schema requires omitted keys.
   return Option.getOrUndefined(
-    decode(
-      Object.fromEntries(Object.entries({ ...normalized, ...raw.value }).filter(([, value]) => value !== undefined)),
-    ),
+    decode(Object.fromEntries(Object.entries({ ...normalized, ...raw }).filter(([, value]) => value !== undefined))),
   )
 }
 

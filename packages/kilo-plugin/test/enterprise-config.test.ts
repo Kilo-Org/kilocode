@@ -142,6 +142,10 @@ it.live("provides the selected organization agent identity from the first reques
       const current = yield* request(code)
       expect(current.system.map((part) => part.text).join("\n")).toContain('Your active agent is "Code" (ID: "code").')
       expect(current.system.map((part) => part.text).join("\n")).not.toContain("Code-Reviewer")
+      yield* agents.transform((editor) => editor.remove(reviewer))
+      expect((yield* request(reviewer)).system.map((part) => part.text).join("\n")).toContain(
+        'Your active agent is "code-reviewer" (ID: "code-reviewer").',
+      )
     }),
   ),
 )

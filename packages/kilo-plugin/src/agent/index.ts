@@ -227,15 +227,18 @@ export const Plugin = define({
 
     yield* ctx.session.hook("context", (event) =>
       Effect.gen(function* () {
-        const current = (yield* ctx.agent.get({ agentID: event.agent })).data
+        const name = yield* ctx.agent.get({ agentID: event.agent }).pipe(
+          Effect.map((current) => current.data.name),
+          Effect.orElseSucceed(() => event.agent),
+        )
         event.system.push({
           type: "text",
           text:
-            `Your active agent is ${JSON.stringify(current.name)} (ID: ${JSON.stringify(current.id)}). ` +
+            `Your active agent is ${JSON.stringify(name)} (ID: ${JSON.stringify(event.agent)}). ` +
             "This is your selected agent/mode identity, not the Code Mode tool-calling mechanism. " +
             "Answer agent/mode identity questions from this context without using tools or inspecting session or credential storage.",
         })
-      }).pipe(Effect.orDie),
+      }),
     )
 
     // Earlier turns show what the previous agent could do. Tell the model once per switch which

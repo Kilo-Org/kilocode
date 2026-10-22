@@ -384,7 +384,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       const resolved = yield* resolveCurrentAccount
       if (targetEpoch !== epoch) return
       yield* resetOrganizationModes(resolved)
-      policy = yield* KiloConfigPolicy.get(config)
+      const nextPolicy = yield* KiloConfigPolicy.get(config)
+      if (targetEpoch !== epoch) return
+      policy = nextPolicy
       yield* cancelRetry
       yield* lock.withPermit(
         loadCatalog(targetEpoch, 0).pipe(

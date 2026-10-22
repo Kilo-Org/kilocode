@@ -23,7 +23,7 @@ export function convertPermissions(groups: KiloModes.OrganizationMode["config"][
   for (const group of groups) {
     const [name, config] = typeof group === "string" ? [group, undefined] : group
     const action = name === "browser" || name === "command" || name === "bash" ? "shell" : name
-    // fileRegex is a wildcard pattern in v1 too. Last-match-wins requires the fallback first.
+    // Preserve v1's wildcard allow followed by catch-all deny, which also denies matching files (last match wins).
     permissions.set(
       action,
       config?.fileRegex

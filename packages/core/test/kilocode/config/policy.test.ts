@@ -12,8 +12,21 @@ test("the exact top-level hide_prompt_training_models setting accepts only boole
   expect(Option.isSome(decode({ hide_prompt_training_models: false }))).toBe(true)
   expect(Option.isSome(decode({}))).toBe(true)
   expect(Option.isNone(decode({ hide_prompt_training_models: "true" }))).toBe(true)
-  expect(KiloConfigPolicy.parse({ hide_prompt_training_models: "true" }, { shell: "valid" })).toBeUndefined()
   expect(ConfigNormalize.normalize({ hide_prompt_training_models: true }).diagnostics).toEqual([])
+})
+
+test.each(["true", null, 0])("invalid Kilo flag %p preserves canonical settings and managed policies", (value) => {
+  const input = {
+    hide_prompt_training_models: value,
+    shell: "valid",
+    policies: [{ effect: "deny", action: "tool.use", resource: "shell:*" }],
+  } as const
+  const normalized = ConfigNormalize.normalize(input)
+  if (normalized.type !== "normalized") throw new Error("expected canonical normalization")
+  const parsed = KiloConfigPolicy.parse(input, normalized.encoded)
+  expect(parsed?.shell).toBe("valid")
+  expect(parsed?.policies).toEqual(input.policies)
+  expect(parsed?.hide_prompt_training_models).toBeUndefined()
 })
 
 it.effect("reads fresh effective entries without filesystem, global paths or plugin storage services", () =>

@@ -8,9 +8,8 @@ import { AbsolutePath } from "../../schema.js"
 import { KiloConfigPolicy } from "./policy.js"
 
 export function systemDirectory(platform: NodeJS.Platform = process.platform, env: NodeJS.ProcessEnv = process.env) {
-  if (env.KILO_TEST_MANAGED_CONFIG_DIR) return AbsolutePath.make(path.resolve(env.KILO_TEST_MANAGED_CONFIG_DIR))
   if (platform === "darwin") return AbsolutePath.make("/Library/Application Support/kilo")
-  if (platform === "win32") return AbsolutePath.make(path.join(env.ProgramData || "C:\\ProgramData", "kilo"))
+  if (platform === "win32") return AbsolutePath.make(path.win32.join(env.ProgramData || "C:\\ProgramData", "kilo"))
   return AbsolutePath.make("/etc/kilo")
 }
 

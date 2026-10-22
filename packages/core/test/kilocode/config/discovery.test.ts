@@ -79,17 +79,13 @@ const directories = (root: string) =>
   })
 
 describe("Kilo config discovery", () => {
-  test("uses Kilo's managed directory on each platform and honors the test override", () => {
+  test("uses Kilo's managed directory on each platform", () => {
     const system = KiloConfigDiscovery.layout.systemDirectory!
     expect(system("darwin", {})).toBe(AbsolutePath.make("/Library/Application Support/kilo"))
     expect(system("linux", {})).toBe(AbsolutePath.make("/etc/kilo"))
-    expect(system("win32", { ProgramData: "D:\\ProgramData" })).toBe(
-      AbsolutePath.make(path.join("D:\\ProgramData", "kilo")),
-    )
-    expect(system("win32", {})).toBe(AbsolutePath.make(path.join("C:\\ProgramData", "kilo")))
-    expect(system("darwin", { KILO_TEST_MANAGED_CONFIG_DIR: "/managed-test" })).toBe(
-      AbsolutePath.make(path.resolve("/managed-test")),
-    )
+    expect(system("win32", { ProgramData: "D:\\ProgramData" })).toBe(AbsolutePath.make("D:\\ProgramData\\kilo"))
+    expect(system("win32", { ProgramData: "D:/ProgramData/" })).toBe(AbsolutePath.make("D:\\ProgramData\\kilo"))
+    expect(system("win32", {})).toBe(AbsolutePath.make("C:\\ProgramData\\kilo"))
     expect(ConfigDiscovery.systemDirectory("darwin", {})).toBe(
       AbsolutePath.make("/Library/Application Support/opencode"),
     )
@@ -97,6 +93,17 @@ describe("Kilo config discovery", () => {
       AbsolutePath.make("/etc/opencode"),
     )
   })
+
+  it.effect("the production layout ignores an ambient KILO_TEST_MANAGED_CONFIG_DIR", () =>
+    withEnv({ KILO_TEST_MANAGED_CONFIG_DIR: "/managed-test", ProgramData: "D:\\ProgramData" }, () =>
+      Effect.sync(() => {
+        const system = KiloConfigDiscovery.layout.systemDirectory!
+        expect(system("darwin", process.env)).toBe(AbsolutePath.make("/Library/Application Support/kilo"))
+        expect(system("linux", process.env)).toBe(AbsolutePath.make("/etc/kilo"))
+        expect(system("win32", process.env)).toBe(AbsolutePath.make("D:\\ProgramData\\kilo"))
+      }),
+    ),
+  )
 
   it.live("managed files override user, explicit, project and runtime settings and retain Kilo policy fields", () =>
     Effect.gen(function* () {
@@ -117,44 +124,40 @@ describe("Kilo config discovery", () => {
       yield* write(path.join(managed, "kilo.json"), { hide_prompt_training_models: false, shell: "legacy-kilo" })
       yield* write(path.join(managed, "opencode.json"), { hide_prompt_training_models: false, shell: "opencode" })
 
-      yield* withEnv({ KILO_TEST_MANAGED_CONFIG_DIR: managed }, () =>
-        Effect.gen(function* () {
-          const config = yield* Config.Service
-          expect(yield* shells).toEqual(["user", "explicit", "project", "runtime", "managed-jsonc", "managed-json"])
-          expect(yield* KiloConfigPolicy.get(config)).toEqual({ hide_prompt_training_models: true })
-          const entries = yield* config.entries()
-          expect(entries.some((entry) => entry.type === "document" && entry.info.policies?.length)).toBe(true)
-          const watcher = yield* Watcher.Test
-          expect(yield* watcher.subscriptions()).toContainEqual(
-            expect.objectContaining({ type: "directory", path: managed }),
-          )
-        }).pipe(
-          Effect.provide(
-            configLayer({
-              directory: project,
-              global,
-              git: true,
-              options: {
-                system: true,
-                file: explicit,
-                content: JSON.stringify({ hide_prompt_training_models: false, shell: "runtime" }),
-              },
-            }),
-          ),
+      yield* Effect.gen(function* () {
+        const config = yield* Config.Service
+        expect(yield* shells).toEqual(["user", "explicit", "project", "runtime", "managed-jsonc", "managed-json"])
+        expect(yield* KiloConfigPolicy.get(config)).toEqual({ hide_prompt_training_models: true })
+        const entries = yield* config.entries()
+        expect(entries.some((entry) => entry.type === "document" && entry.info.policies?.length)).toBe(true)
+        const watcher = yield* Watcher.Test
+        expect(yield* watcher.subscriptions()).toContainEqual(
+          expect.objectContaining({ type: "directory", path: managed }),
+        )
+      }).pipe(
+        Effect.provide(
+          configLayer({
+            directory: project,
+            global,
+            git: true,
+            options: {
+              system: managed,
+              file: explicit,
+              content: JSON.stringify({ hide_prompt_training_models: false, shell: "runtime" }),
+            },
+          }),
         ),
       )
       // Disabling managed discovery must leave the user/project policy effective.
-      yield* withEnv({ KILO_TEST_MANAGED_CONFIG_DIR: managed }, () =>
-        Effect.gen(function* () {
-          const config = yield* Config.Service
-          expect(yield* KiloConfigPolicy.get(config)).toEqual({ hide_prompt_training_models: false })
-        }).pipe(Effect.provide(configLayer({ directory: project, global, git: true }))),
-      )
+      yield* Effect.gen(function* () {
+        const config = yield* Config.Service
+        expect(yield* KiloConfigPolicy.get(config)).toEqual({ hide_prompt_training_models: false })
+      }).pipe(Effect.provide(configLayer({ directory: project, global, git: true })))
     }),
   )
 
   const mac = process.platform === "darwin" ? it.live : it.live.skip
-  mac("MDM preferences stay above the managed directory, including with the test directory override", () =>
+  mac("MDM preferences stay above the managed directory with an injected discovery layout", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
       const project = path.join(tmp.path, "repo")
@@ -198,21 +201,28 @@ describe("Kilo config discovery", () => {
           })),
         ).pipe(Layer.provide(layer)),
       )
-      yield* withEnv({ KILO_TEST_MANAGED_CONFIG_DIR: managed }, () =>
-        Effect.gen(function* () {
-          const config = yield* Config.Service
-          expect(yield* KiloConfigPolicy.get(config)).toEqual({ hide_prompt_training_models: true })
-          expect(yield* shells).toEqual(["managed", "MDM"])
-        }).pipe(
-          Effect.provide(
-            configLayer({
-              directory: project,
-              global,
-              git: true,
-              options: { system: true },
-              overrides: [FSUtil.node.replace(files), AppProcess.node.replace(processes)],
-            }),
-          ),
+      yield* Effect.gen(function* () {
+        const config = yield* Config.Service
+        expect(yield* KiloConfigPolicy.get(config)).toEqual({ hide_prompt_training_models: true })
+        expect(yield* shells).toEqual(["managed", "MDM"])
+      }).pipe(
+        Effect.provide(
+          configLayer({
+            directory: project,
+            global,
+            git: true,
+            options: { system: true },
+            overrides: [
+              ConfigDiscovery.node.replace(
+                Layer.succeed(ConfigDiscovery.LayoutService, {
+                  ...KiloConfigDiscovery.layout,
+                  systemDirectory: () => AbsolutePath.make(managed),
+                }),
+              ),
+              FSUtil.node.replace(files),
+              AppProcess.node.replace(processes),
+            ],
+          }),
         ),
       )
     }),
