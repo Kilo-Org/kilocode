@@ -15,15 +15,18 @@ END`
 export function providerCost(usage: Usage | undefined, providerID?: string, metadata?: ProviderMetadata) {
   if (providerID !== "kilo") return undefined
   const raw = Object.values(usage?.providerMetadata ?? {})
-  const openrouter = record(metadata?.openrouter?.usage) ?? usage?.providerMetadata?.openrouter
-  if (openrouter) {
-    const upstream =
-      number(record(openrouter.costDetails)?.upstreamInferenceCost) ??
-      number(record(openrouter.cost_details)?.upstream_inference_cost)
-    if (upstream !== undefined) return Money.USD.make(Math.max(0, upstream))
-    const regular = number(openrouter.cost)
-    if (regular !== undefined) return Money.USD.make(Math.max(0, regular))
-  }
+  const openrouter = [record(metadata?.openrouter?.usage), usage?.providerMetadata?.openrouter]
+    .flatMap((value) =>
+      value
+        ? [
+            number(record(value.costDetails)?.upstreamInferenceCost),
+            number(record(value.cost_details)?.upstream_inference_cost),
+            number(value.cost),
+          ]
+        : [],
+    )
+    .find((value) => value !== undefined)
+  if (openrouter !== undefined) return Money.USD.make(Math.max(0, openrouter))
   const upstream = raw
     .map((value) => number(record(value.cost_details)?.upstream_inference_cost))
     .find((value) => value !== undefined)

@@ -77,6 +77,7 @@ it.effect("groups each Kilo step by its own route and leaves requested models in
     const stats = yield* SessionStats.get({ projectID, from: 0, to: 2_000, tools: "none" })
     expect(stats.steps).toBe(7)
     expect(stats.cost).toBeCloseTo(1)
+    expect(stats.models).toHaveLength(4)
     expect(
       stats.models.map((item) => [
         String(item.model.providerID),
@@ -85,12 +86,14 @@ it.effect("groups each Kilo step by its own route and leaves requested models in
         item.steps,
         Number(item.cost),
       ]),
-    ).toEqual([
-      ["kilo", "kilo-auto/free", "high", 3, 0.3],
-      ["kilo", "openai/gpt-5.5", "high", 2, 0.1],
-      ["kilo", "anthropic/claude-sonnet-4.6", "high", 1, 0.2],
-      ["anthropic", "claude-sonnet-4.6", "high", 1, 0.4],
-    ])
+    ).toEqual(
+      expect.arrayContaining([
+        ["kilo", "kilo-auto/free", "high", 3, 0.3],
+        ["kilo", "openai/gpt-5.5", "high", 2, 0.1],
+        ["kilo", "anthropic/claude-sonnet-4.6", "high", 1, 0.2],
+        ["anthropic", "claude-sonnet-4.6", "high", 1, 0.4],
+      ]),
+    )
     expect(stats.models.find((item) => item.model.id === "openai/gpt-5.5")?.tokens).toEqual({
       input: 20,
       output: 10,

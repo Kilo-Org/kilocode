@@ -58,6 +58,19 @@ describe("Gateway settlement", () => {
     ).toBe(Money.USD.make(0.01))
   })
 
+  test.each([
+    { normalized: { is_byok: true }, raw: { cost: "0.25" }, expected: 0.25 },
+    { normalized: { cost: "invalid" }, raw: { cost: 0 }, expected: 0 },
+    { normalized: { cost: 0 }, raw: { cost: 4, cost_details: { upstream_inference_cost: 7 } }, expected: 0 },
+  ])("retains raw OpenRouter costs with partial normalized metadata: %j", ({ normalized, raw, expected }) => {
+    expect(
+      KiloSessionUsage.providerCost(new Usage({ providerMetadata: { openrouter: raw } }), "kilo", {
+        openrouter: { usage: normalized },
+        gateway: { marketCost: 9 },
+      }),
+    ).toBe(Money.USD.make(expected))
+  })
+
   test("prefers raw native upstream inference cost over Gateway market cost and ignores the Gateway fee", () => {
     expect(
       SessionUsage.record(
