@@ -667,18 +667,18 @@ export function compare(base: Snapshot, head: Snapshot, place?: Placement) {
 type Point = { date: string; done: number; total: number; percent: number }
 
 /**
- * Past states from the committed progress.json files on the first-parent history, one point per day
+ * Past states from the committed progress.json files on v2's first-parent history, one point per day
  * (the last commit of the day). A commit whose file equals the current output is skipped, so the result
  * is the same before and after the commit that stores it, which keeps `--check` stable.
  */
-async function history(current: string) {
-  const log = await git(["log", "--first-parent", "--format=%H %cs", "--", "migration-tracking/progress/progress.json"]).catch(() => "")
+export async function history(current: string, read = git) {
+  const log = await read(["log", "--first-parent", "--format=%H %cs", "origin/v2", "--", "migration-tracking/progress/progress.json"]).catch(() => "")
   const points: Point[] = []
   const seen = new Set<string>()
   for (const line of log.split("\n").filter(Boolean)) {
     const [sha, date] = line.split(" ")
     if (seen.has(date)) continue
-    const text = await git(["show", `${sha}:migration-tracking/progress/progress.json`]).catch(() => "")
+    const text = await read(["show", `${sha}:migration-tracking/progress/progress.json`]).catch(() => "")
     if (!text || text + "\n" === current) continue
     const summary = (JSON.parse(text) as { summary: { done: number; total: number; percent: number } }).summary
     seen.add(date)
@@ -789,7 +789,7 @@ function render(config: Config, data: Awaited<ReturnType<typeof collect>>, dispo
     "",
     `![Progress history](history.svg)`,
     "",
-    `One point per day from the committed \`progress.json\` on the first-parent history, plus the current state.`,
+    `One point per day from the committed \`progress.json\` on v2's first-parent history, plus the current state.`,
     "",
     `| Date | Done | Total | % |`,
     `|---|---:|---:|---:|`,
