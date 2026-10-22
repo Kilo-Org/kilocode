@@ -22,6 +22,10 @@ Select a file to open it in the editor with syntax highlighting.
 - Notebook (`.ipynb`) files open in a [Notebook](/docs/desktop/features/notebooks) tab (requires sign-in).
 - Markdown (`.md`) files can be viewed in a {% svgIcon src="/docs/img/desktop/eye.svg" /%} rendered preview or {% svgIcon src="/docs/img/desktop/code.svg" /%} as source code, with links to other workspace files clickable inline.
 - Images open in a preview.
+- **CSV** (`.csv`), **TSV** (`.tsv`), and **Parquet** (`.parquet`) files open as interactive tables. You can scroll, sort, and filter the data.
+  - For CSV and TSV, select **Edit source** to edit the text and **Show as table** to switch back. Save as usual.
+  - Parquet tables are read-only.
+  - Table view is available for files up to 64 MB (Parquet) or 1 MB (CSV/TSV). For larger CSV/TSV files, use **Show text preview** or open them in an external editor.
 - Files that can't be shown — such as binaries or very large files — open read-only or explain why they can't be previewed.
 
 Save with `Cmd/Ctrl+S`. If the file changed on disk since you opened it, Kilo Desktop surfaces a conflict instead of overwriting, so you can reload the latest version, overwrite it with your changes, or cancel. Closing a file with unsaved changes prompts you first.

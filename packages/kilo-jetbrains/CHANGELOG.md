@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.8.15
+
+### Patch Changes
+
+- [#15204](https://github.com/Kilo-Org/kilocode/pull/15204) [`b3c52ec`](https://github.com/Kilo-Org/kilocode/commit/b3c52ecf08539cd796436953056b8ada1977ca0d) - Fetch the latest base branch when creating JetBrains worktrees.
+
 ## 7.8.13
 
 ### Patch Changes
