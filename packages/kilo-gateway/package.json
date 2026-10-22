@@ -41,7 +41,7 @@
     "@openrouter/ai-sdk-provider": "2.9.0",
     "@clack/prompts": "1.0.0-alpha.1",
     "ai": "catalog:",
-    "open": "10.1.2",
+    "open": "11.0.4",
     "zod": "catalog:"
   },
   "devDependencies": {
