@@ -32,9 +32,25 @@ const record: KiloMarketplaceRpc.Installed = {
 
 beforeEach(() => takeDraft(undefined))
 
-async function mount(installed: KiloMarketplaceRpc.Installed, result = record) {
+async function mount(
+  installed: KiloMarketplaceRpc.Installed,
+  result = record,
+  auth?: {
+    status?: "needs_auth" | "connected" | "disabled" | "failed"
+    delayed?: boolean
+    overridden?: boolean
+    outcome?: "complete" | "failed"
+    afterAuth?: "failed" | "pending"
+    starting?: Promise<void>
+    polling?: Promise<void>
+    refreshing?: Promise<void>
+  },
+) {
   const calls: { method: string; path: string; body?: unknown }[] = []
   let removed = false
+  let checks = 0
+  let signedIn = false
+  const location = { directory, project: { id: "proj_test", directory, canonical: directory } }
   const app = await createAppFixture({
     width: 120,
     height: 40,
@@ -66,6 +82,74 @@ async function mount(installed: KiloMarketplaceRpc.Installed, result = record) {
           return json({ output: {} })
         }
       }
+      if (auth && url.pathname === "/api/config")
+        return json([
+          {
+            type: "document",
+            path: record.config,
+            info: { mcp: { servers: { [result.server!]: { type: "remote", url: "https://demo.test/mcp" } } } },
+          },
+          ...(auth.overridden
+            ? [
+                {
+                  type: "document",
+                  path: "/other/kilo2.json",
+                  info: { mcp: { servers: { [result.server!]: { type: "remote", url: "https://other.test/mcp" } } } },
+                },
+              ]
+            : []),
+        ])
+      if (auth && url.pathname === "/api/mcp")
+        return json({
+          location,
+          data:
+            auth.delayed && checks++ < 2
+              ? []
+              : [
+                  {
+                    name: result.server,
+                    status: signedIn
+                      ? auth.afterAuth === "failed"
+                        ? { status: "failed", error: "Transport refused" }
+                        : { status: auth.afterAuth ?? "connected" }
+                      : auth.status === "failed"
+                        ? { status: "failed", error: "Transport refused" }
+                        : { status: auth.status ?? "needs_auth", error: "Sign-in required" },
+                    integrationID: "shared-integration",
+                  },
+                ],
+        })
+      const integration = {
+        id: "shared-integration",
+        name: "Demo MCP",
+        metadata: { source: "mcp" },
+        methods: [{ type: "oauth", id: "demo-oauth", label: "Sign in to Demo" }],
+        connections: signedIn ? [{ type: "credential", id: "shared-credential", label: "Demo" }] : [],
+      }
+      if (auth && url.pathname === "/api/integration") return json({ location, data: [integration] })
+      if (auth && url.pathname === "/api/integration/shared-integration") return json({ location, data: integration })
+      if (auth && url.pathname === "/api/integration/shared-integration/connect/oauth") {
+        await auth.starting
+        return json({
+          location,
+          data: {
+            attemptID: "demo-attempt",
+            mode: "auto",
+            url: "https://demo.test/auth",
+            instructions: "Authorize Demo",
+          },
+        })
+      }
+      if (auth && url.pathname === "/api/integration/shared-integration/connect/oauth/demo-attempt") {
+        if (request.method === "DELETE") return new Response(null, { status: 204 })
+        await auth.polling
+        signedIn = auth.outcome === "complete"
+        return json({ location, data: { status: auth.outcome ?? "pending", message: "Authorization denied" } })
+      }
+      if (auth?.refreshing && signedIn && url.pathname === "/api/model") {
+        await auth.refreshing
+        return json({ location, data: [] })
+      }
       // Both server names share a credential. Uninstall must not inspect or remove it.
       if (url.pathname === "/api/mcp")
         return json({
@@ -85,6 +169,19 @@ async function mount(installed: KiloMarketplaceRpc.Installed, result = record) {
 }
 
 type Fixture = Awaited<ReturnType<typeof mount>>
+
+async function reinstall(app: Fixture) {
+  await actions(app)
+  await app.mockInput.typeText("Reinstall")
+  await app.waitForFrame((frame) => frame.includes("Reinstall (project)") && !frame.includes("Install globally"))
+  app.mockInput.pressEnter()
+}
+
+async function signIn(app: Fixture) {
+  await app.waitForFrame((frame) => frame.includes("This server needs sign-in"))
+  expect(app.calls.some((call) => call.path.endsWith("/connect/oauth"))).toBe(false)
+  app.mockInput.pressEnter()
+}
 
 async function actions(app: Fixture) {
   await app.mockInput.typeText("/marketplace")
@@ -172,3 +269,146 @@ test("uninstall retains sign-in and calls no credential or integration endpoints
     [],
   )
 })
+
+test("delayed discovery uses the returned server key and offers Sign In / Skip without starting OAuth", async () => {
+  await using app = await mount(record, { ...record, server: "sanitized-demo" }, { delayed: true })
+  await reinstall(app)
+  await app.waitForFrame((frame) => frame.includes("This server needs sign-in"))
+  expect(app.captureCharFrame()).toContain("Installed sanitized-demo")
+  expect(app.captureCharFrame()).toContain("Skip")
+  expect(app.calls.filter((call) => call.path === "/api/mcp").length).toBeGreaterThanOrEqual(3)
+  expect(app.calls.some((call) => call.path.endsWith("/connect/oauth"))).toBe(false)
+  await app.mockInput.typeText("Skip")
+  app.mockInput.pressEnter()
+  await app.waitForFrame((frame) => frame.includes("Marketplace: MCP Servers"))
+  expect(app.calls.some((call) => call.path.endsWith("/uninstall"))).toBe(false)
+})
+
+test("installed items can sign in without reinstalling; native dialog replacements stay open until cancellation", async () => {
+  await using app = await mount(record, record, {})
+  await actions(app)
+  await app.mockInput.typeText("Manage Authentication")
+  app.mockInput.pressEnter()
+  await signIn(app)
+  await app.waitForFrame((frame) => frame.includes("Waiting for authorization"))
+  expect(app.captureCharFrame()).not.toContain("Marketplace: MCP Servers")
+  expect(app.calls.filter((call) => call.path.endsWith("/connect/oauth"))).toHaveLength(1)
+  app.mockInput.pressEscape()
+  await app.waitFor(() => app.calls.some((call) => call.method === "DELETE" && call.path.endsWith("demo-attempt")))
+  await app.waitForFrame((frame) => frame.includes("This server needs sign-in"))
+  expect(app.calls.some((call) => call.path.endsWith("/install") || call.path.endsWith("/uninstall"))).toBe(false)
+})
+
+test.each(["connected", "disabled", "failed"] as const)("%s servers do not offer OAuth", async (status) => {
+  await using app = await mount(record, record, { status })
+  await reinstall(app)
+  await app.waitForFrame((frame) =>
+    frame.includes(
+      status === "connected" ? "and connected" : status === "disabled" ? "is disabled" : "Transport refused",
+    ),
+  )
+  expect(app.captureCharFrame()).not.toContain("This server needs sign-in")
+  expect(app.calls.some((call) => call.path.endsWith("/connect/oauth"))).toBe(false)
+})
+
+test("a project override defers authentication instead of signing in to the wrong server", async () => {
+  await using app = await mount(record, record, { overridden: true })
+  await reinstall(app)
+  await app.waitForFrame((frame) => frame.includes("overridden in this project"))
+  expect(app.captureCharFrame()).not.toContain("Sign In")
+  expect(app.calls.some((call) => call.path.endsWith("/connect/oauth"))).toBe(false)
+})
+
+test.each([undefined, "failed"] as const)(
+  "OAuth completion reports native connection outcome: %s",
+  async (afterAuth) => {
+    await using app = await mount(record, record, { outcome: "complete", afterAuth })
+    await reinstall(app)
+    await signIn(app)
+    await app.waitForFrame((frame) => frame.includes(afterAuth ? "Transport refused" : "and connected"))
+    if (afterAuth) expect(app.captureCharFrame()).toContain("signed in")
+    expect(app.calls.filter((call) => call.path.endsWith("/connect/oauth"))).toHaveLength(1)
+    expect(app.calls.some((call) => call.path.endsWith("/uninstall"))).toBe(false)
+  },
+)
+
+test("a late OAuth start response is cancelled without reopening the native dialog", async () => {
+  const started = Promise.withResolvers<void>()
+  await using app = await mount(record, record, { starting: started.promise })
+  await reinstall(app)
+  await signIn(app)
+  await app.waitForFrame((frame) => frame.includes("Starting authorization"))
+  app.mockInput.pressEscape()
+  await app.waitForFrame((frame) => frame.includes("This server needs sign-in"))
+  started.resolve()
+  await app.waitFor(() => app.calls.some((call) => call.method === "DELETE" && call.path.endsWith("demo-attempt")))
+  expect(app.captureCharFrame()).not.toContain("Waiting for authorization")
+  expect(app.calls.filter((call) => call.method === "GET" && call.path.endsWith("demo-attempt"))).toHaveLength(0)
+})
+
+test("a late pending OAuth poll cannot resume polling after cancellation", async () => {
+  const polled = Promise.withResolvers<void>()
+  await using app = await mount(record, record, { polling: polled.promise })
+  await reinstall(app)
+  await signIn(app)
+  await app.waitForFrame((frame) => frame.includes("Waiting for authorization"))
+  await app.waitFor(() => app.calls.some((call) => call.method === "GET" && call.path.endsWith("demo-attempt")))
+  app.mockInput.pressEscape()
+  await app.waitForFrame((frame) => frame.includes("This server needs sign-in"))
+  polled.resolve()
+  await new Promise((resolve) => setTimeout(resolve, 600))
+  expect(app.calls.filter((call) => call.method === "GET" && call.path.endsWith("demo-attempt"))).toHaveLength(1)
+})
+
+test("dismissing a completed login during refresh does not clear the subsequent connection outcome", async () => {
+  const refreshing = Promise.withResolvers<void>()
+  await using app = await mount(record, record, { outcome: "complete", refreshing: refreshing.promise })
+  await reinstall(app)
+  await signIn(app)
+  await app.waitFor(() => app.calls.some((call) => call.path.endsWith("demo-attempt")))
+  await app.waitForFrame((frame) => frame.includes("Waiting for authorization"))
+  app.mockInput.pressEscape()
+  await app.waitForFrame((frame) => frame.includes("Installed demo and connected"))
+  refreshing.resolve()
+  await app.waitForVisualIdle()
+  expect(app.captureCharFrame()).toContain("Installed demo and connected")
+})
+
+test("Escape during readiness keeps installation and returns to browsing without OAuth", async () => {
+  await using app = await mount(record, record, { delayed: true })
+  await reinstall(app)
+  await app.waitForFrame((frame) => frame.includes("Checking MCP connection status"))
+  app.mockInput.pressEscape()
+  await app.waitForFrame((frame) => frame.includes("Marketplace: MCP Servers"))
+  expect(app.calls.some((call) => call.path.endsWith("/uninstall") || call.path.endsWith("/connect/oauth"))).toBe(false)
+})
+
+test("OAuth failure stays native, keeps installation, and allows retry", async () => {
+  await using app = await mount(record, record, { outcome: "failed" })
+  await reinstall(app)
+  await signIn(app)
+  await app.waitForFrame(
+    (frame) => frame.includes("Authorization denied") && frame.includes("This server needs sign-in"),
+  )
+  expect(app.calls.some((call) => call.path.endsWith("/uninstall"))).toBe(false)
+})
+
+test("successful sign-in with a pending transport is not reported connected", async () => {
+  await using app = await mount(record, record, { outcome: "complete", afterAuth: "pending" })
+  await reinstall(app)
+  await signIn(app)
+  await app.waitForFrame((frame) => frame.includes("Checking MCP connection status"))
+  // Keep the fixture's event stream alive beyond Bun's 10-second HTTP idle timeout.
+  const heartbeat = setInterval(
+    () => app.events.emit({ id: "evt_pending", created: 1, type: "mcp.status.changed", data: { server: "demo" } }),
+    5_000,
+  )
+  try {
+    await app.waitForFrame((frame) => frame.includes("Installed demo: signed in") && frame.includes("Check Again"), {
+      maxPasses: 1200,
+    })
+    expect(app.captureCharFrame()).not.toContain("and connected")
+  } finally {
+    clearInterval(heartbeat)
+  }
+}, 20_000)

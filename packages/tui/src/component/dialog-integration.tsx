@@ -612,6 +612,13 @@ function OAuthStarting(props: {
   const dialog = useDialog()
   const client = useClient()
   const toast = useToast()
+  // kilocode_change start - marketplace: cancel an attempt returned after its starting screen closes
+  let closed = false
+  let handedOff = false
+  onCleanup(() => {
+    if (!handedOff) closed = true
+  })
+  // kilocode_change end
 
   onMount(() => {
     void client.api.integration.oauth
@@ -622,6 +629,17 @@ function OAuthStarting(props: {
         ...(props.answer ? { answer: props.answer } : {}),
       })
       .then((result) => {
+        // kilocode_change start - marketplace: do not reopen authorization after cancellation
+        if (closed) {
+          void client.api.integration.oauth.cancel({
+            integrationID: props.integration.id,
+            attemptID: result.data.attemptID,
+            location: locationQuery(props.location),
+          })
+          return
+        }
+        handedOff = true
+        // kilocode_change end
         if (result.data.mode === "code") {
           dialog.replace(() => (
             <OAuthCode
@@ -645,6 +663,7 @@ function OAuthStarting(props: {
         ))
       })
       .catch((cause) => {
+        if (closed) return // kilocode_change - marketplace: a dismissed attempt cannot replace a later dialog
         toast.show({ variant: "error", message: errorMessage(cause) })
         dialog.clear()
       })
@@ -668,6 +687,7 @@ function OAuthAuto(props: {
   const newDesigns = useNewDesigns()
   let timer: ReturnType<typeof setTimeout> | undefined
   let settled = false
+  let closed = false // kilocode_change - marketplace: OAuth completion refreshes may outlive this screen
 
   const open = () => {
     openUrl(props.attempt.url).catch(() =>
@@ -702,6 +722,7 @@ function OAuthAuto(props: {
         location: locationQuery(props.location),
       })
       .then((result) => {
+        if (settled) return // kilocode_change - marketplace: ignore an OAuth poll that completed after cleanup
         const status = result.data
         if (status.status === "pending") {
           timer = setTimeout(poll, 500)
@@ -709,13 +730,14 @@ function OAuthAuto(props: {
         }
         settled = true
         if (status.status === "complete") {
-          void connected(props.integration, props.location, data, dialog, toast, props.onConnected)
+          void connected(props.integration, props.location, data, dialog, toast, props.onConnected, () => closed) // kilocode_change - marketplace: guard post-auth UI after dismissal
           return
         }
         toast.show({ variant: "error", message: status.status === "failed" ? status.message : "Authorization expired" })
         dialog.clear()
       })
       .catch((cause) => {
+        if (settled) return // kilocode_change - marketplace: suppress stale OAuth poll errors after cleanup
         settled = true
         toast.show({ variant: "error", message: errorMessage(cause) })
         dialog.clear()
@@ -724,8 +746,10 @@ function OAuthAuto(props: {
 
   onMount(poll)
   onCleanup(() => {
+    closed = true // kilocode_change - marketplace: stop a completing login from clearing a later dialog
     if (timer) clearTimeout(timer)
     if (settled) return
+    settled = true // kilocode_change - marketplace: prevent in-flight polls from restarting after cancellation
     void client.api.integration.oauth.cancel({
       integrationID: props.integration.id,
       attemptID: props.attempt.attemptID,
@@ -760,8 +784,10 @@ function OAuthCode(props: {
   const newDesigns = useNewDesigns()
   const [error, setError] = createSignal<string>()
   let settled = false
+  let closed = false // kilocode_change - marketplace: code submission may finish after dismissal
 
   onCleanup(() => {
+    closed = true // kilocode_change - marketplace: ignore late code completion after cancellation
     if (settled) return
     void client.api.integration.oauth.cancel({
       integrationID: props.integration.id,
@@ -785,8 +811,9 @@ function OAuthCode(props: {
             code,
           })
           .then(() => {
+            if (closed) return // kilocode_change - marketplace: do not clear a later dialog after code submission
             settled = true
-            return connected(props.integration, props.location, data, dialog, toast, props.onConnected)
+            return connected(props.integration, props.location, data, dialog, toast, props.onConnected, () => closed) // kilocode_change - marketplace: guard completion refreshes
           })
           .catch((cause) => setError(errorMessage(cause)))
       }}
@@ -1253,6 +1280,7 @@ async function connected(
   dialog: ReturnType<typeof useDialog>,
   toast: ReturnType<typeof useToast>,
   onConnected?: OnIntegrationConnected,
+  closed?: () => boolean, // kilocode_change - marketplace: optional OAuth owner-lifetime guard
 ) {
   data.location.integration.invalidate(location)
   data.location.model.invalidate(location)
@@ -1262,6 +1290,7 @@ async function connected(
     data.location.model.sync(location),
     data.location.provider.sync(location),
   ])
+  if (closed?.()) return // kilocode_change - marketplace: preserve the current Location's dialog after old auth refreshes
   toast.show({ variant: "success", message: `Connected ${integration.name}` })
   // kilocode_change start - after a Kilo login, choose the personal account or a team, as in v1
   if (integration.id === "kilo" && !(await chooseKiloAccount(dialog, location))) return

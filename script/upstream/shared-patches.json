@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 27,
-    "markedLines": 206,
+    "markedLines": 237,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -101,8 +101,8 @@
       "unmarked": "JSON has no comments."
     },
     "packages/tui/src/component/dialog-integration.tsx": {
-      "rung": 3,
-      "seam": "Prompt for Personal Account vs Team (`chooseKiloAccount`) after a Kilo Gateway login completes, before closing or chaining the integration dialog. `TuiPlugin` has no post-integration-connect hook."
+      "rung": 4,
+      "seam": "Prompt for Personal Account vs Team (`chooseKiloAccount`) after a Kilo Gateway login completes, before closing or chaining the integration dialog. `TuiPlugin` has no post-integration-connect hook. Marketplace auth also needs a targeted native OAuth cancellation fix: cancel attempts returned after OAuthStarting unmounts, ignore late OAuthAuto polls, and guard OAuth completion UI after unmount during refresh. Plugin hooks and host composition cannot guard these private component-local async continuations; a seam or copied dialog would be larger than the guards."
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 3,
