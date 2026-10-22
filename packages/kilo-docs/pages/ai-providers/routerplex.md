@@ -6,7 +6,7 @@ sidebar_label: RouterPlex
 
 # Using RouterPlex With Kilo Code
 
-[RouterPlex](https://routerplex.com) is a hosted gateway that exposes models from several vendors through one OpenAI-compatible API at `https://api.routerplex.com/v1`. It also serves the Anthropic Messages format. Models are billed at vendor list price with no top-up fee, from a prepaid balance that does not go negative.
+[RouterPlex](https://routerplex.com) is a hosted gateway that exposes models from several vendors through one OpenAI-compatible API at `https://api.routerplex.com/v1`. It also serves the Anthropic Messages format. Models are billed per token from a prepaid balance. RouterPlex states that it charges vendor list price with no top-up fee.
 
 **Website:** [https://routerplex.com](https://routerplex.com)
 
@@ -16,7 +16,7 @@ RouterPlex is configured in Kilo Code as a custom OpenAI-compatible provider. Th
 
 1. Sign in to the [RouterPlex dashboard](https://routerplex.com/dashboard).
 2. Add credit from the billing page. Top-ups accept card or crypto.
-3. Create an API key and copy it. You can set a hard USD budget and a model allowlist on each key, so a runaway agent loop cannot spend more than that key's cap.
+3. Create an API key and copy it. You can set a USD budget and a model allowlist on each key to limit what that key can spend.
 
 ## Configuration in Kilo Code
 
