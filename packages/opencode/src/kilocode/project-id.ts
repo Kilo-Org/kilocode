@@ -3,7 +3,6 @@ import { Instance } from "@/kilocode/instance"
 import { registerDisposer } from "@/effect/instance-registry"
 import { makeRuntime } from "@/effect/run-service"
 import path from "path"
-import { $ } from "bun"
 
 /**
  * Normalize a project identifier: extract repo name from git URLs, truncate to 100 chars
@@ -67,12 +66,18 @@ async function getProjectIdFromConfig(directory: string): Promise<string | undef
  * @returns Normalized project ID from git origin URL or undefined
  */
 async function getProjectIdFromGit(directory: string): Promise<string | undefined> {
-  // Use git command to handle worktrees correctly (git resolves .git symlinks/files)
-  const url = await $`git config --get remote.origin.url`
-    .cwd(directory)
-    .quiet()
-    .nothrow()
-    .text()
+  // Use git command to handle worktrees correctly (git resolves .git symlinks/files).
+  // stdin must not be inherited: under `kilo acp` it is the JSON-RPC pipe with a pending
+  // read, and on Windows git blocks on startup until the client writes again (#10768).
+  const url = await (async () => {
+    const proc = Bun.spawn(["git", "config", "--get", "remote.origin.url"], {
+      cwd: directory,
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "ignore",
+    })
+    return new Response(proc.stdout).text()
+  })()
     .then((x) => x.trim())
     .catch(() => undefined)
 
