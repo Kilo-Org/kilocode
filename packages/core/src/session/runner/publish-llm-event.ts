@@ -14,6 +14,7 @@ import { Money } from "@opencode/schema/money"
 import { SessionUsage } from "../usage.js"
 import { contentFilterError } from "../to-session-error.js"
 import type { Tool } from "../../tool.js"
+import { KiloSessionUsage } from "../../kilocode/session/usage.js" // kilocode_change(gateway)
 
 type Input = {
   readonly sessionID: SessionSchema.ID
@@ -68,6 +69,7 @@ export interface StepRecord {
     readonly rawFinish?: string
     readonly native?: SessionMessage.Native
     readonly tokens: ReturnType<typeof SessionUsage.tokens>
+    readonly providerCost?: Money.USD // kilocode_change(gateway)
   }
   readonly needsContinuation: boolean
 }
@@ -580,8 +582,9 @@ export const createLLMEventPublisher = (bus: Pick<Bus.Interface, "publish">, inp
         stepSettlement = {
           finish: event.reason.normalized,
           rawFinish: event.reason.raw,
-          native: native(event.providerMetadata),
+          native: KiloSessionUsage.native(event.usage, input.model.providerID, native(event.providerMetadata)), // kilocode_change(gateway)
           tokens: SessionUsage.tokens(event.usage),
+          providerCost: KiloSessionUsage.providerCost(event.usage, input.model.providerID, event.providerMetadata), // kilocode_change(gateway)
         }
         if (event.reason.normalized === "content-filter") {
           providerFailed = true

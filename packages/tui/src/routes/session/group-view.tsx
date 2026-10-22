@@ -14,6 +14,7 @@ import { InlineToolRow, reasoningContent, toolDisplay } from "./message-parts"
 import { use } from "./render-context"
 import { resolvePart } from "./rows"
 import { generateThinkingSyntax } from "./thinking-syntax"
+import { RoutedGroupBadge } from "../../kilocode/routed-model" // kilocode_change(gateway)
 
 type Renderers = {
   message: (messageID: string) => SessionMessageInfo | undefined
@@ -152,6 +153,7 @@ function GroupContent(props: GroupProps) {
                 onMouseUp={toggle}
               >
                 {label()}
+                <RoutedGroupBadge node={props.node} message={props.message} models={ctx.models()} />{/* kilocode_change(gateway) */}
               </InlineToolRow>
             </Show>
             <Show when={expanded() && tools().length > 0}>{children("tool")}</Show>
@@ -186,6 +188,7 @@ function GroupContent(props: GroupProps) {
               <Show when={props.completed && !expanded() && latest()}>: {latest()}</Show>
               <Show when={props.completed && thoughts().length > 1}> · {thoughts().length} steps</Show>
               <Show when={props.completed && duration()}> · {Locale.duration(duration())}</Show>
+              <RoutedGroupBadge node={props.node} message={props.message} models={ctx.models()} />{/* kilocode_change(gateway) */}
             </InlineToolRow>
             <Show when={expanded()}>
               <box paddingLeft={3}>{children("thought")}</box>
@@ -200,6 +203,7 @@ function GroupContent(props: GroupProps) {
 
 /** Low verbosity: one summary for a run of tools, thoughts and instruction loads. */
 function ActivityGroup(props: GroupProps) {
+  const ctx = use() // kilocode_change(gateway)
   const theme = useTheme()
   const disclosure = useDisclosure(props)
   const [hover, setHover] = createSignal(false)
@@ -219,6 +223,7 @@ function ActivityGroup(props: GroupProps) {
           onMouseUp={(event) => disclosure.toggle(event.currentTarget)}
         >
           {summary().label}
+          <RoutedGroupBadge node={props.node} message={props.message} models={ctx.models()} />{/* kilocode_change(gateway) */}
         </InlineToolRow>
         <Show when={disclosure.expanded()}>
           <box flexDirection="column" gap={1} marginTop={1}>

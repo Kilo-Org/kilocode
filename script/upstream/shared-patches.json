@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 32,
-    "markedLines": 217,
+    "files": 41,
+    "markedLines": 268,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -140,6 +140,42 @@
     "packages/cli/src/services/updater.ts": {
       "rung": 4,
       "seam": "Kilo config names for the autoupdate policy (feature `config`): read the `update` or legacy `autoupdate` key from Kilo's global config names (`kilo2.json`, `kilo2.jsonc`, last defined policy wins) instead of `config.json`/`opencode.json(c)` or v1 `kilo.json(c)`. Internal releases have no v1 filename fallback (decision 12). Rung 4: one import and one marked line in an upstream CLI service; the CLI may not import Core (`test/import-boundaries.test.ts`), so it calls out to `util/src/kilocode/config/files.ts`. No hook or node for the updater policy."
+    },
+    "packages/core/src/session/usage.ts": {
+      "rung": 4,
+      "seam": "The static SessionUsage function has no plugin hook or replaceable service for provider-reported billing. Its optional provider ID invokes Kilo-owned session/usage.ts before unchanged token pricing; callers that omit it retain upstream behavior. A new generic billing framework would require a larger API than this call-out."
+    },
+    "packages/core/src/session/runner/publish-llm-event.ts": {
+      "rung": 4,
+      "seam": "The publisher discards raw usage after normalization and no public response-finish hook can amend the settlement. Pass the Kilo-owned cost and minimal response identity into the existing step record/native fields, without adding durable events or projections."
+    },
+    "packages/core/src/session/runner/step.ts": {
+      "rung": 4,
+      "seam": "Step settlement has no hook or replaceable service between the publisher record and Step.Ended/Failed. Prefer the optional provider charge from the existing finish record, including zero, before unchanged catalog pricing. Policy is in the Kilo-owned usage module."
+    },
+    "packages/core/src/session/title.ts": {
+      "rung": 4,
+      "seam": "Title usage calls the static SessionUsage.record function outside primary step settlement. Pass the already selected provider ID to the same Kilo-owned billing policy; no title-spend hook or service override exists."
+    },
+    "packages/core/src/session/compaction.ts": {
+      "rung": 4,
+      "seam": "Native and streamed compaction settle their usage through static SessionUsage.record outside the step runner. Pass the selected provider ID to the same Kilo-owned policy. A compaction transform replaces the operation, not these settlement calls, and would duplicate upstream compaction."
+    },
+    "packages/core/src/session/stats.ts": {
+      "rung": 4,
+      "seam": "Statistics construct their grouping SQL locally with no model-identity hook or service override. One Kilo-owned SQL expression reads the durable actual route for Kilo steps and keeps the requested model fallback and all non-Kilo grouping unchanged."
+    },
+    "packages/tui/src/routes/session/index.tsx": {
+      "rung": 4,
+      "seam": "The production transcript has no plugin renderer slot for assistant footers, token usage rows, or intermediate step labels. Narrow call-outs render Kilo-owned actual-route components while preserving requested Auto identity and upstream rendering."
+    },
+    "packages/tui/src/routes/session/group-view.tsx": {
+      "rung": 4,
+      "seam": "Collapsed reasoning, exploration, and activity groups do not expose a plugin label slot. A Kilo-owned badge reads each group's assistant identities so hidden reasoning/tool steps do not lose their routes."
+    },
+    "packages/tui/src/util/session.ts": {
+      "rung": 4,
+      "seam": "The static context-usage resolver has no plugin hook. A Kilo-owned actual-model lookup supplies the served model's context limit when available, with the original requested model lookup as fallback."
     }
   }
 }
