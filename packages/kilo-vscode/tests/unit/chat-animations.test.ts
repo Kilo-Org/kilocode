@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from "bun:test"
-import { resolveAnimations } from "../../webview-ui/src/animations"
+import { reduceMotion, resolveAnimations } from "../../webview-ui/src/animations"
 
 describe("resolveAnimations", () => {
   it("keeps the full motion while the window is focused", () => {
@@ -30,5 +30,17 @@ describe("resolveAnimations", () => {
     expect(resolveAnimations("off", true, false)).toBe("off")
     expect(resolveAnimations("off", false, false)).toBe("off")
     expect(resolveAnimations("off", true, true)).toBe("off")
+  })
+})
+
+describe("reduceMotion", () => {
+  it("stops the script-driven motion the stylesheet cannot reach", () => {
+    expect(reduceMotion("off")).toBe(true)
+    expect(reduceMotion("paused")).toBe(true)
+  })
+
+  it("leaves the one-shot motion alone when the budget is reduced", () => {
+    expect(reduceMotion("full")).toBe(false)
+    expect(reduceMotion("reduced")).toBe(false)
   })
 })

@@ -18,7 +18,11 @@
    for components that clean up in an animationend or transitionend handler:
    a shortened animation still ends and still fires its event, so nothing is
    left half revealed, and a paused animation resumes and fires its event
-   once the motion is allowed again. */
+   once the motion is allowed again.
+
+   The attribute is the only place the budget lives. The stylesheet reads it,
+   the script-driven motion reads it, and the client writes it, so the CSS and
+   the Web Animations API calls always agree on how much motion is allowed. */
 
 html[data-animations="reduced"] *,
 html[data-animations="reduced"] *::before,

@@ -21,10 +21,22 @@ export function resolveAnimations(user: Animations, focused: boolean, hidden: bo
   return user
 }
 
+/**
+ * Whether the chat should stop moving.
+ *
+ * The webview already carries a reduce-motion escape hatch that both the
+ * stylesheet and the script-driven motion read, so the budget reaches the
+ * Web Animations API calls the stylesheet cannot touch.
+ */
+export function reduceMotion(mode: Motion): boolean {
+  return mode === "off" || mode === "paused"
+}
+
 export function applyAnimations(user: Animations, focused: boolean) {
   if (typeof document === "undefined") return
   const root = document.documentElement
   const mode = resolveAnimations(user, focused, document.visibilityState === "hidden")
   if (mode === "full") delete root.dataset.animations
   else root.dataset.animations = mode
+  document.body?.classList.toggle("vscode-reduce-motion", reduceMotion(mode))
 }
