@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 27,
-    "markedLines": 204,
+    "files": 28,
+    "markedLines": 211,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -87,9 +87,13 @@
       "rung": 3,
       "seam": "Registration phase for embedder plugins: `register(plugin, { phase: \"post\" })` and `all(phase)`. Without a phase, `all()` returns what it returned before. The Kilo agents use it: the agent ceiling must run after `ConfigAgentPlugin`, which is an internal post plugin (U-E2-12). Six lines, no Kilo value. Rungs 1 and 2 cannot supply it: the store had no phase, so every embedder plugin ran before the internal post plugins and a plugin could not act on the result of config."
     },
+    "packages/core/src/plugin/internal.ts": {
+      "rung": 3,
+      "seam": "Expose the existing Location-service provider to embedder plugins. The supervisor applies it without changing pre/post order or upstream defaults. Required for account config and managed policy reads at plugin activation; the public plugin context has no config domain, and host-global registration cannot supply a Location-scoped Config service. All feature logic stays in Kilo-owned plugins."
+    },
     "packages/core/src/plugin/supervisor.ts": {
       "rung": 3,
-      "seam": "Appends the embedder plugins registered with phase `post` (`SdkPlugins.all(\"post\")`) after the internal post plugins, so they see the result of config. One line, no Kilo value. Rungs 1 and 2 cannot supply it: the supervisor builds the boot order itself and put every embedder plugin in the pre phase."
+      "seam": "Appends the embedder plugins registered with phase `post` (`SdkPlugins.all(\"post\")`) after the internal post plugins, so they see the result of config. Provides the existing Location-service context to embedder plugins in both phases, as internal plugins already receive it. No boot-order or upstream default change. Rungs 1 and 2 cannot supply it: the supervisor builds the boot order itself, and host-global registration cannot supply Location-scoped services such as Config."
     },
     "packages/server/src/process.ts": {
       "rung": 3,
