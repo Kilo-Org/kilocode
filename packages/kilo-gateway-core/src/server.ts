@@ -80,6 +80,12 @@ export function gateway(server?: string, env: Record<string, string | undefined>
   return apiUrl(server!, "gateway")
 }
 
+// v1 createKilo uses the OpenRouter route for every inference dialect, not the media/FIM Gateway route.
+export function openrouter(server?: string, env: Record<string, string | undefined> = process.env) {
+  if (isConfiguredBase(server, env)) return aiGatewayFromEnv(env)
+  return apiUrl(server!, "openrouter")
+}
+
 // Resolves the models catalog endpoint, matching `fetchRawKiloModels` / `CloudCatalog.models` on main:
 // - For the configured AI gateway base: `${aiGatewayBase}/models` or `${aiGatewayBase}/organizations/${id}/models`.
 // - For custom or token-embedded server URLs: `${openrouterBase}/models` or `${server}/api/organizations/${id}/models`.

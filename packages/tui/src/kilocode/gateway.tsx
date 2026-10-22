@@ -117,10 +117,6 @@ export default Plugin.define({
               group: "Kilo",
               palette: true,
               slash: { name: "teams", aliases: ["team", "org", "orgs"] },
-              enabled: () =>
-                (context.data.location.integration.list() ?? []).some(
-                  (integration) => integration.id === "kilo" && integration.connections.length > 0,
-                ),
               run: () => teams(context),
             },
             {

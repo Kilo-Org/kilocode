@@ -16,8 +16,8 @@
   },
   "module:packages/kilo-gateway/src/api/url.ts": {
     "state": "ported",
-    "note": "packages/kilo-gateway-core/src/server.ts KiloServer.gateway, apiUrl and modelsUrl. The default Gateway URL follows a later main (https://ai-gateway.kilo.ai/api/v1).",
-    "by": "gateway-finish"
+    "note": "packages/kilo-gateway-core/src/server.ts gateway, openrouter, apiUrl and modelsUrl. Compared with live main 9e4e3a43c802bd2172cd23dbf2dbaeb6e109905e: inference uses openrouter for custom/token servers, while media/FIM retain gateway; configured KILO_AI_GATEWAY_URL and KILO_API_URL routing remains distinct. account.test.ts covers configured, custom, scoped-token and explicit personal routes.",
+    "by": "gateway-account-parity"
   },
   "module:packages/kilo-gateway/src/auth/device-auth-tui.ts": {
     "state": "ported",
@@ -41,8 +41,8 @@
   },
   "module:packages/kilo-gateway/src/auth/token.ts": {
     "state": "ported",
-    "note": "packages/kilo-gateway-core/src/server.ts KiloServer.fromToken (server URL in a token) and account.ts KiloAccount.resolve; the token of a credential is read in packages/core/src/kilocode/gateway.ts toAccount.",
-    "by": "gateway-finish"
+    "note": "packages/kilo-gateway-core/src/server.ts fromToken and account.ts resolve/authContent/compatible, composed by kilo-plugin/src/gateway/index.ts resolveCurrentAccount and final request hooks. Live main 9e4e3a43c802bd2172cd23dbf2dbaeb6e109905e catalog.token and final patchKiloProviderAuth callers establish env > saved credential > config kilocodeToken > config apiKey. Configured and token-scoped endpoints/organizations are shared by catalog, account RPCs and inference; incompatible token scope fails closed, explicit personal null persists per account, and v2 stores remain isolated. account.test.ts and kilo-plugin/test/gateway.test.ts carry precedence/scope regressions.",
+    "by": "gateway-account-parity"
   },
   "module:packages/kilo-gateway/src/edit-prompt.ts": {
     "state": "ported",

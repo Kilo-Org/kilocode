@@ -36,7 +36,7 @@
       "seam": 0,
       "patch": 0
     },
-    "coreImports": 9,
+    "coreImports": 10,
     "sharedPatches": {
       "seam": 21,
       "patch": 7
@@ -55,6 +55,7 @@
   "coreImports": [
     "@opencode/core/app",
     "@opencode/core/bus",
+    "@opencode/core/config",
     "@opencode/core/config/discovery",
     "@opencode/core/permission",
     "@opencode/core/plugin/sdk",

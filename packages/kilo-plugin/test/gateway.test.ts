@@ -4,8 +4,10 @@ import { EmbeddingCatalog } from "@kilocode/gateway-core/embedding-catalog"
 import { fixture } from "@kilocode/gateway-core/testing"
 import { isRetryable } from "@opencode/ai"
 import { httpFailure } from "@opencode/ai/route/executor"
-import { Effect, Schema } from "effect"
+import { Cause, Effect, Exit, Schema } from "effect"
 import { Bus } from "@opencode/core/bus"
+import { Config } from "@opencode/core/config"
+import { ConfigProviderPlugin } from "@opencode/core/config/plugin/provider"
 import { Credential } from "@opencode/core/credential"
 import { Integration } from "@opencode/core/integration"
 import { Model } from "@opencode/core/model"
@@ -17,6 +19,7 @@ import { KiloPlugin } from "@opencode/core/plugin/provider/kilo"
 import { Provider } from "@opencode/core/provider"
 import { Rpc } from "@opencode/core/rpc"
 import { Agent } from "@opencode/schema/agent"
+import { Document, Info } from "@opencode/schema/config"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { Session } from "@opencode/schema/session"
 import { Global } from "@opencode/util/global"
@@ -86,6 +89,25 @@ function eventually<A, E>(effect: Effect.Effect<A, E>, predicate: (value: A) => 
 }
 
 describe("KiloGatewayPlugin", () => {
+  it.live("fails explicitly if an embedder does not provide Location config", () =>
+    Effect.gen(function* () {
+      const plugin = yield* Plugin.Service
+      const host = yield* PluginHost.make(plugin)
+      const bus = yield* Bus.Service
+      const result = yield* Effect.promise(() =>
+        Effect.runPromiseExit(
+          Effect.scoped(KiloGatewayPlugin.effect(host)).pipe(
+            Effect.provideService(Bus.Service, bus),
+            Effect.provide(Global.layerWith({})),
+          ),
+        ),
+      )
+      expect(Exit.isFailure(result)).toBe(true)
+      if (Exit.isFailure(result))
+        expect(Cause.squash(result.cause)).toEqual(new Error("Kilo Gateway requires location config"))
+    }),
+  )
+
   it.effect("is not in the upstream built-in provider list; the Kilo host registers it", () =>
     Effect.sync(() => {
       expect(ProviderPlugins.map((item) => item.id)).not.toContain(KiloGatewayPlugin.id)
@@ -265,8 +287,10 @@ describe("KiloGatewayPlugin", () => {
               value: oauth({ server: backend.url, organizationID: null, email: "a@example.test" }),
             })
             expect(
-              (yield* eventually(providers.get(kilo), (provider) => !provider?.headers?.["X-KILOCODE-ORGANIZATIONID"]))
-                ?.headers,
+              (yield* eventually(
+                providers.get(kilo),
+                (provider) => provider?.activation === "auto" && !provider.headers?.["X-KILOCODE-ORGANIZATIONID"],
+              ))?.headers,
             ).toEqual(headers())
             expect(
               (yield* models.available())
@@ -291,6 +315,46 @@ describe("KiloGatewayPlugin", () => {
                 .filter((item) => item.providerID === kilo)
                 .map((item) => item.id),
             ).toEqual([Model.ID.make("kilo-auto/free"), Model.ID.make("kilo-auto/small")])
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
+  it.live("invalidates an in-flight scope when another credential is selected", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv(env, () =>
+          Effect.gen(function* () {
+            const credentials = yield* Credential.Service
+            const first = yield* credentials.create({
+              integrationID,
+              label: "first",
+              value: oauth({ server: backend.url, organizationID: "first" }),
+            })
+            yield* addPlugin()
+            backend.requests.length = 0
+            backend.state.delay = 80
+            yield* credentials.create({
+              integrationID,
+              label: "second",
+              value: oauth({ server: backend.url, organizationID: "selected" }),
+            })
+            yield* eventually(
+              Effect.sync(() => backend.requests.some((request) => request.path === "/api/profile")),
+              Boolean,
+            )
+            yield* credentials.activate(first.id)
+            const providers = yield* Provider.Service
+            yield* eventually(
+              providers.get(kilo),
+              (provider) =>
+                provider?.activation === "auto" && provider.headers?.["X-KILOCODE-ORGANIZATIONID"] === "first",
+            )
+            expect(backend.requests.some((request) => request.path === "/api/organizations/selected/models")).toBe(
+              false,
+            )
           }),
         ),
       (backend) => Effect.sync(() => backend[Symbol.dispose]()),
@@ -496,10 +560,196 @@ describe("KiloGatewayPlugin", () => {
               label: "stored",
               value: oauth({ server: "https://staging.kilo.test/", organizationID: "first", email: "a@example.test" }),
             })
-            yield* addPlugin()
+            const host = yield* addPlugin()
             const provider = yield* (yield* Provider.Service).get(kilo)
             expect(provider?.headers).toEqual(headers("selected"))
             expect(provider?.settings?.apiKey).toBe("env-token")
+            const session = yield* host.session.create({ title: "scope" })
+            const hooks = yield* PluginHooks.Service
+            const model = { providerID: kilo, id: Model.ID.make("kilo-auto/small") }
+            const common = { sessionID: session.id, agent: Agent.ID.make("code"), model, kind: "primary" as const }
+            expect(
+              (yield* hooks.trigger("session", "model.request", {
+                ...common,
+                baseURL: "https://model-override.test",
+                headers: {},
+              })).baseURL,
+            ).toBe(`${backend.url}/api/gateway/v1`)
+            const request = yield* hooks.trigger("session", "http.request", {
+              ...common,
+              request: new Request(`${backend.url}/api/gateway/v1/messages`, {
+                method: "POST",
+                headers: { authorization: "Bearer saved-token", "x-api-key": "saved-token" },
+                body: "{}",
+              }),
+            })
+            expect(request.request.headers.get("authorization")).toBe("Bearer env-token")
+            expect(request.request.headers.get("x-api-key")).toBeNull()
+            expect(request.request.headers.get("x-kilocode-organizationid")).toBe("selected")
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
+  it.live("uses config-only auth and private endpoint for the catalog, profile and request scope", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv(env, () =>
+          Effect.gen(function* () {
+            const config = yield* Config.Test
+            yield* config.setEntries([
+              new Document({
+                type: "document",
+                info: Schema.decodeUnknownSync(Info)({
+                  providers: {
+                    kilo: {
+                      settings: {
+                        apiKey: "lower-priority-api-key",
+                        kilocodeToken: "config-token",
+                        baseURL: backend.url,
+                        kilocodeOrganizationId: "first",
+                      },
+                      models: { "kilo-auto/small": { settings: { baseURL: "https://model-override.test" } } },
+                    },
+                  },
+                }),
+              }),
+            ])
+            const host = yield* addPlugin()
+            yield* ConfigProviderPlugin.Plugin.effect(host)
+            const rpc = yield* Rpc.Service
+            expect(yield* rpc.call("kilocode.gateway", "authStatus", {})).toEqual({
+              authenticated: true,
+              server: backend.url,
+              organizationID: "first",
+            })
+            expect(yield* rpc.call("kilocode.gateway", "profile", {})).toMatchObject({ organizationID: "first" })
+            expect(
+              backend.requests
+                .filter((request) => request.path.includes("models"))
+                .every((request) => request.authorization === "Bearer config-token"),
+            ).toBe(true)
+            const hooks = yield* PluginHooks.Service
+            const session = yield* host.session.create({ title: "config" })
+            const model = { providerID: kilo, id: Model.ID.make("kilo-auto/small") }
+            expect(
+              (yield* hooks.trigger("session", "model.request", {
+                sessionID: session.id,
+                agent: Agent.ID.make("code"),
+                model,
+                kind: "primary",
+                baseURL: "https://model-override.test",
+                headers: {},
+              })).baseURL,
+            ).toBe(`${backend.url}/api/openrouter`)
+            yield* rpc.call("kilocode.gateway", "organization.set", { organizationID: null })
+            expect(yield* rpc.call("kilocode.gateway", "profile", {})).toMatchObject({ organizationID: null })
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
+  it.live("keeps saved auth above config and replaces saved auth with KILO_AUTH_CONTENT", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url }, () =>
+          Effect.gen(function* () {
+            yield* (yield* Credential.Service).create({
+              integrationID,
+              label: "saved",
+              value: Credential.Key.make({ type: "key", key: "saved-token" }),
+            })
+            yield* (yield* Config.Test).setEntries([
+              new Document({
+                type: "document",
+                info: Schema.decodeUnknownSync(Info)({ providers: { kilo: { settings: { apiKey: "config-token" } } } }),
+              }),
+            ])
+            for (const [content, expected] of [
+              [undefined, "saved-token"],
+              [
+                JSON.stringify({ kilo: { type: "oauth", access: "injected-token", accountId: "first" } }),
+                "injected-token",
+              ],
+              ["{}", "config-token"],
+            ] as const) {
+              yield* withEnv({ KILO_AUTH_CONTENT: content }, () =>
+                Effect.scoped(
+                  Effect.gen(function* () {
+                    yield* addPlugin()
+                    yield* (yield* Rpc.Service).call("kilocode.gateway", "profile", {})
+                    expect(backend.requests.at(-1)?.authorization).toBe(`Bearer ${expected}`)
+                  }),
+                ),
+              )
+            }
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
+  it.live("fails closed on token organization conflicts even when the profile belongs to both teams", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv(
+          { ...env, KILO_API_KEY: `${backend.url}/api/organizations/first:secret`, KILO_ORG_ID: "selected" },
+          () =>
+            Effect.gen(function* () {
+              yield* addPlugin()
+              expect((yield* (yield* Model.Service).available()).filter((model) => model.providerID === kilo)).toEqual(
+                [],
+              )
+              expect(backend.requests).toEqual([])
+              expect(
+                yield* (yield* Rpc.Service).call("kilocode.gateway", "profile", {}).pipe(Effect.flip),
+              ).toMatchObject({
+                type: "unauthorized",
+              })
+              expect(
+                yield* (yield* Rpc.Service)
+                  .call("kilocode.gateway", "organization.set", {
+                    organizationID: "selected",
+                  })
+                  .pipe(Effect.flip),
+              ).toMatchObject({ type: "failed" })
+            }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
+  it.live("selects the default team for an ordinary key on a team-only account and rejects Personal", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url }, () =>
+          Effect.gen(function* () {
+            backend.state.profile = {
+              user: { email: "team@example.test" },
+              organizations: [{ id: "first", name: "First" }],
+              hasPersonalAccount: false,
+              selectedOrganizationId: "first",
+            }
+            yield* (yield* Credential.Service).create({
+              integrationID,
+              label: "team-only-key",
+              value: Credential.Key.make({ type: "key", key: "team-key" }),
+            })
+            yield* addPlugin()
+            const rpc = yield* Rpc.Service
+            expect(yield* rpc.call("kilocode.gateway", "profile", {})).toMatchObject({ organizationID: "first" })
+            expect(
+              backend.requests.filter((request) => request.path.includes("models")).map((request) => request.path),
+            ).toEqual(["/api/gateway/v1/organizations/first/models"])
+            expect(
+              yield* rpc.call("kilocode.gateway", "organization.set", { organizationID: null }).pipe(Effect.flip),
+            ).toMatchObject({ type: "failed" })
           }),
         ),
       (backend) => Effect.sync(() => backend[Symbol.dispose]()),
