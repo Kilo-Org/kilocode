@@ -629,29 +629,20 @@
 ## [7.1.12] - 2026-10-22
 
 ### Added
-- feat(cli): add project-scoped agent usage aggregation by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15185
-- feat(cli): custom auto routers with client models and local evals by @iscekic in https://github.com/Kilo-Org/kilocode/pull/15183
-- feat(jetbrains): fetch base before creating worktrees by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15204
-- feat(cli): expose pageable agent usage HTTP API by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15205
-- feat(cli): add session host registry and kilo cloud adapter by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15351
+- Added project-scoped agent usage aggregation to the bundled CLI, backed by a pageable agent usage HTTP API.
+- Added custom auto routers with client models and local evals.
+- Added a session host registry and Kilo Cloud session adapter.
+- Agent Manager now fetches the base branch before creating new worktrees.
 
 ### Fixed
-- fix(vscode): let browser_open permissions be allowed always by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/15235
-- fix(cli): map audio formats in custom router decision input by @iscekic in https://github.com/Kilo-Org/kilocode/pull/15245
-- fix(telemetry): stop flaky PostHog shutdown failure in CI by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15257
-- fix(cli): keep edit tools for subagents of allowlist callers by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15254
-- fix(cli): preserve MCP prompt content by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/15293
-- fix(jetbrains): keep prompt navigator in sync with hovered stripe by @kirillk in https://github.com/Kilo-Org/kilocode/pull/15295
-- fix(cli): ingest PR links without remote control by @eshurakov in https://github.com/Kilo-Org/kilocode/pull/15350
+- Kept the prompt navigator in sync with the hovered stripe and stopped following the prompt after manual scrolling.
+- Preserved MCP prompt content so server-provided prompts render correctly.
+- Kept edit tools available to subagents of allowlist callers.
+- Mapped audio formats correctly in custom router decision input.
+- Ingested PR links without requiring remote control.
 
 ### Changed
-- release(jetbrains): v7.1.11 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15186
-- chore(jetbrains): bump CLI pin to v7.8.14 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15188
-- refactor: make kilo-auto-close the only closer and merge high-value into keep-open by @brunoagatao in https://github.com/Kilo-Org/kilocode/pull/15233
-- docs(kilo-docs): update Kilo Desktop docs for 0.1.13 by @MihaelaStoica in https://github.com/Kilo-Org/kilocode/pull/15346
-- docs(kilo-docs): note direct Codex instructions size limit by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/14644
-- chore(jetbrains): bump CLI pin to v7.8.15 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/15262
-
+- Bumped the bundled Kilo CLI pin to v7.8.15 (via v7.8.14).
 
 ## [7.1.11] - 2026-10-16
 
