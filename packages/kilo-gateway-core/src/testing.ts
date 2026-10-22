@@ -25,6 +25,7 @@ export function fixture() {
       hasPersonalAccount: true,
     } as unknown,
     modelsStatus: 200,
+    authenticatedModelsStatus: undefined as number | undefined,
     modelsRetryAfter: undefined as string | undefined,
     models: {
       data: [
@@ -298,7 +299,11 @@ export function fixture() {
         path === "/api/v1/models"
       ) {
         const headers = state.modelsRetryAfter ? { "retry-after": state.modelsRetryAfter } : undefined
-        if (state.modelsStatus !== 200) return new Response("Unavailable", { status: state.modelsStatus, headers })
+        const status =
+          request.headers.has("authorization") && request.headers.get("authorization") !== "Bearer anonymous"
+            ? state.authenticatedModelsStatus ?? state.modelsStatus
+            : state.modelsStatus
+        if (status !== 200) return new Response("Unavailable", { status, headers })
         return Response.json(state.models)
       }
       if (/^\/api\/(?:gateway\/v1\/|v1\/)?organizations\/[^/]+\/models$/.test(path)) {

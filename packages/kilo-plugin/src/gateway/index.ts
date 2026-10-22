@@ -153,7 +153,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         ),
       )
       const envInput = KiloAccount.envToken()
-      server = settings?.baseURL ? KiloServer.normalize(settings.baseURL) : KiloServer.fromEnv()
+      const configuredServer = settings?.baseURL ? KiloServer.normalize(settings.baseURL) : KiloServer.fromEnv()
       const content = KiloAccount.authContent()
       const connection = content === undefined ? yield* ctx.integration.connection.active(id) : undefined
       const credential = connection
@@ -163,14 +163,34 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         content !== undefined ? (content ?? undefined) : credential ? credentialInput(credential) : undefined
       // v1's final provider auth patch runs after config: env > saved OAuth/key > config token > config API key.
       const token = envInput?.token ?? saved?.token ?? settings?.kilocodeToken ?? settings?.apiKey
-      const base = settings?.baseURL || (!envInput ? saved?.server : undefined) || server
+      const base = settings?.baseURL || (!envInput ? saved?.server : undefined) || configuredServer
       const key = token
         ? !envInput && content === undefined && saved && connection
           ? organizationKey(connection)
           : `organization:${snapshotKey(base, token)}`
         : undefined
-      const selection = key ? decodeSelection(yield* ctx.storage.get(key)) : Option.none()
+      const storedSelection = key ? decodeSelection(yield* ctx.storage.get(key)) : Option.none()
+      const legacy =
+        key && (envInput || content)
+          ? decodeSelection(yield* ctx.storage.get("organization:env"))
+          : Option.none()
+      const selection = Option.orElse(storedSelection, () => legacy)
+      const account = token
+        ? KiloAccount.resolve({
+            token,
+            server: base,
+            organizationID: Option.isSome(selection)
+              ? selection.value.organizationID
+              : (saved?.organizationID ?? settings?.kilocodeOrganizationId),
+          })
+        : undefined
+      // Adopt the old unscoped selection once, then keep all future choices bound to this credential identity.
+      if (key && Option.isSome(legacy) && account && KiloAccount.compatible(account)) {
+        if (Option.isNone(storedSelection)) yield* ctx.storage.set(key, legacy.value)
+        yield* ctx.storage.remove("organization:env")
+      }
       return {
+        server: configuredServer,
         envActive: Boolean(envInput || content !== undefined || (!saved && token)),
         connection: !envInput && content === undefined && saved ? connection : undefined,
         selectionKey: key,
@@ -178,15 +198,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           (Option.isSome(selection) && selection.value.organizationID === null) ||
           (!envInput && saved?.organizationID === null) ||
           settings?.kilocodeOrganizationId === null,
-        account: token
-          ? KiloAccount.resolve({
-              token,
-              server: base,
-              organizationID: Option.isSome(selection)
-                ? selection.value.organizationID
-                : (saved?.organizationID ?? settings?.kilocodeOrganizationId),
-            })
-          : undefined,
+        account,
       }
     })
 
@@ -231,6 +243,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     ): Effect.fn.Return<void> {
       const resolved = yield* resolveCurrentAccount
       if (targetEpoch !== epoch) return
+      server = resolved.server
       let current = resolved.account
       const connection = resolved.connection
       const envActive = resolved.envActive
@@ -269,7 +282,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       const profile = token ? yield* KiloProfile.get(base, token).pipe(Effect.option) : Option.none()
       if (targetEpoch !== epoch) return
       // A key login can have no saved organization. Team-only accounts must not request a personal catalog.
-      if (current && !organizationID && Option.isSome(profile) && !profile.value.hasPersonalAccount) {
+      if (current && !organizationID && Option.isSome(profile) && profile.value.hasPersonalAccount === false) {
         organizationID = KiloProfile.defaultOrganizationID(profile.value)
         if (resolved.personalSelected || !organizationID) {
           catalog = { account: current, connection, envActive, models: [], failed: true, anonymous: false }
@@ -391,17 +404,27 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       )
     }
 
-    const reload = Effect.suspend(() => {
+    const reload = Effect.gen(function* () {
       const targetEpoch = ++epoch
-      catalog = { envActive: false, models: [], failed: true, anonymous: true }
-      return cancelRetry.pipe(
-        Effect.andThen(ctx.provider.reload()),
-        Effect.andThen(
-          lock.withPermit(
-            loadCatalog(targetEpoch, 0).pipe(
-              Effect.andThen(Effect.suspend(() => (targetEpoch === epoch ? ctx.provider.reload() : Effect.void))),
-            ),
-          ),
+      const previous = catalog
+      const previousServer = previous.account?.server ?? server
+      const resolved = yield* resolveCurrentAccount
+      if (targetEpoch !== epoch) return
+      // Refreshes keep usable models; scope changes invalidate them before any Gateway request.
+      if (
+        previousServer !== (resolved.account?.server ?? resolved.server) ||
+        previous.account?.token !== resolved.account?.token ||
+        previous.account?.organizationID !== resolved.account?.organizationID ||
+        JSON.stringify(previous.connection) !== JSON.stringify(resolved.connection)
+      ) {
+        catalog = { envActive: false, models: [], failed: true, anonymous: true }
+        yield* ctx.provider.reload()
+      }
+      server = resolved.server
+      yield* cancelRetry
+      yield* lock.withPermit(
+        loadCatalog(targetEpoch, 0).pipe(
+          Effect.andThen(Effect.suspend(() => (targetEpoch === epoch ? ctx.provider.reload() : Effect.void))),
         ),
       )
     })
@@ -412,6 +435,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     // activation does not wait for the network. The fresh catalog loads in the plugin scope and reloads the provider
     // once, as a retry does. The first start (no stored catalog) and team scope, which fails closed, wait for it.
     const start = yield* resolveCurrentAccount
+    server = start.server
     const stored = start.account?.organizationID
       ? undefined
       : yield* readSnapshot(snapshotKey(start.account?.server ?? server, start.account?.token))
@@ -562,9 +586,12 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
           if (catalog.failed) throw new Error("Unable to retrieve Kilo model catalog")
           const headers = new Headers(event.request.headers)
           headers.delete("x-api-key")
-          headers.set("authorization", `Bearer ${catalog.account?.token ?? KiloAccount.ANONYMOUS_KEY}`)
+          const token = catalog.anonymous
+            ? KiloAccount.ANONYMOUS_KEY
+            : catalog.account?.token ?? KiloAccount.ANONYMOUS_KEY
+          headers.set("authorization", `Bearer ${token}`)
           headers.delete(KiloHeaders.HEADER_ORGANIZATION)
-          if (catalog.account?.organizationID) {
+          if (!catalog.anonymous && catalog.account?.organizationID) {
             headers.set(KiloHeaders.HEADER_ORGANIZATION, catalog.account.organizationID)
           }
           event.request = new Request(event.request, { headers })
@@ -702,7 +729,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
               const profile = yield* KiloProfile.get(resolved.account.server, resolved.account.token).pipe(
                 Effect.mapError((error) => context.error("failed", error.message)),
               )
-              if (!profile.hasPersonalAccount)
+              if (profile.hasPersonalAccount === false)
                 return yield* Effect.fail(context.error("failed", "This Kilo account has no personal account"))
             }
             KiloModes.clearCache()
