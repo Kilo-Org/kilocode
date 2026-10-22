@@ -2,7 +2,7 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import tls from "node:tls"
-import { host, pin, stage } from "./bun"
+import { host, pin, stage, target } from "./bun"
 
 export function code(err: unknown): string {
   if (err && typeof err === "object") {
@@ -83,11 +83,13 @@ async function probe(optional: boolean) {
 
 if (import.meta.main) {
   const optional = process.argv.includes("--allow-unavailable")
+  const input = host()
+  console.log(`Selected Bun runtime artifact: ${target(input).name}`)
   await probe(optional)
   if (!process.argv.includes("--compiled")) {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-bun-probe-"))
     try {
-      const runtime = await stage(host())
+      const runtime = await stage(input)
       const file = path.join(dir, process.platform === "win32" ? "probe.exe" : "probe")
       await Bun.build({
         entrypoints: [import.meta.filename],

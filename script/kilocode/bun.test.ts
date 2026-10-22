@@ -58,6 +58,23 @@ test("host defaults to the running process", () => {
   expect(target(host())).toBeDefined()
 })
 
+test("Node bootstrap and Bun select the same native runtime artifact", async () => {
+  const url = new URL("./bun.ts", import.meta.url).href
+  const result = await run(
+    "node",
+    [
+      "--input-type=module",
+      "--eval",
+      `import { host, target } from ${JSON.stringify(url)}; console.log(target(host()).name)`,
+    ],
+    { windowsHide: true },
+  )
+  const expected = result.stdout.trim()
+  const actual = target(host()).name
+  console.log(`Native Bun artifact: Node=${expected}, Bun=${actual}`)
+  expect(actual).toBe(expected)
+})
+
 test("manifest pins all twelve immutable npm tarballs with SHA-512", () => {
   expect(pin.version).toBe("1.4.3-canary.20261021.1")
   expect(pkg.packageManager).toBe(`bun@${pin.version}`)
