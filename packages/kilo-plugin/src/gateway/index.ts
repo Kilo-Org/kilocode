@@ -864,10 +864,13 @@ function toModelInfo(
     // kilo_port(gateway:59f57027c538) Explicit backend variants take precedence, including custom names/options.
     variants:
       source.variants && Object.keys(source.variants).length > 0
-        ? Object.entries(source.variants).map(([name, options]) => ({
-            id: Model.VariantID.make(name),
-            settings: GatewayOptions.lower(source.aiSDKProvider, options),
-          }))
+        ? Object.entries(source.variants)
+            // The native picker owns "default"; empty IDs cannot select a variant.
+            .filter(([name]) => name !== "" && name !== "default")
+            .map(([name, options]) => ({
+              id: Model.VariantID.make(name),
+              settings: GatewayOptions.lower(source.aiSDKProvider, options),
+            }))
         : source.reasoning
           ? Variant.resolve(base, source.reasoningOptions)
           : [],

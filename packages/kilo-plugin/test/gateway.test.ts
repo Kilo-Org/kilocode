@@ -543,7 +543,13 @@ describe("KiloGatewayPlugin", () => {
                         opencode: {
                           ai_sdk_provider: dialect.provider,
                           reasoning_options: [{ type: "effort", values: ["medium"] }],
-                          variants: { "team-custom": shared, "native-custom": { ...shared, ...dialect.native } },
+                          variants: {
+                            default: shared,
+                            "": shared,
+                            "team-custom": shared,
+                            "native-custom": { ...shared, ...dialect.native },
+                            "deep#careful": { ...shared, ...dialect.native },
+                          },
                         },
                       },
                     ],
@@ -555,6 +561,7 @@ describe("KiloGatewayPlugin", () => {
                   expect(model?.variants).toEqual([
                     { id: Model.VariantID.make("team-custom"), settings: { ...shared, ...dialect.lowered } },
                     { id: Model.VariantID.make("native-custom"), settings: { ...shared, ...dialect.native } },
+                    { id: Model.VariantID.make("deep#careful"), settings: { ...shared, ...dialect.native } },
                   ])
                   const session = yield* host.session.create({ title: "variant lowering" })
                   const hooks = yield* PluginHooks.Service
@@ -563,6 +570,7 @@ describe("KiloGatewayPlugin", () => {
                     for (const variant of [
                       { id: "team-custom", body: dialect.sharedBody },
                       { id: "native-custom", body: dialect.nativeBody },
+                      { id: "deep#careful", body: dialect.nativeBody },
                     ]) {
                       const resolved = yield* resolver.resolve({
                         providerID: kilo,
