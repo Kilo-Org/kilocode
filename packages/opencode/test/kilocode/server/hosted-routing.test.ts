@@ -203,8 +203,8 @@ describe("hosted attachment routing", () => {
       headers: { "x-kilo-directory": tmp.path },
     })
 
-    expect(viewed.status).not.toBe(400)
-    expect(status.status).not.toBe(400)
+    expect(viewed.status).toBe(200)
+    expect(status.status).toBe(200)
     expect(fake.calls).toHaveLength(0)
   })
 
