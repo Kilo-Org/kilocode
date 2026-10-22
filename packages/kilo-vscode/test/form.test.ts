@@ -12,11 +12,17 @@ describe("formAnswer", () => {
         { key: "enabled", type: "boolean", required: true },
         { key: "link", type: "external", url: "https://example.com" },
       ],
-      { choice: "old", tags: ["a", "b"], count: "0", rate: "1.5", enabled: false },
+      { choice: "old", tags: ["a", "b"], count: "0", rate: "1.5", enabled: false, link: true },
       { choice: " new ", tags: "a" },
     )
     expect(result.errors).toEqual([])
-    expect(result.answer).toEqual({ choice: "new", tags: ["a", "b"], count: 0, rate: 1.5, enabled: false })
+    expect(result.answer).toEqual({ choice: "new", tags: ["a", "b"], count: 0, rate: 1.5, enabled: false, link: true })
+  })
+
+  test("requires an acknowledged external field, as the server does", () => {
+    const result = formAnswer([{ key: "link", type: "external", url: "https://example.com" }], {})
+    expect(result.errors).toHaveLength(1)
+    expect(result.answer).toEqual({})
   })
 
   test("blocks missing required answers and invalid numeric values", () => {

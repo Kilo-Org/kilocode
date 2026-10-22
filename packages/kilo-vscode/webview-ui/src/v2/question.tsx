@@ -59,7 +59,8 @@ export function QuestionDock(props: { form: FormInfo }) {
   }
   const answered = () => {
     const current = field()
-    if (!current || current.type === "external") return true
+    if (!current) return true
+    if (current.type === "external") return values()[current.key] === true
     if (props.form.metadata?.kind !== "question" && !current.required) return true
     const answer = result().answer[current.key]
     return answer !== undefined && (!Array.isArray(answer) || answer.length > 0)
@@ -374,7 +375,10 @@ export function QuestionDock(props: { form: FormInfo }) {
                         variant="secondary"
                         size="small"
                         disabled={sending()}
-                        onClick={() => v2.open(current.url)}
+                        onClick={() => {
+                          v2.open(current.url)
+                          setValues((values) => ({ ...values, [current.key]: true }))
+                        }}
                       >
                         {current.title ?? current.url}
                       </Button>

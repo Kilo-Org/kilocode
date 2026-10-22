@@ -18,9 +18,13 @@ export function bridge(input: {
     requests.set(message.id, abort)
     const result = await (async () => {
       const target = await input.target()
+      const url = new URL(message.path, target.url)
+      // The credential only goes to the server: the path comes from the webview and must stay on its origin.
+      if (!message.path.startsWith("/") || url.origin !== new URL(target.url).origin)
+        throw new Error(`Refused request outside the Kilo server: ${message.path}`)
       const headers = new Headers(message.headers)
       headers.set("authorization", target.authorization)
-      const response = await run(target.url + message.path, {
+      const response = await run(url.href, {
         method: message.method,
         headers,
         body: message.body,

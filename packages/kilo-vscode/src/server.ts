@@ -117,8 +117,9 @@ export function start(input: {
   })
   child.stderr?.on("data", (chunk: Buffer) => {
     const text = chunk.toString()
-    state.errors.push(text)
     input.log?.(text)
+    // Only startup errors are reported; keep the tail and stop collecting once the server is ready.
+    if (!state.done) state.errors = [...state.errors.slice(-19), text]
   })
   child.on("error", (error) => fail(`The Kilo server could not start: ${error.message}`))
   child.on("exit", (code, signal) => {

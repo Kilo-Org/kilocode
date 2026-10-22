@@ -84,6 +84,24 @@ describe("bridge", () => {
     await expect(web.fetch("http://kilo.invalid/api/info")).rejects.toThrow("server did not start")
   })
 
+  test("refuses paths that leave the server origin, so the credential stays with the server", async () => {
+    const calls: string[] = []
+    for (const path of ["@evil.com/x", "//evil.com/x"]) {
+      const done = Promise.withResolvers<ToWebview>()
+      const host = bridge({
+        target: async () => ({ url: "http://127.0.0.1:4096", authorization: "Basic test" }),
+        post: (message) => done.resolve(message),
+        fetch: (async (input: RequestInfo | URL) => {
+          calls.push(String(input))
+          return new Response("leaked")
+        }) as typeof fetch,
+      })
+      host.receive({ type: "fetch", id: 1, path, method: "GET", headers: [] })
+      expect(await done.promise).toMatchObject({ type: "error", id: 1 })
+    }
+    expect(calls).toEqual([])
+  })
+
   test("ignores messages for unknown requests", () => {
     const web = transport(() => {})
     const stray: ToWebview = { type: "chunk", id: 99, data: new Uint8Array() }

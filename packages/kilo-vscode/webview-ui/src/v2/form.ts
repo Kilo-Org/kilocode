@@ -9,6 +9,9 @@ export function formAnswer(fields: FormField[], values: Draft, custom: Record<st
   fields.forEach((field) => {
     if (field.type === "external") {
       visible.push(field)
+      // The server rejects an external field whose answer is not `true` (core/src/form.ts validateAnswer).
+      if (values[field.key] === true) answer[field.key] = true
+      else errors.push(`${field.title || field.key}: open the link first.`)
       return
     }
     if (
