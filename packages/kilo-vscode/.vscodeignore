@@ -5,6 +5,9 @@ node_modules/**
 src/**
 webview-ui/**
 script/**
+tests/**
+.storybook/**
+.turbo/**
 .gitignore
 .yarnrc
 .npmrc

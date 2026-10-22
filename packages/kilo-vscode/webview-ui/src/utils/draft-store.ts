@@ -3,6 +3,8 @@ import type { CodeContext } from "../../../src/shared/code-context"
 import type { ImageAttachment } from "../hooks/useImageAttachments"
 import type { RevertPromptState } from "../context/session-utils"
 import { clearPromptDraftRoutes, pendingDraftKey, sessionDraftKey } from "./prompt-drafts"
+import type { Annotation } from "./annotations"
+import type { AnnotationEditorDraft } from "./annotation-state"
 
 export const mentionDrafts = new Map<string, Pick<RevertPromptState, "paths" | "sessions">>()
 export const drafts = new Map<string, string>()
@@ -11,6 +13,8 @@ export const reviewDrafts = new Map<string, ReviewCommentEntry[]>()
 export const contextDrafts = new Map<string, CodeContext[]>()
 export const imageDrafts = new Map<string, ImageAttachment[]>()
 export const scrollDrafts = new Map<string, number>()
+export const annotationDrafts = new Map<string, Annotation[]>()
+export const annotationEditorDrafts = new Map<string, AnnotationEditorDraft>()
 /** Full text of collapsed pastes per draft key, in text order, so a restored
  *  draft can expand its `[Pasted ~N lines]` chips again. */
 export const pasteDrafts = new Map<string, string[]>()
@@ -55,10 +59,12 @@ function remove(raw: string | undefined) {
     drafts,
     browserDrafts,
     reviewDrafts,
-    contextDrafts,
     imageDrafts,
     scrollDrafts,
     mentionDrafts,
+    annotationDrafts,
+    annotationEditorDrafts,
+    contextDrafts,
     pasteDrafts,
   ]) {
     for (const key of map.keys()) {

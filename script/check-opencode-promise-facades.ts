@@ -34,6 +34,14 @@ const testAllow: Record<string, { count: number; reason: string }> = {
   "kilocode/config-validation.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/cli-shutdown.test.ts": { count: 1, reason: "mocked runtime boundary for shutdown unit tests" },
   "kilocode/plan-followup.test.ts": { count: 3, reason: "existing runtime integration test" },
+  "kilocode/response-lens.test.ts": {
+    count: 2,
+    reason: "cleanup of the real production provider runtime after isolated loopback explanation integration tests",
+  },
+  "kilocode/server/httpapi-response-lens.test.ts": {
+    count: 2,
+    reason: "cleanup of the real application runtime after authenticated stateless HTTP explanation integration tests",
+  },
   "kilocode/session-compaction-chunks.test.ts": {
     count: 2,
     reason: "disk-backed instance integration test cleanup",

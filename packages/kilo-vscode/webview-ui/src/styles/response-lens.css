@@ -1,0 +1,145 @@
+.response-lens-popover [data-slot="popover-body"] {
+  padding: 0;
+}
+
+.response-lens-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  font-size: var(--kilo-font-size-13, 13px);
+  line-height: 1.5;
+}
+
+.response-lens-header,
+.response-lens-actions,
+.response-lens-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.response-lens-header {
+  justify-content: space-between;
+}
+
+.response-lens-header strong {
+  font-size: var(--kilo-font-size-13, 13px);
+  font-weight: 600;
+}
+
+.response-lens-header > [data-component="button"],
+.response-lens-actions > [data-component="button"],
+.response-lens-settings > [data-component="button"],
+.response-lens-settings [data-slot="select-select-trigger"],
+.response-lens-model [data-slot="popover-trigger"] {
+  min-height: 26px;
+  height: auto;
+  padding: 3px 8px;
+  font-size: var(--kilo-font-size-12, 12px);
+  line-height: 18px;
+}
+
+.response-lens-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.response-lens-body > .response-lens-settings {
+  padding-top: 8px;
+  border-top: 1px solid var(--lens-border);
+}
+
+.response-lens-settings > [data-component="switch"] {
+  flex-basis: 100%;
+  margin-bottom: 2px;
+}
+
+.response-lens-model {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.response-lens-model [data-slot="popover-trigger"] {
+  max-width: 100%;
+}
+
+.response-lens-model .model-selector-trigger-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.response-lens-actions {
+  flex-wrap: wrap;
+}
+
+.response-lens-loading {
+  padding: 2px 0;
+}
+
+.response-lens-result {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.response-lens-hint {
+  color: var(--vscode-descriptionForeground, var(--lens-foreground));
+  font-size: var(--kilo-font-size-11, 11px);
+  overflow-wrap: anywhere;
+}
+
+.response-lens-body [aria-live] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.response-lens-body [role="alert"] {
+  color: var(--vscode-errorForeground, var(--lens-foreground));
+  overflow-wrap: anywhere;
+}
+
+.response-lens-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--lens-border);
+  list-style: none;
+  font-size: var(--kilo-font-size-12, 12px);
+}
+
+.response-lens-source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.response-lens-source a {
+  color: var(--vscode-textLink-foreground, LinkText);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.response-lens-source a:focus-visible {
+  outline: 1px solid var(--lens-focus);
+  outline-offset: 2px;
+}
+
+.response-lens-source-status {
+  color: var(--vscode-descriptionForeground, var(--lens-foreground));
+  font-size: var(--kilo-font-size-11, 11px);
+}
+
+.response-lens-body p {
+  margin: 0;
+}

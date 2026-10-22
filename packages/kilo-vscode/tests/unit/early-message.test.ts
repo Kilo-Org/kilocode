@@ -5,6 +5,7 @@ type Ctx = Parameters<typeof routeEarlyMessage>[1]
 
 function context(copied: string[], posted: unknown[], fail = false) {
   return {
+    responseLens: () => false,
     copy: async (text: string) => {
       if (fail) throw new Error("clipboard unavailable")
       copied.push(text)
@@ -47,6 +48,7 @@ describe("routeEarlyMessage resume", () => {
   it("forwards the original session, assistant, and request IDs without sending text", async () => {
     const calls: string[][] = []
     const ctx = {
+      responseLens: () => false,
       resume: async (...ids: string[]) => {
         calls.push(ids)
       },
@@ -62,7 +64,7 @@ describe("routeEarlyMessage resume", () => {
 describe("routeEarlyMessage activity", () => {
   it("forwards authoritative webview presentation state without interpreting session events", async () => {
     const calls: unknown[] = []
-    const ctx = { activity: (state: unknown) => calls.push(state) } as Ctx
+    const ctx = { responseLens: () => false, activity: (state: unknown) => calls.push(state) } as Ctx
     for (const state of ["busy", "waiting", "done", "scheduled", "error", "idle"]) {
       expect(await routeEarlyMessage({ type: "sessionActivity", state }, ctx)).toBe(true)
     }
@@ -73,7 +75,7 @@ describe("routeEarlyMessage activity", () => {
 describe("routeEarlyMessage caffeination", () => {
   it("delegates keep-awake toggles to the host", async () => {
     const calls: string[] = []
-    const ctx = { caffeination: () => calls.push("toggle") } as Ctx
+    const ctx = { responseLens: () => false, caffeination: () => calls.push("toggle") } as Ctx
 
     expect(await routeEarlyMessage({ type: "toggleCaffeination" }, ctx)).toBe(true)
     expect(calls).toEqual(["toggle"])
@@ -84,6 +86,7 @@ describe("routeEarlyMessage background jobs", () => {
   it("forwards board requests without losing owner, project, or revision", async () => {
     const calls: unknown[] = []
     const ctx = {
+      responseLens: () => false,
       board: async (message: Record<string, unknown>) => {
         calls.push(message)
         return true
@@ -103,6 +106,7 @@ describe("routeEarlyMessage background jobs", () => {
   it("forwards list request correlation", async () => {
     const calls: unknown[] = []
     const ctx = {
+      responseLens: () => false,
       backgroundJobs: async (sessionID: string, requestID: string) => calls.push([sessionID, requestID]),
     } as Ctx
 
@@ -115,6 +119,7 @@ describe("routeEarlyMessage background jobs", () => {
   it("forwards cancellation through the owning parent session", async () => {
     const calls: unknown[] = []
     const ctx = {
+      responseLens: () => false,
       cancelBackgroundJob: async (jobID: string, sessionID: string, requestID: string) =>
         calls.push([jobID, sessionID, requestID]),
     } as Ctx
@@ -136,6 +141,7 @@ describe("routeEarlyMessage background jobs", () => {
   it("forwards promotion for one child through its owning parent session", async () => {
     const calls: unknown[] = []
     const ctx = {
+      responseLens: () => false,
       promoteBackgroundJob: async (jobID: string, sessionID: string) => calls.push([jobID, sessionID]),
     } as Ctx
 

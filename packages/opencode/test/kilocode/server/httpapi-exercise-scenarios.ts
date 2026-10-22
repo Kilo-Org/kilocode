@@ -573,6 +573,10 @@ export const kiloScenarios: Scenario[] = [
     .at((ctx) => ({ path: "/enhance-prompt", headers: ctx.headers(), body: { text: "" } }))
     .status(400),
   http.protected
+    .post("/response-lens/explain", "responseLens.explain")
+    .at((ctx) => ({ path: "/response-lens/explain", headers: ctx.headers(), body: { text: "" } }))
+    .status(400),
+  http.protected
     .post("/kilocode/session/{sessionID}/resume", "kilocode.resumeSession")
     .seeded((ctx) => ctx.session({ title: "Empty resume" }))
     .at((ctx) => ({

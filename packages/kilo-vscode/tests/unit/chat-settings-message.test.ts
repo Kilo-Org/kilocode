@@ -84,6 +84,7 @@ describe("buildChatSettingsMessage", () => {
         type: "chatSettingsLoaded",
         settings: {
           shiftTabCyclesVariant: true,
+          responseLens: { enabled: true, level: "simple" },
           browserAutomation: true,
           agentManagerBrowserOpenLinksIn: "external",
           workspaceTrusted: true,
@@ -156,5 +157,15 @@ describe("validChatSetting", () => {
     expect(validChatSetting("shiftTabCyclesVariant", false)).toBe(true)
     expect(validChatSetting("shiftTabCyclesVariant", "false")).toBe(false)
     expect(validChatSetting("unknown", true)).toBe(false)
+  })
+
+  it("validates Response Lens writes before persisting", () => {
+    expect(validChatSetting("responseLens", { enabled: true, level: "school" })).toBe(true)
+    expect(validChatSetting("responseLens", { enabled: false, level: "high-school" })).toBe(true)
+    expect(validChatSetting("responseLens", { enabled: true, level: "expert" })).toBe(false)
+    expect(validChatSetting("responseLens", { enabled: "true", level: "simple" })).toBe(false)
+    expect(
+      validChatSetting("responseLens", { enabled: true, level: "simple", model: { providerID: "x", modelID: " " } }),
+    ).toBe(false)
   })
 })

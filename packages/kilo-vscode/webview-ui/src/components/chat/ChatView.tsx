@@ -35,6 +35,8 @@ import { pollBackgroundJobs } from "./background-jobs"
 import { showTabStrip } from "../../utils/local-tabs"
 import { forcesExternalBrowser } from "../../utils/link-modifier"
 import type { WorktreeReference } from "../../hooks/file-mention-utils"
+import { AnnotationSourceMarkers } from "./AnnotationMarkers"
+import { ResponseLensBoundary } from "./ResponseLens"
 
 interface ChatViewProps {
   projectId?: string
@@ -78,6 +80,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // Show "Continue in Worktree": only when explicitly enabled via prop
   const canContinueInWorktree = () => props.continueInWorktree === true
   const ownsPrompts = () => props.interactivePrompts !== false
+  const [transcript, setTranscript] = createSignal<HTMLElement>()
 
   const id = () => session.currentSessionID()
   const openLink = (event: MouseEvent) => {
@@ -423,7 +426,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           </Show>
           <TaskHeader readonly={props.readonly} />
           <div class="chat-messages-wrapper">
-            <div class="chat-messages">
+            <div class="chat-messages" ref={setTranscript} data-transcript-root="" data-session={id()}>
               <MessageList
                 onSelectSession={props.onSelectSession}
                 isSessionOpen={props.isSessionOpen}
@@ -445,6 +448,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             </div>
           </div>
 
+          <ResponseLensBoundary>
+            <AnnotationSourceMarkers transcript={transcript} sessionID={id} />
+          </ResponseLensBoundary>
           <Show when={dock()}>
             <div class="chat-input">
               <Show when={server.connectionState() === "error" && server.errorMessage()}>
@@ -469,6 +475,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               />
               <Show when={ownsPrompts() && !props.readonly}>
                 <PromptInput
+                  transcript={transcript}
                   blocked={blocked}
                   edit={editing()}
                   onEditComplete={() => setEditing(undefined)}
