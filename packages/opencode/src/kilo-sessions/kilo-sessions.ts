@@ -906,6 +906,8 @@ export namespace KiloSessions {
               Effect.sync(() =>
                 startPrLinkPoll(() =>
                   Instance.restore(ctx, async () => {
+                    // Preserve evidence from the previous process before refresh can remove it.
+                    for (const sessionID of tracked) await syncPrLinkForSession(sessionID)
                     await refreshPrLink()
                     for (const sessionID of tracked) await syncPrLinkForSession(sessionID)
                   }),

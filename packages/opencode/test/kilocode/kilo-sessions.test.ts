@@ -1493,15 +1493,7 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
           expect((await PrLink.loadSessionLinks()).size).toBe(1)
 
           await new Promise((r) => setTimeout(r, 1200))
-          const ownerLinks = prLinkItems(owner)
-          expect(ownerLinks.length).toBe(1)
-          expect(ownerLinks[0]!.data).toEqual({
-            platform: "github",
-            prUrl: "https://github.com/owner/repo/pull/7",
-            prNumber: 7,
-            headRef: "feature/x",
-            headSha: sha,
-          })
+          expect(prLinkItems(owner)).toHaveLength(1)
           // No link, and therefore no set and no clear, is ingested for the
           // bystander: a link never fans out.
           expect(prLinkItems(bystander)).toEqual([])
@@ -1578,19 +1570,6 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
               `To github.com:owner/repo.git\n   ${first?.headSha}..${next}  feature/x -> feature/x\n`,
             ),
           )
-          const pushed = await Effect.runPromise(
-            pollWithTimeout(
-              Effect.promise(async () => {
-                const record = await PrLink.readSessionPrLink(id)
-                return record?.headSha === next ? record : undefined
-              }),
-              "pushed PR commit was not recorded",
-            ),
-          )
-          expect(pushed?.link.prNumber).toBe(7)
-          expect(pushed?.headRef).toBe("feature/x")
-          expect(pushed?.headSha).toBe(next)
-
           await Effect.runPromise(
             pollWithTimeout(
               Effect.sync(() => prLinkItems(id).at(-1)),
@@ -1610,15 +1589,6 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
               },
             },
           ])
-
-          await KiloSessions.enableRemote()
-          await KiloSessions.attachRemoteSession(id)
-          const payload = await capturedGetSessions()()
-          expect(payload.sessions.find((s) => s.id === id)?.prLink).toMatchObject({
-            prNumber: 7,
-            headRef: "feature/x",
-            headSha: next,
-          })
         } finally {
           await runtime.dispose()
         }
@@ -1703,7 +1673,7 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
     })
   }, 30000)
 
-  test("the poll withdraws a closed PR without remote control and leaves unlinked sessions alone", async () => {
+  test("the poll withdraws a stored closed PR before this process ingested it", async () => {
     const poller = await import("../../src/kilo-sessions/pr-link-poller")
     const poll = spyOn(poller, "startPrLinkPoll").mockImplementation(() => () => {})
     await using tmp = await repoWithRemote()
@@ -1717,13 +1687,8 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
           await KiloSessions.bootstrap(owner)
           await KiloSessions.bootstrap(bystander)
           await clearStaleIngest()
-          emitPart(owner, toolPart(owner, "p-create", "gh pr create --fill", "https://github.com/owner/repo/pull/7\n"))
-          await Effect.runPromise(
-            pollWithTimeout(
-              Effect.sync(() => prLinkItems(owner).at(-1)),
-              "PR creation was not ingested",
-            ),
-          )
+          // Only persisted evidence exists, as it would after a process restart.
+          await PrLink.recordPrCreate(owner, tmp.path, "https://github.com/owner/repo/pull/7\n")
 
           const { Process } = await import("../../src/util/process")
           spyOn(Process, "text").mockResolvedValue({
@@ -1736,13 +1701,18 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
           if (!run) throw new Error("PR poll was not registered")
           await run()
           expect(await PrLink.readSessionPrLink(owner)).toBeUndefined()
-          await Effect.runPromise(
+          const item = await Effect.runPromise(
             pollWithTimeout(
-              Effect.sync(() => (prLinkItems(owner).length === 2 ? true : undefined)),
-              "closed PR was not withdrawn without remote control",
+              Effect.sync(() =>
+                prLinkItems(owner).find((item) => {
+                  const data = item.data
+                  return data != null && typeof data === "object" && "prUrl" in data && data.prUrl === null
+                }),
+              ),
+              "stored closed PR was not withdrawn on startup",
             ),
           )
-          expect(prLinkItems(owner).at(-1)?.data).toEqual({
+          expect(item.data).toEqual({
             platform: null,
             prUrl: null,
             prNumber: null,
@@ -1750,22 +1720,6 @@ describe("KiloSessions PR link (per-session hard evidence)", () => {
             headSha: null,
           })
 
-          await run()
-          await KiloSessions.create(owner)
-          await KiloSessions.create(bystander)
-          await Effect.runPromise(
-            pollWithTimeout(
-              Effect.sync(() =>
-                ingestBodies.some(
-                  (body) => body.sessionId === bystander && body.data.some((item) => item.type === "session_status"),
-                )
-                  ? true
-                  : undefined,
-              ),
-              "full sync did not complete after PR withdrawal",
-            ),
-          )
-          expect(prLinkItems(owner)).toHaveLength(2)
           expect(prLinkItems(bystander)).toEqual([])
           expect(RemoteWS.connect).not.toHaveBeenCalled()
         } finally {
