@@ -96,6 +96,11 @@ export function transformSseData(
     })
   }
 
+  // Only usage frames are stamped; leave every other chunk (text deltas) byte-for-byte untouched.
+  const usageFrame = [payload, payload.response, payload.message].some(
+    (value) => isRecord(value) && isRecord(value.usage),
+  )
+  if (!usageFrame) return rawData
   const identity = {
     ...(effectiveRoutedModelID ? { routedModelID: effectiveRoutedModelID } : {}),
     ...(gateway ? { gateway } : {}),

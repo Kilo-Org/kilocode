@@ -42,21 +42,10 @@ export async function preflight(target: string, fingerprints: readonly string[] 
 }
 
 /**
- * Extracts a skill archive into `<root>/<id>`. The files are written to a staging directory next to `root` (outside
+ * Writes a prepared skill into `<root>/<id>`. The files are written to a staging directory next to `root` (outside
  * the scanned directory, on the same filesystem) and moved into place in one rename, so the skill scanner never sees
  * a half-written skill. Replacing an existing directory requires a matching content fingerprint.
  */
-export async function install(input: {
-  root: string
-  id: string
-  archive: Uint8Array
-  replace: boolean
-  fingerprints?: readonly string[]
-  select?: string
-}) {
-  return write(await prepare(input), input.replace ? input.fingerprints : [])
-}
-
 export async function write(prepared: Awaited<ReturnType<typeof prepare>>, fingerprints: readonly string[] = []) {
   const target = prepared.target
   await preflight(target, fingerprints)

@@ -54,7 +54,10 @@ export function build(input: {
   if (missing.length > 0) {
     throw new McpError("invalid_params", `Missing required parameters: ${missing.map((p) => p.name).join(", ")}`)
   }
-  const values = new Map(input.parameters.map((parameter) => [parameter.key, input.params[parameter.key] ?? ""]))
+  // Trimmed here so every RPC client writes the same config and records the same ownership fingerprint.
+  const values = new Map(
+    input.parameters.map((parameter) => [parameter.key, input.params[parameter.key]?.trim() ?? ""]),
+  )
   // Only visit the original template: inserted values can contain literal placeholders themselves.
   const filled = input.template.replace(/\{\{([^{}]+)\}\}|\$\{([^{}]+)\}/g, (_, current: string, legacy: string) => {
     const key = current ?? legacy

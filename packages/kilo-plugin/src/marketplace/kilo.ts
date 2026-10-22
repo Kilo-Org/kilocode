@@ -55,7 +55,10 @@ export function make(input: { server?: string; fetch?: typeof fetch } = {}): Reg
     curated: true,
     searchable: false,
     list: async (kind) => {
-      const response = await request(KiloServer.apiUrl(server, "marketplace", paths[kind]))
+      // A hang must fail so the caller falls back to the stored catalog.
+      const response = await request(KiloServer.apiUrl(server, "marketplace", paths[kind]), {
+        signal: AbortSignal.timeout(20_000),
+      })
       if (!response.ok) throw new Error(`Kilo marketplace returned HTTP ${response.status}`)
       return parse(kind, await response.text())
     },

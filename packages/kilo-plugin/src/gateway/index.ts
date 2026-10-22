@@ -511,7 +511,8 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         const variant = model?.variants.find((variant) => variant.id === event.model.variant)
         Object.assign(
           event.options,
-          GatewayOptions.request(source.aiSDKProvider, [
+          // Lower for the resolved package, as GatewayOptions.Plugin did, so both passes agree on one dialect.
+          GatewayOptions.request(model ? GatewayOptions.dialect(model.package) : source.aiSDKProvider, [
             provider.settings,
             model?.settings,
             variant?.settings,
@@ -797,11 +798,8 @@ function snapshotKey(server: string, token?: string): string {
 
 // kilo_port(gateway:742c02b40457) v1 kilo.ts created one Kilo SDK for all models; v2 picks the dialect per model.
 function packageFor(aiSDKProvider?: KiloModels.AISDKProvider): string {
-  if (aiSDKProvider === "anthropic") return "@opencode/ai/providers/anthropic"
-  if (aiSDKProvider === "openai") return "@opencode/ai/providers/openai"
-  if (aiSDKProvider === "openai-compatible") return "@opencode/ai/providers/openai-compatible"
   // kilo_port(gateway:0278ba0eb6aa) v1 sent Gateway provider options under the `openrouter` key.
-  return "@opencode/ai/providers/openrouter"
+  return GatewayOptions.packages[aiSDKProvider ?? "openrouter"]
 }
 
 function toModelInfo(

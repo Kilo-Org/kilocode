@@ -3,7 +3,7 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { KiloMarketplaceRegistry } from "../src/marketplace/kilo"
-import { SkillError, bounded, extract, fingerprint, install, prepare, remove } from "../src/marketplace/skill"
+import { SkillError, bounded, extract, fingerprint, prepare, remove, write } from "../src/marketplace/skill"
 
 const SKILLS = `
 items:
@@ -49,6 +49,10 @@ items:
 const tarball = (files: Record<string, string>) => new Bun.Archive(files, { compress: "gzip" }).bytes()
 
 const tmp = () => fs.mkdtemp(path.join(os.tmpdir(), "kilo-marketplace-"))
+
+// Mirrors Installer.install: replacing an existing tree is authorized only by an owned fingerprint.
+const install = async (input: { root: string; id: string; archive: Uint8Array; fingerprints?: readonly string[] }) =>
+  write(await prepare(input), input.fingerprints)
 
 describe("Kilo marketplace registry", () => {
   test("normalizes skills and skips entries that do not decode", () => {
@@ -183,7 +187,6 @@ describe("skill install", () => {
           root: path.join(directory, "skills"),
           id: "demo",
           archive: await tarball({ "SKILL.md": `---\n${metadata}\n---\nprivate body` }),
-          replace: false,
         }),
       ).rejects.toMatchObject({ reason: "invalid", message: `Invalid skill demo: ${reason}` })
       expect(await fs.readdir(directory)).toEqual([])
@@ -199,7 +202,6 @@ describe("skill install", () => {
       root,
       id: "demo",
       archive: await tarball({ "SKILL.md": "owned", "ref/a.txt": "keep until deleted" }),
-      replace: false,
     })
     const owned = (await fingerprint(target))!
     const original = fs.rm
@@ -237,7 +239,6 @@ describe("skill install", () => {
       root,
       id: "demo",
       archive: await tarball({ "SKILL.md": "old", "ref/a.txt": "old reference" }),
-      replace: false,
     })
     const owned = (await fingerprint(target))!
     const archive = await tarball({ "SKILL.md": "new" })
@@ -254,7 +255,7 @@ describe("skill install", () => {
       await original(location, options)
     })
     try {
-      await expect(install({ root, id: "demo", archive, replace: true, fingerprints: [owned] })).rejects.toBe(
+      await expect(install({ root, id: "demo", archive, fingerprints: [owned] })).rejects.toBe(
         interrupted,
       )
     } finally {
@@ -262,7 +263,7 @@ describe("skill install", () => {
     }
     expect(await fingerprint(target)).toBeUndefined()
     expect((await fs.readdir(directory)).toSorted()).toEqual([".marketplace-trash", "skills"])
-    await install({ root, id: "demo", archive, replace: true, fingerprints: [owned] })
+    await install({ root, id: "demo", archive, fingerprints: [owned] })
     expect(await Bun.file(path.join(target, "SKILL.md")).text()).toBe("new")
     expect(await fs.readdir(directory)).toEqual(["skills"])
     await remove(target, [(await fingerprint(target))!])
@@ -271,13 +272,13 @@ describe("skill install", () => {
   test("fingerprints protect changed contents, added files, empty directories, and symbolic links", async () => {
     const root = path.join(await tmp(), "skills")
     const archive = await tarball({ "SKILL.md": "original", "ref/a.txt": "reference" })
-    const target = await install({ root, id: "demo", archive, replace: false })
+    const target = await install({ root, id: "demo", archive })
     const owned = (await fingerprint(target))!
     await expect(remove(target)).rejects.toMatchObject({ reason: "conflict" })
-    await expect(install({ root, id: "demo", archive, replace: true })).rejects.toMatchObject({ reason: "conflict" })
+    await expect(install({ root, id: "demo", archive })).rejects.toMatchObject({ reason: "conflict" })
     await Bun.write(path.join(target, "SKILL.md"), "edited")
     await expect(remove(target, [owned])).rejects.toMatchObject({ reason: "conflict" })
-    await expect(install({ root, id: "demo", archive, replace: true, fingerprints: [owned] })).rejects.toMatchObject({
+    await expect(install({ root, id: "demo", archive, fingerprints: [owned] })).rejects.toMatchObject({
       reason: "conflict",
     })
     await Bun.write(path.join(target, "SKILL.md"), "original")
@@ -297,12 +298,12 @@ describe("skill install", () => {
   test("installs, refuses to overwrite foreign directories, replaces its own, and removes", async () => {
     const root = path.join(await tmp(), "skills")
     const archive = await tarball({ "demo/SKILL.md": "---\nname: demo\n---\nv1" })
-    const target = await install({ root, id: "demo", archive, replace: false })
+    const target = await install({ root, id: "demo", archive })
     expect(target).toBe(path.join(root, "demo"))
     expect(await Bun.file(path.join(target, "SKILL.md")).text()).toContain("v1")
     expect(await fs.readdir(path.dirname(root))).toEqual(["skills"])
 
-    await await expect(install({ root, id: "demo", archive, replace: false })).rejects.toMatchObject({
+    await await expect(install({ root, id: "demo", archive })).rejects.toMatchObject({
       reason: "conflict",
     })
 
@@ -310,7 +311,6 @@ describe("skill install", () => {
       root,
       id: "demo",
       archive: await tarball({ "SKILL.md": "v2" }),
-      replace: true,
       fingerprints: [(await fingerprint(target))!],
     })
     expect(await Bun.file(path.join(target, "SKILL.md")).text()).toBe("v2")
@@ -323,7 +323,7 @@ describe("skill install", () => {
   test("rejects ids that are not a single path segment", async () => {
     const root = path.join(await tmp(), "skills")
     await await expect(
-      install({ root, id: "../x", archive: await tarball({ "SKILL.md": "x" }), replace: false }),
+      install({ root, id: "../x", archive: await tarball({ "SKILL.md": "x" }) }),
     ).rejects.toMatchObject({
       reason: "invalid",
     })
@@ -338,7 +338,7 @@ describe("skill install", () => {
       "conflict/child.txt": "child",
       ...Object.fromEntries(Array.from({ length: 32 }, (_, index) => [`resources/${index}/data.txt`, "resource"])),
     })
-    await expect(install({ root, id: "demo", archive, replace: false })).rejects.toBeDefined()
+    await expect(install({ root, id: "demo", archive })).rejects.toBeDefined()
     expect(await fs.readdir(directory)).toEqual([])
   })
 
@@ -348,7 +348,7 @@ describe("skill install", () => {
     const blocked = path.join(directory, "blocked")
     await Bun.write(blocked, "not a directory")
     await expect(
-      install({ root: blocked, id: "demo", archive: await tarball({ "SKILL.md": "new" }), replace: true }),
+      install({ root: blocked, id: "demo", archive: await tarball({ "SKILL.md": "new" }) }),
     ).rejects.toBeDefined()
     expect(await fs.readdir(directory)).toEqual(["blocked"])
     expect(await Bun.file(blocked).text()).toBe("not a directory")

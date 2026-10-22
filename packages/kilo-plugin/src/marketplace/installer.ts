@@ -92,8 +92,10 @@ export async function install(input: {
     for (const skill of skills) {
       const resource = resources.find((resource) => "path" in resource && resource.path === skill.target)!
       const existed = (await resourceFingerprint(resource)) !== undefined
-      if (!existed) created.push(resource)
       await Skill.write(skill, allowed(resource))
+      // Only roll back trees this call moved into place: a concurrent install of the same content can make this write
+      // fail its preflight, and its identical fingerprint would otherwise authorize deleting the other install's tree.
+      if (!existed) created.push(resource)
     }
     if (server) {
       const resource = resources[resources.length - 1]
