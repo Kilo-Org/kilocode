@@ -213,39 +213,12 @@ In the PR and the final response, list:
 
 ### PR section `## Proof`
 
-Every PR that changes behavior shows that the behavior works on v2 as on v1. The reviewer must see the result without running the change. A PR without this section is not done.
+Every PR that changes behavior shows that the behavior works on v2 as on v1. A PR without this section is not done.
 
-**User-facing change (TUI, dialog, picker, message, error text):** attach screenshots.
-
-1. Take the v1 screenshot first. Run v1 from a separate checkout of `origin/main` with a temporary home, so that it never reads or writes the real v1 data. `$T` is the test directory from the self-test setup above (or `T=$(mktemp -d)`):
-
-   ```bash
-   git worktree add --detach $T/v1 origin/main && bun install --cwd $T/v1
-   env -i PATH="$PATH" TERM=xterm-256color HOME=$T/v1home XDG_DATA_HOME=$T/v1home/data XDG_CONFIG_HOME=$T/v1home/config XDG_STATE_HOME=$T/v1home/state XDG_CACHE_HOME=$T/v1home/cache bun run --cwd $T/v1 dev
-   ```
-
-   Never run the installed `kilo` binary for this. After the screenshots, remove the checkout with `git worktree remove --force $T/v1` before you delete `$T`.
-2. Take the v2 screenshot of the same screen in the same state, with `bun dev --standalone` and a fresh `KILO_V2_PROFILE`.
-3. Use the `vscode-self-test` harness with `HEADLESS=false` for both, because headless runs cannot take screenshots. Use the same terminal size and the same fixture data.
-4. In the PR, put the two images one after the other as markdown images labeled `v1` and `v2` (`![v1 - <screen>](<url>)`, then `![v2 - <screen>](<url>)`), with one sentence about what to compare. When v2 differs on purpose, say why.
-5. If v1 has no equivalent screen (a new Kilo-only behavior), show only v2 and say so.
-
-**No UI to show (headers, requests, catalog, config, retries, storage):** attach a different proof from a real run, for example:
-
-- A short command transcript from `bun dev run --standalone` with the relevant output.
-- Captured request headers or bodies from a local fixture, with secrets replaced by `<redacted>`.
-- The same command or request on v1 and v2 with both outputs.
-- Relevant log lines or the `bun dev api` response.
-
-Test output alone is not enough. It goes in the evidence list, not in this section.
-
-**Privacy (always):**
-
-- Never show real user data: emails, names, organization or team names, account or organization IDs, tokens, keys, balances, Kilo Pass data, session titles or content, or local paths with a user name.
-- Use fixture accounts and fake data (a local Gateway fixture with test names), not a real login.
-- Do not show internal model names that are not public.
-- Crop to the relevant part. Read every image before you upload it, and redact transcripts before you paste them.
-- Never commit screenshots to this repository or add them to the PR diff. Upload them to a public asset host and embed them by URL. If a PR-media skill is available (for example `pr-guidance`), use its upload flow and privacy check.
+- **User-facing change:** compare v1 and v2. Take screenshots of the same screen in the same state on v1 and on v2, and attach both to the PR description, labeled. When v2 differs on purpose, say why. When v1 has no such screen, show v2 only and say so.
+- **No UI to show:** attach another proof from a real run (for example a transcript or captured requests, on v1 and v2 when possible). Test output alone is not enough.
+- **Isolation:** run v1 so that it never reads or writes the real v1 data (a temporary home, not the user's profile).
+- **Privacy:** show no real user data (emails, names, organizations, IDs, tokens, balances, session content). Use fixture accounts. Never commit screenshots to the repository.
 
 ### PR section `## Progress map`
 
