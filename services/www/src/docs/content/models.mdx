@@ -57,6 +57,24 @@ falls back to the newest available supported model.
 
 See [Config](/config) for configuration locations and precedence.
 
+## Free models
+
+Set `OPENCODE_DISABLE_FREE_MODELS=1` (or `true`) on the server process to hide [free OpenCode models](/console/models#free-models):
+
+```bash
+OPENCODE_DISABLE_FREE_MODELS=1 opencode serve
+```
+
+For the shared background server:
+
+```bash
+opencode service set env OPENCODE_DISABLE_FREE_MODELS 1
+```
+
+Free means an `opencode` or `opencode-go` model with no input price. These models disappear from the catalog and defaults;
+explicitly selecting one fails with `Model unavailable`. Signed out, the `opencode` provider is absent until you connect
+an OpenCode Console account or set `OPENCODE_API_KEY`, which restores its paid models.
+
 ## Variants
 
 Variants are named options for one model, often used for reasoning effort or token budgets. Add `#variant` when selecting
