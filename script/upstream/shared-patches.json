@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 42,
-    "files": 42,
-    "markedLines": 296,
+    "files": 43,
+    "files": 43,
+    "markedLines": 303,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -116,6 +116,10 @@
     "packages/tui/src/component/dialog-integration.tsx": {
       "rung": 3,
       "seam": "Prompt for Personal Account vs Team (`chooseKiloAccount`) after a Kilo Gateway login completes, before closing or chaining the integration dialog. `TuiPlugin` has no post-integration-connect hook."
+    },
+    "packages/tui/src/component/dialog-model.tsx": {
+      "rung": 4,
+      "seam": "Model picker (U-E9-07, #15242): show the Kilo option list (Kilo Gateway order from `recommendedIndex`, Recommended and Kilo Gateway sections, `Free` from Gateway `isFree`, `BYOK` and `May train` labels, v1 search over provider and model IDs), keep section headers while searching (`flat={false}`), follow the highlight with `onMove`, and wrap the list with the model info panel. Seven call-out lines; the logic is in tui/src/kilocode/dialog-model.tsx and tui/src/kilocode/model-picker.ts. The upstream options memo, `sortModelOptions` and `prioritizeFavorites` stay unchanged, so upstream's model-options tests pass. Rungs 1 and 2 cannot reach it: the TUI plugin API has no model picker hook, and the host runs in the server process. A generic seam (an option-list and side-panel hook) would need the same lines here plus a new plugin API surface for one consumer."
     },
     "packages/tui/src/context/local.tsx": {
       "rung": 4,

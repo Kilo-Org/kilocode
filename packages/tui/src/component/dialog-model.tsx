@@ -10,6 +10,7 @@ import { useData } from "../context/data"
 import { modelPreferenceKey } from "../model-preference"
 import { useLocation } from "../context/location"
 import { useNewDesigns } from "../config"
+import { createKiloModelPicker } from "../kilocode/dialog-model" // kilocode_change(components:06ac8868d98e)
 
 export function DialogModel(props: { providerID?: string }) {
   const local = useLocal()
@@ -27,6 +28,7 @@ export function DialogModel(props: { providerID?: string }) {
   const models = createMemo(() => data.location.model.list(location.ref) ?? [])
 
   const showExtra = createMemo(() => connected() && !props.providerID)
+  const kilo = createKiloModelPicker({ providerID: props.providerID, query, connected, showExtra, onSelect }) // kilocode_change(tui)
 
   const options = createMemo(() => {
     const needle = query().trim()
@@ -140,11 +142,11 @@ export function DialogModel(props: { providerID?: string }) {
     dialog.clear()
   }
 
-  return (
+  return kilo.frame( // kilocode_change(tui) - Kilo: info panel next to the list
     <DialogSelect<ReturnType<typeof options>[number]["value"]>
       searchInTitle
       titlePlaceholder="Search models"
-      options={options()}
+      options={kilo.options()} // kilocode_change(tui) - Kilo: Gateway order and labels
       actions={[
         {
           command: "model.dialog.provider",
@@ -174,11 +176,12 @@ export function DialogModel(props: { providerID?: string }) {
         },
       ]}
       onFilter={setQuery}
-      flat={true}
+      flat={false} // kilocode_change(tui) - Kilo: keep section headers while searching, as v1
       skipFilter={true}
       title={title()}
       current={local.model.current()}
-    />
+      onMove={kilo.move} // kilocode_change(tui) - Kilo: info panel follows the highlighted model
+    />, // kilocode_change(tui)
   )
 }
 
