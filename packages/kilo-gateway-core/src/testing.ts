@@ -15,6 +15,7 @@ export function fixture() {
     pollStatus: 200,
     approved: { status: "approved", token: "fixture-token", userEmail: "device@example.test" } as unknown,
     profileStatus: 200,
+    profilePending: undefined as Promise<void> | undefined,
     profile: {
       user: { email: "profile@example.test", name: "Fixture" },
       organizations: [
@@ -25,6 +26,8 @@ export function fixture() {
       hasPersonalAccount: true,
     } as unknown,
     modelsStatus: 200,
+    authenticatedModelsStatus: undefined as number | undefined,
+    modelsPending: undefined as Promise<void> | undefined,
     modelsRetryAfter: undefined as string | undefined,
     models: {
       data: [
@@ -290,15 +293,27 @@ export function fixture() {
         if (state.pending-- > 0) return new Response(null, { status: 202 })
         return Response.json(state.approved, { status: state.pollStatus })
       }
-      if (path === "/api/profile") return Response.json(state.profile, { status: state.profileStatus })
+      if (path === "/api/profile") {
+        const pending = state.profilePending
+        state.profilePending = undefined
+        if (pending) await pending
+        return Response.json(state.profile, { status: state.profileStatus })
+      }
       if (
         path === "/api/openrouter/models" ||
         path === "/api/gateway/models" ||
         path === "/api/gateway/v1/models" ||
         path === "/api/v1/models"
       ) {
+        const pending = state.modelsPending
+        state.modelsPending = undefined
+        if (pending) await pending
         const headers = state.modelsRetryAfter ? { "retry-after": state.modelsRetryAfter } : undefined
-        if (state.modelsStatus !== 200) return new Response("Unavailable", { status: state.modelsStatus, headers })
+        const status =
+          request.headers.has("authorization") && request.headers.get("authorization") !== "Bearer anonymous"
+            ? state.authenticatedModelsStatus ?? state.modelsStatus
+            : state.modelsStatus
+        if (status !== 200) return new Response("Unavailable", { status, headers })
         return Response.json(state.models)
       }
       if (/^\/api\/(?:gateway\/v1\/|v1\/)?organizations\/[^/]+\/models$/.test(path)) {

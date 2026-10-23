@@ -189,7 +189,7 @@ const layer = Layer.effect(
           .pipe(Effect.orDie)
         return row
           ? {
-              sessionID: Session.ID.make(row.session_id),
+              sessionID: row.session_id,
               message: yield* SessionHistory.decodeMessageRow(row).pipe(Effect.orDie),
             }
           : undefined

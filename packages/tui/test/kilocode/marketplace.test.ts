@@ -970,7 +970,7 @@ test("global MCP previews show the resolved URL without the project secret warni
   await app.mockInput.typeText("Install globally")
   app.mockInput.pressEnter()
   const frame = await app.waitForFrame(
-    (frame) => frame.includes("Review Demo MCP installation") && frame.replace(/\s+/g, "").includes("[redacted]"),
+    (frame) => frame.includes("Review Demo MCP installation") && frame.includes("redacted"),
   )
   expect(frame).toContain("https://demo.test/mcp")
   expect(frame).not.toContain("plaintext")

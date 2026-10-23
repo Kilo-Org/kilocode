@@ -85,9 +85,16 @@ export const Plugin = define({
           providers.models.update(providerID, id, (model) => {
             if (base) Object.assign(model, structuredClone(base))
             if (item.package !== undefined) model.package = undefined
-            if (item.settings?.baseURL !== undefined && model.settings) delete model.settings.baseURL
           })
         }
+        // A configured provider baseURL replaces every catalog per-model endpoint, not only those of configured
+        // models. Configured per-model settings are applied later and still win.
+        if (item.settings?.baseURL !== undefined)
+          for (const [id, model] of providers.get(providerID)?.models ?? [])
+            if (model.settings?.baseURL !== undefined)
+              providers.models.update(providerID, id, (model) => {
+                delete model.settings?.baseURL
+              })
         next.set(item, { providerID, models: definitions })
       }
       for (const [item, definition] of next) {
@@ -131,6 +138,9 @@ export const Plugin = define({
             if (config.capabilities !== undefined)
               model.capabilities = Model.mergeCapabilities(config.capabilities, model.capabilities)
             if (config.limit !== undefined) model.limit = { ...model.limit, ...config.limit }
+          })
+          // Variants are spelled for the final package, which the update above normalizes from `aisdk:*`.
+          models.update(providerID, id, (model) => {
             // Configured reasoning replaces the base variants; configured variants still overlay them below.
             if (config.capabilities?.reasoning !== undefined)
               model.variants = [

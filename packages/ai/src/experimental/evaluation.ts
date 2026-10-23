@@ -108,14 +108,11 @@ export type EvaluationOptions = Record<string, unknown>
 
 export interface EvaluationRoute<Options extends EvaluationOptions = EvaluationOptions> {
   readonly id: string
-  readonly evaluate: (
-    request: EvaluationRequestFor<Options>,
-    execute: Execute,
-  ) => Effect.Effect<EvaluationResponse, AIError>
+  evaluate(request: EvaluationRequestFor<Options>, execute: Execute): Effect.Effect<EvaluationResponse, AIError>
 }
 
 export class EvaluationModel<Options extends EvaluationOptions = EvaluationOptions> {
-  declare protected readonly _Options: (options: Options) => Options
+  declare protected readonly _Options: Options
   readonly id: ModelID
   readonly provider: ProviderID
   readonly route: EvaluationRoute<Options>
@@ -182,14 +179,14 @@ export type EvaluationRequestFor<
 }
 
 export type EvaluationRequestInput<
-  Model extends object = EvaluationModel,
+  Model extends EvaluationModel = EvaluationModel,
   Questions extends EvaluationQuestions = EvaluationQuestions,
 > = Omit<ConstructorParameters<typeof EvaluationRequest>[0], "model" | "questions" | "options" | "http"> & {
   readonly model: Model
   readonly questions: Questions
   readonly options?: NoInfer<EvaluationModelOptions<Model>>
   readonly http?: HttpOptions.Input
-} & (Model extends EvaluationModel<EvaluationModelOptions<Model>> ? unknown : never)
+}
 
 export class EvaluationRounding extends Schema.Class<EvaluationRounding>("Evaluation.Rounding")({
   probabilityDecimals: Schema.optional(Schema.Int),
@@ -208,26 +205,26 @@ export type EvaluationResponseFor<Questions extends EvaluationQuestions> = Omit<
   readonly answers: AnswersFor<Questions>
 }
 
-export function request<const Model extends object, const Questions extends EvaluationQuestions>(
+export function request<const Model extends EvaluationModel, const Questions extends EvaluationQuestions>(
   input: EvaluationRequestInput<Model, Questions>,
 ): EvaluationRequestFor<EvaluationModelOptions<Model>, Questions>
 export function request(input: EvaluationRequest): EvaluationRequest
+export function request(input: EvaluationRequest | EvaluationRequestInput): EvaluationRequest
 export function request(input: EvaluationRequest | EvaluationRequestInput) {
   if (input instanceof EvaluationRequest) return input
   return new EvaluationRequest({
     ...input,
-    model: input.model as unknown as EvaluationModel,
     http: HttpOptions.make(input.http),
   })
 }
 
-export function run<const Model extends object, const Questions extends EvaluationQuestions>(
+export function run<const Model extends EvaluationModel, const Questions extends EvaluationQuestions>(
   input: EvaluationRequestInput<Model, Questions>,
 ): Effect.Effect<EvaluationResponseFor<Questions>, AIError, Service>
 export function run(input: EvaluationRequest): Effect.Effect<EvaluationResponse, AIError, Service>
 export function run(input: EvaluationRequest | EvaluationRequestInput) {
   return Effect.try({
-    try: () => (input instanceof EvaluationRequest ? input : request(input)),
+    try: () => request(input),
     catch: (cause) =>
       new AIError({
         reason: new InvalidRequestError({
@@ -235,11 +232,7 @@ export function run(input: EvaluationRequest | EvaluationRequestInput) {
           cause,
         }),
       }),
-  }).pipe(
-    Effect.flatMap((request) =>
-      EvaluationClient.evaluate(request as EvaluationRequestFor<EvaluationOptions, EvaluationQuestions>),
-    ),
-  )
+  }).pipe(Effect.flatMap(EvaluationClient.evaluate))
 }
 
 export const Evaluation = {

@@ -1,5 +1,6 @@
 import path from "node:path"
 import fs from "node:fs/promises"
+import os from "node:os"
 import { describe, expect, test } from "bun:test"
 import { Client, InMemoryTransport, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
 import {
@@ -56,6 +57,7 @@ import { TestClock } from "effect/testing"
 import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { ExitCode, makeHandle, ProcessId } from "effect/process/ChildProcessSpawner"
 import { Image } from "@opencode/core/image"
+import { Global } from "@opencode/util/global"
 import { advance, drain } from "./lib/clock"
 import { testEffect } from "./lib/effect"
 import { registerIntegrationPolicy } from "./fixture/policy"
@@ -446,6 +448,13 @@ const mcp = Layer.mock(Mcp.Service, {
         description: "Returns text and an image",
         inputSchema: { type: "object", properties: {} },
       } satisfies Mcp.Tool,
+      {
+        server: Mcp.ServerName.make("direct"),
+        name: "attachments",
+        codemode: false,
+        description: "Returns resource blobs that cannot be sent inline",
+        inputSchema: { type: "object", properties: {} },
+      } satisfies Mcp.Tool,
     ]),
   callTool: (input) =>
     Effect.sync(() => {
@@ -466,6 +475,26 @@ const mcp = Layer.mock(Mcp.Service, {
           content: [
             { type: "text", text: "rendered chart" },
             { type: "media", data: "aGVsbG8=", mimeType: "image/png" },
+          ],
+        } satisfies Mcp.ToolResult
+      if (input.name === "attachments")
+        return {
+          server: Mcp.ServerName.make(input.server),
+          tool: input.name,
+          isError: false,
+          content: [
+            {
+              type: "media",
+              data: Buffer.from("# Notes").toString("base64"),
+              mimeType: "text/markdown",
+              uri: "file:///README.md",
+            },
+            {
+              type: "media",
+              data: "UEFSMQ==",
+              mimeType: "application/vnd.apache.parquet",
+              uri: "file:///data.parquet",
+            },
           ],
         } satisfies Mcp.ToolResult
       if (input.name === "status")
@@ -507,12 +536,14 @@ const permissions = Layer.mock(Permission.Service, {
     }),
 })
 const events = Layer.mock(Bus.Service, { subscribe: () => Stream.never })
+const outputData = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-mcp-output-"))
 const it = testEffect(
   AppNodeBuilder.build(LayerNode.group([Tool.node, McpTool.node]), [
     Mcp.node.replace(mcp),
     Permission.node.replace(permissions),
     Bus.node.replace(events),
     Image.node.replace(imagePassthrough),
+    Global.node.replace(Global.layerWith({ data: outputData })),
   ]),
 )
 
@@ -2245,6 +2276,7 @@ it.effect("advertises MCP output schemas to Code Mode", () =>
     const execute = toolSet.definitions.find((tool) => tool.name === "execute")
 
     expect(toolSet.definitions.map((tool) => tool.name)).toEqual([
+      "direct_attachments",
       "direct_fail",
       "direct_issues",
       "direct_lookup",
@@ -2423,6 +2455,31 @@ it.effect("preserves MCP text and media content for the model", () =>
       { type: "text", text: "rendered chart" },
       { type: "file", mime: "image/png" },
     ])
+  }),
+)
+
+it.effect("decodes text blobs and saves other MCP blobs instead of attaching them", () =>
+  Effect.gen(function* () {
+    assertion = yield* Deferred.make<Permission.AssertInput>()
+    decision = Effect.void
+    const registry = yield* Tool.Service
+    const registration = yield* McpTool.Service
+    yield* registration.flush
+
+    const execution = yield* executeTool(registry, {
+      sessionID: Session.ID.make("ses_mcp_attachments"),
+      ...toolIdentity,
+      call: { type: "tool-call", id: "call_mcp_attachments", name: "direct_attachments", input: {} },
+    })
+
+    const text = execution.content?.map((part) => (part.type === "text" ? part.text : part.mime)) ?? []
+    const saved =
+      /^\[Binary resource file:\/\/\/data\.parquet \(application\/vnd\.apache\.parquet, 4 bytes\) saved to (.+)\]$/.exec(
+        text[1] ?? "",
+      )?.[1]
+    expect(text[0]).toBe("[Resource file:///README.md (text/markdown)]\n# Notes")
+    expect(saved?.startsWith(path.join(outputData, ToolOutput.DIRECTORY, "tool_"))).toBe(true)
+    expect(yield* Effect.promise(() => fs.readFile(saved ?? "", "utf8"))).toBe("PAR1")
   }),
 )
 

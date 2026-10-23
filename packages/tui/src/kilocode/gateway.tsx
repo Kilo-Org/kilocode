@@ -13,6 +13,19 @@ import { useToast } from "../ui/toast"
 type Profile = typeof KiloGatewayRpc.Definition.methods.profile.output.Type
 
 /**
+ * The Popular integrations of the connect dialog and their order. Same as v1 `PROVIDER_PRIORITY`, which replaced
+ * the upstream map: Kilo first, and OpenCode Go and OpenCode Console in the alphabetical services list.
+ */
+export const KILO_INTEGRATION_PRIORITY: Record<string, number> = {
+  kilo: -1,
+  anthropic: 0,
+  "github-copilot": 1,
+  openai: 2,
+  google: 3,
+  "anaconda-desktop": 4,
+}
+
+/**
  * After a Kilo login, asks which account requests use. Same flow as v1 `KiloAutoMethod`: no picker
  * without teams, the first team preselected, and the personal account when the profile request fails.
  * Resolves `false` when the user closes the dialog.
@@ -117,10 +130,6 @@ export default Plugin.define({
               group: "Kilo",
               palette: true,
               slash: { name: "teams", aliases: ["team", "org", "orgs"] },
-              enabled: () =>
-                (context.data.location.integration.list() ?? []).some(
-                  (integration) => integration.id === "kilo" && integration.connections.length > 0,
-                ),
               run: () => teams(context),
             },
             {

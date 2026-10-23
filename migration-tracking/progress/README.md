@@ -8,20 +8,20 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**94 / 9829 cells done (1%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
+**150 / 9828 cells done (1.5%)**, 26 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 32 | 3547 | 0.9% |
-| api | 1 | 39 | 2.6% |
-| patch | 39 | 3445 | 1.1% |
-| test | 22 | 2798 | 0.8% |
+| module | 52 | 3547 | 1.5% |
+| api | 3 | 39 | 7.7% |
+| patch | 65 | 3444 | 1.9% |
+| test | 30 | 2798 | 1.1% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
-Landed by rung, for patch cells closed by a done-proof: 21 plugin, 3 host, 0 seam, 0 patch.
+Landed by rung, for patch cells closed by a done-proof: 42 plugin, 3 host, 0 seam, 5 patch.
 
-Ratchets: 21 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config/discovery`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/rpc`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 41 shared patches by rung: 24 seam, 17 patch (`script/upstream/shared-patches.json`).
+Ratchets: 26 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 48 shared patches by rung: 28 seam, 20 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -36,7 +36,8 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-20 | 87 | 9829 | 0.9% |
 | 2026-10-21 | 90 | 9829 | 0.9% |
 | 2026-10-22 | 93 | 9829 | 0.9% |
-| now | 94 | 9829 | 1% |
+| 2026-10-23 | 149 | 9828 | 1.5% |
+| now | 150 | 9828 | 1.5% |
 
 ## Features
 
@@ -61,8 +62,8 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | command | 0/3 | 0/2 |  | 0/3 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | commit-message | 0/4 |  |  | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | compaction-policy | 0/5 | 0/3 | 0/1 | 0/8 | 0/17 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| components | 0/16 |  | 0/2 | 0/4 | 0/22 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| config | 0/25 |  | 0/10 | 0/29 | 0/64 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| components | 7/16 |  | 1/2 | 4/4 | 12/22 | 54.5% | `█████████░░░░░░░` | 1 patch |
+| config | 0/25 |  | 0/10 | 1/29 | 1/64 | 1.6% | `░░░░░░░░░░░░░░░░` |  |
 | console | 0/87 |  | 0/1 | 0/9 | 0/97 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | core-watcher |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | daemon | 0/2 |  |  | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -98,12 +99,12 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | permission | 0/12 |  | 0/6 | 0/16 | 0/34 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | pii | 0/1 |  |  |  | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | plan | 0/2 |  |  | 0/4 | 0/6 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| plugin | 0/26 |  | 0/2 | 0/6 | 0/34 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| plugin | 6/26 |  | 0/2 | 1/6 | 7/34 | 20.6% | `███░░░░░░░░░░░░░` |  |
 | presence | 0/3 |  | 0/1 | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | process | 0/4 | 0/1 | 0/9 | 0/1 | 0/15 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | project | 0/4 |  | 0/2 | 0/5 | 0/11 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | provider | 0/16 |  | 0/14 | 0/38 | 0/68 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| provider-usage | 0/6 | 0/2 | 0/2 |  | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| provider-usage | 6/6 | 2/2 | 2/2 |  | 10/10 | 100% | `████████████████` | 2 plugin |
 | pty | 0/6 |  | 0/14 | 0/7 | 0/27 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | question | 0/1 |  | 0/2 | 0/4 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | reference | 0/3 |  | 0/3 | 0/2 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -134,7 +135,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | telemetry | 0/5 |  | 0/2 | 0/7 | 0/14 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | tool | 0/61 |  | 0/7 | 0/43 | 0/111 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | ts-check | 0/2 |  | 0/2 | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| tui | 0/15 |  | 0/6 | 0/24 | 0/45 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| tui | 1/15 |  | 1/6 | 2/24 | 4/45 | 8.9% | `█░░░░░░░░░░░░░░░` | 1 plugin |
 | tui-sync | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | ui | 0/248 |  | 0/1 | 0/18 | 0/267 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | usage-cost | 0/4 |  |  | 0/5 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -151,12 +152,12 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 | Area | Patches | Tests | Done | % |
 |---|---:|---:|---:|---:|
 | test |  | 0/821 | 0/821 | 0% |
-| session | 0/449 |  | 0/449 | 0% |
+| session | 4/449 |  | 4/449 | 0.9% |
 | tool | 0/237 |  | 0/237 | 0% |
 | cli | 0/216 |  | 0/216 | 0% |
 | server | 0/173 |  | 0/173 | 0% |
-| tui/component | 0/142 |  | 0/142 | 0% |
-| config | 2/130 |  | 2/130 | 1.5% |
+| tui/component | 13/141 |  | 13/141 | 9.2% |
+| config | 3/130 |  | 3/130 | 2.3% |
 | core/test |  | 0/118 | 0/118 | 0% |
 | tui/context | 0/101 |  | 0/101 | 0% |
 | tui/routes | 0/97 |  | 0/97 | 0% |
@@ -185,7 +186,7 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 | core/plugin | 0/20 |  | 0/20 | 0% |
 | core/ripgrep | 0/20 |  | 0/20 | 0% |
 | acp | 0/19 |  | 0/19 | 0% |
-| tui/ui | 0/19 |  | 0/19 | 0% |
+| tui/ui | 4/19 |  | 4/19 | 21.1% |
 | core/filesystem | 0/18 |  | 0/18 | 0% |
 | session-ui/v2 | 0/17 | 0/1 | 0/18 | 0% |
 | llm/protocols | 0/16 |  | 0/16 | 0% |
@@ -331,6 +332,7 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 - `patch:unattributed:agent:8c603298aa6d`: RuntimeFlags in the agent service fed Scout and the shared agent board rules. The v2 agents plugin reads no runtime flags: Scout is not ported (U-E11-05), and the board unit adds its own rules. (agents-plugin)
 - `patch:unattributed:agent:92890c7740e7`: Scout agent. Scout (experimental, default off) is not ported. U-E11-05 records the decision. (agents-plugin)
 - `patch:unattributed:agent:d88711e4e0f0`: Rule for the `suggest` tool, which v2 does not have yet. The suggest unit (U-E2-16) adds the rule with the tool (#14999, differences table). (agents-plugin)
+- `patch:unattributed:tui/component:902bf97fd9cb`: v1 hunk ranked the upstream 'Popular providers' rows of the model picker with rankProviderOptions while searching. Upstream v2 removed those rows from component/dialog-model.tsx (signed-out users reach integrations through the 'View all integrations' action, which opens DialogIntegration), so there is no provider row left to rank. Model search ranking is ported in packages/tui/src/kilocode/model-picker.ts. (kilo-model-picker)
 
 ## Counting rules
 

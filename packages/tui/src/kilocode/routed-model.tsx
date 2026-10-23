@@ -21,9 +21,12 @@ export function routedModelLabel(message: Message, models: Models) {
   if (!message.model.id.startsWith("kilo-auto/")) return
   const route = routedModel(message)
   if (!route) return
-  const id = route.id.replace(/-(?:\d{8}|\d{4}-\d{2}-\d{2})$/, "")
-  const name = routedModelInfo(message, models)?.name
-  return (name ?? id)
+  return modelLabel(route, models)
+}
+
+/** The short display name of a model: its catalog name, or its ID without a date suffix, cleaned as in v1. */
+export function modelLabel(model: Pick<ModelInfo, "providerID" | "id">, models: Models) {
+  return (findModel(model, models)?.name ?? model.id.replace(DATE, ""))
     .trim()
     .replace(/^[^:]+:\s+/, "")
     .replace(/^[^/\s]+\/(?=[^/]+$)/, "")
@@ -38,12 +41,18 @@ export function routedModelInfo<T extends Pick<ModelInfo, "providerID" | "id">>(
 ) {
   const route = routedModel(message)
   if (!route) return
+  return findModel(route, models)
+}
+
+const DATE = /-(?:\d{8}|\d{4}-\d{2}-\d{2})$/
+
+function findModel<T extends Pick<ModelInfo, "providerID" | "id">>(
+  model: Pick<ModelInfo, "providerID" | "id">,
+  models: ReadonlyArray<T> | undefined,
+) {
   return (
-    models?.find((model) => model.providerID === route.providerID && model.id === route.id) ??
-    models?.find(
-      (model) =>
-        model.providerID === route.providerID && model.id === route.id.replace(/-(?:\d{8}|\d{4}-\d{2}-\d{2})$/, ""),
-    )
+    models?.find((item) => item.providerID === model.providerID && item.id === model.id) ??
+    models?.find((item) => item.providerID === model.providerID && item.id === model.id.replace(DATE, ""))
   )
 }
 

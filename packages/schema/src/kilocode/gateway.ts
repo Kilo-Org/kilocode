@@ -196,6 +196,9 @@ export const EditTarget = Schema.Struct({
 export const ModelEntry = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
+  recommended: Schema.optional(Schema.Boolean).annotate({
+    description: "The current Gateway scope's default model, not a catalog ranking.",
+  }),
   isFree: Schema.Boolean,
   recommendedIndex: Schema.optional(Schema.Number),
   hasUserByokAvailable: Schema.optional(Schema.Boolean),
@@ -232,6 +235,12 @@ export const SessionMetadata = Schema.Struct({
 })
 
 export type SessionMetadata = typeof SessionMetadata.Type
+
+// kilo_port(unattributed:session:142910b3fc8c) kilo_port(unattributed:session:5dd7101d7cc6) v1 `platform` on session
+// create. A client sets this key in the session metadata on `session.create`, for example `"vscode"`,
+// `"agent-manager"` or `"cli"`. Children and forks inherit it; the Gateway reads it from the root session to set
+// `X-KILOCODE-FEATURE`.
+export const PLATFORM_METADATA_KEY = "kilocode.platform"
 
 // The TUI, VS Code, and JetBrains clients use this contract for account/profile, balance, Kilo Pass,
 // BYOK, coding plans, team modes, notifications, media and embedding models, and FIM/edit routing.

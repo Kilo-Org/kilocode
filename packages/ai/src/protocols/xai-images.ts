@@ -5,7 +5,7 @@ import { Media } from "../media.js"
 import { MediaProtocol } from "../route/media-protocol.js"
 import { MediaRoute } from "../route/media.js"
 import { mergeJsonRecords, type OpenString } from "../schema/index.js"
-import { ProviderShared, optionalNull } from "./shared.js"
+import { JsonObject, ProviderShared, lenient, optionalNull } from "./shared.js"
 import { MediaInput } from "./utils/media-input.js"
 
 const route = MediaProtocol.identity({ id: "xai-images", name: "xAI Images", provider: "xai" })
@@ -39,7 +39,7 @@ const XAIImageResponse = Schema.Struct({
       mime_type: optionalNull(Schema.String),
     }),
   ),
-  usage: Schema.optional(Schema.Unknown),
+  usage: lenient(JsonObject),
 })
 
 // ---------------------------------------------------------------------------
@@ -100,12 +100,11 @@ const decodeResponse = Effect.fn("XAIImages.decodeResponse")(function* (
     }),
   )
   if (images.length === 0) return yield* output.invalid(`${route.name} returned no images`)
-  const usage = ProviderShared.isRecord(decoded.usage) ? decoded.usage : undefined
   // xAI reports a USD cost (`cost_in_usd_ticks`) rather than tokens, seconds, or credits; the raw record stays in
   // provider metadata.
   return new ImageResponse({
     images,
-    providerMetadata: usage === undefined ? undefined : { xai: { usage } },
+    providerMetadata: decoded.usage === undefined ? undefined : { xai: { usage: decoded.usage } },
   })
 })
 

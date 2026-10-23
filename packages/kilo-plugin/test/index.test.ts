@@ -1,13 +1,19 @@
 import { expect, test } from "bun:test"
 import { KiloPlugins, KiloPostPlugins } from "../src/index"
 
-test("the Kilo plugin lists include marketplace and keep the agent ceiling and Gateway normalization after config", () => {
+test("Gateway modes override built-in agents before config, marketplace is registered, and post-config steps keep policy, the ceiling, options and the free-tier filter", () => {
   expect(KiloPlugins.map((plugin) => plugin.id)).toEqual([
     "kilocode.handshake",
-    "kilocode.gateway",
     "kilo.agent",
+    "kilocode.gateway",
+    "kilocode.provider-usage",
     "kilocode.marketplace",
   ])
-  expect(KiloPostPlugins.map((plugin) => plugin.id)).toEqual(["kilo.agent.ceiling", "kilocode.gateway.options"])
+  expect(KiloPostPlugins.map((plugin) => plugin.id)).toEqual([
+    "kilocode.gateway.policy",
+    "kilo.agent.ceiling",
+    "kilocode.gateway.options",
+    "kilocode.gateway.opencode-free-tier",
+  ])
   expect([...KiloPlugins, ...KiloPostPlugins].every((plugin) => typeof plugin.effect === "function")).toBe(true)
 })

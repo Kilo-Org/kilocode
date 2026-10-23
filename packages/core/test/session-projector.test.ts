@@ -331,7 +331,7 @@ describe("SessionProjector", () => {
 
   it.effect("projects durable context messages supported by the updater", () =>
     Effect.gen(function* () {
-      const db = yield* seedSession({ agent: "plan", model: previousModel })
+      const db = yield* seedSession({ agent: Agent.ID.make("plan"), model: previousModel })
       const bus = yield* Bus.Service
 
       yield* bus.publish(SessionEvent.AgentSelected, {

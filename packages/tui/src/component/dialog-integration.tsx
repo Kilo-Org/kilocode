@@ -36,7 +36,7 @@ import { DialogSelect } from "../ui/dialog-select"
 import { Link } from "../ui/link"
 import { useToast } from "../ui/toast"
 import { errorMessage } from "../util/error"
-import { chooseKiloAccount } from "../kilocode/gateway" // kilocode_change - Kilo account choice after login
+import { chooseKiloAccount, KILO_INTEGRATION_PRIORITY } from "../kilocode/gateway" // kilocode_change - Kilo account choice, Kilo first
 import {
   formInitialValues,
   formLabel,
@@ -67,11 +67,12 @@ const SUBMIT = Symbol("submit")
 // Device-flow codes such as "R283-GOUEO"; when present they are copied instead of the URL.
 const OAUTH_CODE = /[A-Z0-9]{4}-[A-Z0-9]{4,5}/
 
-export function integrationOptions(list: IntegrationInfo[]) {
+// kilocode_change start - gateway seam: the priority map is a parameter, upstream's map is the default
+export function integrationOptions(list: IntegrationInfo[], priority = INTEGRATION_PRIORITY) {
   return list.toSorted(
     (a, b) =>
       Number(b.metadata?.source === "mcp") - Number(a.metadata?.source === "mcp") ||
-      (INTEGRATION_PRIORITY[a.id] ?? 99) - (INTEGRATION_PRIORITY[b.id] ?? 99) ||
+      (priority[a.id] ?? 99) - (priority[b.id] ?? 99) || // kilocode_change end
       a.name.localeCompare(b.name) ||
       a.id.localeCompare(b.id),
   )
@@ -107,7 +108,9 @@ export function DialogIntegration(
   const theme = useTheme().surface("dialog")
   const location = currentLocation.ref ?? data.location.default()
   const integrations = createMemo(() =>
-    integrationOptions(data.location.integration.list(location) ?? []).filter(
+    // kilocode_change start - Kilo first, v1 provider priority
+    integrationOptions(data.location.integration.list(location) ?? [], KILO_INTEGRATION_PRIORITY).filter(
+      // kilocode_change end
       (integration) => props.integrationID === undefined || integration.id === props.integrationID,
     ),
   )
@@ -129,7 +132,7 @@ export function DialogIntegration(
       const methods = connectMethods(integration)
       const credentials = credentialConnections(integration)
       let category = "Services"
-      if (integration.id in INTEGRATION_PRIORITY) category = "Popular"
+      if (integration.id in KILO_INTEGRATION_PRIORITY) category = "Popular" // kilocode_change - v1 Popular list
       if (integration.metadata?.source === "mcp") category = "MCP"
       const status = integration.connections[0]?.status
       return {

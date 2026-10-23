@@ -4,6 +4,7 @@ import { KiloPlugins, KiloPostPlugins } from "@kilocode/kilo-plugin"
 import { App } from "@opencode/core/app"
 import { Bus } from "@opencode/core/bus"
 import { ConfigDiscovery } from "@opencode/core/config/discovery"
+import { ModelResolver } from "@opencode/core/model-resolver"
 import { LayerNodePlatform } from "@opencode/core/effect/app-node-platform"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
 import { Model } from "@opencode/core/model"
@@ -77,6 +78,7 @@ export const overrides: LayerNode.Replacements = [
       ).pipe(Layer.provide(layer)),
     ),
   ),
+  ModelResolver.node.replace(KiloGatewayModel.resolverNode),
   SessionRunnerModel.node.replace(KiloGatewayModel.node),
   // kilo_port(unattributed:config:546539fc1643) kilo_port(unattributed:config:8cdbdec70393)
   ConfigDiscovery.node.replace(Layer.succeed(ConfigDiscovery.LayoutService, KiloConfigDiscovery.layout)),

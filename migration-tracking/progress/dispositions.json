@@ -1,4 +1,9 @@
 {
+  "module:packages/opencode/test/kilocode/config/hide-prompt-training-models.test.ts": {
+    "state": "ported",
+    "note": "packages/core/test/kilocode/config/policy.test.ts checks the exact top-level boolean setting, true, false, omission, and rejection of string values against KiloConfigPolicy.Info. Gateway request enforcement and managed precedence are covered by packages/kilo-plugin/test/organization-modes.test.ts and packages/core/test/kilocode/config/discovery.test.ts.",
+    "by": "gateway-enterprise-parity"
+  },
   "module:packages/kilo-gateway/src/gateway-metadata.ts": {
     "state": "ported",
     "note": "Current main 9e4e3a43c802bd2172cd23dbf2dbaeb6e109905e live native Gateway middleware is implemented by packages/kilo-gateway-core/src/stream.ts extractMetadata/transformResponse: successful routing attempts/canonical slugs, native Messages/Responses usage, market-cost metadata and request/response identity cross the existing Usage.providerMetadata path. packages/core/src/kilocode/session/usage.ts settles reported cost and retains only irreducible native.kilo identity on each existing assistant step. No raw envelope, second log, or selected-model replacement. TUI consumes durable identities instead of the latest-only metadata RPC.",
@@ -11,7 +16,7 @@
   },
   "module:packages/kilo-gateway/src/api/constants.ts": {
     "state": "ported",
-    "note": "The constants moved next to their use in packages/kilo-gateway-core/src: server.ts (API URL), headers.ts (header and env names, User-Agent), defaults.ts (default models), device.ts (poll interval, token lifetime), account.ts (anonymous key), models.ts (timeout, AI SDK providers and backend prompt directive enum). packages/kilo-plugin/src/gateway/prompt.ts applies those directives through native session hooks, using current v2 templates and narrow model-specific adaptations. The event service URL goes with event-service/client.ts. The signed-in personal fallback remains v2's kilo-auto/frontier decision; unavailable team defaults select the first team model, as main provider/catalog.ts recommend does.",
+    "note": "The constants moved next to their use in packages/kilo-gateway-core/src: server.ts (API URL), headers.ts (header and env names, User-Agent), defaults.ts (default models), device.ts (poll interval, token lifetime), account.ts (anonymous key), models.ts (timeout, AI SDK providers and backend prompt directive enum). packages/kilo-plugin/src/gateway/prompt.ts applies those directives through native session hooks, using current v2 templates and narrow model-specific adaptations. The event service URL goes with event-service/client.ts. The signed-in personal fallback remains v2's kilo-auto/frontier decision; unavailable team defaults select the first team model, as main provider/catalog.ts recommend does. As recommend does, a custom or token-embedded server origin gets no defaults request: teams select the first team model and personal accounts the first model in v1 Provider.sort order (KiloDefaults.firstSorted).",
     "by": "gateway-model-parity"
   },
   "module:packages/kilo-gateway/src/api/embedding-models.ts": {
@@ -26,8 +31,8 @@
   },
   "module:packages/kilo-gateway/src/api/url.ts": {
     "state": "ported",
-    "note": "packages/kilo-gateway-core/src/server.ts KiloServer.gateway, apiUrl and modelsUrl. The default Gateway URL follows a later main (https://ai-gateway.kilo.ai/api/v1).",
-    "by": "gateway-finish"
+    "note": "packages/kilo-gateway-core/src/server.ts gateway, openrouter, apiUrl and modelsUrl. Compared with live main 9e4e3a43c802bd2172cd23dbf2dbaeb6e109905e: inference uses openrouter for custom/token servers, while media/FIM retain gateway; configured KILO_AI_GATEWAY_URL and KILO_API_URL routing remains distinct. account.test.ts covers configured, custom, scoped-token and explicit personal routes.",
+    "by": "gateway-account-parity"
   },
   "module:packages/kilo-gateway/src/auth/device-auth-tui.ts": {
     "state": "ported",
@@ -51,8 +56,8 @@
   },
   "module:packages/kilo-gateway/src/auth/token.ts": {
     "state": "ported",
-    "note": "packages/kilo-gateway-core/src/server.ts KiloServer.fromToken (server URL in a token) and account.ts KiloAccount.resolve; the token of a credential is read in packages/core/src/kilocode/gateway.ts toAccount.",
-    "by": "gateway-finish"
+    "note": "packages/kilo-gateway-core/src/server.ts fromToken and account.ts resolve/authContent/compatible, composed by kilo-plugin/src/gateway/index.ts resolveCurrentAccount and final request hooks. Live main 9e4e3a43c802bd2172cd23dbf2dbaeb6e109905e catalog.token and final patchKiloProviderAuth callers establish env > saved credential > config kilocodeToken > config apiKey. Configured and token-scoped endpoints/organizations are shared by catalog, account RPCs and inference; incompatible token scope fails closed, explicit personal null persists per account, and v2 stores remain isolated. account.test.ts and kilo-plugin/test/gateway.test.ts carry precedence/scope regressions.",
+    "by": "gateway-account-parity"
   },
   "module:packages/kilo-gateway/src/edit-prompt.ts": {
     "state": "ported",
@@ -390,5 +395,70 @@
     "v2": "packages/core/src/config/plugin/agent.ts",
     "note": "Rebuild the cached agents when config changes. v2 rebuilds the agent state on every config change: ConfigAgentPlugin reloads on `config.updated`, and the plugin supervisor reloads the generation.",
     "by": "agents-plugin"
+  },
+  "module:packages/opencode/test/kilocode/model-info-panel.types.test.ts": {
+    "state": "ported",
+    "note": "v1 asserted at type level that the SDK model fits ModelInfoPanel props. On v2 packages/tui/src/kilocode/components/model-info-panel.tsx takes the client ModelInfo type directly, and kilocode/dialog-model.tsx passes the model list entry, so `bun typecheck` in packages/tui checks the same contract. packages/tui/test/kilocode/dialog-model.test.tsx renders the panel with that type.",
+    "by": "kilo-model-picker"
+  },
+  "patch:unattributed:tui/component:902bf97fd9cb": {
+    "state": "dropped",
+    "note": "v1 hunk ranked the upstream 'Popular providers' rows of the model picker with rankProviderOptions while searching. Upstream v2 removed those rows from component/dialog-model.tsx (signed-out users reach integrations through the 'View all integrations' action, which opens DialogIntegration), so there is no provider row left to rank. Model search ranking is ported in packages/tui/src/kilocode/model-picker.ts.",
+    "by": "kilo-model-picker"
+  },
+  "api:POST /kilocode/provider-usage/refresh": {
+    "state": "ported",
+    "note": "Served by the kilocode.provider-usage RPC method refresh (packages/schema/src/kilocode/provider-usage.ts Definition, handler in packages/kilo-plugin/src/provider-usage/index.ts): it bypasses the per-source cache and fetches every source again. The TUI /usage dialog calls it on ctrl+r. Round trip: packages/kilo-cli/test/provider-usage.test.ts.",
+    "by": "kilo-usage-screen"
+  },
+  "module:packages/core/src/kilocode/provider-usage/cloud.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/provider-usage/cloud.ts UsageCloud.plans/snapshot/app: same plan filter (active or past_due, canQueryUsage, installed and enabled coding_plan BYOK key, sorted by ID), same windows, plan state and management URL. The Kilo account data comes from the kilocode.gateway RPC methods authStatus, codingPlans, byok and codingPlanUsage instead of direct tRPC calls; team accounts still get no coding plans. Tests: packages/kilo-plugin/test/provider-usage.test.ts and packages/kilo-cli/test/provider-usage.test.ts.",
+    "by": "kilo-usage-screen"
+  },
+  "module:packages/core/src/kilocode/provider-usage/codex.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/provider-usage/codex.ts CodexUsage.load/decode/normalize: same wham/usage request (bearer token, ChatGPT-Account-Id, 5 s timeout, no redirects, 64 KiB limit), plan names, windows, reset times and auth versus retryable errors. The OpenAI ChatGPT OAuth credential is read through ctx.integration.connection in packages/kilo-plugin/src/provider-usage/index.ts. Tests: packages/kilo-plugin/test/provider-usage.test.ts.",
+    "by": "kilo-usage-screen"
+  },
+  "module:packages/core/src/kilocode/provider-usage/minimax/native.ts": {
+    "state": "ported",
+    "note": "The MiniMax token_plan/remains schema (ModelRemains, Native) is in packages/kilo-plugin/src/provider-usage/minimax.ts with the same fields and the 0-100 percent check.",
+    "by": "kilo-usage-screen"
+  },
+  "module:packages/core/src/kilocode/provider-usage/minimax/usage.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/provider-usage/minimax.ts MiniMaxUsage.load/normalize: same regional bindings, sk-cp key rule, interval and weekly windows, boost, not_in_plan and exhausted status, remaining-count semantics and video filter. The key comes from the provider credential or the configured apiKey, as in v1 (index.ts configuredKey). The per-credential cache with stale fallback, kept for failed fetches and failed credential reads, is in cache.ts (UsageCache). Tests: packages/kilo-plugin/test/provider-usage.test.ts.",
+    "by": "kilo-usage-screen"
+  },
+  "module:packages/opencode/test/kilocode/tui/usage.test.ts": {
+    "state": "ported",
+    "note": "packages/tui/test/kilocode/usage.test.ts carries the throughput assertions: weighted generation speed over step time, ignored steps without tokens or time, t/s formatting with grouping and '-' for missing, zero, negative, NaN and infinite values. v1's last-wins fallback for steps without elapsed time is not carried: every v2 assistant step has its start and completion time. The /usage dialog is covered by packages/tui/test/kilocode/usage.view.test.tsx.",
+    "by": "kilo-usage-screen"
+  },
+  "module:packages/opencode/src/kilocode/components/kilo-news.tsx": {
+    "state": "ported",
+    "note": "packages/tui/src/kilocode/kilo-news.tsx News: fetches the kilocode.gateway notifications RPC on mount, keeps items with no showIn or showIn 'cli', shows the first unread item and opens all unread items, then marks them read. Keeps the 3-row placeholder. v2 also refetches on credential.switched/updated and the rpc.kilocode.gateway.organization event, so login and /teams update the banner live. Signed-out and team scope come from the existing kilo-plugin notifications handler (no account returns [], team header from the active account). Test: packages/tui/test/kilocode/news.test.ts.",
+    "by": "kilo-gateway-news"
+  },
+  "module:packages/opencode/src/kilocode/components/news.ts": {
+    "state": "ported",
+    "note": "packages/tui/src/kilocode/kilo-news.tsx: the read IDs live in the plugin storage store 'news' (persisted per TUI profile); unread filter and set-union of opened IDs are in News and the slot onRead. The typed plugin store replaces the v1 KV value validation. packages/tui/test/kilocode/news.test.ts checks read state across a restart.",
+    "by": "kilo-gateway-news"
+  },
+  "module:packages/opencode/src/kilocode/components/notification-banner.tsx": {
+    "state": "ported",
+    "note": "packages/tui/src/kilocode/kilo-news.tsx News render: info dot, title, '(N new)' when more than one, word-wrapped message, hover background, click opens the dialog.",
+    "by": "kilo-gateway-news"
+  },
+  "module:packages/opencode/src/kilocode/components/dialog-kilo-notifications.tsx": {
+    "state": "ported",
+    "note": "packages/tui/src/kilocode/kilo-news.tsx DialogKiloNotifications: same layout as v1 ('News' header with esc, one padded row per item with '*' bullet, bold title, indented message, [actionText] link one row below, close button), close on enter, esc or click. Colors use the v2 semantic tokens for the v1 roles (info, primary, muted).",
+    "by": "kilo-gateway-news"
+  },
+  "module:packages/opencode/src/kilocode/plugins/home-news.tsx": {
+    "state": "ported",
+    "note": "packages/tui/src/kilocode/kilo-news.tsx kilocode.news TUI plugin, registered in packages/tui/src/plugin/builtins.ts. Same frame as v1 home_bottom (centered, maxWidth 75, paddingTop 2) through the new generic home.bottom slot below the home prompt (seam in packages/tui/src/routes/home.tsx and packages/plugin/src/tui/context.ts). Palette command kilo.news.toggle (Hide news / Show news, only on home) persists the hidden flag.",
+    "by": "kilo-gateway-news"
   }
 }

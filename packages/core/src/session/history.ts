@@ -6,7 +6,7 @@ import { SessionLegacy } from "@opencode/schema/session-legacy"
 import { Database } from "../database/database.js"
 import { MessageDecodeError } from "./error.js"
 import { SessionMessage } from "./message.js"
-import { SessionSchema } from "./schema.js"
+import type { SessionSchema } from "./schema.js"
 import { Instructions } from "../instructions/index.js"
 import { InstructionState } from "./instruction-state.js"
 import { SessionRecentText } from "./recent-text.js"
@@ -32,7 +32,8 @@ export const isNativeCompaction = (
 
 /** A native compaction's window: canonical AI messages, stored as JSON. */
 export const NativeWindow = Schema.toCodecJson(Schema.Array(Message))
-const decodesWindow = (messages: unknown) => Option.isSome(Schema.decodeUnknownOption(NativeWindow)(messages))
+const decodeNativeWindow = Schema.decodeUnknownOption(NativeWindow)
+const decodesWindow = (messages: unknown) => Option.isSome(decodeNativeWindow(messages))
 
 // Like other native data, a window only replays on the model that made it. One that no longer decodes, for example
 // a malformed one from a compaction hook, is skipped the same way instead of failing the session.
@@ -44,7 +45,7 @@ const replayable = (message: SessionMessage.Info, boundary: Boundary) =>
     message.model.id === boundary.id &&
     decodesWindow(message.native.messages))
 
-export const latestCompaction = Effect.fnUntraced(function* (
+const latestCompaction = Effect.fnUntraced(function* (
   db: DatabaseService,
   sessionID: SessionSchema.ID,
   boundary: Boundary,
@@ -93,8 +94,8 @@ export const decodeMessageRow = (row: typeof SessionMessageTable.$inferSelect) =
     Effect.mapError(
       () =>
         new MessageDecodeError({
-          sessionID: SessionSchema.ID.make(row.session_id),
-          messageID: SessionMessage.ID.make(row.id),
+          sessionID: row.session_id,
+          messageID: row.id,
         }),
     ),
   )
@@ -154,13 +155,11 @@ const withRecentText = Effect.fnUntraced(function* (
   const compaction = first?.message
   if (compaction?.type !== "compaction" || compaction.status !== "completed") return entries
   const keepID = compaction.metadata?.keepID
-  if (typeof keepID !== "string") return entries
+  if (!Schema.is(SessionMessage.ID)(keepID)) return entries
   const start = yield* db
     .select({ seq: SessionMessageTable.seq })
     .from(SessionMessageTable)
-    .where(
-      and(eq(SessionMessageTable.session_id, sessionID), eq(SessionMessageTable.id, SessionMessage.ID.make(keepID))),
-    )
+    .where(and(eq(SessionMessageTable.session_id, sessionID), eq(SessionMessageTable.id, keepID)))
     .get()
     .pipe(Effect.orDie)
   if (!start) return entries
