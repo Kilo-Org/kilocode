@@ -64,7 +64,14 @@ export const replacements = {
     ["this OpenCode component", "this Kilo component"],
     ["global OpenCode configuration", "global Kilo configuration"],
   ],
-  "tui/src/util/presentation.ts": [commands],
+  "tui/src/util/presentation.ts": [
+    commands,
+    ['import { logo } from "../logo"', 'import { compact, logo, widths } from "../logo"'],
+    [
+      "  return logo.left.map((line, index) => {\n    const left",
+      '  if ((process.stdout.columns ?? widths.full + pad.length) < widths.full + pad.length)\n    return compact.map((line) => `${pad}${draw(line, dim, "\\x1b[38;5;235m", "\\x1b[48;5;235m")}`)\n\n  return logo.left.map((line, index) => {\n    const left',
+    ],
+  ],
   "tui/src/attention.ts": [product],
   "tui/src/app.tsx": [
     product,
@@ -111,10 +118,13 @@ export const replacements = {
 export function transform(file: string, source: string) {
   const key = file.replaceAll("\\", "/").split("/packages/").at(-1) ?? file
   if (!Object.hasOwn(replacements, key)) return source
-  const branded = replacements[key as keyof typeof replacements].reduce((text, [from, to]) => {
-    if (!text.includes(from)) throw new Error(`Kilo branding no longer matches ${key}: ${from}`)
-    return text.replaceAll(from, to)
-  }, source)
+  const branded = replacements[key as keyof typeof replacements].reduce(
+    (text, [from, to]) => {
+      if (!text.includes(from)) throw new Error(`Kilo branding no longer matches ${key}: ${from}`)
+      return text.replaceAll(from, to)
+    },
+    source.replaceAll("\r\n", "\n"),
+  )
   if (key !== "core/src/oauth/page.ts") return branded
   if (!/const WORDMARK = `<svg[\s\S]*?<\/svg>`/.test(branded))
     throw new Error("Kilo OAuth wordmark no longer matches the upstream page")

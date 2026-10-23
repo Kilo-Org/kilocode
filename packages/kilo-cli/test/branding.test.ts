@@ -18,12 +18,35 @@ for (const [file, replacements] of Object.entries(KiloBranding.replacements)) {
     const original = await Bun.file(filename).text()
     const branded = KiloBranding.transform(filename, original)
     for (const [from, to] of replacements) {
-      expect(branded).not.toContain(from)
       expect(branded).toContain(to)
+      if (!to.includes(from)) expect(branded).not.toContain(from)
     }
     expect(branded.match(/@opencode\/[\w/.-]+/g)).toEqual(original.match(/@opencode\/[\w/.-]+/g))
   })
 }
+
+test("branding is independent of LF or CRLF checkouts", async () => {
+  for (const file of Object.keys(KiloBranding.replacements)) {
+    const filename = path.join(repo, "packages", file)
+    const lf = (await Bun.file(filename).text()).replaceAll("\r\n", "\n")
+    const crlf = lf.replaceAll("\n", "\r\n")
+    expect(KiloBranding.transform(filename, crlf)).toBe(KiloBranding.transform(filename, lf))
+  }
+})
+
+test("leaves line endings in unmapped modules untouched", () => {
+  const source = 'export const provider = "opencode";\r\n'
+  expect(KiloBranding.transform("unmapped.ts", source)).toBe(source)
+})
+
+test("still rejects real preflight drift in a CRLF checkout", async () => {
+  const filename = path.join(repo, "packages/cli/src/services/update-preflight.tsx")
+  const source = (await Bun.file(filename).text())
+    .replaceAll("\r\n", "\n")
+    .replaceAll("\n", "\r\n")
+    .replace("<For each={monogram}>", "<For each={different}>")
+  expect(() => KiloBranding.transform(filename, source)).toThrow("Kilo branding no longer matches")
+})
 
 test("does not rename provider identities, theme schemas or wire identifiers", async () => {
   for (const file of [
@@ -156,6 +179,50 @@ function checkLogos(output: string, hosted: boolean, modern: boolean) {
     if (hosted) expect(frame).not.toContain("█▀▀█ █▀▀█ █▀▀█ █▀▀▄")
   }
 }
+
+for (const hosted of [false, true]) {
+  for (const columns of [0, 44, 48, 52, 53, 72, 120]) {
+    test(`source epilogue: ${hosted ? "Kilo" : "upstream"}, ${columns} columns`, async () => {
+      await using root = await temporary()
+      const fixture = path.join(import.meta.dir, "fixtures/epilogue.ts")
+      checkEpilogue(await run([process.execPath, fixture, String(columns)], root.path, hosted), hosted, columns)
+    }, 30_000)
+  }
+
+  test(`compiled epilogue: ${hosted ? "Kilo" : "upstream"}, 48 columns`, async () => {
+    await using root = await temporary()
+    const outfile = path.join(root.path, process.platform === "win32" ? "epilogue.exe" : "epilogue")
+    const result = await Bun.build({
+      entrypoints: [path.join(import.meta.dir, "fixtures/epilogue.ts")],
+      plugins: [...(hosted ? [brandingPlugin] : []), createSolidTransformPlugin()],
+      compile: { outfile, autoloadBunfig: false, autoloadDotenv: false },
+      define: { KILO_BRANDING_COMPILED: "true" },
+    })
+    expect(result.success, result.logs.map(String).join("\n")).toBe(true)
+    checkEpilogue(await run([outfile, "48"], root.path, !hosted), hosted, 48)
+  }, 60_000)
+}
+
+function checkEpilogue(output: string, hosted: boolean, columns: number) {
+  const lines = Bun.stripANSI(output.trimEnd()).split("\n")
+  const artLines = lines.filter((line) => /[█▀▄]/.test(line))
+  const art = KiloLogo.art({})
+  const full = hosted ? art.logo : logo
+  const expected =
+    hosted && columns > 0 && columns < 53 ? art.compact : full.left.map((line, index) => `${line} ${full.right[index]}`)
+  expect(artLines).toEqual(
+    expected.map((line) => `  ${line.replaceAll("_", " ").replaceAll("^", "▀").replaceAll("~", "▀")}`),
+  )
+  expect(output).toContain("Session")
+  expect(output).toContain(`${hosted ? "kilo2" : "opencode"} -s ses_example`)
+  if (columns > 0) for (const line of artLines) expect(Bun.stringWidth(line)).toBeLessThanOrEqual(columns)
+}
+
+test("source/compiled epilogue anchors are applied", async () => {
+  const filename = path.join(repo, "packages/tui/src/util/presentation.ts")
+  const source = KiloBranding.transform(filename, await Bun.file(filename).text())
+  expect(source).toContain("widths.full + pad.length")
+})
 
 for (const args of [["--help"], ["auth", "logout", "--help"]]) {
   test(`Kilo CLI help: ${args.join(" ")}`, async () => {
