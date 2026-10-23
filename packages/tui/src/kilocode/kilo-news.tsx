@@ -67,10 +67,16 @@ function News(props: { context: Plugin.Context; read: readonly string[]; onRead:
   const [hover, setHover] = createSignal(false)
   const theme = () => props.context.theme
   const unread = createMemo(() => items().filter((item) => !props.read.includes(item.id)))
+  // Only the newest request may update the banner: an older answer can be for the previous account or team.
+  let generation = 0
   const load = () => {
+    const current = ++generation
     const location = props.context.location ?? props.context.data.location.default()
     rpc.notifications({}, { location: { directory: location.directory } }).then(
-      (list) => setItems(list.filter((item) => !item.showIn || item.showIn.includes("cli"))),
+      (list) => {
+        if (current !== generation) return
+        setItems(list.filter((item) => !item.showIn || item.showIn.includes("cli")))
+      },
       () => {},
     )
   }
@@ -83,6 +89,7 @@ function News(props: { context: Plugin.Context; read: readonly string[]; onRead:
 
   onMount(load)
   onCleanup(props.context.data.listen((event) => refresh.has(event.details.type) && load()))
+  onCleanup(() => generation++)
 
   // v1 `NotificationBanner`. The fixed-height fallback keeps the prompt from moving when the news arrives.
   return (
