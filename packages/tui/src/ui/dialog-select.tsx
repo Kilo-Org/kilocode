@@ -683,19 +683,21 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
           return props.footer
         },
       }}
+      // kilocode_change start - keep the footer mounted while its actions appear and disappear.
+      // Remounting it registers a renderer resize listener (useTerminalDimensions) on every
+      // selection change, which reaches the listener budget in a long-lived TUI.
       legacyFooter={
-        <Show when={props.footer || visibleActions().length} fallback={<box flexShrink={0} />}>
-          <DialogFooter
-            inset={DIALOG_LIST_INSET - DIALOG_INSET}
-            actions={{
-              secondary: footerGroup((item) => item.side !== "right"),
-              primary: footerGroup((item) => item.side === "right"),
-            }}
-          >
-            {props.footer}
-          </DialogFooter>
-        </Show>
+        <DialogFooter
+          inset={DIALOG_LIST_INSET - DIALOG_INSET}
+          actions={{
+            secondary: footerGroup((item) => item.side !== "right"),
+            primary: footerGroup((item) => item.side === "right"),
+          }}
+        >
+          {props.footer}
+        </DialogFooter>
       }
+      // kilocode_change end
     >
       <DialogBleed>
         <Show
