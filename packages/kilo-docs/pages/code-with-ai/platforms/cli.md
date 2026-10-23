@@ -707,6 +707,21 @@ The CLI supports overriding config values with environment variables. The suppor
 - For `kilocode` provider: `KILOCODE_<FIELD_NAME>` (e.g., `KILOCODE_MODEL` → `kilocodeModel`)
 - For other providers: `KILO_<FIELD_NAME>` (e.g., `KILO_API_KEY` → `apiKey`)
 
+## Self-Hosted Backends
+
+By default the CLI sends Kilo API traffic (sign-in, profile, defaults) to `https://api.kilo.ai` and [AI gateway](/docs/gateway) traffic (chat, model listing, embeddings, autocomplete, transcription) to `https://ai-gateway.kilo.ai/api/v1`. Point either at a different server with these environment variables — for example, to route gateway traffic through a self-hosted gateway for compliance, or a local backend during development.
+
+| Variable | Default | Controls |
+|---|---|---|
+| `KILO_API_URL` | `https://api.kilo.ai` | Kilo API traffic. When set on its own (without `KILO_AI_GATEWAY_URL`), gateway traffic also goes here, under `/api/gateway/v1`. |
+| `KILO_AI_GATEWAY_URL` | `https://ai-gateway.kilo.ai/api/v1` | AI gateway traffic only. |
+
+Set `KILO_AI_GATEWAY_URL` to send only gateway traffic to another server while leaving sign-in and profile requests on the default:
+
+```bash
+KILO_AI_GATEWAY_URL=https://gateway.example.com/api/v1 kilo
+```
+
 ## Using the CLI in an Organization
 
 If you belong to a Kilo organization (Team or Enterprise), you can route CLI requests through that organization. The process differs slightly between interactive and non-interactive usage.
