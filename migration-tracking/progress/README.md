@@ -8,20 +8,20 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**118 / 9828 cells done (1.2%)**, 26 dropped. `░░░░░░░░░░░░░░░░`
+**122 / 9828 cells done (1.2%)**, 26 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
 | module | 36 | 3547 | 1% |
 | api | 0 | 39 | 0% |
-| patch | 55 | 3444 | 1.6% |
+| patch | 59 | 3444 | 1.7% |
 | test | 27 | 2798 | 1% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
-Landed by rung, for patch cells closed by a done-proof: 36 plugin, 3 host, 0 seam, 1 patch.
+Landed by rung, for patch cells closed by a done-proof: 36 plugin, 3 host, 4 seam, 1 patch.
 
-Ratchets: 25 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 43 shared patches by rung: 24 seam, 19 patch (`script/upstream/shared-patches.json`).
+Ratchets: 25 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 44 shared patches by rung: 25 seam, 19 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -37,7 +37,7 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-21 | 90 | 9829 | 0.9% |
 | 2026-10-22 | 93 | 9829 | 0.9% |
 | 2026-10-23 | 95 | 9829 | 1% |
-| now | 118 | 9828 | 1.2% |
+| now | 122 | 9828 | 1.2% |
 
 ## Features
 
@@ -186,7 +186,7 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 | core/plugin | 0/20 |  | 0/20 | 0% |
 | core/ripgrep | 0/20 |  | 0/20 | 0% |
 | acp | 0/19 |  | 0/19 | 0% |
-| tui/ui | 0/19 |  | 0/19 | 0% |
+| tui/ui | 4/19 |  | 4/19 | 21.1% |
 | core/filesystem | 0/18 |  | 0/18 | 0% |
 | session-ui/v2 | 0/17 | 0/1 | 0/18 | 0% |
 | llm/protocols | 0/16 |  | 0/16 | 0% |

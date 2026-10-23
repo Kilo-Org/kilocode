@@ -50,7 +50,7 @@ const entries: KiloGatewayRpc.ModelEntry[] = [
   { id: "openai/gpt-5", name: "OpenAI: GPT-5", isFree: false },
 ]
 
-async function open(connected: boolean) {
+async function open(connected: boolean, recent?: { providerID: string; modelID: string }) {
   const rpc: unknown[] = []
   const setup = await renderLocal({
     models,
@@ -78,6 +78,7 @@ async function open(connected: boolean) {
     },
   })
   setup.resize(130, 40)
+  if (recent) setup.local.model.set(recent, { recent: true })
   setup.dialog.replace(() => <DialogModel />)
   return { setup, rpc }
 }
@@ -144,4 +145,31 @@ test("signed out picker lists Recommended Kilo models first without section head
   expect(row("Claude Sonnet 4.5")).toBeLessThan(row("Grok Code Fast"))
   expect(row("Grok Code Fast")).toBeLessThan(row("OpenAI: GPT-5"))
   expect(row("OpenAI: GPT-5")).toBeLessThan(row("Zen Sonnet"))
+})
+
+test("a recent model listed twice highlights and targets one row", async () => {
+  const { setup } = await open(true, { providerID: "kilo", modelID: "openai/gpt-5" })
+  await using _ = setup
+  await setup.waitForFrame((frame) => frame.includes("Recent") && frame.includes("Recommended"))
+  // The recent model is in Recent and in its Kilo Gateway section, as in v1.
+  // Rows of the list, left of the info panel.
+  const rows = () => {
+    const text = setup.captureCharFrame().split("\n")
+    return setup
+      .captureSpans()
+      .lines.map((line, y) => ({ y, span: line.spans.find((span) => span.text.includes("OpenAI: GPT-5")) }))
+      .filter((row) => row.span !== undefined && text[row.y]!.split("│")[0]!.includes("OpenAI: GPT-5"))
+  }
+  expect(rows()).toHaveLength(2)
+  const active = () => rows().map((row) => row.span!.bg.toString())
+  // Only the Recent copy (the current model) is active, not both copies.
+  expect(active()[0]).not.toBe(active()[1])
+  const first = active()[0]
+
+  // Hovering the second copy moves the highlight to that row.
+  const second = rows()[1]!
+  const x = setup.captureCharFrame().split("\n")[second.y]!.indexOf("OpenAI: GPT-5")
+  await setup.mockMouse.moveTo(x + 2, second.y)
+  await setup.waitFor(() => active()[1] === first)
+  expect(active()[0]).not.toBe(first)
 })

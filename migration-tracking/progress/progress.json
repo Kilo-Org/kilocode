@@ -4,7 +4,7 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 118,
+    "done": 122,
     "total": 9828,
     "percent": 1.2,
     "dropped": 26,
@@ -21,7 +21,7 @@
       },
       {
         "kind": "patch",
-        "done": 55,
+        "done": 59,
         "total": 3444
       },
       {
@@ -33,12 +33,12 @@
     "landed": {
       "plugin": 36,
       "host": 3,
-      "seam": 0,
+      "seam": 4,
       "patch": 1
     },
     "coreImports": 25,
     "sharedPatches": {
-      "seam": 24,
+      "seam": 25,
       "patch": 19
     }
   },
@@ -5681,7 +5681,7 @@
     },
     {
       "feature": "unattributed:tui/ui",
-      "done": 0,
+      "done": 4,
       "total": 19,
       "dropped": 0,
       "kinds": {
@@ -5694,13 +5694,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 4,
           "total": 19
         },
         "test": {
           "done": 0,
           "total": 0
         }
+      },
+      "landed": {
+        "plugin": 0,
+        "host": 0,
+        "seam": 4,
+        "patch": 0
       }
     },
     {
@@ -6152,7 +6158,10 @@
     "patch:unattributed:tui/component:9e2836eb85dc": "plugin",
     "patch:unattributed:tui/component:a277acf3a84b": "plugin",
     "patch:unattributed:tui/component:c8cf17d43819": "plugin",
-    "patch:unattributed:tui/component:d10b36aa74a5": "plugin"
+    "patch:unattributed:tui/component:d10b36aa74a5": "plugin",
+    "patch:unattributed:tui/ui:858635f51958": "seam",
+    "patch:unattributed:tui/ui:aac5db9863ac": "seam",
+    "patch:unattributed:tui/ui:acda41f897d2": "seam"
   },
   "done": [
     "module:packages/kilo-gateway/src/api/constants.ts",
@@ -6272,7 +6281,11 @@
     "patch:unattributed:tui/component:9e2836eb85dc",
     "patch:unattributed:tui/component:a277acf3a84b",
     "patch:unattributed:tui/component:c8cf17d43819",
-    "patch:unattributed:tui/component:d10b36aa74a5"
+    "patch:unattributed:tui/component:d10b36aa74a5",
+    "patch:unattributed:tui/ui:858635f51958",
+    "patch:unattributed:tui/ui:aac5db9863ac",
+    "patch:unattributed:tui/ui:aac5db9863ac",
+    "patch:unattributed:tui/ui:acda41f897d2"
   ],
   "dropped": [
     "module:packages/kilo-gateway/src/auth/device-auth.ts",

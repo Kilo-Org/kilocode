@@ -87,6 +87,7 @@ function DialogConnectedModels(props: {
   const kilo = createKiloModelPicker({ providerID: props.providerID, query, connected, showExtra, onSelect: props.onSelect }) // kilocode_change(tui)
 
   const options = createMemo(() => {
+    if (kilo) return kilo.options() // kilocode_change(tui) - Kilo list replaces the upstream list, which stays unchanged for syncs
     const needle = query().trim()
     const showSections = showExtra() && needle.length === 0
     const favorites = connected() ? (newDesigns() ? favoritesAtOpen : local.model.favorite()) : []
@@ -200,7 +201,7 @@ function DialogConnectedModels(props: {
     <DialogSelect<ReturnType<typeof options>[number]["value"]>
       searchInTitle
       titlePlaceholder="Search models"
-      options={kilo.options()} // kilocode_change(tui) - Kilo: Gateway order and labels
+      options={options()}
       actions={[
         {
           command: "model.dialog.provider",
