@@ -81,21 +81,26 @@ test("production session shows each route while keeping Auto selected", async ()
   )
   try {
     await modelCatalog
-    await setup.waitForFrame((frame) => frame.includes("Auto") && frame.includes("Claude Sonnet 4.6"), { maxPasses: 60 })
+    // Windows can still have a render scheduled when the default passes run out.
+    const wait = { maxPasses: 200 }
+    await setup.waitForFrame((frame) => frame.includes("Auto") && frame.includes("Claude Sonnet 4.6"), wait)
+    await setup.waitForVisualIdle()
     const thought = setup
       .captureCharFrame()
       .split("\n")
       .findIndex((line) => line.includes("Thought"))
     expect(setup.captureCharFrame().split("\n")[thought]).toContain("gpt-5.5")
     await setup.mockMouse.click(6, thought)
-    await setup.waitForFrame((frame) => frame.includes("Routed to gpt-5.5"), { maxPasses: 60 })
+    await setup.waitForFrame((frame) => frame.includes("Routed to gpt-5.5"), wait)
+    await setup.waitForVisualIdle()
     const row = setup
       .captureCharFrame()
       .split("\n")
       .findIndex((line) => line.includes("+ Tokens"))
     expect(row).toBeGreaterThan(0)
     await setup.mockMouse.click(6, row)
-    await setup.waitForFrame((frame) => frame.includes("tool-call") && frame.includes("gpt-5.5"), { maxPasses: 60 })
+    await setup.waitForFrame((frame) => frame.includes("tool-call") && frame.includes("gpt-5.5"), wait)
+    await setup.waitForVisualIdle()
     const lines = setup.captureCharFrame().split("\n")
     expect(lines.find((line) => line.includes("tool-call"))).toContain("gpt-5.5")
     expect(lines.find((line) => line.trim().startsWith("stop"))).toContain("Claude Sonnet 4.6")

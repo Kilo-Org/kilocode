@@ -1,4 +1,9 @@
 {
+  "module:packages/opencode/test/kilocode/config/hide-prompt-training-models.test.ts": {
+    "state": "ported",
+    "note": "packages/core/test/kilocode/config/policy.test.ts checks the exact top-level boolean setting, true, false, omission, and rejection of string values against KiloConfigPolicy.Info. Gateway request enforcement and managed precedence are covered by packages/kilo-plugin/test/organization-modes.test.ts and packages/core/test/kilocode/config/discovery.test.ts.",
+    "by": "gateway-enterprise-parity"
+  },
   "module:packages/kilo-gateway/src/gateway-metadata.ts": {
     "state": "ported",
     "note": "Current main 9e4e3a43c802bd2172cd23dbf2dbaeb6e109905e live native Gateway middleware is implemented by packages/kilo-gateway-core/src/stream.ts extractMetadata/transformResponse: successful routing attempts/canonical slugs, native Messages/Responses usage, market-cost metadata and request/response identity cross the existing Usage.providerMetadata path. packages/core/src/kilocode/session/usage.ts settles reported cost and retains only irreducible native.kilo identity on each existing assistant step. No raw envelope, second log, or selected-model replacement. TUI consumes durable identities instead of the latest-only metadata RPC.",
