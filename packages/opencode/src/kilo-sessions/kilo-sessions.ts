@@ -36,6 +36,7 @@ import {
   enabled as prEnabled,
   loadSessionLinks,
   pruneLegacyWorktreeLinks,
+  readSessionPrLink,
   recordPrCreate,
   recordPush,
 } from "@/kilo-sessions/pr-link"
@@ -492,11 +493,18 @@ export namespace KiloSessions {
   async function syncPrLinkTriple(sessionId: string, triple: PrLinkTriple) {
     const key = JSON.stringify(triple)
     if (lastPrLinkTriple.get(sessionId) === key) return
-    // Record the triple only after ingest accepts (queues) it. A missing client
-    // makes ingest.sync return false without queueing; recording before would
-    // poison the dedupe map and skip the persist after a later login.
+    // The queue drops items without a share. Leave those triples retryable
+    // until bootstrap completes, just as ingest.sync does for a missing client.
+    if (!(await readShare(sessionId))) return
     const accepted = await ingest.sync(sessionId, [{ type: "session_pr_link", data: triple }])
     if (accepted) lastPrLinkTriple.set(sessionId, key)
+  }
+
+  // Ingest stored evidence without a remote heartbeat. Withdraw an absent
+  // record only if this process previously ingested the session's link.
+  async function syncPrLinkForSession(sessionId: string) {
+    const record = await readSessionPrLink(sessionId)
+    await syncSessionPrLink(sessionId, record, new Set())
   }
 
   // Sessions already cleared by the legacy sweep this process.
@@ -784,20 +792,23 @@ export namespace KiloSessions {
             if (!prEnabled()) return
             // kilocode_change - A PR is linked only on the session's own hard
             // evidence: the session ran a create command whose output returned
-            // the PR URL, or it pushed the PR's head branch. Agent text, a
+            // the PR URL, it pushed the PR's head branch, or it explicitly
+            // linked the PR with link_pr. Agent text, a
             // listing (`gh pr list`), a view, or a review is a mention, never a
-            // link, so only a completed shell tool with such a command is read.
+            // link, so only a completed evidence-producing tool is read.
             if (part.type !== "tool" || part.state.status !== "completed") return
+            if (part.tool === "link_pr") return syncPrLinkForSession(part.sessionID)
             if (part.tool !== "bash" && part.tool !== "shell") return
             const raw = part.state.input["command"]
             const command = typeof raw === "string" ? raw : undefined
             if (!command) return
             if (isPrCreateCommand(command)) {
               await recordPrCreate(part.sessionID, Instance.worktree, part.state.output)
-              return
+              return syncPrLinkForSession(part.sessionID)
             }
             if (isPushCommand(command)) {
               await recordPush(part.sessionID, Instance.worktree, command, part.state.output)
+              await syncPrLinkForSession(part.sessionID)
             }
           })
           watch(Session.Event.Diff, (evt) =>
@@ -893,9 +904,14 @@ export namespace KiloSessions {
           if (prEnabled()) {
             yield* Effect.acquireRelease(
               Effect.sync(() =>
-                startPrLinkPoll(async () => {
-                  await Instance.restore(ctx, () => refreshPrLink())
-                }),
+                startPrLinkPoll(() =>
+                  Instance.restore(ctx, async () => {
+                    // Preserve evidence from the previous process before refresh can remove it.
+                    for (const sessionID of tracked) await syncPrLinkForSession(sessionID)
+                    await refreshPrLink()
+                    for (const sessionID of tracked) await syncPrLinkForSession(sessionID)
+                  }),
+                ),
               ),
               (stop) => Effect.sync(stop),
             )
@@ -1782,6 +1798,7 @@ export namespace KiloSessions {
         data: await statuses.snapshot(sessionId, () => AppRuntime.runPromise(deriveStatus(sessionId))),
       },
     ])
+    await syncPrLinkForSession(sessionId)
   }
 
   /** Normalize a git remote URL: strip credentials, query params, and hash. Returns undefined for unrecognized formats. */

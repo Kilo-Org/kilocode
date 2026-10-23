@@ -27,11 +27,13 @@ The tab also handles the cases where there's nothing to show:
 
 ## Commit, push, and open a pull request
 
-The commit control in the top toolbar turns your reviewed changes into commits and shares them. Its main button is a **quick action** that adapts to your branch's state, so it always offers the next sensible step. Open its dropdown to choose an action directly:
+The commit control in the top toolbar turns your changes into commits and shares them. Its main button adapts to your branch's state and offers the next step: **Commit**, **Commit & push**, **Commit, push & PR**, **Push**, **Pull**, **Create PR**, or **View PR**. Open its dropdown to choose **Commit**, **Push**, or **Create PR** directly.
 
-- **Commit** — commit your current changes. Unavailable when the working tree is clean.
-- **Push** — push your commits to the remote. Needs a checked-out branch with an `origin` remote and local commits to send.
-- **Create PR** — open a pull request for the current branch. Needs committed work on a feature branch (not the default branch) with a GitHub `origin` remote. When a pull request already exists, the menu links to it as **PR #N**, color-coded by its state.
+- **Commit** — stages all your changes and commits them. Kilo writes a one-line commit message using the model selected in the chat, matching your repository's recent commit style. Unavailable when the working tree is clean.
+- **Push** — pushes your commits to the remote. It needs a checked-out branch with an `origin` remote and local commits to send.
+- **Create PR** — writes a pull request title and description with the selected model, creates a **draft** pull request, and opens it in your browser. If your repository has a PR template, Kilo fills it in. It needs the GitHub CLI (`gh`), committed work on a feature branch, and a GitHub `origin` remote. When a pull request already exists, the menu links to it as **PR #N**, colored by its state.
+
+While an action runs, the button shows its progress (for example *Generating commit message...* or *Creating draft PR...*). If the button is disabled, hover it to see why (for example *Branch is behind its upstream. Pull or rebase first.*). Select a model in the chat before committing.
 
 If a push fails, the error opens in a dialog where you can read the full git output. Select **Fix in chat** to add the error to your chat draft so the agent can help.
 
