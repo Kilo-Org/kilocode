@@ -39,6 +39,7 @@
     "@types/babel__core": "7.20.5",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
-    "@typescript/native": "catalog:"
+    "@typescript/native": "catalog:",
+    "solid-js": "catalog:"
   }
 }
