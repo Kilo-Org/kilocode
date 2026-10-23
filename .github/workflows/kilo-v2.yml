@@ -99,18 +99,23 @@ jobs:
       # compound syntax that need Bash 5, which the Linux runners have. Install it and use it for the
       # tests so the darwin job exercises the same shell behavior as Linux.
       - name: Setup Bash 5
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
         run: |
           brew install bash
           echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
           echo "SHELL=$(brew --prefix)/bin/bash" >> "$GITHUB_ENV"
 
+      # Through each package's own test script, like the Linux and Windows unit jobs: core's wrapper
+      # gives the run a temporary HOME, OPENCODE_TEST_HOME, XDG directories and TMPDIR.
       - name: Run core platform tests
         working-directory: packages/core
-        run: bun test test/filesystem test/pty/pty-session.test.ts test/persistent-pty-daemon.test.ts test/process/process.test.ts test/tool-shell.test.ts test/session-shell.test.ts test/shell.test.ts test/shell-cleanup.test.ts test/util/which.test.ts --timeout 60000
+        run: bun run test ./test/filesystem ./test/pty/pty-session.test.ts ./test/persistent-pty-daemon.test.ts ./test/process/process.test.ts ./test/tool-shell.test.ts ./test/session-shell.test.ts ./test/shell.test.ts ./test/shell-cleanup.test.ts ./test/util/which.test.ts
 
       - name: Run CLI service tests
         working-directory: packages/cli
-        run: bun test test/service.test.ts test/service-lifecycle.test.ts --timeout 60000
+        run: bun run test ./test/service.test.ts ./test/service-lifecycle.test.ts
 
   shared:
     name: shared upstream patches
