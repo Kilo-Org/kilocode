@@ -1,5 +1,7 @@
 # kilo-code
 
+## 7.8.16
+
 ## 7.8.15
 
 ### Patch Changes

@@ -61,6 +61,60 @@ export function isReplaced(error: unknown): boolean {
   return error instanceof Error && error.name === "AuthorizationReplacedError"
 }
 
+// Named callback failures keep the user-facing message unchanged while letting telemetry
+// classify the outcome without parsing text.
+function named(name: string, message: string): Error {
+  const err = new Error(message)
+  err.name = name
+  return err
+}
+
+/** The authorization server redirected back with an OAuth `error` (for example `access_denied`). */
+export function denied(message: string, code: string): Error & { oauthError: string } {
+  return Object.assign(named("AuthorizationDeniedError", message), { oauthError: code })
+}
+
+const CANCELLED = "AuthorizationCancelledError"
+const EXPIRED = "AuthorizationTimeoutError"
+const STOPPED = "AuthorizationStoppedError"
+const DISPLACED = "AuthorizationDisplacedError"
+
+export function cancelled(): Error {
+  return named(CANCELLED, "Authorization cancelled")
+}
+
+export function expired(): Error {
+  return named(EXPIRED, "OAuth callback timeout - authorization took too long")
+}
+
+export function stopped(): Error {
+  return named(STOPPED, "OAuth callback server stopped")
+}
+
+export function isCancelled(error: unknown): boolean {
+  return error instanceof Error && error.name === CANCELLED
+}
+
+export function isExpired(error: unknown): boolean {
+  return error instanceof Error && error.name === EXPIRED
+}
+
+/**
+ * A newer flow restarted the listener on another host, port, or path. The user sees the same
+ * message as a shutdown, but the waiting flow was superseded rather than interrupted.
+ */
+export function displaced(): Error {
+  return named(DISPLACED, "OAuth callback server stopped")
+}
+
+export function isStopped(error: unknown): boolean {
+  return error instanceof Error && error.name === STOPPED
+}
+
+export function isDisplaced(error: unknown): boolean {
+  return error instanceof Error && error.name === DISPLACED
+}
+
 /**
  * True when a request proves it asks this process to hand its callback listener over. The
  * takeover header makes it a non-simple request: a browser must clear a CORS preflight first,

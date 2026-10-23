@@ -57,9 +57,9 @@ jobs:
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        uses: ./.github/actions/setup-bun
         with:
-          bun-version-file: package.json
+          install: false
 
       - name: Setup Java
         uses: actions/setup-java@v4
