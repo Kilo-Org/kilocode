@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 46,
-    "markedLines": 334,
+    "files": 48,
+    "markedLines": 353,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -126,7 +126,7 @@
     },
     "packages/plugin/src/tui/context.ts": {
       "rung": 3,
-      "seam": "Declare the `home.bottom` slot path in the public `SlotMap`, so a TUI plugin can render below the home prompt, as the v1 `home_bottom` slot allowed (Kilo Gateway news uses it). The v2 home screen publishes only `home.footer` and `home.footer.status`; a `before`/`after` claim on those places content at the bottom of the screen, not below the prompt. Rungs 1 and 2 cannot add a slot path: `SlotMap` is the closed public type of the plugin API. One generic line with no Kilo value."
+      "seam": "Declare the `home.bottom` slot path in the public `SlotMap`, so a TUI plugin can render below the home prompt, as the v1 `home_bottom` slot allowed (Kilo Gateway news uses it). The v2 home screen publishes only `home.footer` and `home.footer.status`; a `before`/`after` claim on those places content at the bottom of the screen, not below the prompt. Rungs 1 and 2 cannot add a slot path: `SlotMap` is the closed public type of the plugin API. One generic line with no Kilo value. Also the optional `order` field of the public `SlotClaim` type. Optional numeric `order` on TUI slot claims, so a plugin can place its claim between other claims at one anchor (v1 slots had `order`; the Kilo sidebar panels need pr 50, footer 99, usage 150 between the upstream Context, MCP and Todo panels). A claim without an order counts as 100, 200, ... in enable order. Without any order the result is the enable order, as before, so upstream claims and tests do not change. No plugin hook or host option reaches the slot resolver: the claim type, its normalization and the resolver are the only places that know claim positions, so the knob needs one line in each of the three files. Generic, no Kilo value."
     },
     "packages/tui/src/routes/home.tsx": {
       "rung": 3,
@@ -134,7 +134,7 @@
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 3,
-      "seam": "Register the built-in `KiloTeams` TUI plugin (`/teams`, `/team`, `/org`, `/orgs`), the `KiloNews` TUI plugin (Kilo Gateway news on the home screen) and the `KiloUsage` TUI plugin (`/usage`, `/plans`, `/quota`). Stays after U-E0-01: the TUI loads its built-in list in the TUI process, which `SdkPlugins` (a server store) does not reach. The config-driven path (`plugins` in the TUI config, loaded by `tui/src/plugin/context.tsx`) loads only npm packages or local files, which a compiled binary does not have. A generic seam needs an `@opencode/tui` export of the list (package.json) plus an extension point in this file, which is not fewer shared lines than these two."
+      "seam": "Register the built-in `KiloTeams` TUI plugin (`/teams`, `/team`, `/org`, `/orgs`), the `KiloNews` TUI plugin (Kilo Gateway news on the home screen) the `KiloUsage` TUI plugin (`/usage`, `/plans`, `/quota`), and the Kilo sidebar panels (`KiloSidebarPr`, `KiloSidebarFooter`, `KiloSidebarUsage`). Stays after U-E0-01: the TUI loads its built-in list in the TUI process, which `SdkPlugins` (a server store) does not reach. The config-driven path (`plugins` in the TUI config, loaded by `tui/src/plugin/context.tsx`) loads only npm packages or local files, which a compiled binary does not have. A generic seam needs an `@opencode/tui` export of the list (package.json) plus an extension point in this file, which is not fewer shared lines than these two."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,
@@ -196,6 +196,14 @@
     "packages/tui/src/ui/dialog-select.tsx": {
       "rung": 4,
       "seam": "Keep the list footer mounted when its action list becomes empty. The footer is wrapped in a Show that unmounts it whenever no action is visible, and each mount registers a renderer resize listener through useTerminalDimensions. Selection changes that hide or show an action (for example the account row in the Kilo gateway dialog) therefore add listeners until the renderer exceeds its budget and writes a MaxListenersExceededWarning over the TUI. Rungs 1 to 3 cannot reach it: the footer is rendered by upstream's DialogSelect, and no plugin hook or generic knob controls whether that element stays mounted. Separately (rung 3 lines, no Kilo value): match the active row by option reference instead of by value (`active`, mouse move and mouse down, the scroll-to-top check), as on v1. A list may show one value twice: the model picker keeps a recent model in Recent and in its provider section (v1 placement). With value equality both copies render active and the pointer targets the first copy. For lists with unique values the behavior is the same, so upstream's DialogSelect tests pass. No plugin hook or host option reaches DialogSelect's private row matching."
+    },
+    "packages/tui/src/plugin/api.tsx": {
+      "rung": 3,
+      "seam": "Pass the optional claim `order` into the normalized placement. Optional numeric `order` on TUI slot claims, so a plugin can place its claim between other claims at one anchor (v1 slots had `order`; the Kilo sidebar panels need pr 50, footer 99, usage 150 between the upstream Context, MCP and Todo panels). A claim without an order counts as 100, 200, ... in enable order. Without any order the result is the enable order, as before, so upstream claims and tests do not change. No plugin hook or host option reaches the slot resolver: the claim type, its normalization and the resolver are the only places that know claim positions, so the knob needs one line in each of the three files. Generic, no Kilo value."
+    },
+    "packages/tui/src/plugin/structure.ts": {
+      "rung": 3,
+      "seam": "`Placement.order` and a stable sort of each anchor in `resolveSlots`. Optional numeric `order` on TUI slot claims, so a plugin can place its claim between other claims at one anchor (v1 slots had `order`; the Kilo sidebar panels need pr 50, footer 99, usage 150 between the upstream Context, MCP and Todo panels). A claim without an order counts as 100, 200, ... in enable order. Without any order the result is the enable order, as before, so upstream claims and tests do not change. No plugin hook or host option reaches the slot resolver: the claim type, its normalization and the resolver are the only places that know claim positions, so the knob needs one line in each of the three files. Generic, no Kilo value."
     }
   }
 }

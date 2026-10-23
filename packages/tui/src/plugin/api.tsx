@@ -304,7 +304,7 @@ export function createPluginContext(input: {
         if (kinds.length !== 1) throw new Error("Slot claim requires exactly one placement key")
         const kind = kinds[0]
         input.registry.set("slots", key, {
-          placement: { kind, target: value[kind] as string },
+          placement: { kind, target: value[kind] as string, order: value.order }, // kilocode_change(plugin) seam - claim order
           // The registration map erases the path-specific input type.
           render: (slotInput) => provide(() => (value.render as SlotRender)(slotInput)),
         })
