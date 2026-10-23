@@ -113,6 +113,12 @@ jobs:
         working-directory: packages/core
         run: bun run test ./test/filesystem ./test/pty/pty-session.test.ts ./test/persistent-pty-daemon.test.ts ./test/process/process.test.ts ./test/tool-shell.test.ts ./test/session-shell.test.ts ./test/shell.test.ts ./test/shell-cleanup.test.ts ./test/util/which.test.ts
 
+      # The v1 darwin profile covered the PTY HTTP routes here. On v2 the PTY transport, socket and
+      # persistent daemon live in packages/server, so run those files instead.
+      - name: Run server PTY tests
+        working-directory: packages/server
+        run: bun run test ./test/pty-socket.test.ts ./test/pty-transport.test.ts ./test/persistent-pty.test.ts ./test/process.test.ts
+
       - name: Run CLI service tests
         working-directory: packages/cli
         run: bun run test ./test/service.test.ts ./test/service-lifecycle.test.ts
