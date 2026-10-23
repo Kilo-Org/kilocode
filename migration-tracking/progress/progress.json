@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 146,
+    "done": 152,
     "total": 9828,
     "percent": 1.5,
     "dropped": 26,
     "kinds": [
       {
         "kind": "module",
-        "done": 49,
+        "done": 54,
         "total": 3547
       },
       {
@@ -26,7 +26,7 @@
       },
       {
         "kind": "test",
-        "done": 29,
+        "done": 30,
         "total": 2798
       }
     ],
@@ -38,7 +38,7 @@
     },
     "coreImports": 25,
     "sharedPatches": {
-      "seam": 26,
+      "seam": 28,
       "patch": 20
     }
   },
@@ -1433,12 +1433,12 @@
     },
     {
       "feature": "plugin",
-      "done": 1,
+      "done": 7,
       "total": 34,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 1,
+          "done": 6,
           "total": 26
         },
         "api": {
@@ -1450,7 +1450,7 @@
           "total": 2
         },
         "test": {
-          "done": 0,
+          "done": 1,
           "total": 6
         }
       }
@@ -6251,6 +6251,11 @@
     "module:packages/opencode/src/kilocode/kilo-commands.tsx",
     "module:packages/opencode/src/kilocode/kilo-errors.ts",
     "module:packages/opencode/src/kilocode/plugins/home-news.tsx",
+    "module:packages/opencode/src/kilocode/plugins/model-usage.ts",
+    "module:packages/opencode/src/kilocode/plugins/sidebar-footer.tsx",
+    "module:packages/opencode/src/kilocode/plugins/sidebar-pr.tsx",
+    "module:packages/opencode/src/kilocode/plugins/sidebar-usage-row.tsx",
+    "module:packages/opencode/src/kilocode/plugins/sidebar-usage.tsx",
     "module:packages/opencode/test/kilocode/agent-global-config-dirs.test.ts",
     "module:packages/opencode/test/kilocode/agent-permission-overrides.test.ts",
     "module:packages/opencode/test/kilocode/agent-skill-permissions.test.ts",
@@ -6262,6 +6267,7 @@
     "module:packages/opencode/test/kilocode/model-info-panel-utils.test.ts",
     "module:packages/opencode/test/kilocode/model-info-panel.types.test.ts",
     "module:packages/opencode/test/kilocode/news.test.ts",
+    "module:packages/opencode/test/kilocode/sidebar-footer.test.ts",
     "module:packages/opencode/test/kilocode/tui/usage.test.ts",
     "module:packages/schema/src/kilocode/provider-usage.ts",
     "module:packages/tui/src/kilocode/model-picker.ts",
