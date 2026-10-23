@@ -107,7 +107,12 @@ function remapPart(part: MessageV2.Part, map: Map<string, SessionID>) {
   return next
 }
 
-function copy(input: { source: Session.Info; parentID: SessionID; ops: Ops }) {
+function copy(input: {
+  source: Session.Info
+  parentID: SessionID
+  ops: Ops
+  invalidated?: Set<string>
+}) {
   return Effect.gen(function* () {
     const target = yield* input.ops.create({
       parentID: input.parentID,
@@ -134,6 +139,9 @@ function copy(input: { source: Session.Info; parentID: SessionID; ops: Ops }) {
       })
 
       for (const part of msg.parts) {
+        // A cleaned-up revert invalidated these checkpoints. Cloning them under fresh ids would
+        // hide that from the fork's own revert state, which then resurrects discarded content.
+        if (input.invalidated?.has(part.id)) continue
         const prepared = prepareForkedPart(part)
         if (!prepared) continue
         const next: MessageV2.Part = {
@@ -156,6 +164,7 @@ export function remapChildren(input: {
   sessionID: SessionID
   ops: Ops
   remapped?: Map<string, SessionID>
+  invalidated?: (sessionID: SessionID) => Effect.Effect<Set<string>>
 }): Effect.Effect<void, Session.NotFound> {
   return Effect.gen(function* () {
     const map = input.remapped ?? new Map<string, SessionID>()
@@ -172,9 +181,10 @@ export function remapChildren(input: {
       if (!Schema.is(SessionID)(ref.child)) continue
       const source = yield* input.ops.get(SessionID.make(ref.child)).pipe(Effect.orElseSucceed(() => undefined))
       if (!source) continue
-      const target = yield* copy({ source, parentID: input.sessionID, ops: input.ops })
+      const invalidated = input.invalidated ? yield* input.invalidated(source.id) : undefined
+      const target = yield* copy({ source, parentID: input.sessionID, ops: input.ops, invalidated })
       map.set(ref.child, target.id)
-      yield* remapChildren({ sessionID: target.id, ops: input.ops, remapped: map })
+      yield* remapChildren({ sessionID: target.id, ops: input.ops, remapped: map, invalidated: input.invalidated })
     }
 
     for (const msg of msgs) {
