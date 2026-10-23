@@ -346,7 +346,8 @@ describe("KiloGatewayPlugin", () => {
             const models = yield* Model.Service
             const before = (yield* models.available()).filter((model) => model.providerID === kilo)
             backend.requests.length = 0
-            backend.state.delay = 80
+            let releaseRefresh: () => void = () => {}
+            backend.state.profilePending = new Promise<void>((resolve) => { releaseRefresh = resolve })
             const catalog = backend.state.models as { data: { id: string }[] }
             backend.state.models = { data: catalog.data.filter((model) => model.id !== "kilo-auto/frontier") }
             const bus = yield* Bus.Service
@@ -369,6 +370,7 @@ describe("KiloGatewayPlugin", () => {
               }),
             })
             expect(request.request.headers.get("authorization")).toBe("Bearer refresh-token")
+            releaseRefresh()
             yield* eventually(
               models.available(),
               (list) => !list.some((model) => model.providerID === kilo && model.id === Model.ID.make("kilo-auto/frontier")),
@@ -394,7 +396,8 @@ describe("KiloGatewayPlugin", () => {
               model: { providerID: kilo, id: Model.ID.make("kilo-auto/free") },
               kind: "primary" as const,
             }
-            backend.second.state.delay = 80
+            let releaseEndpoint: () => void = () => {}
+            backend.second.state.modelsPending = new Promise<void>((resolve) => { releaseEndpoint = resolve })
             const config = yield* Config.Test
             yield* config.setEntries([
               new Document({
@@ -420,6 +423,7 @@ describe("KiloGatewayPlugin", () => {
               request: new Request(`${backend.first.url}/api/gateway/v1/chat/completions`),
             }).pipe(Effect.exit)
             expect(Exit.isFailure(request)).toBe(true)
+            releaseEndpoint()
             yield* eventually(models.available(), (list) => list.some((model) => model.providerID === kilo))
             const providers = yield* Provider.Service
             expect((yield* providers.get(kilo))?.settings?.baseURL).toBe(`${backend.second.url}/api/openrouter`)

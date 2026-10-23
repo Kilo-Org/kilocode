@@ -27,6 +27,7 @@ export function fixture() {
     } as unknown,
     modelsStatus: 200,
     authenticatedModelsStatus: undefined as number | undefined,
+    modelsPending: undefined as Promise<void> | undefined,
     modelsRetryAfter: undefined as string | undefined,
     models: {
       data: [
@@ -304,6 +305,9 @@ export function fixture() {
         path === "/api/gateway/v1/models" ||
         path === "/api/v1/models"
       ) {
+        const pending = state.modelsPending
+        state.modelsPending = undefined
+        if (pending) await pending
         const headers = state.modelsRetryAfter ? { "retry-after": state.modelsRetryAfter } : undefined
         const status =
           request.headers.has("authorization") && request.headers.get("authorization") !== "Bearer anonymous"
