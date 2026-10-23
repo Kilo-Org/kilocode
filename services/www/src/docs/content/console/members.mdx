@@ -58,8 +58,8 @@ You can only grant roles up to your own, and the workspace always keeps at least
 
 Access is revoked immediately, and you can invite them again later. Their past usage stays in the workspace's reports.
 
-Service accounts and their API keys belong to the workspace, so removing the member who created them does not revoke
-them. Revoke keys from **Keys** if needed. See [Service accounts](/console/api#service-accounts).
+Removing a member also revokes the API keys they created in the workspace, including service account keys. Service
+accounts themselves stay, and keys other people created keep working. See [Revocation](/console/api#revocation).
 
 ## Member details
 
