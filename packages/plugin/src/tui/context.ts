@@ -222,7 +222,7 @@ export type SlotPath = keyof SlotMap
  * keys is a type error, not a silent priority pick.
  */
 export type SlotClaim<Path extends SlotPath = SlotPath> = Path extends SlotPath
-  ? { readonly render: (input: SlotMap[Path]) => JSX.Element } & (
+  ? { readonly render: (input: SlotMap[Path]) => JSX.Element; readonly order?: number } & ( // kilocode_change(plugin) seam - optional order at the anchor, see resolveSlots
       | {
           readonly prepend: Path
           readonly append?: never
