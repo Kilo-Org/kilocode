@@ -153,6 +153,14 @@ internal interface ActiveListHitCell {
 }
 
 /**
+ * Opt-in visual hover contract for interactive components inside the reused list renderer stamp.
+ * Existing hit cells do not implement it and therefore keep their current painting and repaint cost.
+ */
+internal interface ActiveListHoverCell {
+    fun cellHovered(hovered: Boolean)
+}
+
+/**
  * A row in an [ActiveList]. Carries the display contract shared by settings pages, the worktree
  * list, and the session history stack: a leading icon, a title whose weight follows
  * [ActiveListConfig.title] with an inline [note], a secondary [description] line, [leading] badges
@@ -248,6 +256,7 @@ internal class ActiveListHit(
     val cursor: Int,
     val tooltip: String?,
     val action: (() -> Unit)?,
+    val hoverable: Boolean,
 )
 
 /**
@@ -283,9 +292,22 @@ internal fun activeListHits(
             hit.cellCursor(),
             hit.cellTooltip(),
             hit.cellAction(),
+            hit is ActiveListHoverCell,
         )
     }
-    return out
+    return out.sortedBy { it.id == ACTIVE_LIST_SECTION_CELL }
+}
+
+/** Applies one hover target to every opt-in cell in a renderer stamp, clearing every other cell. */
+internal fun activeListApplyHover(component: Component, id: String?) {
+    fun visit(child: Component) {
+        if (!child.isVisible) return
+        if (child is ActiveListHoverCell && child is ActiveListHitCell) {
+            child.cellHovered(child.cellId == id)
+        }
+        if (child is Container) child.components.forEach(::visit)
+    }
+    visit(component)
 }
 
 /** Clickable action-cell rectangles for a row, in list coordinates. */

@@ -32,9 +32,11 @@ import java.awt.event.FocusEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import javax.swing.DefaultListSelectionModel
 import javax.swing.JComponent
 import javax.swing.KeyStroke
 import javax.swing.JViewport
+import javax.swing.ListModel
 import javax.swing.ListSelectionModel
 import javax.swing.Scrollable
 import javax.swing.SwingConstants
@@ -54,17 +56,32 @@ internal class ActiveListView(
     private val menu: ActiveListMenu<*>? = null,
     private val reorder: ActiveListReorder? = null,
     private val onHover: ((ActiveListItem?) -> Unit)? = null,
+    private val collapse: ActiveListCollapse? = null,
     private val onCell: (String, String) -> Unit,
 ) : Stack(StackAxis.VERTICAL), Scrollable {
     private val model = CollectionListModel<ActiveListItem>()
-    private val renderer = ActiveListRenderer(model, cfg, menu)
+    // Built before the list because the list's selection model has to see the collapsed rows.
+    private val collapsed: MutableSet<String> = collapse?.load()?.toMutableSet() ?: mutableSetOf()
+    // One action per section, created once: the renderer folds these into a row, and a fresh lambda per
+    // sync would make every row compare unequal and defeat the rebuild skip in [sync].
+    private val toggles: MutableMap<String, () -> Unit> = mutableMapOf()
+    private val renderer = ActiveListRenderer(
+        model,
+        cfg,
+        menu,
+        collapse != null,
+        { section: String -> toggle(section) },
+        collapse,
+    )
     // Hover tracking also drives the hover callback, so a consumer that only wants row hover does not
     // have to turn on the hover action bar to get it.
-    private val hover = cfg.hoverActions || menu != null || onHover != null
+    private val hover = cfg.hoverActions || menu != null || onHover != null || collapse != null
     internal val list: JBList<ActiveListItem> = object : JBList<ActiveListItem>(model), ActiveListActive {
         override fun active(): Boolean = popups > 0
 
         override fun hoveredIndex(): Int = hovered
+
+        override fun hoveredCell(): String? = hoveredCell
 
         override fun processMouseEvent(e: MouseEvent) {
             if (e.id == MouseEvent.MOUSE_PRESSED && UIUtil.isActionClick(e, MouseEvent.MOUSE_PRESSED, true)) {
@@ -104,6 +121,10 @@ internal class ActiveListView(
         }
     }.apply {
         selectionMode = cfg.selection
+        // A collapsed section's stand-in row carries the separator, not a selectable item, so it must
+        // never take the selection. The platform's own arrow keys move through
+        // SelectionModel.setSelectionInterval, which makes the model the one place that has to know.
+        if (collapse != null) selectionModel = ActiveListSectionModel(model)
         setExpandableItemsEnabled(false)
         emptyText.text = empty
     }
@@ -112,11 +133,18 @@ internal class ActiveListView(
     private var press: Press? = null
     private var popups = 0
     private var hovered = -1
+    private var hoveredCell: String? = null
     private var heightKey: ActiveListHeightKey? = null
+    // Sections [sync] folded in the rows it last built, so a drag can map a painted row back to the item
+    // slot it stands for.
+    private var folded: Set<String> = emptySet()
     private var drag: Drag? = null
     private var anchor: Set<Any> = emptySet()
     private var mark = -1
     private var restoring = false
+    // Set while [sync] rebuilds the model. The list clears its selection as the rows change and
+    // reports that as a user selection; the anchor must survive until [restore] has run.
+    private var rebuilding = false
     // Cursor for the row body; buttons override it on hover via [cursorAt].
     private var baseCursor: Cursor = Cursor.getDefaultCursor()
     private var extent = -1
@@ -157,7 +185,11 @@ internal class ActiveListView(
                 list.requestFocusInWindow()
                 press = null
                 if (selection(e)) return
-                rowAt(e.point)?.takeIf { !list.isSelectedIndex(it) }?.let { choose(it, scroll = false) }
+                // Folding must not move the selection: the chevron sits inside the first row's cell,
+                // so the ordinary press path would select that row before the toggle ran.
+                if (!sectionCell(e.point)) {
+                    rowAt(e.point)?.takeIf { !list.isSelectedIndex(it) && !isSection(it) }?.let { choose(it, scroll = false) }
+                }
                 val hit = hit(e) ?: return
                 press = Press(hit.item.key, hit.id ?: return)
             }
@@ -167,6 +199,7 @@ internal class ActiveListView(
                     if (selection(e)) return
                     val hit = hit(e, enabled = false) ?: return
                     if (hit.id != null) return
+                    if (hit.item is ActiveListSectionRow) return
                     if (hit.item.progress != null) return
                     if (!openOnClick) {
                         onClick?.invoke(hit.item) ?: return
@@ -181,6 +214,7 @@ internal class ActiveListView(
                 if (e.clickCount != 2 || !UIUtil.isActionClick(e, MouseEvent.MOUSE_CLICKED, true)) return
                 val hit = hit(e, enabled = false) ?: return
                 if (hit.id != null) return
+                if (hit.item is ActiveListSectionRow) return
                 if (hit.item.progress != null) return
                 val action = onOpen
                 if (action != null) action(hit.item, true) else activate(hit.item)
@@ -197,7 +231,22 @@ internal class ActiveListView(
                 press = null
                 val hit = hit(e) ?: return
                 if (hit.item.key != down.key || hit.id != down.id) return
-                if (hit.item.progress != null) return
+                if (hit.item.progress != null && !down.id.startsWith(ACTIVE_LIST_SECTION_CELL)) return
+                // The separator chevron folds its section here rather than through [fire]: a band
+                // belongs to the run it heads, and an expanded run's band rides on a row that has no
+                // cell of its own to answer for. Same interception as the menu glyph's, above.
+                if (hit.id == ACTIVE_LIST_SECTION_CELL || hit.id == ACTIVE_LIST_SECTION_TOGGLE_CELL) {
+                    hit.item.section?.let(::flip)
+                    e.consume()
+                    return
+                }
+                if (down.id.startsWith("$ACTIVE_LIST_SECTION_CELL:action:")) {
+                    val idx = rowAt(e.point) ?: return
+                    activeListHits(list, idx, list.isSelectedIndex(idx))
+                        .firstOrNull { it.id == down.id && it.enabled }?.action?.invoke()
+                    e.consume()
+                    return
+                }
                 fire(hit.item, down.id)
                 e.consume()
             }
@@ -207,7 +256,12 @@ internal class ActiveListView(
                     val idx = list.locationToIndex(e.point)
                         .takeIf { it >= 0 && list.getCellBounds(it, it)?.contains(e.point) == true }
                         ?: -1
-                    setHovered(idx)
+                    val cell = idx.takeIf { it >= 0 }?.let {
+                        activeListHits(list, it, list.isSelectedIndex(it))
+                            .firstOrNull { hit -> hit.hoverable && hit.bounds.contains(e.point) }
+                            ?.id
+                    }
+                    setHovered(idx, cell)
                 }
                 syncCursor(cursorAt(e.point))
             }
@@ -223,7 +277,7 @@ internal class ActiveListView(
             // Selection gates the hover-revealed action bar, so repaint the hovered row as soon as
             // its selection flips instead of waiting for the next mouse move.
             if (hover) repaintRow(hovered)
-            if (!restoring && !e.valueIsAdjusting) {
+            if (!restoring && !rebuilding && !e.valueIsAdjusting) {
                 anchor = identities()
                 mark = list.selectedIndex
                 onSelect?.invoke()
@@ -493,9 +547,17 @@ internal class ActiveListView(
         checkEdt()
         val q = filter.trim()
         val base = if (q.isBlank()) items else items.filter { matcher(q, it) }
+        // Folding hides rows, so it steps aside while a search is active: a match the filter proves
+        // exists must never be hidden behind a collapsed separator. The stored state is left alone.
+        val shape = if (collapse == null || q.isNotBlank()) {
+            base
+        } else {
+            activeListCollapseRows(base, collapsed, ::activeListSectionCaption)
+        }
         val state = drag
-        if (state != null && base.none { it.key == state.key }) drag = null
-        val rows = drag?.let { activeListGapRows(base, it.key, it.index, it.height) } ?: base
+        if (state != null && shape.none { it.key == state.key }) drag = null
+        folded = if (shape === base) emptySet() else collapsed.toSet()
+        val rows = drag?.let { activeListGapRows(shape, it.key, it.index, it.height) } ?: shape
         val before = identities()
         restoring = true
         try {
@@ -504,10 +566,17 @@ internal class ActiveListView(
             // reconcile selection below. Row types are data classes, so equality is by value.
             if (model.items != rows) {
                 setHovered(-1)
-                model.replaceAll(rows)
+                // Rebuilding drops the selection, and a folded run's stand-in becomes the selected
+                // row for a moment; that identity must not replace the real anchor restore needs.
+                rebuilding = true
+                try {
+                    model.replaceAll(rows)
+                } finally {
+                    rebuilding = false
+                }
             }
             syncCellHeight(rows)
-            restore(rows, absent, at)
+            restore(rows, absent, at?.let { modelIndex(rows, it) })
             // Scroll only when the refresh moved the selection to another row. Re-finding the same
             // rows must leave the viewport where the user left it, or a polling owner would drag the
             // view back to the selection on every tick.
@@ -516,6 +585,43 @@ internal class ActiveListView(
         } finally {
             restoring = false
         }
+    }
+
+    /**
+     * [at], read as an item slot, as the model row the list should select: a folded section's stand-in
+     * occupies a row the slot does not count, so every placeholder ahead of it shifts it down.
+     */
+    private fun modelIndex(rows: List<ActiveListItem>, at: Int): Int {
+        if (collapsed.isEmpty()) return at
+        var slot = 0
+        for ((idx, row) in rows.withIndex()) {
+            if (row is ActiveListSectionRow) continue
+            if (slot == at) return idx
+            slot++
+        }
+        return rows.lastIndex.coerceAtLeast(0)
+    }
+
+    /** Whether the row at [index] is a collapsed section's stand-in rather than a selectable item. */
+    private fun isSection(index: Int): Boolean = model.items.getOrNull(index) is ActiveListSectionRow
+
+    /** The action a separator band's chevron fires for [section]; one per section for the view's life. */
+    private fun toggle(section: String): () -> Unit = toggles.getOrPut(section) { { flip(section) } }
+
+    /**
+     * Folds or unfolds [section]. The height key is dropped because a collapsed section changes how
+     * many rows the list paints, not the rows' own height.
+     */
+    @RequiresEdt
+    private fun flip(section: String) {
+        checkEdt()
+        // Rebuilding the model mid-drag would move the placeholder out from under the pointer.
+        if (drag != null) return
+        if (!collapsed.remove(section)) collapsed += section
+        collapse?.save(collapsed.toSet())
+        heightKey = null
+        setHovered(-1)
+        sync()
     }
 
     /**
@@ -540,41 +646,67 @@ internal class ActiveListView(
         when (absent) {
             Absent.KEEP -> list.clearSelection()
             Absent.SLIDE -> {
-                if (anchor.isEmpty() || rows.isEmpty()) {
+                val next = nearest(rows, mark, 1)
+                if (anchor.isEmpty() || next < 0) {
                     list.clearSelection()
                     mark = -1
                     return
                 }
-                val next = mark.coerceIn(0, rows.lastIndex)
                 list.selectedIndex = next
                 anchor = setOf(rows[next].identity)
                 mark = next
             }
             Absent.FIRST -> {
-                if (rows.isEmpty()) {
+                // A collapsed section's stand-in heads its run; landing the selection there would
+                // highlight a separator, so the first real row after it takes the selection instead.
+                val first = (rows.indices).firstOrNull { !isSection(it) }
+                if (first == null) {
                     list.clearSelection()
                     return
                 }
-                list.selectedIndex = 0
-                mark = 0
-                if (anchor.isEmpty()) anchor = setOf(rows[0].identity)
+                list.selectedIndex = first
+                mark = first
+                if (anchor.isEmpty()) anchor = setOf(rows[first].identity)
             }
         }
+    }
+
+    /** The nearest real row to [from] stepping by [step], or -1 when that way is all separators. */
+    private fun nearest(rows: List<ActiveListItem>, from: Int, step: Int): Int {
+        if (rows.isEmpty()) return -1
+        val start = from.coerceIn(0, rows.lastIndex)
+        var ahead = start
+        while (ahead in rows.indices) {
+            if (rows[ahead] !is ActiveListSectionRow) return ahead
+            ahead += step
+        }
+        var behind = start
+        while (behind in rows.indices) {
+            if (rows[behind] !is ActiveListSectionRow) return behind
+            behind -= step
+        }
+        return -1
     }
 
     private fun identities(): Set<Any> = list.selectedValuesList.map { it.identity }.toSet()
 
     @RequiresEdt
-    private fun setHovered(idx: Int) {
+    private fun setHovered(idx: Int, cell: String? = null) {
         checkEdt()
-        if (hovered == idx) return
+        if (hovered == idx && hoveredCell == cell) return
         val old = hovered
+        val row = hovered != idx
         hovered = idx
-        repaintRow(old)
-        repaintRow(idx)
+        hoveredCell = cell
+        if (row) {
+            repaintRow(old)
+            repaintRow(idx)
+        } else {
+            repaintRow(idx)
+        }
         // Single funnel for every hover transition — mouse move, mouse exit, and the clear that setBusy
         // and a model rebuild perform — so a consumer cannot miss one and leave a popup behind.
-        onHover?.invoke(model.items.getOrNull(idx))
+        if (row) onHover?.invoke(model.items.getOrNull(idx))
     }
 
     /**
@@ -634,9 +766,11 @@ internal class ActiveListView(
             return
         }
         if (rows.any { it.section != null }) {
-            val height = rows.indices.maxOfOrNull { idx ->
-                renderer.bodyPreferredHeight(list, rows[idx], idx, true, true)
-            }
+            // A folded section's stand-in is only a band, so it must not set the shared body height for
+            // the real rows around it.
+            val height = rows.indices
+                .filter { rows[it] !is ActiveListSectionRow }
+                .maxOfOrNull { idx -> renderer.bodyPreferredHeight(list, rows[idx], idx, true, true) }
             renderer.setBodyHeight(height)
             if (list.fixedCellHeight == -1) {
                 list.revalidate()
@@ -719,7 +853,7 @@ internal class ActiveListView(
 
     private fun open(focus: Boolean) {
         val item = active() ?: return
-        if (item is ActiveListGap) return
+        if (item is ActiveListGap || item is ActiveListSectionRow) return
         if (item.progress != null) return
         val action = onOpen
         if (action != null) {
@@ -731,7 +865,7 @@ internal class ActiveListView(
 
     private fun source() {
         val item = list.selectedValue ?: return
-        if (item is ActiveListGap) return
+        if (item is ActiveListGap || item is ActiveListSectionRow) return
         if (item.progress != null) return
         onOpen?.invoke(item, true)
     }
@@ -750,7 +884,7 @@ internal class ActiveListView(
      * action is destructive (e.g. delete) does nothing on double-click.
      */
     private fun activate(item: ActiveListItem) {
-        if (item is ActiveListGap) return
+        if (item is ActiveListGap || item is ActiveListSectionRow) return
         if (item.progress != null) return
         val action = onActivate
         if (action != null) {
@@ -767,7 +901,7 @@ internal class ActiveListView(
     }
 
     private fun primary(item: ActiveListItem) {
-        if (item is ActiveListGap) return
+        if (item is ActiveListGap || item is ActiveListSectionRow) return
         if (item.progress != null) return
         val cells = activeListVisibleCells(item, true)
         val cell = cells.firstOrNull { it.enabled && it.primary }
@@ -805,7 +939,7 @@ internal class ActiveListView(
         if (!list.isEnabled || filter.isNotBlank() || drag != null) return null
         val idx = rowAt(point) ?: return null
         val item = model.getElementAt(idx)
-        if (item is ActiveListGap || item.disabled || item.progress != null) return null
+        if (item is ActiveListGap || item is ActiveListSectionRow || item.disabled || item.progress != null) return null
         if (!cfg.movable(item)) return null
         val selected = list.isSelectedIndex(idx)
         if (activeListCellAt(list, idx, point, selected, menu?.takeIf { it.available(item) } != null) != null) return null
@@ -822,7 +956,7 @@ internal class ActiveListView(
         checkEdt()
         val idx = rowAt(point) ?: return null
         val item = model.getElementAt(idx)
-        if (item is ActiveListGap) return null
+        if (item is ActiveListGap || item is ActiveListSectionRow) return null
         val bounds = list.getCellBounds(idx, idx) ?: return null
         val (image, origin) = renderer.rowImage(list, item, idx, bounds.width) ?: return null
         // Clamp so grabbing the section-header band still anchors inside the body image.
@@ -854,11 +988,31 @@ internal class ActiveListView(
         }
         val run = activeListSectionRun(base, from)
         if (run.isEmpty()) return
-        val idx = nearestRow(point) ?: state.index
-        val next = idx.coerceIn(run.first, run.last)
+        // The pointer answers a model row. Folded sections ahead of the drag's slot add rows the slot
+        // itself does not count, so both sides are shifted the same way.
+        val idx = nearestRow(point) ?: return
+        val next = (idx - foldedAhead(base, from)).coerceIn(run.first, run.last)
         if (state.index == next && current != null) return
         drag = state.copy(index = next)
         sync(at = next)
+    }
+
+    /** How many folded sections start before item [slot], i.e. the rows added in front of it. */
+    private fun foldedAhead(base: List<ActiveListItem>, slot: Int): Int {
+        if (folded.isEmpty()) return 0
+        var out = 0
+        var idx = 0
+        while (idx < slot) {
+            val section = base.getOrNull(idx)?.section
+            if (section == null || section !in folded) {
+                idx++
+                continue
+            }
+            val run = activeListSectionRun(base, idx)
+            if (run.first < slot) out++
+            idx = run.last + 1
+        }
+        return out
     }
 
     @RequiresEdt
@@ -871,6 +1025,8 @@ internal class ActiveListView(
             sync()
             return
         }
+        // [state.index] is an item slot, and a folded section's stand-in sits in front of the items it
+        // heads, so the owner's order changes before the row the model paints there.
         val rows = items.toMutableList()
         val item = rows.removeAt(source)
         val target = state.index.coerceIn(0, rows.size)
@@ -913,11 +1069,21 @@ internal class ActiveListView(
         if (!bounds.contains(point)) return baseCursor
         val item = model.getElementAt(idx)
         if (item is ActiveListGap) return baseCursor
-        if (menu == null && item.cells.isEmpty() && activeListRegions(item).isEmpty()) return baseCursor
+        // A folded section's stand-in is only a band, so it is the one row whose hit targets come from
+        // nowhere else. Every other row is checked exactly as before.
+        if (collapse == null && menu == null && item.cells.isEmpty() && activeListRegions(item).isEmpty() && item !is ActiveListSectionRow) return baseCursor
         val hit = activeListHits(list, idx, list.isSelectedIndex(idx))
             .firstOrNull { it.enabled && it.bounds.contains(point) }
             ?: return baseCursor
         return Cursor.getPredefinedCursor(hit.cursor)
+    }
+
+    /** Whether [point] is over a separator's chevron, on a folded stand-in or the run's first row. */
+    private fun sectionCell(point: Point): Boolean {
+        if (collapse == null) return false
+        val idx = rowAt(point) ?: return false
+        return activeListHits(list, idx, list.isSelectedIndex(idx))
+            .any { it.id == ACTIVE_LIST_SECTION_CELL && it.bounds.contains(point) }
     }
 
     private fun hit(e: MouseEvent, enabled: Boolean = true): Hit? {
@@ -927,6 +1093,10 @@ internal class ActiveListView(
         val item = model.getElementAt(idx)
         if (item is ActiveListGap) return null
         val selected = list.isSelectedIndex(idx)
+        val button = activeListHits(list, idx, selected).firstOrNull {
+            it.id.startsWith("$ACTIVE_LIST_SECTION_CELL:action:") && it.bounds.contains(e.point)
+        }
+        if (button != null) return if (!enabled || button.enabled) Hit(item, button.id) else null
         val id = if (enabled) {
             activeListCellAt(list, idx, e.point, selected, menu?.takeIf { it.available(item) } != null)
         } else {
@@ -937,9 +1107,9 @@ internal class ActiveListView(
             // blocking must key off whether the hit id is a real cell/region, not that field.
             val ids = activeListVisibleCells(item, selected, menu?.takeIf { it.available(item) } != null)
                 .map { it.id }
-                .toSet() + activeListRegions(item).keys
+                .toSet() + activeListRegions(item).keys + ACTIVE_LIST_SECTION_CELL + ACTIVE_LIST_SECTION_TOGGLE_CELL
             activeListHits(list, idx, selected)
-                .firstOrNull { it.id in ids && it.bounds.contains(e.point) }
+                .firstOrNull { (it.id in ids || it.id.startsWith("$ACTIVE_LIST_SECTION_CELL:action:")) && it.bounds.contains(e.point) }
                 ?.id
         }
         return Hit(item, id)
@@ -951,7 +1121,7 @@ internal class ActiveListView(
         val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return false
         if (!bounds.contains(point)) return false
         val item = model.getElementAt(idx)
-        if (item is ActiveListGap) return false
+        if (item is ActiveListGap || item is ActiveListSectionRow) return false
         if (item.disabled || item.progress != null || !cfg.available(item)) return false
         val rect = activeListCellBounds(list, idx, list.isSelectedIndex(idx))[ACTIVE_LIST_MENU_CELL] ?: return false
         if (!rect.contains(point)) return false
@@ -996,6 +1166,53 @@ internal class ActiveListView(
     private fun selection(e: MouseEvent): Boolean {
         if (list.selectionMode == ListSelectionModel.SINGLE_SELECTION) return false
         return e.isShiftDown || e.isMetaDown || e.isControlDown
+    }
+
+    /**
+     * Selection model that steps over [ActiveListSectionRow] placeholders. Used only on a list that
+     * opted into [ActiveListCollapse], so every other list keeps the platform model untouched.
+     *
+     * Both directions are needed: an arrow key asks for the index either side of the current one, and
+     * the answer has to be the next real row that way — or stay put when there is none, which is how
+     * the platform behaves at the ends of the list.
+     */
+    private class ActiveListSectionModel(private val rows: ListModel<*>) : DefaultListSelectionModel() {
+        override fun setSelectionInterval(index0: Int, index1: Int) {
+            val first = target(index0, index1)
+            val last = target(index1, index0)
+            if (first < 0 || last < 0) return
+            super.setSelectionInterval(first, last)
+        }
+
+        override fun addSelectionInterval(index0: Int, index1: Int) {
+            val first = target(index0, index1)
+            val last = target(index1, index0)
+            if (first < 0 || last < 0) return
+            super.addSelectionInterval(first, last)
+        }
+
+        override fun setLeadSelectionIndex(index: Int) {
+            val next = target(index, -1)
+            if (next < 0) return
+            super.setLeadSelectionIndex(next)
+        }
+
+        /**
+         * [index], or the nearest selectable row after it stepping in [step]'s direction. A pair that
+         * merely covers a band — selecting a range past it, or an index pair from another way in —
+         * resolves in the direction of the pair, never backwards past the request.
+         */
+        private fun target(index: Int, step: Int): Int {
+            if (index !in 0 until rows.size) return -1
+            if (!rows.isSectionRow(index)) return index
+            val dir = if (step < index) -1 else 1
+            var next = index + dir
+            while (next in 0 until rows.size) {
+                if (!rows.isSectionRow(next)) return next
+                next += dir
+            }
+            return -1
+        }
     }
 
     /**
@@ -1107,6 +1324,10 @@ internal class ActiveListView(
     private enum class Absent { KEEP, SLIDE, FIRST }
 
 }
+
+/** Whether the row at [index] is a collapsed section's stand-in rather than a selectable item. */
+private fun ListModel<*>.isSectionRow(index: Int): Boolean =
+    index in 0 until size && getElementAt(index) is ActiveListSectionRow
 
 private data class ActiveListHeightRow(
     val key: String,

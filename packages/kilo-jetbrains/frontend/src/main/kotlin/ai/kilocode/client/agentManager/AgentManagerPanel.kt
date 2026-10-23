@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.actions.CopySessionPrRefAction
+import ai.kilocode.client.actions.NewWorktreeAction
 import ai.kilocode.client.agentManager.worktree.CreateFailure
 import ai.kilocode.client.agentManager.worktree.CreateKind
 import ai.kilocode.client.agentManager.worktree.NewWorktreeDialog
@@ -45,12 +46,14 @@ import ai.kilocode.client.ui.style
 import ai.kilocode.client.diff.KiloDiffComparison
 import ai.kilocode.client.diff.openKiloDiff
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
+import ai.kilocode.client.ui.list.ActiveListCollapse
 import ai.kilocode.client.ui.list.ActiveListConfig
 import ai.kilocode.client.ui.list.ActiveListDeleteOptions
 import ai.kilocode.client.ui.list.ActiveListItem
@@ -125,6 +128,7 @@ class AgentManagerPanel(
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
     private val provider = WorktreeDeleteProvider()
     private val edit = RenameAction()
+    private val create = NewWorktreeAction()
     private val group = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? ActionGroup ?: DefaultActionGroup()
     private val list = ActiveList(
         KiloBundle.message("worktree.empty"),
@@ -154,6 +158,23 @@ class AgentManagerPanel(
             onMove = { move -> controller.reorder(move.keys) },
         ),
         onHover = { row -> hover(row) },
+        collapse = ActiveListCollapse(
+            load = KiloPluginSettings::getAgentSectionsCollapsed,
+            save = KiloPluginSettings::setAgentSectionsCollapsed,
+            actions = { section ->
+                if (section == KiloBundle.message("worktree.section.local")) listOf(create) else emptyList()
+            },
+            context = {
+                DataContext { id ->
+                    when {
+                        SidePanelKeys.MODE.`is`(id) -> SidePanelMode.AGENT_MANAGER
+                        SidePanelKeys.WORKTREE_PANEL.`is`(id) -> this
+                        com.intellij.openapi.actionSystem.CommonDataKeys.PROJECT.`is`(id) -> project
+                        else -> null
+                    }
+                }
+            },
+        ),
     )
     // Rows are dense and neighbours are only ever passed over on the way somewhere else, so the dwell is
     // longer here than for a transcript card the pointer goes to on purpose.

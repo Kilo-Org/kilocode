@@ -19,6 +19,7 @@ import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.diff.KiloDiffEditorKind
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.testing.FakeRunRpcApi
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
@@ -38,7 +39,11 @@ import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListMetrics
 import ai.kilocode.client.ui.list.ActiveListView
 import ai.kilocode.client.ui.list.ACTIVE_LIST_CHANGES_CELL
+import ai.kilocode.client.ui.list.ACTIVE_LIST_SECTION_CELL
+import ai.kilocode.client.ui.list.ACTIVE_LIST_SECTION_TOGGLE_CELL
+import ai.kilocode.client.ui.list.ActiveListSectionRow
 import ai.kilocode.client.ui.list.activeListCellBounds
+import ai.kilocode.client.ui.list.activeListHits
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloPath
 import ai.kilocode.client.vfs.KiloVfsManager
@@ -120,6 +125,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
+            KiloPluginSettings.unsetAgentSectionsCollapsed()
             edt { service<WorktreeNameCache>().clear() }
             coroutines.close(::pump)
         } finally {
@@ -184,6 +190,33 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals("feature/y", created.branch)
         assertEquals("main", rpc.creates.single().baseBranch)
         edt { assertEquals("build it", service<PendingWorktreePrompt>().take(created.path)?.text) }
+    }
+
+    fun `test local section toolbar uses existing worktree dialog without folding or selecting`() {
+        val order = mutableListOf<String>()
+        rpc.listed += worktree("existing")
+        val controller = WorktreeController(service, project.basePath!!, coroutines.scope)
+        val panel = edt {
+            AgentManagerPanel(testRootDisposable, controller, project, dialog = { _, _ -> FakeWorktreeDialog(null, order) })
+        }
+        edt { controller.reload() }
+        flush()
+        val view = edt { UIUtil.findComponentOfType(panel, ActiveListView::class.java)!! }
+        layout(view)
+        edt {
+            view.clearSelection()
+            val idx = (0 until view.list.model.size).first { view.list.model.getElementAt(it).section != null }
+            val button = activeListHits(view.list, idx, false).single { it.id.startsWith("$ACTIVE_LIST_SECTION_CELL:action:") }
+            val point = center(button.bounds)
+            for (id in listOf(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED)) {
+                fire(view.list, MouseEvent(view.list, id, 0, InputEvent.BUTTON1_DOWN_MASK, point.x, point.y, 1, false, MouseEvent.BUTTON1))
+            }
+            assertNull(view.selected())
+            assertFalse(view.list.model.getElementAt(idx) is ActiveListSectionRow)
+        }
+        assertEquals(listOf("show"), order)
+        assertTrue(rpc.creates.isEmpty())
+        assertTrue(opened().isEmpty())
     }
 
     fun `test configure does nothing when the dialog is cancelled`() {
@@ -345,6 +378,33 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(item.path, file.path.params["path"])
         assertSame(WorktreeSessionEditorKind.fileType(file.path.params), file.fileType)
         assertEquals(false, file.getUserData(KiloVfsManager.FOCUS))
+    }
+
+    fun `test local worktrees separator folds every worktree row`() {
+        rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        rpc.listed += worktree("feature-x")
+        val controller = WorktreeController(service, "/repo", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val band = edt {
+            list.setSize(400, 200)
+            list.doLayout()
+            activeListCellBounds(list, 1, selected = false).getValue(ACTIVE_LIST_SECTION_CELL)
+        }
+        fire(list, MouseEvent(list, MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(), 0,
+            band.x + band.width / 2, band.y + band.height / 2, 1, false, MouseEvent.BUTTON1))
+        fire(list, MouseEvent(list, MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), 0,
+            band.x + band.width / 2, band.y + band.height / 2, 1, false, MouseEvent.BUTTON1))
+        flush()
+
+        assertEquals(2, rows(panel))
+        assertEquals("main", row(panel, 0).title)
+        assertTrue(row(panel, 1) is ActiveListSectionRow)
+        assertEquals(setOf("Local worktrees"), KiloPluginSettings.getAgentSectionsCollapsed())
+        KiloPluginSettings.unsetAgentSectionsCollapsed()
     }
 
     fun `test current branch row appears first and opens session editor`() {
@@ -1564,7 +1624,11 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
             val areas = activeListCellBounds(list, 0, selected = false)
             val badge = areas.getValue("pull-request")
             val changes = areas.getValue(ACTIVE_LIST_CHANGES_CELL)
-            assertEquals(setOf("pull-request", ACTIVE_LIST_CHANGES_CELL), areas.keys)
+            // The section header also carries its create action, separate from the row's badges.
+            assertEquals(1, areas.keys.count { it.startsWith("$ACTIVE_LIST_SECTION_CELL:action:") })
+            assertEquals(setOf("pull-request", ACTIVE_LIST_CHANGES_CELL, ACTIVE_LIST_SECTION_CELL,
+                ACTIVE_LIST_SECTION_TOGGLE_CELL),
+                areas.keys.filterNot { it.startsWith("$ACTIVE_LIST_SECTION_CELL:action:") }.toSet())
             val renderer = list.cellRenderer.getListCellRendererComponent(list, row, 0, false, true)
             renderer.setSize(list.width, list.getCellBounds(0, 0).height)
             components(renderer).filterIsInstance<Container>().forEach { it.doLayout() }
