@@ -7,14 +7,30 @@ export const brandingPlugin: BunPlugin = {
   setup(build) {
     build.onLoad({ filter: /[/\\]packages[/\\]tui[/\\]src[/\\]logo\.ts$/ }, async (args) => {
       const source = await Bun.file(args.path).text()
-      const declaration = /^export const logo = \{[\s\S]*?^\}/m
-      if (!declaration.test(source)) throw new Error("Kilo logo no longer matches the upstream module")
+      const { parseAsync } = await import("@babel/core")
+      const parsed = await parseAsync(source, {
+        filename: args.path,
+        sourceType: "module",
+        configFile: false,
+        babelrc: false,
+        parserOpts: { plugins: ["typescript"] },
+      })
+      const declaration = parsed?.program.body.find((node) => {
+        if (node.type !== "ExportNamedDeclaration" || node.declaration?.type !== "VariableDeclaration") return false
+        if (node.declaration.kind !== "const" || node.declaration.declarations.length !== 1) return false
+        const variable = node.declaration.declarations[0]
+        return (
+          variable.id.type === "Identifier" && variable.id.name === "logo" && variable.init?.type === "ObjectExpression"
+        )
+      })
+      if (typeof declaration?.start !== "number" || typeof declaration.end !== "number")
+        throw new Error("Kilo logo no longer matches the upstream module")
       return {
         loader: "ts",
-        contents: source.replace(
-          declaration,
-          `export { logo, compact, widths } from ${JSON.stringify(path.join(import.meta.dir, "logo-art.ts"))}`,
-        ),
+        contents:
+          source.slice(0, declaration.start) +
+          `export { logo, compact, widths } from ${JSON.stringify(path.join(import.meta.dir, "logo-art.ts"))}\n` +
+          source.slice(declaration.end),
       }
     })
     const files = Object.keys(KiloBranding.replacements)

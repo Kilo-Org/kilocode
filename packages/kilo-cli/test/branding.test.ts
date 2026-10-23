@@ -8,6 +8,7 @@ import { brandingPlugin } from "../src/branding/plugin"
 import { KiloBranding } from "../src/branding/text"
 import { KiloLogo } from "../src/branding/logo-art"
 import { logo, go } from "../../tui/src/logo"
+import { createPluginRuntimePlugin } from "../script/plugin-runtime"
 
 const repo = path.resolve(import.meta.dir, "../../..")
 const entry = path.join(import.meta.dir, "fixtures/branding.ts")
@@ -200,6 +201,42 @@ for (const hosted of [false, true]) {
     })
     expect(result.success, result.logs.map(String).join("\n")).toBe(true)
     checkEpilogue(await run([outfile, "48"], root.path, !hosted), hosted, 48)
+  }, 60_000)
+}
+
+for (const hosted of [false, true]) {
+  for (const columns of [
+    [120, 48],
+    [48, 120],
+    [48, 53],
+    [120, 48, 120, 48],
+  ]) {
+    test(`source resize epilogue: ${hosted ? "Kilo" : "upstream"}, ${columns.join("-")}`, async () => {
+      await using root = await temporary()
+      const fixture = path.join(import.meta.dir, "fixtures/epilogue-resize.ts")
+      const output = await run([process.execPath, fixture, ...columns.map(String)], root.path, hosted)
+      checkEpilogue(output, hosted, columns.at(-1)!)
+    }, 30_000)
+  }
+
+  test(`compiled resize epilogue: ${hosted ? "Kilo" : "upstream"}`, async () => {
+    await using root = await temporary()
+    const outfile = path.join(root.path, process.platform === "win32" ? "epilogue-resize.exe" : "epilogue-resize")
+    const result = await Bun.build({
+      entrypoints: [path.join(import.meta.dir, "fixtures/epilogue-resize.ts")],
+      plugins: [...(hosted ? [brandingPlugin] : []), createSolidTransformPlugin(), createPluginRuntimePlugin()],
+      compile: { outfile, autoloadBunfig: false, autoloadDotenv: false },
+      define: { KILO_BRANDING_COMPILED: "true" },
+    })
+    expect(result.success, result.logs.map(String).join("\n")).toBe(true)
+    for (const columns of [
+      [120, 48],
+      [48, 120],
+      [48, 53],
+    ]) {
+      const output = await run([outfile, ...columns.map(String)], root.path, !hosted)
+      checkEpilogue(output, hosted, columns.at(-1)!)
+    }
   }, 60_000)
 }
 

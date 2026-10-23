@@ -22,7 +22,6 @@ test("uses the block fallback for unsupported terminals", () => {
 
 test("uses sextants on supported terminals", () => {
   expect(KiloLogo.supports({}, "darwin")).toBe(true)
-  expect(KiloLogo.supports({ KILO_UNICODE_LOGO: "invalid" }, "linux")).toBe(true)
   for (const env of [
     { WT_SESSION: "test" },
     { TERM_PROGRAM: "vscode" },
@@ -30,6 +29,13 @@ test("uses sextants on supported terminals", () => {
     { TERM_PROGRAM: "WezTerm" },
   ])
     expect(KiloLogo.supports(env, "win32")).toBe(true)
+})
+
+test("invalid overrides fall through to terminal detection", () => {
+  expect(KiloLogo.supports({ KILO_UNICODE_LOGO: "invalid", TERM: "dumb" }, "linux")).toBe(false)
+  expect(KiloLogo.supports({ KILO_UNICODE_LOGO: "invalid" }, "win32")).toBe(false)
+  expect(KiloLogo.supports({ KILO_UNICODE_LOGO: "invalid", WT_SESSION: "test" }, "win32")).toBe(true)
+  expect(KiloLogo.supports({ KILO_UNICODE_LOGO: "invalid" }, "linux")).toBe(true)
 })
 
 for (const modern of [false, true]) {

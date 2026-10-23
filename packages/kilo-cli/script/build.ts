@@ -19,13 +19,13 @@ import { embed } from "@opencode/script/highlights"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import type { BunPlugin } from "bun"
 import cliPackage from "../../cli/package.json"
-import { discoverPluginRuntimeSpecifiers, pluginRuntimeLoaderCode } from "@opencode/plugin/runtime-modules"
 import { buildAppArchive } from "../../cli/script/app-assets"
 import { verifyArtifact, verifySimulationGraph } from "../../cli/script/verify-artifact"
 import { resolveOpencodePty } from "../../cli/script/opencode-pty"
 import { NativeArch } from "../../../script/native-arch"
 import { directory } from "../src/env"
 import { brandingPlugin } from "../src/branding/plugin"
+import { createPluginRuntimePlugin } from "./plugin-runtime"
 
 const dir = path.resolve(import.meta.dirname, "..")
 // Kilo: internal releases use `kilo2`, separate from v1. The upstream target names stay the build's internal names.
@@ -101,30 +101,7 @@ export default () => readFileSync(archive)`,
     }))
   },
 }
-const pluginRuntimeEntries = discoverPluginRuntimeSpecifiers()
-const pluginRuntimeModulesSource = [
-  "export const resolveHostPackageRoots = () => []",
-  "const modules = {",
-  ...[...pluginRuntimeEntries.keys()].map(
-    (specifier) => `  ${JSON.stringify(specifier)}: ${pluginRuntimeLoaderCode(specifier, pluginRuntimeEntries)},`,
-  ),
-  "}",
-  "export const loadRuntimeModules = () => modules",
-].join("\n")
-const pluginRuntimePlugin: BunPlugin = {
-  name: "opencode-plugin-runtime",
-  setup(build) {
-    build.onLoad({ filter: /plugin[/\\]src[/\\]runtime-modules\.ts$/ }, () => ({
-      contents: pluginRuntimeModulesSource,
-      loader: "ts",
-    }))
-    build.onLoad({ filter: /[/\\]internal[/\\]httpApi(?:Scalar|Swagger)\.js$/ }, () => ({
-      contents:
-        'export const css = ""; export const javascript = \'document.body.textContent = "Scalar/Swagger UI assets are not bundled in OpenCode"\'',
-      loader: "js",
-    }))
-  },
-}
+const pluginRuntimePlugin = createPluginRuntimePlugin()
 
 for (const item of targets) {
   const opencodePty = await resolveOpencodePty({
