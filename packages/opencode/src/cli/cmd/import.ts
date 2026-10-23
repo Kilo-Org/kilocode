@@ -8,9 +8,12 @@ import { InstanceRef } from "@/effect/instance-ref"
 import { EOL } from "os"
 import path from "path"
 import { FSUtil } from "@opencode-ai/core/fs-util"
-import { Effect, Schema } from "effect"
+import { Cause, Effect, Option, Schema } from "effect" // kilocode_change
+import { isSqlError, type SqlError } from "effect/unstable/sql/SqlError" // kilocode_change
 import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import type { InstanceContext } from "@/project/instance-context"
+import { errorMessage } from "@/util/error" // kilocode_change
+import { isRecord } from "@/util/record" // kilocode_change
 
 const log = Log.create({ service: "import" }) // kilocode_change
 
@@ -132,6 +135,211 @@ export async function bootstrapImportedSessionIngest(
 
 type ExportData = { info: SDKSession; messages: Array<{ info: Message; parts: Part[] }> }
 
+// kilocode_change start - validate the whole import document before the first write and write it in one transaction so a failed import leaves no partial session behind
+export type ImportMessage = { info: SessionV1.Info; parts: SessionV1.Part[] }
+
+/**
+ * Every document-level decoding failure gets the same user-facing prefix, whether it
+ * came from the session `info` block or from a message/part.
+ */
+const invalidDocument = (error: unknown) =>
+  new CliError({ message: `Invalid session document: ${errorMessage(error)}` })
+
+/**
+ * Decodes every message and part of an import document before the store is
+ * touched.
+ *
+ * The import used to decode lazily inside the write loop, so a single malformed
+ * part aborted the command after earlier rows had already been committed and left
+ * a truncated session behind. Decoding the whole document up front turns every
+ * schema problem into a pre-write failure, and the decoded values are reused by
+ * the write phase so nothing is ever decoded twice.
+ *
+ * @throws Error with the offending message/part index when the document is malformed.
+ */
+export function decodeImportMessages(messages: unknown): ImportMessage[] {
+  if (!Array.isArray(messages))
+    throw new Error(`Session document has no "messages" array (got ${messages === null ? "null" : typeof messages})`)
+
+  return messages.map((raw: unknown, messageIndex: number) => {
+    const msg = isRecord(raw) ? raw : undefined
+    if (!msg) throw new Error(`Message ${messageIndex} is not an object (got ${raw === null ? "null" : typeof raw})`)
+
+    const parts = msg["parts"]
+    if (!Array.isArray(parts))
+      throw new Error(`Message ${messageIndex} has no "parts" array (got ${parts === null ? "null" : typeof parts})`)
+
+    let info: SessionV1.Info
+    try {
+      info = decodeMessageInfo(msg["info"]) as SessionV1.Info
+    } catch (error) {
+      throw new Error(`Invalid message ${messageIndex}: ${errorMessage(error)}`, { cause: error })
+    }
+
+    return {
+      info,
+      parts: parts.map((part: unknown, partIndex: number) => {
+        try {
+          return decodePart(part) as SessionV1.Part
+        } catch (error) {
+          throw new Error(`Invalid part ${partIndex} of message ${messageIndex}: ${errorMessage(error)}`, {
+            cause: error,
+          })
+        }
+      }),
+    }
+  })
+}
+
+/**
+ * The drizzle layer wraps every statement failure in an `EffectDrizzleQueryError`
+ * whose `cause` holds the original `SqlError` inside a `Cause`, so the bare error
+ * only ever reports the (redacted) statement. Unwrap it to reach the sqlite reason.
+ *
+ * The unwrapping recurses because the wrapper is not always the outermost value:
+ * begin/commit failures surface a bare `SqlError`, while a statement failure arrives
+ * wrapped. A `Cause` is unwrapped only when it carries a failure (`Cause.fail`);
+ * a die cause (`Cause.die`) has no `SqlError` to extract, so it deliberately falls
+ * back to `errorMessage(error)` instead of recursing into the defect.
+ *
+ * The recursion is bounded rather than cycle-checked: the `cause === error` guard
+ * only rejects a self-reference, so a longer cycle (`a.cause = b; b.cause = a`)
+ * would spin forever. The depth cap catches any cycle while leaving every real
+ * chain short.
+ */
+function storeWriteSqlError(error: unknown, depth = 0): SqlError | undefined {
+  if (depth > 8) return undefined
+  if (isSqlError(error)) return error
+  if (!isRecord(error) || !("cause" in error) || error["cause"] === error) return undefined
+  const cause = error["cause"]
+  if (!Cause.isCause(cause)) return storeWriteSqlError(cause, depth + 1)
+  const failure = Cause.findErrorOption(cause)
+  return Option.isSome(failure) ? storeWriteSqlError(failure.value, depth + 1) : undefined
+}
+
+/**
+ * Formats a store write failure so the CLI surfaces the underlying sqlite
+ * reason instead of a bare "Unexpected error" plus a redacted statement.
+ */
+export function formatImportWriteError(error: unknown) {
+  const sqlError = storeWriteSqlError(error)
+  if (sqlError) {
+    const reason = sqlError.reason as { cause?: unknown; message?: unknown; _tag?: unknown }
+    // `errorMessage(undefined)` is the string "undefined", so the presence check
+    // has to come before it — otherwise a reason without a cause would report
+    // "undefined" instead of falling back to its own message.
+    if (reason.cause !== undefined && reason.cause !== null) {
+      const cause = errorMessage(reason.cause)
+      if (cause && cause !== "unknown error") return cause
+    }
+    if (typeof reason.message === "string" && reason.message) return reason.message
+    if (typeof reason._tag === "string" && reason._tag) return reason._tag
+  }
+  return errorMessage(error)
+}
+
+/**
+ * Writes the imported session together with its messages and parts inside a
+ * single transaction, so any failure rolls back and the store is never left with
+ * a partial session.
+ */
+export const writeImport = Effect.fn("Cli.import.write")(function* (
+  db: Database.Interface["db"],
+  row: ReturnType<typeof Session.toRow>,
+  messages: ImportMessage[],
+) {
+  return yield* db.transaction(
+    (tx) =>
+      Effect.gen(function* () {
+        yield* tx
+          .insert(SessionTable)
+          .values(row)
+          .onConflictDoUpdate({
+            target: SessionTable.id,
+            set: { project_id: row.project_id, directory: row.directory, path: row.path },
+          })
+          .run()
+
+        for (const msg of messages) {
+          const { id, sessionID: _, ...msgData } = msg.info
+          yield* tx
+            .insert(MessageTable)
+            .values({
+              id,
+              session_id: row.id,
+              time_created: msg.info.time?.created ?? Date.now(),
+              data: msgData as never,
+            })
+            .onConflictDoNothing()
+            .run()
+
+          for (const part of msg.parts) {
+            const { id: partId, sessionID: _s, messageID, ...partData } = part
+            yield* tx
+              .insert(PartTable)
+              .values({
+                id: partId,
+                message_id: messageID,
+                session_id: row.id,
+                data: partData,
+              })
+              .onConflictDoNothing()
+              .run()
+          }
+        }
+      }),
+    // Immediate takes the write lock at BEGIN instead of upgrading to it part-way
+    // through: a deferred transaction that upgrades mid-write can hit SQLITE_BUSY,
+    // which cannot be retried safely once statements have already run.
+    { behavior: "immediate" },
+  )
+})
+
+/**
+ * Validates the entire import document and then writes it in a single
+ * transaction.
+ *
+ * Decoding every message and part up front is what keeps a malformed document
+ * from writing anything at all, so the two steps live together here: the ordering
+ * between them is the guarantee, and it has to be testable as a unit.
+ */
+export const importDocument = Effect.fn("Cli.import.document")(function* (
+  db: Database.Interface["db"],
+  row: ReturnType<typeof Session.toRow>,
+  messages: unknown,
+) {
+  const decoded = yield* Effect.try({
+    try: () => decodeImportMessages(messages),
+    catch: invalidDocument,
+  })
+
+  yield* writeImport(db, row, decoded).pipe(
+    // Logging is a separate tap so the mapper below stays a pure function of the
+    // error: mapping that also writes to the log is a side effect hidden in a
+    // function whose job is to name the failure.
+    Effect.tapError((error) => Effect.sync(() => log.error("import write failed", { error }))),
+    // The full drizzle error carries the (redacted) statement, which is what makes
+    // a write failure diagnosable, so it is logged before the reason is extracted.
+    Effect.mapError(
+      (error) => new CliError({ message: `Failed to write imported session: ${formatImportWriteError(error)}` }),
+    ),
+    // A defect becomes a user-visible CliError below, so the log has to carry the
+    // stack: the logger formats the message chain only, and that is where a real
+    // bug would otherwise be lost.
+    Effect.tapDefect((defect) =>
+      Effect.sync(() =>
+        log.error("import write died", {
+          error: defect instanceof Error ? (defect.stack ?? defect.message) : String(defect),
+        }),
+      ),
+    ),
+    Effect.catchDefect((defect) =>
+      Effect.fail(new CliError({ message: `Failed to write imported session: ${errorMessage(defect)}` })),
+    ),
+  )
+})
+// kilocode_change end
+
 export const ImportCommand = effectCmd({
   command: "import <file>",
   describe: "import session data from JSON file or URL",
@@ -205,57 +413,27 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
     return
   }
 
-  const info = Schema.decodeUnknownSync(Session.Info)({
-    ...exportData.info,
-    projectID: ctx.project.id,
-    directory: ctx.directory,
-    path: path.relative(path.resolve(ctx.worktree), ctx.directory).replaceAll("\\", "/"),
-  }) as Session.Info
+  // kilocode_change start - surface document validation as a typed CLI failure instead of a defect
+  const info = yield* Effect.try({
+    try: () =>
+      Schema.decodeUnknownSync(Session.Info)({
+        ...exportData.info,
+        projectID: ctx.project.id,
+        directory: ctx.directory,
+        path: path.relative(path.resolve(ctx.worktree), ctx.directory).replaceAll("\\", "/"),
+      }) as Session.Info,
+    catch: invalidDocument,
+  })
   const row = Session.toRow(info)
-  yield* db
-    .insert(SessionTable)
-    .values(row)
-    .onConflictDoUpdate({
-      target: SessionTable.id,
-      set: { project_id: row.project_id, directory: row.directory, path: row.path },
-    })
-    .run()
-    .pipe(Effect.orDie)
 
-  for (const msg of exportData.messages) {
-    const msgInfo = decodeMessageInfo(msg.info) as SessionV1.Info
-    const { id, sessionID: _, ...msgData } = msgInfo
-    yield* db
-      .insert(MessageTable)
-      .values({
-        id,
-        session_id: row.id,
-        time_created: msgInfo.time?.created ?? Date.now(),
-        data: msgData as never,
-      })
-      .onConflictDoNothing()
-      .run()
-      .pipe(Effect.orDie)
-
-    for (const part of msg.parts) {
-      const partInfo = decodePart(part) as SessionV1.Part
-      const { id: partId, sessionID: _s, messageID, ...partData } = partInfo
-      yield* db
-        .insert(PartTable)
-        .values({
-          id: partId,
-          message_id: messageID,
-          session_id: row.id,
-          data: partData,
-        })
-        .onConflictDoNothing()
-        .run()
-        .pipe(Effect.orDie)
-    }
-  }
+  // Validate the whole document before the first write, then commit the session,
+  // its messages and its parts together, so a failure can never leave a partial
+  // session behind.
+  yield* importDocument(db, row, exportData.messages)
+  // kilocode_change end
 
   // kilocode_change start
-  yield* Effect.promise(() => bootstrapImportedSessionIngest(exportData!.info.id))
+  yield* Effect.promise(() => bootstrapImportedSessionIngest(info.id))
   // kilocode_change end
 
   process.stdout.write(`Imported session: ${exportData.info.id}`)
