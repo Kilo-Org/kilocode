@@ -82,6 +82,11 @@ describe("jetbrains plugin", () => {
       const bom = await Bun.file(result.sidecar).json()
 
       expect(await validate(bom)).toEqual([])
+      expect(bom.components.some((item: { name: string }) => item.name === "bun")).toBe(false)
+      expect(bom.metadata.properties).toContainEqual({
+        name: "kilocode:coverage:gap:bun",
+        value: "Bun runtime for CLI 9.9.9 requires release-specific evidence",
+      })
       for (const platform of JetBrains.PLATFORMS) {
         expect(scope(bom, `kilo-cli-${platform}`)).toBe("optional")
       }

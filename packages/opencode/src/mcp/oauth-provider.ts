@@ -167,6 +167,12 @@ export class McpOAuthProvider implements OAuthClientProvider {
   }
 
   async redirectToAuthorization(authorizationUrl: URL): Promise<void> {
+    // kilocode_change start - backport upstream validation before local or external browser handoff
+    if (authorizationUrl.protocol !== "http:" && authorizationUrl.protocol !== "https:")
+      throw new Error(
+        `MCP server "${this.serverUrl}" returned a ${authorizationUrl.protocol} authorization URL; only http and https are supported`,
+      )
+    // kilocode_change end
     await this.callbacks.onRedirect(authorizationUrl)
   }
 
