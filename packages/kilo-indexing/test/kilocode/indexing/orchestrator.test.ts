@@ -108,6 +108,8 @@ class Scanner {
 
 class Watcher {
   public disposed = 0
+  public shutdowns = 0
+  public onShutdown?: () => Promise<void>
   public readonly onDidStartBatchProcessing = new Emitter<string[]>()
   public readonly onBatchProgressUpdate = new Emitter<{
     processedInBatch: number
@@ -126,6 +128,11 @@ class Watcher {
       status: "skipped",
       reason: "not used in test",
     }
+  }
+
+  async shutdown(): Promise<void> {
+    this.shutdowns += 1
+    await this.onShutdown?.()
   }
 
   dispose(): void {
@@ -664,6 +671,35 @@ describe("CodeIndexOrchestrator telemetry", () => {
     const next = await acquire(dir, "/tmp/ws")
     expect(next).toBeDefined()
     await next?.release()
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  test("waits for the watcher drain before clearing data", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "indexing-lock-"))
+    const store = new Store("complete", false)
+    const watcher = new Watcher()
+    const drain = Promise.withResolvers<void>()
+    watcher.onShutdown = () => drain.promise
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { dir, async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      watcher as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("background")
+    const clearing = orchestrator.clearIndexData()
+    await Bun.sleep(20)
+    // The watcher's drain task is still writing, so the collection stays.
+    expect(watcher.shutdowns).toBe(1)
+    expect(store.deleteCount).toBe(0)
+
+    drain.resolve()
+    await clearing
+    expect(store.deleteCount).toBe(1)
     await rm(dir, { recursive: true, force: true })
   })
 
