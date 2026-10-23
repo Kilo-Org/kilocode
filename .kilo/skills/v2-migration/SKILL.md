@@ -144,7 +144,7 @@ st stop-vscode --cleanup true >/dev/null; st stop >/dev/null; rm -rf $T
 - Do not wait for text you typed. It is already on the screen. Use `idle`.
 - A free-model answer can show `Retrying` first when the Gateway upstream fails. `idle` waits through it. Report a test as blocked only when `idle` reports a failure.
 - `st click --text` does not reach the terminal. Use `tclick`.
-- Headless runs cannot take screenshots. Set `HEADLESS=false` only for visual review, because the window then opens on the user's screen.
+- Headless runs cannot take screenshots. Set `HEADLESS=false` only for visual review and for the PR screenshots (section `## Proof` under Evidence), because the window then opens on the user's screen.
 - New tabs get their title a few seconds after the first answer. The active tab title scrolls, so match a short part.
 - Never type real credentials. Stop auth flows before the secret input, or use a test account.
 - CLI data of a test: log in `$T/profile/data/kilo2/log/opencode-local.log`, database files in `$T/profile/data/kilo2/`.
@@ -172,7 +172,7 @@ Grow the test surface with each PR.
 - New Kilo code comes with tests for its behavior. Prefer real integration with the Kilo Gateway over mocks. Use small unit tests only for paths a live server cannot trigger (outage, malformed data).
 - Known upstream failures are listed in `pinned-v2-baseline.md` for the release it names. When `v2` has moved past that release, compare against `origin/v2` before your change. Do not fix unrelated ones. A new failure in a package you touched blocks the PR.
 - Never delete or skip a test silently. List every skip in the PR with its reason.
-- Self-test each user-visible behavior you add, and record the scenario so the next PR can repeat it.
+- Self-test each user-visible behavior you add, and record the scenario so the next PR can repeat it. Attach the proof (v1 and v2 screenshots, or another proof) as described in Evidence.
 
 ## Progress map
 
@@ -205,10 +205,46 @@ Grow the test surface with each PR.
 In the PR and the final response, list:
 
 - The commands you ran, and the self-test scenarios with pass, fail or blocked.
+- The proof that the change works as on v1, as the PR section `## Proof` below. This is mandatory for every PR that changes behavior.
 - Each shared upstream file you changed, with its option (1 to 5 above) and the missing seam.
 - The progress map delta, as the PR section below.
 - The CI state. For each red check, the cause: your change (fix it), a flake (one rerun) or a known baseline failure.
 - The limits, for example a flow that needs credentials.
+
+### PR section `## Proof`
+
+Every PR that changes behavior shows that the behavior works on v2 as on v1. The reviewer must see the result without running the change. A PR without this section is not done.
+
+**User-facing change (TUI, dialog, picker, message, error text):** attach screenshots.
+
+1. Take the v1 screenshot first. Run v1 from a separate checkout of `origin/main` (for example `git worktree add --detach $T/v1 origin/main`, then `bun install` there) with a temporary home, so that it never reads or writes the real v1 data:
+
+   ```bash
+   env -i PATH="$PATH" TERM=xterm-256color HOME=$T/v1home XDG_DATA_HOME=$T/v1home/data XDG_CONFIG_HOME=$T/v1home/config XDG_STATE_HOME=$T/v1home/state XDG_CACHE_HOME=$T/v1home/cache bun run --cwd $T/v1 dev
+   ```
+
+   Never run the installed `kilo` binary for this.
+2. Take the v2 screenshot of the same screen in the same state, with `bun dev --standalone` and a fresh `KILO_V2_PROFILE`.
+3. Use the `vscode-self-test` harness with `HEADLESS=false` for both, because headless runs cannot take screenshots. Use the same terminal size and the same fixture data.
+4. In the PR, put the two images side by side or one after the other, labeled `v1` and `v2`, with one sentence about what to compare. When v2 differs on purpose, say why.
+5. If v1 has no equivalent screen (a new Kilo-only behavior), show only v2 and say so.
+
+**No UI to show (headers, requests, catalog, config, retries, storage):** attach a different proof from a real run, for example:
+
+- A short command transcript from `bun dev run --standalone` with the relevant output.
+- Captured request headers or bodies from a local fixture, with secrets replaced by `<redacted>`.
+- The same command or request on v1 and v2 with both outputs.
+- Relevant log lines or the `bun dev api` response.
+
+Test output alone is not enough. It goes in the evidence list, not in this section.
+
+**Privacy (always):**
+
+- Never show real user data: emails, names, organization or team names, account or organization IDs, tokens, keys, balances, Kilo Pass data, session titles or content, or local paths with a user name.
+- Use fixture accounts and fake data (a local Gateway fixture with test names), not a real login.
+- Do not show internal model names that are not public.
+- Crop to the relevant part. Read every image before you upload it, and redact transcripts before you paste them.
+- Never commit screenshots to this repository or add them to the PR diff. Upload them to a public asset host and embed them by URL. If a PR-media skill is available (for example `pr-guidance`), use its upload flow and privacy check.
 
 ### PR section `## Progress map`
 
