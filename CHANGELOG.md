@@ -2,6 +2,64 @@
 
 Release notes for OpenCode V2, newest first.
 
+## v2.1.2 — 2026-10-21
+
+### Highlights
+
+- **Clear Free-Limit Recovery**: When your free messages run out, Desktop and the TUI now show the reset time, restore your submitted prompt, and offer direct upgrade or model-switching actions instead of a generic error. ([#57466](https://github.com/anomalyco/opencode/pull/57466), [#57467](https://github.com/anomalyco/opencode/pull/57467), [#57471](https://github.com/anomalyco/opencode/pull/57471))
+- **Hide Free Models**: Set `OPENCODE_DISABLE_FREE_MODELS=1` or `true` to remove zero-cost models from OpenCode and OpenCode Go catalogs, defaults, and fallbacks. ([#57478](https://github.com/anomalyco/opencode/pull/57478))
+- **Configurable Location Unloading**: Set `experimental.location_idle_timeout` to a duration such as `"4 hours"`, or to `false`, to control when inactive location services unload. ([#57476](https://github.com/anomalyco/opencode/pull/57476))
+- **Reliable Fresh Installs**: The installer now creates `~/.zshrc` or Fish’s `config.fish` when missing, adds OpenCode to `PATH`, and tells you to run `exec $SHELL`. ([#57348](https://github.com/anomalyco/opencode/pull/57348))
+
+### Core
+
+#### Improvements
+
+- Added `OPENCODE_DISABLE_FREE_MODELS` for hiding free OpenCode and OpenCode Go models. ([#57478](https://github.com/anomalyco/opencode/pull/57478))
+- Added `experimental.location_idle_timeout`, accepting a duration string or `false`. ([#57476](https://github.com/anomalyco/opencode/pull/57476))
+
+#### Bug fixes
+
+- Fixed fresh zsh and Fish installations not adding OpenCode to `PATH` when their configuration file did not exist. ([#57348](https://github.com/anomalyco/opencode/pull/57348))
+- Kept locations loaded while sessions are waiting for input, running long tools, or owning background jobs. ([#57416](https://github.com/anomalyco/opencode/pull/57416))
+- Fixed legacy `console.opencode.ai` credentials not being forwarded to `opencode.ai/console`. ([#57588](https://github.com/anomalyco/opencode/pull/57588))
+- Reused recent Console configuration checks when inference is rejected, avoiding unnecessary repeated checks. ([#57465](https://github.com/anomalyco/opencode/pull/57465))
+
+### TUI
+
+#### Improvements
+
+- Added an inline free-limit notice with the reset time and `/connect` and `/models` actions, while restoring the submitted prompt when the composer is empty. ([#57467](https://github.com/anomalyco/opencode/pull/57467))
+- Restored the animated “Free limit reached” OpenCode Go dialog with **Subscribe**, **Dismiss**, and **Don’t show again** actions. ([#57471](https://github.com/anomalyco/opencode/pull/57471))
+
+#### Bug fixes
+
+- Stopped showing redundant failure notifications when the free-message limit is reached. ([#57467](https://github.com/anomalyco/opencode/pull/57467))
+- Only shows “location unavailable” when the server explicitly reports the location as missing. ([#57594](https://github.com/anomalyco/opencode/pull/57594))
+
+### Desktop
+
+#### Bug fixes
+
+- Restored the free-limit dialog, reset-time timeline notice, and submitted prompt after free usage is exhausted. Subscribing to OpenCode Go now updates the current session’s model instead of opening another draft. ([#57466](https://github.com/anomalyco/opencode/pull/57466))
+
+### SDK
+
+#### Improvements
+
+- Added `retryAfterMs` to structured session errors so clients can display provider-supplied retry timing. ([#57146](https://github.com/anomalyco/opencode/pull/57146))
+
+#### Bug fixes
+
+- Fixed retry timing being dropped from quota, rate-limit, and provider-internal session errors. ([#57589](https://github.com/anomalyco/opencode/pull/57589))
+- Fixed OpenAI realtime client-secret requests by supplying the required `expires_after.anchor`.
+
+### Extensions
+
+#### Bug fixes
+
+- Fixed Code Mode async jobs interleaving in the middle of statements and losing writes, while preserving concurrent tool calls. Thanks [@RhysSullivan](https://github.com/RhysSullivan)! ([#54276](https://github.com/anomalyco/opencode/pull/54276))
+
 ## v2.1.0 — 2026-10-20
 
 ### Highlights

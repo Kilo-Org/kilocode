@@ -14,6 +14,12 @@ export class Info extends Schema.Class<Info>("ConfigExperimental.Info")({
   subagent_depth: NonNegativeInt.pipe(optional).annotate({
     description: "Maximum subagent nesting depth. Defaults to 1.",
   }),
+  location_idle_timeout: Schema.Union([Schema.DurationFromString, Schema.Literal(false)])
+    .pipe(optional)
+    .annotate({
+      description:
+        'How long a location can go without session activity before its services are unloaded. Running sessions and background jobs keep a location loaded. Set to false to never unload (default: "60 minutes")',
+    }),
   policies: ConfigPolicy.Info.pipe(Schema.Array, optional).annotate({
     description: "Deprecated: use top-level policies. Ordered policies controlling access to configured resources",
   }),

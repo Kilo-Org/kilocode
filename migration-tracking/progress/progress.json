@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 148,
+    "done": 149,
     "total": 9828,
     "percent": 1.5,
     "dropped": 26,
     "kinds": [
       {
         "kind": "module",
-        "done": 48,
+        "done": 52,
         "total": 3547
       },
       {
@@ -21,24 +21,24 @@
       },
       {
         "kind": "patch",
-        "done": 69,
+        "done": 65,
         "total": 3444
       },
       {
         "kind": "test",
-        "done": 29,
+        "done": 30,
         "total": 2798
       }
     ],
     "landed": {
       "plugin": 42,
-      "host": 4,
-      "seam": 3,
+      "host": 3,
+      "seam": 0,
       "patch": 5
     },
-    "coreImports": 26,
+    "coreImports": 25,
     "sharedPatches": {
-      "seam": 29,
+      "seam": 28,
       "patch": 20
     }
   },
@@ -62,7 +62,6 @@
     "@opencode/core/model",
     "@opencode/core/model-resolver",
     "@opencode/core/permission",
-    "@opencode/core/plugin/provider/openai",
     "@opencode/core/plugin/sdk",
     "@opencode/core/plugin/system-prompt/anthropic.txt",
     "@opencode/core/plugin/system-prompt/gpt-astra.txt",
@@ -1332,12 +1331,12 @@
     },
     {
       "feature": "oauth",
-      "done": 5,
+      "done": 0,
       "total": 8,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 1,
+          "done": 0,
           "total": 1
         },
         "api": {
@@ -1345,19 +1344,13 @@
           "total": 0
         },
         "patch": {
-          "done": 4,
+          "done": 0,
           "total": 6
         },
         "test": {
           "done": 0,
           "total": 1
         }
-      },
-      "landed": {
-        "plugin": 0,
-        "host": 1,
-        "seam": 3,
-        "patch": 0
       }
     },
     {
@@ -1434,12 +1427,12 @@
     },
     {
       "feature": "plugin",
-      "done": 1,
+      "done": 7,
       "total": 34,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 1,
+          "done": 6,
           "total": 26
         },
         "api": {
@@ -1451,7 +1444,7 @@
           "total": 2
         },
         "test": {
-          "done": 0,
+          "done": 1,
           "total": 6
         }
       }
@@ -6153,10 +6146,6 @@
     "patch:gateway:e8673ed1650b": "plugin",
     "patch:gateway:f983d8f993c8": "plugin",
     "patch:global:0e189a57d108": "host",
-    "patch:oauth:3ad23f430831": "seam",
-    "patch:oauth:513c5db12e0f": "seam",
-    "patch:oauth:62e32555f6d9": "host",
-    "patch:oauth:ee5e067b8d7b": "seam",
     "patch:provider-usage:b0945f511fb3": "plugin",
     "patch:provider-usage:ce8e021f1ef6": "plugin",
     "patch:server:5e0f8563b425": "plugin",
@@ -6194,7 +6183,6 @@
   "done": [
     "api:GET /kilocode/provider-usage",
     "api:POST /kilocode/provider-usage/refresh",
-    "module:packages/core/src/kilocode/oauth/page.ts",
     "module:packages/core/src/kilocode/provider-usage.ts",
     "module:packages/core/src/kilocode/provider-usage/cloud.ts",
     "module:packages/core/src/kilocode/provider-usage/codex.ts",
@@ -6254,6 +6242,11 @@
     "module:packages/opencode/src/kilocode/components/notification-banner.tsx",
     "module:packages/opencode/src/kilocode/kilo-errors.ts",
     "module:packages/opencode/src/kilocode/plugins/home-news.tsx",
+    "module:packages/opencode/src/kilocode/plugins/model-usage.ts",
+    "module:packages/opencode/src/kilocode/plugins/sidebar-footer.tsx",
+    "module:packages/opencode/src/kilocode/plugins/sidebar-pr.tsx",
+    "module:packages/opencode/src/kilocode/plugins/sidebar-usage-row.tsx",
+    "module:packages/opencode/src/kilocode/plugins/sidebar-usage.tsx",
     "module:packages/opencode/test/kilocode/agent-global-config-dirs.test.ts",
     "module:packages/opencode/test/kilocode/agent-permission-overrides.test.ts",
     "module:packages/opencode/test/kilocode/agent-skill-permissions.test.ts",
@@ -6265,6 +6258,7 @@
     "module:packages/opencode/test/kilocode/model-info-panel-utils.test.ts",
     "module:packages/opencode/test/kilocode/model-info-panel.types.test.ts",
     "module:packages/opencode/test/kilocode/news.test.ts",
+    "module:packages/opencode/test/kilocode/sidebar-footer.test.ts",
     "module:packages/opencode/test/kilocode/tui/usage.test.ts",
     "module:packages/schema/src/kilocode/provider-usage.ts",
     "module:packages/tui/src/kilocode/model-picker.ts",
@@ -6287,10 +6281,6 @@
     "patch:gateway:e8673ed1650b",
     "patch:gateway:f983d8f993c8",
     "patch:global:0e189a57d108",
-    "patch:oauth:3ad23f430831",
-    "patch:oauth:513c5db12e0f",
-    "patch:oauth:62e32555f6d9",
-    "patch:oauth:ee5e067b8d7b",
     "patch:provider-usage:b0945f511fb3",
     "patch:provider-usage:ce8e021f1ef6",
     "patch:server:5e0f8563b425",
