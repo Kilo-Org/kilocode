@@ -52,7 +52,7 @@ export function error(detail: string, options?: CallbackPageOptions) {
 export function brand(page: string, product?: { readonly name: string; readonly wordmark?: string }) {
   if (!product) return page
   const name = escapeHtml(product.name)
-  return page.replace(WORDMARK, product.wordmark ?? name).replaceAll("OpenCode", () => name)
+  return page.replace(WORDMARK, () => product.wordmark ?? name).replaceAll("OpenCode", () => name)
 }
 // kilocode_change end
 

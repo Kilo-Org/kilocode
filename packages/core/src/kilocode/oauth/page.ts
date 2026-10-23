@@ -1,7 +1,7 @@
 export * as KiloOauthCallbackPage from "./page.js"
 
 /**
- * The Kilo Code mark. The Kilo host gives it to `OauthCallbackPage.brand` through `App.Product`, so the OAuth
+ * The Kilo Code mark. The Kilo host gives it to `OauthCallbackPage.brand` through `App.Info.product`, so the OAuth
  * callback pages show it in place of the OpenCode wordmark.
  */
 export const wordmark = `<svg class="wordmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" aria-label="Kilo Code" role="img">
