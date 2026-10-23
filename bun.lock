@@ -262,6 +262,8 @@
       "name": "@kilocode/kilo-cli",
       "version": "0.0.0",
       "dependencies": {
+        "@babel/core": "7.29.7",
+        "@babel/preset-typescript": "7.27.1",
         "@effect/platform-node": "catalog:",
         "@kilocode/gateway-core": "workspace:*",
         "@kilocode/kilo-plugin": "workspace:*",
@@ -273,12 +275,14 @@
         "@opencode/util": "workspace:*",
         "@opentui/core": "catalog:",
         "@opentui/solid": "catalog:",
+        "babel-preset-solid": "1.9.12",
         "effect": "catalog:",
       },
       "devDependencies": {
         "@opencode/client": "workspace:*",
         "@opencode/server": "workspace:*",
         "@tsconfig/bun": "catalog:",
+        "@types/babel__core": "7.20.5",
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@typescript/native": "catalog:",
