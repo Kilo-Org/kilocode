@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.8.15",
+  "version": "7.8.17",
   "name": "@opencode-ai/core",
   "type": "module",
   "license": "MIT",
@@ -79,6 +79,7 @@
     "mime-types": "3.0.2",
     "minimatch": "10.2.6",
     "npm-package-arg": "13.0.2",
+    "open": "11.0.4",
     "rotating-file-stream": "3.2.9",
     "semver": "^7.6.3",
     "xdg-basedir": "5.1.0",
