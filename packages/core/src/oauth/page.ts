@@ -48,6 +48,14 @@ export function error(detail: string, options?: CallbackPageOptions) {
   })
 }
 
+// kilocode_change start - oauth seam: an embedder's product name and wordmark replace OpenCode's on a rendered page
+export function brand(page: string, product?: { readonly name: string; readonly wordmark?: string }) {
+  if (!product) return page
+  const name = escapeHtml(product.name)
+  return page.replace(WORDMARK, product.wordmark ?? name).replaceAll("OpenCode", () => name)
+}
+// kilocode_change end
+
 export interface BootstrapOptions {
   /** Same-origin path the in-browser script POSTs the parsed callback to. */
   tokenPath: string

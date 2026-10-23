@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 95,
+    "done": 100,
     "total": 9829,
     "percent": 1,
     "dropped": 25,
     "kinds": [
       {
         "kind": "module",
-        "done": 32,
+        "done": 33,
         "total": 3547
       },
       {
@@ -21,7 +21,7 @@
       },
       {
         "kind": "patch",
-        "done": 40,
+        "done": 44,
         "total": 3445
       },
       {
@@ -32,13 +32,13 @@
     ],
     "landed": {
       "plugin": 22,
-      "host": 3,
-      "seam": 0,
+      "host": 4,
+      "seam": 3,
       "patch": 0
     },
     "coreImports": 25,
     "sharedPatches": {
-      "seam": 24,
+      "seam": 28,
       "patch": 19
     }
   },
@@ -1325,12 +1325,12 @@
     },
     {
       "feature": "oauth",
-      "done": 0,
+      "done": 5,
       "total": 8,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 1,
           "total": 1
         },
         "api": {
@@ -1338,13 +1338,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 4,
           "total": 6
         },
         "test": {
           "done": 0,
           "total": 1
         }
+      },
+      "landed": {
+        "plugin": 0,
+        "host": 1,
+        "seam": 3,
+        "patch": 0
       }
     },
     {
@@ -6109,6 +6115,10 @@
     "patch:gateway:e8673ed1650b": "plugin",
     "patch:gateway:f983d8f993c8": "plugin",
     "patch:global:0e189a57d108": "host",
+    "patch:oauth:3ad23f430831": "seam",
+    "patch:oauth:513c5db12e0f": "seam",
+    "patch:oauth:62e32555f6d9": "host",
+    "patch:oauth:ee5e067b8d7b": "seam",
     "patch:server:5e0f8563b425": "plugin",
     "patch:unattributed:agent:161afe543464": "plugin",
     "patch:unattributed:agent:55cce67688d4": "plugin",
@@ -6122,6 +6132,7 @@
     "patch:unattributed:config:8cdbdec70393": "host"
   },
   "done": [
+    "module:packages/core/src/kilocode/oauth/page.ts",
     "module:packages/kilo-gateway/src/api/constants.ts",
     "module:packages/kilo-gateway/src/api/embedding-models.ts",
     "module:packages/kilo-gateway/src/api/kilo-pass.ts",
@@ -6192,6 +6203,10 @@
     "patch:gateway:e8673ed1650b",
     "patch:gateway:f983d8f993c8",
     "patch:global:0e189a57d108",
+    "patch:oauth:3ad23f430831",
+    "patch:oauth:513c5db12e0f",
+    "patch:oauth:62e32555f6d9",
+    "patch:oauth:ee5e067b8d7b",
     "patch:server:5e0f8563b425",
     "patch:unattributed:agent:0a0c97da2c48",
     "patch:unattributed:agent:161afe543464",

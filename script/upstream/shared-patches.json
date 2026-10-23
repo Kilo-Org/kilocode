@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 43,
-    "markedLines": 316,
+    "files": 47,
+    "markedLines": 356,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -184,6 +184,22 @@
     "packages/tui/src/ui/dialog-select.tsx": {
       "rung": 4,
       "seam": "Keep the list footer mounted when its action list becomes empty. The footer is wrapped in a Show that unmounts it whenever no action is visible, and each mount registers a renderer resize listener through useTerminalDimensions. Selection changes that hide or show an action (for example the account row in the Kilo gateway dialog) therefore add listeners until the renderer exceeds its budget and writes a MaxListenersExceededWarning over the TUI. Rungs 1 to 3 cannot reach it: the footer is rendered by upstream's DialogSelect, and no plugin hook or generic knob controls whether that element stays mounted."
+    },
+    "packages/core/src/app.ts": {
+      "rung": 3,
+      "seam": "Optional App.Info.product (id, display name, callback-page wordmark) that make() passes through. The Kilo host sets it in KiloApp; no Kilo value in the file. Issue #15409. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI and ChatGPT plugins would mirror about 1000 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
+    },
+    "packages/core/src/oauth/page.ts": {
+      "rung": 3,
+      "seam": "Exported brand(page, product) that puts an embedder's product name and wordmark in place of OpenCode's on a rendered callback page; returns the page unchanged without a product. Issue #15409. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI and ChatGPT plugins would mirror about 1000 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
+    },
+    "packages/core/src/plugin/provider/openai.ts": {
+      "rung": 3,
+      "seam": "Codex sign-in reads App.Info.product: the originator in the authorize URL, provider headers and model requests, the OAuth token request user agent (as v1 `kilo/<version>`) and the callback page brand. Defaults stay `opencode`, App.useragent and the OpenCode page. Issue #15409. A Kilo model.request hook (rung 1) could rewrite the request header alone, but the authorize URL needs this knob anyway, so all originator uses read the same value. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI and ChatGPT plugins would mirror about 1000 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
+    },
+    "packages/core/src/plugin/provider/chatgpt.ts": {
+      "rung": 3,
+      "seam": "ChatGPT token sharing reads App.Info.product: the agent_name_hint in the authorize URL and the callback page brand. Defaults stay `OpenCode` and the OpenCode page. Issue #15409. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI and ChatGPT plugins would mirror about 1000 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
     }
   }
 }
