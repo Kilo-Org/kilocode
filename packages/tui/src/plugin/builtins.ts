@@ -13,6 +13,7 @@ import Stats from "../feature-plugins/system/stats"
 import Latex from "@opencode/latex/plugin"
 import Merman from "@opencode/merman/plugin"
 import KiloTeams from "../kilocode/gateway" // kilocode_change - Kilo /teams command
+import KiloUsage from "../kilocode/usage" // kilocode_change(provider-usage) - Kilo /usage command
 
 export const builtins = [
   HomeFooter,
@@ -32,4 +33,5 @@ export const builtins = [
   ...(process.env.OPENCODE_STORY ? [Storybook] : []),
   DiffViewer,
   KiloTeams, // kilocode_change
+  KiloUsage, // kilocode_change(provider-usage)
 ]
