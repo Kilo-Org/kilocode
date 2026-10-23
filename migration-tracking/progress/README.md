@@ -8,20 +8,20 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**95 / 9829 cells done (1%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
+**101 / 9829 cells done (1%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 32 | 3547 | 0.9% |
+| module | 37 | 3547 | 1% |
 | api | 0 | 39 | 0% |
 | patch | 40 | 3445 | 1.2% |
-| test | 23 | 2798 | 0.8% |
+| test | 24 | 2798 | 0.9% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
 Landed by rung, for patch cells closed by a done-proof: 22 plugin, 3 host, 0 seam, 0 patch.
 
-Ratchets: 25 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 43 shared patches by rung: 24 seam, 19 patch (`script/upstream/shared-patches.json`).
+Ratchets: 25 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 45 shared patches by rung: 26 seam, 19 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -37,7 +37,7 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-21 | 90 | 9829 | 0.9% |
 | 2026-10-22 | 93 | 9829 | 0.9% |
 | 2026-10-23 | 95 | 9829 | 1% |
-| now | 95 | 9829 | 1% |
+| now | 101 | 9829 | 1% |
 
 ## Features
 
@@ -62,7 +62,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | command | 0/3 | 0/2 |  | 0/3 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | commit-message | 0/4 |  |  | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | compaction-policy | 0/5 | 0/3 | 0/1 | 0/8 | 0/17 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| components | 0/16 |  | 0/2 | 0/4 | 0/22 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| components | 4/16 |  | 0/2 | 1/4 | 5/22 | 22.7% | `████░░░░░░░░░░░░` |  |
 | config | 0/25 |  | 0/10 | 1/29 | 1/64 | 1.6% | `░░░░░░░░░░░░░░░░` |  |
 | console | 0/87 |  | 0/1 | 0/9 | 0/97 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | core-watcher |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -99,7 +99,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | permission | 0/12 |  | 0/6 | 0/16 | 0/34 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | pii | 0/1 |  |  |  | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | plan | 0/2 |  |  | 0/4 | 0/6 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| plugin | 0/26 |  | 0/2 | 0/6 | 0/34 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| plugin | 1/26 |  | 0/2 | 0/6 | 1/34 | 2.9% | `░░░░░░░░░░░░░░░░` |  |
 | presence | 0/3 |  | 0/1 | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | process | 0/4 | 0/1 | 0/9 | 0/1 | 0/15 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | project | 0/4 |  | 0/2 | 0/5 | 0/11 | 0% | `░░░░░░░░░░░░░░░░` |  |
