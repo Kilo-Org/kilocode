@@ -592,6 +592,16 @@
   max-width: 10em;
 }
 
+/* The provider routing name is capped and shrinks slowly, like the agent. */
+.prompt-selector[data-part="routing"] {
+  flex: 0 0.1 auto;
+  min-width: 3em;
+}
+
+.prompt-selectors .prompt-selector[data-part="routing"] [data-slot="popover-trigger"] {
+  max-width: 10em;
+}
+
 .prompt-selector > [data-component="tooltip-trigger"] {
   flex: 1 1 auto;
   min-width: 0;
@@ -674,8 +684,8 @@
   color: var(--text-weak, var(--vscode-descriptionForeground));
 }
 
-/* One trailing arrow: on the reasoning part, or on the model part when the
-   model has no reasoning levels. It turns while its popover is open. */
+/* One trailing arrow, on the last part shown: reasoning, or the part before it
+   when the model has no reasoning levels. It turns while its popover is open. */
 .prompt-selectors .selector-trigger-chevron,
 .prompt-selectors .model-selector-trigger-chevron {
   display: none;
@@ -683,11 +693,8 @@
   transition: transform 160ms var(--prompt-selectors-ease);
 }
 
-.prompt-selectors .prompt-selector[data-part="variant"] .selector-trigger-chevron,
-.prompt-selectors:not(:has([data-part="variant"] [data-slot="popover-trigger"])) .model-selector-trigger-chevron,
-.prompt-selectors:not(:has(:is([data-part="model"], [data-part="variant"]) [data-slot="popover-trigger"]))
-  [data-part="agent"]
-  .selector-trigger-chevron {
+.prompt-selector:not(:has(~ .prompt-selector [data-slot="popover-trigger"]))
+  :is(.selector-trigger-chevron, .model-selector-trigger-chevron) {
   display: block;
 }
 
