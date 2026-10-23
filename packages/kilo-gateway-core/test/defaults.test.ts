@@ -58,3 +58,35 @@ for (const failure of failures) {
     }
   })
 }
+
+test("skips the defaults request and the personal fallback for a custom server like v1", async () => {
+  const requests: string[] = []
+  const backend = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request) {
+      requests.push(new URL(request.url).pathname)
+      return Response.json({ defaultModel: "custom/paid", defaultFreeModel: "custom/free" })
+    },
+  })
+  const server = backend.url.origin
+  const endpoint = `${server}/api/organizations/team`
+  try {
+    expect(await Effect.runPromise(KiloDefaults.get({ server, endpoint }))).toBeUndefined()
+    expect(await Effect.runPromise(KiloDefaults.get({ server, endpoint, token: "token" }))).toBeUndefined()
+    expect(await Effect.runPromise(KiloDefaults.get({ server, endpoint, token: "token", organizationID: "team" })))
+      .toBeUndefined()
+    expect(requests).toEqual([])
+  } finally {
+    backend.stop(true)
+  }
+})
+
+test("picks the first model in v1 Provider.sort order", () => {
+  expect(KiloDefaults.firstSorted(["kilo-auto/free", "openai/gpt-5.4", "anthropic/claude-sonnet-4.6"])).toBe(
+    "anthropic/claude-sonnet-4.6",
+  )
+  expect(KiloDefaults.firstSorted(["a/model", "b/model-latest", "c/model"])).toBe("b/model-latest")
+  expect(KiloDefaults.firstSorted(["a/model", "c/model"])).toBe("c/model")
+  expect(KiloDefaults.firstSorted([])).toBeUndefined()
+})
