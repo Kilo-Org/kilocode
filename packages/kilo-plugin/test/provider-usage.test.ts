@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test"
+import type { ProviderUsage } from "@opencode/schema/kilocode/provider-usage"
+import { UsageCache } from "../src/provider-usage/cache"
 import { UsageCloud } from "../src/provider-usage/cloud"
 import { CodexUsage } from "../src/provider-usage/codex"
 import { MiniMaxUsage } from "../src/provider-usage/minimax"
@@ -69,6 +71,8 @@ describe("Codex usage", () => {
       fetchState: "unavailable",
       error: { code: "codex_auth_unavailable", message: "Reconnect ChatGPT to view Codex usage.", retryable: false },
     })
+    // v1 guard: a plan type that names an Object.prototype member falls back to the generic label.
+    expect(CodexUsage.normalize({ plan: "constructor", additional: [] }).planLabel).toBe("ChatGPT Codex")
     const invalid = await CodexUsage.load({ label: "OpenAI", access: "x" }, fetcher(() => Response.json({})).fn)
     expect(invalid.error).toEqual({ code: "codex_usage_unavailable", message: "Usage unavailable.", retryable: true })
   })
@@ -167,5 +171,78 @@ describe("Kilo coding plans", () => {
       fetchState: "unavailable",
       managementUrl: "https://app.kilo.ai/subscriptions/coding-plans/sub-1",
     })
+  })
+})
+
+describe("direct source cache", () => {
+  const snapshot = (
+    fetchState: ProviderUsage.UsageSnapshot["fetchState"],
+    used: number,
+  ): ProviderUsage.UsageSnapshot => ({
+    id: "codex-chatgpt",
+    providerID: "openai",
+    sourceKind: "direct",
+    providerLabel: "OpenAI",
+    planLabel: "ChatGPT Pro",
+    sourceLabel: "ChatGPT OAuth",
+    fetchState,
+    planState: fetchState === "ready" ? "active" : "unknown",
+    routingState: "not_applicable",
+    windows:
+      fetchState === "ready"
+        ? [{ id: "w", resource: "Codex", unit: "percent", orientation: "used_percent", used, state: "active" }]
+        : [],
+    ...(fetchState === "ready"
+      ? {}
+      : { error: { code: "codex_usage_unavailable", message: "Usage unavailable.", retryable: true } }),
+  })
+
+  test("keeps good answers for 60 s, failures for 10 s, and the last good windows as stale", async () => {
+    let now = 1_000_000
+    const cache = UsageCache.make(() => now)
+    const answers = [snapshot("ready", 10), snapshot("unavailable", 0), snapshot("ready", 20)]
+    let calls = 0
+    const load = async () => answers[calls++]
+    expect((await cache.source("codex-chatgpt", "token", false, load)).windows[0].used).toBe(10)
+    now += 59_000
+    await cache.source("codex-chatgpt", "token", false, load)
+    expect(calls).toBe(1)
+    // refresh bypasses the cache; the failure keeps the last windows as stale.
+    const failed = await cache.source("codex-chatgpt", "token", true, load)
+    expect(failed).toMatchObject({
+      fetchState: "stale",
+      windows: [{ used: 10 }],
+      error: { message: "Usage unavailable." },
+    })
+    now += 9_000
+    await cache.source("codex-chatgpt", "token", false, load)
+    expect(calls).toBe(2)
+    now += 2_000
+    expect((await cache.source("codex-chatgpt", "token", false, load)).windows[0].used).toBe(20)
+    expect(calls).toBe(3)
+  })
+
+  test("a new credential never shows the previous quota", async () => {
+    const cache = UsageCache.make(() => 0)
+    await cache.source("codex-chatgpt", "first", false, async () => snapshot("ready", 10))
+    const other = await cache.source("codex-chatgpt", "second", false, async () => snapshot("unavailable", 0))
+    expect(other).toMatchObject({ fetchState: "unavailable", windows: [] })
+  })
+
+  test("a failed credential read keeps the last snapshot as stale, and gone sources are dropped", async () => {
+    let now = 5_000
+    const cache = UsageCache.make(() => now)
+    expect(cache.preserve("codex-chatgpt")).toEqual([])
+    await cache.source("codex-chatgpt", "token", false, async () => snapshot("ready", 10))
+    now = 8_000
+    const kept = cache.preserve("codex-chatgpt")
+    expect(kept).toMatchObject([
+      { fetchState: "stale", windows: [{ used: 10 }], error: { code: "source_refresh_unavailable" } },
+    ])
+    // generatedAt is the time of the newest data, not of the request.
+    now = 20_000
+    expect(cache.settle(kept)).toBe(new Date(8_000).toISOString())
+    expect(cache.settle([])).toBe(new Date(20_000).toISOString())
+    expect(cache.preserve("codex-chatgpt")).toEqual([])
   })
 })

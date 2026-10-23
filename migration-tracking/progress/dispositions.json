@@ -418,7 +418,7 @@
   },
   "module:packages/core/src/kilocode/provider-usage/minimax/usage.ts": {
     "state": "ported",
-    "note": "packages/kilo-plugin/src/provider-usage/minimax.ts MiniMaxUsage.load/normalize: same regional bindings, sk-cp key rule, interval and weekly windows, boost, not_in_plan and exhausted status, remaining-count semantics and video filter. The key comes from the provider credential or the configured apiKey, as in v1 (index.ts configuredKey). The per-credential cache with stale fallback is in index.ts. Tests: packages/kilo-plugin/test/provider-usage.test.ts.",
+    "note": "packages/kilo-plugin/src/provider-usage/minimax.ts MiniMaxUsage.load/normalize: same regional bindings, sk-cp key rule, interval and weekly windows, boost, not_in_plan and exhausted status, remaining-count semantics and video filter. The key comes from the provider credential or the configured apiKey, as in v1 (index.ts configuredKey). The per-credential cache with stale fallback, kept for failed fetches and failed credential reads, is in cache.ts (UsageCache). Tests: packages/kilo-plugin/test/provider-usage.test.ts.",
     "by": "kilo-usage-screen"
   },
   "module:packages/opencode/test/kilocode/tui/usage.test.ts": {

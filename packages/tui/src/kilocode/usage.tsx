@@ -74,7 +74,7 @@ export function DialogUsage(props: { context: Plugin.Context; sessionID?: string
     dialog.setSize("xlarge")
     load(false)
     // Subagent messages are loaded on demand. The generation speed covers every step of the family.
-    family().forEach((member) => void data.session.message.sync(member))
+    family().forEach((member) => void data.session.message.sync(member).catch(() => undefined))
   })
 
   Keymap.createLayer(() => ({

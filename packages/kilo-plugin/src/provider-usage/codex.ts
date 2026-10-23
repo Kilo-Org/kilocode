@@ -123,12 +123,14 @@ export function normalize(native: Native, label = "OpenAI"): ProviderUsage.Usage
     seen.set(item.id, count + 1)
     return windows(JSON.stringify(["additional", item.id, count]), item.name, item.rate, now)
   })
+  // A plan type such as "constructor" must not resolve to an Object.prototype member.
+  const plan = plans[native.plan?.toLowerCase() ?? ""]
   return {
     id: "codex-chatgpt",
     providerID: "openai",
     sourceKind: "direct",
     providerLabel: label,
-    planLabel: plans[native.plan?.toLowerCase() ?? ""] ?? "ChatGPT Codex",
+    planLabel: typeof plan === "string" ? plan : "ChatGPT Codex",
     sourceLabel: "ChatGPT OAuth",
     fetchState: "ready",
     planState: "active",
