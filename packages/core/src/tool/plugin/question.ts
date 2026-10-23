@@ -99,7 +99,7 @@ export const Plugin = {
                     answers: input.questions.map((_, index): Question.Answer => {
                       const value = state.answer[`q${index}`]
                       if (value === undefined) return []
-                      if (typeof value === "object") return Array.from(value)
+                      if (Array.isArray(value)) return Array.from(value)
                       return [String(value)]
                     }),
                   }

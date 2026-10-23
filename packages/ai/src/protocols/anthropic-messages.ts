@@ -535,13 +535,13 @@ const providerMetadata = (key: string, metadata: Record<string, unknown>): Provi
 
 const signatureFromMetadata = (metadata: ProviderMetadata | undefined, key: string): string | undefined => {
   const provider = metadata?.[key]
-  if (!ProviderShared.isRecord(provider)) return undefined
+  if (!provider) return undefined
   return typeof provider.signature === "string" ? provider.signature : undefined
 }
 
 const redactedDataFromMetadata = (metadata: ProviderMetadata | undefined, key: string): string | undefined => {
   const provider = metadata?.[key]
-  if (!ProviderShared.isRecord(provider)) return undefined
+  if (!provider) return undefined
   return typeof provider.redactedData === "string" ? provider.redactedData : undefined
 }
 
@@ -617,7 +617,7 @@ const lowerServerToolResult = Effect.fnUntraced(function* (part: ToolResultPart,
 })
 
 const fileIdFromMetadata = (metadata: MediaPart["metadata"]): string | undefined => {
-  if (!ProviderShared.isRecord(metadata)) return undefined
+  if (!metadata) return undefined
   const anthropic = metadata.anthropic
   if (ProviderShared.isRecord(anthropic)) {
     if (typeof anthropic.file_id === "string") return anthropic.file_id
@@ -631,7 +631,7 @@ const fileIdFromMetadata = (metadata: MediaPart["metadata"]): string | undefined
 const transformationsFromMetadata = (
   metadata: MediaPart["metadata"],
 ): AnthropicImageBlock["transformations"] | undefined => {
-  if (!ProviderShared.isRecord(metadata)) return undefined
+  if (!metadata) return undefined
   const anthropic = ProviderShared.isRecord(metadata.anthropic) ? metadata.anthropic : undefined
   const raw = anthropic?.transformations ?? metadata.transformations
   if (ProviderShared.isRecord(raw)) {
@@ -644,17 +644,17 @@ const transformationsFromMetadata = (
 }
 
 const documentTitleFromPart = (part: MediaPart): string | undefined => {
-  if (ProviderShared.isRecord(part.metadata)) {
+  if (part.metadata !== undefined) {
     const anthropic = part.metadata.anthropic
     if (ProviderShared.isRecord(anthropic) && typeof anthropic.title === "string") return anthropic.title
     if (typeof part.metadata.title === "string") return part.metadata.title
   }
-  if (typeof part.filename === "string" && part.filename.length > 0) return part.filename
+  if (part.filename && part.filename.length > 0) return part.filename
   return undefined
 }
 
 const documentContextFromMetadata = (metadata: MediaPart["metadata"]): string | undefined => {
-  if (!ProviderShared.isRecord(metadata)) return undefined
+  if (!metadata) return undefined
   const anthropic = ProviderShared.isRecord(metadata.anthropic) ? metadata.anthropic : undefined
   if (anthropic && typeof anthropic.context === "string") return anthropic.context
   if (typeof metadata.context === "string") return metadata.context
@@ -662,7 +662,7 @@ const documentContextFromMetadata = (metadata: MediaPart["metadata"]): string | 
 }
 
 const citationsFromMetadata = (metadata: MediaPart["metadata"]): AnthropicDocumentBlock["citations"] | undefined => {
-  if (!ProviderShared.isRecord(metadata)) return undefined
+  if (!metadata) return undefined
   const raw = ProviderShared.isRecord(metadata.anthropic)
     ? (metadata.anthropic.citations ?? metadata.citations)
     : metadata.citations
@@ -940,7 +940,7 @@ const lowerMessages = Effect.fnUntraced(function* (request: LLMRequest, breakpoi
             content.push({ type: "redacted_thinking", data: redactedData })
             continue
           }
-          if (typeof signature !== "string" || signature.trim().length === 0) {
+          if (!signature || signature.trim().length === 0) {
             if (part.text.trim().length === 0) continue
             if (!requireThinkingSignature(request)) {
               content.push({ type: "thinking", thinking: part.text, signature: "" })
@@ -1199,9 +1199,7 @@ const isServerToolResultType = (type: string): type is AnthropicServerToolResult
 const serverToolResultEvent = (block: AnthropicStreamBlock, providerMetadataKey: string): LLMEvent | undefined => {
   if (!block.type || !isServerToolResultType(block.type)) return undefined
   const errorPayload =
-    typeof block.content === "object" && block.content !== null && "type" in block.content
-      ? String((block.content as Record<string, unknown>).type)
-      : ""
+    ProviderShared.isRecord(block.content) && "type" in block.content ? String(block.content.type) : ""
   const isError = errorPayload.endsWith("_tool_result_error")
   return LLMEvent.toolResult({
     id: block.tool_use_id ?? "",

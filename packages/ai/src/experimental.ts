@@ -33,4 +33,5 @@ export type {
   RealtimeSession,
   RealtimeTransport,
   RealtimeTransportInput,
+  RealtimeTransportType,
 } from "./experimental/realtime.js"

@@ -4,6 +4,7 @@ import { directoryColumn, pathColumn } from "../database/path.js"
 import { ProjectTable } from "../project/sql.js"
 import type { SessionMessage } from "./message.js"
 import type { SessionInbox } from "./inbox.js"
+import type { Agent } from "@opencode/schema/agent"
 import type { FileDiff } from "@opencode/schema/file-diff"
 import type { Permission } from "@opencode/schema/permission"
 import type { Project } from "@opencode/schema/project"
@@ -50,7 +51,7 @@ export const SessionTable = sqliteTable(
     tokens_cache_write: integer().notNull().default(0),
     revert: text({ mode: "json" }).$type<Session.Revert | RevertV1>(),
     permission: text({ mode: "json" }).$type<Permission.Ruleset>(),
-    agent: text(),
+    agent: text().$type<Agent.ID>(),
     model: text({ mode: "json" }).$type<{
       id: string
       providerID: string
