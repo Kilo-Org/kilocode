@@ -2,7 +2,7 @@
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
     "files": 43,
-    "markedLines": 309,
+    "markedLines": 316,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -113,8 +113,8 @@
       "unmarked": "JSON has no comments."
     },
     "packages/tui/src/component/dialog-integration.tsx": {
-      "rung": 3,
-      "seam": "Prompt for Personal Account vs Team (`chooseKiloAccount`) after a Kilo Gateway login completes, before closing or chaining the integration dialog. `TuiPlugin` has no post-integration-connect hook."
+      "rung": 4,
+      "seam": "Prompt for Personal Account vs Team (`chooseKiloAccount`) after a Kilo Gateway login completes, before closing or chaining the integration dialog. `TuiPlugin` has no post-integration-connect hook. The connect dialog also ranks and groups integrations with Kilo's v1 provider priority (`KILO_INTEGRATION_PRIORITY` in tui/src/kilocode/gateway.tsx: Kilo first under Popular, OpenCode Go and OpenCode Console under Services). `integrationOptions` takes the priority map as a parameter with upstream's map as the default (generic seam, so upstream's integration-options tests pass unchanged), and the dialog passes the Kilo map and uses it for the Popular group (rung 4). The map is a constant in the TUI process: no TUI plugin hook ranks integrations, and the host runs in the server process."
     },
     "packages/tui/src/context/local.tsx": {
       "rung": 4,
