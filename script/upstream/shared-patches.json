@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 49,
-    "markedLines": 363,
+    "files": 51,
+    "markedLines": 368,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -136,9 +136,17 @@
       "rung": 3,
       "seam": "Register the built-in `KiloTeams` TUI plugin (`/teams`, `/team`, `/org`, `/orgs`), the `KiloMarketplace` TUI plugin (`/marketplace`, U-E2-23), the `KiloNews` TUI plugin (Kilo Gateway news on the home screen), the `KiloUsage` TUI plugin (`/usage`, `/plans`, `/quota`), and the Kilo sidebar panels (`KiloSidebarPr`, `KiloSidebarFooter`, `KiloSidebarUsage`). Stays after U-E0-01: the TUI loads its built-in list in the TUI process, which `SdkPlugins` (a server store) does not reach. The config-driven path (`plugins` in the TUI config, loaded by `tui/src/plugin/context.tsx`) loads only npm packages or local files, which a compiled binary does not have. A generic seam needs an `@opencode/tui` export of the list (package.json) plus an extension point in this file, which is not fewer shared lines than these two."
     },
+    "packages/tui/src/app.tsx": {
+      "rung": 3,
+      "seam": "Accept an optional client fetch transport at TUI startup and reuse it on managed-service reconnect, preserving noTimeoutFetch as the default. Marketplace cancellation tests can then observe and reject the actual client request on abort rather than depending on Windows HTTP-disconnect propagation to a fixture server. Rungs 1 and 2 cannot replace this transport: the TUI constructs its promise client before plugin registration and has no service node or transport input to override."
+    },
     "packages/tui/test/component/go-upsell-art.test.tsx": {
       "rung": 4,
       "seam": "Upstream-quality test fix: select the expected Go logo glyphs from the renderer RGB capability. RGB rendering intentionally uses half blocks, while non-RGB rendering retains the original full-block glyphs; the lifecycle and draw-count assertions stay unchanged. Rungs 1 to 3 cannot change this test-local assertion, and changing production rendering or terminal defaults would hide the valid RGB path."
+    },
+    "packages/tui/test/fixture/app.ts": {
+      "rung": 3,
+      "seam": "Pass an optional clientFetch from the test fixture to the TUI startup transport input while retaining the normal HTTP fixture server. This lets Kilo-owned marketplace tests exercise client abort rejection and ignored-abort late success deterministically, without global fetch mocking or changing upstream test defaults. The fixture input is closed over inside createAppFixture, so a plugin or host layer cannot supply the transport without this pass-through."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,

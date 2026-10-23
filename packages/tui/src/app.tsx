@@ -195,6 +195,7 @@ export type TuiInput = {
   updater?: UpdateSource
   packages: PackageSource
   environment?: Readonly<Record<string, string>>
+  fetch?: typeof noTimeoutFetch // kilocode_change(testing) seam - optional client transport; preserve the default
   terminalHandoff?: () => Promise<
     | {
         readonly renderer: CliRenderer
@@ -215,7 +216,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
   const options = {
     baseUrl: input.server.endpoint.url,
     headers: Service.headers(input.server.endpoint),
-    fetch: noTimeoutFetch,
+    fetch: input.fetch ?? noTimeoutFetch, // kilocode_change(testing) seam
   }
   const api = OpenCode.make(options)
   const location = yield* Effect.tryPromise(() => api.file.list({ location: { directory: process.cwd() } })).pipe(
@@ -230,7 +231,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
     ? {
         reconnect: async (signal: AbortSignal) => {
           const endpoint = await managed.reconnect(signal)
-          const next = { baseUrl: endpoint.url, headers: Service.headers(endpoint), fetch: noTimeoutFetch }
+          const next = { ...options, baseUrl: endpoint.url, headers: Service.headers(endpoint) } // kilocode_change(testing) seam
           return { api: OpenCode.make(next), url: endpoint.url }
         },
         restart: managed.restart,

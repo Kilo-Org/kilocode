@@ -1,6 +1,7 @@
 import { InputRenderable } from "@opentui/core"
 import { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
 import { beforeEach, expect, test } from "bun:test"
+import { noTimeoutFetch } from "@opencode/util/no-timeout-fetch"
 import { KiloMarketplaceRegistry } from "../../../kilo-plugin/src/marketplace/kilo"
 import { takeDraft } from "../../src/component/prompt/draft-stash"
 import { createAppFixture } from "../fixture/app"
@@ -64,10 +65,53 @@ async function mount(
   let signedIn = false
   let records = inventory?.records ?? [installed]
   const location = { directory, project: { id: "proj_test", directory, canonical: directory } }
+  const hold = inventory?.hold
   const app = await createAppFixture({
     width: inventory?.width ?? 120,
     height: 40,
     config: { animations: false },
+    clientFetch: hold
+      ? Object.assign(
+          async (input: RequestInfo | URL, init?: RequestInit) => {
+            const request = new Request(input, init)
+            const url = new URL(request.url)
+            if (!url.pathname.startsWith("/api/rpc/kilocode.marketplace/")) return noTimeoutFetch(request)
+            const method = url.pathname.split("/").at(-1)!
+            calls.push({
+              method: request.method,
+              path: url.pathname,
+              signal: request.signal,
+              directory: url.searchParams.get("location[directory]"),
+              body: (await request.clone().json()) as unknown,
+            })
+            if (
+              (method === hold.method || hold.method === "*") &&
+              url.searchParams.get("location[directory]") === directory
+            ) {
+              // Observe the client's signal, not OS-dependent propagation to the fixture's HTTP server.
+              await new Promise<void>((resolve, reject) => {
+                const abort = () => {
+                  const error = new DOMException("Marketplace request aborted", "AbortError")
+                  aborted.push({ method, error })
+                  if (!hold.ignoreAbort) reject(error)
+                }
+                request.signal.addEventListener("abort", abort, { once: true })
+                if (request.signal.aborted) abort()
+                void hold.until.then(() => {
+                  request.signal.removeEventListener("abort", abort)
+                  resolve()
+                })
+              })
+              // The late-success case deliberately models a transport that ignores cancellation.
+              const response = await noTimeoutFetch(new Request(request, { signal: null }))
+              completed.push(method)
+              return response
+            }
+            return noTimeoutFetch(request)
+          },
+          { preconnect: fetch.preconnect },
+        )
+      : undefined,
     fetch: async (url, request) => {
       const call = {
         method: request.method,
@@ -76,31 +120,10 @@ async function mount(
         directory: url.searchParams.get("location[directory]"),
         body: undefined as unknown,
       }
-      calls.push(call)
+      if (!hold || !url.pathname.startsWith("/api/rpc/kilocode.marketplace/")) calls.push(call)
       if (url.pathname.startsWith("/api/rpc/kilocode.marketplace/")) {
         call.body = await request.json()
         const method = url.pathname.split("/").at(-1)!
-        if (
-          inventory?.hold &&
-          (method === inventory.hold.method || inventory.hold.method === "*") &&
-          url.searchParams.get("location[directory]") === directory
-        ) {
-          const hold = inventory.hold
-          await new Promise<void>((resolve, reject) => {
-            const abort = () => {
-              const error = new DOMException("Marketplace request aborted", "AbortError")
-              aborted.push({ method, error })
-              if (!hold.ignoreAbort) reject(error)
-            }
-            request.signal.addEventListener("abort", abort, { once: true })
-            if (request.signal.aborted) abort()
-            void hold.until.then(() => {
-              request.signal.removeEventListener("abort", abort)
-              resolve()
-            })
-          })
-          completed.push(method)
-        }
         if (inventory?.unavailable && (method === "list" || method === "registries"))
           return new Response("Catalog unavailable", { status: 503 })
         if (method === "list") return json({ output: { items: [inventory?.item ?? item], failures: [] } })
@@ -885,6 +908,7 @@ test.each(["list", "installed", "registries", "registries.set", "preview", "inst
       await app.waitFor(() => app.calls.some((call) => call.path.endsWith(`/${method}`) && call.signal.aborted))
       await app.waitFor(() => app.aborted.some((call) => call.method === method))
       expect(app.aborted.find((call) => call.method === method)?.error.name).toBe("AbortError")
+      expect(app.completed).not.toContain(method)
       await app.waitForVisualIdle()
       expect(app.captureCharFrame()).not.toMatch(/abort|Couldn't|Unknown error/i)
       await app.mockInput.typeText("/marketplace")

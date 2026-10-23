@@ -2,6 +2,7 @@ import { describe, expect, spyOn, test } from "bun:test"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
+import { Installer } from "../src/marketplace/installer"
 import { KiloMarketplaceRegistry } from "../src/marketplace/kilo"
 import { SkillError, bounded, extract, fingerprint, prepare, remove, write } from "../src/marketplace/skill"
 
@@ -154,6 +155,84 @@ describe("skill archives", () => {
 })
 
 describe("skill install", () => {
+  test("installs and replaces two owned MCP companions with nested resources and cleans staging and backups", async () => {
+    const directory = await tmp()
+    try {
+      const skills = path.join(directory, "skills")
+      const config = path.join(directory, "kilo2.json")
+      const archives = new Map<string, Uint8Array<ArrayBuffer>>(
+        await Promise.all(
+          ["guide", "invalid"].map(
+            async (id) =>
+              [
+                `/${id}.tar.gz`,
+                await tarball({ "SKILL.md": `# ${id} v1`, "ref/nested/old.txt": `${id} old resource` }),
+              ] as const,
+          ),
+        ),
+      )
+      using server = Bun.serve({
+        port: 0,
+        fetch: (request) => new Response(archives.get(new URL(request.url).pathname)),
+      })
+      const [entry] = KiloMarketplaceRegistry.parse(
+        "mcp",
+        Bun.YAML.stringify({
+          items: [
+            {
+              id: "demo",
+              content: '{"url":"https://demo.example.com/mcp"}',
+              skills: ["guide", "invalid"].map((id) => ({
+                id,
+                content: new URL(`/${id}.tar.gz`, server.url).href,
+              })),
+            },
+          ],
+        }),
+      )
+      const first = await Installer.install({ entry, skills, config })
+      expect(first.paths).toEqual([path.join(skills, "guide"), path.join(skills, "invalid")])
+      expect(first.resources).toHaveLength(3)
+      for (const resource of first.resources!) {
+        expect(await Installer.resourceFingerprint(resource)).toBe(resource.fingerprints![0])
+      }
+      for (const id of ["guide", "invalid"]) {
+        expect(await fs.readFile(path.join(skills, id, "SKILL.md"), "utf8")).toBe(`# ${id} v1`)
+        expect(await fs.readFile(path.join(skills, id, "ref/nested/old.txt"), "utf8")).toBe(`${id} old resource`)
+        archives.set(
+          `/${id}.tar.gz`,
+          await tarball({
+            "SKILL.md": `# ${id} v2`,
+            "ref/nested/new.txt": `${id} new resource`,
+          }),
+        )
+      }
+      expect((await fs.readdir(directory)).toSorted()).toEqual(["kilo2.json", "skills"])
+      const second = await Installer.install({
+        entry,
+        skills,
+        config,
+        previous: { registry: "kilo", kind: "mcp", id: "demo", scope: "global", installedAt: 0, ...first },
+      })
+      for (const resource of second.resources!) {
+        expect(await Installer.resourceFingerprint(resource)).toBe(resource.fingerprints![0])
+      }
+      for (const id of ["guide", "invalid"]) {
+        expect(await fs.readFile(path.join(skills, id, "SKILL.md"), "utf8")).toBe(`# ${id} v2`)
+        expect(await fs.readFile(path.join(skills, id, "ref/nested/new.txt"), "utf8")).toBe(`${id} new resource`)
+        expect(await fs.readdir(path.join(skills, id, "ref/nested"))).toEqual(["new.txt"])
+      }
+      expect((await fs.readdir(directory)).toSorted()).toEqual([".marketplace-trash", "kilo2.json", "skills"])
+      expect(await fs.readdir(path.join(directory, ".marketplace-trash"))).toEqual([])
+      await Installer.uninstall({ id: "demo", ...second })
+      expect(await fs.readdir(skills)).toEqual([])
+      expect(await fs.readdir(path.join(directory, ".marketplace-trash"))).toEqual([])
+      expect((await Bun.file(config).json()).mcp.servers).toEqual({})
+    } finally {
+      await fs.rm(directory, { recursive: true, force: true })
+    }
+  })
+
   test.each([
     ["frontmatter", "---\nname: demo\ndescription: Demo\n---\nBody"],
     ["plain Markdown", "# Demo\nBody"],

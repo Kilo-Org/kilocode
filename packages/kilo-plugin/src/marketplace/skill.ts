@@ -78,7 +78,7 @@ export async function write(prepared: Awaited<ReturnType<typeof prepare>>, finge
         prepared.files.map(async (file) => {
           const destination = path.join(staging, file.path)
           await fs.mkdir(path.dirname(destination), { recursive: true })
-          await Bun.write(destination, file.data)
+          await fs.writeFile(destination, file.data)
         }),
       )
       const failed = writes.find((write) => write.status === "rejected")
