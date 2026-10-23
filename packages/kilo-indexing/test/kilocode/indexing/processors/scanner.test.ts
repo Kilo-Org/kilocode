@@ -431,41 +431,31 @@ describe("DirectoryScanner", () => {
     expect(retry?.error).toContain("[REDACTED_PATH]")
   })
 
-  test("keeps capitalized source folders that only differ in case from ignored dirs", async () => {
+  test("keeps capitalized source folders that match ignored dirs case-insensitively", async () => {
     // The anchored ignore globs (e.g. **/build/**) must match case-sensitively
-    // like FileIgnore.match() does: on glob platforms with a nocase default, this
-    // would prune valid sources such as src/Build/Main.ts. Windows is
-    // case-insensitive at the filesystem level, so Build and build cannot
-    // coexist there and the OS reports a single entry; the same holds for the
-    // default case-insensitive APFS volume on macOS runners, where creating
-    // both dirs silently merges them. Detect that at runtime instead of by
-    // platform so the test is meaningful wherever case-sensitive dirs exist.
-    if (process.platform === "win32") return
-    const probe = await mkdtemp(join(tmpdir(), "scanner-case-probe-"))
-    try {
-      await mkdir(join(probe, "Build"), { recursive: true })
-      await mkdir(join(probe, "build"), { recursive: true })
-      const { readdirSync } = await import("fs")
-      if (readdirSync(probe).length < 2) return
-    } finally {
-      await rm(probe, { recursive: true, force: true })
-    }
+    // like FileIgnore.match() does: on glob platforms with a nocase default
+    // (macOS, Windows), they would prune valid sources such as src/Build/Main.ts.
+    // Only the capitalized dirs exist, so this works on case-insensitive volumes
+    // too and catches a regression on the platform where it actually occurs.
     const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
     const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
     try {
       const kept = join(root, "src", "Build", "Main.ts")
       const keptTarget = join(root, "src", "Target", "Main.ts")
       const keptDesktop = join(root, "Desktop", "App.ts")
-      const pruned = join(root, "src", "build", "gen.ts")
+      const pruned = join(root, "build", "gen.ts")
+      const prunedNested = join(root, "pkg", "build", "gen.ts")
 
       await mkdir(join(root, "src", "Build"), { recursive: true })
       await mkdir(join(root, "src", "Target"), { recursive: true })
       await mkdir(join(root, "Desktop"), { recursive: true })
-      await mkdir(join(root, "src", "build"), { recursive: true })
+      await mkdir(join(root, "build"), { recursive: true })
+      await mkdir(join(root, "pkg", "build"), { recursive: true })
       await Bun.write(kept, "export const kept = 1\n")
       await Bun.write(keptTarget, "export const keptTarget = 1\n")
       await Bun.write(keptDesktop, "export const keptDesktop = 1\n")
       await Bun.write(pruned, "export const pruned = 1\n")
+      await Bun.write(prunedNested, "export const prunedNested = 1\n")
 
       const cache = new CacheManager(cacheDir, root)
       await cache.initialize()
@@ -478,6 +468,7 @@ describe("DirectoryScanner", () => {
       expect(cache.getHash(keptTarget)).toBeDefined()
       expect(cache.getHash(keptDesktop)).toBeDefined()
       expect(cache.getHash(pruned)).toBeUndefined()
+      expect(cache.getHash(prunedNested)).toBeUndefined()
     } finally {
       await rm(root, { recursive: true, force: true })
       await rm(cacheDir, { recursive: true, force: true })
