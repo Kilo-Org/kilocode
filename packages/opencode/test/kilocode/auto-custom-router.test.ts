@@ -20,7 +20,11 @@ import { KiloRoutedModel } from "@/kilocode/session/routed-model"
 
 const KILO = ProviderV2.ID.make("kilo")
 
-function model(providerID: string, id: string, input?: { variants?: Record<string, Record<string, unknown>>; price?: number }): Provider.Model {
+function model(
+  providerID: string,
+  id: string,
+  input?: { variants?: Record<string, Record<string, unknown>>; price?: number },
+): Provider.Model {
   const pid = ProviderV2.ID.make(providerID)
   return {
     id: ModelV2.ID.make(id),
@@ -76,7 +80,7 @@ function clientListing(overrides: Partial<CustomRouterListEntry> = {}): CustomRo
       pricing: null,
     }),
     needsClientEval: true,
-    variants: [{ variant: null, status: "missing", failureReason: null }],
+    variants: [{ variant: null, status: "missing", failureReason: null, linked: false }],
     ...overrides,
   }
 }
@@ -86,7 +90,7 @@ function gatewayListing(): CustomRouterListEntry {
     key: "gateway:anthropic/claude-sonnet-4",
     entry: { kind: "gateway", model: "anthropic/claude-sonnet-4" },
     needsClientEval: false,
-    variants: [{ variant: null, status: "ready", failureReason: null }],
+    variants: [{ variant: null, status: "ready", failureReason: null, linked: false }],
   }
 }
 
@@ -420,6 +424,18 @@ describe("client entry construction", () => {
     expect(clientEntry(model("lmstudio", "local")).pricing).toBeNull()
     expect(clientEntry(model("lmstudio", "local")).variants).toEqual([])
   })
+
+  test("includes the confirmed platform measurement without changing the client model", () => {
+    const entry = clientEntry(model("ollama", "qwen3", { variants: { low: {}, high: {} } }), "qwen/qwen3")
+    expect(entry).toMatchObject({
+      kind: "client",
+      provider: "ollama",
+      model: "qwen3",
+      measuredAs: "qwen/qwen3",
+      variants: ["low", "high"],
+    })
+    expect(ClientCustomRouterEntrySchema.parse(entry)).toEqual(entry)
+  })
 })
 
 describe("openai message conversion", () => {
@@ -440,7 +456,12 @@ describe("openai message conversion", () => {
           { type: "tool-call", toolCallId: "call_1", toolName: "read", input: { path: "a.ts" } },
         ],
       },
-      { role: "tool", content: [{ type: "tool-result", toolCallId: "call_1", toolName: "read", output: { type: "text", value: "ok" } }] },
+      {
+        role: "tool",
+        content: [
+          { type: "tool-result", toolCallId: "call_1", toolName: "read", output: { type: "text", value: "ok" } },
+        ],
+      },
     ] as unknown as ModelMessage[]
     expect(openaiMessages(messages)).toEqual([
       { role: "system", content: "be brief" },
@@ -469,7 +490,12 @@ describe("openai message conversion", () => {
         role: "user",
         content: [
           { type: "file", mediaType: "image/png", filename: "a.png", data: "data:image/png;base64,iVBO" },
-          { type: "file", mediaType: "application/pdf", filename: "spec.pdf", data: "data:application/pdf;base64,JVBE" },
+          {
+            type: "file",
+            mediaType: "application/pdf",
+            filename: "spec.pdf",
+            data: "data:application/pdf;base64,JVBE",
+          },
           { type: "file", mediaType: "text/plain", filename: "notes.txt", data: new Uint8Array([104, 105]) },
           { type: "file", mediaType: "image/jpeg", data: new URL("https://example.com/b.jpg") },
           { type: "file", mediaType: "audio/mpeg", data: "data:audio/mpeg;base64,SUQz" },
@@ -495,9 +521,9 @@ describe("openai message conversion", () => {
   })
 
   test("drops unsupported parts and keeps an empty content string", () => {
-    expect(openaiMessages([{ role: "user", content: [{ type: "reasoning", text: "x" }] } as unknown as ModelMessage])).toEqual([
-      { role: "user", content: "" },
-    ])
+    expect(
+      openaiMessages([{ role: "user", content: [{ type: "reasoning", text: "x" }] } as unknown as ModelMessage]),
+    ).toEqual([{ role: "user", content: "" }])
   })
 
   test("serializes tool schemas", async () => {
@@ -507,7 +533,10 @@ describe("openai message conversion", () => {
         inputSchema: jsonSchema({ type: "object", properties: { path: { type: "string" } } }),
       },
     }
-    const converted = (await openaiTools(tools)) as Array<{ type: string; function: { name: string; parameters: unknown } }>
+    const converted = (await openaiTools(tools)) as Array<{
+      type: string
+      function: { name: string; parameters: unknown }
+    }>
     expect(converted[0]!.type).toBe("function")
     expect(converted[0]!.function.name).toBe("read")
     expect(converted[0]!.function.parameters).toEqual({

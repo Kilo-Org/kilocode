@@ -12,9 +12,11 @@ import {
   CustomRouterRequestError,
   customRouterEntryKey,
   fetchCustomRouters,
+  fetchPlatformMeasurements,
   parseCustomRouterModelId,
   registerCustomRouterClientEntry,
   removeCustomRouterClientEntry,
+  suggestMeasuredAs,
   type CustomRouterClientEntryId,
   type CustomRouterListEntry,
   type CustomRouterReference,
@@ -81,7 +83,14 @@ export const AutoRouterAddCommand = effectCmd({
   builder: (yargs) =>
     yargs
       .positional("router", { type: "string", demandOption: true, describe: "router id or slug" })
-      .positional("model", { type: "string", demandOption: true, describe: "<provider>/<model> resolved by this CLI" }),
+      .positional("model", { type: "string", demandOption: true, describe: "<provider>/<model> resolved by this CLI" })
+      .option("measured-as", { type: "string", describe: "reuse the platform benchmark of this model" })
+      .option("link", {
+        type: "boolean",
+        default: true,
+        describe: "suggest a platform benchmark link; disable with --no-link",
+      })
+      .option("yes", { type: "boolean", default: false, describe: "accept a suggested platform benchmark link" }),
   handler: Effect.fn("Cli.auto.router.add")(function* (args) {
     const reference = resolveReference(args.router)
     if (!reference) {
@@ -102,13 +111,49 @@ export const AutoRouterAddCommand = effectCmd({
     }
     const creds = yield* credentials()
     if (!creds) return
+    const list = yield* Effect.promise(() =>
+      fetchCustomRouters({ token: creds.token, organizationId: creds.organizationId }).catch((error) => {
+        throw new Error(describeFailure(error, "Could not load custom auto routers"))
+      }),
+    )
+    const router = list.routers.find((item) => item.scope === reference.scope && item.slug === reference.slug)
+    if (!router) {
+      yield* fail(`Custom auto router ${args.router} was not found. Check the id with \`kilo auto router list\`.`)
+      return
+    }
+    const measurements = yield* Effect.promise(() =>
+      fetchPlatformMeasurements({
+        token: creds.token,
+        organizationId: creds.organizationId,
+        baseRouter: router.baseRouter,
+      }).catch((error) => {
+        UI.println(
+          `${UI.Style.TEXT_WARNING}${describeFailure(error, "Could not load platform measurements")}. Registering without a benchmark link.${UI.Style.TEXT_NORMAL}`,
+        )
+        return undefined
+      }),
+    )
+    const suggestion = measurements
+      ? suggestMeasuredAs(
+          target,
+          measurements.models.map((item) => item.model),
+        )
+      : null
+    const measuredAs = yield* Effect.promise(async () => {
+      if (!measurements) return undefined
+      if (args.measuredAs) return args.measuredAs
+      if (!suggestion || !args.link) return undefined
+      if (args.yes) return suggestion
+      const answer = (await UI.input(`Reuse the platform benchmark of ${suggestion}? [Y/n] `)).trim()
+      return answer === "" || /^y(es)?$/i.test(answer) ? suggestion : undefined
+    })
     const response = yield* Effect.promise(() =>
       registerCustomRouterClientEntry({
         token: creds.token,
         organizationId: creds.organizationId,
         scope: reference.scope,
         slug: reference.slug,
-        entry: clientEntry(model),
+        entry: clientEntry(model, measuredAs),
       }).catch((error) => {
         throw new Error(describeFailure(error, "Could not register the client entry"))
       }),
@@ -217,10 +262,13 @@ function describeRouter(router: CustomRouterSummary): string {
 }
 
 function describeEntry(entry: CustomRouterListEntry, providers: Record<ProviderV2.ID, Provider.Info>): string {
-  const state = entry.variants.map((variant) => `${variant.variant ?? "default"}:${variant.status}`).join(" ")
+  const state = entry.variants
+    .map((variant) => `${variant.variant ?? "default"}:${variant.status}${variant.linked ? "(linked)" : ""}`)
+    .join(" ")
   const needs = entry.needsClientEval ? "needs client eval" : "ready"
   const local = KiloCustomRouter.servable(entry.entry, providers) ? " · servable here" : ""
-  return `${entry.key} · ${state || "no variants"} · ${needs}${local}`
+  const linked = entry.entry.measuredAs ? ` · measured as ${entry.entry.measuredAs}` : ""
+  return `${entry.key}${linked} · ${state || "no variants"} · ${needs}${local}`
 }
 
 function splitModel(value: string): CustomRouterClientEntryId | undefined {

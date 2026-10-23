@@ -5,7 +5,7 @@ const MODALITIES = ["text", "audio", "image", "video", "pdf"] as const
 
 // ADR 0005: the client entry carries the metadata the router needs to rank this
 // model, taken from the CLI's own resolved model (models.dev plus config).
-export function clientEntry(model: Provider.Model): ClientCustomRouterEntry {
+export function clientEntry(model: Provider.Model, measuredAs?: string): ClientCustomRouterEntry {
   const modalities = MODALITIES.filter((name) => model.capabilities.input[name])
   const cost = model.cost
   const priced = cost.input > 0 || cost.output > 0 || cost.cache.read > 0 || cost.cache.write > 0
@@ -13,6 +13,7 @@ export function clientEntry(model: Provider.Model): ClientCustomRouterEntry {
     kind: "client",
     provider: model.providerID,
     model: model.id,
+    ...(measuredAs ? { measuredAs } : {}),
     variants: Object.keys(model.variants ?? {}),
     capabilities: {
       contextLength: model.limit.context > 0 ? model.limit.context : null,
