@@ -115,7 +115,7 @@ export function DialogIntegration(
       (integration) => props.integrationID === undefined || integration.id === props.integrationID,
     ),
   )
-  const kiloFailure = useKiloFailure(location) // kilocode_change - v1 failure detail
+  const kiloFailure = useKiloFailure(location, () => integrations().some((item) => item.id === "kilo")) // kilocode_change - v1 failure detail
 
   createEffect(() => {
     if (!props.autoConnect) return
@@ -149,7 +149,7 @@ export function DialogIntegration(
           integration.connections.length > 0 && !status
             ? () => <text fg={theme.text.feedback.success.base}>✓</text>
             : undefined,
-        ...kiloRow(integration.id, kiloFailure(), theme), // kilocode_change - v1 titles, descriptions, failure detail
+        ...kiloRow(integration.id, kiloFailure(), theme, methods.length === 0), // kilocode_change - v1 titles, descriptions, failure detail
         onSelect: () => {
           if (credentials.length) return manageConnections(integration, methods, location, dialog, props.onConnected)
           return selectMethod(integration, methods, location, dialog, props.onConnected)

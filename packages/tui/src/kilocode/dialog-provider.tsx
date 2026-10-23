@@ -2,7 +2,7 @@
 // descriptions and titles, the failure reason of the Kilo Gateway catalog, and the Kilo API key hint.
 import type { LocationRef } from "@opencode/client"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
-import { createSignal, Match, onMount, Switch } from "solid-js"
+import { createEffect, createSignal, Match, Switch } from "solid-js"
 import { useClient } from "../context/client"
 import { useTheme } from "../context/theme"
 import { Link } from "../ui/link"
@@ -64,10 +64,12 @@ export function kiloRow(
   integrationID: string,
   failure: Failure | undefined,
   theme: ReturnType<ReturnType<typeof useTheme>["surface"]>,
+  // Upstream's "Environment only" explains why an integration without methods is disabled; keep it.
+  environmentOnly = false,
 ) {
   const failed = integrationID === "kilo" ? failedDescription(failure) : undefined
   const title = KILO_PROVIDER_TITLES[integrationID]
-  const description = failed ?? KILO_PROVIDER_DESCRIPTIONS[integrationID]
+  const description = failed ?? (environmentOnly ? undefined : KILO_PROVIDER_DESCRIPTIONS[integrationID])
   return {
     ...(title ? { title } : {}),
     ...(description ? { description } : {}),
@@ -75,11 +77,17 @@ export function kiloRow(
   }
 }
 
-/** The failure of the Kilo Gateway catalog at the location, read once when the dialog opens. */
-export function useKiloFailure(location: LocationRef) {
+/**
+ * The failure of the Kilo Gateway catalog at the location, read once when a Kilo row is visible. Scoped dialogs that
+ * show another integration never ask, and the answer is a cached local read, not a network request.
+ */
+export function useKiloFailure(location: LocationRef, visible: () => boolean) {
   const client = useClient()
   const [failure, setFailure] = createSignal<Failure>()
-  onMount(() => {
+  let requested = false
+  createEffect(() => {
+    if (requested || !visible()) return
+    requested = true
     client.api
       .rpc(KiloGatewayRpc.Definition)
       .models({}, { location: { directory: location.directory } })

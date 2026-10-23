@@ -113,8 +113,29 @@ test("connects LM Studio without a key, as v1", async () => {
     app.mockInput.pressEnter()
     await app.waitForFrame((frame) => frame.includes("Optional for localhost"))
     app.mockInput.pressEnter()
-    await Bun.sleep(100)
+    for (let attempt = 0; attempt < 200 && keys.length === 0; attempt++) await Bun.sleep(10)
     expect(keys).toEqual(["local"])
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("keeps Environment only for a v1-described integration without connect methods", async () => {
+  const app = await renderDialog([
+    {
+      id: "openai",
+      name: "OpenAI",
+      methods: [],
+      connections: [{ type: "credential", method: "key", id: "cred_env_key", label: "OPENAI_API_KEY" }],
+    },
+  ])
+  try {
+    const row = app
+      .captureCharFrame()
+      .split("\n")
+      .find((line) => line.includes("OpenAI / Codex"))
+    expect(row).toContain("Environment only")
+    expect(row).not.toContain("ChatGPT login or API key")
   } finally {
     app.renderer.destroy()
   }
@@ -151,7 +172,7 @@ async function renderDialog(
     if (url.pathname === "/api/model" || url.pathname === "/api/provider") return json({ location, data: [] })
     if (url.pathname.endsWith("/connect/key") && onKey) {
       await onKey(request)
-      return json({ location, data: {} })
+      return new Response(null, { status: 204 })
     }
     if (url.pathname === "/api/rpc/kilocode.gateway/models")
       return failure
