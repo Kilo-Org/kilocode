@@ -93,11 +93,11 @@ test("registers a client model and routes a custom router request to it", async 
     // A worker error fails the execution with the specific message instead of routing elsewhere.
     backend.state.decideStatus = 402
     backend.state.decide = { error: { code: "insufficient_balance", message: "no credit" } }
-    const sent = local.requests.length
     await client.session.prompt({ sessionID: session.id, text: "Again." })
     await client.session.wait({ sessionID: session.id })
     expect((await client.session.get({ sessionID: session.id })).outcome).toBe("failed")
-    expect(local.requests.length).toBe(sent)
+    // The title request of the first prompt can still reach the client model, so check the prompt, not the count.
+    expect(local.requests.some((request) => request.body.includes("Again."))).toBe(false)
     backend.state.decideStatus = 200
     backend.state.decide = undefined
 
@@ -179,14 +179,15 @@ function apply(variables: Record<string, string | undefined>) {
 
 // An OpenAI-compatible Chat Completions server that streams one text answer.
 function openai() {
-  const requests: { model: string; authorization: string | null }[] = []
+  const requests: { model: string; authorization: string | null; body: string }[] = []
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
     async fetch(request) {
       if (new URL(request.url).pathname !== "/v1/chat/completions") return new Response(null, { status: 404 })
-      const body = (await request.json()) as { model: string }
-      requests.push({ model: body.model, authorization: request.headers.get("authorization") })
+      const text = await request.text()
+      const body = JSON.parse(text) as { model: string }
+      requests.push({ model: body.model, authorization: request.headers.get("authorization"), body: text })
       const chunk = (delta: object, finish: string | null) =>
         `data: ${JSON.stringify({ id: "local", object: "chat.completion.chunk", model: body.model, choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`
       return new Response(
