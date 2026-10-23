@@ -8,11 +8,11 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**90 / 9829 cells done (0.9%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
+**91 / 9829 cells done (0.9%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 31 | 3547 | 0.9% |
+| module | 32 | 3547 | 0.9% |
 | api | 0 | 39 | 0% |
 | patch | 38 | 3445 | 1.1% |
 | test | 21 | 2798 | 0.8% |
@@ -34,8 +34,8 @@ One point per day from the committed `progress.json` on the first-parent history
 | 2026-10-16 | 12 | 9854 | 0.1% |
 | 2026-10-19 | 87 | 9829 | 0.9% |
 | 2026-10-20 | 87 | 9829 | 0.9% |
-| 2026-10-21 | 89 | 9829 | 0.9% |
-| now | 90 | 9829 | 0.9% |
+| 2026-10-21 | 90 | 9829 | 0.9% |
+| now | 91 | 9829 | 0.9% |
 
 ## Features
 
@@ -93,7 +93,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | model-routing | 0/1 |  | 0/1 | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | notebook | 0/2 | 0/3 | 0/2 | 0/3 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | npm-publish |  |  | 0/2 | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| oauth | 0/1 |  | 0/6 | 0/1 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| oauth | 1/1 |  | 0/6 | 0/1 | 1/8 | 12.5% | `██░░░░░░░░░░░░░░` |  |
 | permission | 0/12 |  | 0/6 | 0/16 | 0/34 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | pii | 0/1 |  |  |  | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | plan | 0/2 |  |  | 0/4 | 0/6 | 0% | `░░░░░░░░░░░░░░░░` |  |

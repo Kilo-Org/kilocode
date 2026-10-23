@@ -1,4 +1,9 @@
 {
+  "module:packages/core/src/kilocode/oauth/page.ts": {
+    "state": "ported",
+    "note": "packages/kilo-cli/src/branding/text.ts KiloBranding.transform applies the Kilo callback text and square SVG mark to the upstream page module through the host runtime/build loader. Success and error preserve upstream HTML escaping and autoClose behavior; the bootstrap page is also branded. packages/kilo-cli/test/branding.test.ts checks source and compiled exports. The separate oauth-branding test cell remains open because provider User-Agent/originator changes are deferred.",
+    "by": "rebrand-identity"
+  },
   "module:packages/kilo-gateway/src/api/constants.ts": {
     "state": "ported",
     "note": "The constants moved next to their use in packages/kilo-gateway-core/src: server.ts (API URL), headers.ts (header and env names, User-Agent), defaults.ts (default models), device.ts (poll interval, token lifetime), account.ts (anonymous key), models.ts (timeout, AI SDK providers). The event service URL goes with event-service/client.ts. PROMPTS is tracked by #15108. The signed-in fallback model in defaults.ts is kilo-auto/frontier, not kilo-auto/free as on v1.",

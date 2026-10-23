@@ -16,6 +16,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@babel/core": "7.29.7",
+    "@babel/preset-typescript": "7.27.1",
+    "babel-preset-solid": "1.9.12",
     "@effect/platform-node": "catalog:",
     "@kilocode/kilo-plugin": "workspace:*",
     "@opencode/cli": "workspace:*",
@@ -33,6 +36,7 @@
     "@opencode/server": "workspace:*",
     "@opencode/tui": "workspace:*",
     "@tsconfig/bun": "catalog:",
+    "@types/babel__core": "7.20.5",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native": "catalog:"
