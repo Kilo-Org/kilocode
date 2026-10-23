@@ -28,11 +28,15 @@ export function SidebarUsage(props: { context: Plugin.Context; sessionID: string
   })
   const location = () => data.session.get(root())?.location ?? props.context.location ?? data.location.default()
   const models = createMemo(() => data.location.model.list(location()) ?? [])
-  // The message store keeps only a page of each session, so the panel reads every message of the family. A step
-  // updates the session, so a new version reads them again, as v1 read its usage query after each step.
+  // The message store keeps only a page of each session, so the panel reads every message of the family. A finished
+  // step adds its usage to the session totals, so a change of the totals reads them again, as v1 read its usage
+  // query after each step. Other session updates (title, time) do not.
   const version = createMemo(() =>
     family()
-      .map((id) => `${id}:${data.session.get(id)?.time.updated ?? 0}`)
+      .map((id) => {
+        const session = data.session.get(id)
+        return `${id}:${session?.cost ?? 0}:${JSON.stringify(session?.tokens ?? {})}`
+      })
       .join(","),
   )
   const [result] = createResource(version, () =>
