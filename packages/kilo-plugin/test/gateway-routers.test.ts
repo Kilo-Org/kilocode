@@ -176,6 +176,41 @@ describe("routed model", () => {
   })
 })
 
+describe("routed client model stamp", () => {
+  test("a concurrent title request keeps the client route of the primary step", async () => {
+    const routes = new Map([["ses_1:primary", { provider: "local", model: "echo" }]])
+    const base = { sessionID: "ses_1", agent: "code", system: [], messages: [], tools: {} } as unknown as Parameters<
+      typeof GatewayRouters.route
+    >[0]
+    await Effect.runPromise(
+      GatewayRouters.route(
+        {
+          ...base,
+          kind: "title",
+          model: { providerID: Provider.ID.make("kilo"), id: Model.ID.make("kilo-auto/small") },
+        },
+        { account: undefined, routes, models: Effect.succeed([]), machineID: Effect.succeed(undefined) },
+      ),
+    )
+    const chunk = { id: "x", model: "echo", choices: [], usage: { prompt_tokens: 1, completion_tokens: 1 } }
+    const event = {
+      sessionID: "ses_1",
+      kind: "primary",
+      model: { providerID: Provider.ID.make("local"), id: Model.ID.make("echo") },
+      response: new Response(`data: ${JSON.stringify(chunk)}\n\n`, {
+        headers: { "content-type": "text/event-stream" },
+      }),
+    } as unknown as Parameters<typeof GatewayRouters.stamp>[0]
+    GatewayRouters.stamp(event, routes)
+    expect(await event.response.text()).toContain('"routedModelID":"echo"')
+
+    const other = { ...event, kind: "title", response: new Response("data: {}\n\n") } as typeof event
+    const original = other.response
+    GatewayRouters.stamp(other, routes)
+    expect(other.response).toBe(original)
+  })
+})
+
 describe("client entry from the catalog", () => {
   test("describes capabilities, pricing, and variants from the resolved model", () => {
     expect(KiloCustomRouter.clientEntry(GatewayRouters.clientModel(QWEN))).toEqual({

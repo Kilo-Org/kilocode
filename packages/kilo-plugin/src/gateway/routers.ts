@@ -16,7 +16,7 @@ type Route = SessionHooks["route"]
 
 export interface RouteInput {
   readonly account: KiloCustomRouter.Account | undefined
-  /** The client pick of each session's current request, for `stamp`. */
+  /** The client pick of each session's current request per kind, for `stamp`. */
   readonly routes: Map<string, { readonly provider: string; readonly model: string }>
   readonly models: Effect.Effect<readonly Model.Info[]>
   readonly machineID: Effect.Effect<string | undefined>
@@ -26,8 +26,10 @@ export interface RouteInput {
 // request to the picked model itself. Without a servable client entry the custom model ID goes to the Gateway.
 // v1 resolved the pick in session/llm.ts before the request was built.
 export function route(event: Route, input: RouteInput) {
+  // A title request runs next to the primary step of the same session, so each request kind has its own route.
+  const key = `${event.sessionID}:${event.kind}`
   return Effect.gen(function* () {
-    input.routes.delete(event.sessionID)
+    input.routes.delete(key)
     if (!KiloCustomRouter.parseModelID(event.model.id)) return
     const models = yield* input.models
     const servable = (entry: { readonly provider: string; readonly model: string }) =>
@@ -51,14 +53,14 @@ export function route(event: Route, input: RouteInput) {
     event.target = routed
     if (pick.kind !== "client") return
     if (input.routes.size >= 500) input.routes.delete(input.routes.keys().next().value!)
-    input.routes.set(event.sessionID, { provider: pick.provider, model: pick.model })
+    input.routes.set(key, { provider: pick.provider, model: pick.model })
   }).pipe(Effect.orDie)
 }
 
 // A client pick runs on the owner's own provider, so the served model cannot come from a Gateway response. Stamp
 // the response model on the usage, as the Gateway stream does, so the step records it as the routed model.
 export function stamp(event: SessionHooks["http.response"], routes: RouteInput["routes"]) {
-  const route = routes.get(event.sessionID)
+  const route = routes.get(`${event.sessionID}:${event.kind}`)
   if (!route || route.provider !== event.model.providerID || event.response.status >= 400) return
   event.response = KiloStream.transformResponse(event.response)
 }
