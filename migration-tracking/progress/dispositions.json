@@ -396,6 +396,16 @@
     "note": "Rebuild the cached agents when config changes. v2 rebuilds the agent state on every config change: ConfigAgentPlugin reloads on `config.updated`, and the plugin supervisor reloads the generation.",
     "by": "agents-plugin"
   },
+  "module:packages/opencode/test/kilocode/model-info-panel.types.test.ts": {
+    "state": "ported",
+    "note": "v1 asserted at type level that the SDK model fits ModelInfoPanel props. On v2 packages/tui/src/kilocode/components/model-info-panel.tsx takes the client ModelInfo type directly, and kilocode/dialog-model.tsx passes the model list entry, so `bun typecheck` in packages/tui checks the same contract. packages/tui/test/kilocode/dialog-model.test.tsx renders the panel with that type.",
+    "by": "kilo-model-picker"
+  },
+  "patch:unattributed:tui/component:902bf97fd9cb": {
+    "state": "dropped",
+    "note": "v1 hunk ranked the upstream 'Popular providers' rows of the model picker with rankProviderOptions while searching. Upstream v2 removed those rows from component/dialog-model.tsx (signed-out users reach integrations through the 'View all integrations' action, which opens DialogIntegration), so there is no provider row left to rank. Model search ranking is ported in packages/tui/src/kilocode/model-picker.ts.",
+    "by": "kilo-model-picker"
+  },
   "api:POST /kilocode/provider-usage/refresh": {
     "state": "ported",
     "note": "Served by the kilocode.provider-usage RPC method refresh (packages/schema/src/kilocode/provider-usage.ts Definition, handler in packages/kilo-plugin/src/provider-usage/index.ts): it bypasses the per-source cache and fetches every source again. The TUI /usage dialog calls it on ctrl+r. Round trip: packages/kilo-cli/test/provider-usage.test.ts.",
