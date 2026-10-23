@@ -82,6 +82,7 @@ describe("KiloRequests", () => {
         organizationID: "org-1",
         email: "user@example.test",
         kiloCredentials: true,
+        kiloEmptyToken: true,
         input: [
           { type: "item_reference", id: "ref_1" },
           { type: "message", id: "msg_1", role: "user", content: "hi" },

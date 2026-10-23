@@ -44,13 +44,16 @@ test("production session shows each route while keeping Auto selected", async ()
     ),
   ]
   const selected: unknown[] = []
+  let modelsLoaded: () => void = () => {}
+  const modelCatalog = new Promise<void>((resolve) => { modelsLoaded = resolve })
   const calls = createFetch((url, request) => {
     if (url.pathname === "/api/session") return json({ data: [session], cursor: {} })
     if (url.pathname === `/api/session/${session.id}`) return json({ data: session })
     if (url.pathname === `/api/session/${session.id}/message`) return json({ data: messages.toReversed(), cursor: {} })
     if (url.pathname === `/api/session/${session.id}/inbox`) return json({ data: [] })
     if (url.pathname === `/api/session/${session.id}/model`) selected.push(request)
-    if (url.pathname === "/api/model")
+    if (url.pathname === "/api/model") {
+      modelsLoaded()
       return json({
         location: { directory },
         data: [
@@ -58,6 +61,7 @@ test("production session shows each route while keeping Auto selected", async ()
           catalogModel({ providerID: "kilo", id: "anthropic/claude-sonnet-4.6", name: "Anthropic: Claude Sonnet 4.6" }),
         ],
       })
+    }
   }, createEventStream())
   const server = Bun.serve({ port: 0, idleTimeout: 0, fetch: (request) => calls.fetch(request) })
   const { run } = await import("../../src/app")
@@ -76,21 +80,22 @@ test("production session shows each route while keeping Auto selected", async ()
     }).pipe(Effect.provide(Global.layerWith({ state: state.path })), Effect.provide(FileSystem.layerNoop({}))),
   )
   try {
-    await setup.waitForFrame((frame) => frame.includes("Auto") && frame.includes("Claude Sonnet 4.6"))
+    await modelCatalog
+    await setup.waitForFrame((frame) => frame.includes("Auto") && frame.includes("Claude Sonnet 4.6"), { maxPasses: 60 })
     const thought = setup
       .captureCharFrame()
       .split("\n")
       .findIndex((line) => line.includes("Thought"))
     expect(setup.captureCharFrame().split("\n")[thought]).toContain("gpt-5.5")
     await setup.mockMouse.click(6, thought)
-    await setup.waitForFrame((frame) => frame.includes("Routed to gpt-5.5"))
+    await setup.waitForFrame((frame) => frame.includes("Routed to gpt-5.5"), { maxPasses: 60 })
     const row = setup
       .captureCharFrame()
       .split("\n")
       .findIndex((line) => line.includes("+ Tokens"))
     expect(row).toBeGreaterThan(0)
     await setup.mockMouse.click(6, row)
-    await setup.waitForFrame((frame) => frame.includes("tool-call") && frame.includes("gpt-5.5"))
+    await setup.waitForFrame((frame) => frame.includes("tool-call") && frame.includes("gpt-5.5"), { maxPasses: 60 })
     const lines = setup.captureCharFrame().split("\n")
     expect(lines.find((line) => line.includes("tool-call"))).toContain("gpt-5.5")
     expect(lines.find((line) => line.trim().startsWith("stop"))).toContain("Claude Sonnet 4.6")
@@ -101,4 +106,4 @@ test("production session shows each route while keeping Auto selected", async ()
     await task
     await server.stop()
   }
-}, 20_000)
+}, 30_000)

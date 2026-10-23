@@ -201,6 +201,7 @@ export interface Scope {
 
 export interface Result {
   readonly models: readonly Model[]
+  /** Missing credentials or a public retry, not an explicit empty credential. */
   readonly anonymous: boolean
 }
 
@@ -213,7 +214,7 @@ export interface Result {
 export function get(scope: Scope): Effect.Effect<Result, Failure> {
   return Effect.gen(function* () {
     const server = KiloServer.normalize(scope.server)
-    const organizationID = scope.token ? (scope.organizationID ?? null) : null
+    const organizationID = scope.organizationID ?? null
     const url = KiloServer.modelsUrl(server, organizationID)
     const headers: Record<string, string> = {
       ...KiloHeaders.provider({ version: scope.version ?? "unknown", organizationID }),
@@ -239,10 +240,9 @@ export function get(scope: Scope): Effect.Effect<Result, Failure> {
     )
     const parsed = decodeEnvelope(raw)
     if (Option.isNone(parsed)) return yield* Effect.fail({ kind: "schema" } satisfies Failure)
-    const anonymous = !scope.token
     return {
-      models: catalogModels(parsed.value, anonymous),
-      anonymous,
+      models: catalogModels(parsed.value, !scope.token),
+      anonymous: scope.token === undefined,
     }
   })
 }
