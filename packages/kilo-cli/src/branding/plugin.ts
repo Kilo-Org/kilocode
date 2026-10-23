@@ -1,9 +1,22 @@
 import type { BunPlugin } from "bun"
+import path from "node:path"
 import { KiloBranding } from "./text"
 
 export const brandingPlugin: BunPlugin = {
   name: "kilo-branding",
   setup(build) {
+    build.onLoad({ filter: /[/\\]packages[/\\]tui[/\\]src[/\\]logo\.ts$/ }, async (args) => {
+      const source = await Bun.file(args.path).text()
+      const declaration = /^export const logo = \{[\s\S]*?^\}/m
+      if (!declaration.test(source)) throw new Error("Kilo logo no longer matches the upstream module")
+      return {
+        loader: "ts",
+        contents: source.replace(
+          declaration,
+          `export { logo, compact, widths } from ${JSON.stringify(path.join(import.meta.dir, "logo-art.ts"))}`,
+        ),
+      }
+    })
     const files = Object.keys(KiloBranding.replacements)
       .map((file) => file.replaceAll(".", "\\.").replaceAll("/", "[/\\\\]"))
       .join("|")

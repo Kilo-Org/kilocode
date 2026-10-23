@@ -286,6 +286,7 @@
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@typescript/native": "catalog:",
+        "solid-js": "catalog:",
       },
     },
     "packages/kilo-gateway-core": {

@@ -42,7 +42,23 @@ export const replacements = {
     ["Uninstall OpenCode", "Uninstall Kilo"],
     ["shared by OpenCode versions and channels", "shared by Kilo versions and channels"],
   ],
-  "cli/src/services/update-preflight.tsx": [["Loading OpenCode", "Loading Kilo"], product],
+  "cli/src/services/update-preflight.tsx": [
+    ["Loading OpenCode", "Loading Kilo"],
+    product,
+    ['import { go } from "@opencode/tui/logo"', 'import { compact } from "@opencode/tui/logo"'],
+    ["const monogram = go.right.slice(1)", "const monogram = compact"],
+    [
+      '<box flexDirection="column">\n      <For each={monogram}>',
+      '<box flexDirection="column" flexShrink={0} width={Math.max(...monogram.map((line) => Bun.stringWidth(line)))}>\n      <For each={monogram}>',
+    ],
+  ],
+  "tui/src/component/logo.tsx": [
+    ['import { go, logo } from "../logo"', 'import { compact, logo, widths } from "../logo"'],
+    ["dimensions().width < 22", "dimensions().width < widths.split + 2"],
+    ["dimensions().width < 44", "dimensions().width < widths.full + 4"],
+    ["go.right.slice(1)", "compact"],
+    ["logo.left.slice(1)", "logo.left"],
+  ],
   "tui/src/util/error.ts": [commands, ["opencode.json", KiloConfigFiles.newFile]],
   "tui/src/util/error-details.ts": [
     ["this OpenCode component", "this Kilo component"],

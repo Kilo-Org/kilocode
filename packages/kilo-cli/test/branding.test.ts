@@ -6,6 +6,8 @@ import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import { brandingPlugin } from "../src/branding/plugin"
 import { KiloBranding } from "../src/branding/text"
+import { KiloLogo } from "../src/branding/logo-art"
+import { logo, go } from "../../tui/src/logo"
 
 const repo = path.resolve(import.meta.dir, "../../..")
 const entry = path.join(import.meta.dir, "fixtures/branding.ts")
@@ -101,6 +103,60 @@ function checkOnboarding(output: string, hosted: boolean) {
   expect(frame).toContain("Connect provider")
 }
 
+for (const hosted of [false, true]) {
+  for (const modern of [false, true]) {
+    test(`source logo layouts: ${hosted ? "Kilo" : "upstream"}, ${modern ? "modern" : "fallback"}`, async () => {
+      await using root = await temporary()
+      const fixture = path.join(import.meta.dir, "fixtures/logo-render.ts")
+      checkLogos(await run([process.execPath, fixture, modern ? "1" : "0"], root.path, hosted), hosted, modern)
+    }, 60_000)
+
+    test(`compiled logo layouts: ${hosted ? "Kilo" : "upstream"}, ${modern ? "modern" : "fallback"}`, async () => {
+      await using root = await temporary()
+      const outfile = path.join(root.path, process.platform === "win32" ? "logo.exe" : "logo")
+      const result = await Bun.build({
+        entrypoints: [path.join(import.meta.dir, "fixtures/logo-render.ts")],
+        plugins: [...(hosted ? [brandingPlugin] : []), createSolidTransformPlugin()],
+        compile: { outfile, autoloadBunfig: false, autoloadDotenv: false },
+        define: { KILO_BRANDING_COMPILED: "true" },
+      })
+      expect(result.success, result.logs.map(String).join("\n")).toBe(true)
+      checkLogos(await run([outfile, modern ? "1" : "0"], root.path, !hosted), hosted, modern)
+    }, 60_000)
+  }
+}
+
+function checkLogos(output: string, hosted: boolean, modern: boolean) {
+  const result = JSON.parse(output) as {
+    frames: { width: number; height: number; mode: string; frame: string }[]
+    assets: { logo: typeof logo; go: typeof go; compact?: string[]; widths?: { split: number; full: number } }
+  }
+  const art = KiloLogo.art({ KILO_UNICODE_LOGO: modern ? "1" : "0" })
+  expect(result.assets.go).toEqual(go)
+  expect(result.assets.logo).toEqual(hosted ? art.logo : logo)
+  expect(result.assets.compact).toEqual(hosted ? art.compact : undefined)
+  expect(result.assets.widths).toEqual(hosted ? art.widths : undefined)
+  expect(result.frames).toHaveLength(14)
+  for (const { width, height, frame } of result.frames) {
+    if (height < 12) {
+      expect(frame.trim()).toBe("")
+      continue
+    }
+    const compact = hosted ? art.compact : go.right.slice(1)
+    const split = hosted ? [...art.logo.left, ...art.logo.right] : [...logo.left.slice(1), ...logo.right]
+    const full = (hosted ? art.logo : logo).left.map(
+      (line, index) => `${line} ${(hosted ? art.logo : logo).right[index]}`,
+    )
+    const rows = width < (hosted ? 30 : 22) ? compact : width < (hosted ? 55 : 44) ? split : full
+    for (const line of rows) {
+      const visible = line.replaceAll("_", " ").replaceAll("^", "▀").replaceAll("~", "▀").replaceAll(",", "▄").trimEnd()
+      if (visible.trim()) expect(frame).toContain(visible)
+    }
+    for (const line of frame.split("\n")) expect(Bun.stringWidth(line.trimEnd())).toBeLessThanOrEqual(width)
+    if (hosted) expect(frame).not.toContain("█▀▀█ █▀▀█ █▀▀█ █▀▀▄")
+  }
+}
+
 for (const args of [["--help"], ["auth", "logout", "--help"]]) {
   test(`Kilo CLI help: ${args.join(" ")}`, async () => {
     await using root = await temporary()
@@ -172,6 +228,7 @@ async function run(command: string[], root: string, hosted: boolean, exitCode = 
     stdout: "pipe",
     stderr: "pipe",
     timeout: 15_000,
+    killSignal: "SIGKILL",
   })
   const [stdout, stderr, code] = await Promise.all([
     new Response(child.stdout).text(),
