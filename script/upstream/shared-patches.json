@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 42,
-    "files": 42,
-    "markedLines": 299,
+    "files": 44,
+    "files": 44,
+    "markedLines": 301,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -120,6 +120,14 @@
     "packages/tui/src/context/local.tsx": {
       "rung": 4,
       "seam": "Full TUI default selection (Gateway): call the Kilo-owned default-model loader, then use SDK model.default after CLI/config and recent models, within the existing user/agent selection precedence. Keep the first catalog model when the server supplies no valid default. Without a higher-priority selection, catalog readiness waits for the default request so --prompt cannot submit the catalog's first model before the recommendation arrives. Rungs 1 and 2 cannot reach LocalProvider's private fallback memo or readiness flag; the TUI plugin API has no model-default resolver, and the host runs in the server process. A generic seam would add a resolver registration API for this single SDK read instead of these small call-outs. Loading, refresh and location isolation stay in tui/src/kilocode/default-model.ts."
+    },
+    "packages/plugin/src/tui/context.ts": {
+      "rung": 3,
+      "seam": "Declare the `home.bottom` slot path in the public `SlotMap`, so a TUI plugin can render below the home prompt, as the v1 `home_bottom` slot allowed (Kilo Gateway news uses it). The v2 home screen publishes only `home.footer` and `home.footer.status`; a `before`/`after` claim on those places content at the bottom of the screen, not below the prompt. Rungs 1 and 2 cannot add a slot path: `SlotMap` is the closed public type of the plugin API. One generic line with no Kilo value."
+    },
+    "packages/tui/src/routes/home.tsx": {
+      "rung": 3,
+      "seam": "Render the `home.bottom` plugin slot directly below the home prompt (the v1 `home_bottom` position). Without a claim it renders nothing, so the upstream home screen is unchanged. Rungs 1 and 2 cannot add a slot boundary to the home route. One generic line with no Kilo value; the Kilo news banner lives in tui/src/kilocode/kilo-news.tsx."
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 3,

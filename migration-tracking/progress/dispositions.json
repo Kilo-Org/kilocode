@@ -413,12 +413,12 @@
   },
   "module:packages/opencode/src/kilocode/components/dialog-kilo-notifications.tsx": {
     "state": "ported",
-    "note": "packages/tui/src/kilocode/kilo-news.tsx DialogKiloNotifications: 'News' dialog with title, message and [actionText] link per item, close on enter, esc or the close button, on the v2 DialogLayout.",
+    "note": "packages/tui/src/kilocode/kilo-news.tsx DialogKiloNotifications: same layout as v1 ('News' header with esc, one padded row per item with '*' bullet, bold title, indented message, [actionText] link one row below, close button), close on enter, esc or click. Colors use the v2 semantic tokens for the v1 roles (info, primary, muted).",
     "by": "kilo-gateway-news"
   },
   "module:packages/opencode/src/kilocode/plugins/home-news.tsx": {
     "state": "ported",
-    "note": "packages/tui/src/kilocode/kilo-news.tsx kilocode.news TUI plugin, registered in packages/tui/src/plugin/builtins.ts. Palette command kilo.news.toggle (Hide news / Show news, only on home) persists the hidden flag. v2 has no home_bottom slot, so the banner uses the public before:'home.footer' slot claim; it shows above the home footer instead of directly below the prompt.",
+    "note": "packages/tui/src/kilocode/kilo-news.tsx kilocode.news TUI plugin, registered in packages/tui/src/plugin/builtins.ts. Same frame as v1 home_bottom (centered, maxWidth 75, paddingTop 2) through the new generic home.bottom slot below the home prompt (seam in packages/tui/src/routes/home.tsx and packages/plugin/src/tui/context.ts). Palette command kilo.news.toggle (Hide news / Show news, only on home) persists the hidden flag.",
     "by": "kilo-gateway-news"
   }
 }

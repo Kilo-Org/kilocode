@@ -7,7 +7,7 @@ import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js"
 import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
-import { DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
+import { useDialog } from "../ui/dialog"
 import { Link } from "../ui/link"
 
 type Notification = KiloGatewayRpc.Notification
@@ -39,23 +39,22 @@ export default Plugin.define({
         },
       ],
     }))
+    // Same frame as v1 `home_bottom`: centered below the prompt, at most 75 cells wide, two blank rows above.
     context.ui.slot({
-      before: "home.footer",
+      append: "home.bottom",
       render: () => (
-        <box width="100%" alignItems="center" paddingLeft={2} paddingRight={2}>
-          <box width="100%" maxWidth={75}>
-            <Show when={!store.hidden}>
-              <News
-                context={context}
-                read={store.read}
-                onRead={(ids) =>
-                  void update((draft) => {
-                    draft.read = [...new Set([...draft.read, ...ids])]
-                  })
-                }
-              />
-            </Show>
-          </box>
+        <box width="100%" maxWidth={75} alignItems="center" paddingTop={2} flexShrink={0}>
+          <Show when={!store.hidden}>
+            <News
+              context={context}
+              read={store.read}
+              onRead={(ids) =>
+                void update((draft) => {
+                  draft.read = [...new Set([...draft.read, ...ids])]
+                })
+              }
+            />
+          </Show>
         </box>
       ),
     })
@@ -85,33 +84,33 @@ function News(props: { context: Plugin.Context; read: readonly string[]; onRead:
   onMount(load)
   onCleanup(props.context.data.listen((event) => refresh.has(event.details.type) && load()))
 
-  // The fixed-height fallback keeps the prompt from moving when the news arrives.
+  // v1 `NotificationBanner`. The fixed-height fallback keeps the prompt from moving when the news arrives.
   return (
     <Show when={unread()[0]} fallback={<box height={3} />}>
       {(first) => (
         <box
           flexDirection="column"
-          paddingTop={1}
-          backgroundColor={hover() ? theme().background.action.primary.hovered : undefined}
+          maxWidth="100%"
+          backgroundColor={hover() ? theme().background.raised.base : undefined}
           onMouseOver={() => setHover(true)}
           onMouseOut={() => setHover(false)}
           onMouseUp={open}
         >
           <box flexDirection="row" gap={1}>
-            <text flexShrink={0} fg={theme().text.feedback.info.base}>
+            <text flexShrink={0} fg={hover() ? theme().text.action.primary.selected : theme().text.feedback.info.base}>
               ●
             </text>
-            <text wrapMode="none" fg={theme().text.base}>
+            <text wrapMode="none" fg={hover() ? theme().text.action.primary.selected : theme().text.base}>
               {first().title}
             </text>
             <Show when={unread().length > 1}>
-              <text flexShrink={0} fg={theme().text.muted}>
+              <text flexShrink={0} fg={hover() ? theme().text.action.primary.selected : theme().text.muted}>
                 ({unread().length} new)
               </text>
             </Show>
           </box>
           <box paddingLeft={2}>
-            <text fg={theme().text.muted} wrapMode="word">
+            <text fg={hover() ? theme().text.base : theme().text.muted} wrapMode="word">
               {first().message}
             </text>
           </box>
@@ -121,9 +120,11 @@ function News(props: { context: Plugin.Context; read: readonly string[]; onRead:
   )
 }
 
+// v1 `DialogKiloNotifications`: "News" header with esc, one padded row per item, close button.
 function DialogKiloNotifications(props: { notifications: readonly Notification[] }) {
   const dialog = useDialog()
   const theme = useTheme().surface("dialog")
+  const [closeHover, setCloseHover] = createSignal(false)
 
   Keymap.createLayer(() => ({
     mode: "modal",
@@ -131,45 +132,77 @@ function DialogKiloNotifications(props: { notifications: readonly Notification[]
   }))
 
   return (
-    <DialogLayout
-      header={<DialogHeader title="News" />}
-      footer={{ actions: { primary: [{ title: "close", key: "enter", onTrigger: () => dialog.clear() }] } }}
-      legacyFooter={
-        <box flexDirection="row" justifyContent="flex-end">
-          <box
-            paddingLeft={3}
-            paddingRight={3}
-            backgroundColor={theme.background.action.primary.focused}
-            onMouseUp={() => dialog.clear()}
-          >
-            <text fg={theme.text.action.primary.focused}>close</text>
-          </box>
+    <box paddingLeft={2} paddingRight={2} gap={1}>
+      <box flexDirection="row" justifyContent="space-between">
+        <text attributes={TextAttributes.BOLD} fg={theme.text.base}>
+          News
+        </text>
+        <box
+          paddingLeft={1}
+          paddingRight={1}
+          backgroundColor={closeHover() ? theme.background.raised.base : undefined}
+          onMouseOver={() => setCloseHover(true)}
+          onMouseOut={() => setCloseHover(false)}
+          onMouseUp={() => dialog.clear()}
+        >
+          <text fg={closeHover() ? theme.text.base : theme.text.muted}>esc</text>
         </box>
-      }
-    >
-      <scrollbox maxHeight={15}>
-        <box gap={1}>
+      </box>
+      <scrollbox maxHeight={15} flexGrow={1}>
+        <box gap={0} paddingBottom={1}>
           <For each={props.notifications}>
-            {(notification) => (
-              <box>
-                <text attributes={TextAttributes.BOLD} fg={theme.text.base}>
-                  {notification.title}
-                </text>
-                <text fg={theme.text.muted} wrapMode="word">
-                  {notification.message}
-                </text>
-                <Show when={notification.action}>
-                  {(action) => (
-                    <Link href={action().actionURL} fg={theme.text.action.primary.selected}>
-                      [{action().actionText}]
-                    </Link>
-                  )}
-                </Show>
-              </box>
-            )}
+            {(notification) => {
+              const [hover, setHover] = createSignal(false)
+              return (
+                <box
+                  gap={0}
+                  backgroundColor={hover() ? theme.background.raised.base : undefined}
+                  paddingTop={1}
+                  paddingBottom={1}
+                  paddingLeft={2}
+                  paddingRight={2}
+                  onMouseOver={() => setHover(true)}
+                  onMouseOut={() => setHover(false)}
+                >
+                  <box flexDirection="row" gap={1}>
+                    <text fg={hover() ? theme.text.action.primary.selected : theme.text.feedback.info.base}>*</text>
+                    <text
+                      attributes={TextAttributes.BOLD}
+                      fg={hover() ? theme.text.action.primary.selected : theme.text.base}
+                    >
+                      {notification.title}
+                    </text>
+                  </box>
+                  <box paddingLeft={2}>
+                    <text fg={hover() ? theme.text.base : theme.text.muted} wrapMode="word">
+                      {notification.message}
+                    </text>
+                    <Show when={notification.action}>
+                      {(action) => (
+                        <box flexDirection="row" marginTop={1}>
+                          <Link href={action().actionURL} fg={theme.text.action.primary.selected}>
+                            [{action().actionText}]
+                          </Link>
+                        </box>
+                      )}
+                    </Show>
+                  </box>
+                </box>
+              )
+            }}
           </For>
         </box>
       </scrollbox>
-    </DialogLayout>
+      <box flexDirection="row" justifyContent="flex-end" paddingBottom={1}>
+        <box
+          paddingLeft={3}
+          paddingRight={3}
+          backgroundColor={theme.background.action.primary.focused}
+          onMouseUp={() => dialog.clear()}
+        >
+          <text fg={theme.text.action.primary.focused}>close</text>
+        </box>
+      </box>
+    </box>
   )
 }
