@@ -195,6 +195,102 @@ describe("MCP config translation", () => {
 })
 
 describe("MCP config files", () => {
+  test.skipIf(process.platform === "win32").each([0o644, 0o640])(
+    "secret installs tighten existing config permissions %i using merged parameter metadata",
+    async (mode) => {
+      for (const metadata of [
+        { item: [{ ...param("VALUE"), secret: true }], option: [] },
+        { item: [], option: [{ ...param("VALUE"), secret: true }] },
+        { item: [{ ...param("VALUE"), secret: false }], option: [{ ...param("VALUE"), secret: true }] },
+      ]) {
+        const directory = await tmp()
+        const config = path.join(directory, "kilo2.json")
+        await fs.writeFile(config, "{}")
+        await fs.chmod(config, mode)
+        const written = await Installer.install({
+          entry: {
+            ...mcpEntry,
+            item: {
+              ...mcpEntry.item,
+              parameters: metadata.item,
+              options: [{ name: "default", prerequisites: [], parameters: metadata.option }],
+            },
+            payloads: ['{"command":"node","args":["{{VALUE}}"]}'],
+          },
+          skills: path.join(directory, "skills"),
+          config,
+          params: { VALUE: " private-value " },
+        })
+        expect((await Bun.file(config).json()).mcp.servers.demo.command).toEqual(["node", "private-value"])
+        expect((await fs.stat(config)).mode & 0o7777).toBe(0o600)
+        await Installer.uninstall({ id: "demo", ...written })
+        expect((await fs.stat(config)).mode & 0o7777).toBe(0o600)
+      }
+    },
+  )
+
+  test.skipIf(process.platform === "win32").each([0o644, 0o640])(
+    "non-secret installs preserve config permissions %i using merged parameter metadata",
+    async (mode) => {
+      for (const metadata of [
+        {
+          item: [{ ...param("TOKEN"), secret: true }],
+          option: [{ ...param("TOKEN"), secret: false }],
+          value: "public",
+        },
+        { item: [{ ...param("TOKEN", true), secret: true }], option: [], value: "   " },
+        { item: [param("TOKEN")], option: [], value: "public" },
+      ]) {
+        const directory = await tmp()
+        const config = path.join(directory, "kilo2.json")
+        await fs.writeFile(config, "{}")
+        await fs.chmod(config, mode)
+        const written = await Installer.install({
+          entry: {
+            ...mcpEntry,
+            item: {
+              ...mcpEntry.item,
+              parameters: metadata.item,
+              options: [{ name: "default", prerequisites: [], parameters: metadata.option }],
+            },
+            payloads: ['{"url":"https://example.com/mcp","headers":{"Authorization":"{{TOKEN}}"}}'],
+          },
+          skills: path.join(directory, "skills"),
+          config,
+          params: { TOKEN: metadata.value },
+        })
+        expect((await fs.stat(config)).mode & 0o7777).toBe(mode)
+        await Installer.uninstall({ id: "demo", ...written })
+        expect((await fs.stat(config)).mode & 0o7777).toBe(mode)
+      }
+    },
+  )
+
+  test.skipIf(process.platform === "win32")("secret installs tighten the actual config symlink target", async () => {
+    const directory = await tmp()
+    const config = path.join(directory, "kilo2.json")
+    const target = path.join(directory, "target.json")
+    await fs.writeFile(target, '{ // keep comments\n "model": "user/model" }')
+    await fs.chmod(target, 0o644)
+    await fs.symlink("target.json", config)
+    await Installer.install({
+      entry: {
+        ...mcpEntry,
+        item: { ...mcpEntry.item, parameters: [{ ...param("VALUE"), secret: true }] },
+        payloads: ['{"command":"node","args":["{{VALUE}}"]}'],
+      },
+      skills: path.join(directory, "skills"),
+      config,
+      params: { VALUE: "private-value" },
+    })
+    expect((await fs.stat(target)).mode & 0o7777).toBe(0o600)
+    expect((await fs.lstat(config)).isSymbolicLink()).toBe(true)
+    expect(await fs.readlink(config)).toBe("target.json")
+    expect(await fs.readFile(target, "utf8")).toContain("// keep comments")
+    expect(await fs.readFile(target, "utf8")).toContain('"model": "user/model"')
+    expect(await fingerprint(config, "demo")).toBe(await fingerprint(target, "demo"))
+  })
+
   test.skipIf(process.platform === "win32")(
     "install and uninstall preserve a config symlink, target settings and comments, and logical metadata",
     async () => {

@@ -235,7 +235,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
         return searched.entries.find((entry) => entry.item.registry === registry && entry.item.id === id)
       })
 
-    const local = (scope: KiloMarketplaceRpc.Scope) =>
+    const local = (scope: KiloMarketplaceRpc.Scope, migrate = true) =>
       Effect.gen(function* () {
         const entries = yield* Effect.tryPromise({
           try: (signal) =>
@@ -253,38 +253,61 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
             ),
           catch: (error) => new StorageError("fetch_failed", message(error)),
         })
+        const records = entries.map((entry) => entry.record)
+        if (!migrate) return records
         for (const entry of entries) {
-          if (manifestKey(entry.original) === manifestKey(entry.record)) continue
-          // Copy verified ownership first: either journal spelling remains recoverable if a later write fails.
-          yield* storage(
-            ctx.storage.set(manifestKey(entry.record), JSON.stringify(entry.record)),
-            "write_failed",
-            "Couldn't migrate marketplace ownership",
+          const key = manifestKey(entry.record)
+          const retirementKey = `retiring:${key}`
+          if (manifestKey(entry.original) !== key) {
+            // Preserve both trust anchors until the journal uses the new project identity.
+            yield* storage(
+              ctx.storage.set(key, JSON.stringify(entry.record)),
+              "write_failed",
+              "Couldn't migrate marketplace ownership",
+            )
+            const copied =
+              entry.original.project &&
+              (yield* Effect.tryPromise({
+                try: () => directoryExists(entry.original.project!),
+                catch: (error) => new StorageError("fetch_failed", message(error)),
+              }))
+            // Keep retirement intent outside the journal: rewriting it must not erase a failed cleanup's identity.
+            if (!copied)
+              yield* storage(
+                ctx.storage.set(retirementKey, JSON.stringify(entry.original)),
+                "write_failed",
+                "Couldn't save marketplace ownership retirement",
+              )
+            yield* Effect.tryPromise({
+              try: () => writeLocal(roots(scope), directory(scope), entry.record),
+              catch: (error) =>
+                new StorageError("write_failed", `Couldn't migrate marketplace journal: ${message(error)}`),
+            })
+          }
+          const retiring = yield* storage(
+            ctx.storage.get(retirementKey),
+            "fetch_failed",
+            "Couldn't read marketplace ownership retirement",
           )
-          yield* Effect.tryPromise({
-            try: () => writeLocal(roots(scope), directory(scope), entry.record),
-            catch: (error) =>
-              new StorageError("write_failed", `Couldn't migrate marketplace journal: ${message(error)}`),
-          })
-          // A copied project may still share the original's external config; do not revoke its ownership.
-          if (
-            entry.original.project &&
-            (yield* Effect.tryPromise({
-              try: () => directoryExists(entry.original.project!),
-              catch: (error) => new StorageError("fetch_failed", message(error)),
-            }))
-          )
-            continue
+          if (retiring === undefined) continue
           yield* storage(
-            ctx.storage.remove(manifestKey(entry.original)),
+            ctx.storage.remove(manifestKey(decodeRecord(retiring, retirementKey))),
             "write_failed",
             "Couldn't remove stale marketplace index",
           )
+          yield* storage(
+            ctx.storage.remove(retirementKey),
+            "write_failed",
+            "Couldn't clear marketplace ownership retirement; retry install or uninstall",
+          )
         }
-        return entries.map((entry) => entry.record)
+        return records
       })
 
-    const read = (input: { registry: string; kind: string; id: string; scope: KiloMarketplaceRpc.Scope }) =>
+    const read = (
+      input: { registry: string; kind: string; id: string; scope: KiloMarketplaceRpc.Scope },
+      migrate = true,
+    ) =>
       Effect.gen(function* () {
         const stored = yield* storage(
           ctx.storage.get(manifestKey(input)),
@@ -292,7 +315,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
           "Couldn't read marketplace installation",
         )
         const decoded = stored === undefined ? undefined : decodeRecord(stored, manifestKey(input))
-        const records = yield* local(input.scope)
+        const records = yield* local(input.scope, migrate)
         return records.find((record) => manifestKey(record) === manifestKey(input)) ?? decoded
       })
 
@@ -375,12 +398,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                 return yield* Effect.fail(
                   new McpError("not_found", `No ${input.kind} ${input.id} in ${input.registry}`),
                 )
-              const stored = yield* storage(
-                ctx.storage.get(manifestKey(input)),
-                "fetch_failed",
-                "Couldn't read marketplace installation",
-              )
-              const previous = stored === undefined ? undefined : decodeRecord(stored, manifestKey(input))
+              const previous = yield* read(input, false)
               return yield* Effect.tryPromise({
                 try: async () => ({
                   ...Installer.preview({ entry, option: input.option, params: input.params }),
@@ -632,14 +650,10 @@ async function readLocal(
         }
         const configs = KiloConfigFiles.writeCandidates(await resolveFile(directory), scope === "global")
         const originals = KiloConfigFiles.writeCandidates(await resolveFile(stored.directory), scope === "global")
-        const external = async (entry: Extract<KiloMarketplaceRpc.Resource, { config: string }>) => {
-          const destination = await resolveFile(entry.config)
-          if (scope === "global" || configs.includes(destination))
-            // Only a scope relocation can rebase ownership, never a change to the config symlink.
-            return stored.directory !== directory && entry.target && originals.includes(entry.target)
-              ? { ...entry, target: configs[originals.indexOf(entry.target)] }
-              : entry
-          // A repository journal is not a trust anchor for an external dotfiles/config symlink.
+        const ownership = async (
+          entry: Extract<KiloMarketplaceRpc.Resource, { config: string }>,
+          destination: string,
+        ) => {
           const owned = await trusted(stored.record)
           const resource = [...(owned?.resources ?? []), ...(owned?.pending ?? [])].find(
             (resource) =>
@@ -651,6 +665,22 @@ async function readLocal(
           if (!resource || !("config" in resource))
             throw new Error(`Marketplace recovery config target has no machine-local ownership: ${entry.config}`)
           return { ...entry, target: destination, fingerprints: resource.fingerprints }
+        }
+        const external = async (entry: Extract<KiloMarketplaceRpc.Resource, { config: string }>) => {
+          const destination = await resolveFile(entry.config)
+          if (scope === "global" || configs.includes(destination)) {
+            // Only a scope relocation can rebase ownership, never a change to the config symlink.
+            const rebased =
+              stored.directory !== directory && entry.target && originals.includes(entry.target)
+                ? { ...entry, target: configs[originals.indexOf(entry.target)] }
+                : entry
+            // Even an internal config must not promote a journal-supplied external target into trusted storage.
+            if (scope === "project" && rebased.target && !configs.includes(rebased.target))
+              return ownership(rebased, rebased.target)
+            return rebased
+          }
+          // A repository journal is not a trust anchor for an external dotfiles/config symlink.
+          return ownership(entry, destination)
         }
         const resource = async (entry: KiloMarketplaceRpc.Resource): Promise<KiloMarketplaceRpc.Resource> =>
           "path" in entry

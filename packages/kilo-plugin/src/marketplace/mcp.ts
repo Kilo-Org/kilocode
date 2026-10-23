@@ -148,11 +148,12 @@ export function write(input: {
   server: Mcp.ServerConfig
   replace: boolean
   fingerprints?: readonly string[]
+  secret?: boolean
 }) {
   return serialized(input.file, async (file) => {
     const text = await read(file)
     check(text, input.file, input.name, input.replace ? input.fingerprints : [])
-    await save(file, text, ["mcp", "servers", input.name], input.server)
+    await save(file, text, ["mcp", "servers", input.name], input.server, input.secret)
   })
 }
 
@@ -249,10 +250,10 @@ function entry(text: string, file: string, name: string) {
 
 // Edits keep comments and formatting. The new text goes to a temporary file that replaces the config in one rename,
 // so the config watcher never reads a half-written file.
-async function save(file: string, text: string, key: string[], value: unknown) {
+async function save(file: string, text: string, key: string[], value: unknown, secret = false) {
   const next = applyEdits(text, modify(text, key, value, { formattingOptions: { tabSize: 2, insertSpaces: true } }))
   const mode = await fs.stat(file).then(
-    (info) => info.mode & 0o7777,
+    (info) => (secret ? 0o600 : info.mode & 0o7777),
     (error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") return 0o600
       throw error

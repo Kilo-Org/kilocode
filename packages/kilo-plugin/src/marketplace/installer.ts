@@ -30,7 +30,8 @@ export async function install(input: {
   if (item.kind !== "skill" && item.kind !== "mcp") {
     throw new McpError("invalid_params", `Installing ${item.kind} items is not supported yet`)
   }
-  const server = item.kind === "mcp" ? mcp(input.entry, input.option, input.params ?? {}).server : undefined
+  const configuration = item.kind === "mcp" ? mcp(input.entry, input.option, input.params ?? {}) : undefined
+  const server = configuration?.server
   if (item.kind === "skill" && !input.entry.archive) throw new SkillError("invalid", `Skill ${item.id} has no archive`)
   const skills = []
   for (const companion of item.kind === "skill"
@@ -102,6 +103,9 @@ export async function install(input: {
         server,
         replace: true,
         fingerprints: allowed(resource),
+        secret: configuration?.parameters.some(
+          (parameter) => parameter.secret && input.params?.[parameter.key]?.trim(),
+        ),
       })
     }
   } catch (error) {
