@@ -135,6 +135,30 @@ test("requests the optional stream once when the server answers with a non-SSE b
   expect(seen.filter((method) => method === "GET").length).toBe(1)
 })
 
+test("requests the optional stream once when a same-origin redirect leads to a non-SSE body", async () => {
+  const seen: string[] = []
+  const transport = new StreamableHTTPClientTransport(new URL(ENDPOINT), {
+    fetch: probe(async (input, init) => {
+      const method = init?.method ?? "GET"
+      const url = new URL(input instanceof Request ? input.url : input)
+      if (method === "GET") {
+        seen.push(url.pathname)
+        if (url.pathname === "/mcp") return new Response(null, { status: 307, headers: { location: "/stream" } })
+        return get({ "content-type": "text/html" })
+      }
+      if (String(init?.body ?? "").includes("notifications/initialized")) return new Response(null, { status: 202 })
+      return json(initialize)
+    }, ENDPOINT),
+    reconnectionOptions: reconnection,
+  })
+
+  await handshake(transport)
+  await Bun.sleep(100)
+  await transport.close()
+
+  expect(seen).toEqual(["/mcp", "/stream"])
+})
+
 test("repeats the optional stream without the probe", async () => {
   const seen: string[] = []
   const transport = new StreamableHTTPClientTransport(new URL(ENDPOINT), {

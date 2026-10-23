@@ -10,10 +10,13 @@
  * The spec already answers "this endpoint has no stream" with `405`, and the SDK returns from the
  * probe cleanly on it, so normalize the response instead of patching the SDK.
  *
- * Normalization is scoped to the optional stream request only: a GET to the MCP endpoint with an
- * SSE `Accept` header. The same fetch wrapper also serves OAuth discovery, registration, and token
- * requests, and rewriting any of those would break authentication. When [endpoint] is omitted the
- * method and Accept checks still apply, which keeps the wrapper safe for other callers.
+ * Normalization is scoped to the optional stream request only: a GET on the MCP endpoint's origin
+ * with an SSE `Accept` header. The origin, not the full URL, is compared because the SDK follows
+ * same-origin redirects itself and calls this wrapper again with the redirect target, which would
+ * otherwise slip through. The same fetch wrapper also serves OAuth discovery, registration, and
+ * token requests, and rewriting any of those would break authentication; those never ask for an
+ * event stream, so the Accept check keeps them out. When [endpoint] is omitted the method and Accept
+ * checks still apply, which keeps the wrapper safe for other callers.
  */
 
 type Request = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -37,9 +40,10 @@ function acceptsEventStream(init: RequestInit | undefined, request: RequestInfo 
 }
 
 export const probe = (base: Request = fetch, endpoint?: string) => {
+  const origin = endpoint ? new URL(endpoint).origin : undefined
   return async (input: RequestInfo | URL, init?: RequestInit) => {
     const response = await base(input, init)
-    if (endpoint && requestUrl(input) !== endpoint) return response
+    if (origin && new URL(requestUrl(input)).origin !== origin) return response
     const method = init?.method ?? (input instanceof Request ? input.method : "GET")
     if (method !== "GET" || !response.ok) return response
     if (!acceptsEventStream(init, input)) return response
