@@ -101,6 +101,7 @@ export function Home() {
         <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1} flexShrink={0} position="relative">
           <Prompt ref={bind} placeholders={placeholder} disabled={forms().length > 0} />
         </box>
+        <Slot path="home.bottom" /* kilocode_change(gateway) seam - plugin slot below the home prompt */ />
         <box flexGrow={1} minHeight={0} />
       </box>
       <box width="100%" flexShrink={0}>
