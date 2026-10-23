@@ -27,6 +27,7 @@ export async function renderLocal(
     preferences?: Partial<ModelPreference>
     args?: Args
     fetch?: FetchHandler
+    waitForDefault?: boolean // kilocode_change(gateway)
   } = {},
 ) {
   const temporary = await tmpdir()
@@ -90,6 +91,7 @@ export async function renderLocal(
   )
   await waitForModel(() => local !== undefined && local.model.ready)
   await data.location.sync()
+  if (input.waitForDefault !== false) await waitForModel(() => local.model.catalogReady) // kilocode_change(gateway)
   return {
     ...setup,
     local,

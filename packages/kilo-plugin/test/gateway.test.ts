@@ -2,30 +2,39 @@ import { describe, expect } from "bun:test"
 import { KiloErrors } from "@kilocode/gateway-core"
 import { EmbeddingCatalog } from "@kilocode/gateway-core/embedding-catalog"
 import { fixture } from "@kilocode/gateway-core/testing"
-import { isRetryable } from "@opencode/ai"
+import { isRetryable, LLM } from "@opencode/ai"
+import { compileRequest } from "@opencode/ai/route/client"
 import { httpFailure } from "@opencode/ai/route/executor"
+import type { HttpPrepared } from "@opencode/ai/route/transport/http"
 import { Deferred, Effect, Fiber, Schema } from "effect"
+import { HttpClientRequest } from "effect/http"
 import { TestClock } from "effect/testing"
 import { Bus } from "@opencode/core/bus"
 import { Config } from "@opencode/core/config"
+import { ConfigProviderPlugin } from "@opencode/core/config/plugin/provider"
 import { Credential } from "@opencode/core/credential"
 import { Integration } from "@opencode/core/integration"
 import { Model } from "@opencode/core/model"
+import { ModelResolver } from "@opencode/core/model-resolver"
 import { Plugin } from "@opencode/core/plugin"
 import { PluginHooks } from "@opencode/core/plugin/hooks"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { ProviderPlugins } from "@opencode/core/plugin/provider"
 import { KiloPlugin } from "@opencode/core/plugin/provider/kilo"
+import { VerbosityPlugin } from "@opencode/core/plugin/verbosity"
 import { Provider } from "@opencode/core/provider"
 import { Rpc } from "@opencode/core/rpc"
 import { Agent } from "@opencode/schema/agent"
+import { Document, Info } from "@opencode/schema/config"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { Session } from "@opencode/schema/session"
 import { Global } from "@opencode/util/global"
 import { withEnv } from "../../core/test/fixture/env"
 import { testEffect } from "../../core/test/lib/effect"
 import { PluginTestLayer } from "../../core/test/plugin/fixture"
+import { KiloPostPlugins } from "../src"
 import { KiloGatewayPlugin } from "../src/gateway"
+import { GatewayOptions } from "../src/gateway/options"
 
 const it = testEffect(PluginTestLayer)
 const kilo = Provider.ID.make("kilo")
@@ -204,6 +213,7 @@ describe("KiloGatewayPlugin", () => {
             expect(yield* models.small(kilo)).toMatchObject({
               providerID: kilo,
               id: Model.ID.make("kilo-auto/small"),
+              settings: { kiloCredentials: false },
             })
           }),
         ),
@@ -237,6 +247,7 @@ describe("KiloGatewayPlugin", () => {
                 .map((item) => item.id),
             ).toEqual([Model.ID.make("anthropic/claude-sonnet-4.6"), Model.ID.make("kilo-auto/small")])
             const available = yield* models.available()
+            expect(available.find((item) => item.id === "kilo-auto/small")?.settings?.kiloCredentials).toBe(true)
             const sonnet = available.find(
               (item) => item.providerID === kilo && item.id === Model.ID.make("anthropic/claude-sonnet-4.6"),
             )
@@ -288,6 +299,7 @@ describe("KiloGatewayPlugin", () => {
             yield* credentials.remove(team.id)
             const signedOut = yield* eventually(providers.get(kilo), (provider) => provider?.activation === "enabled")
             expect(signedOut?.settings?.apiKey).toBe("anonymous")
+            expect((yield* models.get(kilo, Model.ID.make("kilo-auto/small")))?.settings?.kiloCredentials).toBe(false)
             expect(
               (yield* models.available())
                 .filter((item) => item.providerID === kilo)
@@ -428,6 +440,569 @@ describe("KiloGatewayPlugin", () => {
       (backend) => Effect.sync(() => backend[Symbol.dispose]()),
     ),
   )
+  it.live("uses an aliased model family once and preserves a custom agent system prompt", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) => withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "token" }, () =>
+        Effect.gen(function* () {
+          backend.state.models = { data: [{
+            id: "kilo-auto/frontier", name: "Claude alias", context_length: 128000,
+            opencode: { family: "claude", ai_sdk_provider: "anthropic" },
+          }] }
+          const host = yield* addPlugin()
+          yield* host.agent.transform((editor) => editor.update("code", (agent) => { agent.system = undefined }))
+          const models = yield* Model.Service
+          expect((yield* models.available()).find((model) => model.id === "kilo-auto/frontier")?.family).toBe(Model.Family.make("claude"))
+          expect((yield* host.agent.get({ agentID: Agent.ID.make("code") })).data.system).toBeUndefined()
+          const session = yield* host.session.create({ title: "Prompt precedence" })
+          const hooks = yield* PluginHooks.Service
+          const input = {
+            sessionID: session.id, agent: Agent.ID.make("code"),
+            model: { providerID: kilo, id: Model.ID.make("kilo-auto/frontier") },
+            messages: [], tools: {}, options: {},
+          }
+          const aliased = yield* hooks.trigger("session", "context", { ...input, system: [{ type: "text", text: "BASE" }] })
+          expect(aliased.system[0]?.text).toContain("match the surrounding comment density")
+          expect(aliased.system[0]?.text.split("# Code comments")).toHaveLength(2)
+          yield* host.agent.transform((editor) => editor.update("code", (agent) => {
+            agent.system = "CUSTOM-GATEWAY-SYSTEM"
+          }))
+          const custom = yield* hooks.trigger("session", "context", {
+            ...input, system: [{ type: "text", text: "CUSTOM-GATEWAY-SYSTEM" }],
+          })
+          expect(custom.system[0]?.text).toBe("CUSTOM-GATEWAY-SYSTEM")
+        }),
+      ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
+  it.live("retains credential presence when a personal 401 falls back to a free small-router catalog", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => {
+        const backend = fixture()
+        const proxy = Bun.serve({
+          hostname: "127.0.0.1",
+          port: 0,
+          fetch(request) {
+            if (request.headers.get("authorization") === "Bearer expired") return new Response(null, { status: 401 })
+            return fetch(new Request(new URL(new URL(request.url).pathname, backend.url), request))
+          },
+        })
+        return {
+          url: proxy.url.origin,
+          [Symbol.dispose]() {
+            proxy.stop(true)
+            backend[Symbol.dispose]()
+          },
+        }
+      }),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "expired" }, () =>
+          Effect.gen(function* () {
+            yield* addPlugin()
+            const models = yield* Model.Service
+            expect((yield* models.get(kilo, Model.ID.make("kilo-auto/small")))?.settings).toMatchObject({
+              apiKey: "anonymous",
+              kiloCredentials: true,
+            })
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
+  for (const status of [200, 503]) {
+    it.live(`selects the first allowed team model when defaults are ${status === 200 ? "empty" : "unavailable"}`, () =>
+      Effect.acquireUseRelease(
+        Effect.sync(() => fixture()),
+        (backend) =>
+          withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "token", KILO_ORG_ID: "selected" }, () =>
+            Effect.gen(function* () {
+              backend.state.teamModels = {
+                data: [
+                  { id: "anthropic/claude-X", name: "First allowed", context_length: 128000 },
+                  { id: "kilo-auto/frontier", name: "Personal fallback also allowed", context_length: 128000 },
+                ],
+              }
+              backend.state.teamDefaults = {}
+              backend.state.teamDefaultsStatus = status
+              yield* addPlugin()
+              const models = yield* Model.Service
+              expect(
+                (yield* models.available()).filter((model) => model.providerID === kilo).map((model) => model.id),
+              ).toEqual([Model.ID.make("anthropic/claude-X"), Model.ID.make("kilo-auto/frontier")])
+              expect(yield* models.default()).toMatchObject({
+                providerID: kilo,
+                id: Model.ID.make("anthropic/claude-X"),
+              })
+            }),
+          ),
+        (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+      ),
+    )
+  }
+
+  for (const dialect of [
+    {
+      provider: "anthropic",
+      model: "anthropic/claude-sonnet-4.6",
+      route: "anthropic-messages",
+      lowered: { thinking: { type: "adaptive" }, effort: "low" },
+      native: { thinking: { type: "disabled" }, effort: "high" },
+      sharedBody: { thinking: { type: "adaptive" }, output_config: { effort: "low" } },
+      nativeBody: { thinking: { type: "disabled" }, output_config: { effort: "high" } },
+    },
+    {
+      provider: "openai",
+      model: "openai/gpt-5.4",
+      route: "openai-responses",
+      lowered: { reasoningEffort: "high", textVerbosity: "low", forceReasoning: true },
+      native: { reasoningEffort: "low", textVerbosity: "high", forceReasoning: false, store: true },
+      sharedBody: { reasoning: { effort: "high" }, text: { verbosity: "low" }, store: false },
+      nativeBody: { reasoning: { effort: "low" }, text: { verbosity: "high" }, store: true },
+    },
+    {
+      provider: "openai-compatible",
+      model: "test/compatible",
+      route: "openai-compatible-chat",
+      lowered: { reasoningEffort: "high", textVerbosity: "low" },
+      native: { reasoningEffort: "low", textVerbosity: "high" },
+      sharedBody: { reasoning_effort: "high" },
+      nativeBody: { reasoning_effort: "low" },
+    },
+  ]) {
+    for (const reasoning of [true, false]) {
+      it.live(
+        `uses explicit ${dialect.provider} variants over reasoning_options with reasoning capability ${reasoning}`,
+        () =>
+          Effect.acquireUseRelease(
+            Effect.sync(() => {
+              const backend = fixture()
+              const gateway = Bun.serve({
+                hostname: "127.0.0.1",
+                port: 0,
+                async fetch(request) {
+                  if (request.method === "POST") return Response.json(await request.json())
+                  return fetch(new Request(new URL(new URL(request.url).pathname, backend.url), request))
+                },
+              })
+              return {
+                ...backend,
+                url: gateway.url.origin,
+                [Symbol.dispose]() {
+                  gateway.stop(true)
+                  backend[Symbol.dispose]()
+                },
+              }
+            }),
+            (backend) =>
+              withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "token" }, () =>
+                Effect.gen(function* () {
+                  const shared = { reasoning: { enabled: true, effort: "high" }, verbosity: "low" }
+                  backend.state.models = {
+                    data: [
+                      {
+                        id: dialect.model,
+                        name: "Backend variants",
+                        context_length: 128000,
+                        supported_parameters: ["tools", ...(reasoning ? ["reasoning"] : [])],
+                        opencode: {
+                          ai_sdk_provider: dialect.provider,
+                          reasoning_options: [{ type: "effort", values: ["medium"] }],
+                          variants: {
+                            default: shared,
+                            "": shared,
+                            "team-custom": shared,
+                            "native-custom": { ...shared, ...dialect.native },
+                            "deep#careful": { ...shared, ...dialect.native },
+                          },
+                        },
+                      },
+                    ],
+                  }
+                  const host = yield* addPlugin()
+                  const models = yield* Model.Service
+                  const model = yield* models.get(kilo, Model.ID.make(dialect.model))
+                  expect(model?.package).toBe(`@opencode/ai/providers/${dialect.provider}`)
+                  expect(model?.variants).toEqual([
+                    { id: Model.VariantID.make("team-custom"), settings: { ...shared, ...dialect.lowered } },
+                    { id: Model.VariantID.make("native-custom"), settings: { ...shared, ...dialect.native } },
+                    { id: Model.VariantID.make("deep#careful"), settings: { ...shared, ...dialect.native } },
+                  ])
+                  const session = yield* host.session.create({ title: "variant lowering" })
+                  const hooks = yield* PluginHooks.Service
+                  yield* Effect.gen(function* () {
+                    const resolver = yield* ModelResolver.Service
+                    for (const variant of [
+                      { id: "team-custom", body: dialect.sharedBody },
+                      { id: "native-custom", body: dialect.nativeBody },
+                      { id: "deep#careful", body: dialect.nativeBody },
+                    ]) {
+                      const resolved = yield* resolver.resolve({
+                        providerID: kilo,
+                        id: Model.ID.make(dialect.model),
+                        variant: Model.VariantID.make(variant.id),
+                      })
+                      expect(resolved).toBeDefined()
+                      const context = yield* hooks.trigger("session", "context", {
+                        sessionID: session.id,
+                        agent: Agent.ID.make("code"),
+                        model: resolved!.ref,
+                        system: [],
+                        messages: [],
+                        tools: {},
+                        options: {},
+                      })
+                      const input = LLM.request({
+                        model: resolved!.model,
+                        prompt: "Hello",
+                        providerOptions: context.options,
+                      })
+                      const request = yield* compileRequest(input)
+                      expect(request.route).toBe(dialect.route)
+                      expect(request.body).toMatchObject({ model: dialect.model, ...variant.body })
+                      const prepared: HttpPrepared<string> | { readonly http: HttpPrepared<string> } =
+                        yield* resolved!.model.route.prepareTransport(request.body, input)
+                      const outgoing = yield* hooks.trigger("session", "http.request", {
+                        sessionID: session.id,
+                        agent: Agent.ID.make("code"),
+                        model: resolved!.ref,
+                        kind: "primary",
+                        request: yield* HttpClientRequest.toWeb(
+                          "http" in prepared ? prepared.http.request : prepared.request,
+                        ),
+                      })
+                      expect(outgoing.request.headers.get("authorization")).toBe("Bearer token")
+                      const received = yield* Effect.promise(() => fetch(outgoing.request))
+                      expect(received.status).toBe(200)
+                      expect(yield* Effect.promise(() => received.json())).toMatchObject({
+                        model: dialect.model,
+                        ...variant.body,
+                      })
+                    }
+                  }).pipe(Effect.provide(ModelResolver.layer))
+                  expect((yield* models.get(kilo, Model.ID.make(dialect.model)))?.variants).toEqual(model?.variants)
+                }),
+              ),
+            (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+          ),
+      )
+    }
+  }
+
+  it.live(
+    "uses reasoning_options when explicit variants are empty and keeps non-reasoning models without variants",
+    () =>
+      Effect.acquireUseRelease(
+        Effect.sync(() => fixture()),
+        (backend) =>
+          withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "token" }, () =>
+            Effect.gen(function* () {
+              backend.state.models = {
+                data: [true, false].map((reasoning) => ({
+                  id: `test/empty-variants-${reasoning}`,
+                  name: "Empty explicit variants",
+                  context_length: 128000,
+                  supported_parameters: ["tools", ...(reasoning ? ["reasoning"] : [])],
+                  opencode: {
+                    ai_sdk_provider: "openai-compatible",
+                    variants: {},
+                    reasoning_options: [{ type: "effort", values: ["low", "high"] }],
+                  },
+                })),
+              }
+              yield* addPlugin()
+              const models = yield* Model.Service
+              expect(
+                (yield* models.get(kilo, Model.ID.make("test/empty-variants-true")))?.variants.map(
+                  (variant) => variant.id,
+                ),
+              ).toEqual([Model.VariantID.make("low"), Model.VariantID.make("high")])
+              expect((yield* models.get(kilo, Model.ID.make("test/empty-variants-false")))?.variants).toEqual([])
+            }),
+          ),
+        (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+      ),
+  )
+
+  it.live("uses high reasoning for Gemini 3 by default but lets the selected explicit variant override it", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => fixture()),
+      (backend) =>
+        withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "token" }, () =>
+          Effect.gen(function* () {
+            backend.state.models = {
+              data: ["openrouter", "openai-compatible"].map((provider) => ({
+                id: `google/gemini-3-${provider}`,
+                name: "Gateway Gemini 3",
+                context_length: 128000,
+                supported_parameters: ["tools", "reasoning"],
+                opencode: { ai_sdk_provider: provider, variants: { quiet: { reasoning: { effort: "low" } } } },
+              })),
+            }
+            const host = yield* addPlugin()
+            const session = yield* host.session.create({ title: "Gemini reasoning defaults" })
+            const models = yield* Model.Service
+            const hooks = yield* PluginHooks.Service
+            yield* Effect.gen(function* () {
+              const resolver = yield* ModelResolver.Service
+              for (const provider of ["openrouter", "openai-compatible"]) {
+                const id = Model.ID.make(`google/gemini-3-${provider}`)
+                expect((yield* models.get(kilo, id))?.settings).toMatchObject({ reasoning: { effort: "high" } })
+                for (const variant of [undefined, Model.VariantID.make("quiet")]) {
+                  const model = { providerID: kilo, id, ...(variant ? { variant } : {}) }
+                  const context = yield* hooks.trigger("session", "context", {
+                    sessionID: session.id,
+                    agent: Agent.ID.make("code"),
+                    model,
+                    system: [],
+                    messages: [],
+                    tools: {},
+                    options: {},
+                  })
+                  const effort = variant ? "low" : "high"
+                  expect(context.options).toMatchObject({ reasoning: { effort } })
+                  const resolved = yield* resolver.resolve(model)
+                  const request = yield* compileRequest(
+                    LLM.request({ model: resolved!.model, prompt: "Hello", providerOptions: context.options }),
+                  )
+                  expect(request.body).toMatchObject(
+                    provider === "openrouter" ? { reasoning: { effort } } : { reasoning_effort: effort },
+                  )
+                }
+              }
+            }).pipe(Effect.provide(ModelResolver.layer))
+          }),
+        ),
+      (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+    ),
+  )
+
+  for (const dialect of [
+    {
+      provider: "anthropic",
+      native: { thinking: { type: "adaptive" }, effort: "low" },
+      body: { thinking: { type: "adaptive" }, output_config: { effort: "low" } },
+    },
+    {
+      provider: "openai",
+      native: { reasoningEffort: "high", textVerbosity: "low", forceReasoning: true },
+      body: { reasoning: { effort: "high" }, text: { verbosity: "low" } },
+    },
+    {
+      provider: "openai-compatible",
+      native: { reasoningEffort: "high", textVerbosity: "low" },
+      body: { reasoning_effort: "high" },
+    },
+  ]) {
+    it.live(`lowers shared ${dialect.provider} config and event options through every session request hook`, () =>
+      Effect.acquireUseRelease(
+        Effect.sync(() => fixture()),
+        (backend) =>
+          withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "token" }, () =>
+            Effect.gen(function* () {
+              const id = Model.ID.make(`test/${dialect.provider}-config`)
+              backend.state.models = {
+                data: [
+                  {
+                    id,
+                    name: "Shared config",
+                    context_length: 128000,
+                    opencode: { ai_sdk_provider: dialect.provider },
+                  },
+                ],
+              }
+              const host = yield* addPlugin()
+              const session = yield* host.session.create({ title: "Shared config lowering" })
+              const providers = yield* Provider.Service
+              yield* providers.transform((editor) =>
+                editor.update(kilo, (provider) => {
+                  provider.settings = {
+                    ...provider.settings,
+                    reasoning: { enabled: true, effort: "high" },
+                    verbosity: "low",
+                  }
+                }),
+              )
+              const hooks = yield* PluginHooks.Service
+              yield* Effect.gen(function* () {
+                const resolver = yield* ModelResolver.Service
+                const resolved = yield* resolver.resolve({ providerID: kilo, id })
+                for (const hook of ["context", "compaction", "generate", "title"] as const) {
+                  const context = yield* hooks.trigger("session", hook, {
+                    sessionID: session.id,
+                    agent: Agent.ID.make("code"),
+                    model: { providerID: kilo, id },
+                    system: [],
+                    messages: [],
+                    tools: {},
+                    options: { temperature: 0.25 },
+                  })
+                  expect(context.options).toMatchObject({ temperature: 0.25, ...dialect.native })
+                  expect(context.options).not.toHaveProperty("apiKey")
+                  expect(context.options).not.toHaveProperty("baseURL")
+                  const request = yield* compileRequest(
+                    LLM.request({ model: resolved!.model, prompt: "Hello", providerOptions: context.options }),
+                  )
+                  expect(request.body).toMatchObject(dialect.body)
+                  const override = yield* hooks.trigger("session", hook, {
+                    sessionID: session.id,
+                    agent: Agent.ID.make("code"),
+                    model: { providerID: kilo, id },
+                    system: [],
+                    messages: [],
+                    tools: {},
+                    options: { reasoning: { enabled: false, effort: "medium" }, verbosity: "high" },
+                  })
+                  expect(override.options).toMatchObject(
+                    dialect.provider === "anthropic"
+                      ? { thinking: { type: "disabled" }, effort: "high" }
+                      : {
+                          reasoningEffort: "medium",
+                          textVerbosity: "high",
+                          ...(dialect.provider === "openai" ? { forceReasoning: false } : {}),
+                        },
+                  )
+                }
+              }).pipe(Effect.provide(ModelResolver.layer))
+            }),
+          ),
+        (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+      ),
+    )
+  }
+
+  for (const selection of [
+    { name: "provider shared high", provider: { verbosity: "high" }, expected: "high" },
+    {
+      name: "model shared medium",
+      provider: { verbosity: "high" },
+      model: { verbosity: "medium" },
+      expected: "medium",
+    },
+    { name: "variant shared high", model: { verbosity: "medium" }, variant: { verbosity: "high" }, expected: "high" },
+    { name: "native model low", model: { verbosity: "high", textVerbosity: "low" }, expected: "low" },
+    {
+      name: "native variant low",
+      model: { verbosity: "high" },
+      variant: { verbosity: "medium", textVerbosity: "low" },
+      expected: "low",
+    },
+    {
+      name: "model shared over provider native",
+      provider: { textVerbosity: "low" },
+      model: { verbosity: "high" },
+      expected: "high",
+    },
+    {
+      name: "variant shared over model native",
+      model: { textVerbosity: "low" },
+      variant: { verbosity: "medium" },
+      expected: "medium",
+    },
+    {
+      name: "explicit request native low",
+      model: { verbosity: "high" },
+      options: { textVerbosity: "low" },
+      expected: "low",
+    },
+    {
+      name: "explicit request native high",
+      model: { verbosity: "medium" },
+      options: { textVerbosity: "high" },
+      expected: "high",
+    },
+    {
+      name: "explicit request native over request shared",
+      options: { verbosity: "high", textVerbosity: "low" },
+      expected: "low",
+    },
+    {
+      name: "request shared over variant native",
+      variant: { textVerbosity: "low" },
+      options: { verbosity: "medium" },
+      expected: "medium",
+    },
+    { name: "unconfigured native default", expected: "low" },
+  ]) {
+    it.live(`keeps ${selection.name} with the real config and verbosity plugins`, () =>
+      Effect.acquireUseRelease(
+        Effect.sync(() => fixture()),
+        (backend) =>
+          withEnv({ ...env, KILO_API_URL: backend.url, KILO_API_KEY: "token" }, () =>
+            Effect.gen(function* () {
+              const id = Model.ID.make("openai/gpt-5.4")
+              backend.state.models = {
+                data: [
+                  {
+                    id,
+                    name: "Native verbosity precedence",
+                    context_length: 128000,
+                    opencode: { ai_sdk_provider: "openai" },
+                  },
+                ],
+              }
+              const plugins = yield* Plugin.Service
+              yield* VerbosityPlugin.Plugin.effect(yield* PluginHost.make(plugins))
+              const host = yield* addPlugin()
+              yield* ConfigProviderPlugin.Plugin.effect(host).pipe(
+                Effect.provide(
+                  Config.testLayer([
+                    new Document({
+                      type: "document",
+                      info: Schema.decodeUnknownSync(Info)({
+                        providers: {
+                          kilo: {
+                            settings: selection.provider ?? {},
+                            models: {
+                              [id]: {
+                                settings: selection.model ?? {},
+                                variants: [{ id: "configured", settings: selection.variant ?? {} }],
+                              },
+                            },
+                          },
+                        },
+                      }),
+                    }),
+                  ]),
+                ),
+              )
+              expect(KiloPostPlugins).toContain(GatewayOptions.Plugin)
+              yield* GatewayOptions.Plugin.effect(host)
+              const session = yield* host.session.create({ title: "Native verbosity precedence" })
+              const hooks = yield* PluginHooks.Service
+              const ref = { providerID: kilo, id, variant: Model.VariantID.make("configured") }
+              yield* Effect.gen(function* () {
+                const resolver = yield* ModelResolver.Service
+                const resolved = yield* resolver.resolve(ref)
+                for (const hook of ["context", "compaction", "generate", "title"] as const) {
+                  const event = yield* hooks.trigger("session", hook, {
+                    sessionID: session.id,
+                    agent: Agent.ID.make("code"),
+                    model: ref,
+                    system: [],
+                    messages: [],
+                    tools: {},
+                    options: { ...selection.options },
+                  })
+                  expect(event.options.textVerbosity).toBe(selection.expected)
+                  const request = yield* compileRequest(
+                    LLM.request({
+                      model: resolved!.model,
+                      prompt: "Hello",
+                      providerOptions: event.options,
+                    }),
+                  )
+                  expect(request.body).toMatchObject({ text: { verbosity: selection.expected } })
+                }
+              }).pipe(Effect.provide(ModelResolver.layer))
+            }),
+          ),
+        (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+      ),
+    )
+  }
 
   // #15244: a later start does not wait for the network when the exact scope has a stored catalog. The fresh catalog
   // drops the paid frontier model, and for the anonymous scope also the small model.
@@ -623,10 +1198,8 @@ describe("KiloGatewayPlugin", () => {
               { global: true },
             )
             expect(
-              (yield* eventually(
-                providers.get(kilo),
-                (provider) => provider?.headers?.["X-KILOCODE-ORGANIZATIONID"] === "selected",
-              ))?.headers,
+              (yield* eventually(providers.get(kilo), (provider) => provider?.headers?.["X-KILOCODE-ORGANIZATIONID"] === "selected"))
+                ?.headers,
             ).toEqual(headers("selected"))
 
             // A new login is a new connection, so its own default team applies again.
@@ -636,8 +1209,10 @@ describe("KiloGatewayPlugin", () => {
               value: oauth({ server: backend.url, organizationID: "selected", email: "b@example.test" }),
             })
             expect(
-              (yield* eventually(providers.get(kilo), (provider) => provider?.headers?.["X-KILOCODE-ORGANIZATIONID"] === "selected"))
-                ?.headers,
+              (yield* eventually(
+                providers.get(kilo),
+                (provider) => provider?.headers?.["X-KILOCODE-ORGANIZATIONID"] === "selected",
+              ))?.headers,
             ).toEqual(headers("selected"))
           }),
         ),

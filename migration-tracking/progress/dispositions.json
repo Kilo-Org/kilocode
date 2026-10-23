@@ -16,8 +16,8 @@
   },
   "module:packages/kilo-gateway/src/api/constants.ts": {
     "state": "ported",
-    "note": "The constants moved next to their use in packages/kilo-gateway-core/src: server.ts (API URL), headers.ts (header and env names, User-Agent), defaults.ts (default models), device.ts (poll interval, token lifetime), account.ts (anonymous key), models.ts (timeout, AI SDK providers). The event service URL goes with event-service/client.ts. PROMPTS is tracked by #15108. The signed-in fallback model in defaults.ts is kilo-auto/frontier, not kilo-auto/free as on v1.",
-    "by": "gateway-finish"
+    "note": "The constants moved next to their use in packages/kilo-gateway-core/src: server.ts (API URL), headers.ts (header and env names, User-Agent), defaults.ts (default models), device.ts (poll interval, token lifetime), account.ts (anonymous key), models.ts (timeout, AI SDK providers and backend prompt directive enum). packages/kilo-plugin/src/gateway/prompt.ts applies those directives through native session hooks, using current v2 templates and narrow model-specific adaptations. The event service URL goes with event-service/client.ts. The signed-in personal fallback remains v2's kilo-auto/frontier decision; unavailable team defaults select the first team model, as main provider/catalog.ts recommend does.",
+    "by": "gateway-model-parity"
   },
   "module:packages/kilo-gateway/src/api/embedding-models.ts": {
     "state": "ported",
@@ -251,8 +251,8 @@
   },
   "patch:gateway:0468bd6d3d9e": {
     "state": "dropped",
-    "note": "v1 config schema fields prompt, isFree and ai_sdk_provider for models. v2 does not read them from config: the Gateway catalog sets the dialect and isFree (models metadata RPC), and v2 has no prompt enum (#15108 tracks family overrides).",
-    "by": "gateway-finish"
+    "note": "v1 config schema fields prompt, isFree and ai_sdk_provider for models are not native v2 config fields. The Gateway catalog owns dialect, free status, and backend prompt directives; models.ts parses the prompt enum and kilo-plugin/src/gateway/prompt.ts applies it through session context hooks. Native v2 model package/settings/variant overlays remain configurable. This disposition does not claim that legacy config model.prompt is implemented.",
+    "by": "gateway-model-parity"
   },
   "patch:gateway:6f5d1599021c": {
     "state": "ported",

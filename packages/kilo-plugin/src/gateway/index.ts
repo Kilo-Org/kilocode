@@ -25,6 +25,7 @@ import { Config } from "@opencode/core/config"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Variant } from "@opencode/core/variant"
 import type { IntegrationOAuthMethodRegistration } from "@opencode/plugin/effect/integration"
+import type { SessionHooks } from "@opencode/plugin/effect/session"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Credential } from "@opencode/schema/credential"
 import { IntegrationID, IntegrationMethodID } from "@opencode/schema/integration-id"
@@ -36,6 +37,8 @@ import { Global } from "@opencode/util/global"
 import { KiloOrganizationModes } from "./modes"
 import { createHash, randomUUID } from "node:crypto"
 import { Clock, Duration, Effect, Fiber, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
+import { GatewayOptions } from "./options.js"
+import { GatewayPrompt } from "./prompt.js"
 
 // v2 adapter for the Kilo Gateway (issue #14991, PRs 1-3: login, teams, catalog authority, requests, and errors).
 // Kilo logic lives in @kilocode/gateway-core; this file maps it onto the v2 plugin API. The `kilocode.gateway` RPC
@@ -532,7 +535,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
         },
         models: catalog.models
           .filter((item) => !policy.hide_prompt_training_models || item.mayTrainOnYourPrompts !== true)
-          .map((item) => toModelInfo(item, baseURL, mergedHeaders)),
+          .map((item) => toModelInfo(item, baseURL, mergedHeaders, Boolean(catalog.account))),
         ...(sourceConnection ? { sourceConnection } : {}),
       })
     })
@@ -559,6 +562,41 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       const allowed = models.list(id).find((model) => model.enabled !== false && model.status === "active")
       if (allowed) models.default.set(id, allowed.id)
     })
+
+    const prepareOptions = (event: SessionHooks["context"] | SessionHooks["title"]) =>
+      Effect.gen(function* () {
+        const source = catalog.models.find((model) => model.id === event.model.id)
+        if (!source) return
+        const model = (yield* ctx.model.list()).data.find(
+          (model) => model.providerID === id && model.id === event.model.id,
+        )
+        const provider = (yield* ctx.provider.get({ providerID: id })).data
+        const variant = model?.variants.find((variant) => variant.id === event.model.variant)
+        Object.assign(
+          event.options,
+          GatewayOptions.request(source.aiSDKProvider, [
+            provider.settings,
+            model?.settings,
+            variant?.settings,
+            event.options,
+          ]),
+        )
+      }).pipe(Effect.catch(() => Effect.void))
+    yield* ctx.session.hook("context", prepareOptions, { providerID: id })
+    yield* ctx.session.hook("compaction", prepareOptions, { providerID: id })
+    yield* ctx.session.hook("generate", prepareOptions, { providerID: id })
+    yield* ctx.session.hook("title", prepareOptions, { providerID: id })
+
+    const preparePrompt = (event: SessionHooks["context"]) =>
+      Effect.gen(function* () {
+        const source = catalog.models.find((model) => model.id === event.model.id)
+        if (!source || (yield* ctx.agent.get({ agentID: event.agent })).data.system) return
+        const text = GatewayPrompt.render(source, Object.keys(event.tools))
+        if (text !== undefined && event.system[0]) event.system[0] = { ...event.system[0], text }
+      }).pipe(Effect.catch(() => Effect.void))
+    yield* ctx.session.hook("context", preparePrompt, { providerID: id })
+    yield* ctx.session.hook("compaction", preparePrompt, { providerID: id })
+    yield* ctx.session.hook("generate", preparePrompt, { providerID: id })
 
     // Per-request attribution headers (`X-KILOCODE-TASKID`, `X-KILOCODE-PARENT-TASKID`, `X-KILOCODE-PROJECTID`,
     // `X-KILOCODE-MACHINEID`, `x-kilocode-mode`, `User-Agent`, plus provider headers).
@@ -838,13 +876,21 @@ function toModelInfo(
   source: KiloModels.Model,
   baseURL: string,
   headers: Record<string, string>,
+  credentials: boolean,
 ): Model.Info {
   const modelID = Model.ID.make(source.id)
   // kilo_port(gateway:f983d8f993c8) v1 copied OpenRouter-shaped options to every SDK; v2 uses one dialect per model.
   const pkg = packageFor(source.aiSDKProvider)
   const settings = {
     baseURL,
+    ...(source.id === KiloDefaults.SMALL_MODEL ? { kiloCredentials: credentials } : {}),
     ...(pkg === "@opencode/ai/providers/openai-compatible" ? { provider: id } : {}),
+    ...(source.aiSDKProvider === "openai" ? { store: false } : {}),
+    // kilo_port(gateway:e19fc2acea57) Native OpenRouter includes usage; Gateway Gemini 3 defaults to high reasoning.
+    ...GatewayOptions.lower(
+      source.aiSDKProvider,
+      source.id.includes("gemini-3") ? { reasoning: { effort: "high" } } : {},
+    ),
   }
   const base: Model.Info = {
     id: modelID,
@@ -883,9 +929,19 @@ function toModelInfo(
   }
   return {
     ...base,
-    // kilo_port(gateway:59f57027c538) v1 used the server `opencode.variants`; the Gateway sends the same set as
-    // `reasoning_options`.
-    variants: source.reasoning ? Variant.resolve(base, source.reasoningOptions) : [],
+    // kilo_port(gateway:59f57027c538) Explicit backend variants take precedence, including custom names/options.
+    variants:
+      source.variants && Object.keys(source.variants).length > 0
+        ? Object.entries(source.variants)
+            // The native picker owns "default"; empty IDs cannot select a variant.
+            .filter(([name]) => name !== "" && name !== "default")
+            .map(([name, options]) => ({
+              id: Model.VariantID.make(name),
+              settings: GatewayOptions.lower(source.aiSDKProvider, options),
+            }))
+        : source.reasoning
+          ? Variant.resolve(base, source.reasoningOptions)
+          : [],
   }
 }
 
