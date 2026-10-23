@@ -8,18 +8,18 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**95 / 9829 cells done (1%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
+**99 / 9829 cells done (1%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
 | module | 32 | 3547 | 0.9% |
 | api | 0 | 39 | 0% |
-| patch | 40 | 3445 | 1.2% |
+| patch | 44 | 3445 | 1.3% |
 | test | 23 | 2798 | 0.8% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
-Landed by rung, for patch cells closed by a done-proof: 22 plugin, 3 host, 0 seam, 0 patch.
+Landed by rung, for patch cells closed by a done-proof: 26 plugin, 3 host, 0 seam, 0 patch.
 
 Ratchets: 25 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 42 shared patches by rung: 25 seam, 17 patch (`script/upstream/shared-patches.json`).
 
@@ -36,8 +36,8 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-20 | 87 | 9829 | 0.9% |
 | 2026-10-21 | 90 | 9829 | 0.9% |
 | 2026-10-22 | 93 | 9829 | 0.9% |
-| 2026-10-23 | 93 | 9829 | 0.9% |
-| now | 95 | 9829 | 1% |
+| 2026-10-23 | 95 | 9829 | 1% |
+| now | 99 | 9829 | 1% |
 
 ## Features
 
@@ -152,7 +152,7 @@ Hunks in shared upstream files with no `kilocode_change(<feature>)` tag, no Kilo
 | Area | Patches | Tests | Done | % |
 |---|---:|---:|---:|---:|
 | test |  | 0/821 | 0/821 | 0% |
-| session | 0/449 |  | 0/449 | 0% |
+| session | 4/449 |  | 4/449 | 0.9% |
 | tool | 0/237 |  | 0/237 | 0% |
 | cli | 0/216 |  | 0/216 | 0% |
 | server | 0/173 |  | 0/173 | 0% |
