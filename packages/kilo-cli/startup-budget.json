@@ -8,7 +8,8 @@
     "kilocode.gateway": 50,
     "kilo.agent": 50,
     "kilo.agent.ceiling": 50,
-    "kilocode.gateway.options": 10
+    "kilocode.gateway.options": 10,
+    "kilocode.gateway.opencode-free-tier": 10
   },
   "overhead": 60,
   "modules": 100
