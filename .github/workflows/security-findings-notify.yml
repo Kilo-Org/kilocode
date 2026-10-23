@@ -69,12 +69,19 @@ jobs:
             secrets='[]'
           fi
 
+          # Alert lists can exceed the OS argument size limit, so pass them as files.
+          tmp=$(mktemp -d)
+          printf '%s' "$dependabot" > "$tmp/dependabot.json"
+          printf '%s' "$code" > "$tmp/code.json"
+          printf '%s' "$secrets" > "$tmp/secrets.json"
+
           now=$(date -u +%s)
           matrix=$(jq -cn --argjson now "$now" \
             --argjson critDays "$CRIT_DAYS" --argjson highDays "$HIGH_DAYS" \
             --argjson medDays "$MEDIUM_DAYS" --argjson lowDays "$LOW_DAYS" \
             --arg min "$MIN_SEVERITY" \
-            --argjson dependabot "$dependabot" --argjson code "$code" --argjson secrets "$secrets" '
+            --slurpfile dependabot "$tmp/dependabot.json" --slurpfile code "$tmp/code.json" --slurpfile secrets "$tmp/secrets.json" '
+            ($dependabot[0]) as $dependabot | ($code[0]) as $code | ($secrets[0]) as $secrets |
             def rank: {critical: 4, high: 3, medium: 2, low: 1}[.] // 0;
             def days: if . == "critical" then $critDays elif . == "high" then $highDays elif . == "medium" then $medDays else $lowDays end;
             def item($kind; $number; $sev; $id; $summary; $url; $created):
