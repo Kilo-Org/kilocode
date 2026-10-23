@@ -68,14 +68,13 @@ Each unit has exactly one surface.
 ### E0 Foundation
 
 - **Why:** the clean base has no Kilo package at all (`git ls-tree HEAD packages/` lists only upstream packages). Every other epic needs a host, a registration pattern and a working CI signal first.
-- **What:** Kilo host/composition package; Kilo RPC and plugin scaffolding; re-landed Kilo `AGENTS.md`, rewritten fork conventions and migration-tracking index; Kilo CI lane on Kilo's `origin/v2`; disable or neutralize upstream workflows and publish targets that must not run from the fork; v1 reference fixtures for the runtime-policy units.
+- **What:** Kilo host/composition package; Kilo RPC and plugin scaffolding; re-landed Kilo `AGENTS.md`, rewritten fork conventions and migration-tracking index; Kilo CI lane on Kilo's `origin/v2`; disable or neutralize upstream workflows and publish targets that must not run from the fork.
 - **Exit criteria:**
   - A Kilo host package builds and starts an isolated server through public seams only, verified by a service smoke test.
   - One sample Kilo RPC, registered as a plugin, passes a round-trip test through the generated client.
   - A Kilo-owned workflow runs `bun run check` and package tests on PRs to `origin/v2`, with results compared to `pinned-v2-baseline.md`.
   - No upstream publish or deploy workflow can publish from the fork, verified by reading each workflow's trigger and repository guard.
   - `AGENTS.md` and `v2-fork-conventions.md` name the Kilo integration branch `origin/v2`, BASE and the AGENTS branch rules.
-  - v1 reference fixtures for offline wait, overflow, slow snapshot and snapshot retention are committed and replayable.
 
 ### E1 Core and identity
 
@@ -92,9 +91,9 @@ Each unit has exactly one surface.
 ### E2 Runtime behavior
 
 - **Why:** V1 policy on top of generic runtime services must survive, and the IDE tracks consume it.
-- **What:** session policy (offline wait, overflow, snapshots, deletion, drain, subagents, wakeups, goals, retention, recall); agents, plan, review, commands, skills, rules; Kilo tools and permission policy; memory, indexing, sandbox, telemetry; MCP deltas and marketplace; board, background processes, worktree runtime, Agent Manager host contract; generation endpoints; Atomic Chat provider.
+- **What:** session policy (deletion, drain, subagents, wakeups, goals, retention, recall); agents, plan, review, commands, skills, rules; Kilo tools and permission policy; memory, indexing, sandbox, telemetry; MCP deltas and marketplace; board, background processes, worktree runtime, Agent Manager host contract; generation endpoints; Atomic Chat provider.
 - **Exit criteria:**
-  - Every E2 unit with gate G1 passes its acceptance against the E0 v1 reference fixtures where one exists.
+  - Every E2 unit with gate G1 passes its acceptance.
   - Every native-equivalence claim in the inventory is backed by a test covering scope, errors, cancellation, persistence and presentation.
   - G2-gated E2 units (message deletion, Agent Manager contract, generation endpoints, removal callers) expose public contracts that the generated client consumes.
   - No client package imports Core or Server internals (L3 ratchet count is 0 for client→Core/Server).

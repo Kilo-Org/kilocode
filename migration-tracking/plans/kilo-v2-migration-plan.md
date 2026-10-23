@@ -116,9 +116,9 @@ Epic IDs follow discovery so register rows stay traceable; they are presented in
 
 ### E0 Foundation (pre-gate)
 
-- **Outcome:** a Kilo host, a Kilo plugin/RPC pattern, a Kilo CI signal and v1 reference fixtures exist on the clean base, and no upstream workflow can publish from the fork.
+- **Outcome:** a Kilo host, a Kilo plugin/RPC pattern and a Kilo CI signal exist on the clean base, and no upstream workflow can publish from the fork.
 - **Why:** the base has no Kilo package at all. Every other epic needs these first.
-- **Exit criteria:** the host starts an isolated server through public seams only (service smoke test); one sample Kilo RPC round-trips through the generated client; a Kilo-owned workflow runs `bun run check` and package tests on PRs to `origin/v2`, compared against the pinned baseline; every upstream publish or deploy workflow is disabled or guarded; Kilo `AGENTS.md` and fork conventions name the current base and branch rules; v1 reference fixtures for offline wait, overflow, slow snapshot and snapshot retention replay on the base.
+- **Exit criteria:** the host starts an isolated server through public seams only (service smoke test); one sample Kilo RPC round-trips through the generated client; a Kilo-owned workflow runs `bun run check` and package tests on PRs to `origin/v2`, compared against the pinned baseline; every upstream publish or deploy workflow is disabled or guarded; Kilo `AGENTS.md` and fork conventions name the current base and branch rules.
 - **Gate:** blocks everything.
 - **Depends on:** the admin task for Actions permissions (CI lane only).
 - **Top risks:** upstream's test workflow runs on every pull request, so it will run on fork PRs before the Kilo lane exists; branch protection is convention-only until an admin acts.
@@ -136,7 +136,7 @@ Epic IDs follow discovery so register rows stay traceable; they are presented in
 
 - **Outcome:** v1 runtime policy runs on v2 seams: session policy, agents and plan, commands and skills, Kilo tools and permissions, the memory, indexing, sandbox and telemetry engines, MCP and marketplace, agent coordination, generation endpoints.
 - **Why:** this is the behavior users notice, and the IDE tracks consume it through public contracts.
-- **Exit criteria:** every G1 unit passes acceptance against the E0 fixtures where one exists; every native-equivalence claim has a test covering scope, errors, cancellation, persistence and presentation; the G2 units expose public contracts that the generated client consumes; no client package imports Core or Server internals.
+- **Exit criteria:** every G1 unit passes its acceptance; every native-equivalence claim has a test covering scope, errors, cancellation, persistence and presentation; the G2 units expose public contracts that the generated client consumes; no client package imports Core or Server internals.
 - **Gate:** G1 (message deletion, Agent Manager control plane and generation endpoints are G2).
 - **Depends on:** E0; parts of E1 (config, catalog, identity).
 - **Top risks:** nearly every area is MATERIAL or NEW, so donor reuse is low; agent coordination alone grew by about 55k lines on v1; this is the largest epic (30 units).
@@ -239,7 +239,6 @@ flowchart LR
   subgraph Spine["Runtime spine"]
     H["E0 host and RPC"] --> AU["E1 Gateway auth"] --> CA["E1 catalog"] --> UI["E1 usage and E9 sidebar"]
     H --> SE["E2 session core"] --> CO["E2 subagents, board, wakeups"]
-    FX["E0 v1 fixtures"] --> SP["E2 session policy"]
   end
   subgraph Ship["Distribution spine"]
     CI["E0 CI lane"] --> BP["E3 build pipeline"] --> PT["E3 preview train"] --> CN["E3 G1 canary"]
@@ -439,13 +438,11 @@ Each epic section has workstream tables, one row per unit, and one dependency di
 | U-E0-02 | Kilo RPC and plugin scaffolding (`packages/schema/src/kilocode`, plugin `define`, generated client) | #15173 | pre-gate | U-E0-01 | native mechanism | n/a | yes H | 1 plugin | One sample Kilo RPC registered as a plugin round-trips through the generated client; `bun run generate` leaves no drift | done: #15261 merged (`68536a63da`, 2026-10-19). The Gateway RPC contract is in `packages/schema/src/kilocode/gateway.ts` and the adapter in `packages/kilo-plugin/src/gateway/`; `packages/kilo-cli/test/rpc.test.ts` calls it through the generated promise client against a host-booted server; `bun run generate` leaves no drift; shared patches 30 files, 305 marked, 51 unmarked before, 29, 304, 50 after |
 | U-E0-03 | Re-land Kilo `AGENTS.md`; rewrite `v2-fork-conventions.md` and `script/v2-baseline.ts` (README, banners and drops done by this plan, Appendix D) | #15175 | pre-gate | — | needs-port | n/a | no | n/a | `AGENTS.md` names the integration branch `origin/v2`, BASE and branch rules; conventions carry the base pin, no-prefix branches, `services/www`; `v2-baseline.ts` runs at BASE (pin-is-ancestor assertion, mirrors `check.yml`/`test.yml`); fork conventions carry the plugin-first rung table (landed with this change) | done: #15259 merged (`d011f04bdf`, 2026-10-20). Root `AGENTS.md` carries one marked Kilo block (rung 4, `shared-patches.json` entry) naming `origin/v2`, BASE through `pinned()` and the branch rules; `v2-fork-conventions.md` rewritten without the stale banner; `v2-baseline.ts` takes the pin from `pinned()`, asserts ancestry and mirrors CI |
 | U-E0-04 | Kilo CI lane on Kilo's `origin/v2`; neutralize upstream publish/deploy workflows, `sdks/vscode` publishing, hosted web properties, CI images | #15176 | pre-gate | admin: Actions permissions | needs-port | n/a | no | n/a | Kilo workflow runs `bun run check` and package tests on PRs to `origin/v2`, compared with `pinned-v2-baseline.md`; each upstream publish/deploy workflow disabled or repository-guarded, verified by reading triggers | done (evidence, 2026-10-20): only `check.yml`, `test.yml` and `kilo-v2.yml` remain. All three run on every pull request and on pushes to `v2`; `check.yml` runs `bun run check`, `test.yml` and `kilo-v2.yml` run the package tests. The 28 upstream workflows are deleted (#14996 via #15016), and `script/check-workflows.ts` fails CI on a new one. No remaining workflow publishes or deploys: `kilo-v2.yml` builds artifacts only (#14997), `test.yml` runs `publish.ts --dry-run`, and the e2e job is disabled (`if: false`). All three are green on the last two pushes to `v2` (`68536a63da`, `d011f04bdf`). Known failures are compared through `pinned-v2-baseline.md` and `v2-baseline.ts`, which mirrors CI (#15259). The comparison is a manual procedure by design, not a CI step: a failing check is compared with the baseline and with `origin/v2` before it is attributed to a change. Evidence: [#15176 comment](https://github.com/Kilo-Org/kilocode/issues/15176#issuecomment-6281565888) |
-| U-E0-05 | v1 reference fixtures: offline wait, overflow, slow snapshot, snapshot retention (data at v1 target, harness on BASE) | #15177 | pre-gate | U-E0-01 | needs-port | M | partial M | n/a | Fixtures generated through v1 writer methods at `fb7e96ed`, each isolating HOME/XDG itself; harness on BASE replays them | todo |
 
 ```mermaid
 flowchart LR
   HQ["Q-HOST-01"]:::ext -.-> E0_01["U-E0-01 host"]
   E0_01 --> E0_02["U-E0-02 RPC scaffolding"]
-  E0_01 --> E0_05["U-E0-05 v1 fixtures"]
   E0_03["U-E0-03 conventions"]
   ADM["admin: Actions permissions"]:::ext -.-> E0_04["U-E0-04 CI lane"]
   classDef ext stroke-dasharray: 4 4
@@ -485,10 +482,6 @@ Every E2 unit except U-E2-18, -21, -28 (SMALL) and U-E2-29 (EMPTY) re-derives be
 
 | Unit | Title | Issue | Gate | Deps | Delta | Stale | Donor | Acceptance | Status |
 |---|---|---|---|---|---|---|---|---|---|
-| U-E2-01 | Offline network wait and reconnect | #14371 | G1 | U-E0-05 | needs-port | M | no | Fixture: waits past the native ~84 s retry bound and resumes; connection-reset retry (v1 #14893) | todo |
-| U-E2-02 | Overflow accounting, `threshold_percent`, chunked compaction, payload recovery | #14372 | G1 | U-E0-05 | partial | M | no | Fixture: compaction triggers at v1 thresholds; chunked compaction and payload recovery match v1 | todo |
-| U-E2-03 | Slow-snapshot interaction policy and UI | #14373 | G1 | U-E0-05 | partial | M | no | Fixture: question after the v1 timeout; persisted disable honored | todo |
-| U-E2-04 | Snapshot seed/materialize, locking, cleanup, retention, restore/diff | #14374 | G1 | U-E0-05 | partial | M | no | Fixture: seed, lock, cleanup and retention match v1; restore and diff correct | todo |
 | U-E2-05 | Message deletion runtime operation, Kilo revert, stable ordering | #14380 | G2 | U-E0-02, Q-G2-05 | needs-port | M | no | Public delete operation (semantics per Q-G2-05) in the generated client; ordering stable after delete and revert | todo |
 | U-E2-06 | Session core verification: drain/control, prompt queue and steer, title, processing hardening | new | G1 | U-E0-01 | partial | M + NEW | no | Native-equivalence tests (scope, errors, cancellation, persistence, presentation) for drain, stop/resume, queue dismissal, steer labels, bounded title, processing fixes | todo |
 | U-E2-07 | Subagent resume, background subagents (default on), steering | new | G1 | U-E2-06 | partial | M | no | Background subagents on by default with kill switch, survive stop; resume hint; steering into subagents | todo |
@@ -536,7 +529,7 @@ Every E2 unit except U-E2-18, -21, -28 (SMALL) and U-E2-29 (EMPTY) re-derives be
 |---|---|---|---|---|---|---|---|---|---|
 | U-E2-24 | Shared agent board / swarm (default on) | new | G1 | U-E2-07 | needs-port | NEW | partial M | Board keyed by root session; recipients as v1; default on with kill switch | todo |
 | U-E2-25 | Background processes tool, sidebar data, `/process`, on persistent PTY | new | G1 | U-E0-02 | needs-port | M | partial M | Tool and `/process` as v1; a stale `running` row shows no PID after restart | todo |
-| U-E2-26 | Worktree runtime: family detection, teardown, Kilo layout, VCS | new | G1 | U-E0-01 | partial | M | no | Family detection and teardown as v1; `.kilo/worktrees` layout | todo |
+| U-E2-26 | Worktree runtime: family detection, teardown, Kilo layout, VCS, snapshot cleanup | new | G1 | U-E0-01 | partial | M | no | Family detection and teardown as v1; `.kilo/worktrees` layout; teardown removes the snapshot store of the deleted worktree, and old snapshot data is pruned (the native v2 store in `core/src/snapshot.ts` only grows) | todo |
 | U-E2-27 | Agent Manager host contract and control plane (ask/reply/reject, protection) | #14391 | G2 | U-E2-26, Q-G2-06 | needs-port | M | partial L | Public control-plane contract (per Q-G2-06) in the generated client, incl. multi-project routing | todo |
 
 ### Workstream: generation and providers
@@ -550,15 +543,10 @@ Every E2 unit except U-E2-18, -21, -28 (SMALL) and U-E2-29 (EMPTY) re-derives be
 flowchart TD
   E0_01["U-E0-01"]:::ext
   E0_02["U-E0-02"]:::ext
-  E0_05["U-E0-05"]:::ext
   E1_01["U-E1-01"]:::ext
   E1_04["U-E1-04"]:::ext
   E1_07["U-E1-07"]:::ext
   subgraph SP["Session policy"]
-    E2_01["01 offline wait"]
-    E2_02["02 overflow"]
-    E2_03["03 slow snapshot"]
-    E2_04["04 snapshots"]
     E2_05["05 message deletion G2"]:::g2
     E2_06["06 session core"]
     E2_07["07 subagents"]
@@ -598,7 +586,6 @@ flowchart TD
     E2_28["28 generation G2"]:::g2
     E2_29["29 Atomic Chat"]
   end
-  E0_05 --> E2_01 & E2_02 & E2_03 & E2_04
   E0_01 --> E2_06 & E2_20 & E2_26
   E0_02 --> E2_05 & E2_11 & E2_12 & E2_16 & E2_18 & E2_19 & E2_22 & E2_25 & E2_28
   E2_06 --> E2_07 & E2_08
@@ -928,10 +915,7 @@ flowchart LR
 | #14022 | Tracker → E7 | |
 | #14023 | Tracker → U-E10-01 | |
 | #14024 | Tracker → U-E10-02 | |
-| #14371 | U-E2-01 | |
-| #14372 | U-E2-02 | |
-| #14373 | U-E2-03 | |
-| #14374 | U-E2-04 | |
+| #14374 | U-E2-26 | Snapshot cleanup part only |
 | #14375 | U-E9-09 | |
 | #14376 | U-E11-04 | |
 | #14377 | U-E9-10 | |
@@ -998,7 +982,6 @@ flowchart LR
 | #15173 | U-E0-02 | |
 | #15175 | U-E0-03 | |
 | #15176 | U-E0-04 | |
-| #15177 | U-E0-05 | |
 | #15229 | U-E0-01 + placement automation (`v2-host-strategy.md` §9 step 2) | Work merged in #15232 |
 | #15230 | Progress map adopts the host strategy (`v2-host-strategy.md` §9 step 2b; feeds U-L3-01) | Work merged in #15231 |
 | #15244 | E0 foundation: Kilo plugin startup ratchet and Gateway startup (startup part of U-E9-01) | Work merged in #15246, #15248 |
@@ -1015,7 +998,6 @@ Issues that map to more than one unit (#14378, #14391, #14395, #14399, #14413, #
 | N2 ratchet | U-L3-01 |
 | N3 sync automation and e2e lane | U-L1-01 + U-E0-04 |
 | N4 delta sweep | U-L2-01 |
-| N5 v1 reference fixtures | U-E0-05 |
 | N6a package assessment | U-E9-14 (`kilo-web-ui`), U-E8-03 (`kilo-console` retired, docs deploy), U-L5-01 (docs content) |
 | N6b package imports onto the old branch | Not needed as a unit: `kilo-jetbrains` lands in U-E7-02, `kilo-docs` in U-E8-03 |
 | N7 progress-plan and issue alignment | Not needed: this plan replaces the progress plan; issue-body updates are a user follow-up |

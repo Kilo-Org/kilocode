@@ -257,7 +257,6 @@ It was read, not run. Findings:
 | 118 | `main` changes reach v2 via dispositions `not-applicable / already-fixed / port / defer`; re-implement by default |
 | 119 | Native equivalence is verified on scope, errors, cancellation, persistence and presentation (now in the discovery brief) |
 | 194 | Start signing/notarization (#14411) early because of external lead time |
-| 210 | V1 reference fixtures needed for offline wait, overflow accounting, slow snapshot, snapshot retention (#14371–#14374) |
 | 222-227 | Store-identity checks: boot fails closed on v1 or OpenCode stores; upstream `V1Migration` must be a no-op on an empty store; verify whether the v1 IDE and CLI share one DB/auth file; verify that v1 IDEs can never resolve the customer v2 `kilo` binary (VS Code does not pin a CLI) |
 | 229-231 | Import covers DB + `auth.json` + Kilo `kilo.jsonc` keys; fixtures from released v1 versions; a re-run imports only new sessions (test required) |
 | 233-238 | Preview release train before G1 so G1 is not the first v2 release |

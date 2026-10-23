@@ -27,7 +27,6 @@ Donor paths are relative to the donor tag; `kc/` = `packages/kilo-cli/src/`, `kv
 | U-E0-02 | Kilo RPC and plugin scaffolding (`packages/schema/src/kilocode`, plugin `define`, generated client consumption) | shared runtime | pre-gate | F-V2-050, Part 1 "Plugins and SDK" | new | native mechanism | n/a | yes H: `packages/schema/src/kilocode/*` (`schema/src/rpc.ts` unchanged since donor base) | U-E0-01 |
 | U-E0-03 | Re-land Kilo `AGENTS.md`; rewrite `v2-fork-conventions.md`, migration-tracking `README.md`, `v2-baseline.ts`; superseded banners on old plans (see `doc-inventory.md` §8) | repo | pre-gate | — | new | needs-port | n/a | no | — |
 | U-E0-04 | Kilo CI lane on Kilo's `origin/v2`; neutralize upstream publish/deploy workflows, `sdks/vscode` publishing, hosted web properties, CI images | repo | pre-gate | F-V2-055, F-V2-056, F-V2-057 | new (part of #14408 scope) | needs-port | n/a | no | admin task: Actions permissions |
-| U-E0-05 | v1 reference fixtures for offline wait, overflow, slow snapshot, snapshot retention (data at V1, harness on BASE) | repo | pre-gate | — | new (old N5) | needs-port | MATERIAL (A06) | partial M: `kc/test/fixtures/v1-session`, `v1-writer*` (built at V1 `d99662338`/`ecccd1f`; regenerate at V1 `fb7e96ed`) | U-E0-01 |
 
 ## E1 Core and identity
 
@@ -46,10 +45,6 @@ Donor paths are relative to the donor tag; `kc/` = `packages/kilo-cli/src/`, `kv
 
 | Unit | Title | Surface | Gate | Features | Issues | Delta | Stale | Donor | Depends |
 |---|---|---|---|---|---|---|---|---|---|
-| U-E2-01 | Offline network wait and reconnect | shared runtime | G1 | F-CORE-034, F-V2-009 | #14371 | needs-port | MATERIAL (A06; incl. #14893 at the V1 tip) | no (progress row "Needs port") | U-E0-05 |
-| U-E2-02 | Overflow accounting, `threshold_percent`, chunked compaction, payload recovery | shared runtime | G1 | F-CORE-035, F-V2-010, Part 1 "Compaction" | #14372 | partial | MATERIAL (`5edf432c2f` #14318) | no (native reuse only) | U-E0-05 |
-| U-E2-03 | Slow-snapshot interaction policy and UI | shared runtime | G1 | F-CORE-036a | #14373 | partial | MATERIAL | no | U-E0-05 |
-| U-E2-04 | Snapshot seed/materialize, locking, cleanup, retention, restore/diff | shared runtime | G1 | F-CORE-036b, F-V2-011 | #14374 | partial | MATERIAL (+490; lock/cleanup NEW) | no | U-E0-05 |
 | U-E2-05 | Message deletion runtime operation, Kilo revert, stable ordering | shared runtime | G2 | F-CORE-042 | #14380 | needs-port | MATERIAL | no | U-E0-02 |
 | U-E2-06 | Session core verification: drain/control, prompt queue and steer, title, processing hardening | shared runtime | G1 | F-CORE-037, F-CORE-043, F-CORE-044, F-CORE-045, F-V2-008, Part 1 "Sessions" | new | partial | MATERIAL + NEW (drain, steer; ~128 fixes) | no (native reuse) | U-E0-01 |
 | U-E2-07 | Subagent resume, background subagents (default on), steering | shared runtime | G1 | F-CORE-041, F-V2-012, F-V2-033 | new | partial | MATERIAL (#14702, #13641) | no | U-E2-06 |
@@ -326,10 +321,10 @@ Every issue in the #13750 tree maps to a unit or is closed out as a tracker.
 | #14022 | tracker → E7 | #14409 | U-E3-07 |
 | #14023 | tracker → E10 | #14410 | U-E3-06 |
 | #14024 | tracker → E10 | #14411 | U-E3-07 |
-| #14371 | U-E2-01 | #14412 | U-E3-07 |
-| #14372 | U-E2-02 | #14413 | U-E3-01 (+ U-E3-02, U-E3-03) |
-| #14373 | U-E2-03 | #14414 | U-E3-11 (G1 child; G2/G3 children later) |
-| #14374 | U-E2-04 | #14415 | U-E6-08 (evidence: `editor-services-inventory.md`) |
+| | | #14412 | U-E3-07 |
+| | | #14413 | U-E3-01 (+ U-E3-02, U-E3-03) |
+| | | #14414 | U-E3-11 (G1 child; G2/G3 children later) |
+| #14374 | U-E2-26 | #14415 | U-E6-08 (evidence: `editor-services-inventory.md`) |
 | #14375 | U-E9-09 | #14416 | U-E6-08 |
 | #14376 | U-E11-04 | #14417 | U-E6-07 |
 | #14377 | U-E9-10 | #14418 | U-E11-01 |
@@ -361,7 +356,6 @@ Every issue in the #13750 tree maps to a unit or is closed out as a tracker.
 | N2 ratchet | U-L3-01 |
 | N3 sync automation and e2e lane | U-L1-01 (+ U-E0-04 for the CI lane) |
 | N4 delta sweep | U-L2-01 |
-| N5 v1 reference fixtures | U-E0-05 |
 | N6a package assessment | folded into U-E8-03 and U-E9-14; `kilo-console` obsolete |
 | N6b package imports onto the old branch | not-needed as a unit: each package lands with its epic (kilo-docs via U-E8-03/U-L5-01, kilo-jetbrains via E7) |
 | N7 progress-plan alignment | not-needed: the old progress plan is archived; the new plan replaces it (D9) |
