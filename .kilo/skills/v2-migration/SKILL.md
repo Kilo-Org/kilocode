@@ -217,16 +217,17 @@ Every PR that changes behavior shows that the behavior works on v2 as on v1. The
 
 **User-facing change (TUI, dialog, picker, message, error text):** attach screenshots.
 
-1. Take the v1 screenshot first. Run v1 from a separate checkout of `origin/main` (for example `git worktree add --detach $T/v1 origin/main`, then `bun install` there) with a temporary home, so that it never reads or writes the real v1 data:
+1. Take the v1 screenshot first. Run v1 from a separate checkout of `origin/main` with a temporary home, so that it never reads or writes the real v1 data. `$T` is the test directory from the self-test setup above (or `T=$(mktemp -d)`):
 
    ```bash
+   git worktree add --detach $T/v1 origin/main && bun install --cwd $T/v1
    env -i PATH="$PATH" TERM=xterm-256color HOME=$T/v1home XDG_DATA_HOME=$T/v1home/data XDG_CONFIG_HOME=$T/v1home/config XDG_STATE_HOME=$T/v1home/state XDG_CACHE_HOME=$T/v1home/cache bun run --cwd $T/v1 dev
    ```
 
-   Never run the installed `kilo` binary for this.
+   Never run the installed `kilo` binary for this. After the screenshots, remove the checkout with `git worktree remove --force $T/v1` before you delete `$T`.
 2. Take the v2 screenshot of the same screen in the same state, with `bun dev --standalone` and a fresh `KILO_V2_PROFILE`.
 3. Use the `vscode-self-test` harness with `HEADLESS=false` for both, because headless runs cannot take screenshots. Use the same terminal size and the same fixture data.
-4. In the PR, put the two images side by side or one after the other, labeled `v1` and `v2`, with one sentence about what to compare. When v2 differs on purpose, say why.
+4. In the PR, put the two images one after the other as markdown images labeled `v1` and `v2` (`![v1 - <screen>](<url>)`, then `![v2 - <screen>](<url>)`), with one sentence about what to compare. When v2 differs on purpose, say why.
 5. If v1 has no equivalent screen (a new Kilo-only behavior), show only v2 and say so.
 
 **No UI to show (headers, requests, catalog, config, retries, storage):** attach a different proof from a real run, for example:
