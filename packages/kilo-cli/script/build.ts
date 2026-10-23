@@ -25,6 +25,7 @@ import { verifyArtifact, verifySimulationGraph } from "../../cli/script/verify-a
 import { resolveOpencodePty } from "../../cli/script/opencode-pty"
 import { NativeArch } from "../../../script/native-arch"
 import { directory } from "../src/env"
+import { brandingProbe } from "../src/branding/probe-plugin"
 
 const dir = path.resolve(import.meta.dirname, "..")
 // Kilo: internal releases use `kilo2`, separate from v1. The upstream target names stay the build's internal names.
@@ -172,6 +173,7 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
     entrypoints: ["./src/index.ts"],
     tsconfig: "./tsconfig.json",
     plugins: [
+      ...(process.env.KILO_REBRAND_PROBE === "1" ? [brandingProbe] : []),
       appAssetsPlugin,
       solidPlugin,
       parcelWatcherPlugin,
@@ -204,6 +206,7 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
       windows: {},
     },
     define: {
+      KILO_REBRAND_COMPILED: "true",
       OPENCODE_VERSION: `'${Script.version}'`,
       // Kilo: the command name that help and usage text show.
       OPENCODE_CLI_NAME: `'${binary}'`,

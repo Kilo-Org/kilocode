@@ -6,6 +6,7 @@
 // plugins and service overrides (./host). Every server the CLI starts (background service, standalone, stdio) runs this entry with `serve`.
 // Keep it in step with the upstream file; the differences are marked "Kilo:".
 import "./env"
+import "./branding/probe-preload"
 import { ensurePluginRuntime } from "@opencode/plugin/runtime"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { Cause, Effect } from "effect"
