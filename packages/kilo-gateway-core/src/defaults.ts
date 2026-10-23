@@ -25,7 +25,7 @@ export interface Scope {
 export function get(scope: Scope): Effect.Effect<string | undefined> {
   const fallback = scope.token && scope.organizationID ? undefined : scope.token ? DEFAULT_MODEL : DEFAULT_FREE_MODEL
   return Effect.gen(function* () {
-    const organizationID = scope.token ? (scope.organizationID ?? null) : null
+    const organizationID = scope.organizationID ?? null
     const url = organizationID
       ? KiloServer.apiUrl(scope.server, "organizations", encodeURIComponent(organizationID), "defaults")
       : KiloServer.apiUrl(scope.server, "defaults")

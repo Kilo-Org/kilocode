@@ -14,7 +14,7 @@ import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { IntegrationID, IntegrationMethodID } from "@opencode/schema/integration-id"
 import { Document } from "@opencode/schema/config"
 import { Global } from "@opencode/util/global"
-import { Effect, Fiber, Schedule } from "effect"
+import { Effect, Exit, Fiber, Schedule } from "effect"
 import { withEnv } from "../../core/test/fixture/env"
 import { testEffect } from "../../core/test/lib/effect"
 import { PluginTestLayer } from "../../core/test/plugin/fixture"
@@ -107,10 +107,10 @@ it.live("applies real agents, respects local overrides, and replaces organizatio
               organizations: [],
               hasPersonalAccount: true,
             }
-            yield* call("first")
-            expect(yield* agents.get(Agent.ID.make("first-only"))).toBeUndefined()
+            // The RPC validates membership before changing scope, so a revoked team cannot be selected.
+            expect(Exit.isFailure(yield* call("first").pipe(Effect.exit))).toBe(true)
+            expect((yield* agents.get(Agent.ID.make("first-only")))?.system).toBe("First team")
             backend.state.profile = profile
-            yield* call("first")
             expect((yield* agents.get(Agent.ID.make("first-only")))?.system).toBe("First team")
             backend.state.modes = { modes: [mode("second-only", "Second team")] }
             yield* call("selected")

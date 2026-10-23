@@ -60,7 +60,7 @@ export function balance(
       ...(organizationID ? { "x-kilocode-organizationid": organizationID } : {}),
     }
     const response = yield* request(
-      `${KiloServer.normalize(server)}/api/profile/balance`,
+      KiloServer.apiUrl(server, "profile", "balance"),
       { headers },
       "Balance fetch failed",
     )
