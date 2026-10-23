@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 47,
-    "markedLines": 356,
+    "files": 46,
+    "markedLines": 346,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -187,19 +187,15 @@
     },
     "packages/core/src/app.ts": {
       "rung": 3,
-      "seam": "Optional App.Info.product (id, display name, callback-page wordmark) that make() passes through. The Kilo host sets it in KiloApp; no Kilo value in the file. Issue #15409. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI and ChatGPT plugins would mirror about 1000 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
+      "seam": "Optional App.Info.product (id, display name, callback-page wordmark) that make() passes through. The Kilo host sets it in KiloApp; no Kilo value in the file. Issue #15409. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI plugin would mirror about 440 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
     },
     "packages/core/src/oauth/page.ts": {
       "rung": 3,
-      "seam": "Exported brand(page, product) that puts an embedder's product name and wordmark in place of OpenCode's on a rendered callback page; returns the page unchanged without a product. Issue #15409. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI and ChatGPT plugins would mirror about 1000 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
+      "seam": "Exported brand(page, product) that puts an embedder's product name and wordmark in place of OpenCode's on a rendered callback page; returns the page unchanged without a product. Issue #15409. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI plugin would mirror about 440 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
     },
     "packages/core/src/plugin/provider/openai.ts": {
       "rung": 3,
-      "seam": "Codex sign-in reads App.Info.product: the originator in the authorize URL, provider headers and model requests, the OAuth token request user agent (as v1 `kilo/<version>`) and the callback page brand. Defaults stay `opencode`, App.useragent and the OpenCode page. Issue #15409. A Kilo model.request hook (rung 1) could rewrite the request header alone, but the authorize URL needs this knob anyway, so all originator uses read the same value. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI and ChatGPT plugins would mirror about 1000 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
-    },
-    "packages/core/src/plugin/provider/chatgpt.ts": {
-      "rung": 3,
-      "seam": "ChatGPT token sharing reads App.Info.product: the agent_name_hint in the authorize URL and the callback page brand. Defaults stay `OpenCode` and the OpenCode page. Issue #15409. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI and ChatGPT plugins would mirror about 1000 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
+      "seam": "Codex sign-in reads App.Info.product: the originator in the authorize URL, provider headers and model requests, the OAuth token request user agent (as v1 `kilo/<version>`) and the callback page brand. Defaults stay `opencode`, App.useragent and the OpenCode page. Issue #15409. A Kilo model.request hook (rung 1) could rewrite the request header alone, but the authorize URL needs this knob anyway, so all originator uses read the same value. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI plugin would mirror about 440 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
     }
   }
 }

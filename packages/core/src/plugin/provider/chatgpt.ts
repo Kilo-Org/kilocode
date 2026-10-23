@@ -107,7 +107,6 @@ const signIn = (app: App.Info, savedClientID: () => string | undefined, storage:
         const state = randomValue()
         const nonce = randomValue()
         const savedID = savedClientID()
-        const page = (html: string) => OauthCallbackPage.brand(html, app.product) // kilocode_change(oauth) seam - product brand
         const received = yield* Deferred.make<{ code: string; clientID?: string; response: ServerResponse }, Error>()
         // Lazy so runtimes without a loopback listener (workerd) never evaluate node:http.
         const { createServer } = yield* Effect.promise(() => import("node:http"))
@@ -123,7 +122,7 @@ const signIn = (app: App.Info, savedClientID: () => string | undefined, storage:
             Effect.runFork(Deferred.fail(received, new Error(error)))
             response
               .writeHead(400, { "Content-Type": "text/html" })
-              .end(page(OauthCallbackPage.error(error, { provider: "ChatGPT" }))) // kilocode_change(oauth) seam - product brand
+              .end(OauthCallbackPage.error(error, { provider: "ChatGPT" }))
             return
           }
           if (!authorizationCode || url.searchParams.get("state") !== state) {
@@ -131,7 +130,7 @@ const signIn = (app: App.Info, savedClientID: () => string | undefined, storage:
             Effect.runFork(Deferred.fail(received, new Error(message)))
             response
               .writeHead(400, { "Content-Type": "text/html" })
-              .end(page(OauthCallbackPage.error(message, { provider: "ChatGPT" }))) // kilocode_change(oauth) seam - product brand
+              .end(OauthCallbackPage.error(message, { provider: "ChatGPT" }))
             return
           }
           if (
@@ -150,22 +149,20 @@ const signIn = (app: App.Info, savedClientID: () => string | undefined, storage:
         const redirect = `http://127.0.0.1:${port}/auth/callback`
         return {
           mode: "auto" as const,
-          url: authorizeURL(redirect, pkce, state, nonce, savedID, hostID, app.product?.name ?? agentName), // kilocode_change(oauth) seam - product name
+          url: authorizeURL(redirect, pkce, state, nonce, savedID, hostID),
           instructions: "Complete authorization in your browser. This window will close automatically.",
           callback: Effect.gen(function* () {
             const result = yield* Deferred.await(received)
-            // kilocode_change start - oauth seam: product brand
             const respond = (error?: string) =>
               Effect.sync(() =>
                 result.response
                   .writeHead(error ? 400 : 200, { "Content-Type": "text/html" })
                   .end(
                     error
-                      ? page(OauthCallbackPage.error(error, { provider: "ChatGPT" }))
-                      : page(OauthCallbackPage.success({ provider: "ChatGPT" })),
+                      ? OauthCallbackPage.error(error, { provider: "ChatGPT" })
+                      : OauthCallbackPage.success({ provider: "ChatGPT" }),
                   ),
               )
-            // kilocode_change end
             return yield* Effect.gen(function* () {
               // Reauthorization callbacks may omit the client ID; reuse the one this attempt started with.
               if (savedID && result.clientID && result.clientID !== savedID)
@@ -527,11 +524,10 @@ function authorizeURL(
   nonce: string,
   savedID: string | undefined,
   hostID: string,
-  name: string, // kilocode_change(oauth) seam - product name for the agent name hint
 ) {
   return `${issuer}/api/accounts/authorize?${new URLSearchParams({
     client_id: savedID ?? registrationClientID,
-    ...(savedID ? {} : { agent_name_hint: name }), // kilocode_change(oauth) seam - product name
+    ...(savedID ? {} : { agent_name_hint: agentName }),
     ext_agent_host_id: hostID,
     // Enable only for user-requested consent retries after OpenAI confirms deployment;
     // ordinary sign-ins must not force reconsent.

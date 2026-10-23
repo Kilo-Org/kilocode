@@ -5,6 +5,7 @@ import { OpencodeFreeTier } from "./gateway/opencode"
 import { KiloGatewayPolicyPlugin } from "./gateway/policy"
 import { GatewayOptions } from "./gateway/options"
 import { KiloHandshakePlugin } from "./handshake"
+import { KiloOpenAIPlugin } from "./openai"
 
 /**
  * The Kilo plugins on the public plugin API (plugin-first rung 1), in registration order. The Kilo host
@@ -23,6 +24,7 @@ export const KiloPlugins = [
   // v1 imported the Kilo agent module into agent.ts. kilo_port(agent:2e5632e7bfc6)
   KiloAgentPlugin.Plugin,
   KiloGatewayPlugin,
+  KiloOpenAIPlugin,
 ] as const
 
 /** Kilo plugins that run after the config plugins: the host registers them with phase `post`. */
