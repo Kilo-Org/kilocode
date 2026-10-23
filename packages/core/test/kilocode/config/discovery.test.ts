@@ -1,7 +1,7 @@
 import path from "path"
 import fs from "fs/promises"
-import { describe, expect } from "bun:test"
-import { Effect, Layer } from "effect"
+import { describe, expect, test } from "bun:test"
+import { Effect, Layer, Logger } from "effect"
 import { Config } from "@opencode/core/config"
 import { ConfigDiscovery } from "@opencode/core/config/discovery"
 import { Bus } from "@opencode/core/bus"
@@ -9,22 +9,35 @@ import { Credential } from "@opencode/core/credential"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
 import { Watcher } from "@opencode/core/filesystem/watcher"
 import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
+import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { Location } from "@opencode/core/location"
 import { AbsolutePath } from "@opencode/core/schema"
 import { WellKnown } from "@opencode/core/wellknown"
 import { Global } from "@opencode/util/global"
+import { FSUtil } from "@opencode/util/fs-util"
+import { AppProcess } from "@opencode/util/process"
 import { LayerNode } from "@opencode/util/effect/layer-node"
+import { ChildProcess } from "effect/process"
 import { emptyCredentialNode, emptyWellknownNode } from "../../fixture/config-nodes"
 import { location } from "../../fixture/location"
+import { withEnv } from "../../fixture/env"
 import { tmpdirScoped } from "../../fixture/tmpdir"
 import { it } from "../../lib/effect"
 
 // The Config graph with the replacement the Kilo host passes to every server (KiloHost.overrides). Without it,
 // Config keeps the upstream names, which the upstream tests in test/config cover.
-function configLayer(input: { directory: string; global: string; project?: string; git?: boolean }) {
+function configLayer(input: {
+  directory: string
+  global: string
+  project?: string
+  git?: boolean
+  options?: Config.Options
+  overrides?: LayerNode.Replacements
+}) {
   const project = AbsolutePath.make(input.project ?? input.directory)
   const vcs = input.git ? { type: "git" as const, store: AbsolutePath.make(path.join(project, ".git")) } : undefined
   const built = AppNodeBuilder.build(LayerNode.group([Config.node, Bus.node]), [
+    Config.node.replace(Config.configured({ system: false, ...input.options })),
     ConfigDiscovery.node.replace(Layer.succeed(ConfigDiscovery.LayoutService, KiloConfigDiscovery.layout)),
     Location.node.replace(
       Layer.succeed(
@@ -38,6 +51,7 @@ function configLayer(input: { directory: string; global: string; project?: strin
     Credential.node.replace(emptyCredentialNode),
     WellKnown.node.replace(emptyWellknownNode),
     Watcher.node.replace(Watcher.testLayer),
+    ...(input.overrides ?? []),
   ])
   // Merge the watcher layer by reference so Watcher.Test resolves to the instance the built graph uses.
   return Layer.mergeAll(built, Watcher.testLayer)
@@ -65,6 +79,195 @@ const directories = (root: string) =>
   })
 
 describe("Kilo config discovery", () => {
+  test("uses Kilo's managed directory on each platform", () => {
+    const system = KiloConfigDiscovery.layout.systemDirectory!
+    expect(system("darwin", {})).toBe(AbsolutePath.make("/Library/Application Support/kilo"))
+    expect(system("linux", {})).toBe(AbsolutePath.make("/etc/kilo"))
+    expect(system("win32", { ProgramData: "D:\\ProgramData" })).toBe(AbsolutePath.make("D:\\ProgramData\\kilo"))
+    expect(system("win32", { ProgramData: "D:/ProgramData/" })).toBe(AbsolutePath.make("D:\\ProgramData\\kilo"))
+    expect(system("win32", {})).toBe(AbsolutePath.make("C:\\ProgramData\\kilo"))
+    expect(ConfigDiscovery.systemDirectory("darwin", {})).toBe(
+      AbsolutePath.make("/Library/Application Support/opencode"),
+    )
+    expect(ConfigDiscovery.systemDirectory("linux", { KILO_TEST_MANAGED_CONFIG_DIR: "/managed-test" })).toBe(
+      AbsolutePath.make("/etc/opencode"),
+    )
+  })
+
+  it.effect("the production layout ignores an ambient KILO_TEST_MANAGED_CONFIG_DIR", () =>
+    withEnv({ KILO_TEST_MANAGED_CONFIG_DIR: "/managed-test", ProgramData: "D:\\ProgramData" }, () =>
+      Effect.sync(() => {
+        const system = KiloConfigDiscovery.layout.systemDirectory!
+        expect(system("darwin", process.env)).toBe(AbsolutePath.make("/Library/Application Support/kilo"))
+        expect(system("linux", process.env)).toBe(AbsolutePath.make("/etc/kilo"))
+        expect(system("win32", process.env)).toBe(AbsolutePath.make("D:\\ProgramData\\kilo"))
+      }),
+    ),
+  )
+
+  it.live("managed files override user, explicit, project and runtime settings and retain Kilo policy fields", () =>
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const project = path.join(tmp.path, "repo")
+      const global = path.join(tmp.path, "global")
+      const managed = path.join(tmp.path, "managed")
+      const explicit = path.join(tmp.path, "explicit.json")
+      yield* write(path.join(global, "kilo2.jsonc"), { hide_prompt_training_models: false, shell: "user" })
+      yield* write(explicit, { hide_prompt_training_models: false, shell: "explicit" })
+      yield* write(path.join(project, ".kilo2", "kilo2.json"), { hide_prompt_training_models: false, shell: "project" })
+      yield* write(path.join(managed, "kilo2.jsonc"), { hide_prompt_training_models: false, shell: "managed-jsonc" })
+      yield* write(path.join(managed, "kilo2.json"), {
+        hide_prompt_training_models: true,
+        shell: "managed-json",
+        policies: [{ effect: "deny", action: "tool.use", resource: "shell:*" }],
+      })
+      yield* write(path.join(managed, "kilo.json"), { hide_prompt_training_models: false, shell: "legacy-kilo" })
+      yield* write(path.join(managed, "opencode.json"), { hide_prompt_training_models: false, shell: "opencode" })
+
+      yield* Effect.gen(function* () {
+        const config = yield* Config.Service
+        expect(yield* shells).toEqual(["user", "explicit", "project", "runtime", "managed-jsonc", "managed-json"])
+        expect(yield* KiloConfigPolicy.get(config)).toEqual({ hide_prompt_training_models: true })
+        const entries = yield* config.entries()
+        expect(entries.some((entry) => entry.type === "document" && entry.info.policies?.length)).toBe(true)
+        const watcher = yield* Watcher.Test
+        expect(yield* watcher.subscriptions()).toContainEqual(
+          expect.objectContaining({ type: "directory", path: managed }),
+        )
+      }).pipe(
+        Effect.provide(
+          configLayer({
+            directory: project,
+            global,
+            git: true,
+            options: {
+              system: managed,
+              file: explicit,
+              content: JSON.stringify({ hide_prompt_training_models: false, shell: "runtime" }),
+            },
+          }),
+        ),
+      )
+      // Disabling managed discovery must leave the user/project policy effective.
+      yield* Effect.gen(function* () {
+        const config = yield* Config.Service
+        expect(yield* KiloConfigPolicy.get(config)).toEqual({ hide_prompt_training_models: false })
+      }).pipe(Effect.provide(configLayer({ directory: project, global, git: true })))
+    }),
+  )
+
+  it.live(
+    "warns about a malformed managed privacy flag without dropping permission policies or logging its value",
+    () => {
+      const messages: unknown[] = []
+      const logger = Logger.map(Logger.formatStructured, (entry) => messages.push(entry.message))
+      return Effect.gen(function* () {
+        const tmp = yield* tmpdirScoped()
+        const project = path.join(tmp.path, "repo")
+        const global = path.join(tmp.path, "global")
+        const managed = path.join(tmp.path, "managed")
+        const file = path.join(managed, "kilo2.json")
+        yield* write(path.join(project, "kilo2.json"), { hide_prompt_training_models: false })
+        yield* write(file, {
+          hide_prompt_training_models: "sensitive-invalid-value",
+          policies: [{ effect: "deny", action: "tool.use", resource: "shell:*" }],
+        })
+        yield* Effect.gen(function* () {
+          const config = yield* Config.Service
+          const entries = yield* config.entries()
+          expect(
+            entries.flatMap((entry) =>
+              entry.type === "document" && entry.path === file ? (entry.info.policies ?? []) : [],
+            ),
+          ).toEqual([{ effect: "deny", action: "tool.use", resource: "shell:*" }])
+          expect(yield* KiloConfigPolicy.get(config)).toEqual({ hide_prompt_training_models: false })
+        }).pipe(Effect.provide(configLayer({ directory: project, global, options: { system: managed } })))
+        expect(messages).toContainEqual([
+          "configuration normalization diagnostic",
+          expect.objectContaining({
+            source: file,
+            path: "$.hide_prompt_training_models",
+            kind: "invalid",
+            action: expect.stringContaining("expected a boolean"),
+          }),
+        ])
+        expect(JSON.stringify(messages)).not.toContain("sensitive-invalid-value")
+      }).pipe(Effect.provide(Logger.layer([logger])))
+    },
+  )
+
+  const mac = process.platform === "darwin" ? it.live : it.live.skip
+  mac("MDM preferences stay above the managed directory with an injected discovery layout", () =>
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirScoped()
+      const project = path.join(tmp.path, "repo")
+      const global = path.join(tmp.path, "global")
+      const managed = path.join(tmp.path, "managed")
+      const plist = path.join(tmp.path, "managed.plist")
+      yield* write(path.join(project, "kilo2.json"), { hide_prompt_training_models: false })
+      yield* write(path.join(managed, "kilo2.json"), { hide_prompt_training_models: false, shell: "managed" })
+      yield* Effect.promise(() =>
+        fs.writeFile(
+          plist,
+          `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict><key>hide_prompt_training_models</key><true/><key>shell</key><string>MDM</string>
+<key>PayloadIdentifier</key><string>ai.opencode.managed</string></dict></plist>`,
+        ),
+      )
+      const preferences = path.join("/Library/Managed Preferences", "ai.opencode.managed.plist")
+      const files = FSUtil.node.mapLayer((layer) =>
+        Layer.effect(
+          FSUtil.Service,
+          Effect.map(FSUtil.Service, (fs) => ({
+            ...fs,
+            isFile: (file: string) =>
+              file.startsWith("/Library/Managed Preferences/") ? Effect.succeed(file === preferences) : fs.isFile(file),
+          })),
+        ).pipe(Layer.provide(layer)),
+      )
+      const processes = AppProcess.node.mapLayer((layer) =>
+        Layer.effect(
+          AppProcess.Service,
+          Effect.map(AppProcess.Service, (process) => ({
+            ...process,
+            run: (command: ChildProcess.Command, options?: AppProcess.RunOptions) => {
+              expect(command._tag).toBe("StandardCommand")
+              if (command._tag !== "StandardCommand") return Effect.die("unexpected process")
+              expect(command.command).toBe("plutil")
+              expect(command.args).toEqual(["-convert", "json", "-o", "-", preferences])
+              return process.run(ChildProcess.make("plutil", ["-convert", "json", "-o", "-", plist]), options)
+            },
+          })),
+        ).pipe(Layer.provide(layer)),
+      )
+      yield* Effect.gen(function* () {
+        const config = yield* Config.Service
+        expect(yield* KiloConfigPolicy.get(config)).toEqual({ hide_prompt_training_models: true })
+        expect(yield* shells).toEqual(["managed", "MDM"])
+      }).pipe(
+        Effect.provide(
+          configLayer({
+            directory: project,
+            global,
+            git: true,
+            options: { system: true },
+            overrides: [
+              ConfigDiscovery.node.replace(
+                Layer.succeed(ConfigDiscovery.LayoutService, {
+                  ...KiloConfigDiscovery.layout,
+                  systemDirectory: () => AbsolutePath.make(managed),
+                }),
+              ),
+              FSUtil.node.replace(files),
+              AppProcess.node.replace(processes),
+            ],
+          }),
+        ),
+      )
+    }),
+  )
+
   it.live("reads kilo2.json and kilo2.jsonc at each level, farthest first and .jsonc after .json", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()

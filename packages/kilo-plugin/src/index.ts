@@ -2,6 +2,7 @@ import { KiloAgentPlugin } from "./agent"
 // kilo_port(gateway:17e39e074eaf) v1 registered the Gateway auth plugin in the upstream plugin list.
 import { KiloGatewayPlugin } from "./gateway"
 import { OpencodeFreeTier } from "./gateway/opencode"
+import { KiloGatewayPolicyPlugin } from "./gateway/policy"
 import { GatewayOptions } from "./gateway/options"
 import { KiloHandshakePlugin } from "./handshake"
 
@@ -19,10 +20,15 @@ import { KiloHandshakePlugin } from "./handshake"
 // the RPC of a plugin in this list.
 export const KiloPlugins = [
   KiloHandshakePlugin,
-  KiloGatewayPlugin,
   // v1 imported the Kilo agent module into agent.ts. kilo_port(agent:2e5632e7bfc6)
   KiloAgentPlugin.Plugin,
+  KiloGatewayPlugin,
 ] as const
 
 /** Kilo plugins that run after the config plugins: the host registers them with phase `post`. */
-export const KiloPostPlugins = [KiloAgentPlugin.Ceiling, GatewayOptions.Plugin, OpencodeFreeTier.Plugin] as const
+export const KiloPostPlugins = [
+  KiloGatewayPolicyPlugin,
+  KiloAgentPlugin.Ceiling,
+  GatewayOptions.Plugin,
+  OpencodeFreeTier.Plugin,
+] as const

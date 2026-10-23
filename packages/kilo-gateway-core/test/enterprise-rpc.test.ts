@@ -146,6 +146,22 @@ describe("Enterprise account, tRPC, modes, notifications, media, and FIM/edit", 
     ])
   })
 
+  test("does not reuse organization modes across credentials or cache endpoint failures", async () => {
+    using backend = fixture()
+    const original = backend.state.modes
+    KiloModes.clearCache()
+    expect(await Effect.runPromise(KiloModes.get(backend.url, "first-token", "selected"))).toHaveLength(1)
+    backend.state.modes = { modes: [] }
+    expect(await Effect.runPromise(KiloModes.get(backend.url, "second-token", "selected"))).toEqual([])
+    expect(await Effect.runPromise(KiloModes.get(backend.url, "first-token", "selected"))).toHaveLength(1)
+    KiloModes.clearCache()
+    backend.state.modesStatus = 503
+    expect(await Effect.runPromise(KiloModes.get(backend.url, "first-token", "selected"))).toEqual([])
+    backend.state.modesStatus = 200
+    backend.state.modes = original
+    expect(await Effect.runPromise(KiloModes.get(backend.url, "first-token", "selected"))).toHaveLength(1)
+  })
+
   test("resolves FIM and Next Edit targets and extracts fenced edit bodies", async () => {
     expect(KiloAutocomplete.resolveFimTarget("kilo", "mistralai/codestral-2508", "https://api.kilo.ai")).toEqual({
       provider: "kilo",
