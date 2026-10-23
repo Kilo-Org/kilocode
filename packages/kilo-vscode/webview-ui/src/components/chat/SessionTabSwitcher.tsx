@@ -3,7 +3,7 @@ import { List } from "@kilocode/kilo-ui/list"
 import type { ListRef } from "@kilocode/kilo-ui/list"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { Show, createEffect, createMemo, createSignal, type Component, type JSX } from "solid-js"
+import { Show, createEffect, createMemo, createSignal, onCleanup, type Component, type JSX } from "solid-js"
 import { ActivityIcon } from "../shared/ActivityIcon"
 import type { Activity } from "../../utils/session-activity"
 
@@ -48,6 +48,36 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
 
   createEffect(() => {
     if (open()) focus(true)
+  })
+
+  // "Kilo Code: Show Open Tabs" (Command Palette) opens the switcher. The
+  // command runs while the palette still owns focus; when VS Code hands focus
+  // back, the webview re-focuses the prompt, and the Popover dismisses on that
+  // focusin outside its content. So open only once this webview has focus.
+  // VS Code returns focus right after the palette closes; if it never does,
+  // drop the request so a later, unrelated focus doesn't pop the switcher open.
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const cancel = () => {
+    clearTimeout(timer)
+    window.removeEventListener("focus", reveal)
+  }
+  const reveal = () => {
+    cancel()
+    requestAnimationFrame(() => setOpen(true))
+  }
+  const show = () => {
+    cancel()
+    if (document.hasFocus()) {
+      setOpen(true)
+      return
+    }
+    window.addEventListener("focus", reveal)
+    timer = setTimeout(cancel, 1000)
+  }
+  window.addEventListener("showOpenTabs", show)
+  onCleanup(() => {
+    window.removeEventListener("showOpenTabs", show)
+    cancel()
   })
 
   const select = (item: SessionTabSwitcherItem) => {
