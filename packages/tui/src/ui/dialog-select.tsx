@@ -454,7 +454,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
       }
       if (y < 0) {
         scroll.scrollBy(y)
-        if (isDeepEqual(flat()[0].value, selected()?.value)) {
+        if (flat()[0] === selected()) { // kilocode_change(unattributed:tui/ui:acda41f897d2) - reference identity, duplicate values are legal
           scroll.scrollTo(0)
         }
       }
@@ -778,7 +778,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
                   </Show>
                   <For each={options}>
                     {(option) => {
-                      const active = createMemo(() => !props.locked && isDeepEqual(option.value, selected()?.value))
+                      const active = createMemo(() => !props.locked && option === selected()) // kilocode_change(unattributed:tui/ui:858635f51958) - by reference: a list can show one value twice
                       const current = createMemo(() => isDeepEqual(option.value, props.current))
                       return (
                         <box
@@ -786,7 +786,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
                           position="relative"
                           onMouseMove={() => {
                             if (props.locked) return
-                            const index = flat().findIndex((x) => isDeepEqual(x.value, option.value))
+                            const index = flat().indexOf(option) // kilocode_change(unattributed:tui/ui:aac5db9863ac) - see `active`
                             if (index === -1 || index === store.selected) return
                             moveTo(index)
                           }}
@@ -797,7 +797,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
                           }}
                           onMouseDown={() => {
                             if (props.locked) return
-                            const index = flat().findIndex((x) => isDeepEqual(x.value, option.value))
+                            const index = flat().indexOf(option) // kilocode_change(unattributed:tui/ui:aac5db9863ac) - see `active`
                             if (index === -1) return
                             moveTo(index)
                           }}
