@@ -20,6 +20,8 @@ export interface RouteInput {
   readonly routes: Map<string, { readonly provider: string; readonly model: string }>
   readonly models: Effect.Effect<readonly Model.Info[]>
   readonly machineID: Effect.Effect<string | undefined>
+  /** Runs before the first request to a client pick's provider, to set up `stamp` for it. */
+  readonly onClient?: (providerID: string) => Effect.Effect<void>
 }
 
 // A custom router with a client entry this client can serve asks the routing worker for a decision, then sends the
@@ -54,6 +56,7 @@ export function route(event: Route, input: RouteInput) {
     if (pick.kind !== "client") return
     if (input.routes.size >= 500) input.routes.delete(input.routes.keys().next().value!)
     input.routes.set(key, { provider: pick.provider, model: pick.model })
+    if (input.onClient) yield* input.onClient(pick.provider)
   }).pipe(Effect.orDie)
 }
 
@@ -68,10 +71,12 @@ export function stamp(event: SessionHooks["http.response"], routes: RouteInput["
   const decoder = new TextDecoder()
   const encoder = new TextEncoder()
   const state = { buffer: "", reported: undefined as string | undefined }
-  const line = (text: string) => {
-    if (!text.startsWith("data:")) return text
+  const line = (raw: string) => {
+    const end = raw.endsWith("\r") ? "\r" : ""
+    const text = end ? raw.slice(0, -1) : raw
+    if (!text.startsWith("data:")) return raw
     const payload = parse(text.slice("data:".length).trim())
-    if (!payload) return text
+    if (!payload) return raw
     const reported = [payload.model, record(payload.response)?.model, record(payload.message)?.model].find(
       (value): value is string => typeof value === "string" && value.length > 0,
     )
@@ -86,14 +91,15 @@ export function stamp(event: SessionHooks["http.response"], routes: RouteInput["
       ...(record(payload.response) ? { response: withUsage(record(payload.response)!) } : {}),
       ...(record(payload.message) ? { message: withUsage(record(payload.message)!) } : {}),
     }
-    return JSON.stringify(next) === JSON.stringify(payload) ? text : `data: ${JSON.stringify(next)}`
+    return JSON.stringify(next) === JSON.stringify(payload) ? raw : `data: ${JSON.stringify(next)}${end}`
   }
   const stream = body.pipeThrough(
     new TransformStream<Uint8Array, Uint8Array>({
       transform(chunk, controller) {
         const lines = (state.buffer + decoder.decode(chunk, { stream: true })).split("\n")
         state.buffer = lines.pop() ?? ""
-        controller.enqueue(encoder.encode(lines.map((item) => line(item)).join("\n") + "\n"))
+        // A chunk without a line end only fills the buffer: an empty write here would end the pending SSE event.
+        if (lines.length > 0) controller.enqueue(encoder.encode(lines.map((item) => line(item)).join("\n") + "\n"))
       },
       flush(controller) {
         const rest = state.buffer + decoder.decode()
@@ -101,10 +107,14 @@ export function stamp(event: SessionHooks["http.response"], routes: RouteInput["
       },
     }),
   )
+  // The body is decoded and its length changes, so the upstream length and encoding no longer apply.
+  const headers = new Headers(event.response.headers)
+  headers.delete("content-length")
+  headers.delete("content-encoding")
   event.response = new Response(stream, {
     status: event.response.status,
     statusText: event.response.statusText,
-    headers: event.response.headers,
+    headers,
   })
 }
 
@@ -356,7 +366,8 @@ export interface EvalConfigInput {
   readonly account: KiloCustomRouter.Account
   readonly models: readonly Model.Info[]
   readonly provider: (providerID: string) => Effect.Effect<Provider.Info | undefined>
-  readonly credential: (providerID: string) => Effect.Effect<Credential.Value | undefined>
+  /** The active credential of the provider's integration (`integrationID`, else the provider ID). */
+  readonly credential: (provider: Provider.Info) => Effect.Effect<Credential.Value | undefined>
 }
 
 export function evalConfig(input: EvalConfigInput) {
@@ -380,7 +391,11 @@ export function evalConfig(input: EvalConfigInput) {
     const provider = yield* input.provider(entry.provider)
     if (!model || !provider)
       return yield* Effect.fail(new Error(`Client model ${entry.provider}/${entry.model} is not configured locally`))
-    const credential = yield* input.credential(entry.provider)
+    if (!npm(model.package ?? provider.package))
+      return yield* Effect.fail(
+        new Error(`Client evals do not support provider ${provider.id}: the published CLI cannot load its package`),
+      )
+    const credential = yield* input.credential(provider)
     const settings = { ...provider.settings, ...model.settings }
     const key =
       credential?.type === "key"
@@ -453,16 +468,23 @@ export function providerConfig(provider: Provider.Info, model: Model.Info) {
 }
 
 // The published CLI loads AI SDK packages; a v2 native package names the same protocol.
-function npm(pkg: string | undefined) {
+function npm(value: string | undefined) {
+  const pkg = value?.startsWith("aisdk:") ? value.slice("aisdk:".length) : value
   if (!pkg?.startsWith("@opencode/ai/providers/")) return pkg ?? "@ai-sdk/openai-compatible"
   const name = pkg.slice("@opencode/ai/providers/".length).split("/")[0]!
   if (name.startsWith("google-vertex")) return "@ai-sdk/google-vertex"
+  if (UNSUPPORTED.has(name)) return undefined
   return NPM[name] ?? `@ai-sdk/${name}`
 }
+
+// v2 native providers without an AI SDK package the published CLI can load.
+const UNSUPPORTED = new Set(["cloudflare-ai-gateway", "opencode", "typesafe-ai", "zai-coding-plan"])
 
 const NPM: Record<string, string> = {
   openrouter: "@openrouter/ai-sdk-provider",
   "anthropic-compatible": "@ai-sdk/anthropic",
   "openai-compatible-responses": "@ai-sdk/openai-compatible",
   "amazon-bedrock-mantle": "@ai-sdk/amazon-bedrock",
+  "vercel-ai-gateway": "@ai-sdk/gateway",
+  "cloudflare-workers-ai": "workers-ai-provider",
 }

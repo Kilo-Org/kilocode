@@ -433,7 +433,7 @@ async function customRouterRoute(state: FixtureState, request: Request, path: st
   const url = new URL(request.url)
   const body = request.method === "GET" || request.method === "DELETE" ? undefined : await request.json().catch(() => undefined)
   state.customRouterBodies.push({ method: request.method, path: `${path}${url.search}`, body })
-  const fields = (body ?? {}) as Record<string, any>
+  const fields: Record<string, unknown> = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {}
   if (path === "/api/auto-routing/custom-routers") {
     if (state.customRoutersStatus !== 200) return new Response("Unavailable", { status: state.customRoutersStatus })
     return Response.json(state.customRouters)
@@ -443,7 +443,9 @@ async function customRouterRoute(state: FixtureState, request: Request, path: st
     const router = state.customRouters.routers.find((item) => item.scope === entries[1] && item.slug === entries[2])
     if (!router) return Response.json({ error: { code: "router_not_found", message: "no such router" } }, { status: 404 })
     if (request.method === "POST") {
-      const entry = fields.entry as Record<string, unknown>
+      const entry = fields.entry
+      if (typeof entry !== "object" || entry === null || !("provider" in entry) || !("model" in entry))
+        return Response.json({ error: { code: "invalid_request", message: "entry is required" } }, { status: 400 })
       const key = `client:${entry.provider}/${entry.model}`
       router.entries = [
         ...router.entries.filter((item) => item.key !== key),

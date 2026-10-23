@@ -12,6 +12,8 @@ import {
   evalImageTag,
 } from "../src/auto/eval-docker"
 import { parseKiloRunEvents } from "../src/auto/eval-events"
+import { runItem } from "../src/auto/eval"
+import { Effect } from "effect"
 
 // Port of v1 packages/opencode/test/kilocode/auto-eval.test.ts (#15183). The container config assertions are in
 // packages/kilo-plugin/test/gateway-routers.test.ts, where v2 builds the config.
@@ -169,6 +171,138 @@ describe("kilo run event parsing", () => {
   test("accepts the flattened shape and reports no cost when the model is free", () => {
     const lines = [JSON.stringify({ type: "text", text: "answer", time: { end: 1 } })]
     expect(parseKiloRunEvents(lines)).toEqual({ text: "answer", costUsd: null })
+  })
+})
+
+// One case end to end with a stand-in `docker` on PATH and a stub server: the env file with credentials is removed
+// on success and on every failure.
+describe.skipIf(process.platform === "win32")("eval case run", () => {
+  const router = { id: "3f2504e0-4f89-11d3-9a0c-0305e82c3301" } as Parameters<typeof runItem>[1]
+  const plan = { engineIdentity: "engine-1" } as Parameters<typeof runItem>[2]
+  const item = {
+    entry: { kind: "client", provider: "local", model: "qwen3" },
+    variant: null,
+    caseId: "case-1",
+    rep: 0,
+  } as const
+  const result = (lines: string[]) =>
+    JSON.stringify({
+      exitCode: 0,
+      durationMs: 12,
+      timedOut: false,
+      stdoutTruncated: false,
+      stdoutLines: lines,
+      stderrTail: "",
+    })
+
+  async function run(input: { docker: string; upload?: () => Promise<unknown>; server?: string }) {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-auto-eval-run-"))
+    const tmp = path.join(root, "tmp")
+    const bin = path.join(root, "bin")
+    await fs.mkdir(tmp)
+    await fs.mkdir(bin)
+    // The stand-in copies the env file it receives, then prints the container result.
+    await fs.writeFile(
+      path.join(bin, "docker"),
+      `#!/bin/sh\nwhile [ "$1" != "--env-file" ]; do shift; done\ncp "$2" "${root}/seen.env"\ncat <<'EOF'\n${input.docker}\nEOF\n`,
+      { mode: 0o755 },
+    )
+    const uploads: unknown[] = []
+    const connection = {
+      options: { location: { directory: root } },
+      rpc: {
+        "routers.evalCase": async () => ({
+          caseId: "case-1",
+          baseRouter: "efficient",
+          prompt: "Reply with OK.",
+          timeoutMs: 5_000,
+        }),
+        "routers.evalConfig": async () => ({
+          server: input.server ?? "https://api.kilo.ai",
+          organizationID: "team",
+          provider: "local",
+          model: "qwen3",
+          config: { enabled_providers: ["local"] },
+          auth: { kilo: { type: "api", key: "kilo-fixture-key" } },
+        }),
+        "routers.evalResult": async (args: { result: unknown }) => {
+          uploads.push(args.result)
+          return input.upload ? input.upload() : { score: 1 }
+        },
+      },
+    } as unknown as Parameters<typeof runItem>[0]
+    const previous = { PATH: process.env.PATH, TMPDIR: process.env.TMPDIR }
+    process.env.PATH = `${bin}${path.delimiter}${previous.PATH ?? ""}`
+    process.env.TMPDIR = tmp
+    try {
+      const outcome = await Effect.runPromise(
+        Effect.result(runItem(connection, router, plan, item, new Map(), "kilo-auto-eval:test")),
+      )
+      const left = await fs.readdir(tmp)
+      const seen = await Bun.file(path.join(root, "seen.env"))
+        .text()
+        .catch(() => "")
+      return { outcome, left, seen, uploads }
+    } finally {
+      process.env.PATH = previous.PATH
+      if (previous.TMPDIR === undefined) delete process.env.TMPDIR
+      else process.env.TMPDIR = previous.TMPDIR
+      await fs.rm(root, { recursive: true, force: true })
+    }
+  }
+
+  test("uploads the graded output and removes the credential env file", async () => {
+    const text = JSON.stringify({ type: "text", part: { text: "OK", time: { end: 1 } } })
+    const done = await run({ docker: result([text]) })
+    expect(done.outcome._tag).toBe("Success")
+    expect(done.uploads).toEqual([
+      {
+        routerId: router.id,
+        engineIdentity: "engine-1",
+        entry: item.entry,
+        variant: null,
+        caseId: "case-1",
+        rep: 0,
+        output: "OK",
+        costUsd: 0,
+        durationMs: 12,
+        exitCode: 0,
+        timedOut: false,
+      },
+    ])
+    expect(done.seen).toContain('KILO_AUTH_CONTENT={"kilo":{"type":"api","key":"kilo-fixture-key"}}')
+    expect(done.seen).toContain("KILO_ORG_ID=team")
+    expect(done.left).toEqual([])
+  })
+
+  test("removes the env file when the container gives no result", async () => {
+    const failed = await run({ docker: "not json" })
+    expect(failed.outcome._tag).toBe("Failure")
+    expect(String(failed.outcome._tag === "Failure" ? failed.outcome.failure.message : "")).toContain(
+      "Container produced no result",
+    )
+    expect(failed.uploads).toEqual([])
+    expect(failed.left).toEqual([])
+  })
+
+  test("removes the env file when the upload fails and keeps the error code", async () => {
+    const failed = await run({
+      docker: result([]),
+      upload: () => Promise.reject({ type: "router", message: "limit", data: { code: "quota_exceeded" } }),
+    })
+    expect(failed.outcome._tag === "Failure" ? failed.outcome.failure : undefined).toMatchObject({
+      code: "quota_exceeded",
+    })
+    expect(failed.left).toEqual([])
+  })
+
+  test("refuses a value with a line break instead of writing extra variables", async () => {
+    const failed = await run({ docker: result([]), server: "https://api.kilo.ai\nINJECTED=1" })
+    expect(failed.outcome._tag === "Failure" ? failed.outcome.failure.message : "").toContain(
+      "KILO_API_URL contains a line break",
+    )
+    expect(failed.seen).toBe("")
+    expect(failed.left).toEqual([])
   })
 })
 

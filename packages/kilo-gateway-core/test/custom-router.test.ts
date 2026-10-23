@@ -92,15 +92,7 @@ describe("model ids", () => {
 describe("contracts mirror", () => {
   test("rejects a gateway entry that uses the reserved client prefix", () => {
     expect(Schema.is(KiloCustomRouter.EntryRef)({ kind: "gateway", model: "client:ollama/qwen3" })).toBe(false)
-    expect(KiloCustomRouter.parseCandidateModel("client:ollama/qwen3")).toEqual({
-      kind: "client",
-      provider: "ollama",
-      model: "qwen3",
-    })
-    expect(KiloCustomRouter.parseCandidateModel("anthropic/claude-sonnet-4")).toEqual({
-      kind: "gateway",
-      model: "anthropic/claude-sonnet-4",
-    })
+    expect(Schema.is(KiloCustomRouter.EntryRef)({ kind: "gateway", model: "anthropic/claude-sonnet-4" })).toBe(true)
   })
 
   test("defaults a missing staleEntries list", () => {
@@ -205,6 +197,13 @@ describe("routing decision", () => {
     expect(backend.state.customRouterBodies.length).toBe(1)
     await run({ now: () => 40_000 })
     expect(backend.state.customRouterBodies.length).toBe(2)
+  })
+
+  test("shares one router list request between concurrent decisions", async () => {
+    const { backend, run } = setup("token-shared")
+    using _ = backend
+    await Promise.all([run({ now: () => 1_000 }), run({ now: () => 1_000 }), run({ now: () => 1_000 })])
+    expect(backend.state.customRouterBodies.length).toBe(1)
   })
 
   test("surfaces worker error codes with specific messages", async () => {

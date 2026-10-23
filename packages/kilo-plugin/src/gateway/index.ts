@@ -835,19 +835,35 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       Effect.orElseSucceed(() => []),
     )
     const clientRoutes = new Map<string, { provider: string; model: string }>()
-    yield* ctx.session.hook(
-      "route",
-      (event) =>
-        GatewayRouters.route(event, {
-          account: routerAccount(),
-          routes: clientRoutes,
-          models: catalogModels,
-          machineID: getMachineID,
-        }),
-      { providerID: id },
+    // The response stamp runs only for providers that served a client pick, so other providers keep the plain
+    // request path (a session HTTP hook makes the request builder copy every request body).
+    const pluginScope = yield* Effect.scope
+    const stamped = new Set<string>()
+    const stampProvider = (providerID: string) =>
+      stamped.has(providerID)
+        ? Effect.void
+        : Effect.sync(() => stamped.add(providerID)).pipe(
+            Effect.andThen(
+              ctx.session.hook(
+                "http.response",
+                (event) => Effect.sync(() => GatewayRouters.stamp(event, clientRoutes)),
+                { providerID },
+              ),
+            ),
+            Effect.provideService(Scope.Scope, pluginScope),
+            Effect.asVoid,
+          )
+    // No provider filter: every request clears the session's previous client route, so a later direct request to
+    // the same provider is never stamped. `route` itself only routes `kilo` custom routers.
+    yield* ctx.session.hook("route", (event) =>
+      GatewayRouters.route(event, {
+        account: routerAccount(),
+        routes: clientRoutes,
+        models: catalogModels,
+        machineID: getMachineID,
+        onClient: stampProvider,
+      }),
     )
-    // Client picks are served by another provider, so this hook has no provider filter.
-    yield* ctx.session.hook("http.response", (event) => Effect.sync(() => GatewayRouters.stamp(event, clientRoutes)))
 
     yield* ctx.rpc
       .register(KiloGatewayRpc.Definition, {
@@ -859,9 +875,9 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
               Effect.map((result) => result.data),
               Effect.orElseSucceed(() => undefined),
             ),
-          credential: (providerID) =>
+          credential: (provider) =>
             Effect.gen(function* () {
-              const connection = yield* ctx.integration.connection.active(providerID)
+              const connection = yield* ctx.integration.connection.active(provider.integrationID ?? provider.id)
               return connection ? yield* ctx.integration.connection.resolve(connection) : undefined
             }).pipe(Effect.orElseSucceed(() => undefined)),
         }),

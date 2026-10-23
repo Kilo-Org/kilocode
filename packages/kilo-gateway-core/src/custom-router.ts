@@ -1,6 +1,7 @@
 export * as KiloCustomRouter from "./custom-router.js"
 
 import { Effect, Option, Schema } from "effect"
+import { createHash } from "node:crypto"
 import { KiloHeaders } from "./headers.js"
 import { request as send } from "./http.js"
 import { KiloServer } from "./server.js"
@@ -13,7 +14,6 @@ import { KiloServer } from "./server.js"
 export const MODEL_PREFIX = "kilo-auto/custom/"
 export const ORG_MODEL_PREFIX = "kilo-auto/custom/org/"
 export const RESERVED_USER_SLUG = "org"
-export const MAX_ENTRIES = 20
 export const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/
 export const CLIENT_PREFIX = "client:"
 export const DECISION_HEADER = "x-kilo-auto-decision"
@@ -205,21 +205,13 @@ export interface Account {
   readonly version: string
 }
 
-export function isModelID(model: string) {
-  return model.startsWith(MODEL_PREFIX)
-}
-
 export function parseModelID(model: string): Reference | undefined {
-  if (!isModelID(model)) return undefined
+  if (!model.startsWith(MODEL_PREFIX)) return undefined
   const reference = model.startsWith(ORG_MODEL_PREFIX)
     ? { scope: "org" as const, slug: model.slice(ORG_MODEL_PREFIX.length) }
     : { scope: "user" as const, slug: model.slice(MODEL_PREFIX.length) }
   if (reference.scope === "user" && reference.slug === RESERVED_USER_SLUG) return undefined
   return Option.getOrUndefined(Schema.decodeUnknownOption(Reference)(reference))
-}
-
-export function modelID(scope: Scope, slug: string) {
-  return `${scope === "org" ? ORG_MODEL_PREFIX : MODEL_PREFIX}${slug}`
 }
 
 /** Accepts the full model ID or a bare slug, with an optional `org/` prefix, as the v1 commands did. */
@@ -235,21 +227,6 @@ export function resolveReference(
 export function entryKey(entry: EntryRef) {
   return entry.kind === "gateway" ? `gateway:${entry.model}` : `${CLIENT_PREFIX}${entry.provider}/${entry.model}`
 }
-
-export function candidateModel(entry: EntryRef) {
-  return entry.kind === "gateway" ? entry.model : entryKey(entry)
-}
-
-export function parseCandidateModel(model: string): EntryRef | undefined {
-  if (!model.startsWith(CLIENT_PREFIX)) return decodeEntryRef({ kind: "gateway", model })
-  const id = model.slice(CLIENT_PREFIX.length)
-  const separator = id.indexOf("/")
-  if (separator === -1) return undefined
-  const client = decodeEntryRef({ kind: "client", provider: id.slice(0, separator), model: id.slice(separator + 1) })
-  return client && candidateModel(client) === model ? client : undefined
-}
-
-const decodeEntryRef = (input: unknown) => Option.getOrUndefined(Schema.decodeUnknownOption(EntryRef)(input))
 
 export interface ClientModel {
   readonly provider: string
@@ -489,13 +466,22 @@ export interface ResolveInput {
   readonly now?: () => number
 }
 
-const cache = new Map<string, { readonly at: number; readonly value: ListResponse }>()
+// One list request per account scope at a time, kept for LIST_TTL_MS. The server process is long-lived, so expired
+// entries are swept and the key holds a hash, not the token.
+const cache = new Map<string, { readonly at: number; readonly value: Effect.Effect<ListResponse, Error> }>()
 
 function routers(account: Account, now: number) {
-  const key = `${account.server}:${account.token}:${account.organizationID ?? ""}`
-  const hit = cache.get(key)
-  if (hit && now - hit.at < LIST_TTL_MS) return Effect.succeed(hit.value)
-  return list(account).pipe(Effect.tap((value) => Effect.sync(() => cache.set(key, { at: now, value }))))
+  return Effect.gen(function* () {
+    for (const [key, entry] of cache) if (now - entry.at >= LIST_TTL_MS) cache.delete(key)
+    const key = createHash("sha256")
+      .update(`${account.server}\n${account.token}\n${account.organizationID ?? ""}`)
+      .digest("hex")
+    const hit = cache.get(key)
+    if (hit) return yield* hit.value
+    const value = yield* Effect.cached(list(account))
+    cache.set(key, { at: now, value })
+    return yield* value.pipe(Effect.tapError(() => Effect.sync(() => cache.delete(key))))
+  })
 }
 
 /** The client entries of a router this client can serve. */

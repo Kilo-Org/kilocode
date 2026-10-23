@@ -248,6 +248,61 @@ describe("routed client model stamp", () => {
   })
 })
 
+describe("routed client model stamp framing", () => {
+  const routes = new Map([["ses_1:primary", { provider: "local", model: "echo" }]])
+  const event = (body: ReadableStream<Uint8Array> | string, headers: Record<string, string> = {}) =>
+    ({
+      sessionID: "ses_1",
+      kind: "primary",
+      model: { providerID: Provider.ID.make("local"), id: Model.ID.make("echo") },
+      response: new Response(body, { headers: { "content-type": "text/event-stream", ...headers } }),
+    }) as unknown as Parameters<typeof GatewayRouters.stamp>[0]
+
+  test("keeps SSE events intact when a data line spans chunks", async () => {
+    const data = `data: ${JSON.stringify({ model: "echo", choices: [], usage: { prompt_tokens: 1 } })}`
+    const parts = ["event: message\r\n", data.slice(0, 20), data.slice(20), "\r\n\r\n"]
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        parts.forEach((part) => controller.enqueue(new TextEncoder().encode(part)))
+        controller.close()
+      },
+    })
+    const stamped = event(body, { "content-length": "999", "content-encoding": "gzip" })
+    GatewayRouters.stamp(stamped, routes)
+    const text = await stamped.response.text()
+    expect(text.startsWith('event: message\r\ndata: {"model":"echo"')).toBe(true)
+    expect(text).toContain('"routedModelID":"echo"}}\r\n\r\n')
+    expect(text.split("\n").filter((line) => line === "").length).toBe(1)
+    expect(stamped.response.headers.get("content-length")).toBeNull()
+    expect(stamped.response.headers.get("content-encoding")).toBeNull()
+  })
+
+  test("a direct request to the same provider clears the previous client route", async () => {
+    const own = new Map(routes)
+    const direct = {
+      sessionID: "ses_1",
+      agent: "code",
+      kind: "primary",
+      model: { providerID: Provider.ID.make("local"), id: Model.ID.make("echo") },
+      system: [],
+      messages: [],
+      tools: {},
+    } as unknown as Parameters<typeof GatewayRouters.route>[0]
+    await Effect.runPromise(
+      GatewayRouters.route(direct, {
+        account: undefined,
+        routes: own,
+        models: Effect.succeed([]),
+        machineID: Effect.succeed(undefined),
+      }),
+    )
+    const response = event(`data: ${JSON.stringify({ model: "echo", usage: { prompt_tokens: 1 } })}\n\n`)
+    const original = response.response
+    GatewayRouters.stamp(response, own)
+    expect(response.response).toBe(original)
+  })
+})
+
 describe("client entry from the catalog", () => {
   test("describes capabilities, pricing, and variants from the resolved model", () => {
     expect(KiloCustomRouter.clientEntry(GatewayRouters.clientModel(QWEN))).toEqual({
@@ -297,6 +352,41 @@ describe("eval container config", () => {
     expect(entry.cost as unknown).toEqual({ input: 1, output: 2, cache_read: 0, cache_write: 0 })
     expect(Object.keys(entry.variants ?? {})).toEqual(["low", "high"])
     expect(entry.headers).toEqual({ "X-Route": "eu" })
+  })
+
+  test("maps v2 packages to packages the published CLI can load", async () => {
+    const npm = (pkg: string) =>
+      GatewayRouters.providerConfig({ ...provider, package: pkg }, { ...QWEN, package: undefined }).provider.ollama!.npm
+    expect(npm("aisdk:@ai-sdk/openai")).toBe("@ai-sdk/openai")
+    expect(npm("@opencode/ai/providers/openai-compatible")).toBe("@ai-sdk/openai-compatible")
+    expect(npm("@opencode/ai/providers/openrouter")).toBe("@openrouter/ai-sdk-provider")
+    expect(npm("@opencode/ai/providers/google-vertex-chat")).toBe("@ai-sdk/google-vertex")
+    expect(npm("@opencode/ai/providers/vercel-ai-gateway")).toBe("@ai-sdk/gateway")
+    await expect(
+      Effect.runPromise(
+        GatewayRouters.evalConfig({
+          entry: { kind: "client", provider: "ollama", model: "qwen3" },
+          account: { server: "https://api.kilo.ai", token: "kilo-token", version: "1.0.0" },
+          models: [{ ...QWEN, package: "@opencode/ai/providers/zai-coding-plan" }, ROUTER],
+          provider: () => Effect.succeed(provider),
+          credential: () => Effect.succeed(undefined),
+        }),
+      ),
+    ).rejects.toThrow("Client evals do not support provider ollama")
+  })
+
+  test("reads the credential of the provider's integration", async () => {
+    const seen: string[] = []
+    await Effect.runPromise(
+      GatewayRouters.evalConfig({
+        entry: { kind: "client", provider: "ollama", model: "qwen3" },
+        account: { server: "https://api.kilo.ai", token: "kilo-token", version: "1.0.0" },
+        models: CATALOG,
+        provider: () => Effect.succeed(provider),
+        credential: (info) => Effect.sync(() => void seen.push(info.id)).pipe(Effect.as(undefined)),
+      }),
+    )
+    expect(seen).toEqual(["ollama"])
   })
 
   test("sends the provider credential and the Kilo account only in auth", async () => {

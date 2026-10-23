@@ -136,6 +136,8 @@ export function evalImageTag(version: string): string {
   const hasher = new Bun.CryptoHasher("sha256")
   hasher.update(EVAL_ENTRYPOINT)
   hasher.update(version)
+  // A changed Dockerfile needs a new image, not the cached one.
+  hasher.update(evalDockerfile(version))
   return `${EVAL_IMAGE_PREFIX}:${hasher.digest("hex").slice(0, 12)}`
 }
 

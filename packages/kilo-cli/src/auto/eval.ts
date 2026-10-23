@@ -124,7 +124,8 @@ export default Runtime.handler(
       }
     })
     yield* Effect.all(
-      Array.from({ length: input.concurrency }, () => worker),
+      // More workers than cases would only start idle containers.
+      Array.from({ length: Math.min(input.concurrency, plan.items.length) }, () => worker),
       { concurrency: "unbounded" },
     )
     if (stats.failed > 0)
@@ -135,8 +136,8 @@ export default Runtime.handler(
   }, Effect.catch(report())),
 )
 
-function runItem(
-  connection: Connection,
+export function runItem(
+  connection: Pick<Connection, "rpc" | "options">,
   router: KiloCustomRouter.Summary,
   plan: KiloCustomRouter.EvalPlan,
   item: KiloCustomRouter.EvalPlanItem,
@@ -145,67 +146,83 @@ function runItem(
 ) {
   return Effect.gen(function* () {
     const resolved = yield* resolveCase(connection, router, item, cases)
-    const env = yield* Effect.promise(() =>
-      writeEnvFile({
-        KILO_CONFIG_CONTENT: JSON.stringify(resolved.config.config),
-        KILO_AUTH_CONTENT: JSON.stringify(resolved.config.auth),
-        KILO_DISABLE_SESSION_INGEST: "1",
-        KILO_API_URL: resolved.config.server,
-        ...(process.env.KILO_AI_GATEWAY_URL ? { KILO_AI_GATEWAY_URL: process.env.KILO_AI_GATEWAY_URL } : {}),
-        ...(resolved.config.organizationID ? { KILO_ORG_ID: resolved.config.organizationID } : {}),
-        EVAL_TIMEOUT_MS: String(resolved.case.timeoutMs),
-        NO_COLOR: "1",
+    // The env file holds credentials: acquiring it is uninterruptible and its removal always runs.
+    return yield* Effect.acquireUseRelease(
+      Effect.tryPromise({
+        try: () =>
+          writeEnvFile({
+            KILO_CONFIG_CONTENT: JSON.stringify(resolved.config.config),
+            KILO_AUTH_CONTENT: JSON.stringify(resolved.config.auth),
+            KILO_DISABLE_SESSION_INGEST: "1",
+            KILO_API_URL: resolved.config.server,
+            ...(process.env.KILO_AI_GATEWAY_URL ? { KILO_AI_GATEWAY_URL: process.env.KILO_AI_GATEWAY_URL } : {}),
+            ...(resolved.config.organizationID ? { KILO_ORG_ID: resolved.config.organizationID } : {}),
+            EVAL_TIMEOUT_MS: String(resolved.case.timeoutMs),
+            NO_COLOR: "1",
+          }),
+        catch: (error) => new CallError(`Could not write the eval env file: ${message(error)}`),
       }),
+      (env) =>
+        Effect.gen(function* () {
+          const prompt = path.join(env.dir, "prompt.txt")
+          yield* Effect.tryPromise({
+            try: () => fs.writeFile(prompt, resolved.case.prompt, { mode: 0o600 }),
+            catch: (error) => new CallError(`Could not write the case prompt: ${message(error)}`),
+          })
+          const args = evalCliArgs({
+            provider: resolved.config.provider,
+            model: resolved.config.model,
+            variant: item.variant,
+          })
+          // The case prompt goes on stdin: a long prompt exceeds the argument size limit.
+          const result = yield* exec(["docker", ...evalDockerRunArgs({ image, envFile: env.file, args })], {
+            stdin: Bun.file(prompt),
+            timeout: resolved.case.timeoutMs + 120_000,
+          })
+          const parsed = yield* containerResult(result.stdout)
+          if (parsed.stdoutTruncated)
+            return yield* Effect.fail(
+              new CallError("Output exceeded the container stdout cap; the case was not uploaded"),
+            )
+          const events = parseKiloRunEvents(parsed.stdoutLines)
+          const score = yield* decode(
+            KiloCustomRouter.EvalResult,
+            yield* call(() =>
+              connection.rpc["routers.evalResult"](
+                {
+                  result: {
+                    routerId: router.id,
+                    engineIdentity: plan.engineIdentity,
+                    entry: item.entry,
+                    variant: item.variant,
+                    caseId: item.caseId,
+                    rep: item.rep,
+                    output: events.text,
+                    costUsd: events.costUsd ?? 0,
+                    durationMs: parsed.durationMs,
+                    exitCode: parsed.exitCode,
+                    timedOut: parsed.timedOut,
+                  },
+                },
+                connection.options,
+              ),
+            ),
+          )
+          yield* info(
+            `case ${item.caseId} rep ${item.rep} ${label(item.entry)} variant ${item.variant ?? "default"}: score ${score.score.toFixed(3)}`,
+          )
+        }),
+      (env) => Effect.promise(() => fs.rm(env.dir, { recursive: true, force: true })),
     )
-    return yield* Effect.gen(function* () {
-      const prompt = path.join(env.dir, "prompt.txt")
-      yield* Effect.promise(() => fs.writeFile(prompt, resolved.case.prompt, { mode: 0o600 }))
-      const args = evalCliArgs({
-        provider: resolved.config.provider,
-        model: resolved.config.model,
-        variant: item.variant,
-      })
-      // The case prompt goes on stdin: a long prompt exceeds the argument size limit.
-      const result = yield* exec(["docker", ...evalDockerRunArgs({ image, envFile: env.file, args })], {
-        stdin: Bun.file(prompt),
-        timeout: resolved.case.timeoutMs + 120_000,
-      })
-      const parsed = yield* containerResult(result.stdout)
-      if (parsed.stdoutTruncated)
-        return yield* Effect.fail(new CallError("Output exceeded the container stdout cap; the case was not uploaded"))
-      const events = parseKiloRunEvents(parsed.stdoutLines)
-      const score = yield* decode(
-        KiloCustomRouter.EvalResult,
-        yield* call(() =>
-          connection.rpc["routers.evalResult"](
-            {
-              result: {
-                routerId: router.id,
-                engineIdentity: plan.engineIdentity,
-                entry: item.entry,
-                variant: item.variant,
-                caseId: item.caseId,
-                rep: item.rep,
-                output: events.text,
-                costUsd: events.costUsd ?? 0,
-                durationMs: parsed.durationMs,
-                exitCode: parsed.exitCode,
-                timedOut: parsed.timedOut,
-              },
-            },
-            connection.options,
-          ),
-        ),
-      )
-      yield* info(
-        `case ${item.caseId} rep ${item.rep} ${label(item.entry)} variant ${item.variant ?? "default"}: score ${score.score.toFixed(3)}`,
-      )
-    }).pipe(Effect.ensuring(Effect.promise(() => fs.rm(env.dir, { recursive: true, force: true }))))
   })
 }
 
+function message(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
+}
+
 function resolveCase(
-  connection: Connection,
+  connection: Pick<Connection, "rpc" | "options">,
   router: KiloCustomRouter.Summary,
   item: KiloCustomRouter.EvalPlanItem,
   cases: Map<string, KiloCustomRouter.EvalCase>,
@@ -233,6 +250,8 @@ function label(entry: KiloCustomRouter.EntryRef) {
 function exec(cmd: string[], options: { readonly stdin?: Bun.BunFile; readonly timeout: number }) {
   return Effect.promise(async () => {
     const proc = Bun.spawn(cmd, {
+      // The current environment, so `docker` resolves with the PATH (and DOCKER_HOST) of this process.
+      env: process.env,
       stdin: options.stdin ?? "ignore",
       stdout: "pipe",
       stderr: "pipe",
@@ -270,6 +289,9 @@ function confirm(router: string) {
 }
 
 async function writeEnvFile(values: Record<string, string>) {
+  // `docker --env-file` reads one variable per line, so a line break would split a value into more variables.
+  const broken = Object.entries(values).find(([, value]) => /[\r\n]/.test(value))
+  if (broken) throw new Error(`${broken[0]} contains a line break`)
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-auto-eval-env-"))
   const file = path.join(dir, "eval.env")
   const body = Object.entries(values)
