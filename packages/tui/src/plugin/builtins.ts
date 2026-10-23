@@ -14,6 +14,7 @@ import Latex from "@opencode/latex/plugin"
 import Merman from "@opencode/merman/plugin"
 import KiloTeams from "../kilocode/gateway" // kilocode_change - Kilo /teams command
 import KiloNews from "../kilocode/kilo-news" // kilocode_change - Kilo Gateway news on the home screen
+import KiloUsage from "../kilocode/usage" // kilocode_change(provider-usage) - Kilo /usage command
 
 export const builtins = [
   HomeFooter,
@@ -34,4 +35,5 @@ export const builtins = [
   DiffViewer,
   KiloTeams, // kilocode_change
   KiloNews, // kilocode_change
+  KiloUsage, // kilocode_change(provider-usage)
 ]

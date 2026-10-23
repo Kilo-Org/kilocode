@@ -396,6 +396,36 @@
     "note": "Rebuild the cached agents when config changes. v2 rebuilds the agent state on every config change: ConfigAgentPlugin reloads on `config.updated`, and the plugin supervisor reloads the generation.",
     "by": "agents-plugin"
   },
+  "api:POST /kilocode/provider-usage/refresh": {
+    "state": "ported",
+    "note": "Served by the kilocode.provider-usage RPC method refresh (packages/schema/src/kilocode/provider-usage.ts Definition, handler in packages/kilo-plugin/src/provider-usage/index.ts): it bypasses the per-source cache and fetches every source again. The TUI /usage dialog calls it on ctrl+r. Round trip: packages/kilo-cli/test/provider-usage.test.ts.",
+    "by": "kilo-usage-screen"
+  },
+  "module:packages/core/src/kilocode/provider-usage/cloud.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/provider-usage/cloud.ts UsageCloud.plans/snapshot/app: same plan filter (active or past_due, canQueryUsage, installed and enabled coding_plan BYOK key, sorted by ID), same windows, plan state and management URL. The Kilo account data comes from the kilocode.gateway RPC methods authStatus, codingPlans, byok and codingPlanUsage instead of direct tRPC calls; team accounts still get no coding plans. Tests: packages/kilo-plugin/test/provider-usage.test.ts and packages/kilo-cli/test/provider-usage.test.ts.",
+    "by": "kilo-usage-screen"
+  },
+  "module:packages/core/src/kilocode/provider-usage/codex.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/provider-usage/codex.ts CodexUsage.load/decode/normalize: same wham/usage request (bearer token, ChatGPT-Account-Id, 5 s timeout, no redirects, 64 KiB limit), plan names, windows, reset times and auth versus retryable errors. The OpenAI ChatGPT OAuth credential is read through ctx.integration.connection in packages/kilo-plugin/src/provider-usage/index.ts. Tests: packages/kilo-plugin/test/provider-usage.test.ts.",
+    "by": "kilo-usage-screen"
+  },
+  "module:packages/core/src/kilocode/provider-usage/minimax/native.ts": {
+    "state": "ported",
+    "note": "The MiniMax token_plan/remains schema (ModelRemains, Native) is in packages/kilo-plugin/src/provider-usage/minimax.ts with the same fields and the 0-100 percent check.",
+    "by": "kilo-usage-screen"
+  },
+  "module:packages/core/src/kilocode/provider-usage/minimax/usage.ts": {
+    "state": "ported",
+    "note": "packages/kilo-plugin/src/provider-usage/minimax.ts MiniMaxUsage.load/normalize: same regional bindings, sk-cp key rule, interval and weekly windows, boost, not_in_plan and exhausted status, remaining-count semantics and video filter. The key comes from the provider credential or the configured apiKey, as in v1 (index.ts configuredKey). The per-credential cache with stale fallback, kept for failed fetches and failed credential reads, is in cache.ts (UsageCache). Tests: packages/kilo-plugin/test/provider-usage.test.ts.",
+    "by": "kilo-usage-screen"
+  },
+  "module:packages/opencode/test/kilocode/tui/usage.test.ts": {
+    "state": "ported",
+    "note": "packages/tui/test/kilocode/usage.test.ts carries the throughput assertions: weighted generation speed over step time, ignored steps without tokens or time, t/s formatting with grouping and '-' for missing, zero, negative, NaN and infinite values. v1's last-wins fallback for steps without elapsed time is not carried: every v2 assistant step has its start and completion time. The /usage dialog is covered by packages/tui/test/kilocode/usage.view.test.tsx.",
+    "by": "kilo-usage-screen"
+  },
   "module:packages/opencode/src/kilocode/components/kilo-news.tsx": {
     "state": "ported",
     "note": "packages/tui/src/kilocode/kilo-news.tsx News: fetches the kilocode.gateway notifications RPC on mount, keeps items with no showIn or showIn 'cli', shows the first unread item and opens all unread items, then marks them read. Keeps the 3-row placeholder. v2 also refetches on credential.switched/updated and the rpc.kilocode.gateway.organization event, so login and /teams update the banner live. Signed-out and team scope come from the existing kilo-plugin notifications handler (no account returns [], team header from the active account). Test: packages/tui/test/kilocode/news.test.ts.",
