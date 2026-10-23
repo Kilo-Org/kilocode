@@ -2,7 +2,16 @@ export * as KiloConfigDiscovery from "./discovery.js"
 
 import { Effect } from "effect"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
+import path from "path"
 import type { ConfigDiscovery } from "../../config/discovery.js"
+import { AbsolutePath } from "../../schema.js"
+import { KiloConfigPolicy } from "./policy.js"
+
+export function systemDirectory(platform: NodeJS.Platform = process.platform, env: NodeJS.ProcessEnv = process.env) {
+  if (platform === "darwin") return AbsolutePath.make("/Library/Application Support/kilo")
+  if (platform === "win32") return AbsolutePath.make(path.win32.join(env.ProgramData || "C:\\ProgramData", "kilo"))
+  return AbsolutePath.make("/etc/kilo")
+}
 
 /**
  * Kilo config discovery as a value for the generic discovery layout (`ConfigDiscovery.Layout`). The Kilo host
@@ -14,6 +23,9 @@ export const layout: ConfigDiscovery.Layout = {
   names: KiloConfigFiles.names,
   directories: KiloConfigFiles.directories,
   directoryFiles: KiloConfigFiles.directoryFiles,
+  systemFiles: KiloConfigFiles.directoryFiles, // kilo_port(unattributed:config:73db79553730) managed .jsonc before .json
+  systemDirectory,
+  parse: KiloConfigPolicy.parse,
   walk: (input) =>
     Effect.gen(function* () {
       // Cut the walk (nearest first) at the worktree root, as Kilo v1 does. Directories outside version control
