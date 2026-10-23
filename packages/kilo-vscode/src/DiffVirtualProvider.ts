@@ -12,6 +12,8 @@ export interface DiffVirtualFile {
   status?: "added" | "deleted" | "modified"
   files?: Omit<DiffVirtualFile, "files" | "initialDiffStyle">[]
   initialDiffStyle: "unified" | "split"
+  /** Permission ask that opened this diff, if it was auto-opened. */
+  askID?: string
 }
 
 /**
@@ -72,6 +74,16 @@ export class DiffVirtualProvider implements vscode.Disposable {
     })
 
     this.panel = panel
+  }
+
+  /**
+   * Close the panel only if it currently shows the diff that was auto-opened
+   * for the given permission ask. The panel is shared and reused, so a manual
+   * or newer diff must not be closed out from under the user.
+   */
+  public closeIfCurrent(askID: string): void {
+    if (!this.panel || this.pending?.askID !== askID) return
+    this.panel.dispose()
   }
 
   private onMessage(msg: Record<string, unknown>): void {
