@@ -2,6 +2,7 @@
     <dependencies>
         <module name="intellij.platform.backend"/>
         <module name="intellij.platform.kernel.backend"/>
+        <module name="intellij.platform.vcs"/>
         <module name="kilo.jetbrains.shared"/>
     </dependencies>
 
@@ -13,6 +14,7 @@
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloSessionRpcApiProvider"/>
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloMigrationRpcApiProvider"/>
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloWorktreeRpcApiProvider"/>
+        <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloRepoRpcApiProvider"/>
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloRunRpcApiProvider"/>
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloMarketplaceRpcApiProvider"/>
         <applicationService serviceImplementation="ai.kilocode.backend.migration.KiloBackendLegacyMigrationStoreService"/>
