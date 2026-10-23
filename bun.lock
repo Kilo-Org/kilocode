@@ -34,7 +34,7 @@
     },
     "packages/ai": {
       "name": "@opencode/ai",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@aws-sdk/credential-providers": "3.1057.0",
         "@opencode/schema": "workspace:*",
@@ -56,7 +56,7 @@
     },
     "packages/cli": {
       "name": "@opencode/cli",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "bin": {
         "opencode": "./bin/opencode.cjs",
         "opencode2": "./bin/opencode2.cjs",
@@ -124,7 +124,7 @@
     },
     "packages/client": {
       "name": "@opencode/client",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@opencode/protocol": "workspace:*",
         "@opencode/schema": "workspace:*",
@@ -149,7 +149,7 @@
     },
     "packages/codemode": {
       "name": "@opencode/codemode",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "acorn": "8.15.0",
         "effect": "catalog:",
@@ -162,7 +162,7 @@
     },
     "packages/core": {
       "name": "@opencode/core",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@ai-sdk/cohere": "3.0.27",
         "@ai-sdk/perplexity": "3.0.26",
@@ -228,7 +228,7 @@
     },
     "packages/http-recorder": {
       "name": "@opencode/http-recorder",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@effect/platform-node-shared": "catalog:",
       },
@@ -247,7 +247,7 @@
     },
     "packages/httpapi-codegen": {
       "name": "@opencode/httpapi-codegen",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "effect": "catalog:",
         "prettier": "3.6.2",
@@ -265,10 +265,13 @@
         "@babel/core": "7.29.7",
         "@babel/preset-typescript": "7.27.1",
         "@effect/platform-node": "catalog:",
+        "@kilocode/gateway-core": "workspace:*",
         "@kilocode/kilo-plugin": "workspace:*",
+        "@opencode/ai": "workspace:*",
         "@opencode/cli": "workspace:*",
         "@opencode/core": "workspace:*",
         "@opencode/plugin": "workspace:*",
+        "@opencode/schema": "workspace:*",
         "@opencode/util": "workspace:*",
         "@opentui/core": "catalog:",
         "@opentui/solid": "catalog:",
@@ -276,9 +279,7 @@
         "effect": "catalog:",
       },
       "devDependencies": {
-        "@kilocode/gateway-core": "workspace:*",
         "@opencode/client": "workspace:*",
-        "@opencode/schema": "workspace:*",
         "@opencode/server": "workspace:*",
         "@opencode/tui": "workspace:*",
         "@tsconfig/bun": "catalog:",
@@ -323,7 +324,7 @@
     },
     "packages/latex": {
       "name": "@opencode/latex",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@opencode/plugin": "workspace:*",
         "@opentui/core": "catalog:",
@@ -337,7 +338,7 @@
     },
     "packages/merman": {
       "name": "@opencode/merman",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@opencode/plugin": "workspace:*",
         "@opentui/core": "catalog:",
@@ -352,7 +353,7 @@
     },
     "packages/plugin": {
       "name": "@opencode/plugin",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@ai-sdk/provider": "3.0.8",
         "@opencode/ai": "workspace:*",
@@ -389,7 +390,7 @@
     },
     "packages/plugin-browser": {
       "name": "@opencode/plugin-browser",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@opencode/plugin": "workspace:*",
         "@opencode/schema": "workspace:*",
@@ -404,7 +405,7 @@
     },
     "packages/plugins/figma": {
       "name": "@opencode/plugin-figma",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "gray-matter": "4.0.3",
       },
@@ -419,7 +420,7 @@
     },
     "packages/protocol": {
       "name": "@opencode/protocol",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@opencode/schema": "workspace:*",
         "effect": "catalog:",
@@ -434,7 +435,7 @@
     },
     "packages/schema": {
       "name": "@opencode/schema",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@standard-schema/spec": "catalog:",
         "effect": "catalog:",
@@ -458,7 +459,7 @@
     },
     "packages/sdk": {
       "name": "@opencode/sdk",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@opencode/client": "workspace:*",
         "@opencode/core": "workspace:*",
@@ -479,7 +480,7 @@
     },
     "packages/server": {
       "name": "@opencode/server",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@effect/platform-node": "catalog:",
         "@effect/platform-node-shared": "catalog:",
@@ -502,7 +503,7 @@
     },
     "packages/simulation": {
       "name": "@opencode/simulation",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@opencode/ai": "workspace:*",
         "@opencode/core": "workspace:*",
@@ -522,7 +523,7 @@
     },
     "packages/theme": {
       "name": "@opencode/theme",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@opentui/core": "catalog:",
         "effect": "catalog:",
@@ -536,7 +537,7 @@
     },
     "packages/tui": {
       "name": "@opencode/tui",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@opencode/client": "workspace:*",
         "@opencode/core": "workspace:*",
@@ -569,7 +570,7 @@
     },
     "packages/ui": {
       "name": "@opencode/ui",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@kitlangton/solid-motion": "0.2.2",
         "@kobalte/core": "catalog:",
@@ -605,7 +606,7 @@
     },
     "packages/util": {
       "name": "@opencode/util",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "@effect/opentelemetry": "catalog:",
         "@effect/platform-node": "catalog:",
@@ -665,7 +666,7 @@
     },
     "services/update": {
       "name": "@opencode/update",
-      "version": "2.0.32",
+      "version": "2.1.0",
       "dependencies": {
         "jose": "6.0.11",
         "semver": "catalog:",

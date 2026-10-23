@@ -1,6 +1,7 @@
 import type { ModelInfo, SessionMessageInfo } from "@opencode/client"
 import { lastAssistantWithUsage } from "@opencode/client/solid"
 import { Locale } from "./locale"
+import { routedModelInfo } from "../kilocode/routed-model" // kilocode_change(gateway)
 
 type SessionNode = {
   id: string
@@ -53,7 +54,11 @@ export function contextUsage(
   const tokens =
     last.tokens.input + last.tokens.output + last.tokens.reasoning + last.tokens.cache.read + last.tokens.cache.write
   if (tokens <= 0) return
-  const model = models?.find((model) => model.providerID === last.model.providerID && model.id === last.model.id)
+  // kilocode_change start - gateway: use the served model's context limit without changing the selection
+  const model =
+    routedModelInfo(last, models) ??
+    models?.find((model) => model.providerID === last.model.providerID && model.id === last.model.id)
+  // kilocode_change end
   return {
     tokens,
     percent: model?.limit.context ? Math.round((tokens / model.limit.context) * 100) : undefined,

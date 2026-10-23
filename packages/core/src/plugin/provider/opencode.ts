@@ -302,6 +302,9 @@ export const OpencodePlugin = define<HttpClient.HttpClient | Bus.Service | Manag
             model.headers = Provider.mergeHeaders(model.headers, config.headers)
             model.body = Provider.mergeOverlay(model.body, config.body)
             if (config.limit !== undefined) model.limit = { ...model.limit, ...config.limit }
+          })
+          // Variants are spelled for the final package, which the update above normalizes from `aisdk:*`.
+          providers.models.update(providerID, modelID, (model) => {
             // The Console's reasoning replaces the base variants; its variants still overlay them below.
             if (config.capabilities?.reasoning !== undefined)
               model.variants = [

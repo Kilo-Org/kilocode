@@ -420,7 +420,7 @@ export const layer = (options?: Options) =>
               yield* decodeCatalog(text)
               yield* writeCache(text, digest)
               yield* invalidate
-              yield* bus.publish(ModelsDev.Event.Refreshed, {})
+              yield* bus.publish(ModelsDev.Event.Refreshed, {}, { global: true })
             }),
           )
           .pipe(

@@ -10,6 +10,7 @@ import { define } from "@opencode/plugin/effect/plugin"
 import { Agent } from "@opencode/schema/agent"
 import type { SessionEvent } from "@opencode/schema/session-event"
 import { Global } from "@opencode/util/global"
+import { KiloOrganizationModes } from "../gateway/modes"
 import { Effect, Option, Stream } from "effect"
 import path from "path"
 
@@ -224,6 +225,22 @@ export const Plugin = define({
       })
     })
 
+    yield* ctx.session.hook("context", (event) =>
+      Effect.gen(function* () {
+        const name = yield* ctx.agent.get({ agentID: event.agent }).pipe(
+          Effect.map((current) => current.data.name),
+          Effect.orElseSucceed(() => event.agent),
+        )
+        event.system.push({
+          type: "text",
+          text:
+            `Your active agent is ${JSON.stringify(name)} (ID: ${JSON.stringify(event.agent)}). ` +
+            "This is your selected agent/mode identity, not the Code Mode tool-calling mechanism. " +
+            "Answer agent/mode identity questions from this context without using tools or inspecting session or credential storage.",
+        })
+      }),
+    )
+
     // Earlier turns show what the previous agent could do. Tell the model once per switch which
     // agent is active now and whether it may change files. A new session has no previous agent.
     yield* ctx.event.subscribe().pipe(
@@ -269,6 +286,22 @@ export const Ceiling = define({
       // browser plugin's deny).
       const appended = editor.get(probe)?.permissions ?? []
       editor.remove(probe)
+      for (const agent of editor.list()) {
+        const span = KiloOrganizationModes.permissionSpans.get(agent.permissions)
+        if (!span) continue
+        const after = agent.permissions.slice(span[1])
+        // An unknown boundary keeps organization rules last instead of allowing a broad global bypass.
+        const split = boundary(after, appended) ?? after.length
+        // Global defaults precede organization rules, while explicit per-agent config stays last.
+        editor.update(agent.id, (item) => {
+          item.permissions = [
+            ...agent.permissions.slice(0, span[0]),
+            ...after.slice(0, split),
+            ...agent.permissions.slice(span[0], span[1]),
+            ...after.slice(split),
+          ]
+        })
+      }
       for (const [id, base, ceiling] of [
         ["ask", guard.ask, (global: Permission.Rule[]) => seal(guard.ask, global)],
         ["plan", guard.plan, (global: Permission.Rule[]) => seal(guard.plan, global)],

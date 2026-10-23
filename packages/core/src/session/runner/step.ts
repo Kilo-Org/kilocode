@@ -243,9 +243,14 @@ export const make = Effect.gen(function* () {
                     .files({ from: startSnapshot, to: snapshot })
                     .pipe(Effect.orElseSucceed(() => undefined))
               : undefined
+          // kilocode_change start - gateway: prefer the provider's completed response charge, including zero.
           const usage = record.finish
-            ? { cost: SessionUsage.calculateCost(input.model.cost, record.finish.tokens), tokens: record.finish.tokens }
+            ? {
+                cost: record.finish.providerCost ?? SessionUsage.calculateCost(input.model.cost, record.finish.tokens),
+                tokens: record.finish.tokens,
+              }
             : undefined
+          // kilocode_change end
           if (record.failure) yield* publisher.publishStepFailure({ ...usage, snapshot, files })
           if (record.finish && usage && !record.failure)
             yield* bus.publish(SessionEvent.Step.Ended, {

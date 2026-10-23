@@ -20,6 +20,7 @@ describe("KiloModels", () => {
       description: "Frontier router model",
       family: "claude",
       aiSDKProvider: "openrouter",
+      prompt: "anthropic",
       free: false,
       recommendedIndex: 0,
       hasUserByokAvailable: true,
@@ -58,6 +59,29 @@ describe("KiloModels", () => {
     expect(result.models.map((model) => model.id)).toEqual(["kilo-auto/free", "kilo-auto/small"])
     expect(result.models.every((model) => model.free)).toBe(true)
   })
+
+  test("retains an explicit empty token without exposing paid anonymous models", async () => {
+    using backend = fixture()
+    const result = await Effect.runPromise(KiloModels.get({ server: backend.url, token: "" }))
+    expect(result.anonymous).toBe(false)
+    expect(result.models.map((model) => model.id)).toEqual(["kilo-auto/free", "kilo-auto/small"])
+    expect(backend.requests).toEqual([
+      { method: "GET", path: "/api/openrouter/models", authorization: null },
+    ])
+  })
+
+  for (const token of [undefined, ""]) {
+    test(`does not retry a team 401 against public models with token ${String(token)}`, async () => {
+      using backend = fixture()
+      backend.state.teamModelsStatus = 401
+      expect(await Effect.runPromise(
+        KiloModels.get({ server: backend.url, token, organizationID: "selected" }).pipe(Effect.flip),
+      )).toEqual({ kind: "unauthorized", status: 401 })
+      expect(backend.requests).toEqual([
+        { method: "GET", path: "/api/organizations/selected/models", authorization: null, organizationID: "selected" },
+      ])
+    })
+  }
 
   test("fetches the team catalog from /api/organizations/:id/models and sends the team header", async () => {
     using backend = fixture()
@@ -140,7 +164,60 @@ describe("KiloModels", () => {
     expect(models[0]?.terminalBench).toBeUndefined()
     expect(models[0]?.autoRouting).toBeUndefined()
     expect(models[0]?.aiSDKProvider).toBeUndefined()
+    expect(models[0]?.prompt).toBeUndefined()
     expect(models[0]?.limit).toEqual({ context: 128000, output: 25600 })
+  })
+
+  test("preserves supported prompt selectors and flat explicit variants from the HTTP catalog", async () => {
+    using backend = fixture()
+    const prompts = [
+      "codex",
+      "gemini",
+      "beast",
+      "anthropic",
+      "trinity",
+      "anthropic_without_todo",
+      "ling",
+      "gpt55",
+    ] satisfies KiloModels.Prompt[]
+    const variants = {
+      "team-custom": { reasoning: { enabled: true, effort: "high" }, verbosity: "low", custom: { enabled: true } },
+      quiet: { thinking: { type: "disabled" }, effort: "medium" },
+    }
+    backend.state.models = {
+      data: prompts.map((prompt) => ({
+        id: `test/${prompt}`,
+        name: prompt,
+        context_length: 128000,
+        supported_parameters: ["tools"],
+        opencode: { prompt, variants, reasoning_options: [{ type: "effort", values: ["low"] }] },
+      })),
+    }
+    const result = await Effect.runPromise(KiloModels.get({ server: backend.url, token: "token" }))
+    expect(result.models.map((model) => model.prompt)).toEqual(prompts)
+    for (const model of result.models) {
+      expect(model.reasoning).toBe(false)
+      expect(model.variants).toEqual(variants)
+      expect(model.reasoningOptions).toEqual([{ type: "effort", values: ["low"] }])
+    }
+  })
+
+  test("ignores malformed variants without dropping the model or a valid prompt", () => {
+    const models = KiloModels.catalogModels(
+      {
+        data: [null, [], "high", { high: null }, { high: [] }, {}].map((variants, index) => ({
+          id: `test/variants-${index}`,
+          name: `Variants ${index}`,
+          context_length: 128000,
+          opencode: { prompt: "codex", variants },
+        })),
+      },
+      false,
+    )
+    expect(models).toHaveLength(6)
+    expect(models.every((model) => model.prompt === "codex")).toBe(true)
+    expect(models.slice(0, 5).every((model) => model.variants === undefined)).toBe(true)
+    expect(models[5]?.variants).toEqual({})
   })
 
   test("parses Retry-After and computes catalog recovery backoff", async () => {
@@ -257,4 +334,24 @@ describe("KiloDefaults", () => {
       "kilo-auto/frontier",
     )
   })
+
+  for (const defaults of [
+    { name: "empty", status: 200, body: {} },
+    { name: "null", status: 200, body: { defaultModel: null } },
+    { name: "malformed", status: 200, body: { defaultModel: 123 } },
+    { name: "unavailable", status: 503, body: {} },
+  ]) {
+    test(`leaves an ${defaults.name} team default unset instead of selecting the personal fallback`, async () => {
+      using backend = fixture()
+      backend.state.teamDefaults = defaults.body
+      backend.state.teamDefaultsStatus = defaults.status
+      expect(
+        await Effect.runPromise(KiloDefaults.get({ server: backend.url, token: "token", organizationID: "selected" })),
+      ).toBeUndefined()
+      expect(backend.requests.at(-1)).toMatchObject({
+        path: "/api/organizations/selected/defaults",
+        authorization: "Bearer token",
+      })
+    })
+  }
 })
