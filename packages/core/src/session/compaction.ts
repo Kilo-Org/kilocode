@@ -101,6 +101,8 @@ const RESERVE_MIN = 16_000
 const RESERVE_SHARE = 0.15
 /** A common window size, assumed for the compaction request when the model's window is unknown. */
 const UNKNOWN_WINDOW = 200_000
+/** A summary gets at least this much output, or the room left if less, even when the estimate margin leaves less. */
+const SUMMARY_OUTPUT_FLOOR = 32_000
 const IMAGE_TOKEN_ESTIMATE = 1_500
 const PDF_TOKEN_ESTIMATE = 2_000
 
@@ -885,15 +887,20 @@ const hasMeasuredPrompt = (message: SessionMessage.Info, model: SessionContext.L
  * cannot shrink the conversation further. Lower the limit to the room the request being sent leaves in the window,
  * so the input and the requested output never exceed the window by our own estimate.
  *
- * Like `budget` in `prepare`, the estimate counts as measured, without the margin primary requests add for estimates:
- * `deliver` aims at about 90% of the window, so that margin would cut every summary near its target to the minimum.
+ * The limit leaves the same margin for a low estimate that primary requests do. `deliver` aims at about 90% of the
+ * window, so that margin alone would cut a summary near its target to the minimum; there it still gets up to
+ * `SUMMARY_OUTPUT_FLOOR` of the room left without the margin.
  */
 const fitOutput = (request: LLMRequest, limit: SessionContext.Loaded["model"]["limit"]) => {
   const current = request.generation?.maxTokens
   if (current === undefined) return request
+  const estimated = estimateRequest(request)
   const maxTokens = Math.min(
     current,
-    SessionModelRequest.outputLimit(limit, "compaction", { measured: estimateRequest(request), estimated: 0 }),
+    Math.max(
+      SessionModelRequest.outputLimit(limit, { measured: 0, estimated }),
+      Math.min(SUMMARY_OUTPUT_FLOOR, SessionModelRequest.outputLimit(limit, { measured: estimated, estimated: 0 })),
+    ),
   )
   if (maxTokens === current) return request
   return LLMRequest.update(request, { generation: { ...request.generation, maxTokens } })

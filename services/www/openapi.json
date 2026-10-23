@@ -5382,6 +5382,68 @@
         }
       }
     },
+    "/api/experimental/voice/models": {
+      "get": {
+        "tags": ["voice"],
+        "operationId": "experimental.voice.models",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "VoiceModelsResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceModelsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestErrorEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UnauthorizedError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedErrorEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "LocationNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocationNotFoundErrorEncoded"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "List supported voice models, their transports, whether the server has a usable API key for each provider or the connected OpenCode Console hosts the model, and the Console workspace a hosted model bills to.",
+        "summary": "List voice models"
+      }
+    },
     "/api/experimental/voice/session": {
       "post": {
         "tags": ["voice"],
@@ -5440,7 +5502,7 @@
             }
           }
         },
-        "description": "Create a server-brokered voice session using the server's configured provider credentials and return the WebRTC SDP answer or WebSocket ephemeral token.",
+        "description": "Create a server-brokered voice session using the server's configured provider credentials, or the connected OpenCode Console when it hosts the model, and return the WebRTC SDP answer or WebSocket ephemeral token.",
         "summary": "Create voice session",
         "requestBody": {
           "content": {
@@ -5466,6 +5528,87 @@
                   }
                 },
                 "required": ["model", "transport"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/experimental/voice/session/{sessionID}/instructions": {
+      "post": {
+        "tags": ["voice"],
+        "operationId": "experimental.voice.instructions",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestErrorEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UnauthorizedError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedErrorEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "LocationNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocationNotFoundErrorEncoded"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Replace the backend instructions of a running session the connected OpenCode Console hosts, whose data channel can't change them.",
+        "summary": "Replace voice session instructions",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "instructions": {
+                    "type": "string"
+                  }
+                },
+                "required": ["instructions"],
                 "additionalProperties": false
               }
             }
@@ -14324,6 +14467,17 @@
                 "type": "integer",
                 "minimum": 0
               },
+              "location_idle_timeout": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "boolean",
+                    "enum": [false]
+                  }
+                ]
+              },
               "policies": {
                 "type": "array",
                 "items": {
@@ -19794,6 +19948,10 @@
             },
             "required": ["body"],
             "additionalProperties": false
+          },
+          "retryAfterMs": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "required": ["type", "message"],
@@ -20525,6 +20683,78 @@
         "required": ["_tag", "providerID", "message"],
         "additionalProperties": false
       },
+      "VoiceModel": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "transports": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VoiceTransportType"
+            }
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "integration": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "workspace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["model", "provider", "transports", "available"],
+        "additionalProperties": false
+      },
+      "VoiceModelsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "models": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/VoiceModel"
+                }
+              },
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": ["models"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["data"],
+        "additionalProperties": false
+      },
       "VoiceSessionResponse": {
         "type": "object",
         "properties": {
@@ -20533,6 +20763,23 @@
             "properties": {
               "transport": {
                 "$ref": "#/components/schemas/VoiceTransport"
+              },
+              "session": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id"],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": ["transport"],
@@ -20561,6 +20808,10 @@
             "$ref": "#/components/schemas/VoiceWebSocketTransportInput"
           }
         ]
+      },
+      "VoiceTransportType": {
+        "type": "string",
+        "enum": ["webrtc", "websocket"]
       },
       "VoiceWebRTCTransport": {
         "type": "object",

@@ -87,7 +87,7 @@ const Assistant = Schema.StructWithRest(
     tool_calls: optionalArray(ToolCall),
     thought_signature: Schema.optional(Schema.String),
   }),
-  [Schema.Record(Schema.String, Schema.Unknown)],
+  [JsonObject],
 )
 const Messages = Schema.Array(
   Schema.Union([
@@ -130,11 +130,11 @@ const Delta = Schema.StructWithRest(
     tool_calls: optionalNull(Schema.Array(ToolDelta)),
     thought_signature: optionalNull(Schema.String),
   }),
-  [Schema.Record(Schema.String, Schema.Unknown)],
+  [JsonObject],
 )
 const Choice = Schema.StructWithRest(
   Schema.Struct({ ...OpenAIChat.OpenAIChatChoice.schema.fields, delta: optionalNull(Delta) }),
-  [Schema.Record(Schema.String, Schema.Unknown)],
+  [JsonObject],
 )
 const Usage = Schema.StructWithRest(
   Schema.Struct({
@@ -146,11 +146,11 @@ const Usage = Schema.StructWithRest(
           cache_write_tokens: optionalNull(Schema.Number),
           cache_creation_input_tokens: optionalNull(Schema.Number),
         }),
-        [Schema.Record(Schema.String, Schema.Unknown)],
+        [JsonObject],
       ),
     ),
   }),
-  [Schema.Record(Schema.String, Schema.Unknown)],
+  [JsonObject],
 )
 const Event = Schema.StructWithRest(
   Schema.Struct({
@@ -165,7 +165,7 @@ const Event = Schema.StructWithRest(
       }),
     ),
   }),
-  [Schema.Record(Schema.String, Schema.Unknown)],
+  [JsonObject],
 )
 
 interface State {

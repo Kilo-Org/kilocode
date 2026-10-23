@@ -334,7 +334,6 @@ function useEnvShare() {
 function useEnvMock() {
   return {
     mockEvent: process.env["MOCK_EVENT"],
-    mockToken: process.env["MOCK_TOKEN"],
   }
 }
 
@@ -343,8 +342,7 @@ function useEnvGithubToken() {
 }
 
 function isMock() {
-  const { mockEvent, mockToken } = useEnvMock()
-  return Boolean(mockEvent || mockToken)
+  return Boolean(useEnvMock().mockEvent)
 }
 
 function isPullRequest() {
@@ -367,29 +365,17 @@ function useShareUrl() {
 }
 
 async function getAccessToken() {
-  const { repo } = useContext()
-
   const envToken = useEnvGithubToken()
   if (envToken) return envToken
+  if (isMock()) throw new Error("TOKEN is required when running with MOCK_EVENT")
 
-  let response
-  if (isMock()) {
-    response = await fetch("https://api.opencode.ai/exchange_github_app_token_with_pat", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${useEnvMock().mockToken}`,
-      },
-      body: JSON.stringify({ owner: repo.owner, repo: repo.repo }),
-    })
-  } else {
-    const oidcToken = await core.getIDToken("opencode-github-action")
-    response = await fetch("https://api.opencode.ai/exchange_github_app_token", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${oidcToken}`,
-      },
-    })
-  }
+  const oidcToken = await core.getIDToken("opencode-github-action")
+  const response = await fetch("https://api.opencode.ai/exchange_github_app_token", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${oidcToken}`,
+    },
+  })
 
   if (!response.ok) {
     const responseJson = (await response.json()) as { error?: string }

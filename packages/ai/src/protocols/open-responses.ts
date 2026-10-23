@@ -476,7 +476,7 @@ export const lowerToolChoice = (protocolName: string, toolChoice: NonNullable<LL
 // provider-defined and does not necessarily identify the item's semantic type.
 const itemID = (providerMetadata: ProviderMetadata | undefined, providerMetadataKey: string) => {
   const metadata = providerMetadata?.[providerMetadataKey]
-  if (!ProviderShared.isRecord(metadata) || typeof metadata.itemId !== "string") return undefined
+  if (!metadata || typeof metadata.itemId !== "string") return undefined
   const separator = metadata.itemId.indexOf("_")
   return separator > 0 && separator < metadata.itemId.length - 1 ? metadata.itemId : undefined
 }
@@ -495,7 +495,7 @@ const lowerToolCall = (part: ToolCallPart, providerMetadataKey: string): OpenRes
 
 const lowerReasoning = (part: ReasoningPart, providerMetadataKey: string): OpenResponsesReasoningInput | undefined => {
   const metadata = part.providerMetadata?.[providerMetadataKey]
-  if (!ProviderShared.isRecord(metadata)) return undefined
+  if (!metadata) return undefined
   const id = itemID(part.providerMetadata, providerMetadataKey)
   const encryptedContent =
     typeof metadata.reasoningEncryptedContent === "string" || metadata.reasoningEncryptedContent === null
@@ -1021,7 +1021,7 @@ export const onReasoningDelta = (state: ParserState, event: Event, itemID: strin
 // as a single delta unless that summary index already streamed one.
 export const onReasoningDone = (state: ParserState, event: Event, itemID: string): StepResult => {
   const item = state.reasoningItems[itemID]
-  if (!item || typeof event.text !== "string") return [state, NO_EVENTS]
+  if (!item || event.text === undefined) return [state, NO_EVENTS]
   const index = event.summary_index ?? 0
   if (item.deltaIndexes.has(index)) return [state, NO_EVENTS]
   return onReasoningDelta(state, { ...event, delta: event.text }, itemID)

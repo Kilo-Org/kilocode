@@ -12,6 +12,8 @@ import {
   type HttpContext,
   type HttpRateLimitDetails,
 } from "./schema/index.js"
+import { Json } from "./utils/json.js"
+import { isRecord } from "./utils/record.js"
 
 const patterns = [
   /prompt is too long/i,
@@ -115,7 +117,7 @@ export const isRetryable = (error: AIError) => {
   }
 }
 
-const decodeJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))
+const decodeJson = Schema.decodeUnknownOption(Json)
 // OpenCode Zen reports account caps as typed 429/402 errors that are not throttles.
 const QUOTA_CODES = new Set([
   "insufficient_quota",
@@ -263,7 +265,7 @@ export function classifyProviderFailure(input: ProviderFailure): AIError["reason
     codes.some((code) => QUOTA_CODES.has(code)) ||
     (input.status === 429 && QUOTA_TEXT.test(text))
   )
-    return new QuotaExceededError(details)
+    return new QuotaExceededError({ ...details, retryAfterMs: input.retryAfterMs })
   if (
     input.status === 401 ||
     input.status === 403 ||
@@ -332,8 +334,4 @@ function providerCodes(value: unknown) {
     response?.error_type,
     exception?.type,
   ].filter((value): value is string => typeof value === "string")
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
 }
