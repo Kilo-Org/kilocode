@@ -59,13 +59,17 @@ export function build(input: {
     input.parameters.map((parameter) => [parameter.key, input.params[parameter.key]?.trim() ?? ""]),
   )
   // Only visit the original template: inserted values can contain literal placeholders themselves.
-  const filled = input.template.replace(/\{\{([^{}]+)\}\}|\$\{([^{}]+)\}/g, (_, current: string, legacy: string) => {
-    const key = current ?? legacy
-    const value = values.get(key)
-    if (value === undefined)
-      throw new McpError("invalid_params", `The server config uses undeclared parameters: ${key}`)
-    return JSON.stringify(value).slice(1, -1)
-  })
+  const filled = input.template.replace(
+    /\{\{([^{}]+)\}\}|\$\{([^{}]+)\}/g,
+    (placeholder, current: string, legacy: string) => {
+      const key = current ?? legacy
+      const value = values.get(key)
+      if (value === undefined && current === undefined) return placeholder
+      if (value === undefined)
+        throw new McpError("invalid_params", `The server config uses undeclared parameters: ${key}`)
+      return JSON.stringify(value).slice(1, -1)
+    },
+  )
   const decodedJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))(filled)
   if (Option.isNone(decodedJson)) throw new McpError("invalid_params", "The server config is not valid JSON")
   const raw = decodedJson.value
@@ -106,7 +110,22 @@ function optionalRecord(key: string, value: unknown) {
 }
 
 /** The Kilo config file that a write goes to: the first existing write candidate, else a new `kilo2.json`. */
-export async function configFile(directory: string, global: boolean) {
+export async function configFile(
+  directory: string,
+  global: boolean,
+  owned: readonly KiloMarketplaceRpc.Resource[] = [],
+) {
+  const checked = async (file: string) => {
+    if (global) return file
+    const target = await resolveFile(file)
+    // Project symlinks are repository-controlled; only existing machine-local ownership can authorize other targets.
+    if (
+      !KiloConfigFiles.writeCandidates(await resolveFile(directory), false).includes(target) &&
+      !owned.some((resource) => "config" in resource && resource.config === file && resource.target === target)
+    )
+      throw new McpError("conflict", `Project MCP config target has no machine-local ownership: ${file}`)
+    return file
+  }
   for (const candidate of KiloConfigFiles.writeCandidates(directory, global)) {
     if (
       await fs.stat(candidate).then(
@@ -117,9 +136,9 @@ export async function configFile(directory: string, global: boolean) {
         },
       )
     )
-      return candidate
+      return checked(candidate)
   }
-  return path.join(directory, KiloConfigFiles.newFile)
+  return checked(path.join(directory, KiloConfigFiles.newFile))
 }
 
 /** Adds `mcp.servers.<name>`. Fails with `conflict` when the entry exists and `replace` is not set. */
@@ -206,7 +225,8 @@ export async function resolveFile(file: string): Promise<string> {
       if (error.code === "ENOENT") return undefined
       throw error
     })
-    if (info?.isSymbolicLink()) return resolveFile(path.resolve(path.dirname(file), await fs.readlink(file)))
+    if (info?.isSymbolicLink())
+      return resolveFile(path.resolve(await resolveFile(path.dirname(file)), await fs.readlink(file)))
     if (info) return fs.realpath(file)
     return path.join(await resolveFile(path.dirname(file)), path.basename(file))
   })
@@ -231,10 +251,19 @@ function entry(text: string, file: string, name: string) {
 // so the config watcher never reads a half-written file.
 async function save(file: string, text: string, key: string[], value: unknown) {
   const next = applyEdits(text, modify(text, key, value, { formattingOptions: { tabSize: 2, insertSpaces: true } }))
+  const mode = await fs.stat(file).then(
+    (info) => info.mode & 0o7777,
+    (error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return 0o600
+      throw error
+    },
+  )
   await fs.mkdir(path.dirname(file), { recursive: true })
   const temporary = `${file}.${randomUUID()}.tmp`
   try {
     await fs.writeFile(temporary, next, { mode: 0o600, flag: "wx" })
+    // Creation applies the umask; restore the exact target mode before the atomic replacement.
+    await fs.chmod(temporary, mode)
     await fs.rename(temporary, file)
   } catch (error) {
     const cleanup = await Promise.allSettled([fs.rm(temporary, { force: true })])

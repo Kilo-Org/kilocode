@@ -73,7 +73,13 @@ describe("Kilo marketplace registry", () => {
     const [context7, composer] = KiloMarketplaceRegistry.parse("mcp", MCPS)
     expect(context7.item.options.map((option) => option.name)).toEqual(["NPX", "Remote Server"])
     expect(context7.item.options[0].parameters).toEqual([
-      { key: "DEFAULT_MINIMUM_TOKENS", name: "Default Minimum Tokens", placeholder: undefined, optional: true },
+      {
+        key: "DEFAULT_MINIMUM_TOKENS",
+        name: "Default Minimum Tokens",
+        placeholder: undefined,
+        optional: true,
+        secret: true,
+      },
     ])
     expect(context7.payloads).toHaveLength(2)
     expect(composer.item.options.map((option) => option.name)).toEqual(["Default"])
@@ -302,6 +308,93 @@ describe("skill install", () => {
     }
   })
 
+  test.each(["write", "remove"] as const)(
+    "serializes concurrent %s through an alias until failed promotion restores the old tree",
+    async (operation) => {
+      const directory = await fs.realpath(await tmp())
+      const resume = Promise.withResolvers<void>()
+      try {
+        const root = path.join(directory, "skills")
+        const target = await install({
+          root,
+          id: "demo",
+          archive: await tarball({ "SKILL.md": "old", "ref/a.txt": "old reference" }),
+        })
+        const owned = (await fingerprint(target))!
+        const prepared = await prepare({ root, id: "demo", archive: await tarball({ "SKILL.md": "new" }) })
+        const alias = path.join(directory, "alias")
+        await fs.symlink(root, alias, "dir")
+        const aliased = path.relative(process.cwd(), path.join(alias, "demo"))
+        const entered = Promise.withResolvers<void>()
+        const attempted = Promise.withResolvers<void>()
+        const rename = fs.rename
+        const realpath = fs.realpath
+        const lstat = fs.lstat
+        const denied = new Error("staging rename denied")
+        const inspections: string[] = []
+        const restored: (string | undefined)[] = []
+        using promotion = spyOn(fs, "rename").mockImplementation(async (source, destination) => {
+          if (String(source).includes(".marketplace-staging")) {
+            entered.resolve()
+            await resume.promise
+            throw denied
+          }
+          await rename(source, destination)
+          if (String(source).includes(".marketplace-trash")) restored.push(await fingerprint(target))
+        })
+        const replacing = write(prepared, [owned]).catch((error: unknown) => error)
+        await entered.promise
+        using resolving = spyOn(fs, "realpath").mockImplementation((async (location) => {
+          const result = await realpath(location)
+          if (location === alias) attempted.resolve()
+          return result
+        }) as typeof fs.realpath)
+        using inspecting = spyOn(fs, "lstat").mockImplementation(((location) => {
+          if (
+            path.resolve(String(location)) === target ||
+            path.resolve(String(location)) === path.join(alias, "demo")
+          ) {
+            inspections.push(String(location))
+            attempted.resolve()
+          }
+          return lstat(location)
+        }) as typeof fs.lstat)
+        const queued =
+          operation === "write"
+            ? write({ ...prepared, target: aliased }, [owned]).catch((error: unknown) => error)
+            : remove(aliased, [owned])
+        try {
+          await attempted.promise
+          // Drain queue dispatch microtasks after canonicalization, without a timing-based sleep.
+          await new Promise<void>((resolve) => setImmediate(resolve))
+          expect(inspections).toEqual([])
+          const trash = path.join(directory, ".marketplace-trash")
+          const backups = await fs.readdir(trash)
+          expect(backups).toHaveLength(1)
+          expect(await fingerprint(path.join(trash, backups[0]))).toBe(owned)
+        } finally {
+          resume.resolve()
+          await Promise.all([replacing, queued])
+        }
+        expect(await replacing).toBe(denied)
+        expect(await queued).toBe(operation === "write" ? denied : undefined)
+        expect(restored).toEqual(operation === "write" ? [owned, owned] : [owned])
+        expect(await fingerprint(target)).toBe(operation === "write" ? owned : undefined)
+        if (operation === "write") {
+          expect(await Bun.file(path.join(target, "ref/a.txt")).text()).toBe("old reference")
+        }
+        expect(await fs.readdir(path.join(directory, ".marketplace-trash"))).toEqual([])
+        expect((await fs.readdir(directory)).toSorted()).toEqual([".marketplace-trash", "alias", "skills"])
+        // A rejected operation must not poison later work on the target.
+        await remove(target, [owned])
+        expect(await fingerprint(target)).toBeUndefined()
+      } finally {
+        resume.resolve()
+        await fs.rm(directory, { recursive: true, force: true })
+      }
+    },
+  )
+
   test("keeps failed rollback backups addressable by ownership after a project move", async () => {
     const directory = await tmp()
     try {
@@ -344,11 +437,12 @@ describe("skill install", () => {
       const second = await install({ root, id: "second", archive: await tarball({ "SKILL.md": "second" }) })
       const firstOwned = (await fingerprint(first))!
       const secondOwned = (await fingerprint(second))!
+      const canonical = await fs.realpath(second)
       const entered = Promise.withResolvers<void>()
       const resume = Promise.withResolvers<void>()
       const original = fs.rename
       using paused = spyOn(fs, "rename").mockImplementation(async (source, destination) => {
-        if (source === second) {
+        if (source === canonical) {
           entered.resolve()
           await resume.promise
         }

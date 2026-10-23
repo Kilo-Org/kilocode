@@ -10,8 +10,15 @@ export const Plugin = define({
   effect: Effect.fn(function* (ctx) {
     yield* ctx.model.transform((editor) => {
       for (const model of editor.list("kilo")) {
-        const provider = dialect(model.package)
-        if (!provider || provider === "openrouter") continue
+        const provider =
+          model.package === "@opencode/ai/providers/anthropic"
+            ? "anthropic"
+            : model.package === "@opencode/ai/providers/openai"
+              ? "openai"
+              : model.package === "@opencode/ai/providers/openai-compatible"
+                ? "openai-compatible"
+                : undefined
+        if (!provider) continue
         model.settings = {
           ...model.settings,
           ...request(provider, [editor.provider.get("kilo")?.provider.settings, model.settings]),
@@ -23,19 +30,6 @@ export const Plugin = define({
     })
   }),
 })
-
-// The one mapping between a Gateway dialect and its AI SDK package; settings are lowered for the resolved package.
-export const packages = {
-  anthropic: "@opencode/ai/providers/anthropic",
-  openai: "@opencode/ai/providers/openai",
-  "openai-compatible": "@opencode/ai/providers/openai-compatible",
-  openrouter: "@opencode/ai/providers/openrouter",
-} satisfies Record<KiloModels.AISDKProvider, string>
-
-// Config may override or clear a model's package, so lowering follows the resolved package, not the catalog.
-export function dialect(pkg: string | undefined) {
-  return (Object.keys(packages) as KiloModels.AISDKProvider[]).find((provider) => packages[provider] === pkg)
-}
 
 const decode = Schema.decodeUnknownOption(
   Schema.Struct({

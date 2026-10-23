@@ -20,6 +20,25 @@ const ID = /^[a-z0-9][a-z0-9._-]*$/i
 const MAX_BYTES = 32 * 1024 * 1024
 const MAX_ENTRIES = 4096
 
+// Cleanup must not delete another operation's live rollback backup. Aliases share a process-local queue.
+const queues = new Map<string, Promise<unknown>>()
+async function serialized<A>(target: string, task: (target: string) => Promise<A>) {
+  const absolute = path.resolve(target)
+  const canonical = path.join(await resolveDirectory(path.dirname(absolute)), path.basename(absolute))
+  const run = (queues.get(canonical) ?? Promise.resolve()).catch(() => undefined).then(() => task(canonical))
+  queues.set(canonical, run)
+  return run.finally(() => {
+    if (queues.get(canonical) === run) queues.delete(canonical)
+  })
+}
+
+async function resolveDirectory(directory: string): Promise<string> {
+  return fs.realpath(directory).catch(async (error: NodeJS.ErrnoException) => {
+    if (error.code !== "ENOENT") throw error
+    return path.join(await resolveDirectory(path.dirname(directory)), path.basename(directory))
+  })
+}
+
 export async function prepare(input: { root: string; id: string; archive: Uint8Array; select?: string }) {
   if (!ID.test(input.id)) throw new SkillError("invalid", `Invalid skill id: ${input.id}`)
   const files = await extract(input.archive, input.select)
@@ -49,48 +68,49 @@ export async function preflight(target: string, fingerprints: readonly string[] 
  * leaves a backup that the durable resource can still clean up.
  */
 export async function write(prepared: Awaited<ReturnType<typeof prepare>>, fingerprints: readonly string[] = []) {
-  const target = prepared.target
-  await preflight(target, fingerprints)
-  const root = path.dirname(target)
-  const staging = path.join(path.dirname(root), ".marketplace-staging", randomUUID())
-  const failures: unknown[] = []
-  try {
-    const writes = await Promise.allSettled(
-      prepared.files.map(async (file) => {
-        const destination = path.join(staging, file.path)
-        await fs.mkdir(path.dirname(destination), { recursive: true })
-        await Bun.write(destination, file.data)
-      }),
-    )
-    const failed = writes.find((write) => write.status === "rejected")
-    if (failed) throw failed.reason
-    await fs.mkdir(root, { recursive: true })
-    const current = await preflight(target, fingerprints)
-    await cleanup(target, fingerprints)
-    const backup = current === undefined ? undefined : trash(target, current)
-    if (backup) {
-      await fs.mkdir(path.dirname(backup), { recursive: true })
-      await fs.rename(target, backup)
-    }
+  return serialized(prepared.target, async (target) => {
+    await preflight(target, fingerprints)
+    const root = path.dirname(target)
+    const staging = path.join(path.dirname(root), ".marketplace-staging", randomUUID())
+    const failures: unknown[] = []
     try {
-      await fs.rename(staging, target)
+      const writes = await Promise.allSettled(
+        prepared.files.map(async (file) => {
+          const destination = path.join(staging, file.path)
+          await fs.mkdir(path.dirname(destination), { recursive: true })
+          await Bun.write(destination, file.data)
+        }),
+      )
+      const failed = writes.find((write) => write.status === "rejected")
+      if (failed) throw failed.reason
+      await fs.mkdir(root, { recursive: true })
+      const current = await preflight(target, fingerprints)
+      await cleanup(target, fingerprints)
+      const backup = current === undefined ? undefined : trash(target, current)
+      if (backup) {
+        await fs.mkdir(path.dirname(backup), { recursive: true })
+        await fs.rename(target, backup)
+      }
+      try {
+        await fs.rename(staging, target)
+      } catch (error) {
+        if (backup) await fs.rename(backup, target).catch((error: unknown) => failures.push(error))
+        throw error
+      }
+      if (backup) await fs.rm(backup, { recursive: true, force: true })
     } catch (error) {
-      if (backup) await fs.rename(backup, target).catch((error: unknown) => failures.push(error))
-      throw error
+      failures.unshift(error)
+    } finally {
+      // All writers have settled before cleanup, so none can recreate a failed staging directory.
+      await fs.rm(staging, { recursive: true, force: true }).catch((error: unknown) => failures.push(error))
+      // Concurrent installs may still use the staging parent.
+      await fs.rmdir(path.dirname(staging)).catch(() => undefined)
     }
-    if (backup) await fs.rm(backup, { recursive: true, force: true })
-  } catch (error) {
-    failures.unshift(error)
-  } finally {
-    // All writers have settled before cleanup, so none can recreate a failed staging directory.
-    await fs.rm(staging, { recursive: true, force: true }).catch((error: unknown) => failures.push(error))
-    // Concurrent installs may still use the staging parent.
-    await fs.rmdir(path.dirname(staging)).catch(() => undefined)
-  }
-  if (failures.length > 1)
-    throw new AggregateError(failures, `Skill write or cleanup failed at ${target}`, { cause: failures[0] })
-  if (failures.length) throw failures[0]
-  return target
+    if (failures.length > 1)
+      throw new AggregateError(failures, `Skill write or cleanup failed at ${target}`, { cause: failures[0] })
+    if (failures.length) throw failures[0]
+    return prepared.target
+  })
 }
 
 /**
@@ -98,14 +118,16 @@ export async function write(prepared: Awaited<ReturnType<typeof prepare>>, finge
  * locatable from the durable resource after interruption, even when deletion changes the tree's fingerprint.
  */
 export async function remove(target: string, fingerprints: readonly string[] = []) {
-  const current = await preflight(target, fingerprints)
-  await cleanup(target, fingerprints)
-  if (current === undefined) return
-  const destination = trash(target, current)
-  await fs.mkdir(path.dirname(destination), { recursive: true })
-  await fs.rename(target, destination)
-  await fs.rm(destination, { recursive: true, force: true })
-  // Keep the shared parent: another resource may be between mkdir and rename.
+  return serialized(target, async (target) => {
+    const current = await preflight(target, fingerprints)
+    await cleanup(target, fingerprints)
+    if (current === undefined) return
+    const destination = trash(target, current)
+    await fs.mkdir(path.dirname(destination), { recursive: true })
+    await fs.rename(target, destination)
+    await fs.rm(destination, { recursive: true, force: true })
+    // Keep the shared parent: another resource may be between mkdir and rename.
+  })
 }
 
 function trash(target: string, fingerprint: string) {

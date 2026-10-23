@@ -100,10 +100,21 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
         )
       })
 
-    const manifestKey = (input: { registry: string; kind: string; id: string; scope: KiloMarketplaceRpc.Scope }) =>
-      ["installed", input.registry, input.kind, input.id, input.scope, input.scope === "project" ? project : ""].join(
-        ":",
-      )
+    const manifestKey = (input: {
+      registry: string
+      kind: string
+      id: string
+      scope: KiloMarketplaceRpc.Scope
+      project?: string
+    }) =>
+      [
+        "installed",
+        input.registry,
+        input.kind,
+        input.id,
+        input.scope,
+        input.scope === "project" ? (input.project ?? project) : "",
+      ].join(":")
 
     // Only the curated Kilo marketplace is on by default: the other registries list community content nobody at
     // Kilo reviewed, so a user turns them on (`registries.set`). The choice is global, in plugin storage.
@@ -225,21 +236,52 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
       })
 
     const local = (scope: KiloMarketplaceRpc.Scope) =>
-      Effect.tryPromise({
-        try: (signal) =>
-          readLocal(roots(scope), directory(scope), scope, (record) =>
-            Effect.runPromise(
-              storage(
-                ctx.storage.get(manifestKey(record)),
-                "fetch_failed",
-                "Couldn't verify external config ownership",
-              ).pipe(
-                Effect.map((value) => (value === undefined ? undefined : decodeRecord(value, manifestKey(record)))),
+      Effect.gen(function* () {
+        const entries = yield* Effect.tryPromise({
+          try: (signal) =>
+            readLocal(roots(scope), directory(scope), scope, (record) =>
+              Effect.runPromise(
+                storage(
+                  ctx.storage.get(manifestKey(record)),
+                  "fetch_failed",
+                  "Couldn't verify external config ownership",
+                ).pipe(
+                  Effect.map((value) => (value === undefined ? undefined : decodeRecord(value, manifestKey(record)))),
+                ),
+                { signal },
               ),
-              { signal },
             ),
-          ),
-        catch: (error) => new StorageError("fetch_failed", message(error)),
+          catch: (error) => new StorageError("fetch_failed", message(error)),
+        })
+        for (const entry of entries) {
+          if (manifestKey(entry.original) === manifestKey(entry.record)) continue
+          // Copy verified ownership first: either journal spelling remains recoverable if a later write fails.
+          yield* storage(
+            ctx.storage.set(manifestKey(entry.record), JSON.stringify(entry.record)),
+            "write_failed",
+            "Couldn't migrate marketplace ownership",
+          )
+          yield* Effect.tryPromise({
+            try: () => writeLocal(roots(scope), directory(scope), entry.record),
+            catch: (error) =>
+              new StorageError("write_failed", `Couldn't migrate marketplace journal: ${message(error)}`),
+          })
+          // A copied project may still share the original's external config; do not revoke its ownership.
+          if (
+            entry.original.project &&
+            (yield* Effect.tryPromise({
+              try: () => directoryExists(entry.original.project!),
+              catch: (error) => new StorageError("fetch_failed", message(error)),
+            }))
+          )
+            continue
+          yield* storage(
+            ctx.storage.remove(manifestKey(entry.original)),
+            "write_failed",
+            "Couldn't remove stale marketplace index",
+          )
+        }
+        return entries.map((entry) => entry.record)
       })
 
     const read = (input: { registry: string; kind: string; id: string; scope: KiloMarketplaceRpc.Scope }) =>
@@ -266,17 +308,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
         for (const entry of scanned.entries) {
           const decoded = decodeRecord(entry.value, entry.key)
           if (decoded.scope === "project" && decoded.project !== project) {
-            // New records also travel with the project. Remove only the stale database index, never its files.
-            if (
-              decoded.resources &&
-              decoded.project &&
-              !(yield* Effect.tryPromise({
-                try: () => directoryExists(decoded.project!),
-                catch: (error) => new StorageError("fetch_failed", message(error)),
-              }))
-            ) {
-              yield* storage(ctx.storage.remove(entry.key), "write_failed", "Couldn't remove stale marketplace index")
-            }
+            // A missing path may be a moved project. Its trust anchor is retired only after local reconciliation.
             continue
           }
           records.push(decoded)
@@ -325,6 +357,43 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
             context,
           ),
         installed: (_, context) => respond(installed, context),
+        preview: (input, context) =>
+          respond(
+            Effect.gen(function* () {
+              const on = yield* enabled
+              if (!on.has(input.registry)) {
+                return yield* Effect.fail(
+                  new McpError("not_found", `The ${input.registry} registry is turned off; enable it first`),
+                )
+              }
+              const entry = yield* lookup(input.registry, input.kind, input.id).pipe(
+                Effect.mapError((error) =>
+                  error instanceof StorageError ? error : new StorageError("fetch_failed", error),
+                ),
+              )
+              if (!entry)
+                return yield* Effect.fail(
+                  new McpError("not_found", `No ${input.kind} ${input.id} in ${input.registry}`),
+                )
+              const stored = yield* storage(
+                ctx.storage.get(manifestKey(input)),
+                "fetch_failed",
+                "Couldn't read marketplace installation",
+              )
+              const previous = stored === undefined ? undefined : decodeRecord(stored, manifestKey(input))
+              return yield* Effect.tryPromise({
+                try: async () => ({
+                  ...Installer.preview({ entry, option: input.option, params: input.params }),
+                  config: await configFile(directory(input.scope), input.scope === "global", [
+                    ...(previous?.resources ?? []),
+                    ...(previous?.pending ?? []),
+                  ]),
+                }),
+                catch: (error) => error,
+              })
+            }),
+            context,
+          ),
         install: (input, context) =>
           respond(
             Effect.gen(function* () {
@@ -363,10 +432,14 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                   Installer.install({
                     entry,
                     skills: path.join(roots(input.scope), "skills"),
-                    config: await configFile(
-                      input.scope === "global" ? global.config : project,
-                      input.scope === "global",
-                    ),
+                    config:
+                      input.kind === "skill"
+                        ? path.join(directory(input.scope), KiloConfigFiles.newFile)
+                        : await configFile(
+                            input.scope === "global" ? global.config : project,
+                            input.scope === "global",
+                            [...(previous?.resources ?? []), ...(previous?.pending ?? [])],
+                          ),
                     option: input.option,
                     params: input.params,
                     previous,
@@ -462,6 +535,16 @@ class StorageError extends Error {
   }
 }
 
+async function directoryExists(directory: string) {
+  return fs.stat(directory).then(
+    (entry) => entry.isDirectory(),
+    (error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return false
+      throw error
+    },
+  )
+}
+
 function message(error: unknown) {
   return error instanceof Error ? error.message : String(error)
 }
@@ -507,15 +590,13 @@ async function readLocal(
     if (error.code === "ENOENT") return []
     throw error
   })
-  if (files.some((file) => file.endsWith(".json"))) {
-    // Repository metadata cannot turn a symlinked skill root into deletion authority elsewhere.
-    for (const candidate of scope === "project" ? [root, path.join(root, "skills")] : [path.join(root, "skills")]) {
-      const info = await fs.lstat(candidate).catch((error: NodeJS.ErrnoException) => {
-        if (error.code === "ENOENT") return undefined
-        throw error
-      })
-      if (info?.isSymbolicLink()) throw new Error(`Unsafe marketplace recovery directory: ${candidate}`)
-    }
+  // Apply recovery restrictions before the first install too, so its journal remains manageable.
+  for (const candidate of scope === "project" ? [root, path.join(root, "skills")] : [path.join(root, "skills")]) {
+    const info = await fs.lstat(candidate).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return undefined
+      throw error
+    })
+    if (info?.isSymbolicLink()) throw new Error(`Unsafe marketplace recovery directory: ${candidate}`)
   }
   return Promise.all(
     files
@@ -550,16 +631,20 @@ async function readLocal(
           return rebased
         }
         const configs = KiloConfigFiles.writeCandidates(await resolveFile(directory), scope === "global")
+        const originals = KiloConfigFiles.writeCandidates(await resolveFile(stored.directory), scope === "global")
         const external = async (entry: Extract<KiloMarketplaceRpc.Resource, { config: string }>) => {
           const destination = await resolveFile(entry.config)
           if (scope === "global" || configs.includes(destination))
-            return entry.target ? { ...entry, target: destination } : entry
+            // Only a scope relocation can rebase ownership, never a change to the config symlink.
+            return stored.directory !== directory && entry.target && originals.includes(entry.target)
+              ? { ...entry, target: configs[originals.indexOf(entry.target)] }
+              : entry
           // A repository journal is not a trust anchor for an external dotfiles/config symlink.
           const owned = await trusted(stored.record)
           const resource = [...(owned?.resources ?? []), ...(owned?.pending ?? [])].find(
             (resource) =>
               "config" in resource &&
-              resource.config === entry.config &&
+              resource.config === path.join(stored.directory, path.relative(directory, entry.config)) &&
               resource.server === entry.server &&
               resource.target === destination,
           )
@@ -574,23 +659,16 @@ async function readLocal(
         const config = stored.record.config ? rebase(stored.record.config, "config") : undefined
         if (config) await external({ config, server: stored.record.server ?? serverName(stored.record.id) })
         return {
-          ...stored.record,
-          project: scope === "project" ? directory : undefined,
-          paths: stored.record.paths.map((entry) => rebase(entry, "skill")),
-          config,
-          resources: stored.record.resources ? await Promise.all(stored.record.resources.map(resource)) : undefined,
-          pending: stored.record.pending ? await Promise.all(stored.record.pending.map(resource)) : undefined,
+          original: stored.record,
+          record: {
+            ...stored.record,
+            project: scope === "project" ? directory : undefined,
+            paths: stored.record.paths.map((entry) => rebase(entry, "skill")),
+            config,
+            resources: stored.record.resources ? await Promise.all(stored.record.resources.map(resource)) : undefined,
+            pending: stored.record.pending ? await Promise.all(stored.record.pending.map(resource)) : undefined,
+          },
         }
       }),
-  )
-}
-
-async function directoryExists(directory: string) {
-  return fs.stat(directory).then(
-    (entry) => entry.isDirectory(),
-    (error: NodeJS.ErrnoException) => {
-      if (error.code === "ENOENT") return false
-      throw error
-    },
   )
 }

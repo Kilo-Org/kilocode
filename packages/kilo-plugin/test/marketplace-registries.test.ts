@@ -3,10 +3,83 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { Installer } from "../src/marketplace/installer"
+import { KiloMarketplaceRegistry } from "../src/marketplace/kilo"
 import { McpRegistry } from "../src/marketplace/mcp-registry"
 import { build, parameters, serverName } from "../src/marketplace/mcp"
 import { extract } from "../src/marketplace/skill"
 import { SkillsShRegistry } from "../src/marketplace/skills-sh"
+
+describe("curated MCP registry credentials", () => {
+  test("masks the legacy Brave Search credential through normalization and parameter selection", () => {
+    // Credential-bearing excerpt from https://api.kilo.ai/api/marketplace/mcps (2026-10-22).
+    const [entry] = KiloMarketplaceRegistry.parse(
+      "mcp",
+      `
+items:
+  - id: brave-search
+    name: Brave Search
+    content:
+      - name: NPX
+        prerequisites: [Node.js]
+        content: |
+          {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+            "env": { "BRAVE_API_KEY": "{{BRAVE_API_KEY}}" }
+          }
+    parameters:
+      - name: Brave API Key
+        key: BRAVE_API_KEY
+        placeholder: your_brave_api_key_here
+`,
+    )
+    const declared = parameters(entry.item, entry.item.options[0])
+    expect(declared).toEqual([
+      {
+        key: "BRAVE_API_KEY",
+        name: "Brave API Key",
+        placeholder: "your_brave_api_key_here",
+        optional: false,
+        secret: true,
+      },
+    ])
+    expect(
+      build({ template: String(entry.payloads[0]), parameters: declared, params: { BRAVE_API_KEY: "fake-key" } }),
+    ).toEqual({
+      type: "local",
+      command: ["npx", "-y", "@modelcontextprotocol/server-brave-search"],
+      environment: { BRAVE_API_KEY: "fake-key" },
+    })
+  })
+
+  test.each([undefined, true, false])(
+    "preserves secret=%s at item and option level, masking absent metadata",
+    (secret) => {
+      const [entry] = KiloMarketplaceRegistry.parse(
+        "mcp",
+        JSON.stringify({
+          items: [
+            {
+              id: "credentials",
+              parameters: [{ key: "ITEM", secret }],
+              content: [
+                {
+                  name: "NPX",
+                  parameters: [{ key: "OPTION", secret, optional: true }],
+                  content: '{ "command": "npx", "args": ["demo"] }',
+                },
+              ],
+            },
+          ],
+        }),
+      )
+      expect(parameters(entry.item, entry.item.options[0])).toEqual([
+        { key: "ITEM", name: "ITEM", placeholder: undefined, optional: false, secret: secret ?? true },
+        { key: "OPTION", name: "OPTION", placeholder: undefined, optional: true, secret: secret ?? true },
+      ])
+    },
+  )
+})
 
 describe("skills.sh registry", () => {
   test("keeps GitHub-backed skills, ids them by repository and installs from the repository tarball", () => {
@@ -170,6 +243,26 @@ describe("MCP registry", () => {
     expect(McpRegistry.parse(server({ packages: [{ registryType: "nuget", identifier: "x" }] }))).toEqual([])
     expect(serverName("io.github.owner/server-name")).toBe("io-github-owner-server-name")
     expect(serverName("context7")).toBe("context7")
+  })
+
+  test.each([
+    ["registry.example.com:5000/team/server", "1.2.3", "registry.example.com:5000/team/server:1.2.3"],
+    ["registry.example.com:5000/team/server:2", "1.2.3", "registry.example.com:5000/team/server:2"],
+    ["ghcr.io/team/server:2", "1.2.3", "ghcr.io/team/server:2"],
+    ["server:2", "1.2.3", "server:2"],
+    ["registry.example.com:5000/team/server", undefined, "registry.example.com:5000/team/server"],
+    ...["ghcr.io/team/server", "registry.example.com:5000/team/server", "ghcr.io/team/server:2"].map(
+      (image) => [`${image}@sha256:${"a".repeat(64)}`, "1.2.3", `${image}@sha256:${"a".repeat(64)}`] as const,
+    ),
+  ] as const)("resolves OCI image %s with package version %s", (identifier, version, image) => {
+    const [entry] = McpRegistry.parse(
+      server({
+        packages: [{ registryType: "oci", identifier, version, transport: { type: "stdio" } }],
+      }),
+    )
+    expect(
+      build({ template: String(entry.payloads[0]), parameters: entry.item.options[0].parameters, params: {} }),
+    ).toEqual({ type: "local", command: ["docker", "run", "-i", "--rm", image] })
   })
 
   test("skips inherited runner names without dropping valid neighboring servers or options", () => {
@@ -341,6 +434,64 @@ describe("MCP registry", () => {
         REGION: "eu",
         ENDPOINT: "https://acme.example.com/api",
       },
+    })
+  })
+
+  test.each([false, true])("merges shared header requiredness and secrecy with required-first=%s", (requiredFirst) => {
+    const headers = [
+      { name: "X-Optional", value: "{TOKEN}", variables: { TOKEN: { isRequired: false, isSecret: false } } },
+      { name: "Authorization", value: "Bearer {TOKEN}", variables: { TOKEN: { isRequired: true, isSecret: true } } },
+    ]
+    const [entry] = McpRegistry.parse(
+      server({
+        remotes: [
+          {
+            type: "streamable-http",
+            url: "https://example.com/mcp",
+            headers: requiredFirst ? headers.toReversed() : headers,
+          },
+        ],
+      }),
+    )
+    const declared = parameters(entry.item, entry.item.options[0])
+    expect(declared).toEqual([{ key: "TOKEN", name: "TOKEN", placeholder: undefined, optional: false, secret: true }])
+    expect(() => build({ template: String(entry.payloads[0]), parameters: declared, params: {} })).toThrow(
+      "Missing required parameters: TOKEN",
+    )
+    expect(
+      build({ template: String(entry.payloads[0]), parameters: declared, params: { TOKEN: "fake-token" } }),
+    ).toEqual({
+      type: "remote",
+      url: "https://example.com/mcp",
+      headers: { "X-Optional": "fake-token", Authorization: "Bearer fake-token" },
+    })
+  })
+
+  test("merges shared parameters across package environment, runtime and package arguments", () => {
+    const [entry] = McpRegistry.parse(
+      server({
+        packages: [
+          {
+            registryType: "npm",
+            identifier: "demo",
+            environmentVariables: [{ name: "TOKEN", isRequired: false, isSecret: false }],
+            runtimeArguments: [{ value: "{TOKEN}", variables: { TOKEN: { isRequired: true, isSecret: true } } }],
+            packageArguments: [{ value: "{TOKEN}", variables: { TOKEN: { isRequired: false, isSecret: false } } }],
+          },
+        ],
+      }),
+    )
+    const declared = parameters(entry.item, entry.item.options[0])
+    expect(declared).toEqual([{ key: "TOKEN", name: "TOKEN", placeholder: undefined, optional: false, secret: true }])
+    expect(() => build({ template: String(entry.payloads[0]), parameters: declared, params: {} })).toThrow(
+      "Missing required parameters: TOKEN",
+    )
+    expect(
+      build({ template: String(entry.payloads[0]), parameters: declared, params: { TOKEN: "fake-token" } }),
+    ).toEqual({
+      type: "local",
+      command: ["npx", "fake-token", "-y", "demo", "fake-token"],
+      environment: { TOKEN: "fake-token" },
     })
   })
 

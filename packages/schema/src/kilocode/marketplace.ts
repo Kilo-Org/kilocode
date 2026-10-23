@@ -118,6 +118,14 @@ export const RegistryInfo = Schema.Struct({
 export type RegistryInfo = typeof RegistryInfo.Type
 
 const Ref = { registry: Schema.String, kind: Kind, id: Schema.String }
+const InstallInput = Schema.Struct({
+  ...Ref,
+  scope: Scope,
+  /** The `name` of an install option. Defaults to the first option. */
+  option: optional(Schema.String),
+  /** Values for the item's and the option's parameters, by `key`. */
+  params: optional(Schema.Record(Schema.String, Schema.String)),
+})
 
 export const Definition = Rpc.define({
   id: "kilocode.marketplace",
@@ -155,17 +163,22 @@ export const Definition = Rpc.define({
       output: portable(Schema.Array(Installed)),
       errors: Failure,
     },
-    install: {
-      input: portable(
+    /** Read-only MCP configuration preview. Secret parameters are redacted before rendering the template. */
+    preview: {
+      input: portable(InstallInput),
+      output: portable(
         Schema.Struct({
-          ...Ref,
-          scope: Scope,
-          /** The `name` of an install option. Defaults to the first option. */
-          option: optional(Schema.String),
-          /** Values for the item's and the option's parameters, by `key`. */
-          params: optional(Schema.Record(Schema.String, Schema.String)),
+          config: Schema.String,
+          server: Schema.String,
+          parameters: Schema.Array(Schema.String),
+          /** Names of nonempty secret parameters that will be stored in plaintext. */
+          secrets: Schema.Array(Schema.String),
         }),
       ),
+      errors: Failure,
+    },
+    install: {
+      input: portable(InstallInput),
       output: portable(Installed),
       errors: Failure,
     },

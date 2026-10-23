@@ -161,7 +161,9 @@ const RUNNERS: Record<
       "-i",
       "--rm",
       ...(pkg.environmentVariables ?? []).flatMap((variable) => (variable.name ? ["-e", variable.name] : [])),
-      pkg.version && !pkg.identifier.includes(":") ? `${pkg.identifier}:${pkg.version}` : pkg.identifier,
+      pkg.version && !pkg.identifier.includes("@") && pkg.identifier.lastIndexOf(":") <= pkg.identifier.lastIndexOf("/")
+        ? `${pkg.identifier}:${pkg.version}`
+        : pkg.identifier,
     ],
   },
 }
@@ -236,6 +238,7 @@ function placeholder(name: string, input: Partial<Input>, parameters: Map<string
       ...(input.isSecret !== undefined ? { secret: input.isSecret } : {}),
     })
   }
+  if (input.isRequired) parameters.set(key, { ...parameters.get(key)!, optional: false })
   if (input.isSecret) parameters.set(key, { ...parameters.get(key)!, secret: true })
   return `{{${key}}}`
 }

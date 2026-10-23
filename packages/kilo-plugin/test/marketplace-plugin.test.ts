@@ -28,7 +28,7 @@ function journal(root: string) {
   return path.join(root, ".marketplace", "installed", `${hash}.json`)
 }
 
-const fixture = Effect.fn(function* (companion = false) {
+const fixture = Effect.fn(function* (companion = false, skills = true) {
   const directory = yield* Effect.promise(() => fs.mkdtemp(path.join(os.tmpdir(), "kilo-marketplace-plugin-")))
   yield* Effect.addFinalizer(() => Effect.promise(() => fs.rm(directory, { recursive: true, force: true })))
   let archive = yield* Effect.promise(() => new Bun.Archive({ "SKILL.md": "new guide" }).bytes())
@@ -50,10 +50,14 @@ const fixture = Effect.fn(function* (companion = false) {
               : new Response(`items:
   - id: demo
     content: '{"url":"https://new.example.com/mcp"}'
-    skills:
+${
+  skills
+    ? `    skills:
       - id: guide
         content: ${new URL("/guide.tar", request.url).href}
-${companion ? `      - id: invalid\n        content: ${new URL("/invalid.tar", request.url).href}\n` : ""}
+${companion ? `      - id: invalid\n        content: ${new URL("/invalid.tar", request.url).href}\n` : ""}`
+    : ""
+}
 `),
   })
   yield* Effect.addFinalizer(() => Effect.sync(() => server.stop(true)))
@@ -633,6 +637,296 @@ for (const field of [
     }),
 )
 
+for (const scope of ["global", "project"] as const) {
+  ;(process.platform === "win32" ? it.live.skip : it.live)(
+    `${scope} recovery preserves the recorded target after config symlink retargeting`,
+    () =>
+      Effect.gen(function* () {
+        const test = yield* fixture(false, false)
+        const project = path.join(test.directory, "project")
+        yield* Effect.promise(() => fs.mkdir(project))
+        yield* test.start({
+          ...test.host,
+          location: {
+            ...test.host.location,
+            directory: AbsolutePath.make(project),
+            project: { ...test.host.location.project, directory: AbsolutePath.make(project) },
+          },
+        })
+        const request = { ...input, scope }
+        const installed = decode(yield* test.rpc.call("kilocode.marketplace", "install", request))
+        const config = installed.config!
+        const original = path.join(path.dirname(config), "original.json")
+        const changed = path.join(
+          path.dirname(config),
+          ...(scope === "global" ? ["changed.json"] : [".kilo2", "kilo2.jsonc"]),
+        )
+        const content = yield* Effect.promise(() => Bun.file(config).text())
+        yield* Effect.promise(async () => {
+          await fs.rename(config, original)
+          await Bun.write(changed, content)
+          await fs.symlink(changed, config)
+        })
+        const listed = decodeList(yield* test.rpc.call("kilocode.marketplace", "installed", {}))
+        expect(listed[0]).toMatchObject({ status: "modified", resources: installed.resources })
+        expect(listed[0].warnings?.join(" ")).toContain("target changed since installation")
+        for (const method of ["install", "uninstall"] as const) {
+          expect(yield* test.rpc.call("kilocode.marketplace", method, request).pipe(Effect.flip)).toMatchObject({
+            type: "conflict",
+          })
+          expect(yield* Effect.promise(() => Bun.file(original).text())).toBe(content)
+          expect(yield* Effect.promise(() => Bun.file(changed).text())).toBe(content)
+        }
+      }),
+  )
+}
+
+for (const missing of [false, true]) {
+  ;(process.platform === "win32" ? it.live.skip : it.live)(
+    `reinstall through a higher-priority config alias ${missing ? "repairs a missing" : "retains an owned"} server`,
+    () =>
+      Effect.gen(function* () {
+        const test = yield* fixture(false, false)
+        yield* test.start({
+          ...test.host,
+          location: {
+            ...test.host.location,
+            directory: AbsolutePath.make(test.directory),
+            project: { ...test.host.location.project, directory: AbsolutePath.make(test.directory) },
+          },
+        })
+        const request = { ...input, scope: "project" } as const
+        const first = decode(yield* test.rpc.call("kilocode.marketplace", "install", request))
+        const config = path.join(test.directory, ".kilo2", "kilo2.jsonc")
+        yield* Effect.promise(async () => {
+          await fs.symlink("../kilo2.json", config)
+          if (missing) await Bun.write(first.config!, '{"mcp":{"servers":{}}}')
+        })
+        const record = decode(yield* test.rpc.call("kilocode.marketplace", "install", request))
+        expect(record).toMatchObject({ config, status: "ready" })
+        expect(record.pending).toBeUndefined()
+        expect(record.resources).toEqual(first.resources?.map((resource) => ({ ...resource, config })))
+        expect(decodeList(yield* test.rpc.call("kilocode.marketplace", "installed", {}))[0].status).toBe("ready")
+        expect(yield* Effect.promise(() => Bun.file(first.config!).json())).toEqual({
+          mcp: { servers: { demo: { type: "remote", url: "https://new.example.com/mcp" } } },
+        })
+        yield* test.rpc.call("kilocode.marketplace", "uninstall", request)
+        expect(yield* Effect.promise(() => fs.readlink(config))).toBe("../kilo2.json")
+        expect(yield* Effect.promise(() => Bun.file(first.config!).json())).toEqual({ mcp: { servers: {} } })
+      }),
+  )
+}
+
+for (const linked of ["root", "skills"] as const) {
+  ;(process.platform === "win32" ? it.live.skip : it.live)(
+    `rejects an initial MCP-only install with a symlinked ${linked} before durable intent`,
+    () =>
+      Effect.gen(function* () {
+        const test = yield* fixture(false, false)
+        const root = path.join(test.directory, ".kilo2")
+        const shared = path.join(test.directory, "shared")
+        yield* Effect.promise(async () => {
+          await fs.mkdir(shared)
+          if (linked === "skills") await fs.mkdir(root)
+          await fs.symlink(shared, linked === "root" ? root : path.join(root, "skills"))
+        })
+        yield* test.start({
+          ...test.host,
+          location: {
+            ...test.host.location,
+            directory: AbsolutePath.make(test.directory),
+            project: { ...test.host.location.project, directory: AbsolutePath.make(test.directory) },
+          },
+        })
+        for (const method of ["install", "installed", "install", "uninstall"] as const) {
+          expect(
+            yield* test.rpc
+              .call("kilocode.marketplace", method, method === "installed" ? {} : { ...input, scope: "project" })
+              .pipe(Effect.flip),
+          ).toMatchObject({
+            type: "fetch_failed",
+            message: expect.stringContaining("Unsafe marketplace recovery directory"),
+          })
+          expect(yield* test.host.storage.get(`installed:kilo:mcp:demo:project:${test.directory}`)).toBeUndefined()
+          expect(yield* Effect.promise(() => Bun.file(journal(root)).exists())).toBe(false)
+          expect(yield* Effect.promise(() => Bun.file(path.join(test.directory, "kilo2.json")).exists())).toBe(false)
+          expect(yield* Effect.promise(() => fs.readdir(shared))).toEqual([])
+        }
+      }),
+  )
+}
+
+for (const destination of ["external", "project-file", "missing"] as const) {
+  ;(process.platform === "win32" ? it.live.skip : it.live)(
+    `rejects a first MCP install through an unowned ${destination} config symlink before durable intent`,
+    () =>
+      Effect.gen(function* () {
+        const test = yield* fixture()
+        const project = path.join(test.directory, "project")
+        const target = path.join(destination === "project-file" ? project : test.directory, "settings.jsonc")
+        const config = path.join(project, "kilo2.json")
+        const content = '{"keep":"unchanged"}'
+        yield* Effect.promise(async () => {
+          await fs.mkdir(project)
+          if (destination !== "missing") await Bun.write(target, content)
+          await fs.symlink(target, config)
+        })
+        yield* test.start({
+          ...test.host,
+          location: {
+            ...test.host.location,
+            directory: AbsolutePath.make(project),
+            project: { ...test.host.location.project, directory: AbsolutePath.make(project) },
+          },
+        })
+        expect(
+          yield* test.rpc.call("kilocode.marketplace", "install", { ...input, scope: "project" }).pipe(Effect.flip),
+        ).toMatchObject({ type: "conflict", message: expect.stringContaining("no machine-local ownership") })
+        expect(yield* test.host.storage.get(`installed:kilo:mcp:demo:project:${project}`)).toBeUndefined()
+        expect(yield* Effect.promise(() => Bun.file(journal(path.join(project, ".kilo2"))).exists())).toBe(false)
+        expect(yield* Effect.promise(() => fs.readlink(config))).toBe(target)
+        if (destination !== "missing") expect(yield* Effect.promise(() => Bun.file(target).text())).toBe(content)
+        if (destination === "missing") expect(yield* Effect.promise(() => Bun.file(target).exists())).toBe(false)
+        expect(
+          decode(
+            yield* test.rpc.call("kilocode.marketplace", "install", {
+              ...input,
+              kind: "skill",
+              id: "guide",
+              scope: "project",
+            }),
+          ).status,
+        ).toBe("ready")
+        if (destination !== "missing") expect(yield* Effect.promise(() => Bun.file(target).text())).toBe(content)
+        if (destination === "missing") expect(yield* Effect.promise(() => Bun.file(target).exists())).toBe(false)
+      }),
+  )
+}
+
+for (const scenario of ["direct", "other-project", "storage-failure", "copy"] as const) {
+  for (const method of ["installed", "install", "uninstall"] as const) {
+    ;(process.platform === "win32" ? it.live.skip : it.live)(
+      `${method} recovers a renamed project's machine-owned external config after ${scenario}`,
+      () =>
+        Effect.gen(function* () {
+          const test = yield* fixture()
+          const original = path.join(test.directory, "original")
+          const renamed = path.join(test.directory, "renamed")
+          const external = path.join(test.directory, "dotfiles.jsonc")
+          const config = path.join(original, "kilo2.jsonc")
+          const projectInput = { ...input, scope: "project" } as const
+          const oldKey = `installed:kilo:mcp:demo:project:${original}`
+          const newKey = `installed:kilo:mcp:demo:project:${renamed}`
+          const context = (directory: string) => ({
+            ...test.host,
+            location: {
+              ...test.host.location,
+              directory: AbsolutePath.make(directory),
+              project: { ...test.host.location.project, directory: AbsolutePath.make(directory) },
+            },
+          })
+          yield* Effect.promise(async () => {
+            await fs.mkdir(original)
+            await Bun.write(config, "{}")
+          })
+          yield* Effect.scoped(
+            Effect.gen(function* () {
+              yield* test.start(context(original))
+              const installed = decode(yield* test.rpc.call("kilocode.marketplace", "install", projectInput))
+              yield* test.rpc.call("kilocode.marketplace", "install", { ...input, kind: "skill", id: "guide" })
+              yield* Effect.promise(async () => {
+                await fs.rename(config, external)
+                await fs.symlink(external, config)
+              })
+              const destination = yield* Effect.promise(() => fs.realpath(external))
+              const owned = {
+                ...installed,
+                resources: installed.resources?.map((resource) =>
+                  "config" in resource ? { ...resource, target: destination } : resource,
+                ),
+              }
+              yield* test.host.storage.set(oldKey, JSON.stringify(owned))
+              yield* Effect.promise(() =>
+                Bun.write(
+                  journal(path.join(original, ".kilo2")),
+                  JSON.stringify({ directory: original, record: owned }),
+                ),
+              )
+            }),
+          )
+          yield* Effect.promise(() =>
+            scenario === "copy"
+              ? fs.cp(original, renamed, { recursive: true, verbatimSymlinks: true })
+              : fs.rename(original, renamed),
+          )
+          if (scenario === "other-project") {
+            const other = path.join(test.directory, "other")
+            yield* Effect.promise(() => fs.mkdir(other))
+            yield* Effect.scoped(
+              Effect.gen(function* () {
+                yield* test.start(context(other))
+                yield* test.rpc.call("kilocode.marketplace", "installed", {})
+              }),
+            )
+            expect(yield* test.host.storage.get(oldKey)).toBeDefined()
+          }
+          let failMigration = scenario === "storage-failure"
+          yield* test.start({
+            ...context(renamed),
+            storage: {
+              ...test.host.storage,
+              set: (key, value) => {
+                if (failMigration && key === newKey) {
+                  failMigration = false
+                  return Effect.die(new Error("injected ownership migration failure"))
+                }
+                return test.host.storage.set(key, value)
+              },
+            },
+          })
+          if (scenario === "storage-failure") {
+            expect(
+              yield* test.rpc
+                .call("kilocode.marketplace", method, method === "installed" ? {} : projectInput)
+                .pipe(Effect.flip),
+            ).toMatchObject({
+              type: "write_failed",
+              message: expect.stringContaining("injected ownership migration failure"),
+            })
+            expect(yield* test.host.storage.get(oldKey)).toBeDefined()
+            expect(yield* test.host.storage.get(newKey)).toBeUndefined()
+            expect(yield* Effect.promise(() => Bun.file(journal(path.join(renamed, ".kilo2"))).json())).toMatchObject({
+              directory: original,
+            })
+          }
+          yield* test.rpc.call("kilocode.marketplace", method, method === "installed" ? {} : projectInput)
+          const listed = decodeList(yield* test.rpc.call("kilocode.marketplace", "installed", {}))
+          expect(listed.find((record) => record.kind === "skill")).toMatchObject({ id: "guide", status: "ready" })
+          if (method !== "uninstall") {
+            expect(listed.find((record) => record.kind === "mcp")).toMatchObject({
+              id: "demo",
+              status: "ready",
+              project: renamed,
+            })
+            expect(yield* test.host.storage.get(newKey)).toBeDefined()
+          }
+          if (scenario !== "copy") expect(yield* test.host.storage.get(oldKey)).toBeUndefined()
+          expect(yield* Effect.promise(() => fs.readlink(path.join(renamed, "kilo2.jsonc")))).toBe(external)
+          if (scenario === "copy") {
+            expect(yield* test.host.storage.get(oldKey)).toBeDefined()
+            yield* Effect.scoped(
+              Effect.gen(function* () {
+                yield* test.start(context(original))
+                const source = decodeList(yield* test.rpc.call("kilocode.marketplace", "installed", {}))
+                expect(source.find((record) => record.kind === "mcp")).toMatchObject({ id: "demo", project: original })
+              }),
+            )
+          }
+        }),
+    )
+  }
+}
+
 for (const trusted of [false, true]) {
   ;(process.platform === "win32" ? it.live.skip : it.live)(
     `${trusted ? "preserves deliberately installed" : "rejects forged journal authority for"} external config symlinks`,
@@ -647,7 +941,7 @@ for (const trusted of [false, true]) {
         const content = '{"mcp":{"servers":{"demo":{"type":"remote","url":"https://new.example.com/mcp"}}}}'
         yield* Effect.promise(async () => {
           await fs.mkdir(project)
-          await Bun.write(external, trusted ? "{}" : content)
+          await Bun.write(external, content)
           await fs.symlink(external, config)
         })
         yield* test.start({
@@ -687,6 +981,27 @@ for (const trusted of [false, true]) {
           }
           return
         }
+        // Existing machine-local ownership authorizes a dotfiles target; a repository journal alone never does.
+        const prior = {
+          ...projectInput,
+          project,
+          installedAt: 0,
+          paths: [],
+          config,
+          server: "demo",
+          resources: [
+            {
+              config,
+              server: "demo",
+              target: yield* Effect.promise(() => fs.realpath(external)),
+              fingerprints: [(yield* Effect.promise(() => Installer.resourceFingerprint({ config, server: "demo" })))!],
+            },
+          ],
+        }
+        yield* test.host.storage.set(projectKey, JSON.stringify(prior))
+        yield* Effect.promise(() =>
+          Bun.write(journal(path.join(project, ".kilo2")), JSON.stringify({ directory: project, record: prior })),
+        )
         const installed = decode(yield* test.rpc.call("kilocode.marketplace", "install", projectInput))
         expect(installed.resources).toContainEqual(
           expect.objectContaining({ config, target: yield* Effect.promise(() => fs.realpath(external)) }),

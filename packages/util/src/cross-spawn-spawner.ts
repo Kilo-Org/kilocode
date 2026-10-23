@@ -95,15 +95,7 @@ export class KilledBySignal extends Error {
 }
 
 type ExitSignal = Deferred.Deferred<readonly [code: number | null, signal: NodeJS.Signals | null]>
-// kilocode_change start - process-output: carry buffers attached synchronously at launch.
-type Spawned = readonly [
-  process: NodeChildProcess.ChildProcess,
-  closed: ExitSignal,
-  exited: ExitSignal,
-  stopOutput: Deferred.Deferred<void>,
-  output: Pick<ChildProcessHandle, "stdout" | "stderr" | "all">,
-]
-// kilocode_change end
+type Spawned = readonly [process: NodeChildProcess.ChildProcess, closed: ExitSignal, exited: ExitSignal]
 
 const makeCrossSpawnSpawner = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
@@ -289,16 +281,6 @@ const makeCrossSpawnSpawner = Effect.gen(function* () {
       const closed = Deferred.makeUnsafe<readonly [code: number | null, signal: NodeJS.Signals | null]>()
       const exited = Deferred.makeUnsafe<readonly [code: number | null, signal: NodeJS.Signals | null]>()
       const proc = launch(command.command, command.args, opts)
-      // kilocode_change start - process-output: Bun can drain pipes on exit before an Effect continuation resumes.
-      const stopOutput = Deferred.makeUnsafe<void>()
-      const captured = setupOutput(
-        command,
-        proc,
-        stdio(command.options, "stdout"),
-        stdio(command.options, "stderr"),
-        stopOutput,
-      )
-      // kilocode_change end
       let end = false
       let exit: readonly [code: number | null, signal: NodeJS.Signals | null] | undefined
       proc.on("error", (err) => {
@@ -315,7 +297,7 @@ const makeCrossSpawnSpawner = Effect.gen(function* () {
         Deferred.doneUnsafe(closed, Exit.succeed(exit ?? args))
       })
       proc.on("spawn", () => {
-        resume(Effect.succeed([proc, closed, exited, stopOutput, captured])) // kilocode_change(process-output)
+        resume(Effect.succeed([proc, closed, exited]))
       })
       return Effect.sync(() => {
         proc.kill("SIGTERM")
@@ -327,7 +309,8 @@ const makeCrossSpawnSpawner = Effect.gen(function* () {
     opts: NodeChildProcess.SpawnOptions,
   ) {
     yield* Effect.logInfo("spawning process", { command: command.command, args: command.args, cwd: opts.cwd })
-    const [proc, closed, exited, stopOutput, captured] = yield* launchProcess(command, opts) // kilocode_change(process-output)
+    const [proc, closed, exited] = yield* launchProcess(command, opts)
+    const stopOutput = yield* Deferred.make<void>()
     // Register before process release so the deadline remains active during termination.
     yield* Effect.forkScoped(
       Effect.gen(function* () {
@@ -342,7 +325,7 @@ const makeCrossSpawnSpawner = Effect.gen(function* () {
         discard(proc.stderr)
       }),
     )
-    return [proc, closed, exited, stopOutput, captured] as const // kilocode_change(process-output)
+    return [proc, closed, exited, stopOutput] as const
   })
 
   const discard = (readable: NodeChildProcess.ChildProcess["stdout"]) => {
@@ -442,9 +425,7 @@ const makeCrossSpawnSpawner = Effect.gen(function* () {
           const extra = fds(command.options)
           const dir = yield* cwd(command.options)
 
-          // kilocode_change start - process-output: reuse capture attached before the spawn continuation.
-          const [proc, closed, exited, stopOutput, out] = yield* Effect.acquireRelease(
-            // kilocode_change end
+          const [proc, closed, exited, stopOutput] = yield* Effect.acquireRelease(
             spawn(command, {
               cwd: dir,
               env: env(command.options),
@@ -484,6 +465,7 @@ const makeCrossSpawnSpawner = Effect.gen(function* () {
             Deferred.await(stopOutput).pipe(Effect.andThen(Deferred.await(exited))),
           )
           const fd = yield* setupFds(command, proc, extra)
+          const out = setupOutput(command, proc, sout, serr, stopOutput)
           let ref = true
           return makeHandle({
             pid: ProcessId(proc.pid!),

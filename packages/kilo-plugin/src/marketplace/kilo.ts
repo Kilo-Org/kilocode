@@ -15,6 +15,7 @@ const RawParameter = Schema.Struct({
   name: Schema.optional(Schema.String),
   placeholder: Schema.optional(Schema.String),
   optional: Schema.optional(Schema.Boolean),
+  secret: Schema.optional(Schema.Boolean),
 })
 
 const RawOption = Schema.Struct({
@@ -110,5 +111,12 @@ function mcpOptions(content: unknown) {
 }
 
 function parameter(raw: typeof RawParameter.Type): KiloMarketplaceRpc.Parameter {
-  return { key: raw.key, name: raw.name ?? raw.key, placeholder: raw.placeholder, optional: raw.optional ?? false }
+  return {
+    key: raw.key,
+    name: raw.name ?? raw.key,
+    placeholder: raw.placeholder,
+    optional: raw.optional ?? false,
+    // Legacy catalogs lack secret metadata; mask unless they explicitly opt out.
+    secret: raw.secret ?? true,
+  }
 }

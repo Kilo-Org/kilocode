@@ -154,9 +154,20 @@ describe("MCP config translation", () => {
     }
   })
 
-  test("rejects placeholders that no parameter declares", () => {
-    expect(() => build({ template: `{ "command": "{{BIN}}/x" }`, parameters: [], params: {} })).toThrow(McpError)
-    expect(() => build({ template: '{ "command": "${BIN}/x" }', parameters: [], params: {} })).toThrow(McpError)
+  test("rejects undeclared double-brace placeholders even when supplied in params", () => {
+    expect(() => build({ template: `{ "command": "{{BIN}}/x" }`, parameters: [], params: { BIN: "node" } })).toThrow(
+      /The server config uses undeclared parameters: BIN/,
+    )
+  })
+
+  test("substitutes declared legacy placeholders but preserves undeclared runtime expressions", () => {
+    expect(
+      build({
+        template: JSON.stringify({ command: "node", args: ["${KEY}", "${HOME}/server.js", "${workspaceFolder}"] }),
+        parameters: [param("KEY")],
+        params: { KEY: 'resolved "value"', HOME: "/ignored", workspaceFolder: "/ignored" },
+      }),
+    ).toEqual({ type: "local", command: ["node", 'resolved "value"', "${HOME}/server.js", "${workspaceFolder}"] })
   })
 
   test("substitutes only original placeholders and preserves placeholder-like parameter values", () => {
@@ -195,6 +206,7 @@ describe("MCP config files", () => {
         target,
         '{\n  // keep target comments\n  "model": "user/model",\n  "mcp": { "servers": { "foreign": { "type": "local", "command": ["keep"] } } }\n}\n',
       )
+      await fs.chmod(target, 0o640)
       await fs.symlink(path.relative(directory, target), config)
       const foreign = await fingerprint(target, "foreign")
       expect(await configFile(directory, true)).toBe(config)
@@ -211,6 +223,7 @@ describe("MCP config files", () => {
       expect(written.resources![0]).toMatchObject({ config, server: "demo" })
       expect((await fs.lstat(config)).isSymbolicLink()).toBe(true)
       expect(await fs.readlink(config)).toBe(path.relative(directory, target))
+      expect((await fs.stat(target)).mode & 0o7777).toBe(0o640)
       expect(await fs.readFile(target, "utf8")).toContain("// keep target comments")
       expect(await fingerprint(config, "demo")).toBe(await fingerprint(target, "demo"))
       await preflight({ file: config, name: "demo", fingerprints: written.resources![0].fingerprints })
@@ -218,6 +231,7 @@ describe("MCP config files", () => {
       expect(await Installer.inspect({ id: "demo", ...written })).toEqual({ status: "ready", warnings: [] })
 
       await Installer.uninstall({ id: "demo", ...written })
+      expect((await fs.stat(target)).mode & 0o7777).toBe(0o640)
       expect((await fs.lstat(config)).isSymbolicLink()).toBe(true)
       expect(await fs.readlink(config)).toBe(path.relative(directory, target))
       const text = await fs.readFile(target, "utf8")
@@ -296,20 +310,105 @@ describe("MCP config files", () => {
     },
   )
 
-  test("config discovery and operations propagate non-ENOENT path errors", async () => {
+  test.skipIf(process.platform === "win32")(
+    "config discovery and operations propagate non-ENOENT path errors",
+    async () => {
+      const directory = await tmp()
+      const parent = path.join(directory, "not-a-directory")
+      const file = path.join(parent, "kilo2.json")
+      await fs.writeFile(parent, "keep")
+      await expect(configFile(parent, true)).rejects.toMatchObject({ code: "ENOTDIR" })
+      await expect(preflight({ file, name: "demo" })).rejects.toMatchObject({ code: "ENOTDIR" })
+      await expect(fingerprint(file, "demo")).rejects.toMatchObject({ code: "ENOTDIR" })
+      await expect(
+        write({ file, name: "demo", server: { type: "local", command: ["node"] }, replace: false }),
+      ).rejects.toMatchObject({ code: "ENOTDIR" })
+      await expect(remove({ file, name: "demo" })).rejects.toMatchObject({ code: "ENOTDIR" })
+      expect(await fs.readFile(parent, "utf8")).toBe("keep")
+    },
+  )
+
+  test("a regular-file config parent cannot be overwritten", async () => {
     const directory = await tmp()
     const parent = path.join(directory, "not-a-directory")
     const file = path.join(parent, "kilo2.json")
     await fs.writeFile(parent, "keep")
-    await expect(configFile(parent, true)).rejects.toMatchObject({ code: "ENOTDIR" })
-    await expect(preflight({ file, name: "demo" })).rejects.toMatchObject({ code: "ENOTDIR" })
-    await expect(fingerprint(file, "demo")).rejects.toMatchObject({ code: "ENOTDIR" })
     await expect(
       write({ file, name: "demo", server: { type: "local", command: ["node"] }, replace: false }),
-    ).rejects.toMatchObject({ code: "ENOTDIR" })
-    await expect(remove({ file, name: "demo" })).rejects.toMatchObject({ code: "ENOTDIR" })
+    ).rejects.toBeDefined()
     expect(await fs.readFile(parent, "utf8")).toBe("keep")
   })
+
+  test.skipIf(process.platform === "win32")(
+    "project config links may target another supported config candidate",
+    async () => {
+      const directory = await tmp()
+      const target = path.join(directory, "kilo2.json")
+      const config = path.join(directory, ".kilo2", "kilo2.jsonc")
+      await fs.mkdir(path.dirname(config))
+      await fs.writeFile(target, "{}")
+      await fs.symlink("../kilo2.json", config)
+      expect(await configFile(directory, false)).toBe(config)
+      await write({ file: config, name: "demo", server: { type: "local", command: ["node"] }, replace: false })
+      expect((await Bun.file(target).json()).mcp.servers.demo).toEqual({ type: "local", command: ["node"] })
+      expect(await fs.readlink(config)).toBe("../kilo2.json")
+    },
+  )
+
+  test.skipIf(process.platform === "win32")(
+    "resolves dangling relative config links from their physical parent",
+    async () => {
+      const directory = await tmp()
+      const physical = path.join(directory, "physical", "project")
+      const logical = path.join(directory, "alias")
+      const target = path.join(directory, "physical", "dotfiles", "config.jsonc")
+      await fs.mkdir(physical, { recursive: true })
+      await fs.symlink(physical, logical)
+      await fs.symlink("../dotfiles/config.jsonc", path.join(physical, "kilo2.jsonc"))
+      const files = [path.join(logical, "kilo2.jsonc"), path.join(physical, "kilo2.jsonc"), target]
+      expect(await MarketplaceMcp.resolveFile(files[0])).toBe(await MarketplaceMcp.resolveFile(target))
+      await Promise.all(
+        files.map((file, index) =>
+          write({ file, name: `server-${index}`, server: { type: "local", command: ["node"] }, replace: false }),
+        ),
+      )
+      expect(Object.keys((await Bun.file(target).json()).mcp.servers).toSorted()).toEqual([
+        "server-0",
+        "server-1",
+        "server-2",
+      ])
+      expect((await fs.lstat(path.join(physical, "kilo2.jsonc"))).isSymbolicLink()).toBe(true)
+      expect(await Bun.file(path.join(directory, "dotfiles", "config.jsonc")).exists()).toBe(false)
+    },
+  )
+
+  test.skipIf(process.platform === "win32")(
+    "cleanup rejects a changed config target without modifying either file",
+    async () => {
+      const directory = await tmp()
+      const config = path.join(directory, "kilo2.jsonc")
+      const original = path.join(directory, "original.jsonc")
+      const changed = path.join(directory, "changed.jsonc")
+      const content = JSON.stringify({ mcp: { servers: { demo: { type: "local", command: ["node"] } } } })
+      await fs.writeFile(original, content)
+      await fs.writeFile(changed, content)
+      await fs.symlink(original, config)
+      const resource = {
+        config,
+        server: "demo",
+        target: await MarketplaceMcp.resolveFile(config),
+        fingerprints: [(await fingerprint(config, "demo"))!],
+      }
+      await fs.unlink(config)
+      await fs.symlink(changed, config)
+      await expect(Installer.cleanup(resource)).rejects.toMatchObject({
+        reason: "conflict",
+        message: `MCP config target changed since installation: ${config}`,
+      })
+      expect(await fs.readFile(original, "utf8")).toBe(content)
+      expect(await fs.readFile(changed, "utf8")).toBe(content)
+    },
+  )
 
   test("fingerprints normalize JSON object ordering but protect changed and legacy entries", async () => {
     const file = path.join(await tmp(), "kilo2.jsonc")
@@ -351,6 +450,46 @@ describe("MCP config files", () => {
     await remove({ file, name: "demo", fingerprints: [(await fingerprint(file, "demo"))!] })
     expect((await fs.stat(file)).mode & 0o777).toBe(0o600)
   })
+
+  test.skipIf(process.platform === "win32").each([0, 0o777])(
+    "creates new configs with exactly 0600 permissions under umask %i",
+    async (mask) => {
+      const file = path.join(await tmp(), "kilo2.json")
+      const previous = process.umask(mask)
+      try {
+        await write({ file, name: "demo", server: { type: "local", command: ["x"] }, replace: false })
+        expect((await fs.stat(file)).mode & 0o7777).toBe(0o600)
+      } finally {
+        process.umask(previous)
+      }
+    },
+  )
+
+  test.skipIf(process.platform === "win32").each([0o640, 0o644, 0o750])(
+    "preserves existing config permission bits %i on write and removal despite a restrictive umask",
+    async (mode) => {
+      const file = path.join(await tmp(), "kilo2.json")
+      await fs.writeFile(file, "{}")
+      await fs.chmod(file, mode)
+      const previous = process.umask(0o077)
+      try {
+        await write({ file, name: "demo", server: { type: "local", command: ["x"] }, replace: false })
+        expect((await fs.stat(file)).mode & 0o7777).toBe(mode)
+        await write({
+          file,
+          name: "demo",
+          server: { type: "local", command: ["y"] },
+          replace: true,
+          fingerprints: [(await fingerprint(file, "demo"))!],
+        })
+        expect((await fs.stat(file)).mode & 0o7777).toBe(mode)
+        await remove({ file, name: "demo", fingerprints: [(await fingerprint(file, "demo"))!] })
+        expect((await fs.stat(file)).mode & 0o7777).toBe(mode)
+      } finally {
+        process.umask(previous)
+      }
+    },
+  )
 
   test("writes a new kilo2.json, keeps comments, refuses foreign entries and removes", async () => {
     const directory = await tmp()

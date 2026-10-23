@@ -30,19 +30,7 @@ export async function install(input: {
   if (item.kind !== "skill" && item.kind !== "mcp") {
     throw new McpError("invalid_params", `Installing ${item.kind} items is not supported yet`)
   }
-  const index = input.option === undefined ? 0 : item.options.findIndex((option) => option.name === input.option)
-  const template = input.entry.payloads[index]
-  if (item.kind === "mcp" && (index < 0 || typeof template !== "string")) {
-    throw new McpError("not_found", `${item.name} has no install option ${input.option ?? ""}`.trim())
-  }
-  const server =
-    item.kind === "mcp"
-      ? MarketplaceMcp.build({
-          template: template as string,
-          parameters: MarketplaceMcp.parameters(item, item.options[index]),
-          params: input.params ?? {},
-        })
-      : undefined
+  const server = item.kind === "mcp" ? mcp(input.entry, input.option, input.params ?? {}).server : undefined
   if (item.kind === "skill" && !input.entry.archive) throw new SkillError("invalid", `Skill ${item.id} has no archive`)
   const skills = []
   for (const companion of item.kind === "skill"
@@ -66,17 +54,23 @@ export async function install(input: {
   if (new Set(resources.map(key)).size !== resources.length)
     throw new SkillError("invalid", "Duplicate install resources")
   const prior = input.previous ? [...active(input.previous), ...(input.previous.pending ?? [])] : []
-  for (const resource of prior.filter((old) => resources.some((resource) => key(old) === key(resource))))
+  for (const resource of prior.filter((old) =>
+    resources.some(
+      (resource) =>
+        key(old) === key(resource) ||
+        ("config" in old && "config" in resource && old.config === resource.config && old.server === resource.server),
+    ),
+  ))
     await checkTarget(resource)
   const allowed = (resource: Resource) =>
-    prior.filter((old) => key(old) === key(resource)).flatMap((old) => old.fingerprints ?? [])
+    prior.filter((old) => same(old, resource)).flatMap((old) => old.fingerprints ?? [])
   // Preparation and ownership preflight finish before the durable intent and before any target writes.
   for (const resource of resources) {
     if ("path" in resource) await Skill.preflight(resource.path, allowed(resource))
     else
       await MarketplaceMcp.preflight({ file: resource.config, name: resource.server, fingerprints: allowed(resource) })
   }
-  const pending = prior.filter((old) => !resources.some((resource) => key(resource) === key(old)))
+  const pending = prior.filter((old) => !resources.some((resource) => same(old, resource)))
   const written: Written = {
     paths: skills.map((skill) => skill.target),
     ...(server ? { config: input.config, server: MarketplaceMcp.serverName(item.id) } : {}),
@@ -124,8 +118,50 @@ export async function install(input: {
   return written
 }
 
+/** Build the same server as install, replacing secrets before interpolation so none can reach the preview. */
+export function preview(input: { entry: Entry; option?: string; params?: Readonly<Record<string, string>> }) {
+  const index =
+    input.option === undefined ? 0 : input.entry.item.options.findIndex((option) => option.name === input.option)
+  const parameters = MarketplaceMcp.parameters(input.entry.item, input.entry.item.options[index])
+  const secrets = parameters.filter((parameter) => parameter.secret && input.params?.[parameter.key]?.trim())
+  const redacted = {
+    ...input.params,
+    ...Object.fromEntries(secrets.map((parameter) => [parameter.key, "[redacted]"])),
+  }
+  return {
+    server: JSON.stringify(mcp(input.entry, input.option, redacted).server, null, 2),
+    parameters: parameters.map((parameter) => `${parameter.name} (${parameter.key})`),
+    secrets: secrets.map((parameter) => parameter.name),
+  }
+}
+
+function mcp(entry: Entry, option: string | undefined, params: Readonly<Record<string, string>>) {
+  if (entry.item.kind !== "mcp") throw new McpError("invalid_params", "Only MCP servers have a configuration preview")
+  const index = option === undefined ? 0 : entry.item.options.findIndex((entry) => entry.name === option)
+  const template = entry.payloads[index]
+  if (index < 0 || typeof template !== "string") {
+    throw new McpError("not_found", `${entry.item.name} has no install option ${option ?? ""}`.trim())
+  }
+  const parameters = MarketplaceMcp.parameters(entry.item, entry.item.options[index])
+  return { server: MarketplaceMcp.build({ template, parameters, params }), parameters }
+}
+
 function key(resource: Resource) {
-  return JSON.stringify("path" in resource ? ["path", resource.path] : ["config", resource.config, resource.server])
+  return JSON.stringify(
+    "path" in resource ? ["path", resource.path] : ["config", resource.target ?? resource.config, resource.server],
+  )
+}
+
+function same(left: Resource, right: Resource) {
+  return (
+    key(left) === key(right) ||
+    // Persisted records predating canonical targets can still own their original logical filename.
+    ("config" in left &&
+      "config" in right &&
+      (!left.target || !right.target) &&
+      left.config === right.config &&
+      left.server === right.server)
+  )
 }
 
 function active(record: Written & { id: string }): readonly Resource[] {
@@ -135,7 +171,14 @@ function active(record: Written & { id: string }): readonly Resource[] {
     ...(record.config
       ? [{ config: record.config, server: record.server ?? MarketplaceMcp.serverName(record.id) }]
       : []),
-  ].map((resource) => record.resources?.find((owned) => key(owned) === key(resource)) ?? resource)
+  ].map(
+    (resource) =>
+      record.resources?.find((owned) =>
+        "path" in resource
+          ? "path" in owned && owned.path === resource.path
+          : "config" in owned && owned.config === resource.config && owned.server === resource.server,
+      ) ?? resource,
+  )
 }
 
 export async function resourceFingerprint(resource: Resource): Promise<string | undefined> {

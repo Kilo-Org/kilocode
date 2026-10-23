@@ -170,6 +170,23 @@ test("lists, installs and uninstalls marketplace skills and MCP servers through 
             // An MCP server goes into the project config, with its parameters filled and converted to the v2 shape.
             const mcp = { registry: "kilo", kind: "mcp" as const, id: "demo-mcp", scope: "project" as const }
             await expect(rpc.install(mcp, options)).rejects.toMatchObject({ type: "invalid_params" })
+            const beforePreview = await rpc.installed({}, options)
+            const preview = await rpc.preview(
+              { ...mcp, option: "NPX", params: { API_KEY: "private-preview-value" } },
+              options,
+            )
+            expect(preview.config).toBe(path.join(directory, "kilo2.json"))
+            expect(JSON.parse(preview.server)).toEqual({
+              type: "local",
+              command: ["npx", "-y", "demo"],
+              environment: { API_KEY: "[redacted]" },
+            })
+            expect(preview.parameters).toEqual(["API key (API_KEY)"])
+            expect(preview.secrets).toEqual(["API key"])
+            expect(JSON.stringify(preview)).not.toContain("private-preview-value")
+            expect(await Bun.file(preview.config).exists()).toBe(false)
+            expect(await rpc.installed({}, options)).toEqual(beforePreview)
+            await expect(rpc.preview(mcp, options)).rejects.toMatchObject({ type: "invalid_params" })
             const server = await rpc.install({ ...mcp, option: "NPX", params: { API_KEY: "secret" } }, options)
             const config = path.join(directory, "kilo2.json")
             expect(server).toMatchObject({ config, paths: [] })

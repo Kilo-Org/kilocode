@@ -1,16 +1,12 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 42,
-    "markedLines": 295,
+    "files": 41,
+    "markedLines": 270,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
   "files": {
-    "packages/util/src/cross-spawn-spawner.ts": {
-      "rung": 4,
-      "seam": "Targeted upstream defect fix: attach stdout/stderr capture synchronously immediately after launch, before the spawning Effect can yield and Bun can drain a fast-exiting child's pipes. The internal launch/capture boundary has no plugin hook or host option; replacing the whole spawner would duplicate its process lifecycle and drain logic. Existing cleanup and post-exit deadlines are unchanged. Regression: packages/core/test/kilocode/fast-exit-output.test.ts."
-    },
     "packages/cli/src/commands/commands.ts": {
       "rung": 3,
       "seam": "Optional full-TUI --model/-m argument, passed to the existing TUI Args.model selector. The CLI command specification is closed and has no host extension for root parameters; no default changes when omitted. Two generic lines across the root specification and default handler replace a custom argument parser or a second host command mirror."

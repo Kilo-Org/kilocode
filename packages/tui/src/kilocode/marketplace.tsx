@@ -13,6 +13,7 @@ import { useLocation } from "../context/location"
 import { DialogIntegration } from "../component/dialog-integration"
 import { DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
 import { DialogMarketplaceSecret } from "./dialog-marketplace-secret"
+import { DialogMarketplaceInstall } from "./dialog-marketplace-install"
 
 type Kind = KiloMarketplaceRpc.Kind
 type Item = KiloMarketplaceRpc.Item
@@ -20,7 +21,12 @@ type Installed = KiloMarketplaceRpc.Installed
 type RegistryInfo = KiloMarketplaceRpc.RegistryInfo
 type Action = { type: "install" | "uninstall" | "details" | "auth"; scope: KiloMarketplaceRpc.Scope }
 type Choice = { type: "item"; item: Item } | { type: "search" }
-type Context = Plugin.Context & { target: LocationRef; signal: AbortSignal; signIn: (id: string) => Promise<void> }
+type Context = Plugin.Context & {
+  target: LocationRef
+  signal: AbortSignal
+  cancel: () => void
+  signIn: (id: string) => Promise<void>
+}
 
 const kinds: { kind: Kind; title: string; description: string }[] = [
   { kind: "skill", title: "Skills", description: "Instructions and resources the agent loads on demand" },
@@ -76,6 +82,10 @@ export default Plugin.define({
                   ...context,
                   target: location.ref ?? context.data.location.default(),
                   signal: controller.signal,
+                  cancel: () => {
+                    controller.abort()
+                    if (active === controller) active = undefined
+                  },
                   signIn: (integrationID) =>
                     new Promise<void>((resolve) => {
                       dismissed = resolve
@@ -252,7 +262,17 @@ async function registries(context: Context): Promise<void> {
 async function browse(context: Context, kind: Kind, query?: string): Promise<void> {
   if (context.signal.aborted) return
   const { rpc, options } = connect(context)
-  context.ui.toast.show({ variant: "info", message: query ? `Searching for "${query}"...` : "Loading marketplace..." })
+  let loading = true
+  context.ui.dialog.show(
+    () => (
+      <DialogLayout header={<DialogHeader title="Marketplace" closeLabel="esc cancel" />}>
+        <text>{query ? `Searching for "${query}"...` : "Loading marketplace..."}</text>
+      </DialogLayout>
+    ),
+    () => {
+      if (loading) context.cancel()
+    },
+  )
   const loaded = await Promise.all([
     rpc.list({ kind, query }, options),
     rpc.installed({}, options),
@@ -262,7 +282,10 @@ async function browse(context: Context, kind: Kind, query?: string): Promise<voi
       context.ui.toast.show({ variant: "error", message: error.message || "Couldn't load the marketplace" })
     return undefined
   })
-  if (!loaded || context.signal.aborted) return
+  if (context.signal.aborted) return
+  loading = false
+  context.ui.dialog.clear()
+  if (!loaded) return
   const [listed, installed, sources] = loaded
   const items = listed.items
   // Keep diagnostics together so a later toast cannot hide a failed source or pending cleanup.
@@ -451,6 +474,42 @@ async function act(context: Context, item: Item, installed: readonly Installed[]
     }
     const answers = await ask(context, item)
     if (!answers || context.signal.aborted) return
+    if (item.kind === "mcp") {
+      const preview = await rpc.preview({ ...ref, scope: choice.scope, ...answers }, options).catch((error: Error) => {
+        if (!context.signal.aborted)
+          context.ui.toast.show({ variant: "error", message: error.message || "Couldn't preview installation" })
+        return undefined
+      })
+      if (!preview || context.signal.aborted) return
+      const message = [
+        "This configuration will be activated immediately. Local commands run with your user permissions.",
+        `Config file: ${preview.config}`,
+        ...(choice.scope === "project" && preview.secrets.length > 0
+          ? [
+              `WARNING: Secrets (${preview.secrets.join(", ")}) will be stored in plaintext in this project config.`,
+              "Do not commit this file. Ensure it is gitignored, or cancel and install globally instead.",
+            ]
+          : []),
+        `Parameters: ${preview.parameters.join(", ") || "none"}`,
+        preview.server,
+      ].join("\n")
+      const confirmed = await new Promise<boolean>((resolve) => {
+        context.ui.dialog.show(
+          () => (
+            <DialogMarketplaceInstall
+              title={`Review ${item.name} installation`}
+              message={message}
+              onChoose={(confirmed) => {
+                resolve(confirmed)
+                context.ui.dialog.clear()
+              }}
+            />
+          ),
+          () => resolve(false),
+        )
+      })
+      if (!confirmed || context.signal.aborted) return
+    }
     const result = await rpc.install({ ...ref, scope: choice.scope, ...answers }, options).catch((error: Error) => {
       if (!context.signal.aborted)
         context.ui.toast.show({ variant: "error", message: error.message || "Unknown error" })
