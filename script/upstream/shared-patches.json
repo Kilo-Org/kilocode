@@ -3,7 +3,7 @@
   "limits": {
     "files": 42,
     "files": 42,
-    "markedLines": 298,
+    "markedLines": 305,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -114,8 +114,8 @@
       "unmarked": "JSON has no comments."
     },
     "packages/tui/src/component/dialog-integration.tsx": {
-      "rung": 3,
-      "seam": "Prompt for Personal Account vs Team (`chooseKiloAccount`) after a Kilo Gateway login completes, before closing or chaining the integration dialog. `TuiPlugin` has no post-integration-connect hook."
+      "rung": 4,
+      "seam": "Prompt for Personal Account vs Team (`chooseKiloAccount`) after a Kilo Gateway login completes, before closing or chaining the integration dialog. `TuiPlugin` has no post-integration-connect hook. The connect dialog also ranks and groups integrations with Kilo's v1 provider priority (`KILO_INTEGRATION_PRIORITY` in tui/src/kilocode/gateway.tsx: Kilo first under Popular, OpenCode Go and OpenCode Console under Services). `integrationOptions` takes the priority map as a parameter with upstream's map as the default (generic seam, so upstream's integration-options tests pass unchanged), and the dialog passes the Kilo map and uses it for the Popular group (rung 4). The map is a constant in the TUI process: no TUI plugin hook ranks integrations, and the host runs in the server process."
     },
     "packages/tui/src/context/local.tsx": {
       "rung": 4,
