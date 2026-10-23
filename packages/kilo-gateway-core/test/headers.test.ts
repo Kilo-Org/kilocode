@@ -10,6 +10,16 @@ describe("KiloHeaders.provider", () => {
     expect(KiloHeaders.provider({ version: "1" }, { KILOCODE_FEATURE: "" })[KiloHeaders.HEADER_FEATURE]).toBe("cli")
   })
 
+  test("maps the session platform to the feature, else the process platform, else the process feature", () => {
+    const feature = (platform: string | undefined, env: Record<string, string>) =>
+      KiloHeaders.provider({ version: "1", platform }, env)[KiloHeaders.HEADER_FEATURE]
+    expect(feature("vscode", { KILOCODE_FEATURE: "cli" })).toBe("vscode-extension")
+    expect(feature("agent-manager", { KILO_PLATFORM: "vscode" })).toBe("agent-manager")
+    expect(feature(undefined, { KILO_PLATFORM: "vscode", KILOCODE_FEATURE: "cloud-agent" })).toBe("vscode-extension")
+    expect(feature("jetbrains", { KILOCODE_FEATURE: "jetbrains-plugin" })).toBe("jetbrains-plugin")
+    expect(feature("toString", {})).toBe("cli")
+  })
+
   test("names the editor from KILOCODE_EDITOR_NAME, else Kilo CLI with the version", () => {
     expect(KiloHeaders.provider({ version: "1.2.3" }, {})[KiloHeaders.HEADER_EDITOR]).toBe("Kilo CLI 1.2.3")
     expect(
