@@ -425,5 +425,15 @@
     "state": "ported",
     "note": "packages/tui/test/kilocode/usage.test.ts carries the throughput assertions: weighted generation speed over step time, ignored steps without tokens or time, t/s formatting with grouping and '-' for missing, zero, negative, NaN and infinite values. v1's last-wins fallback for steps without elapsed time is not carried: every v2 assistant step has its start and completion time. The /usage dialog is covered by packages/tui/test/kilocode/usage.view.test.tsx.",
     "by": "kilo-usage-screen"
+  },
+  "module:packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx": {
+    "state": "ported",
+    "note": "packages/tui/src/kilocode/dialog-provider.tsx, called from packages/tui/src/component/dialog-integration.tsx (kilocode_change(cli:66a6b3781917)): PROVIDER_DESCRIPTIONS and PROVIDER_TITLES (KILO_PROVIDER_DESCRIPTIONS, KILO_PROVIDER_TITLES), failureMessage and failedDescription for the Kilo catalog failure kinds (unauthorized, network, http, schema, plus v2 organization_missing; the reason comes from the kilocode.gateway models RPC error data), renderGutter (red ! gutter), renderApiDescription for kilo and atomic-chat (KeyDescription), LOCAL_OPTIONAL_API_KEY, apiKeyPlaceholder and LOCAL_API_KEY_PLACEHOLDER (apiKeyPlaceholder, apiKey). PROVIDER_PRIORITY is KILO_INTEGRATION_PRIORITY in packages/tui/src/kilocode/gateway.tsx and renderAutoMethod is chooseKiloAccount there. The re-export of selectProvider belongs to anaconda-desktop (module anaconda-desktop/tui/setup.tsx, open). v1 'unauthenticated' and the no-reason fallback have no v2 source: the RPC always reports a kind. Tests: packages/tui/test/kilocode/dialog-integration.test.tsx carries the assertions of v1 test/kilocode/cli/tui/component/dialog-provider.test.ts.",
+    "by": "kilo-commands-dialogs"
+  },
+  "module:packages/opencode/src/kilocode/kilo-commands.tsx": {
+    "state": "ported",
+    "note": "v1 registered all Kilo slash commands in one useBindings list. v2 has a native command registry: each TUI plugin registers its commands with context.keymap.layer and slash names (packages/tui/src/context/keymap.tsx), so each feature registers its own. Ported commands: /teams (team, org, orgs) and /profile (me, whoami) in packages/tui/src/kilocode/gateway.tsx, /usage (plans, quota) in packages/tui/src/kilocode/usage.tsx, all in group Kilo. The other v1 entries belong to their own features and stay open there: /remote (tui remote-tui.tsx, cloud sessions), /indexing (components dialog-indexing.tsx), /about (cli dialog-about.tsx), /privacy (U-E9-12).",
+    "by": "kilo-commands-dialogs"
   }
 }

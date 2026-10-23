@@ -8,18 +8,18 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**110 / 9829 cells done (1.1%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
+**113 / 9829 cells done (1.1%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 38 | 3547 | 1.1% |
+| module | 40 | 3547 | 1.1% |
 | api | 2 | 39 | 5.1% |
-| patch | 46 | 3445 | 1.3% |
+| patch | 47 | 3445 | 1.4% |
 | test | 24 | 2798 | 0.9% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
-Landed by rung, for patch cells closed by a done-proof: 28 plugin, 3 host, 0 seam, 0 patch.
+Landed by rung, for patch cells closed by a done-proof: 28 plugin, 3 host, 0 seam, 1 patch.
 
 Ratchets: 25 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 43 shared patches by rung: 24 seam, 19 patch (`script/upstream/shared-patches.json`).
 
@@ -36,8 +36,8 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-20 | 87 | 9829 | 0.9% |
 | 2026-10-21 | 90 | 9829 | 0.9% |
 | 2026-10-22 | 93 | 9829 | 0.9% |
-| 2026-10-23 | 106 | 9829 | 1.1% |
-| now | 110 | 9829 | 1.1% |
+| 2026-10-23 | 143 | 9828 | 1.5% |
+| now | 113 | 9829 | 1.1% |
 
 ## Features
 
@@ -57,7 +57,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | branch-name | 0/1 |  |  | 0/1 | 0/2 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | caffeination | 0/1 |  |  |  | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | cleanup |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| cli | 0/72 |  | 0/25 | 0/51 | 0/148 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| cli | 1/72 |  | 1/25 | 0/51 | 2/148 | 1.4% | `░░░░░░░░░░░░░░░░` | 1 patch |
 | cloud | 0/16 |  | 0/2 | 0/9 | 0/27 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | command | 0/3 | 0/2 |  | 0/3 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | commit-message | 0/4 |  |  | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -135,7 +135,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | telemetry | 0/5 |  | 0/2 | 0/7 | 0/14 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | tool | 0/61 |  | 0/7 | 0/43 | 0/111 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | ts-check | 0/2 |  | 0/2 | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| tui | 0/15 |  | 0/6 | 1/24 | 1/45 | 2.2% | `░░░░░░░░░░░░░░░░` |  |
+| tui | 1/15 |  | 0/6 | 1/24 | 2/45 | 4.4% | `█░░░░░░░░░░░░░░░` |  |
 | tui-sync | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | ui | 0/248 |  | 0/1 | 0/18 | 0/267 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | usage-cost | 0/4 |  |  | 0/5 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
