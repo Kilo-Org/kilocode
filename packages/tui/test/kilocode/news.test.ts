@@ -81,3 +81,35 @@ test("refetches news when the Kilo account or team changes", async () => {
   } as never)
   await app.waitForFrame((frame) => frame.includes("other-team title"), wait)
 }, 60_000)
+
+test("keeps the newest news when an older request answers last", async () => {
+  const pending: PromiseWithResolvers<Response>[] = []
+  await using app = await createAppFixture({
+    fetch: (url) => {
+      if (url.pathname !== "/api/rpc/kilocode.gateway/notifications") return
+      pending.push(Promise.withResolvers<Response>())
+      return pending.at(-1)!.promise
+    },
+    width: 100,
+    height: 34,
+  })
+  await app.waitForFrame((frame) => frame.includes("ctrl+p"), wait)
+  while (pending.length === 0) await Bun.sleep(10)
+
+  app.events.emit({
+    id: "evt_team",
+    created: 0,
+    type: "rpc.kilocode.gateway.organization",
+    location: { directory },
+    data: { organizationID: "org_2" },
+  } as never)
+  while (pending.length < 2) await Bun.sleep(10)
+  pending[1]!.resolve(json({ output: [item("newer")] }))
+  await app.waitForFrame((frame) => frame.includes("newer title"), wait)
+
+  pending[0]!.resolve(json({ output: [item("older")] }))
+  await Bun.sleep(100)
+  await app.waitForVisualIdle()
+  expect(app.captureCharFrame()).toContain("newer title")
+  expect(app.captureCharFrame()).not.toContain("older title")
+}, 60_000)
