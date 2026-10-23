@@ -78,6 +78,7 @@ export const FailureCode = Schema.Literals([
   "not_found",
   "invalid_request",
   "invalid_response",
+  "auth_unavailable",
   "rejected",
   "unavailable",
   "unknown_provider",
@@ -189,6 +190,22 @@ export const StartResult = Schema.Struct({
 }).annotate({ identifier: "SessionHostStartResult" })
 export type StartResult = Schema.Schema.Type<typeof StartResult>
 
+/**
+ * A proven native request bound to one hosted session. The local attachment
+ * layer reduces the inbound request to this shape before the provider maps it,
+ * so local credentials, cookies, and selectors never reach the provider.
+ */
+export interface NativeRequest {
+  readonly session: HostedSessionID
+  readonly method: string
+  readonly path: string
+  readonly query: URLSearchParams
+  readonly headers: Headers
+  /** Native request bodies are JSON bytes; binary content travels base64 inside JSON. */
+  readonly body?: Uint8Array
+  readonly organizationID?: string
+}
+
 export interface Provider {
   readonly id: ProviderID
   readonly default?: boolean
@@ -199,4 +216,10 @@ export interface Provider {
   readonly transcript: (input: TranscriptInput) => Effect.Effect<HostedTranscriptPage, HostedFailure>
   readonly start: (input: StartInput) => Effect.Effect<StartResult, HostedFailure>
   readonly attach: (input: AttachInput) => Effect.Effect<Attachment, HostedFailure>
+  /**
+   * Provider-owned request mapping for the proven native allowlist. Provider
+   * origin, credentials, control identities, selectors, and fences stay inside
+   * the implementation. Omitted by providers without native routing.
+   */
+  readonly route?: (input: NativeRequest) => Effect.Effect<Response, HostedFailure>
 }
