@@ -80,7 +80,11 @@ jobs:
 
   # The v1 line runs a curated macOS unit job because its darwin build ships. v2 runs unit tests on
   # Linux and Windows only, so this covers the platform-specific filesystem, PTY, process and shell
-  # code, and the CLI service lifecycle, on the OS that `install:alpha` uses.
+  # code on the OS that `install:alpha` uses.
+  #
+  # Like the v1 Darwin profile, it holds only files whose failure would point at macOS behavior:
+  # file watching, node-pty, process spawning and shell selection. Platform-neutral suites stay on
+  # Linux and Windows, where they already run, and cost about 3x more on the macOS runner.
   macos:
     name: macOS platform tests
     runs-on: macos-15
@@ -118,10 +122,6 @@ jobs:
       - name: Run server PTY tests
         working-directory: packages/server
         run: bun run test ./test/pty-socket.test.ts ./test/pty-transport.test.ts ./test/persistent-pty.test.ts ./test/process.test.ts
-
-      - name: Run CLI service tests
-        working-directory: packages/cli
-        run: bun run test ./test/service.test.ts ./test/service-lifecycle.test.ts
 
   shared:
     name: shared upstream patches
