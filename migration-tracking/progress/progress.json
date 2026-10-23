@@ -33,13 +33,13 @@
     "landed": {
       "plugin": 36,
       "host": 3,
-      "seam": 4,
-      "patch": 1
+      "seam": 0,
+      "patch": 5
     },
     "coreImports": 25,
     "sharedPatches": {
-      "seam": 25,
-      "patch": 19
+      "seam": 24,
+      "patch": 20
     }
   },
   "notCounted": {
@@ -5705,8 +5705,8 @@
       "landed": {
         "plugin": 0,
         "host": 0,
-        "seam": 4,
-        "patch": 0
+        "seam": 0,
+        "patch": 4
       }
     },
     {
@@ -6159,9 +6159,9 @@
     "patch:unattributed:tui/component:a277acf3a84b": "plugin",
     "patch:unattributed:tui/component:c8cf17d43819": "plugin",
     "patch:unattributed:tui/component:d10b36aa74a5": "plugin",
-    "patch:unattributed:tui/ui:858635f51958": "seam",
-    "patch:unattributed:tui/ui:aac5db9863ac": "seam",
-    "patch:unattributed:tui/ui:acda41f897d2": "seam"
+    "patch:unattributed:tui/ui:858635f51958": "patch",
+    "patch:unattributed:tui/ui:aac5db9863ac": "patch",
+    "patch:unattributed:tui/ui:acda41f897d2": "patch"
   },
   "done": [
     "module:packages/kilo-gateway/src/api/constants.ts",
