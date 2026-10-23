@@ -4,9 +4,9 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 111,
+    "done": 115,
     "total": 9829,
-    "percent": 1.1,
+    "percent": 1.2,
     "dropped": 25,
     "kinds": [
       {
@@ -21,7 +21,7 @@
       },
       {
         "kind": "patch",
-        "done": 46,
+        "done": 50,
         "total": 3445
       },
       {
@@ -31,7 +31,7 @@
       }
     ],
     "landed": {
-      "plugin": 24,
+      "plugin": 28,
       "host": 4,
       "seam": 3,
       "patch": 0
@@ -5123,7 +5123,7 @@
     },
     {
       "feature": "unattributed:session",
-      "done": 0,
+      "done": 4,
       "total": 449,
       "dropped": 0,
       "kinds": {
@@ -5136,13 +5136,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 4,
           "total": 449
         },
         "test": {
           "done": 0,
           "total": 0
         }
+      },
+      "landed": {
+        "plugin": 4,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -6137,7 +6143,10 @@
     "patch:unattributed:agent:b6727a425792": "plugin",
     "patch:unattributed:config:546539fc1643": "host",
     "patch:unattributed:config:73db79553730": "plugin",
-    "patch:unattributed:config:8cdbdec70393": "host"
+    "patch:unattributed:config:8cdbdec70393": "host",
+    "patch:unattributed:session:13cc4c3e6a51": "plugin",
+    "patch:unattributed:session:142910b3fc8c": "plugin",
+    "patch:unattributed:session:5dd7101d7cc6": "plugin"
   },
   "done": [
     "api:GET /kilocode/provider-usage",
@@ -6250,7 +6259,11 @@
     "patch:unattributed:agent:fbbd4a8ba315",
     "patch:unattributed:config:546539fc1643",
     "patch:unattributed:config:73db79553730",
-    "patch:unattributed:config:8cdbdec70393"
+    "patch:unattributed:config:8cdbdec70393",
+    "patch:unattributed:session:13cc4c3e6a51",
+    "patch:unattributed:session:142910b3fc8c",
+    "patch:unattributed:session:5dd7101d7cc6",
+    "patch:unattributed:session:5dd7101d7cc6"
   ],
   "dropped": [
     "module:packages/kilo-gateway/src/auth/device-auth.ts",
