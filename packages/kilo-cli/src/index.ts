@@ -24,6 +24,7 @@ import { EffectFlock } from "@opencode/util/effect-flock"
 import { Heap } from "@opencode/cli/heap"
 import { CpuProfile } from "@opencode/cli/cpu-profile"
 import { KiloApp } from "./app"
+import { AutoCommand } from "./auto/auto"
 
 ensurePluginRuntime()
 
@@ -32,7 +33,10 @@ if (process.env.OPENCODE_SSH_ASKPASS_PORT) {
   process.exit(await Effect.runPromise(askpass.pipe(Effect.provide(NodeServices.layer))))
 }
 
-const Handlers = Runtime.handlers(Commands, {
+// Kilo: the Kilo commands next to the upstream ones. `kilo auto` manages custom auto routers (#15418).
+const KiloCommands = { ...Commands, commands: { ...Commands.commands, auto: AutoCommand } }
+
+const Handlers = Runtime.handlers(KiloCommands, {
   $: () => import("@opencode/cli/commands/handlers/default"),
   upgrade: () => import("@opencode/cli/commands/handlers/upgrade"),
   uninstall: () => import("@opencode/cli/commands/handlers/uninstall"),
@@ -87,6 +91,15 @@ const Handlers = Runtime.handlers(Commands, {
   },
   // Kilo: the server gets the Kilo plugins and service overrides.
   serve: () => import("./serve"),
+  // Kilo: custom auto routers.
+  auto: {
+    router: {
+      list: () => import("./auto/router-list"),
+      add: () => import("./auto/router-add"),
+      remove: () => import("./auto/router-remove"),
+    },
+    eval: () => import("./auto/eval"),
+  },
 })
 
 Effect.gen(function* () {
@@ -113,7 +126,7 @@ Effect.gen(function* () {
     local: OPENCODE_LOCAL,
     args: process.argv.slice(2),
   })
-  return yield* Runtime.run(Commands, Handlers, { version: OPENCODE_VERSION })
+  return yield* Runtime.run(KiloCommands, Handlers, { version: OPENCODE_VERSION }) // Kilo: with the Kilo commands
 }).pipe(
   Effect.catchCause((cause) =>
     Effect.logError("cli process failed", {

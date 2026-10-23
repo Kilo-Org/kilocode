@@ -27,6 +27,7 @@ import { Cause, Context, Effect, Layer, Result, Stream } from "effect"
 import { HttpClientRequest, HttpClientResponse } from "effect/http"
 import { makeLocationNode } from "@opencode/util/effect/app-node"
 import { App } from "../app.js"
+import { ModelResolver } from "../model-resolver.js" // kilocode_change(gateway) seam - route hook target
 import { Permission } from "../permission.js"
 import { PluginHooks } from "../plugin/hooks.js"
 import { QuestionTool } from "../tool/plugin/question.js"
@@ -233,11 +234,15 @@ export const layer = Layer.effect(
     const hooks = yield* PluginHooks.Service
     const transport = yield* SessionModelTransport.Service
     const app = yield* App.Metadata
+    const resolver = yield* Effect.serviceOption(ModelResolver.Service) // kilocode_change(gateway) seam - route hook target
     const prepare = Effect.fn("SessionModelRequest.prepare")(function* <
       S extends SessionRequest & { tools?: Definitions },
     >(kind: SessionRequestKind, input: Input, shape: (draft: SessionRequest, tools: Definitions) => Effect.Effect<S>) {
       const session = input.session
-      const model = input.model
+      // kilocode_change start - gateway seam: a route hook may send this one request to another model
+      const routed = yield* hooks.trigger("session", "route", { sessionID: session.id, agent: input.agent, model: input.model.ref, kind, system: input.system, messages: input.messages, tools: Object.fromEntries((input.tools?.definitions ?? []).map((t) => [t.name, { description: t.description, input: t.inputSchema }])) })
+      const model = routed.target && resolver._tag === "Some" ? yield* resolver.value.resolveModel(routed.target.model, routed.target.variant).pipe(Effect.orDie) : input.model
+      // kilocode_change end
       const scope = { sessionID: session.id, agent: input.agent, model: model.ref, kind }
       const tools = input.tools ?? {
         definitions: [],
@@ -419,5 +424,5 @@ export const layer = Layer.effect(
 export const node = makeLocationNode({
   service: Service,
   layer,
-  deps: [PluginHooks.node, SessionModelTransport.node, App.node],
+  deps: [PluginHooks.node, SessionModelTransport.node, App.node, ModelResolver.node], // kilocode_change(gateway) seam - route hook target
 })

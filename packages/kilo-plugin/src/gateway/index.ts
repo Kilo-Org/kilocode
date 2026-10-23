@@ -40,6 +40,7 @@ import { createHash, randomUUID } from "node:crypto"
 import { Clock, Duration, Effect, Fiber, Option, Schedule, Schema, Scope, Semaphore, Stream } from "effect"
 import { GatewayOptions } from "./options.js"
 import { GatewayPrompt } from "./prompt.js"
+import { GatewayRouters } from "./routers.js"
 
 // v2 adapter for the Kilo Gateway (issue #14991, PRs 1-3: login, teams, catalog authority, requests, and errors).
 // Kilo logic lives in @kilocode/gateway-core; this file maps it onto the v2 plugin API. The `kilocode.gateway` RPC
@@ -817,8 +818,53 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
       { providerID: id },
     )
 
+    // Custom auto routers (ADR 0005) run in the resolved account scope and see the catalog of this location.
+    const routerAccount = () => {
+      const account = activeAccount()
+      return account
+        ? {
+            server: account.server,
+            token: account.token,
+            organizationID: account.organizationID,
+            version: ctx.app.version,
+          }
+        : undefined
+    }
+    const catalogModels = ctx.model.list().pipe(
+      Effect.map((result) => result.data),
+      Effect.orElseSucceed(() => []),
+    )
+    const clientRoutes = new Map<string, { provider: string; model: string }>()
+    yield* ctx.session.hook(
+      "route",
+      (event) =>
+        GatewayRouters.route(event, {
+          account: routerAccount(),
+          routes: clientRoutes,
+          models: catalogModels,
+          machineID: getMachineID,
+        }),
+      { providerID: id },
+    )
+    // Client picks are served by another provider, so this hook has no provider filter.
+    yield* ctx.session.hook("http.response", (event) => Effect.sync(() => GatewayRouters.stamp(event, clientRoutes)))
+
     yield* ctx.rpc
       .register(KiloGatewayRpc.Definition, {
+        ...GatewayRouters.handlers({
+          account: routerAccount,
+          models: catalogModels,
+          provider: (providerID) =>
+            ctx.provider.get({ providerID: Provider.ID.make(providerID) }).pipe(
+              Effect.map((result) => result.data),
+              Effect.orElseSucceed(() => undefined),
+            ),
+          credential: (providerID) =>
+            Effect.gen(function* () {
+              const connection = yield* ctx.integration.connection.active(providerID)
+              return connection ? yield* ctx.integration.connection.resolve(connection) : undefined
+            }).pipe(Effect.orElseSucceed(() => undefined)),
+        }),
         authStatus: () =>
           Effect.sync(() => {
             const account = scopeCompatible() ? catalog.account : undefined
