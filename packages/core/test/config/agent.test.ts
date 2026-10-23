@@ -32,8 +32,10 @@ function migrateV1(input: unknown) {
 }
 const defaultPermissions = Agent.Info.default(Agent.ID.make("test")).permissions
 
-test("rejects named agent color tokens", () => {
-  expect(() => decode({ agents: { reviewer: { color: "warning" } } })).toThrow()
+test("ignores named agent color tokens", () => {
+  expect(decode({ agents: { reviewer: { description: "Reviews", color: "warning" } } }).agents?.reviewer).toEqual({
+    description: "Reviews",
+  })
 })
 
 test("keeps schema fields and name out of legacy agent options", () => {
@@ -468,6 +470,10 @@ permissions:
 ---
 Use native v2 fields.`,
             )
+            await fs.writeFile(
+              path.join(tmp.path, "agents", "themed.md"),
+              "---\ndescription: Themed\nmode: subagent\ncolor: accent\n---\nUse a theme color.",
+            )
             await fs.writeFile(path.join(tmp.path, "agents", "disabled.md"), "---\ndisabled: true\n---\nDisabled")
             await fs.writeFile(path.join(tmp.path, "agents", "empty.md"), "")
             await fs.writeFile(path.join(tmp.path, "modes", "plan.md"), "Make a plan.")
@@ -498,6 +504,9 @@ Use native v2 fields.`,
             request: { headers: { "x-agent": "native" }, body: { effort: "high" } },
             permissions: [...defaultPermissions, { action: "edit", resource: "*", effect: "deny" }],
           })
+          const themed = yield* agents.get(Agent.ID.make("themed"))
+          expect(themed).toMatchObject({ system: "Use a theme color.", description: "Themed" })
+          expect(themed?.color).toBeUndefined()
           expect(yield* agents.get(Agent.ID.make("disabled"))).toBeUndefined()
           expect(yield* agents.get(Agent.ID.make("empty"))).toBeUndefined()
           expect(yield* agents.get(Agent.ID.make("plan"))).toMatchObject({ system: "Make a plan.", mode: "primary" })

@@ -108,7 +108,13 @@ export type ToolTextContent = { type: "text"; text: string }
 
 export type ToolFileContent = { type: "file"; uri: string; mime: string; name?: string | null }
 
-export type SessionStructuredError = { type: string; message: string; status?: number; response?: { body: string } }
+export type SessionStructuredError = {
+  type: string
+  message: string
+  status?: number
+  response?: { body: string }
+  retryAfterMs?: number
+}
 
 export type SessionActive = { type: "running" }
 
@@ -173,6 +179,8 @@ export type ModelCapabilities = { tools: boolean; input: Array<string>; output: 
 export type MoneyUSDPerMillionTokens = number
 
 export type GenerateTextResponse = { data: { text: string } }
+
+export type VoiceTransportType = "webrtc" | "websocket"
 
 export type VoiceWebRTCTransport = { type: "webrtc"; sdp: string }
 
@@ -654,6 +662,15 @@ export type ModelCost = {
   input: MoneyUSDPerMillionTokens
   output: MoneyUSDPerMillionTokens
   cache: { read: MoneyUSDPerMillionTokens; write: MoneyUSDPerMillionTokens }
+}
+
+export type VoiceModel = {
+  model: string
+  provider: string
+  transports: Array<VoiceTransportType>
+  available: boolean
+  integration?: string | undefined
+  workspace?: string | undefined
 }
 
 export type VoiceTransport = VoiceWebRTCTransport | VoiceWebSocketTransport
@@ -1979,7 +1996,9 @@ export type ProviderInfo = {
   body?: { [x: string]: any }
 }
 
-export type VoiceSessionResponse = { data: { transport: VoiceTransport } }
+export type VoiceModelsResponse = { data: { models: Array<VoiceModel>; default?: string | undefined } }
+
+export type VoiceSessionResponse = { data: { transport: VoiceTransport; session?: { id: string } | undefined } }
 
 export type CredentialValue = CredentialOAuth | CredentialKey | CredentialExternal
 
@@ -2331,6 +2350,7 @@ export type ConfigEntry =
           portable_shell_scanner?: boolean
           todo?: boolean
           subagent_depth?: number
+          location_idle_timeout?: string | false
           policies?: Array<{
             action: "provider.use" | "tool.use" | "integration.use"
             resource: string
@@ -4959,6 +4979,8 @@ export type GenerateTextInput = {
 
 export type GenerateTextOutput = GenerateTextResponse["data"]
 
+export type VoiceModelsOutput = VoiceModelsResponse["data"]
+
 export type VoiceSessionInput = {
   readonly model: {
     readonly model: string
@@ -4984,6 +5006,13 @@ export type VoiceSessionInput = {
 }
 
 export type VoiceSessionOutput = VoiceSessionResponse["data"]
+
+export type VoiceInstructionsInput = {
+  readonly sessionID: { readonly sessionID: string }["sessionID"]
+  readonly instructions: { readonly instructions: string }["instructions"]
+}
+
+export type VoiceInstructionsOutput = void
 
 export type ProviderListInput = {
   readonly location?: { readonly location?: { readonly directory?: string | undefined } | undefined }["location"]
