@@ -153,7 +153,7 @@ export class DirectoryScanner implements IDirectoryScanner {
       absolute: true,
       nodir: true,
       dot: false,
-      ignore: FileIgnore.PATTERNS,
+      ignore: FileIgnore.globs(),
       maxDepth: Infinity,
     })
 
