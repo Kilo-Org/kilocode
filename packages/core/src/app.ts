@@ -7,7 +7,7 @@ export interface Info {
   readonly name: string
   readonly version: string
   readonly channel: string
-  // kilocode_change start - oauth seam: how an embedder names its product in third-party sign-in (OAuth originator, consent screen, callback page)
+  // kilocode_change start - oauth seam: how an embedder names its product in third-party sign-in (OAuth originator, request user agent, callback page)
   readonly product?: { readonly id: string; readonly name: string; readonly wordmark?: string }
   // kilocode_change end
 }
