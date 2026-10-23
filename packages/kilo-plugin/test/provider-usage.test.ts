@@ -222,6 +222,22 @@ describe("direct source cache", () => {
     expect(calls).toBe(3)
   })
 
+  test("overlapping calls share one load", async () => {
+    const cache = UsageCache.make(() => 0)
+    let calls = 0
+    const load = async () => {
+      calls++
+      await Bun.sleep(5)
+      return snapshot("ready", calls)
+    }
+    const [first, second] = await Promise.all([
+      cache.source("codex-chatgpt", "token", false, load),
+      cache.source("codex-chatgpt", "token", true, load),
+    ])
+    expect(calls).toBe(1)
+    expect(second).toBe(first)
+  })
+
   test("a new credential never shows the previous quota", async () => {
     const cache = UsageCache.make(() => 0)
     await cache.source("codex-chatgpt", "first", false, async () => snapshot("ready", 10))
