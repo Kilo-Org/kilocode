@@ -3,7 +3,7 @@
   "limits": {
     "files": 42,
     "files": 42,
-    "markedLines": 296,
+    "markedLines": 299,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -123,7 +123,7 @@
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 3,
-      "seam": "Register the built-in `KiloTeams` TUI plugin (`/teams`, `/team`, `/org`, `/orgs`). Stays after U-E0-01: the TUI loads its built-in list in the TUI process, which `SdkPlugins` (a server store) does not reach. The config-driven path (`plugins` in the TUI config, loaded by `tui/src/plugin/context.tsx`) loads only npm packages or local files, which a compiled binary does not have. A generic seam needs an `@opencode/tui` export of the list (package.json) plus an extension point in this file, which is not fewer shared lines than these two."
+      "seam": "Register the built-in `KiloTeams` TUI plugin (`/teams`, `/team`, `/org`, `/orgs`) and the `KiloNews` TUI plugin (Kilo Gateway news on the home screen). Stays after U-E0-01: the TUI loads its built-in list in the TUI process, which `SdkPlugins` (a server store) does not reach. The config-driven path (`plugins` in the TUI config, loaded by `tui/src/plugin/context.tsx`) loads only npm packages or local files, which a compiled binary does not have. A generic seam needs an `@opencode/tui` export of the list (package.json) plus an extension point in this file, which is not fewer shared lines than these two."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,
@@ -131,7 +131,7 @@
     },
     "packages/tui/test/fixture/tui-client.ts": {
       "rung": 3,
-      "seam": "Neutral SDK model.default response for the shared HTTP test fixture: no model data, so upstream selection assertions keep testing their original first-model fallback. The full TUI now reads this existing API to obtain the host's recommendation. No Kilo model or assertion change. Rungs 1 and 2 cannot extend the fixture's closed route dispatcher; without this route Bun.serve reports its unexpected-request throw before the client's fallback can handle the failed request."
+      "seam": "Neutral SDK model.default response for the shared HTTP test fixture: no model data, so upstream selection assertions keep testing their original first-model fallback. The full TUI now reads this existing API to obtain the host's recommendation. No Kilo model or assertion change. Rungs 1 and 2 cannot extend the fixture's closed route dispatcher; without this route Bun.serve reports its unexpected-request throw before the client's fallback can handle the failed request. The same applies to plugin RPC calls (`/api/rpc/*`) from built-in TUI plugins such as the Kilo news banner: the fixture answers them as unregistered (404) so the plugin's failure path runs and upstream screens stay unchanged; Kilo-owned tests serve their own RPC answers."
     },
     "packages/util/src/global.ts": {
       "rung": 3,

@@ -395,5 +395,30 @@
     "v2": "packages/core/src/config/plugin/agent.ts",
     "note": "Rebuild the cached agents when config changes. v2 rebuilds the agent state on every config change: ConfigAgentPlugin reloads on `config.updated`, and the plugin supervisor reloads the generation.",
     "by": "agents-plugin"
+  },
+  "module:packages/opencode/src/kilocode/components/kilo-news.tsx": {
+    "state": "ported",
+    "note": "packages/tui/src/kilocode/kilo-news.tsx News: fetches the kilocode.gateway notifications RPC on mount, keeps items with no showIn or showIn 'cli', shows the first unread item and opens all unread items, then marks them read. Keeps the 3-row placeholder. v2 also refetches on credential.switched/updated and the rpc.kilocode.gateway.organization event, so login and /teams update the banner live. Signed-out and team scope come from the existing kilo-plugin notifications handler (no account returns [], team header from the active account). Test: packages/tui/test/kilocode/news.test.ts.",
+    "by": "kilo-gateway-news"
+  },
+  "module:packages/opencode/src/kilocode/components/news.ts": {
+    "state": "ported",
+    "note": "packages/tui/src/kilocode/kilo-news.tsx: the read IDs live in the plugin storage store 'news' (persisted per TUI profile); unread filter and set-union of opened IDs are in News and the slot onRead. The typed plugin store replaces the v1 KV value validation. packages/tui/test/kilocode/news.test.ts checks read state across a restart.",
+    "by": "kilo-gateway-news"
+  },
+  "module:packages/opencode/src/kilocode/components/notification-banner.tsx": {
+    "state": "ported",
+    "note": "packages/tui/src/kilocode/kilo-news.tsx News render: info dot, title, '(N new)' when more than one, word-wrapped message, hover background, click opens the dialog.",
+    "by": "kilo-gateway-news"
+  },
+  "module:packages/opencode/src/kilocode/components/dialog-kilo-notifications.tsx": {
+    "state": "ported",
+    "note": "packages/tui/src/kilocode/kilo-news.tsx DialogKiloNotifications: 'News' dialog with title, message and [actionText] link per item, close on enter, esc or the close button, on the v2 DialogLayout.",
+    "by": "kilo-gateway-news"
+  },
+  "module:packages/opencode/src/kilocode/plugins/home-news.tsx": {
+    "state": "ported",
+    "note": "packages/tui/src/kilocode/kilo-news.tsx kilocode.news TUI plugin, registered in packages/tui/src/plugin/builtins.ts. Palette command kilo.news.toggle (Hide news / Show news, only on home) persists the hidden flag. v2 has no home_bottom slot, so the banner uses the public before:'home.footer' slot claim; it shows above the home footer instead of directly below the prompt.",
+    "by": "kilo-gateway-news"
   }
 }

@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 95,
+    "done": 101,
     "total": 9829,
     "percent": 1,
     "dropped": 25,
     "kinds": [
       {
         "kind": "module",
-        "done": 32,
+        "done": 37,
         "total": 3547
       },
       {
@@ -26,7 +26,7 @@
       },
       {
         "kind": "test",
-        "done": 23,
+        "done": 24,
         "total": 2798
       }
     ],
@@ -496,12 +496,12 @@
     },
     {
       "feature": "components",
-      "done": 0,
+      "done": 5,
       "total": 22,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 4,
           "total": 16
         },
         "api": {
@@ -513,7 +513,7 @@
           "total": 2
         },
         "test": {
-          "done": 0,
+          "done": 1,
           "total": 4
         }
       }
@@ -1421,12 +1421,12 @@
     },
     {
       "feature": "plugin",
-      "done": 0,
+      "done": 1,
       "total": 34,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 1,
           "total": 26
         },
         "api": {
@@ -6167,7 +6167,12 @@
     "module:packages/kilo-gateway/test/responses.test.ts",
     "module:packages/opencode/src/kilocode/agent/index.ts",
     "module:packages/opencode/src/kilocode/balance-refresh.ts",
+    "module:packages/opencode/src/kilocode/components/dialog-kilo-notifications.tsx",
+    "module:packages/opencode/src/kilocode/components/kilo-news.tsx",
+    "module:packages/opencode/src/kilocode/components/news.ts",
+    "module:packages/opencode/src/kilocode/components/notification-banner.tsx",
     "module:packages/opencode/src/kilocode/kilo-errors.ts",
+    "module:packages/opencode/src/kilocode/plugins/home-news.tsx",
     "module:packages/opencode/test/kilocode/agent-global-config-dirs.test.ts",
     "module:packages/opencode/test/kilocode/agent-permission-overrides.test.ts",
     "module:packages/opencode/test/kilocode/agent-skill-permissions.test.ts",
@@ -6175,6 +6180,7 @@
     "module:packages/opencode/test/kilocode/config/hide-prompt-training-models.test.ts",
     "module:packages/opencode/test/kilocode/kilo-errors.test.ts",
     "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts",
+    "module:packages/opencode/test/kilocode/news.test.ts",
     "patch:agent:2e5632e7bfc6",
     "patch:gateway:00d34e8d5cd7",
     "patch:gateway:0278ba0eb6aa",

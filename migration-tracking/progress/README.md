@@ -8,14 +8,14 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**95 / 9829 cells done (1%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
+**101 / 9829 cells done (1%)**, 25 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 32 | 3547 | 0.9% |
+| module | 37 | 3547 | 1% |
 | api | 0 | 39 | 0% |
 | patch | 40 | 3445 | 1.2% |
-| test | 23 | 2798 | 0.8% |
+| test | 24 | 2798 | 0.9% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
@@ -36,8 +36,8 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-20 | 87 | 9829 | 0.9% |
 | 2026-10-21 | 90 | 9829 | 0.9% |
 | 2026-10-22 | 93 | 9829 | 0.9% |
-| 2026-10-23 | 93 | 9829 | 0.9% |
-| now | 95 | 9829 | 1% |
+| 2026-10-23 | 95 | 9829 | 1% |
+| now | 101 | 9829 | 1% |
 
 ## Features
 
@@ -62,7 +62,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | command | 0/3 | 0/2 |  | 0/3 | 0/8 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | commit-message | 0/4 |  |  | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | compaction-policy | 0/5 | 0/3 | 0/1 | 0/8 | 0/17 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| components | 0/16 |  | 0/2 | 0/4 | 0/22 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| components | 4/16 |  | 0/2 | 1/4 | 5/22 | 22.7% | `████░░░░░░░░░░░░` |  |
 | config | 0/25 |  | 0/10 | 1/29 | 1/64 | 1.6% | `░░░░░░░░░░░░░░░░` |  |
 | console | 0/87 |  | 0/1 | 0/9 | 0/97 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | core-watcher |  |  |  | 0/1 | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -99,7 +99,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | permission | 0/12 |  | 0/6 | 0/16 | 0/34 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | pii | 0/1 |  |  |  | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | plan | 0/2 |  |  | 0/4 | 0/6 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| plugin | 0/26 |  | 0/2 | 0/6 | 0/34 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| plugin | 1/26 |  | 0/2 | 0/6 | 1/34 | 2.9% | `░░░░░░░░░░░░░░░░` |  |
 | presence | 0/3 |  | 0/1 | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | process | 0/4 | 0/1 | 0/9 | 0/1 | 0/15 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | project | 0/4 |  | 0/2 | 0/5 | 0/11 | 0% | `░░░░░░░░░░░░░░░░` |  |
