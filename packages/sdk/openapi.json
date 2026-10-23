@@ -41139,6 +41139,9 @@
       "McpInstallationMethod": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string"
+          },
           "name": {
             "type": "string"
           },
@@ -41156,6 +41159,12 @@
             "items": {
               "type": "string"
             }
+          },
+          "oauthRequirement": {
+            "type": "string"
+          },
+          "authHandler": {
+            "type": "string"
           }
         },
         "required": ["name", "content"],
@@ -41235,6 +41244,12 @@
             "items": {
               "$ref": "#/components/schemas/McpSkill"
             }
+          },
+          "oauthRequirement": {
+            "type": "string"
+          },
+          "authHandler": {
+            "type": "string"
           }
         },
         "required": ["id", "name", "description", "category", "type", "url", "content"],

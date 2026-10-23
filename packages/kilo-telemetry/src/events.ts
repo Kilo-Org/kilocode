@@ -33,6 +33,8 @@ export enum TelemetryEvent {
   // MCP Events
   MCP_SERVER_CONNECTED = "MCP Server Connected",
   MCP_SERVER_ERROR = "MCP Server Error",
+  MCP_AUTH_STARTED = "MCP Auth Started",
+  MCP_AUTH_COMPLETED = "MCP Auth Completed",
 
   // Remote Events
   REMOTE_CONNECTION_OPENED = "Remote Connection Opened",
