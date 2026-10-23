@@ -1,9 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 42,
-    "files": 42,
-    "markedLines": 303,
+    "files": 43,
+    "markedLines": 316,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -181,6 +180,10 @@
     "packages/tui/src/util/session.ts": {
       "rung": 4,
       "seam": "The static context-usage resolver has no plugin hook. A Kilo-owned actual-model lookup supplies the served model's context limit when available, with the original requested model lookup as fallback."
+    },
+    "packages/tui/src/ui/dialog-select.tsx": {
+      "rung": 4,
+      "seam": "Keep the list footer mounted when its action list becomes empty. The footer is wrapped in a Show that unmounts it whenever no action is visible, and each mount registers a renderer resize listener through useTerminalDimensions. Selection changes that hide or show an action (for example the account row in the Kilo gateway dialog) therefore add listeners until the renderer exceeds its budget and writes a MaxListenersExceededWarning over the TUI. Rungs 1 to 3 cannot reach it: the footer is rendered by upstream's DialogSelect, and no plugin hook or generic knob controls whether that element stays mounted."
     }
   }
 }
