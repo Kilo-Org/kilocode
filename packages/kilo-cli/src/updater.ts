@@ -14,6 +14,9 @@ export const layer = Layer.succeed(
     method: () => Effect.succeed(undefined),
     latest: () => Effect.fail(new Error(message)),
     upgrade: () => Effect.fail(new Error(message)),
+    // TODO(rebrand, #15324): Before installer/service identity work, test isolated uninstall dry-run
+    // and cleanup paths. Undefined skips package removal, not upstream cache cleanup or service
+    // shutdown. Verify kilo2-only paths and confirmation text; preserve v1/OpenCode data and shell config.
     removal: () => undefined,
   }),
 )

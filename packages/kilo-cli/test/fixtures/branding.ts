@@ -2,6 +2,7 @@ if (process.env.KILO_BRANDING_TEST_HOSTED === "1") await import("../../src/brand
 
 const relative = await import("../../../core/src/oauth/page")
 const exported = await import("@opencode/core/oauth/page")
+const { cliErrorMessage } = await import("../../../tui/src/util/error")
 const options = { provider: "OpenCode <script>unsafe</script>", autoClose: false }
 console.log(
   JSON.stringify({
@@ -9,5 +10,6 @@ console.log(
     success: exported.success(options),
     error: exported.error("<img src=x onerror=alert(1)>", options),
     bootstrap: exported.bootstrap({ provider: "</script><script>unsafe</script>", tokenPath: "/callback" }),
+    modelError: cliErrorMessage({ _tag: "ProviderModelNotFoundError", providerID: "test", modelID: "missing" }),
   }),
 )

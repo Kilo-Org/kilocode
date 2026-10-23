@@ -35,7 +35,6 @@
   "devDependencies": {
     "@opencode/client": "workspace:*",
     "@opencode/server": "workspace:*",
-    "@opencode/tui": "workspace:*",
     "@tsconfig/bun": "catalog:",
     "@types/babel__core": "7.20.5",
     "@types/bun": "catalog:",

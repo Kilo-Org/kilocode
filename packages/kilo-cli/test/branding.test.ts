@@ -2,6 +2,8 @@ import { expect, test } from "bun:test"
 import { mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
+import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
+import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import { brandingPlugin } from "../src/branding/plugin"
 import { KiloBranding } from "../src/branding/text"
 
@@ -33,6 +35,17 @@ test("does not rename provider identities, theme schemas or wire identifiers", a
   }
 })
 
+test("config hints name a file that the Kilo host reads and writes", async () => {
+  expect(KiloConfigFiles.names).toContain(KiloConfigFiles.newFile)
+  for (const file of ["cli/src/commands/handlers/mcp/auth.ts", "tui/src/util/error.ts"]) {
+    const filename = path.join(repo, "packages", file)
+    const branded = KiloBranding.transform(filename, await Bun.file(filename).text())
+    expect(branded).toContain(KiloConfigFiles.newFile)
+    expect(branded).not.toContain("kilo.json")
+    expect(branded).not.toContain("opencode.json")
+  }
+})
+
 test("fails clearly if an upstream text anchor changes", () => {
   expect(() => KiloBranding.transform("/repo/packages/tui/src/util/error.ts", "changed")).toThrow(
     "Kilo branding no longer matches",
@@ -59,6 +72,35 @@ for (const hosted of [false, true]) {
   }, 60_000)
 }
 
+for (const hosted of [false, true]) {
+  test(`source TSX renders ${hosted ? "Kilo" : "upstream"} branding`, async () => {
+    await using root = await temporary()
+    const fixture = path.join(import.meta.dir, "fixtures/branding-tsx.ts")
+    checkOnboarding(await run([process.execPath, fixture], root.path, hosted), hosted)
+  }, 30_000)
+
+  test(`compiled TSX renders ${hosted ? "Kilo" : "upstream"} branding`, async () => {
+    await using root = await temporary()
+    const outfile = path.join(root.path, process.platform === "win32" ? "sidebar.exe" : "sidebar")
+    const result = await Bun.build({
+      entrypoints: [path.join(import.meta.dir, "fixtures/branding-tsx.ts")],
+      plugins: [...(hosted ? [brandingPlugin] : []), createSolidTransformPlugin()],
+      compile: { outfile, autoloadBunfig: false, autoloadDotenv: false },
+      define: { KILO_BRANDING_COMPILED: "true" },
+    })
+    expect(result.success, result.logs.map(String).join("\n")).toBe(true)
+    checkOnboarding(await run([outfile], root.path, !hosted), hosted)
+  }, 60_000)
+}
+
+function checkOnboarding(output: string, hosted: boolean) {
+  const frame = JSON.parse(output) as string
+  expect(frame).toContain("Getting started")
+  expect(frame).toContain(`${hosted ? "Kilo" : "OpenCode"} includes free models`)
+  expect(frame).not.toContain(`${hosted ? "OpenCode" : "Kilo"} includes free models`)
+  expect(frame).toContain("Connect provider")
+}
+
 for (const args of [["--help"], ["auth", "logout", "--help"]]) {
   test(`Kilo CLI help: ${args.join(" ")}`, async () => {
     await using root = await temporary()
@@ -80,7 +122,13 @@ for (const args of [["upgrade"], ["upgrade", "99.0.0", "--method", "npm"], ["upd
 }
 
 function checkPages(output: string, hosted: boolean) {
-  const pages = JSON.parse(output) as { relative: string; success: string; error: string; bootstrap: string }
+  const pages = JSON.parse(output) as {
+    relative: string
+    success: string
+    error: string
+    bootstrap: string
+    modelError: string
+  }
   expect(pages.relative).toBe(pages.success)
   for (const html of [pages.success, pages.error, pages.bootstrap]) {
     expect(html).toContain(hosted ? "· Kilo</title>" : "· OpenCode</title>")
@@ -91,6 +139,8 @@ function checkPages(output: string, hosted: boolean) {
   expect(pages.bootstrap).toContain('var PROVIDER="\\u003c/script>\\u003cscript>unsafe\\u003c/script>"')
   expect(pages.bootstrap).toContain('var TOKEN_URL=new URL("/callback",window.location.origin).href')
   expect(pages.success).not.toContain("setTimeout(function(){try{window.close()}")
+  expect(pages.modelError).toContain(`config (${hosted ? KiloConfigFiles.newFile : "opencode.json"})`)
+  expect(pages.modelError).not.toContain("kilo.json")
 }
 
 async function temporary() {

@@ -3,6 +3,9 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 
+// TODO(rebrand, #15324): Before merging #15417, refresh its verification evidence with the current
+// head/base, generated progress totals and test results. Recheck CI, including the automated reviewer;
+// pending/running check status belongs in the PR, not in a permanent runtime-bug claim.
 const repo = path.resolve(import.meta.dir, "../../..")
 const binary = process.argv[2] && path.resolve(process.argv[2])
 if (process.argv.length > 3) throw new Error("Usage: bun script/branding-smoke.ts [compiled-binary-path]")

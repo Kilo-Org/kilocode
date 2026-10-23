@@ -1,5 +1,7 @@
 export * as KiloBranding from "./text"
 
+import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
+
 const commands = ["opencode ", "kilo2 "] as const
 const product = ['"OpenCode"', '"Kilo"'] as const
 const title = ["`OC | ", "`Kilo | "] as const
@@ -32,7 +34,7 @@ export const replacements = {
   "cli/src/acp/translate.ts": [["OpenCode prompt failed", "Kilo prompt failed"]],
   "cli/src/acp/error.ts": [["OpenCode server is unavailable", "Kilo server is unavailable"]],
   "cli/src/commands/handlers/acp.ts": [["opencode acp:", "kilo2 acp:"]],
-  "cli/src/commands/handlers/mcp/auth.ts": [commands, ["opencode.json", "kilo.json"]],
+  "cli/src/commands/handlers/mcp/auth.ts": [commands, ["opencode.json", KiloConfigFiles.newFile]],
   "cli/src/commands/handlers/stats.ts": [commands, ["opencode.ai", "kilo.ai"]],
   "cli/src/commands/handlers/pair.ts": [commands, ["your OpenCode server", "your Kilo server"]],
   "cli/src/commands/handlers/default.ts": [["OpenCode update could not start", "Kilo update could not start"]],
@@ -41,7 +43,7 @@ export const replacements = {
     ["shared by OpenCode versions and channels", "shared by Kilo versions and channels"],
   ],
   "cli/src/services/update-preflight.tsx": [["Loading OpenCode", "Loading Kilo"], product],
-  "tui/src/util/error.ts": [commands, ["opencode.json", "kilo.json"]],
+  "tui/src/util/error.ts": [commands, ["opencode.json", KiloConfigFiles.newFile]],
   "tui/src/util/error-details.ts": [
     ["this OpenCode component", "this Kilo component"],
     ["global OpenCode configuration", "global Kilo configuration"],
