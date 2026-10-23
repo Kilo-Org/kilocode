@@ -211,7 +211,7 @@ class KiloPromptCompletionProvider(
             out.addElement(info(prefix, msg))
             return
         }
-        search.files.forEach { file -> out.addElement(file(file)) }
+        search.files.forEachIndexed { index, file -> out.addElement(weight(file(file), -index)) }
         if (known.isEmpty() && search.files.isEmpty()) {
             val msg = KiloBundle.message("prompt.completion.noMatches")
             out.addElement(info(prefix, msg))
