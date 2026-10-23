@@ -13,6 +13,7 @@ import { useLocation } from "../context/location"
 import { useNewDesigns } from "../config"
 import { DialogFreeModels } from "./dialog-model-free"
 import { FavoriteMarker, ModelDetail, isFreeModel, prioritizeFavorites, sortModelOptions } from "./model-options"
+import { createKiloModelPicker } from "../kilocode/dialog-model" // kilocode_change(components:06ac8868d98e)
 
 export function DialogModel(props: { providerID?: string }) {
   const local = useLocal()
@@ -83,8 +84,10 @@ function DialogConnectedModels(props: {
   const models = createMemo(() => data.location.model.list(location.ref) ?? [])
 
   const showExtra = createMemo(() => connected() && !props.providerID)
+  const kilo = createKiloModelPicker({ providerID: props.providerID, query, connected, showExtra, onSelect: props.onSelect }) // kilocode_change(tui)
 
   const options = createMemo(() => {
+    if (kilo) return kilo.options() // kilocode_change(tui) - Kilo list replaces the upstream list, which stays unchanged for syncs
     const needle = query().trim()
     const showSections = showExtra() && needle.length === 0
     const favorites = connected() ? (newDesigns() ? favoritesAtOpen : local.model.favorite()) : []
@@ -194,7 +197,7 @@ function DialogConnectedModels(props: {
     return value.name
   })
 
-  return (
+  return kilo.frame( // kilocode_change(tui) - Kilo: info panel next to the list
     <DialogSelect<ReturnType<typeof options>[number]["value"]>
       searchInTitle
       titlePlaceholder="Search models"
@@ -222,10 +225,11 @@ function DialogConnectedModels(props: {
         },
       ]}
       onFilter={setQuery}
-      flat={true}
+      flat={false} // kilocode_change(tui) - Kilo: keep section headers while searching, as v1
       skipFilter={true}
       title={title()}
       current={local.model.current()}
-    />
+      onMove={kilo.move} // kilocode_change(tui) - Kilo: info panel follows the highlighted model
+    />, // kilocode_change(tui)
   )
 }

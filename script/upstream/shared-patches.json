@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 43,
-    "markedLines": 318,
+    "files": 46,
+    "markedLines": 334,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -116,13 +116,25 @@
       "rung": 4,
       "seam": "Prompt for Personal Account vs Team (`chooseKiloAccount`) after a Kilo Gateway login completes, before closing or chaining the integration dialog. `TuiPlugin` has no post-integration-connect hook. The connect dialog also ranks and groups integrations with Kilo's v1 provider priority (`KILO_INTEGRATION_PRIORITY` in tui/src/kilocode/gateway.tsx: Kilo first under Popular, OpenCode Go and OpenCode Console under Services). `integrationOptions` takes the priority map as a parameter with upstream's map as the default (generic seam, so upstream's integration-options tests pass unchanged), and the dialog passes the Kilo map and uses it for the Popular group (rung 4). The map is a constant in the TUI process: no TUI plugin hook ranks integrations, and the host runs in the server process."
     },
+    "packages/tui/src/component/dialog-model.tsx": {
+      "rung": 4,
+      "seam": "Model picker (U-E9-07, #15242): the connected picker returns the Kilo option list (Kilo Gateway order from `recommendedIndex`, Recommended and Kilo Gateway sections, `Free` from Gateway `isFree`, `BYOK` and `May train` labels, v1 search over provider and model IDs) from the first line of its options memo, keeps section headers while searching (`flat={false}`), follows the highlight with `onMove`, and wraps the list with the model info panel. Seven call-out lines; the logic is in tui/src/kilocode/dialog-model.tsx and tui/src/kilocode/model-picker.ts. The upstream option code below the early return, `sortModelOptions` and `prioritizeFavorites` stay unchanged, so upstream syncs merge cleanly and upstream's model-options tests pass. Rungs 1 and 2 cannot reach it: the TUI plugin API has no model picker hook, and the host runs in the server process. A generic seam (an option-list and side-panel hook) would need the same lines here plus a new plugin API surface for one consumer."
+    },
     "packages/tui/src/context/local.tsx": {
       "rung": 4,
       "seam": "Full TUI default selection (Gateway): call the Kilo-owned default-model loader, then use SDK model.default after CLI/config and recent models, within the existing user/agent selection precedence. Keep the first catalog model when the server supplies no valid default. Without a higher-priority selection, catalog readiness waits for the default request so --prompt cannot submit the catalog's first model before the recommendation arrives. Rungs 1 and 2 cannot reach LocalProvider's private fallback memo or readiness flag; the TUI plugin API has no model-default resolver, and the host runs in the server process. A generic seam would add a resolver registration API for this single SDK read instead of these small call-outs. Loading, refresh and location isolation stay in tui/src/kilocode/default-model.ts."
     },
+    "packages/plugin/src/tui/context.ts": {
+      "rung": 3,
+      "seam": "Declare the `home.bottom` slot path in the public `SlotMap`, so a TUI plugin can render below the home prompt, as the v1 `home_bottom` slot allowed (Kilo Gateway news uses it). The v2 home screen publishes only `home.footer` and `home.footer.status`; a `before`/`after` claim on those places content at the bottom of the screen, not below the prompt. Rungs 1 and 2 cannot add a slot path: `SlotMap` is the closed public type of the plugin API. One generic line with no Kilo value."
+    },
+    "packages/tui/src/routes/home.tsx": {
+      "rung": 3,
+      "seam": "Render the `home.bottom` plugin slot directly below the home prompt (the v1 `home_bottom` position). Without a claim it renders nothing, so the upstream home screen is unchanged. Rungs 1 and 2 cannot add a slot boundary to the home route. One generic line with no Kilo value; the Kilo news banner lives in tui/src/kilocode/kilo-news.tsx."
+    },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 3,
-      "seam": "Register the built-in `KiloTeams` TUI plugin (`/teams`, `/team`, `/org`, `/orgs`) and the `KiloUsage` TUI plugin (`/usage`, `/plans`, `/quota`). Stays after U-E0-01: the TUI loads its built-in list in the TUI process, which `SdkPlugins` (a server store) does not reach. The config-driven path (`plugins` in the TUI config, loaded by `tui/src/plugin/context.tsx`) loads only npm packages or local files, which a compiled binary does not have. A generic seam needs an `@opencode/tui` export of the list (package.json) plus an extension point in this file, which is not fewer shared lines than these two."
+      "seam": "Register the built-in `KiloTeams` TUI plugin (`/teams`, `/team`, `/org`, `/orgs`), the `KiloNews` TUI plugin (Kilo Gateway news on the home screen) and the `KiloUsage` TUI plugin (`/usage`, `/plans`, `/quota`). Stays after U-E0-01: the TUI loads its built-in list in the TUI process, which `SdkPlugins` (a server store) does not reach. The config-driven path (`plugins` in the TUI config, loaded by `tui/src/plugin/context.tsx`) loads only npm packages or local files, which a compiled binary does not have. A generic seam needs an `@opencode/tui` export of the list (package.json) plus an extension point in this file, which is not fewer shared lines than these two."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,
@@ -130,7 +142,7 @@
     },
     "packages/tui/test/fixture/tui-client.ts": {
       "rung": 3,
-      "seam": "Neutral SDK model.default response for the shared HTTP test fixture: no model data, so upstream selection assertions keep testing their original first-model fallback. The full TUI now reads this existing API to obtain the host's recommendation. No Kilo model or assertion change. Rungs 1 and 2 cannot extend the fixture's closed route dispatcher; without this route Bun.serve reports its unexpected-request throw before the client's fallback can handle the failed request."
+      "seam": "Neutral SDK model.default response for the shared HTTP test fixture: no model data, so upstream selection assertions keep testing their original first-model fallback. The full TUI now reads this existing API to obtain the host's recommendation. No Kilo model or assertion change. Rungs 1 and 2 cannot extend the fixture's closed route dispatcher; without this route Bun.serve reports its unexpected-request throw before the client's fallback can handle the failed request. The same applies to plugin RPC calls (`/api/rpc/*`) from built-in TUI plugins such as the Kilo news banner: the fixture answers them as unregistered (404) so the plugin's failure path runs and upstream screens stay unchanged; Kilo-owned tests serve their own RPC answers."
     },
     "packages/util/src/global.ts": {
       "rung": 3,
@@ -183,7 +195,7 @@
     },
     "packages/tui/src/ui/dialog-select.tsx": {
       "rung": 4,
-      "seam": "Keep the list footer mounted when its action list becomes empty. The footer is wrapped in a Show that unmounts it whenever no action is visible, and each mount registers a renderer resize listener through useTerminalDimensions. Selection changes that hide or show an action (for example the account row in the Kilo gateway dialog) therefore add listeners until the renderer exceeds its budget and writes a MaxListenersExceededWarning over the TUI. Rungs 1 to 3 cannot reach it: the footer is rendered by upstream's DialogSelect, and no plugin hook or generic knob controls whether that element stays mounted."
+      "seam": "Keep the list footer mounted when its action list becomes empty. The footer is wrapped in a Show that unmounts it whenever no action is visible, and each mount registers a renderer resize listener through useTerminalDimensions. Selection changes that hide or show an action (for example the account row in the Kilo gateway dialog) therefore add listeners until the renderer exceeds its budget and writes a MaxListenersExceededWarning over the TUI. Rungs 1 to 3 cannot reach it: the footer is rendered by upstream's DialogSelect, and no plugin hook or generic knob controls whether that element stays mounted. Separately (rung 3 lines, no Kilo value): match the active row by option reference instead of by value (`active`, mouse move and mouse down, the scroll-to-top check), as on v1. A list may show one value twice: the model picker keeps a recent model in Recent and in its provider section (v1 placement). With value equality both copies render active and the pointer targets the first copy. For lists with unique values the behavior is the same, so upstream's DialogSelect tests pass. No plugin hook or host option reaches DialogSelect's private row matching."
     }
   }
 }
