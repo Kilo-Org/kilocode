@@ -6,9 +6,9 @@ describe("model info panel price formatting", () => {
     expect(fmtPrice(0)).toBe("Free")
   })
 
-  test("fmtPrice returns dash for negative values", () => {
-    expect(fmtPrice(-1)).toBe("—")
-    expect(fmtPrice(-1000000)).toBe("—")
+  test("fmtPrice returns a hyphen for negative values", () => {
+    expect(fmtPrice(-1)).toBe("-")
+    expect(fmtPrice(-1000000)).toBe("-")
   })
 
   test("fmtPrice uses four decimals for very small prices", () => {
