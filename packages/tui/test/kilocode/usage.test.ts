@@ -2,7 +2,10 @@ import { expect, test } from "bun:test"
 import type { SessionInfo, SessionMessageInfo } from "@opencode/client"
 import { familyUsage, formatCacheRate, formatSpeed, formatWindow, windowLabel } from "../../src/kilocode/usage-data"
 
-const session = (id: string, tokens: { input: number; output: number; reasoning: number; read: number; write: number }) =>
+const session = (
+  id: string,
+  tokens: { input: number; output: number; reasoning: number; read: number; write: number },
+) =>
   ({
     id,
     projectID: "proj",
@@ -26,7 +29,10 @@ const step = (id: string, output: number, reasoning: number, created: number, co
 // v1 kilocode/tui/usage.test.ts: the speed is weighted by generation time across steps, and bogus values show "-".
 test("sums family tokens and weights the generation speed by step time", () => {
   const result = familyUsage(
-    [session("root", { input: 100, output: 50, reasoning: 10, read: 300, write: 100 }), session("child", { input: 20, output: 5, reasoning: 0, read: 0, write: 0 })],
+    [
+      session("root", { input: 100, output: 50, reasoning: 10, read: 300, write: 100 }),
+      session("child", { input: 20, output: 5, reasoning: 0, read: 0, write: 0 }),
+    ],
     [
       step("a", 90, 10, 0, 1_000),
       step("b", 300, 0, 5_000, 8_000),
@@ -49,14 +55,21 @@ test("sums family tokens and weights the generation speed by step time", () => {
 
 test("labels quota windows as v1 does", () => {
   const base = { id: "w", unit: "percent", state: "active" as const }
-  expect(windowLabel({ ...base, resource: "subscription", orientation: "remaining_percent", period: { unit: "hour", value: 5 } })).toBe(
-    "5-hour quota",
-  )
+  expect(
+    windowLabel({
+      ...base,
+      resource: "subscription",
+      orientation: "remaining_percent",
+      period: { unit: "hour", value: 5 },
+    }),
+  ).toBe("5-hour quota")
   expect(windowLabel({ ...base, resource: "general", orientation: "amount", period: { unit: "week", value: 1 } })).toBe(
     "Shared · Weekly quota",
   )
   expect(windowLabel({ ...base, resource: "Codex", orientation: "used_percent" })).toBe("Codex · Quota")
-  expect(formatWindow({ ...base, resource: "x", orientation: "remaining_percent", remaining: 75 })).toBe("75% remaining")
+  expect(formatWindow({ ...base, resource: "x", orientation: "remaining_percent", remaining: 75 })).toBe(
+    "75% remaining",
+  )
   expect(formatWindow({ ...base, resource: "x", orientation: "used_percent", used: 42 })).toBe("42% used")
   expect(formatWindow({ ...base, resource: "x", unit: "count", orientation: "count", remaining: 30, limit: 100 })).toBe(
     "30 of 100 remaining",

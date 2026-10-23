@@ -53,7 +53,8 @@ export function formatSpeed(value: number | undefined) {
 
 function period(value: ProviderUsage.UsagePeriod) {
   if (value.unit === "hour") return `${value.value}-hour quota`
-  if (value.value === 1) return value.unit === "day" ? "Daily quota" : value.unit === "week" ? "Weekly quota" : "Monthly quota"
+  if (value.value === 1)
+    return value.unit === "day" ? "Daily quota" : value.unit === "week" ? "Weekly quota" : "Monthly quota"
   return `${value.value}-${value.unit} quota`
 }
 

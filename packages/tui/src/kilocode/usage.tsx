@@ -12,7 +12,15 @@ import { Keymap } from "../context/keymap"
 import { useTheme } from "../context/theme"
 import { DialogHeader, DialogLayout, useDialog } from "../ui/dialog"
 import { Link } from "../ui/link"
-import { familyUsage, formatCacheRate, formatCost, formatCount, formatSpeed, formatWindow, windowLabel } from "./usage-data"
+import {
+  familyUsage,
+  formatCacheRate,
+  formatCost,
+  formatCount,
+  formatSpeed,
+  formatWindow,
+  windowLabel,
+} from "./usage-data"
 
 export function DialogUsage(props: { context: Plugin.Context; sessionID?: string }) {
   const dialog = useDialog()

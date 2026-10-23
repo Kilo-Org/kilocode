@@ -37,7 +37,10 @@ test("/usage shows the session family, provider plans and BYOK keys, and refresh
     time: { created: 1_000, completed: 1_000 + elapsed },
   })
   const messages: Record<string, SessionMessageInfo[]> = {
-    [root.id]: [{ type: "user", id: "msg_user", text: "Check usage", time: { created: 0 } }, step("msg_root", 100, 1_000)],
+    [root.id]: [
+      { type: "user", id: "msg_user", text: "Check usage", time: { created: 0 } },
+      step("msg_root", 100, 1_000),
+    ],
     [child.id]: [step("msg_child", 300, 3_000)],
   }
   const rpc: string[] = []
@@ -52,7 +55,9 @@ test("/usage shows the session family, provider plans and BYOK keys, and refresh
     }
     if (url.pathname.startsWith("/api/rpc/")) rpc.push(url.pathname)
     if (url.pathname === "/api/rpc/kilocode.gateway/byok")
-      return json({ output: [{ id: "byok-1", provider_id: "anthropic", management_source: "coding_plan", is_enabled: true }] })
+      return json({
+        output: [{ id: "byok-1", provider_id: "anthropic", management_source: "coding_plan", is_enabled: true }],
+      })
     if (url.pathname.startsWith("/api/rpc/kilocode.provider-usage/"))
       return json({
         output: {
@@ -92,7 +97,11 @@ test("/usage shows the session family, provider plans and BYOK keys, and refresh
               planState: "unknown",
               routingState: "not_applicable",
               windows: [],
-              error: { code: "codex_auth_unavailable", message: "Reconnect ChatGPT to view Codex usage.", retryable: false },
+              error: {
+                code: "codex_auth_unavailable",
+                message: "Reconnect ChatGPT to view Codex usage.",
+                retryable: false,
+              },
             },
           ],
         },
