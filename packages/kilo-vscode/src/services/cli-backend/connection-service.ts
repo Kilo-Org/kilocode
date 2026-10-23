@@ -96,6 +96,7 @@ export class KiloConnectionService {
   private state: ConnectionState = "disconnected"
   private error: Error | null = null
   private connectPromise: Promise<void> | null = null
+  private readonly lifetime = new AbortController()
   private healthPollTimer: ReturnType<typeof setInterval> | null = null
 
   private readonly eventListeners: Set<SSEEventListener> = new Set()
@@ -172,6 +173,7 @@ export class KiloConnectionService {
    * Lazily start server + SSE. Multiple callers share the same promise.
    */
   async connect(workspaceDir: string): Promise<void> {
+    this.lifetime.signal.throwIfAborted()
     this.trackDirectory(workspaceDir)
     if (this.connectPromise) {
       return this.connectPromise
@@ -181,6 +183,7 @@ export class KiloConnectionService {
     }
 
     // Mark as connecting early so concurrent callers won't start another connection attempt.
+    this.error = null
     this.setState("connecting")
 
     this.connectPromise = this.doConnect(workspaceDir)
@@ -213,16 +216,58 @@ export class KiloConnectionService {
    * Get the shared SDK client, auto-connecting if not yet started.
    * Accepts an optional directory to use as the workspace root; falls back
    * to the first VS Code workspace folder. Throws if neither is available
-   * or if the connection fails.
+   * or if the connection fails. During SSE recovery, fail promptly unless
+   * an interactive send explicitly opts into waiting for the stream.
    */
-  async getClientAsync(dir?: string): Promise<KiloClient> {
+  async getClientAsync(dir?: string, signal?: AbortSignal, wait = false): Promise<KiloClient> {
+    this.lifetime.signal.throwIfAborted()
+    signal?.throwIfAborted()
     if (dir) this.trackDirectory(dir)
     if (this.client && this.state === "connected") return this.client
+    // The adapter owns SSE recovery. Reuse it instead of resetting the shared
+    // HTTP client and event subscriptions whenever a request arrives mid-reconnect.
+    if (this.client && this.sseClient) {
+      if (wait) return this.waitForClient(signal)
+      throw this.error ?? new Error("CLI event stream is reconnecting")
+    }
     const root = dir ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
     if (!root) throw new Error("No workspace folder open")
     this.trackDirectory(root)
     await this.connect(root)
+    signal?.throwIfAborted()
     return this.getClient()
+  }
+
+  private async waitForClient(signal?: AbortSignal): Promise<KiloClient> {
+    const pending = Promise.withResolvers<KiloClient>()
+    const timeout = AbortSignal.timeout(30_000)
+    const abort = AbortSignal.any([this.lifetime.signal, timeout, ...(signal ? [signal] : [])])
+    let failure = this.error
+    const cancel = () =>
+      pending.reject(
+        timeout.aborted
+          ? new Error(`Timed out waiting for CLI event stream to reconnect${failure ? `: ${failure.message}` : ""}`, {
+              cause: failure ?? undefined,
+            })
+          : abort.reason,
+      )
+    const unsubscribe = this.onStateChange((state, error) => {
+      if (error) failure = error
+      if (state === "connected" && this.client) pending.resolve(this.client)
+      if (!this.client || state === "disconnected") {
+        pending.reject(error ?? new Error("CLI backend disconnected while waiting for its event stream"))
+      }
+    })
+    abort.addEventListener("abort", cancel, { once: true })
+    if (abort.aborted) cancel()
+    try {
+      const client = await pending.promise
+      abort.throwIfAborted()
+      return client
+    } finally {
+      unsubscribe()
+      abort.removeEventListener("abort", cancel)
+    }
   }
 
   /** Directories that may own directory-scoped requests on the shared backend. */
@@ -826,6 +871,7 @@ export class KiloConnectionService {
    * Clean up everything: kill server, close SSE, clear listeners.
    */
   dispose(): void {
+    this.lifetime.abort(new Error("CLI connection service disposed"))
     this.stopHealthPoll()
     this.sseClient?.dispose()
     this.serverManager.dispose()
@@ -879,7 +925,7 @@ export class KiloConnectionService {
 
   private setState(state: ConnectionState, error?: Error): void {
     this.state = state
-    this.error = state === "error" ? (error ?? this.error) : null
+    this.error = state === "error" || state === "connecting" ? (error ?? this.error) : null
     for (const listener of this.stateListeners) {
       listener(state, this.error ?? undefined)
     }
@@ -961,6 +1007,7 @@ export class KiloConnectionService {
     this.resetConnection()
 
     const server = await this.serverManager.getServer()
+    this.lifetime.signal.throwIfAborted()
     this.info = { port: server.port }
 
     const config: ServerConfig = {
