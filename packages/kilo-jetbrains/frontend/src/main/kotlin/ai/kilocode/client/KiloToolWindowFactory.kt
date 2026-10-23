@@ -106,6 +106,7 @@ internal class KiloToolWindowSetupService(
                 cs,
                 activity = project.service<KiloSessionService>().activity,
                 abort = { id, dir -> project.service<KiloSessionService>().abort(id, dir) },
+                changes = service<KiloWorktreeService>().changes(workspace.directory),
             )
             val agentManagerPanel = AgentManagerPanel(manager, worktrees, project)
 
