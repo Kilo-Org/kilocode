@@ -138,6 +138,41 @@ export interface RequestCloudSessionsMessage {
   gitUrl?: string
 }
 
+export interface RequestHostedProvidersMessage {
+  type: "requestHostedProviders"
+}
+
+export interface RequestHostedSessionsMessage {
+  type: "requestHostedSessions"
+  limit?: number
+}
+
+export interface HostedOpenSessionMessage {
+  type: "hostedOpenSession"
+  providerID: string
+  sessionID: string
+  limit?: number
+}
+
+export interface HostedStartSessionMessage {
+  type: "hostedStartSession"
+  repositoryType?: "github" | "gitlab" | "git"
+  repo?: string
+  url?: string
+  branch?: string
+  prompt: string
+  mode: string
+  model: string
+  organizationID?: string
+  operationKey: string
+  messageID: string
+}
+
+export interface HostedDetachSessionMessage {
+  type: "hostedDetachSession"
+  key: string
+}
+
 export interface RequestGitRemoteUrlMessage {
   type: "requestGitRemoteUrl"
 }
@@ -1765,6 +1800,11 @@ export type WebviewMessage =
   | LoadSessionsRequest
   | RequestSessionModelUsageMessage
   | RequestCloudSessionsMessage
+  | RequestHostedProvidersMessage
+  | RequestHostedSessionsMessage
+  | HostedOpenSessionMessage
+  | HostedStartSessionMessage
+  | HostedDetachSessionMessage
   | RequestGitRemoteUrlMessage
   | LoginRequest
   | LogoutRequest

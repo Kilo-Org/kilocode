@@ -10,9 +10,11 @@ import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useLanguage } from "../../context/language"
 import { useSession } from "../../context/session"
 import { useLocalTabs } from "../../context/local-tabs"
+import { useConfig } from "../../context/config"
 import { CloudImportDialog } from "../chat/CloudImportDialog"
 import SessionList from "./SessionList"
 import CloudSessionList from "./CloudSessionList"
+import HostedSessionList from "./HostedSessionList"
 import type { SessionInfo } from "../../types/messages"
 
 interface HistoryViewProps {
@@ -25,7 +27,7 @@ interface HistoryViewProps {
   rowActions?: (session: SessionInfo) => JSX.Element
 }
 
-type Source = "local" | "cloud" | "worktree"
+type Source = "local" | "cloud" | "hosted" | "worktree"
 
 const EMPTY_SESSION_IDS = new Set<string>()
 
@@ -34,21 +36,27 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
   const dialog = useDialog()
   const session = useSession()
   const tabs = useLocalTabs()
+  const config = useConfig()
   const worktreeIds = () => props.worktreeSessionIds?.()
+  const hosted = () => config.settings().hostedSessions === true
   const [tab, setTab] = createSignal<Source>(worktreeIds() ? "worktree" : "local")
   let local: HTMLButtonElement | undefined
   let cloud: HTMLButtonElement | undefined
+  let hostedTab: HTMLButtonElement | undefined
   let worktree: HTMLButtonElement | undefined
   let localPanel: HTMLDivElement | undefined
   let cloudPanel: HTMLDivElement | undefined
+  let hostedPanel: HTMLDivElement | undefined
   let worktreePanel: HTMLDivElement | undefined
 
   createEffect(() => {
     if (tab() === "worktree" && !worktreeIds()) setTab("local")
+    if (tab() === "hosted" && !hosted()) setTab("local")
   })
 
   createEffect(() => {
-    const panel = tab() === "local" ? localPanel : tab() === "cloud" ? cloudPanel : worktreePanel
+    const panel =
+      tab() === "local" ? localPanel : tab() === "cloud" ? cloudPanel : tab() === "hosted" ? hostedPanel : worktreePanel
 
     const frame = requestAnimationFrame(() => {
       panel
@@ -78,7 +86,12 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
   }
 
   function move(event: KeyboardEvent, current: Source) {
-    const sources: Source[] = worktreeIds() ? ["local", "cloud", "worktree"] : ["local", "cloud"]
+    const sources: Source[] = [
+      "local",
+      "cloud",
+      ...(hosted() ? (["hosted"] as Source[]) : []),
+      ...(worktreeIds() ? (["worktree"] as Source[]) : []),
+    ]
     const index = sources.indexOf(current)
     const source =
       event.key === "Home"
@@ -90,7 +103,16 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
             : event.key === "ArrowRight"
               ? sources[(index + 1) % sources.length]
               : undefined
-    const next = source === "local" ? local : source === "cloud" ? cloud : source === "worktree" ? worktree : undefined
+    const next =
+      source === "local"
+        ? local
+        : source === "cloud"
+          ? cloud
+          : source === "hosted"
+            ? hostedTab
+            : source === "worktree"
+              ? worktree
+              : undefined
     if (!next) return
     event.preventDefault()
     next.focus()
@@ -133,6 +155,42 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
           >
             {language.t("session.tab.cloud")}
           </button>
+          <Show when={hosted()}>
+            <button
+              ref={hostedTab}
+              id="history-tab-hosted"
+              class="history-tab-btn"
+              classList={{ "history-tab-btn--active": tab() === "hosted" }}
+              type="button"
+              role="tab"
+              aria-selected={tab() === "hosted"}
+              aria-controls="history-panel-hosted"
+              tabIndex={tab() === "hosted" ? 0 : -1}
+              onClick={() => setTab("hosted")}
+              onKeyDown={(event) => move(event, "hosted")}
+            >
+              {language.t("session.tab.hosted")}
+            </button>
+          </Show>
+          <Show when={hosted()}>
+            <div
+              class="history-view-content"
+              ref={hostedPanel}
+              id="history-panel-hosted"
+              role="tabpanel"
+              aria-labelledby="history-tab-hosted"
+              hidden={tab() !== "hosted"}
+            >
+              {tab() === "hosted" && (
+                <HostedSessionList
+                  onSelectSession={(entry) => {
+                    session.selectHostedSession(entry.providerID, entry.sessionID)
+                    props.onBack?.()
+                  }}
+                />
+              )}
+            </div>
+          </Show>
           <Show when={worktreeIds()}>
             <button
               ref={worktree}

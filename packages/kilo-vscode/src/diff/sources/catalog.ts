@@ -4,6 +4,7 @@ import { GitOps } from "../../agent-manager/GitOps"
 import { gitGeneratedFiles } from "../shared/git-attributes"
 import { resolveLocalDiffTarget } from "../shared/target"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
+import { isHostedKey } from "../../hosted/identity"
 import type { BranchListItem } from "../../agent-manager/git-import"
 import type { PanelContext } from "../types"
 import type { DiffSource, DiffSourceDescriptor } from "./types"
@@ -44,6 +45,7 @@ export interface WorkspaceBranchesResult {
  */
 export class DiffSourceCatalog implements vscode.Disposable {
   private readonly sessionFetch: SessionDiffFetch = async ({ sessionID, directory }) => {
+    if (isHostedKey(sessionID)) return []
     const client = this.connection.getClient()
     const { data } = await client.session.diff({ sessionID, directory }, { throwOnError: true })
     return data ?? []
@@ -53,8 +55,12 @@ export class DiffSourceCatalog implements vscode.Disposable {
    * Turn diffs are stored on the user message itself (`summary.diffs`), not
    * on the session-level snapshot. The `/session/:id/diff` endpoint ignores
    * its `messageID` param today, so we fetch the message directly instead.
+   *
+   * Single-message reads are not part of the hosted native allowlist, so a
+   * hosted session returns no turn diffs rather than failing the view.
    */
   private readonly turnFetch: TurnDiffFetch = async ({ sessionID, messageID, directory }) => {
+    if (isHostedKey(sessionID)) return []
     const client = this.connection.getClient()
     const { data } = await client.session.message({ sessionID, messageID, directory }, { throwOnError: true })
     const info = data?.info

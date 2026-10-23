@@ -8,7 +8,8 @@
 
 /* Session List Items */
 .session-list [data-slot="list-item-title"],
-.cloud-session-list [data-slot="list-item-title"] {
+.cloud-session-list [data-slot="list-item-title"],
+.hosted-session-list [data-slot="list-item-title"] {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -18,7 +19,8 @@
 }
 
 .session-list [data-slot="list-item-description"],
-.cloud-session-list [data-slot="list-item-description"] {
+.cloud-session-list [data-slot="list-item-description"],
+.hosted-session-list [data-slot="list-item-description"] {
   flex-shrink: 0;
   margin-left: 8px;
   font-size: var(--kilo-font-size-12);
@@ -175,6 +177,30 @@ body.vscode-light
   flex-direction: column;
   flex: 1;
   min-height: 0;
+}
+
+/* Hosted Session List (inside History View) */
+.hosted-session-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.hosted-session-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+}
+
+.hosted-session-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: var(--kilo-font-size-12);
+  color: var(--text-weak, var(--vscode-descriptionForeground));
 }
 
 /* Make the list search wrapper wrap so the repo filter appears below search */

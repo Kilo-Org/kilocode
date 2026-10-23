@@ -252,6 +252,19 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.hostedSessions.title")}
+          description={language.t("settings.experimental.hostedSessions.description")}
+        >
+          <Switch
+            checked={settings().hostedSessions === true}
+            onChange={(checked) => applySetting("hostedSessions", checked, "experimental.hostedSessions")}
+            hideLabel
+          >
+            {language.t("settings.experimental.hostedSessions.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.browserAutomation.title")}
           description={language.t("settings.experimental.browserAutomation.description")}
         >

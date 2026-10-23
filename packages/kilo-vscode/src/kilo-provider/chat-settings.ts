@@ -12,6 +12,7 @@ export function buildChatSettingsMessage() {
       browserAutomation: vscode.workspace
         .getConfiguration("kilo-code.new.experimental")
         .get("browserAutomation", false),
+      hostedSessions: vscode.workspace.getConfiguration("kilo-code.new.experimental").get("hostedSessions", false),
       agentManagerBrowserOpenLinksIn: integratedBrowserLinkDestination(),
       workspaceTrusted: vscode.workspace.isTrusted,
     },
@@ -31,6 +32,7 @@ export function watchChatConfig(post: Post): vscode.Disposable {
     if (
       event.affectsConfiguration("kilo-code.new.chat") ||
       event.affectsConfiguration("kilo-code.new.experimental.browserAutomation") ||
+      event.affectsConfiguration("kilo-code.new.experimental.hostedSessions") ||
       event.affectsConfiguration("kilo-code.new.agentManager.browser.openLinksIn")
     ) {
       post(buildChatSettingsMessage())

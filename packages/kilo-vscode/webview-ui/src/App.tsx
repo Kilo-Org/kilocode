@@ -422,6 +422,8 @@ const AppContent: Component = () => {
     onCleanup(() => window.removeEventListener("message", handler))
   })
 
+  const hostedCurrent = () => session.currentSessionID()?.startsWith("host:") === true
+
   const handleSelectSession = (id: string) => {
     if (tabs) tabs.open(id)
     if (!tabs) session.selectSession(id)
@@ -466,7 +468,7 @@ const AppContent: Component = () => {
           <Switch
             fallback={
               <ChatView
-                continueInWorktree
+                continueInWorktree={!hostedCurrent()}
                 onForkMessage={session.status() === "idle" ? handleForkMessage : undefined}
                 promptBoxId="sidebar:fallback"
                 emptyState={emptyState}
@@ -478,7 +480,7 @@ const AppContent: Component = () => {
                 onSelectSession={handleSelectSession}
                 onShowHistory={() => setCurrentView("history")}
                 onForkMessage={session.status() === "idle" ? handleForkMessage : undefined}
-                continueInWorktree
+                continueInWorktree={!hostedCurrent()}
                 promptBoxId="sidebar:new-task"
                 emptyState={emptyState}
               />
