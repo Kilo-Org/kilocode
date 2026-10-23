@@ -15,6 +15,7 @@ export async function createAppFixture(
     config?: Config.Info
     args?: TuiInput["args"]
     fetch?: FetchHandler
+    clientFetch?: TuiInput["fetch"] // kilocode_change(testing) seam - inject client transport independently of HTTP disconnects
     // A renderer whose owner already set up its terminal, such as the simulation renderer.
     setup?: TestRendererSetup
   } = {},
@@ -40,6 +41,7 @@ export async function createAppFixture(
     run({
       app: { name: "test", version: "test", channel: "test" },
       server: { endpoint: { url: server.url.toString() } },
+      fetch: input.clientFetch, // kilocode_change(testing) seam
       config: {
         get: async () => config,
         update: async (mutate) => {
