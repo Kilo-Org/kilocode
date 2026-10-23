@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.8.15",
+  "version": "7.8.17",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -165,7 +165,7 @@
     "mime-types": "3.0.2",
     "minimatch": "10.2.6",
     "npm-package-arg": "13.0.2",
-    "open": "10.1.2",
+    "open": "11.0.4",
     "opencode-gitlab-auth": "2.1.0",
     "opencode-poe-auth": "0.0.1",
     "partial-json": "0.1.7",

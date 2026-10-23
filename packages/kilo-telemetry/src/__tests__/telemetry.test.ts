@@ -75,6 +75,10 @@ describe("TelemetryEvent", () => {
   test("MCP events are defined", () => {
     expect(TelemetryEvent.MCP_SERVER_CONNECTED).toBeDefined()
     expect(TelemetryEvent.MCP_SERVER_ERROR).toBeDefined()
+    // Reporting models select these names; renaming them breaks dashboards.
+    const names: string[] = Object.values(TelemetryEvent)
+    expect(names).toContain("MCP Auth Started")
+    expect(names).toContain("MCP Auth Completed")
   })
 
   test("share events are defined", () => {
