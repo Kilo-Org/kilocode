@@ -1067,8 +1067,10 @@ describe("SessionRunnerLLM", () => {
     yield* Fiber.join(renamed)
 
     expect(s.requests).toHaveLength(6)
-    expect(s.requests[2]?.messages).toContainEqual(Message.user("First prompt"))
-    expect(s.requests[4]?.messages).toContainEqual(Message.user("First prompt"))
+    expect(JSON.stringify(s.requests[2]?.messages)).toContain("First prompt")
+    expect(JSON.stringify(s.requests[2]?.messages)).not.toContain("Second prompt")
+    expect(JSON.stringify(s.requests[4]?.messages)).toContain("First prompt")
+    expect(JSON.stringify(s.requests[4]?.messages)).not.toContain("Third prompt")
     expect((yield* s.session.get(sessionID)).title).toBe("Generated title")
   })
 
@@ -1841,7 +1843,7 @@ describe("SessionRunnerLLM", () => {
     )
     yield* s.db
       .update(SessionTable)
-      .set({ agent: "reviewer" })
+      .set({ agent: Agent.ID.make("reviewer") })
       .where(eq(SessionTable.id, sessionID))
       .run()
       .pipe(Effect.orDie)
@@ -1861,7 +1863,7 @@ describe("SessionRunnerLLM", () => {
   scenario("fails before the model request when the selected agent is unavailable", function* (s) {
     yield* s.db
       .update(SessionTable)
-      .set({ agent: "explore" })
+      .set({ agent: Agent.ID.make("explore") })
       .where(eq(SessionTable.id, sessionID))
       .run()
       .pipe(Effect.orDie)
