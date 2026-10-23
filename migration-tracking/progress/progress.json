@@ -4,34 +4,34 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 122,
+    "done": 133,
     "total": 9828,
-    "percent": 1.2,
+    "percent": 1.4,
     "dropped": 26,
     "kinds": [
       {
         "kind": "module",
-        "done": 36,
+        "done": 42,
         "total": 3547
       },
       {
         "kind": "api",
-        "done": 0,
+        "done": 2,
         "total": 39
       },
       {
         "kind": "patch",
-        "done": 59,
+        "done": 61,
         "total": 3444
       },
       {
         "kind": "test",
-        "done": 27,
+        "done": 28,
         "total": 2798
       }
     ],
     "landed": {
-      "plugin": 36,
+      "plugin": 38,
       "host": 3,
       "seam": 0,
       "patch": 5
@@ -1547,26 +1547,32 @@
     },
     {
       "feature": "provider-usage",
-      "done": 0,
+      "done": 10,
       "total": 10,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 6,
           "total": 6
         },
         "api": {
-          "done": 0,
+          "done": 2,
           "total": 2
         },
         "patch": {
-          "done": 0,
+          "done": 2,
           "total": 2
         },
         "test": {
           "done": 0,
           "total": 0
         }
+      },
+      "landed": {
+        "plugin": 2,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -2297,7 +2303,7 @@
     },
     {
       "feature": "tui",
-      "done": 3,
+      "done": 4,
       "total": 45,
       "dropped": 0,
       "kinds": {
@@ -2314,7 +2320,7 @@
           "total": 6
         },
         "test": {
-          "done": 1,
+          "done": 2,
           "total": 24
         }
       },
@@ -6134,6 +6140,8 @@
     "patch:gateway:e8673ed1650b": "plugin",
     "patch:gateway:f983d8f993c8": "plugin",
     "patch:global:0e189a57d108": "host",
+    "patch:provider-usage:b0945f511fb3": "plugin",
+    "patch:provider-usage:ce8e021f1ef6": "plugin",
     "patch:server:5e0f8563b425": "plugin",
     "patch:tui:c29e2d297ca2": "plugin",
     "patch:unattributed:agent:161afe543464": "plugin",
@@ -6164,6 +6172,13 @@
     "patch:unattributed:tui/ui:acda41f897d2": "patch"
   },
   "done": [
+    "api:GET /kilocode/provider-usage",
+    "api:POST /kilocode/provider-usage/refresh",
+    "module:packages/core/src/kilocode/provider-usage.ts",
+    "module:packages/core/src/kilocode/provider-usage/cloud.ts",
+    "module:packages/core/src/kilocode/provider-usage/codex.ts",
+    "module:packages/core/src/kilocode/provider-usage/minimax/native.ts",
+    "module:packages/core/src/kilocode/provider-usage/minimax/usage.ts",
     "module:packages/kilo-gateway/src/api/constants.ts",
     "module:packages/kilo-gateway/src/api/embedding-models.ts",
     "module:packages/kilo-gateway/src/api/kilo-pass.ts",
@@ -6223,6 +6238,8 @@
     "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts",
     "module:packages/opencode/test/kilocode/model-info-panel-utils.test.ts",
     "module:packages/opencode/test/kilocode/model-info-panel.types.test.ts",
+    "module:packages/opencode/test/kilocode/tui/usage.test.ts",
+    "module:packages/schema/src/kilocode/provider-usage.ts",
     "module:packages/tui/src/kilocode/model-picker.ts",
     "module:packages/tui/test/kilocode/model-picker.test.ts",
     "patch:agent:2e5632e7bfc6",
@@ -6243,6 +6260,8 @@
     "patch:gateway:e8673ed1650b",
     "patch:gateway:f983d8f993c8",
     "patch:global:0e189a57d108",
+    "patch:provider-usage:b0945f511fb3",
+    "patch:provider-usage:ce8e021f1ef6",
     "patch:server:5e0f8563b425",
     "patch:tui:c29e2d297ca2",
     "patch:unattributed:agent:0a0c97da2c48",
