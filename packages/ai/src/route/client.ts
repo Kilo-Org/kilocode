@@ -132,7 +132,7 @@ const makeRouteLanguageModel = <Options extends ProviderOptions, Compact extends
 ) => {
   const provider = route.provider ?? ("provider" in mapped ? mapped.provider : undefined)
   if (!provider) throw new Error(`Route.model(${route.id}) requires a provider`)
-  if (!endpointBaseURL(route.endpoint))
+  if (!route.endpoint.baseURL)
     throw new ProviderConfigurationError({
       provider: ProviderID.make(provider),
       message: `Route.model(${route.id}) requires an endpoint baseURL — configure it on the route first`,
@@ -159,9 +159,6 @@ const mergeRouteDefaults = (base: RouteDefaults | undefined, patch: RouteDefault
     ),
   }
 }
-
-const endpointBaseURL = <Body>(endpoint: Endpoint.Definition<Body>) =>
-  typeof endpoint.baseURL === "string" ? endpoint.baseURL : undefined
 
 const mergeHeaders = (...items: ReadonlyArray<Record<string, string> | undefined>) => {
   const entries = items.flatMap((item) =>
@@ -646,13 +643,6 @@ export function compact(request: LLMRequest, options?: EndpointCompactOptions | 
     return yield* unsupportedCompaction(request, options?.mechanism)
   })
 }
-
-export const streamRequest = (request: LLMRequest, options?: StreamOptions) =>
-  Stream.unwrap(
-    Effect.gen(function* () {
-      return (yield* Service).stream(request, options)
-    }),
-  )
 
 export const layer: Layer.Layer<Service, never, RequestExecutor.Service> = Layer.effect(
   Service,

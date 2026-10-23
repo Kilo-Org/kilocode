@@ -492,6 +492,7 @@ describe("OpenRouter", () => {
           model: OpenRouter.configure({ apiKey: "test-key" }).model("anthropic/claude-sonnet-4.6"),
           cache: "none",
           messages: [
+            Message.assistant(""),
             Message.assistant([
               {
                 type: "reasoning",

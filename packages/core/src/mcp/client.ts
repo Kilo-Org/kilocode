@@ -81,7 +81,7 @@ export class SessionExpiredError extends Schema.TaggedError<SessionExpiredError>
 
 export type CallToolContent =
   | { readonly type: "text"; readonly text: string }
-  | { readonly type: "media"; readonly data: string; readonly mimeType: string }
+  | { readonly type: "media"; readonly data: string; readonly mimeType: string; readonly uri?: string }
 
 export interface CallToolResult {
   readonly isError: boolean
@@ -437,7 +437,7 @@ function toCallToolResult(result: SdkCallToolResult): CallToolResult {
         const resource = part.resource
         if ("text" in resource && typeof resource.text === "string") return [{ type: "text", text: resource.text }]
         if ("blob" in resource && typeof resource.blob === "string" && typeof resource.mimeType === "string")
-          return [{ type: "media", data: resource.blob, mimeType: resource.mimeType }]
+          return [{ type: "media", data: resource.blob, mimeType: resource.mimeType, uri: resource.uri }]
         return [{ type: "text", text: resource.uri }]
       }
       return []
