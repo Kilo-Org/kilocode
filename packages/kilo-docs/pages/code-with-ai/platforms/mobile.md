@@ -186,6 +186,12 @@ Quick Chat can connect to remote [MCP servers](/docs/automate/mcp/what-is-mcp) s
 
 When an OAuth server needs you to sign in, its row shows **Sign in to use this server** with a **Sign in** button instead of **Retry**. OAuth credentials are kept for your account and cleared when you sign out, delete the server, or change its URL or authentication type.
 
+### MCP Apps views
+
+Some remote MCP servers attach an MCP Apps view to a tool. After a call to that tool finishes, the chat transcript draws the view in a card under the tool call, and you can interact with it on your phone. The view can call tools its own server offers, open links, and resize to fit its content. Tools without a view keep their usual result, and a call that has not finished keeps its usual row.
+
+The view runs in a sandboxed page that allows only the origins the server declared for it. A server that declares none gets no external origins, and anything that would widen that policy is rejected. The app does not offer views sampling, model context updates, messages, or downloads, and a view cannot call a tool its server was not discovered to offer.
+
 ## Web search in chat
 
 A chat can search the web with the `web_search` tool, which runs through Kilo's own web search service. The **Search the web** switch at the top of the Quick Chat tools sheet turns it on for that chat, and the model names its sources in the reply.
