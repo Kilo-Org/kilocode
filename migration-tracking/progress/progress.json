@@ -36,7 +36,7 @@
       "seam": 3,
       "patch": 0
     },
-    "coreImports": 25,
+    "coreImports": 26,
     "sharedPatches": {
       "seam": 27,
       "patch": 19
@@ -62,6 +62,7 @@
     "@opencode/core/model",
     "@opencode/core/model-resolver",
     "@opencode/core/permission",
+    "@opencode/core/plugin/provider/openai",
     "@opencode/core/plugin/sdk",
     "@opencode/core/plugin/system-prompt/anthropic.txt",
     "@opencode/core/plugin/system-prompt/gpt-astra.txt",

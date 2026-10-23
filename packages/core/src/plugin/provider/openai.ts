@@ -447,3 +447,5 @@ function claim(token: string) {
     claims.organizations?.[0]?.id
   )
 }
+
+export { browser, headless } // kilocode_change(oauth) seam - the Codex method registrations, so a plugin can relabel them

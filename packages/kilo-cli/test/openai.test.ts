@@ -44,15 +44,18 @@ function expectKiloPage(html: string) {
 }
 
 describe("Kilo OpenAI sign-in", () => {
-  it.effect("offers the v1 sign-in methods: Codex browser and device code, without ChatGPT token sharing", () =>
+  it.effect("offers the v1 sign-in methods with the v1 labels, without ChatGPT token sharing", () =>
     Effect.gen(function* () {
+      const integrations = yield* Integration.Service
       yield* add(ChatGPTPlugin)
       yield* add(OpenAIPlugin)
+      yield* integrations.transform((editor) => editor.method.update({ integrationID, method: { type: "key" } }))
       yield* add(KiloOpenAIPlugin)
-      const integrations = yield* Integration.Service
-      expect(
-        (yield* integrations.get(integrationID))?.methods.map((method) => method.type === "oauth" && method.id),
-      ).toEqual([Integration.MethodID.make("chatgpt-browser"), Integration.MethodID.make("chatgpt-headless")])
+      expect((yield* integrations.get(integrationID))?.methods).toEqual([
+        { id: Integration.MethodID.make("chatgpt-browser"), type: "oauth", label: "ChatGPT Pro/Plus (browser)" },
+        { id: Integration.MethodID.make("chatgpt-headless"), type: "oauth", label: "ChatGPT Pro/Plus (headless)" },
+        { type: "key", label: "Manually enter API Key" },
+      ])
     }),
   )
 
