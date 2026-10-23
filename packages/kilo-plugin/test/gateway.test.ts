@@ -57,6 +57,7 @@ const env = {
   KILO_DATA_COLLECTION: undefined,
   KILOCODE_EDITOR_NAME: undefined,
   KILOCODE_FEATURE: undefined,
+  KILO_PLATFORM: undefined,
   KILOCODE_VERSION: undefined,
 }
 const headers = (team?: string) => ({

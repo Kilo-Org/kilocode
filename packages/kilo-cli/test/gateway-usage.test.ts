@@ -220,6 +220,43 @@ test.each(["anthropic", "openai"] as const)(
   30_000,
 )
 
+// One server serves several clients. Each root session carries its client product in the session metadata, and a
+// child session uses the product of its root, also when its own metadata is different.
+test("sets X-KILOCODE-FEATURE from the root session platform, else the process feature", async () => {
+  using backend = gateway("openrouter", Array.from({ length: 8 }, (_, index) => ({ route: `route/${index}`, cost: 0 })))
+  await isolated(backend.url, async (directory) => {
+    // The process value, which `isolated` restores afterwards.
+    process.env.KILOCODE_FEATURE = "cloud-agent"
+    await server(directory, ":memory:", async (client) => {
+      const platform = (value: string) => ({ [KiloGatewayRpc.PLATFORM_METADATA_KEY]: value })
+      const vscode = await client.session.create({ location: { directory }, model: auto, metadata: platform("vscode") })
+      const manager = await client.session.create({
+        location: { directory },
+        model: auto,
+        metadata: platform("agent-manager"),
+      })
+      const plain = await client.session.create({ location: { directory }, model: auto })
+      const child = await client.session.create({ parentID: vscode.id, model: auto, metadata: platform("cli") })
+      for (const session of [vscode, manager, plain, child]) {
+        await client.session.prompt({ sessionID: session.id, text: "Say hello." })
+        await client.session.wait({ sessionID: session.id })
+      }
+      expect(Object.fromEntries(backend.requests.map((request) => [request.sessionID, request.feature]))).toEqual({
+        [vscode.id]: "vscode-extension",
+        [manager.id]: "agent-manager",
+        [plain.id]: "cloud-agent",
+        [child.id]: "vscode-extension",
+      })
+      // Root sessions also send a title request, which carries the same feature as the step.
+      expect(
+        backend.requests.every(
+          (request) => request.feature === backend.requests.find((item) => item.sessionID === request.sessionID)?.feature,
+        ),
+      ).toBeTrue()
+    })
+  })
+}, 30_000)
+
 async function isolated(url: string, body: (directory: string) => Promise<void>) {
   const directory = await mkdtemp(path.join(os.tmpdir(), "kilo-gateway-usage-"))
   const variables = {
@@ -229,6 +266,8 @@ async function isolated(url: string, body: (directory: string) => Promise<void>)
     KILO_AUTH_CONTENT: undefined,
     KILO_ORG_ID: undefined,
     KILO_AI_GATEWAY_URL: undefined,
+    KILO_PLATFORM: undefined,
+    KILOCODE_FEATURE: undefined,
   }
   const previous = Object.fromEntries(Object.keys(variables).map((key) => [key, process.env[key]]))
   apply(variables)
@@ -305,6 +344,7 @@ function gateway(
     model: string
     messages: { role: string; content: unknown }[]
     sessionID: string | null
+    feature: string | null
     pathname: string
   }[] = []
   const server = Bun.serve({
@@ -334,7 +374,12 @@ function gateway(
         return new Response(null, { status: 404 })
       const index = requests.length
       const body = (await request.json()) as { model: string; messages: { role: string; content: unknown }[] }
-      requests.push({ ...body, pathname, sessionID: request.headers.get("x-kilocode-taskid") })
+      requests.push({
+        ...body,
+        pathname,
+        sessionID: request.headers.get("x-kilocode-taskid"),
+        feature: request.headers.get("x-kilocode-feature"),
+      })
       const response = responses[index]
       if (!response) return new Response("Unexpected model request", { status: 500 })
       const native = {
