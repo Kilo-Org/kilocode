@@ -121,18 +121,22 @@ export const AutoRouterAddCommand = effectCmd({
       yield* fail(`Custom auto router ${args.router} was not found. Check the id with \`kilo auto router list\`.`)
       return
     }
-    const measurements = yield* Effect.promise(() =>
-      fetchPlatformMeasurements({
-        token: creds.token,
-        organizationId: creds.organizationId,
-        baseRouter: router.baseRouter,
-      }).catch((error) => {
-        UI.println(
-          `${UI.Style.TEXT_WARNING}${describeFailure(error, "Could not load platform measurements")}. Registering without a benchmark link.${UI.Style.TEXT_NORMAL}`,
-        )
-        return undefined
-      }),
-    )
+    // An explicit --measured-as skips the suggestion: the server validates the link on register.
+    const measurements =
+      args.measuredAs || !args.link
+        ? undefined
+        : yield* Effect.promise(() =>
+            fetchPlatformMeasurements({
+              token: creds.token,
+              organizationId: creds.organizationId,
+              baseRouter: router.baseRouter,
+            }).catch((error) => {
+              UI.println(
+                `${UI.Style.TEXT_WARNING}${describeFailure(error, "Could not load platform measurements")}. Registering without a benchmark link.${UI.Style.TEXT_NORMAL}`,
+              )
+              return undefined
+            }),
+          )
     const suggestion = measurements
       ? suggestMeasuredAs(
           target,
@@ -140,9 +144,8 @@ export const AutoRouterAddCommand = effectCmd({
         )
       : null
     const measuredAs = yield* Effect.promise(async () => {
-      if (!measurements) return undefined
       if (args.measuredAs) return args.measuredAs
-      if (!suggestion || !args.link) return undefined
+      if (!suggestion) return undefined
       if (args.yes) return suggestion
       const answer = (await UI.input(`Reuse the platform benchmark of ${suggestion}? [Y/n] `)).trim()
       return answer === "" || /^y(es)?$/i.test(answer) ? suggestion : undefined
