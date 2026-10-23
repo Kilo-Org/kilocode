@@ -29,7 +29,7 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
   2. The Kilo host (`packages/kilo-cli`, unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry. Add a server plugin to `KiloPlugins` in `packages/kilo-plugin/src/index.ts`; the host registers it. Service replacements go in `overrides` in `packages/kilo-cli/src/host.ts`, `KILO_*` names in `packages/kilo-cli/src/env.ts`. TUI plugins still register with one marked call-out line in `packages/tui/src/plugin/builtins.ts` (rung 4; the TUI list is in the TUI process, which the host does not reach).
   3. A small, generic seam patch in a shared upstream file: widen an API, add a hook, export a value. Prefer files that change rarely.
   4. A feature patch in a shared upstream file. Last resort. Say in the PR why options 1 to 3 do not work.
-  5. Branding and product strings: the rename script during upstream syncs, never hand edits.
+  5. Branding and product strings: automated renaming in Kilo-owned code, never hand edits in upstream files. PR #15417 uses an interim source/build adapter; review its mapping at every upstream sync (see "Branding and upstream drift").
 - Mark every change in a shared upstream file with `kilocode_change` (options 3 and 4). One generic seam is better than many small edits.
 - Kilo logic packages (for example `kilo-gateway-core`) import nothing from `@opencode/*`. Only thin adapters do.
 - The Kilo Gateway is the only source of Kilo models (`models.set`, no models.dev fallback). Requests identify as Kilo (token, team header, `X-KILOCODE-*`). See #14991.
@@ -41,6 +41,25 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 - Stack on an open v2 PR when you depend on it, and target that PR's branch.
 - One plan unit per PR. Never push directly to `v2`. A human merges.
 - Short hyphenated branch names, no slashes. Titles `type(scope): summary`.
+
+## Branding and upstream drift
+
+Decision: keep the approach in PR #15417 as an **interim adapter**, not a permanent branding API. Its reference implementation is `packages/kilo-cli/src/branding/`; check whether the PR is merged before assuming those files exist on your branch.
+
+- For these CLI/TUI surfaces, v1 used Kilo constants and OAuth wrappers called from patched shared files, rather than a translation catalog. The v2 adapter instead transforms selected upstream source text in memory, through Kilo-owned runtime/build wiring. Upstream source and unhosted behavior stay unchanged. Compiled binaries contain the branded result; they do not rewrite installed source at startup.
+- The adapter still depends on exact paths and text anchors. Fewer shared-file patches does **not** mean less semantic coupling or automatic adaptation to upstream changes.
+- Known anchor changes throw, and the branding tests read every mapped file and check each replacement. Changed wording and moved/deleted files must fail CI. In source development a missing anchor can also fail module loading; do not promise that drift is always a harmless fallback.
+- New upstream text outside the mapping can remain unbranded without failing current tests. It needs manual review. A dedicated sync-time branding audit/report is a proposed follow-up, **not implemented automation**.
+
+At every upstream sync, and after merging a newer `v2` into a branding branch:
+
+1. Read the previous and new upstream pins through the sync tooling. Inspect renames, deletions and changes to mapped files; do not rely only on merge conflicts.
+2. Locate moved code and update its mapping. Review changed wording before updating replacement anchors. Remove an entry only when its behavior is gone or tracked elsewhere; never weaken assertions just to make CI pass.
+3. Review new user-visible names, commands, titles, links and callback pages. Preserve real OpenCode provider identities, package imports, protocol/keybind IDs and schema URLs. Use the host's config filename source, such as `KiloConfigFiles.newFile`, rather than guessing from the product name.
+4. Run the focused branding tests and affected package typechecks. Keep both upstream/hosted controls, OAuth escaping checks, and real TSX rendering coverage in source and compiled modes. Repeat isolated source/compiled smoke checks when their surfaces change.
+5. Record mapping adaptations, test results and remaining gaps in the sync/feature PR. Keep live CI status and evidence current; source-rendered OAuth screenshots do not prove a live browser sign-in.
+
+The legacy sync branding passes exist but are disabled by default and process conflicts only. Do not enable them as a substitute for this review: their broad rules and scope differ from the adapter. Moving the same mapping to sync time or generated copies does not remove its path/string dependency. A stable API or a different generation mechanism needs a separate approved design; do not add upstream seams solely to remove Kilo-owned code.
 
 ## Isolation: never touch the v1 setup
 
