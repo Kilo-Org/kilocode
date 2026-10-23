@@ -937,6 +937,62 @@ describe("KiloGatewayPlugin", () => {
     )
   }
 
+  // v1 `provider/catalog.ts:recommend` asks for defaults only on the Kilo API origin. A custom server gets the
+  // first team model, or for a personal account the first model in v1 `Provider.sort` order.
+  for (const scope of [
+    { name: "Kilo API personal", kilo: true, key: () => "token" },
+    { name: "custom base URL personal", baseURL: true, key: () => "token" },
+    { name: "custom base URL team", baseURL: true, team: true, key: () => "token" },
+    { name: "custom token URL personal", key: (url: string) => `${url}:secret` },
+    { name: "custom token URL team", team: true, key: (url: string) => `${url}/api/organizations/selected:secret` },
+  ]) {
+    it.live(`requests defaults only for the Kilo API origin: ${scope.name}`, () =>
+      Effect.acquireUseRelease(
+        Effect.sync(() => fixture()),
+        (backend) =>
+          withEnv(
+            {
+              ...env,
+              KILO_API_URL: scope.kilo ? backend.url : undefined,
+              KILO_API_KEY: scope.key(backend.url),
+              KILO_ORG_ID: scope.team ? "selected" : undefined,
+            },
+            () =>
+              Effect.gen(function* () {
+                backend.state.defaults = { defaultModel: "kilo-auto/free", defaultFreeModel: "kilo-auto/free" }
+                backend.state.teamModels = {
+                  data: [
+                    { id: "anthropic/claude-X", name: "First allowed", context_length: 128000 },
+                    { id: "kilo-auto/frontier", name: "Personal fallback also allowed", context_length: 128000 },
+                  ],
+                }
+                if (scope.baseURL) {
+                  const config = yield* Config.Test
+                  yield* config.setEntries([new Document({
+                    type: "document",
+                    info: Schema.decodeUnknownSync(Info)({ providers: { kilo: { settings: { baseURL: backend.url } } } }),
+                  })])
+                }
+                yield* addPlugin()
+                const models = yield* Model.Service
+                const chosen = (yield* models.default())?.id
+                const defaults = backend.requests.filter((request) => request.path.endsWith("/defaults"))
+                if (scope.kilo) {
+                  expect(defaults.map((request) => request.path)).toEqual(["/api/defaults"])
+                  expect(chosen).toBe(Model.ID.make("kilo-auto/free"))
+                  return
+                }
+                expect(defaults).toEqual([])
+                if (scope.team) expect(chosen).toBe(Model.ID.make("anthropic/claude-X"))
+                // v1 sort: no priority match, so the highest ID wins.
+                else expect(chosen).toBe(Model.ID.make("kilo-auto/small"))
+              }),
+          ),
+        (backend) => Effect.sync(() => backend[Symbol.dispose]()),
+      ),
+    )
+  }
+
   for (const dialect of [
     {
       provider: "anthropic",

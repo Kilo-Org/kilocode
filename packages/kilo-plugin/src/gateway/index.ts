@@ -391,6 +391,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             server: api,
             token,
             organizationID,
+            endpoint: base,
           }),
         ],
         { concurrency: 2 },
@@ -404,7 +405,8 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             ? defaultModelID
             : organizationID
               ? models[0]?.id
-              : defaultModelID
+              : // Only a custom server answers no personal default: keep the default on the Kilo provider as v1.
+                (defaultModelID ?? KiloDefaults.firstSorted(models.map((model) => model.id)))
         // Key the snapshot by the actual scope of the returned data: a 401 personal fallback returns the
         // anonymous free catalog (`anonymous === true`), so never store it under the personal token key.
         const writeKey = organizationID
