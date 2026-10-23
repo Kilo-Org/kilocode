@@ -10,7 +10,7 @@ This file records the upstream release `origin/v2` is synced to, the validation 
 
 | Ref | SHA | Date | Note |
 |---|---|---|---|
-| Sync branch (measured) | `021d6b31848` | 2026-10-23 | `sync-v2-1-3`: the `v2.1.3` sync merge `0d8ae9be328` plus `origin/v2` `2af82eef6a8` (#15405) |
+| Sync branch (measured) | `021d6b31848` | 2026-10-23 | `sync-v2-1-3`: the `v2.1.3` sync merge `0d8ae9be328` plus `origin/v2` `2af82eef6a8` (#15405). After the later merge of `origin/v2` `aa7d29226e4` (#15345, #15407) at `d75e69380b1`, `check`, the generated-file checks, the Kilo checks and the `tui` (1,604), `plugin` (9), `kilo-plugin` (188) and `kilo-cli` (62) tests were run again and pass |
 | Current upstream base | `37d973754ba6cc31732f93421c0c18b675841573` | 2026-10-22 | Release commit of `v2.1.3` (parent of the tag) |
 | `upstream/dev` at capture | `2a3e7c0f349` | 2026-10-23 | 72 commits past the current base. Lag: 1 release (`v2.1.4`) |
 
@@ -26,7 +26,7 @@ Measured with `bun migration-tracking/technical-notes/script/v2-baseline.ts --ch
 | `sdk-verify-package`, `codemode-publish-dry-run` | pass | |
 | CLI build, binary version, service smoke | pass | |
 | Kilo build, host smoke, CLI startup ratchet | pass | |
-| Workflow allowlist, annotations, shared patches, progress map, Kilo import rule | pass | Shared patches: 44 files, 329 marked and 39 unmarked lines against `37d973754ba` |
+| Workflow allowlist, annotations, shared patches, progress map, Kilo import rule | pass | Shared patches: 46 files, 334 marked and 39 unmarked lines against `37d973754ba` (at `d75e69380b1`) |
 | Node build and smoke | not run | CI pins Node 26.4.0; this host has v25.2.1 |
 | `lint:effect-patterns` | **fail** | 27 errors, unchanged. Not run by CI |
 
