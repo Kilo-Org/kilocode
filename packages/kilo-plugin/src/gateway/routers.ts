@@ -370,6 +370,11 @@ export interface EvalConfigInput {
   readonly credential: (provider: Provider.Info) => Effect.Effect<Credential.Value | undefined>
 }
 
+/** The integration that holds a provider's credential, as model resolution reads it. */
+export function integrationOf(provider: Provider.Info) {
+  return provider.integrationID ?? provider.id
+}
+
 export function evalConfig(input: EvalConfigInput) {
   return Effect.gen(function* () {
     const kilo = {

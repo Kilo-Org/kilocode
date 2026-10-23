@@ -212,7 +212,8 @@ export function runItem(
             `case ${item.caseId} rep ${item.rep} ${label(item.entry)} variant ${item.variant ?? "default"}: score ${score.score.toFixed(3)}`,
           )
         }),
-      (env) => Effect.promise(() => fs.rm(env.dir, { recursive: true, force: true })),
+      // Best effort: a cleanup error must not abort the other cases.
+      (env) => Effect.tryPromise(() => fs.rm(env.dir, { recursive: true, force: true })).pipe(Effect.ignore),
     )
   })
 }

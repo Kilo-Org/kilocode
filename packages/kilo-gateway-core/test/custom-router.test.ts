@@ -199,6 +199,33 @@ describe("routing decision", () => {
     expect(backend.state.customRouterBodies.length).toBe(2)
   })
 
+  test("an entry edit reaches the next decision instead of waiting for the cache", async () => {
+    const { backend, run } = setup("token-edit")
+    using _ = backend
+    expect(await run({ now: () => 1_000 })).toBeUndefined()
+    const account = { server: backend.url, token: "token-edit", organizationID: null, version: "1.0.0" }
+    await Effect.runPromise(
+      KiloCustomRouter.register(
+        account,
+        { scope: "user", slug: "myrouter" },
+        KiloCustomRouter.clientEntry({
+          provider: "ollama",
+          model: "qwen3",
+          variants: [],
+          context: 0,
+          input: ["text"],
+          toolCall: true,
+          reasoning: false,
+        }),
+      ),
+    )
+    expect(await run({ now: () => 2_000 })).toMatchObject({ kind: "client", provider: "ollama", model: "qwen3" })
+    await Effect.runPromise(
+      KiloCustomRouter.remove(account, { scope: "user", slug: "myrouter" }, { provider: "ollama", model: "qwen3" }),
+    )
+    expect(await run({ now: () => 3_000 })).toBeUndefined()
+  })
+
   test("shares one router list request between concurrent decisions", async () => {
     const { backend, run } = setup("token-shared")
     using _ = backend

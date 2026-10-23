@@ -334,7 +334,7 @@ export function register(account: Account, reference: Reference, entry: ClientEn
     account,
     { url: clientEntriesUrl(account, reference), method: "POST", body: { entry } },
     RouterResponse,
-  )
+  ).pipe(Effect.ensuring(evict(account)))
 }
 
 export function remove(
@@ -347,7 +347,7 @@ export function remove(
     account,
     { url: `${clientEntriesUrl(account, reference)}?${query.toString()}`, method: "DELETE" },
     RouterResponse,
-  )
+  ).pipe(Effect.ensuring(evict(account)))
 }
 
 export function decide(account: Account, body: DecideRequest) {
@@ -470,12 +470,21 @@ export interface ResolveInput {
 // entries are swept and the key holds a hash, not the token.
 const cache = new Map<string, { readonly at: number; readonly value: Effect.Effect<ListResponse, Error> }>()
 
+function cacheKey(account: Account) {
+  return createHash("sha256")
+    .update(`${account.server}\n${account.token}\n${account.organizationID ?? ""}`)
+    .digest("hex")
+}
+
+// An entry edit must reach the next routing decision, not the one after the cache expires.
+function evict(account: Account) {
+  return Effect.sync(() => cache.delete(cacheKey(account)))
+}
+
 function routers(account: Account, now: number) {
   return Effect.gen(function* () {
     for (const [key, entry] of cache) if (now - entry.at >= LIST_TTL_MS) cache.delete(key)
-    const key = createHash("sha256")
-      .update(`${account.server}\n${account.token}\n${account.organizationID ?? ""}`)
-      .digest("hex")
+    const key = cacheKey(account)
     const hit = cache.get(key)
     if (hit) return yield* hit.value
     const value = yield* Effect.cached(list(account))

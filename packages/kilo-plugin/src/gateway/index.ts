@@ -837,7 +837,6 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     const clientRoutes = new Map<string, { provider: string; model: string }>()
     // The response stamp runs only for providers that served a client pick, so other providers keep the plain
     // request path (a session HTTP hook makes the request builder copy every request body).
-    const pluginScope = yield* Effect.scope
     const stamped = new Set<string>()
     const stampProvider = (providerID: string) =>
       stamped.has(providerID)
@@ -850,7 +849,8 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
                 { providerID },
               ),
             ),
-            Effect.provideService(Scope.Scope, pluginScope),
+            // The activation scope, so a reload disposes these hooks with the rest of the plugin.
+            Effect.provideService(Scope.Scope, scope),
             Effect.asVoid,
           )
     // No provider filter: every request clears the session's previous client route, so a later direct request to
@@ -877,7 +877,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             ),
           credential: (provider) =>
             Effect.gen(function* () {
-              const connection = yield* ctx.integration.connection.active(provider.integrationID ?? provider.id)
+              const connection = yield* ctx.integration.connection.active(GatewayRouters.integrationOf(provider))
               return connection ? yield* ctx.integration.connection.resolve(connection) : undefined
             }).pipe(Effect.orElseSucceed(() => undefined)),
         }),

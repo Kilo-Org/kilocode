@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { Media, Message } from "@opencode/ai"
 import { KiloCustomRouter } from "@kilocode/gateway-core"
+import { IntegrationID } from "@opencode/schema/integration-id"
 import { Model } from "@opencode/schema/model"
 import { Money } from "@opencode/schema/money"
 import { Provider } from "@opencode/schema/provider"
@@ -387,6 +388,11 @@ describe("eval container config", () => {
       }),
     )
     expect(seen).toEqual(["ollama"])
+    // Console-managed providers keep their own ID but store the credential under their integration.
+    expect(String(GatewayRouters.integrationOf({ ...provider, integrationID: IntegrationID.make("opencode") }))).toBe(
+      "opencode",
+    )
+    expect(String(GatewayRouters.integrationOf(provider))).toBe("ollama")
   })
 
   test("sends the provider credential and the Kilo account only in auth", async () => {
