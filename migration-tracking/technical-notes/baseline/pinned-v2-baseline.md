@@ -1,10 +1,43 @@
 # Pinned upstream v2 baseline
 
-Status: living. Refreshed 2026-10-23 on the `v2.1.1` sync branch `sync-v2-1-1`, synced to upstream `v2.1.1`. The base moves with every upstream sync (plan A4), so re-measure after each sync. The 2026-10-16 capture at `v2.0.30` and the 2026-10-11 capture at the initial base are kept below as previous captures. The 2026-08-13 capture at `76dbaf20` (old branch `johnnyeric/v2-baseline`) survives in git history only.
+Status: living. Refreshed 2026-10-23 on the `v2.1.3` sync branch `sync-v2-1-3`, synced to upstream `v2.1.3` (the sync includes `v2.1.2`). The base moves with every upstream sync (plan A4), so re-measure after each sync. The `v2.1.1` capture (2026-10-23), the 2026-10-16 capture at `v2.0.30` and the 2026-10-11 capture at the initial base are kept below as previous captures. The 2026-08-13 capture at `76dbaf20` (old branch `johnnyeric/v2-baseline`) survives in git history only.
 
 This file records the upstream release `origin/v2` is synced to, the validation commands that this tree defines, and the result of running them. Compare any failing check against this file, and against `origin/v2` before your change, before you attribute it to a change (`migration-context.md`, Conventions).
 
-## Current capture: `v2.1.1` (2026-10-23)
+## Current capture: `v2.1.3` (2026-10-23)
+
+### Refs
+
+| Ref | SHA | Date | Note |
+|---|---|---|---|
+| Sync branch (measured) | `021d6b31848` | 2026-10-23 | `sync-v2-1-3`: the `v2.1.3` sync merge `0d8ae9be328` plus `origin/v2` `2af82eef6a8` (#15405) |
+| Current upstream base | `37d973754ba6cc31732f93421c0c18b675841573` | 2026-10-22 | Release commit of `v2.1.3` (parent of the tag) |
+| `upstream/dev` at capture | `2a3e7c0f349` | 2026-10-23 | 72 commits past the current base. Lag: 1 release (`v2.1.4`) |
+
+Measured with `bun migration-tracking/technical-notes/script/v2-baseline.ts --checks` in a clean detached worktree outside the repository. Toolchain: bun 1.4.4 (the new `packageManager`), node v25.2.1, macOS 26.6 arm64, macOS bash 3.2, `rg` on PATH (Homebrew), login shell fish. `origin/v2` `2af82eef6a8` was measured with the same script (`--only test`) and bun 1.4.2.
+
+### Results
+
+| Check | Result | Detail |
+|---|---|---|
+| `install`, `check` (`bun run check`), effect simplification lint and rule tests | pass | `bun.lock` unchanged. `check`: 28/28 turbo tasks, oxlint 209 warnings, 0 errors |
+| `test` (`bun turbo test --continue --force`, isolated) | **fail** | 25/26 tasks pass, 4 min 8 s. `@opencode/core`: 6,732 pass, 13 fail (`origin/v2`: 6,693 pass, the same 13 fail). All other packages pass, for example `@opencode/cli` 339, `@opencode/tui` 1,601, `@opencode/server` 87, `@kilocode/gateway-core` 104, `@kilocode/kilo-plugin` 188, `@kilocode/kilo-cli` 62 |
+| `client`, `www`, `protocol` `check:generated` | pass | No drift |
+| `sdk-verify-package`, `codemode-publish-dry-run` | pass | |
+| CLI build, binary version, service smoke | pass | |
+| Kilo build, host smoke, CLI startup ratchet | pass | |
+| Workflow allowlist, annotations, shared patches, progress map, Kilo import rule | pass | Shared patches: 44 files, 329 marked and 39 unmarked lines against `37d973754ba` |
+| Node build and smoke | not run | CI pins Node 26.4.0; this host has v25.2.1 |
+| `lint:effect-patterns` | **fail** | 27 errors, unchanged. Not run by CI |
+
+### Current reds
+
+The 13 `@opencode/core` cases of the `v2.1.1` capture, unchanged. The failure set is identical on `origin/v2` `2af82eef6a8` (before the sync) on this host. None is attributable to the sync or to a Kilo change.
+
+1. **macOS bash 3.2, 7 cases:** `ShellTool conditional process substitution` (4), `ShellTool compound syntax approval compatibility` (2), `real-shell compound syntax > bash` (1). Green on Linux CI.
+2. **Login shell, 6 cases:** `Session.shell > …` (`packages/core/test/session-shell.test.ts`) times out when `SHELL` is fish. With `SHELL=/bin/zsh` the file passes (9 pass).
+
+## Previous capture: `v2.1.1` (2026-10-23)
 
 ### Refs
 
