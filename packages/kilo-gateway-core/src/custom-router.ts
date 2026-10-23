@@ -434,7 +434,7 @@ function request<S extends Schema.ConstraintDecoder<unknown>>(
     )
     const text = yield* Effect.promise(() => response.text())
     const json = text.length > 0 ? parseJson(text) : undefined
-    if (!response.ok) return yield* Effect.fail(failure(response.status, json ?? text))
+    if (!response.ok) return yield* Effect.fail(failure(response.status, json))
     const decoded = Schema.decodeUnknownOption(schema)(json)
     if (Option.isSome(decoded)) return decoded.value
     return yield* Effect.fail(
@@ -447,11 +447,12 @@ function request<S extends Schema.ConstraintDecoder<unknown>>(
   })
 }
 
+// A body that is not JSON (for example an HTML error page) is not shown to the user, as on v1.
 function parseJson(text: string): unknown {
   try {
     return JSON.parse(text)
   } catch {
-    return text
+    return undefined
   }
 }
 

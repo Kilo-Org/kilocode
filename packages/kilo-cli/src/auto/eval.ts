@@ -1,5 +1,6 @@
 import { KiloCustomRouter } from "@kilocode/gateway-core"
 import { Runtime } from "@opencode/cli/framework/runtime"
+import { UI } from "@opencode/cli/run/ui"
 import { OPENCODE_VERSION } from "@opencode/cli/version"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { Effect, Option, Schema } from "effect"
@@ -19,7 +20,7 @@ import {
   type EvalContainerResult,
 } from "./eval-docker"
 import { parseKiloRunEvents } from "./eval-events"
-import { CallError, call, connect, decode, print, reference, report, UsageError } from "./shared"
+import { CallError, call, connect, decode, info, prefixed, reference, report, UsageError } from "./shared"
 
 // `kilo auto eval`: port of v1 packages/opencode/src/kilocode/auto-routing/eval.ts (#15183). Runs the missing client
 // evals of a custom router, one fresh container per case, and uploads each result at once. The server resolves the
@@ -42,7 +43,7 @@ export default Runtime.handler(
     const list = yield* decode(
       KiloCustomRouter.ListResponse,
       yield* call(() => connection.rpc["routers.list"]({}, connection.options)).pipe(
-        Effect.mapError((error) => new CallError(`Could not load the router list: ${error.message}`, error.code)),
+        Effect.mapError(prefixed("Could not load the router list")),
       ),
     )
     const router = list.routers.find((item) => item.modelId === target.modelID)
@@ -61,25 +62,25 @@ export default Runtime.handler(
 
     const image = evalImageTag(cli.version)
     if ((yield* exec(["docker", "image", "inspect", image], { timeout: 30_000 })).code !== 0) {
-      yield* print(`Building the eval image ${image} (node:22-slim + @kilocode/cli@${cli.version})...`)
+      yield* info(`Building the eval image ${image} (node:22-slim + @kilocode/cli@${cli.version})...`)
       yield* buildImage(image, cli.version)
     }
 
     const plan = yield* decode(
       KiloCustomRouter.EvalPlan,
       yield* call(() => connection.rpc["routers.evalPlan"]({ routerID: router.id }, connection.options)).pipe(
-        Effect.mapError((error) => new CallError(`Could not load the eval plan: ${error.message}`, error.code)),
+        Effect.mapError(prefixed("Could not load the eval plan")),
       ),
     )
     if (plan.items.length === 0)
-      return yield* print(`Nothing to evaluate for ${router.modelId}: every entry has a current result.`)
+      return yield* info(`Nothing to evaluate for ${router.modelId}: every entry has a current result.`)
 
     const cases = new Map<string, KiloCustomRouter.EvalCase>()
     if (input.debugConfig) {
       const first = plan.items[0]!
       const resolved = yield* resolveCase(connection, router, first, cases)
-      yield* print("kilo auto eval would run:")
-      return yield* print(
+      yield* info("kilo auto eval would run:")
+      return yield* info(
         KiloCustomRouter.redacted({
           image,
           args: evalDockerRunArgs({
@@ -96,12 +97,10 @@ export default Runtime.handler(
       )
     }
 
-    yield* print(`Eval plan for ${router.modelId}: ${plan.items.length} case(s), engine ${plan.engineIdentity}.`)
+    yield* info(`Eval plan for ${router.modelId}: ${plan.items.length} case(s), engine ${plan.engineIdentity}.`)
     for (const stale of plan.staleEntries)
-      yield* print(
-        `  stale: ${label(stale.entry)} variant ${stale.variant ?? "default"} (serving an older measurement)`,
-      )
-    if (!input.yes && !(yield* confirm(input.router))) return yield* print("Cancelled.")
+      yield* info(`  stale: ${label(stale.entry)} variant ${stale.variant ?? "default"} (serving an older measurement)`)
+    if (!input.yes && !(yield* confirm(input.router))) return yield* info("Cancelled.")
 
     const queue = [...plan.items]
     const stats = { uploaded: 0, failed: 0 }
@@ -114,7 +113,7 @@ export default Runtime.handler(
           Effect.catch((error) =>
             Effect.gen(function* () {
               stats.failed++
-              process.stderr.write(`case ${item.caseId} rep ${item.rep}: ${error.message}${os.EOL}`)
+              UI.error(`case ${item.caseId} rep ${item.rep}: ${error.message}`)
               if (error instanceof CallError && error.code && STOP_CODES.has(error.code)) {
                 stats.failed += queue.length
                 queue.length = 0
@@ -132,7 +131,7 @@ export default Runtime.handler(
       return yield* Effect.fail(
         new UsageError(`${stats.uploaded} case(s) uploaded, ${stats.failed} failed. Re-run to resume.`),
       )
-    yield* print(`${stats.uploaded} case(s) uploaded and graded.`)
+    yield* info(`${stats.uploaded} case(s) uploaded and graded.`)
   }, Effect.catch(report())),
 )
 
@@ -198,7 +197,7 @@ function runItem(
           ),
         ),
       )
-      yield* print(
+      yield* info(
         `case ${item.caseId} rep ${item.rep} ${label(item.entry)} variant ${item.variant ?? "default"}: score ${score.score.toFixed(3)}`,
       )
     }).pipe(Effect.ensuring(Effect.promise(() => fs.rm(env.dir, { recursive: true, force: true }))))

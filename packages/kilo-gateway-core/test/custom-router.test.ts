@@ -293,6 +293,15 @@ describe("web routes", () => {
     expect(backend.requests.at(-1)?.organizationID).toBe("team")
   })
 
+  test("hides an error body that is not JSON", async () => {
+    backend.state.customRoutersStatus = 503
+    const error = await Effect.runPromise(
+      Effect.flip(KiloCustomRouter.list({ server: backend.url, token: "token", version: "1.0.0" })),
+    )
+    expect(error).toMatchObject({ code: "internal_error", message: "request failed", status: 503 })
+    expect(KiloCustomRouter.describe(error)).toBe("Kilo auto routing failed (request failed).")
+  })
+
   test("rejects a case response without the exact prompt", async () => {
     backend.state.evalCase = {
       caseId: "case-1",

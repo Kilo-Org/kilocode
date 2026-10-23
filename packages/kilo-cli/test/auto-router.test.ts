@@ -73,6 +73,7 @@ test("registers a client model and routes a custom router request to it", async 
       model: string
       sessionId: string
       mode: string
+      clientRequestId: string
       clientEntries: unknown[]
       messages: { role: string; content: unknown }[]
       tools?: unknown[]
@@ -83,7 +84,9 @@ test("registers a client model and routes a custom router request to it", async 
       mode: "code",
       clientEntries: [{ provider: "local", model: "echo" }],
     })
-    expect(decide.messages[0]?.role).toBe("system")
+    // As on v1: the conversation without the agent system prompt, and the user message ID as the client request ID.
+    expect(decide.messages.map((message) => message.role)).toEqual(["user"])
+    expect(decide.clientRequestId).toMatch(/^msg_/)
     expect(decide.messages).toContainEqual({ role: "user", content: [{ type: "text", text: "Say hi." }] })
     expect(decide.tools?.length).toBeGreaterThan(0)
 

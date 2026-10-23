@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Media, Message, SystemPart } from "@opencode/ai"
+import { Media, Message } from "@opencode/ai"
 import { KiloCustomRouter } from "@kilocode/gateway-core"
 import { Model } from "@opencode/schema/model"
 import { Money } from "@opencode/schema/money"
@@ -53,8 +53,7 @@ describe("openai message conversion", () => {
       Message.tool({ id: "call_1", name: "read", result: "ok", resultType: "text" }),
       Message.tool({ id: "call_2", name: "glob", result: { files: 1 } }),
     ]
-    expect(GatewayRouters.openaiMessages([SystemPart.make("be brief")], messages)).toEqual([
-      { role: "system", content: "be brief" },
+    expect(GatewayRouters.openaiMessages(messages)).toEqual([
       {
         role: "user",
         content: [
@@ -92,7 +91,7 @@ describe("openai message conversion", () => {
         media({ type: "ref", provider: "openai" as never, id: "file-1", mediaType: "application/pdf" }),
       ]),
     ]
-    expect(GatewayRouters.openaiMessages([], messages)).toEqual([
+    expect(GatewayRouters.openaiMessages(messages)).toEqual([
       {
         role: "user",
         content: [
@@ -109,7 +108,7 @@ describe("openai message conversion", () => {
   })
 
   test("drops unsupported parts and keeps an empty content string", () => {
-    expect(GatewayRouters.openaiMessages([], [Message.user([{ type: "reasoning", text: "x" }])])).toEqual([
+    expect(GatewayRouters.openaiMessages([Message.user([{ type: "reasoning", text: "x" }])])).toEqual([
       { role: "user", content: "" },
     ])
   })
@@ -140,6 +139,16 @@ describe("routed model", () => {
     expect(unknownVariant?.variant).toBeUndefined()
   })
 
+  test("routes a client pick even when the router itself is not in the catalog", () => {
+    const routed = GatewayRouters.target(
+      { kind: "client", provider: "ollama", model: "qwen3", variant: null },
+      undefined,
+      CATALOG,
+    )
+    expect(routed?.model.id).toBe(Model.ID.make("qwen3"))
+    expect(routed?.variant).toBeUndefined()
+  })
+
   test("returns undefined for a client pick that vanished from the catalog", () => {
     expect(
       GatewayRouters.target({ kind: "client", provider: "lmstudio", model: "qwen3", variant: null }, ROUTER, CATALOG),
@@ -162,6 +171,8 @@ describe("routed model", () => {
     expect(unknown?.model.id).toBe(Model.ID.make("vendor/private-model"))
     expect(unknown?.model.modelID).toBe(Model.ID.make("vendor/private-model"))
     expect(unknown?.model.providerID).toBe(Provider.ID.make("kilo"))
+    // v1 kept the router model's request shape, including its variants.
+    expect(unknown?.model.variants).toEqual(ROUTER.variants)
   })
 
   test("carries the signed decision to the gateway and leaves the catalog model untouched", () => {
@@ -203,6 +214,32 @@ describe("routed client model stamp", () => {
     } as unknown as Parameters<typeof GatewayRouters.stamp>[0]
     GatewayRouters.stamp(event, routes)
     expect(await event.response.text()).toContain('"routedModelID":"echo"')
+
+    const silent = {
+      ...event,
+      response: new Response(`data: ${JSON.stringify({ choices: [], usage: { prompt_tokens: 1 } })}\n\n`, {
+        headers: { "content-type": "text/event-stream" },
+      }),
+    } as typeof event
+    GatewayRouters.stamp(silent, routes)
+    // A provider that reports no model records the routed model, as v1 did.
+    expect(await silent.response.text()).toContain('"routedModelID":"echo"')
+
+    // Only the kilo provider has custom routers: the same ID elsewhere is not routed and needs no account.
+    const foreign = {
+      ...base,
+      kind: "primary",
+      model: { providerID: Provider.ID.make("openrouter"), id: Model.ID.make("kilo-auto/custom/myrouter") },
+    } as Parameters<typeof GatewayRouters.route>[0]
+    await Effect.runPromise(
+      GatewayRouters.route(foreign, {
+        account: undefined,
+        routes,
+        models: Effect.succeed([]),
+        machineID: Effect.succeed(undefined),
+      }),
+    )
+    expect(foreign.target).toBeUndefined()
 
     const other = { ...event, kind: "title", response: new Response("data: {}\n\n") } as typeof event
     const original = other.response

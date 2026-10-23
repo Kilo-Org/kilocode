@@ -1,6 +1,6 @@
 export * as GatewayRouters from "./routers.js"
 
-import { KiloCustomRouter, KiloStream } from "@kilocode/gateway-core"
+import { KiloCustomRouter } from "@kilocode/gateway-core"
 import type { RpcCallContext, RpcHandlers } from "@opencode/plugin/effect/rpc"
 import type { SessionHooks } from "@opencode/plugin/effect/session"
 import type { Credential } from "@opencode/schema/credential"
@@ -30,14 +30,14 @@ export function route(event: Route, input: RouteInput) {
   const key = `${event.sessionID}:${event.kind}`
   return Effect.gen(function* () {
     input.routes.delete(key)
-    if (!KiloCustomRouter.parseModelID(event.model.id)) return
+    if (event.model.providerID !== "kilo" || !KiloCustomRouter.parseModelID(event.model.id)) return
     const models = yield* input.models
     const servable = (entry: { readonly provider: string; readonly model: string }) =>
       models.some((model) => model.providerID === entry.provider && model.id === entry.model)
     const pick = yield* KiloCustomRouter.resolve({
       account: input.account,
       modelID: event.model.id,
-      messages: openaiMessages(event.system, event.messages),
+      messages: openaiMessages(event.messages),
       tools: openaiTools(event.tools),
       sessionID: event.sessionID,
       requestID: event.messages.findLast((message) => message.role === "user")?.id,
@@ -47,7 +47,7 @@ export function route(event: Route, input: RouteInput) {
     })
     if (!pick) return
     const base = models.find((model) => model.providerID === event.model.providerID && model.id === event.model.id)
-    const routed = base ? target(pick, base, models) : undefined
+    const routed = target({ ...pick, variant: pick.variant ?? event.model.variant ?? null }, base, models)
     if (!routed)
       return yield* Effect.fail(new Error(KiloCustomRouter.errorMessage("custom_router_unavailable", event.model.id)))
     event.target = routed
@@ -57,12 +57,69 @@ export function route(event: Route, input: RouteInput) {
   }).pipe(Effect.orDie)
 }
 
-// A client pick runs on the owner's own provider, so the served model cannot come from a Gateway response. Stamp
-// the response model on the usage, as the Gateway stream does, so the step records it as the routed model.
+// A client pick runs on the owner's own provider, so the served model cannot come from a Gateway response. As on v1,
+// record the model the provider reports, else the routed model: stamp it on the usage, as the Gateway stream does, so
+// the step stores it as the routed model.
 export function stamp(event: SessionHooks["http.response"], routes: RouteInput["routes"]) {
   const route = routes.get(`${event.sessionID}:${event.kind}`)
   if (!route || route.provider !== event.model.providerID || event.response.status >= 400) return
-  event.response = KiloStream.transformResponse(event.response)
+  const body = event.response.body
+  if (!body || !(event.response.headers.get("content-type") ?? "").includes("text/event-stream")) return
+  const decoder = new TextDecoder()
+  const encoder = new TextEncoder()
+  const state = { buffer: "", reported: undefined as string | undefined }
+  const line = (text: string) => {
+    if (!text.startsWith("data:")) return text
+    const payload = parse(text.slice("data:".length).trim())
+    if (!payload) return text
+    const reported = [payload.model, record(payload.response)?.model, record(payload.message)?.model].find(
+      (value): value is string => typeof value === "string" && value.length > 0,
+    )
+    state.reported = reported ?? state.reported
+    const routedModelID = state.reported ?? route.model
+    const withUsage = (value: Record<string, unknown>) => {
+      const usage = record(value.usage)
+      return usage ? { ...value, usage: { ...usage, routedModelID } } : value
+    }
+    const next = {
+      ...withUsage(payload),
+      ...(record(payload.response) ? { response: withUsage(record(payload.response)!) } : {}),
+      ...(record(payload.message) ? { message: withUsage(record(payload.message)!) } : {}),
+    }
+    return JSON.stringify(next) === JSON.stringify(payload) ? text : `data: ${JSON.stringify(next)}`
+  }
+  const stream = body.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        const lines = (state.buffer + decoder.decode(chunk, { stream: true })).split("\n")
+        state.buffer = lines.pop() ?? ""
+        controller.enqueue(encoder.encode(lines.map((item) => line(item)).join("\n") + "\n"))
+      },
+      flush(controller) {
+        const rest = state.buffer + decoder.decode()
+        if (rest) controller.enqueue(encoder.encode(line(rest)))
+      },
+    }),
+  )
+  event.response = new Response(stream, {
+    status: event.response.status,
+    statusText: event.response.statusText,
+    headers: event.response.headers,
+  })
+}
+
+function parse(text: string) {
+  try {
+    return record(JSON.parse(text))
+  } catch {
+    return undefined
+  }
+}
+
+function record(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined
 }
 
 type Methods = RpcHandlers<typeof KiloGatewayRpc.Definition>
@@ -152,15 +209,19 @@ export function handlers(input: HandlerInput): Pick<Methods, RouterMethod> {
 }
 
 /** The model a decision names, with the decision header on Gateway picks. */
-export function target(pick: KiloCustomRouter.Resolution, base: Model.Info, models: readonly Model.Info[]) {
+// A decision without a variant keeps the variant selected for the router, as on v1. A variant the model does not
+// have is dropped, because v2 fails a request with an unknown variant.
+export function target(pick: KiloCustomRouter.Resolution, base: Model.Info | undefined, models: readonly Model.Info[]) {
   if (pick.kind === "client") {
     const model = models.find((item) => item.providerID === pick.provider && item.id === pick.model)
     return model ? { model, ...variant(model, pick.variant) } : undefined
   }
   // The Gateway catalog can omit a model the decision still names, for example a direct-BYOK entry the owner key
   // serves. Keep the router's request shape and let the Gateway resolve the concrete ID.
-  const known = models.find((item) => item.providerID === base.providerID && item.id === pick.model)
-  const model = known ?? { ...base, id: Model.ID.make(pick.model), modelID: Model.ID.make(pick.model), variants: [] }
+  const known = models.find((item) => item.providerID === "kilo" && item.id === pick.model)
+  const model =
+    known ?? (base ? { ...base, id: Model.ID.make(pick.model), modelID: Model.ID.make(pick.model) } : undefined)
+  if (!model) return undefined
   // The Gateway verifies the signed decision and records the custom router as the auto model.
   return {
     model: { ...model, headers: { ...model.headers, [KiloCustomRouter.DECISION_HEADER]: pick.decisionId } },
@@ -195,24 +256,22 @@ function modalities(values: readonly string[]) {
 
 // The routing worker classifies the request exactly as the Gateway does, so
 // client and Gateway decisions share one normalization. It receives OpenAI-format messages and tools.
-export function openaiMessages(system: Route["system"], messages: Route["messages"]): unknown[] {
-  return [
-    ...system.map((part) => ({ role: "system", content: part.text })),
-    ...messages.flatMap((message): unknown[] => {
-      if (message.role === "system")
-        return [
-          {
-            role: "system",
-            content: message.content.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n"),
-          },
-        ]
-      if (message.role === "user") return [{ role: "user", content: userContent(message.content) }]
-      if (message.role === "assistant") return [assistantContent(message.content)]
-      return message.content.flatMap((part) =>
-        part.type === "tool-result" ? [{ role: "tool", tool_call_id: part.id, content: toolResult(part.result) }] : [],
-      )
-    }),
-  ]
+// Like v1, it gets the conversation without the agent system prompt.
+export function openaiMessages(messages: Route["messages"]): unknown[] {
+  return messages.flatMap((message): unknown[] => {
+    if (message.role === "system")
+      return [
+        {
+          role: "system",
+          content: message.content.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n"),
+        },
+      ]
+    if (message.role === "user") return [{ role: "user", content: userContent(message.content) }]
+    if (message.role === "assistant") return [assistantContent(message.content)]
+    return message.content.flatMap((part) =>
+      part.type === "tool-result" ? [{ role: "tool", tool_call_id: part.id, content: toolResult(part.result) }] : [],
+    )
+  })
 }
 
 export function openaiTools(tools: Route["tools"]): unknown[] {
@@ -240,7 +299,7 @@ function filePart(media: Extract<Part, { type: "media" }>["media"], filename: st
   const inline = media.inline()
   const url = inline?.dataUrl ?? (media.source.type === "url" ? media.source.url : undefined)
   if (!url) return undefined
-  const mime = media.mediaType.toLowerCase()
+  const mime = media.mediaType
   if (mime.startsWith("image/")) return { type: "image_url", image_url: { url } }
   if (mime.startsWith("video/")) return { type: "video_url", video_url: { url } }
   if (mime.startsWith("audio/")) {
@@ -287,10 +346,6 @@ function assistantContent(content: readonly Part[]) {
 
 function toolResult(result: Extract<Part, { type: "tool-result" }>["result"]): string {
   if (result.type === "json") return JSON.stringify(result.value)
-  if (result.type === "content") {
-    const text = result.value.flatMap((item) => (item.type === "text" ? [item.text] : []))
-    return text.length === result.value.length ? text.join("\n") : JSON.stringify(result.value)
-  }
   return typeof result.value === "string" ? result.value : JSON.stringify(result.value)
 }
 
@@ -376,7 +431,7 @@ export function providerConfig(provider: Provider.Info, model: Model.Info) {
             reasoning: clientModel(model).reasoning,
             tool_call: model.capabilities.tools,
             attachment: model.capabilities.input.some((item) => item !== "text"),
-            temperature: model.capabilities.temperature ?? true,
+            temperature: model.capabilities.temperature ?? false,
             modalities: { input: modalities(model.capabilities.input), output: modalities(model.capabilities.output) },
             cost: {
               input: cost?.input ?? 0,
@@ -397,9 +452,17 @@ export function providerConfig(provider: Provider.Info, model: Model.Info) {
   }
 }
 
-// The published CLI loads AI SDK packages; v2 native packages name the same protocol.
+// The published CLI loads AI SDK packages; a v2 native package names the same protocol.
 function npm(pkg: string | undefined) {
   if (!pkg?.startsWith("@opencode/ai/providers/")) return pkg ?? "@ai-sdk/openai-compatible"
   const name = pkg.slice("@opencode/ai/providers/".length).split("/")[0]!
-  return name === "openrouter" ? "@openrouter/ai-sdk-provider" : `@ai-sdk/${name}`
+  if (name.startsWith("google-vertex")) return "@ai-sdk/google-vertex"
+  return NPM[name] ?? `@ai-sdk/${name}`
+}
+
+const NPM: Record<string, string> = {
+  openrouter: "@openrouter/ai-sdk-provider",
+  "anthropic-compatible": "@ai-sdk/anthropic",
+  "openai-compatible-responses": "@ai-sdk/openai-compatible",
+  "amazon-bedrock-mantle": "@ai-sdk/amazon-bedrock",
 }

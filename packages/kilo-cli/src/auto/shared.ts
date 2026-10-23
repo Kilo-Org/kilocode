@@ -1,6 +1,7 @@
 import { KiloCustomRouter } from "@kilocode/gateway-core"
 import { OpenCode } from "@opencode/client"
 import { Service } from "@opencode/client/effect/service"
+import { UI } from "@opencode/cli/run/ui"
 import { ServerConnection } from "@opencode/cli/services/server-connection"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { Effect, Option, Schema } from "effect"
@@ -39,6 +40,9 @@ export function call<A>(run: () => Promise<A>) {
   return Effect.tryPromise({
     try: run,
     catch: (cause) => {
+      // Signed out: the v1 message, without the command's failure prefix.
+      if (typeof cause === "object" && cause !== null && "type" in cause && cause.type === "unauthorized")
+        return new UsageError("Sign in to Kilo to use custom auto routers. Run `kilo auth login`.")
       if (typeof cause === "object" && cause !== null && "message" in cause && typeof cause.message === "string") {
         const data = "data" in cause ? cause.data : undefined
         const code =
@@ -52,20 +56,27 @@ export function call<A>(run: () => Promise<A>) {
   })
 }
 
+export function prefixed(prefix: string) {
+  return (error: CallError | UsageError) =>
+    error instanceof CallError ? new CallError(`${prefix}: ${error.message}`, error.code) : error
+}
+
 export function decode<S extends Schema.ConstraintDecoder<unknown>>(schema: S, value: unknown) {
   return Schema.decodeUnknownEffect(schema)(value).pipe(
     Effect.mapError(() => new CallError("Unexpected response from the custom router service")),
   )
 }
 
+// As on v1: data (router rows, JSON) goes to stdout, messages and progress to stderr, failures as `Error: ...`.
 export const print = (line = "") => Effect.sync(() => process.stdout.write(line + EOL))
+export const info = (line: string) => Effect.sync(() => UI.println(line))
 
-/** Prints `<prefix>: <message>` to stderr and sets a failing exit code. */
+/** Prints `Error: <prefix>: <message>` to stderr and sets a failing exit code. */
 export function report(prefix?: string) {
   return (error: unknown) =>
     Effect.sync(() => {
       const message = error instanceof Error ? error.message : String(error)
-      process.stderr.write((prefix && !(error instanceof UsageError) ? `${prefix}: ${message}` : message) + EOL)
+      UI.error(prefix && !(error instanceof UsageError) ? `${prefix}: ${message}` : message)
       process.exitCode = 1
     })
 }

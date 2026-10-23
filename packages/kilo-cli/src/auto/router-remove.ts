@@ -2,7 +2,7 @@ import { KiloCustomRouter } from "@kilocode/gateway-core"
 import { Runtime } from "@opencode/cli/framework/runtime"
 import { Effect } from "effect"
 import { AutoCommand } from "./auto"
-import { call, connect, decode, print, reference, report, splitModel } from "./shared"
+import { call, connect, decode, info, reference, report, splitModel } from "./shared"
 
 export default Runtime.handler(
   AutoCommand.commands.router.commands.remove,
@@ -17,7 +17,7 @@ export default Runtime.handler(
           connection.rpc["routers.remove"]({ router: input.router, model: input.model }, connection.options),
         ),
       )
-      yield* print(`Removed ${input.model} from ${response.router.modelId}.`)
+      yield* info(`Removed ${input.model} from ${response.router.modelId}.`)
     },
     Effect.catch(report("Could not remove the client entry")),
   ),
