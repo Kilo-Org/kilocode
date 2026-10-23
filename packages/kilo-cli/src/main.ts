@@ -5,7 +5,6 @@
 // directory (./env, imported first), Kilo's app name, and a serve handler (./serve) that gives the server the Kilo
 // plugins and service overrides (./host). Every server the CLI starts (background service, standalone, stdio) runs this entry with `serve`.
 // Keep it in step with the upstream file; the differences are marked "Kilo:".
-import { ensurePluginRuntime } from "@opencode/plugin/runtime"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { Cause, Effect } from "effect"
 import { getErrorReported } from "effect/Runtime"
@@ -23,6 +22,8 @@ import { EffectFlock } from "@opencode/util/effect-flock"
 import { Heap } from "@opencode/cli/heap"
 import { CpuProfile } from "@opencode/cli/cpu-profile"
 import { KiloApp } from "./app"
+
+import { ensurePluginRuntime } from "./index"
 
 ensurePluginRuntime()
 
