@@ -3,7 +3,7 @@
   "limits": {
     "files": 42,
     "files": 42,
-    "markedLines": 296,
+    "markedLines": 298,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -123,7 +123,7 @@
     },
     "packages/tui/src/plugin/builtins.ts": {
       "rung": 3,
-      "seam": "Register the built-in `KiloTeams` TUI plugin (`/teams`, `/team`, `/org`, `/orgs`). Stays after U-E0-01: the TUI loads its built-in list in the TUI process, which `SdkPlugins` (a server store) does not reach. The config-driven path (`plugins` in the TUI config, loaded by `tui/src/plugin/context.tsx`) loads only npm packages or local files, which a compiled binary does not have. A generic seam needs an `@opencode/tui` export of the list (package.json) plus an extension point in this file, which is not fewer shared lines than these two."
+      "seam": "Register the built-in `KiloTeams` TUI plugin (`/teams`, `/team`, `/org`, `/orgs`) and the `KiloUsage` TUI plugin (`/usage`, `/plans`, `/quota`). Stays after U-E0-01: the TUI loads its built-in list in the TUI process, which `SdkPlugins` (a server store) does not reach. The config-driven path (`plugins` in the TUI config, loaded by `tui/src/plugin/context.tsx`) loads only npm packages or local files, which a compiled binary does not have. A generic seam needs an `@opencode/tui` export of the list (package.json) plus an extension point in this file, which is not fewer shared lines than these two."
     },
     "packages/tui/test/fixture/local.tsx": {
       "rung": 3,
