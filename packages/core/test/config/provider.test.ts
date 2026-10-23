@@ -787,7 +787,7 @@ describe("ConfigProviderPlugin.Plugin", () => {
     }),
   )
 
-  it.effect("builds variants from configured reasoning and overlays configured variants", () =>
+  it.effect("builds configured reasoning variants after provider and model package normalization", () =>
     Effect.gen(function* () {
       const models = yield* Model.Service
       const providerID = Provider.ID.make("custom")
@@ -802,6 +802,24 @@ describe("ConfigProviderPlugin.Plugin", () => {
                   effort: {
                     capabilities: { reasoning: { supported: true, effort: ["default", "low", "high"] } },
                     variants: [{ id: "high", headers: { "x-tier": "high" } }],
+                  },
+                  gpt: {
+                    package: "aisdk:@ai-sdk/openai",
+                    capabilities: { reasoning: { supported: true, effort: ["low", "high"] } },
+                    variants: [{ id: "high", headers: { "x-tier": "high" } }],
+                  },
+                  "claude-sonnet-4-5": {
+                    package: "aisdk:@ai-sdk/anthropic",
+                    capabilities: { reasoning: { supported: true, budget: { min: 1024 } } },
+                    limit: { output: 64_000 },
+                  },
+                  "gemini-3.1-pro": {
+                    package: "aisdk:@ai-sdk/google",
+                    capabilities: { reasoning: { supported: true, effort: ["low", "high"] } },
+                  },
+                  "magistral-medium": {
+                    package: "aisdk:@ai-sdk/mistral",
+                    capabilities: { reasoning: { supported: true, effort: ["low", "high"] } },
                   },
                   fixed: { capabilities: { reasoning: { supported: true } } },
                   plain: { capabilities: { reasoning: { supported: false } } },
@@ -823,6 +841,33 @@ describe("ConfigProviderPlugin.Plugin", () => {
           settings: { reasoningEffort: "high", reasoningSummary: "auto", include: ["reasoning.encrypted_content"] },
           headers: { "x-tier": "high" },
         },
+      ])
+      const gpt = required(yield* models.get(providerID, Model.ID.make("gpt")))
+      expect(gpt.package).toBe("@opencode/ai/providers/openai")
+      expect(gpt.variants).toEqual(effort.variants)
+      const claude = required(yield* models.get(providerID, Model.ID.make("claude-sonnet-4-5")))
+      expect(claude.package).toBe("@opencode/ai/providers/anthropic")
+      expect(claude.variants).toEqual([
+        { id: Model.VariantID.make("high"), settings: { thinking: { type: "enabled", budgetTokens: 16_000 } } },
+        { id: Model.VariantID.make("max"), settings: { thinking: { type: "enabled", budgetTokens: 31_999 } } },
+      ])
+      const gemini = required(yield* models.get(providerID, Model.ID.make("gemini-3.1-pro")))
+      expect(gemini.package).toBe("@opencode/ai/providers/google")
+      expect(gemini.variants).toEqual([
+        {
+          id: Model.VariantID.make("low"),
+          settings: { thinkingConfig: { includeThoughts: true, thinkingLevel: "low" } },
+        },
+        {
+          id: Model.VariantID.make("high"),
+          settings: { thinkingConfig: { includeThoughts: true, thinkingLevel: "high" } },
+        },
+      ])
+      const magistral = required(yield* models.get(providerID, Model.ID.make("magistral-medium")))
+      expect(magistral.package).toBe("@opencode/ai/providers/mistral")
+      expect(magistral.variants).toEqual([
+        { id: Model.VariantID.make("low"), settings: { reasoningEffort: "low" } },
+        { id: Model.VariantID.make("high"), settings: { reasoningEffort: "high" } },
       ])
       expect(required(yield* models.get(providerID, Model.ID.make("fixed"))).variants).toEqual([])
       expect(required(yield* models.get(providerID, Model.ID.make("plain"))).variants).toEqual([])

@@ -187,7 +187,7 @@ export type DialogFooterAction = {
   command?: string
   onTrigger?: () => void
   disabled?: boolean
-  /** Overrides the title color, e.g. for a "✓ copied" confirmation. */
+  /** Overrides the title and key color, e.g. for a "copied ✓" confirmation. */
   color?: RGBA
 }
 
@@ -278,7 +278,7 @@ function DialogFooterItem(props: { action: DialogFooterAction; variant: "primary
         {props.action.title}
       </span>
       <Show when={props.action.key}>
-        <span style={{ fg: props.action.disabled ? theme.text.action.primary.disabled : key }}>
+        <span style={{ fg: props.action.disabled ? theme.text.action.primary.disabled : (props.action.color ?? key) }}>
           {" " + props.action.key}
         </span>
       </Show>
