@@ -131,6 +131,9 @@ export const Plugin = define({
             if (config.capabilities !== undefined)
               model.capabilities = Model.mergeCapabilities(config.capabilities, model.capabilities)
             if (config.limit !== undefined) model.limit = { ...model.limit, ...config.limit }
+          })
+          // Variants are spelled for the final package, which the update above normalizes from `aisdk:*`.
+          models.update(providerID, id, (model) => {
             // Configured reasoning replaces the base variants; configured variants still overlay them below.
             if (config.capabilities?.reasoning !== undefined)
               model.variants = [
