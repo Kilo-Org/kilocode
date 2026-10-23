@@ -1,7 +1,7 @@
 import path from "path"
 import fs from "fs/promises"
 import { Cause, Effect, Exit, Fiber, Scope } from "effect"
-import { SessionID, PartID } from "@/session/schema"
+import { SessionID, MessageID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
 import { Agent } from "@/agent/agent"
@@ -16,6 +16,11 @@ import type { EventV2 } from "@opencode-ai/core/event"
 import { Interrupted } from "@opencode-ai/schema/kilocode/session-drain"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import { KiloSessionSteering } from "@/kilocode/session/steering"
+import { KiloSessionSteeringInbox } from "@/kilocode/session/steering-inbox"
+import { Context } from "effect"
+import type { Config } from "@/config/config"
+import type { RuntimeFlags } from "@/effect/runtime-flags"
 import { Permission } from "@/permission"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { Question } from "@/question"
@@ -30,6 +35,20 @@ import { MemoryMarker } from "@/kilocode/memory/marker"
 import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import { consumeAutoTitle, markAutoTitle } from "@/kilo-sessions/rename-adoptions"
+
+
+
+// Context.Service keys on this string, so this is the same tag instance as the
+// shared prompt service. Declared here because the shared module imports this
+// one, and the shared file asserts the shape stays compatible.
+// Carries the live prompt entry point to Kilo code that runs inside a turn.
+// Supplied by the shared prompt layer; it cannot be referenced directly there
+// because the shared module imports this one.
+export class PromptService extends Context.Service<PromptService, Interface>()("@kilocode/SessionPrompt") {}
+
+export interface Interface {
+  readonly prompt: (input: { sessionID: SessionID; synthetic: string }) => Effect.Effect<unknown, unknown>
+}
 
 export namespace KiloSessionPrompt {
   const modes = ["ask", "plan", "architect"]
@@ -158,6 +177,50 @@ export namespace KiloSessionPrompt {
     return action === "continue" ? "continue" : "break"
   }
 
+  /**
+   * Fan a mid-run user update out to active task subagents of this session.
+   * Never fails prompt admission: a broken fan-out is logged, not surfaced.
+   */
+  export const fanout = Effect.fn("KiloSessionPrompt.fanout")(function* (input: {
+    message: MessageV2.WithParts
+    config: Pick<Config.Info, "experimental">
+    flags: Pick<RuntimeFlags.Info, "experimentalSubagentSteering">
+  }) {
+    if (input.message.info.role !== "user") return
+    if (!KiloSessionSteering.user(input.message.parts)) return
+    const entry = KiloSessionSteering.enabled(input)
+      ? KiloSessionSteering.fanout({
+          origin: input.message.info.sessionID,
+          messageID: input.message.info.id,
+          parts: input.message.parts,
+        })
+      : undefined
+    if (!entry) return
+    const snapshot = KiloSessionSteeringInbox.snapshot(input.message.info.sessionID)
+    if (snapshot) KiloSession.publishSteeringChanged(snapshot)
+  })
+
+  /**
+   * Enqueue unconsumed steering as a real user turn before a child ends, so a
+   * subagent never returns a result produced under superseded instructions.
+   */
+  export const escalate = Effect.fn("KiloSessionPrompt.escalate")(function* (input: {
+    sessionID: SessionID
+    config: Pick<Config.Info, "experimental">
+    flags: Pick<RuntimeFlags.Info, "experimentalSubagentSteering">
+  }) {
+    if (!KiloSessionSteering.enabled(input)) return false
+    if (!KiloSessionSteeringInbox.pending(input.sessionID)) return false
+    // Synthetic so the escalated turn is runtime delivery: it must not fan out to
+    // the child's own subagents and must not look like a new human message.
+    const prompt = yield* PromptService
+    const entry = yield* KiloSessionSteering.escalate({
+      sessionID: input.sessionID,
+      deliver: (message) => prompt.prompt({ sessionID: input.sessionID, synthetic: message.text }),
+    })
+    return entry !== undefined
+  })
+
   export const cancelTree = Effect.fn("KiloSessionPrompt.cancelTree")(
     function* (input: {
       sessionID: SessionID
@@ -179,6 +242,7 @@ export namespace KiloSessionPrompt {
       const cancel = (sessionID: SessionID) =>
         Effect.gen(function* () {
           yield* KiloSessionPromptQueue.cancel(sessionID)
+          KiloSessionSteeringInbox.clear(sessionID) // kilocode_change - stop delivering a cancelled direction
           PlanFollowup.abort(sessionID)
           yield* abortIntakes(sessionID)
           yield* input.cancel(sessionID, { background: input.scope !== "session" })
