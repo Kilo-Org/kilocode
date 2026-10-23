@@ -24,6 +24,7 @@ const PROMPT_UTILS_FILE = path.join(ROOT, "webview-ui/src/components/chat/prompt
 const PROMPT_FILE = path.join(ROOT, "webview-ui/src/components/chat/PromptInput.tsx")
 const KILOPROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
 const CLOUD_SESSION_FILE = path.join(ROOT, "src/kilo-provider/handlers/cloud-session.ts")
+const CLOUD_FAILURE_FILE = path.join(ROOT, "webview-ui/src/context/cloud-session-failure.ts")
 const CONNECTION_SERVICE_FILE = path.join(ROOT, "src/services/cli-backend/connection-service.ts")
 
 function readFile(filePath: string): string {
@@ -594,14 +595,16 @@ describe("Cloud import parts cleanup contract", () => {
   })
 
   it("handleCloudSessionImportFailed prunes cloud parts and the synthetic session entries", () => {
-    // Implemented as a switch case inside handleExtensionMessage, not a
-    // standalone function, so search the source for the case body directly.
-    const idx = source.indexOf('case "cloudSessionImportFailed"')
+    // The cleanup lives in cloud-session-failure.ts so the session switch
+    // stays under the complexity cap. The key must remain the synthetic
+    // "cloud:<id>" scope, not the raw preview id.
+    const cleanup = readFile(CLOUD_FAILURE_FILE)
+    const idx = cleanup.indexOf("cloudSessionImportFailed")
     expect(idx).toBeGreaterThan(-1)
-    const after = source.slice(idx, idx + 4000)
-    expect(after).toMatch(/pruneCloudOrphans\(failedKey\)/)
-    expect(after).toMatch(/delete sessions\[failedKey\]/)
-    expect(after).toMatch(/delete messages\[failedKey\]/)
+    const after = cleanup.slice(idx)
+    expect(after).toMatch(/deps\.prune\(key\)/)
+    expect(after).toMatch(/delete sessions\[key\]/)
+    expect(after).toMatch(/delete messages\[key\]/)
   })
 
   it("handleCloudSessionImportFailed clears cloudPreviewId, currentSessionID, draftSessionID, and loading only when still on the failed cloud session", () => {
@@ -627,13 +630,13 @@ describe("Cloud import parts cleanup contract", () => {
     // otherwise `cloudPreviewId() === message.cloudSessionId` would be
     // false even on the failing preview and the spinner would stick
     // until later navigation clears it.
-    const idx = source.indexOf('case "cloudSessionImportFailed"')
+    const idx = source.indexOf("const cloudFailureDeps")
     expect(idx).toBeGreaterThan(-1)
-    const after = source.slice(idx, idx + 4000)
-    expect(after).toMatch(/clearIfOn\(cloudPreviewId, \(\) => setLoading\(false\), message\.cloudSessionId\)/)
-    expect(after).toMatch(/clearIfOn\(cloudPreviewId, \(\) => setCloudPreviewId\(null\), message\.cloudSessionId\)/)
-    expect(after).toMatch(/clearIfOn\(currentSessionID, \(\) => setCurrentSessionID\(undefined\), failedKey\)/)
-    expect(after).toMatch(/clearIfOn\(draftSessionID, \(\) => setDraftSessionID\(undefined\), failedKey\)/)
+    const after = source.slice(idx, idx + 2000)
+    expect(after).toMatch(/clearIfOn\(cloudPreviewId, \(\) => setLoading\(false\), raw\)/)
+    expect(after).toMatch(/clearIfOn\(cloudPreviewId, \(\) => setCloudPreviewId\(null\), raw\)/)
+    expect(after).toMatch(/clearIfOn\(currentSessionID, \(\) => setCurrentSessionID\(undefined\), key\)/)
+    expect(after).toMatch(/clearIfOn\(draftSessionID, \(\) => setDraftSessionID\(undefined\), key\)/)
     expect(after).not.toMatch(/^\s*setLoading\(false\)\s*$/m)
     // Loading check must come before cloudPreviewId null in the case body.
     const loadIdx = after.indexOf("setLoading(false)")

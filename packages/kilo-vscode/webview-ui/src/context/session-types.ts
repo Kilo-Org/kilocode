@@ -245,6 +245,7 @@ export interface SessionContextValue {
   // Cloud session preview
   cloudPreviewId: Accessor<string | null>
   selectCloudSession: (cloudSessionId: string) => void
+  selectHostedSession: (providerID: string, sessionID: string) => void
   draftSessionID: Accessor<string | undefined>
   setDraftSessionID: (id: string | undefined) => void
   userClearedSession: Accessor<boolean>

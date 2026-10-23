@@ -6,6 +6,7 @@ import type { ServerConfig } from "./types"
 import { createDuplicateEventFilter, resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
 import { SandboxPreference } from "../sandbox-preference"
 import { ExplicitAbortState } from "./explicit-abort"
+import { HostedService } from "../../hosted/service"
 import type { PermissionResponseResult } from "../../kilo-provider/handlers/permission-handler"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
@@ -88,6 +89,7 @@ async function drainNetworkWaits(client: KiloClient, dir: string) {
  */
 export class KiloConnectionService {
   readonly sandboxPreference: SandboxPreference
+  readonly hosted = new HostedService(() => this.client)
   private readonly serverManager: ServerManager
   private client: KiloClient | null = null
   private sseClient: SdkSSEAdapter | null = null
@@ -939,6 +941,7 @@ export class KiloConnectionService {
     this.sseClient = null
     sse?.disconnect()
     this.client = null
+    this.hosted.reset()
     this.config = null
     this.info = null
     this.permissionDirectories.clear()

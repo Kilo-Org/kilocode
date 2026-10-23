@@ -110,32 +110,13 @@ import { createModelSelector } from "./session-model-selector"
 import { createModelPreferences } from "./session-model-preferences"
 import { activities, blockedSessionIds, type Activity } from "../utils/session-activity"
 import { createTiming, running, type Timing } from "./session-timing"
+import { createHostedBridge } from "./hosted-session-bridge"
+import { handleCloudImportFailure, type CloudFailureDeps } from "./cloud-session-failure"
+import type { CloseState, SessionStore } from "./session-store"
 import type { SessionContextValue } from "./session-types"
 
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
-// Store structure for messages and parts
-interface SessionStore {
-  sessions: Record<string, SessionInfo>
-  messages: Record<string, Message[]> // sessionID -> messages
-  parts: Record<string, Part[]> // messageID -> parts
-  toolParts: Record<string, ToolPart[]> // sessionID -> compact per-session tool index
-  todos: Record<string, TodoItem[]> // sessionID -> todos
-  sessionOverrides: Record<string, Record<string, ModelSelection>> // scope -> agent -> explicit model pick
-  agentSelections: Record<string, string> // sessionID -> agent name
-  variantSelections: Record<string, string> // session/agent scoped variant key -> variant name
-  recentModels: ModelSelection[]
-  favoriteModels: ModelSelection[]
-  modelUsageHistory: ModelUsageMap
-  modelUsage: Record<string, { requestID: string; data?: SessionModelUsage }>
-}
-
-interface CloseState {
-  reason: SessionCloseReason
-  parentID?: string
-  eventID?: string
-  seen?: boolean
-}
 
 export const SessionContext = createContext<SessionContextValue>()
 
@@ -894,6 +875,8 @@ export const SessionProvider: ParentComponent = (props) => {
     if (handleStreamMessage(message)) return
     handleCommandCompletion(message)
     handleResumeResult(message)
+    hosted.handle(message)
+    handleCloudImportFailure(message, cloudFailureDeps)
     cah.handleMessage(message)
     switch (message.type) {
       case "sessionCreated":
@@ -1009,42 +992,6 @@ export const SessionProvider: ParentComponent = (props) => {
       case "cloudSessionImported":
         handleCloudSessionImported(message.cloudSessionId, message.session)
         break
-
-      case "cloudSessionImportFailed": {
-        const failedKey = `cloud:${message.cloudSessionId}`
-        pruneCloudOrphans(failedKey)
-        setStore(
-          "sessions",
-          produce((sessions) => {
-            delete sessions[failedKey]
-          }),
-        )
-        setStore(
-          "messages",
-          produce((messages) => {
-            delete messages[failedKey]
-          }),
-        )
-        setStore(
-          "toolParts",
-          produce((toolParts) => {
-            delete toolParts[failedKey]
-          }),
-        )
-        // cloudPreviewId stores the raw cloud session id (see selectCloudSession),
-        // not the synthetic "cloud:<id>" key used for session/draft ids.
-        clearIfOn(cloudPreviewId, () => setLoading(false), message.cloudSessionId)
-        clearIfOn(cloudPreviewId, () => setCloudPreviewId(null), message.cloudSessionId)
-        clearIfOn(currentSessionID, () => setCurrentSessionID(undefined), failedKey)
-        clearIfOn(draftSessionID, () => setDraftSessionID(undefined), failedKey)
-        showToast({
-          variant: "error",
-          title: language.t("session.cloud.import.failed") ?? "Failed to import cloud session",
-          description: message.error,
-        })
-        console.error("[Kilo New] Cloud session import failed:", message.error)
-        break
-      }
 
       case "worktreeStatsLoaded":
         setWorktreeStats({ files: message.files, additions: message.additions, deletions: message.deletions })
@@ -1208,6 +1155,46 @@ export const SessionProvider: ParentComponent = (props) => {
       (msg) => parts?.[msg.id] ?? stash.peek(msg.id) ?? untrack(() => store.parts[msg.id]) ?? msg.parts,
     )
     setTools(sessionID, tools, mode)
+  }
+
+  const hosted = createHostedBridge({
+    store: setStore,
+    loaded: (key) =>
+      setLoaded((prev) => {
+        if (prev.has(key)) return prev
+        const next = new Set(prev)
+        next.add(key)
+        return next
+      }),
+    page: (key, hasMore) => patchPage(key, { hasMore, lastMutation: "replace" }),
+    toolParts: (key, messages) => rebuildToolParts(key, messages),
+    isolate: (part) => isolate(part),
+    current: (key) => setCurrentSessionID(key),
+    draft: (key) => setDraftSessionID(key),
+    loading: (value) => setLoading(value),
+    clearDraft: () => agentDrafts.prune(draftSessionID()),
+    connected: () => server.isConnected(),
+    post: (message) => vscode.postMessage(message),
+    batch,
+  })
+
+  const cloudFailureDeps: CloudFailureDeps = {
+    store: setStore,
+    prune: (key) => pruneCloudOrphans(key),
+    clearPreview: (raw) => {
+      clearIfOn(cloudPreviewId, () => setLoading(false), raw)
+      clearIfOn(cloudPreviewId, () => setCloudPreviewId(null), raw)
+    },
+    clearCurrent: (key) => clearIfOn(currentSessionID, () => setCurrentSessionID(undefined), key),
+    clearDraft: (key) => clearIfOn(draftSessionID, () => setDraftSessionID(undefined), key),
+    toast: (error) => {
+      showToast({
+        variant: "error",
+        title: language.t("session.cloud.import.failed") ?? "Failed to import cloud session",
+        description: error,
+      })
+      console.error("[Kilo New] Cloud session import failed:", error)
+    },
   }
 
   function patchToolPart(sessionID: string | undefined, messageID: string, part: Part) {
@@ -2685,6 +2672,11 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "requestCloudSessionData", sessionId: cloudSessionId })
   }
 
+  function selectHostedSession(providerID: string, sessionID: string) {
+    setUserClearedSession(false)
+    hosted.select(providerID, sessionID)
+  }
+
   function deleteSession(id: string) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot delete session: not connected")
@@ -3071,6 +3063,7 @@ export const SessionProvider: ParentComponent = (props) => {
     unsyncSession,
     cloudPreviewId,
     selectCloudSession,
+    selectHostedSession,
     draftSessionID,
     setDraftSessionID,
     userClearedSession,

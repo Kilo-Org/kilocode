@@ -136,6 +136,17 @@ import {
   type CloudSessionContext,
 } from "./kilo-provider/handlers/cloud-session"
 import {
+  handleHostedDetach,
+  handleHostedOpen,
+  handleHostedProviders,
+  handleHostedSessions,
+  handleHostedStart,
+  hostedRepository,
+  type HostedContext,
+} from "./kilo-provider/handlers/hosted"
+import { isHostedKey } from "./hosted/identity"
+import type { HostedTurn } from "./hosted/service"
+import {
   handlePermissionResponse,
   fetchAndSendPendingPermissions,
   type PermissionContext,
@@ -148,6 +159,7 @@ import {
 import { fetchAndSendPendingSuggestions } from "./kilo-provider/handlers/suggestion"
 import { nativeTitle } from "./kilo-provider/native-tab-title"
 import { isActivity, type Activity } from "../webview-ui/src/utils/session-activity"
+import { Identifier } from "../webview-ui/src/utils/id"
 import type { PRReviewCommentData, ReviewMessageData } from "./shared/review-comments"
 import { feedbackMetadata, parseFeedback, type BrowserFeedbackData } from "./shared/browser-feedback"
 import { mergeInjected } from "./shared/injected-prompt"
@@ -514,6 +526,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private sessionGitDirectories = new Map<string, string>() // Stable Git root resolved for each session.
   private sessionGitRecoveries = new Set<string>() // Sessions whose older history was scanned for a Git root.
   private readonly aborts = new SessionAbort()
+  private readonly hostedUnsubs = new Map<string, () => void>()
   private projectID: string | undefined // Current workspace project ID used to filter sessions.
   private loadMessagesAbort: AbortController | null = null // Current load request cancellation.
   private lastReconciledAt = new Map<string, number>() // Per-session focus-mode reconcile timestamp.
@@ -1311,6 +1324,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         return
       }
       if (this.handleEditorOpenMessage(message)) return
+      if (await this.handleHostedMessage(message)) return
       if (await this.handleMcpMessage(message)) return
       if (await this.handleAgentManagerSettingsMessage(message)) return
       if (await this.handleAutoCleanupMessage(message)) return
@@ -4732,6 +4746,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
 
+    if (isHostedKey(sessionID)) {
+      await this.sendHostedMessage({
+        key: sessionID,
+        text,
+        messageID,
+        providerID,
+        modelID,
+        agent,
+        variant,
+        files,
+        review,
+        browserFeedback,
+        injectedTitle,
+      })
+      return
+    }
+
     let resolved: { sid: string; dir: string } | undefined
     try {
       const sandbox = this.sandboxTransitions.get(
@@ -5096,6 +5127,303 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   // Cloud session handlers extracted to kilo-provider/handlers/cloud-session.ts
+
+  private get hostedCtx(): HostedContext {
+    return {
+      hosted: this.connectionService.hosted,
+      postMessage: (msg) => this.postMessage(msg),
+      mapTurns: (items) => this.mapHostedTurns(items),
+      watch: (key) => {
+        this.trackedSessionIds.add(key)
+        this.watchHosted(key)
+      },
+    }
+  }
+
+  /** Hosted discovery, open, start, and detach, routed ahead of the main switch. */
+  private async handleHostedMessage(message: TypedWebviewMessage & Record<string, unknown>): Promise<boolean> {
+    switch (message.type) {
+      case "requestHostedProviders":
+        await handleHostedProviders(this.hostedCtx)
+        return true
+      case "requestHostedSessions":
+        await handleHostedSessions(this.hostedCtx, typeof message.limit === "number" ? message.limit : undefined)
+        return true
+      case "hostedOpenSession":
+        if (typeof message.providerID === "string" && typeof message.sessionID === "string") {
+          await handleHostedOpen(
+            this.hostedCtx,
+            message.providerID,
+            message.sessionID,
+            typeof message.limit === "number" ? message.limit : undefined,
+          )
+        }
+        return true
+      case "hostedStartSession":
+        await this.startHosted(message)
+        return true
+      case "hostedDetachSession":
+        if (typeof message.key === "string") {
+          this.hostedUnsubs.get(message.key)?.()
+          this.hostedUnsubs.delete(message.key)
+          await handleHostedDetach(this.hostedCtx, message.key)
+        }
+        return true
+      case "loadMessages": {
+        if (!isHostedKey(typeof message.sessionID === "string" ? message.sessionID : undefined)) return false
+        void this.handleHostedMessages(message.sessionID as string, {
+          mode: message.mode as MessageLoadMode | undefined,
+          before: typeof message.before === "string" ? message.before : undefined,
+          limit: typeof message.limit === "number" ? message.limit : undefined,
+        })
+        return true
+      }
+      case "abort": {
+        const key = typeof message.sessionID === "string" ? message.sessionID : undefined
+        if (!isHostedKey(key)) return false
+        this.cancelRetry(key)
+        await this.connectionService.hosted
+          .abort(key)
+          .catch((error) => console.error("[Kilo New] KiloProvider: Failed to abort hosted session:", error))
+        this.publish(key, { type: "idle" })
+        return true
+      }
+      case "permissionResponse": {
+        const key = typeof message.sessionID === "string" ? message.sessionID : undefined
+        if (!isHostedKey(key) || typeof message.permissionId !== "string") return false
+        const response = message.response
+        if (response !== "once" && response !== "always" && response !== "reject") return false
+        await this.connectionService.hosted
+          .replyPermission(key, message.permissionId, response)
+          .then(() => this.postMessage({ type: "permissionResolved", requestID: message.permissionId }))
+          .catch((error) => {
+            console.error("[Kilo New] KiloProvider: Failed to answer hosted permission:", error)
+            this.postMessage({ type: "permissionError", requestID: message.permissionId })
+          })
+        return true
+      }
+      case "questionReply": {
+        const key = typeof message.sessionID === "string" ? message.sessionID : undefined
+        if (!isHostedKey(key) || typeof message.requestID !== "string") return false
+        const answers = Array.isArray(message.answers) ? (message.answers as string[][]) : []
+        this.noteFollowup(answers, key)
+        const ok = await this.connectionService.hosted
+          .replyQuestion(key, message.requestID, answers)
+          .then(() => true)
+          .catch((error) => {
+            console.error("[Kilo New] KiloProvider: Failed to answer hosted question:", error)
+            this.postMessage({ type: "questionError", requestID: message.requestID })
+            return false
+          })
+        if (!ok) this.pendingFollowup = null
+        return true
+      }
+      case "questionReject": {
+        const key = typeof message.sessionID === "string" ? message.sessionID : undefined
+        if (!isHostedKey(key) || typeof message.requestID !== "string") return false
+        this.pendingFollowup = null
+        await this.connectionService.hosted.rejectQuestion(key, message.requestID).catch((error) => {
+          console.error("[Kilo New] KiloProvider: Failed to reject hosted question:", error)
+          this.postMessage({ type: "questionError", requestID: message.requestID })
+        })
+        return true
+      }
+      default:
+        return false
+    }
+  }
+
+  private async startHosted(message: Record<string, unknown>): Promise<void> {
+    const repository = hostedRepository({
+      type: typeof message.repositoryType === "string" ? message.repositoryType : undefined,
+      repo: typeof message.repo === "string" ? message.repo : undefined,
+      url: typeof message.url === "string" ? message.url : undefined,
+      branch: typeof message.branch === "string" ? message.branch : undefined,
+    })
+    if (
+      !repository ||
+      typeof message.prompt !== "string" ||
+      typeof message.mode !== "string" ||
+      typeof message.model !== "string" ||
+      typeof message.operationKey !== "string" ||
+      typeof message.messageID !== "string"
+    ) {
+      this.postMessage({
+        type: "hostedSessionFailed",
+        error: "Hosted session start requires a repository, prompt, agent, and model",
+      })
+      return
+    }
+    await handleHostedStart(this.hostedCtx, {
+      repository,
+      prompt: message.prompt,
+      mode: message.mode,
+      model: message.model,
+      ...(typeof message.organizationID === "string" ? { organizationID: message.organizationID } : {}),
+      operationKey: message.operationKey,
+      messageID: message.messageID,
+    })
+  }
+
+  private mapHostedTurns(items: HostedTurn[]) {
+    return items.map((item) => ({
+      ...this.slimInfo(item.info),
+      parts: this.slimParts(item.parts),
+      createdAt: new Date(item.info.time.created).toISOString(),
+    }))
+  }
+
+  /** Mirrors `handleLoadMessages` for a hosted key without touching local routing. */
+  private async handleHostedMessages(
+    key: string,
+    options: { mode?: MessageLoadMode; limit?: number; before?: string },
+  ): Promise<void> {
+    this.trackedSessionIds.add(key)
+    try {
+      const page = await this.connectionService.hosted.transcript(key, options.before, options.limit)
+      this.postMessage({
+        type: "messagesLoaded",
+        sessionID: key,
+        messages: this.mapHostedTurns(page.items),
+        mode: options.mode ?? "replace",
+        cursor: page.cursor,
+        hasMore: Boolean(page.cursor),
+      })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to load hosted messages:", error)
+      this.postMessage({
+        type: "error",
+        message: getErrorMessage(error) || "Failed to load hosted messages",
+        sessionID: key,
+      })
+    }
+  }
+
+  /** Re-reads every hosted state surface after continuity could not be proven. */
+  private async resnapshotHosted(key: string): Promise<void> {
+    try {
+      const open = await this.connectionService.hosted.resnapshot(key)
+      this.postMessage({
+        type: "messagesLoaded",
+        sessionID: key,
+        messages: this.mapHostedTurns(open.items),
+        mode: "replace",
+        cursor: open.cursor,
+        hasMore: Boolean(open.cursor),
+      })
+      const pending = await this.connectionService.hosted.pending(key)
+      for (const [sessionID, status] of Object.entries(pending.status)) {
+        if (sessionID !== open.session.id) continue
+        this.postMessage({ type: "sessionStatus", sessionID: key, status: status.type })
+      }
+      for (const question of pending.questions as Array<Record<string, unknown>>) {
+        this.postMessage({
+          type: "questionRequest",
+          question: { ...question, sessionID: key },
+        })
+      }
+      for (const permission of pending.permissions as Array<Record<string, unknown>>) {
+        this.postMessage({
+          type: "permissionRequest",
+          permission: {
+            id: permission.id,
+            sessionID: key,
+            toolName: permission.permission,
+            patterns: permission.patterns,
+            always: permission.always,
+            args: permission.metadata,
+            message: `Permission required: ${String(permission.permission)}`,
+            tool: permission.tool,
+          },
+        })
+      }
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to resnapshot hosted session:", error)
+    }
+  }
+
+  private watchHosted(key: string): void {
+    if (this.hostedUnsubs.has(key)) return
+    const off = this.connectionService.hosted.subscribe(
+      key,
+      (payload) => this.handleHostedEvent(key, payload),
+      (failure) => {
+        // Terminal: drop the subscription so a later action can resubscribe.
+        this.hostedUnsubs.delete(key)
+        this.postMessage({
+          type: "hostedSessionFailed",
+          error: failure.message,
+          code: failure.code,
+          sessionID: key,
+        })
+      },
+      () => void this.resnapshotHosted(key),
+    )
+    this.hostedUnsubs.set(key, off)
+  }
+
+  private handleHostedEvent(key: string, payload: unknown): void {
+    const event = payload as Parameters<typeof mapSSEEventToWebviewMessage>[0]
+    if (!event || typeof event.type !== "string") return
+    if (event.type === "question.asked" || event.type === "permission.asked") {
+      const properties = (event as { properties?: { id?: unknown } }).properties
+      if (typeof properties?.id === "string") {
+        this.connectionService.recordQuestionDirectory(properties.id, key)
+        this.connectionService.recordPermissionDirectory(properties.id, key, key)
+      }
+    }
+    const msg = mapSSEEventToWebviewMessage(event, key)
+    if (msg) this.postMessage(msg)
+  }
+
+  private async sendHostedMessage(input: {
+    key: string
+    text: string
+    messageID?: string
+    providerID?: string
+    modelID?: string
+    agent?: string
+    variant?: string
+    files?: MessageFile[]
+    review?: ReviewMessageData
+    browserFeedback?: BrowserFeedbackData
+    injectedTitle?: string
+  }): Promise<void> {
+    const parts: Array<Record<string, unknown>> = []
+    for (const file of input.files ?? []) {
+      parts.push({ type: "file", mime: file.mime, url: file.url, filename: file.filename, source: file.source })
+    }
+    parts.push({
+      type: "text",
+      text: input.text,
+      metadata: mergeInjected(feedbackMetadata(input.review, input.browserFeedback), input.injectedTitle),
+    })
+    const messageID = input.messageID ?? Identifier.ascending("message")
+    try {
+      this.trackedSessionIds.add(input.key)
+      this.connectionService.recordMessageSessionId(messageID, input.key)
+      this.watchHosted(input.key)
+      await this.connectionService.hosted.prompt(input.key, {
+        messageID,
+        parts,
+        agent: input.agent,
+        model: input.providerID && input.modelID ? { providerID: input.providerID, modelID: input.modelID } : undefined,
+        variant: input.variant,
+      })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to send hosted message:", error)
+      this.postMessage({
+        type: "sendMessageFailed",
+        error: getErrorMessage(error) || "Failed to send message",
+        text: input.text,
+        sessionID: input.key,
+        messageID,
+        files: input.files,
+        review: input.review,
+        browserFeedback: input.browserFeedback,
+      })
+    }
+  }
 
   private get cloudSessionCtx(): CloudSessionContext {
     const self = this
@@ -6318,6 +6646,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   dispose(): void {
     this.opts.onHidden?.()
+    for (const off of this.hostedUnsubs.values()) off()
+    this.hostedUnsubs.clear()
     if (this.opts.focusContext) {
       void vscode.commands.executeCommand("setContext", this.opts.focusContext, false)
     }

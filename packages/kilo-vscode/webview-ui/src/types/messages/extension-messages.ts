@@ -324,6 +324,75 @@ export interface CloudSessionDataLoadedMessage {
   messages: Message[]
 }
 
+/** Provider-neutral availability, independent of any session's turn state. */
+export interface HostedProviderStatus {
+  id: string
+  default: boolean
+  availability:
+    | { state: "available" }
+    | { state: "unavailable"; reason: "signed_out" | "rejected" | "unreachable"; message: string }
+  transport:
+    | { state: "unknown" }
+    | { state: "reachable"; checkedAt: number }
+    | { state: "unreachable"; checkedAt: number; message: string }
+}
+
+export interface HostedSessionSummary {
+  key: string
+  providerID: string
+  sessionID: string
+  title: string
+  created: number
+  updated: number
+  directory?: string
+}
+
+export interface HostedProvidersLoadedMessage {
+  type: "hostedProvidersLoaded"
+  providers: HostedProviderStatus[]
+  error?: string
+}
+
+export interface HostedSessionsLoadedMessage {
+  type: "hostedSessionsLoaded"
+  sessions: HostedSessionSummary[]
+  error?: string
+}
+
+export interface HostedSessionLoadedMessage {
+  type: "hostedSessionLoaded"
+  key: string
+  providerID: string
+  sessionID: string
+  session: { id: string; title: string; time: { created: number; updated: number } }
+  title: string
+  messages: Message[]
+  cursor?: string
+  omitted?: number
+  mode?: MessageLoadMode
+}
+
+export interface HostedSessionStartedMessage {
+  type: "hostedSessionStarted"
+  key: string
+  providerID: string
+  sessionID: string
+  replayed: boolean
+  delivery: "sent" | "queued"
+}
+
+export interface HostedSessionFailedMessage {
+  type: "hostedSessionFailed"
+  error: string
+  code?: string
+  sessionID?: string
+}
+
+export interface HostedSessionDetachedMessage {
+  type: "hostedSessionDetached"
+  key: string
+}
+
 export interface CloudSessionImportedMessage {
   type: "cloudSessionImported"
   cloudSessionId: string
@@ -525,6 +594,7 @@ export interface ChatSettingsLoadedMessage {
   settings: {
     shiftTabCyclesVariant: boolean
     browserAutomation: boolean
+    hostedSessions: boolean
     agentManagerBrowserOpenLinksIn: "external" | "integrated"
     workspaceTrusted: boolean
   }
@@ -1844,6 +1914,12 @@ export type ExtensionMessage =
   | MessageCreatedMessage
   | SessionsLoadedMessage
   | CloudSessionsLoadedMessage
+  | HostedProvidersLoadedMessage
+  | HostedSessionsLoadedMessage
+  | HostedSessionLoadedMessage
+  | HostedSessionStartedMessage
+  | HostedSessionFailedMessage
+  | HostedSessionDetachedMessage
   | GitRemoteUrlLoadedMessage
   | ActionMessage
   | ProfileDataMessage

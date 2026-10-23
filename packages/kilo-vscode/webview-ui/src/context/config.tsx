@@ -82,6 +82,7 @@ function loadedSettings(message: ExtensionMessage): Record<string, unknown> | un
     return {
       "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
       browserAutomation: message.settings.browserAutomation,
+      hostedSessions: message.settings.hostedSessions,
       agentManagerBrowserOpenLinksIn: message.settings.agentManagerBrowserOpenLinksIn,
       workspaceTrusted: message.settings.workspaceTrusted,
     }
