@@ -27,6 +27,7 @@ export type Route = {
 export type Result = Route | { readonly kind: "mismatch" } | undefined
 
 const SELECTOR_QUERY = new Set(["directory", "workspace", "location[directory]", "location[workspace]"])
+const TRANSCRIPT_QUERY = new Set(["limit", "before"])
 
 const SESSION_ROUTES: ReadonlyArray<{
   readonly method: "GET" | "POST"
@@ -60,6 +61,14 @@ function session(path: string) {
   const match = /^\/session\/([^/]+)(\/.*)?$/.exec(path)
   if (!match?.[1]) return undefined
   return { id: match[1], suffix: match[2] ?? "" }
+}
+
+function transcript(inbound: URLSearchParams) {
+  const query = new URLSearchParams()
+  for (const key of TRANSCRIPT_QUERY) {
+    for (const value of inbound.getAll(key)) query.append(key, value)
+  }
+  return query
 }
 
 function forwarded(inbound: URLSearchParams) {
@@ -118,7 +127,10 @@ export function classify(id: RemoteSessionID, method: string, path: string, inbo
       kind: "route",
       method: rule.method,
       remote: rule.remote(decoded),
-      query: forwarded(inbound),
+      // Cloud rejects every id-scoped selector except the transcript pagination
+      // keys. Its abort is session-scoped, so a local `scope=session` is not
+      // forwarded.
+      query: rule.suffix === "/message" ? transcript(inbound) : new URLSearchParams(),
     }
   }
   return undefined

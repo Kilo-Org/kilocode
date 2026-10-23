@@ -98,13 +98,14 @@ it.effect("maps only the proven native allowlist onto the Cloud facade", () => {
       "POST /kilo/permission/per_1/reply",
     ])
 
-    // Non-selector query parameters survive while every local selector is dropped.
+    // Cloud rejects every id-scoped selector except the transcript pagination
+    // keys, so only limit/before survive and every local selector is dropped.
     expect(app.calls.map((call) => call.search.toString())).toEqual([
-      "trace=detail",
+      "",
       "limit=2&before=cursor-1",
-      "trace=prompt",
-      "scope=session",
-      "trace=command",
+      "",
+      "",
+      "",
       "",
       "",
       `directory=${encodeURIComponent(`/cloud-agent/sessions/${SESSION}`)}`,

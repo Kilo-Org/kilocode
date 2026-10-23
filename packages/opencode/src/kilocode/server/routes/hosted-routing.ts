@@ -147,7 +147,7 @@ export function respond(plan: Routed, request: ServerRequest): Effect.Effect<Htt
       ...(plan.entry.organizationID ? { organizationID: plan.entry.organizationID } : {}),
     }
     return yield* route(native).pipe(
-      Effect.map(forwardResponse),
+      Effect.flatMap(forwardResponse),
       Effect.catch((error) => Effect.succeed(failure(error.code))),
     )
   })
@@ -189,7 +189,7 @@ function payload(request: ServerRequest) {
   })
 }
 
-function forwardResponse(response: Response): HttpServerResponse.HttpServerResponse {
+function forwardResponse(response: Response): Effect.Effect<HttpServerResponse.HttpServerResponse> {
   const headers: Record<string, string> = {}
   response.headers.forEach((value, key) => {
     const name = key.toLowerCase()
@@ -197,10 +197,28 @@ function forwardResponse(response: Response): HttpServerResponse.HttpServerRespo
     headers[key] = value
   })
   const contentType = response.headers.get("content-type")
-  if (!response.body) return HttpServerResponse.raw(null, { status: response.status, headers })
-  return HttpServerResponse.raw(
-    Stream.toReadableStream(Stream.fromReadableStream({ evaluate: () => response.body!, onError: (err) => err })),
-    { status: response.status, headers, ...(contentType ? { contentType } : {}) },
+  const options = {
+    status: response.status,
+    headers,
+    ...(contentType ? { contentType } : {}),
+  }
+  if (!response.body) return Effect.succeed(HttpServerResponse.raw(null, options))
+  if (contentType?.startsWith("text/event-stream")) {
+    return Effect.succeed(
+      HttpServerResponse.stream(
+        Stream.fromReadableStream({ evaluate: () => response.body!, onError: (err) => err }),
+        { contentType: "text/event-stream", headers },
+      ),
+    )
+  }
+  // Native non-streaming routes are bounded JSON. Buffer them instead of
+  // relaying a provider-owned stream across the server boundary.
+  return Effect.tryPromise({
+    try: () => response.arrayBuffer(),
+    catch: () => new Error("Session host response could not be read"),
+  }).pipe(
+    Effect.map((buffer) => HttpServerResponse.raw(new TextDecoder().decode(buffer), options)),
+    Effect.catch(() => Effect.succeed(HttpServerResponse.empty({ status: 502 }))),
   )
 }
 
