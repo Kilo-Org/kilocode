@@ -268,11 +268,27 @@ For models that support it, webhook and scheduled triggers can set a **reasoning
 
 Triggers do not support manual env var or setup command overrides at this time.
 
+### Sandbox selection
+
+When your account can choose a sandbox, the trigger form shows a **Sandbox** field. Choices are grouped by provider and filtered to the runtimes available for the selected repository, including the Cloudflare Containers runtime where it applies. **Automatic** keeps the default Cloud Agent routing.
+
+Existing triggers keep any allocation they already have. Legacy allocations are not offered when you create a trigger or change its sandbox.
+
+### Run as webhook creator
+
+By default, organization triggers run as the organization webhook bot. When you create an organization trigger, you can instead select **Run as webhook creator** so each session runs with your identity. Organization billing and repository scope stay with the organization.
+
+This is a create-time choice and cannot be changed later. Only you, the creator, can edit a creator-run trigger or run it on demand. Existing triggers keep using the organization webhook bot; create a new trigger to use creator mode.
+
+Creator-run webhooks require shared-secret authentication. Set a header name and a secret of at least 16 characters when you create the trigger, and send the same header with every request. Kilo revalidates your account, the organization, and your direct membership before each delivery and retry. If that authorization fails, the request fails instead of falling back to the organization bot.
+
 ### Scheduled Triggers
 
 Scheduled triggers fire on a recurring schedule using cron expressions. You can configure them with a simple frequency picker (every 10 minutes, hourly, daily, weekly) or enter a raw cron expression for full control. Each trigger has a configurable timezone (default: UTC) and handles daylight saving time transitions automatically.
 
 The minimum schedule interval is 10 minutes. Scheduled triggers use `{{scheduledTime}}` and `{{timestamp}}` as prompt template variables (webhook-specific variables like `{{body}}` are not available since there is no inbound HTTP request).
+
+Scheduled triggers do not accept inbound requests. They run only from their schedule or from the invoke action described below.
 
 ### Invoking a scheduled trigger on demand
 
@@ -330,6 +346,8 @@ You can reference data in a trigger’s prompt template using these placeholders
 
 - `{{scheduledTime}}` - the time the schedule fired (ISO string)
 - `{{timestamp}}` - capture timestamp (ISO string)
+
+Kilo expands placeholders in the prompt template once. A placeholder that arrives inside captured request data, such as `{{headers}}` within a webhook body, stays as literal text and is not expanded again.
 
 {% callout type="warning" title="Security Considerations" %}
 Care should be taken when deciding to use webhooks as they are susceptible to prompt injection attacks. Especially in scenarios where webhook payloads may contain untrusted input. At this time we recommend using webhooks only for trusted sources.

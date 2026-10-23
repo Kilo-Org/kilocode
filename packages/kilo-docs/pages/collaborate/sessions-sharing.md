@@ -43,9 +43,20 @@ You can share a session with anyone via a link. A shared page:
 
 1. Shows who shared it, the session title, and a short preview of the conversation
 2. Provides safe “open in editor” or CLI actions so collaborators can try your session themselves
-3. Lives at a URL like /share/SHARE_ID and is visible to anyone with the link
+3. Lives at a URL like `/s/SHARE_TOKEN` and is visible to anyone with the link
 
-Note: Sharing creates a read‑only copy for the public link so your private session remains in your account.
+When you create a link, choose how long it lasts: **1 hour**, **1 day**, **7 days**, **30 days**, or **Never expires**. New links default to 7 days.
+
+You also choose whether the link **includes new messages**:
+
+- With **Include new messages** off (the default), the link shows a snapshot of the conversation from when you created it.
+- With **Include new messages** on, the link follows the conversation as it continues, for as long as the link lasts.
+
+The same lifetime and new-message options apply when you share a cloud session from the web and when you share an authenticated session through MCP. Creating a replacement link disables the previous link for that session. Reopening the share dialog lets you copy the link that is already displayed instead of creating another one.
+
+Unsharing a session, or creating a replacement link, disables the existing link. Links created before these options were available keep their original lifetime and message behavior; create a new link if you need a different duration or live updates.
+
+Note: Sharing creates a read‑only view for the public link so your private session remains in your account.
 
 ## Fork a shared session (make it yours)
 
@@ -59,7 +70,7 @@ Forking creates a new session in your account, with its own ID, and copies over 
 
 ## Where your session data lives
 
-Kilo stores local session history and metadata in an SQLite database on the machine where Kilo runs. Cloud sessions and shared-session copies use Kilo's cloud services and are separate from the local database. If you share a session, Kilo keeps a public copy for the share link while the original session remains private.
+Kilo stores local session history and metadata in an SQLite database on the machine where Kilo runs. Cloud sessions and shared-session copies use Kilo's cloud services and are separate from the local database. If you share a session, Kilo keeps the shared copy for the link's lifetime while the original session remains private.
 
 See [Session History and Search](/docs/code-with-ai/agents/session-history) to find the local database, search session titles or transcripts, and inspect sessions with the CLI or SQLite.
 
