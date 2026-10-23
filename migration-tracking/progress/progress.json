@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 149,
+    "done": 150,
     "total": 9828,
     "percent": 1.5,
     "dropped": 26,
     "kinds": [
       {
         "kind": "module",
-        "done": 52,
+        "done": 53,
         "total": 3547
       },
       {
@@ -1331,12 +1331,12 @@
     },
     {
       "feature": "oauth",
-      "done": 0,
+      "done": 1,
       "total": 8,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 1,
           "total": 1
         },
         "api": {
@@ -6183,6 +6183,7 @@
   "done": [
     "api:GET /kilocode/provider-usage",
     "api:POST /kilocode/provider-usage/refresh",
+    "module:packages/core/src/kilocode/oauth/page.ts",
     "module:packages/core/src/kilocode/provider-usage.ts",
     "module:packages/core/src/kilocode/provider-usage/cloud.ts",
     "module:packages/core/src/kilocode/provider-usage/codex.ts",
