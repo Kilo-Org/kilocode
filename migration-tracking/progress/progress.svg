@@ -3051,7 +3051,7 @@
 <rect class="o" x="492.69" y="303.64" width="1.31" height="5.36"/>
 <rect class="b" x="491.69" y="302.64" width="3.31" height="7.36"/>
 </g>
-<text x="509.00" y="21.00" font-size="16">Unattributed patches by upstream area: 1% (41/4151)</text>
+<text x="509.00" y="21.00" font-size="16">Unattributed patches by upstream area: 1.1% (45/4151)</text>
 <g><title>test: 0/821 (0%)</title>
 <rect class="o" x="506.00" y="31.00" width="11.46" height="11.19"/>
 <rect class="o" x="517.46" y="31.00" width="11.46" height="11.19"/>
@@ -3256,9 +3256,9 @@
 <rect class="b" x="505.00" y="30.00" width="151.01" height="181.01"/>
 <text x="510.00" y="46.00" font-size="12">test</text>
 </g>
-<g><title>session: 0/449 (0%)</title>
-<rect class="o" x="506.00" y="212.01" width="7.84" height="8.82"/>
-<rect class="o" x="513.84" y="212.01" width="7.84" height="8.82"/>
+<g><title>session: 4/449 (0.9%)</title>
+<rect class="d" x="506.00" y="212.01" width="7.84" height="8.82"/>
+<rect class="d" x="513.84" y="212.01" width="7.84" height="8.82"/>
 <rect class="o" x="521.69" y="212.01" width="7.84" height="8.82"/>
 <rect class="o" x="529.53" y="212.01" width="7.84" height="8.82"/>
 <rect class="o" x="537.37" y="212.01" width="7.84" height="8.82"/>
@@ -6770,5 +6770,5 @@
 <rect class="d" x="4" y="316" width="12" height="12"/><text x="20.00" y="327.00" font-size="12">done</text>
 <rect class="o" x="60" y="316" width="12" height="12"/><text x="76.00" y="327.00" font-size="12">open</text>
 <rect class="x" x="112" y="316" width="12" height="12"/><text x="128.00" y="327.00" font-size="12">dropped</text>
-<text x="190.00" y="327.00" font-size="12">Landed by rung: 38 plugin, 3 host, 0 seam, 5 patch</text>
+<text x="190.00" y="327.00" font-size="12">Landed by rung: 42 plugin, 3 host, 0 seam, 5 patch</text>
 </svg>

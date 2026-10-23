@@ -4,7 +4,7 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 133,
+    "done": 137,
     "total": 9828,
     "percent": 1.4,
     "dropped": 26,
@@ -21,7 +21,7 @@
       },
       {
         "kind": "patch",
-        "done": 61,
+        "done": 65,
         "total": 3444
       },
       {
@@ -31,7 +31,7 @@
       }
     ],
     "landed": {
-      "plugin": 38,
+      "plugin": 42,
       "host": 3,
       "seam": 0,
       "patch": 5
@@ -5129,7 +5129,7 @@
     },
     {
       "feature": "unattributed:session",
-      "done": 0,
+      "done": 4,
       "total": 449,
       "dropped": 0,
       "kinds": {
@@ -5142,13 +5142,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 4,
           "total": 449
         },
         "test": {
           "done": 0,
           "total": 0
         }
+      },
+      "landed": {
+        "plugin": 4,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -6154,6 +6160,9 @@
     "patch:unattributed:config:546539fc1643": "host",
     "patch:unattributed:config:73db79553730": "plugin",
     "patch:unattributed:config:8cdbdec70393": "host",
+    "patch:unattributed:session:13cc4c3e6a51": "plugin",
+    "patch:unattributed:session:142910b3fc8c": "plugin",
+    "patch:unattributed:session:5dd7101d7cc6": "plugin",
     "patch:unattributed:tui/component:013e56c6e70d": "plugin",
     "patch:unattributed:tui/component:361708efa0db": "plugin",
     "patch:unattributed:tui/component:3bd2c832bb54": "plugin",
@@ -6288,6 +6297,10 @@
     "patch:unattributed:config:546539fc1643",
     "patch:unattributed:config:73db79553730",
     "patch:unattributed:config:8cdbdec70393",
+    "patch:unattributed:session:13cc4c3e6a51",
+    "patch:unattributed:session:142910b3fc8c",
+    "patch:unattributed:session:5dd7101d7cc6",
+    "patch:unattributed:session:5dd7101d7cc6",
     "patch:unattributed:tui/component:013e56c6e70d",
     "patch:unattributed:tui/component:361708efa0db",
     "patch:unattributed:tui/component:3bd2c832bb54",

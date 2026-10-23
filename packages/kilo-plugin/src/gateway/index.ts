@@ -713,7 +713,7 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
     yield* ctx.session.hook("generate", preparePrompt, { providerID: id })
 
     // Per-request attribution headers (`X-KILOCODE-TASKID`, `X-KILOCODE-PARENT-TASKID`, `X-KILOCODE-PROJECTID`,
-    // `X-KILOCODE-MACHINEID`, `x-kilocode-mode`, `User-Agent`, plus provider headers).
+    // `X-KILOCODE-MACHINEID`, `X-KILOCODE-FEATURE`, `x-kilocode-mode`, `User-Agent`, plus provider headers).
     // kilo_port(gateway:50352226b43c) v1 resolved the project ID, machine ID, and parent session in request.ts.
     yield* ctx.session.hook(
       "model.request",
@@ -728,9 +728,15 @@ export const KiloGatewayPlugin = define<Bus.Service | Global.Service | Scope.Sco
             { concurrency: 3 },
           )
           const parentSessionID = Option.isSome(session) ? session.value.parentID : undefined
+          // kilo_port(unattributed:session:13cc4c3e6a51) v1 attributed the feature to the root session's platform.
+          let root = session
+          while (Option.isSome(root) && root.value.parentID)
+            root = yield* ctx.session.get({ sessionID: root.value.parentID }).pipe(Effect.option)
+          const platform = Option.isSome(root) ? root.value.metadata?.[KiloGatewayRpc.PLATFORM_METADATA_KEY] : undefined
           const requestHeaders = KiloHeaders.request({
             version: ctx.app.version,
             organizationID: catalog.account?.organizationID,
+            platform: typeof platform === "string" ? platform : undefined,
             sessionID: event.sessionID,
             parentSessionID,
             projectID,

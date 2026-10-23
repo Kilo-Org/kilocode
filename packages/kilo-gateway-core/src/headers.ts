@@ -16,6 +16,8 @@ export interface Options {
   readonly version: string
   readonly organizationID?: string | null
   readonly testerWarningsDisabledUntil?: number
+  // The client product of the root session (v1 `platform`), for example "vscode". See `feature` below.
+  readonly platform?: string
 }
 
 export interface RequestOptions extends Options {
@@ -37,7 +39,7 @@ export function provider(options: Options, env: Record<string, string | undefine
     "HTTP-Referer": "https://kilocode.ai",
     "X-Title": "Kilo Code",
     [HEADER_EDITOR]: env.KILOCODE_EDITOR_NAME || `Kilo CLI ${version}`,
-    [HEADER_FEATURE]: env.KILOCODE_FEATURE || "cli",
+    [HEADER_FEATURE]: feature(options.platform, env),
     ...(options.organizationID ? { [HEADER_ORGANIZATION]: options.organizationID } : {}),
     ...(env.KILO_TESTER === TESTER_SUPPRESS_VALUE || (testerUntil && testerUntil > Date.now())
       ? { [HEADER_TESTER]: TESTER_SUPPRESS_VALUE }
@@ -62,3 +64,15 @@ export function request(
     ...(options.mode ? { [HEADER_MODE]: options.mode.toLowerCase() } : {}),
   }
 }
+
+// v1 `KiloSession.featureForPlatform` and `attribution`: the root session platform, else the process platform, maps
+// to a feature. Unknown platforms fall back to the process feature, then to "cli".
+function feature(platform: string | undefined, env: Record<string, string | undefined>) {
+  return FEATURES.get(platform ?? env.KILO_PLATFORM ?? "") ?? (env.KILOCODE_FEATURE || "cli")
+}
+
+const FEATURES = new Map([
+  ["agent-manager", "agent-manager"],
+  ["vscode", "vscode-extension"],
+  ["cli", "cli"],
+])
