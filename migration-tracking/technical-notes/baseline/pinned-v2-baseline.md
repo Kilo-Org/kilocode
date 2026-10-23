@@ -1,10 +1,45 @@
 # Pinned upstream v2 baseline
 
-Status: living. Refreshed 2026-10-16 at `origin/v2` `98ead1f27e`, synced to upstream `v2.0.30`. The base moves with every upstream sync (plan A4), so re-measure after each sync. The 2026-10-11 capture at the initial base is kept below as the previous capture. The 2026-08-13 capture at `76dbaf20` (old branch `johnnyeric/v2-baseline`) survives in git history only.
+Status: living. Refreshed 2026-10-23 on the `v2.1.1` sync branch `sync-v2-1-1`, synced to upstream `v2.1.1`. The base moves with every upstream sync (plan A4), so re-measure after each sync. The 2026-10-16 capture at `v2.0.30` and the 2026-10-11 capture at the initial base are kept below as previous captures. The 2026-08-13 capture at `76dbaf20` (old branch `johnnyeric/v2-baseline`) survives in git history only.
 
 This file records the upstream release `origin/v2` is synced to, the validation commands that this tree defines, and the result of running them. Compare any failing check against this file, and against `origin/v2` before your change, before you attribute it to a change (`migration-context.md`, Conventions).
 
-## Current capture: `v2.0.30` (2026-10-16)
+## Current capture: `v2.1.1` (2026-10-23)
+
+### Refs
+
+| Ref | SHA | Date | Note |
+|---|---|---|---|
+| Sync branch (measured) | `3c4b1fdf849` | 2026-10-23 | `sync-v2-1-1`: the `v2.1.1` sync merge `b80adececc8` plus `origin/v2` `2663e72e7f8` (#15372) |
+| Current upstream base | `e9ac459c2e62e3e5b04c13e2322ded2dc2680f65` | 2026-10-20 | Release commit of `v2.1.1` (parent of the tag) |
+| `upstream/dev` at capture | `74f8d4860f4` | 2026-10-23 | 167 commits past the current base. Lag: 2 releases (`v2.1.2`, `v2.1.3`) |
+
+Measured with `bun migration-tracking/technical-notes/script/v2-baseline.ts --checks` in a clean worktree. Toolchain: bun 1.4.2, node v25.2.1, macOS 26.6 arm64, macOS bash 3.2, `rg` on PATH (Homebrew), login shell fish.
+
+### Results
+
+| Check | Result | Detail |
+|---|---|---|
+| `install`, `check` (`bun run check`), effect simplification lint and rule tests | pass | `bun.lock` unchanged. `check`: 28/28 turbo tasks, oxlint 213 warnings, 0 errors |
+| `test` (`bun turbo test --continue --force`, isolated) | **fail** | 25/26 tasks pass, 4 min 6 s. `@opencode/core`: 6,693 pass, 13 fail. All other packages pass, for example `@opencode/cli` 339, `@opencode/tui` 1,559, `@opencode/server` 87, `@kilocode/gateway-core` 101, `@kilocode/kilo-plugin` 173, `@kilocode/kilo-cli` 53 |
+| `client`, `www`, `protocol` `check:generated` | pass | No drift |
+| `sdk-verify-package`, `codemode-publish-dry-run` | pass | |
+| CLI build, binary version, service smoke | pass | |
+| Kilo build, host smoke, CLI startup ratchet | pass | |
+| Workflow allowlist, annotations, shared patches, progress map, Kilo import rule | pass | Shared patches: 42 files, 275 marked and 39 unmarked lines against `e9ac459c2e6` |
+| Node build and smoke | not run | CI pins Node 26.4.0; this host has v25.2.1 |
+| `lint:effect-patterns` | **fail** | 27 errors, unchanged. Not run by CI |
+
+### Current reds
+
+The same 13 `@opencode/core` cases fail on `origin/v2` `a1e74c10d7d` (before the sync) on this host. None is attributable to the sync or to a Kilo change.
+
+1. **macOS bash 3.2, 7 cases, unchanged:** `ShellTool conditional process substitution` (4), `ShellTool compound syntax approval compatibility` (2), `real-shell compound syntax > bash` (1). Green on Linux CI.
+2. **Login shell, 6 cases, new on this host:** `Session.shell > …` (`packages/core/test/session-shell.test.ts`) times out after 5 s when `SHELL` is fish. With `SHELL=/bin/zsh` the file passes (9 pass).
+3. The 23 ripgrep-backed cases of the previous capture pass now that `rg` is on PATH.
+4. Outside turbo, `packages/cli/test/debug-paths.test.ts` fails when `OPENCODE_TEST_HOME` is set (it expects the real home directory). It passes without that variable and in the turbo run.
+
+## Previous capture: `v2.0.30` (2026-10-16)
 
 ### Refs
 
@@ -173,4 +208,4 @@ bun migration-tracking/technical-notes/script/v2-baseline.ts --checks --only tes
 
 The script takes the base from `pinned()` (`script/upstream/utils/upstream.ts`), so it follows each sync without an edit, and refuses to run the checks unless the pin is an ancestor of `HEAD` and of `upstream/dev` (when that ref exists locally). `--checks` runs the commands of `check.yml`, `test.yml` and `kilo-v2.yml` in CI order, plus the two checks CI does not run (`lint:effect-patterns`, `packages/protocol` `check:generated`, reported but not failing the run). It runs turbo test with `--force` and isolated `OPENCODE_TEST_HOME` and `XDG_*` directories. The CI steps it does not mirror, and why, are listed at the top of the script.
 
-The captures above predate the script. The 2026-10-16 capture used a throwaway script outside the repo with the same isolation, in a clean worktree, and the sequence of the table above (turbo test also `--force`). The 2026-10-11 capture used the sequence: install, typecheck (`--force` re-run), lint, turbo test `--continue`, the three `check:generated` commands, then CLI build and service smoke.
+The 2026-10-23 capture used the script. The older captures predate it. The 2026-10-16 capture used a throwaway script outside the repo with the same isolation, in a clean worktree, and the sequence of the table above (turbo test also `--force`). The 2026-10-11 capture used the sequence: install, typecheck (`--force` re-run), lint, turbo test `--continue`, the three `check:generated` commands, then CLI build and service smoke.
