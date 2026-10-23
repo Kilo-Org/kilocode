@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 142,
+    "done": 148,
     "total": 9828,
-    "percent": 1.4,
+    "percent": 1.5,
     "dropped": 26,
     "kinds": [
       {
         "kind": "module",
-        "done": 43,
+        "done": 48,
         "total": 3547
       },
       {
@@ -26,7 +26,7 @@
       },
       {
         "kind": "test",
-        "done": 28,
+        "done": 29,
         "total": 2798
       }
     ],
@@ -38,7 +38,7 @@
     },
     "coreImports": 26,
     "sharedPatches": {
-      "seam": 27,
+      "seam": 29,
       "patch": 20
     }
   },
@@ -497,12 +497,12 @@
     },
     {
       "feature": "components",
-      "done": 7,
+      "done": 12,
       "total": 22,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 3,
+          "done": 7,
           "total": 16
         },
         "api": {
@@ -514,7 +514,7 @@
           "total": 2
         },
         "test": {
-          "done": 3,
+          "done": 4,
           "total": 4
         }
       },
@@ -1434,12 +1434,12 @@
     },
     {
       "feature": "plugin",
-      "done": 0,
+      "done": 1,
       "total": 34,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 1,
           "total": 26
         },
         "api": {
@@ -6245,10 +6245,15 @@
     "module:packages/kilo-gateway/test/responses.test.ts",
     "module:packages/opencode/src/kilocode/agent/index.ts",
     "module:packages/opencode/src/kilocode/balance-refresh.ts",
+    "module:packages/opencode/src/kilocode/components/dialog-kilo-notifications.tsx",
     "module:packages/opencode/src/kilocode/components/free-model-disclosure.ts",
+    "module:packages/opencode/src/kilocode/components/kilo-news.tsx",
     "module:packages/opencode/src/kilocode/components/model-info-panel-utils.ts",
     "module:packages/opencode/src/kilocode/components/model-info-panel.tsx",
+    "module:packages/opencode/src/kilocode/components/news.ts",
+    "module:packages/opencode/src/kilocode/components/notification-banner.tsx",
     "module:packages/opencode/src/kilocode/kilo-errors.ts",
+    "module:packages/opencode/src/kilocode/plugins/home-news.tsx",
     "module:packages/opencode/test/kilocode/agent-global-config-dirs.test.ts",
     "module:packages/opencode/test/kilocode/agent-permission-overrides.test.ts",
     "module:packages/opencode/test/kilocode/agent-skill-permissions.test.ts",
@@ -6259,6 +6264,7 @@
     "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts",
     "module:packages/opencode/test/kilocode/model-info-panel-utils.test.ts",
     "module:packages/opencode/test/kilocode/model-info-panel.types.test.ts",
+    "module:packages/opencode/test/kilocode/news.test.ts",
     "module:packages/opencode/test/kilocode/tui/usage.test.ts",
     "module:packages/schema/src/kilocode/provider-usage.ts",
     "module:packages/tui/src/kilocode/model-picker.ts",
