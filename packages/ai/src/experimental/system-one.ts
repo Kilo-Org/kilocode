@@ -11,13 +11,15 @@ import {
   type EvaluationOptions,
 } from "./evaluation.js"
 import { Auth, type Definition as AuthDefinition } from "../route/auth.js"
+import { RequestExecutor } from "../route/executor.js"
+import { JsonObject, ProviderShared } from "../protocols/shared.js"
 import {
   AIError,
-  HttpContext,
   HttpOptions,
   InvalidProviderOutputError,
   InvalidRequestError,
   ModelID,
+  ProviderMetadata,
   Usage,
   mergeJsonRecords,
 } from "../schema/index.js"
@@ -51,7 +53,7 @@ const Request = Schema.StructWithRest(
     state: EvaluationInput,
     questions: Schema.Record(Schema.String, Question),
   }),
-  [Schema.Record(Schema.String, Schema.Any)],
+  [JsonObject],
 )
 
 const Probability = Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 1 }))
@@ -75,7 +77,7 @@ const NativeUsage = Schema.StructWithRest(
     input_tokens: Schema.optional(Schema.Number),
     output_tokens: Schema.optional(Schema.Number),
   }),
-  [Schema.Record(Schema.String, Schema.Unknown)],
+  [JsonObject],
 )
 const Response = Schema.Struct({
   model: Schema.String,
@@ -83,7 +85,7 @@ const Response = Schema.Struct({
   usage: Schema.optional(NativeUsage),
   id: Schema.optional(Schema.String),
   provider: Schema.optional(Schema.String),
-  provider_metadata: Schema.optional(Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Unknown))),
+  provider_metadata: Schema.optional(ProviderMetadata),
 })
 
 export interface ModelInput {
@@ -132,7 +134,7 @@ export const model = <Options extends EvaluationOptions = EvaluationOptions>(cfg
               HttpClientRequest.bodyText(body, "application/json"),
             ),
           )
-          const http = new HttpContext({ url: res.request.url, status: res.status, headers: res.headers })
+          const http = RequestExecutor.responseHttp(res)
           const fail = (message: string, cause: unknown, body?: string) =>
             new AIError({ reason: new InvalidProviderOutputError({ route: "system-one", message, body, http, cause }) })
           const text = yield* res.text.pipe(
@@ -182,10 +184,11 @@ export const model = <Options extends EvaluationOptions = EvaluationOptions>(cfg
               ? new Usage({
                   inputTokens: data.usage.input_tokens,
                   outputTokens: data.usage.output_tokens,
-                  totalTokens:
-                    data.usage.input_tokens === undefined && data.usage.output_tokens === undefined
-                      ? undefined
-                      : (data.usage.input_tokens ?? 0) + (data.usage.output_tokens ?? 0),
+                  totalTokens: ProviderShared.totalTokens(
+                    data.usage.input_tokens,
+                    data.usage.output_tokens,
+                    undefined,
+                  ),
                   providerMetadata: { [cfg.providerMetadataKey]: data.usage },
                 })
               : undefined,

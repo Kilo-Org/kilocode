@@ -64,6 +64,14 @@ describe("RequestExecutor", () => {
       )
       expect(RequestExecutor.httpFailure({ message: "No response", url: request.url }).reason.http).toBeUndefined()
       expect(RequestExecutor.httpFailure({ message: "No URL", status: 500 }).reason.http).toBeUndefined()
+      expect(
+        RequestExecutor.httpFailure({
+          message: "Huge retry-after",
+          url: request.url,
+          status: 429,
+          responseHeaders: { "Retry-After": "1e20" },
+        }).reason,
+      ).toMatchObject({ _tag: "RateLimit", retryAfterMs: Number.MAX_SAFE_INTEGER })
     }),
   )
 

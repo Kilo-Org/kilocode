@@ -1,9 +1,12 @@
 import { mergeProviderOptions, type ProviderOptions } from "../schema/index.js"
-import type { OpenAIServiceTier } from "../protocols/utils/openai-options.js"
-import type { Options } from "../protocols/utils/open-responses-options.js"
+import type { Options, ResponseIncludable, ServiceTier } from "../protocols/utils/open-responses-options.js"
 import type { ContextManagement } from "../protocols/openai-responses.js"
 
-export type { OpenAIResponseIncludable, OpenAIServiceTier } from "../protocols/utils/openai-options.js"
+// Mirrors OpenAI's `ResponseIncludable` union from the official SDK. Keep this
+// in lockstep with `openai-node/src/resources/responses/responses.ts`.
+export type OpenAIResponseIncludable = ResponseIncludable
+// Mirrors OpenAI's `ServiceTier` union from the official SDK.
+export type OpenAIServiceTier = ServiceTier | "scale" | "fast" | "ultrafast"
 
 export type OpenAIOptionsInput = Omit<Options, "serviceTier"> & {
   /** Advanced in-band compaction. The caller owns checkpoint persistence and recovery. */

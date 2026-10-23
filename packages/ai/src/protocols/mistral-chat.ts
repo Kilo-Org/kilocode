@@ -388,9 +388,6 @@ export const fromRequest = Effect.fn("MistralChat.fromRequest")(function* (reque
   const options = yield* ProviderShared.validateWith(Schema.decodeUnknownEffect(MistralOptions))(
     request.providerOptions ?? {},
   )
-  const selected = request.toolChoice?.type === "tool" ? request.toolChoice.name : undefined
-  if (request.toolChoice?.type === "tool" && !selected)
-    return yield* ProviderShared.invalidRequest("Mistral Chat tool choice requires a tool name")
   if (options.reasoningEffort !== undefined && options.promptMode !== undefined)
     return yield* ProviderShared.invalidRequest(
       "Mistral Chat reasoningEffort and promptMode provider options are mutually exclusive",
@@ -505,7 +502,7 @@ const thinkingUnits = (value: unknown): ReadonlyArray<MistralThinkingUnit> => {
 }
 
 const thinkingText = (thinking: ReadonlyArray<MistralThinkingUnit>) =>
-  thinking.flatMap((unit) => (typeof unit.text === "string" ? [unit.text] : [])).join("")
+  thinking.flatMap((unit) => (unit.text !== undefined ? [unit.text] : [])).join("")
 
 const thinkingMetadata = (thinking: MistralThinkingContent) => ({ mistral: { thinking } })
 
