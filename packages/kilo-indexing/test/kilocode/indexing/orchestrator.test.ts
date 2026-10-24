@@ -628,8 +628,9 @@ describe("CodeIndexOrchestrator telemetry", () => {
     const active = orchestrator.startIndexing("background")
     await scanner.started.promise
     const clearing = orchestrator.clearIndexData()
-    await Bun.sleep(20)
+    for (let i = 0; i < 200 && !scanner.isCancelled; i += 1) await Bun.sleep(5)
     // The in-flight batch is still running, so nothing may be deleted yet.
+    expect(scanner.isCancelled).toBe(true)
     expect(store.deleteCount).toBe(0)
 
     scanner.gate.resolve()
@@ -692,7 +693,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
 
     await orchestrator.startIndexing("background")
     const clearing = orchestrator.clearIndexData()
-    await Bun.sleep(20)
+    for (let i = 0; i < 200 && watcher.shutdowns === 0; i += 1) await Bun.sleep(5)
     // The watcher's drain task is still writing, so the collection stays.
     expect(watcher.shutdowns).toBe(1)
     expect(store.deleteCount).toBe(0)
