@@ -23,10 +23,12 @@ import {
   type HostedSession,
   type HostedSessionPage,
   type HostedTranscriptPage,
+  type NativeRequest,
   type Provider,
   type StartResult,
   type Transport,
 } from "./types"
+import { classify } from "./native-routes"
 
 export const PROVIDER = Schema.decodeUnknownSync(ProviderID)("kilo-cloud")
 export const ATTACHMENT_TTL_MS = 60_000
@@ -68,6 +70,9 @@ export function provider(options: Options): Provider {
         if (error.kind === "missing") {
           return new HostedFailure({ code: "signed_out", message: error.message, retryable: false })
         }
+        if (error.kind === "unavailable") {
+          return new HostedFailure({ code: "auth_unavailable", message: error.message, retryable: true })
+        }
         return new HostedFailure({ code: "rejected", message: error.message, retryable: false })
       }),
     )
@@ -77,15 +82,8 @@ export function provider(options: Options): Provider {
     Effect.catchTag("CloudAuthResolutionError", (error) =>
       Effect.succeed({
         state: "unavailable",
-        reason: error.kind === "missing" ? "signed_out" : "rejected",
+        reason: error.kind === "missing" ? "signed_out" : error.kind === "unavailable" ? "unreachable" : "rejected",
         message: error.message,
-      } as Availability),
-    ),
-    Effect.catchTag("AuthError", () =>
-      Effect.succeed({
-        state: "unavailable",
-        reason: "unreachable",
-        message: "Kilo credentials could not be read",
       } as Availability),
     ),
   )
@@ -342,6 +340,50 @@ export function provider(options: Options): Provider {
       return { session: session.id, expiresAt: clock() + ATTACHMENT_TTL_MS }
     })
 
+  /**
+   * Maps one allowlisted native request onto the merged `/kilo` facade. Cloud
+   * control identities, origin, bearer, selector, and fence never leave this
+   * module.
+   */
+  const native = (input: NativeRequest): Effect.Effect<Response, HostedFailure> =>
+    Effect.gen(function* () {
+      const mapped = classify(input.session.sessionID, input.method, input.path, input.query)
+      if (mapped === undefined) {
+        return yield* Effect.fail(
+          new HostedFailure({
+            code: "invalid_request",
+            message: "Native route is not supported by this session host",
+            retryable: false,
+          }),
+        )
+      }
+      if (mapped.kind === "mismatch") {
+        return yield* Effect.fail(
+          new HostedFailure({
+            code: "invalid_request",
+            message: "Session identity does not match this attachment",
+            retryable: false,
+          }),
+        )
+      }
+      const auth = yield* resolve(input.organizationID)
+      const headers: Record<string, string> = {
+        ...buildKiloHeaders(undefined, auth.organizationID ? { kilocodeOrganizationId: auth.organizationID } : undefined),
+      }
+      for (const [key, value] of input.headers.entries()) headers[key] = value
+      const query = mapped.query.toString()
+      return yield* request(auth, {
+        method: mapped.method,
+        path: query.length === 0 ? mapped.remote : `${mapped.remote}?${query}`,
+        headers,
+        ...(input.body && input.body.length > 0
+          ? { body: new Blob([new Uint8Array(input.body).buffer]) }
+          : {}),
+        // The native event stream is long-lived; every other call keeps the default bound.
+        ...(mapped.remote === "/kilo/event" ? { timeoutMs: 0 } : {}),
+      })
+    })
+
   return {
     id: PROVIDER,
     default: true,
@@ -352,6 +394,7 @@ export function provider(options: Options): Provider {
     transcript,
     start,
     attach,
+    route: native,
   }
 }
 
