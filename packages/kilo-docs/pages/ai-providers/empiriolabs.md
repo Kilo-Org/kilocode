@@ -1,12 +1,12 @@
 ---
 title: "Using EmpirioLabs AI with Kilo Code"
-description: "Configure EmpirioLabs AI in Kilo Code to use open and proprietary coding models through one OpenAI-compatible API."
+description: "Configure EmpirioLabs AI, specialized AI model hosting for open, proprietary, and custom stacks, in Kilo Code. Setup guide for VS Code and the CLI."
 sidebar_label: EmpirioLabs AI
 ---
 
 # Using EmpirioLabs AI With Kilo Code
 
-EmpirioLabs AI serves open and proprietary models, including Qwen, GLM, Kimi, DeepSeek and MiniMax, through an OpenAI-compatible API at `https://api.empiriolabs.ai/v1`. Kilo Code includes it as a built-in provider.
+EmpirioLabs AI is specialized AI model hosting for open, proprietary, and custom stacks. Its OpenAI-compatible API is at `https://api.empiriolabs.ai/v1`, and Kilo Code includes it as a built-in provider.
 
 **Website:** [https://empiriolabs.ai](https://empiriolabs.ai)
 
