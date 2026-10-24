@@ -25,7 +25,7 @@ import {
 } from "../constants"
 import { FileIgnore } from "../../file/ignore"
 import { Log } from "../../util/log"
-import { sanitizeErrorMessage } from "../shared/validation-helpers"
+import { isNonRetryableEmbeddingError, sanitizeErrorMessage } from "../shared/validation-helpers"
 import type { IndexingTelemetryMeta, IndexingTelemetryMode, IndexingTelemetryReporter } from "../interfaces/telemetry"
 import type { IgnoreMatcher } from "../shared/load-ignore"
 import { isBinary } from "../shared/is-binary"
@@ -651,6 +651,14 @@ export class DirectoryScanner implements IDirectoryScanner {
           attemptNumber: attempts,
           batchSize: batchBlocks.length,
         })
+
+        // Deterministic client errors (e.g. a 400 from the embedding endpoint) cannot
+        // be fixed by re-sending the identical payload. Fail immediately instead of
+        // burning the remaining retries — this is what produced the "400 after 3
+        // retries" symptom in #15450. Transient errors (429, 5xx, network) still retry.
+        if (isNonRetryableEmbeddingError(error)) {
+          break
+        }
 
         if (attempts < this.maxBatchRetries) {
           this.emitRetry(mode, attempts, batchBlocks.length, error)

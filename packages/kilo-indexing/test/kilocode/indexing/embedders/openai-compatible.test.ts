@@ -317,6 +317,48 @@ describe("OpenAICompatibleEmbedder", () => {
         expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(1)
       })
 
+      test("splits an oversized batch when the endpoint rejects it for context overflow", async () => {
+        // Simulate a small-context model: reject any request with more than 2
+        // items, accept the rest.
+        mockEmbeddingsCreate.mockImplementation(async (body: any) => {
+          if (body.input.length > 2) {
+            throw Object.assign(new Error("input (517 tokens) is larger than the max context size (512 tokens)"), {
+              status: 400,
+            })
+          }
+          return {
+            data: body.input.map((_: any, i: number) => ({ embedding: [i] })),
+            usage: { prompt_tokens: body.input.length, total_tokens: body.input.length },
+          }
+        })
+
+        const result = await embedder.createEmbeddings(["a", "b", "c", "d"])
+
+        // One oversized request (4 items) plus two split halves (2 + 2 items).
+        expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(3)
+        // All four items are embedded, in order: left half ["a","b"] -> [0],[1],
+        // right half ["c","d"] -> [0],[1].
+        expect(result.embeddings).toEqual([
+          [0],
+          [1],
+          [0],
+          [1],
+        ])
+      })
+
+      test("does not retry a context-overflow rejection for a single oversized item", async () => {
+        mockEmbeddingsCreate.mockImplementation(async (body: any) => {
+          throw Object.assign(new Error("input (600 tokens) is larger than the max context size (512 tokens)"), {
+            status: 400,
+          })
+        })
+
+        await expect(embedder.createEmbeddings(["a"])).rejects.toThrow("max context size")
+
+        // A single item cannot be split, so it must not be re-sent.
+        expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(1)
+      })
+
       test("should return correct usage statistics", async () => {
         const testTexts = ["text1", "text2"]
 
