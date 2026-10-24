@@ -1101,6 +1101,11 @@ export type SessionStatus =
       type: "scheduled"
       scheduledAt: string
     }
+  | {
+      type: "waiting"
+      reason: "permission"
+      requestID?: string
+    }
 
 export type QuestionOption = {
   /**
@@ -4577,7 +4582,7 @@ export type NotebookFailure = {
   currentRevision?: string
 }
 
-export type AgentManagerActivity = "idle" | "busy" | "retry" | "offline"
+export type AgentManagerActivity = "idle" | "busy" | "retry" | "offline" | "waiting"
 
 export type AgentManagerAttention = Array<"permission" | "question">
 

@@ -155,6 +155,16 @@ describe("resolveDerivedSessionStatus", () => {
         scheduledAt: 5_000,
       }),
     ).toBe("retry")
+    // kilocode_change start - a session waiting for permission is an active turn (#33)
+    expect(
+      resolveDerivedSessionStatus({
+        hasPermission: false,
+        hasQuestion: false,
+        statusType: "waiting",
+        scheduledAt: 5_000,
+      }),
+    ).toBe("busy")
+    // kilocode_change end
   })
 
   test("every existing result is unchanged without a wakeup", () => {
@@ -167,5 +177,10 @@ describe("resolveDerivedSessionStatus", () => {
     expect(resolveDerivedSessionStatus({ hasPermission: false, hasQuestion: false, statusType: "offline" })).toBe(
       "retry",
     )
+    // kilocode_change start - a session waiting for permission maps to busy (#33)
+    expect(resolveDerivedSessionStatus({ hasPermission: false, hasQuestion: false, statusType: "waiting" })).toBe(
+      "busy",
+    )
+    // kilocode_change end
   })
 })
