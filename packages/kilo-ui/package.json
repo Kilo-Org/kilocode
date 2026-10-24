@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-ui",
-  "version": "7.8.15",
+  "version": "7.8.17",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -104,15 +104,15 @@
   },
   "devDependencies": {
     "@playwright/test": "1.57.0",
-    "@storybook/addon-a11y": "10.2.10",
-    "@storybook/addon-docs": "10.2.10",
-    "@storybook/addon-themes": "10.2.10",
+    "@storybook/addon-a11y": "10.6.2",
+    "@storybook/addon-docs": "10.6.2",
+    "@storybook/addon-themes": "10.6.2",
     "@tsconfig/node22": "catalog:",
     "@types/bun": "catalog:",
-    "storybook": "10.2.10",
+    "storybook": "10.6.2",
     "storybook-solidjs-vite": "10.0.9",
     "typescript": "catalog:",
-    "vite": "7.3.5",
+    "vite": "7.3.7",
     "vite-plugin-solid": "2.11.10"
   },
   "scripts": {

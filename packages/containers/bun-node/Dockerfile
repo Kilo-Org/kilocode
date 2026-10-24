@@ -5,8 +5,10 @@ FROM ${REGISTRY}/build/base:24.04
 
 SHELL ["/bin/bash", "-lc"]
 
-ARG NODE_VERSION=24.4.0
-ARG BUN_VERSION=1.4.2
+# kilocode_change start
+ARG NODE_VERSION=24.22.1
+ARG BUN_VERSION=1.4.4
+# kilocode_change end
 
 ENV BUN_INSTALL=/opt/bun
 ENV PATH=/opt/bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -19,10 +21,10 @@ RUN set -euo pipefail; \
   | tar -xJf - -C /usr/local --strip-components=1; \
   corepack enable
 
-# kilocode_change start - retry the installer and its internal release download
+# kilocode_change start - install the exact npm release with retries
 RUN set -euo pipefail; \
   for attempt in 1 2 3 4 5; do \
-    if curl -fsSL https://bun.sh/install | bash -s -- "bun-v${BUN_VERSION}"; then \
+    if npm install --global --prefix "$BUN_INSTALL" "bun@${BUN_VERSION}"; then \
       break; \
     fi; \
     if [ "$attempt" -eq 5 ]; then \

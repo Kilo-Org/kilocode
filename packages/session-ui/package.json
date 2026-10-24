@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/session-ui",
-  "version": "7.8.15",
+  "version": "7.8.17",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -52,7 +52,7 @@
     "@solidjs/meta": "catalog:",
     "@solidjs/router": "catalog:",
     "diff": "catalog:",
-    "dompurify": "3.4.16",
+    "dompurify": "3.4.17",
     "fuzzysort": "catalog:",
     "luxon": "catalog:",
     "marked": "catalog:",

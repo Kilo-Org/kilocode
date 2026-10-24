@@ -412,6 +412,23 @@ import type {
   SessionForkResponses,
   SessionGetErrors,
   SessionGetResponses,
+  SessionHostAttachErrors,
+  SessionHostAttachResponses,
+  SessionHostDetachErrors,
+  SessionHostDetachResponses,
+  SessionHostGetErrors,
+  SessionHostGetResponses,
+  SessionHostListErrors,
+  SessionHostListResponses,
+  SessionHostOrganizationId,
+  SessionHostProviderId,
+  SessionHostProvidersErrors,
+  SessionHostProvidersResponses,
+  SessionHostStartErrors,
+  SessionHostStartInput,
+  SessionHostStartResponses,
+  SessionHostTranscriptErrors,
+  SessionHostTranscriptResponses,
   SessionInitErrors,
   SessionInitResponses,
   SessionListErrors,
@@ -9519,6 +9536,183 @@ export class Sandbox extends HeyApiClient {
   }
 }
 
+export class SessionHost extends HeyApiClient {
+  /**
+   * List session host providers
+   *
+   * Report every registered session host provider with its availability and transport state.
+   */
+  public providers<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).get<
+      SessionHostProvidersResponses,
+      SessionHostProvidersErrors,
+      ThrowOnError
+    >({ url: "/kilocode/session-host/provider", ...options })
+  }
+
+  /**
+   * List hosted sessions
+   *
+   * List sessions from the authenticated default session host provider.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      limit?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "limit" }] }])
+    return (options?.client ?? this.client).get<SessionHostListResponses, SessionHostListErrors, ThrowOnError>({
+      url: "/kilocode/session-host/session",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Start a hosted session
+   *
+   * Start a hosted session and deliver the initial message. Reuse the same operation key and message ID to retry safely.
+   */
+  public start<ThrowOnError extends boolean = false>(
+    parameters?: {
+      sessionHostStartInput?: SessionHostStartInput
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "sessionHostStartInput", map: "body" }] }])
+    return (options?.client ?? this.client).post<SessionHostStartResponses, SessionHostStartErrors, ThrowOnError>({
+      url: "/kilocode/session-host/session",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Get a hosted session
+   *
+   * Read a hosted session's normalized native detail without waking compute.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<SessionHostGetResponses, SessionHostGetErrors, ThrowOnError>({
+      url: "/kilocode/session-host/session/{providerID}/{sessionID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read a hosted transcript
+   *
+   * Read a bounded page of a hosted session transcript without waking compute.
+   */
+  public transcript<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      sessionID: string
+      limit?: string
+      before?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "before" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostTranscriptResponses,
+      SessionHostTranscriptErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/session/{providerID}/{sessionID}/message",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Attach to a hosted session
+   *
+   * Mint an opaque local attachment that routes the proven native API for one hosted session. No provider origin, credential, or selector is exposed.
+   */
+  public attach<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      sessionID: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SessionHostAttachResponses, SessionHostAttachErrors, ThrowOnError>({
+      url: "/kilocode/session-host/session/{providerID}/{sessionID}/attach",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Detach a hosted session
+   *
+   * Dispose a local attachment. This never changes Cloud lifecycle.
+   */
+  public detach<ThrowOnError extends boolean = false>(
+    parameters: {
+      attachmentID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "attachmentID" }] }])
+    return (options?.client ?? this.client).delete<SessionHostDetachResponses, SessionHostDetachErrors, ThrowOnError>({
+      url: "/kilocode/session-host/attachment/{attachmentID}",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Suggestion extends HeyApiClient {
   /**
    * List pending suggestions
@@ -12331,6 +12525,11 @@ export class KiloClient extends HeyApiClient {
   private _sandbox?: Sandbox
   get sandbox(): Sandbox {
     return (this._sandbox ??= new Sandbox({ client: this.client }))
+  }
+
+  private _sessionHost?: SessionHost
+  get sessionHost(): SessionHost {
+    return (this._sessionHost ??= new SessionHost({ client: this.client }))
   }
 
   private _suggestion?: Suggestion
