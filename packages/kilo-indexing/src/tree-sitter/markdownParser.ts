@@ -33,9 +33,42 @@ export function parseMarkdown(content: string): QueryCapture[] {
   const setextH1Regex = /^={3,}\s*$/
   const setextH2Regex = /^-{3,}\s*$/
   const validSetextTextRegex = /^\s*[^#<>!\[\]`\t]+[^\n]$/
+  const fenceOpenRegex = /^ {0,3}(`{3,}[^`]*|~{3,}.*)$/
 
-  for (let i = 0; i < lines.length; i++) {
+  const start = (() => {
+    if (lines[0]?.trim() !== "---") return 0
+    for (let i = 1; i < lines.length; i++) {
+      const trimmed = lines[i]?.trim()
+      if (trimmed === "---" || trimmed === "...") return i + 1
+    }
+    return 0
+  })()
+
+  let fence = ""
+  let prevSkippable = true
+
+  for (let i = start; i < lines.length; i++) {
     const line = lines[i]
+
+    if (fence) {
+      const char = fence[0]
+      const closeRegex = new RegExp(`^ {0,3}${char}{${fence.length},}\\s*$`)
+      if (closeRegex.test(line)) {
+        fence = ""
+      }
+      prevSkippable = true
+      continue
+    }
+
+    const fenceMatch = line.match(fenceOpenRegex)
+    if (fenceMatch) {
+      const token = fenceMatch[1]
+      const char = token[0]
+      const count = token.match(new RegExp(`^${char}+`))?.[0].length ?? 3
+      fence = char.repeat(count)
+      prevSkippable = true
+      continue
+    }
 
     // ATX headers (# Header)
     const atxMatch = line.match(atxHeaderRegex)
@@ -61,11 +94,12 @@ export function parseMarkdown(content: string): QueryCapture[] {
         patternIndex: 0,
       })
 
+      prevSkippable = true
       continue
     }
 
     // Setext headers (underlined)
-    if (i > 0) {
+    if (i > start && !prevSkippable) {
       if (setextH1Regex.test(line) && validSetextTextRegex.test(lines[i - 1])) {
         const text = lines[i - 1].trim()
 
@@ -87,6 +121,7 @@ export function parseMarkdown(content: string): QueryCapture[] {
           patternIndex: 0,
         })
 
+        prevSkippable = true
         continue
       }
 
@@ -111,9 +146,12 @@ export function parseMarkdown(content: string): QueryCapture[] {
           patternIndex: 0,
         })
 
+        prevSkippable = true
         continue
       }
     }
+
+    prevSkippable = line.trim() === ""
   }
 
   // Calculate section ranges
