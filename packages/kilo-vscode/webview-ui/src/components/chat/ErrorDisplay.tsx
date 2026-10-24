@@ -1,4 +1,4 @@
-import { Component, createMemo, Switch, Match } from "solid-js"
+import { Component, createMemo, Show, Switch, Match } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
@@ -20,6 +20,8 @@ import ProviderConnectDialog from "../settings/ProviderConnectDialog"
 export interface ErrorDisplayProps {
   error: NonNullable<AssistantMessage["error"]>
   onLogin?: () => void
+  /** Set for failed compaction summaries; offers switching to a separate compaction model. */
+  onCompactionModel?: () => void
 }
 
 export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
@@ -68,6 +70,15 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
             <Icon name="warning" size="small" />
             <div class="error-card-message">{errorText()}</div>
           </div>
+          <Show when={props.onCompactionModel}>
+            {(open) => (
+              <div class="error-card-actions">
+                <Button variant="secondary" size="small" onClick={() => open()()}>
+                  {t("error.compaction.action")}
+                </Button>
+              </div>
+            )}
+          </Show>
           <Collapsible variant="ghost">
             <Collapsible.Trigger class="error-details-trigger">
               <span>{t("error.details.show")}</span>

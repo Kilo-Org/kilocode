@@ -22,6 +22,7 @@ import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery"
 import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks"
+import { KiloCompactionFailure } from "@/kilocode/session/compaction-failure"
 import { SessionExport } from "@/kilocode/session-export"
 import { KiloSession } from "@/kilocode/session"
 // kilocode_change end
@@ -564,20 +565,12 @@ const layer = Layer.effect(
         return "stop"
       }
 
-      // kilocode_change start - an empty worker response fails retryably and never replaces the session
+      // kilocode_change start - an empty, filtered, or refused summary fails and never replaces the session
       if (fallback === "continue") {
         const produced = yield* MessageV2.parts(msg.id).pipe(Effect.provideService(Database.Service, database))
-        const visible = produced.some((part) => part.type === "text" && part.text.trim().length > 0)
-        // A processor that returns "continue" without rendering any text
-        // answered with nothing; fail retryably instead of replacing the session.
-        if (!visible) {
-          processor.message.error = new MessageV2.APIError({
-            message: KiloCompactionChunks.EMPTY_SUMMARY,
-            isRetryable: true,
-          }).toObject()
-          processor.message.finish = "error"
-          processor.message.time.completed = Date.now()
-          yield* session.updateMessage(processor.message)
+        const error = KiloCompactionFailure.inspect({ message: processor.message, parts: produced, model })
+        if (error) {
+          yield* session.updateMessage(KiloCompactionFailure.settle(processor.message, error))
           fallback = "stop"
         }
       }
@@ -716,17 +709,20 @@ const layer = Layer.effect(
         const error = processor.message.error
         const produced = yield* MessageV2.parts(msg.id).pipe(Effect.provideService(Database.Service, database))
         const visible = produced.some((part) => part.type === "text" && part.text.trim().length > 0)
-        const empty = error.name === "APIError" && error.data.message === KiloCompactionChunks.EMPTY_SUMMARY
+        const empty = error.name === "APIError" && error.data.message === KiloCompactionFailure.EMPTY_SUMMARY
         if (empty && !visible) {
           yield* session.updatePart({
             id: PartID.ascending(),
             messageID: msg.id,
             sessionID: input.sessionID,
             type: "text",
-            text: KiloCompactionChunks.EMPTY_SUMMARY,
+            text: KiloCompactionFailure.EMPTY_SUMMARY,
           })
         }
-        if (empty) {
+        // Finish the failed summary so the same compaction request is not re-run before the next prompt.
+        if (!processor.message.finish || !processor.message.time.completed)
+          yield* session.updateMessage(KiloCompactionFailure.settle(processor.message, error))
+        if (KiloCompactionFailure.owned(error)) {
           yield* Effect.logError("compaction failed", { "session.id": input.sessionID, error })
           yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error })
         }

@@ -1375,6 +1375,8 @@ export const dict = {
 
   "error.details.show": "詳細",
 
+  "error.compaction.action": "圧縮モデルを選択",
+
   "task.todos.progress": "{{done}}/{{total}} タスク完了",
   "task.todos.allDone": "{{count}} タスク完了",
   "task.todos.title": "タスク",

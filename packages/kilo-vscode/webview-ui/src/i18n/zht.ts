@@ -1308,6 +1308,8 @@ export const dict = {
 
   "error.details.show": "詳細資訊",
 
+  "error.compaction.action": "選擇壓縮模型",
+
   "task.todos.progress": "{{done}}/{{total}} 個待辦已完成",
   "task.todos.allDone": "{{count}} 個待辦已完成",
   "task.todos.title": "待辦",

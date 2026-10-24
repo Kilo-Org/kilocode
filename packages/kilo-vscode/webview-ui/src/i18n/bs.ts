@@ -1387,6 +1387,8 @@ export const dict = {
 
   "error.details.show": "Detalji",
 
+  "error.compaction.action": "Odaberi model za kompresiju",
+
   "task.todos.progress": "{{done}}/{{total}} zadataka završeno",
   "task.todos.allDone": "{{count}} zadataka završeno",
   "task.todos.title": "Zadaci",

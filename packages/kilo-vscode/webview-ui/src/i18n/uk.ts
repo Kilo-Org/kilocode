@@ -1355,6 +1355,8 @@ export const dict = {
 
   "error.details.show": "Деталі",
 
+  "error.compaction.action": "Вибрати модель стискання",
+
   "task.todos.progress": "{{done}} з {{total}} завдань виконано",
   "task.todos.allDone": "{{count}} завдань виконано",
   "task.todos.title": "Завдання",

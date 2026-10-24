@@ -1355,6 +1355,8 @@ export const dict = {
 
   "error.details.show": "รายละเอียด",
 
+  "error.compaction.action": "เลือกโมเดลสำหรับการบีบอัด",
+
   "task.todos.progress": "{{done}}/{{total}} งานเสร็จแล้ว",
   "task.todos.allDone": "{{count}} งานเสร็จแล้ว",
   "task.todos.title": "รายการงาน",

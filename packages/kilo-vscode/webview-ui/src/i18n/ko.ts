@@ -1358,6 +1358,8 @@ export const dict = {
 
   "error.details.show": "상세 정보",
 
+  "error.compaction.action": "압축 모델 선택",
+
   "task.todos.progress": "{{done}}/{{total}} 할 일 완료",
   "task.todos.allDone": "{{count}} 할 일 완료",
   "task.todos.title": "할 일",

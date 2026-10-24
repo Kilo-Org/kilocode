@@ -1304,6 +1304,8 @@ export const dict = {
 
   "error.details.show": "详细信息",
 
+  "error.compaction.action": "选择压缩模型",
+
   "task.todos.progress": "{{done}}/{{total}} 个待办已完成",
   "task.todos.allDone": "{{count}} 个待办已完成",
   "task.todos.title": "待办",
