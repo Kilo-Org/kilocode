@@ -469,6 +469,68 @@ export const kiloScenarios: Scenario[] = [
     .post("/kilo/cloud/session/import", "kilo.cloud.session.import")
     .at((ctx) => ({ path: "/kilo/cloud/session/import", headers: ctx.headers(), body: { sessionId: "missing" } }))
     .status(401),
+  http.protected.get("/kilocode/session-host/provider", "sessionHost.providers").json(200, (body) => {
+    object(body)
+    array(body.providers)
+  }),
+  http.protected
+    .get("/kilocode/session-host/session", "sessionHost.list")
+    .at((ctx) => ({ path: "/kilocode/session-host/session", headers: ctx.headers() }))
+    .json(200, (body) => {
+      object(body)
+      array(body.items)
+    }),
+  http.protected
+    .post("/kilocode/session-host/session", "sessionHost.start")
+    .at((ctx) => ({
+      path: "/kilocode/session-host/session",
+      headers: ctx.headers(),
+      body: {
+        repository: { type: "github", repo: "owner/repo" },
+        prompt: "hello",
+        agent: { mode: "build", model: "test/fake" },
+      },
+    }))
+    .status(401),
+  http.protected
+    .get("/kilocode/session-host/session/{providerID}/{sessionID}", "sessionHost.get")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/session/{providerID}/{sessionID}", {
+        providerID: "kilo-cloud",
+        sessionID: "ses_00000000000000000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .get("/kilocode/session-host/session/{providerID}/{sessionID}/message", "sessionHost.transcript")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/session/{providerID}/{sessionID}/message", {
+        providerID: "kilo-cloud",
+        sessionID: "ses_00000000000000000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .post("/kilocode/session-host/session/{providerID}/{sessionID}/attach", "sessionHost.attach")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/session/{providerID}/{sessionID}/attach", {
+        providerID: "kilo-cloud",
+        sessionID: "ses_00000000000000000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .delete("/kilocode/session-host/attachment/{attachmentID}", "sessionHost.detach")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/attachment/{attachmentID}", {
+        attachmentID: "wrk_att_0000000000000000000000000Z",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(404),
   http.protected.get("/network", "network.list").json(200, array),
   http.protected
     .post("/network/{requestID}/reply", "network.reply")
