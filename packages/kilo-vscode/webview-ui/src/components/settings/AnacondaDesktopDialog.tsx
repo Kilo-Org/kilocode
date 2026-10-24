@@ -32,12 +32,14 @@ function AnacondaDesktopDialog(props: AnacondaDesktopDialogProps) {
   const [error, setError] = createSignal<string>()
   const managing = props.connected ?? provider.connected().includes(ID)
 
-  function check() {
+  // `refresh` bypasses the backend status cache so "check again" always shows
+  // the machine as it is now; the automatic check on open may use the cache.
+  function check(refresh = false) {
     if (checking() || opening() || syncing()) return
     setChecking(true)
     setError()
     action.send(
-      { type: "anacondaDesktopStatus" },
+      { type: "anacondaDesktopStatus", refresh },
       {
         onStatus: (message) => {
           setChecking(false)
@@ -268,7 +270,7 @@ function AnacondaDesktopDialog(props: AnacondaDesktopDialogProps) {
             </Button>
           </Show>
           <Show when={!checking()}>
-            <Button variant="secondary" size="large" onClick={check} disabled={opening() || syncing()}>
+            <Button variant="secondary" size="large" onClick={() => check(true)} disabled={opening() || syncing()}>
               {language.t("provider.anaconda.action.checkAgain")}
             </Button>
           </Show>

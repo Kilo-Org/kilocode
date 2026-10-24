@@ -51,6 +51,12 @@ export function matchLegacyKiloOpenApi(input: Record<string, unknown>) {
   )
   if (limit) limit.schema = { type: "integer", minimum: 1, maximum: 50 }
 
+  const refresh = spec.paths?.["/kilocode/anaconda-desktop/status"]?.get?.parameters?.find(
+    (param) => param.in === "query" && param.name === "refresh",
+  )
+  // SDK callers pass a real boolean; the server still decodes "true"/"false".
+  if (refresh) refresh.schema = { type: "boolean" }
+
   const body = spec.paths?.["/kilo/organization"]?.post?.requestBody?.content?.["application/json"]?.schema
   const ref = body?.$ref?.replace("#/components/schemas/", "")
   const props = ref ? spec.components?.schemas?.[ref]?.properties : body?.properties
