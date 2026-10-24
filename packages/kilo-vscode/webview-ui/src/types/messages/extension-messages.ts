@@ -102,12 +102,20 @@ export interface ReadyMessage {
   vscodeLanguage?: string
   languageOverride?: string
   fontSize?: number
+  animations?: "full" | "reduced" | "off"
+  focused?: boolean
   workspaceDirectory?: string
 }
 
 export interface FontSizeChangedMessage {
   type: "fontSizeChanged"
   fontSize: number
+}
+
+export interface AnimationsChangedMessage {
+  type: "animationsChanged"
+  animations: "full" | "reduced" | "off"
+  focused: boolean
 }
 
 export interface GitStatusMessage {
@@ -1814,6 +1822,7 @@ export type ExtensionMessage =
   | ReadyMessage
   | WorkspaceScopeMessage
   | FontSizeChangedMessage
+  | AnimationsChangedMessage
   | GitStatusMessage
   | ConnectionStateMessage
   | ErrorMessage
