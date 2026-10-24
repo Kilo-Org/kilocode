@@ -122,9 +122,12 @@ The `kilo console` command and its browser interface are deprecated and will be 
 
 #### Provider Commands
 
-| Command | Description |
-|---|---|
-| `/connect` | Connect/add a provider - entry point for new users to add API credentials |
+| Command | Aliases | Description |
+|---|---|---|
+| `/connect` | - | Connect/add a provider - entry point for new users to add API credentials |
+| `/usage` | `/plans`, `/quota` | Show plan and quota usage for your connected providers |
+
+`/usage` opens a **Plans & usage** dialog with one card per detected source: Kilo coding plan quotas, ChatGPT (Codex) rate limits, and MiniMax Token Plan quotas. Each card shows the plan, the usage windows with their percentage used, any reset time, and a **Manage** link when the provider offers one. Press `ctrl+r` to refresh.
 
 #### System Commands
 
@@ -261,6 +264,26 @@ The `diff_open` and `session_move` TUI keybindings run the same actions and are 
   },
 }
 ```
+
+## Home Screen and Session Sidebar
+
+### Home screen news
+
+When you are signed in to Kilo Gateway, the CLI home screen shows the most recent unread Kilo news item, with a `(N new)` count when more than one item is unread. Select the banner to open the **News** dialog, which lists every unread item and its action links. Opening the dialog marks those items as read, and they stay hidden after a restart. Items that are not intended for the CLI are not shown.
+
+The command palette has **Hide news** and **Show news** on the home screen, and the choice persists. Kilo fetches news only while you are signed in, and refetches after you sign in, sign out, or switch teams.
+
+### Session sidebar
+
+The session sidebar shows Kilo panels alongside the built-in ones:
+
+- **Branch PR** — the pull request for the current branch, when `gh` is installed and the branch has one.
+- **Token Usage** — input, output, reasoning, cache read, and cache write tokens, cache hit rate, generation speed, and cost for the whole session, including subagents.
+- **Models** — one row per provider and model, with its step count and cost. Expand a row for its token breakdown.
+- **Terminal Bench 2.0** — the completion score and cost per attempt for the current Kilo model.
+- **Footer** — your Kilo balance, Kilo Pass usage (personal accounts), and the Kilo version.
+
+Select a panel heading to collapse or expand it.
 
 ## Permissions
 

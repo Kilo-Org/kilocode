@@ -42,6 +42,8 @@ Four actions are available from outside the app. On iOS they appear in the **Sho
 
 **Start agent** uses the same create path as the in-app new-session screen, including your repository, model preference, and mode. An unsupported GitHub or GitLab repository reports a repository-specific reason and a next action, and a start-agent request with no prompt is refused as prompt-required instead of being left to time out.
 
+**Start agent** asks for confirmation in the app before it creates a session. A native alert shows the full prompt and the named repository, or your most recent repository when the request did not name one. Both platforms bring the app to the foreground first, and the alert waits until the app is active before it appears, so a start requested from a shortcut or another app is not silently dropped. Choosing Cancel returns a cancelled result to the caller and creates no session.
+
 **Open session** and **Open pull request** open the same screens as their in-app controls. A pull request link that is not a review link reports the app's not-a-pull-request message and opens nothing.
 
 ### App icon shortcuts and Quick Settings tile
@@ -126,6 +128,8 @@ Cloud Agent sessions also offer a **Sandbox** field, which starts on the backend
 ## Agent environment profiles
 
 The **Profile** tab lets you browse, create, edit, and delete [agent environment profiles](/docs/code-with-ai/platforms/cloud-agent#agent-environment-profiles) from your phone. Profiles are personal or organization-owned, and you can manage their repository bindings and reorder them with the up and down buttons. Each profile row shows its MCP server count.
+
+Organization-owned profiles are read-only for members: only organization owners and admins can create, edit, or delete one. Members can open an organization profile and use it for a session, but its editor is read-only. You can always create and manage your own personal profiles.
 
 When you start a session, pick a profile in the new-session screen or choose **No profile**. The active profile appears as a chip on the new-session and session screens; in an organization session, tap the chip to open the profile in its owner's scope. You can also change the profile under **Advanced Configuration** while starting a session. Environment variables and setup commands you enter under **Advanced Configuration** are sent with the session even if you do not save them to a profile.
 
