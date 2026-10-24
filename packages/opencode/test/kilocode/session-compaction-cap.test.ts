@@ -491,6 +491,56 @@ describe("session compaction cap", () => {
       ),
     15_000,
   )
+
+  // Compactions separated by completed model steps are normal context cycling of a long turn, not the loop the cap
+  // guards against; the turn must not be exhausted by them.
+  it.live(
+    "completes a long turn whose compactions are separated by completed steps",
+    () =>
+      provideTmpdirServer(
+        Effect.fnUntraced(function* ({ llm }) {
+          const prompt = yield* SessionPrompt.Service
+          const sessions = yield* Session.Service
+          const chat = yield* sessions.create({
+            title: "Compaction cycling",
+            permission: [{ permission: "*", pattern: "*", action: "allow" }],
+          })
+
+          const cycles = KiloSessionPrompt.MAX_COMPACTION_ATTEMPTS + 1
+          for (let i = 1; i <= cycles; i++) {
+            yield* llm.tool("glob", { pattern: "*.md" }) // completed step with a tool call: the turn goes on
+            yield* llm.error(400, overflowBody) // the next request overflows -> compaction
+            yield* llm.text(`summary ${i}`) // the compaction summary succeeds
+          }
+          yield* llm.text("final answer")
+
+          const turnClose = yield* Deferred.make<KiloSession.CloseReason>()
+          const unsub = Bus.subscribe(KiloSession.Event.TurnClose, (evt) => {
+            if (evt.properties.sessionID === chat.id)
+              Deferred.doneUnsafe(turnClose, Effect.succeed(evt.properties.reason))
+          })
+
+          yield* prompt.prompt({
+            sessionID: chat.id,
+            agent: "code",
+            noReply: true,
+            parts: [{ type: "text", text: "long task" }],
+          })
+          const result = yield* prompt.loop({ sessionID: chat.id })
+          const reason = yield* Deferred.await(turnClose).pipe(Effect.timeout("2 seconds"))
+          unsub()
+
+          expect(yield* llm.calls).toBe(cycles * 3 + 1)
+          expect(reason).toBe("completed")
+          expect(result.info.role).toBe("assistant")
+          if (result.info.role !== "assistant") return
+          expect(result.info.error).toBeUndefined()
+          expect(result.parts.some((p) => p.type === "text" && p.text === "final answer")).toBe(true)
+        }),
+        { git: true, config: providerCfg },
+      ),
+    30_000,
+  )
 })
 
 function makeAssistantStub(sessionID: string): MessageV2.Assistant {
