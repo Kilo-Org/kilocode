@@ -8,6 +8,7 @@ import { Effect, Schedule, Schema } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { SessionRetry } from "../../src/session/retry"
 import { MessageV2 } from "../../src/session/message-v2"
+import { KiloSessionProcessor } from "../../src/kilocode/session/processor" // kilocode_change
 import { ProviderError } from "../../src/provider/error"
 import { SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
@@ -222,6 +223,10 @@ describe("session.retry.retryable", () => {
     "The model is currently at capacity due to high demand",
     "The service is temporarily at capacity",
     "upstream returned status 524",
+    // kilocode_change start - gateway/proxy idle-timeout messages (#15042)
+    "upstream idle timeout exceeded",
+    "upstream timeout",
+    // kilocode_change end
   ])("retries matching API error text: %s", (message) => {
     expect(SessionRetry.retryable(wrap(message), retryProvider)).toEqual({ message })
   })
@@ -243,6 +248,31 @@ describe("session.retry.retryable", () => {
     )
     expect(SessionRetry.retryable(error, retryProvider)).toEqual({ message: "Request failed" })
   })
+
+  // kilocode_change start - retryable 5xx status regardless of provider flag so
+  // mid-stream retry handles 504 upstream idle timeouts (#15042)
+  test("retries 5xx API errors even when the provider marks them non-retryable", () => {
+    const error = Schema.decodeUnknownSync(SessionV1.APIError.Schema)(
+      new SessionV1.APIError({
+        message: "Upstream idle timeout exceeded",
+        isRetryable: false,
+        statusCode: 504,
+      }).toObject(),
+    )
+    expect(SessionRetry.retryable(error, retryProvider)).toEqual({ message: "Upstream idle timeout exceeded" })
+  })
+
+  test("does not retry 4xx API errors even with a retryable-sounding message", () => {
+    const error = Schema.decodeUnknownSync(SessionV1.APIError.Schema)(
+      new SessionV1.APIError({
+        message: "temporary upstream timeout",
+        isRetryable: false,
+        statusCode: 429,
+      }).toObject(),
+    )
+    expect(SessionRetry.retryable(error, retryProvider)).toBeUndefined()
+  })
+  // kilocode_change end
 
   test("retries transport timeout errors", () => {
     const request = MessageV2.fromError(new ProviderError.HeaderTimeoutError(10000), { providerID })
@@ -462,4 +492,52 @@ describe("session.message-v2.fromError", () => {
       message: "An error occurred while processing your request.",
     })
   })
+
+  // kilocode_change start - transient() reopens the mid-stream retry for
+  // server-side failures that arrive after output (#15042)
+  describe("session.processor transient", () => {
+    const error = (input: { message: string; statusCode?: number; isRetryable?: boolean }) =>
+      MessageV2.fromError(
+        new APICallError({
+          message: input.message,
+          url: "https://example.test/v1/chat/completions",
+          requestBodyValues: {},
+          statusCode: input.statusCode,
+          responseHeaders: { "content-type": "application/json" },
+          isRetryable: input.isRetryable ?? true,
+        }),
+        { providerID },
+      )
+
+    test("reopens the retry for a 504 that carries a status code", () => {
+      expect(
+        KiloSessionProcessor.transient(error({ message: "Upstream idle timeout exceeded", statusCode: 504 })),
+      ).toBe(true)
+    })
+
+    test("reopens the retry when no status code is present", () => {
+      expect(KiloSessionProcessor.transient(error({ message: "Upstream idle timeout exceeded" }))).toBe(true)
+      expect(KiloSessionProcessor.transient(error({ message: "stream terminated" }))).toBe(true)
+    })
+
+    test("keeps client-side refusals blocked", () => {
+      expect(KiloSessionProcessor.transient(error({ message: "429 status code (no body)", statusCode: 429 }))).toBe(
+        false,
+      )
+      expect(
+        KiloSessionProcessor.transient(error({ message: "Provider rate limit exceeded. Please try again shortly." })),
+      ).toBe(false)
+      expect(
+        KiloSessionProcessor.transient(error({ message: "Bad request", statusCode: 400, isRetryable: false })),
+      ).toBe(false)
+    })
+
+    test("keeps terminal errors blocked", () => {
+      expect(KiloSessionProcessor.transient(error({ message: "context window exceeded", statusCode: 400 }))).toBe(false)
+      expect(
+        KiloSessionProcessor.transient({ data: { message: "Tool call not allowed while generating summary" } }),
+      ).toBe(false)
+    })
+  })
+  // kilocode_change end
 })

@@ -171,7 +171,19 @@ const layer = Layer.effect(
       const retryParse = (e: unknown) => {
         const error = parse(e)
         if (e instanceof KiloSessionProcessor.IncompleteResponseError) return KiloSessionProcessor.blockRetry(error)
-        if (attempt.text || attempt.reasoning || attempt.tool) return KiloSessionProcessor.blockRetry(error)
+        if (attempt.text || attempt.reasoning || attempt.tool) {
+          // kilocode_change start - allow a transient server-side failure (e.g. 504
+          // upstream idle timeout) to be retried after partial text or reasoning:
+          // the retry drops the failed attempt's parts first, so nothing layers
+          // on top of them. A tool call still blocks the retry: the provider may
+          // have already executed it and the retried request would run the side
+          // effects a second time. KiloSessionProcessor.transient stays in lockstep
+          // with the retry policy that performs the retry, including cases the
+          // matching message patterns cover (#15042).
+          if (!attempt.tool && KiloSessionProcessor.transient(error)) return error
+          // kilocode_change end
+          return KiloSessionProcessor.blockRetry(error)
+        }
         return error
       }
       // kilocode_change end
@@ -979,6 +991,12 @@ const layer = Layer.effect(
         return yield* Effect.gen(function* () {
           // kilocode_change start - publish retry state consistently for provider and empty-response retries
           const retries = { provider: 0 }
+          // kilocode_change start - shared baseline; holds every part that existed
+          // when the step started. `request` drops parts added after this set on
+          // its first re-run, so a retry cleans up the failed attempt's output
+          // before regenerating from the same request.
+          const baseline = new Set<string>()
+          // kilocode_change end
           const setRetry = (info: {
             attempt: number
             message: string
@@ -994,8 +1012,44 @@ const layer = Layer.effect(
             })
           }
 
+          const discard = Effect.fn("SessionProcessor.discardIncomplete")(function* (
+            baseline: Set<string>,
+            retain?: (part: MessageV2.Part) => boolean, // kilocode_change - keep parts a failed attempt already showed
+          ) {
+            yield* Effect.forEach(
+              Object.values(ctx.toolcalls),
+              (call) => Deferred.succeed(call.done, undefined).pipe(Effect.ignore),
+              { concurrency: "unbounded" },
+            )
+            const parts = yield* MessageV2.parts(ctx.assistantMessage.id).pipe(
+              Effect.provideService(Database.Service, database),
+            )
+            yield* Effect.forEach(
+              parts.filter((part) => !baseline.has(part.id) && !retain?.(part)),
+              (part) =>
+                session.removePart({ sessionID: ctx.sessionID, messageID: ctx.assistantMessage.id, partID: part.id }),
+              { concurrency: 1 },
+            )
+            ctx.currentText = undefined
+            ctx.reasoningMap = {}
+            ctx.toolcalls = {}
+            ctx.toolmeta = {}
+            ctx.assistantMessage.finish = undefined
+          })
+
           const request = () =>
             Effect.gen(function* () {
+              // kilocode_change start - the retried attempt re-runs this effect,
+              // so this is the only point that can clean up ahead of the next
+              // attempt. Baseline is unchanged on re-entry (no parts were added
+              // before the retry started), so this drops exactly the failed
+              // attempt's visible output; reasoning is retained because the
+              // failed-attempt reasoning was already streamed and closed. A
+              // no-op on the first run, and a terminal failure keeps the last
+              // attempt's output for the user.
+              yield* discard(baseline, (part) => part.type === "reasoning")
+              attempt = KiloSessionProcessor.attempt()
+              // kilocode_change end
               ctx.currentText = undefined
               ctx.reasoningMap = {}
               yield* status.set(ctx.sessionID, { type: "busy" })
@@ -1057,38 +1111,15 @@ const layer = Layer.effect(
               ),
             )
 
-          const discard = Effect.fn("SessionProcessor.discardIncomplete")(function* (baseline: Set<string>) {
-            yield* Effect.forEach(
-              Object.values(ctx.toolcalls),
-              (call) => Deferred.succeed(call.done, undefined).pipe(Effect.ignore),
-              { concurrency: "unbounded" },
-            )
-            const parts = yield* MessageV2.parts(ctx.assistantMessage.id).pipe(
-              Effect.provideService(Database.Service, database),
-            )
-            yield* Effect.forEach(
-              parts.filter((part) => !baseline.has(part.id)),
-              (part) =>
-                session.removePart({ sessionID: ctx.sessionID, messageID: ctx.assistantMessage.id, partID: part.id }),
-              { concurrency: 1 },
-            )
-            ctx.currentText = undefined
-            ctx.reasoningMap = {}
-            ctx.toolcalls = {}
-            ctx.toolmeta = {}
-            ctx.assistantMessage.finish = undefined
-          })
-
-          const recover = () => {
-            const baseline = new Set<string>()
-            return KiloSessionProcessor.recover({
+          const recover = () =>
+            KiloSessionProcessor.recover({
               run: Effect.fn("SessionProcessor.incompleteAttempt")(function* () {
                 baseline.clear()
                 for (const part of yield* MessageV2.parts(ctx.assistantMessage.id).pipe(
                   Effect.provideService(Database.Service, database),
-                ))
+                )) {
                   baseline.add(part.id)
-                attempt = KiloSessionProcessor.attempt()
+                }
                 yield* request()
               }),
               replayable: () =>
@@ -1102,7 +1133,6 @@ const layer = Layer.effect(
               discard: () => discard(baseline),
               set: setRetry,
             })
-          }
 
           yield* recover().pipe(Effect.catch(halt), Effect.ensuring(cleanup()))
           // kilocode_change end

@@ -1419,14 +1419,9 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Accedi di nuovo con ChatGPT, quindi invia di nuovo il tuo messaggio per continuare a usare i modelli Codex.",
 
-  // Provider failure
-  "provider.failure.unauthorized": "Credenziali rifiutate (HTTP {{status}}). Accedi di nuovo.",
-  "provider.failure.unauthorizedNoStatus": "Credenziali rifiutate. Accedi di nuovo.",
-  "provider.failure.unauthenticated": "Non hai effettuato l'accesso.",
-  "provider.failure.network": "Impossibile raggiungere il provider. Controlla la connessione.",
-  "provider.failure.http": "Errore del provider (HTTP {{status}}).",
-  "provider.failure.httpNoStatus": "Errore del provider.",
-  "provider.failure.schema": "Risposta imprevista dal provider.",
+  "error.upstreamTimeout.title": "Il server del provider di IA è scaduto",
+  "error.upstreamTimeout.description":
+    "Si tratta di solito di un problema temporaneo lato server e non della tua configurazione. Kilo riprova automaticamente questi errori, ma se continua a verificarsi, invia di nuovo il messaggio o controlla la pagina di stato del provider.",
 
   // Speech to Text tooltips and errors
   "speechToText.tooltip.start": "Avvia input vocale",

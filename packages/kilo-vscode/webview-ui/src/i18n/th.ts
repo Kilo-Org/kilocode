@@ -287,13 +287,9 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "เข้าสู่ระบบ ChatGPT อีกครั้ง จากนั้นส่งข้อความของคุณใหม่เพื่อใช้งานโมเดล Codex ต่อไป",
 
-  "provider.failure.unauthorized": "ข้อมูลรับรองถูกปฏิเสธ (HTTP {{status}}) โปรดเข้าสู่ระบบอีกครั้ง",
-  "provider.failure.unauthorizedNoStatus": "ข้อมูลรับรองถูกปฏิเสธ โปรดเข้าสู่ระบบอีกครั้ง",
-  "provider.failure.unauthenticated": "ยังไม่ได้เข้าสู่ระบบ",
-  "provider.failure.network": "ไม่สามารถเชื่อมต่อผู้ให้บริการได้ โปรดตรวจสอบการเชื่อมต่อของคุณ",
-  "provider.failure.http": "เกิดข้อผิดพลาดของผู้ให้บริการ (HTTP {{status}})",
-  "provider.failure.httpNoStatus": "เกิดข้อผิดพลาดของผู้ให้บริการ",
-  "provider.failure.schema": "ได้รับการตอบกลับที่ไม่คาดคิดจากผู้ให้บริการ",
+  "error.upstreamTimeout.title": "เซิร์ฟเวอร์ของผู้ให้บริการ AI หมดเวลารอ",
+  "error.upstreamTimeout.description":
+    "โดยปกตินี่เป็นปัญหาชั่วคราวที่ฝั่งเซิร์ฟเวอร์ ไม่ใช่ปัญหาการตั้งค่าของคุณ Kilo จะลองใหม่ให้อัตโนมัติ แต่หากเกิดขึ้นต่อเนื่อง ให้ส่งข้อความของคุณอีกครั้งหรือตรวจสอบหน้าสถานะของผู้ให้บริการ",
 
   "notification.permission.title": "ต้องการสิทธิ์",
   "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
