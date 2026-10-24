@@ -88,7 +88,7 @@ export const AutoRouterAddCommand = effectCmd({
       .option("link", {
         type: "boolean",
         default: true,
-        describe: "suggest a platform benchmark link; disable with --no-link",
+        describe: "suggest a platform benchmark link (--no-link skips it; a stored link stays until cleared in the web editor)",
       })
       .option("yes", { type: "boolean", default: false, describe: "accept a suggested platform benchmark link" }),
   handler: Effect.fn("Cli.auto.router.add")(function* (args) {
