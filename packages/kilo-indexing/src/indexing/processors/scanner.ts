@@ -152,7 +152,7 @@ export class DirectoryScanner implements IDirectoryScanner {
       cwd: directoryPath,
       absolute: true,
       nodir: true,
-      dot: false,
+      dot: true,
       ignore: FileIgnore.PATTERNS,
       maxDepth: Infinity,
     })
@@ -381,6 +381,9 @@ export class DirectoryScanner implements IDirectoryScanner {
               } finally {
                 release()
               }
+            }
+            if (!addedBlocksFromFile && !this._cancelled) {
+              this.cacheManager.updateHash(filePath, currentFileHash)
             }
           } else {
             // Only update hash if not being processed in a batch

@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { mkdtemp, mkdir, rename, rm, writeFile } from "fs/promises"
+import { mkdtemp, mkdir, rename, rm, symlink, writeFile } from "fs/promises"
 import { tmpdir } from "os"
 import path from "path"
 import { createHash } from "crypto"
@@ -701,5 +701,47 @@ describe("FileWatcher subscription", () => {
 
     await watcher.shutdown()
     expect(backend.unsubscribed).toBe(1)
+  })
+
+  test("ignores symlinked directories during expansion and trims block text before embedding", async () => {
+    const backend = createFakeBackend()
+    const embedded: string[][] = []
+    const embedder: IEmbedder = {
+      async createEmbeddings(texts) {
+        embedded.push(texts)
+        return { embeddings: texts.map((_, index) => [index + 1]) }
+      },
+      async validateConfiguration() {
+        return { valid: true }
+      },
+      get embedderInfo() {
+        return { name: "openai" as const }
+      },
+    }
+    const { root, watcher, store, drain } = await makeWatcher(backend.subscribe)
+    ;(watcher as unknown as { embedder: IEmbedder }).embedder = embedder
+    const external = await mkdtemp(path.join(tmpdir(), "watcher-ext-"))
+
+    try {
+      await writeFile(path.join(external, "outside.md"), "# Outside content that should not be indexed via dir symlink\n")
+      const link = path.join(root, "linked-dir")
+      await symlink(external, link)
+      const local = path.join(root, "local.md")
+      await writeFile(local, "   # Local heading with surrounding whitespace and enough characters to index   \n")
+
+      await watcher.initialize()
+      backend.emit([
+        { path: link, type: "create" },
+        { path: local, type: "create" },
+      ])
+      await drain()
+
+      expect(store.points.map((point) => point.payload?.filePath)).toEqual(["local.md"])
+      expect(embedded[0]?.[0]).toBe("# Local heading with surrounding whitespace and enough characters to index")
+    } finally {
+      await watcher.shutdown()
+      await rm(root, { recursive: true, force: true })
+      await rm(external, { recursive: true, force: true })
+    }
   })
 })
