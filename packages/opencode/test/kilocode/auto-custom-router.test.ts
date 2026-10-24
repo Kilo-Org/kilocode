@@ -14,7 +14,7 @@ import {
   type FetchLike,
 } from "@kilocode/kilo-gateway"
 import { KiloCustomRouter } from "@/kilocode/auto-routing/router"
-import { clientEntry } from "@/kilocode/auto-routing/entries"
+import { clientEntry, linkChoice } from "@/kilocode/auto-routing/entries"
 import { openaiMessages, openaiTools } from "@/kilocode/auto-routing/messages"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model"
 
@@ -573,5 +573,35 @@ describe("routed model metadata", () => {
 
     const untouched = LLMEvent.textDelta({ id: "text-0", text: "hi" })
     expect(KiloRoutedModel.stamp(untouched, route)).toBe(untouched)
+  })
+})
+
+describe("linkChoice", () => {
+  const base = { yes: false, interactive: true, suggestion: "anthropic/claude-opus-5.5" }
+
+  test("an explicit link wins over the suggestion and needs no answer", () => {
+    expect(linkChoice({ ...base, interactive: false, measuredAs: "vendor/other" })).toEqual({
+      kind: "link",
+      measuredAs: "vendor/other",
+    })
+  })
+
+  test("--yes accepts the suggestion without asking", () => {
+    expect(linkChoice({ ...base, yes: true, interactive: false })).toEqual({
+      kind: "link",
+      measuredAs: "anthropic/claude-opus-5.5",
+    })
+  })
+
+  test("asks on an interactive terminal", () => {
+    expect(linkChoice(base)).toEqual({ kind: "ask", suggestion: "anthropic/claude-opus-5.5" })
+  })
+
+  test("registers without a link when no one can answer", () => {
+    expect(linkChoice({ ...base, interactive: false })).toEqual({ kind: "skip" })
+  })
+
+  test("registers without a link when nothing matches", () => {
+    expect(linkChoice({ ...base, yes: true, suggestion: null })).toEqual({ kind: "skip" })
   })
 })

@@ -755,8 +755,11 @@ Positionals:
   model   <provider>/<model> resolved by this CLI  [string]
 
 Options:
-  --help     Show help  [boolean]
-  --version  Show version number  [boolean]
+  --help         Show help  [boolean]
+  --version      Show version number  [boolean]
+  --measured-as  reuse the platform benchmark of this model  [string]
+  --link         suggest a platform benchmark link; disable with --no-link  [boolean] [default: true]
+  --yes          accept a suggested platform benchmark link  [boolean] [default: false]
 ```
 
 ### kilo auto router remove

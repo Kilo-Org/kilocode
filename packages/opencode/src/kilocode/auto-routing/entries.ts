@@ -30,3 +30,23 @@ export function clientEntry(model: Provider.Model, measuredAs?: string): ClientC
       : null,
   }
 }
+
+export type LinkChoice =
+  | { kind: "link"; measuredAs: string }
+  | { kind: "skip" }
+  | { kind: "ask"; suggestion: string }
+
+// How `kilo auto router add` picks a platform benchmark link. A suggestion needs an interactive
+// answer, so a non-interactive run without --yes registers without a link.
+export function linkChoice(input: {
+  measuredAs?: string
+  yes: boolean
+  interactive: boolean
+  suggestion: string | null
+}): LinkChoice {
+  if (input.measuredAs) return { kind: "link", measuredAs: input.measuredAs }
+  if (!input.suggestion) return { kind: "skip" }
+  if (input.yes) return { kind: "link", measuredAs: input.suggestion }
+  if (!input.interactive) return { kind: "skip" }
+  return { kind: "ask", suggestion: input.suggestion }
+}

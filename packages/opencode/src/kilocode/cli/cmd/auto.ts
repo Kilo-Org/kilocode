@@ -22,7 +22,7 @@ import {
   type CustomRouterReference,
   type CustomRouterSummary,
 } from "@kilocode/kilo-gateway"
-import { clientEntry } from "@/kilocode/auto-routing/entries"
+import { clientEntry, linkChoice } from "@/kilocode/auto-routing/entries"
 import { KiloCustomRouter } from "@/kilocode/auto-routing/router"
 import { KiloAutoEval } from "@/kilocode/auto-routing/eval"
 
@@ -143,12 +143,19 @@ export const AutoRouterAddCommand = effectCmd({
           measurements.models.map((item) => item.model),
         )
       : null
+    const choice = linkChoice({
+      measuredAs: args.measuredAs,
+      yes: args.yes,
+      interactive: Boolean(process.stdin.isTTY),
+      suggestion,
+    })
+    if (suggestion && choice.kind === "skip") {
+      UI.println(`Platform benchmark ${suggestion} matches this model. Pass --yes to link it.`)
+    }
     const measuredAs = yield* Effect.promise(async () => {
-      if (args.measuredAs) return args.measuredAs
-      if (!suggestion) return undefined
-      if (args.yes) return suggestion
-      const answer = (await UI.input(`Reuse the platform benchmark of ${suggestion}? [Y/n] `)).trim()
-      return answer === "" || /^y(es)?$/i.test(answer) ? suggestion : undefined
+      if (choice.kind !== "ask") return choice.kind === "link" ? choice.measuredAs : undefined
+      const answer = (await UI.input(`Reuse the platform benchmark of ${choice.suggestion}? [Y/n] `)).trim()
+      return answer === "" || /^y(es)?$/i.test(answer) ? choice.suggestion : undefined
     })
     const response = yield* Effect.promise(() =>
       registerCustomRouterClientEntry({
