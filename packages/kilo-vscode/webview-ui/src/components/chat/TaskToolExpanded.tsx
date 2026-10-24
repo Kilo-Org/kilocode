@@ -19,10 +19,12 @@ import { useLanguage } from "../../context/language"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
+import { useProvider } from "../../context/provider"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
 import { childID, latestTaskPart } from "../../context/session-utils"
 import { useConfig } from "../../context/config"
+import { sessionModel, taskModelLabel } from "../../context/model-usage"
 import { openSubagent } from "./open-subagent"
 import {
   showChildPromotion,
@@ -41,6 +43,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const session = useSession()
   const { features } = useConfig()
   const vscode = useVSCode()
+  const provider = useProvider()
   const worktree = useWorktreeMode()
 
   const childSessionId = () =>
@@ -168,6 +171,18 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     return id ? session.getSessionToolCount(id) : 0
   })
 
+  // Which model this stage delegated to: the child's own streamed transcript
+  // wins, otherwise the subagent's configured model. There is no session-scope
+  // selection fallback — resolving against the child session's scope would
+  // render the primary agent's model under the stage's name, which this label
+  // exists to disambiguate.
+  const modelLabel = createMemo(() => {
+    const id = childSessionId()
+    if (!id) return undefined
+    const configured = props.input.subagent_type ? session.modelForAgent(props.input.subagent_type) : null
+    return taskModelLabel(sessionModel(session.allMessages()[id] ?? []), configured, provider.providers())
+  })
+
   const result = createMemo(() => taskResult(props.output, childSessionId()))
 
   createEffect((prev: string | undefined) => {
@@ -241,11 +256,17 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         <span data-slot="basic-tool-tool-title" title={description() || title()}>
           {description() || title()}
         </span>
-        <Show when={description() || childToolCount() > 0}>
+        <Show when={description() || childToolCount() > 0 || modelLabel()}>
           <span data-slot="basic-tool-tool-subtitle">
             {description() ? title() : undefined}
             <Show when={childToolCount() > 0}>
               {description() ? " " : ""}({childToolCount()})
+            </Show>
+            <Show when={modelLabel()}>
+              <span data-slot="task-tool-model">
+                {description() || childToolCount() > 0 ? " · " : ""}
+                {modelLabel()}
+              </span>
             </Show>
           </span>
         </Show>

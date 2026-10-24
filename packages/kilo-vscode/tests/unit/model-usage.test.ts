@@ -7,6 +7,7 @@ import {
   isSameSessionTree,
   modelUsageName,
   sessionModel,
+  taskModelLabel,
   tokenSummary,
 } from "../../webview-ui/src/context/model-usage"
 
@@ -54,6 +55,18 @@ describe("model usage", () => {
     expect(modelUsageName({ ...models[0], modelID: "moonshotai/kimi-k2.7-code-20260612" }, {})).toBe("kimi-k2.7-code")
     // Routed free-variant ids keep their name instead of collapsing to the ":free" suffix
     expect(modelUsageName({ ...models[0], modelID: "tencent/hy3:free" }, {})).toBe("hy3:free")
+  })
+
+  test("labels a delegated stage with the observed model, else the selection", () => {
+    const observed = { providerID: "kilo", modelID: "qwen/qwen3.7-plus-20260602" }
+    const selected = { providerID: "minimax", modelID: "minimax-m3" }
+    // The child's own streamed transcript decides what actually ran
+    expect(taskModelLabel(observed, selected, providers)).toBe("Qwen 3.7 Plus")
+    // Before the first assistant reply the recorded selection stands in
+    expect(taskModelLabel(undefined, selected, providers)).toBe("MiniMax M3")
+    expect(taskModelLabel(undefined, undefined, providers)).toBeUndefined()
+    // A session with neither an observed model nor a selection stays unlabeled
+    expect(taskModelLabel(undefined, null, {})).toBeUndefined()
   })
 
   test("matches sessions through their top-level tree", () => {
