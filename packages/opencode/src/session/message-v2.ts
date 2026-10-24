@@ -18,6 +18,7 @@ import {
 
 export { EditorContext } from "@/kilocode/editor-context" // kilocode_change
 import { NamedError } from "@opencode-ai/core/util/error"
+import { AnthropicRecovery } from "@/kilocode/session/anthropic-recovery" // kilocode_change
 import { APICallError, convertToModelMessages, LoadAPIKeyError, type ModelMessage, type UIMessage } from "ai"
 import { Database } from "@opencode-ai/core/database/database"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
@@ -502,6 +503,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
             })
         }
         if (part.type === "reasoning") {
+          if (AnthropicRecovery.excluded(part, model)) continue // kilocode_change - original parts stay stored but rejected thinking stays excluded
           if (differentModel) {
             if (part.text.trim().length > 0)
               assistantMessage.parts.push({
