@@ -1053,6 +1053,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Dette er en innebygd modus. Grunndefinisjonen kan ikke endres, men du kan konfigurere overstyringer nedenfor.",
   "settings.agentBehaviour.editMode.promptOverride": "Tilpasset prompt-overstyring for denne innebygde modusen",
+  "settings.agentBehaviour.mode.title": "Modus",
+  "settings.agentBehaviour.mode.description":
+    "Primære agenter vises i chattens modusvelger. Subagenter kalles bare av andre agenter via Task-verktøyet, basert på beskrivelsen deres.",
+  "settings.agentBehaviour.mode.primary": "Primær",
+  "settings.agentBehaviour.mode.subagent": "Subagent",
+  "settings.agentBehaviour.mode.all": "Primær og subagent",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "Dette er standardagenten, så den kan ikke bare være en subagent. Velg en annen standardagent først.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "Denne agenten er standardagenten i prosjektets kilo.jsonc, så den kan ikke bare være en subagent. Endre default_agent der først.",
   "settings.agentBehaviour.badge.subagent": "subagent",
   "settings.agentBehaviour.permissions.title": "Beregnede tillatelser",
   "settings.agentBehaviour.permissions.count": "{{count}} regler",

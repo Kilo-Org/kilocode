@@ -1425,6 +1425,16 @@ export const dict = {
     "Bu yerleşik bir moddur. Temel tanımı değiştirilemez, ancak aşağıdan geçersiz kılmaları yapılandırabilirsiniz.",
   "settings.agentBehaviour.editMode.prompt": "Sistem İstemi",
   "settings.agentBehaviour.editMode.promptOverride": "Bu yerleşik mod için özel sistem istemi geçersiz kılma",
+  "settings.agentBehaviour.mode.title": "Mod",
+  "settings.agentBehaviour.mode.description":
+    "Birincil ajanlar sohbetin mod değiştiricisinde görünür. Alt ajanlar yalnızca diğer ajanlar tarafından, açıklamalarına göre Task aracı üzerinden çağrılır.",
+  "settings.agentBehaviour.mode.primary": "Birincil",
+  "settings.agentBehaviour.mode.subagent": "Alt ajan",
+  "settings.agentBehaviour.mode.all": "Birincil ve alt ajan",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "Bu varsayılan ajan olduğundan yalnızca alt ajan olamaz. Önce başka bir varsayılan ajan seçin.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "Bu ajan projenin kilo.jsonc dosyasında varsayılan ajan olduğundan yalnızca alt ajan olamaz. Önce orada default_agent değerini değiştirin.",
   "settings.agentBehaviour.badge.subagent": "alt ajan",
   "settings.agentBehaviour.permissions.title": "Hesaplanan İzinler",
   "settings.agentBehaviour.permissions.count": "{{count}} kural",

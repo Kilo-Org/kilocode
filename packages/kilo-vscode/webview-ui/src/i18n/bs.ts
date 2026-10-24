@@ -1053,6 +1053,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Ovo je ugrađeni način rada. Njegova osnovna definicija ne može se mijenjati, ali ispod možete konfigurirati nadjačavanja.",
   "settings.agentBehaviour.editMode.promptOverride": "Prilagođeno nadjačavanje prompta za ovaj ugrađeni mod",
+  "settings.agentBehaviour.mode.title": "Mod",
+  "settings.agentBehaviour.mode.description":
+    "Primarni agenti se prikazuju u prebacivaču modova u chatu. Podagente pozivaju samo drugi agenti putem alata Task, na osnovu njihovog opisa.",
+  "settings.agentBehaviour.mode.primary": "Primarni",
+  "settings.agentBehaviour.mode.subagent": "Podagent",
+  "settings.agentBehaviour.mode.all": "Primarni i podagent",
+  "settings.agentBehaviour.mode.defaultAgent":
+    "Ovo je zadani agent, pa ne može biti samo podagent. Prvo odaberite drugog zadanog agenta.",
+  "settings.agentBehaviour.mode.defaultAgentProject":
+    "Ovaj agent je zadani agent u kilo.jsonc projekta, pa ne može biti samo podagent. Prvo tamo promijenite default_agent.",
   "settings.agentBehaviour.badge.subagent": "podagent",
   "settings.agentBehaviour.permissions.title": "Izračunate dozvole",
   "settings.agentBehaviour.permissions.count": "{{count}} pravila",
