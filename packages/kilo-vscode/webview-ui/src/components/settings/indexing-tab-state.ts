@@ -1,8 +1,28 @@
 import type { IndexingConfig } from "@kilocode/kilo-indexing/config"
 
 export type IndexingScope = "global" | "project"
-export type IndexingInheritance = "none" | "inherited" | "partial"
-export type IndexingSource = "none" | "global" | "local" | "mixed" | "default"
+export type IndexingInheritance = "none" | "inherited" | "partial" | "managed"
+export type IndexingSource = "none" | "global" | "local" | "mixed" | "default" | "managed"
+
+/** Per-field provenance as resolved by the config overlay endpoint, keyed by dotted path. */
+export interface IndexingFieldInfo {
+  key: string
+  path: string[]
+  value?: unknown
+  global?: unknown
+  local?: unknown
+  source: "project" | "global" | "system" | "default"
+  inherited: boolean
+  overridden: boolean
+  editable: boolean
+  reason?: string
+}
+
+export interface IndexingFieldDisplay {
+  value: unknown
+  source: IndexingSource
+  editable: boolean
+}
 
 function record(input: unknown): input is Record<string, unknown> {
   return typeof input === "object" && input !== null && !Array.isArray(input)
@@ -78,9 +98,42 @@ export function indexingInheritance(
   return "none"
 }
 
+/**
+ * Display value for a single indexing field in the given scope.
+ * Values from the editable scopes (global/project raw layers, including unsaved edits)
+ * win; when neither defines the field, the value resolved by the config overlay is shown —
+ * that is where managed/enterprise config, environment, and runtime resolution surface.
+ */
+export function indexingFieldDisplay(
+  scope: IndexingScope,
+  global: IndexingConfig,
+  project: IndexingConfig,
+  fields: Record<string, IndexingFieldInfo> | undefined,
+  path: readonly string[],
+): IndexingFieldDisplay {
+  const current = get(indexingConfig(scope, global, project), path)
+  if (current !== undefined) {
+    return { value: current, source: indexingSource(scope, global, project, [path]), editable: true }
+  }
+  const resolved = fields?.[`indexing.${path.join(".")}`]
+  if (!resolved || resolved.value === undefined) {
+    return { value: undefined, source: "default", editable: true }
+  }
+  const source =
+    resolved.source === "system"
+      ? "managed"
+      : resolved.source === "global"
+        ? "global"
+        : resolved.source === "project"
+          ? "local"
+          : "default"
+  return { value: resolved.value, source, editable: resolved.editable }
+}
+
 export function indexingDescription(description: string, inheritance: IndexingInheritance) {
   if (inheritance === "inherited") return `${description} Inherited from global config.`
   if (inheritance === "partial") return `${description} Some values are inherited from global config.`
+  if (inheritance === "managed") return `${description} Inherited from managed config.`
   return description
 }
 

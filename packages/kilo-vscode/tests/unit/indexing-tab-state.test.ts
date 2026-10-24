@@ -4,9 +4,11 @@ import {
   indexingDescription,
   indexingEnabled,
   indexingEnabledInherited,
+  indexingFieldDisplay,
   indexingInheritance,
   indexingSource,
   indexingUpdate,
+  type IndexingFieldInfo,
 } from "../../webview-ui/src/components/settings/indexing-tab-state"
 
 describe("indexing tab scope state", () => {
@@ -134,5 +136,71 @@ describe("indexing tab scope state", () => {
     expect(indexingConfig("project", global, { fileExtensions: [".php"] }).fileExtensions).toEqual([".php"])
     expect(indexingInheritance("project", global, {}, [["fileExtensions"]])).toBe("inherited")
     expect(indexingInheritance("project", global, { fileExtensions: [".php"] }, [["fileExtensions"]])).toBe("none")
+  })
+})
+
+function managedField(value: unknown, editable = true): IndexingFieldInfo {
+  return {
+    key: "indexing.provider",
+    path: ["indexing", "provider"],
+    value,
+    source: "system",
+    inherited: false,
+    overridden: false,
+    editable,
+    reason: "Resolved from runtime, cloud, environment, or managed config.",
+  }
+}
+
+const managedFields: Record<string, IndexingFieldInfo> = {
+  "indexing.provider": managedField("openai-compatible"),
+  "indexing.model": managedField("granite-embedding-107m-multilingual"),
+  "indexing.dimension": managedField(384),
+  "indexing.openai-compatible.baseUrl": managedField("http://embed.test/v1/embeddings"),
+  "indexing.fileExtensions": managedField([".cs", ".md"]),
+}
+
+describe("indexing managed-config display", () => {
+  it("shows managed values when no raw scope defines them", () => {
+    expect(indexingFieldDisplay("project", {}, {}, managedFields, ["provider"]).value).toBe("openai-compatible")
+    expect(indexingFieldDisplay("project", {}, {}, managedFields, ["provider"]).source).toBe("managed")
+    expect(indexingFieldDisplay("project", {}, {}, managedFields, ["model"]).value).toBe(
+      "granite-embedding-107m-multilingual",
+    )
+    expect(indexingFieldDisplay("project", {}, {}, managedFields, ["dimension"]).value).toBe(384)
+    expect(indexingFieldDisplay("project", {}, {}, managedFields, ["openai-compatible", "baseUrl"]).value).toBe(
+      "http://embed.test/v1/embeddings",
+    )
+    expect(indexingFieldDisplay("project", {}, {}, managedFields, ["fileExtensions"]).value).toEqual([".cs", ".md"])
+  })
+
+  it("keeps raw scope values ahead of managed values", () => {
+    const project = indexingFieldDisplay("project", {}, { provider: "ollama" }, managedFields, ["provider"])
+    expect(project.value).toBe("ollama")
+    expect(project.source).toBe("local")
+
+    const global = indexingFieldDisplay("project", { provider: "gemini" }, {}, managedFields, ["provider"])
+    expect(global.value).toBe("gemini")
+    expect(global.source).toBe("global")
+  })
+
+  it("reports managed values as not editable in global scope", () => {
+    const fields = { "indexing.provider": managedField("openai-compatible", false) }
+    const display = indexingFieldDisplay("global", {}, {}, fields, ["provider"])
+    expect(display.value).toBe("openai-compatible")
+    expect(display.source).toBe("managed")
+    expect(display.editable).toBe(false)
+  })
+
+  it("falls back to default when no layer defines the value", () => {
+    expect(indexingFieldDisplay("project", {}, {}, undefined, ["provider"]).value).toBeUndefined()
+    expect(indexingFieldDisplay("project", {}, {}, {}, ["provider"]).source).toBe("default")
+    expect(indexingFieldDisplay("project", {}, {}, {}, ["provider"]).editable).toBe(true)
+  })
+
+  it("describes managed inheritance", () => {
+    expect(indexingDescription("Configure this value.", "managed")).toBe(
+      "Configure this value. Inherited from managed config.",
+    )
   })
 })
