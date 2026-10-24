@@ -29,6 +29,7 @@ Use your provider API key to route matching models through your account:
 - Azure Foundry (experimental)
 - DeepSeek
 - Fireworks
+- GMI Cloud
 - Google AI Studio
 - Inception
 - Minimax
