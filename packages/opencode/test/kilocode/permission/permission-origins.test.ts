@@ -12,6 +12,8 @@ import { Config } from "../../../src/config/config"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { Npm } from "@opencode-ai/core/npm"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { Global } from "@opencode-ai/core/global"
+import { Permission } from "../../../src/permission"
 import { Env } from "../../../src/env"
 import { Git } from "../../../src/git"
 import { Auth } from "../../../src/auth"
@@ -35,7 +37,9 @@ const noopNpm = Layer.mock(Npm.Service)({
   add: () => Effect.die("not implemented"),
   which: () => Effect.succeed(undefined),
 })
-const unexpectedHttp = HttpClient.make((request) => Effect.die(`unexpected http request: ${request.method} ${request.url}`))
+const unexpectedHttp = HttpClient.make((request) =>
+  Effect.die(`unexpected http request: ${request.method} ${request.url}`),
+)
 const testLayer = AppNodeBuilder.build(Config.node, [
   [Auth.node, emptyAuth],
   [Account.node, emptyAccount],
@@ -78,4 +82,60 @@ test("a scalar project bash permission maps to the '*' pattern under the local s
       expect(cfg.permission_origins?.bash).toEqual({ "*": "local" })
     },
   })
+})
+
+test("project permission entries apply after legacy ignore rules", async () => {
+  await using tmp = await tmpdir()
+  const dir = path.join(tmp.path, "a")
+  const kilo = path.join(dir, ".kilo")
+  await fs.mkdir(kilo, { recursive: true })
+  await Bun.write(path.join(dir, ".kilocodeignore"), "secrets/\n")
+  await Bun.write(path.join(kilo, "kilo.json"), JSON.stringify({ permission: { read: { "*": "deny" } } }))
+
+  await provideTestInstance({
+    directory: dir,
+    fn: async () => {
+      const cfg = await Effect.runPromise(
+        Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(testLayer)),
+      )
+      expect(cfg.permission?.read).toMatchObject({ "*": "deny" })
+      expect(cfg.permission_origins?.read?.["*"]).toBe("local")
+    },
+  })
+})
+
+test("global permission entries decide a key and pattern that a project file also sets", async () => {
+  await using tmp = await tmpdir()
+  const global = path.join(tmp.path, "global")
+  const dir = path.join(tmp.path, "a")
+  const kilo = path.join(dir, ".kilo")
+  await fs.mkdir(kilo, { recursive: true })
+  await fs.mkdir(global, { recursive: true })
+  await Bun.write(path.join(global, "kilo.json"), JSON.stringify({ permission: { bash: { "*": "ask" } } }))
+  await Bun.write(
+    path.join(kilo, "kilo.json"),
+    JSON.stringify({ permission: { bash: { "*": "allow" }, edit: { "*": "deny" } } }),
+  )
+
+  const previous = Global.Path.config
+  Global.Path.config = global
+  try {
+    await provideTestInstance({
+      directory: dir,
+      fn: async () => {
+        const cfg = await Effect.runPromise(
+          Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(testLayer)),
+        )
+        expect(cfg.permission?.bash).toEqual({ "*": "ask" })
+        expect(cfg.permission?.edit).toEqual({ "*": "deny" })
+        expect(cfg.permission_origins?.bash).toEqual({ "*": "global" })
+        expect(cfg.permission_origins?.edit).toEqual({ "*": "local" })
+        const rules = Permission.fromConfig(cfg.permission ?? {})
+        expect(Permission.evaluate("bash", "bun test", rules).action).toBe("ask")
+        expect(Permission.evaluate("edit", "src/index.ts", rules).action).toBe("deny")
+      },
+    })
+  } finally {
+    ;(Global.Path as { config: string }).config = previous
+  }
 })

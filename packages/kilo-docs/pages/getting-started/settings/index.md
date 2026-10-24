@@ -220,6 +220,8 @@ Settings are resolved through an 8-level precedence system (lowest to highest pr
 
 Higher-priority levels override lower ones. This allows organizations to enforce settings at the enterprise level while still letting individual developers customize their local environment.
 
+Permission rules are the exception: a global `permission` entry or `permissions` rule is applied after project entries for the same key and pattern, so the global rule decides the result. See [Agent Permissions](/docs/customize/agent-permissions#config-precedence).
+
 ### Schema Auto-Injection
 
 When you create or open a `kilo.jsonc` file, the CLI automatically injects a `$schema` property pointing to the config JSON schema. This gives you **autocompletion and validation** in any editor that supports JSON Schema (VS Code, JetBrains, etc.).
