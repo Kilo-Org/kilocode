@@ -881,7 +881,7 @@ export const RunCommand = effectCmd({
               }
 
               if (part.type === "text" && part.time?.end) {
-                if (emit("text", { part })) continue
+                if (KiloRun.text(part, emit)) continue // kilocode_change - fallback markers are not CLI output
                 const text = part.text.trim()
                 if (!text) continue
                 if (!process.stdout.isTTY) {
