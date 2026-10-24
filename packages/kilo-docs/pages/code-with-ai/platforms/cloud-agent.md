@@ -61,7 +61,7 @@ On the **General** tab:
 - **Default sandbox** — the sandbox for new sessions when a repository has no override. The dialog names the sandbox that **Platform default** resolves to, so you can see what a session uses when nothing else applies.
 - **Repository overrides** — set or clear a sandbox and an [agent environment profile](#agent-environment-profiles) for an individual repository.
 
-The **Profiles** tab hosts the full profile manager: the profile list on the left and a detail pane on the right with **Overview**, **Variables**, **Setup**, **Slash Cmds**, **MCP**, **Skills**, and **Agents**.
+The **Profiles** tab hosts the full profile manager: the profile list on the left and a detail pane on the right with **Overview**, **Variables**, **Setup**, **Slash Cmds**, **MCP**, **Skills**, **Agents**, **Instructions**, and **Import**.
 
 Each change saves as you make it. In an organization, members see the settings read-only; only owners and admins can change them.
 
@@ -138,6 +138,12 @@ Use the side-by-side toggle in the file viewer to switch between a unified diff 
 
 These are saved snapshots, not a live view of the checkout. Diffs may be unavailable for binary, unsupported, or large files, or when there are too many changes to save in full.
 
+## Previewing a running app
+
+You can preview a web app running inside a Cloud Agent session's sandbox. When a session serves an app on a port, the web interface shows a preview button and preview links, and selecting one opens the running app in a new browser tab. Each preview is served from its own hostname that targets the session's workspace and port, so different sessions and ports do not collide.
+
+Preview is available to every Cloud Agent account.
+
 ## Agent Environment Profiles
 
 Agent environment profiles are reusable bundles of environment settings for cloud-agent sessions. A profile can include:
@@ -149,6 +155,16 @@ Agent environment profiles are reusable bundles of environment settings for clou
 Profiles are owned by either a user or an organization. Names are unique per owner, and each owner can have a single default profile. This lets teams share standard environment setups across multiple sessions and triggers.
 
 In the web app, manage profiles from the **Profiles** tab of the [Cloud Agent settings dialog](#choosing-where-sessions-run).
+
+Only organization owners and admins can create, edit, or delete an organization-owned profile. Other members can open the profile and use it for a session, but they see its settings read-only. Personal profiles are unaffected — every account can create and manage its own.
+
+### Importing a local configuration
+
+You can import a local Kilo configuration ZIP into a profile to move your agents, slash commands, skills, and instructions into the cloud. Open the profile in the **Profiles** tab and use the **Import** tab.
+
+Kilo validates the archive and shows a preview of what it contains before anything is saved. Review the preview, then confirm to replace the profile's agents, slash commands, skills, and instructions. Definitions that match keep their IDs, and definitions missing from the archive are removed; variables, setup commands, and MCP servers are not changed. If the archive is invalid — for example, it uses a reserved built-in agent name — Kilo shows the validation error and disables the import.
+
+Imported instruction files appear on the profile's **Instructions** tab.
 
 ## Environment Variables & Secrets & Startup Commands
 
@@ -254,11 +270,27 @@ For models that support it, webhook and scheduled triggers can set a **reasoning
 
 Triggers do not support manual env var or setup command overrides at this time.
 
+### Sandbox selection
+
+When your account can choose a sandbox, the trigger form shows a **Sandbox** field. Choices are grouped by provider and filtered to the runtimes available for the selected repository, including the Cloudflare Containers runtime where it applies. **Automatic** keeps the default Cloud Agent routing.
+
+Existing triggers keep any allocation they already have. Legacy allocations are not offered when you create a trigger or change its sandbox.
+
+### Run as webhook creator
+
+By default, organization triggers run as the organization webhook bot. When you create an organization trigger, you can instead select **Run as webhook creator** so each session runs with your identity. Organization billing and repository scope stay with the organization.
+
+This is a create-time choice and cannot be changed later. Only you, the creator, can edit a creator-run trigger or run it on demand. Existing triggers keep using the organization webhook bot; create a new trigger to use creator mode.
+
+Creator-run webhooks require shared-secret authentication. Set a header name and a secret of at least 16 characters when you create the trigger, and send the same header with every request. Kilo revalidates your account, the organization, and your direct membership before each delivery and retry. If that authorization fails, the request fails instead of falling back to the organization bot.
+
 ### Scheduled Triggers
 
 Scheduled triggers fire on a recurring schedule using cron expressions. You can configure them with a simple frequency picker (every 10 minutes, hourly, daily, weekly) or enter a raw cron expression for full control. Each trigger has a configurable timezone (default: UTC) and handles daylight saving time transitions automatically.
 
 The minimum schedule interval is 10 minutes. Scheduled triggers use `{{scheduledTime}}` and `{{timestamp}}` as prompt template variables (webhook-specific variables like `{{body}}` are not available since there is no inbound HTTP request).
+
+Scheduled triggers do not accept inbound requests. They run only from their schedule or from the invoke action described below.
 
 ### Invoking a scheduled trigger on demand
 
@@ -316,6 +348,8 @@ You can reference data in a trigger’s prompt template using these placeholders
 
 - `{{scheduledTime}}` - the time the schedule fired (ISO string)
 - `{{timestamp}}` - capture timestamp (ISO string)
+
+Kilo expands placeholders in the prompt template once. A placeholder that arrives inside captured request data, such as `{{headers}}` within a webhook body, stays as literal text and is not expanded again.
 
 {% callout type="warning" title="Security Considerations" %}
 Care should be taken when deciding to use webhooks as they are susceptible to prompt injection attacks. Especially in scenarios where webhook payloads may contain untrusted input. At this time we recommend using webhooks only for trusted sources.
