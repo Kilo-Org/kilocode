@@ -97,6 +97,7 @@ Turn automated reviews on or off for an individual repository to override the in
 
 - Check the Code Reviews page for error details on specific reviews
 - Ensure you have sufficient Kilo Code credits
+- A review on a paid model does not start when your balance is below the Cloud Agent minimum. Add credits or select a free or BYOK model, then push a new commit to run the review again.
 - Very large PRs may time out — consider splitting the change into smaller PRs
 
 ### The GitHub App is missing permissions
