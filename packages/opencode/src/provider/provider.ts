@@ -45,6 +45,8 @@ import {
   publicKiloProvider,
   kiloSmallModelPriority,
   hasKiloCredentials,
+  cheapestSmallModel,
+  isLoopbackProvider,
   buildTimeoutSignal,
   requestTimeout,
   wrapFirstByte,
@@ -2140,6 +2142,14 @@ const layer = Layer.effect(
         }
         if (candidates[0]) return candidates[0]
       }
+
+      // kilocode_change start - skip local-server providers: their catalog lists
+      // every known model but the server only serves installed ones, so the
+      // cheapest entry can name a model the user never installed. Returning
+      // undefined keeps the session-model fallback in the callers.
+      const cheap = isLoopbackProvider(provider) ? undefined : cheapestSmallModel(Object.values(provider.models))
+      if (cheap) return cheap
+      // kilocode_change end
 
       // kilocode_change start - fall back to kilo's auto small model only when the user actually has
       // kilo credentials. The kilo provider is always autoloaded (anonymous key), so checking it
