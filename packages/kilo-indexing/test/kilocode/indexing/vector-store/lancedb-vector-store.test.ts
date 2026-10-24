@@ -711,7 +711,9 @@ describe("LocalVectorStore", () => {
       await store.search([1, 2, 3], maliciousPrefix)
 
       // Verify proper escaping in the where clause
-      expect(whereSpy).toHaveBeenCalledWith("`filePath` LIKE 'src'' OR ''1''=''1%'")
+      expect(whereSpy).toHaveBeenCalledWith(
+        "(`filePath` = 'src'' OR ''1''=''1' OR `filePath` LIKE 'src'' OR ''1''=''1/%')",
+      )
     })
 
     test("should prevent injection with wildcards in directory prefix", async () => {
@@ -727,7 +729,7 @@ describe("LocalVectorStore", () => {
 
       await store.search([1, 2, 3], maliciousPrefix)
 
-      expect(whereSpy).toHaveBeenCalledWith("`filePath` LIKE '50\\%\\_test%'")
+      expect(whereSpy).toHaveBeenCalledWith("(`filePath` = '50%_test' OR `filePath` LIKE '50\\%\\_test/%')")
     })
 
     test("should handle Windows paths with backslashes in search", async () => {
@@ -744,7 +746,39 @@ describe("LocalVectorStore", () => {
       await store.search([1, 2, 3], windowsPrefix)
 
       // Backslashes should be escaped in LIKE patterns
-      expect(whereSpy).toHaveBeenCalledWith("`filePath` LIKE 'C:\\\\Users\\\\test%'")
+      expect(whereSpy).toHaveBeenCalledWith(
+        "(`filePath` = 'C:\\Users\\test' OR `filePath` LIKE 'C:\\\\Users\\\\test\\\\%')",
+      )
+    })
+
+    test("should enforce path separator boundary on directory prefix in search", async () => {
+      const whereSpy = mock().mockReturnThis()
+      mockTable.search.mockResolvedValue({
+        where: whereSpy,
+        distanceType: mock().mockReturnThis(),
+        distanceRange: mock().mockReturnThis(),
+        limit: mock().mockReturnThis(),
+        toArray: mock().mockResolvedValue([]),
+      })
+
+      await store.search([1, 2, 3], "src/app/")
+
+      expect(whereSpy).toHaveBeenCalledWith("(`filePath` = 'src/app' OR `filePath` LIKE 'src/app/%')")
+    })
+
+    test("should treat current-directory prefix as unfiltered workspace search", async () => {
+      const whereSpy = mock().mockReturnThis()
+      mockTable.search.mockResolvedValue({
+        where: whereSpy,
+        distanceType: mock().mockReturnThis(),
+        distanceRange: mock().mockReturnThis(),
+        limit: mock().mockReturnThis(),
+        toArray: mock().mockResolvedValue([]),
+      })
+
+      await store.search([1, 2, 3], "./")
+
+      expect(whereSpy).not.toHaveBeenCalled()
     })
 
     test("should prevent injection via file paths in deletePointsByFilePath", async () => {
