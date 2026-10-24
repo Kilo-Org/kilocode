@@ -12426,6 +12426,60 @@
         ]
       }
     },
+    "/config/hooks": {
+      "get": {
+        "tags": ["config-console"],
+        "operationId": "config.hooks",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hooks settings data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigHooks"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "List the hooks Kilo runs from ~/.claude/settings.json, the Claude Code events and handlers it skips with the reason, whether Claude Code hooks are enabled for this server, and the tool names hook matchers can use.",
+        "summary": "Get hooks settings data",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.config.hooks({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/config/effective": {
       "get": {
         "tags": ["config-console"],
@@ -16148,6 +16202,76 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.teardownWorktree({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/hooks/dispatch": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.hooksDispatch",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hook result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HooksDispatchResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Run the configured hooks for an event that happens in a client, such as WorktreeSetup after the Agent Manager set up a managed worktree, and report whether a hook blocked it.",
+        "summary": "Run the hooks of a client-side event",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HooksDispatchPayload"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.hooksDispatch({\n  ...\n})"
           }
         ]
       }
@@ -36067,6 +36191,62 @@
         },
         "additionalProperties": false
       },
+      "HookHandlerConfig": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["command"]
+          },
+          "command": {
+            "type": "string",
+            "description": "Command to run. Without args it runs in bash (Git Bash on Windows) or the platform shell; with args it is the program to spawn directly. It receives the hook input as JSON on stdin."
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "shell": {
+            "type": "string",
+            "enum": ["bash", "powershell"]
+          },
+          "if": {
+            "type": "string"
+          },
+          "timeout": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "onFailure": {
+            "type": "string",
+            "enum": ["continue", "block"]
+          },
+          "async": {
+            "type": "boolean"
+          }
+        },
+        "required": ["type", "command"],
+        "additionalProperties": false
+      },
+      "HookGroupConfig": {
+        "type": "object",
+        "properties": {
+          "matcher": {
+            "type": "string",
+            "description": "What it matches depends on the event (tool name, source, trigger, ...): \"*\" or omitted matches everything, \"a|b\" matches exact names, anything else is a regular expression. Ignored on events without a matcher."
+          },
+          "hooks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HookHandlerConfig"
+            }
+          }
+        },
+        "required": ["hooks"],
+        "additionalProperties": false
+      },
       "PermissionActionConfig": {
         "type": "string",
         "enum": ["ask", "allow", "deny"]
@@ -36951,6 +37131,192 @@
           },
           "default_agent": {
             "type": "string"
+          },
+          "hooks": {
+            "type": "object",
+            "properties": {
+              "PreToolUse": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "PostToolUse": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "PostToolUseFailure": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "PostToolBatch": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "PermissionRequest": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "TaskCreated": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "TaskCompleted": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "UserPromptSubmit": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "UserPromptExpansion": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "PreModelSwitch": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "PostModelSwitch": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "SessionStart": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "SessionEnd": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "InstructionsLoaded": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "Stop": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "SubagentStop": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "SubagentStart": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "StopFailure": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "PreCompact": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "PostCompact": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "Notification": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "ConfigChange": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "FileChanged": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "CwdChanged": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "GoalReport": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "WakeupFire": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "WorktreeSetup": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "WorktreeTeardown": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "CommitMessage": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              },
+              "BranchName": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HookGroupConfig"
+                }
+              }
+            },
+            "additionalProperties": false
           },
           "subagent_depth": {
             "type": "integer",
@@ -41334,6 +41700,246 @@
         "required": ["sources"],
         "additionalProperties": false
       },
+      "ClaudeHookGroup": {
+        "type": "object",
+        "properties": {
+          "matcher": {
+            "type": "string"
+          },
+          "hooks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["command"]
+                },
+                "command": {
+                  "type": "string"
+                },
+                "args": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "timeout": {
+                  "type": "number"
+                },
+                "onFailure": {
+                  "type": "string",
+                  "enum": ["continue", "block"]
+                },
+                "async": {
+                  "type": "boolean"
+                },
+                "shell": {
+                  "type": "string",
+                  "enum": ["bash", "powershell"]
+                },
+                "if": {
+                  "type": "string"
+                }
+              },
+              "required": ["type", "command"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["hooks"],
+        "additionalProperties": false
+      },
+      "ConfigHooks": {
+        "type": "object",
+        "properties": {
+          "claude": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "hooks": {
+                "type": "object",
+                "properties": {
+                  "PreToolUse": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "PostToolUse": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "PostToolUseFailure": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "PostToolBatch": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "PermissionRequest": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "TaskCreated": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "TaskCompleted": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "UserPromptSubmit": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "UserPromptExpansion": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "PreModelSwitch": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "PostModelSwitch": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "SessionStart": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "SessionEnd": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "InstructionsLoaded": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "Stop": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "SubagentStop": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "SubagentStart": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "StopFailure": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "PreCompact": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "PostCompact": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "Notification": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "FileChanged": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  },
+                  "CwdChanged": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ClaudeHookGroup"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              "skipped": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "event": {
+                      "type": "string"
+                    },
+                    "command": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["event", "reason"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["path", "enabled", "skipped"],
+            "additionalProperties": false
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Every tool name a hook matcher can use here: Kilo tool ids, their Claude Code names, MCP tools."
+          }
+        },
+        "required": ["claude", "tools"],
+        "additionalProperties": false
+      },
       "ConfigOverlayConflictError": {
         "type": "object",
         "properties": {
@@ -42556,6 +43162,51 @@
           }
         },
         "required": ["success", "slug"],
+        "additionalProperties": false
+      },
+      "HooksDispatchPayload": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "enum": ["WorktreeSetup"]
+          },
+          "worktree": {
+            "type": "string"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "parentBranch": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string",
+            "enum": ["create", "promote", "import", "multi_version", "tool", "continue"]
+          },
+          "script": {
+            "type": "string",
+            "enum": ["none", "succeeded", "failed"]
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          }
+        },
+        "required": ["event", "worktree", "origin", "script"],
+        "additionalProperties": false
+      },
+      "HooksDispatchResult": {
+        "type": "object",
+        "properties": {
+          "blocked": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": ["blocked"],
         "additionalProperties": false
       },
       "ProviderUsagePeriod": {

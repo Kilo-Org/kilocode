@@ -307,6 +307,9 @@ export const dict = {
   "notification.permission.titleSandboxEscalation": "Exécuter en dehors du bac à sable ?",
   "notification.permission.descriptionSandboxEscalation":
     "Cette action exécute toute la commande sans les restrictions de système de fichiers et de réseau, pour cette commande uniquement. Git doit écrire dans .git, qui est en lecture seule dans le bac à sable et se trouve hors de l’arborescence de travail pour un worktree lié. Les règles d’autorisation Bash et l’approbation automatique n’approuvent jamais cette demande automatiquement.",
+  "notification.permission.titleHookAsk": "Un hook demande une confirmation",
+  "notification.permission.descriptionHookAsk":
+    "Un hook vous demande de confirmer cet appel avant son exécution. L'approbation automatique ne répond jamais à cette demande.",
   "ui.permission.manageAutoApprove": "Gérer les règles d'approbation automatique",
   "ui.permission.reject": "Rejeter",
   "ui.permission.feedbackPlaceholder": "Dites à Kilo quoi faire différemment",
@@ -890,6 +893,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "Agents",
   "settings.agentBehaviour.subtab.mcpServers": "Serveurs MCP",
+  "settings.agentBehaviour.subtab.hooks": "Hooks",
   "settings.agentBehaviour.subtab.rules": "Règles",
   "settings.agentBehaviour.subtab.workflows": "Flux de travail",
   "settings.agentBehaviour.subtab.skills": "Compétences",
@@ -1147,7 +1151,148 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Compatibilité Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Charger les fichiers Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "Charge les instructions et les compétences de CLAUDE.md depuis votre répertoire de configuration Claude Code dans les sessions. Activez cette option si vous souhaitez que Kilo utilise vos instructions et compétences Claude Code. Nécessite un redémarrage.",
+    "Charge les instructions et les compétences de CLAUDE.md depuis votre répertoire de configuration Claude Code dans les sessions. Activez cette option si vous souhaitez que Kilo utilise vos instructions et compétences Claude Code. Nécessite un redémarrage. Exécute aussi les hooks Claude Code de ~/.claude/settings.json avec vos droits utilisateur : événements d'outils, de prompt et de session (UserPromptSubmit, SessionStart, ...), Stop et sous-agents, compaction et notifications.",
+  "settings.agentBehaviour.hooks.description":
+    "Exécutez vos propres commandes quand l'agent agit : avant ou après un appel d'outil, quand vous envoyez un prompt, au démarrage d'une session, quand l'agent s'arrête, avant la compaction, et plus encore. Utilise le format de hooks de Claude Code.",
+  "settings.agentBehaviour.hooks.warning":
+    "Les hooks exécutent des commandes shell avec tous vos droits utilisateur, en dehors du sandbox. N'ajoutez que des commandes de confiance.",
+  "settings.agentBehaviour.hooks.scope":
+    "Enregistré dans votre configuration globale. Les hooks de la configuration du projet sont ignorés.",
+  "settings.agentBehaviour.hooks.openConfig": "Ouvrir le fichier de configuration",
+  "settings.agentBehaviour.hooks.empty": "Aucun hook pour le moment.",
+  "settings.agentBehaviour.hooks.add": "Ajouter un hook",
+  "settings.agentBehaviour.hooks.allTools": "Tout",
+  "settings.agentBehaviour.hooks.badge.timeout": "Délai {{seconds}} s",
+  "settings.agentBehaviour.hooks.badge.block": "Bloque en cas d'échec",
+  "settings.agentBehaviour.hooks.badge.exec": "Sans shell",
+  "settings.agentBehaviour.hooks.inherited": "D'une autre configuration",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "Ces hooks s'exécutent aussi. Ils proviennent d'un autre fichier de configuration globale, d'une configuration gérée ou de votre organisation ; modifiez-les là où ils sont définis.",
+  "settings.agentBehaviour.hooks.claude": "De Claude Code",
+  "settings.agentBehaviour.hooks.claude.open": "Ouvrir le fichier",
+  "settings.agentBehaviour.hooks.claude.active":
+    "Ces hooks de {{path}} s'exécutent aussi, sauf dans les sessions en sandbox.",
+  "settings.agentBehaviour.hooks.claude.off":
+    'Non exécutés : activez "Charger les fichiers Claude Code" dans l’onglet Règles, puis redémarrez Kilo.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "Pas encore exécutés : redémarrez Kilo pour appliquer la compatibilité Claude Code. S'ils ne s'exécutent toujours pas, vérifiez que KILO_DISABLE_CLAUDE_CODE_HOOKS n'est pas défini.",
+  "settings.agentBehaviour.hooks.new": "Nouveau hook",
+  "settings.agentBehaviour.hooks.edit": "Modifier le hook",
+  "settings.agentBehaviour.hooks.event": "Quand",
+  "settings.agentBehaviour.hooks.matcher": "Filtre",
+  "settings.agentBehaviour.hooks.matcher.all": "Correspond à tout",
+  "settings.agentBehaviour.hooks.matcher.names": "Correspond exactement à : {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "Expression régulière, recherchée n'importe où dans la valeur",
+  "settings.agentBehaviour.hooks.matcher.invalid": "Expression régulière non valide",
+  "settings.agentBehaviour.hooks.unmatched":
+    "Aucun outil ne s'appelle {{names}} ici, ce hook ne s'exécute donc jamais pour lui.",
+  "settings.agentBehaviour.hooks.ifIgnored":
+    "Kilo ignore ce hook : la condition `if` ne fonctionne que sur les événements d'outil.",
+  "settings.agentBehaviour.hooks.command": "Commande",
+  "settings.agentBehaviour.hooks.command.help":
+    "Reçoit l'événement en JSON sur stdin et s'exécute dans le dossier du projet.",
+  "settings.agentBehaviour.hooks.command.required": "Saisissez une commande",
+  "settings.agentBehaviour.hooks.exec": "Exécuter sans shell",
+  "settings.agentBehaviour.hooks.exec.help":
+    "Exécute la commande comme un programme avec les arguments ci-dessous, un par ligne. Aucun shell n'est utilisé, donc ~ et $VARIABLES ne sont pas développés : utilisez des chemins absolus.",
+  "settings.agentBehaviour.hooks.args.placeholder": "Un argument par ligne",
+  "settings.agentBehaviour.hooks.timeout": "Délai d'expiration (secondes)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "Par défaut : {{seconds}} pour cet événement. Un hook qui dépasse le délai est arrêté, avec tous les processus qu'il a lancés.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "Saisissez un nombre entier de secondes, de 1 à 86400",
+  "settings.agentBehaviour.hooks.block": "Bloquer si le hook échoue",
+  "settings.agentBehaviour.hooks.block.help":
+    "Par défaut, un hook qui plante ou dépasse le délai laisse l'action continuer. Activez cette option pour les garde-fous qui ne doivent jamais laisser passer en cas d'échec.",
+  "settings.agentBehaviour.hooks.apply": "Appliquer",
+  "settings.agentBehaviour.hooks.remove.heading": "Supprimer le hook",
+  "settings.agentBehaviour.hooks.remove.confirm":
+    'Supprimer le hook "{{command}}" ? Cliquez sur Enregistrer pour appliquer la modification.',
+  "settings.agentBehaviour.hooks.remove.button": "Supprimer",
+  "settings.agentBehaviour.hooks.kiloOnly": "Kilo uniquement",
+  "settings.agentBehaviour.hooks.badge.async": "Arrière-plan",
+  "settings.agentBehaviour.hooks.group.tools": "Outils",
+  "settings.agentBehaviour.hooks.group.prompt": "Prompts",
+  "settings.agentBehaviour.hooks.group.session": "Sessions",
+  "settings.agentBehaviour.hooks.group.loop": "Boucle de l'agent",
+  "settings.agentBehaviour.hooks.group.compaction": "Compaction",
+  "settings.agentBehaviour.hooks.group.environment": "Environnement",
+  "settings.agentBehaviour.hooks.group.kilo": "Événements Kilo",
+  "settings.agentBehaviour.hooks.event.PreToolUse.help":
+    "Avant l'exécution d'un outil. Le code de sortie 2 ou un refus JSON bloque l'appel ; « ask » fait d'abord demander Kilo.",
+  "settings.agentBehaviour.hooks.event.PostToolUse.help":
+    "Après la réussite d'un outil. Le stderr d'un code de sortie 2 ou additionalContext est montré à l'agent, par exemple des erreurs de lint.",
+  "settings.agentBehaviour.hooks.event.PostToolUseFailure.help":
+    "Après l'échec d'un outil, y compris une commande shell qui se termine avec un code non nul. additionalContext est montré à l'agent.",
+  "settings.agentBehaviour.hooks.event.PostToolBatch.help":
+    "Après une étape du modèle qui a exécuté des outils, avant l'appel suivant au modèle. Un blocage termine le tour.",
+  "settings.agentBehaviour.hooks.event.PermissionRequest.help":
+    "Quand Kilo affiche une demande d'autorisation. Un refus JSON refuse l'appel ; les hooks ne peuvent pas approuver.",
+  "settings.agentBehaviour.hooks.event.TaskCreated.help":
+    "Quand l'agent ajoute une tâche. Un blocage retire cette tâche.",
+  "settings.agentBehaviour.hooks.event.TaskCompleted.help":
+    "Quand l'agent marque une tâche comme terminée. Un blocage la garde ouverte.",
+  "settings.agentBehaviour.hooks.event.UserPromptSubmit.help":
+    "Quand vous envoyez un prompt ou une commande. Un blocage le rejette ; stdout est ajouté au prompt.",
+  "settings.agentBehaviour.hooks.event.UserPromptExpansion.help":
+    "Quand une commande personnalisée, une compétence ou un prompt MCP se développe. Un blocage la rejette.",
+  "settings.agentBehaviour.hooks.event.PreModelSwitch.help":
+    "Avant qu'un prompt fasse passer la session à un autre modèle. Un blocage, un « ask » ou un dépassement de délai rejette le prompt.",
+  "settings.agentBehaviour.hooks.event.PostModelSwitch.help":
+    "Après le changement de modèle de la session. stdout est ajouté à la requête suivante.",
+  "settings.agentBehaviour.hooks.event.SessionStart.help":
+    "Quand une session démarre, reprend, est dupliquée ou compactée. stdout est ajouté à la conversation.",
+  "settings.agentBehaviour.hooks.event.SessionEnd.help":
+    "Quand une session est supprimée ou que Kilo se ferme. Tous les hooks SessionEnd partagent un court délai.",
+  "settings.agentBehaviour.hooks.event.InstructionsLoaded.help":
+    "Quand un fichier d'instructions comme AGENTS.md ou CLAUDE.md est chargé.",
+  "settings.agentBehaviour.hooks.event.Stop.help":
+    "Quand l'agent a fini de répondre. Un blocage le fait continuer, au plus 8 fois de suite.",
+  "settings.agentBehaviour.hooks.event.SubagentStop.help":
+    "Quand un sous-agent a terminé. Un blocage le fait continuer.",
+  "settings.agentBehaviour.hooks.event.SubagentStart.help":
+    "Quand un sous-agent démarre. additionalContext est ajouté à son premier prompt.",
+  "settings.agentBehaviour.hooks.event.StopFailure.help":
+    "Quand un tour se termine par une erreur d'API, par exemple une limite de débit.",
+  "settings.agentBehaviour.hooks.event.PreCompact.help":
+    "Avant la compaction de la conversation. Un blocage annule la compaction.",
+  "settings.agentBehaviour.hooks.event.PostCompact.help": "Après la compaction de la conversation.",
+  "settings.agentBehaviour.hooks.event.Notification.help":
+    "Quand Kilo vous attend : une demande d'autorisation, une question, ou l'inactivité après un tour.",
+  "settings.agentBehaviour.hooks.event.ConfigChange.help":
+    "Après une modification de la configuration par Kilo. Ne peut pas bloquer.",
+  "settings.agentBehaviour.hooks.event.FileChanged.help": "Quand un fichier surveillé du dossier du projet change.",
+  "settings.agentBehaviour.hooks.event.CwdChanged.help":
+    "Quand une commande shell s'exécute dans un autre dossier que la précédente.",
+  "settings.agentBehaviour.hooks.event.GoalReport.help":
+    "Avant qu'un /goal soit marqué comme terminé ou bloqué. Un blocage maintient l'objectif en cours.",
+  "settings.agentBehaviour.hooks.event.WakeupFire.help":
+    "Avant l'exécution d'un réveil planifié ou d'une tâche cron. Un blocage l'ignore.",
+  "settings.agentBehaviour.hooks.event.WorktreeSetup.help":
+    "Après la création d'un worktree géré et l'exécution de son script d'installation. Un blocage marque l'installation comme échouée.",
+  "settings.agentBehaviour.hooks.event.WorktreeTeardown.help": "Avant la suppression d'un worktree géré.",
+  "settings.agentBehaviour.hooks.event.CommitMessage.help":
+    "Après la génération d'un message de commit. hookSpecificOutput.commitMessage le remplace ; un blocage le rejette.",
+  "settings.agentBehaviour.hooks.event.BranchName.help":
+    "Après la génération d'un nom de branche de worktree. hookSpecificOutput.branchName le remplace ; un blocage garde le nom actuel.",
+  "settings.agentBehaviour.hooks.matcher.values":
+    "Correspond à {{field}} : {{values}}. Séparez plusieurs valeurs par |.",
+  "settings.agentBehaviour.hooks.matcher.kind.tool":
+    "Laissez vide pour cibler tous les outils. Séparez les noms d'outils par | (edit|write). Toute autre valeur est une expression régulière. Les noms Kilo et Claude Code fonctionnent tous les deux (bash ou Bash) ; les outils MCP ressemblent à github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.kind.file":
+    "Noms de fichiers du dossier du projet à surveiller, séparés par | (.envrc|.env). Chaque nom est pris littéralement.",
+  "settings.agentBehaviour.hooks.matcher.kind.model":
+    "Noms de modèles séparés par |, ou une expression régulière. Le nom canonique (claude-sonnet-4-5), l'identifiant du modèle et fournisseur/modèle correspondent tous.",
+  "settings.agentBehaviour.hooks.matcher.kind.name":
+    "Correspond à {{field}}. Séparez les noms par |, ou utilisez une expression régulière. Laissez vide pour tout cibler.",
+  "settings.agentBehaviour.hooks.matcher.files": "Surveille : {{names}}",
+  "settings.agentBehaviour.hooks.matcher.filesNone":
+    "Ne surveille aucun fichier par lui-même ; s'exécute pour les chemins que d'autres hooks ajoutent avec watchPaths.",
+  "settings.agentBehaviour.hooks.matcher.none": "Cet événement n'a pas de filtre ; le hook s'exécute à chaque fois.",
+  "settings.agentBehaviour.hooks.async": "Exécuter en arrière-plan",
+  "settings.agentBehaviour.hooks.async.help":
+    "Kilo n'attend pas le hook ; sa sortie et son code de sortie sont seulement journalisés.",
+  "settings.agentBehaviour.hooks.async.noBlock": "Un hook en arrière-plan ne peut ni bloquer ni ajouter de contexte.",
+  "settings.agentBehaviour.hooks.claude.skipped": "Non exécutés par Kilo : {{items}}",
   "settings.agentBehaviour.mcpDetail.command": "Commande",
   "settings.agentBehaviour.mcpDetail.args": "Arguments",
   "settings.agentBehaviour.mcpDetail.env": "Environnement",
@@ -1282,6 +1427,7 @@ export const dict = {
   "chat.memory.command.failed": "La commande de mémoire a échoué",
   "chat.memory.updated": "Memory updated",
   "chat.memory.rebuild": "Memory index rebuilt",
+  "chat.hookFeedback": "Retour de hook ({{event}})",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Utiliser un prompt personnalisé",

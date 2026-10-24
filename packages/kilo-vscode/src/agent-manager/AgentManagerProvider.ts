@@ -39,7 +39,7 @@ import { TerminalRouter } from "./terminal-routing"
 import { discardWorktree as discard } from "./discard-worktree"
 import { acquirePtyCleanup, teardown } from "./pty-cleanup"
 import { executeVscodeTask } from "./task-runner"
-import { runLifecycleSetup } from "./provider-lifecycle"
+import { openSetupScript, runLifecycleSetup, setupHooks, type SetupOrigin } from "./provider-lifecycle"
 import { RunController } from "./run/controller"
 import { handleRunMessage } from "./run/message"
 import { handleTabLayoutMessage } from "./tab-layout"
@@ -212,7 +212,7 @@ export class AgentManagerProvider implements Disposable {
       state: () => this.getStateManager(),
       post: (msg) => this.postToWebview(msg),
       push: () => this.pushState(),
-      setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
+      setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id, undefined, "import"),
       session: (dir, branch, id) => this.createSessionInWorktree(dir, branch, id),
       acquirePtyCleanup: (directory) => this.acquirePtyCleanup(directory),
       register: (sid, dir) => this.registerWorktreeSession(sid, dir),
@@ -1144,7 +1144,7 @@ export class AgentManagerProvider implements Disposable {
           }
         },
         hasScript: () => this.getSetupScriptService()?.hasScript() ?? false,
-        setup: (dir, branch, id, early) => this.runSetupScriptForWorktree(dir, branch, id, early),
+        setup: (dir, branch, id, early) => this.runSetupScriptForWorktree(dir, branch, id, early, "tool"),
         createSessionInWorktree: this.createSessionInWorktree.bind(this),
         sessionMetadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
         registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
@@ -1270,32 +1270,27 @@ export class AgentManagerProvider implements Disposable {
 
   /** Open the worktree setup script in the editor for user configuration. */
   private async configureSetupScript(): Promise<void> {
-    const service = this.getSetupScriptService()
-    if (!service) return
-    try {
-      if (!service.hasScript()) {
-        await service.createDefaultScript()
-      }
-      const resolved = service.resolveScript()
-      if (!resolved) return
-      await this.host.openDocument(resolved.path)
-    } catch (error) {
-      this.log(`Failed to open setup script: ${error}`)
-    }
+    await openSetupScript(
+      this.getSetupScriptService(),
+      (file) => this.host.openDocument(file),
+      (msg) => this.log(msg),
+    )
   }
 
-  /** Copy .env files and run the worktree setup script. Blocks until complete. Shows progress in overlay. */
+  /** Copy .env files, run the setup script, then the WorktreeSetup hooks. Blocks until complete; shows progress. */
   private async runSetupScriptForWorktree(
     worktreePath: string,
     branch?: string,
     worktreeId?: string,
     early?: () => Promise<void>,
+    origin: SetupOrigin = "create",
   ): Promise<void> {
     const root = this.getRoot()
     if (!root) return
 
     await runLifecycleSetup(
       {
+        hooks: await setupHooks(() => this.connectionService.getClient(), root, origin),
         service: this.getSetupScriptService(),
         destination: this.destination.value(),
         projectId: this.context?.id,
@@ -1465,7 +1460,7 @@ export class AgentManagerProvider implements Disposable {
     return {
       createOnDisk: (opts) => this.createWorktreeOnDisk(opts),
       hasScript: () => this.getSetupScriptService()?.hasScript() ?? false,
-      runSetup: (dir, branch, id, early) => this.runSetupScriptForWorktree(dir, branch, id, early),
+      runSetup: (dir, branch, id, early, origin) => this.runSetupScriptForWorktree(dir, branch, id, early, origin),
       createSession: (dir, branch, id, boot, timing) =>
         this.createSessionInWorktree(dir, branch, id, undefined, boot, timing),
       notifyReady: (sid, result, id) => this.notifyWorktreeReady(sid, result, id),
@@ -1495,6 +1490,7 @@ export class AgentManagerProvider implements Disposable {
   private get multiVersionHost(): MultiVersionHost {
     return {
       ...this.lifecycleHost,
+      runSetup: (dir, branch, id, early) => this.runSetupScriptForWorktree(dir, branch, id, early, "multi_version"),
       discard: (id, dir, branch, sessionId) => this.discardWorktree(id, dir, branch, sessionId),
       promptName: (input) => this.naming.prompt(input),
       error: (message) => this.host.showError(message),
@@ -1789,7 +1785,7 @@ export class AgentManagerProvider implements Disposable {
         binary: this.gitOps.path,
         getClient: () => this.connectionService.getClient(),
         createWorktreeOnDisk: (opts) => this.createWorktreeOnDisk(opts),
-        runSetupScript: (p, b, id) => this.runSetupScriptForWorktree(p, b, id),
+        runSetupScript: (p, b, id) => this.runSetupScriptForWorktree(p, b, id, undefined, "continue"),
         cleanupWorktree: async (id) => {
           await this.onDeleteWorktree(id)
         },

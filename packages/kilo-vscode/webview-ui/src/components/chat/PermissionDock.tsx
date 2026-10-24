@@ -56,13 +56,32 @@ export const PermissionDock: Component<{
   const skillShell = () => props.request.args?.skillShell === true
   const skillShellCommands = () =>
     skillShell() && props.request.toolName === "bash" ? (props.request.args?.commands ?? []) : []
+  // A PreToolUse hook asked for confirmation: never auto-approved or remembered, so no rules are offered.
+  const hookAsk = () => props.request.args?.hookAsk === true
+  const reason = () => {
+    const value = props.request.args?.reason
+    if (!hookAsk() || typeof value !== "string" || !value.trim()) return undefined
+    // Escape control/bidi chars per line: the reason is hook output and may quote model-written text.
+    return value.trim().split(/\r?\n/).map(displaySkillCommand).join("\n")
+  }
+  // The tool the hook asks about (metadata.tool) is absent from older servers, and a hook ask for a tool
+  // without a command or file shows nothing else about the call.
+  const hookTool = () => {
+    const value = props.request.args?.tool
+    if (!hookAsk() || typeof value !== "string" || !value.trim()) return undefined
+    return displaySkillCommand(value.trim())
+  }
   // Bash sends fine-grained rules via metadata.rules; other tools use the always array.
   const rules = () => props.request.args?.rules ?? props.request.always ?? []
   // Rules like "git *" or "git log *" — strip the trailing wildcard for display.
   // A bare "*" (global wildcard) becomes empty so only the tool name shows.
   const label = (rule: string) => (rule === "*" ? "" : rule.replace(/ \*$/, ""))
   const command = () => {
-    const cmd = props.request.args?.command
+    // A hook ask carries the bash command as its only pattern, not in metadata.
+    const pattern = props.request.patterns[0]
+    const cmd =
+      props.request.args?.command ??
+      (hookAsk() && props.request.toolName === "bash" && pattern !== "*" ? pattern : undefined)
     if (typeof cmd !== "string") return undefined
     // Normalize IDN/Unicode hostnames to punycode ASCII to prevent homograph attacks.
     return normalizeUrls(cmd)
@@ -80,11 +99,14 @@ export const PermissionDock: Component<{
 
   // Dynamic MCP tools send their resolved input as metadata.mcpInput so the full
   // request, including nested objects and arrays, is inspectable before approval.
+  // A hook ask sends the call's arguments as metadata.input (older servers send none).
   const input = () => {
-    const value = props.request.args?.mcpInput
+    const value = props.request.args?.mcpInput ?? (hookAsk() ? props.request.args?.input : undefined)
     if (!value || typeof value !== "object") return undefined
     if (Object.keys(value).length === 0) return undefined
-    return JSON.stringify(value, null, 2)
+    const json = JSON.stringify(value, null, 2)
+    // The arguments of a hook ask are model-written: escape control/bidi chars per line, like the reason.
+    return hookAsk() ? json.split("\n").map(displaySkillCommand).join("\n") : json
   }
 
   const diffs = createMemo(() => permissionDiffs(props.request))
@@ -107,9 +129,11 @@ export const PermissionDock: Component<{
     void props.request.id
     setRejecting(false)
     setFeedback("")
+    // Toggles belong to the request they were made on; a reused dock must not carry them over.
+    setDecisions({})
   })
 
-  const hasRules = () => rules().length > 0 && !skillShell()
+  const hasRules = () => rules().length > 0 && !skillShell() && !hookAsk()
 
   const toggleExpanded = () => {
     const next = !expanded()
@@ -118,6 +142,8 @@ export const PermissionDock: Component<{
   }
 
   const collectRules = () => {
+    // No rule toggles are shown (skill shell, hook asks), so none may be saved.
+    if (!hasRules()) return { approved: [], denied: [] }
     const all = rules()
     const approved: string[] = []
     const denied: string[] = []
@@ -158,6 +184,7 @@ export const PermissionDock: Component<{
 
   const title = () => {
     if (sandboxEscalation()) return language.t("notification.permission.titleSandboxEscalation")
+    if (hookAsk()) return language.t("notification.permission.titleHookAsk")
     const skill = props.request.args?.skill
     if (skillShell() && typeof skill === "string" && skill.length > 0)
       // Escape the untrusted skill name so bidi/control chars can't reorder the header text.
@@ -365,6 +392,30 @@ export const PermissionDock: Component<{
                     <div data-slot="permission-hint">
                       {language.t("notification.permission.descriptionSandboxEscalation")}
                     </div>
+                  </Show>
+                  <Show when={hookAsk()}>
+                    <div data-slot="permission-hint" data-wrap>
+                      {language.t("notification.permission.descriptionHookAsk")}
+                    </div>
+                    <Show when={hookTool()}>
+                      {(name) => (
+                        <div data-slot="permission-hint" data-wrap data-hook-tool>
+                          <code style={{ "font-family": "var(--vscode-editor-font-family, monospace)" }}>{name()}</code>
+                        </div>
+                      )}
+                    </Show>
+                    <Show when={reason()}>
+                      {(text) => (
+                        <div
+                          data-slot="permission-hint"
+                          data-wrap
+                          data-hook-reason
+                          style={{ "white-space": "pre-wrap" }}
+                        >
+                          {text()}
+                        </div>
+                      )}
+                    </Show>
                   </Show>
                   <Show when={command()}>
                     {(cmd) => <PermissionCommand command={cmd()} plain={props.request.args.heredoc === true} />}

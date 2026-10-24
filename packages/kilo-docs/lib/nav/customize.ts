@@ -30,6 +30,12 @@ export const CustomizeNav: NavSection[] = [
       },
       { href: "/customize/agents-md", children: "agents.md" },
       { href: "/customize/workflows", children: "Workflows", platform: "new" },
+      {
+        href: "/customize/hooks",
+        children: "Hooks",
+        platform: "new",
+        subLinks: [{ href: "/customize/hooks-reference", children: "Hooks Reference", platform: "new" }],
+      },
       { href: "/customize/skills", children: "Skills" },
       {
         href: "/customize/prompt-engineering",

@@ -366,6 +366,44 @@ describe("acp permissions", () => {
   })
   // kilocode_change end
 
+  // kilocode_change start - a hook ask is titled as a hook confirmation, a sandbox escalation keeps its own title
+  it("titles a hook ask with the hook's reason, control characters stripped, and omits the persist option", async () => {
+    const harness = createHarness()
+    await createSession(harness.session, "ses_a")
+
+    harness.subscription.handle(
+      permissionAsked("ses_a", "perm_hook", {
+        permission: "bash",
+        metadata: { hookAsk: true, reason: "deletes\u001b[2J the\nbuild\u202edir" },
+      }),
+    )
+
+    await pollUntil(() => harness.replies.length === 1, "hook ask permission was never replied")
+
+    expect(harness.requests[0]).toMatchObject({
+      toolCall: { title: "A hook asks for confirmation: deletes [2J the build dir" },
+      options: [
+        { optionId: "once", kind: "allow_once", name: "Allow" },
+        { optionId: "reject", kind: "reject_once", name: "Reject" },
+      ],
+    })
+    expect(harness.replies[0]).toMatchObject({ requestID: "perm_hook", reply: "once", interactive: true })
+  })
+
+  it("titles a sandbox escalation as running outside the sandbox", async () => {
+    const harness = createHarness()
+    await createSession(harness.session, "ses_a")
+
+    harness.subscription.handle(
+      permissionAsked("ses_a", "perm_sandbox", { permission: "bash", metadata: { sandboxEscalation: true } }),
+    )
+
+    await pollUntil(() => harness.replies.length === 1, "sandbox permission was never replied")
+
+    expect(harness.requests[0]).toMatchObject({ toolCall: { title: "Run outside the sandbox" } })
+  })
+  // kilocode_change end
+
   it("rejects non-selected outcomes", async () => {
     const harness = createHarness(() => Promise.resolve({ outcome: { outcome: "cancelled" } }))
     await createSession(harness.session, "ses_a")

@@ -19,6 +19,7 @@ import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
 import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // kilocode_change
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
+import { KiloHookTool } from "@/kilocode/hooks/tool"
 // kilocode_change end
 
 export const Event = PermissionV1.Event
@@ -46,7 +47,8 @@ export type Error = PermissionV1.Error
 export const ReplyInput = PermissionV1.ReplyInput
 export type ReplyInput = PermissionV1.ReplyInput
 // Kilo extends upstream's AskInput with an optional hardRuleset (consumed by drain + session/prompt)
-export type AskInput = PermissionV1.AskInput & { hardRuleset?: PermissionV1.Ruleset }
+// and the PermissionRequest hook review that races the prompt.
+export type AskInput = PermissionV1.AskInput & { hardRuleset?: PermissionV1.Ruleset; review?: KiloHookTool.Review }
 // kilocode_change end
 
 // kilocode_change start
@@ -147,6 +149,7 @@ function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
   if (ConfigProtection.isRequest(entry.info)) return false
   if (entry.info.metadata?.["skillShell"] === true) return false // kilocode_change - skill batch needs an explicit reply
   if (entry.info.metadata?.["sandboxEscalation"] === true) return false // kilocode_change - host access needs an explicit reply
+  if (entry.info.metadata?.["hookAsk"] === true) return false // kilocode_change - a PreToolUse hook ask needs an explicit reply
   return entry.info.patterns.every((pattern) => {
     if (veto(entry.info.permission, pattern, entry.hardRuleset)) return false
     return resolve(entry.info.permission, pattern, entry.ruleset, approved, local).action === "allow"
@@ -187,7 +190,7 @@ const layer = Layer.effect(
     const ask = Effect.fn("Permission.ask")(function* (input: AskInput) {
       const { approved, pending } = yield* InstanceState.get(state)
       // kilocode_change start
-      const { ruleset, hardRuleset, ...request } = input
+      const { ruleset, hardRuleset, review, ...request } = input
       const s = yield* InstanceState.get(state)
       const local = s.session[request.sessionID] ?? []
       // kilocode_change end
@@ -213,7 +216,12 @@ const layer = Layer.effect(
         : false
       // kilocode_change end
 
-      const forceAsk = request.metadata?.["skillShell"] === true || request.metadata?.["sandboxEscalation"] === true // kilocode_change
+      // kilocode_change start - skill shells, sandbox escalations and PreToolUse hook asks always prompt
+      const forceAsk =
+        request.metadata?.["skillShell"] === true ||
+        request.metadata?.["sandboxEscalation"] === true ||
+        request.metadata?.["hookAsk"] === true
+      // kilocode_change end
       for (const pattern of request.patterns) {
         const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
         yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
@@ -274,7 +282,13 @@ const layer = Layer.effect(
       yield* events.publish(Event.Asked, info) // kilocode_change - was bus.publish
       // kilocode_change start - was `return yield* Effect.ensuring(...)`; report the manual decision to callers
       yield* Effect.ensuring(
-        Deferred.await(deferred),
+        Deferred.await(deferred).pipe(
+          Effect.raceFirst(
+            KiloHookTool.contest(review, info, () =>
+              events.publish(Event.Replied, { sessionID: info.sessionID, requestID: id, reply: "reject" }),
+            ),
+          ),
+        ),
         Effect.sync(() => {
           pending.delete(id)
         }),
@@ -293,7 +307,9 @@ const layer = Layer.effect(
       // Log rather than fail silently: a genuine human client sets `interactive`, so a refused reply here
       // means an auto-approver tried to answer — the request intentionally stays pending for a human.
       if (
-        (existing.info.metadata?.["skillShell"] === true || existing.info.metadata?.["sandboxEscalation"] === true) &&
+        (existing.info.metadata?.["skillShell"] === true ||
+          existing.info.metadata?.["sandboxEscalation"] === true ||
+          existing.info.metadata?.["hookAsk"] === true) &&
         input.reply !== "reject" &&
         input.interactive !== true
       ) {

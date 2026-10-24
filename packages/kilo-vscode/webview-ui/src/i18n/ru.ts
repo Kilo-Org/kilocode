@@ -301,6 +301,9 @@ export const dict = {
   "notification.permission.titleSandboxEscalation": "Выполнить вне песочницы?",
   "notification.permission.descriptionSandboxEscalation":
     "Команда целиком выполняется без ограничений файловой системы и сети, только для этой команды. Git должен записывать в .git, который доступен только для чтения в песочнице и находится вне рабочего дерева в связанном worktree. Правила разрешений Bash и автоодобрение никогда не одобряют этот запрос автоматически.",
+  "notification.permission.titleHookAsk": "Хук просит подтверждения",
+  "notification.permission.descriptionHookAsk":
+    "Хук просит вас подтвердить этот вызов перед выполнением. Автоодобрение никогда не отвечает на этот запрос.",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
   "ui.permission.reject": "Отклонить",
   "ui.permission.feedbackPlaceholder": "Скажите Kilo, что сделать иначе",
@@ -870,6 +873,7 @@ export const dict = {
 
   "settings.agentBehaviour.subtab.agents": "Агенты",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-серверы",
+  "settings.agentBehaviour.subtab.hooks": "Хуки",
   "settings.agentBehaviour.subtab.rules": "Правила",
   "settings.agentBehaviour.subtab.workflows": "Рабочие процессы",
   "settings.agentBehaviour.subtab.skills": "Навыки",
@@ -1117,7 +1121,145 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Совместимость с Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Загружать файлы Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "Загружать инструкции CLAUDE.md и навыки из каталога конфигурации Claude Code в сессии. Включите эту опцию, если хотите, чтобы Kilo использовал ваши инструкции и навыки Claude Code. Требуется перезапуск.",
+    "Загружать инструкции CLAUDE.md и навыки из каталога конфигурации Claude Code в сессии. Включите эту опцию, если хотите, чтобы Kilo использовал ваши инструкции и навыки Claude Code. Требуется перезапуск. Также выполняет хуки Claude Code из ~/.claude/settings.json с вашими правами пользователя: события инструментов, промптов и сессий (UserPromptSubmit, SessionStart, ...), Stop и события субагентов, сжатие и уведомления.",
+  "settings.agentBehaviour.hooks.description":
+    "Запускайте собственные команды, когда агент действует: до или после вызова инструмента, при отправке промпта, при запуске сессии, когда агент останавливается, перед сжатием и в других случаях. Используется формат хуков Claude Code.",
+  "settings.agentBehaviour.hooks.warning":
+    "Хуки выполняют команды оболочки с вашими полными правами пользователя, вне песочницы. Добавляйте только команды, которым доверяете.",
+  "settings.agentBehaviour.hooks.scope":
+    "Сохраняется в глобальную конфигурацию. Хуки из конфигурации проекта игнорируются.",
+  "settings.agentBehaviour.hooks.openConfig": "Открыть файл конфигурации",
+  "settings.agentBehaviour.hooks.empty": "Хуков пока нет.",
+  "settings.agentBehaviour.hooks.add": "Добавить хук",
+  "settings.agentBehaviour.hooks.allTools": "Все",
+  "settings.agentBehaviour.hooks.badge.timeout": "Таймаут {{seconds}} с",
+  "settings.agentBehaviour.hooks.badge.block": "Блокирует при сбое",
+  "settings.agentBehaviour.hooks.badge.exec": "Без оболочки",
+  "settings.agentBehaviour.hooks.inherited": "Из другой конфигурации",
+  "settings.agentBehaviour.hooks.inherited.help":
+    "Эти хуки тоже выполняются. Они заданы в другом глобальном файле конфигурации, в управляемой конфигурации или вашей организацией; редактируйте их там, где они определены.",
+  "settings.agentBehaviour.hooks.claude": "Из Claude Code",
+  "settings.agentBehaviour.hooks.claude.open": "Открыть файл",
+  "settings.agentBehaviour.hooks.claude.active": "Эти хуки из {{path}} тоже выполняются, кроме сессий в песочнице.",
+  "settings.agentBehaviour.hooks.claude.off":
+    'Не выполняются: включите "Загружать файлы Claude Code" на вкладке "Правила", затем перезапустите Kilo.',
+  "settings.agentBehaviour.hooks.claude.restart":
+    "Пока не выполняются: перезапустите Kilo, чтобы применить совместимость с Claude Code. Если они по-прежнему не выполняются, убедитесь, что переменная KILO_DISABLE_CLAUDE_CODE_HOOKS не задана.",
+  "settings.agentBehaviour.hooks.new": "Новый хук",
+  "settings.agentBehaviour.hooks.edit": "Редактировать хук",
+  "settings.agentBehaviour.hooks.event": "Когда",
+  "settings.agentBehaviour.hooks.matcher": "Фильтр",
+  "settings.agentBehaviour.hooks.matcher.all": "Соответствует всему",
+  "settings.agentBehaviour.hooks.matcher.names": "Точное совпадение: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.regex": "Регулярное выражение, совпадение в любом месте значения",
+  "settings.agentBehaviour.hooks.matcher.invalid": "Недопустимое регулярное выражение",
+  "settings.agentBehaviour.hooks.unmatched":
+    "Здесь нет инструмента с именем {{names}}, поэтому этот хук для него никогда не выполняется.",
+  "settings.agentBehaviour.hooks.ifIgnored":
+    "Kilo пропускает этот хук: условие `if` работает только для событий инструментов.",
+  "settings.agentBehaviour.hooks.command": "Команда",
+  "settings.agentBehaviour.hooks.command.help":
+    "Получает событие в формате JSON через stdin и выполняется в каталоге проекта.",
+  "settings.agentBehaviour.hooks.command.required": "Введите команду",
+  "settings.agentBehaviour.hooks.exec": "Запускать без оболочки",
+  "settings.agentBehaviour.hooks.exec.help":
+    "Запускать команду как программу с аргументами ниже, по одному на строку. Оболочка не используется, поэтому ~ и $VARIABLES не раскрываются: используйте абсолютные пути.",
+  "settings.agentBehaviour.hooks.args.placeholder": "Один аргумент на строку",
+  "settings.agentBehaviour.hooks.timeout": "Таймаут (секунды)",
+  "settings.agentBehaviour.hooks.timeout.help":
+    "По умолчанию {{seconds}} для этого события. Хук, превысивший таймаут, останавливается вместе со всеми запущенными им процессами.",
+  "settings.agentBehaviour.hooks.timeout.invalid": "Введите целое число секунд от 1 до 86400",
+  "settings.agentBehaviour.hooks.block": "Блокировать при сбое хука",
+  "settings.agentBehaviour.hooks.block.help":
+    "По умолчанию, если хук аварийно завершается или превышает таймаут, действие продолжается. Включите это для защитных проверок, которые при сбое не должны ничего пропускать.",
+  "settings.agentBehaviour.hooks.apply": "Применить",
+  "settings.agentBehaviour.hooks.remove.heading": "Удалить хук",
+  "settings.agentBehaviour.hooks.remove.confirm":
+    'Удалить хук "{{command}}"? Нажмите "Сохранить", чтобы применить изменение.',
+  "settings.agentBehaviour.hooks.remove.button": "Удалить",
+  "settings.agentBehaviour.hooks.kiloOnly": "Только Kilo",
+  "settings.agentBehaviour.hooks.badge.async": "В фоне",
+  "settings.agentBehaviour.hooks.group.tools": "Инструменты",
+  "settings.agentBehaviour.hooks.group.prompt": "Промпты",
+  "settings.agentBehaviour.hooks.group.session": "Сессии",
+  "settings.agentBehaviour.hooks.group.loop": "Цикл агента",
+  "settings.agentBehaviour.hooks.group.compaction": "Сжатие",
+  "settings.agentBehaviour.hooks.group.environment": "Окружение",
+  "settings.agentBehaviour.hooks.group.kilo": "События Kilo",
+  "settings.agentBehaviour.hooks.event.PreToolUse.help":
+    'Перед запуском инструмента. Код выхода 2 или deny в JSON блокирует вызов; "ask" заставляет Kilo сначала спросить вас.',
+  "settings.agentBehaviour.hooks.event.PostToolUse.help":
+    "После успешной работы инструмента. stderr при коде выхода 2 или additionalContext показывается агенту, например ошибки линтера.",
+  "settings.agentBehaviour.hooks.event.PostToolUseFailure.help":
+    "После сбоя инструмента, в том числе когда команда оболочки завершается с ненулевым кодом. additionalContext показывается агенту.",
+  "settings.agentBehaviour.hooks.event.PostToolBatch.help":
+    "После шага модели, который запускал инструменты, перед следующим вызовом модели. Блокировка завершает ход.",
+  "settings.agentBehaviour.hooks.event.PermissionRequest.help":
+    "Когда Kilo показывает запрос разрешения. Deny в JSON отклоняет вызов; хуки не могут одобрять.",
+  "settings.agentBehaviour.hooks.event.TaskCreated.help":
+    "Когда агент добавляет задачу. Блокировка удаляет эту задачу.",
+  "settings.agentBehaviour.hooks.event.TaskCompleted.help":
+    "Когда агент отмечает задачу как выполненную. Блокировка оставляет её открытой.",
+  "settings.agentBehaviour.hooks.event.UserPromptSubmit.help":
+    "Когда вы отправляете промпт или команду. Блокировка отклоняет их; stdout добавляется к промпту.",
+  "settings.agentBehaviour.hooks.event.UserPromptExpansion.help":
+    "Когда разворачивается пользовательская команда, навык или промпт MCP. Блокировка отклоняет её.",
+  "settings.agentBehaviour.hooks.event.PreModelSwitch.help":
+    'Перед тем как промпт переключит сессию на другую модель. Блокировка, "ask" или таймаут отклоняет промпт.',
+  "settings.agentBehaviour.hooks.event.PostModelSwitch.help":
+    "После смены модели сессии. stdout добавляется к следующему запросу.",
+  "settings.agentBehaviour.hooks.event.SessionStart.help":
+    "Когда сессия запускается, возобновляется, ответвляется или сжимается. stdout добавляется в разговор.",
+  "settings.agentBehaviour.hooks.event.SessionEnd.help":
+    "Когда сессия удаляется или Kilo завершает работу. Все хуки SessionEnd делят короткий лимит времени.",
+  "settings.agentBehaviour.hooks.event.InstructionsLoaded.help":
+    "Когда загружается файл инструкций, например AGENTS.md или CLAUDE.md.",
+  "settings.agentBehaviour.hooks.event.Stop.help":
+    "Когда агент заканчивает отвечать. Блокировка заставляет его продолжить, не более 8 раз подряд.",
+  "settings.agentBehaviour.hooks.event.SubagentStop.help":
+    "Когда субагент завершает работу. Блокировка заставляет его продолжить.",
+  "settings.agentBehaviour.hooks.event.SubagentStart.help":
+    "Когда запускается субагент. additionalContext добавляется к его первому промпту.",
+  "settings.agentBehaviour.hooks.event.StopFailure.help":
+    "Когда ход завершается ошибкой API, например превышением лимита запросов.",
+  "settings.agentBehaviour.hooks.event.PreCompact.help": "Перед сжатием разговора. Блокировка пропускает сжатие.",
+  "settings.agentBehaviour.hooks.event.PostCompact.help": "После сжатия разговора.",
+  "settings.agentBehaviour.hooks.event.Notification.help":
+    "Когда Kilo ждёт вас: запрос разрешения, вопрос или простой после хода.",
+  "settings.agentBehaviour.hooks.event.ConfigChange.help":
+    "После того как Kilo изменил свою конфигурацию. Не может блокировать.",
+  "settings.agentBehaviour.hooks.event.FileChanged.help": "Когда изменяется отслеживаемый файл в каталоге проекта.",
+  "settings.agentBehaviour.hooks.event.CwdChanged.help":
+    "Когда команда оболочки выполняется в другом каталоге, чем предыдущая.",
+  "settings.agentBehaviour.hooks.event.GoalReport.help":
+    "Перед тем как /goal будет отмечен как выполненный или заблокированный. Блокировка оставляет цель активной.",
+  "settings.agentBehaviour.hooks.event.WakeupFire.help":
+    "Перед запуском запланированного пробуждения или задачи cron. Блокировка пропускает её.",
+  "settings.agentBehaviour.hooks.event.WorktreeSetup.help":
+    "После создания управляемого worktree и выполнения его скрипта настройки. Блокировка помечает настройку как неудачную.",
+  "settings.agentBehaviour.hooks.event.WorktreeTeardown.help": "Перед удалением управляемого worktree.",
+  "settings.agentBehaviour.hooks.event.CommitMessage.help":
+    "После генерации сообщения коммита. hookSpecificOutput.commitMessage заменяет его; блокировка отклоняет его.",
+  "settings.agentBehaviour.hooks.event.BranchName.help":
+    "После генерации имени ветки для worktree. hookSpecificOutput.branchName заменяет его; блокировка сохраняет текущее имя.",
+  "settings.agentBehaviour.hooks.matcher.values":
+    "Сравнивает {{field}}: {{values}}. Разделяйте несколько значений символом |.",
+  "settings.agentBehaviour.hooks.matcher.kind.tool":
+    "Оставьте пустым, чтобы срабатывать для всех инструментов. Разделяйте имена инструментов символом | (edit|write). Всё остальное считается регулярным выражением. Подходят имена как Kilo, так и Claude Code (bash или Bash); инструменты MCP выглядят как github_create_issue.",
+  "settings.agentBehaviour.hooks.matcher.kind.file":
+    "Имена файлов в каталоге проекта для отслеживания, через | (.envrc|.env). Каждое имя берётся буквально.",
+  "settings.agentBehaviour.hooks.matcher.kind.model":
+    "Имена моделей через | или регулярное выражение. Подходят каноническое имя (claude-sonnet-4-5), id модели и провайдер/модель.",
+  "settings.agentBehaviour.hooks.matcher.kind.name":
+    "Сравнивает {{field}}. Разделяйте имена символом | или используйте регулярное выражение. Оставьте пустым, чтобы срабатывать всегда.",
+  "settings.agentBehaviour.hooks.matcher.files": "Отслеживает: {{names}}",
+  "settings.agentBehaviour.hooks.matcher.filesNone":
+    "Сам не отслеживает ни одного файла; запускается для путей, которые другие хуки добавляют через watchPaths.",
+  "settings.agentBehaviour.hooks.matcher.none": "У этого события нет фильтра; хук запускается каждый раз.",
+  "settings.agentBehaviour.hooks.async": "Выполнять в фоне",
+  "settings.agentBehaviour.hooks.async.help": "Kilo не ждёт хук; его вывод и код выхода только записываются в журнал.",
+  "settings.agentBehaviour.hooks.async.noBlock": "Фоновый хук не может блокировать или добавлять контекст.",
+  "settings.agentBehaviour.hooks.claude.skipped": "Не запускаются Kilo: {{items}}",
   "settings.agentBehaviour.mcpDetail.command": "Команда",
   "settings.agentBehaviour.mcpDetail.args": "Аргументы",
   "settings.agentBehaviour.mcpDetail.env": "Окружение",
@@ -1247,6 +1389,7 @@ export const dict = {
   "chat.memory.command.failed": "Команда памяти не выполнена",
   "chat.memory.updated": "Memory updated",
   "chat.memory.rebuild": "Memory index rebuilt",
+  "chat.hookFeedback": "Ответ хука ({{event}})",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Использовать пользовательский prompt",

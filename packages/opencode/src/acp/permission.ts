@@ -12,7 +12,7 @@ import { exists, readText } from "@/util/filesystem"
 import type { ACPSession } from "./session"
 import { pendingToolCall, toLocations, type ToolInput } from "./tool"
 import { Effect } from "effect"
-import { SkillShellPrompt } from "@/kilocode/acp/permission" // kilocode_change
+import { HookAskPrompt, SandboxPrompt, SkillShellPrompt } from "@/kilocode/acp/permission" // kilocode_change
 
 type PermissionEvent = Extract<Event, { type: "permission.asked" }>
 type Reply = "once" | "always" | "reject"
@@ -60,12 +60,18 @@ export class Handler {
     }
 
     const skillShell = SkillShellPrompt.is(permission.metadata) // kilocode_change - skill batches list commands and never persist
-    const temporary = skillShell || permission.metadata?.["sandboxEscalation"] === true // kilocode_change
+    // kilocode_change start - sandbox escalations and PreToolUse hook asks are never remembered
+    const sandbox = SandboxPrompt.is(permission.metadata)
+    const hook = HookAskPrompt.is(permission.metadata)
+    const temporary = skillShell || sandbox || hook
+    // kilocode_change end
     const title = skillShell
       ? SkillShellPrompt.title
-      : temporary
-        ? "Run outside the sandbox" // kilocode_change
-        : undefined // kilocode_change
+      : hook
+        ? HookAskPrompt.title(permission.metadata) // kilocode_change
+        : sandbox
+          ? SandboxPrompt.title // kilocode_change
+          : undefined // kilocode_change
     const result = await this.input.connection
       .requestPermission({
         sessionId: permission.sessionID,

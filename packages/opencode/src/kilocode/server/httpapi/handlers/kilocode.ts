@@ -55,6 +55,7 @@ import { SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { KiloSnapshotCleanup } from "@/kilocode/snapshot/cleanup"
 import { clearPtys } from "@/kilocode/worktree/pty-cleanup"
+import { KiloHookWorktree } from "@/kilocode/hooks/worktree"
 import { Snapshot } from "@/snapshot"
 import { KiloSnapshotPrepare } from "@/kilocode/snapshot/prepare"
 import { Global } from "@opencode-ai/core/global"
@@ -71,6 +72,7 @@ import {
   RemoveSkillPayload,
   RemoveSnapshotPayload,
   TeardownWorktreePayload,
+  HooksDispatchPayload,
   ResumeSessionPayload,
   DrainSessionPayload,
   BackgroundJobInfo,
@@ -429,27 +431,30 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       payload: typeof TeardownWorktreePayload.Type
     }) {
       const instance = yield* InstanceState.context
-      // Lexical checks only, like KiloSnapshotCleanup.remove: a symlinked `.kilo/worktrees` in an
-      // untrusted repository must not widen the directories this endpoint can tear down.
-      // `contains` rejects `..` and absolute escapes; one component rejects nested paths.
-      const managed = path.resolve(instance.worktree, ".kilo", "worktrees")
-      const worktree = path.resolve(ctx.payload.worktree)
-      const child = path.relative(managed, worktree).split(path.sep).filter(Boolean)
-      if (!path.isAbsolute(ctx.payload.worktree) || !FSUtil.contains(managed, worktree) || child.length !== 1)
-        return yield* Effect.fail(new HttpApiError.BadRequest({}))
-      // disposeDirectory follows symlinks, so a symlinked `.kilo`, `.kilo/worktrees`, or worktree
-      // could reach an instance outside the project. The project root itself is already canonical.
-      const links = yield* Effect.forEach([path.dirname(managed), managed, worktree], (target) =>
-        fs.readLink(target).pipe(
-          Effect.as(true),
-          Effect.catch(() => Effect.succeed(false)),
-        ),
-      )
-      if (links.some(Boolean)) return yield* Effect.fail(new HttpApiError.BadRequest({}))
+      // Lexical checks, like KiloSnapshotCleanup.remove: a symlinked `.kilo/worktrees` in an untrusted
+      // repository must not widen the directories this endpoint can tear down, and disposeDirectory
+      // follows symlinks, so a symlinked `.kilo`, `.kilo/worktrees` or worktree could reach an
+      // instance outside the project. The project root itself is already canonical.
+      const worktree = yield* KiloHookWorktree.managed(instance, ctx.payload.worktree)
+      if (!worktree) return yield* Effect.fail(new HttpApiError.BadRequest({}))
+      // Every Agent Manager removal comes through here before the directory goes, so WorktreeTeardown
+      // hooks (observe only) finish while the worktree still exists.
+      yield* KiloHookWorktree.teardown({ worktree, root: instance.worktree, config, database })
       yield* clearPtys(worktree, yield* WorkspaceRef)
       const loaded = (yield* store.list()).some((item) => path.resolve(item.directory) === worktree)
       yield* store.disposeDirectory(worktree)
       return { disposed: loaded }
+    })
+
+    // The client names the worktree, never the hooks: they come from trusted config, and the path
+    // must be a managed worktree of this project.
+    const hooksDispatch = Effect.fn("KilocodeHttpApi.hooksDispatch")(function* (ctx: {
+      payload: typeof HooksDispatchPayload.Type
+    }) {
+      const instance = yield* InstanceState.context
+      const worktree = yield* KiloHookWorktree.managed(instance, ctx.payload.worktree)
+      if (!worktree) return yield* Effect.fail(new HttpApiError.BadRequest({}))
+      return yield* KiloHookWorktree.dispatch({ ...ctx.payload, worktree, root: instance.worktree, config, database })
     })
 
     const providerUsage = Effect.fn("KilocodeHttpApi.providerUsage")(function* () {
@@ -605,6 +610,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("marketplaceRemove", marketplaceRemove)
       .handle("removeSnapshot", removeSnapshot)
       .handle("teardownWorktree", teardownWorktree)
+      .handle("hooksDispatch", hooksDispatch)
       .handle("prepareSnapshot", () =>
         Effect.gen(function* () {
           const started = performance.now()

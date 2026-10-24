@@ -238,6 +238,7 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(404),
   http.protected.get("/config/sources", "config.sources").json(200, object),
+  http.protected.get("/config/hooks", "config.hooks").json(200, object),
   http.protected.get("/tui/config", "tui.config.get").json(200, object),
   http.protected.get("/tui/keybinds", "tui.keybind.list").json(200, object),
   http.protected
@@ -946,6 +947,24 @@ export const kiloScenarios: Scenario[] = [
       body: { worktree: path.join(directory(ctx), ".kilo", "worktrees", "api-worktree-teardown") },
     }))
     .status(401),
+  http.protected
+    .post("/kilocode/hooks/dispatch", "kilocode.hooksDispatch")
+    .mutating()
+    .inProject({ git: true })
+    .at((ctx) => ({
+      path: `/kilocode/hooks/dispatch?directory=${encodeURIComponent(directory(ctx))}`,
+      headers: ctx.headers(),
+      body: {
+        event: "WorktreeSetup",
+        worktree: path.join(directory(ctx), ".kilo", "worktrees", "api-hooks-dispatch"),
+        origin: "create",
+        script: "none",
+      },
+    }))
+    .json(200, (body) => {
+      object(body)
+      check(body.blocked === false, "a worktree without WorktreeSetup hooks should not be blocked")
+    }),
   http.protected
     .get("/kilocode/command/files", "kilocode.commandFiles")
     .inProject({ git: true, init: command })

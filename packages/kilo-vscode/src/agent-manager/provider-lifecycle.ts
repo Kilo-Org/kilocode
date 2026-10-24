@@ -17,29 +17,129 @@ import { copyEnvFiles } from "./env-copy"
 import { runWorktreeSetupScript } from "./setup-script-task"
 import { broken } from "./worktree-reconcile"
 import type { PanelContext } from "./host"
+import type { SetupScriptService } from "./SetupScriptService"
 
+/** Where a worktree came from, as WorktreeSetup hooks see it (their matcher value). */
+export type SetupOrigin = "create" | "promote" | "import" | "multi_version" | "tool" | "continue"
+
+/** WorktreeSetup hooks for a new worktree: whether any are configured, and how to run them. */
+interface SetupHooks {
+  present: boolean
+  run: (input: {
+    worktree: string
+    branch?: string
+    script: "none" | "succeeded" | "failed"
+  }) => Promise<{ blocked: boolean; reason?: string }>
+}
+
+/** Open the worktree setup script in the editor for user configuration, creating the default one first. */
+export async function openSetupScript(
+  service: SetupScriptService | undefined,
+  open: (file: string) => Promise<void>,
+  log: (message: string) => void,
+): Promise<void> {
+  if (!service) return
+  try {
+    if (!service.hasScript()) await service.createDefaultScript()
+    const resolved = service.resolveScript()
+    if (!resolved) return
+    await open(resolved.path)
+  } catch (error) {
+    log(`Failed to open setup script: ${getErrorMessage(error)}`)
+  }
+}
+
+/**
+ * WorktreeSetup hooks as the backend runs them for a worktree from `origin`. They come from its
+ * effective config, which holds only trusted (global, managed, organization) hooks and never reads
+ * this event from Claude Code settings. A config that cannot be read counts as having hooks, so the
+ * session waits for them.
+ */
+export async function setupHooks(client: () => KiloClient, root: string, origin: SetupOrigin): Promise<SetupHooks> {
+  const present = await Promise.resolve()
+    .then(() => client().config.get({ directory: root }, { throwOnError: true }))
+    .then((result) => (result.data.hooks?.WorktreeSetup?.length ?? 0) > 0)
+    .catch(() => true)
+  return {
+    present,
+    run: async (input) => {
+      const result = await client().kilocode.hooksDispatch(
+        { directory: root, hooksDispatchPayload: { event: "WorktreeSetup", ...input, origin } },
+        { throwOnError: true },
+      )
+      return result.data
+    },
+  }
+}
+
+/**
+ * Prepare a new worktree: copy `.env` files, run the repository's setup script, then the
+ * WorktreeSetup hooks (user and organization setup on top of the project baseline). The early
+ * session start runs only when neither a script nor hooks have to finish first. A blocking hook
+ * marks setup failed like a failing script; a hook that cannot be reached does not.
+ */
 export async function runLifecycleSetup(
-  input: Parameters<typeof runWorktreeSetupScript>[0],
+  input: Parameters<typeof runWorktreeSetupScript>[0] & { hooks?: SetupHooks },
   env: Parameters<typeof runWorktreeSetupScript>[1],
   output: (message: string) => void,
   early?: () => Promise<void>,
 ): Promise<void> {
   await copyEnvFiles(env.repoPath, env.worktreePath, (msg) => output(`[EnvCopy] ${msg}`))
-  if (!input.service?.hasScript()) await early?.()
-  try {
-    await runWorktreeSetupScript(input, env)
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error)
-    output(`[AgentManager] Setup script error: ${msg}`)
+  const script = input.service?.hasScript() ?? false
+  if (!script && !input.hooks?.present) await early?.()
+  const fail = (message: string) =>
     input.post({
       type: "agentManager.worktreeSetup",
       status: "error",
-      message: `Setup script failed: ${msg}`,
+      message,
       projectId: input.projectId,
       branch: input.branch,
       worktreeId: input.worktreeId,
     })
+  // The runner reports a failing script through `post` instead of throwing, and a script the user
+  // stopped only through its log.
+  const outcome = { failed: false }
+  const post: typeof input.post = (message) => {
+    if (message.type === "agentManager.worktreeSetup" && message.status === "error") outcome.failed = true
+    input.post(message)
   }
+  const log = (message: string) => {
+    if (message.startsWith("Setup script execution failed")) outcome.failed = true
+    input.log(message)
+  }
+  try {
+    await runWorktreeSetupScript({ ...input, post, log }, env)
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    outcome.failed = true
+    output(`[AgentManager] Setup script error: ${msg}`)
+    fail(`Setup script failed: ${msg}`)
+  }
+  if (!input.hooks?.present) return
+  input.post({
+    type: "agentManager.worktreeSetup",
+    status: "creating",
+    message: "Running WorktreeSetup hooks...",
+    projectId: input.projectId,
+    branch: input.branch,
+    worktreeId: input.worktreeId,
+  })
+  const result = await input.hooks
+    .run({
+      worktree: env.worktreePath,
+      branch: input.branch,
+      script: !script ? "none" : outcome.failed ? "failed" : "succeeded",
+    })
+    .catch((error: unknown) => {
+      output(
+        `[AgentManager] WorktreeSetup hooks could not run: ${error instanceof Error ? error.message : String(error)}`,
+      )
+      return { blocked: false, reason: undefined }
+    })
+  if (!result.blocked) return
+  const reason = result.reason ?? "No reason given."
+  output(`[AgentManager] WorktreeSetup hook blocked: ${reason}`)
+  fail(`WorktreeSetup hook failed: ${reason}`)
 }
 
 /** Setup calls the optional early step only after copying .env files. */
@@ -95,7 +195,13 @@ export function beginBoot(start: () => Promise<Record<string, unknown>>, timing?
 export interface LifecycleHost {
   createOnDisk: (opts?: CreateWorktreeOnDiskOptions) => Promise<CreateWorktreeOnDiskResult | null>
   hasScript: () => boolean
-  runSetup: (dir: string, branch: string, id: string, early?: () => Promise<void>) => Promise<void>
+  runSetup: (
+    dir: string,
+    branch: string,
+    id: string,
+    early?: () => Promise<void>,
+    origin?: SetupOrigin,
+  ) => Promise<void>
   createSession: (
     dir: string,
     branch: string,
@@ -181,7 +287,7 @@ export async function createLifecycleWorktree(
   const prepared = await prepareSession(
     plan({ setupScript: host.hasScript() }),
     async (early) => {
-      await host.runSetup(created.result.path, created.result.branch, created.worktree.id, early)
+      await host.runSetup(created.result.path, created.result.branch, created.worktree.id, early, "create")
       timing.mark("setup")
     },
     () => {
@@ -457,7 +563,7 @@ export async function promoteLifecycleSession(
   if (!created) return null
 
   // Run setup script for new worktree (blocks until complete, shows in overlay)
-  await host.runSetup(created.result.path, created.result.branch, created.worktree.id)
+  await host.runSetup(created.result.path, created.result.branch, created.worktree.id, undefined, "promote")
 
   const state = ctx.peekState()!
   if (!state.getSession(sessionId)) {

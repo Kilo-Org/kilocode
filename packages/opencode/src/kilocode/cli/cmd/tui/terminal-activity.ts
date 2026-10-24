@@ -1,6 +1,7 @@
 import type { Event, EventSessionTurnClose } from "@kilocode/sdk/v2"
 import { createEffect, createMemo, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
+import { KiloSessionPhase } from "@/kilocode/session/phase"
 import { KiloTerminalTitle } from "./terminal-title"
 
 type Outcome = EventSessionTurnClose["properties"]["reason"]
@@ -65,7 +66,8 @@ export namespace KiloTerminalActivity {
           prev === "error" && event.properties.reason === "completed" ? prev : event.properties.reason,
         )
       }
-      if (event.type === "session.error" && event.properties.sessionID) {
+      // An admission error (a rejected prompt, a hook notice) is not the outcome of a turn.
+      if (event.type === "session.error" && event.properties.sessionID && !KiloSessionPhase.admission(event)) {
         setOutcomes(
           event.properties.sessionID,
           event.properties.error?.name === "MessageAbortedError" ? "interrupted" : "error",

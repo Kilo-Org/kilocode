@@ -44,6 +44,7 @@ import { KiloSessionEvent } from "@/kilocode/session/event"
 import { SessionExport } from "@/kilocode/session-export"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
 import { carryForkDiff } from "@/kilocode/session-portability/cumulative-diff" // kilocode_change
+import { KiloHookSession } from "@/kilocode/hooks/session"
 // kilocode_change end
 import { Effect, Layer, Option, Context, Schema, Types } from "effect"
 import { NonNegativeInt, optionalOmitUndefined } from "@opencode-ai/core/schema"
@@ -874,6 +875,7 @@ export const layer: Layer.Layer<
         sandboxFallback, // kilocode_change - seed confinement from the source session's original directory
         platform: KiloSession.resolvePlatform(original.id), // kilocode_change - inherit platform telemetry attribution
       })
+      KiloHookSession.forked(session.id) // kilocode_change - the fork's SessionStart hooks run with source "fork"
       const idMap = new Map<string, MessageID>()
       const target = input.messageID ? msgs.findIndex((msg) => msg.info.id === input.messageID) : msgs.length
       const writer = forkWriter(events, { get, messages, create }) // kilocode_change

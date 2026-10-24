@@ -31,6 +31,7 @@ export const ServeCommand = effectCmd({
     const { InstanceRuntime } = yield* Effect.promise(() => import("../../project/instance-runtime"))
     const { startParentWatchdog } = yield* Effect.promise(() => import("../../kilocode/parent-watchdog"))
     const { KiloSessions } = yield* Effect.promise(() => import("@/kilo-sessions/kilo-sessions"))
+    const { KiloHookSession } = yield* Effect.promise(() => import("@/kilocode/hooks/session"))
     yield* Effect.promise(
       () =>
         new Promise<void>((resolve) => {
@@ -45,6 +46,7 @@ export const ServeCommand = effectCmd({
             const timeout = setTimeout(() => process.exit(1), 5000)
             timeout.unref()
             try {
+              await KiloHookSession.end("other", 3000) // kilocode_change - SessionEnd hooks, within the 5 s exit window
               await KiloSessions.drainIngestForShutdown() // kilocode_change
               await InstanceRuntime.disposeAllInstances()
               await server.stop(true)

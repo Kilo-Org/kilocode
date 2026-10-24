@@ -216,6 +216,8 @@ export namespace RemoteCommand {
         model: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
         auto: boolean
       }) => Promise<void>
+      /** PreCompact hooks for a remote /compact: false when a hook blocked it (the user is told why). */
+      allow?: (sessionID: SessionID) => Promise<boolean>
     }
     prompt: { loop: (sessionID: SessionID) => Promise<void> }
   }
@@ -264,6 +266,7 @@ export namespace RemoteCommand {
               ? { providerID: user.info.model.providerID, modelID: user.info.model.modelID }
               : undefined) ??
             (await services.provider.default())
+          if (services.compaction.allow && !(await services.compaction.allow(input.sessionID))) return
           await services.compaction.create({
             sessionID: input.sessionID,
             agent,
@@ -352,6 +355,29 @@ export namespace RemoteCommand {
             import("@/session/compaction"),
           ])
           await AppRuntime.runPromise(SessionCompaction.Service.use((service) => service.create(input)))
+        },
+        allow: async (sessionID) => {
+          const [{ AppRuntime }, { Effect }, { KiloHookCompact }, { Config }, { Database }, { EventV2Bridge }] =
+            await Promise.all([
+              import("@/effect/app-runtime"),
+              import("effect"),
+              import("@/kilocode/hooks/compact"),
+              import("@/config/config"),
+              import("@opencode-ai/core/database/database"),
+              import("@/event-v2-bridge"),
+            ])
+          return AppRuntime.runPromise(
+            Effect.gen(function* () {
+              return yield* KiloHookCompact.allow({
+                sessionID,
+                trigger: "manual",
+                manual: true,
+                config: yield* Config.Service,
+                database: yield* Database.Service,
+                events: yield* EventV2Bridge.Service,
+              })
+            }),
+          )
         },
       },
       prompt: {
