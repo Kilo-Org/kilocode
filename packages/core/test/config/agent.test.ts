@@ -143,6 +143,55 @@ describe("ConfigAgentPlugin.Plugin", () => {
   )
   // kilocode_change end
 
+  // kilocode_change start - a global rule stays last for a resource that a project rule repeats
+  it.effect("keeps a global multi-pattern rule ahead of a project rule for the same resource", () =>
+    Effect.gen(function* () {
+      const agents = yield* AgentV2.Service
+      const build = AgentV2.ID.make("build")
+      yield* agents.transform((editor) =>
+        editor.update(build, (agent) => {
+          agent.mode = "primary"
+        }),
+      )
+
+      const config = Config.Service.of({
+        entries: () =>
+          Effect.succeed([
+            new Config.Document({
+              type: "document",
+              info: decode({
+                permissions: [
+                  { action: "bash", resource: "*", effect: "allow" },
+                  { action: "bash", resource: "rm *", effect: "deny" },
+                ],
+              }),
+            }),
+            new Config.Document({
+              type: "document",
+              info: decode({
+                permissions: [{ action: "bash", resource: "rm *", effect: "allow" }],
+              }),
+            }),
+          ]),
+      })
+
+      yield* ConfigAgentPlugin.Plugin.effect(host({ agent: agentHost(agents) })).pipe(
+        Effect.provideService(Config.Service, config),
+      )
+
+      const item = yield* agents.get(build)
+      if (!item) throw new Error("expected configured build agent")
+      expect(item.permissions).toEqual([
+        { action: "bash", resource: "rm *", effect: "allow" },
+        { action: "bash", resource: "*", effect: "allow" },
+        { action: "bash", resource: "rm *", effect: "deny" },
+      ])
+      expect(PermissionV2.evaluate("bash", "rm -rf build", item.permissions).effect).toBe("deny")
+      expect(PermissionV2.evaluate("bash", "bun test", item.permissions).effect).toBe("allow")
+    }),
+  )
+  // kilocode_change end
+
   // kilocode_change start - permission rules apply in reverse document priority
   it.effect("keeps user-global permission rules ahead of repository permission rules", () =>
     Effect.gen(function* () {

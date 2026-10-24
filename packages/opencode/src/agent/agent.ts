@@ -162,7 +162,7 @@ const layer = Layer.effect(
         const defaults = Permission.merge(baseDefaults, kilo.defaultsPatch)
         // kilocode_change end
 
-        const user = Permission.fromConfig(cfg.permission ?? {})
+        const user = Permission.fromScopes(cfg.permission_layers, cfg.permission) // kilocode_change - keep document precedence
 
         const agents: Record<string, Info> = {
           build: {

@@ -168,6 +168,11 @@ export type Info = ConfigV1.Info & {
   // project config can contribute different patterns under the same key. Lets the runtime explain
   // why a tool call was auto-approved.
   permission_origins?: Record<string, Record<string, "global" | "local">>
+  // derived permission documents in ascending precedence: project documents first, global
+  // documents last. V1 rules resolve by the last match, so the runtime flattens these in order
+  // instead of reading `permission`, whose merged keys keep the position they were first written
+  // at and would let a project entry outrank a global entry for the same key.
+  permission_layers?: ConfigPermissionV1.Info[]
   // kilocode_change end
 }
 
@@ -264,6 +269,7 @@ function writable(info: Info) {
     instruction_origins: _instruction_origins,
     skill_path_origins: _skill_path_origins,
     permission_origins: _permission_origins,
+    permission_layers: _permission_layers,
     ...next
   } = info
   // kilocode_change end
@@ -648,15 +654,23 @@ const layer = Layer.effect(
           return result
         }
 
-        // Permission entries in the merged map resolve per key and pattern, so keep scoped
-        // contributions apart and apply project entries first: a user-global entry decides the
-        // result for a key and pattern that a project file also sets. The permission rules merged
-        // before this point come from the legacy `.kilocodeignore` migration, which is
-        // project-scoped, so they join the project side.
+        // Permission entries resolve per key and pattern: V1 rules match on the last rule, so a
+        // user-global entry has to stay ahead of a project entry that sets the same key or pattern.
+        // Keep scoped contributions apart and rebuild both forms from the same ordered list. The
+        // permission rules merged before this point come from the legacy `.kilocodeignore`
+        // migration, which is project-scoped, so they join the project side.
         const globalPermissions: ConfigPermissionV1.Info[] = []
         const localPermissions: ConfigPermissionV1.Info[] = result.permission ? [result.permission] : []
         const mergePermissions = (list: ConfigPermissionV1.Info[]) =>
           list.reduce<ConfigPermissionV1.Info>((acc, item) => mergeDeep(acc, item), {})
+        // Project documents first, global documents last: ascending precedence for the flattened
+        // ruleset. The merged map alone cannot carry that order, because a key that both scopes set
+        // keeps the position where the project document wrote it.
+        const applyPermissions = () => {
+          const layers = [...localPermissions, ...globalPermissions]
+          result.permission_layers = layers.length > 0 ? layers : undefined
+          if (layers.length > 0) result.permission = mergePermissions(layers)
+        }
 
         const merge = Effect.fnUntraced(function* (
           source: string,
@@ -873,6 +887,10 @@ const layer = Layer.effect(
           yield* ensureGitignore(dir).pipe(Effect.orDie)
 
           // kilocode_change start - propagate parse errors to the Warning accumulator
+          // The markdown source guard reads permission rules for this directory, so apply the
+          // ordered layers first: a global entry has to decide a key or pattern that a project
+          // file also sets.
+          applyPermissions()
           const sourceScopes = (names: readonly string[]) => [
             ...(dirSourceScope ? [dirSourceScope] : []),
             ...ExternalMarkdown.scopes({
@@ -1030,17 +1048,16 @@ const layer = Layer.effect(
         }
 
         // kilocode_change start
-        // Apply project permission entries first and global entries last, so a global entry decides
-        // the result for a key and pattern that a project file also sets. Project entries that a
-        // global file does not mention keep applying.
-        if (localPermissions.length > 0) {
-          result.permission = mergeDeep(mergePermissions(localPermissions), mergePermissions(globalPermissions))
-        }
+        // Rebuild the merged map and the ordered ruleset once more: directory config files merged
+        // above can still add permission entries after the last markdown scan.
+        applyPermissions()
         // kilocode_change end
 
         if (Flag.KILO_PERMISSION) {
           try {
-            result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.KILO_PERMISSION))
+            const parsed = JSON.parse(Flag.KILO_PERMISSION) as ConfigPermissionV1.Info // kilocode_change
+            result.permission = mergeDeep(result.permission ?? {}, parsed) // kilocode_change
+            result.permission_layers = [...(result.permission_layers ?? []), parsed] // kilocode_change
           } catch (err) {
             yield* Effect.logWarning("KILO_PERMISSION contains invalid JSON, skipping", { err })
           }
@@ -1057,6 +1074,8 @@ const layer = Layer.effect(
             perms[tool] = action
           }
           result.permission = mergeDeep(perms, result.permission ?? {})
+          // kilocode_change - `tools` is the lowest-precedence layer, matching the map merge above
+          result.permission_layers = [perms, ...(result.permission_layers ?? [])] // kilocode_change
         }
 
         if (!result.username) {

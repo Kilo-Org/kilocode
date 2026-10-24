@@ -502,6 +502,15 @@ export function merge(...rulesets: PermissionV1.Ruleset[]): PermissionV1.Rule[] 
   return rulesets.flat()
 }
 
+// kilocode_change start - flatten config documents in ascending precedence. Rules resolve on the
+// last match, so a document that outranks another is appended after it; flattening the merged map
+// instead would let a lower-priority document's key position decide the result.
+export function fromScopes(layers: ConfigPermissionV1.Info[] | undefined, fallback?: ConfigPermissionV1.Info) {
+  if (!layers?.length) return fromConfig(fallback ?? {})
+  return layers.flatMap((layer) => fromConfig(layer))
+}
+// kilocode_change end
+
 export function disabled(tools: string[], ruleset: PermissionV1.Ruleset): Set<string> {
   const edits = ["edit", "write", "apply_patch"]
   const reads = ["list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource"]

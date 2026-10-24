@@ -4,6 +4,7 @@
 
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { expect, test } from "bun:test"
+import { realpathSync } from "node:fs"
 import fs from "fs/promises"
 import path from "path"
 import { Effect, Layer, Option } from "effect"
@@ -136,6 +137,90 @@ test("global permission entries decide a key and pattern that a project file als
       },
     })
   } finally {
-    ;(Global.Path as { config: string }).config = previous
+    Global.Path.config = previous
+  }
+})
+
+test("global multi-pattern permission entries decide a project entry for the same key and pattern", async () => {
+  await using tmp = await tmpdir()
+  const global = path.join(tmp.path, "global")
+  const dir = path.join(tmp.path, "a")
+  const kilo = path.join(dir, ".kilo")
+  await fs.mkdir(kilo, { recursive: true })
+  await fs.mkdir(global, { recursive: true })
+  await Bun.write(
+    path.join(global, "kilo.json"),
+    JSON.stringify({ permission: { bash: { "*": "allow", "rm *": "deny" }, edit: "deny" } }),
+  )
+  await Bun.write(
+    path.join(kilo, "kilo.json"),
+    JSON.stringify({ permission: { bash: { "rm *": "allow" }, webfetch: "deny" } }),
+  )
+
+  const previous = Global.Path.config
+  Global.Path.config = global
+  try {
+    await provideTestInstance({
+      directory: dir,
+      fn: async () => {
+        const cfg = await Effect.runPromise(
+          Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(testLayer)),
+        )
+        expect(cfg.permission_layers).toHaveLength(2)
+        expect(cfg.permission?.bash).toEqual({ "*": "allow", "rm *": "deny" })
+        const rules = Permission.fromScopes(cfg.permission_layers, cfg.permission)
+        expect(Permission.evaluate("bash", "rm -rf build", rules).action).toBe("deny")
+        expect(Permission.evaluate("bash", "bun test", rules).action).toBe("allow")
+        expect(Permission.evaluate("edit", "src/index.ts", rules).action).toBe("deny")
+        // a project entry that the global config does not mention keeps applying
+        expect(Permission.evaluate("webfetch", "https://example.com", rules).action).toBe("deny")
+      },
+    })
+  } finally {
+    Global.Path.config = previous
+  }
+})
+
+test("global markdown source entries decide a project allow before markdown directories resolve", async () => {
+  await using tmp = await tmpdir()
+  const global = path.join(tmp.path, "global")
+  const dir = path.join(tmp.path, "a")
+  const kilo = path.join(dir, ".kilo")
+  const shared = path.join(tmp.path, "shared", "agent")
+  await fs.mkdir(kilo, { recursive: true })
+  await fs.mkdir(global, { recursive: true })
+  await fs.mkdir(shared, { recursive: true })
+  const root = realpathSync.native(shared)
+  await Bun.write(path.join(shared, "shared.md"), "Shared agent prompt.\n")
+  await fs.symlink(shared, path.join(kilo, "agent"), "dir")
+  await Bun.write(
+    path.join(global, "kilo.json"),
+    JSON.stringify({ permission: { markdown_source: { [`${root}/*`]: "deny" } } }),
+  )
+  await Bun.write(
+    path.join(kilo, "kilo.json"),
+    JSON.stringify({ permission: { markdown_source: { [`${root}/*`]: "allow" } } }),
+  )
+
+  const previous = Global.Path.config
+  Global.Path.config = global
+  try {
+    await provideTestInstance({
+      directory: dir,
+      fn: async () => {
+        const [cfg, warnings] = await Effect.runPromise(
+          Config.Service.use((svc) => Effect.all([svc.get(), svc.warnings()])).pipe(
+            Effect.scoped,
+            Effect.provide(testLayer),
+          ),
+        )
+        expect(cfg.permission?.markdown_source).toEqual({ [`${root}/*`]: "deny" })
+        expect(cfg.permission_origins?.markdown_source).toEqual({ [`${root}/*`]: "global" })
+        expect(cfg.agent?.shared).toBeUndefined()
+        expect(warnings.some((warning) => warning.path.endsWith("shared.md"))).toBe(true)
+      },
+    })
+  } finally {
+    Global.Path.config = previous
   }
 })
