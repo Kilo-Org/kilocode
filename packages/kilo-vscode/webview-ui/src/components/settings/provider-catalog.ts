@@ -62,3 +62,11 @@ export function sortProviders(items: Provider[]) {
     return a.name.localeCompare(b.name)
   })
 }
+
+/** Account key setup for catalog providers with a separate credential console. */
+export function providerApiKeyUrl(providerID: string): string | undefined {
+  if (providerID === "acedatacloud") {
+    return "https://platform.acedata.cloud/console/applications?utm_source=vscode_marketplace&utm_medium=referral&utm_campaign=evergreen&utm_content=kilo_provider_api_key"
+  }
+  return undefined
+}
