@@ -156,6 +156,8 @@ Profiles are owned by either a user or an organization. Names are unique per own
 
 In the web app, manage profiles from the **Profiles** tab of the [Cloud Agent settings dialog](#choosing-where-sessions-run).
 
+Only organization owners and admins can create, edit, or delete an organization-owned profile. Other members can open the profile and use it for a session, but they see its settings read-only. Personal profiles are unaffected — every account can create and manage its own.
+
 ### Importing a local configuration
 
 You can import a local Kilo configuration ZIP into a profile to move your agents, slash commands, skills, and instructions into the cloud. Open the profile in the **Profiles** tab and use the **Import** tab.
