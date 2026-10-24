@@ -802,7 +802,7 @@ export class FileWatcher implements IFileWatcher {
 
     for (const event of eventsToProcess.values()) {
       const result = batchResults.findLast((item) => item.path === event.path)
-      if (result?.status !== "success") continue
+      if (result?.status !== "success" && result?.status !== "skipped") continue
       this.overlay?.settle(event.path, this.cacheManager.getHash(event.path), this.accumulatedEvents.has(event.path))
     }
 
@@ -883,6 +883,7 @@ export class FileWatcher implements IFileWatcher {
       // Check file size
       const fileStat = await stat(filePath)
       if (fileStat.size > MAX_FILE_SIZE_BYTES) {
+        this.cacheManager.deleteHash(filePath)
         return {
           path: filePath,
           status: "skipped" as const,
@@ -959,6 +960,15 @@ export class FileWatcher implements IFileWatcher {
         pointsToUpsert,
       }
     } catch (error) {
+      const code = (error as NodeJS.ErrnoException)?.code
+      if (code === "ENOENT" || code === "ENOTDIR") {
+        this.cacheManager.deleteHash(filePath)
+        return {
+          path: filePath,
+          status: "skipped" as const,
+          reason: "File does not exist",
+        }
+      }
       return {
         path: filePath,
         status: "local_error" as const,

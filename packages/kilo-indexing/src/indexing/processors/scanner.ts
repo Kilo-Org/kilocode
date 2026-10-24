@@ -387,6 +387,11 @@ export class DirectoryScanner implements IDirectoryScanner {
             this.cacheManager.updateHash(filePath, currentFileHash)
           }
         } catch (error) {
+          const code = (error as NodeJS.ErrnoException)?.code
+          if (code === "ENOENT" || code === "ENOTDIR") {
+            skippedCount++
+            return
+          }
           log.error(`Error processing file ${filePath} in workspace ${scanWorkspace}`, {
             error: sanitizeErrorMessage(error instanceof Error ? error.message : String(error)),
             stack: error instanceof Error ? sanitizeErrorMessage(error.stack || "") : undefined,
@@ -443,6 +448,8 @@ export class DirectoryScanner implements IDirectoryScanner {
       await queueBatch(finalBatch.batchBlocks, finalBatch.batchTexts, finalBatch.batchFileInfos)
     }
 
+    await Promise.all(activeBatchPromises)
+
     // Short-circuit if cancelled before handling deletions
     if (this._cancelled) {
       log.info("directory scan cancelled", {
@@ -458,8 +465,6 @@ export class DirectoryScanner implements IDirectoryScanner {
         },
         totalBlockCount,
       }
-    } else {
-      await Promise.all(activeBatchPromises)
     }
 
     if (!failed) {
