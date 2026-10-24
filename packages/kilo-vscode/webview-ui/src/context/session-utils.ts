@@ -361,6 +361,37 @@ export function calcContextUsage(
   return { tokens: total, percentage }
 }
 
+export function latestContextUsage(messages: readonly Message[], limit: number | undefined) {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i]
+    if (msg.role !== "assistant") continue
+    if (msg.summary === true) {
+      // Chunk workers copy summary metadata. Only the first summary for this parent replaces history.
+      const target = messages.find(
+        (item) => item.role === "assistant" && item.summary === true && item.parentID === msg.parentID,
+      )
+      if (
+        target === msg &&
+        typeof msg.time?.completed === "number" &&
+        msg.finish &&
+        msg.finish !== "error" &&
+        !msg.error &&
+        msg.estimate !== undefined
+      )
+        return {
+          tokens: msg.estimate,
+          percentage: limit ? Math.round((msg.estimate / limit) * 100) : null,
+          estimated: true,
+        }
+      continue
+    }
+    if (!msg.tokens) continue
+    const usage = calcContextUsage(msg.tokens, limit)
+    if (usage.tokens > 0) return usage
+  }
+  return undefined
+}
+
 export type TokenUsageMessage = {
   role: string
   tokens?: {

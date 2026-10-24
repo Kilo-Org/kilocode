@@ -100,6 +100,7 @@ import { KiloSessionSteering } from "@/kilocode/session/steering" // kilocode_ch
 import { Goal } from "@/kilocode/session/goal/runner" // kilocode_change
 import { GoalPolicy } from "@/kilocode/session/goal/policy" // kilocode_change
 import { GoalState } from "@/kilocode/session/goal/state" // kilocode_change
+import { KiloContextUsage } from "@/kilocode/session/context-usage" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -1661,6 +1662,16 @@ export const layer = Layer.effect(
             closeReasons.set(sessionID, "error")
             break
           }
+          yield* KiloContextUsage.compacted({ sessionID, parentID: task.messageID, model, session: sessions }).pipe(
+            Effect.provideService(Database.Service, database),
+            Effect.catchCause((cause) =>
+              Effect.logWarning("context estimate failed", {
+                "session.id": sessionID,
+                messageID: task.messageID,
+                cause,
+              }),
+            ),
+          )
           // kilocode_change end
           continue
         }

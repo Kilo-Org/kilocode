@@ -685,6 +685,7 @@ export type AssistantMessage = {
     root: string
   }
   summary?: boolean
+  estimate?: number
   cost: number
   tokens: {
     total?: number
@@ -699,6 +700,7 @@ export type AssistantMessage = {
   structured?: unknown
   variant?: string
   finish?: string
+  contextOverhead?: number
 }
 
 export type Message = UserMessage | AssistantMessage
