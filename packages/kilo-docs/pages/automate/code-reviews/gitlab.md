@@ -119,6 +119,7 @@ You need **Maintainer role** on the GitLab project. Both webhook creation and bo
 
 - Check the Code Reviews page for error details
 - Ensure you have sufficient Kilo Code credits
+- A review on a paid model does not start when your balance is below the Cloud Agent minimum. Add credits or select a free or BYOK model, then push a new commit to run the review again.
 - Large MRs may time out — consider splitting the change into smaller MRs
 
 ### No projects listed after connecting
