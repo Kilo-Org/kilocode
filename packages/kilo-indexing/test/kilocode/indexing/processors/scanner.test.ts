@@ -171,6 +171,29 @@ class RetryStore extends Store {
   }
 }
 
+/**
+ * Simulates a small-context embedding model: every request is rejected with a
+ * deterministic 400 "input too large" error.
+ */
+class DeterministicFailEmbedder implements IEmbedder {
+  public calls = 0
+
+  public async createEmbeddings(texts: string[]): Promise<{ embeddings: number[][] }> {
+    this.calls += 1
+    throw Object.assign(new Error("input (517 tokens) is larger than the max context size (512 tokens)"), {
+      status: 400,
+    })
+  }
+
+  public async validateConfiguration(): Promise<{ valid: boolean; error?: string }> {
+    return { valid: true }
+  }
+
+  public get embedderInfo() {
+    return { name: "openai" as const }
+  }
+}
+
 describe("DirectoryScanner", () => {
   test("uses seeded baseline hashes to index only worktree changes", async () => {
     const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
@@ -429,5 +452,26 @@ describe("DirectoryScanner", () => {
     expect(retry?.attempt).toBe(1)
     expect(retry?.maxRetries).toBe(2)
     expect(retry?.error).toContain("[REDACTED_PATH]")
+  })
+
+  test("does not retry a deterministic 4xx embedding failure", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const file = join(root, "main.ts")
+    await Bun.write(file, "export const value = 2\n")
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+    cache.updateHash(file, "old-hash")
+
+    const emb = new DeterministicFailEmbedder()
+    // batchSegmentThreshold=1, maxBatchRetries=3. Without the fix, the same
+    // payload would be re-sent up to 3 times; with it, it fails fast.
+    const scan = new DirectoryScanner(emb, new Store(), new Parser(), cache, ignore(), 1, 3)
+
+    await scan.scanDirectory(root)
+
+    expect(emb.calls).toBe(1)
+    expect(cache.getHash(file)).toBe("old-hash")
   })
 })
