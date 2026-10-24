@@ -212,6 +212,12 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
     path: path.relative(path.resolve(ctx.worktree), ctx.directory).replaceAll("\\", "/"),
   }) as Session.Info
   const row = Session.toRow(info)
+  // kilocode_change start - validate every message and part before the first write
+  const messages = exportData.messages.map((msg) => ({
+    info: decodeMessageInfo(msg.info) as SessionV1.Info,
+    parts: msg.parts.map((part) => decodePart(part) as SessionV1.Part),
+  }))
+  // kilocode_change end
   yield* db
     .insert(SessionTable)
     .values(row)
@@ -222,8 +228,10 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
     .run()
     .pipe(Effect.orDie)
 
-  for (const msg of exportData.messages) {
-    const msgInfo = decodeMessageInfo(msg.info) as SessionV1.Info
+  // kilocode_change start
+  for (const msg of messages) {
+    const msgInfo = msg.info
+    // kilocode_change end
     const { id, sessionID: _, ...msgData } = msgInfo
     yield* db
       .insert(MessageTable)
@@ -237,8 +245,9 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
       .run()
       .pipe(Effect.orDie)
 
-    for (const part of msg.parts) {
-      const partInfo = decodePart(part) as SessionV1.Part
+    // kilocode_change start
+    for (const partInfo of msg.parts) {
+      // kilocode_change end
       const { id: partId, sessionID: _s, messageID, ...partData } = partInfo
       yield* db
         .insert(PartTable)
