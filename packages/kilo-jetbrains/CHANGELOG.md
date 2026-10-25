@@ -1,5 +1,27 @@
 # Changelog
 
+## 7.8.16
+
+### Patch Changes
+
+- [#15295](https://github.com/Kilo-Org/kilocode/pull/15295) [`0cc464f`](https://github.com/Kilo-Org/kilocode/commit/0cc464f3e9203442a3b09912382a6245dfaa94ad) - Keep the prompt navigation popup open when hovering between the timeline stripes, and scroll the list to the hovered prompt, including the last one.
+
+- [#15365](https://github.com/Kilo-Org/kilocode/pull/15365) [`3ef6b23`](https://github.com/Kilo-Org/kilocode/commit/3ef6b235245296e783bb49f71ed987d94442020b) - Preserve session activity events received immediately after the JetBrains backend starts.
+
+## 7.8.15
+
+### Patch Changes
+
+- [#15204](https://github.com/Kilo-Org/kilocode/pull/15204) [`b3c52ec`](https://github.com/Kilo-Org/kilocode/commit/b3c52ecf08539cd796436953056b8ada1977ca0d) - Fetch the latest base branch when creating JetBrains worktrees.
+
+## 7.8.13
+
+### Patch Changes
+
+- [#15112](https://github.com/Kilo-Org/kilocode/pull/15112) [`3cb7685`](https://github.com/Kilo-Org/kilocode/commit/3cb7685900ca5bc5adc337c797c18cc16cb8ebe6) - Use the primary brand yellow for the JetBrains plugin icon and in-app Kilo logos.
+
+- [#15179](https://github.com/Kilo-Org/kilocode/pull/15179) [`90791a0`](https://github.com/Kilo-Org/kilocode/commit/90791a055fd4108f5a042f16ba54771de089a96d) - Prevent editor context ignore-file loading from blocking the JetBrains UI thread.
+
 ## 7.8.10
 
 ### Patch Changes
@@ -611,6 +633,48 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.1.12] - 2026-10-22
+
+### Added
+
+- Added project-scoped agent usage aggregation to the bundled CLI, backed by a pageable agent usage HTTP API.
+- Added custom auto routers with client models and local evals.
+- Added a session host registry and Kilo Cloud session adapter.
+- Agent Manager now fetches the base branch before creating new worktrees.
+
+### Fixed
+
+- Kept the prompt navigator in sync with the hovered stripe and stopped following the prompt after manual scrolling.
+- Preserved MCP prompt content so server-provided prompts render correctly.
+- Kept edit tools available to subagents of allowlist callers.
+- Mapped audio formats correctly in custom router decision input.
+- Ingested PR links without requiring remote control.
+
+### Changed
+
+- Bumped the bundled Kilo CLI pin to v7.8.15 (via v7.8.14).
+
+## [7.1.11] - 2026-10-16
+
+### Added
+
+- List remote agents for the mobile app.
+- Bundle Kilo CLI v7.8.13.
+
+### Fixed
+
+- Prevent editor context ignore-file loading from blocking the JetBrains UI thread.
+- Guard deferred prompt dispatch.
+- Keep worker console writes off the TUI frame.
+- Refresh expired MCP OAuth tokens automatically.
+- Preserve session status occurrence timing.
+- Persist late OpenRouter reasoning details for replay.
+- Make OpenAI-compatible tool content normalization opt-in.
+
+### Changed
+
+- Bump the Gradle wrapper to 9.8.1 and openapi-generator to 7.26.0.
 
 ## [7.1.10] - 2026-10-15
 

@@ -4,6 +4,7 @@ import { EventManifest as SchemaEventManifest } from "@opencode-ai/schema/event-
 import { Todo } from "@/session/todo"
 import { EventManifest } from "@/event-manifest"
 import { Drained, Interrupted } from "@opencode-ai/schema/kilocode/session-drain" // kilocode_change
+import { Availability as SessionHostAvailability } from "@opencode-ai/schema/kilocode/session-host-event" // kilocode_change
 import { Pending as WakeupPending } from "@opencode-ai/schema/kilocode/wakeup-event" // kilocode_change
 import { AuthUrl } from "@opencode-ai/schema/mcp-event" // kilocode_change
 
@@ -12,10 +13,11 @@ describe("public event manifest", () => {
     expect(EventManifest.Definitions).toBe(SchemaEventManifest.Definitions)
     expect(EventManifest.Latest).toBe(SchemaEventManifest.Latest)
     expect(EventManifest.Durable).toBe(SchemaEventManifest.Durable)
-    expect(EventManifest.Latest.size).toBe(94) // kilocode_change - include session drain, wakeup, and MCP auth events
+    expect(EventManifest.Latest.size).toBe(95) // kilocode_change - include session drain, wakeup, session host availability, and MCP auth events
     expect(EventManifest.Latest.get("session.drained")).toBe(Drained) // kilocode_change
     expect(EventManifest.Latest.get("session.drain.interrupted")).toBe(Interrupted) // kilocode_change
     expect(EventManifest.Latest.get("session.wakeup")).toBe(WakeupPending) // kilocode_change
+    expect(EventManifest.Latest.get("session.host.availability")).toBe(SessionHostAvailability) // kilocode_change
     expect(EventManifest.Latest.get("mcp.auth.url")).toBe(AuthUrl) // kilocode_change
     expect(EventManifest.Latest.get("session.next.step.ended")).toBe(SessionEvent.Step.Ended)
     expect(EventManifest.Latest.get("todo.updated")).toBe(Todo.Event.Updated)
