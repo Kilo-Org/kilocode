@@ -1,5 +1,36 @@
 # @kilocode/cli
 
+## 7.8.16
+
+### Patch Changes
+
+- [#15383](https://github.com/Kilo-Org/kilocode/pull/15383) [`82926fb`](https://github.com/Kilo-Org/kilocode/commit/82926fb30e3dab7e3f07bd437bc898dc5385cb00) - Restrict browser links and MCP OAuth authorization URLs to HTTP(S), and fix unsafe URL handling on Windows and WSL.
+
+- [#15365](https://github.com/Kilo-Org/kilocode/pull/15365) [`c7b9c36`](https://github.com/Kilo-Org/kilocode/commit/c7b9c36961e2902a0b8de18dcb782a64d6dcef8b) - Block compromised eMudhra certificate chains with a fixed, pinned Bun runtime on all CLI platforms.
+  Keep Nix CLI builds compatible with the pinned runtime.
+
+- [#15293](https://github.com/Kilo-Org/kilocode/pull/15293) [`2e17931`](https://github.com/Kilo-Org/kilocode/commit/2e1793154f6bef7632516a75a53d421a2e96b718) - Treat shell expressions in MCP prompts as literal text instead of executing them locally.
+
+- [#15350](https://github.com/Kilo-Org/kilocode/pull/15350) [`4481e06`](https://github.com/Kilo-Org/kilocode/commit/4481e06d8af12857097fdeaea4e84e8ea363304b) - Restore session pull request badges when remote control is disabled.
+
+- [#15351](https://github.com/Kilo-Org/kilocode/pull/15351) [`2f452d7`](https://github.com/Kilo-Org/kilocode/commit/2f452d7a5fded651d5ef8d0decbd68d09c867887) - Add an internal Session Host registry and the built-in Kilo Cloud provider that lists, reads, starts, and describes cloud-hosted sessions.
+
+## 7.8.15
+
+### Minor Changes
+
+- [#15183](https://github.com/Kilo-Org/kilocode/pull/15183) [`61e311c`](https://github.com/Kilo-Org/kilocode/commit/61e311cbfb94233a5c2f9aae76f5775c42fcc675) - Route `kilo-auto/custom/<slug>` auto routers on the client: the CLI registers
+  its own provider models as router entries (`kilo auto router add|remove|list`),
+  asks the auto-routing service for a decision when it can serve one of them, and
+  runs the picked model locally. `kilo auto eval <router>` runs the missing
+  client evals in Docker and uploads each result as it finishes.
+
+### Patch Changes
+
+- [#15235](https://github.com/Kilo-Org/kilocode/pull/15235) [`c61a974`](https://github.com/Kilo-Org/kilocode/commit/c61a974f983c0ff7853b776781945856dbf28dbf) - Let the `browser_open` permission prompt remember your choice. The prompt now offers the current origin and all origins as always-allow rules, and Auto-Approve settings list `browser_open` so you can allow Integrated Browser navigation without answering each request.
+
+- [#15254](https://github.com/Kilo-Org/kilocode/pull/15254) [`705b5d6`](https://github.com/Kilo-Org/kilocode/commit/705b5d6d1c4bdcf87dda0a235e1d24135e759538) - Restore `edit` and `write` for subagents delegated by an agent that allows edits on specific paths. The subagent's own edit allowlist now governs instead of inheriting a blanket edit deny.
+
 ## 7.8.13
 
 ### Minor Changes
