@@ -189,6 +189,9 @@ export const LocalTabsProvider: ParentComponent = (props) => {
   const openHosted = (id: string) => {
     if (!id.startsWith(HOSTED_TAB_PREFIX)) return
     setCloud(undefined)
+    // Complete local session lists never contain hosted keys. Preserve this
+    // tab until the user closes it instead of reconciling it away.
+    fresh.add(id)
     apply(openSessionTab(current(), id))
     focus(id)
     persist()

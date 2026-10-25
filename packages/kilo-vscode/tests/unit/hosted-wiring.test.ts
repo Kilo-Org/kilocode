@@ -43,4 +43,20 @@ describe("hosted session wiring", () => {
     const body = source.slice(start, start + 800)
     expect(body).toMatch(/this\.releaseHosted\(key\)/)
   })
+
+  it("preserves opened hosted tabs across complete local session reconciliation", () => {
+    const source = read("webview-ui/src/context/local-tabs.tsx")
+    const start = source.indexOf("const openHosted")
+    expect(start).toBeGreaterThan(-1)
+    const body = source.slice(start, start + 500)
+    expect(body).toMatch(/fresh\.add\(id\)/)
+    expect(body.indexOf("fresh.add(id)")).toBeLessThan(body.indexOf("openSessionTab"))
+  })
+
+  it("keeps provider and session discovery errors independent", () => {
+    const source = read("webview-ui/src/components/history/HostedSessionList.tsx")
+    expect(source).toMatch(/setProviderError\(message\.error \?\? ""\)/)
+    expect(source).toMatch(/setSessionError\(message\.error \?\? ""\)/)
+    expect(source).toMatch(/actionError\(\) \|\| providerError\(\) \|\| sessionError\(\)/)
+  })
 })

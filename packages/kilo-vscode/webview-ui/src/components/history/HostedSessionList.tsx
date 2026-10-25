@@ -27,7 +27,9 @@ const HostedSessionList: Component<HostedSessionListProps> = (props) => {
   const [sessions, setSessions] = createSignal<HostedSessionSummary[]>([])
   const [loading, setLoading] = createSignal(true)
   const [notice, setNotice] = createSignal("")
-  const [error, setError] = createSignal("")
+  const [providerError, setProviderError] = createSignal("")
+  const [sessionError, setSessionError] = createSignal("")
+  const [actionError, setActionError] = createSignal("")
   const [availability, setAvailability] = createSignal<
     { state: "available" } | { state: "unavailable"; reason: string; message: string } | undefined
   >(undefined)
@@ -37,6 +39,7 @@ const HostedSessionList: Component<HostedSessionListProps> = (props) => {
     const value = availability()
     return value?.state === "unavailable" ? value : undefined
   }
+  const error = () => actionError() || providerError() || sessionError()
 
   let seq = 0
 
@@ -47,18 +50,18 @@ const HostedSessionList: Component<HostedSessionListProps> = (props) => {
       setTransport(provider?.transport.state)
       // A failed provider read must not look like "Start is disabled for no
       // reason": keep a sign-in path and show the failure.
-      setError(message.error ?? "")
+      setProviderError(message.error ?? "")
       return
     }
     if (message.type === "hostedSessionsLoaded") {
       setSessions(message.sessions)
       setLoading(false)
-      setError(message.error ?? "")
+      setSessionError(message.error ?? "")
       return
     }
     if (message.type === "hostedSessionStarted") {
       setLoading(true)
-      setError("")
+      setActionError("")
       vscode.postMessage({ type: "requestHostedSessions", limit: 50 })
       props.onSelectSession?.({
         key: message.key,
@@ -72,7 +75,7 @@ const HostedSessionList: Component<HostedSessionListProps> = (props) => {
     }
     if (message.type === "hostedSessionFailed") {
       setLoading(false)
-      setError(message.error)
+      setActionError(message.error)
       setNotice(message.error)
     }
   })
@@ -81,7 +84,9 @@ const HostedSessionList: Component<HostedSessionListProps> = (props) => {
 
   function refresh() {
     setLoading(true)
-    setError("")
+    setProviderError("")
+    setSessionError("")
+    setActionError("")
     vscode.postMessage({ type: "requestHostedProviders" })
     vscode.postMessage({ type: "requestHostedSessions", limit: 50 })
   }
