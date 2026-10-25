@@ -1,22 +1,12 @@
 import type { IndexingConfig } from "@kilocode/kilo-indexing/config"
+import type { ConfigField } from "../../types/messages/config"
 
 export type IndexingScope = "global" | "project"
 export type IndexingInheritance = "none" | "inherited" | "partial" | "managed"
 export type IndexingSource = "none" | "global" | "local" | "mixed" | "default" | "managed"
 
 /** Per-field provenance as resolved by the config overlay endpoint, keyed by dotted path. */
-export interface IndexingFieldInfo {
-  key: string
-  path: string[]
-  value?: unknown
-  global?: unknown
-  local?: unknown
-  source: "project" | "global" | "system" | "default"
-  inherited: boolean
-  overridden: boolean
-  editable: boolean
-  reason?: string
-}
+export type IndexingFieldInfo = ConfigField
 
 export interface IndexingFieldDisplay {
   value: unknown
@@ -98,11 +88,22 @@ export function indexingInheritance(
   return "none"
 }
 
+function resolvedSource(source: IndexingFieldInfo["source"]): IndexingSource {
+  if (source === "system") return "managed"
+  if (source === "global") return "global"
+  if (source === "project") return "local"
+  return "default"
+}
+
 /**
  * Display value for a single indexing field in the given scope.
  * Values from the editable scopes (global/project raw layers, including unsaved edits)
  * win; when neither defines the field, the value resolved by the config overlay is shown —
  * that is where managed/enterprise config, environment, and runtime resolution surface.
+ *
+ * A field the overlay reports as non-editable is locked by managed/enterprise (or system)
+ * config: its effective value must win over any raw-scope value so the input renders
+ * disabled instead of showing a stale value that would be rejected on save.
  */
 export function indexingFieldDisplay(
   scope: IndexingScope,
@@ -111,23 +112,18 @@ export function indexingFieldDisplay(
   fields: Record<string, IndexingFieldInfo> | undefined,
   path: readonly string[],
 ): IndexingFieldDisplay {
+  const resolved = fields?.[`indexing.${path.join(".")}`]
+  if (resolved && resolved.editable === false) {
+    return { value: resolved.value, source: resolvedSource(resolved.source), editable: false }
+  }
   const current = get(indexingConfig(scope, global, project), path)
   if (current !== undefined) {
     return { value: current, source: indexingSource(scope, global, project, [path]), editable: true }
   }
-  const resolved = fields?.[`indexing.${path.join(".")}`]
   if (!resolved || resolved.value === undefined) {
     return { value: undefined, source: "default", editable: true }
   }
-  const source =
-    resolved.source === "system"
-      ? "managed"
-      : resolved.source === "global"
-        ? "global"
-        : resolved.source === "project"
-          ? "local"
-          : "default"
-  return { value: resolved.value, source, editable: resolved.editable }
+  return { value: resolved.value, source: resolvedSource(resolved.source), editable: resolved.editable }
 }
 
 export function indexingDescription(description: string, inheritance: IndexingInheritance) {

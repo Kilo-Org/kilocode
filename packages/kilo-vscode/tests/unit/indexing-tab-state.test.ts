@@ -184,6 +184,28 @@ describe("indexing managed-config display", () => {
     expect(global.source).toBe("global")
   })
 
+  it("locks a non-editable managed value over a coexisting raw value", () => {
+    const fields = { "indexing.provider": managedField("openai-compatible", false) }
+
+    const project = indexingFieldDisplay("project", {}, { provider: "ollama" }, fields, ["provider"])
+    expect(project.value).toBe("openai-compatible")
+    expect(project.source).toBe("managed")
+    expect(project.editable).toBe(false)
+
+    const global = indexingFieldDisplay("global", { provider: "gemini" }, {}, fields, ["provider"])
+    expect(global.value).toBe("openai-compatible")
+    expect(global.source).toBe("managed")
+    expect(global.editable).toBe(false)
+  })
+
+  it("keeps an editable managed value losing to a coexisting raw value", () => {
+    const fields = { "indexing.provider": managedField("openai-compatible", true) }
+    const display = indexingFieldDisplay("project", {}, { provider: "ollama" }, fields, ["provider"])
+    expect(display.value).toBe("ollama")
+    expect(display.source).toBe("local")
+    expect(display.editable).toBe(true)
+  })
+
   it("reports managed values as not editable in global scope", () => {
     const fields = { "indexing.provider": managedField("openai-compatible", false) }
     const display = indexingFieldDisplay("global", {}, {}, fields, ["provider"])
