@@ -55,6 +55,7 @@ The Auto Approve tab lists the following tool-specific permissions. Some tools a
 | `todoread` / `todowrite` | Reading and updating the todo list |
 | `websearch` | Performing web searches |
 | `webfetch` | Fetching content from URLs |
+| `browser_open` | Opening pages in the Integrated Browser preview |
 | `doom_loop` | Allowing the agent to continue after repeated failures |
 
 ## Runtime Permission Requests
@@ -87,6 +88,7 @@ Most tools default to `"*": "allow"` for a smooth out-of-the-box experience. Not
 
 - **`.env` files** — reading `.env` files prompts for approval. Files matching `*.env.*` (e.g., `.env.local`, `.env.production`) also trigger an ask, while `*.env.example` is explicitly allowed.
 - **`external_directory`** — accessing files outside the project prompts for approval
+- **`browser_open`** — opening a page in the Integrated Browser preview prompts for approval. Approve the current origin or all origins from the prompt, or set **Browser Open** to **Allow** in the Auto-Approve settings to allow every navigation without prompting. See [Browser previews](/docs/automate/agent-manager#browser-previews).
 - **`doom_loop`** — prompts when the agent enters a repeated failure cycle
 - **`edit` (JetBrains plugin only)** — file edits prompt for approval. This is a plugin default, not an environment override: set `permission.edit` in your global or project `kilo.jsonc`, or use **Settings → Tools → Kilo Code → Auto-Approve**, to change it.
 
