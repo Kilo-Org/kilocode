@@ -69,6 +69,22 @@ When you start a session, the sandbox is resolved in this order: the sandbox you
 
 Vercel sandboxes are offered for GitHub repositories only. If your account cannot select a sandbox, the settings show where sessions run as plain text and the new-session page hides the picker.
 
+## Repository environments
+
+Each repository can have one saved environment that applies automatically when a session starts, so you do not set up the same workspace for every chat. A repository environment holds:
+
+- A sandbox size
+- One setup script
+- Variables, including secrets (encrypted at rest)
+
+Open **Env** beside a repository to create or edit its environment. In an organization, owners and admins can manage repository environments; other members see them read-only.
+
+When a repository environment applies, its setup script replaces the setup commands from the selected [agent environment profile](#agent-environment-profiles). The profile's variables and agent settings still apply. A warning beside the profile picker explains when a profile's setup is replaced.
+
+Repository environments follow the same automatic-resolution policy as automatic profiles: sessions started by automated code reviews, Security Agent sessions, and unknown origins do not automatically receive a repository environment.
+
+Setup scripts run through Bash with `-e -o pipefail`, so the script stops at the first failing command. New and replaced variable values are encrypted; values stored before encryption remain compatible.
+
 ## Queueing follow-up messages
 
 The composer stays editable while a session is being prepared or finalized, so you can keep typing and send follow-up messages without waiting for the current turn to finish. Sent messages are queued and processed in order, and the composer shows the current phase while it waits. While a session is still loading, when its connection is unresolved, or when a chat is read-only, the composer does not accept submissions, but anything you have typed is preserved.
@@ -264,11 +280,19 @@ When creating a trigger, you choose an **activation mode** that cannot be change
 
 ### Configuration
 
-Triggers utilize [agent environment profiles](#agent-environment-profiles) to configure the execution environment for triggered sessions. The agent resolves the profile at runtime, so profile updates apply automatically to future executions. Profiles referenced by triggers cannot be deleted until those triggers are updated or removed.
+Triggers can use an [agent environment profile](#agent-environment-profiles) to configure the execution environment for triggered sessions, or run without one and use the repository and account defaults. The agent resolves the profile at runtime, so profile updates apply automatically to future executions. Profiles referenced by triggers cannot be deleted until those triggers are updated or removed.
+
+Which profiles a trigger offers depends on how it runs. Organization triggers run as the organization webhook bot by default and select organization profiles; a trigger created with **Run as webhook creator** selects personal profiles instead. Clearing a profile returns the trigger to the repository and account defaults, and existing triggers keep the profile they already have until you change it.
 
 For models that support it, webhook and scheduled triggers can set a **reasoning effort** next to the model selector. **Default** leaves the model's behavior unchanged; a specific effort applies to each session the trigger starts.
 
 Triggers do not support manual env var or setup command overrides at this time.
+
+### Request body validation
+
+Webhook triggers can validate each request body against a JSON Schema before the request is captured. When a body does not match the schema, Kilo rejects it with HTTP 400 and does not capture or queue it.
+
+The schema editor supports standard JSON Schema keywords, including `pattern`, `const`, `enum`, nested objects and arrays, required fields, and value limits. Matching uses native ECMAScript regular expressions, which are not bounded in matching time, so prefer `const` for a fixed value such as a URL and `enum` for a fixed list over a complex pattern.
 
 ### Sandbox selection
 
