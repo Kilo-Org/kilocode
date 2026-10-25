@@ -74,6 +74,9 @@ export class HostedRegistry {
           expiresAt: value.expiresAt,
         }
         if (this.version(key) !== start) {
+          // Invalidation or a detach won the race. The backend attachment is
+          // already minted, so release it instead of leaking it until expiry.
+          port.detach(value.attachmentID).catch(() => undefined)
           deferred.reject(new Error("Hosted attachment was invalidated"))
           return
         }

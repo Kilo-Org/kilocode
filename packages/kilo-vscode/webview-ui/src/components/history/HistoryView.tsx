@@ -172,25 +172,6 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
               {language.t("session.tab.hosted")}
             </button>
           </Show>
-          <Show when={hosted()}>
-            <div
-              class="history-view-content"
-              ref={hostedPanel}
-              id="history-panel-hosted"
-              role="tabpanel"
-              aria-labelledby="history-tab-hosted"
-              hidden={tab() !== "hosted"}
-            >
-              {tab() === "hosted" && (
-                <HostedSessionList
-                  onSelectSession={(entry) => {
-                    session.selectHostedSession(entry.providerID, entry.sessionID)
-                    props.onBack?.()
-                  }}
-                />
-              )}
-            </div>
-          </Show>
           <Show when={worktreeIds()}>
             <button
               ref={worktree}
@@ -240,6 +221,28 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
       >
         {tab() === "cloud" && <CloudSessionList onSelectSession={selectCloudSession} />}
       </div>
+      <Show when={hosted()}>
+        <div
+          class="history-view-content"
+          ref={hostedPanel}
+          id="history-panel-hosted"
+          role="tabpanel"
+          aria-labelledby="history-tab-hosted"
+          hidden={tab() !== "hosted"}
+        >
+          {tab() === "hosted" && (
+            <HostedSessionList
+              onSelectSession={(entry) => {
+                session.selectHostedSession(entry.providerID, entry.sessionID)
+                // Open it as a tab so the session stays "open" host-side while
+                // the user works in it, and closes (detaching) like any tab.
+                tabs?.openHosted(entry.key)
+                props.onBack?.()
+              }}
+            />
+          )}
+        </div>
+      </Show>
       <Show when={worktreeIds()}>
         <div
           class="history-view-content"

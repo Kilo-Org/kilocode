@@ -45,11 +45,15 @@ const HostedSessionList: Component<HostedSessionListProps> = (props) => {
       const provider = message.providers.find((p) => p.default) ?? message.providers[0]
       setAvailability(provider?.availability)
       setTransport(provider?.transport.state)
+      // A failed provider read must not look like "Start is disabled for no
+      // reason": keep a sign-in path and show the failure.
+      setError(message.error ?? "")
       return
     }
     if (message.type === "hostedSessionsLoaded") {
       setSessions(message.sessions)
       setLoading(false)
+      setError(message.error ?? "")
       return
     }
     if (message.type === "hostedSessionStarted") {
@@ -75,10 +79,14 @@ const HostedSessionList: Component<HostedSessionListProps> = (props) => {
 
   onCleanup(unsub)
 
-  onMount(() => {
+  function refresh() {
+    setLoading(true)
+    setError("")
     vscode.postMessage({ type: "requestHostedProviders" })
     vscode.postMessage({ type: "requestHostedSessions", limit: 50 })
-  })
+  }
+
+  onMount(refresh)
 
   function announce(session: HostedSessionSummary | undefined) {
     const id = ++seq
@@ -121,21 +129,16 @@ const HostedSessionList: Component<HostedSessionListProps> = (props) => {
         <Button variant="primary" size="small" onClick={openStart} disabled={availability()?.state !== "available"}>
           {language.t("hosted.start")}
         </Button>
-        <Button
-          variant="ghost"
-          size="small"
-          onClick={() => {
-            setLoading(true)
-            setError("")
-            vscode.postMessage({ type: "requestHostedSessions", limit: 50 })
-          }}
-        >
+        <Button variant="ghost" size="small" onClick={refresh}>
           {language.t("common.refresh")}
         </Button>
       </div>
       <Show when={error()}>
         <div data-slot="hosted-error" class="hosted-session-notice" role="alert">
           <span dir="auto">{error()}</span>
+          <Button variant="secondary" size="small" onClick={refresh}>
+            {language.t("common.retry")}
+          </Button>
         </div>
       </Show>
       <List<HostedSessionSummary>

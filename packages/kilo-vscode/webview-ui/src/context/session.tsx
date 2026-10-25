@@ -1169,7 +1169,11 @@ export const SessionProvider: ParentComponent = (props) => {
     page: (key, hasMore) => patchPage(key, { hasMore, lastMutation: "replace" }),
     toolParts: (key, messages) => rebuildToolParts(key, messages),
     isolate: (part) => isolate(part),
-    current: (key) => setCurrentSessionID(key),
+    current: () => currentSessionID(),
+    focus: (key) => {
+      setCurrentSessionID(key)
+      setDraftSessionID(key)
+    },
     draft: (key) => setDraftSessionID(key),
     loading: (value) => setLoading(value),
     clearDraft: () => agentDrafts.prune(draftSessionID()),
@@ -2214,7 +2218,7 @@ export const SessionProvider: ParentComponent = (props) => {
     recordModelUsage(selection.providerID, selection.modelID)
     const preview = sid?.startsWith("cloud:")
       ? sid.slice("cloud:".length)
-      : origin === undefined
+      : origin === undefined && !sid?.startsWith("host:")
         ? cloudPreviewId()
         : null
     if (preview) {
@@ -2314,7 +2318,7 @@ export const SessionProvider: ParentComponent = (props) => {
     // Cloud previews need import-then-command; post importAndSend with command metadata
     const preview = sid?.startsWith("cloud:")
       ? sid.slice("cloud:".length)
-      : origin === undefined
+      : origin === undefined && !sid?.startsWith("host:")
         ? cloudPreviewId()
         : null
     if (preview) {
@@ -2674,6 +2678,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function selectHostedSession(providerID: string, sessionID: string) {
     setUserClearedSession(false)
+    // A hosted key is not a cloud preview. Clear it, otherwise the prompt
+    // fallback would route the next send to a previously previewed cloud
+    // session instead of the hosted one.
+    setCloudPreviewId(null)
     hosted.select(providerID, sessionID)
   }
 

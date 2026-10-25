@@ -1178,6 +1178,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     for (const id of this.openSessionIds) {
       if (!next.has(id)) this.trackedSessionIds.delete(id)
     }
+    // A hosted session that is no longer open must stop streaming: its SSE
+    // reader re-attaches with backoff forever otherwise.
+    for (const key of [...this.hostedUnsubs.keys()]) {
+      if (next.has(key)) continue
+      this.releaseHosted(key)
+    }
     this.openSessionIds.clear()
     for (const id of next) {
       this.openSessionIds.add(id)
@@ -5164,9 +5170,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         return true
       case "hostedDetachSession":
         if (typeof message.key === "string") {
-          this.hostedUnsubs.get(message.key)?.()
-          this.hostedUnsubs.delete(message.key)
-          await handleHostedDetach(this.hostedCtx, message.key)
+          this.openSessionIds.delete(message.key)
+          this.trackedSessionIds.delete(message.key)
+          this.releaseHosted(message.key)
         }
         return true
       case "loadMessages": {
@@ -5349,7 +5355,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       (payload) => this.handleHostedEvent(key, payload),
       (failure) => {
         // Terminal: drop the subscription so a later action can resubscribe.
-        this.hostedUnsubs.delete(key)
+        this.releaseHosted(key)
         this.postMessage({
           type: "hostedSessionFailed",
           error: failure.message,
@@ -5360,6 +5366,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       () => void this.resnapshotHosted(key),
     )
     this.hostedUnsubs.set(key, off)
+  }
+
+  /** Stops streaming a hosted session and drops its local attachment. */
+  private releaseHosted(key: string): void {
+    const off = this.hostedUnsubs.get(key)
+    this.hostedUnsubs.delete(key)
+    off?.()
+    void handleHostedDetach(this.hostedCtx, key)
   }
 
   private handleHostedEvent(key: string, payload: unknown): void {

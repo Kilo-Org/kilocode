@@ -59,12 +59,16 @@ interface LocalTabsValue {
   isPinned: (id: string) => boolean
   togglePinned: (id: string) => void
   previewCloud: (id: string) => void
+  openHosted: (id: string) => void
   reorder: (from: string, to: string) => boolean
   move: (id: string, offset: -1 | 1) => number | undefined
   persist: () => void
 }
 
 const LocalTabsContext = createContext<LocalTabsValue>()
+
+/** Hosted sessions are keyed `host:<provider>:<session>` (see src/hosted/identity.ts). */
+export const HOSTED_TAB_PREFIX = "host:"
 
 const same = (left: string[], right: string[]) => left.length === right.length && left.every((id, i) => right[i] === id)
 
@@ -182,6 +186,13 @@ export const LocalTabsProvider: ParentComponent = (props) => {
   const closeToRightTab = (id: string) => closeToRight(id, closeDeps)
   const rightTabs = (id: string) => closableRight(id, closeDeps)
   const previewCloud = (id: string) => setCloud(id)
+  const openHosted = (id: string) => {
+    if (!id.startsWith(HOSTED_TAB_PREFIX)) return
+    setCloud(undefined)
+    apply(openSessionTab(current(), id))
+    focus(id)
+    persist()
+  }
   const reorder = (from: string, to: string) => {
     const next = reorderPinnedTabs(ids(), pinned(), from, to)
     if (!next) return false
@@ -250,6 +261,12 @@ export const LocalTabsProvider: ParentComponent = (props) => {
         focus(next.active)
         return
       }
+      if (message.type === "hostedSessionStarted") {
+        fresh.add(message.key)
+        apply(openSessionTab(current(), message.key))
+        focus(message.key)
+        return
+      }
       if (message.type === "cloudSessionImported") {
         const activate = cloud() === message.cloudSessionId
         fresh.add(message.session.id)
@@ -297,6 +314,7 @@ export const LocalTabsProvider: ParentComponent = (props) => {
         isPinned,
         togglePinned,
         previewCloud,
+        openHosted,
         reorder,
         move,
         persist,

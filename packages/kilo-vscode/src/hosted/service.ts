@@ -203,6 +203,11 @@ export class HostedService {
     await this.registry.detach(key, this.port())
   }
 
+  /** Drops the cached attachment so the next request mints a fresh one. */
+  invalidate(key: string): void {
+    this.registry.invalidate(key)
+  }
+
   /** Backend restarts invalidate every attachment. */
   reset(): void {
     for (const [key, stream] of [...this.streams]) {

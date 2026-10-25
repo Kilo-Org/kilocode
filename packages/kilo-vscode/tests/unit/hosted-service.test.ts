@@ -213,11 +213,12 @@ describe("hosted service", () => {
   })
 
   test("keeps colliding native session ids on their own attachment", async () => {
-    const ctx = backend((call) => {
+    const ctx = backend((call, index) => {
       if (call.path.endsWith("/attach")) {
         return {
           body: {
-            attachmentID: "wrk_att_1",
+            // Per-call ids, so the assertions can prove each key keeps its own.
+            attachmentID: `wrk_att_${index + 1}`,
             session: { providerID: "kilo-cloud", sessionID: "ses_same" },
             expiresAt: Date.now() + 60_000,
           },
@@ -231,8 +232,40 @@ describe("hosted service", () => {
     ctx.service.remember("beta", "ses_same")
     await ctx.service.attach("host:alpha:ses_same")
     await ctx.service.attach("host:beta:ses_same")
-    expect(ctx.service.attachment("host:alpha:ses_same")?.attachmentID).toBe("wrk_att_1")
-    expect(ctx.service.attachment("host:beta:ses_same")?.attachmentID).toBe("wrk_att_1")
+    const alpha = ctx.service.attachment("host:alpha:ses_same")?.attachmentID
+    const beta = ctx.service.attachment("host:beta:ses_same")?.attachmentID
+    expect(alpha).toBe("wrk_att_1")
+    expect(beta).toBe("wrk_att_2")
+    expect(alpha).not.toBe(beta)
     expect(ctx.calls.filter((call) => call.path.endsWith("/attach"))).toHaveLength(2)
+  })
+
+  test("detaches an attachment that lost the invalidation race instead of leaking it", async () => {
+    const gate = Promise.withResolvers<void>()
+    const detached: string[] = []
+    const service = new HostedService(
+      () =>
+        ({
+          sessionHost: {
+            attach: async () => {
+              await gate.promise
+              return { data: { attachmentID: "wrk_att_stale", expiresAt: Date.now() + 60_000 } }
+            },
+            detach: async (input: { attachmentID: string }) => {
+              detached.push(input.attachmentID)
+              return { data: true }
+            },
+          },
+        }) as never,
+    )
+    const key = service.remember("kilo-cloud", "ses_hosted")
+
+    const pending = service.attach(key)
+    service.invalidate(key)
+    gate.resolve()
+    await pending.catch(() => undefined)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(detached).toEqual(["wrk_att_stale"])
   })
 })

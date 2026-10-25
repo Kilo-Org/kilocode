@@ -8,7 +8,8 @@ export interface HostedBridgeDeps {
   page(key: string, hasMore: boolean): void
   toolParts(key: string, messages: Message[]): void
   isolate(part: Part): Part
-  current(key: string): void
+  current(): string | undefined
+  focus(key: string): void
   draft(key: string): void
   loading(value: boolean): void
   clearDraft(): void
@@ -42,7 +43,9 @@ export function createHostedBridge(deps: HostedBridgeDeps) {
         if (msg.parts && msg.parts.length > 0) deps.store("parts", msg.id, msg.parts.map(deps.isolate))
       }
       deps.toolParts(message.key, message.messages)
-      deps.current(message.key)
+      // A late response must not pull the user back if they already switched
+      // away, nor clear another session's loading state.
+      if (deps.current() !== message.key) return
       deps.loading(false)
     })
   }
@@ -54,8 +57,7 @@ export function createHostedBridge(deps: HostedBridgeDeps) {
     }
     const key = `host:${providerID}:${sessionID}`
     deps.clearDraft()
-    deps.current(key)
-    deps.draft(key)
+    deps.focus(key)
     deps.loading(true)
     deps.post({ type: "hostedOpenSession", providerID, sessionID })
   }
