@@ -1,5 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
+import { exec } from "../util/process"
 
 // TODO: Remove the legacy .kilocode -> .kilo migration helpers below after the
 // GA release cleanup tracked in https://github.com/Kilo-Org/kilocode/issues/6986.
@@ -113,21 +114,18 @@ async function isDirectory(filepath: string): Promise<boolean> {
 }
 
 /**
- * Resolve the real git directory for a repository root.
- * When root/.git is a directory, returns it directly.
- * When root/.git is a file (worktree), follows the gitdir pointer
- * up two levels to reach the shared git directory.
+ * Resolve the shared git directory for `root`.
+ *
+ * `git rev-parse --git-common-dir` works for a repository root, a linked
+ * worktree, and a subdirectory of either. A stat of `root/.git` does not:
+ * a subdirectory workspace has no `.git` entry. The path may be relative to
+ * `root`. Unknown flags are rejected because older Git prints them and exits 0.
  */
-export async function resolveGitDir(root: string): Promise<string> {
-  const gitPath = path.join(root, ".git")
-  const stat = await fs.promises.stat(gitPath)
-  if (stat.isDirectory()) return gitPath
-
-  const content = await fs.promises.readFile(gitPath, "utf-8")
-  const match = content.match(/^gitdir:\s*(.+)$/m)
-  if (!match) throw new Error("Invalid .git file format")
-  // gitdir points to e.g. /repo/.git/worktrees/foo — go up two levels to /repo/.git
-  return path.resolve(path.dirname(gitPath), match[1].trim(), "..", "..")
+export async function resolveGitDir(root: string, binary = "git"): Promise<string> {
+  const { stdout } = await exec(binary, ["rev-parse", "--git-common-dir"], { cwd: root })
+  const dir = stdout.trim()
+  if (!dir || dir.startsWith("--")) throw new Error("git rev-parse did not return a git directory")
+  return path.resolve(root, dir)
 }
 
 /**
