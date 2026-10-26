@@ -19,7 +19,7 @@ index 520d8b6d9b4111aab52e252f4c929f0a6a9ad302..d04ba5f5691bf8e5abbcfceb65d4834a
   * Orchestrates the full auth flow with a server.
   *
 diff --git a/dist/cjs/client/auth.js b/dist/cjs/client/auth.js
-index 09eadc8264c9fcb249f5b95792f381b08b7afe90..b9078031d085edd5928dd3447bdf7b587661a58e 100644
+index 4c87a15f58e385da47145658ea1d82f5d4f82285..52e79524a6a92b2a821b470cd7e70f82d61f0636 100644
 --- a/dist/cjs/client/auth.js
 +++ b/dist/cjs/client/auth.js
 @@ -7,6 +7,7 @@ exports.UnauthorizedError = void 0;
@@ -30,7 +30,7 @@ index 09eadc8264c9fcb249f5b95792f381b08b7afe90..b9078031d085edd5928dd3447bdf7b58
  exports.isHttpsUrl = isHttpsUrl;
  exports.selectResourceURL = selectResourceURL;
  exports.extractWWWAuthenticateParams = extractWWWAuthenticateParams;
-@@ -224,6 +225,19 @@ async function auth(provider, options) {
+@@ -226,6 +227,19 @@ async function auth(provider, options) {
          throw error;
      }
  }
@@ -50,7 +50,7 @@ index 09eadc8264c9fcb249f5b95792f381b08b7afe90..b9078031d085edd5928dd3447bdf7b58
  async function authInternal(provider, { serverUrl, authorizationCode, scope, resourceMetadataUrl, fetchFn }) {
      // Check if the provider has cached discovery state to skip discovery
      const cachedState = await provider.discoveryState?.();
-@@ -289,12 +303,12 @@ async function authInternal(provider, { serverUrl, authorizationCode, scope, res
+@@ -291,12 +305,12 @@ async function authInternal(provider, { serverUrl, authorizationCode, scope, res
      // provider's own `validateResourceURL` is used as returned.
      const selectedResource = await selectResourceURL(serverUrl, provider, resourceMetadata);
      const resource = selectedResource && resourceMetadata && !provider.validateResourceURL ? resourceMetadata.resource : selectedResource;
@@ -69,7 +69,7 @@ index 09eadc8264c9fcb249f5b95792f381b08b7afe90..b9078031d085edd5928dd3447bdf7b58
      // Handle client registration if needed. Client information stamped for a different
      // authorization server reads back as `undefined`, so the flow re-registers exactly as if
      // nothing were stored.
-@@ -831,7 +845,7 @@ async function startAuthorization(authorizationServerUrl, { metadata, clientInfo
+@@ -833,7 +847,7 @@ async function startAuthorization(authorizationServerUrl, { metadata, clientInfo
      if (scope) {
          authorizationUrl.searchParams.set('scope', scope);
      }
@@ -206,10 +206,10 @@ index 6581be2e5d67a12698cc782d810a6cbd0dc4f046..1518666501e3e59bbf071c97df9435b4
      }
      /**
 diff --git a/dist/cjs/client/streamableHttp.js b/dist/cjs/client/streamableHttp.js
-index 1b54595cc05a301e0332da7be9f98e46dd7e365b..526195e728df576ce72b00aef4e670d318fd1226 100644
+index a8f4e59eb54c85c6007c258afe1f5757adaa709a..f23234539e6c158fbceed4c11797c192e8bb130f 100644
 --- a/dist/cjs/client/streamableHttp.js
 +++ b/dist/cjs/client/streamableHttp.js
-@@ -205,7 +205,7 @@ class StreamableHTTPClientTransport {
+@@ -218,7 +218,7 @@ class StreamableHTTPClientTransport {
                      if (!event.event || event.event === 'message') {
                          try {
                              const message = types_js_1.JSONRPCMessageSchema.parse(JSON.parse(event.data));
@@ -218,7 +218,7 @@ index 1b54595cc05a301e0332da7be9f98e46dd7e365b..526195e728df576ce72b00aef4e670d3
                                  // Mark that we received a response - no need to reconnect for this request
                                  receivedResponse = true;
                                  if (replayMessageId !== undefined) {
-@@ -291,7 +291,38 @@ class StreamableHTTPClientTransport {
+@@ -304,7 +304,38 @@ class StreamableHTTPClientTransport {
          this.onclose?.();
      }
      async send(message, options) {
@@ -257,7 +257,7 @@ index 1b54595cc05a301e0332da7be9f98e46dd7e365b..526195e728df576ce72b00aef4e670d3
              const { resumptionToken, onresumptiontoken } = options || {};
              if (resumptionToken) {
                  // If we have at last event ID, we need to reconnect the SSE stream
-@@ -299,6 +330,7 @@ class StreamableHTTPClientTransport {
+@@ -312,6 +343,7 @@ class StreamableHTTPClientTransport {
                  return;
              }
              const headers = await this._commonHeaders();
@@ -265,8 +265,8 @@ index 1b54595cc05a301e0332da7be9f98e46dd7e365b..526195e728df576ce72b00aef4e670d3
              headers.set('content-type', 'application/json');
              headers.set('accept', 'application/json, text/event-stream');
              const init = {
-@@ -311,11 +343,20 @@ class StreamableHTTPClientTransport {
-             const response = await (this._fetch ?? fetch)(this._url, init);
+@@ -324,11 +356,20 @@ class StreamableHTTPClientTransport {
+             const response = await (0, transport_js_1.fetchWithinOrigin)(this._fetch ?? fetch)(this._url, init);
              // Handle session ID received during initialization
              const sessionId = response.headers.get('mcp-session-id');
 -            if (sessionId) {
@@ -287,7 +287,7 @@ index 1b54595cc05a301e0332da7be9f98e46dd7e365b..526195e728df576ce72b00aef4e670d3
                  if (response.status === 401 && this._authProvider) {
                      // Prevent infinite recursion when server returns 401 after successful auth
                      if (this._hasCompletedAuthFlow) {
-@@ -336,7 +377,7 @@ class StreamableHTTPClientTransport {
+@@ -349,7 +390,7 @@ class StreamableHTTPClientTransport {
                      // Mark that we completed auth flow
                      this._hasCompletedAuthFlow = true;
                      // Purposely _not_ awaited, so we don't call onerror twice
@@ -296,7 +296,7 @@ index 1b54595cc05a301e0332da7be9f98e46dd7e365b..526195e728df576ce72b00aef4e670d3
                  }
                  if (response.status === 403 && this._authProvider) {
                      const { resourceMetadataUrl, scope, error } = (0, auth_js_1.extractWWWAuthenticateParams)(response);
-@@ -363,7 +404,7 @@ class StreamableHTTPClientTransport {
+@@ -376,7 +417,7 @@ class StreamableHTTPClientTransport {
                          if (result !== 'AUTHORIZED') {
                              throw new auth_js_1.UnauthorizedError();
                          }
@@ -304,12 +304,12 @@ index 1b54595cc05a301e0332da7be9f98e46dd7e365b..526195e728df576ce72b00aef4e670d3
 +                        return this._send(message, options, isSessionRetry);
                      }
                  }
-                 throw new StreamableHTTPError(response.status, `Error POSTing to endpoint: ${text}`);
+                 throw new StreamableHTTPError(response.status, `Error POSTing to endpoint: ${this._unfollowedRedirect(response, this._url) ?? text}`);
 diff --git a/dist/cjs/shared/protocol.js b/dist/cjs/shared/protocol.js
-index 3617e787f0ba70447c99501aee7aa67584d89758..4ee4d158391558fdc1f977f5134b7cacfc45e8c3 100644
+index 2eaacb785f5d029c409be1383d11ac3612d61289..b3eeb28b0aed4b95a1e1a06a7835238823e7a08d 100644
 --- a/dist/cjs/shared/protocol.js
 +++ b/dist/cjs/shared/protocol.js
-@@ -744,7 +744,12 @@ class Protocol {
+@@ -772,7 +772,12 @@ class Protocol {
              }
              else {
                  // No related task - send through transport normally
@@ -344,10 +344,10 @@ index 520d8b6d9b4111aab52e252f4c929f0a6a9ad302..d04ba5f5691bf8e5abbcfceb65d4834a
   * Orchestrates the full auth flow with a server.
   *
 diff --git a/dist/esm/client/auth.js b/dist/esm/client/auth.js
-index c2aba1357cc03838102d49a124d54c07cab53ddc..4f3009628b70e013d090d193361264b42fc4a8c5 100644
+index 9b184c011ffa092078a7ed951be21a2bd99d5f89..94d5cef85e47278656a6dbbad86eb796cd97b1c8 100644
 --- a/dist/esm/client/auth.js
 +++ b/dist/esm/client/auth.js
-@@ -199,6 +199,19 @@ export async function auth(provider, options) {
+@@ -201,6 +201,19 @@ export async function auth(provider, options) {
          throw error;
      }
  }
@@ -367,7 +367,7 @@ index c2aba1357cc03838102d49a124d54c07cab53ddc..4f3009628b70e013d090d193361264b4
  async function authInternal(provider, { serverUrl, authorizationCode, scope, resourceMetadataUrl, fetchFn }) {
      // Check if the provider has cached discovery state to skip discovery
      const cachedState = await provider.discoveryState?.();
-@@ -264,12 +277,12 @@ async function authInternal(provider, { serverUrl, authorizationCode, scope, res
+@@ -266,12 +279,12 @@ async function authInternal(provider, { serverUrl, authorizationCode, scope, res
      // provider's own `validateResourceURL` is used as returned.
      const selectedResource = await selectResourceURL(serverUrl, provider, resourceMetadata);
      const resource = selectedResource && resourceMetadata && !provider.validateResourceURL ? resourceMetadata.resource : selectedResource;
@@ -386,7 +386,7 @@ index c2aba1357cc03838102d49a124d54c07cab53ddc..4f3009628b70e013d090d193361264b4
      // Handle client registration if needed. Client information stamped for a different
      // authorization server reads back as `undefined`, so the flow re-registers exactly as if
      // nothing were stored.
-@@ -806,7 +819,7 @@ export async function startAuthorization(authorizationServerUrl, { metadata, cli
+@@ -808,7 +821,7 @@ export async function startAuthorization(authorizationServerUrl, { metadata, cli
      if (scope) {
          authorizationUrl.searchParams.set('scope', scope);
      }
@@ -523,18 +523,18 @@ index 30795e5ecf60925d980c844a54c0a763b4f0dcf3..bb6253494840470bac1d332487c938b9
      }
      /**
 diff --git a/dist/esm/client/streamableHttp.js b/dist/esm/client/streamableHttp.js
-index 49c9662c58bd2079b4be982125e2b11a45723ba9..51920497dc8bdaeb54ec4b7b69b6f8167f7a88a8 100644
+index 3409dfcbd5fb63cf95183ad59a82bf3ed36710ff..b9e4f5216dc20e6704baa642bd90cb5073664d1a 100644
 --- a/dist/esm/client/streamableHttp.js
 +++ b/dist/esm/client/streamableHttp.js
 @@ -1,6 +1,6 @@
  import { mediaTypeEssence } from '../shared/mediaType.js';
- import { createFetchWithInit, normalizeHeaders } from '../shared/transport.js';
+ import { createFetchWithInit, fetchLeavingRedirects, fetchWithinOrigin, followWithinOrigin, normalizeHeaders, unfollowedRedirect } from '../shared/transport.js';
 -import { isInitializedNotification, isJSONRPCRequest, isJSONRPCResultResponse, JSONRPCMessageSchema } from '../types.js';
 +import { isInitializedNotification, isInitializeRequest, isJSONRPCErrorResponse, isJSONRPCRequest, isJSONRPCResultResponse, JSONRPCMessageSchema } from '../types.js';
  import { auth, extractWWWAuthenticateParams, UnauthorizedError } from './auth.js';
  import { EventSourceParserStream } from 'eventsource-parser/stream';
  // Default reconnection options for StreamableHTTP connections
-@@ -201,7 +201,7 @@ export class StreamableHTTPClientTransport {
+@@ -214,7 +214,7 @@ export class StreamableHTTPClientTransport {
                      if (!event.event || event.event === 'message') {
                          try {
                              const message = JSONRPCMessageSchema.parse(JSON.parse(event.data));
@@ -543,7 +543,7 @@ index 49c9662c58bd2079b4be982125e2b11a45723ba9..51920497dc8bdaeb54ec4b7b69b6f816
                                  // Mark that we received a response - no need to reconnect for this request
                                  receivedResponse = true;
                                  if (replayMessageId !== undefined) {
-@@ -287,7 +287,38 @@ export class StreamableHTTPClientTransport {
+@@ -300,7 +300,38 @@ export class StreamableHTTPClientTransport {
          this.onclose?.();
      }
      async send(message, options) {
@@ -582,7 +582,7 @@ index 49c9662c58bd2079b4be982125e2b11a45723ba9..51920497dc8bdaeb54ec4b7b69b6f816
              const { resumptionToken, onresumptiontoken } = options || {};
              if (resumptionToken) {
                  // If we have at last event ID, we need to reconnect the SSE stream
-@@ -295,6 +326,7 @@ export class StreamableHTTPClientTransport {
+@@ -308,6 +339,7 @@ export class StreamableHTTPClientTransport {
                  return;
              }
              const headers = await this._commonHeaders();
@@ -590,8 +590,8 @@ index 49c9662c58bd2079b4be982125e2b11a45723ba9..51920497dc8bdaeb54ec4b7b69b6f816
              headers.set('content-type', 'application/json');
              headers.set('accept', 'application/json, text/event-stream');
              const init = {
-@@ -307,11 +339,20 @@ export class StreamableHTTPClientTransport {
-             const response = await (this._fetch ?? fetch)(this._url, init);
+@@ -320,11 +352,20 @@ export class StreamableHTTPClientTransport {
+             const response = await fetchWithinOrigin(this._fetch ?? fetch)(this._url, init);
              // Handle session ID received during initialization
              const sessionId = response.headers.get('mcp-session-id');
 -            if (sessionId) {
@@ -612,7 +612,7 @@ index 49c9662c58bd2079b4be982125e2b11a45723ba9..51920497dc8bdaeb54ec4b7b69b6f816
                  if (response.status === 401 && this._authProvider) {
                      // Prevent infinite recursion when server returns 401 after successful auth
                      if (this._hasCompletedAuthFlow) {
-@@ -332,7 +373,7 @@ export class StreamableHTTPClientTransport {
+@@ -345,7 +386,7 @@ export class StreamableHTTPClientTransport {
                      // Mark that we completed auth flow
                      this._hasCompletedAuthFlow = true;
                      // Purposely _not_ awaited, so we don't call onerror twice
@@ -621,7 +621,7 @@ index 49c9662c58bd2079b4be982125e2b11a45723ba9..51920497dc8bdaeb54ec4b7b69b6f816
                  }
                  if (response.status === 403 && this._authProvider) {
                      const { resourceMetadataUrl, scope, error } = extractWWWAuthenticateParams(response);
-@@ -359,7 +400,7 @@ export class StreamableHTTPClientTransport {
+@@ -372,7 +413,7 @@ export class StreamableHTTPClientTransport {
                          if (result !== 'AUTHORIZED') {
                              throw new UnauthorizedError();
                          }
@@ -629,12 +629,12 @@ index 49c9662c58bd2079b4be982125e2b11a45723ba9..51920497dc8bdaeb54ec4b7b69b6f816
 +                        return this._send(message, options, isSessionRetry);
                      }
                  }
-                 throw new StreamableHTTPError(response.status, `Error POSTing to endpoint: ${text}`);
+                 throw new StreamableHTTPError(response.status, `Error POSTing to endpoint: ${this._unfollowedRedirect(response, this._url) ?? text}`);
 diff --git a/dist/esm/shared/protocol.js b/dist/esm/shared/protocol.js
-index bfa2b7120a0f50c569364ea5264e6f811076f44f..dec477d16a0fd796854542c1144279a6e86567f2 100644
+index 58100ad810fbca912148a5a3880242e7ccc59861..e36ff0f3981411a49cd2ed35c3af9772382c1242 100644
 --- a/dist/esm/shared/protocol.js
 +++ b/dist/esm/shared/protocol.js
-@@ -740,7 +740,12 @@ export class Protocol {
+@@ -768,7 +768,12 @@ export class Protocol {
              }
              else {
                  // No related task - send through transport normally
