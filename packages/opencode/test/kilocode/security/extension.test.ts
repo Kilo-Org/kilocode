@@ -262,6 +262,22 @@ describe("workspace Bun config", () => {
       await fs.rm(bunfig, { force: true })
     }
   })
+
+  test("the workspace .env files do not reach the host's environment", async () => {
+    // Bun picks .env.local or .env.<NODE_ENV> (.env.test under bun test). Neither is in DENY_NAMES,
+    // so this holds on every platform, confined or not.
+    const files = [...new Set([".env.local", `.env.${process.env.NODE_ENV || "development"}`])].map((name) =>
+      path.join(ws, name),
+    )
+    for (const file of files) await fs.writeFile(file, `KILO_DOTENV_PROBE=from-dotenv\n`)
+    try {
+      const handle = await startWith(TOOL(`return process.env.KILO_DOTENV_PROBE ?? "none"`), [], "dotenv-probe.ts")
+      const result = await handle.invoke(handle.tools[0]!.id, {})
+      expect(result.output).toBe("none")
+    } finally {
+      for (const file of files) await fs.rm(file, { force: true })
+    }
+  })
 })
 
 describe("the read boundary", () => {
