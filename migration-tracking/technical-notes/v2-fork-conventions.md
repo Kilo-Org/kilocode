@@ -82,7 +82,7 @@ The root `AGENTS.md` is upstream's file. Kilo adds one marked block at its top (
 
 ## Plugin-first extension order
 
-Use the first rung that works. Prefer rungs 1–2 even when the donor has a working non-plugin solution. Code moves one way, from upstream files into Kilo-owned files, never back: a Kilo-owned mirror of an upstream file is rung 2 and is never replaced by a seam in the file it mirrors, and a patch never changes an upstream default (upstream's own tests pass unchanged without the host). Source of truth: `../plans/v2-host-strategy.md` section 5. A PR that uses rung 3 or 4 says why rungs 1 and 2 do not work, and rungs 3 and 4 carry a `kilocode_change` marker. Branding and product strings are handled by the rename script (rung 5), never by hand edits. The `v2-migration` skill carries the same order for agents; the plan adds the per-unit `Mechanism` column (`../plans/kilo-v2-migration-plan.md` §B0). The procedure for one change is the skill `.kilo/skills/v2-feature-placement/SKILL.md`; the reasoning and the guarantees are in `../plans/v2-host-strategy.md`.
+Use the first rung that works. Prefer rungs 1–2 even when the donor has a working non-plugin solution. Code moves one way, from upstream files into Kilo-owned files, never back: a Kilo-owned mirror of an upstream file is rung 2 and is never replaced by a seam in the file it mirrors, and a patch never changes an upstream default (upstream's own tests pass unchanged without the host). Source of truth: `../plans/v2-host-strategy.md` section 5. A PR that uses rung 3 or 4 says why rungs 1 and 2 do not work, and rungs 3 and 4 carry a `kilocode_change` marker. Branding and product strings use automated renaming in Kilo-owned code (rung 5), never hand edits in upstream files. PR #15417 supplies the interim source/build adapter described below. The `v2-migration` skill carries the same order for agents; the plan adds the per-unit `Mechanism` column (`../plans/kilo-v2-migration-plan.md` §B0). The procedure for one change is the skill `.kilo/skills/v2-feature-placement/SKILL.md`; the reasoning and the guarantees are in `../plans/v2-host-strategy.md`.
 
 Vocabulary: a **plugin hook** is an extension point upstream exposes through `@opencode/plugin` (rung 1, no marker). A **seam** is a generic knob or dispatch point Kilo adds to an upstream file so a plugin hook becomes possible (rung 3, one to three marked lines that carry no Kilo value). A **patch** is a Kilo-specific line inside an upstream file (rung 4, one line thick, behavior in a Kilo module). Every marked line carries its feature: `kilocode_change(<feature>)`, or `kilocode_change(<feature>:<id>)` when it replaces a progress-map cell; a Kilo-owned file that replaces a v1 patch cell carries `kilo_port(<feature>:<id>)` instead. Logic packages (`packages/kilo-*-core`) import nothing from `@opencode/*`; adapters import core internals only when no public surface has it, and name each one in the PR.
 
@@ -92,7 +92,15 @@ Vocabulary: a **plugin hook** is an extension point upstream exposes through `@o
 | 2 | Kilo host composition (unit U-E0-01) | Kilo's own entry point, `packages/kilo-cli`. Register Kilo plugins through `SdkPlugins.register` (`packages/core/src/plugin/sdk.ts`): list them in `packages/kilo-plugin/src/index.ts`, the host registers them. Replace Effect services with layers, for example `Global.layerWith` for app directories. Translate `KILO_*` environment variables before boot | None |
 | 3 | Seam patch in a shared file | Small and generic: widen an API, add a hook, export a value, with upstream's value as the default. Prefer files that change rarely. No `kilocode/` path, `Kilo*` identifier or Kilo string literal in the marked lines; with one, it is rung 4 | `kilocode_change` |
 | 4 | Feature patch in a shared file | Last resort | `kilocode_change`, reason in the PR |
-| 5 | Branding and product strings | The rename script during each sync, never hand edits | None (script) |
+| 5 | Branding and product strings | Kilo-owned automated renaming; interim source/build adapter in #15417, mapping reviewed at every sync; never hand-edit upstream | None (Kilo-owned path) |
+
+### Branding and upstream drift
+
+The interim approach in #15417 keeps the replacement catalog and artwork in `packages/kilo-cli/src/branding/`. The host applies the same transformation during source loading and compilation, without editing upstream source or changing behavior without the host. Compiled binaries contain the branded output. This is rung 5 for renaming; loader/bootstrap wiring is rung 2 host composition, not a public plugin hook.
+
+The catalog still depends on upstream paths and wording. At every sync, including clean merges, inspect moved/deleted files and changed anchors, update the mapping, and rerun branding tests and source/compiled checks. Known anchor changes and missing mapped files fail tests; newly introduced text outside the catalog still needs manual review. Preserve internal imports, provider/protocol IDs and schema URLs rather than applying a blanket replacement.
+
+A dedicated sync-time branding audit/report is a proposed follow-up, not implemented automation. The disabled legacy conflict-only rename passes are not a substitute. Generated copies or a stable branding API require a separate approved design. The agent procedure is in `.kilo/skills/v2-migration/SKILL.md`, section "Branding and upstream drift", and `.kilo/skills/v2-feature-placement/SKILL.md`.
 
 ### Areas expected to need rung 3 or 4
 
@@ -103,7 +111,7 @@ Measured 2026-10-13 (plan delta, #15021). Plugin first reduces shared patches bu
 - **Cost tracking:** the plugin session API gives `tokens` but no cost. Gateway cost per request probably needs a provider-level seam (not verified in detail).
 - **Session format and remote ownership (E4):** probably core seams.
 - **Identity paths:** 11 static `Global.Path` references in 7 files bypass `Global.layerWith`.
-- **Branding:** about 4,100 `"opencode"` literals in about 790 files. Rung 5 (rename script), never a plugin.
+- **Branding:** about 4,100 `"opencode"` literals in about 790 files. Rung 5 (Kilo-owned automated renaming, interim adapter in #15417), not a public plugin hook. Review new visible text at each sync; do not rename every literal.
 
 ## Narrow shared seams
 
