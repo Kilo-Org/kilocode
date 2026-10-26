@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 334" width="1000" height="334">
 <style>rect{stroke:#0d1117;stroke-width:.5}.d{fill:#2ea043}.o{fill:#6e7681}.x{fill:#d29922}.b{fill:none;stroke-width:2}text{font-family:sans-serif;fill:#fff;stroke:#0d1117;stroke-width:3;paint-order:stroke}</style>
 <rect x="0" y="0" width="1000" height="334" fill="#0d1117" stroke="none"/>
-<text x="4.00" y="21.00" font-size="16">Features: 1.8% (105/5677)</text>
+<text x="4.00" y="21.00" font-size="16">Features: 1.9% (108/5677)</text>
 <g><title>vscode: 0/2057 (0%)</title>
 <rect class="o" x="1.00" y="31.00" width="14.74" height="15.44"/>
 <rect class="o" x="15.74" y="31.00" width="14.74" height="15.44"/>
@@ -925,9 +925,9 @@
 <rect class="b" x="440.39" y="30.00" width="54.61" height="66.44"/>
 <text x="445.39" y="46.00" font-size="12">indexi</text>
 </g>
-<g><title>cli: 0/148 (0%)</title>
-<rect class="o" x="287.08" y="97.44" width="4.55" height="4.81"/>
-<rect class="o" x="291.62" y="97.44" width="4.55" height="4.81"/>
+<g><title>cli: 2/148 (1.4%)</title>
+<rect class="d" x="287.08" y="97.44" width="4.55" height="4.81"/>
+<rect class="d" x="291.62" y="97.44" width="4.55" height="4.81"/>
 <rect class="o" x="296.17" y="97.44" width="4.55" height="4.81"/>
 <rect class="o" x="300.71" y="97.44" width="4.55" height="4.81"/>
 <rect class="o" x="305.26" y="97.44" width="4.55" height="4.81"/>
@@ -1949,12 +1949,12 @@
 <rect class="b" x="325.68" y="276.50" width="38.53" height="33.50"/>
 <text x="330.68" y="292.50" font-size="12">sess</text>
 </g>
-<g><title>tui: 4/45 (8.9%)</title>
+<g><title>tui: 5/45 (11.1%)</title>
 <rect class="d" x="365.21" y="152.35" width="4.16" height="4.85"/>
 <rect class="d" x="369.37" y="152.35" width="4.16" height="4.85"/>
 <rect class="d" x="373.52" y="152.35" width="4.16" height="4.85"/>
 <rect class="d" x="377.68" y="152.35" width="4.16" height="4.85"/>
-<rect class="o" x="381.83" y="152.35" width="4.16" height="4.85"/>
+<rect class="d" x="381.83" y="152.35" width="4.16" height="4.85"/>
 <rect class="o" x="385.99" y="152.35" width="4.16" height="4.85"/>
 <rect class="o" x="390.14" y="152.35" width="4.16" height="4.85"/>
 <rect class="o" x="394.30" y="152.35" width="4.16" height="4.85"/>
@@ -6770,5 +6770,5 @@
 <rect class="d" x="4" y="316" width="12" height="12"/><text x="20.00" y="327.00" font-size="12">done</text>
 <rect class="o" x="60" y="316" width="12" height="12"/><text x="76.00" y="327.00" font-size="12">open</text>
 <rect class="x" x="112" y="316" width="12" height="12"/><text x="128.00" y="327.00" font-size="12">dropped</text>
-<text x="190.00" y="327.00" font-size="12">Landed by rung: 42 plugin, 3 host, 0 seam, 5 patch</text>
+<text x="190.00" y="327.00" font-size="12">Landed by rung: 42 plugin, 3 host, 0 seam, 6 patch</text>
 </svg>
