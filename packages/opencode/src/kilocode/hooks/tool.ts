@@ -227,18 +227,33 @@ export const post = Effect.fn("KiloHookTool.post")(function* (
   }
 })
 
+/** The shell tool's trailing `<shell_metadata>` block, which says why it killed the command ("" if none). */
+function report(output: string) {
+  const at = output.lastIndexOf("<shell_metadata>")
+  return at < 0 ? "" : output.slice(at)
+}
+
+/**
+ * Whether the user aborted a bash call. The shell tool reports `exit: null` both for an abort and
+ * for its own timeout, and says which in its output. The signal is no help: it can abort after the
+ * command ended, and a call that exited has completed whatever happens to the signal later.
+ */
+function cancelled(call: KiloHooks.Call, metadata: Record<string, unknown>, output: string) {
+  if (call.tool !== "bash" || metadata.exit !== null) return false
+  return report(output).split("\n").includes("User aborted the command")
+}
+
 /**
  * Why a bash call failed, when it did: a non-zero exit code, or no exit code at all. The shell tool
  * reports `exit: null` when it killed the command at its timeout (a signal from outside is a
  * number, 128 + signum) and says so in its output. A cancelled call is not a failure and never
- * reaches here (see `after`).
+ * reaches here (see `cancelled`).
  */
 function ended(call: KiloHooks.Call, metadata: Record<string, unknown>, output: string) {
   if (call.tool !== "bash") return undefined
   if (typeof metadata.exit === "number" && metadata.exit !== 0) return `Exit code ${metadata.exit}\n${output}`
   if (metadata.exit !== null) return undefined
-  const at = output.lastIndexOf("<shell_metadata>")
-  const limit = at < 0 ? undefined : /timeout (\d+) ms/.exec(output.slice(at))?.[1]
+  const limit = /timeout (\d+) ms/.exec(report(output))?.[1]
   return `Command timed out${limit ? ` after ${limit} ms` : ""}\n${output}`
 }
 
@@ -247,7 +262,8 @@ function ended(call: KiloHooks.Call, metadata: Record<string, unknown>, output: 
  * attachments; the UI may still show the streamed original from metadata), then PreToolUse context
  * and PostToolUse feedback are appended to it. A bash command that exited non-zero, or that the
  * shell tool killed at its timeout, runs PostToolUseFailure instead, as Claude Code counts it as a
- * failed call. A cancelled bash call runs neither, like any other cancelled call (see `failure`).
+ * failed call. A bash call the user aborted runs neither, like any other cancelled call (see
+ * `failure`): the shell tool says so in its output, whatever the signal's state is by now.
  */
 export const after = Effect.fn("KiloHookTool.after")(function* (
   hooks: KiloHooks.Hooks,
@@ -256,7 +272,7 @@ export const after = Effect.fn("KiloHookTool.after")(function* (
 ) {
   const metadata = isRecord(result.metadata) ? result.metadata : {}
   if (call.tool === "bash") yield* moved(hooks, call)
-  if (call.tool === "bash" && metadata.exit === null && call.abort?.aborted) {
+  if (cancelled(call, metadata, result.output)) {
     take(call.callID)
     elapsed(call.callID)
     return

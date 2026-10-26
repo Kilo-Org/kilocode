@@ -19,7 +19,7 @@ import { SessionPrompt } from "@/session/prompt"
 import type { SessionID } from "@/session/schema"
 import { Session } from "@/session/session"
 import { provideInstanceEffect, tmpdirScoped } from "../fixture/fixture"
-import { testEffect } from "../lib/effect"
+import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
 import {
   allow,
   alive,
@@ -555,6 +555,59 @@ describe("FileChanged", () => {
       fs.writeFileSync(target, "export A=1\n")
       yield* until(() => lines(file).length === 2)
       expect(lines(file)[1]).toMatchObject({ file_path: target, event: "add" })
+    }),
+  )
+
+  it.instance("a rebuild queued ahead of a run does not make it forget the file it saw", () =>
+    Effect.gen(function* () {
+      const { directory } = yield* boot()
+      const file = marker()
+      const target = path.join(directory, ".envrc")
+      const probe = path.join(directory, ".probe")
+      fs.writeFileSync(target, "export A=1\n")
+      fs.writeFileSync(probe, "1\n")
+      yield* hooks({ FileChanged: [{ matcher: ".envrc|.probe", hooks: [record(file)] }] })
+      yield* subscribe()
+      // The probe's hook only runs once the watchers are up, and the rebuild that raised them has
+      // read which files exist by then.
+      yield* pollWithTimeout(
+        Effect.gen(function* () {
+          if (lines(file).length) return true as const
+          fs.appendFileSync(probe, "2\n")
+          yield* Effect.sleep("250 millis")
+          return lines(file).length ? (true as const) : undefined
+        }),
+        "the watchers never came up",
+      )
+      // Every slot of the shared bound is taken, and each holder says so once it has its slot.
+      const hold = () =>
+        Effect.gen(function* () {
+          const started = yield* Deferred.make<void>()
+          const release = yield* Deferred.make<void>()
+          yield* KiloHookLifecycle.detach(
+            Deferred.succeed(started, undefined).pipe(Effect.andThen(Deferred.await(release))),
+          )
+          return { started, release }
+        })
+      const first = yield* hold()
+      const rest = yield* Effect.forEach(Array.from({ length: 7 }), hold)
+      const all = [first, ...rest]
+      yield* Effect.addFinalizer(() =>
+        Effect.forEach(all, (item) => Deferred.succeed(item.release, undefined), { discard: true }),
+      )
+      yield* awaitWithTimeout(
+        Effect.forEach(all, (item) => Deferred.await(item.started), { discard: true }),
+        "the shared bound never filled",
+      )
+      // The rebuild queues first; the file then goes, and its debounced run queues behind the rebuild.
+      KiloHookLifecycle.watch(directory, [])
+      fs.rmSync(target)
+      yield* settle(400)
+      // One slot frees: the rebuild takes it and drops the file from the ones that exist before the
+      // run gets its slot. The run still reports it, as it was known when the change was seen.
+      yield* Deferred.succeed(first.release, undefined)
+      yield* until(() => lines(file).length === 2)
+      expect(lines(file)[1]).toMatchObject({ file_path: target, event: "unlink" })
     }),
   )
 

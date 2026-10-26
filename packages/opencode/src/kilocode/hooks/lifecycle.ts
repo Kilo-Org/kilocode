@@ -292,12 +292,12 @@ export const subscribe = Effect.fn("KiloHookLifecycle.subscribe")(function* (inp
       })
     })
 
-  const touched = (file: string) =>
+  const touched = (file: string, known: boolean) =>
     Effect.gen(function* () {
-      // Read when the run starts, not when the debounce fired: it may have waited for a slot of the
-      // shared bound, and the file can have gone (or come back) meanwhile.
+      // `exists` is read when the run starts: it may have waited for a slot of the shared bound, and
+      // the file can have gone (or come back) meanwhile. `known` was read when the debounce fired: a
+      // rebuild queued ahead of this run would otherwise erase it first.
       const exists = fs.existsSync(file)
-      const known = files.present.has(file)
       if (exists) files.present.add(file)
       if (!exists) files.present.delete(file)
       if (!exists && !known) return
@@ -347,7 +347,7 @@ export const subscribe = Effect.fn("KiloHookLifecycle.subscribe")(function* (inp
       // Held before the run even resolves its hooks (or waits for a slot of the shared bound), so a
       // change that lands meanwhile is part of this run and does not start a second one.
       guards.set(file, Number.POSITIVE_INFINITY)
-      spawn(touched(file))
+      spawn(touched(file, files.present.has(file)))
     }, DEBOUNCE)
     timer.unref?.()
     debounce.set(file, timer)

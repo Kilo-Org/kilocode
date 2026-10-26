@@ -846,6 +846,31 @@ it.live("runs PostToolUseFailure instead of PostToolUse when a bash command is k
   }),
 )
 
+it.live("runs PostToolUseFailure for a bash command killed at its timeout even when its signal aborts afterwards", () =>
+  Effect.gen(function* () {
+    const dir = yield* scratch()
+    const failure = path.join(dir, "failure")
+    const success = path.join(dir, "success")
+    // Background hooks: an aborted signal kills the ones a call waits for.
+    yield* using({
+      PostToolUseFailure: [{ matcher: "Bash", hooks: [{ ...record(failure), async: true }] }],
+      PostToolUse: [{ matcher: "Bash", hooks: [{ ...record(success), async: true }] }],
+    })
+    // The shell can still drain its output after the timeout, and the user cancels in that window:
+    // the output says the command timed out, so the aborted signal changes nothing.
+    metadata.bash = { exit: null }
+    outputs.bash =
+      "partial output\n\n<shell_metadata>\nshell tool terminated command after exceeding timeout 2000 ms.\n</shell_metadata>"
+    const abort = new AbortController()
+    abort.abort()
+    yield* invoke(yield* resolve(), "bash", { command: "sleep 30" }, abort.signal)
+    const [input] = yield* settle(failure, 1)
+    expect(String(input?.error)).toStartWith("Command timed out after 2000 ms\npartial output")
+    expect(input?.is_interrupt).toBe(false)
+    expect(yield* Effect.promise(() => lines(success))).toEqual([])
+  }),
+)
+
 it.live("runs no PostToolUse or PostToolUseFailure hook, async ones included, for a cancelled bash call", () =>
   Effect.gen(function* () {
     const dir = yield* scratch()
@@ -865,15 +890,19 @@ it.live("runs no PostToolUse or PostToolUseFailure hook, async ones included, fo
     delete outputs.bash
     yield* invoke(tools, "bash", { command: "true" })
     expect(yield* settle(success, 1)).toHaveLength(1)
-    // What the shell tool returns when the call's signal aborted: no exit code, nothing to retry.
+    // What the shell tool returns for an abort: no exit code, and its own note in the output.
     const abort = new AbortController()
     abort.abort()
     metadata.bash = { exit: null }
+    outputs.bash = "partial output\n\n<shell_metadata>\nUser aborted the command\n</shell_metadata>"
     const result = yield* invoke(tools, "bash", { command: "sleep 30" }, abort.signal)
-    expect(result.output).toBe("bash done")
-    yield* Effect.sleep("1 second")
+    expect(result.output).toBe(outputs.bash)
+    // A call that exited keeps its hooks although its signal has aborted since.
+    metadata.bash = { exit: 0 }
+    delete outputs.bash
+    yield* invoke(tools, "bash", { command: "true" }, abort.signal)
+    expect(yield* settle(success, 2)).toHaveLength(2)
     expect(yield* Effect.promise(() => lines(failure))).toHaveLength(1)
-    expect(yield* Effect.promise(() => lines(success))).toHaveLength(1)
   }),
 )
 
