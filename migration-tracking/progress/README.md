@@ -8,20 +8,20 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**150 / 9828 cells done (1.5%)**, 26 dropped. `░░░░░░░░░░░░░░░░`
+**154 / 9828 cells done (1.6%)**, 26 dropped. `░░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
 | module | 53 | 3547 | 1.5% |
 | api | 2 | 39 | 5.1% |
-| patch | 65 | 3444 | 1.9% |
+| patch | 69 | 3444 | 2% |
 | test | 30 | 2798 | 1.1% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
-Landed by rung, for patch cells closed by a done-proof: 42 plugin, 3 host, 0 seam, 5 patch.
+Landed by rung, for patch cells closed by a done-proof: 42 plugin, 4 host, 3 seam, 5 patch.
 
-Ratchets: 25 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 50 shared patches by rung: 30 seam, 20 patch (`script/upstream/shared-patches.json`).
+Ratchets: 26 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 53 shared patches by rung: 33 seam, 20 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -37,7 +37,8 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-21 | 90 | 9829 | 0.9% |
 | 2026-10-22 | 93 | 9829 | 0.9% |
 | 2026-10-23 | 150 | 9828 | 1.5% |
-| now | 150 | 9828 | 1.5% |
+| 2026-10-26 | 150 | 9828 | 1.5% |
+| now | 154 | 9828 | 1.6% |
 
 ## Features
 
@@ -95,7 +96,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | model-routing | 0/1 |  | 0/1 | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | notebook | 0/2 | 0/3 | 0/2 | 0/3 | 0/10 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | npm-publish |  |  | 0/2 | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| oauth | 1/1 |  | 0/6 | 0/1 | 1/8 | 12.5% | `██░░░░░░░░░░░░░░` |  |
+| oauth | 1/1 |  | 4/6 | 0/1 | 5/8 | 62.5% | `██████████░░░░░░` | 1 host, 3 seam |
 | permission | 0/12 |  | 0/6 | 0/16 | 0/34 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | pii | 0/1 |  |  |  | 0/1 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | plan | 0/2 |  |  | 0/4 | 0/6 | 0% | `░░░░░░░░░░░░░░░░` |  |
