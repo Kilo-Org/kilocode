@@ -1527,10 +1527,16 @@ test.skipIf(process.platform === "win32").each(["manual", "select"] as const)(
       setup.mockInput.pressKey("x", { ctrl: true })
       setup.mockInput.pressKey("t")
       await setup.waitForFrame((frame) => frame.includes("alpha beta gamma"))
+      // kilocode_change start - the pane renders before focus moves to it
+      await setup.waitFor(() => setup.renderer.currentFocusedRenderable instanceof EmbeddedTerminalRenderable) // kilocode_change
+      // kilocode_change end
       expect(setup.renderer.currentFocusedRenderable).toBeInstanceOf(EmbeddedTerminalRenderable)
       setup.mockInput.pressKey("x", { ctrl: true })
       setup.mockInput.pressArrow("down")
       await setup.waitForFrame((frame) => frame.includes("Subagents") && frame.includes("Terminals"))
+      // kilocode_change start - focus leaves the pane after the list renders
+      await setup.waitFor(() => !(setup.renderer.currentFocusedRenderable instanceof EmbeddedTerminalRenderable)) // kilocode_change
+      // kilocode_change end
       expect(setup.renderer.currentFocusedRenderable).not.toBeInstanceOf(EmbeddedTerminalRenderable)
 
       setup.renderer.destroy()

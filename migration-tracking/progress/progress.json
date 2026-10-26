@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 150,
+    "done": 153,
     "total": 9828,
-    "percent": 1.5,
+    "percent": 1.6,
     "dropped": 26,
     "kinds": [
       {
         "kind": "module",
-        "done": 53,
+        "done": 55,
         "total": 3547
       },
       {
@@ -21,7 +21,7 @@
       },
       {
         "kind": "patch",
-        "done": 65,
+        "done": 66,
         "total": 3444
       },
       {
@@ -34,12 +34,12 @@
       "plugin": 42,
       "host": 3,
       "seam": 0,
-      "patch": 5
+      "patch": 6
     },
     "coreImports": 25,
     "sharedPatches": {
       "seam": 30,
-      "patch": 20
+      "patch": 21
     }
   },
   "notCounted": {
@@ -376,12 +376,12 @@
     },
     {
       "feature": "cli",
-      "done": 0,
+      "done": 2,
       "total": 148,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 1,
           "total": 72
         },
         "api": {
@@ -389,13 +389,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 1,
           "total": 25
         },
         "test": {
           "done": 0,
           "total": 51
         }
+      },
+      "landed": {
+        "plugin": 0,
+        "host": 0,
+        "seam": 0,
+        "patch": 1
       }
     },
     {
@@ -2303,12 +2309,12 @@
     },
     {
       "feature": "tui",
-      "done": 4,
+      "done": 5,
       "total": 45,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 1,
+          "done": 2,
           "total": 15
         },
         "api": {
@@ -6132,6 +6138,7 @@
   ],
   "landed": {
     "patch:agent:2e5632e7bfc6": "plugin",
+    "patch:cli:66a6b3781917": "patch",
     "patch:components:06ac8868d98e": "patch",
     "patch:gateway:0278ba0eb6aa": "plugin",
     "patch:gateway:17e39e074eaf": "plugin",
@@ -6234,6 +6241,7 @@
     "module:packages/kilo-gateway/test/responses.test.ts",
     "module:packages/opencode/src/kilocode/agent/index.ts",
     "module:packages/opencode/src/kilocode/balance-refresh.ts",
+    "module:packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx",
     "module:packages/opencode/src/kilocode/components/dialog-kilo-notifications.tsx",
     "module:packages/opencode/src/kilocode/components/free-model-disclosure.ts",
     "module:packages/opencode/src/kilocode/components/kilo-news.tsx",
@@ -6241,6 +6249,7 @@
     "module:packages/opencode/src/kilocode/components/model-info-panel.tsx",
     "module:packages/opencode/src/kilocode/components/news.ts",
     "module:packages/opencode/src/kilocode/components/notification-banner.tsx",
+    "module:packages/opencode/src/kilocode/kilo-commands.tsx",
     "module:packages/opencode/src/kilocode/kilo-errors.ts",
     "module:packages/opencode/src/kilocode/plugins/home-news.tsx",
     "module:packages/opencode/src/kilocode/plugins/model-usage.ts",
@@ -6265,6 +6274,7 @@
     "module:packages/tui/src/kilocode/model-picker.ts",
     "module:packages/tui/test/kilocode/model-picker.test.ts",
     "patch:agent:2e5632e7bfc6",
+    "patch:cli:66a6b3781917",
     "patch:components:06ac8868d98e",
     "patch:gateway:00d34e8d5cd7",
     "patch:gateway:0278ba0eb6aa",

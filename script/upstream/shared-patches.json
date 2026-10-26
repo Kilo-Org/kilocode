@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 50,
-    "markedLines": 373,
+    "files": 51,
+    "markedLines": 393,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -114,7 +114,7 @@
     },
     "packages/tui/src/component/dialog-integration.tsx": {
       "rung": 4,
-      "seam": "Prompt for Personal Account vs Team (`chooseKiloAccount`) after a Kilo Gateway login completes, before closing or chaining the integration dialog. `TuiPlugin` has no post-integration-connect hook. The connect dialog also ranks and groups integrations with Kilo's v1 provider priority (`KILO_INTEGRATION_PRIORITY` in tui/src/kilocode/gateway.tsx: Kilo first under Popular, OpenCode Go and OpenCode Console under Services). `integrationOptions` takes the priority map as a parameter with upstream's map as the default (generic seam, so upstream's integration-options tests pass unchanged), and the dialog passes the Kilo map and uses it for the Popular group (rung 4). The map is a constant in the TUI process: no TUI plugin hook ranks integrations, and the host runs in the server process."
+      "seam": "Prompt for Personal Account vs Team (`chooseKiloAccount`) after a Kilo Gateway login completes, before closing or chaining the integration dialog. `TuiPlugin` has no post-integration-connect hook. The connect dialog also ranks and groups integrations with Kilo's v1 provider priority (`KILO_INTEGRATION_PRIORITY` in tui/src/kilocode/gateway.tsx: Kilo first under Popular, OpenCode Go and OpenCode Console under Services). `integrationOptions` takes the priority map as a parameter with upstream's map as the default (generic seam, so upstream's integration-options tests pass unchanged), and the dialog passes the Kilo map and uses it for the Popular group (rung 4). The map is a constant in the TUI process: no TUI plugin hook ranks integrations, and the host runs in the server process. Kilo guidance from v1 `dialog-provider.tsx` (U-E9-06), behavior in tui/src/kilocode/dialog-provider.tsx: `kiloRow` replaces the row title, description and gutter (v1 titles and descriptions, a red `!` and the reason when the Kilo catalog fails, read once from the `kilocode.gateway` models RPC), the key prompt shows v1 key hints (Kilo, Atomic Chat) and accepts an empty key for local providers (LM Studio, Atomic Chat). No TUI plugin hook decorates integration rows or the key prompt."
     },
     "packages/tui/src/component/dialog-model.tsx": {
       "rung": 4,
@@ -204,6 +204,10 @@
     "packages/tui/src/plugin/structure.ts": {
       "rung": 3,
       "seam": "`Placement.order` and a stable sort of each anchor in `resolveSlots`. Optional numeric `order` on TUI slot claims, so a plugin can place its claim between other claims at one anchor (v1 slots had `order`; the Kilo sidebar panels need pr 50, footer 99, usage 150 between the upstream Context, MCP and Todo panels). A claim without an order counts as 100, 200, ... in enable order. Without any order the result is the enable order, as before, so upstream claims and tests do not change. No plugin hook or host option reaches the slot resolver: the claim type, its normalization and the resolver are the only places that know claim positions, so the knob needs one line in each of the three files. Generic, no Kilo value."
+    },
+    "packages/tui/test/app-lifecycle.test.tsx": {
+      "rung": 4,
+      "seam": "Flake fix in the shared terminal-pane test (selection copy and pane management): after ctrl+x t the pane frame renders before focus moves to the terminal, so the immediate `currentFocusedRenderable` assertion races the next render and failed unit (linux, 2/2) on 2026-10-23. Both focus assertions wait for the transition (setup.waitFor) before asserting, the same way the neighbouring terminal assertions do. No product change and no Kilo value: the assertions and their expected results are unchanged. Rungs 1 and 2 cannot reach a test in the TUI package."
     },
     "packages/plugin/src/effect/session.ts": {
       "rung": 3,
