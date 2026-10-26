@@ -30,7 +30,7 @@ Kilo Code does not have a built-in Bifrost provider, so you add Bifrost as a cus
    - **Display name**: `Bifrost`
    - **Provider API**: **OpenAI Compatible**
    - **Base URL**: `http://localhost:8080/openai`, or the same path on your gateway's address
-   - **API key**: your Bifrost virtual key
+   - **API key**: your Bifrost virtual key. If your gateway does not enforce virtual keys, enter any non-empty string.
    - **Models**: click **Fetch models** to load the models your gateway serves, or add model IDs such as `openai/gpt-5` manually
 4. Click **Submit**. The Bifrost models appear in the model picker.
 
