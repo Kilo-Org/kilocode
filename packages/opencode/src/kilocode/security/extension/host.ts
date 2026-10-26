@@ -34,6 +34,7 @@ export namespace ExtensionHost {
   const log = Log.create({ service: "security" })
 
   const ENTRY = path.join(import.meta.dir, "host-entry.ts")
+  const BUNFIG = path.join(import.meta.dir, "host-bunfig.toml")
 
   /** Live child processes, so Kilo never leaves an extension host behind when it exits. */
   const live = new Set<{ kill: () => void }>()
@@ -443,7 +444,11 @@ export namespace ExtensionHost {
     const wanted = sandboxAvailable() && !input.allowUnconfinedReads && readConfinementAvailable()
     const base = {
       command: process.execPath,
-      args: ["run", ENTRY],
+      // The child runs in the workspace, so Bun would load the workspace's .env and bunfig.toml.
+      // The environment is built by environmentFor instead, and the seatbelt profile makes .env
+      // unreadable, which since Bun 1.4 aborts startup. A workspace bunfig could preload code or
+      // [define] values the approval digest does not cover, so the host gets Kilo's empty one.
+      args: ["run", "--no-env-file", `--config=${BUNFIG}`, ENTRY],
       cwd: workspace,
       environment: environmentFor(workspace),
     }

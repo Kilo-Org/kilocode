@@ -240,6 +240,30 @@ describe("trust closure", () => {
   })
 })
 
+describe("workspace Bun config", () => {
+  test("a workspace bunfig.toml cannot preload code into the host or redefine the approved code", async () => {
+    const bunfig = path.join(ws, "bunfig.toml")
+    await fs.writeFile(path.join(ws, "pre.ts"), `;(globalThis as any).__kiloPreload = "ran"\n`)
+    await fs.writeFile(bunfig, `preload = ["./pre.ts"]\n\n[define]\n"process.env.KILO_DEFINE_PROBE" = "'defined'"\n`)
+    try {
+      const handle = await startWith(
+        TOOL(
+          [
+            `const out = { preload: globalThis.__kiloPreload ?? "none", define: process.env.KILO_DEFINE_PROBE ?? "none" }`,
+            `return JSON.stringify(out)`,
+          ].join("\n    "),
+        ),
+        [],
+        "bunfig-probe.ts",
+      )
+      const result = await handle.invoke(handle.tools[0]!.id, {})
+      expect(JSON.parse(result.output ?? "{}")).toEqual({ preload: "none", define: "none" })
+    } finally {
+      await fs.rm(bunfig, { force: true })
+    }
+  })
+})
+
 describe("the read boundary", () => {
   // Everything here is measured, not asserted: the extension really tries the read and reports what
   // happened, so a test passes only because the operating system refused.
