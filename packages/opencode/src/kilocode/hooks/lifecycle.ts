@@ -292,15 +292,22 @@ export const subscribe = Effect.fn("KiloHookLifecycle.subscribe")(function* (inp
       })
     })
 
-  const touched = (file: string, kind: "change" | "add" | "unlink") =>
+  const touched = (file: string) =>
     Effect.gen(function* () {
+      // Read when the run starts, not when the debounce fired: it may have waited for a slot of the
+      // shared bound, and the file can have gone (or come back) meanwhile.
+      const exists = fs.existsSync(file)
+      const known = files.present.has(file)
+      if (exists) files.present.add(file)
+      if (!exists) files.present.delete(file)
+      if (!exists && !known) return
+      const kind = !exists ? "unlink" : known ? "change" : "add"
       const extra = dynamic.get(directory) ?? new Set<string>()
       // Resolved when the file changes, not when the watchers were built: the directory may have
       // been sandboxed since (the /sandbox toggle), which turns Claude Code hooks off.
       const found = yield* hooks(undefined, "FileChanged")
       const groups = (found.FileChanged ?? []).filter((group) => applies(group, file, directory, extra))
       if (!groups.length) return
-      guards.set(file, Number.POSITIVE_INFINITY)
       const verdict = yield* KiloHooks.fire({
         event: "FileChanged",
         // Already filtered by file: the groups run without their matcher.
@@ -318,7 +325,15 @@ export const subscribe = Effect.fn("KiloHookLifecycle.subscribe")(function* (inp
       // A FileChanged hook's watchPaths replaces the dynamic list.
       watch(directory, [])
       if (next.length) watch(directory, next)
-    })
+    }).pipe(
+      // `event` holds the guard open from the debounce timer; a run that ends before its hooks ran
+      // (none apply, or resolving them failed) lets go of it, so later changes are not dropped.
+      Effect.ensuring(
+        Effect.sync(() => {
+          if (guards.get(file) === Number.POSITIVE_INFINITY) guards.delete(file)
+        }),
+      ),
+    )
 
   const event = (dir: string, name: string | Buffer | null) => {
     if (!name) return
@@ -328,13 +343,11 @@ export const subscribe = Effect.fn("KiloHookLifecycle.subscribe")(function* (inp
     clearTimeout(debounce.get(file))
     const timer = setTimeout(() => {
       debounce.delete(file)
-      const exists = fs.existsSync(file)
-      const known = files.present.has(file)
-      if (exists) files.present.add(file)
-      if (!exists) files.present.delete(file)
       if (Date.now() < (guards.get(file) ?? 0)) return
-      if (!exists && !known) return
-      spawn(touched(file, !exists ? "unlink" : known ? "change" : "add"))
+      // Held before the run even resolves its hooks (or waits for a slot of the shared bound), so a
+      // change that lands meanwhile is part of this run and does not start a second one.
+      guards.set(file, Number.POSITIVE_INFINITY)
+      spawn(touched(file))
     }, DEBOUNCE)
     timer.unref?.()
     debounce.set(file, timer)

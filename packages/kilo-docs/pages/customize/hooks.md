@@ -24,7 +24,7 @@ Kilo Code runs 30 hook events. The [hooks reference](/docs/customize/hooks-refer
 |---|---|---|---|
 | `PreToolUse` | Before a tool call, before any permission prompt. Also for `@` file attachments, MCP resource attachments, `!` shell lines in command templates and code-mode tool calls. | Tool name | Yes: denies the call. `ask` forces a permission prompt. |
 | `PostToolUse` | After a tool call succeeds | Tool name | No: feedback to the agent; `updatedToolOutput` replaces the output |
-| `PostToolUseFailure` | After a tool call fails, including a shell command that exits non-zero | Tool name | No: feedback to the agent |
+| `PostToolUseFailure` | After a tool call fails, including a shell command that exits non-zero or is killed at its timeout | Tool name | No: feedback to the agent |
 | `PostToolBatch` | After a model step that ran tools, before the next model call | None | Yes: ends the turn |
 | `PermissionRequest` | When Kilo Code shows a permission prompt for a tool call | Tool name | Deny only |
 | `TaskCreated` | When the agent adds a todo | None | Yes: the todo is not added |
@@ -287,7 +287,7 @@ JSON fields:
 | `hookSpecificOutput.permissionDecision: "allow"` or `"defer"` | `PreToolUse` | Ignored: hooks cannot skip a permission prompt. |
 | `hookSpecificOutput.decision.behavior: "deny"` with `message` | `PermissionRequest` | Denies the call and closes the prompt. With `interrupt: true`, the turn stops too. `"allow"` is ignored. |
 | `hookSpecificOutput.updatedInput` | `PreToolUse` | Kilo Code does not rewrite tool input: when it differs from `tool_input`, the call is blocked. |
-| `hookSpecificOutput.updatedToolOutput`, `updatedMCPToolOutput` | `PostToolUse` | Replaces the output the agent sees (images and attachments are dropped). Only for calls that succeeded: a shell command that exits non-zero runs `PostToolUseFailure`, which cannot replace the output. |
+| `hookSpecificOutput.updatedToolOutput`, `updatedMCPToolOutput` | `PostToolUse` | Replaces the output the agent sees (images and attachments are dropped). Only for calls that succeeded: a shell command that exits non-zero or is killed at its timeout runs `PostToolUseFailure`, which cannot replace the output. |
 | `decision: "block"` with `reason` | Events that can block | Blocks with that reason. On `PostToolUse` and `PostToolUseFailure`, the reason is shown to the agent. |
 | `continue: false` with `stopReason` | Events that can block, and `PostToolUse`, `PostToolUseFailure` | Stops: rejects the prompt, model switch or compaction; skips the wakeup; pauses the goal on `GoalReport`; never continues on `Stop`. On tool events other than `PermissionRequest`, the turn ends after the current step (`PreToolUse` also blocks the call). On `PermissionRequest` it counts only together with a deny, and then also stops the turn. Ignored on `TaskCreated`, `TaskCompleted`, `WorktreeSetup`, `CommitMessage` and `BranchName`: use exit `2` or `decision: "block"` there. |
 | `hookSpecificOutput.additionalContext` | `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`, `UserPromptSubmit`, `UserPromptExpansion`, `PostModelSwitch`, `SessionStart`, `Stop`, `SubagentStop`, `SubagentStart`, `GoalReport`, `WakeupFire` | Adds context for the agent (see below). Ignored on other events. |
@@ -486,7 +486,7 @@ Claude Code compatibility is on by default in the CLI, and off by default in the
 | `PreToolUse` scope | Also runs for `@` file attachments, pasted text attachments, MCP resource attachments and `!` shell lines in command templates, so secret guards hold. `PostToolUse` does not run for them. |
 | `PreToolUse` `ask` | Never answered by rules, auto-approve or allow-everything, never remembered. Denies the call when nobody can answer. The tool's own permission rule can ask a second time. |
 | `updatedInput` | Not applied: a `PreToolUse` hook that rewrites the input blocks the call. |
-| `PostToolUseFailure` | Also runs when a shell command exits non-zero (then `PostToolUse` does not run). Not run for the MCP resource tools. It cannot replace the output: `updatedToolOutput` applies only to calls that succeeded. |
+| `PostToolUseFailure` | Also runs when a shell command exits non-zero or is killed at its timeout (then `PostToolUse` does not run; `is_interrupt` is `false`). Not run when you cancel a call, which Claude Code reports with `is_interrupt: true`. Not run for the MCP resource tools. It cannot replace the output: `updatedToolOutput` applies only to calls that succeeded. |
 | `TaskCreated`, `TaskCompleted` | Run for `todowrite`, the Kilo Code todo tool. A block rolls back only that todo. |
 | `UserPromptSubmit` | Not run for wakeups, background results, goal turns or messages from other sessions. |
 | `CwdChanged` | Means a shell command ran in a different folder than the previous one: Kilo Code's shell keeps no working directory between commands. |
@@ -514,7 +514,7 @@ Claude Code compatibility is on by default in the CLI, and off by default in the
 - In the global config directory, hooks are read from one config file. Use a single file for your hooks.
 - A `PermissionRequest` hook for a call made inside code mode sees the code-mode tool, not the inner tool.
 - When `updatedToolOutput` replaces a tool's output, the chat can still show the original output.
-- `updatedToolOutput` replaces the output of a call that succeeded. A shell command that exits non-zero, or a tool that fails, runs `PostToolUseFailure`, which can add feedback but cannot replace or redact the output.
+- `updatedToolOutput` replaces the output of a call that succeeded. A shell command that exits non-zero or is killed at its timeout, or a tool that fails, runs `PostToolUseFailure`, which can add feedback but cannot replace or redact the output.
 
 ## Related
 

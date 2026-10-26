@@ -15,6 +15,7 @@ import { SandboxPreference } from "../../src/kilocode/sandbox/preference"
 import { KiloHookEvents } from "../../src/kilocode/hooks/events"
 import { KiloHookPayload } from "../../src/kilocode/hooks/payload"
 import { KiloHooks } from "../../src/kilocode/hooks/hooks"
+import { KiloSession } from "../../src/kilocode/session"
 import { Session } from "../../src/session/session"
 import { SessionID } from "../../src/session/schema"
 import { Filesystem } from "../../src/util/filesystem"
@@ -407,6 +408,29 @@ describe("payload", () => {
     expect(KiloHookPayload.alias("debug")).toBe("debug")
   })
 
+  test("remembers the roots of a bounded number of sessions", async () => {
+    const walked: string[] = []
+    const top = (id: string) => id.replace("ses_kid_", "ses_top_")
+    const sessions = {
+      get: (id: string) => {
+        walked.push(id)
+        return Effect.succeed({ id, parentID: id.startsWith("ses_kid_") ? top(id) : undefined })
+      },
+    } as unknown as Parameters<typeof KiloHookPayload.root>[1]
+    const kid = (index: number) => SessionID.make(`ses_kid_${index}`)
+    const root = (index: number) => Effect.runPromise(KiloHookPayload.root(kid(index), sessions)).then(String)
+    const count = 5_000 // more subagent sessions than the cache keeps
+    for (let i = 0; i < count; i++) expect(await root(i)).toBe(top(kid(i)))
+    // Kilo's own ancestry is gone, so only the cache can answer without reading the sessions again.
+    for (let i = 0; i < count; i++) KiloSession.clearPlatformOverride(kid(i))
+    walked.length = 0
+    expect(await root(count - 1)).toBe(top(kid(count - 1)))
+    expect(walked).toEqual([])
+    expect(await root(0)).toBe(top(kid(0)))
+    expect(walked).toContain(kid(0))
+    for (let i = 0; i < count; i++) KiloSession.clearPlatformOverride(kid(i))
+  })
+
   test("marks the summary of an oversized replayed prompt only when a human wrote the prompt", () => {
     const message = (part: Record<string, unknown>) =>
       ({
@@ -606,6 +630,18 @@ describe("decide", () => {
     const [item] = KiloHooks.decide("UserPromptSubmit", outcome(0, long), handler).context
     expect(item?.length).toBeLessThan(10_100)
     expect(item).toEndWith("(hook output truncated)")
+  })
+
+  test("clips the failure, stop reason and ask reason of a hook that prints a very long line", () => {
+    const long = "x".repeat(50_000)
+    const clipped = (value: string | undefined) => {
+      expect(value?.length).toBeLessThan(10_100)
+      expect(value).toEndWith("(hook output truncated)")
+    }
+    clipped(KiloHooks.decide("PostToolUse", outcome(1, "", long), handler).failure)
+    clipped(KiloHooks.decide("PostToolUse", outcome(0, { continue: false, stopReason: long }), handler).stop)
+    const ask = { hookSpecificOutput: { permissionDecision: "ask", permissionDecisionReason: long } }
+    clipped(KiloHooks.decide("PreToolUse", outcome(0, ask), handler).ask)
   })
 })
 
@@ -1019,6 +1055,32 @@ describe("fire", () => {
     expect(verdict.context).toEqual(["a"])
     expect(verdict.specific).toHaveLength(2)
     expect(verdict.ran).toBe(2)
+  })
+
+  test("clips the notice, stop reason and ask reason of a hook that prints a very long line", async () => {
+    const fire = (event: "PreToolUse" | "PostToolUse", code: string) =>
+      Effect.runPromise(
+        KiloHooks.fire({
+          event,
+          hooks: hooks(event, exec(code)),
+          subjects: ["edit"],
+          payloads: [{}],
+          cwd: process.cwd(),
+          sessionID: `ses_long_${event}_${Date.now()}`,
+        }),
+      )
+    const long = "'x'.repeat(50000)"
+    const failing = await fire("PostToolUse", `process.stderr.write(${long}); process.exit(1)`)
+    expect(failing.user).toHaveLength(1)
+    // The notice adds only the event and the hook command to the clipped failure.
+    expect(failing.user[0]?.length).toBeLessThan(10_300 + process.execPath.length)
+    const stopping = await fire("PostToolUse", `console.log(JSON.stringify({ continue: false, stopReason: ${long} }))`)
+    expect(stopping.stop?.length).toBeLessThan(10_100)
+    const asking = await fire(
+      "PreToolUse",
+      `console.log(JSON.stringify({ hookSpecificOutput: { permissionDecision: "ask", permissionDecisionReason: ${long} } }))`,
+    )
+    expect(asking.ask?.length).toBeLessThan(10_100)
   })
 
   test("only runs tool guards in a Kilo started by a hook, and nothing deeper", async () => {

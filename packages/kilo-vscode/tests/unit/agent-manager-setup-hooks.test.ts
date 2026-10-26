@@ -25,6 +25,10 @@ function harness(input: {
   exit?: number
   /** The user stops the setup script. */
   stop?: boolean
+  /** The setup task itself fails with this message. */
+  crash?: string
+  /** Posting the first message throws, which the setup script runner does not catch. */
+  fault?: Error
   present?: boolean
   run?: (call: Call) => Promise<{ blocked: boolean; reason?: string }>
 }) {
@@ -32,6 +36,7 @@ function harness(input: {
   const posted: AgentManagerOutMessage[] = []
   const output: string[] = []
   const calls: Call[] = []
+  const fault = { error: input.fault }
   const hooks: Hooks | undefined =
     input.present === undefined
       ? undefined
@@ -50,10 +55,16 @@ function harness(input: {
     worktreeId: "wt_1",
     projectId: "project",
     log: () => {},
-    post: (message: AgentManagerOutMessage) => posted.push(message),
+    post: (message: AgentManagerOutMessage) => {
+      const error = fault.error
+      fault.error = undefined
+      if (error) throw error
+      posted.push(message)
+    },
     vscode: async () => {
       flow.push("script")
       if (input.stop) throw new Error("Setup script was stopped")
+      if (input.crash) throw new Error(input.crash)
       return input.exit ?? 0
     },
     hooks,
@@ -95,6 +106,7 @@ describe("WorktreeSetup hooks in the Agent Manager lifecycle", () => {
     expect(run.calls.map((call) => call.script)).toEqual(["failed"])
     // Stopping is the user's own choice, so it is not shown as a setup error.
     expect(errors(run.posted)).toEqual([])
+    expect(progress(run.posted)).toEqual(["Running setup script...", "Running WorktreeSetup hooks..."])
   })
 
   it("reports a failed setup script to the hooks", async () => {
@@ -103,6 +115,61 @@ describe("WorktreeSetup hooks in the Agent Manager lifecycle", () => {
     await runLifecycleSetup(run.input, { repoPath: ws.root, worktreePath: ws.dir }, () => {})
     expect(run.calls.map((call) => call.script)).toEqual(["failed"])
     expect(errors(run.posted)).toEqual(["Setup script exited with code 3"])
+  })
+
+  it("keeps a setup script failure in the progress message shown while the hooks run", async () => {
+    await using ws = await workspace(true)
+    const run = harness({ service: ws.service, present: true, exit: 3 })
+    await runLifecycleSetup(run.input, { repoPath: ws.root, worktreePath: ws.dir }, () => {})
+    // The next message replaces the error in the webview, so the failure text moves into it.
+    expect(progress(run.posted)).toEqual([
+      "Running setup script...",
+      "Setup script exited with code 3. Running WorktreeSetup hooks...",
+    ])
+    expect(run.posted.slice(-2)).toMatchObject([
+      { status: "error", message: "Setup script exited with code 3" },
+      { status: "creating", projectId: "project", branch: "feature", worktreeId: "wt_1" },
+    ])
+  })
+
+  it("does not double the period of a failure message that ends with one", async () => {
+    await using ws = await workspace(true)
+    const run = harness({ service: ws.service, present: true, crash: "Failed to start setup task: no shell." })
+    await runLifecycleSetup(run.input, { repoPath: ws.root, worktreePath: ws.dir }, () => {})
+    expect(errors(run.posted)).toEqual(["Failed to start setup task: no shell."])
+    expect(progress(run.posted).at(-1)).toBe("Failed to start setup task: no shell. Running WorktreeSetup hooks...")
+  })
+
+  it("keeps a setup script error the runner did not catch in the progress message shown while the hooks run", async () => {
+    await using ws = await workspace(true)
+    const run = harness({ service: ws.service, present: true, fault: new Error("webview closed") })
+    const logs: string[] = []
+    await runLifecycleSetup(run.input, { repoPath: ws.root, worktreePath: ws.dir }, (msg) => logs.push(msg))
+    expect(logs).toContain("[AgentManager] Setup script error: webview closed")
+    expect(run.calls.map((call) => call.script)).toEqual(["failed"])
+    expect(run.posted).toMatchObject([
+      { status: "error", message: "Setup script failed: webview closed" },
+      {
+        status: "creating",
+        message: "Setup script failed: webview closed. Running WorktreeSetup hooks...",
+        projectId: "project",
+        branch: "feature",
+        worktreeId: "wt_1",
+      },
+    ])
+  })
+
+  it("reports a blocking hook after a failed setup script as the final error", async () => {
+    await using ws = await workspace(true)
+    const run = harness({
+      service: ws.service,
+      present: true,
+      exit: 3,
+      run: async () => ({ blocked: true, reason: "no free port" }),
+    })
+    await runLifecycleSetup(run.input, { repoPath: ws.root, worktreePath: ws.dir }, () => {})
+    expect(errors(run.posted)).toEqual(["Setup script exited with code 3", "WorktreeSetup hook failed: no free port"])
+    expect(run.posted.at(-1)).toMatchObject({ status: "error", message: "WorktreeSetup hook failed: no free port" })
   })
 
   it("reports no setup script to the hooks", async () => {

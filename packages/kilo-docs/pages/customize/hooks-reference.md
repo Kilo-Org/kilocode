@@ -43,7 +43,7 @@ This page lists, for each [hook](/docs/customize/hooks) event, what Kilo Code se
 | `CommitMessage` | 30 s | Honored | Rejects the message | None |
 | `BranchName` | 10 s | Honored | Keeps the current name | None |
 
-"JSON" means `hookSpecificOutput.additionalContext`; "stdout" means plain stdout of a hook that exits `0`. A hook that fails without `onFailure: "block"` never blocks.
+"JSON" means `hookSpecificOutput.additionalContext`; "stdout" means plain stdout of a hook that exits `0`. A hook that fails (it cannot start, times out, prints invalid JSON, or exits with a code other than `0` or `2`) does not block, unless `onFailure: "block"` is set on an event that honors it. There are two exceptions: a `PreModelSwitch` hook that times out always blocks, and the JSON output of a hook that exits with another code still applies, so a JSON deny on exit `1` blocks.
 
 ## Matcher values
 
@@ -75,7 +75,7 @@ Fields each event adds to the [common fields](/docs/customize/hooks#hook-input):
 |---|---|
 | `PreToolUse` | `tool_name`, `kilo_tool_name`, `tool_input`, `tool_use_id`, `mcp_server`, `kilo_source` (attachments and command templates) |
 | `PostToolUse` | Same as `PreToolUse`, plus `tool_response`, `kilo_tool_response` |
-| `PostToolUseFailure` | `tool_name`, `kilo_tool_name`, `tool_input`, `tool_use_id`, `mcp_server`, `error` (`Exit code N` and the output for shell commands), `is_interrupt`, `duration_ms` |
+| `PostToolUseFailure` | `tool_name`, `kilo_tool_name`, `tool_input`, `tool_use_id`, `mcp_server`, `error` (`Exit code N` and the output for shell commands, `Command timed out after N ms` and the output for a command killed at its timeout), `is_interrupt` (`false` for a shell timeout), `duration_ms` |
 | `PostToolBatch` | `tool_calls`: `tool_name`, `tool_input`, `tool_use_id` and `tool_response` (the text the model sees) for each call of the step |
 | `PermissionRequest` | `tool_name`, `kilo_tool_name`, `tool_input`, `mcp_server`, `kilo_permission`, `kilo_patterns` |
 | `TaskCreated`, `TaskCompleted` | `task_id` (stable, derived from the todo text), `task_subject`, `kilo_status`, `kilo_priority` |
@@ -107,7 +107,7 @@ Fields each event adds to the [common fields](/docs/customize/hooks#hook-input):
 
 - `PreToolUse` runs before the permission prompt. For prompt attachments (`@file`, pasted text, MCP resources) the tool is `read` (`Read`) or `read_mcp_resource` (`ReadMcpResourceTool`); a block replaces the attachment with a note and its content is never read. For `` !`cmd` `` lines in command templates the tool is `bash`; a blocked line is replaced by the reason. `ask` cannot prompt for attachments, so it blocks them.
 - Code-mode tool calls run `PreToolUse` and `PostToolUse` with the inner tool's name. They cannot prompt, so `ask` blocks them.
-- `PostToolUse` runs for calls that succeeded, and only it can replace the output with `updatedToolOutput`. A tool that fails, or a shell command that exits non-zero, runs `PostToolUseFailure` instead, which can add feedback but cannot replace the output.
+- `PostToolUse` runs for calls that succeeded, and only it can replace the output with `updatedToolOutput`. A tool that fails, or a shell command that exits non-zero or is killed at its timeout, runs `PostToolUseFailure` instead, which can add feedback but cannot replace the output.
 - `PostToolUseFailure` does not run when you cancel a call, for permission rejections, or when a hook blocked the call.
 - `PermissionRequest` runs when a prompt is shown, including the prompts a `PreToolUse` `ask` opens. It does not run for calls rules allow or deny, for background subagents (which are denied without a prompt), or for sandbox network prompts.
 - `TaskCreated` and `TaskCompleted` compare the new todo list with the previous one, by todo text. A blocked todo is removed from (or kept open in) the list the tool saves; the agent sees the reason and is asked to resubmit later. The chat still shows the list the model sent.
@@ -124,7 +124,7 @@ Fields each event adds to the [common fields](/docs/customize/hooks#hook-input):
 
 - `SessionStart` runs once per session in each Kilo Code process: before the first prompt's `UserPromptSubmit`, or on the first model step of `/goal`, `/resume-claude`, `/resume-codex`, a wakeup or a summarize. It runs again with `compact` after compaction. Subagents run `SubagentStart` instead.
 - Context from `SessionStart` starts with a note telling the model to treat it as information, not instructions. It is added to the conversation after your first message, not before it, and Kilo Code adds the last startup context again after compaction when no `SessionStart` hook matches `compact`.
-- `SessionEnd` runs when a session that ran `SessionStart` is deleted, and when `kilo serve`, the TUI or `kilo run` exits. All `SessionEnd` hooks of one exit share 1.5 seconds, raised to the largest `SessionEnd` `timeout` in your config (at most 60 seconds). `KILO_SESSIONEND_HOOKS_TIMEOUT_MS` (or `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS`) replaces that budget, with no 60-second limit. Under `kilo serve` the budget, including that override, is capped at 3 seconds.
+- `SessionEnd` runs when a session that ran `SessionStart` is deleted, and when `kilo serve`, the TUI or `kilo run` exits. With `kilo run --attach`, the session belongs to the server you attach to, so it ends when that server exits. All `SessionEnd` hooks of one exit share 1.5 seconds, raised to the largest `SessionEnd` `timeout` in your config (at most 60 seconds). `KILO_SESSIONEND_HOOKS_TIMEOUT_MS` (or `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS`) replaces that budget, with no 60-second limit. Under `kilo serve` and the TUI the budget, including that override, is capped at 3 seconds.
 - `InstructionsLoaded` runs for each instruction file of the session when `SessionStart` runs, and when the agent reads a file in a folder with its own `AGENTS.md`. `memory_type` is `User` for files in your Kilo Code or Claude Code config folders, `Managed` for managed config, and `Project` otherwise.
 
 ### Agent loop

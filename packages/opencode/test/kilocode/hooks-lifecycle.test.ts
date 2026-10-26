@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import fs from "fs"
 import path from "path"
-import { Effect, Fiber } from "effect"
+import { Deferred, Effect, Fiber } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { Global } from "@opencode-ai/core/global"
 import { Config } from "@/config/config"
@@ -470,6 +470,112 @@ describe("FileChanged", () => {
       yield* until(() => lines(file).length >= 1)
       yield* settle(2_000)
       expect(lines(file).length).toBeLessThanOrEqual(2)
+    }),
+  )
+
+  it.instance("a second change while the hooks are being resolved is part of the same run", () =>
+    Effect.gen(function* () {
+      const { directory } = yield* boot()
+      const file = marker()
+      const target = path.join(directory, ".envrc")
+      fs.writeFileSync(target, "export A=1\n")
+      yield* hooks({ FileChanged: [{ matcher: ".envrc", hooks: [record(file)] }] })
+      const config = yield* Config.Service
+      const slow = { on: false }
+      yield* KiloHookLifecycle.subscribe({
+        sessions: yield* Session.Service,
+        // The real config, read slowly once armed: resolving the hooks is the window under test.
+        config: {
+          ...config,
+          get: () => (slow.on ? Effect.sleep("600 millis").pipe(Effect.andThen(config.get())) : config.get()),
+        },
+        database: yield* Database.Service,
+      })
+      yield* settle(400)
+      slow.on = true
+      fs.appendFileSync(target, "export B=2\n")
+      // 100 ms of debounce, then 600 ms of resolution: this lands in the middle of it.
+      yield* settle(400)
+      fs.appendFileSync(target, "export C=3\n")
+      yield* until(() => lines(file).length >= 1)
+      yield* settle(1_500)
+      expect(lines(file)).toHaveLength(1)
+      expect(lines(file)[0]).toMatchObject({ file_path: target, event: "change" })
+    }),
+  )
+
+  it.instance("a second change while the run waits for a slot of the shared bound is part of the same run", () =>
+    Effect.gen(function* () {
+      const { directory } = yield* boot()
+      const file = marker()
+      const target = path.join(directory, ".envrc")
+      fs.writeFileSync(target, "export A=1\n")
+      yield* hooks({ FileChanged: [{ matcher: ".envrc", hooks: [record(file)] }] })
+      yield* subscribe()
+      yield* settle(400)
+      // Every slot of the shared bound is taken, so the run queues behind these.
+      const release = yield* Deferred.make<void>()
+      yield* Effect.addFinalizer(() => Deferred.succeed(release, undefined))
+      for (let i = 0; i < 8; i++) yield* KiloHookLifecycle.detach(Deferred.await(release))
+      yield* settle(100)
+      fs.appendFileSync(target, "export B=2\n")
+      yield* settle(400)
+      fs.appendFileSync(target, "export C=3\n")
+      yield* settle(400)
+      expect(lines(file)).toHaveLength(0)
+      yield* Deferred.succeed(release, undefined)
+      yield* until(() => lines(file).length >= 1)
+      yield* settle(1_000)
+      expect(lines(file)).toHaveLength(1)
+    }),
+  )
+
+  it.instance("a run that waited for a slot reports the file as it is then, and a later recreate is an add", () =>
+    Effect.gen(function* () {
+      const { directory } = yield* boot()
+      const file = marker()
+      const target = path.join(directory, ".envrc")
+      fs.writeFileSync(target, "export A=1\n")
+      yield* hooks({ FileChanged: [{ matcher: ".envrc", hooks: [record(file)] }] })
+      yield* subscribe()
+      yield* settle(400)
+      const release = yield* Deferred.make<void>()
+      yield* Effect.addFinalizer(() => Deferred.succeed(release, undefined))
+      for (let i = 0; i < 8; i++) yield* KiloHookLifecycle.detach(Deferred.await(release))
+      yield* settle(100)
+      fs.appendFileSync(target, "export B=2\n")
+      yield* settle(400)
+      // Dropped by the guard while the run is queued: the run itself reads the disk when it starts.
+      fs.rmSync(target)
+      yield* settle(400)
+      yield* Deferred.succeed(release, undefined)
+      yield* until(() => lines(file).length === 1)
+      expect(lines(file)[0]).toMatchObject({ file_path: target, event: "unlink" })
+      yield* settle(700)
+      fs.writeFileSync(target, "export A=1\n")
+      yield* until(() => lines(file).length === 2)
+      expect(lines(file)[1]).toMatchObject({ file_path: target, event: "add" })
+    }),
+  )
+
+  it.instance("a run whose hooks no longer apply lets go of the guard, so the next change is seen", () =>
+    Effect.gen(function* () {
+      const { directory } = yield* boot()
+      const file = marker()
+      const target = path.join(directory, ".envrc")
+      fs.writeFileSync(target, "export A=1\n")
+      yield* hooks({ FileChanged: [{ matcher: ".envrc", hooks: [record(file)] }] })
+      yield* subscribe()
+      yield* settle(400)
+      // The hooks go away without the watchers being rebuilt: the change resolves to no hooks.
+      yield* hooks({})
+      fs.appendFileSync(target, "export B=2\n")
+      yield* settle(700)
+      expect(lines(file)).toHaveLength(0)
+      // The hook is back, still without a rebuild: a guard left behind would drop this change.
+      yield* hooks({ FileChanged: [{ matcher: ".envrc", hooks: [record(file)] }] })
+      fs.appendFileSync(target, "export C=3\n")
+      yield* until(() => lines(file).length === 1)
     }),
   )
 

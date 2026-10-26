@@ -883,7 +883,7 @@ export function decide(event: Event, outcome: Outcome, handler: Handler, sent?: 
   }
 
   if (data && !missing) {
-    if (data.continue === false) result.stop = typeof data.stopReason === "string" ? data.stopReason : ""
+    if (data.continue === false) result.stop = typeof data.stopReason === "string" ? clip(data.stopReason) : ""
     if (data.decision === "block" && info.exit2 === "block") result.block ??= reason(data.reason)
     if (data.decision === "block" && info.exit2 === "feedback" && text(data.reason))
       result.context.push(clip(text(data.reason) ?? ""))
@@ -891,7 +891,7 @@ export function decide(event: Event, outcome: Outcome, handler: Handler, sent?: 
     if (specific?.permissionDecision === "deny" && info.exit2 === "block")
       result.block ??= reason(specific.permissionDecisionReason)
     if (specific?.permissionDecision === "ask" && event === "PreToolUse")
-      result.ask = text(specific.permissionDecisionReason) ?? "A hook asked for confirmation."
+      result.ask = clip(text(specific.permissionDecisionReason) ?? "A hook asked for confirmation.")
     if (specific?.permissionDecision === "ask" && event === "PreModelSwitch")
       result.block ??= `ask is treated as a refusal: ${reason(specific.permissionDecisionReason)}`
     if (event === "PermissionRequest" && verdict?.behavior === "deny") {
@@ -935,7 +935,7 @@ export function decide(event: Event, outcome: Outcome, handler: Handler, sent?: 
           : undefined)
   if (!failed) return result
   const line = outcome.stderr.trim().split("\n")[0]?.trim()
-  result.failure = line ? `${failed}: ${line}` : failed
+  result.failure = clip(line ? `${failed}: ${line}` : failed)
   if (handler.onFailure === "block" && info.failure && !handler.async) {
     result.block ??= bad
       ? "The hook printed invalid JSON and is set to block on failure."

@@ -98,9 +98,12 @@ export async function runLifecycleSetup(
     })
   // The runner reports a failing script through `post` instead of throwing, and a script the user
   // stopped only through its log.
-  const outcome = { failed: false }
+  const outcome: { failed: boolean; error?: string } = { failed: false }
   const post: typeof input.post = (message) => {
-    if (message.type === "agentManager.worktreeSetup" && message.status === "error") outcome.failed = true
+    if (message.type === "agentManager.worktreeSetup" && message.status === "error") {
+      outcome.failed = true
+      outcome.error = message.message
+    }
     input.post(message)
   }
   const log = (message: string) => {
@@ -112,14 +115,18 @@ export async function runLifecycleSetup(
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     outcome.failed = true
+    outcome.error = `Setup script failed: ${msg}`
     output(`[AgentManager] Setup script error: ${msg}`)
-    fail(`Setup script failed: ${msg}`)
+    fail(outcome.error)
   }
   if (!input.hooks?.present) return
+  // A progress message replaces the error the webview shows, so it carries a setup script failure
+  // along instead of hiding it for the whole hooks run.
+  const hint = "Running WorktreeSetup hooks..."
   input.post({
     type: "agentManager.worktreeSetup",
     status: "creating",
-    message: "Running WorktreeSetup hooks...",
+    message: outcome.error ? `${outcome.error.replace(/\.+$/, "")}. ${hint}` : hint,
     projectId: input.projectId,
     branch: input.branch,
     worktreeId: input.worktreeId,

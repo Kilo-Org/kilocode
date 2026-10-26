@@ -756,11 +756,14 @@ const NOTED = new Set(["Stop", "SubagentStop", "PreToolUse"])
 // PreToolUse part, but it is for the model only.
 const BLOCKED = "A PreToolUse hook blocked attaching "
 
-/** Removes the `<hook_context event="E">` wrapper the CLI puts around hook output for the model. */
+// A `KiloHooks.wrap` segment. It escapes `</hook_context` in its body, so the first closing tag ends
+// it. Segments sit at the start of the text or after a blank line, like the context a Stop
+// continuation appends to its block feedback.
+const WRAPPED = /(?<=^|\n\n)<hook_context event="[^"]*">\n([\s\S]*?)\n<\/hook_context>(?=\n\n|$)/g
+
+/** Removes every `<hook_context event="E">` wrapper the CLI puts around hook output for the model. */
 function unwrap(text: string) {
-  const match = text.match(/^<hook_context event="[^"]*">\n([\s\S]*)\n<\/hook_context>$/)
-  if (!match) return text
-  return (match[1] ?? "").replaceAll("&lt;/hook_context", "</hook_context")
+  return text.replace(WRAPPED, (_match, body: string) => body.replaceAll("&lt;/hook_context", "</hook_context"))
 }
 
 /**

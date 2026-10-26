@@ -53,8 +53,17 @@ export function alias(agent: string) {
   return AGENTS[agent] ?? agent
 }
 
+// Sessions' roots found by walking `parentID` (bounded: a server can create many subagent sessions).
 const roots = new Map<string, string>()
+const ROOTS = 4096
 const DEPTH = 16
+
+/** Evicts the oldest entry of a map kept in insertion order once it holds more than `limit`. */
+function trim(map: Map<string, unknown>, limit: number) {
+  if (map.size <= limit) return
+  const oldest = map.keys().next()
+  if (!oldest.done) map.delete(oldest.value)
+}
 
 /**
  * The root session of a session: the id hooks send as `session_id`, as Claude Code sends its main
@@ -83,6 +92,7 @@ export const root = Effect.fn("KiloHookPayload.root")(function* (
   const top = chain.at(-1)?.id ?? sessionID
   if (top === sessionID) return sessionID
   roots.set(sessionID, top)
+  trim(roots, ROOTS)
   for (const item of chain.toReversed()) {
     if (item.parentID) KiloSession.register({ id: item.id, parentID: item.parentID })
   }
@@ -203,10 +213,7 @@ export function attendance(input: {
   const value = attended(input.messages, input.user) && (input.parent ? (turns.get(input.parent) ?? true) : true)
   turns.delete(input.sessionID)
   turns.set(input.sessionID, value)
-  if (turns.size > TURNS) {
-    const oldest = turns.keys().next()
-    if (!oldest.done) turns.delete(oldest.value)
-  }
+  trim(turns, TURNS)
   return value
 }
 

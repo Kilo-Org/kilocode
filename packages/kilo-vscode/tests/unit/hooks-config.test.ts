@@ -515,6 +515,55 @@ describe("notes", () => {
     ])
   })
 
+  it("unwraps the context a Stop continuation appends to its block feedback", () => {
+    // The shape loop.ts builds: the feedback, a blank line, then the KiloHooks.wrap output.
+    const combined = [
+      "Stop hook feedback:\nTests fail",
+      '<hook_context event="Stop">\nRun the linter first\n\nThen the formatter\n</hook_context>',
+    ].join("\n\n")
+    const parts = [part("1", combined, { hook: { event: "Stop", streak: 1 } })]
+    expect(notes(parts)).toEqual([
+      { id: "1", event: "Stop", text: "Stop hook feedback:\nTests fail\n\nRun the linter first\n\nThen the formatter" },
+    ])
+  })
+
+  it("unwraps every wrapped segment and leaves the other text alone", () => {
+    const text = [
+      '<hook_context event="SubagentStop">\nfirst\n</hook_context>',
+      "SubagentStop hook feedback:\nbetween",
+      '<hook_context event="SubagentStop">\nsecond\n</hook_context>',
+    ].join("\n\n")
+    expect(notes([part("1", text, { hook: { event: "SubagentStop" } })])).toEqual([
+      { id: "1", event: "SubagentStop", text: "first\n\nSubagentStop hook feedback:\nbetween\n\nsecond" },
+    ])
+  })
+
+  it("restores the escaped closing tag only inside wrapped segments", () => {
+    // wrap escapes `</hook_context` in the context, but the block feedback is not escaped.
+    const text = [
+      "Stop hook feedback:\nkeep &lt;/hook_context and <b>tags</b> as typed",
+      '<hook_context event="Stop">\na &lt;/hook_context b <i>x</i> &amp; c\n</hook_context>',
+    ].join("\n\n")
+    expect(notes([part("1", text, { hook: { event: "Stop" } })])).toEqual([
+      {
+        id: "1",
+        event: "Stop",
+        text: "Stop hook feedback:\nkeep &lt;/hook_context and <b>tags</b> as typed\n\na </hook_context b <i>x</i> &amp; c",
+      },
+    ])
+  })
+
+  it("leaves text without a wrapper unchanged, including a tag that is not a whole segment", () => {
+    const quoted = 'Stop hook feedback:\nremove <hook_context event="Stop">\nx\n</hook_context> from the prompt'
+    const open = 'Stop hook feedback:\n\n<hook_context event="Stop">\nnever closed'
+    const parts = [
+      part("1", "Stop hook feedback:\nTests fail", { hook: { event: "Stop" } }),
+      part("2", quoted, { hook: { event: "Stop" } }),
+      part("3", open, { hook: { event: "Stop" } }),
+    ]
+    expect(notes(parts).map((note) => note.text)).toEqual(["Stop hook feedback:\nTests fail", quoted, open])
+  })
+
   it("keeps PreToolUse attachment context hidden: only the blocked-attachment notice is a note", () => {
     const parts = [
       part("1", '<hook_context event="PreToolUse">\nThis file is generated; do not edit it.\n</hook_context>', {

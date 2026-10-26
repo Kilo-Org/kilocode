@@ -180,7 +180,10 @@ const start = Effect.fnUntraced(function* (input: Ensure) {
   started.set(id, { cwd: session.directory, hooks, kilo, claude })
   trim(started)
   shutdown()
-  if (hooks.InstructionsLoaded?.length) loads.set(id, compact ? "compact" : "session_start")
+  if (hooks.InstructionsLoaded?.length) {
+    loads.set(id, compact ? "compact" : "session_start")
+    trim(loads)
+  }
   return parts
 })
 

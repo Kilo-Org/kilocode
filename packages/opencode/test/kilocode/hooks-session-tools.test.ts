@@ -118,6 +118,8 @@ const config: { hooks: Config.Info["hooks"] } = { hooks: base }
 const image = { type: "file" as const, mime: "image/png", url: "data:image/png;base64,AA==" }
 // Metadata a probe's next result carries (a bash exit code, the AGENTS.md files a read pulled in).
 const metadata: Record<string, Record<string, unknown>> = {}
+// The output text a probe's next result carries, instead of `<id> done`.
+const outputs: Record<string, string> = {}
 const probe = (id: string): Tool.Def => ({
   id,
   description: `records ${id} runs`,
@@ -130,7 +132,7 @@ const probe = (id: string): Tool.Def => ({
       return {
         title: id,
         metadata: metadata[id] ?? {},
-        output: `${id} done`,
+        output: outputs[id] ?? `${id} done`,
         ...(id === "read" ? { attachments: [image] } : {}),
       }
     }),
@@ -353,6 +355,7 @@ const using = (hooks: Config.Info["hooks"]) =>
       Effect.sync(() => {
         config.hooks = base
         for (const key of Object.keys(metadata)) delete metadata[key]
+        for (const key of Object.keys(outputs)) delete outputs[key]
       }),
   )
 
@@ -810,6 +813,86 @@ it.live("runs PostToolUseFailure instead of PostToolUse when bash exits non-zero
     expect(String(input?.error)).toStartWith("Exit code 3")
     expect(input?.tool_input).toEqual({ command: "make" })
     expect(yield* Effect.promise(() => lines(success))).toEqual([])
+  }),
+)
+
+it.live("runs PostToolUseFailure instead of PostToolUse when a bash command is killed at its timeout", () =>
+  Effect.gen(function* () {
+    const dir = yield* scratch()
+    const failure = path.join(dir, "failure")
+    const success = path.join(dir, "success")
+    yield* using({
+      PostToolUseFailure: [
+        {
+          matcher: "Bash",
+          hooks: [record(failure, reply({ hookSpecificOutput: { additionalContext: "retry with a larger timeout" } }))],
+        },
+      ],
+      PostToolUse: [{ matcher: "Bash", hooks: [record(success)] }],
+    })
+    // What the shell tool returns for a command it killed: no exit code, and the reason in its output.
+    metadata.bash = { exit: null }
+    outputs.bash =
+      "partial output\n\n<shell_metadata>\nshell tool terminated command after exceeding timeout 2000 ms. If this command is expected to take longer, retry with a larger timeout value in milliseconds.\n</shell_metadata>"
+    const result = yield* invoke(yield* resolve(), "bash", { command: "sleep 30" })
+    expect(result.output).toContain("partial output")
+    expect(result.output).toContain('<hook_feedback event="PostToolUseFailure">')
+    expect(result.output).toContain("retry with a larger timeout")
+    const [input] = yield* Effect.promise(() => lines(failure))
+    expect(String(input?.error)).toStartWith("Command timed out after 2000 ms\npartial output")
+    expect(input?.is_interrupt).toBe(false)
+    expect(input?.tool_input).toEqual({ command: "sleep 30" })
+    expect(yield* Effect.promise(() => lines(success))).toEqual([])
+  }),
+)
+
+it.live("runs no PostToolUse or PostToolUseFailure hook, async ones included, for a cancelled bash call", () =>
+  Effect.gen(function* () {
+    const dir = yield* scratch()
+    const failure = path.join(dir, "failure")
+    const success = path.join(dir, "success")
+    yield* using({
+      PostToolUseFailure: [{ matcher: "Bash", hooks: [{ ...record(failure), async: true }] }],
+      PostToolUse: [{ matcher: "Bash", hooks: [{ ...record(success), async: true }] }],
+    })
+    const tools = yield* resolve()
+    // Controls: the same async handlers do run for a timeout and for a zero exit.
+    metadata.bash = { exit: null }
+    outputs.bash = "<shell_metadata>\nshell tool terminated command after exceeding timeout 2000 ms.\n</shell_metadata>"
+    yield* invoke(tools, "bash", { command: "sleep 30" })
+    expect(yield* settle(failure, 1)).toHaveLength(1)
+    metadata.bash = { exit: 0 }
+    delete outputs.bash
+    yield* invoke(tools, "bash", { command: "true" })
+    expect(yield* settle(success, 1)).toHaveLength(1)
+    // What the shell tool returns when the call's signal aborted: no exit code, nothing to retry.
+    const abort = new AbortController()
+    abort.abort()
+    metadata.bash = { exit: null }
+    const result = yield* invoke(tools, "bash", { command: "sleep 30" }, abort.signal)
+    expect(result.output).toBe("bash done")
+    yield* Effect.sleep("1 second")
+    expect(yield* Effect.promise(() => lines(failure))).toHaveLength(1)
+    expect(yield* Effect.promise(() => lines(success))).toHaveLength(1)
+  }),
+)
+
+it.live("keeps running PostToolUse for a bash command that exits zero or has no exit code", () =>
+  Effect.gen(function* () {
+    const dir = yield* scratch()
+    const failure = path.join(dir, "failure")
+    const success = path.join(dir, "success")
+    yield* using({
+      PostToolUseFailure: [{ matcher: "Bash", hooks: [record(failure)] }],
+      PostToolUse: [{ matcher: "Bash", hooks: [record(success)] }],
+    })
+    const tools = yield* resolve()
+    // The probe reports no metadata by default; a real shell call always has an exit code.
+    yield* invoke(tools, "bash", { command: "true" })
+    metadata.bash = { exit: 0 }
+    yield* invoke(tools, "bash", { command: "true" })
+    expect(yield* Effect.promise(() => lines(success))).toHaveLength(2)
+    expect(yield* Effect.promise(() => lines(failure))).toEqual([])
   }),
 )
 

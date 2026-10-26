@@ -228,10 +228,26 @@ export const post = Effect.fn("KiloHookTool.post")(function* (
 })
 
 /**
+ * Why a bash call failed, when it did: a non-zero exit code, or no exit code at all. The shell tool
+ * reports `exit: null` when it killed the command at its timeout (a signal from outside is a
+ * number, 128 + signum) and says so in its output. A cancelled call is not a failure and never
+ * reaches here (see `after`).
+ */
+function ended(call: KiloHooks.Call, metadata: Record<string, unknown>, output: string) {
+  if (call.tool !== "bash") return undefined
+  if (typeof metadata.exit === "number" && metadata.exit !== 0) return `Exit code ${metadata.exit}\n${output}`
+  if (metadata.exit !== null) return undefined
+  const at = output.lastIndexOf("<shell_metadata>")
+  const limit = at < 0 ? undefined : /timeout (\d+) ms/.exec(output.slice(at))?.[1]
+  return `Command timed out${limit ? ` after ${limit} ms` : ""}\n${output}`
+}
+
+/**
  * Runs PostToolUse hooks: `updatedToolOutput` replaces the output the model sees (text and
  * attachments; the UI may still show the streamed original from metadata), then PreToolUse context
- * and PostToolUse feedback are appended to it. A bash command that exited non-zero runs
- * PostToolUseFailure instead, as Claude Code counts it as a failed call.
+ * and PostToolUse feedback are appended to it. A bash command that exited non-zero, or that the
+ * shell tool killed at its timeout, runs PostToolUseFailure instead, as Claude Code counts it as a
+ * failed call. A cancelled bash call runs neither, like any other cancelled call (see `failure`).
  */
 export const after = Effect.fn("KiloHookTool.after")(function* (
   hooks: KiloHooks.Hooks,
@@ -240,11 +256,14 @@ export const after = Effect.fn("KiloHookTool.after")(function* (
 ) {
   const metadata = isRecord(result.metadata) ? result.metadata : {}
   if (call.tool === "bash") yield* moved(hooks, call)
-  if (call.tool === "bash" && typeof metadata.exit === "number" && metadata.exit !== 0) {
-    const notes = [
-      ...take(call.callID),
-      ...(yield* failed(hooks, call, `Exit code ${metadata.exit}\n${result.output}`, false)),
-    ]
+  if (call.tool === "bash" && metadata.exit === null && call.abort?.aborted) {
+    take(call.callID)
+    elapsed(call.callID)
+    return
+  }
+  const fail = ended(call, metadata, result.output)
+  if (fail !== undefined) {
+    const notes = [...take(call.callID), ...(yield* failed(hooks, call, fail, false))]
     if (notes.length) result.output = `${result.output}\n\n${notes.join("\n\n")}`
     return
   }

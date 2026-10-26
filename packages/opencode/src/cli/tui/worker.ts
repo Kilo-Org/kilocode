@@ -57,7 +57,7 @@ let server: Awaited<ReturnType<typeof Server.listen>> | undefined
 const remoteExit = createWorkerRemoteExit(Rpc.emit) // kilocode_change
 // kilocode_change start - drain ingest before dispose so GlobalBus/remote stay live
 const runShutdown = createWorkerShutdown({
-  end: () => KiloHookSession.end("prompt_input_exit"),
+  end: () => KiloHookSession.end("prompt_input_exit", 3000), // kilocode_change - SessionEnd hooks, within the TUI's 5 s shutdown window
   drain: () => KiloSessions.drainIngestForShutdown(),
   dispose: () => InstanceRuntime.disposeAllInstances(),
   stopServer: async () => {
