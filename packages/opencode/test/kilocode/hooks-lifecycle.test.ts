@@ -44,6 +44,18 @@ const marker = () => path.join(temp(), "marker.jsonl")
 // Lets a detached hook that should not run have had its chance to.
 const settle = (ms = 600) => Effect.sleep(`${ms} millis`)
 
+// Writes to a path until `seen` holds, since a watcher that comes up late misses the first write.
+const poke = (file: string, seen: () => boolean, message: string) =>
+  pollWithTimeout(
+    Effect.gen(function* () {
+      if (seen()) return true as const
+      fs.appendFileSync(file, "2\n")
+      yield* Effect.sleep("250 millis")
+      return seen() ? (true as const) : undefined
+    }),
+    message,
+  )
+
 /** Subscribes the hook lifecycle for the current instance, as bootstrap does. */
 const subscribe = Effect.fn("test.subscribe")(function* (
   delays: { permission?: number; question?: number; idle?: number } = {},
@@ -570,15 +582,7 @@ describe("FileChanged", () => {
       yield* subscribe()
       // The probe's hook only runs once the watchers are up, and the rebuild that raised them has
       // read which files exist by then.
-      yield* pollWithTimeout(
-        Effect.gen(function* () {
-          if (lines(file).length) return true as const
-          fs.appendFileSync(probe, "2\n")
-          yield* Effect.sleep("250 millis")
-          return lines(file).length ? (true as const) : undefined
-        }),
-        "the watchers never came up",
-      )
+      yield* poke(probe, () => lines(file).length > 0, "the watchers never came up")
       // Every slot of the shared bound is taken, and each holder says so once it has its slot.
       const hold = () =>
         Effect.gen(function* () {
@@ -608,6 +612,46 @@ describe("FileChanged", () => {
       yield* Deferred.succeed(first.release, undefined)
       yield* until(() => lines(file).length === 2)
       expect(lines(file)[1]).toMatchObject({ file_path: target, event: "unlink" })
+    }),
+  )
+
+  it.instance("a rebuild while a change waits on its debounce does not turn its add into a change", () =>
+    Effect.gen(function* () {
+      const { directory } = yield* boot()
+      const file = marker()
+      const target = path.join(directory, ".envrc")
+      const probe = path.join(directory, ".probe")
+      const after = path.join(directory, ".after")
+      const outside = path.join(temp(), "outside")
+      fs.writeFileSync(probe, "1\n")
+      yield* hooks({ FileChanged: [{ matcher: ".envrc|.probe|.after|outside", hooks: [record(file)] }] })
+      yield* subscribe()
+      yield* poke(probe, () => lines(file).length > 0, "the watchers never came up")
+      const seen = (name: string) => lines(file).some((item) => item.file_path === name)
+      // The file is created, then written every 10 ms: each write restarts its 100 ms debounce, so
+      // its change keeps waiting while the writes stay under 100 ms apart.
+      const stop = { on: false }
+      fs.writeFileSync(target, "x\n")
+      yield* Effect.forkChild(
+        Effect.gen(function* () {
+          while (!stop.on) {
+            fs.appendFileSync(target, "x\n")
+            yield* Effect.sleep("10 millis")
+          }
+        }),
+      )
+      // `.after` is created after the file, so it comes behind the file's first event on the same
+      // watcher: once its hook ran, that event has been delivered and the debounce is armed.
+      fs.writeFileSync(after, "1\n")
+      yield* until(() => seen(after))
+      // The rebuild reads the disk, where the file now exists. It is done once the path it adds is
+      // watched: presence is assigned before the watchers are synced.
+      KiloHookLifecycle.watch(directory, [outside])
+      yield* poke(outside, () => seen(outside), "the rebuild never finished")
+      stop.on = true
+      yield* until(() => seen(target))
+      expect(lines(file).find((item) => item.file_path === target)).toMatchObject({ event: "add" })
+      KiloHookLifecycle.watch(directory, [])
     }),
   )
 

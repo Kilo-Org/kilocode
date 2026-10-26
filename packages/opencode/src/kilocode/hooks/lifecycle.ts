@@ -389,7 +389,11 @@ export const subscribe = Effect.fn("KiloHookLifecycle.subscribe")(function* (inp
           ...groups.flatMap((group) => names(group.matcher)).map((name) => path.join(directory, name)),
           ...extra,
         ])
-        files.present = new Set([...files.targets].filter((file) => fs.existsSync(file)))
+        // A file whose change waits on its debounce keeps the presence that change is judged against:
+        // reading the disk now would turn its add into a change, or drop its unlink.
+        files.present = new Set(
+          [...files.targets].filter((file) => (debounce.has(file) ? files.present.has(file) : fs.existsSync(file))),
+        )
         sync()
       }),
     )
