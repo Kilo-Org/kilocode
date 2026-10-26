@@ -1,4 +1,9 @@
 {
+  "module:packages/core/src/kilocode/oauth/page.ts": {
+    "state": "ported",
+    "note": "packages/kilo-cli/src/branding/text.ts KiloBranding.transform applies the Kilo callback text and square SVG mark to the upstream page module through the host runtime/build loader. Success and error preserve upstream HTML escaping and autoClose behavior; the bootstrap page is also branded. packages/kilo-cli/test/branding.test.ts checks source and compiled exports. The separate oauth-branding test cell remains open because provider User-Agent/originator changes are deferred.",
+    "by": "rebrand-identity"
+  },
   "module:packages/opencode/test/kilocode/config/hide-prompt-training-models.test.ts": {
     "state": "ported",
     "note": "packages/core/test/kilocode/config/policy.test.ts checks the exact top-level boolean setting, true, false, omission, and rejection of string values against KiloConfigPolicy.Info. Gateway request enforcement and managed precedence are covered by packages/kilo-plugin/test/organization-modes.test.ts and packages/core/test/kilocode/config/discovery.test.ts.",

@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 334" width="1000" height="334">
 <style>rect{stroke:#0d1117;stroke-width:.5}.d{fill:#2ea043}.o{fill:#6e7681}.x{fill:#d29922}.b{fill:none;stroke-width:2}text{font-family:sans-serif;fill:#fff;stroke:#0d1117;stroke-width:3;paint-order:stroke}</style>
 <rect x="0" y="0" width="1000" height="334" fill="#0d1117" stroke="none"/>
-<text x="4.00" y="21.00" font-size="16">Features: 1.8% (104/5677)</text>
+<text x="4.00" y="21.00" font-size="16">Features: 1.8% (105/5677)</text>
 <g><title>vscode: 0/2057 (0%)</title>
 <rect class="o" x="1.00" y="31.00" width="14.74" height="15.44"/>
 <rect class="o" x="15.74" y="31.00" width="14.74" height="15.44"/>
@@ -2768,8 +2768,8 @@
 <rect class="o" x="457.54" y="246.83" width="6.49" height="3.67"/>
 <rect class="b" x="450.04" y="238.49" width="14.99" height="13.00"/>
 </g>
-<g><title>oauth: 0/8 (0%)</title>
-<rect class="o" x="466.03" y="239.49" width="4.33" height="3.67"/>
+<g><title>oauth: 1/8 (12.5%)</title>
+<rect class="d" x="466.03" y="239.49" width="4.33" height="3.67"/>
 <rect class="o" x="470.36" y="239.49" width="4.33" height="3.67"/>
 <rect class="o" x="474.69" y="239.49" width="4.33" height="3.67"/>
 <rect class="o" x="466.03" y="243.16" width="4.33" height="3.67"/>
