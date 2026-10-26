@@ -471,6 +471,7 @@ class KiloBackendSessionManager(
         requireClient().sessionDelete(sessionID = id, directory = dir)
         directories.remove(id)
         owned.remove(id)
+        parents.remove(id)
     }
 
     /**
