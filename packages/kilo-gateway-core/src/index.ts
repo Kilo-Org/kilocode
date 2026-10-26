@@ -1,5 +1,6 @@
 export * as KiloAccount from "./account.js"
 export * as KiloAutocomplete from "./autocomplete.js"
+export * as KiloCustomRouter from "./custom-router.js"
 export * as KiloDefaults from "./defaults.js"
 export * as KiloDevice from "./device.js"
 export * as KiloErrors from "./errors.js"
