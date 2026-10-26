@@ -242,6 +242,31 @@ export type SessionMetadata = typeof SessionMetadata.Type
 // `X-KILOCODE-FEATURE`.
 export const PLATFORM_METADATA_KEY = "kilocode.platform"
 
+// Custom auto routers (ADR 0005). The payloads are the Cloud contract, decoded by `KiloCustomRouter` in
+// @kilocode/gateway-core; these methods run them in the Gateway account scope and pass them through unchanged.
+// A failed Cloud request fails with `router`: the user-facing message and the Cloud error code.
+const RouterFailure = {
+  ...Failure,
+  router: portable(Schema.Struct({ code: Schema.String, retryAt: Schema.optional(Schema.String) })),
+}
+const RouterTarget = Schema.Struct({
+  /** Router model ID or slug, as `kilo auto router` accepts it. */
+  router: Schema.String,
+  /** `<provider>/<model>` of a catalog model. */
+  model: Schema.String,
+})
+export const RouterEvalConfig = Schema.Struct({
+  server: Schema.String,
+  organizationID: OrganizationID,
+  provider: Schema.String,
+  model: Schema.String,
+  /** Config for the published CLI in the eval container. Has no credentials. */
+  config: Schema.Unknown,
+  /** Credentials for the published CLI in the eval container. Secret. */
+  auth: Schema.Unknown,
+})
+export type RouterEvalConfig = typeof RouterEvalConfig.Type
+
 // The TUI, VS Code, and JetBrains clients use this contract for account/profile, balance, Kilo Pass,
 // BYOK, coding plans, team modes, notifications, media and embedding models, and FIM/edit routing.
 export const Definition = Rpc.define({
@@ -331,6 +356,41 @@ export const Definition = Rpc.define({
       input: portable(Schema.Struct({ sessionID: Schema.String })),
       output: portable(SessionMetadata),
       errors: Failure,
+    },
+    "routers.list": {
+      input: portable(Schema.Struct({})),
+      output: portable(Schema.Unknown),
+      errors: RouterFailure,
+    },
+    "routers.add": {
+      input: portable(RouterTarget),
+      output: portable(Schema.Unknown),
+      errors: RouterFailure,
+    },
+    "routers.remove": {
+      input: portable(RouterTarget),
+      output: portable(Schema.Unknown),
+      errors: RouterFailure,
+    },
+    "routers.evalPlan": {
+      input: portable(Schema.Struct({ routerID: Schema.String })),
+      output: portable(Schema.Unknown),
+      errors: RouterFailure,
+    },
+    "routers.evalCase": {
+      input: portable(Schema.Struct({ routerID: Schema.String, caseID: Schema.String })),
+      output: portable(Schema.Unknown),
+      errors: RouterFailure,
+    },
+    "routers.evalConfig": {
+      input: portable(Schema.Struct({ entry: Schema.Unknown })),
+      output: portable(RouterEvalConfig),
+      errors: RouterFailure,
+    },
+    "routers.evalResult": {
+      input: portable(Schema.Struct({ result: Schema.Unknown })),
+      output: portable(Schema.Unknown),
+      errors: RouterFailure,
     },
   },
   events: {
