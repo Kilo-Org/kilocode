@@ -26,6 +26,13 @@ class AgentAttentionTest {
     }
 
     @Test
+    fun `subagent errors do not light up the dot`() {
+        val child = SessionActivityDto("/repo/wt", SessionActivityKindDto.ERROR, parentID = "ses_root")
+
+        assertFalse(sessionAttentionNeeded(mapOf("ses_child" to child)))
+    }
+
+    @Test
     fun `one session needing attention lights the dot for the whole snapshot`() {
         val mixed = mapOf(
             "ses_running" to SessionActivityDto("/repo/a", SessionActivityKindDto.RUNNING),

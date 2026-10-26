@@ -16,5 +16,5 @@ internal fun sessionAttentionNeeded(activity: Map<String, SessionActivityDto>): 
         it.kind == SessionActivityKindDto.QUESTION ||
             it.kind == SessionActivityKindDto.PLAN ||
             it.kind == SessionActivityKindDto.PERMISSION ||
-            it.kind == SessionActivityKindDto.ERROR
+            (it.kind == SessionActivityKindDto.ERROR && it.parentID == null)
     }

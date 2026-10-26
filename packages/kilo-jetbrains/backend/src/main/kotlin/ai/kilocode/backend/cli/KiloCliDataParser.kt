@@ -404,7 +404,7 @@ object KiloCliDataParser {
             ?: info?.str("id")?.takeIf { it.isNotBlank() }
             ?: return null
         val dir = info?.str("directory")?.takeIf { it.isNotBlank() } ?: return null
-        return SessionChangeDto(id, dir, kind)
+        return SessionChangeDto(id, dir, kind, info.str("parentID"))
     }
 
     // ================================================================

@@ -3,10 +3,12 @@ package ai.kilocode.client.agentManager.worktree
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.toKind
 import ai.kilocode.rpc.dto.SessionActivityDto
+import ai.kilocode.rpc.dto.SessionActivityKindDto
 
 internal fun aggregateWorktreeActivity(
     activity: Map<String, SessionActivityDto>,
 ): Map<String, SessionActivityKind> = activity.values
+    .filter { it.kind != SessionActivityKindDto.ERROR || it.parentID == null }
     .groupBy { normalize(it.directory) }
     .mapValues { (_, items) -> items.map { it.kind.toKind() }.minBy(::rank) }
 

@@ -48,6 +48,21 @@ class WorktreeActivityTest {
     }
 
     @Test
+    fun `subagent error does not badge its worktree`() {
+        val child = SessionActivityDto(
+            "/repo/wt",
+            SessionActivityKindDto.ERROR,
+            parentID = "ses_root",
+        )
+
+        assertEquals(emptyMap(), aggregateWorktreeActivity(mapOf("ses_child" to child)))
+        assertEquals(
+            SessionActivityKind.ERROR,
+            aggregateWorktreeActivity(mapOf("ses_root" to SessionActivityDto("/repo/wt", SessionActivityKindDto.ERROR)))["/repo/wt"],
+        )
+    }
+
+    @Test
     fun `attention ranks waiting sessions and ignores running work`() {
         val kinds = mapOf(
             "ses_run" to SessionActivityKind.RUNNING,

@@ -462,7 +462,7 @@ class KiloBackendAppService private constructor(
                     models.start(connection.apiClient!!, connection.port)
                     sessions.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
                     chat.start(connection.apiClient!!, connection.port, connection.events)
-                    activity.start(sessions.statuses, sessions::sessionDirectory, chat.events)
+                    activity.start(sessions.statuses, sessions::sessionDirectory, sessions::sessionParent, chat.events)
                     workspaces.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
                     startWatchingGlobalSseEvents()
                     setTelemetry(true)

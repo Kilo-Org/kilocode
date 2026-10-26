@@ -75,6 +75,9 @@ class KiloBackendSessionManager(
     /** Session directory cache populated while mapping CLI sessions. */
     private val owned = ConcurrentHashMap<String, String>()
 
+    /** Parent IDs for subagent sessions; absent entries are root sessions. */
+    private val parents = ConcurrentHashMap<String, String>()
+
     private val _statuses = MutableStateFlow<Map<String, SessionStatusDto>>(emptyMap())
     val statuses: StateFlow<Map<String, SessionStatusDto>> = _statuses.asStateFlow()
 
@@ -130,6 +133,7 @@ class KiloBackendSessionManager(
         http = null
         base = null
         owned.clear()
+        parents.clear()
         jobFlows.clear()
         _statuses.value = emptyMap()
         log.info("Session manager stopped")
@@ -152,9 +156,12 @@ class KiloBackendSessionManager(
     private fun track(change: SessionChangeDto) {
         if (change.kind == SessionChangeKindDto.DELETED) {
             owned.remove(change.id)
+            parents.remove(change.id)
             directories.remove(change.id)
         } else {
             owned[change.id] = change.directory
+            val parent = change.parentID
+            if (parent == null) parents.remove(change.id) else parents[change.id] = parent
         }
         val kind = change.kind.name.lowercase()
         log.debug { "${ChatLogSummary.sid(change.id)} evt=session.$kind ${ChatLogSummary.dir(change.directory)}" }
@@ -608,6 +615,8 @@ class KiloBackendSessionManager(
     fun sessionDirectory(id: String): String? =
         directories[id] ?: owned[id]
 
+    fun sessionParent(id: String): String? = parents[id]
+
     // ------ mapping (generated API model → DTO) ------
 
     private fun dto(s: ai.kilocode.jetbrains.api.model.Session) = dto(
@@ -670,6 +679,7 @@ class KiloBackendSessionManager(
         share: String?,
     ): SessionDto {
         owned[id] = dir
+        if (parent == null) parents.remove(id) else parents[id] = parent
         return SessionDto(
             id = id,
             projectID = project,

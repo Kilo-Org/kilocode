@@ -69,6 +69,7 @@ enum class SessionActivityKindDto {
 data class SessionActivityDto(
     val directory: String,
     val kind: SessionActivityKindDto,
+    val parentID: String? = null,
 )
 
 @Serializable
@@ -96,4 +97,5 @@ data class SessionChangeDto(
     val id: String,
     val directory: String,
     val kind: SessionChangeKindDto,
+    val parentID: String? = null,
 )

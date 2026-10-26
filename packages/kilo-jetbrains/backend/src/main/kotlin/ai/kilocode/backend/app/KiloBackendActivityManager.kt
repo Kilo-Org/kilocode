@@ -49,17 +49,20 @@ class KiloBackendActivityManager(
 
     private var statuses: StateFlow<Map<String, SessionStatusDto>>? = null
     private var directory: (String) -> String? = { null }
+    private var parent: (String) -> String? = { null }
     private var status: Job? = null
     private var events: Job? = null
 
     fun start(
         statuses: StateFlow<Map<String, SessionStatusDto>>,
         directory: (String) -> String?,
+        parent: (String) -> String?,
         chatEvents: SharedFlow<ChatEventDto>,
     ) {
         if (status?.isActive == true || events?.isActive == true) detach()
         this.statuses = statuses
         this.directory = directory
+        this.parent = parent
         status = cs.launch {
             statuses.collect { synchronized(lock) { recompute() } }
         }
@@ -78,6 +81,7 @@ class KiloBackendActivityManager(
         detach()
         statuses = null
         directory = { null }
+        parent = { null }
         synchronized(lock) {
             permissions.clear()
             questions.clear()
@@ -189,7 +193,7 @@ class KiloBackendActivityManager(
         _activity.value = ids.mapNotNull { id ->
             val dir = directory(id) ?: return@mapNotNull null
             val kind = kind(id, current[id]?.type == "busy") ?: return@mapNotNull null
-            id to SessionActivityDto(dir, kind)
+            id to SessionActivityDto(dir, kind, parent(id))
         }.toMap()
     }
 
