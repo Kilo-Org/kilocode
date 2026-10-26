@@ -19,6 +19,7 @@ import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -94,7 +95,8 @@ class KiloBackendSessionManager(
         http = httpClient
         base = "http://127.0.0.1:$port"
         if (watcher?.isActive == true) return
-        watcher = cs.launch {
+        // Subscribe before returning because the SSE flow has no replay.
+        watcher = cs.launch(start = CoroutineStart.UNDISPATCHED) {
             events.collect { event ->
                 if (event.type == "session.status") {
                     val pair = KiloCliDataParser.parseSessionStatus(event.data)
@@ -694,22 +696,30 @@ class KiloBackendSessionManager(
 
     private fun revertDto(s: Any?) = when (s) {
         null -> null
-        is ai.kilocode.jetbrains.api.model.SessionRevert -> revertDto(s.messageID, s.partID, s.snapshot, s.diff)
+        is ai.kilocode.jetbrains.api.model.SessionRevert ->
+            revertDto(s.messageID, s.partID, s.snapshot, s.diff, s.workspace?.value)
         else -> runCatching {
             val cls = s.javaClass
             fun str(name: String) = cls.methods.firstOrNull { it.name == name && it.parameterCount == 0 }?.invoke(s) as? String
+            fun enumStr(name: String): String? {
+                val raw = cls.methods.firstOrNull { it.name == name && it.parameterCount == 0 }?.invoke(s) ?: return null
+                if (raw is String) return raw
+                val value = raw.javaClass.methods.firstOrNull { it.name == "getValue" && it.parameterCount == 0 }
+                return value?.invoke(raw) as? String ?: raw.toString()
+            }
             val message = str("getMessageID")
                 ?: return@runCatching null.also { log.info("revertDto reflective getMessageID missing on ${cls.name}") }
-            revertDto(message, str("getPartID"), str("getSnapshot"), str("getDiff"))
+            revertDto(message, str("getPartID"), str("getSnapshot"), str("getDiff"), enumStr("getWorkspace"))
         }.onFailure { log.info("revertDto reflective decode failed for ${s.javaClass.name}: ${it.message}") }.getOrNull()
     }
 
-    private fun revertDto(message: String, part: String?, snapshot: String?, diff: String?) =
+    private fun revertDto(message: String, part: String?, snapshot: String?, diff: String?, workspace: String? = null) =
         SessionRevertDto(
             messageID = message,
             partID = part,
             snapshot = snapshot,
             diff = diff,
+            workspace = workspace,
         )
 
     private fun statusDto(s: SessionStatus) = SessionStatusDto(

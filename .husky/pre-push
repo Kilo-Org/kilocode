@@ -40,6 +40,12 @@ while read -r local_ref local_oid remote_ref remote_oid; do
   fi
 done
 
+# In a linked worktree git exports GIT_DIR to hooks without GIT_WORK_TREE (githooks(5)). Turbo runs
+# git status inside each package, and with GIT_DIR set that directory becomes the work tree root, so
+# every tracked file looks deleted and each status call writes tens of MB. Let git find the repository
+# from the working directory instead.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
+
 bun typecheck --filter='!@kilocode/kilo-jetbrains'
 
 if [ "$jetbrains" -eq 1 ]; then

@@ -6,10 +6,12 @@ process.env.KILO_SESSION_RETRY_LIMIT = "2"
 
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { NodeFileSystem } from "@effect/platform-node"
-import { afterEach, describe, expect, spyOn } from "bun:test"
+import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { APICallError } from "ai"
-import { Context, Effect, Exit, Layer, Schedule } from "effect"
+import { Context, Effect, Exit, Fiber, Layer, Schedule } from "effect"
+import * as TestClock from "effect/testing/TestClock"
 import * as Stream from "effect/Stream"
 import type { LLMEvent } from "@opencode-ai/llm"
 import { Database } from "@opencode-ai/core/database/database"
@@ -29,6 +31,7 @@ import { Session } from "../../src/session/session"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionProcessor } from "../../src/session/processor"
+import { SessionNetwork } from "../../src/session/network"
 import { SessionRetry } from "../../src/session/retry"
 import { MessageID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
@@ -88,6 +91,10 @@ function retryable429(headers?: Record<string, string>) {
     responseHeaders: headers ?? { "content-type": "application/json" },
     isRetryable: true,
   })
+}
+
+function connectionReset() {
+  return { code: "ECONNRESET", syscall: "read", message: "read ECONNRESET connection reset by peer" }
 }
 
 const stateNode = LayerNode.make({
@@ -234,7 +241,7 @@ describe("session processor retry limit", () => {
 
   it.live("honors a configured retry limit above the upstream default", () => run(10), 15000)
 
-  const policy = (items: ("offline" | "provider")[], limit?: number) =>
+  const policy = (items: ("offline" | "provider" | "reset")[], limit?: number) =>
     Effect.gen(function* () {
       const attempts: number[] = []
       const state = { offline: 0, stopped: false }
@@ -253,9 +260,16 @@ describe("session processor retry limit", () => {
       )
 
       for (const item of items) {
-        const result = yield* Effect.exit(
-          step(item === "offline" ? new Error("fetch failed") : retryable429({ "retry-after-ms": "0" })),
-        )
+        const raw =
+          item === "offline"
+            ? new Error("fetch failed")
+            : item === "reset"
+              ? connectionReset()
+              : retryable429({ "retry-after-ms": "0" })
+        // the step sleeps for the decided backoff; advance the test clock past it
+        const fiber = yield* Effect.suspend(() => step(raw)).pipe(Effect.forkChild)
+        yield* TestClock.adjust("35 seconds")
+        const result = yield* Fiber.await(fiber)
         if (Exit.isFailure(result)) {
           state.stopped = true
           break
@@ -291,6 +305,48 @@ describe("session processor retry limit", () => {
       expect(result.stopped).toBe(true)
     }),
   )
+
+  it.effect("retries retryable connection resets without the offline handler", () =>
+    Effect.gen(function* () {
+      const result = yield* policy(["reset", "reset", "provider"])
+      expect(result.offline).toBe(0)
+      expect(result.attempts).toEqual([1, 2, 3])
+      expect(result.stopped).toBe(false)
+    }),
+  )
+
+  it.effect("retryable connection resets count against the retry limit", () =>
+    Effect.gen(function* () {
+      const result = yield* policy(["reset", "reset", "reset"], 2)
+      expect(result.offline).toBe(0)
+      expect(result.attempts).toEqual([1, 2])
+      expect(result.stopped).toBe(true)
+    }),
+  )
+
+  test("serverReset matches only retryable connection-reset API errors", () => {
+    const reset = MessageV2.fromError(connectionReset(), { providerID: ref.providerID })
+    expect(SessionV1.APIError.isInstance(reset)).toBe(true)
+    expect(SessionNetwork.serverReset(reset)).toBe(true)
+
+    // undici-style wrapper: the reset sits in the cause chain, so fromError
+    // records no top-level metadata.code — the message must still match
+    const nested = MessageV2.fromError(new Error("fetch failed", { cause: connectionReset() }), {
+      providerID: ref.providerID,
+    })
+    expect(SessionNetwork.serverReset(nested)).toBe(true)
+
+    const blocked = new MessageV2.APIError({ message: "Connection reset by server", isRetryable: false }).toObject()
+    expect(SessionNetwork.serverReset(blocked)).toBe(false)
+
+    const refused = MessageV2.fromError(
+      { code: "ECONNREFUSED", syscall: "connect", message: "connect ECONNREFUSED 127.0.0.1:3000" },
+      { providerID: ref.providerID },
+    )
+    expect(SessionNetwork.serverReset(refused)).toBe(false)
+
+    expect(SessionNetwork.serverReset(new Error("fetch failed"))).toBe(false)
+  })
 
   it.effect("only positive integers enable the limit", () =>
     Effect.promise(async () => {

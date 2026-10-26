@@ -19,6 +19,7 @@ import java.awt.Cursor
 import java.awt.Rectangle
 import java.awt.event.KeyEvent
 import javax.swing.JComponent
+import javax.swing.JViewport
 import javax.swing.KeyStroke
 import javax.swing.ScrollPaneConstants
 import javax.swing.UIManager
@@ -99,8 +100,16 @@ internal class ActiveList(
         view.filter(query)
     }
 
+    /** The scroll pane's viewport, for owners that must track its extent. */
+    @RequiresEdt
+    internal fun viewport(): JViewport = scroll.viewport
+
     @RequiresEdt
     fun select(key: String, scroll: Boolean = true): Boolean = view.select(key, scroll)
+
+    /** True when row [index] is entirely inside the viewport. */
+    @RequiresEdt
+    fun indexFullyVisible(index: Int): Boolean = view.indexFullyVisible(index)
 
     @RequiresEdt
     fun selectIndex(index: Int) = view.selectIndex(index)
@@ -156,6 +165,23 @@ internal class ActiveList(
 
     @RequiresEdt
     fun preferredFocus(): JComponent = view.list
+
+    /**
+     * Preferred height of this whole list at [width], including every rendered cell and scroll-pane
+     * chrome. Unlike ordinary Swing preferred-size measurement this is safe before the list enters a
+     * viewport, when wrapped cells do not have their final width yet.
+     */
+    @RequiresEdt
+    fun preferredHeight(width: Int): Int {
+        val own = insets
+        val pane = scroll.insets
+        val port = scroll.viewportBorder?.getBorderInsets(scroll) ?: JBUI.emptyInsets()
+        val room = (width - own.left - own.right - pane.left - pane.right - port.left - port.right)
+            .coerceAtLeast(1)
+        val rows = view.preferredRowsHeight(room)
+        val search = search?.preferredSize?.height ?: 0
+        return own.top + own.bottom + search + pane.top + pane.bottom + port.top + port.bottom + rows
+    }
 
     @RequiresEdt
     fun trackBalloon(balloon: Balloon) = view.trackBalloon(balloon)

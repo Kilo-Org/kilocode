@@ -92,6 +92,25 @@ interface MessageListProps {
   sessionID?: Accessor<string | undefined>
 }
 
+/**
+ * Container for Virtua rows. Virtua sizes it from cached row heights and places
+ * rows absolutely inside it. A row that mounts taller than its cached height
+ * overflows the container and grows the scroller. The bottom pin then scrolls
+ * the row out of range, and the row unmounts before Virtua measures it. The
+ * scroller shrinks, the row comes back into range, and this repeats every
+ * frame. The container clips vertically (see chat-layout.css), so only
+ * measured sizes set the scroll height.
+ */
+const VirtualBox: Component<{
+  ref?: HTMLDivElement | ((el: HTMLDivElement) => void)
+  style?: JSX.CSSProperties
+  children?: JSX.Element
+}> = (box) => (
+  <div ref={box.ref} style={box.style} data-slot="message-list-virtual">
+    {box.children}
+  </div>
+)
+
 export const MessageList: Component<MessageListProps> = (props) => {
   const session = useSession()
   const server = useServer()
@@ -859,6 +878,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
         onScroll={handleScroll}
         class="message-list"
         data-slot="message-list"
+        // VS Code 1.143+ refocuses the last focused webview element before a
+        // native Copy when focus is on the body. Without a focusable transcript,
+        // that element is the prompt, so the selection collapses and Copy is empty.
+        tabIndex={-1}
         role={props.announce === false ? undefined : "log"}
         aria-live={props.announce === false ? undefined : "polite"}
         aria-busy={props.announce === false && session.status() !== "idle" ? "true" : undefined}
@@ -930,6 +953,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     return (
                       <Virtualizer
                         ref={ref}
+                        as={VirtualBox}
                         data={keys()}
                         scrollRef={scrollEl()}
                         shift={session.messageMutation() === "prepend"}

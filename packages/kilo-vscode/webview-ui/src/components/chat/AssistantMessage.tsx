@@ -18,6 +18,7 @@ import {
   useGrowIn,
 } from "@kilocode/kilo-ui/message-part"
 import type { MessageFeedbackControls } from "@kilocode/kilo-ui/message-part"
+import { useToolMotion, useToolSize } from "@kilocode/kilo-ui/tool-motion"
 import type {
   AssistantMessage as SDKAssistantMessage,
   Part as SDKPart,
@@ -110,6 +111,44 @@ function questionBusy(part: SDKPart): boolean {
   return status === "pending" || status === "running"
 }
 
+const still = {
+  enter: () => undefined,
+  live: () => undefined,
+  status: () => undefined,
+  stagger: () => undefined,
+  beat: () => undefined,
+  end: () => {},
+}
+
+/**
+ * Tool rows the user watches happen enter, reveal their details, and resize
+ * smoothly. Rows from history or a session switch stay still. Returns the
+ * wrapper attributes that tool-motion.css reads.
+ */
+function useRowMotion(props: {
+  part: SDKPart
+  done: () => boolean
+  el: () => HTMLElement | undefined
+  body: () => HTMLElement | undefined
+}) {
+  if (props.part.type !== "tool") return still
+  const tool = props.part as unknown as ToolPart
+  const motion = useToolMotion({ id: tool.id, status: () => tool.state?.status })
+  useToolSize({ el: props.el, body: props.body, active: () => motion.live() && !props.done(), motion })
+  return {
+    enter: () => (motion.entering() ? "" : undefined),
+    live: () => (motion.live() ? "" : undefined),
+    status: () => tool.state?.status,
+    stagger: () => (motion.stagger() ? String(motion.stagger()) : undefined),
+    beat: () => (motion.beat() ? String(motion.beat()) : undefined),
+    end: (event: AnimationEvent) => {
+      if (event.animationName === "tool-motion-pop") return motion.beaten()
+      if (event.target !== event.currentTarget || event.animationName !== "tool-motion-enter") return
+      motion.entered()
+    },
+  }
+}
+
 interface AssistantMessageProps {
   message: SDKAssistantMessage
   parts?: SDKPart[]
@@ -149,7 +188,6 @@ function TodoToolCard(props: { part: ToolPart }) {
             output={state()?.output}
             status={state()?.status}
             defaultOpen
-            reveal={false}
           />
         </ToolApprovalProvider>
       )}
@@ -177,7 +215,6 @@ function BashToolCard(props: { part: ToolPart; defaultOpen: boolean }) {
             status={state()?.status}
             defaultOpen={props.defaultOpen}
             animate
-            reveal={state()?.status === "pending" || state()?.status === "running"}
           />
         </ToolApprovalProvider>
       )}
@@ -311,7 +348,14 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           })
           const live = part.type === "text" && !!part.time && !part.time.end
           let el: HTMLDivElement | undefined
+          let body: HTMLDivElement | undefined
           useGrowIn(() => el, live)
+          const motion = useRowMotion({
+            part,
+            done: () => !!props.message.time.completed,
+            el: () => el,
+            body: () => body,
+          })
 
           // Lights up when this part is behind the hovered/focused task-timeline
           // bar, using that bar's own color so the two stay easy to correlate.
@@ -367,62 +411,65 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                 data-part-type={part.type}
                 data-part-id={part.id}
                 data-timeline-highlight={highlighted() ? "" : undefined}
-                style={
-                  highlighted() ? { "--timeline-color": timelineColor(part as unknown as TimelinePart) } : undefined
-                }
+                data-tool-enter={motion.enter()}
+                data-tool-live={motion.live()}
+                data-tool-status={motion.status()}
+                style={{
+                  "--timeline-color": highlighted() ? timelineColor(part as unknown as TimelinePart) : undefined,
+                  "--tool-stagger": motion.stagger(),
+                  "--tool-beat": motion.beat(),
+                }}
+                onAnimationEnd={motion.end}
               >
-                <Show
-                  when={activeQuestion()}
-                  fallback={
-                    <Show
-                      when={activeSuggestion()}
-                      fallback={
-                        <Show
-                          when={planExit()}
-                          fallback={
-                            <Show
-                              when={bash()}
-                              fallback={
-                                <Show
-                                  when={isUpstreamSuppressed}
-                                  fallback={
-                                    <Part
-                                      part={part}
-                                      message={props.message as SDKMessage}
-                                      showAssistantCopyPartID={props.showAssistantCopyPartID}
-                                      defaultOpen={toolDefaultOpen(part, open(), edit(), mcp())}
-                                      reasoningDisplay={display.reasoningDisplay()}
-                                      settled={settled()}
-                                      feedback={props.feedback}
-                                      throughput={throughputEl()}
-                                      turnMeta={turnMetaEl()}
-                                      readonly={props.readonly}
-                                      animate={
-                                        part.type === "tool" &&
-                                        ((part as unknown as ToolPart).state?.status === "pending" ||
-                                          (part as unknown as ToolPart).state?.status === "running")
-                                      }
-                                    />
-                                  }
-                                >
-                                  <TodoToolCard part={part as unknown as ToolPart} />
-                                </Show>
-                              }
-                            >
-                              {(tool) => <BashToolCard part={tool() as unknown as ToolPart} defaultOpen={open()} />}
-                            </Show>
-                          }
-                        >
-                          {(tp) => <PlanExitCard part={tp()} sessionID={props.message.sessionID} />}
-                        </Show>
-                      }
-                    >
-                      {(req) => <SuggestBar request={req()} />}
-                    </Show>
-                  }
-                >
-                  {(req) => <QuestionDock request={req()} />}
-                </Show>
+                <div ref={body} data-slot="tool-part-body">
+                  <Show
+                    when={activeQuestion()}
+                    fallback={
+                      <Show
+                        when={activeSuggestion()}
+                        fallback={
+                          <Show
+                            when={planExit()}
+                            fallback={
+                              <Show
+                                when={bash()}
+                                fallback={
+                                  <Show
+                                    when={isUpstreamSuppressed}
+                                    fallback={
+                                      <Part
+                                        part={part}
+                                        message={props.message as SDKMessage}
+                                        showAssistantCopyPartID={props.showAssistantCopyPartID}
+                                        defaultOpen={toolDefaultOpen(part, open(), edit(), mcp())}
+                                        reasoningDisplay={display.reasoningDisplay()}
+                                        settled={settled()}
+                                        feedback={props.feedback}
+                                        throughput={throughputEl()}
+                                        turnMeta={turnMetaEl()}
+                                        readonly={props.readonly}
+                                      />
+                                    }
+                                  >
+                                    <TodoToolCard part={part as unknown as ToolPart} />
+                                  </Show>
+                                }
+                              >
+                                {(tool) => <BashToolCard part={tool() as unknown as ToolPart} defaultOpen={open()} />}
+                              </Show>
+                            }
+                          >
+                            {(tp) => <PlanExitCard part={tp()} sessionID={props.message.sessionID} />}
+                          </Show>
+                        }
+                      >
+                        {(req) => <SuggestBar request={req()} />}
+                      </Show>
+                    }
+                  >
+                    {(req) => <QuestionDock request={req()} />}
+                  </Show>
+                </div>
               </div>
             </Show>
           )

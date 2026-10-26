@@ -393,9 +393,16 @@ class KiloWorktreeRpcApiImpl(
         probeGh(Path.of(directory).normalize(), "rpc", github, maxAge)
     }
 
-    override suspend fun prStatus(directory: String, maxAge: Long?): WorktreePrListDto = withContext(Dispatchers.IO) {
+    override suspend fun prStatus(directory: String, maxAge: Long?, fresh: List<String>): WorktreePrListDto = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        prs[directory]?.takeIf { usable(it.time, now, prTtl(it.value.availability), maxAge) }?.let { return@withContext it.value }
+        val named = prPaths(fresh)
+        // A caller naming paths knows something about them this cache cannot: it was written before
+        // whatever prompted the call. Only the shared list is refused, though — every path it did
+        // not name still answers from the resolver's own caches below, which is what makes this
+        // cheaper than the `maxAge = 0` it replaces.
+        if (named.isEmpty()) {
+            prs[directory]?.takeIf { usable(it.time, now, prTtl(it.value.availability), maxAge) }?.let { return@withContext it.value }
+        }
         val root = Path.of(directory).normalize()
         // A gone directory reports nothing and is not cached, so a real availability problem found
         // from a live directory still reaches the UI.
@@ -417,7 +424,7 @@ class KiloWorktreeRpcApiImpl(
         var status = GhAvailability.OK
         val data = parallel(items) { item ->
             if (status != GhAvailability.OK) return@parallel null
-            val lookup = runCatching { resolver.resolve(item.path, item.branch, base, maxAge) }.getOrElse { err ->
+            val lookup = runCatching { resolver.resolve(item.path, item.branch, base, prAge(item.path, named, maxAge)) }.getOrElse { err ->
                 if (err is CancellationException) throw err
                 LOG.warn("worktree poll failed: op=pr path=${item.path} message=${err.message}", err)
                 return@parallel null
@@ -627,7 +634,31 @@ class KiloWorktreeRpcApiImpl(
             val base = Path.of(directory).normalize()
             val branch = request.branch.trim()
             if (branch.isEmpty()) return@withContext CreateWorktreeResultDto(error = "Branch name is required")
-            lock(base, "create") { addWorktree(base, branch, request.existingBranch, request.baseBranch) }
+            lock(base, "create") {
+                val ref = if (request.fetchBase && !request.existingBranch) {
+                    val target = request.baseBranch?.trim()?.takeIf { it.isNotEmpty() }
+                        ?: return@lock CreateWorktreeResultDto(error = "Base branch is required to fetch latest")
+                    val remote = runGit(base, "config", "--get", "branch.$target.remote").stdout.trim()
+                    val merge = runGit(base, "config", "--get", "branch.$target.merge").stdout.trim()
+                    if (remote.isEmpty() || remote == "." || !merge.startsWith("refs/heads/")) {
+                        return@lock addWorktree(base, branch, false, target)
+                    }
+                    val tracked = merge.removePrefix("refs/heads/")
+                    val fetched = runGit(
+                        base,
+                        listOf("fetch", "--quiet", "--no-tags", remote, "+$merge:refs/remotes/$remote/$tracked"),
+                        GIT_WRITE_TIMEOUT_MS,
+                    )
+                    if (!fetched.ok) {
+                        LOG.warn("base fetch failed: branch=$target upstream=$remote/$tracked exit=${fetched.exit} stderr=${fetched.stderr.trim()}")
+                        return@lock CreateWorktreeResultDto(error = reason(fetched, "Could not fetch $remote/$tracked"))
+                    }
+                    "$remote/$tracked"
+                } else {
+                    request.baseBranch
+                }
+                addWorktree(base, branch, request.existingBranch, ref)
+            }
         }
 
     override suspend fun importPr(directory: String, url: String): CreateWorktreeResultDto =
@@ -1810,6 +1841,24 @@ internal fun staleWorktrees(items: List<WorktreeDto>, trash: WorktreeTrash? = nu
  */
 internal fun prTargets(items: List<WorktreeDto>): List<WorktreeDto> {
     return items.filter { !it.prunable && it.branch != "(detached)" }
+}
+
+/**
+ * The paths a `prStatus` caller named as no longer covered by any cache, in the shape the worktree
+ * list reports them, so a trailing separator or a `..` segment on the way in still matches a row.
+ */
+internal fun prPaths(fresh: List<String>): Set<String> =
+    fresh.mapTo(HashSet()) { Path.of(it).normalize().toString() }
+
+/**
+ * The freshness ceiling one worktree's lookup runs under: nothing cached at all for a path the
+ * caller named, and whatever the caller allowed for the rest. Keeping this per path is the whole
+ * point of naming them — a repository with a dozen worktrees would otherwise re-run every
+ * PR-less checkout's full `gh` ladder to notice a pull request on one of them.
+ */
+internal fun prAge(path: String, fresh: Set<String>, maxAge: Long?): Long? {
+    if (fresh.isEmpty()) return maxAge
+    return if (Path.of(path).normalize().toString() in fresh) 0 else maxAge
 }
 
 /** Branch checked out in the main working tree, or null when it is missing or detached. */

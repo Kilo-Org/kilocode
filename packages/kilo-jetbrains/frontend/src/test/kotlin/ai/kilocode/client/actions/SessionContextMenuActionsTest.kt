@@ -55,6 +55,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
                 "Kilo.Session.CopyPrRef",
                 "---",
                 "Kilo.OpenSettings",
+                "Kilo.ReloadCoreSettings",
                 "---",
                 "\$Copy",
                 "---",
@@ -91,6 +92,7 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
                 "Kilo.Session.CopyPrRef",
                 "---",
                 "Kilo.OpenSettings",
+                "Kilo.CliGroup",
                 "---",
                 "Kilo.Session.CopyId",
                 "Kilo.Session.CopyShareLink",
@@ -100,9 +102,29 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
         )
     }
 
+    /**
+     * The prompt menu reuses the gear menu's Core submenu rather than repeating Reload/Restart, so a
+     * regression that flattens it would also drop the version/architecture footer.
+     */
+    fun `test prompt menu reuses the core group with its version footer`() {
+        assertEquals(
+            listOf(
+                "Kilo.ReloadCoreSettings",
+                "---",
+                "Kilo.Restart",
+                "Kilo.Reinstall",
+                "---",
+                "Kilo.CoreInfo",
+            ),
+            menuChildren("Kilo.CliGroup"),
+        )
+    }
+
     fun `test both menus reference only declared or platform actions`() {
-        val declared = descriptor().getElementsByTagName("action").let { nodes ->
-            (0 until nodes.length).mapNotNull { (nodes.item(it) as Element).getAttribute("id").takeIf(String::isNotEmpty) }
+        val declared = listOf("action", "group").flatMap { tag ->
+            descriptor().getElementsByTagName(tag).let { nodes ->
+                (0 until nodes.length).mapNotNull { (nodes.item(it) as Element).getAttribute("id").takeIf(String::isNotEmpty) }
+            }
         }.toSet()
 
         for (group in listOf("Kilo.Session.ContextMenu", "Kilo.Session.PromptMenu")) {
@@ -112,6 +134,20 @@ class SessionContextMenuActionsTest : SessionUiTestBase() {
 
             assertEquals("$group references undeclared action ids", emptyList<String>(), missing)
         }
+    }
+
+    fun `test reload slash command reloads core settings for the session workspace`() {
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+        val prompt = find<ai.kilocode.client.session.ui.prompt.PromptPanel>(ui)
+        prompt.setText("/reload")
+
+        prompt.send()
+        settle()
+
+        assertEquals(listOf(workspace.directory), workspaceRpc.coreReloads.toList())
+        assertTrue("client command must not be sent to the model", rpc.prompts.isEmpty())
     }
 
     /**

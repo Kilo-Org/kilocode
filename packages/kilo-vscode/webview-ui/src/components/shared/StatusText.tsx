@@ -24,6 +24,10 @@ export const StatusText: Component<{ text: string }> = (props) => {
   const [label, setLabel] = createSignal(props.text)
   const [old, setOld] = createSignal<string>()
   const [width, setWidth] = createSignal<string>()
+  // Set for the frame that locks the box. The lock starts from `width: auto`,
+  // which cannot transition: with the transition active the box kept its auto
+  // width, grew to the incoming label at once, and the cluster jumped.
+  const [lock, setLock] = createSignal(false)
 
   let box: HTMLSpanElement | undefined
   let line: HTMLSpanElement | undefined
@@ -37,6 +41,7 @@ export const StatusText: Component<{ text: string }> = (props) => {
     timer = undefined
     setOld(undefined)
     setWidth(undefined)
+    setLock(false)
   }
 
   // A label that outgrows the row is clipped rather than ellipsized: it is measured
@@ -69,13 +74,18 @@ export const StatusText: Component<{ text: string }> = (props) => {
         // is 0px, and the lock would blank the label until it is released.
         if (from === undefined || from === "0px") return
         setOld(prev)
+        setLock(true)
         setWidth(from)
+        // Apply the lock now, so the release below transitions from a length.
+        void box?.offsetWidth
         // The line is `justify-self: start` and never wraps, so it keeps its
         // natural width inside the locked box and can be measured directly. The
         // frame also guarantees the swapped DOM is laid out before it is read.
         frame = requestAnimationFrame(() => {
           frame = undefined
-          setWidth(measure(line))
+          const next = measure(line)
+          setLock(false)
+          setWidth(next)
           check()
           timer = setTimeout(settle, SWAP)
         })
@@ -99,7 +109,13 @@ export const StatusText: Component<{ text: string }> = (props) => {
   })
 
   return (
-    <span class="working-status" ref={box} data-swap={old() === undefined ? undefined : ""} style={{ width: width() }}>
+    <span
+      class="working-status"
+      ref={box}
+      data-swap={old() === undefined ? undefined : ""}
+      data-lock={lock() ? "" : undefined}
+      style={{ width: width() }}
+    >
       {/* Keyed so each label is a fresh node: the entry animation replays on every
           swap, which an in-place text update would not do. */}
       <Show when={label()} keyed>

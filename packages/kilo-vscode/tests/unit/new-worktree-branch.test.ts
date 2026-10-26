@@ -66,7 +66,6 @@ describe("new worktree branch validation", () => {
     const messages: unknown[] = []
     const run = new Function(
       "canSubmit",
-      "showAdvanced",
       "branchName",
       "validBranch",
       "showToast",
@@ -75,7 +74,6 @@ describe("new worktree branch validation", () => {
     )
     // Execute the real handler. Any submission side effect would access an unbound dependency and fail.
     run(
-      () => true,
       () => true,
       () => "../escape",
       validBranch,
@@ -95,6 +93,6 @@ describe("new worktree branch validation", () => {
       "props.onClose()",
     ])
       expect(submit.indexOf(effect)).toBeGreaterThan(guard)
-    expect(submit).toContain("const customBranch = advanced ? branchName() || undefined : undefined")
+    expect(submit).toContain("const customBranch = branchName().trim() || undefined")
   })
 })

@@ -469,6 +469,68 @@ export const kiloScenarios: Scenario[] = [
     .post("/kilo/cloud/session/import", "kilo.cloud.session.import")
     .at((ctx) => ({ path: "/kilo/cloud/session/import", headers: ctx.headers(), body: { sessionId: "missing" } }))
     .status(401),
+  http.protected.get("/kilocode/session-host/provider", "sessionHost.providers").json(200, (body) => {
+    object(body)
+    array(body.providers)
+  }),
+  http.protected
+    .get("/kilocode/session-host/session", "sessionHost.list")
+    .at((ctx) => ({ path: "/kilocode/session-host/session", headers: ctx.headers() }))
+    .json(200, (body) => {
+      object(body)
+      array(body.items)
+    }),
+  http.protected
+    .post("/kilocode/session-host/session", "sessionHost.start")
+    .at((ctx) => ({
+      path: "/kilocode/session-host/session",
+      headers: ctx.headers(),
+      body: {
+        repository: { type: "github", repo: "owner/repo" },
+        prompt: "hello",
+        agent: { mode: "build", model: "test/fake" },
+      },
+    }))
+    .status(401),
+  http.protected
+    .get("/kilocode/session-host/session/{providerID}/{sessionID}", "sessionHost.get")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/session/{providerID}/{sessionID}", {
+        providerID: "kilo-cloud",
+        sessionID: "ses_00000000000000000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .get("/kilocode/session-host/session/{providerID}/{sessionID}/message", "sessionHost.transcript")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/session/{providerID}/{sessionID}/message", {
+        providerID: "kilo-cloud",
+        sessionID: "ses_00000000000000000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .post("/kilocode/session-host/session/{providerID}/{sessionID}/attach", "sessionHost.attach")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/session/{providerID}/{sessionID}/attach", {
+        providerID: "kilo-cloud",
+        sessionID: "ses_00000000000000000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .delete("/kilocode/session-host/attachment/{attachmentID}", "sessionHost.detach")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/attachment/{attachmentID}", {
+        attachmentID: "wrk_att_0000000000000000000000000Z",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(404),
   http.protected.get("/network", "network.list").json(200, array),
   http.protected
     .post("/network/{requestID}/reply", "network.reply")
@@ -711,6 +773,34 @@ export const kiloScenarios: Scenario[] = [
       object(body.totals)
       check(body.models.length === 0, "a new session should have no model usage")
     }),
+  http.protected.get("/kilocode/agent-usage/summary", "agentUsage.summary").json(200, (body) => {
+    array(body)
+    for (const item of body) {
+      object(item)
+      check(typeof item.agent === "string", "summary row should include an agent")
+      check(typeof item.runs === "number", "summary row should include a run count")
+      check(typeof item.cost === "number", "summary row should include direct cost")
+      check(typeof item.activeMs === "number", "summary row should include active time")
+    }
+  }),
+  http.protected
+    .get("/kilocode/agent-usage/runs", "agentUsage.runs")
+    .at((ctx) => ({ path: "/kilocode/agent-usage/runs?limit=1", headers: ctx.headers() }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        object(body)
+        array(body.items)
+        check(
+          body.next === undefined || typeof body.next === "string",
+          "runs page should return an optional opaque next cursor",
+        )
+        const invalid = yield* request("GET", {
+          path: "/kilocode/agent-usage/runs?cursor=not-a-cursor",
+          headers: ctx.headers(),
+        })
+        check(invalid.status === 400, "a malformed cursor should be rejected with 400")
+      }),
+    ),
   http.protected
     .get("/kilocode/background-jobs", "kilocode.backgroundJobs")
     .at((ctx) => ({
@@ -780,6 +870,17 @@ export const kiloScenarios: Scenario[] = [
         check(typeof body.last.failed === "number", "run result should include a failed count")
         check(typeof body.last.durationMs === "number", "run result should include a duration")
       }
+    }),
+  http.protected
+    .post("/kilocode/retention/cancel", "kilocode.retention.cancel")
+    .mutating()
+    .at((ctx) => ({
+      path: "/kilocode/retention/cancel",
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      check(typeof body.requested === "boolean", "retention cancel should report whether a pass was running")
     }),
   http.protected
     .post("/kilocode/background-jobs/{jobID}/cancel", "kilocode.backgroundJob.cancel")

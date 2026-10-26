@@ -1,5 +1,6 @@
 import { release } from "node:os"
 import { Client } from "./client.js"
+import { Conda } from "./conda.js"
 import { Identity } from "./identity.js"
 import { TelemetryEvent } from "./events.js"
 
@@ -12,6 +13,7 @@ export interface TelemetryProperties {
   os_arch: string
   editorName?: string
   vscodeVersion?: string
+  aauClientToken?: string
 }
 
 export type ReviewCommand = "review"
@@ -55,9 +57,43 @@ export interface IndexingErrorTelemetryProperties extends IndexingTelemetryPrope
   maxRetries?: number
 }
 
+/** One explicit MCP sign-in attempt admitted by the CLI runtime. Never carries server names, URLs, or OAuth secrets. */
+export interface McpAuthStartedProperties extends Record<string, unknown> {
+  schemaVersion: number
+  attemptId: string
+  /** The client opens the authorization URL itself (editors, console) instead of the CLI process. */
+  external: boolean
+}
+
+export interface McpAuthCompletedProperties extends McpAuthStartedProperties {
+  outcome: "success" | "failure" | "denied" | "cancelled" | "timeout" | "superseded" | "interrupted"
+  phase:
+    | "prepare"
+    | "callback_setup"
+    | "authorization"
+    | "token_exchange"
+    | "credential_store"
+    | "reconnect"
+    | "tool_discovery"
+  oauthOutcome: "success" | "failure" | "not_performed" | "not_reached"
+  connectionOutcome: "connected" | "failed" | "needs_auth" | "needs_client_registration" | "not_attempted"
+  errorCode?: string
+  redirect: boolean
+  durationMs: number
+  /** `verified` only when the effective config matches a public marketplace MCP method. */
+  attribution: "verified" | "unknown"
+  itemType?: "mcp"
+  itemId?: string
+  methodId?: string
+  methodName?: string
+  oauthRequirement?: string
+  authHandler?: string
+}
+
 export namespace Telemetry {
   let initialized = false
   let startTime = 0
+  let probe = 0
   let props: TelemetryProperties = {
     appName: "kilo-cli",
     appVersion: "unknown",
@@ -84,20 +120,31 @@ export namespace Telemetry {
     const vscodeVersion = process.env.KILO_VSCODE_VERSION
     if (vscodeVersion) props.vscodeVersion = vscodeVersion
 
-    Client.init()
+    Client.init(options.dataPath)
 
     const level = process.env.KILO_TELEMETRY_LEVEL
     const enabled = level ? level === "all" : options.enabled
     Client.setEnabled(enabled)
 
-    await Identity.getMachineId()
+    await Promise.all([Identity.getMachineId(), enabled ? refreshConda() : Promise.resolve()])
 
     initialized = true
     startTime = Date.now()
   }
 
   export function setEnabled(value: boolean) {
+    if (value === Client.isEnabled()) return
     Client.setEnabled(value)
+    delete props.aauClientToken
+    if (value) void refreshConda()
+    else probe++
+  }
+
+  async function refreshConda() {
+    const current = ++probe
+    const token = await Conda.clientToken()
+    if (current !== probe || !Client.isEnabled()) return
+    if (token) props.aauClientToken = token
   }
 
   export function isEnabled(): boolean {
@@ -112,24 +159,31 @@ export namespace Telemetry {
 
     const email = Identity.getUserId()
     if (email && previousId && email !== previousId) {
-      // Identify the user with their email and properties
-      Client.identify(email, {
-        ...(accountId && { kilocodeOrganizationId: accountId }),
-        appName: props.appName,
-        appVersion: props.appVersion,
-        platform: props.platform,
-        os_name: props.os_name,
-        os_version: props.os_version,
-        os_arch: props.os_arch,
-      })
-
       // Link the anonymous machineId to the authenticated email
       Client.alias(email, previousId)
     }
   }
 
   export function track(event: TelemetryEvent, properties?: Record<string, unknown>) {
-    Client.capture(event, { ...props, ...properties })
+    const org = Identity.getOrganizationId()
+    const data = { ...properties }
+    delete data.aauClientToken
+    Client.capture(event, {
+      ...props,
+      ...data,
+      ...(Identity.getUserId() &&
+        (event === TelemetryEvent.CLI_START || event === TelemetryEvent.AUTH_SUCCESS) && {
+          $set: {
+            ...(org && { kilocodeOrganizationId: org }),
+            appName: props.appName,
+            appVersion: props.appVersion,
+            platform: props.platform,
+            os_name: props.os_name,
+            os_version: props.os_version,
+            os_arch: props.os_arch,
+          },
+        }),
+    })
   }
 
   // CLI Lifecycle
@@ -269,6 +323,14 @@ export namespace Telemetry {
 
   export function trackMcpServerError(server: string, error?: string) {
     track(TelemetryEvent.MCP_SERVER_ERROR, { server, error })
+  }
+
+  export function trackMcpAuthStarted(properties: McpAuthStartedProperties) {
+    track(TelemetryEvent.MCP_AUTH_STARTED, properties)
+  }
+
+  export function trackMcpAuthCompleted(properties: McpAuthCompletedProperties) {
+    track(TelemetryEvent.MCP_AUTH_COMPLETED, properties)
   }
 
   // Remote

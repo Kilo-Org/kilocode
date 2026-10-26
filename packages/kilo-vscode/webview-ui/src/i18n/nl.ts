@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Bord",
+  "task.swarm.open": "Bord openen",
   "task.swarm.refresh": "Vernieuwen",
   "task.swarm.reset": "Bord resetten",
   "task.swarm.resetTitle": "Dit bord resetten?",
@@ -96,6 +97,7 @@ export const dict = {
     "Gesprek teruggedraaid. De herstelstatus van de werkruimte is niet beschikbaar voor deze eerdere terugdraaiing.",
   "revert.banner.workspace.enableSnapshots": "Snapshots inschakelen",
   "revert.disabled.agentBusy": "Wacht tot de agent klaar is",
+  "revert.error.body": "De repository is mogelijk in gebruik. Probeer het opnieuw of bekijk de Kilo-logs voor details.",
   "command.session.compact": "Sessie comprimeren",
   "command.session.export": "Sessietranscript exporteren",
 
@@ -199,13 +201,28 @@ export const dict = {
   "prompt.worktrees.title": "Worktrees",
   "prompt.worktrees.search": "Worktrees doorzoeken",
   "prompt.thinking.tooltip": "Redeneringsinspanning",
+  "prompt.shortcutHint.addSelection": "om de selectie toe te voegen",
+  "prompt.shortcutHint.waiting": "om een wachtende sessie te beantwoorden",
+  "prompt.shortcutHint.type": "om te typen",
+  "prompt.shortcutHint.sessions": "om van sessie te wisselen",
+  "prompt.shortcutHint.stop": "om te stoppen",
+  "prompt.shortcutHint.changes": "om wijzigingen te bekijken",
+  "prompt.shortcutHint.pr": "om de PR te openen",
+  "prompt.shortcutHint.mode": "Volgende modus",
   "prompt.action.send": "Verzenden",
   "prompt.action.continue": "Doorgaan",
   "prompt.action.send.blocked": "Beantwoord of negeer eerst de openstaande vraag",
   "prompt.action.send.recording": "Transcriberen en verzenden",
   "prompt.action.stop": "Stop",
+  "prompt.action.stop.background": "Hoofdagent stoppen. Achtergrondagenten blijven actief.",
+  "prompt.agents.show": "Achtergrondagenten tonen",
   "prompt.action.enhance": "Prompt verbeteren",
+  "prompt.action.more": "Meer acties",
   "prompt.paste.expand": "Klik om geplakte tekst uit te vouwen",
+  "prompt.issues.title": "Sessieproblemen",
+  "prompt.mcp.provider": "{{name}} MCP",
+  "prompt.mcp.openSettings": "Openen in Instellingen",
+  "prompt.mcp.signIn.busy": "Bezig met inloggen…",
   "prompt.action.indexing": "Indexeringsinstellingen",
   "prompt.action.autoApprove.enable": "Automatisch goedkeuren inschakelen",
   "prompt.action.autoApprove.disable": "Automatisch goedkeuren uitschakelen",
@@ -275,6 +292,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Meld je opnieuw aan bij ChatGPT en stuur je bericht nog een keer om Codex-modellen te blijven gebruiken.",
 
+  "provider.failure.unauthorized": "Inloggegevens geweigerd (HTTP {{status}}). Meld je opnieuw aan.",
+  "provider.failure.unauthorizedNoStatus": "Inloggegevens geweigerd. Meld je opnieuw aan.",
+  "provider.failure.unauthenticated": "Niet aangemeld.",
+  "provider.failure.network": "Kan de provider niet bereiken. Controleer je verbinding.",
+  "provider.failure.http": "Providerfout (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Providerfout.",
+  "provider.failure.schema": "Onverwacht antwoord van de provider.",
+
   "notification.permission.title": "Toestemming vereist",
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",
   "notification.permission.titleSkillShell": "Shell-opdrachten uit vaardigheid “{{skill}}” uitvoeren?",
@@ -308,6 +333,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Todo Lezen",
   "ui.permission.toolLabel.todoWrite": "Todo Schrijven",
   "ui.permission.toolLabel.codeSearch": "Code Zoeken",
+  "ui.permission.toolLabel.browserOpen": "Geïntegreerde browser",
   "ui.permission.copyCommand": "Kopiëren",
   "ui.approval.auto": "Automatisch goedgekeurd",
   "ui.approval.manual": "Door jou goedgekeurd",
@@ -462,6 +488,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Afbeelding voor alle modellen in-/uitschakelen",
   "provider.custom.models.remove": "Model verwijderen",
   "provider.custom.models.add": "Model toevoegen",
+  "provider.custom.models.fetch.button": "Modellen ophalen",
   "provider.custom.models.fetch.authError":
     "Authenticatie mislukt. Controleer de API-sleutel hierboven en probeer het opnieuw.",
   "provider.custom.models.fetch.empty": "Geen modellen gevonden op deze server.",
@@ -492,6 +519,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplicaat",
   "settings.openLocalConfig": "Lokale config",
   "settings.openGlobalConfig": "Globale config",
+  "settings.search.placeholder": "Instellingen zoeken",
+  "settings.search.noResults": "Geen instellingen gevonden",
+  "settings.search.clear": "Zoekopdracht wissen",
   "settings.config.scope.local": "Lokaal",
   "settings.config.scope.global": "Globaal",
   "settings.config.status.loaded": "geladen",
@@ -533,6 +563,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Haal inhoud op van een URL",
   "settings.permissions.tool.websearch.description": "Zoek op het web",
   "settings.permissions.tool.codesearch.description": "Zoek code op het web",
+  "settings.permissions.tool.browser_open.description": "Een pagina openen in de geïntegreerde browser",
   "settings.permissions.tool.external_directory.description": "Krijg toegang tot bestanden buiten de projectmap",
   "settings.permissions.tool.doom_loop.description": "Detecteer herhaalde tool calls met identieke invoer",
 
@@ -552,6 +583,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Nieuw",
   "session.tabs.switcher.busy": "Bezig",
   "session.tabs.switcher.scheduled": "Gepland",
+  "session.tabs.pinHint": "Shift+klik om vast te maken of los te maken",
   "session.tab.local": "Lokaal",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Werkboom",
@@ -727,6 +759,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code is een AI-codeerassistent. Vraag het om features te bouwen, bugs op te lossen of je codebase uit te leggen.",
+  "session.workspaceScope.description": "De Kilo-chat gebruikt alleen ‘{{folder}}’, de eerste map in deze werkruimte.",
+  "session.workspaceScope.alternatives":
+    "Om met een andere map te werken, open je deze in een eigen venster of voeg je deze als project toe in Agent Manager.",
+  "session.workspaceScope.dismiss": "Hint over het bereik van de werkruimte verbergen",
   "session.messages.scrollToBottom": "Scroll naar beneden",
   "session.messages.initializing": "Initialiseren...",
   "session.messages.taskStarting": "Starten...",
@@ -769,10 +805,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Volgende stappen overwegen...",
 
   "dialog.model.noProviders": "Geen providers",
+  "dialog.model.unavailable": "Kilo-modellen niet beschikbaar",
 
   "prompt.placeholder.connecting": "Verbinden met server...",
   "prompt.placeholder.default":
     "Typ een bericht, @ om bestanden te vermelden... (Enter om te verzenden, Shift+Enter voor nieuwe regel)",
+  "prompt.placeholder.hint": "Typ een bericht, @ om bestanden te vermelden... ({{key}} {{action}})",
   "prompt.placeholder.error": "Verbinding mislukt. Controleer het uitvoerpaneel of herstart de extensie.",
 
   "context.usage.sessionCost": "Sessiekosten",
@@ -833,7 +871,8 @@ export const dict = {
   "settings.browser.description":
     "Configureer ingebouwde browserautomatisering mogelijk gemaakt door Playwright. Kilo kan in je sessies door webpagina's navigeren, ermee werken en schermafbeeldingen maken.",
   "settings.browser.enable.title": "Browserautomatisering inschakelen",
-  "settings.browser.enable.description": "Registreer de Playwright MCP-server bij de CLI backend.",
+  "settings.browser.enable.description":
+    "Schakel de sessiegebonden browser van Agent Manager in voor lokale applicaties en openbare HTTPS-pagina's.",
   "settings.browser.systemChrome.title": "Gebruik Systeem Chrome",
   "settings.browser.systemChrome.description":
     "Gebruik je geïnstalleerde Chrome-browser in plaats van een aparte Chromium-instantie.",
@@ -918,6 +957,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Native notebooktools",
   "settings.experimental.nativeNotebookTools.description":
     "Experimentele tools inschakelen voor het lezen, bewerken en uitvoeren van VS Code-notebooks",
+  "settings.experimental.globIncludeIgnored.title": "Genegeerde paden doorzoeken",
+  "settings.experimental.globIncludeIgnored.description":
+    "Mappen of bestanden die de glob-tool moet doorzoeken, ook als .gitignore of andere ignore-bestanden ze uitsluiten. Gebruik patronen in gitignore-stijl relatief aan de werkruimte; genegeerde mappen daarbinnen worden nog steeds overgeslagen.",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",
@@ -932,15 +974,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Extra schrijfbare paden",
   "settings.sandboxing.writablePaths.description":
     "Extra bestandssysteempaden waar de sandbox schrijftoestemming voor geeft (bijv. /tmp, /var/log). Deze worden samengevoegd met de standaard schrijfbare paden wanneer de sandbox actief is.",
-  "settings.experimental.multiProject.title": "Multi-project Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Promptgeschiedenis per gesprek",
+  "settings.experimental.conversationPromptHistory.description":
+    "Houd de promptgeschiedenis (ArrowUp/ArrowDown) gescheiden per gesprek in plaats van één geschiedenis te delen over alle gesprekken.",
   "settings.experimental.claudeMigration.title": "Claude Code-migratie",
   "settings.experimental.claudeMigration.description":
     "Importeer ondersteunde globale CLAUDE.md-instructies, eenvoudige vaardigheden en uitgeschakelde MCP-definities één keer. Originele Claude-bestanden blijven ongewijzigd; herstart de backend na inschakelen.",
-  "settings.experimental.multiProject.description":
-    "Schakel het beheren van sessies en worktrees over meerdere repositories in Agent Manager in. De huidige workspace-repository is altijd het standaardproject.",
-  "settings.experimental.taskModelSelection.title": "Task-subagentmodel selecteren",
-  "settings.experimental.taskModelSelection.description":
-    "Sta toe dat je expliciet een model, provider en redeneerinspanning kiest voor Task-subagents.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
@@ -1003,6 +1042,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Verwijder skill",
   "settings.agentBehaviour.removeSkill.confirm":
     'Skill "{{name}}" verwijderen? Dit verwijdert de skill bestanden van schijf.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    'Skill "{{name}}" verwijderen? Dit verwijdert ook de {{mcp}} MCP-server en elke bijbehorende skill uit dezelfde Marketplace-installatie.',
   "settings.agentBehaviour.removeSkill.button": "Verwijderen",
   "settings.agentBehaviour.rules.description":
     "Regels zijn instructiebestanden die het gedrag van de agent sturen. Ze worden opgenomen in de systeemprompt voor elk gesprek. Voeg hieronder bestandspaden toe om aanvullende regels op te nemen.",
@@ -1019,15 +1060,40 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "Verwijder MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'MCP-server "{{name}}" verwijderen? Dit zal deze uit je configuratie verwijderen.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    'MCP-server "{{name}}" en bijbehorende skills verwijderen? Dit verwijdert zowel de server als elke skill die bij deze Marketplace-installatie hoort.',
   "settings.agentBehaviour.removeMcp.button": "Verwijderen",
   "settings.agentBehaviour.mcpDetail.command": "Opdracht",
   "settings.agentBehaviour.mcpDetail.args": "Argumenten",
   "settings.agentBehaviour.mcpDetail.env": "Omgeving",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Aanmelden annuleren",
+  "settings.agentBehaviour.mcpRemoving": "Verwijderen…",
+  "settings.agentBehaviour.mcpResetAuth": "Aanmelding resetten",
+  "settings.agentBehaviour.mcpResetAuth.title": "MCP-aanmelding resetten",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    'De opgeslagen aanmelding voor "{{name}}" wissen? Je moet opnieuw inloggen.',
   "settings.agentBehaviour.editMcp": "MCP-server bewerken",
   "settings.agentBehaviour.editMcp.transportLocal": "Lokale server (stdio-transport)",
   "settings.agentBehaviour.editMcp.transportRemote": "Externe server (SSE/HTTP-transport)",
   "settings.agentBehaviour.editMcp.env": "Omgevingsvariabelen",
   "settings.agentBehaviour.editMcp.env.help": "Variabelen die worden doorgegeven aan het MCP-serverproces.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Laat op Automatisch staan, behalve als de server een vooraf geregistreerde client vereist. Een clientgeheim wordt opgeslagen in je Kilo-configuratiebestand.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Modus",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Automatisch",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Uitgeschakeld",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Aangepaste client",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "Client-ID",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "Clientgeheim",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Bereik",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Callback-poort",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "Omleidings-URI",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Standaard http://127.0.0.1:19876/mcp/oauth/callback en overschrijft de callback-poort.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "Voer een poort tussen 1 en 65535 in.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "Een clientgeheim vereist een client-ID.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Voer een geldige omleidings-URI in.",
   "settings.agentBehaviour.addMcp.command": "Opdracht",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argumenten",
@@ -1086,6 +1152,8 @@ export const dict = {
     "Takenlijst beheren. Staat het lezen en bijwerken van de interne takenlijst toe.",
   "settings.autoApprove.tool.webfetch": "Een URL ophalen. Staat het ophalen van inhoud van een specifieke URL toe.",
   "settings.autoApprove.tool.websearch": "Zoek op het web. Staat het uitvoeren van externe web-zoekopdrachten toe.",
+  "settings.autoApprove.tool.browser_open":
+    "Pagina's openen in de geïntegreerde browser. Dit is de voorbeeldweergave in de app, niet de Playwright-browserautomatisering.",
   "settings.autoApprove.tool.doom_loop":
     "Voorkom herhaalde identieke acties. Geactiveerd wanneer dezelfde tool call herhaald wordt met identieke invoer.",
 
@@ -1114,6 +1182,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Opschoning nu uitvoeren",
   "settings.autoCleanup.runNow.confirm":
     "Verlopen sessies definitief verwijderen in alle projecten en alle Kilo-clients op deze machine?",
+  "settings.autoCleanup.stop": "Opschonen stoppen",
+  "settings.autoCleanup.progress.cancelling": "Sessie-opschoning wordt gestopt...",
+  "settings.autoCleanup.lastRun.cancelled": "afgebroken",
 
   "settings.context.autoCompaction.title": "Automatische Compactie",
   "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",
@@ -1208,6 +1279,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Uitgeklapt",
   "settings.display.mcpTool.collapsed": "Ingeklapt",
 
+  "settings.display.shortcutHints.title": "Sneltoetstips tonen",
+  "settings.display.shortcutHints.description":
+    "Toon in de lege prompt de sneltoets die past bij wat je nu doet, bijvoorbeeld hoe je geselecteerde code toevoegt of terugkeert naar de prompt.",
   "settings.display.tokenThroughput.title": "Tokendoorvoer weergeven",
   "settings.display.tokenThroughput.description":
     "Toon de tekstgeneratiesnelheid (tokens/sec) in het meest recente assistentbericht en in de taakkoptekst. Wordt standaard weergegeven; schakel deze instelling uit om de snelheid indien nodig te verbergen.",
@@ -1297,16 +1371,16 @@ export const dict = {
 
   "task.todos.progress": "{{done}}/{{total}} to-do's voltooid",
   "task.todos.allDone": "{{count}} to-do's voltooid",
+  "task.todos.title": "To-do's",
+  "task.todos.done": "Alles klaar",
   "task.backgroundAgents.running.one": "1 achtergrondagent",
   "task.backgroundAgents.running.many": "{{count}} achtergrondagenten",
-  "task.backgroundAgents.more": "+{{count}} meer",
   "task.backgroundAgents.open": "Achtergrondagent openen",
   "task.backgroundAgents.openAll": "Alle achtergrondagenten openen",
   "task.backgroundAgents.cancel": "Stoppen",
   "task.backgroundAgents.continueInBackground": "Doorgaan op de achtergrond",
   "task.backgroundAgents.waiting": "Een achtergrondagent heeft je invoer nodig",
   "task.backgroundAgents.needsInput": "Invoer vereist",
-  "task.backgroundAgents.dismiss": "Negeren",
   "task.backgroundAgents.clearFinished": "Voltooide wissen",
   "task.backgroundAgents.summary": "{{running}} van {{total}} achtergrondagenten actief",
   "task.backgroundAgents.status.running": "Actief",
@@ -1315,6 +1389,10 @@ export const dict = {
   "task.backgroundAgents.status.error": "Fout",
   "task.backgroundAgents.untitled": "Achtergrondagent",
   "task.backgroundAgents.stopAll": "Alles stoppen ({{count}})",
+  "task.backgroundAgents.finished": "Achtergrondagenten voltooid",
+  "task.stop": "Subagent stoppen",
+  "task.open.panel": "Subagent openen in paneel",
+  "task.open.tab": "Subagent openen in tabblad",
 
   "settings.saveBar.unsavedChanges": "Niet-opgeslagen wijzigingen",
   "settings.saveBar.discard": "Verwerpen",
@@ -1421,5 +1499,14 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Gebruik Systeem Chrome",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Gebruik de geïnstalleerde Google Chrome voor de geïntegreerde browser. Schakel dit alleen uit als er al een compatibele Playwright Chromium-browser is geïnstalleerd.",
+  "settings.experimental.browserLinks.title": "Links openen in",
+  "settings.experimental.browserLinks.description":
+    "Kies waar weblinks openen vanuit Kilo-chats. Vereist de geïntegreerde browser.",
+  "settings.experimental.browserLinks.external": "Systeembrowser",
+  "settings.experimental.browserLinks.integrated": "Geïntegreerde browser",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
+  "browserTab.noSession":
+    "Open de browser vanuit een sessie om een lokale applicatie of een openbare HTTPS-pagina te bekijken.",
+  "browserTab.disabled":
+    "De geïntegreerde browser is uitgeschakeld. Schakel deze in via Kilo-instellingen > Experimenteel.",
 }

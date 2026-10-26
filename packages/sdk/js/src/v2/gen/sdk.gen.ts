@@ -11,6 +11,10 @@ import type {
   AgentManagerRequestId,
   AgentManagerResult,
   AgentPartInput,
+  AgentUsageRunsErrors,
+  AgentUsageRunsResponses,
+  AgentUsageSummaryErrors,
+  AgentUsageSummaryResponses,
   AnacondaDesktopOpenErrors,
   AnacondaDesktopOpenResponses,
   AnacondaDesktopStatusErrors,
@@ -211,6 +215,8 @@ import type {
   KilocodeResetSessionBoardResponses,
   KilocodeResumeSessionErrors,
   KilocodeResumeSessionResponses,
+  KilocodeRetentionCancelErrors,
+  KilocodeRetentionCancelResponses,
   KilocodeRetentionRunErrors,
   KilocodeRetentionRunResponses,
   KilocodeRetentionStatusErrors,
@@ -261,6 +267,8 @@ import type {
   McpAuthAuthenticateResponses,
   McpAuthCallbackErrors,
   McpAuthCallbackResponses,
+  McpAuthCancelErrors,
+  McpAuthCancelResponses,
   McpAuthRemoveErrors,
   McpAuthRemoveResponses,
   McpAuthStartErrors,
@@ -404,6 +412,23 @@ import type {
   SessionForkResponses,
   SessionGetErrors,
   SessionGetResponses,
+  SessionHostAttachErrors,
+  SessionHostAttachResponses,
+  SessionHostDetachErrors,
+  SessionHostDetachResponses,
+  SessionHostGetErrors,
+  SessionHostGetResponses,
+  SessionHostListErrors,
+  SessionHostListResponses,
+  SessionHostOrganizationId,
+  SessionHostProviderId,
+  SessionHostProvidersErrors,
+  SessionHostProvidersResponses,
+  SessionHostStartErrors,
+  SessionHostStartInput,
+  SessionHostStartResponses,
+  SessionHostTranscriptErrors,
+  SessionHostTranscriptResponses,
   SessionInitErrors,
   SessionInitResponses,
   SessionListErrors,
@@ -3050,9 +3075,50 @@ export class Auth2 extends HeyApiClient {
   /**
    * Authenticate MCP OAuth
    *
-   * Start OAuth flow and wait for callback (opens browser).
+   * Start OAuth flow and wait for callback, optionally letting the client open the browser.
    */
   public authenticate<ThrowOnError extends boolean = false>(
+    parameters: {
+      name: string
+      directory?: string
+      workspace?: string
+      external?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "name" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "external" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<McpAuthAuthenticateResponses, McpAuthAuthenticateErrors, ThrowOnError>(
+      {
+        url: "/mcp/{name}/auth/authenticate",
+        ...options,
+        ...params,
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+          ...params.headers,
+        },
+      },
+    )
+  }
+
+  /**
+   * Cancel MCP OAuth
+   *
+   * Cancel an active OAuth flow without removing stored credentials.
+   */
+  public cancel<ThrowOnError extends boolean = false>(
     parameters: {
       name: string
       directory?: string
@@ -3072,13 +3138,11 @@ export class Auth2 extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).post<McpAuthAuthenticateResponses, McpAuthAuthenticateErrors, ThrowOnError>(
-      {
-        url: "/mcp/{name}/auth/authenticate",
-        ...options,
-        ...params,
-      },
-    )
+    return (options?.client ?? this.client).post<McpAuthCancelResponses, McpAuthCancelErrors, ThrowOnError>({
+      url: "/mcp/{name}/auth/cancel",
+      ...options,
+      ...params,
+    })
   }
 }
 
@@ -6253,6 +6317,84 @@ export class AgentBuilder extends HeyApiClient {
   }
 }
 
+export class AgentUsage extends HeyApiClient {
+  /**
+   * Get agent usage summary
+   *
+   * Get a per-agent rollup of runs, sessions, direct cost, active time, tokens, errors, and the last run time for the routed project.
+   */
+  public summary<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      agent?: string
+      from?: string
+      to?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "agent" },
+            { in: "query", key: "from" },
+            { in: "query", key: "to" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<AgentUsageSummaryResponses, AgentUsageSummaryErrors, ThrowOnError>({
+      url: "/kilocode/agent-usage/summary",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List agent runs
+   *
+   * List agent runs newest first by start time, with optional agent and time window filters. Pages by the opaque `next` cursor returned by the previous page.
+   */
+  public runs<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      agent?: string
+      from?: string
+      to?: string
+      limit?: string
+      cursor?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "agent" },
+            { in: "query", key: "from" },
+            { in: "query", key: "to" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "cursor" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<AgentUsageRunsResponses, AgentUsageRunsErrors, ThrowOnError>({
+      url: "/kilocode/agent-usage/runs",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class BackgroundProcess extends HeyApiClient {
   /**
    * List background processes
@@ -7924,6 +8066,40 @@ export class Retention extends HeyApiClient {
       },
     })
   }
+
+  /**
+   * Stop the active session retention pass
+   *
+   * Ask the machine-wide retention pass to stop before deleting more sessions. Already-deleted sessions stay deleted; the interrupted pass still records its partial result and honors the spacing window.
+   */
+  public cancel<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeRetentionCancelResponses,
+      KilocodeRetentionCancelErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/retention/cancel",
+      ...options,
+      ...params,
+    })
+  }
 }
 
 export class Migrate extends HeyApiClient {
@@ -9354,6 +9530,183 @@ export class Sandbox extends HeyApiClient {
     )
     return (options?.client ?? this.client).post<SandboxToggleResponses, SandboxToggleErrors, ThrowOnError>({
       url: "/session/{sessionID}/sandbox/toggle",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class SessionHost extends HeyApiClient {
+  /**
+   * List session host providers
+   *
+   * Report every registered session host provider with its availability and transport state.
+   */
+  public providers<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).get<
+      SessionHostProvidersResponses,
+      SessionHostProvidersErrors,
+      ThrowOnError
+    >({ url: "/kilocode/session-host/provider", ...options })
+  }
+
+  /**
+   * List hosted sessions
+   *
+   * List sessions from the authenticated default session host provider.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      limit?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "limit" }] }])
+    return (options?.client ?? this.client).get<SessionHostListResponses, SessionHostListErrors, ThrowOnError>({
+      url: "/kilocode/session-host/session",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Start a hosted session
+   *
+   * Start a hosted session and deliver the initial message. Reuse the same operation key and message ID to retry safely.
+   */
+  public start<ThrowOnError extends boolean = false>(
+    parameters?: {
+      sessionHostStartInput?: SessionHostStartInput
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ key: "sessionHostStartInput", map: "body" }] }])
+    return (options?.client ?? this.client).post<SessionHostStartResponses, SessionHostStartErrors, ThrowOnError>({
+      url: "/kilocode/session-host/session",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Get a hosted session
+   *
+   * Read a hosted session's normalized native detail without waking compute.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      sessionID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<SessionHostGetResponses, SessionHostGetErrors, ThrowOnError>({
+      url: "/kilocode/session-host/session/{providerID}/{sessionID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read a hosted transcript
+   *
+   * Read a bounded page of a hosted session transcript without waking compute.
+   */
+  public transcript<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      sessionID: string
+      limit?: string
+      before?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "before" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostTranscriptResponses,
+      SessionHostTranscriptErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/session/{providerID}/{sessionID}/message",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Attach to a hosted session
+   *
+   * Mint an opaque local attachment that routes the proven native API for one hosted session. No provider origin, credential, or selector is exposed.
+   */
+  public attach<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      sessionID: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SessionHostAttachResponses, SessionHostAttachErrors, ThrowOnError>({
+      url: "/kilocode/session-host/session/{providerID}/{sessionID}/attach",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Detach a hosted session
+   *
+   * Dispose a local attachment. This never changes Cloud lifecycle.
+   */
+  public detach<ThrowOnError extends boolean = false>(
+    parameters: {
+      attachmentID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "attachmentID" }] }])
+    return (options?.client ?? this.client).delete<SessionHostDetachResponses, SessionHostDetachErrors, ThrowOnError>({
+      url: "/kilocode/session-host/attachment/{attachmentID}",
       ...options,
       ...params,
     })
@@ -12114,6 +12467,11 @@ export class KiloClient extends HeyApiClient {
     return (this._agentBuilder ??= new AgentBuilder({ client: this.client }))
   }
 
+  private _agentUsage?: AgentUsage
+  get agentUsage(): AgentUsage {
+    return (this._agentUsage ??= new AgentUsage({ client: this.client }))
+  }
+
   private _backgroundProcess?: BackgroundProcess
   get backgroundProcess(): BackgroundProcess {
     return (this._backgroundProcess ??= new BackgroundProcess({ client: this.client }))
@@ -12167,6 +12525,11 @@ export class KiloClient extends HeyApiClient {
   private _sandbox?: Sandbox
   get sandbox(): Sandbox {
     return (this._sandbox ??= new Sandbox({ client: this.client }))
+  }
+
+  private _sessionHost?: SessionHost
+  get sessionHost(): SessionHost {
+    return (this._sessionHost ??= new SessionHost({ client: this.client }))
   }
 
   private _suggestion?: Suggestion

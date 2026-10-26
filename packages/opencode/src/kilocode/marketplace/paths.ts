@@ -4,6 +4,12 @@ import { Global } from "@opencode-ai/core/global"
 import { KilocodeConfigOverlay } from "@/kilocode/config/overlay"
 import type { Scope } from "./schema"
 
+export function isSafeId(id: string) {
+  if (!id || id === "." || id.includes("..") || id.includes("/") || id.includes("\\") || id.endsWith(".")) return false
+  if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(id)) return false
+  return /^[\w\-@.]+$/.test(id)
+}
+
 export async function configPath(scope: Scope, directory: string, worktree?: string) {
   if (scope === "global") return KilocodeConfigOverlay.globalTarget()
   return KilocodeConfigOverlay.projectTarget({ directory, worktree })
@@ -79,4 +85,23 @@ export function skillsDir(scope: Scope, directory: string) {
 export function configRoot(scope: Scope, directory: string) {
   if (scope === "global") return Global.Path.config
   return path.join(directory, ".kilo")
+}
+
+/**
+ * Directory that owns the resolved project config file. A nested workspace can
+ * resolve its config to an ancestor (for example a repository root), so bundle
+ * receipts must live next to that config rather than the request directory.
+ * Otherwise installing from a subdirectory and removing from the root cannot
+ * find the receipt and leaves companion skills behind.
+ */
+export async function scopeRoot(scope: Scope, directory: string, worktree?: string) {
+  if (scope === "global") return Global.Path.config
+  const file = await KilocodeConfigOverlay.projectTarget({ directory, worktree })
+  const dir = path.dirname(file)
+  return dir.endsWith(`${path.sep}.kilo`) || dir.endsWith(`${path.sep}.kilocode`) ? path.dirname(dir) : dir
+}
+
+export async function mcpsDir(scope: Scope, directory: string, worktree?: string) {
+  if (scope === "global") return path.join(Global.Path.config, "marketplace", "mcps")
+  return path.join(await scopeRoot(scope, directory, worktree), ".kilo", "marketplace", "mcps")
 }

@@ -47,6 +47,8 @@ class SessionControllerSelectionTest : SessionControllerTestBase() {
         assertEquals("plan", agent)
         assertEquals("kilo/opus", model)
         assertEquals("high", variant)
+        assertTrue(appRpc.selections.isEmpty())
+        assertTrue(appRpc.variants.isEmpty())
 
         edt { m.prompt("go") }
         flush()

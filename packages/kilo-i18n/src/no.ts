@@ -35,6 +35,7 @@ export const dict = {
   "marketplace.install.scope.global.description":
     "Alle prosjekter på denne maskinen. Lagres i brukerkonfigurasjonen din.",
   "marketplace.install.destination": "Installasjonssted",
+  "marketplace.install.includedSkills": "Inkluderte ferdigheter",
   "marketplace.install.about.mcp":
     "En MCP-server gir Kilo flere verktøy for å arbeide med eksterne tjenester eller lokale programmer.",
   "marketplace.install.about.agent": "En agent legger til en gjenbrukbar rolle med egne instruksjoner og tillatelser.",
@@ -50,7 +51,6 @@ export const dict = {
     "Et programtillegg legger til tilpassede verktøy og integrasjoner i Kilo. Programtillegg kjører med fulle tillatelser.",
   "marketplace.install.plugin.warning":
     "Programtillegg kjører kode med fulle tillatelser. De kan lese og endre filene dine, kjøre kommandoer og få tilgang til påloggingsopplysningene dine og nettverket ditt. Installer bare programtillegg du stoler på.",
-  "marketplace.install.installedAt": "Installert i {{path}}",
   "marketplace.intro":
     "Installer gjenbrukbare agenter, ferdigheter, MCP-verktøy og programtillegg for ett eller alle prosjekter.",
   "marketplace.intro.learnMore": "Om Marketplace",
@@ -61,10 +61,19 @@ export const dict = {
   "marketplace.install.failed": "Installasjonen mislyktes",
   "marketplace.install.done": "Ferdig",
   "marketplace.install.close": "Lukk",
+  "marketplace.install.mcp.signIn.message": "{{name}} er installert, men krever innlogging før verktøyene kan brukes.",
+  "marketplace.install.mcp.signIn.button": "Logg inn",
+  "marketplace.install.mcp.signIn.waiting": "Venter på innlogging via nettleseren…",
+  "marketplace.install.mcp.signIn.cancel": "Avbryt",
+  "marketplace.install.mcp.signIn.skip": "Senere",
+  "marketplace.install.mcp.signIn.success": "Logget inn på {{name}}.",
+  "marketplace.install.mcp.signIn.failed": "Innlogging til {{name}} mislyktes.",
   "marketplace.remove.title": "Fjern {{name}}?",
   "marketplace.remove.confirm":
     "Er du sikker på at du vil fjerne denne {{type}}? Dette vil fjerne den fra din {{scope}}-konfigurasjon.",
   "marketplace.remove.cancel": "Avbryt",
+  "marketplace.remove.mcp.skills":
+    "Dette fjerner også de medfølgende ferdighetene som tilhører denne installasjonen. Ferdigheter som er installert separat, beholdes.",
   "marketplace.remove.confirm.button": "Fjern",
   "marketplace.search": "Søk...",
   "marketplace.filter.all": "Alle elementer",
@@ -73,6 +82,7 @@ export const dict = {
   "marketplace.empty": "Ingen elementer funnet",
   "marketplace.empty.relevant": "Ingen relevante marketplace-elementer funnet for dette arbeidsområdet.",
   "marketplace.badge.mcpServer": "MCP-server",
+  "marketplace.badge.skills": "Inkluderer ferdigheter",
   "marketplace.card.by": "av {{author}}",
   "marketplace.install.method": "Installasjonsmetode",
   "marketplace.install.parameters": "Parametere",
