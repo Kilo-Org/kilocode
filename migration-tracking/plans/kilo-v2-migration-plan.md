@@ -423,13 +423,15 @@ Each epic section has workstream tables, one row per unit, and one dependency di
 | Delta | needs-port, native, partial, decision, not-needed, post-cutover |
 | Stale | D4 verdict, snapshot → v1 target: EMPTY, SMALL, MATERIAL (M), NEW, n/a. Non-EMPTY: re-derive behavior from v1 |
 | Donor | Mechanism reuse from the archived tag: yes / partial / no, with confidence H/M/L. Re-check the seam at the base before reuse |
-| Mechanism | Plugin-first rung: 1 plugin on the public plugin API, 2 Kilo host composition, 3 seam patch in a shared file, 4 feature patch in a shared file, 5 branding via the rename script. Rungs 3 and 4 carry `kilocode_change` and state the missing seam; `n/a` means not a plugin concern |
+| Mechanism | Plugin-first rung: 1 plugin on the public plugin API, 2 Kilo host composition, 3 seam patch in a shared file, 4 feature patch in a shared file, 5 automated branding/product-text renaming in Kilo-owned code (interim source/build adapter in #15417). Rungs 3 and 4 carry `kilocode_change` and state the missing seam; `n/a` means not a plugin concern |
 | Acceptance | What must be shown, against v1 behavior, with evidence recorded with SHA |
 | Status | `todo`, `active`, `review`, `done`, `blocked`, `dropped` |
 
 **Tracking rules.** The GitHub issue is the public entry point for a unit; this file holds the versioned plan. The coordinator updates a unit's Status cell by micro-PR (`coord-status-<unit>`) with the PR link and acceptance evidence. Completing a unit changes only its own row; it never implies an adjacent row is done. Units copied from the donor apply the `@opencode/*` scope at copy time. Every unit follows the Definition of done in `migration-context.md`.
 
-**Mechanism.** Each unit picks its mechanism plugin-first: rung 1 plugin, then rung 2 host composition, then rung 3 seam patch, then rung 4 feature patch, then rung 5 branding script. Rungs 3 and 4 must state the missing seam. Prefer rungs 1–2 even when the donor has a working non-plugin solution. The rung table and the rule are in `../technical-notes/v2-fork-conventions.md` and `.kilo/skills/v2-migration/SKILL.md`. Since U-E0-01 a Kilo server plugin goes into `KiloPlugins` (`packages/kilo-plugin/src/index.ts`) and the host (`packages/kilo-cli`) registers it through `SdkPlugins.register`, never in `packages/core/src/plugin/internal.ts` or `provider.ts`. A TUI plugin keeps one marked line in `packages/tui/src/plugin/builtins.ts`.
+**Mechanism.** Each unit picks its mechanism plugin-first: rung 1 plugin, then rung 2 host composition, then rung 3 seam patch, then rung 4 feature patch. Branding and product strings use rung 5: Kilo-owned automated renaming, currently the interim source/build adapter in #15417. Rungs 3 and 4 must state the missing seam. Prefer rungs 1–2 even when the donor has a working non-plugin solution. The rung table and the rule are in `../technical-notes/v2-fork-conventions.md` and `.kilo/skills/v2-migration/SKILL.md`. Since U-E0-01 a Kilo server plugin goes into `KiloPlugins` (`packages/kilo-plugin/src/index.ts`) and the host (`packages/kilo-cli`) registers it through `SdkPlugins.register`, never in `packages/core/src/plugin/internal.ts` or `provider.ts`. A TUI plugin keeps one marked line in `packages/tui/src/plugin/builtins.ts`.
+
+**Branding maintenance.** The interim adapter leaves upstream source and unhosted defaults unchanged, but still depends on specific paths and text anchors. Review the mapping at every sync, including clean merges; adapt moved files and changed wording, rerun branding tests and source/compiled checks, and review new visible text that existing anchor tests cannot discover. A dedicated sync-time branding audit/report remains proposed, not implemented; the disabled legacy conflict-only rename passes are not a substitute. See `../technical-notes/v2-fork-conventions.md`, section "Branding and upstream drift", and the two migration skills for the procedure. A stable API or generation redesign needs separate approval.
 
 ## B1. E0 Foundation
 
@@ -545,6 +547,20 @@ Every E2 unit except U-E2-18, -21, -28 (SMALL) and U-E2-29 (EMPTY) re-derives be
 |---|---|---|---|---|---|---|---|---|---|
 | U-E2-28 | Generation endpoints: enhance prompt, commit message, branch name | new | G2 | U-E0-02 | partial | SMALL | yes M | Endpoints in the generated client; output and errors match v1; editor-context prefix; equivalence with the BASE `generate` group decided | todo |
 | U-E2-29 | Atomic Chat local provider plugin | new | G1 | U-E1-04 | needs-port | EMPTY | no | Provider discovered and usable | todo |
+
+#### Branch-name check (2026-10-21)
+
+User-reported local check on `99f2a0589e`: native `POST /api/experimental/generate` accepts `{ "prompt": "..." }` and returns `{ "data": { "text": "..." } }`. The caller supplied the v1 branch-name instructions and numbered user messages; the model was not recorded. Source: `packages/protocol/src/groups/generate.ts` and `packages/core/src/generate.ts`.
+
+| User messages | Raw `data.text` |
+|---|---|
+| Fix the token refresh race in MCP OAuth | `fix-token-refresh-race` |
+| hi | `null` |
+| is the login bug fixed? | `null` |
+| Please use the branch name feature-login-page | `feature-login-page` |
+| Can you look at the MCP OAuth code? → Fix the token refresh race | `fix-token-refresh-race` |
+
+`null` above is text, not JSON null. These five samples show that native text generation is reusable, not that branch-name parity is complete. Still required or unverified: Kilo's prompt, last-four-user-message selection and 1,000-character limit per message, output parsing and 50-character limit, small-model preference, temperature 0.1, 10-second timeout with null-on-error, and Agent Manager integration. Native `POST /api/session/{sessionID}/generate` also exists but was not tested. U-E2-28 remains todo; both `branch-name` progress cells stay open. This is not an end-to-end test.
 
 ```mermaid
 flowchart TD

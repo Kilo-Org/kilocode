@@ -78,6 +78,51 @@ jobs:
           overwrite: true
           retention-days: 7
 
+  # The v1 line runs a curated macOS unit job because its darwin build ships. v2 runs unit tests on
+  # Linux and Windows only, so this covers the platform-specific filesystem, PTY, process and shell
+  # code on the OS that `install:alpha` uses.
+  #
+  # Like the v1 Darwin profile, it holds only files whose failure would point at macOS behavior:
+  # file watching, node-pty, process spawning and shell selection. Platform-neutral suites stay on
+  # Linux and Windows, where they already run, and cost about 3x more on the macOS runner.
+  macos:
+    name: macOS platform tests
+    runs-on: macos-15
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun and install dependencies
+        uses: ./.github/actions/setup-bun
+
+      # macOS ships Bash 3.2, but some upstream shell fixtures use process substitution and function
+      # compound syntax that need Bash 5, which the Linux runners have. Install it and use it for the
+      # tests so the darwin job exercises the same shell behavior as Linux.
+      - name: Setup Bash 5
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: |
+          brew install bash
+          echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+          echo "SHELL=$(brew --prefix)/bin/bash" >> "$GITHUB_ENV"
+
+      # Through each package's own test script, like the Linux and Windows unit jobs: core's wrapper
+      # gives the run a temporary HOME, OPENCODE_TEST_HOME, XDG directories and TMPDIR.
+      - name: Run core platform tests
+        working-directory: packages/core
+        run: bun run test ./test/filesystem ./test/pty/pty-session.test.ts ./test/persistent-pty-daemon.test.ts ./test/process/process.test.ts ./test/tool-shell.test.ts ./test/session-shell.test.ts ./test/shell.test.ts ./test/shell-cleanup.test.ts ./test/util/which.test.ts
+
+      # The v1 darwin profile covered the PTY HTTP routes here. On v2 the PTY transport, socket and
+      # persistent daemon live in packages/server, so run those files instead.
+      - name: Run server PTY tests
+        working-directory: packages/server
+        run: bun run test ./test/pty-socket.test.ts ./test/pty-transport.test.ts ./test/persistent-pty.test.ts ./test/process.test.ts
+
   shared:
     name: shared upstream patches
     runs-on: ubuntu-24.04

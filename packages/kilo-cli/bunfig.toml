@@ -1,4 +1,6 @@
-preload = ["@opentui/solid/preload"]
+# Tests use the upstream Solid preload, not the Kilo branding loader, so upstream wording drift
+# only breaks the branding tests in test/branding.test.ts instead of the whole suite.
+preload = ["./src/branding/preload.ts"]
 
 [test]
 preload = ["@opentui/solid/preload", "./test/preload.ts"]

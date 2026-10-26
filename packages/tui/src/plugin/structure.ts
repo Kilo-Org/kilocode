@@ -9,7 +9,7 @@ export type PlacementKind = "prepend" | "append" | "before" | "after" | "replace
 // Normalized from the public SlotClaim shape by the plugin API: exactly one
 // placement kind, the target path erased to a string so the resolver stays
 // independent of the slot map.
-export type Placement = { readonly kind: PlacementKind; readonly target: string }
+export type Placement = { readonly kind: PlacementKind; readonly target: string; readonly order?: number } // kilocode_change(plugin) seam - claim order
 
 // One plugin's registered slot claim, in enable order within the claims array.
 export type Claim<Render> = {
@@ -141,6 +141,16 @@ export function resolveSlots<Render>(input: {
   }
 
   const slotted = new Map<string, Slotted<Render>>()
+  // kilocode_change start - plugin seam: sort each anchor by claim order (stable). A claim without an order counts as
+  // 100, 200, ... in enable order, so an ordered claim can sit between them. Without any order, nothing moves.
+  for (const lists of buckets.values())
+    for (const list of Object.values(lists)) {
+      if (!list.some((claim) => claim.placement.order !== undefined)) continue
+      let step = 0
+      const order = new Map(list.map((claim) => [claim, claim.placement.order ?? ++step * 100]))
+      list.sort((a, b) => order.get(a)! - order.get(b)!)
+    }
+  // kilocode_change end
   for (const [path, lists] of buckets) slotted.set(path, lists)
   for (const [path, winner] of boundaries) slotted.set(path, { ...(buckets.get(path) ?? EMPTY), replace: winner })
   return { slotted, suppressed, degraded }

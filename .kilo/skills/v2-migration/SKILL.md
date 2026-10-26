@@ -27,7 +27,7 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
   2. The Kilo host (`packages/kilo-cli`, unit U-E0-01): plugin registration through `SdkPlugins.register`, Effect layer overrides (for example `Global.layerWith`), environment translation at the entry. Add a server plugin to `KiloPlugins` in `packages/kilo-plugin/src/index.ts`; the host registers it. Service replacements go in `overrides` in `packages/kilo-cli/src/host.ts`, `KILO_*` names in `packages/kilo-cli/src/env.ts`. TUI plugins still register with one marked call-out line in `packages/tui/src/plugin/builtins.ts` (rung 4; the TUI list is in the TUI process, which the host does not reach).
   3. A small, generic seam patch in a shared upstream file: widen an API, add a hook, export a value. Prefer files that change rarely.
   4. A feature patch in a shared upstream file. Last resort. Say in the PR why options 1 to 3 do not work.
-  5. Branding and product strings: the rename script during upstream syncs, never hand edits.
+  5. Branding and product strings: automated renaming in Kilo-owned code, never hand edits in upstream files. PR #15417 uses an interim source/build adapter; review its mapping at every upstream sync (see "Branding and upstream drift").
 - Mark every change in a shared upstream file with `kilocode_change` (options 3 and 4). One generic seam is better than many small edits.
 - Kilo logic packages (for example `kilo-gateway-core`) import nothing from `@opencode/*`. Only thin adapters do.
 - The Kilo Gateway is the only source of Kilo models (`models.set`, no models.dev fallback). Requests identify as Kilo (token, team header, `X-KILOCODE-*`). See #14991.
@@ -39,6 +39,25 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 - Stack on an open v2 PR when you depend on it, and target that PR's branch.
 - One plan unit per PR. Never push directly to `v2`. A human merges.
 - Short hyphenated branch names, no slashes. Titles `type(scope): summary`.
+
+## Branding and upstream drift
+
+Decision: keep the approach in PR #15417 as an **interim adapter**, not a permanent branding API. Its reference implementation is `packages/kilo-cli/src/branding/`; check whether the PR is merged before assuming those files exist on your branch.
+
+- For these CLI/TUI surfaces, v1 used Kilo constants and OAuth wrappers called from patched shared files, rather than a translation catalog. The v2 adapter instead transforms selected upstream source text in memory, through Kilo-owned runtime/build wiring. Upstream source and unhosted behavior stay unchanged. Compiled binaries contain the branded result; they do not rewrite installed source at startup.
+- The adapter still depends on exact paths and text anchors. Fewer shared-file patches does **not** mean less semantic coupling or automatic adaptation to upstream changes.
+- Known anchor changes throw, and the branding tests read every mapped file and check each replacement. Changed wording and moved/deleted files must fail CI. In source development a missing anchor can also fail module loading; do not promise that drift is always a harmless fallback.
+- New upstream text outside the mapping can remain unbranded without failing current tests. It needs manual review. A dedicated sync-time branding audit/report is a proposed follow-up, **not implemented automation**.
+
+At every upstream sync, and after merging a newer `v2` into a branding branch:
+
+1. Read the previous and new upstream pins through the sync tooling. Inspect renames, deletions and changes to mapped files; do not rely only on merge conflicts.
+2. Locate moved code and update its mapping. Review changed wording before updating replacement anchors. Remove an entry only when its behavior is gone or tracked elsewhere; never weaken assertions just to make CI pass.
+3. Review new user-visible names, commands, titles, links and callback pages. Preserve real OpenCode provider identities, package imports, protocol/keybind IDs and schema URLs. Use the host's config filename source, such as `KiloConfigFiles.newFile`, rather than guessing from the product name.
+4. Run the focused branding tests and affected package typechecks. Keep both upstream/hosted controls, OAuth escaping checks, and real TSX rendering coverage in source and compiled modes. Repeat isolated source/compiled smoke checks when their surfaces change.
+5. Record mapping adaptations, test results and remaining gaps in the sync/feature PR. Keep live CI status and evidence current; source-rendered OAuth screenshots do not prove a live browser sign-in.
+
+The legacy sync branding passes exist but are disabled by default and process conflicts only. Do not enable them as a substitute for this review: their broad rules and scope differ from the adapter. Moving the same mapping to sync time or generated copies does not remove its path/string dependency. A stable API or a different generation mechanism needs a separate approved design; do not add upstream seams solely to remove Kilo-owned code.
 
 ## Isolation: never touch the v1 setup
 
@@ -144,7 +163,7 @@ st stop-vscode --cleanup true >/dev/null; st stop >/dev/null; rm -rf $T
 - Do not wait for text you typed. It is already on the screen. Use `idle`.
 - A free-model answer can show `Retrying` first when the Gateway upstream fails. `idle` waits through it. Report a test as blocked only when `idle` reports a failure.
 - `st click --text` does not reach the terminal. Use `tclick`.
-- Headless runs cannot take screenshots. Set `HEADLESS=false` only for visual review, because the window then opens on the user's screen.
+- Headless runs cannot take screenshots. Set `HEADLESS=false` only for visual review and for the PR screenshots (section `## Proof` under Evidence), because the window then opens on the user's screen.
 - New tabs get their title a few seconds after the first answer. The active tab title scrolls, so match a short part.
 - Never type real credentials. Stop auth flows before the secret input, or use a test account.
 - CLI data of a test: log in `$T/profile/data/kilo2/log/opencode-local.log`, database files in `$T/profile/data/kilo2/`.
@@ -172,7 +191,7 @@ Grow the test surface with each PR.
 - New Kilo code comes with tests for its behavior. Prefer real integration with the Kilo Gateway over mocks. Use small unit tests only for paths a live server cannot trigger (outage, malformed data).
 - Known upstream failures are listed in `pinned-v2-baseline.md` for the release it names. When `v2` has moved past that release, compare against `origin/v2` before your change. Do not fix unrelated ones. A new failure in a package you touched blocks the PR.
 - Never delete or skip a test silently. List every skip in the PR with its reason.
-- Self-test each user-visible behavior you add, and record the scenario so the next PR can repeat it.
+- Self-test each user-visible behavior you add, and record the scenario so the next PR can repeat it. Attach the proof (v1 and v2 screenshots, or another proof) as described in Evidence.
 
 ## Progress map
 
@@ -205,10 +224,20 @@ Grow the test surface with each PR.
 In the PR and the final response, list:
 
 - The commands you ran, and the self-test scenarios with pass, fail or blocked.
+- The proof that the change works as on v1, as the PR section `## Proof` below. This is mandatory for every PR that changes behavior.
 - Each shared upstream file you changed, with its option (1 to 5 above) and the missing seam.
 - The progress map delta, as the PR section below.
 - The CI state. For each red check, the cause: your change (fix it), a flake (one rerun) or a known baseline failure.
 - The limits, for example a flow that needs credentials.
+
+### PR section `## Proof`
+
+Every PR that changes behavior shows that the behavior works on v2 as on v1. A PR without this section is not done.
+
+- **User-facing change:** compare v1 and v2. Take screenshots of the same screen in the same state on v1 and on v2, and attach both to the PR description, labeled. When v2 differs on purpose, say why. When v1 has no such screen, show v2 only and say so.
+- **No UI to show:** attach another proof from a real run (for example a transcript or captured requests, on v1 and v2 when possible). Test output alone is not enough.
+- **Isolation:** run v1 so that it never reads or writes the real v1 data (a temporary home, not the user's profile).
+- **Privacy:** show no real user data (emails, names, organizations, IDs, tokens, balances, session content). Use fixture accounts. Never commit screenshots to the repository.
 
 ### PR section `## Progress map`
 

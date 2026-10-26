@@ -13,6 +13,7 @@ import { TokenUsage } from "@opencode/schema/token-usage"
 import { Database } from "../database/database.js"
 import { EventTable } from "../event/sql.js"
 import { SessionMessageTable, SessionTable } from "./sql.js"
+import { KiloSessionUsage } from "../kilocode/session/usage.js" // kilocode_change(gateway)
 
 type Input = {
   readonly from?: number
@@ -131,7 +132,7 @@ export const get = Effect.fn("SessionStats.get")(function* (input: Input = {}) {
             message.type AS type,
             message.time_created AS timeCreated,
             json_extract(message.data, '$.model.providerID') AS providerID,
-            json_extract(message.data, '$.model.id') AS modelID,
+            ${KiloSessionUsage.modelID} AS modelID, /* kilocode_change(gateway) */
             json_extract(message.data, '$.model.variant') AS variant,
             json_extract(message.data, '$.tokens.input') AS input,
             json_extract(message.data, '$.tokens.output') AS output,

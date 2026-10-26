@@ -4,6 +4,7 @@ import { Effect, Option, Schema } from "effect"
 import { KiloHeaders } from "./headers.js"
 import { json, request } from "./http.js"
 import { KiloServer } from "./server.js"
+import { createHash } from "node:crypto"
 
 const TTL_MS = 5 * 60 * 1000
 
@@ -55,7 +56,7 @@ export function get(
   version = "unknown",
 ): Effect.Effect<readonly OrganizationMode[]> {
   return Effect.gen(function* () {
-    const key = `${KiloServer.normalize(server)}:${organizationID}`
+    const key = `${KiloServer.normalize(server)}:${organizationID}:${createHash("sha256").update(token).digest("hex")}`
     const cached = cache.get(key)
     if (cached && Date.now() - cached.timestamp < TTL_MS) return cached.modes
 

@@ -25,7 +25,7 @@ const child = Bun.spawn([process.execPath, path.join(host, "src/index.ts"), ...p
     BUN_OPTIONS: [
       process.env.BUN_OPTIONS,
       "--preload",
-      Bun.resolveSync("@opentui/solid/preload", host).replace(/[\s\\"']/g, (char) => `\\${char}`),
+      path.join(host, "src/branding/preload.ts").replace(/[\s\\"']/g, (char) => `\\${char}`),
     ]
       .filter(Boolean)
       .join(" "),

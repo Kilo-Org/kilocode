@@ -57,6 +57,7 @@ import { Npm } from "@opencode/util/npm"
 import { Permission } from "../permission.js"
 import { Reference } from "../reference.js"
 import { WebSearch } from "../websearch.js"
+import { Voice } from "../voice.js"
 import { Ripgrep } from "../ripgrep.js"
 import { Session } from "../session.js"
 import { SessionCompaction } from "../session/compaction.js"
@@ -152,6 +153,7 @@ const services = [
   SkillDiscovery.Service,
   Tool.Service,
   ToolOutput.Service,
+  Voice.Service,
   Watcher.Service,
   WellKnown.Service,
   Worktree.Service,
@@ -206,6 +208,7 @@ export const requirements = LayerNode.group([
   SkillDiscovery.node,
   Tool.node,
   ToolOutput.node,
+  Voice.node,
   Watcher.node,
   WellKnown.node,
   Worktree.node,
@@ -286,6 +289,12 @@ export const list = Effect.fn("PluginInternal.list")(function* () {
       }),
     )
   return {
+    // kilocode_change start - gateway seam: Location services for embedder plugins
+    provide: <T extends Plugin>(plugin: T) => ({
+      ...plugin,
+      effect: (host: Parameters<Plugin["effect"]>[0]) => plugin.effect(host).pipe(Effect.provide(context)),
+    }),
+    // kilocode_change end
     pre: resolve(pre),
     post: resolve(post),
   }

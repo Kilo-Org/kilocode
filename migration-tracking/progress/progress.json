@@ -4,42 +4,42 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 472,
-    "total": 9829,
-    "percent": 4.8,
-    "dropped": 25,
+    "done": 532,
+    "total": 9828,
+    "percent": 5.4,
+    "dropped": 26,
     "kinds": [
       {
         "kind": "module",
-        "done": 413,
+        "done": 435,
         "total": 3547
       },
       {
         "kind": "api",
-        "done": 0,
+        "done": 2,
         "total": 39
       },
       {
         "kind": "patch",
-        "done": 38,
-        "total": 3445
+        "done": 65,
+        "total": 3444
       },
       {
         "kind": "test",
-        "done": 21,
+        "done": 30,
         "total": 2798
       }
     ],
     "landed": {
-      "plugin": 20,
+      "plugin": 42,
       "host": 3,
       "seam": 0,
-      "patch": 0
+      "patch": 5
     },
-    "coreImports": 9,
+    "coreImports": 25,
     "sharedPatches": {
-      "seam": 20,
-      "patch": 7
+      "seam": 28,
+      "patch": 20
     }
   },
   "notCounted": {
@@ -55,9 +55,25 @@
   "coreImports": [
     "@opencode/core/app",
     "@opencode/core/bus",
+    "@opencode/core/config",
     "@opencode/core/config/discovery",
+    "@opencode/core/config/normalize",
+    "@opencode/core/effect/app-node-platform",
+    "@opencode/core/model",
+    "@opencode/core/model-resolver",
     "@opencode/core/permission",
     "@opencode/core/plugin/sdk",
+    "@opencode/core/plugin/system-prompt/anthropic.txt",
+    "@opencode/core/plugin/system-prompt/gpt-astra.txt",
+    "@opencode/core/plugin/system-prompt/gpt.txt",
+    "@opencode/core/plugin/system-prompt/kimi.txt",
+    "@opencode/core/plugin/system-prompt/trinity.txt",
+    "@opencode/core/provider",
+    "@opencode/core/rpc",
+    "@opencode/core/schema",
+    "@opencode/core/session/runner/model",
+    "@opencode/core/session/runner/prompt/system.txt",
+    "@opencode/core/session/system-prompt",
     "@opencode/core/shell",
     "@opencode/core/tool-output",
     "@opencode/core/util/wildcard",
@@ -480,12 +496,12 @@
     },
     {
       "feature": "components",
-      "done": 0,
+      "done": 12,
       "total": 22,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 7,
           "total": 16
         },
         "api": {
@@ -493,18 +509,24 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 1,
           "total": 2
         },
         "test": {
-          "done": 0,
+          "done": 4,
           "total": 4
         }
+      },
+      "landed": {
+        "plugin": 0,
+        "host": 0,
+        "seam": 0,
+        "patch": 1
       }
     },
     {
       "feature": "config",
-      "done": 0,
+      "done": 1,
       "total": 64,
       "dropped": 0,
       "kinds": {
@@ -521,7 +543,7 @@
           "total": 10
         },
         "test": {
-          "done": 0,
+          "done": 1,
           "total": 29
         }
       }
@@ -865,12 +887,12 @@
     },
     {
       "feature": "gateway",
-      "done": 59,
+      "done": 62,
       "total": 75,
       "dropped": 12,
       "kinds": {
         "module": {
-          "done": 30,
+          "done": 31,
           "total": 35
         },
         "api": {
@@ -878,16 +900,16 @@
           "total": 0
         },
         "patch": {
-          "done": 12,
+          "done": 13,
           "total": 18
         },
         "test": {
-          "done": 17,
+          "done": 18,
           "total": 22
         }
       },
       "landed": {
-        "plugin": 11,
+        "plugin": 12,
         "host": 0,
         "seam": 0,
         "patch": 0
@@ -1309,12 +1331,12 @@
     },
     {
       "feature": "oauth",
-      "done": 0,
+      "done": 1,
       "total": 8,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 1,
           "total": 1
         },
         "api": {
@@ -1405,12 +1427,12 @@
     },
     {
       "feature": "plugin",
-      "done": 0,
+      "done": 7,
       "total": 34,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 6,
           "total": 26
         },
         "api": {
@@ -1422,7 +1444,7 @@
           "total": 2
         },
         "test": {
-          "done": 0,
+          "done": 1,
           "total": 6
         }
       }
@@ -1525,26 +1547,32 @@
     },
     {
       "feature": "provider-usage",
-      "done": 0,
+      "done": 10,
       "total": 10,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 6,
           "total": 6
         },
         "api": {
-          "done": 0,
+          "done": 2,
           "total": 2
         },
         "patch": {
-          "done": 0,
+          "done": 2,
           "total": 2
         },
         "test": {
           "done": 0,
           "total": 0
         }
+      },
+      "landed": {
+        "plugin": 2,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -2275,12 +2303,12 @@
     },
     {
       "feature": "tui",
-      "done": 0,
+      "done": 4,
       "total": 45,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 1,
           "total": 15
         },
         "api": {
@@ -2288,13 +2316,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 1,
           "total": 6
         },
         "test": {
-          "done": 0,
+          "done": 2,
           "total": 24
         }
+      },
+      "landed": {
+        "plugin": 1,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -2617,7 +2651,7 @@
     },
     {
       "feature": "unattributed:config",
-      "done": 2,
+      "done": 3,
       "total": 130,
       "dropped": 0,
       "kinds": {
@@ -2630,7 +2664,7 @@
           "total": 0
         },
         "patch": {
-          "done": 2,
+          "done": 3,
           "total": 130
         },
         "test": {
@@ -2639,7 +2673,7 @@
         }
       },
       "landed": {
-        "plugin": 0,
+        "plugin": 1,
         "host": 2,
         "seam": 0,
         "patch": 0
@@ -5095,7 +5129,7 @@
     },
     {
       "feature": "unattributed:session",
-      "done": 0,
+      "done": 4,
       "total": 449,
       "dropped": 0,
       "kinds": {
@@ -5108,13 +5142,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 4,
           "total": 449
         },
         "test": {
           "done": 0,
           "total": 0
         }
+      },
+      "landed": {
+        "plugin": 4,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -5383,9 +5423,9 @@
     },
     {
       "feature": "unattributed:tui/component",
-      "done": 0,
-      "total": 142,
-      "dropped": 0,
+      "done": 13,
+      "total": 141,
+      "dropped": 1,
       "kinds": {
         "module": {
           "done": 0,
@@ -5396,13 +5436,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
-          "total": 142
+          "done": 13,
+          "total": 141
         },
         "test": {
           "done": 0,
           "total": 0
         }
+      },
+      "landed": {
+        "plugin": 13,
+        "host": 0,
+        "seam": 0,
+        "patch": 0
       }
     },
     {
@@ -5647,7 +5693,7 @@
     },
     {
       "feature": "unattributed:tui/ui",
-      "done": 0,
+      "done": 4,
       "total": 19,
       "dropped": 0,
       "kinds": {
@@ -5660,13 +5706,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 4,
           "total": 19
         },
         "test": {
           "done": 0,
           "total": 0
         }
+      },
+      "landed": {
+        "plugin": 0,
+        "host": 0,
+        "seam": 0,
+        "patch": 4
       }
     },
     {
@@ -6080,6 +6132,7 @@
   ],
   "landed": {
     "patch:agent:2e5632e7bfc6": "plugin",
+    "patch:components:06ac8868d98e": "patch",
     "patch:gateway:0278ba0eb6aa": "plugin",
     "patch:gateway:17e39e074eaf": "plugin",
     "patch:gateway:1995b11b5cdd": "plugin",
@@ -6089,10 +6142,14 @@
     "patch:gateway:73ba28ce78a5": "plugin",
     "patch:gateway:742c02b40457": "plugin",
     "patch:gateway:d29cb22ad5f6": "plugin",
+    "patch:gateway:e19fc2acea57": "plugin",
     "patch:gateway:e8673ed1650b": "plugin",
     "patch:gateway:f983d8f993c8": "plugin",
     "patch:global:0e189a57d108": "host",
+    "patch:provider-usage:b0945f511fb3": "plugin",
+    "patch:provider-usage:ce8e021f1ef6": "plugin",
     "patch:server:5e0f8563b425": "plugin",
+    "patch:tui:c29e2d297ca2": "plugin",
     "patch:unattributed:agent:161afe543464": "plugin",
     "patch:unattributed:agent:55cce67688d4": "plugin",
     "patch:unattributed:agent:655072363498": "plugin",
@@ -6101,9 +6158,37 @@
     "patch:unattributed:agent:a91ca8efa1b6": "plugin",
     "patch:unattributed:agent:b6727a425792": "plugin",
     "patch:unattributed:config:546539fc1643": "host",
-    "patch:unattributed:config:8cdbdec70393": "host"
+    "patch:unattributed:config:73db79553730": "plugin",
+    "patch:unattributed:config:8cdbdec70393": "host",
+    "patch:unattributed:session:13cc4c3e6a51": "plugin",
+    "patch:unattributed:session:142910b3fc8c": "plugin",
+    "patch:unattributed:session:5dd7101d7cc6": "plugin",
+    "patch:unattributed:tui/component:013e56c6e70d": "plugin",
+    "patch:unattributed:tui/component:361708efa0db": "plugin",
+    "patch:unattributed:tui/component:3bd2c832bb54": "plugin",
+    "patch:unattributed:tui/component:442c6f2a6ad9": "plugin",
+    "patch:unattributed:tui/component:5c55d556d8ae": "plugin",
+    "patch:unattributed:tui/component:7fb2970f1e39": "plugin",
+    "patch:unattributed:tui/component:8356b283bea4": "plugin",
+    "patch:unattributed:tui/component:85b11084275d": "plugin",
+    "patch:unattributed:tui/component:9a58930c75d8": "plugin",
+    "patch:unattributed:tui/component:9e2836eb85dc": "plugin",
+    "patch:unattributed:tui/component:a277acf3a84b": "plugin",
+    "patch:unattributed:tui/component:c8cf17d43819": "plugin",
+    "patch:unattributed:tui/component:d10b36aa74a5": "plugin",
+    "patch:unattributed:tui/ui:858635f51958": "patch",
+    "patch:unattributed:tui/ui:aac5db9863ac": "patch",
+    "patch:unattributed:tui/ui:acda41f897d2": "patch"
   },
   "done": [
+    "api:GET /kilocode/provider-usage",
+    "api:POST /kilocode/provider-usage/refresh",
+    "module:packages/core/src/kilocode/oauth/page.ts",
+    "module:packages/core/src/kilocode/provider-usage.ts",
+    "module:packages/core/src/kilocode/provider-usage/cloud.ts",
+    "module:packages/core/src/kilocode/provider-usage/codex.ts",
+    "module:packages/core/src/kilocode/provider-usage/minimax/native.ts",
+    "module:packages/core/src/kilocode/provider-usage/minimax/usage.ts",
     "module:packages/kilo-gateway/src/api/constants.ts",
     "module:packages/kilo-gateway/src/api/embedding-models.ts",
     "module:packages/kilo-gateway/src/api/kilo-pass.ts",
@@ -6121,6 +6206,7 @@
     "module:packages/kilo-gateway/src/edit-prompt.ts",
     "module:packages/kilo-gateway/src/edit.ts",
     "module:packages/kilo-gateway/src/fim.ts",
+    "module:packages/kilo-gateway/src/gateway-metadata.ts",
     "module:packages/kilo-gateway/src/headers.ts",
     "module:packages/kilo-gateway/src/index.ts",
     "module:packages/kilo-gateway/src/mistral-fim-endpoint.ts",
@@ -6143,6 +6229,7 @@
     "module:packages/kilo-gateway/test/edit-prompt.test.ts",
     "module:packages/kilo-gateway/test/edit.test.ts",
     "module:packages/kilo-gateway/test/fim.test.ts",
+    "module:packages/kilo-gateway/test/gateway-metadata.test.ts",
     "module:packages/kilo-gateway/test/mistral-fim-endpoint.test.ts",
     "module:packages/kilo-gateway/test/responses.test.ts",
     "module:packages/kilo-i18n/src/ar.ts",
@@ -6529,14 +6616,38 @@
     "module:packages/kilo-vscode/webview-ui/src/utils/webview-message.ts",
     "module:packages/opencode/src/kilocode/agent/index.ts",
     "module:packages/opencode/src/kilocode/balance-refresh.ts",
+    "module:packages/opencode/src/kilocode/components/dialog-kilo-notifications.tsx",
+    "module:packages/opencode/src/kilocode/components/free-model-disclosure.ts",
+    "module:packages/opencode/src/kilocode/components/kilo-news.tsx",
+    "module:packages/opencode/src/kilocode/components/model-info-panel-utils.ts",
+    "module:packages/opencode/src/kilocode/components/model-info-panel.tsx",
+    "module:packages/opencode/src/kilocode/components/news.ts",
+    "module:packages/opencode/src/kilocode/components/notification-banner.tsx",
     "module:packages/opencode/src/kilocode/kilo-errors.ts",
+    "module:packages/opencode/src/kilocode/plugins/home-news.tsx",
+    "module:packages/opencode/src/kilocode/plugins/model-usage.ts",
+    "module:packages/opencode/src/kilocode/plugins/sidebar-footer.tsx",
+    "module:packages/opencode/src/kilocode/plugins/sidebar-pr.tsx",
+    "module:packages/opencode/src/kilocode/plugins/sidebar-usage-row.tsx",
+    "module:packages/opencode/src/kilocode/plugins/sidebar-usage.tsx",
     "module:packages/opencode/test/kilocode/agent-global-config-dirs.test.ts",
     "module:packages/opencode/test/kilocode/agent-permission-overrides.test.ts",
     "module:packages/opencode/test/kilocode/agent-skill-permissions.test.ts",
     "module:packages/opencode/test/kilocode/ask-agent-permissions.test.ts",
+    "module:packages/opencode/test/kilocode/config/hide-prompt-training-models.test.ts",
+    "module:packages/opencode/test/kilocode/free-model-disclosure.test.ts",
     "module:packages/opencode/test/kilocode/kilo-errors.test.ts",
     "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts",
+    "module:packages/opencode/test/kilocode/model-info-panel-utils.test.ts",
+    "module:packages/opencode/test/kilocode/model-info-panel.types.test.ts",
+    "module:packages/opencode/test/kilocode/news.test.ts",
+    "module:packages/opencode/test/kilocode/sidebar-footer.test.ts",
+    "module:packages/opencode/test/kilocode/tui/usage.test.ts",
+    "module:packages/schema/src/kilocode/provider-usage.ts",
+    "module:packages/tui/src/kilocode/model-picker.ts",
+    "module:packages/tui/test/kilocode/model-picker.test.ts",
     "patch:agent:2e5632e7bfc6",
+    "patch:components:06ac8868d98e",
     "patch:gateway:00d34e8d5cd7",
     "patch:gateway:0278ba0eb6aa",
     "patch:gateway:17e39e074eaf",
@@ -6549,10 +6660,14 @@
     "patch:gateway:742c02b40457",
     "patch:gateway:a120a4aeb745",
     "patch:gateway:d29cb22ad5f6",
+    "patch:gateway:e19fc2acea57",
     "patch:gateway:e8673ed1650b",
     "patch:gateway:f983d8f993c8",
     "patch:global:0e189a57d108",
+    "patch:provider-usage:b0945f511fb3",
+    "patch:provider-usage:ce8e021f1ef6",
     "patch:server:5e0f8563b425",
+    "patch:tui:c29e2d297ca2",
     "patch:unattributed:agent:0a0c97da2c48",
     "patch:unattributed:agent:161afe543464",
     "patch:unattributed:agent:19ff1297ae1a",
@@ -6575,7 +6690,29 @@
     "patch:unattributed:agent:e4427a3d9c64",
     "patch:unattributed:agent:fbbd4a8ba315",
     "patch:unattributed:config:546539fc1643",
-    "patch:unattributed:config:8cdbdec70393"
+    "patch:unattributed:config:73db79553730",
+    "patch:unattributed:config:8cdbdec70393",
+    "patch:unattributed:session:13cc4c3e6a51",
+    "patch:unattributed:session:142910b3fc8c",
+    "patch:unattributed:session:5dd7101d7cc6",
+    "patch:unattributed:session:5dd7101d7cc6",
+    "patch:unattributed:tui/component:013e56c6e70d",
+    "patch:unattributed:tui/component:361708efa0db",
+    "patch:unattributed:tui/component:3bd2c832bb54",
+    "patch:unattributed:tui/component:442c6f2a6ad9",
+    "patch:unattributed:tui/component:5c55d556d8ae",
+    "patch:unattributed:tui/component:7fb2970f1e39",
+    "patch:unattributed:tui/component:8356b283bea4",
+    "patch:unattributed:tui/component:85b11084275d",
+    "patch:unattributed:tui/component:9a58930c75d8",
+    "patch:unattributed:tui/component:9e2836eb85dc",
+    "patch:unattributed:tui/component:a277acf3a84b",
+    "patch:unattributed:tui/component:c8cf17d43819",
+    "patch:unattributed:tui/component:d10b36aa74a5",
+    "patch:unattributed:tui/ui:858635f51958",
+    "patch:unattributed:tui/ui:aac5db9863ac",
+    "patch:unattributed:tui/ui:aac5db9863ac",
+    "patch:unattributed:tui/ui:acda41f897d2"
   ],
   "dropped": [
     "module:packages/kilo-gateway/src/auth/device-auth.ts",
@@ -6602,6 +6739,7 @@
     "patch:unattributed:agent:7c1daa44f22c",
     "patch:unattributed:agent:8c603298aa6d",
     "patch:unattributed:agent:92890c7740e7",
-    "patch:unattributed:agent:d88711e4e0f0"
+    "patch:unattributed:agent:d88711e4e0f0",
+    "patch:unattributed:tui/component:902bf97fd9cb"
   ]
 }
