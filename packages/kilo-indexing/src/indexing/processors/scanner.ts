@@ -600,7 +600,7 @@ export class DirectoryScanner implements IDirectoryScanner {
 
         log.debug(`Creating embeddings for ${batchTexts.length} texts`)
 
-        const { embeddings } = await this.embedder.createEmbeddings(batchTexts)
+        const { embeddings } = await this.embedder.createEmbeddings(batchTexts, undefined, "document")
         log.debug(`Successfully created ${embeddings.length} embeddings`)
 
         // Prepare points for Qdrant

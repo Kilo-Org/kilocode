@@ -59,6 +59,29 @@ describe("CodeIndexConfigManager", () => {
     expect(cfg.isFeatureConfigured).toBe(false)
   })
 
+  test("projects OpenAI-compatible prompt names without losing an empty override", () => {
+    const input = toIndexingConfigInput(
+      IndexingConfig.parse({
+        enabled: true,
+        provider: "openai-compatible",
+        "openai-compatible": {
+          baseUrl: "http://localhost:8080/v1",
+          documentPrompt: "document",
+          queryPrompt: "",
+        },
+      }),
+    )
+    const cfg = new CodeIndexConfigManager(input)
+
+    expect(cfg.getConfig().openAiCompatibleOptions).toEqual({
+      baseUrl: "http://localhost:8080/v1",
+      apiKey: undefined,
+      documentPrompt: "document",
+      queryPrompt: "",
+    })
+    expect(IndexingConfig.safeParse({ "openai-compatible": { queryPrompt: 42 } }).success).toBe(false)
+  })
+
   test("defaults vector store to LanceDB when omitted", () => {
     const cfg = new CodeIndexConfigManager(createInput({ vectorStoreProvider: undefined }))
 
@@ -163,6 +186,33 @@ describe("CodeIndexConfigManager", () => {
   })
 
   describe("loadConfiguration restart checks", () => {
+    test("restarts for either prompt name and distinguishes omitted and empty names", () => {
+      const input = createInput({
+        embedderProvider: "openai-compatible",
+        openAiCompatibleBaseUrl: "http://localhost:8080/v1",
+      })
+      const cfg = new CodeIndexConfigManager(input)
+
+      expect(cfg.loadConfiguration({ ...input, openAiCompatibleDocumentPrompt: "document" }).requiresRestart).toBe(true)
+      expect(cfg.loadConfiguration({ ...input, openAiCompatibleDocumentPrompt: "document" }).requiresRestart).toBe(
+        false,
+      )
+      expect(cfg.loadConfiguration({ ...input, openAiCompatibleQueryPrompt: "CodeRetrieval" }).requiresRestart).toBe(
+        true,
+      )
+      expect(cfg.loadConfiguration({ ...input, openAiCompatibleQueryPrompt: "" }).requiresRestart).toBe(true)
+      expect(cfg.loadConfiguration(input).requiresRestart).toBe(true)
+      expect(cfg.loadConfiguration(input).requiresRestart).toBe(false)
+    })
+
+    test("ignores prompt changes for other embedding providers", () => {
+      const cfg = new CodeIndexConfigManager(createInput())
+
+      expect(cfg.loadConfiguration(createInput({ openAiCompatibleDocumentPrompt: "document" })).requiresRestart).toBe(
+        false,
+      )
+    })
+
     test("requires restart when model changes with same dimension", () => {
       const cfg = new CodeIndexConfigManager(createInput({ modelId: "text-embedding-3-small" }))
 

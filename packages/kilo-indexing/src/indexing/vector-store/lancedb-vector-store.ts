@@ -6,7 +6,7 @@ import type { Payload, VectorStoreSearchResult } from "../interfaces"
 import { DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_SEARCH_MIN_SCORE } from "../constants"
 import fs from "fs"
 import { Log } from "../../util/log"
-import type { EmbeddingProfile } from "../embedding-profile"
+import { isEmbeddingProfileEqual, type EmbeddingProfile } from "../embedding-profile"
 import { loadLanceDB } from "./lancedb-loader"
 
 const log = Log.create({ service: "lancedb-store" })
@@ -29,6 +29,7 @@ const KEY = {
   provider: "embedding_provider",
   model: "embedding_model_id",
   dimension: "embedding_dimension",
+  prompt: "embedding_document_prompt",
 }
 
 /**
@@ -164,6 +165,7 @@ export class LanceDBVectorStore implements IVectorStore {
         key: KEY.dimension,
         value: String(this.profile.dimension),
       },
+      ...(this.profile.documentPrompt !== undefined ? [{ key: KEY.prompt, value: this.profile.documentPrompt }] : []),
       {
         key: KEY.complete,
         value: "false",
@@ -237,6 +239,7 @@ export class LanceDBVectorStore implements IVectorStore {
     const provider = await this._getMetadataValue(db, KEY.provider)
     const modelId = await this._getMetadataValue(db, KEY.model)
     const dimension = await this._getMetadataValue(db, KEY.dimension)
+    const prompt = await this._getMetadataValue(db, KEY.prompt)
     if (typeof provider !== "string" || typeof modelId !== "string") return undefined
     const dim = this._parseNumber(dimension)
     if (!dim) return undefined
@@ -244,15 +247,12 @@ export class LanceDBVectorStore implements IVectorStore {
       provider: provider as EmbeddingProfile["provider"],
       modelId,
       dimension: dim,
+      ...(typeof prompt === "string" ? { documentPrompt: prompt } : {}),
     }
   }
 
   private _isEmbeddingProfileMatch(profile: EmbeddingProfile): boolean {
-    return (
-      profile.provider === this.profile.provider &&
-      profile.modelId === this.profile.modelId &&
-      profile.dimension === this.profile.dimension
-    )
+    return isEmbeddingProfileEqual(profile, this.profile)
   }
 
   async openExisting(): Promise<void> {
@@ -632,6 +632,9 @@ export class LanceDBVectorStore implements IVectorStore {
     await this._upsertMetadata(metadataTable, KEY.provider, this.profile.provider)
     await this._upsertMetadata(metadataTable, KEY.model, this.profile.modelId)
     await this._upsertMetadata(metadataTable, KEY.dimension, this.profile.dimension)
+    await (this.profile.documentPrompt !== undefined
+      ? this._upsertMetadata(metadataTable, KEY.prompt, this.profile.documentPrompt)
+      : metadataTable.delete(`key = '${KEY.prompt}'`))
     await this._upsertMetadata(metadataTable, KEY.size, this.vectorSize)
   }
 
