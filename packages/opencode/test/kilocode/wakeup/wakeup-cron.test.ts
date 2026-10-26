@@ -356,20 +356,13 @@ describe("Wakeup cron", () => {
       // is still scheduled rather than dropped.
       expect((yield* wake.cronList({ sessionID: persisted.sessionID })).map((item) => item.id)).toEqual([persisted.id])
 
-      // The re-armed window is a live timer. `TestClock.adjust` is virtual, so
-      // advancing it returns to the scheduler and lets the guard's re-arm
-      // persist and arm without any wall-clock wait. The re-arm derives its
-      // delay from the real clock while these sleeps are virtual, so a single
-      // adjust can release several already-armed windows; the property under
-      // test is that the schedule keeps firing, not a fixed number of fires.
-      // The bounded loop keeps the assertion honest if that re-arm is dropped.
-      // The re-arm runs in a forked fiber, so an adjust can run before that
-      // fiber arms its window and release nothing. Yield each pass and keep a
-      // generous bound so the loop waits for the schedule under load instead of
-      // exhausting while the arming fiber still waits for a scheduler turn.
-      for (let attempt = 0; attempt < 200 && recorder.calls.length < 2; attempt++) {
-        yield* Effect.yieldNow
+      // Advance virtual timers while allowing the claim's real filesystem I/O
+      // to settle. A fixed number of virtual-clock yields can finish before
+      // the lock is acquired, even when the schedule is still armed.
+      const deadline = Date.now() + 5000
+      while (recorder.calls.length < 2 && Date.now() < deadline) {
         yield* TestClock.adjust("2 minutes")
+        yield* Effect.promise(() => Bun.sleep(10))
       }
       expect(recorder.calls.length).toBeGreaterThanOrEqual(2)
       expect(recorder.calls.every((item) => item.id === persisted.id)).toBe(true)

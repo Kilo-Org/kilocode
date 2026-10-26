@@ -102,7 +102,7 @@ const testAllow: Record<string, { count: number; reason: string }> = {
       "resumes the waiting goal; scoped layers cannot express the boundary under test.",
   },
   "kilocode/wakeup/wakeup-resume.test.ts": {
-    count: 53,
+    count: 60,
     reason:
       "the wakeup resume integration test schedules through the production Wakeup service and asserts the mock " +
       "model receives the scheduled prompt, so it must run the production Fire/resume path " +
@@ -118,7 +118,8 @@ const testAllow: Record<string, { count: number; reason: string }> = {
       "an archived session that must settle paused with a readable reason, and an in-flight goal turn that must " +
       "queue a fire onto the next goal cycle all observe that production path. The session-removal case drives " +
       "KiloSession.cancelWakeups, which resolves the Wakeup service from the same global runtime to cancel the " +
-      "removed session's timers.",
+      "removed session's timers. The corrupt-wakeup goal-clear case drives SessionPrompt.command and " +
+      "verifies stored task removal through the same registered Wakeup cleanup handler, so it shares this boundary.",
   },
   "tool/recall.test.ts": { count: 11, reason: "existing runtime integration test" },
 }

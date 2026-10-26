@@ -172,10 +172,18 @@ export const CronDeleteTool = Tool.define<typeof CronDeleteParams, CronDeleteMet
           }
           return {
             title: "Deleted cron task",
-            output: `Deleted cron task ${removed.id} (next ${new Date(removed.dueAt).toISOString()}).`,
+            output:
+              "unreadable" in removed
+                ? `Deleted cron task ${removed.id}.`
+                : `Deleted cron task ${removed.id} (next ${new Date(removed.dueAt).toISOString()}).`,
             metadata: { id: removed.id, deleted: true },
           }
-        }),
+        }).pipe(
+          Effect.catchTags({
+            "Wakeup.Busy": (error) =>
+              Effect.succeed({ title: "Cron cancellation busy", output: error.message, metadata: { deleted: false } }),
+          }),
+        ),
     }
   }),
 )
