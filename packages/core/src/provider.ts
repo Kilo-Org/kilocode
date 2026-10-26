@@ -234,16 +234,21 @@ export function mergeOverlay(
 ): Record<string, Json> | undefined {
   if (base === undefined) return overlay && decodeJsonRecord({ ...overlay })
   if (overlay === undefined) return decodeJsonRecord({ ...base })
-  return decodeJsonRecord(
-    Object.fromEntries(
-      new Set([...Object.keys(base), ...Object.keys(overlay)]).values().map((key): [string, unknown] => {
-        const left = base[key]
-        const right = overlay[key]
-        if (right === undefined) return [key, left]
-        if (isRecord(left) && isRecord(right)) return [key, mergeOverlay(left, right) ?? {}]
-        return [key, right]
-      }),
-    ),
+  return decodeJsonRecord(mergeRecord(base, overlay))
+}
+
+function mergeRecord(
+  base: Readonly<Record<string, unknown>>,
+  overlay: Readonly<Record<string, unknown>>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    new Set([...Object.keys(base), ...Object.keys(overlay)]).values().map((key): [string, unknown] => {
+      const left = base[key]
+      const right = overlay[key]
+      if (right === undefined) return [key, left]
+      if (isRecord(left) && isRecord(right)) return [key, mergeRecord(left, right)]
+      return [key, right]
+    }),
   )
 }
 

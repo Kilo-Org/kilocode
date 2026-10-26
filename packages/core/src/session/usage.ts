@@ -4,6 +4,7 @@ import type { Usage } from "@opencode/ai"
 import { Money } from "@opencode/schema/money"
 import type { TokenUsage } from "@opencode/schema/token-usage"
 import type { Model } from "@opencode/schema/model"
+import { KiloSessionUsage } from "../kilocode/session/usage.js" // kilocode_change(gateway)
 
 const finite = (value: number) => (Number.isFinite(value) ? value : 0)
 const safe = (value: number | undefined) => Math.max(0, finite(value ?? 0))
@@ -37,10 +38,12 @@ export function calculateCost(costs: Model.Info["cost"], usage: TokenUsage.Info)
 
 export type Recorded = { readonly tokens: TokenUsage.Info; readonly cost: Money.USD }
 
-export const record = (usage: Usage | undefined, costs: Model.Info["cost"]): Recorded => {
+// kilocode_change start - gateway: settle reported billing without changing other providers.
+export const record = (usage: Usage | undefined, costs: Model.Info["cost"], providerID?: string): Recorded => {
   const normalized = tokens(usage)
-  return { tokens: normalized, cost: calculateCost(costs, normalized) }
+  return { tokens: normalized, cost: KiloSessionUsage.providerCost(usage, providerID) ?? calculateCost(costs, normalized) }
 }
+// kilocode_change end
 
 export const add = (a: Recorded, b: Recorded): Recorded => ({
   cost: Money.USD.make(a.cost + b.cost),

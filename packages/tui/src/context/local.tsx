@@ -26,6 +26,7 @@ import { useData } from "./data"
 import { usePermission } from "./permission"
 import { useLocation } from "./location"
 import { parse } from "../util/model"
+import { createGatewayDefaultModel } from "../kilocode/default-model" // kilocode_change(gateway)
 
 export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
   name: "Local",
@@ -43,6 +44,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
 
     const models = () => data.location.model.list(location.ref)
     const providers = () => data.location.provider.list(location.ref)
+    const gatewayDefault = createGatewayDefaultModel() // kilocode_change(gateway)
 
     function isModelValid(model: ModelPreferenceModel) {
       return !!models()?.some((item) => item.providerID === model.providerID && item.id === model.modelID)
@@ -200,6 +202,12 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             return item
           }
         }
+
+        // kilocode_change start - gateway: use the server recommendation after explicit selections.
+        if (!gatewayDefault.ready()) return
+        const recommended = gatewayDefault.current()
+        if (recommended && isModelValid(recommended)) return recommended
+        // kilocode_change end
 
         const model = models()?.[0]
         if (!model) return undefined
@@ -387,7 +395,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           return preferences.ready
         },
         get catalogReady() {
-          return models() !== undefined
+          return models() !== undefined && (!!currentModel() || gatewayDefault.ready()) // kilocode_change(gateway)
         },
         recent() {
           return preferences.recent

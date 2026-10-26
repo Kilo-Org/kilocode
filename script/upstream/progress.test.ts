@@ -6,6 +6,7 @@ import {
   compare,
   featureOf,
   grid,
+  history,
   importBindings,
   knownFeatures,
   parseHunks,
@@ -18,6 +19,25 @@ import {
 } from "./progress"
 
 const split = { "session/steering": "steering", "kilo-ui": "ui", plugins: "plugin" }
+
+test("history uses v2 rather than feature-branch or synthetic merge ancestry", async () => {
+  const current = JSON.stringify({ summary: { done: 92, total: 9829, percent: 0.9 }, coreImports: 12 }) + "\n"
+  const points = await history(current, async (args) => {
+    if (args[0] === "log") {
+      expect(args).toEqual(["log", "--first-parent", "--format=%H %cs", "origin/v2", "--", "migration-tracking/progress/progress.json"])
+      return "current 2026-10-22\nbase 2026-10-22\nolder 2026-10-21"
+    }
+    if (args[1].startsWith("current:")) return current.trimEnd()
+    return JSON.stringify({
+      summary: { done: args[1].startsWith("base:") ? 92 : 90, total: 9829, percent: 0.9 },
+      coreImports: 9,
+    })
+  })
+  expect(points).toEqual([
+    { date: "2026-10-21", done: 90, total: 9829, percent: 0.9 },
+    { date: "2026-10-22", done: 92, total: 9829, percent: 0.9 },
+  ])
+})
 
 test("featureOf: packages, directories, split table and loose files", () => {
   const known = knownFeatures(

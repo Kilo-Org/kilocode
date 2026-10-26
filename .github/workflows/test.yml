@@ -56,7 +56,7 @@ jobs:
           bun -e 'const result = await Bun.file("affected.json").json(); console.log(`app=${result.packages.count > 0}`)' >> "$GITHUB_OUTPUT"
 
   unit:
-    name: unit (${{ matrix.settings.name }}, ${{ matrix.shard }}/${{ matrix.settings.shards }}) # kilocode_change
+    name: unit (${{ matrix.settings.name }}, ${{ matrix.shard == 'packages' && 'packages' || format('{0}/{1}', matrix.shard, matrix.settings.shards) }}) # kilocode_change
     strategy:
       fail-fast: false
       matrix:
@@ -69,8 +69,9 @@ jobs:
             host: blacksmith-4vcpu-windows-2025
             shards: 3 # kilocode_change
             concurrency: 1 # kilocode_change
-        # kilocode_change start - the KILO_TEST_SHARD index; Linux runs two shards
-        shard: [1, 2, 3]
+        # kilocode_change start - the KILO_TEST_SHARD index; Linux runs two shards. The `packages` leg runs the
+        # packages without `test:ci` and the Linux-only checks, in parallel with the shards.
+        shard: [packages, 1, 2, 3]
         exclude:
           - settings: { name: linux, host: blacksmith-4vcpu-ubuntu-2404, shards: 2, concurrency: 2 }
             shard: 3
@@ -96,11 +97,11 @@ jobs:
         uses: ./.github/actions/setup-bun
 
       - name: Test Effect simplification rules
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.shard == 'packages' # kilocode_change
         run: bun run test:effect-simplification-rules
 
       - name: Check Effect simplifications
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.shard == 'packages' # kilocode_change
         run: bun run lint:effect-simplifications
 
       - name: Configure git identity
@@ -123,15 +124,14 @@ jobs:
         timeout-minutes: 20
         run: |
           # The runners have four vCPUs, and each Bun test process performs its own concurrent work.
-          # kilocode_change start - core, tui and cli run in balanced shards through `test:ci`; the other packages run in shard 1
+          # kilocode_change start - core, tui and cli run in balanced shards through `test:ci`; the other packages run in the `packages` leg
           args=(--concurrency=3)
           [ "${{ github.event_name }}" = "workflow_dispatch" ] || args+=(--affected)
-          status=0
-          if [ "${{ matrix.shard }}" = "1" ]; then
-            GITHUB_ACTIONS=false bun turbo test "${args[@]}" --filter='!@opencode/core' --filter='!@opencode/tui' --filter='!@opencode/cli' || status=1
+          if [ "${{ matrix.shard }}" = "packages" ]; then
+            GITHUB_ACTIONS=false bun turbo test "${args[@]}" --filter='!@opencode/core' --filter='!@opencode/tui' --filter='!@opencode/cli'
+            exit
           fi
-          GITHUB_ACTIONS=false bun turbo test:ci "${args[@]}" || status=1
-          exit $status
+          GITHUB_ACTIONS=false bun turbo test:ci "${args[@]}"
           # kilocode_change end
         env:
           OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
@@ -142,7 +142,7 @@ jobs:
 
       # kilocode_change start - JUnit reports of test:ci: failing cases as annotations, and the reports as an artifact
       - name: Publish unit reports
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.shard != 'packages' }}
         uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6.4.0
         with:
           report_paths: artifacts/unit/*.xml
@@ -153,7 +153,7 @@ jobs:
 
       # Input for script/kilocode/test/test-durations.ts, which refreshes the shard weights. Not a test result.
       - name: Upload unit reports
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.shard != 'packages' }}
         continue-on-error: true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -164,17 +164,17 @@ jobs:
       # kilocode_change end
 
       - name: Verify published codemode package
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.shard == 'packages' # kilocode_change
         working-directory: packages/codemode
         run: bun run script/publish.ts --dry-run
 
       - name: Check generated client
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.shard == 'packages' # kilocode_change
         working-directory: packages/client
         run: bun run check:generated
 
       - name: Check generated documentation
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.shard == 'packages' # kilocode_change
         working-directory: services/www
         run: bun run check:generated
 
