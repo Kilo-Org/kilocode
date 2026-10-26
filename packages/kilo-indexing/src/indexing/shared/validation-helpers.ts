@@ -207,11 +207,63 @@ export function formatEmbeddingError(error: any, maxRetries: number): Error {
   const errorMessage = extractErrorMessage(error)
   const statusCode = extractStatusCode(error)
 
+  const toError = (message: string): Error => {
+    const err = new Error(message)
+    // Preserve the HTTP status so callers (e.g. the directory scanner) can tell a
+    // deterministic client error from a transient one without re-parsing the message.
+    if (statusCode !== undefined) {
+      ;(err as Error & { status?: number }).status = statusCode
+    }
+    return err
+  }
+
   if (statusCode === 401) {
-    return new Error("Authentication failed. Please check your API key.")
+    return toError("Authentication failed. Please check your API key.")
   }
   if (statusCode) {
-    return new Error(`Embedding request failed after ${maxRetries} attempts with status ${statusCode}: ${errorMessage}`)
+    return toError(`Embedding request failed after ${maxRetries} attempts with status ${statusCode}: ${errorMessage}`)
   }
-  return new Error(`Embedding request failed after ${maxRetries} attempts: ${errorMessage}`)
+  return toError(`Embedding request failed after ${maxRetries} attempts: ${errorMessage}`)
+}
+
+/**
+ * Phrases that indicate the request payload exceeded the model's maximum
+ * input/context size. These 4xx responses are deterministic: re-sending the
+ * same payload cannot succeed, so callers should split the batch instead of
+ * retrying it.
+ */
+const CONTEXT_OVERFLOW_PATTERNS: readonly RegExp[] = [
+  /maximum context/i,
+  /context (size|length|limit)/i,
+  /larger than (the )?max(imum)? context/i,
+  /input (is )?too (long|many)/i,
+  /prompt (is )?too long/i,
+  /too many tokens/i,
+  /exceeds? (the |your )?(maximum |max )?(input|context|token)/i,
+  /token (limit|length|count).{0,20}(exceed|limit|maximum)/i,
+  /payload too large/i,
+]
+
+/**
+ * Returns true when an embedding error is an "input/context too large" rejection
+ * — the model's maximum input token count was exceeded.
+ */
+export function isContextOverflowError(error: unknown): boolean {
+  const status = extractStatusCode(error)
+  if (status !== undefined && (status < 400 || status >= 500)) return false
+  const message = extractErrorMessage(error)
+  if (!message) return false
+  return CONTEXT_OVERFLOW_PATTERNS.some((pattern) => pattern.test(message))
+}
+
+/**
+ * Returns true when an embedding error is a deterministic client error that
+ * cannot be resolved by retrying the identical request. 429 (rate limit) and
+ * 5xx (server) errors are still considered retryable.
+ */
+export function isNonRetryableEmbeddingError(error: unknown): boolean {
+  const status = extractStatusCode(error)
+  if (status === undefined) return false
+  if (status === 429) return false
+  return status >= 400 && status < 500
 }

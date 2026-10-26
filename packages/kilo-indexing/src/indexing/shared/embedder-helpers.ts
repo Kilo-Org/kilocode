@@ -1,5 +1,46 @@
+import { isContextOverflowError } from "./validation-helpers"
+
 export function estimateTokenCount(text: string): number {
   return Math.ceil(text.length / 4)
+}
+
+type EmbedBatchResult = { embeddings: number[][]; usage: { promptTokens: number; totalTokens: number } }
+
+/**
+ * Embeds a single batch, splitting it in half and retrying each half when the
+ * endpoint rejects the request because the payload exceeded the model's maximum
+ * input/context size.
+ *
+ * The model's context limit is not known up front (see the model registry, which
+ * only records embedding dimensions), so the split is driven reactively by the
+ * endpoint's own "input too large" 400. Splitting halves the batch until each
+ * request fits, which makes small-context embedding models usable without
+ * re-sending a payload that is guaranteed to fail. A single-item batch cannot be
+ * split further, so it rethrows and the caller reports the failure.
+ *
+ * The returned embeddings preserve the original item order across the split.
+ */
+async function embedWithContextSplit(
+  batch: string[],
+  embed: (texts: string[]) => Promise<EmbedBatchResult>,
+): Promise<EmbedBatchResult> {
+  try {
+    return await embed(batch)
+  } catch (error) {
+    if (isContextOverflowError(error) && batch.length > 1) {
+      const mid = Math.floor(batch.length / 2)
+      const left = await embedWithContextSplit(batch.slice(0, mid), embed)
+      const right = await embedWithContextSplit(batch.slice(mid), embed)
+      return {
+        embeddings: [...left.embeddings, ...right.embeddings],
+        usage: {
+          promptTokens: left.usage.promptTokens + right.usage.promptTokens,
+          totalTokens: left.usage.totalTokens + right.usage.totalTokens,
+        },
+      }
+    }
+    throw error
+  }
 }
 
 export function applyQueryPrefix(
@@ -79,7 +120,7 @@ export async function embedBatches(
   const processed = applyQueryPrefix(texts, prefix, maxItemTokens, onPrefixOverflow)
 
   for (const batch of batchTextsByTokenBudget(processed, maxItemTokens, maxBatchTokens, onOversized)) {
-    const result = await embed(batch)
+    const result = await embedWithContextSplit(batch, embed)
     embeddings.push(...result.embeddings)
     usage.promptTokens += result.usage.promptTokens
     usage.totalTokens += result.usage.totalTokens
