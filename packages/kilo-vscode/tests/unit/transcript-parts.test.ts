@@ -3,6 +3,8 @@ import path from "node:path"
 
 const WEBVIEW = path.resolve(import.meta.dir, "../../webview-ui")
 const WORKER_URL = path.resolve(import.meta.dir, "../setup/worker-url.ts")
+// Bun 1.4.4 compiles TSX against `solid-js/jsx-runtime`, which has no runtime exports.
+const SOLID_JSX = path.resolve(import.meta.dir, "../../../ui/test/solid-jsx.ts")
 const PASS = "TRANSCRIPT_PARTS_PASS"
 const FAIL = "TRANSCRIPT_PARTS_FAIL:"
 
@@ -62,7 +64,7 @@ const SCRIPT = `
 
 describe("transcript parts", () => {
   it("keeps timeline candidates aligned with visible transcript parts", () => {
-    const result = Bun.spawnSync(["bun", "--preload", WORKER_URL, "--conditions=browser", "-e", SCRIPT], {
+    const result = Bun.spawnSync(["bun", "--preload", WORKER_URL, "--preload", SOLID_JSX, "--conditions=browser", "-e", SCRIPT], {
       cwd: WEBVIEW,
       stdout: "pipe",
       stderr: "pipe",
