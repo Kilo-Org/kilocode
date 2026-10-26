@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 49,
-    "markedLines": 378,
+    "files": 51,
+    "markedLines": 393,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -208,6 +208,14 @@
     "packages/tui/test/app-lifecycle.test.tsx": {
       "rung": 4,
       "seam": "Flake fix in the shared terminal-pane test (selection copy and pane management): after ctrl+x t the pane frame renders before focus moves to the terminal, so the immediate `currentFocusedRenderable` assertion races the next render and failed unit (linux, 2/2) on 2026-10-23. Both focus assertions wait for the transition (setup.waitFor) before asserting, the same way the neighbouring terminal assertions do. No product change and no Kilo value: the assertions and their expected results are unchanged. Rungs 1 and 2 cannot reach a test in the TUI package."
+    },
+    "packages/plugin/src/effect/session.ts": {
+      "rung": 3,
+      "seam": "Session `route` hook: a plugin may send one model request to another catalog model (`target`) before the request is built. Kilo custom auto routers (ADR 0005, v1 #15183) need it: the routing worker picks a client model or a Gateway model per request from the request messages and tools. No existing hook reaches the model of a request: `context` and `model.request` see a readonly model ref and run after the model is resolved, and the model, provider and AI SDK editors change the catalog, not one request. Type-only: the hook interface and its `SessionHooks` entry."
+    },
+    "packages/core/src/session/model-request.ts": {
+      "rung": 3,
+      "seam": "Trigger the session `route` hook at the start of `SessionModelRequest.prepare` and resolve its `target` with `ModelResolver.resolveModel` (optional service), so the rest of the request uses the target's settings, credentials and provider hooks. Durable records keep the selected model, because the runner records `loaded.model`. Without a `route` hook the request is unchanged and upstream's tests pass unchanged. Rungs 1 and 2 cannot supply it: the model is resolved before any session hook runs, and replacing SessionModelRequest in the host would mirror the whole request builder."
     }
   }
 }

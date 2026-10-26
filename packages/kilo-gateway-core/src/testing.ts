@@ -261,6 +261,18 @@ export function fixture() {
         },
       },
     } as unknown,
+    // Custom auto routers (ADR 0005). The web REST routes and the worker routes; point KILO_AUTO_ROUTING_URL here.
+    customRoutersStatus: 200,
+    customRouters: { routers: [customRouter()] } as { routers: ReturnType<typeof customRouter>[] },
+    // A fixed decision body. Unset, the worker picks the first servable client entry, else the first gateway entry.
+    decide: undefined as unknown,
+    decideStatus: 200,
+    evalPlan: undefined as unknown,
+    evalCase: { caseId: "case-1", baseRouter: "efficient", prompt: "Reply with OK.", timeoutMs: 60_000 } as unknown,
+    evalResult: { score: 1 } as unknown,
+    evalStatus: 200,
+    // Request bodies of the custom router routes, in order.
+    customRouterBodies: [] as { method: string; path: string; body: unknown }[],
   }
   const requests: { method: string; path: string; authorization: string | null; organizationID?: string }[] = []
   const server = Bun.serve({
@@ -358,6 +370,7 @@ export function fixture() {
         if (state.embeddingModelsStatus !== 200) return new Response(null, { status: state.embeddingModelsStatus })
         return Response.json(state.embeddingModels)
       }
+      if (path.startsWith("/api/auto-routing/") || path.startsWith("/v1/")) return customRouterRoute(state, request, path)
       if (path === "/api/trpc/kiloPass.getState") {
         if (state.kiloPassStatus !== 200) return new Response(null, { status: state.kiloPassStatus })
         return Response.json(state.kiloPass)
@@ -378,4 +391,105 @@ export function fixture() {
     },
   })
   return { state, requests, url: server.url.origin, [Symbol.dispose]: () => server.stop(true) }
+}
+
+const ROUTER_ID = "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
+
+function customRouter() {
+  return {
+    id: ROUTER_ID,
+    scope: "user" as const,
+    slug: "myrouter",
+    name: "My Router",
+    modelId: "kilo-auto/custom/myrouter",
+    baseRouter: "efficient" as const,
+    mode: "cost_per_accuracy" as const,
+    defaultEntryKey: "gateway:anthropic/claude-sonnet-4.6",
+    canEdit: true,
+    entries: [
+      {
+        key: "gateway:anthropic/claude-sonnet-4.6",
+        entry: { kind: "gateway", model: "anthropic/claude-sonnet-4.6" } as Record<string, unknown>,
+        needsClientEval: false,
+        variants: [{ variant: null as string | null, status: "ready", failureReason: null as string | null }],
+      },
+    ],
+  }
+}
+
+interface FixtureState {
+  customRoutersStatus: number
+  customRouters: { routers: ReturnType<typeof customRouter>[] }
+  decide: unknown
+  decideStatus: number
+  evalPlan: unknown
+  evalCase: unknown
+  evalResult: unknown
+  evalStatus: number
+  customRouterBodies: { method: string; path: string; body: unknown }[]
+}
+
+async function customRouterRoute(state: FixtureState, request: Request, path: string) {
+  const url = new URL(request.url)
+  const body = request.method === "GET" || request.method === "DELETE" ? undefined : await request.json().catch(() => undefined)
+  state.customRouterBodies.push({ method: request.method, path: `${path}${url.search}`, body })
+  const fields: Record<string, unknown> = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {}
+  if (path === "/api/auto-routing/custom-routers") {
+    if (state.customRoutersStatus !== 200) return new Response("Unavailable", { status: state.customRoutersStatus })
+    return Response.json(state.customRouters)
+  }
+  const entries = /^\/api\/auto-routing\/custom-routers\/(user|org)\/([^/]+)\/client-entries$/.exec(path)
+  if (entries) {
+    const router = state.customRouters.routers.find((item) => item.scope === entries[1] && item.slug === entries[2])
+    if (!router) return Response.json({ error: { code: "router_not_found", message: "no such router" } }, { status: 404 })
+    if (request.method === "POST") {
+      const entry = fields.entry
+      if (typeof entry !== "object" || entry === null || !("provider" in entry) || !("model" in entry))
+        return Response.json({ error: { code: "invalid_request", message: "entry is required" } }, { status: 400 })
+      const key = `client:${entry.provider}/${entry.model}`
+      router.entries = [
+        ...router.entries.filter((item) => item.key !== key),
+        { key, entry, needsClientEval: true, variants: [{ variant: null, status: "missing", failureReason: null }] },
+      ]
+    }
+    if (request.method === "DELETE") {
+      const key = `client:${url.searchParams.get("provider")}/${url.searchParams.get("model")}`
+      router.entries = router.entries.filter((item) => item.key !== key)
+    }
+    return Response.json({ router })
+  }
+  if (path === "/v1/decide") {
+    if (state.decideStatus !== 200 || state.decide !== undefined)
+      return Response.json(state.decide ?? {}, { status: state.decideStatus })
+    const client = (fields.clientEntries as { provider: string; model: string }[] | undefined)?.[0]
+    const entry = client
+      ? { kind: "client", provider: client.provider, model: client.model }
+      : { kind: "gateway", model: "anthropic/claude-sonnet-4.6" }
+    return Response.json({
+      decision: {
+        entry,
+        model: client ? `client:${client.provider}/${client.model}` : entry.model,
+        variant: null,
+        stale: false,
+        fallback: false,
+        sticky: false,
+        taskType: "code",
+        subtaskType: null,
+        tableVersion: "fixture",
+      },
+      decisionId: "fixture-decision",
+    })
+  }
+  if (state.evalStatus !== 200) return Response.json({ error: { code: "quota_exceeded", message: "limit" } }, { status: state.evalStatus })
+  if (path === "/v1/eval/plan") {
+    if (state.evalPlan !== undefined) return Response.json(state.evalPlan)
+    const router = state.customRouters.routers.find((item) => item.id === fields.routerId)
+    const items = (router?.entries ?? [])
+      .filter((item) => item.needsClientEval)
+      .map((item) => ({ entry: item.entry, variant: null, caseId: "case-1", rep: 0 }))
+    return Response.json({ baseRouter: "efficient", engineIdentity: "fixture-engine", repetitions: 1, items, staleEntries: [] })
+  }
+  if (path === "/v1/eval/case") return Response.json(state.evalCase)
+  if (path === "/v1/eval/result") return Response.json(state.evalResult)
+  return new Response(null, { status: 404 })
 }
