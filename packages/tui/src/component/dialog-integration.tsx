@@ -37,6 +37,7 @@ import { Link } from "../ui/link"
 import { useToast } from "../ui/toast"
 import { errorMessage } from "../util/error"
 import { chooseKiloAccount, KILO_INTEGRATION_PRIORITY } from "../kilocode/gateway" // kilocode_change - Kilo account choice, Kilo first
+import { apiKey, apiKeyPlaceholder, KeyDescription, kiloRow, useKiloFailure } from "../kilocode/dialog-provider" // kilocode_change(cli:66a6b3781917)
 import {
   formInitialValues,
   formLabel,
@@ -114,6 +115,7 @@ export function DialogIntegration(
       (integration) => props.integrationID === undefined || integration.id === props.integrationID,
     ),
   )
+  const kiloFailure = useKiloFailure(location, () => integrations().some((item) => item.id === "kilo")) // kilocode_change - v1 failure detail
 
   createEffect(() => {
     if (!props.autoConnect) return
@@ -147,6 +149,7 @@ export function DialogIntegration(
           integration.connections.length > 0 && !status
             ? () => <text fg={theme.text.feedback.success.base}>✓</text>
             : undefined,
+        ...kiloRow(integration.id, kiloFailure(), theme, methods.length === 0), // kilocode_change - v1 titles, descriptions, failure detail
         onSelect: () => {
           if (credentials.length) return manageConnections(integration, methods, location, dialog, props.onConnected)
           return selectMethod(integration, methods, location, dialog, props.onConnected)
@@ -565,8 +568,11 @@ function KeyMethod(props: {
   return (
     <DialogPrompt
       title={props.method.label ?? `Connect ${props.integration.name}`}
-      placeholder="API key"
-      onConfirm={(key) => {
+      // kilocode_change start - v1 optional key for local providers
+      placeholder={apiKeyPlaceholder(props.integration.id)}
+      onConfirm={(value) => {
+        const key = apiKey(props.integration.id, value)
+        // kilocode_change end
         if (!key) return
         void client.api.integration.connect
           .key({
@@ -578,9 +584,14 @@ function KeyMethod(props: {
           .then(() => connected(props.integration, props.location, data, dialog, toast, props.onConnected))
           .catch((cause) => setError(errorMessage(cause)))
       }}
+      // kilocode_change start - v1 key hints
       description={() => (
-        <Show when={error()}>{(value) => <text fg={theme.text.feedback.error.base}>{value()}</text>}</Show>
+        <>
+          <KeyDescription integrationID={props.integration.id} />
+          <Show when={error()}>{(value) => <text fg={theme.text.feedback.error.base}>{value()}</text>}</Show>
+        </>
       )}
+      // kilocode_change end
     />
   )
 }

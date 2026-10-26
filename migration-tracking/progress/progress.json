@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 154,
+    "done": 153,
     "total": 9828,
     "percent": 1.6,
     "dropped": 26,
     "kinds": [
       {
         "kind": "module",
-        "done": 53,
+        "done": 55,
         "total": 3547
       },
       {
@@ -21,7 +21,7 @@
       },
       {
         "kind": "patch",
-        "done": 69,
+        "done": 66,
         "total": 3444
       },
       {
@@ -32,14 +32,14 @@
     ],
     "landed": {
       "plugin": 42,
-      "host": 4,
-      "seam": 3,
-      "patch": 5
+      "host": 3,
+      "seam": 0,
+      "patch": 6
     },
-    "coreImports": 26,
+    "coreImports": 25,
     "sharedPatches": {
-      "seam": 33,
-      "patch": 20
+      "seam": 30,
+      "patch": 21
     }
   },
   "notCounted": {
@@ -62,7 +62,6 @@
     "@opencode/core/model",
     "@opencode/core/model-resolver",
     "@opencode/core/permission",
-    "@opencode/core/plugin/provider/openai",
     "@opencode/core/plugin/sdk",
     "@opencode/core/plugin/system-prompt/anthropic.txt",
     "@opencode/core/plugin/system-prompt/gpt-astra.txt",
@@ -377,12 +376,12 @@
     },
     {
       "feature": "cli",
-      "done": 0,
+      "done": 2,
       "total": 148,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 1,
           "total": 72
         },
         "api": {
@@ -390,13 +389,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 1,
           "total": 25
         },
         "test": {
           "done": 0,
           "total": 51
         }
+      },
+      "landed": {
+        "plugin": 0,
+        "host": 0,
+        "seam": 0,
+        "patch": 1
       }
     },
     {
@@ -1332,7 +1337,7 @@
     },
     {
       "feature": "oauth",
-      "done": 5,
+      "done": 1,
       "total": 8,
       "dropped": 0,
       "kinds": {
@@ -1345,19 +1350,13 @@
           "total": 0
         },
         "patch": {
-          "done": 4,
+          "done": 0,
           "total": 6
         },
         "test": {
           "done": 0,
           "total": 1
         }
-      },
-      "landed": {
-        "plugin": 0,
-        "host": 1,
-        "seam": 3,
-        "patch": 0
       }
     },
     {
@@ -2310,12 +2309,12 @@
     },
     {
       "feature": "tui",
-      "done": 4,
+      "done": 5,
       "total": 45,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 1,
+          "done": 2,
           "total": 15
         },
         "api": {
@@ -6139,6 +6138,7 @@
   ],
   "landed": {
     "patch:agent:2e5632e7bfc6": "plugin",
+    "patch:cli:66a6b3781917": "patch",
     "patch:components:06ac8868d98e": "patch",
     "patch:gateway:0278ba0eb6aa": "plugin",
     "patch:gateway:17e39e074eaf": "plugin",
@@ -6153,10 +6153,6 @@
     "patch:gateway:e8673ed1650b": "plugin",
     "patch:gateway:f983d8f993c8": "plugin",
     "patch:global:0e189a57d108": "host",
-    "patch:oauth:3ad23f430831": "seam",
-    "patch:oauth:513c5db12e0f": "seam",
-    "patch:oauth:62e32555f6d9": "host",
-    "patch:oauth:ee5e067b8d7b": "seam",
     "patch:provider-usage:b0945f511fb3": "plugin",
     "patch:provider-usage:ce8e021f1ef6": "plugin",
     "patch:server:5e0f8563b425": "plugin",
@@ -6245,6 +6241,7 @@
     "module:packages/kilo-gateway/test/responses.test.ts",
     "module:packages/opencode/src/kilocode/agent/index.ts",
     "module:packages/opencode/src/kilocode/balance-refresh.ts",
+    "module:packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx",
     "module:packages/opencode/src/kilocode/components/dialog-kilo-notifications.tsx",
     "module:packages/opencode/src/kilocode/components/free-model-disclosure.ts",
     "module:packages/opencode/src/kilocode/components/kilo-news.tsx",
@@ -6252,6 +6249,7 @@
     "module:packages/opencode/src/kilocode/components/model-info-panel.tsx",
     "module:packages/opencode/src/kilocode/components/news.ts",
     "module:packages/opencode/src/kilocode/components/notification-banner.tsx",
+    "module:packages/opencode/src/kilocode/kilo-commands.tsx",
     "module:packages/opencode/src/kilocode/kilo-errors.ts",
     "module:packages/opencode/src/kilocode/plugins/home-news.tsx",
     "module:packages/opencode/src/kilocode/plugins/model-usage.ts",
@@ -6276,6 +6274,7 @@
     "module:packages/tui/src/kilocode/model-picker.ts",
     "module:packages/tui/test/kilocode/model-picker.test.ts",
     "patch:agent:2e5632e7bfc6",
+    "patch:cli:66a6b3781917",
     "patch:components:06ac8868d98e",
     "patch:gateway:00d34e8d5cd7",
     "patch:gateway:0278ba0eb6aa",
@@ -6293,10 +6292,6 @@
     "patch:gateway:e8673ed1650b",
     "patch:gateway:f983d8f993c8",
     "patch:global:0e189a57d108",
-    "patch:oauth:3ad23f430831",
-    "patch:oauth:513c5db12e0f",
-    "patch:oauth:62e32555f6d9",
-    "patch:oauth:ee5e067b8d7b",
     "patch:provider-usage:b0945f511fb3",
     "patch:provider-usage:ce8e021f1ef6",
     "patch:server:5e0f8563b425",
