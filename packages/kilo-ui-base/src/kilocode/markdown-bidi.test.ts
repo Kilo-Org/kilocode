@@ -53,7 +53,7 @@ describe("Markdown bidirectional rendering contract", () => {
       console.log(renderToString(() => createComponent(Markdown, { text: "hello" })))
     `
     const proc = Bun.spawnSync({
-      cmd: ["bun", "-e", code],
+      cmd: ["bun", "--jsx-runtime=classic", "-e", code],
       cwd: root,
       stdout: "pipe",
       stderr: "pipe",
