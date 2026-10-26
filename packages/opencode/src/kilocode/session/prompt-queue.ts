@@ -2,6 +2,7 @@ import { Effect } from "effect"
 import { MessageV2 } from "@/session/message-v2"
 import { MessageID, SessionID } from "@/session/schema"
 import { KiloSession } from "@/kilocode/session"
+import { KiloSessionSteeringInbox } from "@/kilocode/session/steering-inbox"
 
 type Slot = {
   readonly seq: number
@@ -85,6 +86,8 @@ export namespace KiloSessionPromptQueue {
 
   export function cancel(sessionID: SessionID) {
     return Effect.sync(() => {
+      // A cancelled queue must not keep delivering steering into a stopped session.
+      KiloSessionSteeringInbox.clear(sessionID)
       if (!tails.has(sessionID)) {
         versions.delete(sessionID)
         targets.delete(sessionID)

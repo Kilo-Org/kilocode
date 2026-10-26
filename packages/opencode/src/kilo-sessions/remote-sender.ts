@@ -17,6 +17,7 @@ import { SessionPrompt } from "@/session/prompt"
 import { Question } from "@/question"
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import { KiloSessionSteeringInbox } from "@/kilocode/session/steering-inbox"
 import { Permission } from "@/permission"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { MessageID, SessionID } from "@/session/schema"
@@ -628,6 +629,18 @@ export namespace RemoteSender {
         event: "session.queue.changed",
         data: { sessionID: sessionId, queued },
       })
+      // Same replay contract for steering delivery status, so a reconnecting
+      // client can reconcile "sent to N subagents" without polling.
+      const steering = KiloSessionSteeringInbox.snapshot(SessionID.make(sessionId))
+      if (steering) {
+        options.conn.send({
+          type: "event",
+          sessionId,
+          ...(root ? { parentSessionId: root } : {}),
+          event: "session.steering.changed",
+          data: steering,
+        })
+      }
     }
 
     async function backfillPendingState(sessionId: string) {

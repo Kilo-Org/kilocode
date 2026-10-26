@@ -81,11 +81,16 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const flags = yield* RuntimeFlags.Service
   const cfg = yield* config.get()
   const permissionOrigins = cfg.permission_origins
-  const notify = BoardEnabled.on(cfg, flags) ? input.notify : undefined
+  // kilocode_change - notify also carries subagent steering notices
+  const notify =
+    BoardEnabled.on(cfg, flags) || cfg.experimental?.subagent_steering === true || flags.experimentalSubagentSteering
+      ? input.notify
+      : undefined
+  // kilocode_change - notices are cleaned by the Kilo notifier that attaches them
   type Output = Parameters<SessionProcessor.Handle["completeToolCall"]>[1]
   const finish = <T extends Output>(name: string, output: T, opts: ToolExecutionOptions) =>
     Effect.gen(function* () {
-      const clean = BoardNotice.clean(output)
+      const clean = output
       if (notify && !opts.abortSignal?.aborted) {
         yield* input.processor.metadata(opts.toolCallId, { metadata: { output: clean.output } })
       }

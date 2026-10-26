@@ -18,6 +18,7 @@ import { KiloTaskBackgroundProcess } from "../kilocode/tool/task-background-proc
 import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
 import { KiloSession } from "../kilocode/session" // kilocode_change
+import { KiloSessionSteering } from "../kilocode/session/steering" // kilocode_change
 import { resumeHint } from "../kilocode/task-resume" // kilocode_change
 import { errorMessage } from "@/util/error" // kilocode_change
 import { Effect, Exit, Schema, Scope } from "effect"
@@ -253,6 +254,7 @@ export const TaskTool = Tool.define(
       const ops = ctx.extra?.promptOps as TaskPromptOps
       if (!ops) return yield* Effect.fail(new Error("TaskTool requires promptOps in ctx.extra"))
 
+      let stale = false // kilocode_change - child result predates the newest steering
       const runTask = Effect.fn("TaskTool.runTask")(
         function* () {
           const parts = yield* ops.resolvePromptParts(params.prompt)
@@ -290,15 +292,21 @@ export const TaskTool = Tool.define(
           }
           // kilocode_change end
           // kilocode_change start - ignore synthetic/ignored/empty text parts (e.g. the memory marker) when picking the task result (#13469)
-          return (
+          const output =
             result.parts
               .filter((item): item is MessageV2.TextPart => item.type === "text")
               .findLast((item) => !item.synthetic && !item.ignored && item.text.length > 0)?.text ?? ""
-          )
+          return stale ? `${output}\n\n${KiloSessionSteering.staleNote}` : output
           // kilocode_change end
         },
-        Effect.ensuring(KiloTaskBackgroundProcess.finish(nextSession.id)),
-      ) // kilocode_change - transfer inherited processes when the child run ends
+        // Capture staleness before the queue finalizer clears steering state, and hand
+        // inherited processes to the parent when the child run ends.
+        Effect.ensuring(
+          Effect.sync(() => stale = KiloSessionSteering.stale(nextSession.id)).pipe(
+            Effect.andThen(KiloTaskBackgroundProcess.finish(nextSession.id)),
+          ),
+        ),
+      ) // kilocode_change
 
       // kilocode_change start - inject completed background task results into the parent session
       const inject = Effect.fn("TaskTool.injectBackgroundResult")(function* (
@@ -325,7 +333,7 @@ export const TaskTool = Tool.define(
                   state === "completed"
                     ? `Background task completed: ${params.description}`
                     : `Background task failed: ${params.description}`,
-                text,
+                text: stale ? `${text}\n\n${KiloSessionSteering.staleNote}` : text,
               }),
             },
           ],

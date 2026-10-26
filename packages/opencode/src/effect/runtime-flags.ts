@@ -49,6 +49,7 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
     Config.withDefault(true),
   ),
   // kilocode_change end
+  experimentalSubagentSteering: bool("KILO_EXPERIMENTAL_SUBAGENT_STEERING"), // kilocode_change
   experimentalLspTy: bool("KILO_EXPERIMENTAL_LSP_TY"),
   experimentalLspTool: enabledByExperimental("KILO_EXPERIMENTAL_LSP_TOOL"),
   // kilocode_change start - self-context tools

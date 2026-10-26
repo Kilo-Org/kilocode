@@ -21,7 +21,7 @@ import { ENV_FEATURE } from "@kilocode/kilo-gateway"
 import { existsSync } from "fs"
 import path from "path"
 import { iife } from "@/util/iife"
-import { KiloSessionEvent, type KiloSessionCloseReason } from "./event"
+import { KiloSessionEvent, type KiloSessionCloseReason, type KiloSteeringChanged } from "./event"
 
 export namespace KiloSession {
   const log = Log.create({ service: "session.kilo" })
@@ -63,6 +63,22 @@ export namespace KiloSession {
     Bus.publish(ctx, Event.QueueChanged, input).catch((err) => log.warn("queue changed publish failed", { err }))
   }
 
+  // Delivery status for steering updates. Published by KiloSessionSteering when a
+  // target's state changes so clients can reconcile without polling.
+  export function publishSteeringChanged(input: KiloSteeringChanged) {
+    const ctx = iife((): InstanceContext | undefined => {
+      try {
+        return Instance.current
+      } catch {
+        return undefined
+      }
+    })
+    if (!ctx) return
+    Bus.publish(ctx, Event.SteeringChanged, input).catch((err) =>
+      log.warn("steering changed publish failed", { err }),
+    )
+  }
+
   // ---------------------------------------------------------------------------
   // Per-session platform override (telemetry attribution)
   // ---------------------------------------------------------------------------
@@ -70,14 +86,26 @@ export namespace KiloSession {
   const overrides = new Map<string, string>()
   const parents = new Map<string, string>()
   const roots = new Map<string, string>()
+  const children = new Map<string, Set<string>>()
 
   export function register(input: { id: string; parentID?: string; platform?: string }) {
     const root = input.parentID ? (roots.get(input.parentID) ?? input.parentID) : input.id
     const platform = input.platform ?? (input.parentID ? resolvePlatform(input.parentID) : undefined)
 
     roots.set(input.id, root)
-    if (input.parentID) parents.set(input.id, input.parentID)
+    if (input.parentID) {
+      parents.set(input.id, input.parentID)
+      const current = children.get(input.parentID) ?? new Set<string>()
+      current.add(input.id)
+      children.set(input.parentID, current)
+    }
     if (platform) overrides.set(input.id, platform)
+  }
+
+  // Descendant sessions in registration order, depth first. Steering fans out to
+  // these so nested swarms receive a mid-run direction change too.
+  export function descendants(id: string): string[] {
+    return [...(children.get(id) ?? [])].flatMap((child) => [child, ...descendants(child)])
   }
 
   export function setPlatformOverride(id: string, platform: string) {
@@ -118,6 +146,13 @@ export namespace KiloSession {
   }
 
   export function clearPlatformOverride(id: string) {
+    const parent = parents.get(id)
+    if (parent) {
+      const siblings = children.get(parent)
+      siblings?.delete(id)
+      if (siblings?.size === 0) children.delete(parent)
+    }
+    children.delete(id)
     overrides.delete(id)
     parents.delete(id)
     roots.delete(id)
