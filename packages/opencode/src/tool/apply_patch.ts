@@ -68,6 +68,63 @@ export const ApplyPatchTool = Tool.define(
       if (!(yield* afs.exists(dest))) return
       return yield* Effect.fail(new Error(`apply_patch verification failed: destination already exists: ${dest}`))
     })
+
+    const seen = Effect.fn("ApplyPatchTool.seen")(function* (list: string[], target: string) {
+      for (const item of list) {
+        if (yield* same(item, target)) return true
+      }
+      return false
+    })
+
+    const forget = Effect.fn("ApplyPatchTool.forget")(function* (list: string[], target: string) {
+      const next: string[] = []
+      for (const item of list) {
+        if (!(yield* same(item, target))) next.push(item)
+      }
+      list.splice(0, list.length, ...next)
+    })
+
+    const claim = Effect.fn("ApplyPatchTool.claim")(function* (
+      gone: string[],
+      made: string[],
+      source: string | undefined,
+      dest: string,
+    ) {
+      if (yield* seen(gone, dest)) {
+        yield* forget(gone, dest)
+        made.push(dest)
+        return
+      }
+      if (yield* seen(made, dest)) {
+        return yield* Effect.fail(new Error(`apply_patch verification failed: destination already exists: ${dest}`))
+      }
+      yield* guard(source, dest)
+      made.push(dest)
+    })
+
+    const preview = Effect.fn("ApplyPatchTool.preview")(function* (
+      changes: ReadonlyArray<{ type: string; filePath: string; movePath?: string }>,
+    ) {
+      const gone: string[] = []
+      const made: string[] = []
+      for (const change of changes) {
+        if (change.type === "delete") {
+          yield* forget(made, change.filePath)
+          gone.push(change.filePath)
+          continue
+        }
+        if (change.type === "add") {
+          yield* claim(gone, made, undefined, change.filePath)
+          continue
+        }
+        if (change.type !== "move" || !change.movePath) continue
+        const alias = yield* same(change.filePath, change.movePath)
+        yield* claim(gone, made, alias ? change.filePath : undefined, change.movePath)
+        if (alias) continue
+        yield* forget(made, change.filePath)
+        gone.push(change.filePath)
+      }
+    })
     // kilocode_change end
 
     const run = Effect.fn("ApplyPatchTool.execute")(function* (
@@ -266,6 +323,7 @@ export const ApplyPatchTool = Tool.define(
         ...(change.movePath ? { movePath: change.movePath } : {}),
       }))
 
+      yield* preview(fileChanges) // kilocode_change - reject a collided patch before any write
       // Check permissions if needed
       const relativePaths = fileChanges.map((c) => path.relative(instance.worktree, c.filePath).replaceAll("\\", "/"))
       yield* ctx.ask({

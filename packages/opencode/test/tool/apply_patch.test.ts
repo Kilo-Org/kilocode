@@ -436,6 +436,40 @@ describe("tool.apply_patch freeform", () => {
       expect((yield* Effect.promise(() => fs.lstat(link))).isSymbolicLink()).toBe(true)
     }),
   )
+
+  it.instance("rejects a later add onto an existing file before writing earlier hunks", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const kept = path.join(test.directory, "a.txt")
+      const occupied = path.join(test.directory, "existing.txt")
+      yield* writeText(kept, "before\n")
+      yield* writeText(occupied, "stay\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Update File: a.txt\n@@\n-before\n+after\n*** Add File: existing.txt\n+new\n*** End Patch"
+
+      yield* expectFailure(execute({ patchText }, ctx), "destination already exists")
+      expect(yield* readText(kept)).toBe("before\n")
+      expect(yield* readText(occupied)).toBe("stay\n")
+    }),
+  )
+
+  it.instance("rejects a move onto a path created earlier in the same patch before writing", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const source = path.join(test.directory, "a.txt")
+      yield* writeText(source, "from\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Add File: x.txt\n+created\n*** Update File: a.txt\n*** Move to: x.txt\n@@\n-from\n+moved\n*** End Patch"
+
+      yield* expectFailure(execute({ patchText }, ctx), "destination already exists")
+      expect(yield* readText(source)).toBe("from\n")
+      yield* expectReadFailure(path.join(test.directory, "x.txt"))
+    }),
+  )
   // kilocode_change end
 
   it.instance("rejects update when target file is missing", () =>
