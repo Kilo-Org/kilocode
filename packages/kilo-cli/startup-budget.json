@@ -7,6 +7,7 @@
     "kilocode.handshake": 50,
     "kilocode.gateway": 50,
     "kilocode.provider-usage": 10,
+    "kilocode.openai": 10,
     "kilocode.gateway.policy": 15,
     "kilo.agent": 50,
     "kilocode.marketplace": 50,

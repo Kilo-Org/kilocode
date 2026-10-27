@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 51,
-    "markedLines": 368,
+    "files": 57,
+    "markedLines": 434,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -25,7 +25,7 @@
     },
     ".github/workflows/test.yml": {
       "rung": 3,
-      "seam": "CI triggers: run the unit and e2e matrix on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`). Skip the `affected` job, and with it the `e2e-suite` jobs that need it and the `e2e` result check that requires `affected` to succeed: they test only `packages/app` and `packages/session-ui`, which Kilo removed (`skipFiles` in script/upstream/utils/config.ts). Job-level lines, so upstream changes to the e2e steps still merge cleanly. `Build workspace libraries` in upstream's `build` job filters only on `@opencode/cli^...`, because turbo fails on the `@opencode/app^...` filter when the package does not exist. CI speed: `Verify packed workerd SDK` runs in its own `sdk` job (at the end of the file), so it no longer waits for the unit tests in `unit`. The Turbo cache step (upstream removed its broken one in v2.0.31) uses `.turbo/cache` (where Turborepo 2.x writes), keys on turbo.json and bun.lock, and carries the shard. Test shards: a `shard` matrix dimension in `unit` (2 Linux, 3 Windows) sets `KILO_TEST_SHARD` and `KILO_TEST_CONCURRENCY`; core, tui and cli run `test:ci` (the Kilo runner, script/kilocode/test/test-runner.ts); a `packages` leg per OS runs `test` once for the other packages, and on Linux the Effect, codemode, generated client and generated documentation checks, in parallel with the shards (they ran before the shard 1 tests and on both Linux shards, which made shard 1 the slowest job); failing cases from the runner's JUnit reports become annotations, and the reports are an artifact that refreshes the shard weights. No seam: workflow triggers, job conditions, jobs, steps, matrix dimensions and cache keys cannot be extended from outside the file. Upstream has no cache key input or test shard option."
+      "seam": "CI triggers: run the unit and e2e matrix on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`). Skip the `affected` job, and with it the `e2e-suite` jobs that need it and the `e2e` result check that requires `affected` to succeed: they test only `packages/app` and `packages/session-ui`, which Kilo removed (`skipFiles` in script/upstream/utils/config.ts). Job-level lines, so upstream changes to the e2e steps still merge cleanly. `Build workspace libraries` in upstream's `build` job filters only on `@opencode/cli^...`, because turbo fails on the `@opencode/app^...` filter when the package does not exist. CI speed: `Verify packed workerd SDK` runs in its own `sdk` job (at the end of the file), so it no longer waits for the unit tests in `unit`. The Turbo cache step (upstream removed its broken one in v2.0.31) uses `.turbo/cache` (where Turborepo 2.x writes), keys on turbo.json and bun.lock, and carries the shard. Test shards: a `shard` matrix dimension in `unit` (2 Linux, 3 Windows) sets `KILO_TEST_SHARD` and `KILO_TEST_CONCURRENCY`; core, tui and cli run `test:ci` (the Kilo runner, script/kilocode/test/test-runner.ts), the other packages run `test` once, in shard 1; failing cases from the runner's JUnit reports become annotations, and the reports are an artifact that refreshes the shard weights. No seam: workflow triggers, job conditions, jobs, steps, matrix dimensions and cache keys cannot be extended from outside the file. Upstream has no cache key input or test shard option."
     },
     ".gitignore": {
       "rung": 3,
@@ -126,7 +126,7 @@
     },
     "packages/plugin/src/tui/context.ts": {
       "rung": 3,
-      "seam": "Declare the `home.bottom` slot path in the public `SlotMap`, so a TUI plugin can render below the home prompt, as the v1 `home_bottom` slot allowed (Kilo Gateway news uses it). The v2 home screen publishes only `home.footer` and `home.footer.status`; a `before`/`after` claim on those places content at the bottom of the screen, not below the prompt. Rungs 1 and 2 cannot add a slot path: `SlotMap` is the closed public type of the plugin API. One generic line with no Kilo value. Also the optional `order` field of the public `SlotClaim` type. Optional numeric `order` on TUI slot claims, so a plugin can place its claim between other claims at one anchor (v1 slots had `order`; the Kilo sidebar panels need pr 50, footer 99, usage 150 between the upstream Context, MCP and Todo panels). A claim without an order counts as 100, 200, ... in enable order. Without any order the result is the enable order, as before, so upstream claims and tests do not change. No plugin hook or host option reaches the slot resolver: the claim type, its normalization and the resolver are the only places that know claim positions, so the knob needs one line in each of the three files. Generic, no Kilo value."
+      "seam": "Declare the `home.bottom` slot path in the public `SlotMap`, so a TUI plugin can render below the home prompt, as the v1 `home_bottom` slot allowed (Kilo Gateway news uses it). The v2 home screen publishes only `home.footer` and `home.footer.status`; a `before`/`after` claim on those places content at the bottom of the screen, not below the prompt. Rungs 1 and 2 cannot add a slot path: `SlotMap` is the closed public type of the plugin API. One generic line with no Kilo value."
     },
     "packages/tui/src/routes/home.tsx": {
       "rung": 3,
@@ -154,7 +154,7 @@
     },
     "packages/tui/test/fixture/tui-client.ts": {
       "rung": 3,
-      "seam": "Neutral SDK model.default response for the shared HTTP test fixture: no model data, so upstream selection assertions keep testing their original first-model fallback. The full TUI now reads this existing API to obtain the host's recommendation. No Kilo model or assertion change. Rungs 1 and 2 cannot extend the fixture's closed route dispatcher; without this route Bun.serve reports its unexpected-request throw before the client's fallback can handle the failed request. The same applies to plugin RPC calls (`/api/rpc/*`) from built-in TUI plugins such as the Kilo news banner: the fixture answers them as unregistered (404) so the plugin's failure path runs and upstream screens stay unchanged; Kilo-owned tests serve their own RPC answers."
+      "seam": "Neutral SDK model.default response for the shared HTTP test fixture: no model data, so upstream selection assertions keep testing their original first-model fallback. The full TUI now reads this existing API to obtain the host's recommendation. No Kilo model or assertion change. Rungs 1 and 2 cannot extend the fixture's closed route dispatcher; without this route Bun.serve reports its unexpected-request throw before the client's fallback can handle the failed request."
     },
     "packages/util/src/global.ts": {
       "rung": 3,
@@ -207,7 +207,7 @@
     },
     "packages/tui/src/ui/dialog-select.tsx": {
       "rung": 4,
-      "seam": "Keep the list footer mounted when its action list becomes empty. The footer is wrapped in a Show that unmounts it whenever no action is visible, and each mount registers a renderer resize listener through useTerminalDimensions. Selection changes that hide or show an action (for example the account row in the Kilo gateway dialog) therefore add listeners until the renderer exceeds its budget and writes a MaxListenersExceededWarning over the TUI. Rungs 1 to 3 cannot reach it: the footer is rendered by upstream's DialogSelect, and no plugin hook or generic knob controls whether that element stays mounted. Separately (rung 3 lines, no Kilo value): match the active row by option reference instead of by value (`active`, mouse move and mouse down, the scroll-to-top check), as on v1. A list may show one value twice: the model picker keeps a recent model in Recent and in its provider section (v1 placement). With value equality both copies render active and the pointer targets the first copy. For lists with unique values the behavior is the same, so upstream's DialogSelect tests pass. No plugin hook or host option reaches DialogSelect's private row matching."
+      "seam": "Keep the list footer mounted when its action list becomes empty. The footer is wrapped in a Show that unmounts it whenever no action is visible, and each mount registers a renderer resize listener through useTerminalDimensions. Selection changes that hide or show an action (for example the account row in the Kilo gateway dialog) therefore add listeners until the renderer exceeds its budget and writes a MaxListenersExceededWarning over the TUI. Rungs 1 to 3 cannot reach it: the footer is rendered by upstream's DialogSelect, and no plugin hook or generic knob controls whether that element stays mounted."
     },
     "packages/tui/src/plugin/api.tsx": {
       "rung": 3,
@@ -216,6 +216,30 @@
     "packages/tui/src/plugin/structure.ts": {
       "rung": 3,
       "seam": "`Placement.order` and a stable sort of each anchor in `resolveSlots`. Optional numeric `order` on TUI slot claims, so a plugin can place its claim between other claims at one anchor (v1 slots had `order`; the Kilo sidebar panels need pr 50, footer 99, usage 150 between the upstream Context, MCP and Todo panels). A claim without an order counts as 100, 200, ... in enable order. Without any order the result is the enable order, as before, so upstream claims and tests do not change. No plugin hook or host option reaches the slot resolver: the claim type, its normalization and the resolver are the only places that know claim positions, so the knob needs one line in each of the three files. Generic, no Kilo value."
+    },
+    "packages/tui/test/app-lifecycle.test.tsx": {
+      "rung": 4,
+      "seam": "Flake fix in the shared terminal-pane test (selection copy and pane management): after ctrl+x t the pane frame renders before focus moves to the terminal, so the immediate `currentFocusedRenderable` assertion races the next render and failed unit (linux, 2/2) on 2026-10-23. Both focus assertions wait for the transition (setup.waitFor) before asserting, the same way the neighbouring terminal assertions do. No product change and no Kilo value: the assertions and their expected results are unchanged. Rungs 1 and 2 cannot reach a test in the TUI package."
+    },
+    "packages/plugin/src/effect/session.ts": {
+      "rung": 3,
+      "seam": "Session `route` hook: a plugin may send one model request to another catalog model (`target`) before the request is built. Kilo custom auto routers (ADR 0005, v1 #15183) need it: the routing worker picks a client model or a Gateway model per request from the request messages and tools. No existing hook reaches the model of a request: `context` and `model.request` see a readonly model ref and run after the model is resolved, and the model, provider and AI SDK editors change the catalog, not one request. Type-only: the hook interface and its `SessionHooks` entry."
+    },
+    "packages/core/src/session/model-request.ts": {
+      "rung": 3,
+      "seam": "Trigger the session `route` hook at the start of `SessionModelRequest.prepare` and resolve its `target` with `ModelResolver.resolveModel` (optional service), so the rest of the request uses the target's settings, credentials and provider hooks. Durable records keep the selected model, because the runner records `loaded.model`. Without a `route` hook the request is unchanged and upstream's tests pass unchanged. Rungs 1 and 2 cannot supply it: the model is resolved before any session hook runs, and replacing SessionModelRequest in the host would mirror the whole request builder."
+    },
+    "packages/core/src/app.ts": {
+      "rung": 3,
+      "seam": "Optional App.Info.product (id, display name, callback-page wordmark) that make() passes through. The Kilo host sets it in KiloApp; no Kilo value in the file. Issue #15409. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI plugin would mirror about 440 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
+    },
+    "packages/core/src/oauth/page.ts": {
+      "rung": 3,
+      "seam": "Exported brand(page, product) that puts an embedder's product name and wordmark in place of OpenCode's on a rendered callback page; returns the page unchanged without a product. Issue #15409. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI plugin would mirror about 440 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
+    },
+    "packages/core/src/plugin/provider/openai.ts": {
+      "rung": 3,
+      "seam": "Codex sign-in reads App.Info.product: the originator in the authorize URL, provider headers and model requests, the OAuth token request user agent (as v1 `kilo/<version>`) and the callback page brand. Defaults stay `opencode`, App.useragent and the OpenCode page. Issue #15409. It also exports the browser and headless method registrations, so the Kilo plugin can give them the v1 labels (the integration editor can only replace a method with a full registration, not rename it). A Kilo model.request hook (rung 1) could rewrite the request header alone, but the authorize URL needs this knob anyway, so all originator uses read the same value. Rung 1 cannot supply it: the integration editor lists OAuth methods but cannot wrap a registered method's authorize, and no hook reaches the authorize URL or the loopback callback page. Rung 2 cannot supply it: App.Info had no product identity, and replacing the OpenAI plugin would mirror about 440 lines. Without a product, upstream values stay unchanged and upstream tests pass unchanged."
     }
   }
 }

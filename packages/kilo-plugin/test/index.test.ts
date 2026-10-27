@@ -8,6 +8,7 @@ test("Gateway modes override built-in agents before config, marketplace is regis
     "kilocode.gateway",
     "kilocode.provider-usage",
     "kilocode.marketplace",
+    "kilocode.openai",
   ])
   expect(KiloPostPlugins.map((plugin) => plugin.id)).toEqual([
     "kilocode.gateway.policy",
