@@ -1,4 +1,5 @@
 import path from "path"
+import { lstat, realpath } from "fs/promises"
 import { Effect, Schema } from "effect"
 import { Process } from "@/util/process"
 import { Git } from "@/git"
@@ -70,7 +71,11 @@ export namespace WorktreeStack {
   type Item = Mutable<Omit<typeof Node.Type, "git">> & { git: Mutable<typeof Node.Type.git> }
 
   const json = <S extends Schema.Top>(file: string, schema: S) =>
-    Effect.tryPromise(() => Bun.file(file).json()).pipe(
+    Effect.tryPromise(async () => {
+      const stat = await lstat(file)
+      if (!stat.isFile() || (await realpath(file)) !== path.resolve(file)) return undefined
+      return Bun.file(file).json()
+    }).pipe(
       Effect.flatMap(Schema.decodeUnknownEffect(schema)),
       Effect.catch(() => Effect.succeed(undefined)),
     )
@@ -91,8 +96,7 @@ export namespace WorktreeStack {
         path.resolve(item.path),
         {
           ...item,
-          order:
-            state?.worktreeOrder?.indexOf(id) === -1 ? undefined : (state?.worktreeOrder?.indexOf(id) ?? item.order),
+          order: state?.worktreeOrder?.includes(id) ? state.worktreeOrder.indexOf(id) : item.order,
         },
       ]),
     )

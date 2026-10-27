@@ -3,6 +3,7 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { describe, expect, test } from "bun:test"
 import { Effect, Layer, Schema } from "effect"
 import path from "path"
+import { mkdir, symlink } from "fs/promises"
 import { Git } from "../../../src/git"
 import { WorktreeStack } from "../../../src/kilocode/worktree/stack"
 import { tmpdirScoped } from "../../fixture/fixture"
@@ -132,6 +133,35 @@ describe("worktree stack", () => {
         ),
       )
       expect((yield* WorktreeStack.read(root)).nodes.find((node) => node.path === b)?.parentWorktreeID).toBe(a)
+    }),
+  )
+
+  it.live("ignores malformed and symlinked compatibility metadata", () =>
+    Effect.gen(function* () {
+      const { root, a, b } = yield* fixture()
+      const outside = yield* tmpdirScoped()
+      const file = path.join(outside, "metadata.json")
+      yield* Effect.promise(() => Bun.write(file, JSON.stringify({ parentBranch: "main" })))
+      yield* Effect.promise(() => mkdir(path.join(a, ".kilo"), { recursive: true }))
+      yield* Effect.promise(() => symlink(file, path.join(a, ".kilo", "metadata.json")))
+      yield* Effect.promise(() => Bun.write(path.join(b, ".kilo", "metadata.json"), "{malformed"))
+      expect((yield* WorktreeStack.read(root)).roots).toEqual([root, a, b])
+    }),
+  )
+
+  it.live("preserves recorded sibling ordering when the order list omits an entry", () =>
+    Effect.gen(function* () {
+      const { root, a, b } = yield* fixture()
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(root, ".kilo", "agent-manager.json"),
+          JSON.stringify({
+            worktrees: { a: { path: a, order: 2 }, b: { path: b, order: 1 } },
+            worktreeOrder: [],
+          }),
+        ),
+      )
+      expect((yield* WorktreeStack.read(root)).roots).toEqual([root, b, a])
     }),
   )
 
