@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 532,
+    "done": 549,
     "total": 9828,
-    "percent": 5.4,
+    "percent": 5.6,
     "dropped": 26,
     "kinds": [
       {
         "kind": "module",
-        "done": 435,
+        "done": 447,
         "total": 3547
       },
       {
@@ -21,7 +21,7 @@
       },
       {
         "kind": "patch",
-        "done": 65,
+        "done": 70,
         "total": 3444
       },
       {
@@ -32,14 +32,14 @@
     ],
     "landed": {
       "plugin": 42,
-      "host": 3,
-      "seam": 0,
-      "patch": 5
+      "host": 4,
+      "seam": 3,
+      "patch": 6
     },
-    "coreImports": 25,
+    "coreImports": 26,
     "sharedPatches": {
-      "seam": 28,
-      "patch": 20
+      "seam": 33,
+      "patch": 21
     }
   },
   "notCounted": {
@@ -62,6 +62,7 @@
     "@opencode/core/model",
     "@opencode/core/model-resolver",
     "@opencode/core/permission",
+    "@opencode/core/plugin/provider/openai",
     "@opencode/core/plugin/sdk",
     "@opencode/core/plugin/system-prompt/anthropic.txt",
     "@opencode/core/plugin/system-prompt/gpt-astra.txt",
@@ -376,12 +377,12 @@
     },
     {
       "feature": "cli",
-      "done": 0,
+      "done": 2,
       "total": 148,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 0,
+          "done": 1,
           "total": 72
         },
         "api": {
@@ -389,13 +390,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 1,
           "total": 25
         },
         "test": {
           "done": 0,
           "total": 51
         }
+      },
+      "landed": {
+        "plugin": 0,
+        "host": 0,
+        "seam": 0,
+        "patch": 1
       }
     },
     {
@@ -1331,7 +1338,7 @@
     },
     {
       "feature": "oauth",
-      "done": 1,
+      "done": 5,
       "total": 8,
       "dropped": 0,
       "kinds": {
@@ -1344,13 +1351,19 @@
           "total": 0
         },
         "patch": {
-          "done": 0,
+          "done": 4,
           "total": 6
         },
         "test": {
           "done": 0,
           "total": 1
         }
+      },
+      "landed": {
+        "plugin": 0,
+        "host": 1,
+        "seam": 3,
+        "patch": 0
       }
     },
     {
@@ -2303,12 +2316,12 @@
     },
     {
       "feature": "tui",
-      "done": 4,
+      "done": 5,
       "total": 45,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 1,
+          "done": 2,
           "total": 15
         },
         "api": {
@@ -2357,12 +2370,12 @@
     },
     {
       "feature": "ui",
-      "done": 128,
+      "done": 130,
       "total": 267,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 128,
+          "done": 130,
           "total": 248
         },
         "api": {
@@ -6035,12 +6048,12 @@
     },
     {
       "feature": "vscode",
-      "done": 234,
+      "done": 242,
       "total": 2057,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 234,
+          "done": 242,
           "total": 1439
         },
         "api": {
@@ -6132,6 +6145,7 @@
   ],
   "landed": {
     "patch:agent:2e5632e7bfc6": "plugin",
+    "patch:cli:66a6b3781917": "patch",
     "patch:components:06ac8868d98e": "patch",
     "patch:gateway:0278ba0eb6aa": "plugin",
     "patch:gateway:17e39e074eaf": "plugin",
@@ -6146,6 +6160,10 @@
     "patch:gateway:e8673ed1650b": "plugin",
     "patch:gateway:f983d8f993c8": "plugin",
     "patch:global:0e189a57d108": "host",
+    "patch:oauth:3ad23f430831": "seam",
+    "patch:oauth:513c5db12e0f": "seam",
+    "patch:oauth:62e32555f6d9": "host",
+    "patch:oauth:ee5e067b8d7b": "seam",
     "patch:provider-usage:b0945f511fb3": "plugin",
     "patch:provider-usage:ce8e021f1ef6": "plugin",
     "patch:server:5e0f8563b425": "plugin",
@@ -6302,6 +6320,7 @@
     "module:packages/kilo-ui/src/components/model-info-card.css",
     "module:packages/kilo-ui/src/components/motion.tsx",
     "module:packages/kilo-ui/src/components/popover.css",
+    "module:packages/kilo-ui/src/components/popover.tsx",
     "module:packages/kilo-ui/src/components/prompt-input.css",
     "module:packages/kilo-ui/src/components/radio-group.css",
     "module:packages/kilo-ui/src/components/reasoning-heading.ts",
@@ -6317,6 +6336,7 @@
     "module:packages/kilo-ui/src/components/switch.css",
     "module:packages/kilo-ui/src/components/tabs.css",
     "module:packages/kilo-ui/src/components/tag.css",
+    "module:packages/kilo-ui/src/components/tag.tsx",
     "module:packages/kilo-ui/src/components/task-header.css",
     "module:packages/kilo-ui/src/components/text-field.css",
     "module:packages/kilo-ui/src/components/text-shimmer.tsx",
@@ -6534,7 +6554,14 @@
     "module:packages/kilo-vscode/webview-ui/src/assets.d.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/brand/AnimatedKiloLogo.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/PermissionCommand.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptSelectors.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/prompt-fold.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/shared/DeferredPopover.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/shared/ModeSwitcher.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/shared/ModelSelector.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/shared/PopupSelector.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/SessionRenameEditor.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/shared/ThinkingSelector.tsx",
     "module:packages/kilo-vscode/webview-ui/src/context/language-dictionaries/ar.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/language-dictionaries/br.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/language-dictionaries/bs.ts",
@@ -6613,9 +6640,11 @@
     "module:packages/kilo-vscode/webview-ui/src/utils/date.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/focus.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/ime-enter.ts",
+    "module:packages/kilo-vscode/webview-ui/src/utils/typeahead.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/webview-message.ts",
     "module:packages/opencode/src/kilocode/agent/index.ts",
     "module:packages/opencode/src/kilocode/balance-refresh.ts",
+    "module:packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx",
     "module:packages/opencode/src/kilocode/components/dialog-kilo-notifications.tsx",
     "module:packages/opencode/src/kilocode/components/free-model-disclosure.ts",
     "module:packages/opencode/src/kilocode/components/kilo-news.tsx",
@@ -6623,6 +6652,7 @@
     "module:packages/opencode/src/kilocode/components/model-info-panel.tsx",
     "module:packages/opencode/src/kilocode/components/news.ts",
     "module:packages/opencode/src/kilocode/components/notification-banner.tsx",
+    "module:packages/opencode/src/kilocode/kilo-commands.tsx",
     "module:packages/opencode/src/kilocode/kilo-errors.ts",
     "module:packages/opencode/src/kilocode/plugins/home-news.tsx",
     "module:packages/opencode/src/kilocode/plugins/model-usage.ts",
@@ -6647,6 +6677,7 @@
     "module:packages/tui/src/kilocode/model-picker.ts",
     "module:packages/tui/test/kilocode/model-picker.test.ts",
     "patch:agent:2e5632e7bfc6",
+    "patch:cli:66a6b3781917",
     "patch:components:06ac8868d98e",
     "patch:gateway:00d34e8d5cd7",
     "patch:gateway:0278ba0eb6aa",
@@ -6664,6 +6695,10 @@
     "patch:gateway:e8673ed1650b",
     "patch:gateway:f983d8f993c8",
     "patch:global:0e189a57d108",
+    "patch:oauth:3ad23f430831",
+    "patch:oauth:513c5db12e0f",
+    "patch:oauth:62e32555f6d9",
+    "patch:oauth:ee5e067b8d7b",
     "patch:provider-usage:b0945f511fb3",
     "patch:provider-usage:ce8e021f1ef6",
     "patch:server:5e0f8563b425",

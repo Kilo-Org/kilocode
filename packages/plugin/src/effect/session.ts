@@ -61,6 +61,14 @@ export interface SessionTitle extends SessionRequest {
  */
 export type SessionRequestKind = "primary" | "compaction" | "title" | "generate"
 
+// kilocode_change start - gateway seam: route one model request to another model before it is built
+/** Set `target` to send this request to another model, with its settings, credentials and hooks. Records keep the selected model. */
+export interface SessionRoute extends Readonly<Pick<SessionContext, "sessionID" | "agent" | "model" | "system" | "messages" | "tools">> {
+  readonly kind: SessionRequestKind
+  target?: { readonly model: Model.Info; readonly variant?: Model.VariantID }
+}
+// kilocode_change end
+
 export interface SessionModelRequest {
   readonly sessionID: Session.ID
   readonly agent: Agent.ID
@@ -142,6 +150,7 @@ export interface SessionHooks {
   readonly compaction: SessionCompaction
   readonly generate: SessionGenerate
   readonly title: SessionTitle
+  readonly route: SessionRoute // kilocode_change(gateway) seam - route hook
   readonly "model.request": SessionModelRequest
   readonly "http.request": SessionHttpRequest
   readonly "http.response": SessionHttpResponse
