@@ -7,6 +7,7 @@ import { SessionID } from "@/session/schema"
 import { Storage } from "@/storage/storage"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { WakeupEvent } from "@opencode-ai/schema/kilocode/wakeup-event"
 import { Context, Effect, Fiber, Layer, Option, Semaphore } from "effect"
 import { fireLayer, text as wakeupText } from "./resume"
@@ -70,6 +71,7 @@ export namespace Wakeup {
       const storage = yield* Storage.Service
       const fire = yield* Fire
       const events = yield* EventV2Bridge.Service
+      const flock = yield* EffectFlock.Service
       // Timers live in the service scope, so tearing the layer down stops them.
       const scope = yield* Effect.scope
       const timers = new Map<ID, Fiber.Fiber<void>>()
@@ -101,6 +103,24 @@ export namespace Wakeup {
           stop()
         }),
       )
+
+      // Several processes can adopt one directory from one data directory (an
+      // editor's server and a terminal TUI, for example), and each arms its own
+      // timers for the same records. Every fire and cancel re-reads or removes
+      // its record under a cross-process lock, so one process claims each due
+      // occurrence and a timer whose record another process removed does not
+      // fire. If the lock fails, run unlocked: a duplicate turn is better than
+      // a lost one. Claims in this process also queue on a local permit, so
+      // they never contend on the file lock and wait out its retry backoff.
+      const claims = Semaphore.makeUnsafe(1)
+      const claim = <A>(target: string[], body: Effect.Effect<A>) =>
+        claims.withPermits(1)(
+          flock.withLock(body, target.join(":")).pipe(
+            Effect.catchTag(["LockTimeoutError", "LockCompromisedError"], (err) =>
+              Effect.logWarning("wakeup claim lock failed", { key: target.join(":"), err }).pipe(Effect.andThen(body)),
+            ),
+          ),
+        )
 
       const read = (target: string[]) =>
         storage.read<Info>(target).pipe(Effect.catch(() => Effect.succeed(undefined)))
@@ -152,10 +172,19 @@ export namespace Wakeup {
             timers.delete(info.id)
             // Drop the persistence before the resume: the model turn can be slow,
             // and a concurrent `adopt` that still sees the file would fire twice.
-            yield* storage.remove(key(info)).pipe(Effect.ignore)
+            // A missing record means another process fired or cancelled it.
+            const claimed = yield* claim(
+              key(info),
+              Effect.gen(function* () {
+                if (!(yield* read(key(info)))) return false
+                yield* storage.remove(key(info)).pipe(Effect.ignore)
+                return true
+              }),
+            )
             // Announce after persistence clears so a concurrent snapshot cannot
             // report the fired wakeup as still pending.
             yield* announce(info.sessionID)
+            if (!claimed) return
             yield* fire
               .run(info, { inPlace })
               .pipe(Effect.catchCause((cause) => Effect.logError("wakeup fire failed", { id: info.id, cause })))
@@ -197,18 +226,34 @@ export namespace Wakeup {
 
       const fireCron = (task: CronInfo, inPlace = false): Effect.Effect<void> =>
         Effect.gen(function* () {
-          if (cronFiring.has(task.id)) {
-            // A fire outlasted its interval: the occurrence that just came due
-            // is skipped, not replayed, but the schedule must not stall. Arm the
-            // next window and leave the in-flight fire alone.
-            yield* rearm(task)
-            return
-          }
+          // Persist the next occurrence before the fire: a crash mid-turn must
+          // not lose the schedule. The stored record decides the claim: if it
+          // is gone, the task was cancelled; if its window moved, another
+          // process already fired this occurrence, so follow its next window.
+          const claimed = yield* claim(
+            cronKey(task),
+            Effect.gen(function* () {
+              const stored = yield* readCron(cronKey(task))
+              if (!stored) {
+                cronEntries.delete(task.id)
+                cronTimers.delete(task.id)
+                return false
+              }
+              if (stored.dueAt !== task.dueAt) {
+                cronEntries.set(stored.id, stored)
+                yield* armCron(stored)
+                return false
+              }
+              yield* rearm(stored)
+              return true
+            }),
+          )
+          if (!claimed) return
+          // A fire outlasted its interval: the occurrence that just came due is
+          // skipped, not replayed. The claim above already armed the next window.
+          if (cronFiring.has(task.id)) return
           cronFiring.add(task.id)
           yield* Effect.gen(function* () {
-            // Persist the next occurrence before the fire: a crash mid-turn
-            // must not lose the schedule.
-            yield* rearm(task)
             // The fired occurrence carries the due time it was scheduled for.
             yield* fire
               .run(
@@ -455,7 +500,7 @@ export namespace Wakeup {
           yield* Fiber.interrupt(fiber)
         }
         entries.delete(id)
-        yield* storage.remove(key(info)).pipe(Effect.ignore)
+        yield* claim(key(info), storage.remove(key(info)).pipe(Effect.ignore))
         yield* announce(info.sessionID)
         if (notify) yield* notifyGoal(info.sessionID, info.id, info.directory, "wakeup")
         return info
@@ -470,7 +515,7 @@ export namespace Wakeup {
           yield* Fiber.interrupt(fiber)
         }
         cronEntries.delete(id)
-        yield* storage.remove(cronKey(task)).pipe(Effect.ignore)
+        yield* claim(cronKey(task), storage.remove(cronKey(task)).pipe(Effect.ignore))
         if (notify) yield* notifyGoal(task.sessionID, task.id, task.directory, "cron")
         return task
       })
@@ -551,7 +596,7 @@ export namespace Wakeup {
   export const node = LayerNode.make({
     service: Service,
     layer: defaultLayer,
-    deps: [Storage.node, EventV2Bridge.node],
+    deps: [Storage.node, EventV2Bridge.node, EffectFlock.node],
   })
 }
 

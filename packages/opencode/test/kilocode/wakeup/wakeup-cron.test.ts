@@ -8,6 +8,7 @@ import * as TestClock from "effect/testing/TestClock"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { EventV2 } from "@opencode-ai/core/event"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { AppRuntime } from "@/effect/app-runtime"
 import { InstanceRef } from "@/effect/instance-ref"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -79,7 +80,18 @@ const recorderFire = Layer.effect(
 // Layer.fresh: without it Effect's in-test layer cache hands nested builds the
 // outer test's storage and Fire, so a "restart" would share the first process.
 const serviceLayer = <R>(dir: string, fire: Layer.Layer<Wakeup.Fire, never, R>, published: Published[] = []) =>
-  Layer.fresh(Wakeup.layer.pipe(Layer.provide(Layer.mergeAll(storageLayer(dir), fire, eventsLayer(published)))))
+  Layer.fresh(
+    Wakeup.layer.pipe(
+      Layer.provide(
+        Layer.mergeAll(
+          storageLayer(dir),
+          fire,
+          eventsLayer(published),
+          LayerNode.compile(LayerNode.group([EffectFlock.node])),
+        ),
+      ),
+    ),
+  )
 
 const dirLayer = Layer.effect(
   TestDir,
@@ -568,6 +580,65 @@ describe("Wakeup cron", () => {
           }),
         )
       }),
+    20_000,
+  )
+
+  // Two layers on one storage directory stand in for an editor's server and a
+  // terminal TUI that both adopt the same workspace.
+  it.live(
+    "fires a due task once when two processes share the data directory",
+    () =>
+      Effect.gen(function* () {
+        const dir = (yield* TestDir).dir
+        const first: Wakeup.Info[] = []
+        const second: Wakeup.Info[] = []
+        const a = Context.get(yield* Layer.build(serviceLayer(dir, fireLayer(first))), Wakeup.Service)
+        const b = Context.get(yield* Layer.build(serviceLayer(dir, fireLayer(second))), Wakeup.Service)
+        const persisted = cronInfo({
+          directory: dir,
+          schedule: "* * * * *",
+          dueAt: Date.now() - 1_000,
+          created: Date.now() - 60_000,
+        })
+        persistCron(dir, persisted)
+
+        yield* Effect.all([a.adopt(dir), b.adopt(dir)], { concurrency: "unbounded" })
+
+        expect([...first, ...second].map((item) => item.id)).toEqual([persisted.id])
+        // The loser follows the winner's next window instead of keeping its own.
+        const [left, right] = yield* Effect.all([
+          a.cronList({ sessionID: persisted.sessionID }),
+          b.cronList({ sessionID: persisted.sessionID }),
+        ])
+        expect(left.map((item) => item.dueAt)).toEqual(right.map((item) => item.dueAt))
+        expect(left[0].dueAt).toBeGreaterThan(Date.now())
+      }).pipe(Effect.scoped),
+    20_000,
+  )
+
+  it.live(
+    "does not fire or restore a task that another process cancelled",
+    () =>
+      Effect.gen(function* () {
+        const dir = (yield* TestDir).dir
+        const first: Wakeup.Info[] = []
+        const second: Wakeup.Info[] = []
+        const a = Context.get(yield* Layer.build(serviceLayer(dir, fireLayer(first))), Wakeup.Service)
+        const b = Context.get(yield* Layer.build(serviceLayer(dir, fireLayer(second))), Wakeup.Service)
+        const persisted = cronInfo({ directory: dir, schedule: "* * * * *", dueAt: Date.now() + 1_200 })
+        persistCron(dir, persisted)
+        yield* a.adopt(dir)
+        yield* b.adopt(dir)
+
+        expect((yield* a.cronCancel(persisted.id))?.id).toBe(persisted.id)
+        // The sleep is the assertion: it spans the due time of b's armed timer.
+        yield* Effect.sleep("2500 millis")
+
+        expect([...first, ...second]).toEqual([])
+        expect(yield* b.cronList({ sessionID: persisted.sessionID })).toEqual([])
+        const file = path.join(dir, "storage", "cron", String(persisted.sessionID), `${persisted.id}.json`)
+        expect(fs.existsSync(file)).toBe(false)
+      }).pipe(Effect.scoped),
     20_000,
   )
 })
