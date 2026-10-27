@@ -1,6 +1,8 @@
 import { Auth } from "@/auth"
-import { PROVIDER, provider as kiloCloud } from "@/kilocode/session-hosting/kilo-cloud"
+import { ATTACHMENT_TTL_MS, PROVIDER, provider as kiloCloud } from "@/kilocode/session-hosting/kilo-cloud"
 import {
+  HostedWorkspaceID,
+  HostedWorkspaceSessionID,
   WorkspaceID,
   workspaceKey,
   workspaceSessionKey,
@@ -105,7 +107,7 @@ function status(overrides: Record<string, unknown> = {}) {
   }
 }
 
-function harness() {
+function harness(pages: Record<string, ReturnType<typeof workspace>> = {}) {
   const calls: Call[] = []
   const state = {
     workspace: "ok" as "ok" | "missing" | "mismatch",
@@ -139,9 +141,10 @@ function harness() {
       if (url.pathname === "/trpc/getHostedWorkspace") {
         if (state.workspace === "missing") return Response.json({ result: { data: null } })
         const mismatch = state.workspace === "mismatch"
+        const input = JSON.parse(url.searchParams.get("input")!)
         return Response.json({
           result: {
-            data: workspace(mismatch ? { workspaceId: OTHER_WORKSPACE } : {}),
+            data: pages[input.sessionCursor ?? ""] ?? workspace(mismatch ? { workspaceId: OTHER_WORKSPACE } : {}),
           },
         })
       }
@@ -232,10 +235,11 @@ function signedIn() {
   } satisfies Auth.Interface
 }
 
-function client(url: string) {
+function client(url: string, clock?: () => number) {
   return kiloCloud({
     auth: signedIn(),
     env: { CLOUD_AGENT_NEXT_BASE_URL: url, KILO_API_URL: url },
+    clock,
   })
 }
 
@@ -394,9 +398,12 @@ it.effect("returns deterministic not_found and rejected failures without fallbac
 })
 
 it.effect("pages to the requested workspace session before minting an attachment", () => {
-  const app = harness()
+  const app = harness({
+    "": workspace({ sessions: [session({ cloudAgentSessionId: "workspace_other" })], nextSessionCursor: "next" }),
+    next: workspace(),
+  })
   return Effect.gen(function* () {
-    const cloud = client(app.url)
+    const cloud = client(app.url, () => 1_000)
     const attached = yield* cloud.workspace!.attach({
       id: { providerID: PROVIDER, workspaceID: WORKSPACE, remoteSessionID: REMOTE },
       organizationID: ORG,
@@ -407,13 +414,78 @@ it.effect("pages to the requested workspace session before minting an attachment
       remoteSessionID: REMOTE,
       nativeSessionID: NATIVE,
     })
-    expect(attached.expiresAt).toBeGreaterThan(Date.now())
+    expect(attached.expiresAt).toBe(1_000 + ATTACHMENT_TTL_MS)
+    expect(app.calls).toHaveLength(2)
+    expect(app.calls.map((call) => JSON.parse(new URL(call.search, app.url).searchParams.get("input")!))).toEqual([
+      { workspaceId: WORKSPACE, sessionLimit: 100 },
+      { workspaceId: WORKSPACE, sessionLimit: 100, sessionCursor: "next" },
+    ])
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
 
-    const missing = yield* cloud.workspace!.attach({
-      id: { providerID: PROVIDER, workspaceID: WORKSPACE, remoteSessionID: "workspace_other" },
-      organizationID: ORG,
-    }).pipe(Effect.flip)
-    expect(missing).toMatchObject({ code: "not_found" })
+for (const cursor of [null, "10"]) {
+  it.effect(
+    cursor === null
+      ? "returns not_found when the final scanned page exhausts workspace sessions"
+      : "returns retryable unavailable when the scan cap leaves more workspace sessions",
+    () => {
+      const app = harness(
+        Object.fromEntries(
+          Array.from({ length: 10 }, (_, page) => [
+            page === 0 ? "" : String(page),
+            workspace({
+              sessions: [session({ cloudAgentSessionId: "workspace_other" })],
+              nextSessionCursor: page === 9 ? cursor : String(page + 1),
+            }),
+          ]),
+        ),
+      )
+      return Effect.gen(function* () {
+        const cloud = client(app.url)
+        const failure = yield* cloud
+          .workspace!.attach({
+            id: { providerID: PROVIDER, workspaceID: WORKSPACE, remoteSessionID: REMOTE },
+          })
+          .pipe(Effect.flip)
+        expect(failure).toMatchObject({
+          code: cursor === null ? "not_found" : "unavailable",
+          retryable: cursor !== null,
+        })
+        if (cursor !== null) expect(failure.message).toContain("retry")
+        expect(app.calls).toHaveLength(10)
+        expect(app.calls.map((call) => JSON.parse(new URL(call.search, app.url).searchParams.get("input")!))).toEqual(
+          Array.from({ length: 10 }, (_, page) => ({
+            workspaceId: WORKSPACE,
+            sessionLimit: 100,
+            ...(page === 0 ? {} : { sessionCursor: String(page) }),
+          })),
+        )
+      }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+    },
+  )
+}
+
+it.effect("rejects an attachment response for a different workspace before accepting its matching session", () => {
+  const app = harness({
+    "": workspace({
+      workspaceId: OTHER_WORKSPACE,
+      sessions: [session({ workspaceId: OTHER_WORKSPACE })],
+    }),
+  })
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+    expect(
+      yield* cloud
+        .workspace!.attach({
+          id: { providerID: PROVIDER, workspaceID: WORKSPACE, remoteSessionID: REMOTE },
+        })
+        .pipe(Effect.flip),
+    ).toMatchObject({
+      code: "invalid_response",
+      message: "Kilo Cloud returned a different workspace identity",
+      retryable: false,
+    })
+    expect(app.calls).toHaveLength(1)
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 
@@ -439,25 +511,40 @@ it.effect("returns authorized profile summaries only", () => {
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 
-it.effect("keeps workspace identities composite across providers and workspaces", () => {
-  const app = harness()
-  return Effect.gen(function* () {
-    const a = client(app.url)
-    const b = kiloCloud({
-      auth: signedIn(),
-      env: { CLOUD_AGENT_NEXT_BASE_URL: app.url, KILO_API_URL: app.url },
+it.effect("keeps equal remote and native IDs distinct across providers and workspaces", () =>
+  Effect.sync(() => {
+    const decode = Schema.decodeUnknownSync(HostedWorkspaceSessionID)
+    const one = decode({
+      providerID: PROVIDER,
+      workspaceID: WORKSPACE,
+      remoteSessionID: REMOTE,
+      nativeSessionID: NATIVE,
     })
-    const pageA = yield* a.workspace!.list()
-    const pageB = yield* b.workspace!.list()
+    const two = decode({ ...one, providerID: "other-cloud" })
+    const three = decode({ ...one, workspaceID: OTHER_WORKSPACE })
+    expect(new Set([one, two, three].map(workspaceKey)).size).toBe(3)
+    expect(new Set([one, two, three].map(workspaceSessionKey)).size).toBe(3)
+    expect(workspaceSessionKey(one)).toBe(`${PROVIDER}:${WORKSPACE}:${REMOTE}:${NATIVE}`)
+  }),
+)
 
-    const one = pageA.items[0]!.id
-    const two = pageB.items[0]!.id
-    expect(workspaceKey(one)).toBe(workspaceKey(two))
-
-    Schema.decodeUnknownSync(WorkspaceID)("worktree_12345678-1234-1234-1234-123456789abc")
-    expect(workspaceKey({ ...one, workspaceID: "worktree_other" })).not.toBe(workspaceKey(one))
-    expect(workspaceSessionKey(pageA.items[0]!.sessions[0]!.id)).not.toBe(
-      workspaceSessionKey({ ...pageA.items[0]!.sessions[0]!.id, workspaceID: "worktree_other" }),
-    )
-  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
-})
+it.effect("rejects bare workspace identities and invalid composite identity components", () =>
+  Effect.sync(() => {
+    expect(() => Schema.decodeUnknownSync(HostedWorkspaceID)(WORKSPACE)).toThrow()
+    for (const value of ["", "worktree:other", "worktree/other", "x".repeat(256)]) {
+      expect(() => Schema.decodeUnknownSync(WorkspaceID)(value)).toThrow()
+    }
+    const id = {
+      providerID: PROVIDER,
+      workspaceID: WORKSPACE,
+      remoteSessionID: REMOTE,
+      nativeSessionID: NATIVE,
+    }
+    for (const field of ["providerID", "workspaceID", "remoteSessionID", "nativeSessionID"]) {
+      expect(() =>
+        Schema.decodeUnknownSync(HostedWorkspaceSessionID)({ ...id, [field]: "invalid:component" }),
+      ).toThrow()
+    }
+    expect(() => Schema.decodeUnknownSync(HostedWorkspaceSessionID)({ ...id, nativeSessionID: undefined })).toThrow()
+  }),
+)

@@ -1,5 +1,6 @@
 import type { FailureCode, NativeRequest } from "@/kilocode/session-hosting/types"
 import { isNativePath } from "@/kilocode/session-hosting/native-routes"
+import { errorCode } from "@/kilocode/session-hosting/response"
 import { Effect, Stream } from "effect"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import * as Attachments from "../hosted-attachments"
@@ -115,15 +116,17 @@ export function resolve(
     if (found.kind !== "found") return { type: "fail", reason: found.kind } satisfies Plan
     const entry = found.entry
     if (entry.expiresAt <= Date.now()) {
-      const attached = yield* entry.provider.attach({
-        id: entry.session,
-        ...(entry.organizationID ? { organizationID: entry.organizationID } : {}),
-      }).pipe(
-        Effect.catch((error) => {
-          if (error.code === "not_found") store.dispose(entry.id)
-          return Effect.succeed(undefined)
-        }),
-      )
+      const attached = yield* entry.provider
+        .attach({
+          id: entry.session,
+          ...(entry.organizationID ? { organizationID: entry.organizationID } : {}),
+        })
+        .pipe(
+          Effect.catch((error) => {
+            if (error.code === "not_found") invalidate(entry, store)
+            return Effect.succeed(undefined)
+          }),
+        )
       if (!attached) return { type: "fail", reason: "unavailable" } satisfies Plan
       store.renew(entry, { expiresAt: attached.expiresAt })
     } else {
@@ -160,23 +163,25 @@ export function respond(plan: Routed, request: ServerRequest): Effect.Effect<Htt
         }).pipe(
           Effect.catch(() => Effect.succeed(undefined)),
           Effect.flatMap((body) => {
-            if (deletedSession(body)) Attachments.store.dispose(plan.entry.id)
+            if (errorCode(body) === "KILO_SESSION_NOT_FOUND") invalidate(plan.entry)
             return forwardResponse(response)
           }),
         )
       }),
       Effect.catch((error) => {
-        if (error.code === "not_found") Attachments.store.dispose(plan.entry.id)
+        if (error.code === "not_found") invalidate(plan.entry)
         return Effect.succeed(failure(error.code))
       }),
     )
   })
 }
 
-function deletedSession(value: unknown) {
-  if (value === null || typeof value !== "object") return false
-  const record: Record<string, unknown> = Object.fromEntries(Object.entries(value))
-  return record.error === "KILO_SESSION_NOT_FOUND" || record.code === "KILO_SESSION_NOT_FOUND"
+function invalidate(entry: Attachments.Entry, store: Attachments.Store = Attachments.store) {
+  if (entry.workspace) {
+    store.disposeRemoteSession(entry.workspace.id, entry.workspace.remoteSessionID)
+    return
+  }
+  store.dispose(entry.id)
 }
 
 function forward(headers: Headers) {

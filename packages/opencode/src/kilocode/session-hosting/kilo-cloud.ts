@@ -51,6 +51,7 @@ import {
   type WorkspaceProfilePage,
 } from "./types"
 import { classify } from "./native-routes"
+import { errorCode } from "./response"
 
 export const PROVIDER = Schema.decodeUnknownSync(ProviderID)("kilo-cloud")
 export const ATTACHMENT_TTL_MS = 60_000
@@ -814,15 +815,30 @@ export function provider(options: Options): Provider {
           )
         }
         const value = yield* cloud(CloudWorkspace, body, "Kilo Cloud returned an unsupported workspace")
+        if (value.workspaceId !== id.workspaceID) {
+          return yield* Effect.fail(invalid("Kilo Cloud returned a different workspace identity"))
+        }
         for (const session of value.sessions) {
           if (session.cloudAgentSessionId !== id.remoteSessionID) continue
           return yield* workspaceSession(value.workspaceId, session)
         }
-        if (value.nextSessionCursor === null) break
+        if (value.nextSessionCursor === null) {
+          return yield* Effect.fail(
+            new HostedFailure({
+              code: "not_found",
+              message: "Kilo Cloud workspace session was not found",
+              retryable: false,
+            }),
+          )
+        }
         cursor = value.nextSessionCursor
       }
       return yield* Effect.fail(
-        new HostedFailure({ code: "not_found", message: "Kilo Cloud workspace session was not found", retryable: false }),
+        new HostedFailure({
+          code: "unavailable",
+          message: "Kilo Cloud workspace session lookup reached its scan limit; refresh workspace sessions and retry",
+          retryable: true,
+        }),
       )
     })
 
@@ -940,33 +956,6 @@ export function provider(options: Options): Provider {
 
 function route(base: `/${string}`, query: URLSearchParams): `/${string}` {
   return query.size === 0 ? base : `${base}?${query.toString()}`
-}
-
-function errorCode(value: unknown) {
-  if (value === null || typeof value !== "object") return undefined
-  const record: Record<string, unknown> = Object.fromEntries(Object.entries(value))
-  if (typeof record.error === "string") return record.error
-  const error = record.error
-  if (error === null || typeof error !== "object") return undefined
-  const detail: Record<string, unknown> = Object.fromEntries(Object.entries(error))
-  if (typeof detail.code === "string") return detail.code
-  if (typeof detail.message === "string") return detail.message
-  const json = detail.json
-  if (json !== null && typeof json === "object") {
-    const nested: Record<string, unknown> = Object.fromEntries(Object.entries(json))
-    if (typeof nested.message === "string") return nested.message
-    const data = nested.data
-    if (data !== null && typeof data === "object") {
-      const fields: Record<string, unknown> = Object.fromEntries(Object.entries(data))
-      if (typeof fields.code === "string") return fields.code
-    }
-  }
-  const data = detail.data
-  if (data !== null && typeof data === "object") {
-    const fields: Record<string, unknown> = Object.fromEntries(Object.entries(data))
-    if (typeof fields.code === "string") return fields.code
-  }
-  return undefined
 }
 
 function omittedCount(value: string | null) {

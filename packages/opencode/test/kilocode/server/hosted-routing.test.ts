@@ -71,7 +71,14 @@ describe("hosted attachment routing", () => {
     const call = fake.calls[0]
     expect(call.session.sessionID).toBe(SESSION)
     expect(call.headers.get("accept")).toBe("application/json")
-    for (const stripped of ["authorization", "cookie", "x-kilo-directory", "x-kilo-workspace", "x-kilo-ticket", "host"]) {
+    for (const stripped of [
+      "authorization",
+      "cookie",
+      "x-kilo-directory",
+      "x-kilo-workspace",
+      "x-kilo-ticket",
+      "host",
+    ]) {
       expect(call.headers.get(stripped)).toBeNull()
     }
   })
@@ -249,10 +256,16 @@ describe("hosted attachment routing", () => {
     expect(fake.calls).toHaveLength(1)
   })
 
-  test("disposes a workspace attachment when the provider reports its session deleted", async () => {
+  test.each([
+    { error: "KILO_SESSION_NOT_FOUND" },
+    { code: "KILO_SESSION_NOT_FOUND" },
+    { error: { code: "KILO_SESSION_NOT_FOUND", message: "not found" } },
+    { error: { message: "not found", data: { code: "KILO_SESSION_NOT_FOUND" } } },
+    { error: { json: { message: "not found", data: { code: "KILO_SESSION_NOT_FOUND" } } } },
+  ])("disposes sibling workspace attachments for deleted-session response %j", async (body) => {
     const api = app()
     const fake = provider("alpha", {
-      route: () => Effect.succeed(Response.json({ error: "KILO_SESSION_NOT_FOUND" }, { status: 404 })),
+      route: () => Effect.succeed(Response.json(body, { status: 404 })),
     })
     const entry = Attachments.store.mint({
       provider: fake.value,
@@ -263,13 +276,71 @@ describe("hosted attachment routing", () => {
       },
       expiresAt: Date.now() + 60_000,
     })
+    const sibling = Attachments.store.mint({
+      provider: fake.value,
+      session: entry.session,
+      workspace: entry.workspace,
+      expiresAt: Date.now() + 60_000,
+    })
+    const other = Attachments.store.mint({
+      provider: fake.value,
+      session: entry.session,
+      workspace: {
+        id: { providerID: fake.value.id, workspaceID: "worktree_other" },
+        remoteSessionID: "workspace_remote_one",
+      },
+      expiresAt: Date.now() + 60_000,
+    })
+    const beta = provider("beta")
+    const separate = Attachments.store.mint({
+      provider: beta.value,
+      session: hosted(beta.value.id, SESSION),
+      workspace: {
+        id: { providerID: beta.value.id, workspaceID: "worktree_workspace_one" },
+        remoteSessionID: "workspace_remote_one",
+      },
+      expiresAt: Date.now() + 60_000,
+    })
 
     const missing = await api.request(`/session/${SESSION}/message?workspace=${entry.id}`)
     expect(missing.status).toBe(404)
     expect(Attachments.store.lookup(entry.id)).toEqual({ kind: "disposed" })
+    expect(Attachments.store.lookup(sibling.id)).toEqual({ kind: "disposed" })
+    expect(Attachments.store.lookup(other.id)).toMatchObject({ kind: "found" })
+    expect(Attachments.store.lookup(separate.id)).toMatchObject({ kind: "found" })
 
     const stale = await api.request(`/session/${SESSION}/message?workspace=${entry.id}`)
     expect(stale.status).toBe(410)
+    const closed = await api.request(`/session/${SESSION}/message?workspace=${sibling.id}`)
+    expect(closed.status).toBe(410)
+  })
+
+  test.each(["route", "attach"] as const)("invalidates sibling scopes on provider %s not_found", async (mode) => {
+    const api = app()
+    const missing = () =>
+      Effect.fail(new HostedFailure({ code: "not_found", message: "session deleted", retryable: false }))
+    const fake = provider("alpha", mode === "route" ? { route: missing } : { attach: missing })
+    const workspace = {
+      id: { providerID: fake.value.id, workspaceID: "worktree_one" },
+      remoteSessionID: "workspace_remote_one",
+    }
+    const entry = Attachments.store.mint({
+      provider: fake.value,
+      session: hosted(fake.value.id, SESSION),
+      workspace,
+      expiresAt: mode === "attach" ? 1 : Date.now() + 60_000,
+    })
+    const sibling = Attachments.store.mint({
+      provider: fake.value,
+      session: entry.session,
+      workspace,
+      expiresAt: Date.now() + 60_000,
+    })
+
+    const response = await api.request(`/session/${SESSION}/message?workspace=${entry.id}`)
+    expect(response.status).toBe(mode === "attach" ? 503 : 404)
+    expect(Attachments.store.lookup(entry.id)).toEqual({ kind: "disposed" })
+    expect(Attachments.store.lookup(sibling.id)).toEqual({ kind: "disposed" })
   })
 
   test("keeps a workspace attachment when a 404 is not a deleted-session response", async () => {

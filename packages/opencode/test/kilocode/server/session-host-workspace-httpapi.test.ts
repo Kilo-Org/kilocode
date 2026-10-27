@@ -67,6 +67,7 @@ function harness() {
   const state = {
     workspace: "ok" as "ok" | "missing",
     native: "ok" as "ok" | "deleted",
+    deletion: "ok" as "ok" | "invalid" | "malformed" | "conflict" | "unavailable",
   }
 
   const server = Bun.serve({
@@ -153,6 +154,10 @@ function harness() {
         })
       }
       if (url.pathname === "/trpc/deleteWorktree") {
+        if (state.deletion === "invalid") return Response.json({ result: { data: { success: true } } })
+        if (state.deletion === "malformed") return new Response("not-json", { status: 200 })
+        if (state.deletion === "conflict") return Response.json({ error: "workspace_deleting" }, { status: 409 })
+        if (state.deletion === "unavailable") return Response.json({ error: "unavailable" }, { status: 503 })
         return Response.json({ result: { data: { success: true, deletedSessionIds: [NATIVE] } } })
       }
       if (url.pathname === "/api/trpc/agentProfiles.list") {
@@ -207,7 +212,11 @@ function layer(url: string) {
 const app = harness()
 const it = testEffect(layer(app.url))
 
-afterEach(() => Attachments.store.clear())
+afterEach(() => {
+  Attachments.store.clear()
+  app.state.workspace = "ok"
+  app.state.deletion = "ok"
+})
 afterAll(() => app.stop())
 
 const detail = SessionHostPaths.workspaceDetail
@@ -386,6 +395,33 @@ describe("session host workspace HttpApi", () => {
       app.state.workspace = "ok"
     }),
   )
+
+  for (const mode of ["invalid", "malformed"] as const) {
+    it.live(`invalidates attachments when a successful delete returns an ${mode} result`, () =>
+      Effect.gen(function* () {
+        const entry = attached()
+        app.state.deletion = mode
+        const response = yield* HttpClient.execute(HttpClientRequest.delete(detail))
+        expect(response.status).toBe(502)
+        expect(Attachments.store.lookup(entry.id)).toEqual({ kind: "disposed" })
+      }),
+    )
+  }
+
+  for (const [mode, status] of [
+    ["conflict", 409],
+    ["unavailable", 503],
+  ] as const) {
+    it.live(`preserves attachments when deletion fails with ${mode}`, () =>
+      Effect.gen(function* () {
+        const entry = attached()
+        app.state.deletion = mode
+        const response = yield* HttpClient.execute(HttpClientRequest.delete(detail))
+        expect(response.status).toBe(status)
+        expect(Attachments.store.lookup(entry.id)).toMatchObject({ kind: "found" })
+      }),
+    )
+  }
 
   it.live("keeps control routes local even when an attachment selector is configured", () =>
     Effect.gen(function* () {

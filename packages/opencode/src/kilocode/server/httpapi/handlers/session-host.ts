@@ -299,7 +299,13 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       const id = { providerID: ctx.params.providerID, workspaceID: ctx.params.workspaceID }
       const result = yield* invalidate(
         id,
-        provider.delete({ id, ...ctx.query }),
+        provider.delete({ id, ...ctx.query }).pipe(
+          Effect.catch((error) => {
+            // A successful destructive response may fail projection after Cloud deleted the workspace.
+            if (error.code === "invalid_response") Attachments.store.disposeWorkspace(id)
+            return Effect.fail(error)
+          }),
+        ),
       ).pipe(Effect.mapError(mapFailure))
       Attachments.store.disposeWorkspace(id)
       return result
