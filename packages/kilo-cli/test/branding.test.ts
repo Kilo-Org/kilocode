@@ -158,7 +158,7 @@ function checkLogos(output: string, hosted: boolean, modern: boolean) {
       height: number
       mode: "dark" | "light"
       frame: string
-      spans: { text: string; fg: number[]; attributes: number }[]
+      spans: { text: string; fg: number[]; bg: number[]; attributes: number }[]
     }[]
     assets: { logo: typeof logo; go: typeof go; compact?: string[]; widths?: { split: number; full: number } }
   }
@@ -168,7 +168,7 @@ function checkLogos(output: string, hosted: boolean, modern: boolean) {
   expect(result.assets.compact).toEqual(hosted ? art.compact : undefined)
   expect(result.assets.widths).toEqual(hosted ? art.widths : undefined)
   expect(result.frames).toHaveLength(14)
-  for (const { width, height, frame, spans } of result.frames) {
+  for (const { width, height, mode, frame, spans } of result.frames) {
     if (height < 12) {
       expect(frame.trim()).toBe("")
       continue
@@ -203,6 +203,12 @@ function checkLogos(output: string, hosted: boolean, modern: boolean) {
       for (const span of shadows) {
         expect(span.text.trim()).toMatch(/^▀+$/)
         expect(span.fg).not.toEqual(ink)
+        if (mode === "light") {
+          expect(span.fg).toEqual(RGBA.fromHex(KiloLogo.palette.dim).toInts())
+          const foreground = luminance(span.fg) + 0.05
+          const background = luminance(span.bg) + 0.05
+          expect(Math.max(foreground, background) / Math.min(foreground, background)).toBeGreaterThanOrEqual(3)
+        }
       }
     }
     for (const line of rows) {
@@ -212,6 +218,14 @@ function checkLogos(output: string, hosted: boolean, modern: boolean) {
     for (const line of frame.split("\n")) expect(Bun.stringWidth(line.trimEnd())).toBeLessThanOrEqual(width)
     if (hosted) expect(frame).not.toContain("█▀▀█ █▀▀█ █▀▀█ █▀▀▄")
   }
+}
+
+function luminance(rgb: number[]) {
+  const linear = rgb.slice(0, 3).map((value) => {
+    const channel = value / 255
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * linear[0]! + 0.7152 * linear[1]! + 0.0722 * linear[2]!
 }
 
 for (const hosted of [false, true]) {

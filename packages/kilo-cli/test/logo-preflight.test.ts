@@ -65,7 +65,7 @@ for (const compiled of [false, true]) {
           if (scenario.unicode === "0") expect(text).not.toMatch(/[\u{1FB00}-\u{1FBFF}]/u)
           if (scenario.width === 120) expect(text).toContain("fixture-old")
           expect(text).toMatch(scenario.unicode === "1" ? /██  ██.*?████🬺🬏.*?██  ██/s : /██  ██.*?████  .*?██  ██/s)
-          expect(output).toContain("38;2;255;221;0")
+          expect(monogramColors(output)).toEqual(["2;255;221;0"])
           if (scenario.outcome === "finish") expect(text).toContain("Kilo updated")
           if (scenario.outcome === "fail") expect(text).toContain("Kilo update paused")
         },
@@ -73,6 +73,39 @@ for (const compiled of [false, true]) {
       )
     }
   })
+}
+
+test("tracks monogram colors across SGR resets and background colors", () => {
+  const ink = "\x1b[38;2;255;221;0m"
+  expect(monogramColors(`${ink}██\x1b[48;2;0;0;0m🬺🬏\x1b[48;5;0m█`)).toEqual(["2;255;221;0"])
+  expect(monogramColors(`${ink}█\x1b[0m█\x1b[m█\x1b[39m█`)).toEqual(["2;255;221;0", "default"])
+  expect(monogramColors(`\x1b[0;48;2;0;0;0;38;2;255;221;0m█`)).toEqual(["2;255;221;0"])
+  expect(monogramColors(`\x1b[38;5;3m█\x1b[33m█\x1b[93m█`)).toEqual(["5;3", "33", "93"])
+  expect(monogramColors(`${ink}Loading Kilo`)).toEqual([])
+})
+
+function monogramColors(output: string) {
+  const colors = new Set<string>()
+  let foreground = "default"
+  for (const token of output.matchAll(/\x1b\[([\d;]*)m|([█🬺🬏])/gu)) {
+    if (token[2]) {
+      colors.add(foreground)
+      continue
+    }
+    const codes = token[1]!.split(";").map(Number)
+    for (let index = 0; index < codes.length; index++) {
+      const code = codes[index]!
+      if (code === 38 || code === 48) {
+        const length = codes[index + 1] === 2 ? 5 : 3
+        if (code === 38) foreground = codes.slice(index + 1, index + length).join(";")
+        index += length - 1
+        continue
+      }
+      if (code === 0 || code === 39) foreground = "default"
+      if ((code >= 30 && code <= 37) || (code >= 90 && code <= 97)) foreground = String(code)
+    }
+  }
+  return [...colors]
 }
 
 async function run(command: string[], width: number) {

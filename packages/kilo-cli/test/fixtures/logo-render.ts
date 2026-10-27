@@ -16,7 +16,7 @@ const frames: {
   height: number
   mode: "dark" | "light"
   frame: string
-  spans: { text: string; fg: number[]; attributes: number }[]
+  spans: { text: string; fg: number[]; bg: number[]; attributes: number }[]
 }[] = []
 
 for (const mode of ["dark", "light"] as const) {
@@ -60,7 +60,12 @@ for (const mode of ["dark", "light"] as const) {
           .lines.flatMap((line) =>
             line.spans
               .filter((span) => span.text.trim())
-              .map((span) => ({ text: span.text, fg: span.fg.toInts(), attributes: span.attributes })),
+              .map((span) => ({
+                text: span.text,
+                fg: span.fg.toInts(),
+                bg: span.bg.toInts(),
+                attributes: span.attributes,
+              })),
           ),
       })
     } finally {

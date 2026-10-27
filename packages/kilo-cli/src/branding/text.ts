@@ -47,13 +47,10 @@ export const replacements = {
     product,
     ['import { go } from "@opencode/tui/logo"', 'import { compact, palette } from "@opencode/tui/logo"'],
     ["const monogram = go.right.slice(1)", "const monogram = compact"],
+    ["const monogramRamp = ramp(colors.muted, colors.accent)", "const monogramColor = RGBA.fromHex(palette.ink)"],
     [
-      "const monogramRamp = ramp(colors.muted, colors.accent)",
-      "const monogramRamp = ramp(RGBA.fromHex(palette.dim), RGBA.fromHex(palette.ink))",
-    ],
-    [
-      "shade(monogramRamp, smoothstep(headerFade.progress())) : colors.muted",
-      "shade(monogramRamp, smoothstep(headerFade.progress())) : monogramRamp[rampSteps]",
+      'const monogramInk = createMemo(() =>\n    props.outcome() === "success" ? shade(monogramRamp, smoothstep(headerFade.progress())) : colors.muted,\n  )',
+      "const monogramInk = () => monogramColor",
     ],
     [
       '<box flexDirection="column">\n      <For each={monogram}>',
@@ -62,7 +59,15 @@ export const replacements = {
   ],
   "tui/src/component/logo.tsx": [
     ['import { go, logo } from "../logo"', 'import { compact, logo, widths, palette } from "../logo"'],
-    ["const theme = useTheme()", "const theme = useTheme()\n  const ink = RGBA.fromHex(palette.ink)"],
+    ['import { useTheme } from "../context/theme"', 'import { useTheme, useThemes } from "../context/theme"'],
+    [
+      "const theme = useTheme()",
+      "const theme = useTheme()\n  const themes = useThemes()\n  const ink = RGBA.fromHex(palette.ink)",
+    ],
+    [
+      "const shadow = tint(theme.background.base, fg, 0.25)",
+      'const shadow = themes.mode() === "light" ? RGBA.fromHex(palette.dim) : tint(theme.background.base, fg, 0.25)',
+    ],
     ["theme.text.muted, false", "ink, false"],
     ["theme.text.base, true", "ink, false"],
     ["dimensions().width < 22", "dimensions().width < widths.split + 2"],
