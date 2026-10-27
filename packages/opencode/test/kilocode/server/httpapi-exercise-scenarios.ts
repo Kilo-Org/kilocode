@@ -531,6 +531,100 @@ export const kiloScenarios: Scenario[] = [
       headers: ctx.headers(),
     }))
     .status(404),
+  http.protected.get("/kilocode/session-host/workspace", "sessionHost.workspaces").json(200, (body) => {
+    object(body)
+    array(body.items)
+    check(body.items.length === 0 && body.nextCursor === null, "signed-out workspace list should be empty")
+  }),
+  http.protected
+    .get("/kilocode/session-host/workspace/profiles", "sessionHost.workspaceProfiles")
+    .probe({ path: "/path" })
+    .status(401),
+  http.protected
+    .get("/kilocode/session-host/workspace/{providerID}/{workspaceID}", "sessionHost.workspace")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}", {
+        providerID: "kilo-cloud",
+        workspaceID: "httpapi-missing",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .get("/kilocode/session-host/workspace/{providerID}/{workspaceID}/status", "sessionHost.workspaceStatus")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/status", {
+        providerID: "kilo-cloud",
+        workspaceID: "httpapi-missing",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .get("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", "sessionHost.workspaceSessions")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", {
+        providerID: "kilo-cloud",
+        workspaceID: "httpapi-missing",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .post("/kilocode/session-host/workspace", "sessionHost.createWorkspace")
+    .at((ctx) => ({
+      path: "/kilocode/session-host/workspace",
+      headers: ctx.headers(),
+      body: {
+        repository: { type: "github", repo: "owner/repo" },
+        profileID: "httpapi-profile",
+        prompt: "hello",
+        agent: { mode: "build", model: "test/fake" },
+        operationKey: "11111111-1111-4111-8111-111111111111",
+        messageID: "msg_httpapi_workspace",
+      },
+    }))
+    .status(401),
+  http.protected
+    .delete("/kilocode/session-host/workspace/{providerID}/{workspaceID}", "sessionHost.deleteWorkspace")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}", {
+        providerID: "kilo-cloud",
+        workspaceID: "httpapi-missing",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
+    .post("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", "sessionHost.createWorkspaceSession")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", {
+        providerID: "kilo-cloud",
+        workspaceID: "httpapi-missing",
+      }),
+      headers: ctx.headers(),
+      body: {
+        prompt: "hello",
+        agent: { mode: "build", model: "test/fake" },
+        operationKey: "11111111-1111-4111-8111-111111111111",
+        messageID: "msg_httpapi_workspace",
+      },
+    }))
+    .status(401),
+  http.protected
+    .post(
+      "/kilocode/session-host/workspace/{providerID}/{workspaceID}/session/{remoteSessionID}/attach",
+      "sessionHost.attachWorkspaceSession",
+    )
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session/{remoteSessionID}/attach", {
+        providerID: "kilo-cloud",
+        workspaceID: "httpapi-missing",
+        remoteSessionID: "httpapi-missing",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
   http.protected.get("/network", "network.list").json(200, array),
   http.protected
     .post("/network/{requestID}/reply", "network.reply")
