@@ -12,6 +12,12 @@ export function activate(context: ExtensionContext) {
     cwd: directory,
     env: process.env,
     log: (text) => output.append(text),
+    onError: (error) => {
+      output.appendLine(error.message)
+      void window.showErrorMessage(error.message.split("\n")[0], "Show Output").then((choice) => {
+        if (choice) output.show()
+      })
+    },
   })
   const view = chat({ context, server, directory })
 

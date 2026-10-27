@@ -7,6 +7,18 @@ import { PermissionCommand } from "../components/chat/PermissionCommand"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
 
+/** v2 permission actions whose existing label key has another name. */
+const LABELS: Record<string, string> = {
+  shell: "bash",
+  glob: "globSearch",
+  grep: "grepSearch",
+  webfetch: "webFetch",
+  websearch: "webSearch",
+  subagent: "task",
+  todowrite: "todoWrite",
+  external_directory: "externalDirectory",
+}
+
 export function PermissionDock(props: { request: PermissionRequest }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -20,7 +32,7 @@ export function PermissionDock(props: { request: PermissionRequest }) {
     return typeof value === "string" ? value : undefined
   }
   const action = () => {
-    const key = `ui.permission.toolLabel.${props.request.action}`
+    const key = `ui.permission.toolLabel.${LABELS[props.request.action] ?? props.request.action}`
     const value = language.t(key)
     return value === key ? props.request.action : value
   }
@@ -36,58 +48,56 @@ export function PermissionDock(props: { request: PermissionRequest }) {
   }
 
   return (
-    <div data-component="permission-dock">
-      <div data-component="permission-shortcuts">
-        <DockPrompt
-          kind="permission"
-          header={
-            <div data-slot="permission-row" data-variant="header">
-              <span data-slot="permission-icon">
-                <Icon name="warning" size="small" />
-              </span>
-              <div data-slot="permission-header-title">{language.t("notification.permission.title")}</div>
-            </div>
-          }
-          footer={null}
-        >
-          <div data-slot="permission-scroll">
-            <div data-slot="permission-scroll-content">
-              <Show when={description()}>
-                {(text) => (
-                  <div data-slot="permission-hint" data-wrap>
-                    {text()}
-                  </div>
-                )}
-              </Show>
-              <Show when={props.request.message}>
-                {(text) => (
-                  <div data-slot="permission-hint" data-wrap>
-                    {text()}
-                  </div>
-                )}
-              </Show>
-              <Show when={command()}>{(text) => <PermissionCommand command={text()} />}</Show>
-              <div data-slot="permission-patterns">
-                <span data-slot="permission-patterns-title">{action()}</span>
-                <For each={props.request.resources}>
-                  {(resource) => <code data-slot="permission-pattern">{resource}</code>}
-                </For>
-              </div>
+    <div data-component="permission-shortcuts">
+      <DockPrompt
+        kind="permission"
+        header={
+          <div data-slot="permission-row" data-variant="header">
+            <span data-slot="permission-icon">
+              <Icon name="warning" size="small" />
+            </span>
+            <div data-slot="permission-header-title">{language.t("notification.permission.title")}</div>
+          </div>
+        }
+        footer={null}
+      >
+        <div data-slot="permission-scroll">
+          <div data-slot="permission-scroll-content">
+            <Show when={description()}>
+              {(text) => (
+                <div data-slot="permission-hint" data-wrap>
+                  {text()}
+                </div>
+              )}
+            </Show>
+            <Show when={props.request.message}>
+              {(text) => (
+                <div data-slot="permission-hint" data-wrap>
+                  {text()}
+                </div>
+              )}
+            </Show>
+            <Show when={command()}>{(text) => <PermissionCommand command={text()} />}</Show>
+            <div data-slot="permission-patterns">
+              <span data-slot="permission-patterns-title">{action()}</span>
+              <For each={props.request.resources}>
+                {(resource) => <code data-slot="permission-pattern">{resource}</code>}
+              </For>
             </div>
           </div>
-          <div data-slot="permission-actions">
-            <Button variant="primary" size="small" onClick={() => submit("once")} disabled={sending()}>
-              {language.t("ui.permission.allowOnce")}
-            </Button>
-            <Button variant="secondary" size="small" onClick={() => submit("always")} disabled={sending()}>
-              {language.t("ui.permission.allowAlways")}
-            </Button>
-            <Button variant="ghost" size="small" onClick={() => submit("reject")} disabled={sending()}>
-              {language.t("ui.permission.reject")}
-            </Button>
-          </div>
-        </DockPrompt>
-      </div>
+        </div>
+        <div data-slot="permission-actions">
+          <Button variant="primary" size="small" onClick={() => submit("once")} disabled={sending()}>
+            {language.t("ui.permission.allowOnce")}
+          </Button>
+          <Button variant="secondary" size="small" onClick={() => submit("always")} disabled={sending()}>
+            {language.t("ui.permission.allowAlways")}
+          </Button>
+          <Button variant="ghost" size="small" onClick={() => submit("reject")} disabled={sending()}>
+            {language.t("ui.permission.reject")}
+          </Button>
+        </div>
+      </DockPrompt>
     </div>
   )
 }

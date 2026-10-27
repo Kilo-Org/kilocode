@@ -4,6 +4,8 @@ import type { Request, ToHost, ToWebview } from "./protocol"
 
 export type Target = { url: string; authorization: string }
 
+const WEB = ["http:", "https:"]
+
 export function bridge(input: {
   target: () => Promise<Target>
   post: (message: ToWebview) => void
@@ -53,7 +55,9 @@ export function bridge(input: {
     receive(message: ToHost) {
       if (message.type === "fetch") return void send(message)
       if (message.type === "abort") return requests.get(message.id)?.abort()
-      if (message.type === "open") input.open?.(message.url)
+      // Tool metadata and external form fields come from the model or a server: open web links only, as main does.
+      if (message.type === "open" && URL.canParse(message.url) && WEB.includes(new URL(message.url).protocol))
+        input.open?.(message.url)
     },
     dispose() {
       requests.forEach((abort) => abort.abort())

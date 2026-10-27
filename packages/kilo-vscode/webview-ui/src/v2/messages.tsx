@@ -18,10 +18,21 @@ export function MessageList(props: {
   const v2 = useV2()
   const language = useLanguage()
   const [older, setOlder] = createSignal(false)
-  const messages = () => (props.session ? (v2.data.session.message.list(props.session) ?? []) : [])
-  const pending = () => (props.session ? (v2.data.session.pending.list(props.session) ?? []) : [])
+  // createData already puts pending user input into the message list. Only queued input waits for the end of the
+  // turn, so it moves below the transcript, as in the TUI (packages/tui/src/routes/session/rows.ts).
+  const queued = () =>
+    props.session
+      ? v2.data.session.pending
+          .list(props.session)
+          .flatMap((item) => (item.type === "user" && item.delivery === "queue" ? [item] : []))
+      : []
+  const messages = () => {
+    const all = props.session ? v2.data.session.message.list(props.session) : []
+    const ids = new Set(queued().map((item) => item.id))
+    return ids.size === 0 ? all : all.filter((message) => !ids.has(message.id))
+  }
   const working = () => !!props.session && v2.data.session.status(props.session) === "running"
-  const empty = () => !props.session || (messages().length === 0 && pending().length === 0)
+  const empty = () => !props.session || (messages().length === 0 && queued().length === 0)
   const autoScroll = createAutoScroll({ working })
 
   const loadOlder = () => {
@@ -79,17 +90,13 @@ export function MessageList(props: {
                       </Switch>
                     )}
                   </For>
-                  <For each={pending()}>
+                  <For each={queued()}>
                     {(item) => (
-                      <Show when={item.type === "user" && item}>
-                        {(user) => (
-                          <div class="message-list-queued" data-queued="true">
-                            <UserMessage
-                              message={{ id: user().id, type: "user", text: user().payload.text, time: user().time }}
-                            />
-                          </div>
-                        )}
-                      </Show>
+                      <div class="message-list-queued" data-queued="true">
+                        <UserMessage
+                          message={{ id: item.id, type: "user", text: item.payload.text, time: item.time }}
+                        />
+                      </div>
                     )}
                   </For>
                 </div>

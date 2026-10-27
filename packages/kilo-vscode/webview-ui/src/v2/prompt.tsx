@@ -1,6 +1,6 @@
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js"
+import { createEffect, createSignal, onCleanup, onMount, Show, type JSX } from "solid-js"
 import { useLanguage } from "../context/language"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
 import { useV2 } from "./client"
@@ -11,6 +11,8 @@ export function PromptInput(props: {
   disabled: boolean
   onSend: (text: string) => Promise<boolean>
   onStop: () => void
+  /** Agent, model and variant controls, before the actions as in main's PromptInput. */
+  selectors?: JSX.Element
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -88,6 +90,7 @@ export function PromptInput(props: {
         </div>
       </div>
       <div class="prompt-input-hint">
+        {props.selectors}
         <div class="prompt-input-hint-actions">
           <div class="prompt-input-hint-pinned">
             <Show

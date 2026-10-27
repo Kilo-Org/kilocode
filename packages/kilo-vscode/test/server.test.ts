@@ -4,7 +4,7 @@ import { KiloHandshakeRpc } from "@opencode/schema/kilocode/handshake"
 import { mkdtemp, mkdir, realpath, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { command, environment, parse, start, stop } from "../src/server"
+import { command, environment, manager, parse, start, stop } from "../src/server"
 
 const extension = path.resolve(import.meta.dir, "..")
 
@@ -55,18 +55,51 @@ describe("command", () => {
 })
 
 test("environment drops v1-only variables and sets the client", () => {
-  const env = environment({ KILO_PARENT_PID: "1", KILO_TELEMETRY_LEVEL: "all", PATH: "/bin" }, { KILO_SERVER_PASSWORD: "x" })
+  const env = environment({ KILO_PARENT_PID: "1", KILO_TELEMETRY_LEVEL: "all", PATH: "/bin" }, { OPENCODE_PASSWORD: "x" })
   expect(env.KILO_PARENT_PID).toBeUndefined()
   expect(env.KILO_TELEMETRY_LEVEL).toBeUndefined()
-  expect(env).toMatchObject({ PATH: "/bin", KILO_CLIENT: "vscode", KILO_SERVER_PASSWORD: "x", NODE_USE_SYSTEM_CA: "1" })
+  expect(env).toMatchObject({ PATH: "/bin", KILO_CLIENT: "vscode", OPENCODE_PASSWORD: "x", NODE_USE_SYSTEM_CA: "1" })
+})
+
+test("environment drops inherited server passwords", () => {
+  const env = environment({ OPENCODE_PASSWORD: "a", OPENCODE_SERVER_PASSWORD: "b", KILO_SERVER_PASSWORD: "c" }, {})
+  expect(env.OPENCODE_PASSWORD).toBeUndefined()
+  expect(env.OPENCODE_SERVER_PASSWORD).toBeUndefined()
+  expect(env.KILO_SERVER_PASSWORD).toBeUndefined()
+})
+
+test("manager keeps a failed start, reports it once and retries after a restart", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-manager-"))
+  const errors: string[] = []
+  const server = manager({
+    command: () => ({ cmd: process.execPath, args: ["-e", "process.exit(3)"], env: {} }),
+    cwd: root,
+    env: process.env,
+    onError: (error) => errors.push(error.message),
+  })
+  const first = server.get()
+  await expect(first).rejects.toThrow("exited during startup")
+  // Requests during the retry interval do not start another server.
+  expect(server.get()).toBe(first)
+  expect(errors).toHaveLength(1)
+  await server.stop()
+  const second = server.get()
+  expect(second).not.toBe(first)
+  await expect(second).rejects.toThrow("exited during startup")
+  expect(errors).toHaveLength(2)
+  await rm(root, { recursive: true, force: true })
 })
 
 test("starts the real v2 server, passes the Kilo handshake and stops when stdin closes", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "kilo-vscode-server-"))
   const found = command({ extension, storage: root, env: {} })
   if (!found) throw new Error("dev entry not found")
-  // A stale INIT_CWD must not move the server out of the workspace.
-  const server = await start({ command: found, cwd: path.join(root, "workspace"), env: { ...process.env, INIT_CWD: root } })
+  // A stale INIT_CWD must not move the server out of the workspace, and an inherited password must not replace ours.
+  const server = await start({
+    command: found,
+    cwd: path.join(root, "workspace"),
+    env: { ...process.env, INIT_CWD: root, OPENCODE_PASSWORD: "inherited" },
+  })
   const api = OpenCode.make({ baseUrl: server.url, headers: { authorization: server.authorization } })
   const info = await api.rpc(KiloHandshakeRpc.Definition).get({}, { location: { directory: path.join(root, "workspace") } })
   expect(info.product).toBe("kilo")

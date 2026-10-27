@@ -1,5 +1,6 @@
 // Builds the extension and opens it in a separate VS Code instance: own user data, own extensions, and a server
-// profile under `.kilo-dev/` (or `--fresh` for a temporary one). Usage: bun run extension [--fresh] [workspace]
+// profile under the state directory (or `--fresh` for a temporary one). Usage: bun run extension [--fresh] [workspace]
+import { createHash } from "node:crypto"
 import { existsSync } from "node:fs"
 import { mkdir, mkdtemp } from "node:fs/promises"
 import { tmpdir } from "node:os"
@@ -9,7 +10,11 @@ const root = path.resolve(import.meta.dir, "..")
 const args = Bun.argv.slice(2)
 const fresh = args.includes("--fresh")
 const workspace = path.resolve(args.find((arg) => !arg.startsWith("--")) ?? process.env.INIT_CWD ?? process.cwd())
-const state = fresh ? await mkdtemp(path.join(tmpdir(), "kilo-vscode-v2-")) : path.join(root, ".kilo-dev")
+// The instance socket lives in the user data directory, and a unix socket path is limited to 103 characters. A deep
+// worktree path would exceed that, so the default state directory is per-repo under the OS temp directory.
+const state = fresh
+  ? await mkdtemp(path.join(tmpdir(), "kilo-vscode-v2-"))
+  : path.join(tmpdir(), `kilo-vscode-v2-${createHash("sha256").update(root).digest("hex").slice(0, 12)}`)
 await mkdir(state, { recursive: true })
 
 const build = Bun.spawn([process.execPath, path.join(root, "script/build.ts")], { stdout: "inherit", stderr: "inherit" })
@@ -22,6 +27,11 @@ const code = [
 ].find((file) => file && existsSync(file)) ?? "code"
 
 console.log(`workspace: ${workspace}\nstate: ${state}`)
+// Strip Electron/VS Code variables so the new instance does not attach to the process that started it, for example a
+// VS Code task or the extension host terminal.
+const env = Object.fromEntries(
+  Object.entries(process.env).filter(([key]) => !key.startsWith("ELECTRON_") && !key.startsWith("VSCODE_")),
+)
 const child = Bun.spawn(
   [
     code,
@@ -32,7 +42,7 @@ const child = Bun.spawn(
     workspace,
   ],
   {
-    env: { ...process.env, KILO_V2_PROFILE: process.env.KILO_V2_PROFILE ?? path.join(state, "profile") },
+    env: { ...env, KILO_V2_PROFILE: process.env.KILO_V2_PROFILE ?? path.join(state, "profile") },
     stdout: "inherit",
     stderr: "inherit",
   },

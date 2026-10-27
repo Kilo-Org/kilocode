@@ -102,6 +102,24 @@ describe("bridge", () => {
     expect(calls).toEqual([])
   })
 
+  test("opens web links only", () => {
+    const opened: string[] = []
+    const host = bridge({
+      target: async () => ({ url: "http://server", authorization: "Basic test" }),
+      post: () => {},
+      open: (url) => opened.push(url),
+    })
+    for (const url of [
+      "https://kilo.ai/a",
+      "http://localhost:3000",
+      "file:///etc/hosts",
+      "command:workbench.action.quit",
+      "x",
+    ])
+      host.receive({ type: "open", url })
+    expect(opened).toEqual(["https://kilo.ai/a", "http://localhost:3000"])
+  })
+
   test("ignores messages for unknown requests", () => {
     const web = transport(() => {})
     const stray: ToWebview = { type: "chunk", id: 99, data: new Uint8Array() }

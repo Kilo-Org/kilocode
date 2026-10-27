@@ -13,6 +13,7 @@ export type Server = { url: string; authorization: string; process: ChildProcess
 const ARGS = ["serve", "--port", "0", "--stdio"]
 const TIMEOUT = 60_000
 const OUTPUT_LIMIT = 4096
+const RETRY = 10_000
 
 /** Variables that only the v1 CLI reads. */
 const V1_ONLY = [
@@ -30,6 +31,12 @@ const V1_ONLY = [
   "KILO_APP_VERSION",
   "KILO_VSCODE_VERSION",
 ]
+
+/**
+ * Inherited server passwords. `OPENCODE_PASSWORD` outranks the generated one, and `serve --stdio` removes only the
+ * two `OPENCODE_*` names before tools start, so an inherited `KILO_SERVER_PASSWORD` would reach every tool.
+ */
+const PASSWORDS = ["OPENCODE_PASSWORD", "OPENCODE_SERVER_PASSWORD", "KILO_SERVER_PASSWORD"]
 
 /**
  * The bundled `bin/kilo2` when it exists. Otherwise, in a repository checkout, the isolated dev entry
@@ -55,7 +62,7 @@ export function command(input: {
 
 export function environment(base: NodeJS.ProcessEnv, extra: Record<string, string>): NodeJS.ProcessEnv {
   return {
-    ...Object.fromEntries(Object.entries(base).filter(([key]) => !V1_ONLY.includes(key))),
+    ...Object.fromEntries(Object.entries(base).filter(([key]) => !V1_ONLY.includes(key) && !PASSWORDS.includes(key))),
     // The server trusts the OS certificate store, as VS Code does by default.
     NODE_USE_SYSTEM_CA: base.NODE_USE_SYSTEM_CA ?? "1",
     KILO_CLIENT: "vscode",
@@ -85,13 +92,14 @@ export function start(input: {
   mkdirSync(input.cwd, { recursive: true })
   const child = launch(input.command.cmd, input.command.args, {
     cwd: input.cwd,
+    // `serve --stdio` removes OPENCODE_PASSWORD from its own environment before it starts tools.
     // dev-isolated.ts runs the CLI in INIT_CWD, which `bun run extension` leaves set to the caller's folder.
-    env: environment(input.env, { ...input.command.env, KILO_SERVER_PASSWORD: password, INIT_CWD: input.cwd }),
+    env: environment(input.env, { ...input.command.env, OPENCODE_PASSWORD: password, INIT_CWD: input.cwd }),
     stdio: ["pipe", "pipe", "pipe"],
     detached: process.platform !== "win32",
   })
   const ready = Promise.withResolvers<Server>()
-  const state = { output: "", errors: [] as string[], done: false }
+  const state = { output: "", errors: [] as string[], done: false, started: false }
   const fail = (message: string) => {
     if (state.done) return
     state.done = true
@@ -108,6 +116,7 @@ export function start(input: {
     const found = parse(state.output)
     if (!found || state.done) return
     state.done = true
+    state.started = true
     clearTimeout(timer)
     ready.resolve({
       url: found,
@@ -123,7 +132,7 @@ export function start(input: {
   })
   child.on("error", (error) => fail(`The Kilo server could not start: ${error.message}`))
   child.on("exit", (code, signal) => {
-    input.onExit?.(child)
+    if (state.started) input.onExit?.(child)
     fail(`The Kilo server exited during startup (${signal ?? `code ${code}`}).`)
   })
   return ready.promise
@@ -143,32 +152,48 @@ export function stop(child: ChildProcess) {
   })
 }
 
-/** One server per extension host, started on first use and again after it exits. */
+/**
+ * One server per extension host, started on first use and again after it exits. A failed start is kept for `retry`
+ * milliseconds, because every webview request and event stream reconnect would start another server. `onError`
+ * reports the first failure after a start or Restart Server.
+ */
 export function manager(input: {
   command: () => Command | undefined
   cwd: string
   env: NodeJS.ProcessEnv
   log?: (text: string) => void
+  onError?: (error: Error) => void
+  retry?: number
 }) {
-  const state: { current?: Promise<Server> } = {}
+  const state: { current?: Promise<Server>; failed: boolean } = { failed: false }
   const boot = () => {
     const found = input.command()
-    if (!found)
-      return Promise.reject(
-        new Error("No Kilo v2 server found. Put a kilo2 binary in bin/ or run the extension from the repository."),
-      )
-    const promise = start({
-      command: found,
-      cwd: input.cwd,
-      env: input.env,
-      log: input.log,
-      onExit: () => {
-        if (state.current === promise) state.current = undefined
+    const promise = found
+      ? start({
+          command: found,
+          cwd: input.cwd,
+          env: input.env,
+          log: input.log,
+          onExit: () => {
+            if (state.current === promise) state.current = undefined
+          },
+        })
+      : Promise.reject(
+          new Error("No Kilo v2 server found. Put a kilo2 binary in bin/ or run the extension from the repository."),
+        )
+    promise.then(
+      () => {
+        state.failed = false
       },
-    })
-    promise.catch(() => {
-      if (state.current === promise) state.current = undefined
-    })
+      (error: Error) => {
+        if (!state.failed) input.onError?.(error)
+        state.failed = true
+        const timer = setTimeout(() => {
+          if (state.current === promise) state.current = undefined
+        }, input.retry ?? RETRY)
+        timer.unref()
+      },
+    )
     return promise
   }
   return {
@@ -179,6 +204,7 @@ export function manager(input: {
     stop() {
       const current = state.current
       state.current = undefined
+      state.failed = false
       return current?.then(
         (server) => stop(server.process),
         () => undefined,
