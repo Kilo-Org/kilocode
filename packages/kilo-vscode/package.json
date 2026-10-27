@@ -1283,6 +1283,19 @@
           "default": true,
           "description": "Show a line on tool calls explaining why they were auto-approved (matched rule, agent default, YOLO mode, etc.)"
         },
+        "kilo-code.new.sessionOpenLocation": {
+          "type": "string",
+          "enum": [
+            "sidebar",
+            "editorTab"
+          ],
+          "enumDescriptions": [
+            "Chat in the sidebar (default).",
+            "The sidebar lists sessions; opening or creating one opens its chat as an editor tab."
+          ],
+          "default": "sidebar",
+          "description": "Where sessions open. With editorTab, the Kilo sidebar works as a session list and each session opens in its own editor tab."
+        },
         "kilo-code.new.chat.shiftTabCyclesVariant": {
           "type": "boolean",
           "default": true,

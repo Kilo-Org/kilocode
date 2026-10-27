@@ -205,7 +205,12 @@ import {
   type ConfigTarget,
 } from "./kilo-provider/config-bindings"
 import { canonicalizePath, projectIdFor, samePath } from "./agent-manager/project/paths"
-import { buildTimelineSettingMessage, validChatSetting, watchChatConfig } from "./kilo-provider/chat-settings"
+import {
+  buildTimelineSettingMessage,
+  currentSessionLocation,
+  validChatSetting,
+  watchChatConfig,
+} from "./kilo-provider/chat-settings"
 import { retention } from "./services/task-cleanup/retention"
 import { failure } from "./services/task-cleanup/failure"
 import { buildThroughputSettingMessage, watchThroughputConfig } from "./kilo-provider/throughput-settings"
@@ -1235,6 +1240,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.initializeConnection()
   }
 
+  /** Sidebar session list requests, forwarded to the host when sessions open as editor tabs. */
+  private sessionTab(message: Record<string, unknown>): boolean {
+    const tabs = this.opts.sessionTabs
+    if (message.type === "newSessionInTab") {
+      tabs?.create()
+      return true
+    }
+    const id = message.sessionID
+    if (message.type === "openSessionInTab" && typeof id === "string") {
+      tabs?.open(id)
+      return true
+    }
+    if (message.type === "openCloudSessionInTab" && typeof id === "string") {
+      tabs?.cloud(id)
+      return true
+    }
+    return false
+  }
+
   private acknowledge(message: Record<string, unknown>): boolean {
     if (message.type !== "acknowledgeSession") return false
     if (typeof message.sessionID === "string" && typeof message.eventID === "string") {
@@ -1272,6 +1296,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.telemetryStateDisposable = watchTelemetryState((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
       if (this.acknowledge(message)) return
+      if (this.sessionTab(message)) return
       const intercepted = await interceptMessage(message, {
         workspaceDir: (sid) => this.getWorkspaceDirectory(sid ?? this.currentSession?.id),
         post: (m) => this.postMessage(m),
@@ -6262,6 +6287,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       topBar: this.opts.hideTopBar !== true && isCursorHost(),
       topBarSurface: this.opts.topBarSurface === "tab" ? "tab_title" : "sidebar_title",
       agentManagerSettings: this.opts.agentManagerSettings !== undefined,
+      sessionLocation: sidebar ? currentSessionLocation() : undefined,
       settings: this.opts.settingsPanel?.(),
       module: this.opts.settingsPanel !== undefined,
       preloads: preloads.map((file) => webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", file))),

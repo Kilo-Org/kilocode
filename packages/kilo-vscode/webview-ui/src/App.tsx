@@ -269,6 +269,10 @@ const AppContent: Component = () => {
   const [settingsSearch, setSettingsSearch] = createSignal(0)
   const [agentManagerProjectId, setAgentManagerProjectId] = createSignal<string | undefined>()
   const [migration, setMigration] = createSignal(false)
+  // Set by the host for the sidebar only. With "editorTab" this webview is a session list
+  // and every chat opens as an editor tab, so it never shows a chat itself.
+  const [location, setLocation] = createSignal((window as { KILO_SESSION_LOCATION?: string }).KILO_SESSION_LOCATION)
+  const list = () => location() === "editorTab"
   const session = useSession()
   const tabs = useLocalTabs()
   const server = useServer()
@@ -284,6 +288,10 @@ const AppContent: Component = () => {
   )
 
   const newTask = () => {
+    if (list()) {
+      vscode.postMessage({ type: "newSessionInTab" })
+      return
+    }
     if (currentView() === "newTask") {
       window.dispatchEvent(new CustomEvent("newTaskRequest"))
       return
@@ -374,8 +382,20 @@ const AppContent: Component = () => {
     if (message.type === "selectKiloModel") setCurrentView("newTask")
   }
 
+  // The host reports setting changes, but only the sidebar (which has a location) follows them.
+  const relocate = (message: { type?: string; location?: string }) => {
+    if (message.type === "sessionLocationLoaded" && location() !== undefined) setLocation(message.location)
+  }
+
+  const openCloud = (id: string) => {
+    if (list()) return vscode.postMessage({ type: "openCloudSessionInTab", sessionID: id })
+    session.selectCloudSession(id)
+    setCurrentView("newTask")
+  }
+
   const open = (message: { type?: string; sessionID?: string }) => {
     if (message.type !== "openSession" || !message.sessionID) return
+    if (list()) return vscode.postMessage({ type: "openSessionInTab", sessionID: message.sessionID })
     console.log("[Kilo New] App: opening local session:", message.sessionID)
     if (tabs) tabs.open(message.sessionID, { scrollToBottom: true })
     if (!tabs) session.selectSession(message.sessionID, { scrollToBottom: true })
@@ -398,10 +418,10 @@ const AppContent: Component = () => {
         setCurrentView(message.view as ViewType)
         vscode.postMessage({ type: "settingsTabChanged", tab: message.tab })
       }
+      relocate(message)
       if (message?.type === "openCloudSession" && message.sessionId) {
         console.log("[Kilo New] App: ☁️ openCloudSession:", message.sessionId)
-        session.selectCloudSession(message.sessionId)
-        setCurrentView("newTask")
+        openCloud(message.sessionId)
       }
       open(message)
       handleKiloModel(message)
@@ -423,6 +443,7 @@ const AppContent: Component = () => {
   })
 
   const handleSelectSession = (id: string) => {
+    if (list()) return vscode.postMessage({ type: "openSessionInTab", sessionID: id })
     if (tabs) tabs.open(id)
     if (!tabs) session.selectSession(id)
     setCurrentView("newTask")
@@ -473,6 +494,13 @@ const AppContent: Component = () => {
               />
             }
           >
+            <Match when={list() && (currentView() === "newTask" || currentView() === "history")}>
+              <HistoryView
+                onSelectSession={handleSelectSession}
+                onNew={newTask}
+                onSelectCloud={(id) => vscode.postMessage({ type: "openCloudSessionInTab", sessionID: id })}
+              />
+            </Match>
             <Match when={currentView() === "newTask"}>
               <ChatView
                 onSelectSession={handleSelectSession}

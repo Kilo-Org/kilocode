@@ -835,6 +835,11 @@ export interface TimelineSettingLoadedMessage {
   visible: boolean
 }
 
+export interface SessionLocationLoadedMessage {
+  type: "sessionLocationLoaded"
+  location: "sidebar" | "editorTab"
+}
+
 export interface AutoCleanupLastResult {
   at: number
   scanned: number
@@ -1897,6 +1902,7 @@ export type ExtensionMessage =
   | NotificationSettingsLoadedMessage
   | OSNotificationTestResultMessage
   | TimelineSettingLoadedMessage
+  | SessionLocationLoadedMessage
   | AutoCleanupStateLoadedMessage
   | ThroughputSettingLoadedMessage
   | AutoApprovalReasonSettingLoadedMessage

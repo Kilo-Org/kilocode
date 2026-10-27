@@ -44,6 +44,8 @@ import { isCursorHost } from "./utils"
 import { sameDirectory } from "./kilo-provider-utils"
 import { mcpAuth } from "./services/mcp-auth"
 import { showAuthUrl } from "./kilo-provider/mcp-oauth"
+import { currentSessionLocation } from "./kilo-provider/chat-settings"
+import { findSessionTab } from "./kilo-provider/session-tabs"
 
 let agentManager: AgentManagerProvider | undefined
 let caffeination: CaffeinationService | undefined
@@ -191,6 +193,13 @@ export async function activate(context: vscode.ExtensionContext) {
       chat = provider
     },
     onHidden: () => focus.lost("sidebar"),
+    // Used by the sidebar session list when kilo-code.new.sessionOpenLocation is "editorTab".
+    // The closures run on user clicks, after showSessionTab and friends below are defined.
+    sessionTabs: {
+      open: (id) => void showSessionTab(id),
+      cloud: (id) => void showCloudSessionTab(id),
+      create: () => void openKiloInNewTab(context, tabPanels, attach),
+    },
   })
   provider.setRemoteService(remoteService)
 
@@ -449,6 +458,7 @@ export async function activate(context: vscode.ExtensionContext) {
     os: showOSNotification,
     show: async (sessionID, directory) => {
       if (await agentManagerProvider.revealSession(sessionID)) return
+      if (currentSessionLocation() === "editorTab") return showSessionTab(sessionID, directory)
       await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
       await provider.openSession(sessionID, directory)
     },
@@ -509,6 +519,20 @@ export async function activate(context: vscode.ExtensionContext) {
     tabProvider.resolveWebviewPanel(panel)
     tabPanels.set(panel, tabProvider)
     return tabProvider
+  }
+
+  // Focus the editor tab already showing a session, or open it in a new one.
+  const showSessionTab = async (id: string, directory?: string) => {
+    const panel = findSessionTab(tabPanels, id)
+    if (panel) return panel.reveal(panel.viewColumn, false)
+    const tab = openKiloInNewTab(context, tabPanels, attach)
+    await tab.openSession(id, directory ?? provider.getSessionDirectories().get(id))
+  }
+
+  const showCloudSessionTab = async (id: string) => {
+    const tab = openKiloInNewTab(context, tabPanels, attach)
+    await tab.waitForReady()
+    tab.postMessage({ type: "openCloudSession", sessionId: id })
   }
 
   // Register serializer so "Open in Tab" restores when VS Code restarts
@@ -651,7 +675,11 @@ export async function activate(context: vscode.ExtensionContext) {
   // Register toolbar button command handlers
   context.subscriptions.push(
     vscode.commands.registerCommand("kilo-code.new.sidebarTitle.plusButtonClicked", () => {
-      track("new_task", "kilo-code.new.plusButtonClicked")
+      // With sessions in editor tabs the sidebar has no chat to reset, so "+" opens a new session tab.
+      track(
+        "new_task",
+        currentSessionLocation() === "editorTab" ? "kilo-code.new.openInTab" : "kilo-code.new.plusButtonClicked",
+      )
     }),
     vscode.commands.registerCommand("kilo-code.new.sidebarTitle.historyButtonClicked", () => {
       track("history", "kilo-code.new.historyButtonClicked")
@@ -763,7 +791,7 @@ export async function activate(context: vscode.ExtensionContext) {
       remoteService.toggle().catch((err) => console.error("[Kilo New] toggleRemote command failed:", err))
     }),
     vscode.commands.registerCommand("kilo-code.new.openInTab", () => {
-      return openKiloInNewTab(context, tabPanels, attach)
+      openKiloInNewTab(context, tabPanels, attach)
     }),
     vscode.commands.registerCommand("kilo-code.new.openBrowser", () => {
       openBrowserTab()
@@ -989,6 +1017,7 @@ function openKiloInNewTab(
     null,
     context.subscriptions,
   )
+  return tabProvider
 }
 
 /**

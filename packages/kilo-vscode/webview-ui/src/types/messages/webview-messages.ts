@@ -111,6 +111,21 @@ export interface ClearSessionRequest {
   type: "clearSession"
 }
 
+/** Sidebar session list asks the host to open a session as an editor tab. */
+export interface OpenSessionInTabRequest {
+  type: "openSessionInTab"
+  sessionID: string
+}
+
+export interface OpenCloudSessionInTabRequest {
+  type: "openCloudSessionInTab"
+  sessionID: string
+}
+
+export interface NewSessionInTabRequest {
+  type: "newSessionInTab"
+}
+
 export interface LoadMessagesRequest {
   type: "loadMessages"
   sessionID: string
@@ -1761,6 +1776,9 @@ export type WebviewMessage =
   | PermissionResponseRequest
   | CreateSessionRequest
   | ClearSessionRequest
+  | OpenSessionInTabRequest
+  | OpenCloudSessionInTabRequest
+  | NewSessionInTabRequest
   | LoadMessagesRequest
   | LoadSessionsRequest
   | RequestSessionModelUsageMessage

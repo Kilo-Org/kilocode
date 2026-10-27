@@ -18,6 +18,10 @@ import type { SessionInfo } from "../../types/messages"
 interface HistoryViewProps {
   onSelectSession: (id: string) => void
   onBack?: () => void
+  /** Shows a New session button. Set by the sidebar when sessions open as editor tabs. */
+  onNew?: () => void
+  /** Replaces the default cloud-session preview, e.g. to open it as an editor tab. */
+  onSelectCloud?: (id: string) => void
   worktreeSessionIds?: Accessor<ReadonlySet<string> | undefined>
   /** Filter the Local tab to these session ids. */
   sessionIds?: Accessor<ReadonlySet<string> | undefined>
@@ -72,6 +76,7 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
   }
 
   function selectCloudSession(id: string) {
+    if (props.onSelectCloud) return props.onSelectCloud(id)
     tabs?.previewCloud(id)
     session.selectCloudSession(id)
     props.onBack?.()
@@ -99,9 +104,16 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
   return (
     <div class="history-view">
       <div class="history-view-header">
-        <Button variant="ghost" size="small" icon="arrow-left" onClick={() => props.onBack?.()}>
-          {language.t("common.goBack")}
-        </Button>
+        <Show when={props.onBack}>
+          <Button variant="ghost" size="small" icon="arrow-left" onClick={() => props.onBack?.()}>
+            {language.t("common.goBack")}
+          </Button>
+        </Show>
+        <Show when={props.onNew}>
+          <Button variant="primary" size="small" icon="plus" onClick={() => props.onNew?.()}>
+            {language.t("command.session.new")}
+          </Button>
+        </Show>
         <div class="history-view-tabs" role="tablist" aria-label={language.t("session.history.sources")}>
           <button
             ref={local}
