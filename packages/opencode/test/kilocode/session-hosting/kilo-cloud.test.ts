@@ -338,7 +338,7 @@ it.effect("marks an ambiguous start as non-retryable without an idempotency key"
   const app = harness()
   const cloud = kiloCloud({
     auth: auth(signedIn()),
-    env: { CLOUD_AGENT_NEXT_BASE_URL: "http://127.0.0.1:1", KILO_WEB_APP_URL: "http://127.0.0.1:1" },
+    env: { CLOUD_AGENT_NEXT_BASE_URL: "http://127.0.0.1:1", KILO_WEB_APP_URL: app.url },
   })
   return Effect.gen(function* () {
     const failure = yield* cloud

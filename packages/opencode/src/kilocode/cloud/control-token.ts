@@ -146,10 +146,16 @@ async function issue(
 }
 
 function errorForStatus(status: number) {
-  if (status === 503 || status >= 500) {
+  if (status === 401 || status === 403) {
+    return new ControlTokenError("unauthorized", "Kilo Cloud denied the control token request")
+  }
+  if (status === 408 || status === 429 || status >= 500) {
     return new ControlTokenError("unavailable", "Kilo Cloud token issuance is temporarily unavailable")
   }
-  return new ControlTokenError("unauthorized", "Kilo Cloud denied the control token request")
+  return new ControlTokenError(
+    "invalid_response",
+    `Kilo control token issuer returned an unexpected HTTP status: ${status}`,
+  )
 }
 
 function cacheKey(request: ControlTokenRequest) {

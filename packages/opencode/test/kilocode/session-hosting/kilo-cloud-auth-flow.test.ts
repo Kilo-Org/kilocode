@@ -34,7 +34,7 @@ function harness() {
   const worker: Recorded[] = []
   let now = 1_000_000
   const state = {
-    issue: "ok" as "ok" | "deny" | "unavailable",
+    issue: "ok" as "ok" | "deny" | "unavailable" | "throttled",
     token: CONTROL,
   }
   const server = Bun.serve({
@@ -54,6 +54,7 @@ function harness() {
         issuer.push(recorded)
         if (state.issue === "deny") return Response.json({ error: "denied" }, { status: 401 })
         if (state.issue === "unavailable") return Response.json({ error: "disabled" }, { status: 503 })
+        if (state.issue === "throttled") return Response.json({ error: "limited" }, { status: 429 })
         return Response.json({ token: state.token, expiresAt: new Date(now + 600_000).toISOString() })
       }
       worker.push(recorded)
@@ -161,7 +162,7 @@ it.effect("reports a denied exchange and never dispatches the Worker", () => {
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 
-it.effect("reports an unavailable issuer without dispatching the Worker", () => {
+it.effect("keeps issuer outages retryable before reads and keyless starts", () => {
   const app = harness()
   const store = authStore()
   const cloud = client(app, store)
@@ -169,7 +170,57 @@ it.effect("reports an unavailable issuer without dispatching the Worker", () => 
   return Effect.gen(function* () {
     const error = yield* cloud.list({}).pipe(Effect.flip)
     expect(error).toMatchObject({ code: "unavailable", retryable: true })
+    const start = yield* cloud
+      .start({
+        repository: { type: "github", repo: "Kilo-Org/kilocode" },
+        prompt: "hello",
+        agent: { mode: "build", model: "test/fake" },
+      })
+      .pipe(Effect.flip)
+    expect(start).toMatchObject({ code: "unavailable", retryable: true })
+    expect(app.issuer).toHaveLength(2)
     expect(app.worker).toHaveLength(0)
+    expect(store.writes).toEqual({ set: 0, remove: 0 })
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("reports issuer throttling as retryable without dispatching the Worker", () => {
+  const app = harness()
+  const store = authStore()
+  const cloud = client(app, store)
+  app.state.issue = "throttled"
+  return Effect.gen(function* () {
+    const error = yield* cloud.list({}).pipe(Effect.flip)
+    expect(error).toMatchObject({ code: "unavailable", retryable: true })
+    expect(app.issuer).toHaveLength(1)
+    expect(app.worker).toHaveLength(0)
+    expect(store.writes).toEqual({ set: 0, remove: 0 })
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("keeps a keyless start retryable when the issuer transport fails", () => {
+  const app = harness()
+  const store = authStore()
+  const cloud = kiloCloud({
+    auth: store.interface,
+    env: { CLOUD_AGENT_NEXT_BASE_URL: app.url, KILO_WEB_APP_URL: "http://127.0.0.1:1" },
+  })
+  return Effect.gen(function* () {
+    const error = yield* cloud
+      .start({
+        repository: { type: "github", repo: "Kilo-Org/kilocode" },
+        prompt: "hello",
+        agent: { mode: "build", model: "test/fake" },
+      })
+      .pipe(Effect.flip)
+    expect(error).toMatchObject({
+      code: "unavailable",
+      message: "Kilo control token could not be issued",
+      retryable: true,
+    })
+    expect(app.issuer).toHaveLength(0)
+    expect(app.worker).toHaveLength(0)
+    expect(store.writes).toEqual({ set: 0, remove: 0 })
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 

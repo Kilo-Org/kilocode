@@ -191,7 +191,7 @@ export function provider(options: Options): Provider {
    * short-lived control token first. The source credential is presented only to
    * the issuer; the Worker sees only the control token.
    */
-  const request = (auth: CloudAuth.Resolved, req: BearerRequest) =>
+  const request = (auth: CloudAuth.Resolved, req: BearerRequest, retryable = true) =>
     Effect.gen(function* () {
       const base = yield* origin
       const issuer = yield* webOrigin
@@ -214,7 +214,13 @@ export function provider(options: Options): Provider {
           }).request(req),
         catch: () => {
           unreachable()
-          return new HostedFailure({ code: "unavailable", message: "Kilo Cloud is unreachable", retryable: true })
+          return new HostedFailure({
+            code: "unavailable",
+            message: retryable
+              ? "Kilo Cloud is unreachable"
+              : "Kilo Cloud start outcome is unknown; retry with the same operation key and message ID",
+            retryable,
+          })
         },
       })
       reachable()
@@ -391,20 +397,15 @@ export function provider(options: Options): Provider {
           new HostedFailure({ code: "invalid_request", message: "Session start request is invalid", retryable: false }),
         )
       }
-      const response = yield* request(auth, {
-        method: "POST",
-        path: "/trpc/start",
-        headers: { ...headers(auth), "content-type": "application/json" },
-        body: JSON.stringify(parsed.data),
-      }).pipe(
-        Effect.mapError((error) => {
-          if (error.code !== "unavailable" || !error.retryable || input.operationKey !== undefined) return error
-          return new HostedFailure({
-            code: "unavailable",
-            message: "Kilo Cloud start outcome is unknown; retry with the same operation key and message ID",
-            retryable: false,
-          })
-        }),
+      const response = yield* request(
+        auth,
+        {
+          method: "POST",
+          path: "/trpc/start",
+          headers: { ...headers(auth), "content-type": "application/json" },
+          body: JSON.stringify(parsed.data),
+        },
+        input.operationKey !== undefined,
       )
       const body = yield* consume(response)
       const envelope = Envelope.safeParse(body)
@@ -623,7 +624,10 @@ export function provider(options: Options): Provider {
       }
       const auth = yield* resolve(input.organizationID)
       const headers: Record<string, string> = {
-        ...buildKiloHeaders(undefined, auth.organizationID ? { kilocodeOrganizationId: auth.organizationID } : undefined),
+        ...buildKiloHeaders(
+          undefined,
+          auth.organizationID ? { kilocodeOrganizationId: auth.organizationID } : undefined,
+        ),
       }
       for (const [key, value] of input.headers.entries()) headers[key] = value
       const query = mapped.query.toString()
@@ -631,9 +635,7 @@ export function provider(options: Options): Provider {
         method: mapped.method,
         path: query.length === 0 ? mapped.remote : `${mapped.remote}?${query}`,
         headers,
-        ...(input.body && input.body.length > 0
-          ? { body: new Blob([new Uint8Array(input.body).buffer]) }
-          : {}),
+        ...(input.body && input.body.length > 0 ? { body: new Blob([new Uint8Array(input.body).buffer]) } : {}),
         // Both native event streams are long-lived; every other call keeps the default bound.
         ...(mapped.remote === "/kilo/event" || mapped.remote === "/kilo/cloud-agent/event" ? { timeoutMs: 0 } : {}),
       })

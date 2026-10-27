@@ -124,8 +124,12 @@ test("normalizes issuer failures without retrying", async () => {
   for (const item of [
     { status: 401, reason: "unauthorized" },
     { status: 403, reason: "unauthorized" },
+    { status: 408, reason: "unavailable" },
+    { status: 429, reason: "unavailable" },
     { status: 503, reason: "unavailable" },
     { status: 500, reason: "unavailable" },
+    { status: 400, reason: "invalid_response" },
+    { status: 404, reason: "invalid_response" },
   ] as const) {
     const app = issuer(() => Response.json({ error: "denied" }, { status: item.status }))
     try {
