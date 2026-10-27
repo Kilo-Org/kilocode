@@ -470,6 +470,39 @@ describe("tool.apply_patch freeform", () => {
       yield* expectReadFailure(path.join(test.directory, "x.txt"))
     }),
   )
+
+  it.instance("rejects a move of a file deleted earlier in the same patch before writing", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const source = path.join(test.directory, "a.txt")
+      yield* writeText(source, "from\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Delete File: a.txt\n*** Update File: a.txt\n*** Move to: b.txt\n@@\n-from\n+moved\n*** End Patch"
+
+      yield* expectFailure(execute({ patchText }, ctx), "source already removed")
+      expect(yield* readText(source)).toBe("from\n")
+      yield* expectReadFailure(path.join(test.directory, "b.txt"))
+    }),
+  )
+
+  it.instance("rejects a second move of the same source before writing", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const source = path.join(test.directory, "a.txt")
+      yield* writeText(source, "from\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Update File: a.txt\n*** Move to: b.txt\n@@\n-from\n+one\n*** Update File: a.txt\n*** Move to: c.txt\n@@\n-from\n+two\n*** End Patch"
+
+      yield* expectFailure(execute({ patchText }, ctx), "source already removed")
+      expect(yield* readText(source)).toBe("from\n")
+      yield* expectReadFailure(path.join(test.directory, "b.txt"))
+      yield* expectReadFailure(path.join(test.directory, "c.txt"))
+    }),
+  )
   // kilocode_change end
 
   it.instance("rejects update when target file is missing", () =>

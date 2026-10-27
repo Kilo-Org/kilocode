@@ -118,6 +118,13 @@ export const ApplyPatchTool = Tool.define(
           continue
         }
         if (change.type !== "move" || !change.movePath) continue
+        // The source was already deleted or moved in this patch. Applying
+        // would write the destination, then fail removing a path that is gone.
+        if (yield* seen(gone, change.filePath)) {
+          return yield* Effect.fail(
+            new Error(`apply_patch verification failed: source already removed: ${change.filePath}`),
+          )
+        }
         const alias = yield* same(change.filePath, change.movePath)
         yield* claim(gone, made, alias ? change.filePath : undefined, change.movePath)
         if (alias) continue
