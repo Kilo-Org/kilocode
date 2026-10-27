@@ -44,7 +44,21 @@ describe("CodeIndexConfigManager", () => {
     expect(cfg.getConfig().openAiCompatibleOptions).toEqual({
       baseUrl: "http://localhost:1234/v1",
       apiKey: undefined,
+      sendDimensions: true,
     })
+  })
+
+  test("keeps the dimensions request parameter disabled when configured", () => {
+    const cfg = new CodeIndexConfigManager(
+      createInput({
+        embedderProvider: "openai-compatible",
+        openAiKey: undefined,
+        openAiCompatibleBaseUrl: "http://localhost:1234/v1",
+        openAiCompatibleSendDimensions: false,
+      }),
+    )
+
+    expect(cfg.getConfig().openAiCompatibleOptions?.sendDimensions).toBe(false)
   })
 
   test("requires a base URL for an OpenAI-compatible endpoint", () => {
@@ -203,6 +217,19 @@ describe("CodeIndexConfigManager", () => {
       const cfg = new CodeIndexConfigManager(input)
 
       expect(cfg.loadConfiguration({ ...input, openAiCompatibleApiKey: "sk-test" }).requiresRestart).toBe(true)
+      expect(cfg.loadConfiguration(input).requiresRestart).toBe(true)
+      expect(cfg.loadConfiguration(input).requiresRestart).toBe(false)
+    })
+
+    test("requires restart when the OpenAI-compatible dimensions request flag changes", () => {
+      const input = createInput({
+        embedderProvider: "openai-compatible",
+        openAiKey: undefined,
+        openAiCompatibleBaseUrl: "http://localhost:1234/v1",
+      })
+      const cfg = new CodeIndexConfigManager(input)
+
+      expect(cfg.loadConfiguration({ ...input, openAiCompatibleSendDimensions: false }).requiresRestart).toBe(true)
       expect(cfg.loadConfiguration(input).requiresRestart).toBe(true)
       expect(cfg.loadConfiguration(input).requiresRestart).toBe(false)
     })
