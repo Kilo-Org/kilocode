@@ -1,7 +1,7 @@
 import path from "path"
 import fs from "fs/promises"
 import { Cause, Effect, Exit, Fiber, Scope } from "effect"
-import { SessionID, PartID } from "@/session/schema"
+import { SessionID, PartID, type MessageID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
 import { Agent } from "@/agent/agent"
@@ -19,6 +19,7 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Permission } from "@/permission"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { Question } from "@/question"
+import { InstanceRef } from "@/effect/instance-ref"
 import { environmentDetails } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
@@ -137,19 +138,20 @@ export namespace KiloSessionPrompt {
     question: Pick<Question.Interface, "ask" | "list" | "reject">
   }): Promise<"continue" | "break"> {
     if (!shouldAskPlanFollowup({ messages: input.messages, abort: input.abort })) return "break"
+    const ctx = Instance.current
+    const run = <A, E>(effect: Effect.Effect<A, E>) =>
+      Effect.runPromise(effect.pipe(Effect.provideService(InstanceRef, ctx)))
     const ask = Instance.bind(PlanFollowup.ask)
     const action = await ask({
       sessionID: input.sessionID,
       messages: input.messages,
       abort: input.abort,
-      // Keep the request in the listener-local Question service so HTTP replies can resolve it.
+      // Keep the listener-local service for replies and the instance ref for directory-routed events.
       question: {
-        ask: Instance.bind((request: Parameters<Question.Interface["ask"]>[0]) =>
-          Effect.runPromise(input.question.ask(request)),
-        ),
-        list: Instance.bind(() => Effect.runPromise(input.question.list())),
+        ask: Instance.bind((request: Parameters<Question.Interface["ask"]>[0]) => run(input.question.ask(request))),
+        list: Instance.bind(() => run(input.question.list())),
         reject: Instance.bind((requestID: Parameters<Question.Interface["reject"]>[0]) =>
-          Effect.runPromise(input.question.reject(requestID)),
+          run(input.question.reject(requestID)),
         ),
       },
     })
@@ -603,7 +605,7 @@ export namespace KiloSessionPrompt {
   }) {
     if (input.attempts < MAX_COMPACTION_ATTEMPTS) return { exhausted: false as const }
     const error = new MessageV2.ContextOverflowError({
-      message: `Compaction exhausted: context still exceeds model limits after ${MAX_COMPACTION_ATTEMPTS} attempts`,
+      message: `Compaction exhausted: context still exceeds model limits after ${MAX_COMPACTION_ATTEMPTS} attempts. Start a new session to continue.`,
     }).toObject()
     input.closeReasons.set(input.sessionID, "error")
     if (input.message) {
@@ -612,6 +614,32 @@ export namespace KiloSessionPrompt {
       input.message.finish ??= "error"
     }
     return { exhausted: true as const, error }
+  }
+
+  /**
+   * Marks summaries of an interrupted compaction as aborted. An unfinished summary
+   * keeps the compaction task pending, so the next prompt would run it again.
+   */
+  export function settleCompaction(input: {
+    sessions: Pick<Session.Interface, "messages" | "updateMessage">
+    sessionID: SessionID
+    parentID: MessageID
+  }) {
+    return Effect.gen(function* () {
+      const msgs = yield* input.sessions.messages({ sessionID: input.sessionID })
+      for (const msg of msgs) {
+        const info = msg.info
+        if (info.role !== "assistant" || info.summary !== true || info.parentID !== input.parentID) continue
+        if (info.finish) continue
+        info.error ??= MessageV2.fromError(new DOMException("Aborted", "AbortError"), {
+          providerID: info.providerID,
+          aborted: true,
+        })
+        info.finish = "error"
+        info.time.completed ??= Date.now()
+        yield* input.sessions.updateMessage(info)
+      }
+    }).pipe(Effect.ignore)
   }
 
   /**

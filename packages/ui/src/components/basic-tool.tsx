@@ -36,6 +36,7 @@ export interface BasicToolProps {
   defer?: boolean
   retainDetails?: boolean // kilocode_change
   hasDetails?: boolean // kilocode_change
+  deferredSize?: { height: number; width: number; font: string } // kilocode_change
   locked?: boolean
   animated?: boolean
   allowPendingToggle?: boolean // kilocode_change
@@ -101,9 +102,19 @@ export function BasicTool(props: BasicToolProps) {
   const [state, setState] = createStore({
     open: props.defaultOpen ?? false,
     ready: !props.defer && (props.defaultOpen ?? false),
+    restored: !!(props.defer && props.deferredSize && (props.open ?? props.defaultOpen)), // kilocode_change
   })
   const open = () => props.open ?? state.open
   const ready = () => state.ready
+  // kilocode_change start - keep a restored open card at its measured height
+  // while its expensive body mounts through the deferred frame queue.
+  const reserve = () => {
+    if (!props.defer || ready() || !open()) return
+    if (props.deferredSize == null || props.deferredSize.height <= 0) return
+    return `${props.deferredSize.height}px`
+  }
+  let content: HTMLDivElement | undefined
+  // kilocode_change end
   const pending = () => props.status === "pending" || props.status === "running"
   // kilocode_change start - read the trigger getter once. A JSX trigger is
   // rebuilt on every read of `props.trigger`, and the copy built only for the
@@ -143,6 +154,17 @@ export function BasicTool(props: BasicToolProps) {
   onCleanup(cancel)
 
   onMount(() => {
+    // kilocode_change start - stale measurements must not shift the restored row
+    if (props.defer && open() && content && props.deferredSize) {
+      if (
+        Math.abs(content.getBoundingClientRect().width - props.deferredSize.width) > 1 ||
+        getComputedStyle(content).font !== props.deferredSize.font
+      ) {
+        setState({ ready: true, restored: false })
+        return
+      }
+    }
+    // kilocode_change end
     if (props.defer && open()) scheduleReady(true)
   })
 
@@ -163,6 +185,7 @@ export function BasicTool(props: BasicToolProps) {
       (value) => {
         if (!props.defer) return
         if (!value) {
+          setState("restored", false) // kilocode_change
           cancel()
           if (!props.retainDetails) setState("ready", false) // kilocode_change
           return
@@ -349,7 +372,12 @@ export function BasicTool(props: BasicToolProps) {
       </Show>
       {/* kilocode_change start */}
       <Show when={!props.animated && (hasChildren() || hasDetails()) && !props.hideDetails}>
-        <Collapsible.Content onAnimationEnd={end}>
+        <Collapsible.Content
+          ref={content}
+          onAnimationEnd={end}
+          data-deferred-height={state.restored ? "" : undefined}
+          style={{ "min-height": reserve() }}
+        >
           <Show when={!props.defer || ready()}>{props.children}</Show>
         </Collapsible.Content>
       </Show>

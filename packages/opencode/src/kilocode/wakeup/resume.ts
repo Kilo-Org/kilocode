@@ -2,6 +2,8 @@ import { Instance, provide } from "@/kilocode/instance"
 import { InstanceRef } from "@/effect/instance-ref"
 import * as Log from "@opencode-ai/core/util/log"
 import type { InstanceContext } from "@/project/instance-context"
+import { GoalLink } from "@/kilocode/session/goal/link"
+import { GoalState } from "@/kilocode/session/goal/state"
 import { Effect, Layer } from "effect"
 import { Fire, type Info } from "./schema"
 
@@ -23,10 +25,58 @@ async function resume(info: Info, inst?: InstanceContext, inPlace = false, kind?
       import("@/session/prompt"),
     ])
     const fn = async () => {
-      await AppRuntime.runPromise(Session.Service.use((svc) => svc.get(info.sessionID)))
+      const session = await AppRuntime.runPromise(Session.Service.use((svc) => svc.get(info.sessionID)))
+      // A waiting goal must resume as a goal turn (D2/D4), not as a stranger
+      // prompt and not as a paused-session refusal. An in-flight goal turn
+      // queues the fire instead of starting a second run (D3), even before
+      // the wait is persisted at the end of that turn.
+      const wait = GoalLink.claim(info.sessionID, info, kind, session.metadata)
+      // Construct SessionPrompt so Goal.make binds the instance factory and
+      // hydrates waiting sessions. Ignore the paused flag for a matching wait.
+      const paused = await AppRuntime.runPromise(SessionPrompt.Service.use((svc) => svc.paused(info.sessionID)))
+      if (wait) {
+        GoalLink.hydrate(info.sessionID, session.metadata)
+        const note = text(info, kind)
+        try {
+          await AppRuntime.runPromise(GoalLink.resumeOrQueue(info.sessionID, note, wait, info.directory))
+        } catch (err) {
+          log.error("wakeup could not resume session", {
+            id: info.id,
+            sessionID: info.sessionID,
+            directory: info.directory,
+            err,
+          })
+          // `hydrate` armed the question-gate hold and the wait record. The goal
+          // is not resuming, so undo both: a paused goal that still reads as held
+          // keeps the question tool filtered out and leaks the wait record.
+          GoalLink.clear(info.sessionID)
+          GoalState.clearWaiting(info.sessionID)
+          GoalState.clearCurb(info.sessionID)
+          const latest = await AppRuntime.runPromise(Session.Service.use((svc) => svc.get(info.sessionID)))
+          const saved = GoalState.read(latest.metadata)
+          if (saved) {
+            await AppRuntime.runPromise(
+              Session.Service.use((svc) =>
+                svc.setMetadata({
+                  sessionID: info.sessionID,
+                  metadata: {
+                    ...latest.metadata,
+                    "kilo.goal": {
+                      text: saved.text,
+                      status: "paused",
+                      active: false,
+                      reason: err instanceof Error ? err.message : String(err),
+                    },
+                  },
+                }),
+              ),
+            )
+          }
+        }
+        return
+      }
       // The prompt path drops a synthetic turn while the session is paused, so
       // the wake would vanish without a trace. Refuse it here and log instead.
-      const paused = await AppRuntime.runPromise(SessionPrompt.Service.use((svc) => svc.paused(info.sessionID)))
       if (paused) {
         log.error("wakeup could not resume session", {
           id: info.id,

@@ -9,6 +9,7 @@ import { IndexingPaths, KiloEmbeddingModel } from "../../../src/kilocode/server/
 import { KiloGatewayPaths } from "../../../src/kilocode/server/httpapi/groups/kilo-gateway"
 import { KilocodePaths } from "../../../src/kilocode/server/httpapi/groups/kilocode"
 import { MemoryPaths } from "../../../src/kilocode/server/httpapi/groups/memory"
+import { SessionHostPaths } from "../../../src/kilocode/server/httpapi/groups/session-host"
 import { NetworkPaths } from "../../../src/kilocode/server/httpapi/groups/network"
 import { TelemetryPaths } from "../../../src/kilocode/server/httpapi/groups/telemetry"
 import { ExperimentalPaths } from "../../../src/server/routes/instance/httpapi/groups/experimental"
@@ -32,7 +33,7 @@ type Parameter = {
   schema?: Schema
 }
 
-type Method = "get" | "post" | "patch" | "put"
+type Method = "get" | "post" | "patch" | "put" | "delete"
 
 type Body = {
   content?: Record<string, { schema?: Schema }>
@@ -58,6 +59,45 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       "ownerSessionID",
       "revision",
     ])
+  })
+
+  test("exposes only the proven hosted session surface with opaque attachment ids", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const routes = [
+      { method: "get" as const, path: SessionHostPaths.provider, id: "sessionHost.providers" },
+      { method: "get" as const, path: SessionHostPaths.session, id: "sessionHost.list" },
+      { method: "post" as const, path: SessionHostPaths.session, id: "sessionHost.start" },
+      { method: "get" as const, path: SessionHostPaths.sessionDetail, id: "sessionHost.get" },
+      { method: "get" as const, path: SessionHostPaths.message, id: "sessionHost.transcript" },
+      { method: "post" as const, path: SessionHostPaths.attach, id: "sessionHost.attach" },
+      { method: "delete" as const, path: SessionHostPaths.attachment, id: "sessionHost.detach" },
+    ]
+
+    for (const route of routes) {
+      const path = route.path.replace(/:([A-Za-z0-9_]+)/g, "{$1}")
+      expect(spec.paths[path]?.[route.method]?.operationId).toBe(route.id)
+    }
+
+    const detach = SessionHostPaths.attachment.replace(":attachmentID", "{attachmentID}")
+    const params = spec.paths[detach]?.delete?.parameters as Parameter[] | undefined
+    expect(params?.find((param) => param.name === "attachmentID")?.schema).toMatchObject({
+      type: "string",
+    })
+
+    // The hosted surface must not grow M2 contracts.
+    const hosted = Object.entries(spec.paths)
+      .filter(([path]) => path.startsWith("/kilocode/session-host"))
+      .flatMap(([, item]) => Object.values(item as Record<string, { operationId?: string }>))
+      .map((operation) => operation.operationId)
+      .sort()
+    expect(hosted).toEqual(routes.map((route) => route.id).sort())
+  })
+
+  test("publishes hosted availability and keeps native turn events off the global stream", () => {
+    const spec = JSON.stringify(OpenApi.fromApi(PublicApi))
+
+    expect(spec).toContain("session.host.availability")
+    expect(spec).toContain("sessionHost.attach")
   })
 
   test("uses Kilo branding", () => {

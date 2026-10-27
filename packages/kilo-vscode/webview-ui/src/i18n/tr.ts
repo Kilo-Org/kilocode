@@ -60,6 +60,7 @@ export const dict = {
   ...anacondaDesktopDict,
   ...cloudProviderDict,
   "task.swarm.title": "Pano",
+  "task.swarm.open": "Panoyu aç",
   "task.swarm.refresh": "Yenile",
   "task.swarm.reset": "Panoyu sıfırla",
   "task.swarm.resetTitle": "Bu pano sıfırlansın mı?",
@@ -96,6 +97,7 @@ export const dict = {
     "Konuşma geri alındı. Bu önceki geri alma için çalışma alanı geri yükleme durumu kullanılamıyor.",
   "revert.banner.workspace.enableSnapshots": "Anlık Görüntüleri Etkinleştir",
   "revert.disabled.agentBusy": "Ajanın bitmesini bekleyin",
+  "revert.error.body": "Depo kullanımda olabilir. Tekrar deneyin veya ayrıntılar için Kilo günlüklerine bakın.",
   "command.session.compact": "Oturumu sıkıştır",
   "command.session.export": "Oturum dökümünü dışa aktar",
 
@@ -198,13 +200,28 @@ export const dict = {
   "prompt.worktrees.title": "Worktree'ler",
   "prompt.worktrees.search": "Worktree'leri ara",
   "prompt.thinking.tooltip": "Akıl yürütme eforu",
+  "prompt.shortcutHint.addSelection": "seçimi eklemek için",
+  "prompt.shortcutHint.waiting": "bekleyen oturumu yanıtlamak için",
+  "prompt.shortcutHint.type": "yazmak için",
+  "prompt.shortcutHint.sessions": "oturum değiştirmek için",
+  "prompt.shortcutHint.stop": "durdurmak için",
+  "prompt.shortcutHint.changes": "değişiklikleri incelemek için",
+  "prompt.shortcutHint.pr": "PR'ı açmak için",
+  "prompt.shortcutHint.mode": "Sonraki mod",
   "prompt.action.send": "Gönder",
   "prompt.action.continue": "Devam et",
   "prompt.action.send.blocked": "Bekleyen soruyu önce yanıtlayın veya kapatın",
   "prompt.action.send.recording": "Yazıya dök ve gönder",
   "prompt.action.stop": "Durdur",
+  "prompt.action.stop.background": "Ana ajanı durdur. Arka plan ajanları çalışmaya devam eder.",
+  "prompt.agents.show": "Arka plan ajanlarını göster",
   "prompt.action.enhance": "Komutu geliştir",
+  "prompt.action.more": "Diğer eylemler",
   "prompt.paste.expand": "Yapıştırılan metni genişletmek için tıklayın",
+  "prompt.issues.title": "Oturum sorunları",
+  "prompt.mcp.provider": "{{name}} MCP",
+  "prompt.mcp.openSettings": "Ayarlarda Aç",
+  "prompt.mcp.signIn.busy": "Oturum açılıyor…",
   "prompt.action.indexing": "İndeksleme ayarları",
   "prompt.action.autoApprove.enable": "Otomatik onayı etkinleştir",
   "prompt.action.autoApprove.disable": "Otomatik onayı devre dışı bırak",
@@ -271,6 +288,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Codex modellerini kullanmaya devam etmek için ChatGPT ile tekrar giriş yapın ve mesajınızı yeniden gönderin.",
 
+  "provider.failure.unauthorized": "Kimlik bilgileri reddedildi (HTTP {{status}}). Tekrar giriş yapın.",
+  "provider.failure.unauthorizedNoStatus": "Kimlik bilgileri reddedildi. Tekrar giriş yapın.",
+  "provider.failure.unauthenticated": "Giriş yapılmadı.",
+  "provider.failure.network": "Sağlayıcıya ulaşılamadı. Bağlantınızı kontrol edin.",
+  "provider.failure.http": "Sağlayıcı hatası (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Sağlayıcı hatası.",
+  "provider.failure.schema": "Sağlayıcıdan beklenmeyen bir yanıt alındı.",
+
   "notification.permission.title": "İzin gerekli",
   "notification.permission.titleSubagent": "İzin gerekli (alt ajan)",
   "notification.permission.titleSkillShell": "“{{skill}}” becerisindeki kabuk komutları çalıştırılsın mı?",
@@ -304,6 +329,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Görev Oku",
   "ui.permission.toolLabel.todoWrite": "Görev Yaz",
   "ui.permission.toolLabel.codeSearch": "Kod Araması",
+  "ui.permission.toolLabel.browserOpen": "Entegre Tarayıcı",
   "ui.permission.copyCommand": "Kopyala",
   "ui.approval.auto": "Otomatik onaylandı",
   "ui.approval.manual": "Sizin tarafınızdan onaylandı",
@@ -458,6 +484,7 @@ export const dict = {
   "provider.custom.models.toggleImages": "Tüm modeller için görüntüyü aç/kapat",
   "provider.custom.models.remove": "Modeli kaldır",
   "provider.custom.models.add": "Model ekle",
+  "provider.custom.models.fetch.button": "Modelleri getir",
   "provider.custom.models.fetch.authError":
     "Kimlik doğrulama başarısız oldu. Yukarıdaki API anahtarını kontrol edin ve tekrar deneyin.",
   "provider.custom.models.fetch.empty": "Bu sunucuda model bulunamadı.",
@@ -488,6 +515,9 @@ export const dict = {
   "provider.custom.error.duplicate": "Tekrar",
   "settings.openLocalConfig": "Yerel Config",
   "settings.openGlobalConfig": "Global Config",
+  "settings.search.placeholder": "Ayarlarda ara",
+  "settings.search.noResults": "Ayar bulunamadı",
+  "settings.search.clear": "Aramayı temizle",
   "settings.config.scope.local": "Yerel",
   "settings.config.scope.global": "Küresel",
   "settings.config.status.loaded": "yüklendi",
@@ -528,6 +558,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Bir URL'den içerik getir",
   "settings.permissions.tool.websearch.description": "Web'de ara",
   "settings.permissions.tool.codesearch.description": "Web'de kod ara",
+  "settings.permissions.tool.browser_open.description": "Sayfayı Entegre Tarayıcıda aç",
   "settings.permissions.tool.external_directory.description": "Proje dizini dışındaki dosyalara eriş",
   "settings.permissions.tool.doom_loop.description": "Aynı girdiyle tekrarlanan araç çağrılarını algıla",
 
@@ -547,6 +578,7 @@ export const dict = {
   "session.tabs.switcher.pending": "Yeni",
   "session.tabs.switcher.busy": "Çalışıyor",
   "session.tabs.switcher.scheduled": "Zamanlandı",
+  "session.tabs.pinHint": "Sabitlemek veya kaldırmak için Shift+tıkla",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.tab.worktree": "Çalışma ağacı",
@@ -725,6 +757,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code bir yapay zeka kodlama asistanıdır. Özellik geliştirmesini, hata düzeltmesini veya kod tabanınızı açıklamasını isteyin.",
+  "session.workspaceScope.description":
+    "Kilo sohbeti yalnızca bu çalışma alanındaki ilk klasör olan “{{folder}}” klasörünü kullanır.",
+  "session.workspaceScope.alternatives":
+    "Başka bir klasörde çalışmak için klasörü ayrı bir pencerede açın veya Agent Manager'a proje olarak ekleyin.",
+  "session.workspaceScope.dismiss": "Çalışma alanı kapsamı ipucunu kapat",
   "session.messages.scrollToBottom": "En alta kaydır",
   "session.messages.initializing": "Başlatılıyor...",
   "session.messages.taskStarting": "Başlıyor...",
@@ -767,10 +804,12 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Sonraki adımları değerlendiriyor...",
 
   "dialog.model.noProviders": "Sağlayıcı yok",
+  "dialog.model.unavailable": "Kilo modelleri kullanılamıyor",
 
   "prompt.placeholder.connecting": "Sunucuya bağlanılıyor...",
   "prompt.placeholder.default":
     "Bir mesaj yazın, dosyaları belirtmek için @ kullanın... (Göndermek için Enter, yeni satır için Shift+Enter)",
+  "prompt.placeholder.hint": "Bir mesaj yazın, dosyaları belirtmek için @ kullanın... ({{key}} {{action}})",
   "prompt.placeholder.error": "Bağlantı başarısız. Çıktı panelini kontrol edin veya uzantıyı yeniden başlatın.",
 
   "context.usage.sessionCost": "Oturum maliyeti",
@@ -829,7 +868,8 @@ export const dict = {
   "settings.browser.description":
     "Playwright ile çalışan yerleşik tarayıcı otomasyonunu yapılandırın. Kilo, oturumlarınızda web sayfalarında gezinebilir, bunlarla etkileşime girebilir ve ekran görüntüsü alabilir.",
   "settings.browser.enable.title": "Tarayıcı Otomasyonunu Etkinleştir",
-  "settings.browser.enable.description": "Playwright MCP sunucusunu CLI arka ucuyla kaydet.",
+  "settings.browser.enable.description":
+    "Yerel uygulamalar ve herkese açık HTTPS sayfaları için oturuma özel Agent Manager tarayıcısını etkinleştir.",
   "settings.browser.systemChrome.title": "Sistem Chrome'unu Kullan",
   "settings.browser.systemChrome.description": "Ayrı bir Chromium örneği yerine yüklü Chrome tarayıcınızı kullanın.",
   "settings.browser.headless.title": "Başsız Mod",
@@ -911,6 +951,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "Yerel Not Defteri Araçları",
   "settings.experimental.nativeNotebookTools.description":
     "VS Code not defterlerini okumak, düzenlemek ve çalıştırmak için deneysel araçları etkinleştir",
+  "settings.experimental.globIncludeIgnored.title": "Yok sayılan yollarda ara",
+  "settings.experimental.globIncludeIgnored.description":
+    ".gitignore veya diğer yok sayma dosyaları hariç tutsa bile glob aracının araması gereken klasörler veya dosyalar. Çalışma alanına göre gitignore tarzı desenler kullanın; bunların içindeki yok sayılan klasörler atlanmaya devam eder.",
   "settings.experimental.continueOnDeny.title": "Reddetme Durumunda Devam Et",
   "settings.experimental.continueOnDeny.description": "Bir izin reddedildiğinde ajan döngüsüne devam et",
   "settings.sandboxing.title": "Sandbox",
@@ -924,15 +967,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Ek Yazılabilir Yollar",
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
-  "settings.experimental.multiProject.title": "Çoklu Proje Agent Manager",
+  "settings.experimental.conversationPromptHistory.title": "Sohbet başına istem geçmişi",
+  "settings.experimental.conversationPromptHistory.description":
+    "İstem geçmişini (ArrowUp/ArrowDown) tüm sohbetlerde tek bir geçmiş paylaşmak yerine her sohbet için ayrı tutun.",
   "settings.experimental.claudeMigration.title": "Claude Code Geçişi",
   "settings.experimental.claudeMigration.description":
     "Desteklenen genel CLAUDE.md talimatlarını, basit becerileri ve devre dışı MCP tanımlarını bir kez içe aktarın. Orijinal Claude dosyaları değiştirilmez; etkinleştirdikten sonra arka ucu yeniden başlatın.",
-  "settings.experimental.multiProject.description":
-    "Agent Manager'da birden fazla depo genelinde oturum ve worktree yönetimini etkinleştirin. Mevcut çalışma alanı deposu her zaman varsayılan projedir.",
-  "settings.experimental.taskModelSelection.title": "Task Alt Aracı Modeli Seçimi",
-  "settings.experimental.taskModelSelection.description":
-    "Task alt aracıları için model, sağlayıcı ve akıl yürütme çabasını açıkça seçmeye izin verin.",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",
@@ -995,6 +1035,8 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.title": "Beceriyi kaldır",
   "settings.agentBehaviour.removeSkill.confirm":
     '"{{name}}" becerisi kaldırılsın mı? Bu, beceri dosyalarını diskten silecek.',
+  "settings.agentBehaviour.removeSkill.bundleConfirm":
+    '"{{name}}" becerisi kaldırılsın mı? Bu, aynı Marketplace yüklemesinden {{mcp}} MCP sunucusunu ve her eşlik eden beceriyi de kaldıracaktır.',
   "settings.agentBehaviour.removeSkill.button": "Kaldır",
   "settings.agentBehaviour.rules.description":
     "Kurallar, ajanın davranışını yönlendiren talimat dosyalarıdır. Her konuşma için sistem komutuna dahil edilirler. Ek kurallar eklemek için aşağıya dosya yolları ekleyin.",
@@ -1011,15 +1053,40 @@ export const dict = {
   "settings.agentBehaviour.removeMcp.title": "MCP sunucusunu kaldır",
   "settings.agentBehaviour.removeMcp.confirm":
     '"{{name}}" MCP sunucusu kaldırılsın mı? Bu, yapılandırmanızdan kaldırılacak.',
+  "settings.agentBehaviour.removeMcp.bundleConfirm":
+    '"{{name}}" MCP sunucusu ve eşlik eden becerileri kaldırılsın mı? Bu, bu Marketplace yüklemesine ait sunucuyu ve her beceriyi kaldırır.',
   "settings.agentBehaviour.removeMcp.button": "Kaldır",
   "settings.agentBehaviour.mcpDetail.command": "Komut",
   "settings.agentBehaviour.mcpDetail.args": "Argümanlar",
   "settings.agentBehaviour.mcpDetail.env": "Ortam",
+  "settings.agentBehaviour.mcpSignIn.cancel": "Oturum açmayı iptal et",
+  "settings.agentBehaviour.mcpRemoving": "Kaldırılıyor…",
+  "settings.agentBehaviour.mcpResetAuth": "Oturumu sıfırla",
+  "settings.agentBehaviour.mcpResetAuth.title": "MCP oturumunu sıfırla",
+  "settings.agentBehaviour.mcpResetAuth.confirm":
+    '"{{name}}" için kaydedilmiş oturum temizlensin mi? Yeniden oturum açmanız gerekecek.',
   "settings.agentBehaviour.editMcp": "MCP Sunucusunu Düzenle",
   "settings.agentBehaviour.editMcp.transportLocal": "Yerel sunucu (stdio taşıma)",
   "settings.agentBehaviour.editMcp.transportRemote": "Uzak sunucu (SSE/HTTP taşıma)",
   "settings.agentBehaviour.editMcp.env": "Ortam Değişkenleri",
   "settings.agentBehaviour.editMcp.env.help": "MCP sunucu sürecine aktarılan değişkenler.",
+  "settings.agentBehaviour.editMcp.oauth": "OAuth",
+  "settings.agentBehaviour.editMcp.oauth.help":
+    "Sunucu önceden kayıtlı bir istemci gerektirmedikçe Otomatik olarak bırakın. İstemci sırrı Kilo yapılandırma dosyanızda saklanır.",
+  "settings.agentBehaviour.editMcp.oauth.mode": "Mod",
+  "settings.agentBehaviour.editMcp.oauth.mode.automatic": "Otomatik",
+  "settings.agentBehaviour.editMcp.oauth.mode.disabled": "Devre dışı",
+  "settings.agentBehaviour.editMcp.oauth.mode.custom": "Özel istemci",
+  "settings.agentBehaviour.editMcp.oauth.clientId": "İstemci kimliği",
+  "settings.agentBehaviour.editMcp.oauth.clientSecret": "İstemci sırrı",
+  "settings.agentBehaviour.editMcp.oauth.scope": "Kapsam",
+  "settings.agentBehaviour.editMcp.oauth.callbackPort": "Geri çağırma bağlantı noktası",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri": "Yönlendirme URI'si",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.help":
+    "Varsayılan değer http://127.0.0.1:19876/mcp/oauth/callback'tir ve geri çağırma bağlantı noktasını geçersiz kılar.",
+  "settings.agentBehaviour.editMcp.oauth.port.invalid": "1 ile 65535 arasında bir bağlantı noktası girin.",
+  "settings.agentBehaviour.editMcp.oauth.secret.invalid": "İstemci sırrı bir istemci kimliği gerektirir.",
+  "settings.agentBehaviour.editMcp.oauth.redirectUri.invalid": "Geçerli bir yönlendirme URI'si girin.",
   "settings.agentBehaviour.addMcp.command": "Komut",
   "settings.agentBehaviour.addMcp.command.placeholder": "e.g. npx",
   "settings.agentBehaviour.addMcp.args": "Argümanlar",
@@ -1075,6 +1142,8 @@ export const dict = {
     "Görev listesini yönet. Dahili görev listesini okuma ve güncellemeye izin verir.",
   "settings.autoApprove.tool.webfetch": "URL getir. Belirli bir URL'den içerik almaya izin verir.",
   "settings.autoApprove.tool.websearch": "Web'de ara. Harici web aramaları yapmaya izin verir.",
+  "settings.autoApprove.tool.browser_open":
+    "Sayfaları Entegre Tarayıcıda aç. Bu, uygulama içi önizlemedir, Playwright tarayıcı otomasyonu değildir.",
   "settings.autoApprove.tool.doom_loop":
     "Tekrarlanan aynı eylemleri önle. Aynı araç çağrısı aynı girdiyle tekrarlandığında tetiklenir.",
 
@@ -1102,6 +1171,9 @@ export const dict = {
   "settings.autoCleanup.runNow": "Temizliği şimdi çalıştır",
   "settings.autoCleanup.runNow.confirm":
     "Süresi dolmuş oturumlar bu bilgisayardaki tüm projelerde ve tüm Kilo istemcilerinde kalıcı olarak silinsin mi?",
+  "settings.autoCleanup.stop": "Temizliği durdur",
+  "settings.autoCleanup.progress.cancelling": "Oturum temizliği durduruluyor...",
+  "settings.autoCleanup.lastRun.cancelled": "kesintiye uğradı",
 
   "settings.context.autoCompaction.title": "Otomatik Sıkıştırma",
   "settings.context.autoCompaction.description": "Bağlam sınıra ulaşmadan önce otomatik olarak sıkıştır",
@@ -1195,6 +1267,9 @@ export const dict = {
   "settings.display.mcpTool.expanded": "Genişletilmiş",
   "settings.display.mcpTool.collapsed": "Daraltılmış",
 
+  "settings.display.shortcutHints.title": "Kısayol ipuçlarını göster",
+  "settings.display.shortcutHints.description":
+    "Boş istemde şu anda yaptığınız işe uyan klavye kısayolunu gösterir, örneğin seçili kodu ekleme veya isteme geri dönme.",
   "settings.display.tokenThroughput.title": "Token İşleme Hızını Göster",
   "settings.display.tokenThroughput.description":
     "En son asistan mesajında ve görev başlığında metin oluşturma hızını (tokens/sec) gösterin. Varsayılan olarak gösterilir; gerektiğinde gizlemek için bu ayarı devre dışı bırakın.",
@@ -1283,16 +1358,16 @@ export const dict = {
 
   "task.todos.progress": "{{total}} görevden {{done}} tanesi tamamlandı",
   "task.todos.allDone": "{{count}} görev tamamlandı",
+  "task.todos.title": "Görevler",
+  "task.todos.done": "Hepsi tamam",
   "task.backgroundAgents.running.one": "1 arka plan ajanı",
   "task.backgroundAgents.running.many": "{{count}} arka plan ajanı",
-  "task.backgroundAgents.more": "+{{count}} tane daha",
   "task.backgroundAgents.open": "Arka plan ajanını aç",
   "task.backgroundAgents.openAll": "Tüm arka plan ajanlarını aç",
   "task.backgroundAgents.cancel": "Durdur",
   "task.backgroundAgents.continueInBackground": "Arka planda devam et",
   "task.backgroundAgents.waiting": "Bir arka plan ajanı girişinizi bekliyor",
   "task.backgroundAgents.needsInput": "Giriş gerekli",
-  "task.backgroundAgents.dismiss": "Kapat",
   "task.backgroundAgents.clearFinished": "Tamamlananları temizle",
   "task.backgroundAgents.summary": "{{total}} arka plan ajanından {{running}} tanesi çalışıyor",
   "task.backgroundAgents.status.running": "Çalışıyor",
@@ -1301,6 +1376,10 @@ export const dict = {
   "task.backgroundAgents.status.error": "Hata",
   "task.backgroundAgents.untitled": "Arka plan ajanı",
   "task.backgroundAgents.stopAll": "Tümünü durdur ({{count}})",
+  "task.backgroundAgents.finished": "Arka plan ajanları tamamlandı",
+  "task.stop": "Alt ajanı durdur",
+  "task.open.panel": "Alt ajanı panelde aç",
+  "task.open.tab": "Alt ajanı sekmede aç",
 
   "settings.saveBar.unsavedChanges": "Kaydedilmemiş değişiklikler",
   "settings.saveBar.discard": "Geri Al",
@@ -1408,5 +1487,13 @@ export const dict = {
   "settings.experimental.browserAutomation.systemChrome.title": "Sistem Chrome'unu Kullan",
   "settings.experimental.browserAutomation.systemChrome.description":
     "Entegre Tarayıcı için yüklü Google Chrome'u kullanın. Yalnızca uyumlu bir Playwright Chromium tarayıcısı zaten yüklüyse devre dışı bırakın.",
+  "settings.experimental.browserLinks.title": "Bağlantıların açılacağı yer",
+  "settings.experimental.browserLinks.description":
+    "Kilo sohbetlerindeki web bağlantılarının nerede açılacağını seçin. Entegre Tarayıcı gerektirir.",
+  "settings.experimental.browserLinks.external": "Sistem tarayıcısı",
+  "settings.experimental.browserLinks.integrated": "Entegre Tarayıcı",
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
+  "browserTab.noSession":
+    "Yerel bir uygulamayı veya genel bir HTTPS sayfasını önizlemek için tarayıcıyı bir oturumdan açın.",
+  "browserTab.disabled": "Tümleşik Tarayıcı devre dışı. Kilo Ayarları > Deneysel'den etkinleştirin.",
 }

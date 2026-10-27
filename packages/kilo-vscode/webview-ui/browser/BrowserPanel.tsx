@@ -1,5 +1,6 @@
 import { For, Show, createMemo, type Accessor, type Component } from "solid-js"
-import { Card } from "@kilocode/kilo-ui/card"
+import { Button } from "@kilocode/kilo-ui/button"
+import { Card, CardActions, CardDescription, CardTitle } from "@kilocode/kilo-ui/card"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -7,6 +8,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { createBrowserController } from "./controller"
+import { StreamViewport } from "./StreamViewport"
 import type { BrowserController } from "./controller"
 import type { BrowserLabels, BrowserPosition, BrowserScope, BrowserState, BrowserTransport } from "./types"
 import type { BrowserReference } from "../../src/shared/browser-feedback"
@@ -27,10 +29,35 @@ const Toolbar: Component<{
   labels: BrowserLabels
   title?: string
   active: boolean
+  openExternal: (url: string) => void
 }> = (props) => {
   const ready = () => !!props.controller.state()?.url && props.controller.state()?.status !== "closed"
+  const external = () => {
+    const url = props.controller.state()?.url
+    if (url) props.openExternal(url)
+  }
   return (
     <div class="am-browser-toolbar">
+      <Tooltip value={props.labels.back} placement="bottom">
+        <IconButton
+          icon="chevron-left"
+          size="small"
+          variant="ghost"
+          aria-label={props.labels.back}
+          onClick={props.controller.back}
+          disabled={!ready() || !props.controller.state()?.back || props.controller.loading()}
+        />
+      </Tooltip>
+      <Tooltip value={props.labels.forward} placement="bottom">
+        <IconButton
+          icon="chevron-right"
+          size="small"
+          variant="ghost"
+          aria-label={props.labels.forward}
+          onClick={props.controller.forward}
+          disabled={!ready() || !props.controller.state()?.forward || props.controller.loading()}
+        />
+      </Tooltip>
       <Tooltip value={props.labels.refresh} placement="bottom">
         <IconButton
           icon="refresh"
@@ -59,8 +86,9 @@ const Toolbar: Component<{
           variant="ghost"
           value={props.controller.url()}
           onChange={props.controller.setUrl}
-          placeholder={props.labels.urlPlaceholder}
+          placeholder={props.active ? props.labels.urlPlaceholder : props.labels.noSession}
           aria-label={props.labels.url}
+          disabled={!props.active}
           spellcheck={false}
           autocomplete="off"
           onFocus={(event: FocusEvent & { currentTarget: HTMLInputElement }) => event.currentTarget.select()}
@@ -76,6 +104,16 @@ const Toolbar: Component<{
           />
         </Tooltip>
       </form>
+      <Tooltip value={props.labels.openExternal} placement="bottom">
+        <IconButton
+          icon="square-arrow-top-right"
+          size="small"
+          variant="ghost"
+          aria-label={props.labels.openExternal}
+          disabled={!ready() || props.controller.loading()}
+          onClick={external}
+        />
+      </Tooltip>
       <Tooltip value={props.labels.inspect} placement="bottom">
         <IconButton
           icon="window-cursor"
@@ -126,6 +164,7 @@ const Picker: Component<{
         class="am-browser-inspect"
         aria-label={props.labels.inspect}
         onMouseMove={(event) => props.controller.move(position(event))}
+        onMouseLeave={props.controller.leave}
         onClick={(event) => props.controller.select(position(event))}
       />
       <Show when={bounds()} keyed>
@@ -151,9 +190,12 @@ const Picker: Component<{
 
 const Viewport: Component<{
   state?: BrowserState
-  session?: string
+  scope: Accessor<BrowserScope | undefined>
+  transport: BrowserTransport
   controller: BrowserController
   labels: BrowserLabels
+  download: () => void
+  settings: () => void
 }> = (props) => {
   const issue = () => props.state?.frameError || props.state?.error
   const page = () =>
@@ -161,10 +203,7 @@ const Viewport: Component<{
     props.state.status !== "closed" &&
     (props.state.status !== "error" || !!props.state.title) &&
     props.state.url
-  const identity = () => {
-    const url = page()
-    return url ? `${props.state?.browserId}:${props.state?.navigation ?? 0}:${url}` : undefined
-  }
+  const identity = () => (page() ? props.state?.browserId : undefined)
   return (
     <div class="am-browser-viewport" aria-live="polite">
       <Show
@@ -172,19 +211,33 @@ const Viewport: Component<{
         keyed
         fallback={
           <Show when={!issue()}>
-            <div class="am-browser-empty">
-              <div>{props.session ? props.labels.empty : props.labels.noSession}</div>
-            </div>
+            <Show
+              when={props.scope()?.sessionId}
+              fallback={
+                <Card variant="warning" class="am-browser-error-overlay" role="alert">
+                  <div class="error-card-body">
+                    <Icon name="warning" size="small" />
+                    <div class="error-card-message">{props.labels.noSession}</div>
+                  </div>
+                </Card>
+              }
+            >
+              <div class="am-browser-empty">
+                <div>{props.labels.empty}</div>
+                <div>{props.labels.requirement}</div>
+              </div>
+            </Show>
           </Show>
         }
       >
         {(_key) => (
-          <iframe
-            class="am-browser-frame"
-            src={props.state?.url}
-            title={props.labels.screenshotAlt}
-            sandbox="allow-scripts allow-forms allow-same-origin"
-            referrerpolicy="no-referrer"
+          <StreamViewport
+            scope={props.scope}
+            state={() => props.state}
+            transport={props.transport}
+            label={props.labels.screenshotAlt}
+            inspecting={() => props.controller.selecting() || props.controller.pointing()}
+            onScroll={props.controller.scroll}
           />
         )}
       </Show>
@@ -193,13 +246,45 @@ const Viewport: Component<{
         controller={props.controller}
         labels={props.labels}
       />
-      <Show when={issue()}>
-        {(message) => (
-          <Card variant="error" class="error-card am-browser-error-overlay" role="alert">
-            <div class="error-card-body">
-              <Icon name="warning" size="small" />
-              <div class="error-card-message">{message()}</div>
-            </div>
+      <Show
+        when={props.state?.missing}
+        fallback={
+          <Show when={issue()}>
+            {(message) => (
+              <Card variant="error" class="error-card am-browser-error-overlay" role="alert">
+                <div class="error-card-body">
+                  <Icon name="warning" size="small" />
+                  <div class="error-card-message">{message()}</div>
+                </div>
+              </Card>
+            )}
+          </Show>
+        }
+      >
+        {(missing) => (
+          <Card variant="warning" class="am-browser-error-overlay" role="alert">
+            <CardTitle variant="warning">{props.labels.missingTitle}</CardTitle>
+            <CardDescription>
+              {missing() === "chrome" ? props.labels.missingChrome : props.labels.missingChromium}
+            </CardDescription>
+            <CardActions class="am-browser-setup-actions">
+              <Show when={missing() === "chrome"}>
+                <Button size="small" onClick={props.download}>
+                  {props.labels.download}
+                </Button>
+              </Show>
+              <Button
+                size="small"
+                variant="secondary"
+                onClick={props.controller.open}
+                disabled={props.controller.loading() || !props.controller.url().trim()}
+              >
+                {props.labels.retry}
+              </Button>
+              <Button size="small" variant="secondary" onClick={props.settings}>
+                {props.labels.settings}
+              </Button>
+            </CardActions>
           </Card>
         )}
       </Show>
@@ -256,6 +341,9 @@ export interface BrowserPanelProps {
   scope: Accessor<BrowserScope | undefined>
   transport: BrowserTransport
   labels: BrowserLabels
+  download: () => void
+  settings: () => void
+  openExternal: (url: string) => void
   onReference: (reference: BrowserReference) => void
   onClose: () => void
   theme?: Accessor<"dark" | "light">
@@ -282,9 +370,18 @@ export const BrowserPanel: Component<BrowserPanelProps> = (props) => {
         labels={props.labels}
         title={state()?.title}
         active={!!props.scope()?.sessionId}
+        openExternal={props.openExternal}
       />
       <div class="am-browser-workspace" classList={{ "am-browser-workspace-docked": !!controller.tools() }}>
-        <Viewport state={state()} session={props.scope()?.sessionId} controller={controller} labels={props.labels} />
+        <Viewport
+          state={state()}
+          scope={props.scope}
+          transport={props.transport}
+          controller={controller}
+          labels={props.labels}
+          download={props.download}
+          settings={props.settings}
+        />
         <Show when={controller.tools()} keyed>
           {(entry) => <Tools url={entry.url} labels={props.labels} />}
         </Show>

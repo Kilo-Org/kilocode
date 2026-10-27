@@ -8,17 +8,17 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.ToolKind
 import ai.kilocode.client.session.ui.SessionCodeScroll
-import ai.kilocode.client.session.ui.fileLinkHtml
-import ai.kilocode.client.session.ui.fileLinkText
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.PartHeader
+import ai.kilocode.client.ui.PlainLabel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.editor.BashCommandHighlighter
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.oneLine
 import ai.kilocode.cli.KiloCliParser
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.actionSystem.DataSink
@@ -37,7 +37,6 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
-import com.intellij.xml.util.XmlStringUtil
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -54,7 +53,6 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.Icon
 import javax.swing.JComponent
-import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 
 private val LOG = KiloLog.create(ToolParts::class.java)
@@ -64,16 +62,15 @@ enum class ToolBodyMode { EDITOR, TEXT }
 class ToolParts(
     val header: PartHeader,
     val glyph: JBLabel,
-    val title: JBLabel,
-    val sub: JBLabel,
+    val title: PlainLabel,
+    val sub: PlainLabel,
     val link: FileLinkLabel,
-    val slot: JPanel,
-    val state: JBLabel,
+    val state: PlainLabel,
     val left: Stack,
     val right: Stack,
     val fill: JComponent,
     val extra: JBLabel? = null,
-    val targets: List<JBLabel> = emptyList(),
+    val targets: List<PlainLabel> = emptyList(),
     private val mode: ToolBodyMode = ToolBodyMode.EDITOR,
 ) {
     val href: String? get() = link.href
@@ -117,13 +114,13 @@ class ToolParts(
 
 class FileLinkLabel(
     private val open: SessionFileOpener? = null,
-) : JBLabel() {
+) : PlainLabel() {
     var href: String? = null
         private set
-    var label: String = ""
-        private set
+    val label: String get() = text.orEmpty()
 
     init {
+        underline = true
         isVisible = false
         isFocusable = false
         foreground = SessionUiStyle.Colors.foreground()
@@ -138,17 +135,15 @@ class FileLinkLabel(
 
     @RequiresEdt
     fun setTarget(path: String?, text: String): Boolean {
-        val next = fileLinkText(text.ifBlank { path.orEmpty() })
-        val value = fileLinkHtml(next)
+        val next = oneLine(text.ifBlank { path.orEmpty() })
         var changed = false
         if (href != path) {
             href = path
             toolTipText = path
             changed = true
         }
-        if (label != next || this.text != value) {
-            label = next
-            this.text = value
+        if (this.text != next) {
+            this.text = next
             changed = true
         }
         return changed
@@ -392,49 +387,52 @@ private class ToolField(value: String, private var style: SessionEditorStyle, pr
     }
 }
 
+/**
+ * Builds a tool card header. [link] puts the file link beside the subtitle in the flexible middle; without
+ * it the subtitle is the middle on its own, and the link label is built but left out of the tree. Every card
+ * carries its header for as long as the transcript lives, and every tab switch walks all of them, so a card
+ * that never shows a file link does not keep a hidden link and its wrapper panel attached.
+ */
 @RequiresEdt
 internal fun toolParts(
     tool: Tool,
     openFile: SessionFileOpener? = null,
     mode: ToolBodyMode = ToolBodyMode.TEXT,
+    link: Boolean = false,
 ): ToolParts {
     val glyph = JBLabel()
-    val title = clip(JBLabel())
-    val sub = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
-    val link = clip(FileLinkLabel(openFile))
-    val slot = Stack.fitHorizontal(SessionUiStyle.View.Header.gap()).apply {
+    val title = clip(PlainLabel())
+    val sub = clip(PlainLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
+    val file = clip(FileLinkLabel(openFile))
+    val fill: JComponent = if (!link) sub else Stack.fitHorizontal(SessionUiStyle.View.Header.gap()).apply {
         minimumSize = Dimension(0, minimumSize.height)
         next(sub)
-        next(link)
+        next(file)
     }
-    val state = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
+    val state = clip(PlainLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val header = PartHeader().apply {
         leading(glyph)
         left(title)
         titleGap()
-        fill(slot)
+        fill(fill)
         right(state)
     }
-    return ToolParts(header, glyph, title, sub, link, slot, state, header.left, header.right, fill = slot, mode = mode)
+    return ToolParts(header, glyph, title, sub, file, state, header.left, header.right, fill = fill, mode = mode)
 }
 
 @RequiresEdt
 internal fun searchParts(count: Int): ToolParts {
     val glyph = JBLabel()
-    val title = clip(JBLabel())
-    val sub = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
+    val title = clip(PlainLabel())
+    val sub = clip(PlainLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val targets = List(count) {
-        clip(JBLabel()).apply {
+        clip(PlainLabel()).apply {
             foreground = SessionUiStyle.Colors.foreground()
         }
     }
+    // Search headers show their targets instead; the subtitle and link exist only to satisfy ToolParts.
     val link = clip(FileLinkLabel())
-    val slot = Stack.fitHorizontal(SessionUiStyle.View.Header.gap()).apply {
-        minimumSize = Dimension(0, minimumSize.height)
-        next(sub)
-        next(link)
-    }
-    val state = clip(JBLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
+    val state = clip(PlainLabel()).apply { foreground = SessionUiStyle.Text.Secondary.foreground() }
     val target = Stack.fitHorizontal(SessionUiStyle.View.Header.gap()).apply {
         minimumSize = Dimension(0, minimumSize.height)
         targets.forEach { next(it) }
@@ -446,7 +444,7 @@ internal fun searchParts(count: Int): ToolParts {
         fill(target)
         right(state)
     }
-    return ToolParts(header, glyph, title, sub, link, slot, state, header.left, header.right, fill = target, targets = targets, mode = ToolBodyMode.EDITOR)
+    return ToolParts(header, glyph, title, sub, link, state, header.left, header.right, fill = target, targets = targets, mode = ToolBodyMode.EDITOR)
 }
 
 internal fun icon(tool: Tool) = when (tool.name) {
@@ -477,17 +475,10 @@ internal fun subtitle(tool: Tool) = when (tool.name) {
     else -> toolSubtitle(tool)
 }
 
+/** Shows [text] on one clipped line. [PlainLabel] keeps it plain text, which re-attaching a tab never re-parses. */
 @RequiresEdt
-internal fun setText(label: JBLabel, text: String): Boolean {
-    val value = html(text)
-    if (label.text == value) return false
-    label.text = value
-    return true
-}
-
-@RequiresEdt
-internal fun setTargetText(label: JBLabel, text: String): Boolean {
-    val value = fileLinkText(text)
+internal fun setText(label: PlainLabel, text: String): Boolean {
+    val value = oneLine(text)
     if (label.text == value) return false
     label.text = value
     return true
@@ -506,12 +497,6 @@ internal fun setFileTarget(parts: ToolParts, path: String?, label: String): Bool
 
 private fun <T : JBLabel> clip(label: T): T = label.apply {
     minimumSize = Dimension(0, minimumSize.height)
-}
-
-private fun html(text: String): String {
-    val value = fileLinkText(text)
-    if (value.isBlank()) return ""
-    return XmlStringUtil.wrapInHtml("<nobr>${XmlStringUtil.escapeString(value)}</nobr>")
 }
 
 @RequiresEdt

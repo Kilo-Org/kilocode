@@ -50,6 +50,8 @@ export interface WorktreeState {
   prState?: string
   /** Section this worktree belongs to, or undefined for ungrouped. */
   sectionId?: string
+  /** Pinned worktrees show at the top of the sidebar, above sections. */
+  pinned?: boolean
 }
 
 export interface SectionState {

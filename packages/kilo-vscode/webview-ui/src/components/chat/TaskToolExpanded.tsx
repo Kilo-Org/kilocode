@@ -224,6 +224,17 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     if (id && child) vscode.postMessage({ type: "promoteBackgroundJob", jobID: child, sessionID: id })
   }
 
+  // Stop only this sub-agent and anything it started. The parent keeps running
+  // and receives the cancelled task result.
+  const stop = (e: MouseEvent) => {
+    e.stopPropagation()
+    const child = childSessionId()
+    if (child) vscode.postMessage({ type: "abort", sessionID: child, scope: "tree" })
+  }
+  const stoppable = () => !props.readonly && !!childSessionId() && avatar() === "running"
+
+  const openLabel = createMemo(() => (worktree ? language.t("task.open.panel") : language.t("task.open.tab")))
+
   const trigger = () => (
     <div data-slot="basic-tool-tool-info-structured" data-component="task-tool-heading">
       <div data-slot="basic-tool-tool-info-main">
@@ -240,6 +251,18 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         </Show>
       </div>
       <Show when={childSessionId()}>
+        <Show when={stoppable()}>
+          <Tooltip value={language.t("task.stop")} placement="top">
+            <IconButton
+              icon="stop"
+              size="small"
+              variant="ghost"
+              data-slot="task-tool-stop"
+              aria-label={language.t("task.stop")}
+              onClick={stop}
+            />
+          </Tooltip>
+        </Show>
         <Show when={features().backgroundSubagents && promotable()}>
           <Tooltip value={language.t("task.backgroundAgents.continueInBackground")} placement="top">
             <IconButton
@@ -251,13 +274,15 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
             />
           </Tooltip>
         </Show>
-        <IconButton
-          icon="square-arrow-top-right"
-          size="small"
-          variant="ghost"
-          aria-label={worktree ? "Open sub-agent in panel" : "Open sub-agent in tab"}
-          onClick={openInTab}
-        />
+        <Tooltip value={openLabel()} placement="top">
+          <IconButton
+            icon="square-arrow-top-right"
+            size="small"
+            variant="ghost"
+            aria-label={openLabel()}
+            onClick={openInTab}
+          />
+        </Tooltip>
       </Show>
     </div>
   )
@@ -271,7 +296,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
             data-slot="task-agent-avatar"
             data-clickable={childSessionId() ? "true" : undefined}
             data-resolve={resolved() ? "true" : undefined}
-            title={childSessionId() ? (worktree ? "Open sub-agent in panel" : "Open sub-agent in tab") : undefined}
+            title={childSessionId() ? openLabel() : undefined}
             onClick={childSessionId() ? openInTab : undefined}
           >
             <AgentAvatar id={childSessionId() ?? ""} status={avatar()} />

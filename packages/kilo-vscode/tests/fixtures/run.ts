@@ -19,7 +19,7 @@ export async function fixture(name: string) {
     conditions: ["browser"],
     external: ["happy-dom"],
     format: "esm",
-    loader: { ".css": "empty" },
+    loader: { ".css": "empty", ".svg": "dataurl" },
     logLevel: "silent",
     platform: "node",
     target: "es2022",

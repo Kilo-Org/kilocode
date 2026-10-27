@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.RetentionPatchDto
 import ai.kilocode.rpc.dto.SessionActivityKindDto
 import ai.kilocode.rpc.dto.WatcherPatchDto
 import kotlinx.coroutines.CompletableDeferred
@@ -328,6 +329,59 @@ class KiloBackendAppServiceTest {
         val cfg = appStateDto(state).config
         assertEquals(true, cfg?.shared_agent_board)
         assertEquals(true, svc.config?.shared_agent_board)
+    }
+
+    @Test
+    fun `update config patches snapshot and reloads`() = runBlocking {
+        val svc = create()
+        svc.connect()
+        ready(svc)
+
+        val state = svc.updateConfig(ConfigPatchDto(snapshot = false))
+
+        assertEquals("{\"snapshot\":false}", mock.lastConfigPatchBody)
+        val cfg = appStateDto(state).config
+        assertEquals(false, cfg?.snapshot)
+        assertEquals(false, svc.config?.snapshot)
+    }
+
+    @Test
+    fun `update config patches retention and reloads`() = runBlocking {
+        val svc = create()
+        svc.connect()
+        ready(svc)
+
+        val state = svc.updateConfig(ConfigPatchDto(
+            retention = RetentionPatchDto(enabled = true, maxAgeDays = 30),
+        ))
+
+        assertEquals("{\"retention\":{\"enabled\":true,\"maxAgeDays\":30}}", mock.lastConfigPatchBody)
+        val retention = appStateDto(state).config?.retention
+        assertEquals(true, retention?.enabled)
+        assertEquals(30, retention?.maxAgeDays)
+    }
+
+    @Test
+    fun `retention status and forced run map generated responses`() = runBlocking {
+        mock.retentionStatus = """
+            {"policy":{"enabled":true,"maxAgeDays":45},"last":{"at":1000,"scanned":8,"deleted":3,"skippedActive":2,"failed":1,"durationMs":250},"progress":{"phase":"scanning","total":4,"processed":1,"deleted":0,"failed":0,"skippedActive":2}}
+        """.trimIndent()
+        mock.retentionRun = """
+            {"policy":{"enabled":true,"maxAgeDays":45},"last":{"at":2000,"scanned":8,"deleted":4,"skippedActive":2,"failed":0,"durationMs":300},"progress":null}
+        """.trimIndent()
+        val svc = create()
+        svc.connect()
+        ready(svc)
+
+        val status = svc.retention.status()
+        val run = svc.retention.run(true)
+
+        assertEquals(45, status.policy.maxAgeDays)
+        assertEquals("scanning", status.progress?.phase)
+        assertEquals(2, status.progress?.skippedActive)
+        assertEquals(4, run.last?.deleted)
+        assertEquals(300, run.last?.durationMs)
+        assertEquals("{\"force\":true}", mock.lastRetentionRunBody)
     }
 
     @Test

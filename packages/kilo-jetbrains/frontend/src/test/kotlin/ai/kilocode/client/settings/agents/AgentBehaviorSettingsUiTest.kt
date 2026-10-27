@@ -101,7 +101,7 @@ class AgentBehaviorSettingsUiTest : BasePlatformTestCase() {
 
         edt {
             val labels = components(requireNotNull(ui)).filterIsInstance<ActionLink>().map { it.text }
-            assertEquals(listOf("Agents", "MCP Servers", "Skills", "Workflows", "Rules"), labels)
+            assertEquals(listOf("Agents", "MCP Servers", "Skills", "Commands", "Rules"), labels)
         }
     }
 

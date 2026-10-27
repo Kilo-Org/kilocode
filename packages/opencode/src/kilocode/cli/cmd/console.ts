@@ -17,8 +17,8 @@ function withCredentials(base: string, state: Daemon.State) {
 }
 
 async function launch(url: string) {
-  const { default: open } = await import("open")
-  const child = await open(url)
+  const { openUrl } = await import("@opencode-ai/core/open")
+  const child = await openUrl(url)
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(resolve, 500)
     child.once("error", (err) => {

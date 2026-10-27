@@ -1,13 +1,19 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolApproval
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
+import ai.kilocode.client.session.settings.BlockDisplay
+import ai.kilocode.client.session.settings.ReasoningDisplay
+import ai.kilocode.client.session.settings.TranscriptDisplay
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.tool.FileLinkLabel
 import ai.kilocode.client.session.views.tool.ToolView
+import ai.kilocode.client.ui.PlainLabel
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.editor.EditorFactory
@@ -31,9 +37,72 @@ class ToolViewTest : BasePlatformTestCase() {
         try {
             views.forEach(Disposer::dispose)
             views.clear()
+            KiloPluginSettings.unsetMcpToolDisplay()
         } finally {
             super.tearDown()
         }
+    }
+
+    fun `test expanded display opens generic tool when output is available`() {
+        val tool = tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" }
+        val view = track(ToolView(tool, display = BlockDisplay.EXPANDED))
+
+        assertTrue(view.isExpanded())
+        assertTrue(view.bodyCreated())
+    }
+
+    fun `test expanded display waits for output then opens once expandable`() {
+        val view = track(ToolView(
+            tool("p1", "custom_tool", ToolExecState.RUNNING),
+            display = BlockDisplay.EXPANDED,
+        ))
+
+        assertFalse(view.isExpanded())
+
+        view.update(tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" })
+
+        assertTrue(view.isExpanded())
+    }
+
+    fun `test manual generic tool collapse is not undone by later updates`() {
+        val initial = tool("p1", "custom_tool", ToolExecState.RUNNING).also { it.output = "first" }
+        val view = track(ToolView(initial, display = BlockDisplay.EXPANDED))
+
+        view.toggle()
+        view.update(tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "second" })
+
+        assertFalse(view.isExpanded())
+    }
+
+    fun `test live setting expands untouched generic tool`() {
+        val item = tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" }
+        val view = track(ToolView(item, display = BlockDisplay.COLLAPSED))
+
+        assertTrue(view.syncTranscriptDisplay(toolDisplay(BlockDisplay.EXPANDED)))
+
+        assertTrue(view.isExpanded())
+    }
+
+    fun `test force expands a generic tool the user manually collapsed`() {
+        val item = tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" }
+        val view = track(ToolView(item, display = BlockDisplay.EXPANDED))
+        view.toggle()
+        assertFalse("manual collapse must stick", view.isExpanded())
+
+        assertTrue(view.syncTranscriptDisplay(toolDisplay(BlockDisplay.EXPANDED), force = true))
+
+        assertTrue("force must expand past a manual collapse", view.isExpanded())
+    }
+
+    fun `test force collapses a generic tool the user manually expanded`() {
+        val item = tool("p1", "custom_tool", ToolExecState.COMPLETED).also { it.output = "done" }
+        val view = track(ToolView(item, display = BlockDisplay.COLLAPSED))
+        view.toggle()
+        assertTrue("manual expand must stick", view.isExpanded())
+
+        assertTrue(view.syncTranscriptDisplay(toolDisplay(BlockDisplay.COLLAPSED), force = true))
+
+        assertFalse("force must collapse past a manual expand", view.isExpanded())
     }
 
     // ---- state icons ------
@@ -98,6 +167,19 @@ class ToolViewTest : BasePlatformTestCase() {
         view.toggle()
         assertTrue(view.bodyVisible())
         assertTrue(view.bodyCreated())
+    }
+
+    fun `test header without a file link keeps no link label or wrapper in the tree`() {
+        val view = track(ToolView(tool("p1", "bash", ToolExecState.COMPLETED).also {
+            it.input = mapOf("command" to "pwd", "description" to "Print dir")
+        }))
+
+        val header = header(view)
+
+        // The subtitle is the flexible middle directly, not a stack that also carries a hidden link.
+        val middle = (header.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as PlainLabel
+        assertEquals("Print dir", middle.text)
+        assertTrue(descendants(view).none { it is FileLinkLabel })
     }
 
     fun `test bash tool editor highlights command text`() {
@@ -459,6 +541,8 @@ class ToolViewTest : BasePlatformTestCase() {
         return view
     }
 
+    private fun toolDisplay(mcpTool: BlockDisplay) = TranscriptDisplay(reasoning = ReasoningDisplay.EXPANDED, mcpTool = mcpTool)
+
     private fun assertEditorFont(font: java.awt.Font, style: SessionEditorStyle) {
         assertEquals(style.transcriptFont.name, font.name)
         assertEquals(style.editorSize, font.size)
@@ -474,10 +558,15 @@ class ToolViewTest : BasePlatformTestCase() {
         assertTrue(font.size < style.editorSize)
     }
 
-    private fun headerGap(view: ToolView): Int {
+    private fun headerGap(view: ToolView): Int = (header(view).layout as BorderLayout).hgap
+
+    private fun header(view: ToolView): JPanel {
         val row = view.components.filterIsInstance<JPanel>().single()
-        val header = (row.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as JPanel
-        return (header.layout as BorderLayout).hgap
+        return (row.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as JPanel
+    }
+
+    private fun descendants(root: Container): List<java.awt.Component> = root.components.flatMap { child ->
+        listOf(child) + ((child as? Container)?.let(::descendants) ?: emptyList())
     }
 
     private fun texts(root: Container): List<String> = root.components.flatMap { child ->

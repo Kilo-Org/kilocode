@@ -1,6 +1,12 @@
 name: "Setup Bun"
 description: "Setup Bun with caching and install dependencies"
 inputs:
+  # kilocode_change start - allow lightweight jobs to install only the pinned runtime
+  install:
+    description: "Install and cache repository dependencies"
+    required: false
+    default: "true"
+  # kilocode_change end
   install-flags:
     description: "Additional flags to pass to 'bun install'"
     required: false
@@ -15,27 +21,14 @@ runs:
       with:
         node-version: "24"
 
-    - name: Get baseline download URL
-      id: bun-url
-      shell: bash
-      run: |
-        if [ "$RUNNER_ARCH" = "X64" ]; then
-          V=$(node -p "require('./package.json').packageManager.split('@')[1]")
-          case "$RUNNER_OS" in
-            macOS)   OS=darwin ;;
-            Linux)   OS=linux ;;
-            Windows) OS=windows ;;
-          esac
-          echo "url=https://github.com/oven-sh/bun/releases/download/bun-v${V}/bun-${OS}-x64-baseline.zip" >> "$GITHUB_OUTPUT"
-        fi
-
+    # kilocode_change start - use the checksum-pinned TLS fix, including baseline hosts
     - name: Setup Bun
-      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-      with:
-        bun-version-file: ${{ !steps.bun-url.outputs.url && 'package.json' || '' }}
-        bun-download-url: ${{ steps.bun-url.outputs.url }}
+      run: node script/kilocode/bun.ts --install
+      shell: bash
+    # kilocode_change end
 
     - name: Get cache directory
+      if: inputs.install != 'false' # kilocode_change
       id: cache
       shell: bash
       run: echo "dir=$(bun pm cache)" >> "$GITHUB_OUTPUT"
@@ -43,7 +36,7 @@ runs:
     # Restoring the ~1 GB cache buys nothing on Windows even with Defender exclusions # kilocode_change
     # (measured 83-102s Setup Bun with cache vs ~86s fresh install); keep Windows off it. # kilocode_change
     - name: Restore Bun dependencies
-      if: runner.os != 'Windows' # kilocode_change
+      if: inputs.install != 'false' && runner.os != 'Windows' # kilocode_change
       id: bun-cache
       uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
@@ -54,7 +47,7 @@ runs:
 
     # kilocode_change start
     - name: Configure node-gyp Node headers
-      if: runner.os != 'Windows'
+      if: inputs.install != 'false' && runner.os != 'Windows'
       id: node-gyp
       run: |
         node <<'NODE'
@@ -74,10 +67,12 @@ runs:
     # kilocode_change end
 
     - name: Install setuptools for distutils compatibility
+      if: inputs.install != 'false' # kilocode_change
       run: python3 -m pip install setuptools || pip install setuptools || true
       shell: bash
 
     - name: Install dependencies
+      if: inputs.install != 'false' # kilocode_change
       run: |
         # kilocode_change start
         if [ "$RUNNER_OS" != "Windows" ]; then
@@ -104,7 +99,7 @@ runs:
 
     # Do not upload a Windows cache that Windows jobs intentionally never restore. # kilocode_change
     - name: Save Bun dependencies
-      if: runner.os != 'Windows' && steps.bun-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' # kilocode_change
+      if: inputs.install != 'false' && runner.os != 'Windows' && steps.bun-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' # kilocode_change
       uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: ${{ steps.cache.outputs.dir }}

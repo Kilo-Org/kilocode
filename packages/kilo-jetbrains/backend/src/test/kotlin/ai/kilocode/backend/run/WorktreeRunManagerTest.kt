@@ -1,6 +1,7 @@
 package ai.kilocode.backend.run
 
 import ai.kilocode.backend.testing.PlainApplicationConfig
+import ai.kilocode.backend.testing.ConfigTypes
 import ai.kilocode.backend.testing.PlainApplicationType
 import ai.kilocode.backend.testing.StubbornJvm
 import ai.kilocode.rpc.dto.RunProcessState
@@ -70,8 +71,11 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
     private val launched = mutableListOf<RunnerAndConfigurationSettings>()
     private val added = mutableListOf<RunnerAndConfigurationSettings>()
 
+    private lateinit var types: ConfigTypes
+
     override fun setUp() {
         super.setUp()
+        types = ConfigTypes(testRootDisposable).also { it.mask() }
         cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         launched.clear()
     }
@@ -633,6 +637,47 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         }
     }
 
+    fun testOverlappingStopsAssignAppCleanupToLastRun() = runBlocking {
+        val type = register(paramsType("kilo.test.params.overlap"))
+        val first = add(type, "first")
+        val second = add(type, "second")
+        val mgr = manager()
+        val wt = Files.createTempDirectory("kilo-overlap-wt").toString()
+        assertTrue(mgr.run(first.uniqueID, wt).ok)
+        assertTrue(mgr.run(second.uniqueID, wt).ok)
+
+        val app = StubbornJvm.stubborn(wt)
+        try {
+            val handlers = launched.map { start(it, StubbornHandler()) }
+            assertTrue(mgr.stop(first.uniqueID, wt))
+            assertTrue(mgr.stop(second.uniqueID, wt))
+
+            // Finish the later Stop's handler first: its arm must wait for the older stopped sibling,
+            // whose arm yields ownership, then perform the sole worktree-wide orphan scan.
+            val sibling = handlers.getOrNull(0) ?: error("missing first handler")
+            val owner = handlers.getOrNull(1) ?: error("missing second handler")
+            owner.finish()
+            await("cleanup owner stopped") { owner.isProcessTerminated }
+            assertFalse(sibling.isProcessTerminated)
+            assertTrue(app.isAlive)
+            sibling.finish()
+            await("overlapping handlers stopped") { handlers.all { it.isProcessTerminated } }
+            await("single orphan owner", REAP_WAIT_NANOS, { mgr.states.value }) {
+                mgr.states.value.singleOrNull()?.orphan == true
+            }
+            assertEquals(second.uniqueID, mgr.states.value.single().id)
+            assertTrue(app.isAlive)
+
+            assertTrue(mgr.stop(second.uniqueID, wt))
+            await("overlapping app killed", REAP_WAIT_NANOS) { !app.isAlive }
+            await("overlapping orphan cleared", REAP_WAIT_NANOS, { mgr.states.value }) {
+                mgr.states.value.isEmpty()
+            }
+        } finally {
+            app.destroyForcibly()
+        }
+    }
+
     /**
      * Editing the source configuration replaces the cached clone. The replaced run's application must
      * still be reaped even though the replacement immediately occupies the very same key: waiting for
@@ -801,8 +846,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
     private fun start(clone: RunnerAndConfigurationSettings) = start(clone, NopProcessHandler())
 
     private fun <T : ConfigurationType> register(type: T): T {
-        ConfigurationType.CONFIGURATION_TYPE_EP.point.registerExtension(type, testRootDisposable)
-        return type
+        return types.add(type)
     }
 
     /** Marks the test module as imported by Gradle, which is what makes a config delegable. */
@@ -1076,5 +1120,7 @@ class WorktreeRunManagerTest : BasePlatformTestCase() {
         override fun killProcess() {
             killed = true
         }
+
+        fun finish() = notifyProcessTerminated(0)
     }
 }

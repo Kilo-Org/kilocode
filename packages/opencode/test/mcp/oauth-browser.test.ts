@@ -3,7 +3,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
 import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
-import { Deferred, Effect, Layer, Option } from "effect"
+import { Deferred, Effect, Fiber, Layer, Option } from "effect" // kilocode_change - Fiber drives external auth tests
 import { Config } from "../../src/config/config"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { McpAuth } from "../../src/mcp/auth"
@@ -146,6 +146,20 @@ const trackBrowserOpenFailed = Effect.gen(function* () {
   return event
 })
 
+// kilocode_change start - observe the URL that an external client must open
+const trackAuthUrl = Effect.gen(function* () {
+  const events = yield* EventV2Bridge.Service
+  const event = yield* Deferred.make<{ mcpName: string; url: string }>()
+  const unsubscribe = yield* events.listen((evt) => {
+    if (evt.type === MCP.AuthUrl.type)
+      Deferred.doneUnsafe(event, Effect.succeed(evt.data as { mcpName: string; url: string }))
+    return Effect.void
+  })
+  yield* Effect.addFinalizer(() => unsubscribe)
+  return event
+})
+// kilocode_change end
+
 const addServer = Effect.fnUntraced(function* (name: string, url: string, headers?: Record<string, string>) {
   const mcp = yield* MCP.Service
   const result = yield* mcp.add(name, { type: "remote", url, headers })
@@ -223,3 +237,53 @@ mcpTest.instance("browser launch receives the discovered authorization URL", () 
     ).toBe(true)
   }),
 )
+
+// kilocode_change start - client-driven browser and non-destructive cancellation
+mcpTest.instance("external authentication publishes the URL and skips the server browser", () =>
+  Effect.gen(function* () {
+    yield* withCallbackStop
+    const server = yield* serveOAuthMcp
+    const opened = yield* trackBrowserOpen(server.url)
+    const event = yield* trackAuthUrl
+    const mcp = yield* addServer("test-oauth-external", server.url)
+
+    const fiber = yield* mcp.authenticate("test-oauth-external", undefined, { external: true }).pipe(Effect.forkScoped)
+    const auth = yield* awaitWithTimeout(Deferred.await(event), "Timed out waiting for AuthUrl event", "5 seconds")
+    yield* Effect.tryPromise({
+      try: () => fetch(auth.url).then((response) => response.body?.cancel()),
+      catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+    })
+    const status = yield* awaitWithTimeout(Fiber.join(fiber), "Timed out completing external OAuth", "5 seconds")
+    const browser = yield* Deferred.await(opened).pipe(Effect.timeoutOption("700 millis"))
+
+    expect(auth.mcpName).toBe("test-oauth-external")
+    expect(status).toEqual({ status: "connected" })
+    expect(browser).toEqual(Option.none())
+  }),
+)
+
+mcpTest.instance("cancelling external authentication preserves stored credentials", () =>
+  Effect.gen(function* () {
+    yield* withCallbackStop
+    const server = yield* serveOAuthMcp
+    const event = yield* trackAuthUrl
+    const mcp = yield* addServer("test-oauth-cancel", server.url)
+    const auth = yield* McpAuth.Service
+
+    const fiber = yield* mcp.authenticate("test-oauth-cancel", undefined, { external: true }).pipe(Effect.forkScoped)
+    yield* awaitWithTimeout(Deferred.await(event), "Timed out waiting for AuthUrl event", "5 seconds")
+    yield* auth.set(
+      "test-oauth-cancel",
+      { tokens: { accessToken: "existing-token", refreshToken: "existing-refresh" } },
+      server.url,
+    )
+    yield* mcp.cancelAuth("test-oauth-cancel")
+
+    const status = yield* awaitWithTimeout(Fiber.join(fiber), "Timed out cancelling external OAuth", "5 seconds")
+    const stored = yield* auth.getForUrl("test-oauth-cancel", server.url)
+
+    expect(status).toEqual({ status: "failed", error: "Browser authorization failed: Authorization cancelled" })
+    expect(stored?.tokens).toEqual({ accessToken: "existing-token", refreshToken: "existing-refresh" })
+  }),
+)
+// kilocode_change end

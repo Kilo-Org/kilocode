@@ -23,9 +23,12 @@ const RATIO = 0.6
 const CONCURRENCY = 3
 const DEPTH = 3
 const OUTPUT = 2_048
+// Chunk budget when the model has no configured context window.
+const UNKNOWN = 50_000
 
 export namespace KiloCompactionChunks {
-  export const EMPTY_SUMMARY = "Compaction did not run: the model returned an empty summary. Retry with /compact."
+  export const EMPTY_SUMMARY =
+    "Compaction did not run: the model returned an empty summary. Retry with /compact. If it keeps failing, start a new session to continue."
 
   type Chunk = {
     index: number
@@ -68,6 +71,8 @@ export namespace KiloCompactionChunks {
   }
 
   export function needed(input: { cfg: Config.Info; model: Provider.Model; tokens: number; outputTokenMax?: number }) {
+    // Unknown window: try one summary call and let a provider overflow decide.
+    if (!input.model.limit.context) return false
     const mdl = model(input.model, input.outputTokenMax)
     // Apply 1.3x multiplier to token estimate to compensate for Token.estimate
     // under-counting actual provider tokenizer counts by ~15-30%.
@@ -108,6 +113,8 @@ export namespace KiloCompactionChunks {
   }
 
   export function budget(input: { cfg: Config.Info; model: Provider.Model; outputTokenMax?: number }) {
+    // Unknown window: usable() is 0, which would put each message in its own chunk.
+    if (!input.model.limit.context) return UNKNOWN
     const mdl = model(input.model, input.outputTokenMax)
     return Math.max(
       1_000,
