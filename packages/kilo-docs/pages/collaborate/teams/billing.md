@@ -89,33 +89,33 @@ Ensure your team has uninterrupted access to Kilo Code by enabling [Automatic To
 ### How It Works
 
 - **Initial Verification** — To verify your payment method, a one-time charge for your selected top-up amount will be processed immediately upon enabling this feature.
-- **Automatic Thresholds** — Once enabled, Kilo Code will automatically recharge your balance whenever it falls below $50.00.
+- **Automatic Thresholds** — Once enabled, Kilo Code automatically recharges your balance whenever it falls below your trigger balance. Choose **$50** (the default), **$100**, or **$500**.
 
 {% callout type="warning" title="Payment Failure" %}
 If a payment fails, we will notify you via email and automatically pause auto-top-ups to prevent repeated billing attempts. You can resume this feature at any time from your settings.
 {% /callout %}
 
 - **Flexibility** — You can disable automatic top-ups at any time.
-- **No Expiration** — Any credits you purchase will never expire; they remain available in your account until used.
 
 ### Configuring Automatic Top-Up
 
 1. Navigate to your **Organization Settings**
 2. Select **Billing & Credits**
 3. Locate the **Automatic Top-Up** section and toggle the feature **ON**
-4. Set your **Top-Up Amount** — the amount to add to your balance each time a recharge is triggered
+4. Choose the balance that triggers a top up — **$50** (the default), **$100**, or **$500**
+5. Set your **Top-Up Amount** — the amount to add to your balance each time a recharge is triggered. Organization amounts are **$100**, **$500**, **$1,000**, or **$5,000**.
 
 {% callout type="note" %}
-The minimum top-up amount is **$100.00**.
+The minimum top-up amount is **$100.00**. The top-up amount must be at least the trigger balance, so a **$500** trigger requires a top-up of **$500** or more. The dialog disables combinations that break this rule.
 {% /callout %}
 
-5. Click **Save Changes** to confirm
+6. Click **Save Changes** to confirm
 
 Once saved, your initial top-up will be processed immediately to verify your payment method.
 
 ## Spend alerts
 
-Owners can set spend alerts in the spend view, on the web or in the mobile app, to be notified when spending crosses a limit or when an hour runs far above the usual rate. Alerts go to the owner's authorized billing contacts by email or mobile push. See [Spend alerts](/docs/getting-started/cost-controls-and-usage-safeguards#spend-alerts) for how to configure them.
+Owners can set spend alerts in the spend view, on the web or in the mobile app, to be notified when spending crosses a limit or when an hour runs far above the usual rate. Alerts go by email or mobile push to the scope's recipients: your billing contacts for a personal account, or the alert's creator, the organization's owners, and members holding the `billing_manager` role for an organization. See [Spend alerts](/docs/getting-started/cost-controls-and-usage-safeguards#spend-alerts) for how to configure them.
 
 ## Invoices
 
