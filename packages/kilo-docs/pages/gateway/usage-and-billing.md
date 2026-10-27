@@ -36,7 +36,7 @@ Model inference is deducted from your balance at the upstream provider's rate wi
 
 ### Individual accounts
 
-Your available balance includes unused credits that have not expired, after usage and other balance adjustments. Check your balance and any credit expiration dates in the [Kilo dashboard](https://app.kilo.ai).
+Your available balance includes unused credits that have not expired, after usage and other balance adjustments. Check your balance and any credit expiration dates in the [Kilo application](https://app.kilo.ai).
 
 When your balance reaches zero, requests to paid models will return HTTP 402 with a link to add credits:
 
