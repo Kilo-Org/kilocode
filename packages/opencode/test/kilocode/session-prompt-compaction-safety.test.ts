@@ -3,10 +3,12 @@
 // applied before messages are serialized for the provider request.
 
 import path from "path"
+import fs from "fs/promises"
+import { Global } from "@opencode-ai/core/global"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { describe, expect } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Effect, Fiber, Layer } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { BackgroundJob } from "../../src/background/job"
@@ -754,6 +756,37 @@ describe("SessionPrompt recovery", () => {
         )
         expect(empty).toHaveLength(0)
         expect(msgs.some((msg) => msg.info.id === stale.id)).toBe(false)
+      }),
+      { git: true, config: providerCfg },
+    ),
+  )
+
+  it.live("marks the session turn on disk while a reply runs, for other Kilo processes", () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Turn marker" })
+        const marker = path.join(Global.Path.state, "session-turn", `${chat.id}.${process.pid}`)
+        const gate = Promise.withResolvers<void>()
+        yield* llm.hold("done", gate.promise)
+
+        const run = yield* prompt
+          .prompt({ sessionID: chat.id, agent: "build", parts: [{ type: "text", text: "Reply while held" }] })
+          .pipe(Effect.forkChild)
+        yield* llm.wait(1)
+        expect(yield* Effect.promise(() => fs.readFile(marker, "utf8"))).toBeString()
+
+        gate.resolve()
+        yield* Fiber.join(run)
+        expect(
+          yield* Effect.promise(() =>
+            fs.stat(marker).then(
+              () => true,
+              () => false,
+            ),
+          ),
+        ).toBe(false)
       }),
       { git: true, config: providerCfg },
     ),
