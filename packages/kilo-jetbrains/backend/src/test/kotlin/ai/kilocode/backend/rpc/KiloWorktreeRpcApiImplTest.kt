@@ -2606,6 +2606,29 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `worktree transfer replaces an existing file with an untracked symlink`() = runBlocking {
+        assumeFalse(SystemInfo.isWindows, "creating symbolic links on Windows may require elevated privileges")
+        initRepo()
+        Files.createDirectories(repo.resolve("sub"))
+        Files.createSymbolicLink(repo.resolve("sub/link.txt"), Path.of("missing.txt"))
+
+        preserved {
+            captured { snapshot ->
+                val target = target()
+                Files.createDirectories(target.resolve("sub"))
+                Files.writeString(target.resolve("sub/link.txt"), "stale\n")
+
+                val result = WorktreeTransfer.apply(snapshot, target)
+
+                assertTrue(result.ok, result.error)
+                val link = target.resolve("sub/link.txt")
+                assertTrue(Files.isSymbolicLink(link))
+                assertEquals("missing.txt", Files.readSymbolicLink(link).toString())
+            }
+        }
+    }
+
+    @Test
     fun `worktree transfer fails when an untracked symlink cannot be created`() = runBlocking {
         assumeFalse(SystemInfo.isWindows, "creating symbolic links on Windows may require elevated privileges")
         initRepo()
@@ -2616,14 +2639,14 @@ class KiloWorktreeRpcApiImplTest {
             captured { snapshot ->
                 assertEquals(mapOf("sub/link.txt" to "missing.txt"), snapshot.links)
                 val target = target()
-                Files.writeString(target.resolve("sub"), "blocking file\n")
+                Files.createDirectories(target.resolve("sub/link.txt"))
 
                 preserved(target) {
                     val result = WorktreeTransfer.apply(snapshot, target)
 
                     assertFalse(result.ok, "apply should fail when a symlink cannot be created")
                     assertTrue(assertNotNull(result.error).contains("sub/link.txt"), result.error)
-                    assertFalse(Files.exists(target.resolve("sub/link.txt")))
+                    assertTrue(Files.isDirectory(target.resolve("sub/link.txt")))
                 }
             }
         }

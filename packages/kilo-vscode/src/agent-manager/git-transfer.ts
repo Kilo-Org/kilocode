@@ -159,12 +159,21 @@ export async function apply(
     try {
       await fs.mkdir(nodePath.dirname(full), { recursive: true })
       if (file.link != null) {
+        const existing = await fs.lstat(full).catch((err: unknown) => {
+          if (err instanceof Error && "code" in err && err.code === "ENOENT") return undefined
+          throw err
+        })
+        // A setup script may have created this path. Replace a file or link; leave a directory so creation fails.
+        if (existing && !existing.isDirectory()) await fs.rm(full, { force: true })
         await fs.symlink(file.link, full)
         continue
       }
       await fs.writeFile(full, file.content)
     } catch (err) {
       log(`Failed to write untracked file ${file.path}:`, err)
+      if (file.link == null) continue
+      const msg = err instanceof Error ? err.message : String(err)
+      return { ok: false, error: `Failed to write untracked file ${file.path}: ${msg}` }
     }
   }
 

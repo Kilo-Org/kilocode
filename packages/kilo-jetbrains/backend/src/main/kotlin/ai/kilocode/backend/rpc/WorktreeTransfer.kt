@@ -137,6 +137,10 @@ internal object WorktreeTransfer {
             if (!dst.startsWith(root)) return ApplyResult(false, "Untracked file is outside the target worktree: $rel")
             val err = runCatching {
                 Files.createDirectories(dst.parent)
+                // A setup script may have created this path. Replace a file or link; leave a directory so creation fails.
+                if (Files.exists(dst, LinkOption.NOFOLLOW_LINKS) && !Files.isDirectory(dst, LinkOption.NOFOLLOW_LINKS)) {
+                    Files.delete(dst)
+                }
                 Files.createSymbolicLink(dst, Path.of(link))
             }.exceptionOrNull()
             if (err != null) {

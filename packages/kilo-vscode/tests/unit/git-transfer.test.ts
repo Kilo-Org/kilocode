@@ -334,7 +334,21 @@ describe("git-transfer", () => {
       }
     })
 
-    it.skipIf(process.platform === "win32")("logs and skips an untracked symlink that cannot be created", async () => {
+    it.skipIf(process.platform === "win32")("replaces an existing file with an untracked symlink", async () => {
+      await fs.mkdir(path.join(dir, "sub"))
+      await fs.symlink("missing.txt", path.join(dir, "sub", "active.txt"))
+      const snapshot = await capture(dir, noop)
+      await fs.mkdir(path.join(target, "sub"))
+      await fs.writeFile(path.join(target, "sub", "active.txt"), "stale\n")
+
+      expect(await apply(snapshot, target, noop)).toEqual({ ok: true })
+
+      const link = path.join(target, "sub", "active.txt")
+      expect((await fs.lstat(link)).isSymbolicLink()).toBe(true)
+      expect(await fs.readlink(link)).toBe("missing.txt")
+    })
+
+    it.skipIf(process.platform === "win32")("reports failure when an untracked symlink cannot be created", async () => {
       await fs.mkdir(path.join(dir, "sub"))
       await fs.symlink("missing.txt", path.join(dir, "sub", "active.txt"))
       const logs: unknown[][] = []
@@ -342,12 +356,14 @@ describe("git-transfer", () => {
         logs.push(args)
       }
       const snapshot = await capture(dir, log)
-      await fs.writeFile(path.join(target, "sub"), "blocking\n")
+      await fs.mkdir(path.join(target, "sub", "active.txt"), { recursive: true })
 
-      expect(await apply(snapshot, target, log)).toEqual({ ok: true })
+      const result = await apply(snapshot, target, log)
+
+      expect(result.ok).toBe(false)
+      expect(result.error).toContain("sub/active.txt")
       expect(logs.some((line) => line.join(" ").includes("sub/active.txt"))).toBe(true)
-      expect(await fs.readFile(path.join(target, "sub"), "utf8")).toBe("blocking\n")
-      await expect(fs.lstat(path.join(target, "sub", "active.txt"))).rejects.toThrow()
+      expect((await fs.lstat(path.join(target, "sub", "active.txt"))).isDirectory()).toBe(true)
     })
 
     it("creates subdirectories for untracked files", async () => {
