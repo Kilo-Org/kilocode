@@ -1,5 +1,15 @@
 # @kilocode/cli
 
+## 7.8.18
+
+### Minor Changes
+
+- [#15358](https://github.com/Kilo-Org/kilocode/pull/15358) [`f96361f`](https://github.com/Kilo-Org/kilocode/commit/f96361fe1470239a30be2633940160fc38c9030a) - Expose hosted cloud sessions through the local Kilo API, so editors can discover, read, and interact with a hosted session without ever handling its provider credentials.
+
+### Patch Changes
+
+- [#15430](https://github.com/Kilo-Org/kilocode/pull/15430) [`ef2f6d9`](https://github.com/Kilo-Org/kilocode/commit/ef2f6d9c7a30b1fc1791bf71f40803aa0ff96975) Thanks [@WebReflection](https://github.com/WebReflection)! - Update the MCP TypeScript SDK to 1.32.1 to fix security issues flagged by Dependabot, including MCP HTTP and OAuth requests following cross-origin redirects. Remote MCP servers whose URL redirects to another origin, or answers `POST` with a `301`, `302` or `303` redirect, no longer connect; use the server's final URL instead.
+
 ## 7.8.16
 
 ### Patch Changes
