@@ -2,6 +2,7 @@ import * as Attachments from "@/kilocode/server/hosted-attachments"
 import { SessionHostApi, SessionHostPaths } from "@/kilocode/server/httpapi/groups/session-host"
 import { sessionHostHandlers } from "@/kilocode/server/httpapi/handlers/session-host"
 import { SessionHost } from "@/kilocode/session-hosting"
+import { HostedWorkspaceID } from "@/kilocode/session-hosting/types"
 import { Auth } from "@/auth"
 import { GlobalBus, type GlobalEvent } from "@/bus/global"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -17,10 +18,13 @@ import { HttpClient, HttpClientRequest, HttpRouter } from "effect/unstable/http"
 import { HttpApi, HttpApiBuilder } from "effect/unstable/httpapi"
 import { testEffect, pollWithTimeout } from "../../lib/effect"
 import { parse } from "../../server/httpapi-exercise/assertions"
+import { hosted, provider as fixture } from "./hosted-fixture"
 
 const SESSION = "ses_00000000000000000000000001"
 const OTHER = "ses_00000000000000000000000002"
+const SESSION2 = "ses_00000000000000000000000003"
 const WORKSPACE = "worktree_12345678-1234-1234-1234-123456789abc"
+const OTHER_WORKSPACE = "worktree_87654321-4321-4321-8321-cba987654321"
 const CLOUD = "workspace_12345678-1234-1234-1234-123456789abc"
 const CONTROL = "kilo-test-control-value"
 const PROFILE = "33333333-3333-4333-8333-333333333333"
@@ -77,6 +81,31 @@ function workspaceStatus(overrides: Record<string, unknown> = {}) {
   }
 }
 
+type State = {
+  token: "ok" | "invalid"
+  catalog: "single" | "two"
+  workspace: "ok" | "missing"
+  status: "ok" | "missing"
+  remove: "ok" | "invalid" | "unauthorized" | "conflict" | "unavailable"
+}
+
+function workspaceSession(kiloSessionId: string, workspaceId: string) {
+  return {
+    kiloSessionId,
+    cloudAgentSessionId: CLOUD,
+    workspaceId,
+    userId: "user_1",
+    organizationId: null,
+    title: "Root chat",
+    gitUrl: "https://github.com/Kilo-Org/kilocode",
+    gitBranch: "main",
+    profileId: PROFILE,
+    createdOnPlatform: "agent-manager",
+    created: 100,
+    updated: 200,
+  }
+}
+
 function workspaceSummary(overrides: Record<string, unknown> = {}) {
   return {
     workspaceId: WORKSPACE,
@@ -91,29 +120,22 @@ function workspaceSummary(overrides: Record<string, unknown> = {}) {
     created: 100,
     updated: 200,
     lastActivity: 300,
-    sessions: [
-      {
-        kiloSessionId: SESSION,
-        cloudAgentSessionId: CLOUD,
-        workspaceId: WORKSPACE,
-        userId: "user_1",
-        organizationId: null,
-        title: "Root chat",
-        gitUrl: "https://github.com/Kilo-Org/kilocode",
-        gitBranch: "main",
-        profileId: PROFILE,
-        createdOnPlatform: "agent-manager",
-        created: 100,
-        updated: 200,
-      },
-    ],
+    sessions: [workspaceSession(SESSION, WORKSPACE)],
     nextSessionCursor: null,
     ...overrides,
   }
 }
 
-function harness() {
+function harness(initial: Partial<State> = {}) {
   const calls: Array<{ method: string; path: string; search: string; auth: string | null; body: string }> = []
+  const state: State = {
+    token: "ok",
+    catalog: "single",
+    workspace: "ok",
+    status: "ok",
+    remove: "ok",
+    ...initial,
+  }
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -128,12 +150,15 @@ function harness() {
         body,
       })
       if (url.pathname === "/api/cloud-agent-next/token") {
+        if (state.token === "invalid") return new Response("invalid", { status: 418 })
         return Response.json({ token: CONTROL, expiresAt: new Date(Date.now() + 600_000).toISOString() })
       }
       if (url.pathname === "/kilo/session" && request.method === "GET") {
         return Response.json([sessionInfo(SESSION)])
       }
       if (url.pathname === `/kilo/session/${SESSION}`) return Response.json(sessionInfo(SESSION))
+      if (url.pathname === `/kilo/session/${OTHER}`) return Response.json(sessionInfo(OTHER))
+      if (url.pathname === `/kilo/session/${SESSION2}`) return Response.json(sessionInfo(SESSION2))
       if (url.pathname === `/kilo/session/${SESSION}/message`) {
         return Response.json([
           {
@@ -190,17 +215,58 @@ function harness() {
         })
       }
       if (url.pathname === "/trpc/listHostedWorkspaces") {
+        if (state.catalog === "two") {
+          return Response.json({
+            result: {
+              data: {
+                items: [
+                  workspaceSummary({
+                    sessions: [workspaceSession(SESSION, WORKSPACE), workspaceSession(OTHER, WORKSPACE)],
+                  }),
+                  workspaceSummary({
+                    workspaceId: OTHER_WORKSPACE,
+                    sessions: [workspaceSession(SESSION2, OTHER_WORKSPACE)],
+                  }),
+                ],
+                nextCursor: null,
+              },
+            },
+          })
+        }
         return Response.json({ result: { data: { items: [workspaceSummary()], nextCursor: "cursor-2" } } })
       }
       if (url.pathname === "/trpc/getHostedWorkspace") {
         const input = Object(parse(url.searchParams.get("input") ?? "{}"))
-        if (input.workspaceId !== WORKSPACE) return Response.json({ result: { data: null } })
+        if (state.workspace === "missing" || input.workspaceId !== WORKSPACE) {
+          if (input.workspaceId === OTHER_WORKSPACE) {
+            return Response.json({
+              result: {
+                data: workspaceSummary({
+                  workspaceId: OTHER_WORKSPACE,
+                  sessions: [workspaceSession(SESSION2, OTHER_WORKSPACE)],
+                }),
+              },
+            })
+          }
+          return Response.json({ result: { data: null } })
+        }
         return Response.json({ result: { data: workspaceSummary({ nextSessionCursor: "session-cursor-1" }) } })
       }
       if (url.pathname === "/trpc/getHostedWorkspaceStatus") {
         const input = Object(parse(url.searchParams.get("input") ?? "{}"))
-        if (input.workspaceId !== WORKSPACE) return Response.json({ error: "NOT_FOUND" }, { status: 404 })
+        if (state.status === "missing" || input.workspaceId !== WORKSPACE) {
+          return Response.json({ error: "NOT_FOUND" }, { status: 404 })
+        }
         return Response.json({ result: { data: workspaceStatus() } })
+      }
+      if (url.pathname === "/trpc/deleteWorktree") {
+        if (state.remove === "unauthorized") return Response.json({ error: "UNAUTHORIZED" }, { status: 401 })
+        if (state.remove === "conflict") return Response.json({ error: "CONFLICT" }, { status: 409 })
+        if (state.remove === "unavailable") return Response.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503 })
+        if (state.remove === "invalid") return Response.json({ result: { data: { success: true } } })
+        return Response.json({
+          result: { data: { success: true, deletedSessionIds: [SESSION, OTHER, SESSION2] } },
+        })
       }
       if (url.pathname === "/trpc/createHostedWorkspace") {
         const input = Object(parse(body))
@@ -233,7 +299,7 @@ function harness() {
       return Response.json({ error: "KILO_SESSION_NOT_FOUND" }, { status: 404 })
     },
   })
-  return { url: `http://127.0.0.1:${server.port}`, calls, stop: () => server.stop(true) }
+  return { url: `http://127.0.0.1:${server.port}`, calls, state, stop: () => server.stop(true) }
 }
 
 function auth() {
@@ -270,9 +336,36 @@ function layer(url: string) {
 
 const app = harness()
 const it = testEffect(layer(app.url))
+const issuer = harness({ token: "invalid" })
+const itIssuer = testEffect(layer(issuer.url))
 
-afterEach(() => Attachments.store.clear())
-afterAll(() => app.stop())
+afterEach(() => {
+  Attachments.store.clear()
+  app.state.catalog = "single"
+  app.state.workspace = "ok"
+  app.state.status = "ok"
+  app.state.remove = "ok"
+})
+afterAll(() => {
+  void app.stop()
+  void issuer.stop()
+})
+
+const workspacePath = (workspaceID = WORKSPACE) =>
+  SessionHostPaths.workspaceDetail.replace(":providerID", "kilo-cloud").replace(":workspaceID", workspaceID)
+const statusPath = (workspaceID = WORKSPACE) =>
+  SessionHostPaths.workspaceStatus.replace(":providerID", "kilo-cloud").replace(":workspaceID", workspaceID)
+const sessionsPath = (workspaceID = WORKSPACE) =>
+  SessionHostPaths.workspaceSession.replace(":providerID", "kilo-cloud").replace(":workspaceID", workspaceID)
+const attachPath = (sessionID = SESSION) =>
+  SessionHostPaths.attach.replace(":providerID", "kilo-cloud").replace(":sessionID", sessionID)
+
+const attach = (sessionID = SESSION) =>
+  Effect.gen(function* () {
+    const response = yield* HttpClient.post(attachPath(sessionID))
+    expect(response.status).toBe(200)
+    return String(Object(yield* response.json).attachmentID)
+  })
 
 describe("session host HttpApi", () => {
   it.live("reports the registered provider without exposing provider internals", () =>
@@ -619,6 +712,99 @@ describe("session host HttpApi", () => {
 
       const sessionCall = app.calls.find((item) => item.path === "/trpc/createHostedWorkspaceSession")
       expect(sessionCall?.body).toContain(`"workspaceId":"${WORKSPACE}"`)
+    }),
+  )
+
+  it.live("deletes a workspace and invalidates every attachment in it", () =>
+    Effect.gen(function* () {
+      app.state.catalog = "two"
+      const first = yield* attach(SESSION)
+      const second = yield* attach(SESSION)
+      const sibling = yield* attach(OTHER)
+      const survivor = yield* attach(SESSION2)
+
+      const response = yield* HttpClient.execute(HttpClientRequest.delete(workspacePath()))
+      expect(response.status).toBe(200)
+      const body: unknown = yield* response.json
+      expect(body).toEqual({
+        workspace: { providerID: "kilo-cloud", workspaceID: WORKSPACE },
+        success: true,
+      })
+      expect(JSON.stringify(body)).not.toContain("deletedSessionIds")
+
+      for (const id of [first, second, sibling]) {
+        expect(Attachments.store.lookup(id).kind).toBe("disposed")
+      }
+      expect(Attachments.store.lookup(survivor).kind).toBe("found")
+
+      const call = app.calls.filter((item) => item.path === "/trpc/deleteWorktree").at(-1)
+      expect(Object(parse(call?.body ?? "{}"))).toEqual({ worktreeId: WORKSPACE })
+    }),
+  )
+
+  it.live("invalidates workspace attachments when its reads report not found", () =>
+    Effect.gen(function* () {
+      const first = yield* attach()
+      app.state.workspace = "missing"
+      expect((yield* HttpClient.get(workspacePath())).status).toBe(404)
+      expect(Attachments.store.lookup(first).kind).toBe("disposed")
+
+      app.state.workspace = "ok"
+      const second = yield* attach()
+      app.state.status = "missing"
+      expect((yield* HttpClient.get(statusPath())).status).toBe(404)
+      expect(Attachments.store.lookup(second).kind).toBe("disposed")
+
+      app.state.status = "ok"
+      const third = yield* attach()
+      app.state.workspace = "missing"
+      expect((yield* HttpClient.get(sessionsPath())).status).toBe(404)
+      expect(Attachments.store.lookup(third).kind).toBe("disposed")
+    }),
+  )
+
+  it.live("invalidates workspace attachments when a dispatched deletion response is malformed", () =>
+    Effect.gen(function* () {
+      const id = yield* attach()
+      app.state.remove = "invalid"
+      const response = yield* HttpClient.execute(HttpClientRequest.delete(workspacePath()))
+      expect(response.status).toBe(502)
+      expect(Attachments.store.lookup(id).kind).toBe("disposed")
+    }),
+  )
+
+  it.live("preserves workspace attachments when deletion is rejected or unreachable", () =>
+    Effect.gen(function* () {
+      const id = yield* attach()
+      for (const [state, status] of [
+        ["unauthorized", 401],
+        ["conflict", 409],
+        ["unavailable", 503],
+      ] as const) {
+        app.state.remove = state
+        const response = yield* HttpClient.execute(HttpClientRequest.delete(workspacePath()))
+        expect(response.status).toBe(status)
+        expect(Attachments.store.lookup(id).kind).toBe("found")
+      }
+    }),
+  )
+
+  itIssuer.live("preserves workspace attachments when the issuer response is invalid", () =>
+    Effect.gen(function* () {
+      const fake = fixture("kilo-cloud")
+      const entry = Attachments.store.mint({
+        provider: fake.value,
+        session: hosted("kilo-cloud", SESSION),
+        workspace: Schema.decodeUnknownSync(HostedWorkspaceID)({
+          providerID: "kilo-cloud",
+          workspaceID: WORKSPACE,
+        }),
+        expiresAt: Date.now() + 60_000,
+      })
+
+      const response = yield* HttpClient.execute(HttpClientRequest.delete(workspacePath()))
+      expect(response.status).toBe(502)
+      expect(Attachments.store.lookup(entry.id).kind).toBe("found")
     }),
   )
 })

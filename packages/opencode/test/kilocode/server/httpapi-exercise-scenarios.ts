@@ -574,6 +574,16 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(401),
   http.protected
+    .delete("/kilocode/session-host/workspace/{providerID}/{workspaceID}", "sessionHost.deleteWorkspace")
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}", {
+        providerID: "kilo-cloud",
+        workspaceID: "worktree_00000000-0000-4000-8000-000000000001",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
     .get("/kilocode/session-host/workspace/{providerID}/{workspaceID}/status", "sessionHost.getWorkspaceStatus")
     .at((ctx) => ({
       path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/status", {

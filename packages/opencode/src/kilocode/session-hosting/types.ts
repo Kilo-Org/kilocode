@@ -91,6 +91,21 @@ export class HostedFailure extends Schema.TaggedErrorClass<HostedFailure>()("Ses
   retryable: Schema.Boolean,
 }) {}
 
+const DELETION_DISPATCHED = Symbol("workspace-deletion-dispatched")
+
+/**
+ * Marks a deletion failure that happened after the Worker request was sent, so
+ * the local handler can invalidate workspace attachments without treating a
+ * pre-dispatch issuer failure as a successful deletion.
+ */
+export function markDeletionDispatched(error: HostedFailure) {
+  return Object.assign(error, { [DELETION_DISPATCHED]: true })
+}
+
+export function deletionDispatched(error: HostedFailure) {
+  return DELETION_DISPATCHED in error
+}
+
 export const HostedSession = Schema.Struct({
   id: HostedSessionID,
   session: SessionV1.SessionInfo,
@@ -119,6 +134,14 @@ export const Attachment = Schema.Struct({
   expiresAt: Schema.Finite,
 }).annotate({ identifier: "SessionHostAttachment" })
 export type Attachment = Schema.Schema.Type<typeof Attachment>
+
+/**
+ * Internal attach result. Workspace membership is local routing state and is
+ * deliberately absent from the public attach response.
+ */
+export type AttachmentResult = Attachment & {
+  readonly workspace?: HostedWorkspaceID
+}
 
 export const Repository = Schema.Union([
   Schema.Struct({ type: Schema.Literal("github"), repo: Schema.String, branch: Schema.optional(Schema.String) }),
@@ -354,6 +377,18 @@ export const WorkspaceStatusInput = Schema.Struct({
 }).annotate({ identifier: "SessionHostWorkspaceStatusInput" })
 export type WorkspaceStatusInput = Schema.Schema.Type<typeof WorkspaceStatusInput>
 
+export const WorkspaceDeleteInput = Schema.Struct({
+  id: HostedWorkspaceID,
+  organizationID: Schema.optional(OrganizationID),
+}).annotate({ identifier: "SessionHostWorkspaceDeleteInput" })
+export type WorkspaceDeleteInput = Schema.Schema.Type<typeof WorkspaceDeleteInput>
+
+export const DeleteWorkspaceResult = Schema.Struct({
+  workspace: HostedWorkspaceID,
+  success: Schema.Literal(true),
+}).annotate({ identifier: "SessionHostDeleteWorkspaceResult" })
+export type DeleteWorkspaceResult = Schema.Schema.Type<typeof DeleteWorkspaceResult>
+
 /**
  * Create a hosted workspace and its root session. `operationKey` is required so
  * a retried request is admitted once, and `messageID` names the root initial
@@ -484,10 +519,11 @@ export interface Provider {
   readonly get: (input: GetInput) => Effect.Effect<HostedSession, HostedFailure>
   readonly transcript: (input: TranscriptInput) => Effect.Effect<HostedTranscriptPage, HostedFailure>
   readonly start: (input: StartInput) => Effect.Effect<StartResult, HostedFailure>
-  readonly attach: (input: AttachInput) => Effect.Effect<Attachment, HostedFailure>
+  readonly attach: (input: AttachInput) => Effect.Effect<AttachmentResult, HostedFailure>
   readonly listWorkspaces: (input?: WorkspaceListInput) => Effect.Effect<HostedWorkspacePage, HostedFailure>
   readonly getWorkspace: (input: WorkspaceGetInput) => Effect.Effect<HostedWorkspace, HostedFailure>
   readonly getWorkspaceStatus: (input: WorkspaceStatusInput) => Effect.Effect<HostedWorkspaceStatus, HostedFailure>
+  readonly deleteWorkspace: (input: WorkspaceDeleteInput) => Effect.Effect<DeleteWorkspaceResult, HostedFailure>
   readonly createWorkspace: (input: CreateWorkspaceInput) => Effect.Effect<CreateWorkspaceResult, HostedFailure>
   readonly startWorkspaceSession: (
     input: WorkspaceSessionStartInput,

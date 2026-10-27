@@ -1,7 +1,9 @@
 import { Auth } from "@/auth"
 import { PROVIDER, provider as kiloCloud } from "@/kilocode/session-hosting/kilo-cloud"
+import { deletionDispatched } from "@/kilocode/session-hosting/types"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { expect } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Effect, Layer, Schema } from "effect"
 import { testEffect } from "../../lib/effect"
 
 const it = testEffect(Layer.empty)
@@ -34,7 +36,21 @@ type State = {
   create: "ok" | "forbidden" | "conflict" | "notfound" | "payment" | "unavailable" | "mismatch"
   session: "ok" | "mismatch"
   profiles: "ok" | "direct" | "unauthorized" | "unavailable" | "invalid"
+  membership: "default" | "nested" | "outer" | "wrong" | "flat" | "failure"
+  remove: "ok" | "invalid"
   creates: number
+}
+
+function sessionInfo(id: string) {
+  return Schema.decodeUnknownSync(SessionV1.SessionInfo)({
+    id,
+    slug: id,
+    projectID: "cloud-agent",
+    directory: `/cloud-agent/sessions/${id}`,
+    title: `Hosted ${id}`,
+    version: "cloud-agent",
+    time: { created: 100, updated: 200 },
+  })
 }
 
 function workspaceSessionSummary(kiloSessionId: string) {
@@ -119,6 +135,8 @@ function harness() {
     create: "ok",
     session: "ok",
     profiles: "ok",
+    membership: "default",
+    remove: "ok",
     creates: 0,
   }
 
@@ -142,6 +160,10 @@ function harness() {
         org: request.headers.get("x-kilocode-organizationid"),
         body,
       })
+
+      if (url.pathname === `/kilo/session/${SESSION}`) {
+        return Response.json(sessionInfo(SESSION))
+      }
 
       if (url.pathname === "/api/trpc/agentProfiles.list") {
         if (state.profiles === "unauthorized") return error("UNAUTHORIZED", 401)
@@ -173,18 +195,71 @@ function harness() {
         if (state.page === "unauthorized") return error("UNAUTHORIZED", 401)
         if (state.page === "unavailable") return error("SERVICE_UNAVAILABLE", 503)
         if (state.page === "invalid") return envelope({ items: [{ nope: true }], nextCursor: null })
+        if (state.membership === "failure") return error("SERVICE_UNAVAILABLE", 503)
+        if (state.membership === "flat") {
+          return envelope({ items: [workspaceSummary({ sessions: [] })], nextCursor: null })
+        }
+        if (state.membership === "wrong") {
+          return envelope({
+            items: [
+              workspaceSummary({
+                sessions: [
+                  {
+                    ...workspaceSessionSummary(SESSION),
+                    workspaceId: OTHER_WORKSPACE,
+                  },
+                ],
+              }),
+            ],
+            nextCursor: null,
+          })
+        }
+        if (state.membership === "nested") {
+          return envelope({
+            items: [workspaceSummary({ sessions: [], nextSessionCursor: "nested-1" })],
+            nextCursor: null,
+          })
+        }
+        if (state.membership === "outer") {
+          const input = Object(JSON.parse(new URL(url).searchParams.get("input") ?? "{}"))
+          if (input.cursor === undefined) {
+            return envelope({
+              items: [workspaceSummary({ sessions: [], nextSessionCursor: null })],
+              nextCursor: "outer-2",
+            })
+          }
+          return envelope({ items: [workspaceSummary()], nextCursor: null })
+        }
         return envelope({ items: [workspaceSummary()], nextCursor: "cursor-2" })
       }
 
       if (url.pathname === "/trpc/getHostedWorkspace") {
         if (state.detail === "null") return envelope(null)
         if (state.detail === "invalid") return envelope({ nope: true })
+        if (state.membership === "nested") {
+          const input = Object(JSON.parse(new URL(url).searchParams.get("input") ?? "{}"))
+          if (input.sessionCursor === "nested-1") {
+            return envelope(
+              workspaceSummary({
+                sessions: [workspaceSessionSummary(SESSION)],
+                nextSessionCursor: null,
+              }),
+            )
+          }
+          return envelope(workspaceSummary({ sessions: [], nextSessionCursor: "nested-1" }))
+        }
         return envelope(
           workspaceSummary({
             workspaceId: state.detail === "mismatch" ? OTHER_WORKSPACE : WORKSPACE,
             nextSessionCursor: "session-cursor-1",
           }),
         )
+      }
+
+      if (url.pathname === "/trpc/deleteWorktree") {
+        const input = Object(JSON.parse(body))
+        if (state.remove === "invalid") return envelope({ success: true })
+        return envelope({ success: true, deletedSessionIds: [SESSION], worktreeId: input.worktreeId })
       }
 
       if (url.pathname === "/trpc/getHostedWorkspaceStatus") {
@@ -640,4 +715,121 @@ it.effect("reports a signed-out host and performs no Cloud request", () => {
     expect(error).toMatchObject({ code: "signed_out", retryable: false })
     expect(requests).toBe(0)
   })
+})
+
+it.effect("resolves cold attach membership without a prior workspace list", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+    const result = yield* cloud.attach({ id: { providerID: PROVIDER, sessionID: SESSION } })
+    expect(result).toEqual({
+      session: { providerID: PROVIDER, sessionID: SESSION },
+      workspace: { providerID: PROVIDER, workspaceID: WORKSPACE },
+      expiresAt: expect.any(Number),
+    })
+    expect(app.calls.map((call) => call.path)).toEqual([`/kilo/session/${SESSION}`, "/trpc/listHostedWorkspaces"])
+    expect(app.calls[1]?.search).toContain("limit%22%3A50")
+    expect(app.calls[1]?.search).toContain("sessionLimit%22%3A100")
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("follows outer and nested workspace pages to find membership", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+
+    app.state.membership = "outer"
+    const outer = yield* cloud.attach({ id: { providerID: PROVIDER, sessionID: SESSION } })
+    expect(outer.workspace).toEqual({ providerID: PROVIDER, workspaceID: WORKSPACE })
+    expect(app.calls.filter((call) => call.path === "/trpc/listHostedWorkspaces")).toHaveLength(2)
+
+    app.calls.length = 0
+    app.state.membership = "nested"
+    const nested = yield* cloud.attach({ id: { providerID: PROVIDER, sessionID: SESSION } })
+    expect(nested.workspace).toEqual({ providerID: PROVIDER, workspaceID: WORKSPACE })
+    const detail = app.calls.find((call) => call.path === "/trpc/getHostedWorkspace")
+    expect(Object(JSON.parse(new URL(detail?.search ?? "", app.url).searchParams.get("input") ?? "{}"))).toEqual({
+      workspaceId: WORKSPACE,
+      sessionLimit: 100,
+      sessionCursor: "nested-1",
+    })
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("rejects a nested session that belongs to another workspace", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+    app.state.membership = "wrong"
+    expect(yield* cloud.attach({ id: { providerID: PROVIDER, sessionID: SESSION } }).pipe(Effect.flip)).toMatchObject({
+      code: "invalid_response",
+      retryable: false,
+    })
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("allows a legacy flat session without workspace membership", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+    app.state.membership = "flat"
+    const result = yield* cloud.attach({ id: { providerID: PROVIDER, sessionID: SESSION } })
+    expect(result).toEqual({
+      session: { providerID: PROVIDER, sessionID: SESSION },
+      expiresAt: expect.any(Number),
+    })
+    expect("workspace" in result).toBe(false)
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("propagates a membership lookup failure instead of treating it as legacy", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+    app.state.membership = "failure"
+    expect(yield* cloud.attach({ id: { providerID: PROVIDER, sessionID: SESSION } }).pipe(Effect.flip)).toMatchObject({
+      code: "unavailable",
+      retryable: true,
+    })
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("deletes a workspace with an organization scope and hides deleted session ids", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+    const result = yield* cloud.deleteWorkspace({
+      id: { providerID: PROVIDER, workspaceID: WORKSPACE },
+      organizationID: ORG,
+    })
+    expect(result).toEqual({
+      workspace: { providerID: PROVIDER, workspaceID: WORKSPACE },
+      success: true,
+    })
+    expect(JSON.stringify(result)).not.toContain("deletedSessionIds")
+    expect(JSON.stringify(result)).not.toContain(SESSION)
+
+    const call = app.calls[0]
+    expect(call).toMatchObject({ method: "POST", path: "/trpc/deleteWorktree", auth: `Bearer ${CONTROL}`, org: ORG })
+    expect(Object(JSON.parse(call.body))).toEqual({
+      worktreeId: WORKSPACE,
+      kilocodeOrganizationId: ORG,
+    })
+
+    yield* cloud.deleteWorkspace({ id: { providerID: PROVIDER, workspaceID: OTHER_WORKSPACE } })
+    expect(Object(JSON.parse(app.calls[1].body))).toEqual({ worktreeId: OTHER_WORKSPACE })
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("rejects a malformed deletion response after dispatch", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+    app.state.remove = "invalid"
+    const error = yield* cloud
+      .deleteWorkspace({ id: { providerID: PROVIDER, workspaceID: WORKSPACE } })
+      .pipe(Effect.flip)
+    expect(error).toMatchObject({ code: "invalid_response", retryable: false })
+    expect(deletionDispatched(error)).toBe(true)
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })

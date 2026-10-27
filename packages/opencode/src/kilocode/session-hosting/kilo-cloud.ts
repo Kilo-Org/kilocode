@@ -21,14 +21,17 @@ import {
   ProviderID,
   StartInput,
   TranscriptInput,
+  WorkspaceDeleteInput,
   WorkspaceGetInput,
   WorkspaceListInput,
   WorkspaceProfileListInput,
   WorkspaceSessionStartInput,
   WorkspaceStatusInput,
-  type Attachment,
+  markDeletionDispatched,
+  type AttachmentResult,
   type Availability,
   type CreateWorkspaceResult,
+  type DeleteWorkspaceResult,
   type HostedSession,
   type HostedSessionPage,
   type HostedTranscriptPage,
@@ -50,6 +53,11 @@ import { errorCode } from "./response"
 
 export const PROVIDER = Schema.decodeUnknownSync(ProviderID)("kilo-cloud")
 export const ATTACHMENT_TTL_MS = 60_000
+
+const MEMBERSHIP_PAGE_SIZE = 50
+const MEMBERSHIP_SESSION_LIMIT = 100
+const MEMBERSHIP_PAGE_LIMIT = 20
+const MEMBERSHIP_SESSION_PAGE_LIMIT = 10
 
 const Envelope = z.object({ result: z.object({ data: z.unknown() }) })
 
@@ -150,6 +158,11 @@ const WorkspaceCreate = z.object({
   kiloSessionId: z.string().min(1),
   messageId: z.string().min(1),
   replayed: z.boolean().optional(),
+})
+
+const WorkspaceDelete = z.object({
+  success: z.literal(true),
+  deletedSessionIds: z.array(z.string()),
 })
 
 const CloudProfile = z.object({
@@ -533,11 +546,17 @@ export function provider(options: Options): Provider {
       }
     })
 
-  const attach = (raw: AttachInput): Effect.Effect<Attachment, HostedFailure> =>
+  const attach = (raw: AttachInput): Effect.Effect<AttachmentResult, HostedFailure> =>
     Effect.gen(function* () {
       const input = yield* check(AttachInput, raw)
       const session = yield* get(input)
-      return { session: session.id, expiresAt: clock() + ATTACHMENT_TTL_MS }
+      const auth = yield* resolve(input.organizationID)
+      const workspace = yield* membership(auth, input.id.sessionID)
+      return {
+        session: session.id,
+        expiresAt: clock() + ATTACHMENT_TTL_MS,
+        ...(workspace === undefined ? {} : { workspace }),
+      }
     })
 
   const data = (value: unknown) =>
@@ -562,6 +581,81 @@ export function provider(options: Options): Provider {
       body: JSON.stringify(input),
     }).pipe(Effect.flatMap(consume), Effect.flatMap(data))
 
+  const consistent = (raw: z.infer<typeof WorkspaceSummary>) =>
+    raw.sessions.every((session) => session.workspaceId === raw.workspaceId)
+
+  const holds = (raw: z.infer<typeof WorkspaceSummary>, kiloSessionID: string) =>
+    raw.sessions.some((session) => session.kiloSessionId === kiloSessionID)
+
+  /**
+   * Resolves workspace membership from the existing workspace catalog. A
+   * session that no catalog page mentions is a legacy flat session, so the
+   * attachment stays valid without workspace-scoped invalidation. A catalog
+   * larger than the scan bound also yields no membership so attach keeps
+   * working; routed session-not-found responses still invalidate it.
+   */
+  const membership = (
+    auth: CloudAuth.Resolved,
+    kiloSessionID: string,
+  ): Effect.Effect<HostedWorkspaceID | undefined, HostedFailure> =>
+    Effect.gen(function* () {
+      let cursor: string | undefined
+      for (let page = 0; page < MEMBERSHIP_PAGE_LIMIT; page++) {
+        const payload: Record<string, unknown> = {
+          limit: MEMBERSHIP_PAGE_SIZE,
+          sessionLimit: MEMBERSHIP_SESSION_LIMIT,
+        }
+        if (cursor !== undefined) payload.cursor = cursor
+        const body = yield* query(auth, "listHostedWorkspaces", payload)
+        const parsed = WorkspacePage.safeParse(body)
+        if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported workspace page"))
+        for (const raw of parsed.data.items) {
+          const found = yield* nested(auth, raw, kiloSessionID)
+          if (found !== undefined) return yield* workspaceIdentity(found)
+        }
+        if (parsed.data.nextCursor == null) return undefined
+        cursor = parsed.data.nextCursor
+      }
+      return undefined
+    })
+
+  const nested = (
+    auth: CloudAuth.Resolved,
+    raw: z.infer<typeof WorkspaceSummary>,
+    kiloSessionID: string,
+  ): Effect.Effect<string | undefined, HostedFailure> =>
+    Effect.gen(function* () {
+      if (!consistent(raw)) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned a workspace with a session from another workspace"))
+      }
+      if (holds(raw, kiloSessionID)) return raw.workspaceId
+
+      let cursor: string | null = raw.nextSessionCursor
+      for (let page = 0; cursor != null && page < MEMBERSHIP_SESSION_PAGE_LIMIT; page++) {
+        const body = yield* query(auth, "getHostedWorkspace", {
+          workspaceId: raw.workspaceId,
+          sessionLimit: MEMBERSHIP_SESSION_LIMIT,
+          sessionCursor: cursor,
+        })
+        if (body === null) {
+          return yield* Effect.fail(
+            new HostedFailure({ code: "not_found", message: "Kilo Cloud workspace was not found", retryable: false }),
+          )
+        }
+        const parsed = WorkspaceSummary.safeParse(body)
+        if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported workspace"))
+        if (parsed.data.workspaceId !== raw.workspaceId) {
+          return yield* Effect.fail(invalid("Kilo Cloud returned a different workspace identity"))
+        }
+        if (!consistent(parsed.data)) {
+          return yield* Effect.fail(invalid("Kilo Cloud returned a workspace with a session from another workspace"))
+        }
+        if (holds(parsed.data, kiloSessionID)) return parsed.data.workspaceId
+        cursor = parsed.data.nextSessionCursor
+      }
+      return undefined
+    })
+
   const workspaceIdentity = (workspaceID: unknown) =>
     decode(
       HostedWorkspaceID,
@@ -571,6 +665,9 @@ export function provider(options: Options): Provider {
 
   const workspace = (raw: z.infer<typeof WorkspaceSummary>): Effect.Effect<HostedWorkspace, HostedFailure> =>
     Effect.gen(function* () {
+      if (!consistent(raw)) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned a workspace with a session from another workspace"))
+      }
       const id = yield* workspaceIdentity(raw.workspaceId)
       const sessions = yield* Effect.forEach(raw.sessions, (session) =>
         identity(session.kiloSessionId).pipe(
@@ -689,6 +786,34 @@ export function provider(options: Options): Provider {
           remainingRuntimeLocationCount: parsed.data.deletion.remainingRuntimeLocationCount,
         },
       } satisfies HostedWorkspaceStatus
+    })
+
+  const deleteWorkspace = (raw: WorkspaceDeleteInput): Effect.Effect<DeleteWorkspaceResult, HostedFailure> =>
+    Effect.gen(function* () {
+      const input = yield* check(WorkspaceDeleteInput, raw)
+      const auth = yield* resolve(input.organizationID)
+      // Failures from this request happen before Cloud admits the deletion. Only
+      // a malformed response after dispatch may invalidate local attachments.
+      const response = yield* request(auth, {
+        method: "POST",
+        path: "/trpc/deleteWorktree",
+        headers: { ...headers(auth), "content-type": "application/json" },
+        body: JSON.stringify({
+          worktreeId: input.id.workspaceID,
+          ...(input.organizationID === undefined ? {} : { kilocodeOrganizationId: input.organizationID }),
+        }),
+      })
+      const body = yield* consume(response).pipe(
+        Effect.flatMap(data),
+        Effect.catch((error) => Effect.fail(error.code === "invalid_response" ? markDeletionDispatched(error) : error)),
+      )
+      const parsed = WorkspaceDelete.safeParse(body)
+      if (!parsed.success) {
+        return yield* Effect.fail(
+          markDeletionDispatched(invalid("Kilo Cloud returned an unsupported workspace deletion result")),
+        )
+      }
+      return { workspace: input.id, success: true }
     })
 
   const createWorkspace = (raw: CreateWorkspaceInput): Effect.Effect<CreateWorkspaceResult, HostedFailure> =>
@@ -838,6 +963,7 @@ export function provider(options: Options): Provider {
     listWorkspaces,
     getWorkspace,
     getWorkspaceStatus,
+    deleteWorkspace,
     createWorkspace,
     startWorkspaceSession,
     listWorkspaceProfiles,

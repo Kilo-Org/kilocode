@@ -420,6 +420,8 @@ import type {
   SessionHostCreateWorkspaceErrors,
   SessionHostCreateWorkspaceInput,
   SessionHostCreateWorkspaceResponses,
+  SessionHostDeleteWorkspaceErrors,
+  SessionHostDeleteWorkspaceResponses,
   SessionHostDetachErrors,
   SessionHostDetachResponses,
   SessionHostGetErrors,
@@ -9857,6 +9859,42 @@ export class SessionHost extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/session-host/workspace/profiles",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Delete a hosted workspace
+   *
+   * Delete a hosted workspace and invalidate its local attachments. Attachments for other workspaces are preserved.
+   */
+  public deleteWorkspace<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<
+      SessionHostDeleteWorkspaceResponses,
+      SessionHostDeleteWorkspaceErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}",
       ...options,
       ...params,
     })

@@ -1,7 +1,7 @@
 import {
   HostedFailure,
   ProviderID,
-  type Attachment,
+  type AttachmentResult,
   type AttachInput,
   type NativeRequest,
   type Provider,
@@ -24,6 +24,7 @@ export function provider(id: string, options: { attach?: Provider["attach"]; rou
     getWorkspace: () => Effect.fail(new HostedFailure({ code: "not_found", message: "not found", retryable: false })),
     getWorkspaceStatus: () =>
       Effect.fail(new HostedFailure({ code: "not_found", message: "not found", retryable: false })),
+    deleteWorkspace: (input) => Effect.succeed({ workspace: input.id, success: true }),
     createWorkspace: () =>
       Effect.fail(
         new HostedFailure({ code: "invalid_request", message: "createWorkspace is not supported", retryable: false }),
@@ -38,7 +39,7 @@ export function provider(id: string, options: { attach?: Provider["attach"]; rou
       ),
     attach:
       options.attach ??
-      ((input: AttachInput): Effect.Effect<Attachment> =>
+      ((input: AttachInput): Effect.Effect<AttachmentResult> =>
         Effect.succeed({ session: input.id, expiresAt: Date.now() + 60_000 })),
     ...(options.route === undefined
       ? {

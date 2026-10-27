@@ -102,6 +102,10 @@ function harness() {
         return Response.json(sessionInfo(state.detail === "mismatch" ? OTHER : SESSION))
       }
 
+      if (url.pathname === "/trpc/listHostedWorkspaces") {
+        return Response.json({ result: { data: { items: [], nextCursor: null } } })
+      }
+
       return Response.json({ error: "KILO_SESSION_NOT_FOUND" }, { status: 404 })
     },
   })
@@ -211,7 +215,7 @@ it.effect("applies an explicit organization scope to every read operation", () =
     yield* cloud.transcript({ id: hosted, organizationID: ORG })
     yield* cloud.attach({ id: hosted, organizationID: ORG })
 
-    expect(app.calls).toHaveLength(4)
+    expect(app.calls).toHaveLength(5)
     expect(app.calls.every((call) => call.org === ORG)).toBe(true)
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
@@ -428,6 +432,6 @@ it.effect("returns an attachment descriptor with no provider-private material", 
     for (const secret of [app.url, TOKEN, CLOUD, WORKSPACE, "/cloud-agent/sessions", "fence", "resnapshot"]) {
       expect(text).not.toContain(secret)
     }
-    expect(app.calls.map((call) => call.path)).toEqual([`/kilo/session/${SESSION}`])
+    expect(app.calls.map((call) => call.path)).toEqual([`/kilo/session/${SESSION}`, "/trpc/listHostedWorkspaces"])
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })

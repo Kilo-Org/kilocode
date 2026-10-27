@@ -3,6 +3,7 @@ import {
   Availability,
   CreateWorkspaceInput,
   CreateWorkspaceResult,
+  DeleteWorkspaceResult,
   HostedSession,
   HostedSessionID,
   HostedSessionPage,
@@ -290,6 +291,19 @@ export const SessionHostApi = HttpApi.make("session-host")
             identifier: "sessionHost.getWorkspaceStatus",
             summary: "Read hosted workspace status",
             description: "Read passive compute, activity, wake, billing, and deletion progress without waking compute.",
+          }),
+        ),
+        HttpApiEndpoint.delete("deleteWorkspace", SessionHostPaths.workspaceDetail, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(DeleteWorkspaceResult, "Hosted workspace deleted"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.deleteWorkspace",
+            summary: "Delete a hosted workspace",
+            description:
+              "Delete a hosted workspace and invalidate its local attachments. Attachments for other workspaces are preserved.",
           }),
         ),
         HttpApiEndpoint.get("listWorkspaceSessions", SessionHostPaths.workspaceSession, {

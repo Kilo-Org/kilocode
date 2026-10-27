@@ -5134,6 +5134,11 @@ export type SessionHostWorkspaceStatus = {
   }
 }
 
+export type SessionHostDeleteWorkspaceResult = {
+  workspace: SessionHostWorkspaceIdentity
+  success: true
+}
+
 export type SessionHostWorkspaceSessionPage = {
   items: Array<SessionHostWorkspaceSession>
   cursor?: string
@@ -19427,6 +19432,57 @@ export type SessionHostListWorkspaceProfilesResponses = {
 
 export type SessionHostListWorkspaceProfilesResponse =
   SessionHostListWorkspaceProfilesResponses[keyof SessionHostListWorkspaceProfilesResponses]
+
+export type SessionHostDeleteWorkspaceData = {
+  body?: never
+  path: {
+    providerID: SessionHostProviderId
+    workspaceID: SessionHostWorkspaceId
+  }
+  query?: {
+    organizationID?: SessionHostOrganizationId
+  }
+  url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}"
+}
+
+export type SessionHostDeleteWorkspaceErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostDeleteWorkspaceError = SessionHostDeleteWorkspaceErrors[keyof SessionHostDeleteWorkspaceErrors]
+
+export type SessionHostDeleteWorkspaceResponses = {
+  /**
+   * Hosted workspace deleted
+   */
+  200: SessionHostDeleteWorkspaceResult
+}
+
+export type SessionHostDeleteWorkspaceResponse =
+  SessionHostDeleteWorkspaceResponses[keyof SessionHostDeleteWorkspaceResponses]
 
 export type SessionHostGetWorkspaceData = {
   body?: never
