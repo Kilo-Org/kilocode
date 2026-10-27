@@ -110,7 +110,15 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
     Effect.gen(function* () {
       // kilocode_change start - only trusted tui config resolves {env:}; untrusted {file:} confined to fileScope
       const expanded = yield* Effect.promise(() =>
-        ConfigVariable.substitute({ text, type: "path", path: configFilepath, missing: "empty", trusted, fileScope }),
+        ConfigVariable.substitute({
+          text,
+          type: "path",
+          path: configFilepath,
+          missing: "empty",
+          trusted,
+          fileScope,
+          jsonc: true,
+        }),
       )
       // kilocode_change end
       const data = ConfigParse.jsonc(expanded, configFilepath)

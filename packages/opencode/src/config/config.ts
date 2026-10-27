@@ -344,8 +344,8 @@ const layer = Layer.effect(
       const expanded = yield* Effect.promise(() =>
         ConfigVariable.substitute(
           "path" in options
-            ? { text, type: "path", path: options.path, env, trusted, fileScope } // kilocode_change
-            : { text, type: "virtual", ...options, env, trusted, fileScope }, // kilocode_change
+            ? { text, type: "path", path: options.path, env, trusted, fileScope, jsonc: true } // kilocode_change
+            : { text, type: "virtual", ...options, env, trusted, fileScope, jsonc: true }, // kilocode_change
         ),
       )
       const parsed = ConfigParse.jsonc(expanded, source)

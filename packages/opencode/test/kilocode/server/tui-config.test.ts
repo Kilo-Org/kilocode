@@ -72,6 +72,28 @@ describe("TUI config routes", () => {
     expect(logs.some((message) => message.includes("typo_setting"))).toBe(true)
   })
 
+  test("ignores references inside block comments of project TUI config", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        const cfg = path.join(dir, ".kilo")
+        await fs.mkdir(cfg, { recursive: true })
+        await Bun.write(
+          path.join(cfg, "tui.jsonc"),
+          ["{", "  /* Read the theme from {env:KILO_THEME} later */", '  "theme": "nord"', "}"].join("\n"),
+        )
+      },
+    })
+    const config = await Effect.runPromise(
+      TuiConfig.Service.use((svc) => svc.info()).pipe(
+        Effect.provide(
+          AppNodeBuilder.build(TuiConfig.node).pipe(Layer.provide(Layer.succeed(CurrentWorkingDirectory, tmp.path))),
+        ),
+      ),
+    )
+
+    expect(config.theme).toBe("nord")
+  })
+
   test("does not write TUI config logs to the terminal", async () => {
     await using tmp = await tmpdir({
       init: async (dir) => {

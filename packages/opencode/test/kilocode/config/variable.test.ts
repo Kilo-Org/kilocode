@@ -82,6 +82,41 @@ test("ignores commented-out references in untrusted config", async () => {
   expect(await ConfigVariable.substitute({ ...source, text })).toBe(text)
 })
 
+test("ignores references inside block comments of JSONC config", async () => {
+  const text = [
+    "{",
+    "  /* Agents keep their prompt in ({file:./_prompts/agents/*.md})",
+    "     and read {env:SAFE_VALUE} */",
+    '  "username": "{env:SAFE_VALUE}"',
+    "}",
+  ].join("\n")
+  expect(await ConfigVariable.substitute({ ...trusted, text, jsonc: true, env: { SAFE_VALUE: "allowed" } })).toBe(
+    text.replace('"{env:SAFE_VALUE}"', '"allowed"'),
+  )
+})
+
+test("ignores references in block and trailing comments of untrusted JSONC config", async () => {
+  const text = ["{ /* {env:SAFE_VALUE} */", '  "username": "kilo" // {file:/etc/passwd}', "}"].join("\n")
+  expect(await ConfigVariable.substitute({ ...source, text, jsonc: true })).toBe(text)
+})
+
+test("treats comment markers inside JSONC strings as text", async () => {
+  const text = '{ "instructions": ["docs/**/*.md"], "url": "https://example.com", "username": "{env:SAFE_VALUE}" }'
+  expect(await ConfigVariable.substitute({ ...trusted, text, jsonc: true, env: { SAFE_VALUE: "allowed" } })).toBe(
+    text.replace("{env:SAFE_VALUE}", "allowed"),
+  )
+})
+
+test("substitutes after // in values that are not JSONC", async () => {
+  expect(
+    await ConfigVariable.substitute({
+      ...trusted,
+      text: "https://{env:SAFE_VALUE}/kilo.json",
+      env: { SAFE_VALUE: "host" },
+    }),
+  ).toBe("https://host/kilo.json")
+})
+
 test("rejects server credential environment substitutions", async () => {
   await expect(
     ConfigVariable.substitute({

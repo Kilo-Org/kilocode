@@ -112,6 +112,42 @@ describe("markdown substitutions", () => {
   })
 })
 
+describe("references in config comments", () => {
+  test("ignores file and env references inside block comments of the global JSONC config", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await Filesystem.write(
+        path.join(globalTmp.path, "kilo.jsonc"),
+        [
+          "{",
+          "  /* Agents keep their prompt in ({file:./_prompts/agents/*.md})",
+          "     and read {env:OPENAI_API_KEY} */",
+          '  "model": "test/model"',
+          "}",
+        ].join("\n"),
+      )
+
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const config = await load()
+          expect(config.model).toBe("test/model")
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+})
+
 describe("global config updates", () => {
   test("preserves known global fields and warns for unknown fields", async () => {
     await using globalTmp = await tmpdir()
