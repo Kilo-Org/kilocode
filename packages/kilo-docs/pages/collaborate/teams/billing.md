@@ -96,7 +96,7 @@ If a payment fails, we will notify you via email and automatically pause auto-to
 {% /callout %}
 
 - **Flexibility** — You can disable automatic top-ups at any time.
-- **Credit terms** — Paid purchases expire one calendar year after purchase, and each organization Pass paid allotment expires one calendar year after issuance, including allotments under annual plans. Existing balances and previously disclosed purchase terms are preserved; prepaid annual terms keep their terms until renewal. Apple in-app-purchase paid credits do not expire. Promotional and bonus deadlines are unchanged. Credits are spent earliest-expiring first, with nonexpiring credits last. See [credit expiration and spending order](/docs/getting-started/adding-credits#credit-expiration-and-spending-order).
+- **Credit terms** — Paid purchases expire one calendar year after purchase, and each organization Pass paid allotment expires one calendar year after issuance, including allotments under annual plans. Existing balances and previously disclosed purchase terms are preserved; prepaid annual terms keep their terms until renewal. Promotional and bonus deadlines are unchanged. Credits are spent earliest-expiring first, with nonexpiring credits last. See [credit expiration and spending order](/docs/getting-started/adding-credits#credit-expiration-and-spending-order).
 
 ### Configuring Automatic Top-Up
 
