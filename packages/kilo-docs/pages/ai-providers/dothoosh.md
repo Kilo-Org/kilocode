@@ -30,7 +30,7 @@ DotHoosh (دات‌هوش) is an Iranian AI gateway billed in Toman (IRT) from a
 2. Click **Show more providers** and select **DotHoosh**.
 3. Paste your API key and save.
 
-The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+The extension saves the key in Kilo's `auth.json` credential store, not in `kilo.json`. To use an environment variable or a config file instead, see the **CLI** tab.
 
 {% /tab %}
 {% tab label="JetBrains" %}
@@ -77,7 +77,7 @@ Then set your default model:
 
 ## Select a DotHoosh Model
 
-Once your key is configured, open the model picker and select any model tagged **DotHoosh**. Model IDs use the `dothoosh/<model>` format. Example models:
+Once your key is configured, open the model picker and select any model tagged **DotHoosh**. Model IDs use the `dothoosh/<model>` format. The picker lists models from the [models.dev](https://models.dev/providers/dothoosh) catalog, so DotHoosh only becomes selectable once its catalog entry is live. Until then, it may not appear in the picker even with a valid key. Example models:
 
 - `dothoosh/claude-sonnet-5-5`
 - `dothoosh/gpt-6.1-sol`
