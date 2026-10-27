@@ -43,13 +43,21 @@ describe("KiloSessionTurn.foreign", () => {
     expect(await exists(file)).toBe(false)
   })
 
-  test("keeps a marker of a live process on this host however old it is", async () => {
+  test("keeps a marker of a live process on this host across a suspend", async () => {
     const id = SessionID.descending()
     // The parent of the test runner is alive; an old mtime stands in for a suspend and resume.
     const file = await marker(id, process.ppid, os.hostname(), 5 * 60_000)
 
     expect(await Effect.runPromise(KiloSessionTurn.foreign(id))).toBe(true)
     await fs.rm(file)
+  })
+
+  test("removes a local marker unrefreshed for days even when its pid is alive again", async () => {
+    const id = SessionID.descending()
+    const file = await marker(id, process.ppid, os.hostname(), 3 * 24 * 60 * 60_000)
+
+    expect(await Effect.runPromise(KiloSessionTurn.foreign(id))).toBe(false)
+    expect(await exists(file)).toBe(false)
   })
 
   test("sweeps stale markers of other sessions and ignores their live markers", async () => {

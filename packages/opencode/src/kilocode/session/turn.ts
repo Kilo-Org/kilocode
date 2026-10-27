@@ -12,14 +12,18 @@ import type { SessionID } from "@/session/schema"
  * Kilo process on the same data directory reads these markers to tell a live reply from one that a
  * crashed process left behind.
  *
- * A marker is a file named `<sessionID>.<pid>` that holds the host name. On this host the pid decides
- * liveness. A marker from another host is live while its holder refreshes the mtime. The files are written
- * and removed synchronously, so a release and the next hold for the same session cannot reorder on disk.
+ * A marker is a file named `<sessionID>.<pid>` that holds the host name. The holder refreshes its mtime
+ * while the turn runs. On this host a marker is live while its pid is alive, up to a day without a refresh,
+ * so a suspended process keeps it and a reused pid does not keep it forever. A marker from another host is
+ * live for a minute after its last refresh. The files are written and removed synchronously, so a release
+ * and the next hold for the same session cannot reorder on disk.
  */
 export namespace KiloSessionTurn {
   const log = Log.create({ service: "session-turn" })
   // A marker from another host that its holder has not refreshed for this long belongs to a dead process.
   const ttl = 60_000
+  // A local marker older than this belongs to a reused pid, not to a suspended holder.
+  const limit = 24 * 60 * 60_000
   const held = new Map<SessionID, { count: number; timer?: ReturnType<typeof setInterval> }>()
 
   function dir() {
@@ -103,8 +107,8 @@ export namespace KiloSessionTurn {
       const local = found[1] === host
       // This process tracks its own turns through session status.
       if (local && pid === process.pid) continue
-      // A suspended or stalled local process keeps its marker: only a dead pid is stale on this host.
-      const stale = local ? !alive(pid) : Date.now() - found[0].mtimeMs > ttl
+      const age = Date.now() - found[0].mtimeMs
+      const stale = local ? age > limit || !alive(pid) : age > ttl
       if (!stale) {
         if (name.slice(0, at) === id) live = true
         continue
