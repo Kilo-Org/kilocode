@@ -96,14 +96,29 @@ function resolvedSource(source: IndexingFieldInfo["source"]): IndexingSource {
 }
 
 /**
+ * Whether a field can be written at a given scope. Mirrors the config overlay endpoint:
+ * `editable: source !== "system" || input.scope === "project"` (opencode/config/overlay.ts).
+ *
+ * The snapshot fetches the overlay once at project scope, so the stored `editable` flag is
+ * project-scoped only. A managed/system field's `source` is "system" regardless of fetch
+ * scope (origin is "system" only when no global/local layer defines the value), so recomputing
+ * editability here yields the correct per-scope result: locked in the global view, still
+ * overridable via project config.
+ */
+function scopeEditable(source: IndexingFieldInfo["source"], scope: IndexingScope): boolean {
+  return source !== "system" || scope === "project"
+}
+
+/**
  * Display value for a single indexing field in the given scope.
  * Values from the editable scopes (global/project raw layers, including unsaved edits)
  * win; when neither defines the field, the value resolved by the config overlay is shown —
  * that is where managed/enterprise config, environment, and runtime resolution surface.
  *
- * A field the overlay reports as non-editable is locked by managed/enterprise (or system)
- * config: its effective value must win over any raw-scope value so the input renders
- * disabled instead of showing a stale value that would be rejected on save.
+ * A field the overlay resolves from a managed/system source is locked in the global view:
+ * its effective value wins over any raw-scope value so the input renders disabled instead of
+ * showing a stale value that would be rejected on save. In the project view it stays editable,
+ * since project config can override a managed value.
  */
 export function indexingFieldDisplay(
   scope: IndexingScope,
@@ -113,7 +128,7 @@ export function indexingFieldDisplay(
   path: readonly string[],
 ): IndexingFieldDisplay {
   const resolved = fields?.[`indexing.${path.join(".")}`]
-  if (resolved && resolved.editable === false) {
+  if (resolved && !scopeEditable(resolved.source, scope)) {
     return { value: resolved.value, source: resolvedSource(resolved.source), editable: false }
   }
   const current = get(indexingConfig(scope, global, project), path)
@@ -123,7 +138,7 @@ export function indexingFieldDisplay(
   if (!resolved || resolved.value === undefined) {
     return { value: undefined, source: "default", editable: true }
   }
-  return { value: resolved.value, source: resolvedSource(resolved.source), editable: resolved.editable }
+  return { value: resolved.value, source: resolvedSource(resolved.source), editable: scopeEditable(resolved.source, scope) }
 }
 
 export function indexingDescription(description: string, inheritance: IndexingInheritance) {

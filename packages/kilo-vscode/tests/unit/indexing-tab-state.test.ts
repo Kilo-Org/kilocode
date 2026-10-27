@@ -184,18 +184,29 @@ describe("indexing managed-config display", () => {
     expect(global.source).toBe("global")
   })
 
-  it("locks a non-editable managed value over a coexisting raw value", () => {
-    const fields = { "indexing.provider": managedField("openai-compatible", false) }
+  it("locks a managed value in the global view but keeps it overridable in the project view", () => {
+    // The snapshot fetches the overlay at project scope, so a system-sourced field arrives with
+    // editable:true. The global view must still lock it from its source.
+    const fields = { "indexing.provider": managedField("openai-compatible", true) }
 
-    const project = indexingFieldDisplay("project", {}, { provider: "ollama" }, fields, ["provider"])
-    expect(project.value).toBe("openai-compatible")
-    expect(project.source).toBe("managed")
-    expect(project.editable).toBe(false)
-
-    const global = indexingFieldDisplay("global", { provider: "gemini" }, {}, fields, ["provider"])
+    const global = indexingFieldDisplay("global", {}, {}, fields, ["provider"])
     expect(global.value).toBe("openai-compatible")
     expect(global.source).toBe("managed")
     expect(global.editable).toBe(false)
+
+    const project = indexingFieldDisplay("project", {}, {}, fields, ["provider"])
+    expect(project.value).toBe("openai-compatible")
+    expect(project.source).toBe("managed")
+    expect(project.editable).toBe(true)
+  })
+
+  it("lets a raw value override a managed value at the matching scope", () => {
+    const fields = { "indexing.provider": managedField("openai-compatible", true) }
+
+    const project = indexingFieldDisplay("project", {}, { provider: "ollama" }, fields, ["provider"])
+    expect(project.value).toBe("ollama")
+    expect(project.source).toBe("local")
+    expect(project.editable).toBe(true)
   })
 
   it("keeps an editable managed value losing to a coexisting raw value", () => {
@@ -206,12 +217,32 @@ describe("indexing managed-config display", () => {
     expect(display.editable).toBe(true)
   })
 
-  it("reports managed values as not editable in global scope", () => {
-    const fields = { "indexing.provider": managedField("openai-compatible", false) }
+  it("reports managed values as not editable in global scope even when stored as editable", () => {
+    // stored `editable` reflects the project-scoped fetch; the source is what drives the lock.
+    const fields = { "indexing.provider": managedField("openai-compatible", true) }
     const display = indexingFieldDisplay("global", {}, {}, fields, ["provider"])
     expect(display.value).toBe("openai-compatible")
     expect(display.source).toBe("managed")
     expect(display.editable).toBe(false)
+  })
+
+  it("keeps a globally-defined field editable in the global view over a managed value", () => {
+    const fields: Record<string, IndexingFieldInfo> = {
+      "indexing.provider": {
+        key: "indexing.provider",
+        path: ["indexing", "provider"],
+        value: "gemini",
+        source: "global",
+        inherited: false,
+        overridden: false,
+        editable: true,
+      },
+    }
+    const display = indexingFieldDisplay("global", { provider: "gemini" }, {}, fields, ["provider"])
+    expect(display.value).toBe("gemini")
+    // At global scope the raw branch reports no inheritance tag; the value is the user's own.
+    expect(display.source).toBe("none")
+    expect(display.editable).toBe(true)
   })
 
   it("falls back to default when no layer defines the value", () => {

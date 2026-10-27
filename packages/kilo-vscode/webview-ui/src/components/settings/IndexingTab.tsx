@@ -19,7 +19,6 @@ import SettingsRow from "./SettingsRow"
 import {
   indexingConfig,
   indexingDescription,
-  indexingEnabled,
   indexingEnabledInherited,
   indexingFieldDisplay,
   indexingInheritance,
@@ -99,7 +98,9 @@ function providerFields(provider: ProviderId | undefined): Array<{ key: string; 
 const ScopeRows: Component<{
   scope: IndexingScope
   enabled: boolean
+  disabled: boolean
   inherited: boolean
+  managed: boolean
   t: (key: string) => string
   tag: () => string | undefined
   onScope: (next: IndexingScope) => void
@@ -108,7 +109,9 @@ const ScopeRows: Component<{
   const scope = () => props.scope
   const language = { t: props.t }
   const enabled = () => props.enabled
+  const disabled = () => props.disabled
   const inherited = () => props.inherited
+  const managed = () => props.managed
   const changeScope = props.onScope
   const saveEnabled = props.onEnabled
   const tag = props.tag
@@ -146,13 +149,15 @@ const ScopeRows: Component<{
             : language.t("settings.indexing.projectEnable.title")
         }
         description={
-          inherited()
-            ? `Inherited from global config (${enabled() ? "on" : "off"}) until a project value is saved.`
-            : language.t("settings.indexing.enable.description")
+          managed()
+            ? `${language.t("settings.indexing.enable.description")} Inherited from managed config.`
+            : inherited()
+              ? `Inherited from global config (${enabled() ? "on" : "off"}) until a project value is saved.`
+              : language.t("settings.indexing.enable.description")
         }
         tag={tag}
       >
-        <Switch checked={enabled()} onChange={saveEnabled} hideLabel>
+        <Switch checked={enabled()} onChange={saveEnabled} hideLabel disabled={disabled()}>
           {scope() === "global"
             ? language.t("settings.indexing.globalEnable.title")
             : language.t("settings.indexing.projectEnable.title")}
@@ -189,8 +194,6 @@ const IndexingTab: Component = () => {
   const projectCfg = createMemo<IndexingConfig>(() => projectConfig().indexing ?? {})
   const raw = createMemo<IndexingConfig>(() => (scope() === "global" ? globalCfg() : projectCfg()))
   const cfg = createMemo<IndexingConfig>(() => indexingConfig(scope(), globalCfg(), projectCfg()))
-  const enabled = createMemo(() => indexingEnabled(scope(), globalCfg(), projectCfg()))
-  const inherited = createMemo(() => indexingEnabledInherited(scope(), globalCfg(), projectCfg()))
   const consent = createMemo(() => settings()["indexing.consent"] === true)
   const projects = createMemo(() => (settings()["indexing.projects"] as Project[] | undefined) ?? [])
   const projectId = createMemo(() => settings()["indexing.projectId"] as string | undefined)
@@ -205,6 +208,12 @@ const IndexingTab: Component = () => {
       value,
       fieldInfo(path).source === "managed" ? "managed" : indexingInheritance(scope(), globalCfg(), projectCfg(), [path]),
     )
+  /** Enable switch resolves through the overlay so managed/enterprise values match its tag. */
+  const enabledField = createMemo(() => fieldInfo(["enabled"]))
+  const enabled = createMemo(() => enabledField().value === true)
+  const enabledDisabled = createMemo(() => !enabledField().editable)
+  const enabledManaged = createMemo(() => enabledField().source === "managed")
+  const inherited = createMemo(() => indexingEnabledInherited(scope(), globalCfg(), projectCfg()))
   const changeScope = (next: IndexingScope) => {
     // Blur first so a pending field edit commits against the scope it was typed in.
     const active = document.activeElement
@@ -414,7 +423,9 @@ const IndexingTab: Component = () => {
         <ScopeRows
           scope={scope()}
           enabled={enabled()}
+          disabled={enabledDisabled()}
           inherited={inherited()}
+          managed={enabledManaged()}
           t={language.t}
           tag={() => tag(scope(), ["enabled"])}
           onScope={changeScope}
