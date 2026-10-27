@@ -17144,6 +17144,59 @@ export type KiloCloudSessionImportResponses = {
 
 export type KiloCloudSessionImportResponse = KiloCloudSessionImportResponses[keyof KiloCloudSessionImportResponses]
 
+export type KilocodeWorktreeStackData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/worktree/stack"
+}
+
+export type KilocodeWorktreeStackErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+}
+
+export type KilocodeWorktreeStackError = KilocodeWorktreeStackErrors[keyof KilocodeWorktreeStackErrors]
+
+export type KilocodeWorktreeStackResponses = {
+  /**
+   * Worktree stack forest and invalid-edge diagnostics
+   */
+  200: {
+    nodes: Array<{
+      worktreeID: string
+      branch: string | null
+      path: string
+      parentBranch: string | null
+      parentWorktreeID: string | null
+      state: "root" | "attached" | "detached"
+      git: {
+        ahead: number | null
+        behind: number | null
+        conflicts: boolean | "unknown"
+      }
+      pullRequest?: {
+        number: number
+        url: string
+        state: "open" | "closed" | "merged"
+        base: string
+      }
+    }>
+    roots: Array<string>
+    diagnostics: Array<{
+      code: "cycle" | "self-edge"
+      worktreeIDs: Array<string>
+    }>
+  }
+}
+
+export type KilocodeWorktreeStackResponse = KilocodeWorktreeStackResponses[keyof KilocodeWorktreeStackResponses]
+
 export type KilocodeResumeSessionData = {
   body?: {
     messageID: string

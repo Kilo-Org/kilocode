@@ -14997,6 +14997,216 @@
         ]
       }
     },
+    "/kilocode/worktree/stack": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.worktreeStack",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Worktree stack forest and invalid-edge diagnostics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "nodes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "worktreeID": {
+                            "type": "string"
+                          },
+                          "branch": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "path": {
+                            "type": "string"
+                          },
+                          "parentBranch": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "parentWorktreeID": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": ["root", "attached", "detached"]
+                          },
+                          "git": {
+                            "type": "object",
+                            "properties": {
+                              "ahead": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "behind": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "conflicts": {
+                                "anyOf": [
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": ["unknown"]
+                                  }
+                                ]
+                              }
+                            },
+                            "required": ["ahead", "behind", "conflicts"],
+                            "additionalProperties": false
+                          },
+                          "pullRequest": {
+                            "type": "object",
+                            "properties": {
+                              "number": {
+                                "type": "integer"
+                              },
+                              "url": {
+                                "type": "string"
+                              },
+                              "state": {
+                                "type": "string",
+                                "enum": ["open", "closed", "merged"]
+                              },
+                              "base": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["number", "url", "state", "base"],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "worktreeID",
+                          "branch",
+                          "path",
+                          "parentBranch",
+                          "parentWorktreeID",
+                          "state",
+                          "git"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "roots": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "diagnostics": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "enum": ["cycle", "self-edge"]
+                          },
+                          "worktreeIDs": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": ["code", "worktreeIDs"],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": ["nodes", "roots", "diagnostics"],
+                  "additionalProperties": false,
+                  "description": "Worktree stack forest and invalid-edge diagnostics"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Read local worktree lineage, divergence, and available pull request bases without changing repository state.",
+        "summary": "Read worktree stacks",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.worktreeStack({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/session/{sessionID}/resume": {
       "post": {
         "tags": ["kilocode"],

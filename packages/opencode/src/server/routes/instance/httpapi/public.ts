@@ -196,6 +196,7 @@ function matchLegacyOpenApi(input: Record<string, unknown>) {
   }
   deleteUnusedLegacyErrorComponents(spec)
   matchLegacyKiloOpenApi(input) // kilocode_change
+  restoreStackNulls(spec) // kilocode_change - restore inline stack nulls after operation normalization
   return input
 }
 
@@ -531,6 +532,21 @@ function restoreAgentManagerNulls(spec: OpenApiSpec) {
     schema.properties.sectionID = {
       anyOf: [schema.properties.sectionID, { type: "null" }],
     }
+  }
+}
+// kilocode_change end
+
+// kilocode_change start - stack roots and unresolved divergence are nullable on the wire
+function restoreStackNulls(spec: OpenApiSpec) {
+  const node =
+    spec.paths?.["/kilocode/worktree/stack"]?.get?.responses?.["200"]?.content?.["application/json"]?.schema?.properties
+      ?.nodes?.items
+  if (node?.properties) {
+    for (const key of ["branch", "parentBranch", "parentWorktreeID"]) {
+      node.properties[key] = nullable(node.properties[key])
+    }
+    const git = node.properties.git?.properties
+    if (git) for (const key of ["ahead", "behind"]) git[key] = nullable(git[key])
   }
 }
 // kilocode_change end

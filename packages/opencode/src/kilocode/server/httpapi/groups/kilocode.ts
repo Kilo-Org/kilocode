@@ -41,6 +41,7 @@ import {
 import { CommandFiles } from "@/kilocode/command-files"
 import { Token } from "@opencode-ai/schema/kilocode/session-drain"
 import { PendingInfo as WakeupPending } from "@opencode-ai/schema/kilocode/wakeup-event"
+import { WorktreeStack } from "@/kilocode/worktree/stack"
 
 const root = "/kilocode"
 const Scope = Schema.Literals(["global", "project"])
@@ -153,6 +154,7 @@ export const KilocodePaths = {
   marketplaceRemove: `${root}/marketplace/remove`,
   removeSnapshot: `${root}/snapshot/remove`,
   teardownWorktree: `${root}/worktree/teardown`,
+  worktreeStack: `${root}/worktree/stack`,
   prepareSnapshot: `${root}/snapshot/prepare`,
   providerUsage: `${root}/provider-usage`,
   providerUsageRefresh: `${root}/provider-usage/refresh`,
@@ -180,6 +182,18 @@ export const KilocodeApi = HttpApi.make("kilocode")
   .add(
     HttpApiGroup.make("kilocode")
       .add(
+        HttpApiEndpoint.get("worktreeStack", KilocodePaths.worktreeStack, {
+          query: WorkspaceRoutingQuery,
+          success: described(WorktreeStack.Forest, "Worktree stack forest and invalid-edge diagnostics"),
+          error: InvalidRequestError,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.worktreeStack",
+            summary: "Read worktree stacks",
+            description:
+              "Read local worktree lineage, divergence, and available pull request bases without changing repository state.",
+          }),
+        ),
         HttpApiEndpoint.post("resumeSession", KilocodePaths.resumeSession, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,

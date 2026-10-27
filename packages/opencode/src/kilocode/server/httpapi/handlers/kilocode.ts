@@ -57,6 +57,8 @@ import { KiloSnapshotCleanup } from "@/kilocode/snapshot/cleanup"
 import { clearPtys } from "@/kilocode/worktree/pty-cleanup"
 import { Snapshot } from "@/snapshot"
 import { KiloSnapshotPrepare } from "@/kilocode/snapshot/prepare"
+import { WorktreeStack } from "@/kilocode/worktree/stack"
+import { Git } from "@/git"
 import { Global } from "@opencode-ai/core/global"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
@@ -108,6 +110,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const database = yield* Database.Service
     const scope = yield* Scope.Scope
     const snapshot = yield* Snapshot.Service
+    const git = yield* Git.Service
 
     const board = <A>(work: Effect.Effect<A, BoardStore.Error | BoardStore.Conflict, Database.Service>) =>
       work.pipe(
@@ -591,6 +594,14 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     })
 
     return handlers
+      .handle("worktreeStack", () =>
+        Effect.gen(function* () {
+          return yield* WorktreeStack.read(yield* InstanceState.directory).pipe(
+            Effect.provideService(Git.Service, git),
+            Effect.mapError((err) => new InvalidRequestError({ message: err.message })),
+          )
+        }),
+      )
       .handle("resumeSession", resumeSession)
       .handle("drainSession", drainSession)
       .handle("sessionBoard", sessionBoard)
