@@ -138,6 +138,17 @@ class ActiveListScaleTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test plain section separator has small vertical insets`() {
+        val view = ActiveListView("") { _, _ -> }
+        view.update(listOf(row("a", section = "Local")))
+        val stamp = stamp(view)
+        stamp.getListCellRendererComponent(view.list, view.list.model.getElementAt(0), 0, false, false)
+        val separator = UIUtil.findComponentOfType(stamp, GroupHeaderSeparator::class.java)!!
+
+        assertEquals(UiStyle.Gap.sm(), separator.parent.insets.top)
+        assertEquals(UiStyle.Gap.sm(), separator.parent.insets.bottom)
+    }
+
     /**
      * Applies a real IDE zoom for the duration of [block]: the font defaults and the user scale.
      *

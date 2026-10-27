@@ -49,8 +49,12 @@ internal class ActiveList(
     menu: ActiveListMenu<*>? = null,
     reorder: ActiveListReorder? = null,
     onHover: ((ActiveListItem?) -> Unit)? = null,
+    collapse: ActiveListCollapse? = null,
 ) : BorderLayoutPanel() {
-    private val view = ActiveListView(emptyText, cfg, surface, matcher, enter, openOnClick, onOpen, onActivate, onClick, menu, reorder, onHover, onCell)
+    private val view = ActiveListView(
+        emptyText, cfg, surface, matcher, enter, openOnClick, onOpen, onActivate, onClick, menu, reorder, onHover,
+        collapse, onCell,
+    )
     private val search: SearchTextField? = if (showSearch) SearchTextField(false) else null
     private val scroll = object : JBScrollPane(view) {
         override fun getBackground(): Color {
