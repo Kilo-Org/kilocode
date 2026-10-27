@@ -463,6 +463,9 @@ export const dict = {
   "settings.indexing.tuning.description": "高级搜索和批处理参数。",
   "settings.indexing.status.title": "状态",
   "settings.indexing.providerField.description": "提供商特定的连接设置。",
+  "settings.indexing.providerField.documentPrompt.description":
+    "用于代码索引和文件更新的可选 prompt_name。需要端点支持。更改此值会重建索引。",
+  "settings.indexing.providerField.queryPrompt.description": "用于代码搜索的可选 prompt_name。需要端点支持。",
 
   "settings.providers.title": "提供商",
   "settings.providers.section.connected": "已连接的提供商",

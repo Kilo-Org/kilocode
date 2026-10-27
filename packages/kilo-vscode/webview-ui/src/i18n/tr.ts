@@ -735,6 +735,10 @@ export const dict = {
   "settings.indexing.dimension.description": "Modelden yerleştirme boyutunu otomatik algılamak için boş bırakın.",
   "settings.indexing.dimension.placeholder": "Otomatik",
   "settings.indexing.providerField.description": "Sağlayıcıya özel bağlantı ayarı.",
+  "settings.indexing.providerField.documentPrompt.description":
+    "Kod indeksleme ve dosya güncellemeleri için isteğe bağlı prompt_name. Uç nokta desteği gerektirir. Değiştirildiğinde indeks yeniden oluşturulur.",
+  "settings.indexing.providerField.queryPrompt.description":
+    "Kod aramaları için isteğe bağlı prompt_name. Uç nokta desteği gerektirir.",
   "settings.indexing.vectorStore.title": "Vektör deposu",
   "settings.indexing.vectorStore.description": "İndekslenen yerleştirmelerin nerede saklanacağını seçin.",
   "settings.indexing.lancedbDirectory.title": "LanceDB dizini",

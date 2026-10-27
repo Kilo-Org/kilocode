@@ -206,9 +206,17 @@ describe("CodeIndexConfigManager", () => {
     })
 
     test("ignores prompt changes for other embedding providers", () => {
-      const cfg = new CodeIndexConfigManager(createInput())
+      const input = createInput({
+        openAiCompatibleBaseUrl: "http://localhost:8080/v1",
+        openAiCompatibleDocumentPrompt: "document",
+        openAiCompatibleQueryPrompt: "CodeRetrieval",
+      })
+      const cfg = new CodeIndexConfigManager(input)
 
-      expect(cfg.loadConfiguration(createInput({ openAiCompatibleDocumentPrompt: "document" })).requiresRestart).toBe(
+      expect(cfg.loadConfiguration({ ...input, openAiCompatibleDocumentPrompt: "Document" }).requiresRestart).toBe(
+        false,
+      )
+      expect(cfg.loadConfiguration({ ...input, openAiCompatibleQueryPrompt: "SearchQuery" }).requiresRestart).toBe(
         false,
       )
     })

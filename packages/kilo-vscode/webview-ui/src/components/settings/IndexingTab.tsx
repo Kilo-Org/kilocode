@@ -67,7 +67,7 @@ function sourceLabel(source: IndexingSource) {
 
 function providerFields(
   provider: ProviderId | undefined,
-): Array<{ key: string; label: string; placeholder: string; description?: string }> {
+): Array<{ key: string; label: string; placeholder: string; descriptionKey?: string }> {
   if (provider === "kilo") return []
   if (provider === "openai") return [{ key: "apiKey", label: "API Key", placeholder: "sk-..." }]
   if (provider === "ollama") return [{ key: "baseUrl", label: "Base URL", placeholder: "http://localhost:11434" }]
@@ -79,14 +79,13 @@ function providerFields(
         key: "documentPrompt",
         label: "Document Prompt Name",
         placeholder: "e.g. document",
-        description:
-          "Optional prompt_name for indexing code and file updates. Requires endpoint support. Changing it rebuilds the index.",
+        descriptionKey: "settings.indexing.providerField.documentPrompt.description",
       },
       {
         key: "queryPrompt",
         label: "Query Prompt Name",
         placeholder: "e.g. CodeRetrieval",
-        description: "Optional prompt_name for code searches. Requires endpoint support.",
+        descriptionKey: "settings.indexing.providerField.queryPrompt.description",
       },
     ]
   }
@@ -513,7 +512,7 @@ const IndexingTab: Component = () => {
                   <SettingsRow
                     title={`${name} ${field.label}`}
                     description={description(
-                      field.description ?? language.t("settings.indexing.providerField.description"),
+                      language.t(field.descriptionKey ?? "settings.indexing.providerField.description"),
                       [[group, field.key]],
                     )}
                     tag={() => tag(scope(), [[group, field.key]])}

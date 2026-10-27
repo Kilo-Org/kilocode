@@ -994,6 +994,10 @@ export const dict = {
   "settings.indexing.status.title": "Status",
   "settings.indexing.tuning.description": "Avansert søke- og batch-parameter.",
   "settings.indexing.providerField.description": "Leverandørspesifikk tilkoblingsinnstilling.",
+  "settings.indexing.providerField.documentPrompt.description":
+    "Valgfri prompt_name for kodeindeksering og filoppdateringer. Krever støtte fra endepunktet. Endring bygger indeksen på nytt.",
+  "settings.indexing.providerField.queryPrompt.description":
+    "Valgfri prompt_name for kodesøk. Krever støtte fra endepunktet.",
   "settings.agentBehaviour.defaultAgent.title": "Standardagent",
   "settings.agentBehaviour.defaultAgent.description": "Agent å bruke når ingen er angitt",
   "settings.agentBehaviour.availableAgents": "Tilgjengelige agenter",
