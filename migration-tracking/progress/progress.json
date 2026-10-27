@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 550,
+    "done": 560,
     "total": 9828,
-    "percent": 5.6,
+    "percent": 5.7,
     "dropped": 26,
     "kinds": [
       {
         "kind": "module",
-        "done": 448,
+        "done": 458,
         "total": 3547
       },
       {
@@ -2370,12 +2370,12 @@
     },
     {
       "feature": "ui",
-      "done": 130,
+      "done": 134,
       "total": 267,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 130,
+          "done": 134,
           "total": 248
         },
         "api": {
@@ -6048,12 +6048,12 @@
     },
     {
       "feature": "vscode",
-      "done": 243,
+      "done": 249,
       "total": 2057,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 243,
+          "done": 249,
           "total": 1439
         },
         "api": {
@@ -6310,6 +6310,7 @@
     "module:packages/kilo-ui/src/components/inline-input.css",
     "module:packages/kilo-ui/src/components/inline-input.tsx",
     "module:packages/kilo-ui/src/components/kilo-pass-meter.css",
+    "module:packages/kilo-ui/src/components/kilo-pass-meter.tsx",
     "module:packages/kilo-ui/src/components/list.css",
     "module:packages/kilo-ui/src/components/list.tsx",
     "module:packages/kilo-ui/src/components/markdown.css",
@@ -6321,11 +6322,14 @@
     "module:packages/kilo-ui/src/components/motion.tsx",
     "module:packages/kilo-ui/src/components/popover.css",
     "module:packages/kilo-ui/src/components/popover.tsx",
+    "module:packages/kilo-ui/src/components/progress.tsx",
     "module:packages/kilo-ui/src/components/prompt-input.css",
     "module:packages/kilo-ui/src/components/radio-group.css",
     "module:packages/kilo-ui/src/components/reasoning-heading.ts",
     "module:packages/kilo-ui/src/components/reasoning-open.ts",
+    "module:packages/kilo-ui/src/components/select-change.ts",
     "module:packages/kilo-ui/src/components/select.css",
+    "module:packages/kilo-ui/src/components/select.tsx",
     "module:packages/kilo-ui/src/components/session-diff.ts",
     "module:packages/kilo-ui/src/components/session.css",
     "module:packages/kilo-ui/src/components/settings-sidebar.css",
@@ -6557,6 +6561,9 @@
     "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptSelectors.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/TaskHeader.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/prompt-fold.ts",
+    "module:packages/kilo-vscode/webview-ui/src/components/profile/DeviceAuthCard.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/profile/ProfileView.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/profile/ProviderUsageCards.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/DeferredPopover.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/ModeSwitcher.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/ModelSelector.tsx",
@@ -6638,9 +6645,12 @@
     "module:packages/kilo-vscode/webview-ui/src/styles/todo-dock.css",
     "module:packages/kilo-vscode/webview-ui/src/styles/tool-overrides.css",
     "module:packages/kilo-vscode/webview-ui/src/styles/welcome.css",
+    "module:packages/kilo-vscode/webview-ui/src/types/messages/profile.ts",
+    "module:packages/kilo-vscode/webview-ui/src/types/messages/provider-usage.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/date.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/focus.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/ime-enter.ts",
+    "module:packages/kilo-vscode/webview-ui/src/utils/qrcode.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/typeahead.ts",
     "module:packages/kilo-vscode/webview-ui/src/utils/webview-message.ts",
     "module:packages/opencode/src/kilocode/agent/index.ts",
