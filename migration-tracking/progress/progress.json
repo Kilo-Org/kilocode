@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 549,
+    "done": 550,
     "total": 9828,
     "percent": 5.6,
     "dropped": 26,
     "kinds": [
       {
         "kind": "module",
-        "done": 447,
+        "done": 448,
         "total": 3547
       },
       {
@@ -6048,12 +6048,12 @@
     },
     {
       "feature": "vscode",
-      "done": 242,
+      "done": 243,
       "total": 2057,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 242,
+          "done": 243,
           "total": 1439
         },
         "api": {
@@ -6555,6 +6555,7 @@
     "module:packages/kilo-vscode/webview-ui/src/components/brand/AnimatedKiloLogo.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/PermissionCommand.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/PromptSelectors.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/chat/TaskHeader.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/chat/prompt-fold.ts",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/DeferredPopover.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/ModeSwitcher.tsx",
