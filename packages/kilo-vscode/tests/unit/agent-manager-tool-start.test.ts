@@ -192,6 +192,7 @@ describe("agent manager tool start", () => {
       { worktreeID: "wt-target", mode: "worktree" },
       { worktreeID: "wt-target", versions: true },
       { worktreeID: "wt-target", tasks: [{ prompt: "Fix", branchName: "" }] },
+      { worktreeID: "wt-target", tasks: [{ prompt: "Fix", baseBranch: "main" }] },
     ])
       expect(parseToolRequest({ ...input, ...fields })).toBeUndefined()
   })
@@ -314,6 +315,9 @@ describe("agent manager tool start", () => {
     expect(parseToolRequest({ mode: "bad", tasks: [{ prompt: "one" }] })).toBeUndefined()
     expect(parseToolRequest({ mode: "local", tasks: [] })).toBeUndefined()
     expect(parseToolRequest({ mode: "local", tasks: [{}] })).toBeUndefined()
+    expect(parseToolRequest({ mode: "worktree", tasks: [{ name: "Base", baseBranch: " main " }] })?.tasks).toEqual([
+      { name: "Base", baseBranch: " main " },
+    ])
   })
 
   it("starts local sessions and sends the initial prompt", async () => {
@@ -439,6 +443,7 @@ describe("agent manager tool start", () => {
         {
           prompt: "Fix",
           branchName: "fix/One_two.3",
+          baseBranch: " release/1.0 ",
           model: { providerID: "test", modelID: "reasoning/model" },
           variant: "low",
         },
@@ -446,7 +451,12 @@ describe("agent manager tool start", () => {
     })
 
     expect(c.createWorktree).toHaveBeenCalledWith(
-      expect.objectContaining({ branchName: "fix/One_two.3", name: "fix/One_two.3", label: "one two 3" }),
+      expect.objectContaining({
+        branchName: "fix/One_two.3",
+        baseBranch: "release/1.0",
+        name: "fix/One_two.3",
+        label: "one two 3",
+      }),
     )
     expect(c.setup).toHaveBeenCalled()
     expect(c.createSessionInWorktree).toHaveBeenCalledWith(

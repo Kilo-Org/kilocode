@@ -359,7 +359,9 @@ describe("agent_manager tool", () => {
             { worktreeID: "wt-target", mode: "worktree" },
             { worktreeID: "wt-target", versions: true },
             { worktreeID: "wt-target", tasks: [{ prompt: "Fix", branchName: "" }] },
+            { worktreeID: "wt-target", tasks: [{ prompt: "Fix", baseBranch: "main" }] },
             { worktreeID: "wt-target", tasks: JSON.stringify([{ prompt: "Fix", branchName: "branch" }]) },
+            { worktreeID: "wt-target", tasks: JSON.stringify([{ prompt: "Fix", baseBranch: "main" }]) },
           ]) {
             const result = yield* tool
               .execute({ mode: "local", tasks: [{ prompt: "Fix" }], ...input }, context)
@@ -408,6 +410,35 @@ describe("agent_manager tool", () => {
     )
     expect(Schema.is(Params)({ mode: "local", tasks: [{ prompt: "Fix", provider: "kilo" }] })).toBe(false)
     expect(Schema.is(Params)({ mode: "local", tasks: [{ prompt: "Fix", model: "Shared", provider: 42 }] })).toBe(false)
+  })
+
+  test("accepts a base branch only for worktree tasks", () => {
+    expect(Schema.is(Params)({ mode: "worktree", tasks: [{ name: "Base", baseBranch: "main" }] })).toBe(true)
+    expect(Schema.is(Params)({ mode: "local", tasks: [{ name: "Base", baseBranch: "main" }] })).toBe(false)
+    expect(Schema.is(Params)({ mode: "worktree", tasks: [{ name: "Base", baseBranch: 42 }] })).toBe(false)
+  })
+
+  test("publishes a base branch for worktree tasks", async () => {
+    const tool: Tool.Def = await init()
+    const event = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        Effect.gen(function* () {
+          const bus = yield* Bus.Service
+          const events = yield* Queue.unbounded<AgentManagerStart>()
+          const off = yield* bus.subscribeCallback(AgentManagerEvent.Start, (item) =>
+            Queue.offerUnsafe(events, item.properties),
+          )
+          yield* Effect.addFinalizer(() => Effect.sync(off))
+          yield* tool.execute(
+            { mode: "worktree", tasks: [{ name: "Release", baseBranch: "release/1.0" }] },
+            { ...ctx, ask: () => Effect.void },
+          )
+          return yield* Queue.take(events).pipe(Effect.timeout("2 seconds"))
+        }),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(event.tasks[0]?.baseBranch).toBe("release/1.0")
   })
 
   // Regression for #13029: the OpenAI Responses API forces a value for every
