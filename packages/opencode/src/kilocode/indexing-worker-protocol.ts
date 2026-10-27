@@ -12,6 +12,7 @@ export type InitInput = {
   config: IndexingConfigInput
   baselineDirectory?: string
   lancedbPath?: string
+  valkeyPath?: string
 }
 
 export type Request =

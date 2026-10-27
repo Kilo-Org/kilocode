@@ -162,6 +162,7 @@ export namespace IndexingWorker {
               config,
               baselineDirectory,
               lancedbPath: process.env.KILO_LANCEDB_PATH,
+              valkeyPath: process.env.KILO_VALKEY_GLIDE_PATH,
             },
           },
           (message) => {
