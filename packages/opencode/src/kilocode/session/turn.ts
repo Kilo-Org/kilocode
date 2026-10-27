@@ -12,13 +12,13 @@ import type { SessionID } from "@/session/schema"
  * Kilo process on the same data directory reads these markers to tell a live reply from one that a
  * crashed process left behind.
  *
- * A marker is a file named `<sessionID>.<pid>` that holds the host name. The holder refreshes its mtime
- * while the turn runs. The files are written and removed synchronously, so a release and the next hold for
- * the same session cannot reorder on disk.
+ * A marker is a file named `<sessionID>.<pid>` that holds the host name. On this host the pid decides
+ * liveness. A marker from another host is live while its holder refreshes the mtime. The files are written
+ * and removed synchronously, so a release and the next hold for the same session cannot reorder on disk.
  */
 export namespace KiloSessionTurn {
   const log = Log.create({ service: "session-turn" })
-  // A marker that the holder has not refreshed for this long belongs to a dead process.
+  // A marker from another host that its holder has not refreshed for this long belongs to a dead process.
   const ttl = 60_000
   const held = new Map<SessionID, { count: number; timer?: ReturnType<typeof setInterval> }>()
 
@@ -51,14 +51,14 @@ export namespace KiloSessionTurn {
         try {
           mkdirSync(dir(), { recursive: true })
           writeFileSync(marker, os.hostname())
+          entry.timer = setInterval(() => {
+            const now = new Date()
+            fs.utimes(marker, now, now).catch((err) => log.warn("failed to refresh session turn", { err, id }))
+          }, ttl / 3)
+          entry.timer.unref?.()
         } catch (err) {
           log.warn("failed to mark session turn", { err, id })
         }
-        entry.timer = setInterval(() => {
-          const now = new Date()
-          fs.utimes(marker, now, now).catch((err) => log.warn("failed to refresh session turn", { err, id }))
-        }, ttl / 3)
-        entry.timer.unref?.()
       }
       let active = true
       return () => {
@@ -79,8 +79,8 @@ export namespace KiloSessionTurn {
   }
 
   /**
-   * Returns true when another live Kilo process runs a turn on the session. A marker from another host
-   * counts as live until its holder stops refreshing it. The scan removes stale markers of every session.
+   * Returns true when another live Kilo process runs a turn on the session. The scan removes stale markers
+   * of every session.
    */
   export const foreign = Effect.fn("KiloSessionTurn.foreign")(function* (id: SessionID) {
     const names = yield* Effect.promise(() =>
@@ -103,7 +103,8 @@ export namespace KiloSessionTurn {
       const local = found[1] === host
       // This process tracks its own turns through session status.
       if (local && pid === process.pid) continue
-      const stale = Date.now() - found[0].mtimeMs > ttl || (local && !alive(pid))
+      // A suspended or stalled local process keeps its marker: only a dead pid is stale on this host.
+      const stale = local ? !alive(pid) : Date.now() - found[0].mtimeMs > ttl
       if (!stale) {
         if (name.slice(0, at) === id) live = true
         continue
