@@ -11,11 +11,11 @@ import ai.kilocode.client.settings.base.SettingsListPanel
 import ai.kilocode.client.settings.base.SettingsMessageException
 import ai.kilocode.client.settings.marketplace.marketplaceAction
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListCell
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.active.ActiveBadge
+import ai.kilocode.client.ui.active.ActiveCell
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveSelection
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
@@ -76,7 +76,7 @@ internal class McpSettingsUi(
     private val cs: CoroutineScope,
     dir: String,
     private val create: (String, McpConfigDto) -> McpEditDialogHandle = ::McpEditDialog,
-) : SettingsListPanel(cs, ActiveListConfig.Equal.copy(description = false, keepActions = true)) {
+) : SettingsListPanel(cs, ActiveConfig.Equal.copy(description = false, keepActions = true)) {
     private var dir = dir
 
     private var servers: Map<String, McpServerConfigDto> = emptyMap()
@@ -95,7 +95,7 @@ internal class McpSettingsUi(
     /** A Marketplace install or removal can add or drop servers while this page sits open. */
     override fun refreshOnFocus(): Boolean = true
 
-    override suspend fun fetch(): List<ActiveListItem> {
+    override suspend fun fetch(): List<ActiveItem> {
         val behavior = service<KiloAgentBehaviorService>()
         val cfg = behavior.mcpConfig(dir)
         val owned = ownedBundles(dir)
@@ -165,7 +165,7 @@ internal class McpSettingsUi(
         foreground = UIUtil.getContextHelpForeground()
     }
 
-    private fun item(name: String, cfg: McpConfigDto?, status: McpStatusDto?) = object : ActiveListItem {
+    private fun item(name: String, cfg: McpConfigDto?, status: McpStatusDto?) = object : ActiveItem {
         override val key = name
         override val title = name
         override val description = description(cfg, status)
@@ -182,33 +182,33 @@ internal class McpSettingsUi(
         return parts.joinToString(" - ").takeIf { it.isNotBlank() }
     }
 
-    private fun badges(cfg: McpConfigDto?, status: McpStatusDto?): List<ActiveListBadge> = listOfNotNull(
+    private fun badges(cfg: McpConfigDto?, status: McpStatusDto?): List<ActiveBadge> = listOfNotNull(
         // The row hides its description line, which suppresses the row-level tooltip, so the status
         // pill carries the reason itself. An id is what opts a badge into list hit-testing.
-        ActiveListBadge(
+        ActiveBadge(
             statusLabel(status),
             statusStyle(status),
             id = STATUS_BADGE,
             icon = AllIcons.General.Warning.takeIf { status?.status == NEEDS_AUTH },
             tooltip = statusTooltip(status),
         ).takeIf { status != null },
-        ActiveListBadge(cfg?.type ?: KiloBundle.message("settings.agentBehavior.mcp.configured")).takeIf { cfg != null },
+        ActiveBadge(cfg?.type ?: KiloBundle.message("settings.agentBehavior.mcp.configured")).takeIf { cfg != null },
     )
 
-    private fun cells(cfg: McpConfigDto?, status: McpStatusDto?): List<ActiveListCell> = listOfNotNull(
+    private fun cells(cfg: McpConfigDto?, status: McpStatusDto?): List<ActiveCell> = listOfNotNull(
         connect(status?.status == CONNECTED).takeUnless { status?.status == NEEDS_AUTH },
-        ActiveListCell(AUTH_CELL, KiloBundle.message("settings.agentBehavior.mcp.signIn")).takeIf {
+        ActiveCell(AUTH_CELL, KiloBundle.message("settings.agentBehavior.mcp.signIn")).takeIf {
             status?.status == NEEDS_AUTH
         },
-        ActiveListCell(RESET_AUTH_CELL, KiloBundle.message("settings.agentBehavior.mcp.resetAuth")).takeIf {
+        ActiveCell(RESET_AUTH_CELL, KiloBundle.message("settings.agentBehavior.mcp.resetAuth")).takeIf {
             cfg?.type == "remote" && status?.status == CONNECTED
         },
-        ActiveListCell(
+        ActiveCell(
             EDIT_CELL,
             KiloBundle.message("settings.agentBehavior.edit"),
             primary = true,
         ).takeIf { cfg != null },
-        ActiveListCell(
+        ActiveCell(
             REMOVE_CELL,
             KiloBundle.message("common.delete"),
             icon = AllIcons.Actions.GC,
@@ -216,7 +216,7 @@ internal class McpSettingsUi(
         ).takeIf { cfg != null },
     )
 
-    private fun connect(connected: Boolean) = ActiveListCell(
+    private fun connect(connected: Boolean) = ActiveCell(
         if (connected) DISCONNECT_CELL else CONNECT_CELL,
         if (connected) KiloBundle.message("settings.agentBehavior.mcp.disconnect")
         else KiloBundle.message("settings.agentBehavior.mcp.connect"),
@@ -227,7 +227,7 @@ internal class McpSettingsUi(
         val dialog = create(name, server.config)
         if (!dialog.showAndGet()) return
         val next = dialog.result()
-        mutateAndReload(ActiveListSelection.Key(name)) {
+        mutateAndReload(ActiveSelection.Key(name)) {
             if (!service<KiloAgentBehaviorService>().saveMcp(dir, name, server.scope, next)) {
                 throw SettingsMessageException(KiloBundle.message("settings.agentBehavior.save.failed"))
             }
@@ -252,7 +252,7 @@ internal class McpSettingsUi(
             withContext(edt) {
                 if (!active(id)) return@withContext
                 setBusy(false)
-                view.update(items, ActiveListSelection.Key(name))
+                view.update(items, ActiveSelection.Key(name))
                 clearProgress()
             }
         }) return
@@ -290,7 +290,7 @@ internal class McpSettingsUi(
             Messages.getQuestionIcon(),
         )
         if (result != Messages.YES) return
-        mutateAndReload(ActiveListSelection.Slide) {
+        mutateAndReload(ActiveSelection.Slide) {
             // A pending sign-in and the needs-auth indicator both outlive the row, and the CLI can
             // only cancel the flow while it still knows the name, so drop them before the server
             // disappears.
@@ -313,7 +313,7 @@ internal class McpSettingsUi(
     }
 
     private fun mutate(name: String, block: suspend () -> Boolean) {
-        mutateAndReload(ActiveListSelection.Key(name)) {
+        mutateAndReload(ActiveSelection.Key(name)) {
             if (!block()) throw SettingsMessageException(KiloBundle.message("settings.agentBehavior.mcp.action.failed"))
             true
         }

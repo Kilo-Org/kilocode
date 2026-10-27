@@ -1,6 +1,17 @@
 package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.activeToolWindowBackground
+import ai.kilocode.client.ui.active.ActiveDeleteOptions
+import ai.kilocode.client.ui.active.ActiveEditOptions
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveMenu
+import ai.kilocode.client.ui.active.ActiveReorder
+import ai.kilocode.client.ui.active.ActiveSelection
+import ai.kilocode.client.ui.active.ActiveSurface
+import ai.kilocode.client.ui.active.showActiveDeletePopup
+import ai.kilocode.client.ui.active.showActiveEditPopup
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.options.advanced.AdvancedSettings
@@ -25,42 +36,41 @@ import javax.swing.ScrollPaneConstants
 import javax.swing.UIManager
 import javax.swing.event.DocumentEvent
 
-internal enum class ActiveListSurface {
-    Default,
-    ToolWindow,
-}
-
-internal fun activeListToolWindowBackground(): Color = UIManager.getColor("ToolWindow.background") ?: UIUtil.getPanelBackground()
+internal fun activeListToolWindowBackground(): Color = activeToolWindowBackground()
 
 internal class ActiveList(
     emptyText: String,
-    cfg: ActiveListConfig = ActiveListConfig.Equal,
-    private val surface: ActiveListSurface = ActiveListSurface.Default,
+    cfg: ActiveConfig = ActiveConfig.Equal,
+    private val surface: ActiveSurface = ActiveSurface.Default,
     showSearch: Boolean = true,
     placeholder: String = "",
     onCell: (String, String) -> Unit,
-    onOpen: ((ActiveListItem, Boolean) -> Unit)? = null,
-    matcher: (String, ActiveListItem) -> Boolean = ::activeListMatches,
+    onOpen: ((ActiveItem, Boolean) -> Unit)? = null,
+    matcher: (String, ActiveItem) -> Boolean = ::activeListMatches,
     enter: () -> Boolean = ::activeListEnterFocus,
     openOnClick: Boolean = true,
-    onActivate: ((ActiveListItem) -> Unit)? = null,
-    onClick: ((ActiveListItem) -> Unit)? = null,
+    onActivate: ((ActiveItem) -> Unit)? = null,
+    onClick: ((ActiveItem) -> Unit)? = null,
     onSelect: (() -> Unit)? = null,
-    menu: ActiveListMenu<*>? = null,
-    reorder: ActiveListReorder? = null,
-    onHover: ((ActiveListItem?) -> Unit)? = null,
+    menu: ActiveMenu<*>? = null,
+    reorder: ActiveReorder? = null,
+    onHover: ((ActiveItem?) -> Unit)? = null,
+    options: ActiveListOptions = ActiveListOptions(),
 ) : BorderLayoutPanel() {
-    private val view = ActiveListView(emptyText, cfg, surface, matcher, enter, openOnClick, onOpen, onActivate, onClick, menu, reorder, onHover, onCell)
+    private val view = ActiveListView(
+        emptyText, cfg, surface, matcher, enter, openOnClick, onOpen, onActivate, onClick,
+        menu, reorder, onHover, options, onCell,
+    )
     private val search: SearchTextField? = if (showSearch) SearchTextField(false) else null
     private val scroll = object : JBScrollPane(view) {
         override fun getBackground(): Color {
-            if (surface == ActiveListSurface.ToolWindow) return activeListToolWindowBackground()
+            if (surface == ActiveSurface.ToolWindow) return activeListToolWindowBackground()
             return super.getBackground() ?: UIUtil.getPanelBackground()
         }
     }.apply {
         horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
         viewportBorder = JBUI.Borders.empty()
-        if (surface == ActiveListSurface.ToolWindow) viewport.background = activeListToolWindowBackground()
+        if (surface == ActiveSurface.ToolWindow) viewport.background = activeListToolWindowBackground()
     }
 
     /**
@@ -75,7 +85,7 @@ internal class ActiveList(
         scroll.verticalScrollBar.addAdjustmentListener { onScroll?.invoke() }
         // Center the scroll pane so the list fills the panel vertically and horizontally, with the
         // search field pinned above it.
-        if (surface == ActiveListSurface.ToolWindow) isOpaque = true
+        if (surface == ActiveSurface.ToolWindow) isOpaque = true
         search?.let {
             it.textEditor.emptyText.text = placeholder
             wireActiveListSearch(it, view)
@@ -86,12 +96,12 @@ internal class ActiveList(
     }
 
     override fun getBackground(): Color {
-        if (surface == ActiveListSurface.ToolWindow) return activeListToolWindowBackground()
+        if (surface == ActiveSurface.ToolWindow) return activeListToolWindowBackground()
         return super.getBackground() ?: UIUtil.getPanelBackground()
     }
 
     @RequiresEdt
-    fun update(items: List<ActiveListItem>, selection: ActiveListSelection = ActiveListSelection.Preserve) {
+    fun update(items: List<ActiveItem>, selection: ActiveSelection = ActiveSelection.Preserve) {
         view.update(items, selection)
     }
 
@@ -122,13 +132,13 @@ internal class ActiveList(
     fun selectedIndex(): Int = view.selectedIndex()
 
     @RequiresEdt
-    fun selected(): ActiveListItem? = view.selected()
+    fun selected(): ActiveItem? = view.selected()
 
     @RequiresEdt
     fun clearSelection() = view.clearSelection()
 
     @RequiresEdt
-    fun selectedItems(): List<ActiveListItem> = view.selectedItems()
+    fun selectedItems(): List<ActiveItem> = view.selectedItems()
 
     @RequiresEdt
     fun selectedKeys(): List<String> = view.selectedKeys()
@@ -187,13 +197,13 @@ internal class ActiveList(
     fun trackBalloon(balloon: Balloon) = view.trackBalloon(balloon)
 
     @RequiresEdt
-    fun confirmDelete(anchor: RelativePoint, opts: ActiveListDeleteOptions, confirm: (Boolean) -> Unit) {
-        trackBalloon(showActiveListDeletePopup(anchor, opts, confirm))
+    fun confirmDelete(anchor: RelativePoint, opts: ActiveDeleteOptions, confirm: (Boolean) -> Unit) {
+        trackBalloon(showActiveDeletePopup(anchor, opts, confirm))
     }
 
     @RequiresEdt
-    fun editName(anchor: RelativePoint, opts: ActiveListEditOptions, commit: (String) -> Unit) {
-        trackBalloon(showActiveListEditPopup(anchor, opts, commit))
+    fun editName(anchor: RelativePoint, opts: ActiveEditOptions, commit: (String) -> Unit) {
+        trackBalloon(showActiveEditPopup(anchor, opts, commit))
     }
 
     @RequiresEdt
@@ -205,7 +215,7 @@ internal class ActiveList(
     ) {
         if (!select(key)) return
         val value = current(key) ?: return
-        editName(point(key, cell), ActiveListEditOptions(value)) { name -> commit(key, name) }
+        editName(point(key, cell), ActiveEditOptions(value)) { name -> commit(key, name) }
     }
 
     @RequiresEdt

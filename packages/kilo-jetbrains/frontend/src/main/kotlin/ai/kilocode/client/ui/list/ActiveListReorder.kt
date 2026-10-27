@@ -1,5 +1,8 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveMove
+import ai.kilocode.client.ui.active.ActiveReorder
 import com.intellij.ide.dnd.DnDDragStartBean
 import com.intellij.ide.dnd.DnDImage
 import com.intellij.ide.dnd.DnDSupport
@@ -10,22 +13,22 @@ import java.awt.Point
 import javax.swing.JList
 import javax.swing.TransferHandler
 
-internal class ActiveListReorder(
-    val movable: (ActiveListItem) -> Boolean = { true },
-    val onMove: (ActiveListMove) -> Unit,
+internal class ActiveReorder(
+    val movable: (ActiveItem) -> Boolean = { true },
+    val onMove: (ActiveMove) -> Unit,
 )
 
-internal data class ActiveListMove(
+internal data class ActiveMove(
     val key: String,
     val from: Int,
     val to: Int,
     val keys: List<String>,
 )
 
-internal data class ActiveListGap(
-    val source: ActiveListItem,
+internal data class ActiveGap(
+    val source: ActiveItem,
     val height: Int,
-) : ActiveListItem {
+) : ActiveSection {
     override val key: String get() = source.key
     // Carry the dragged row's identity so a refresh mid-drag reselects the placeholder instead of
     // dropping the selection: rows whose identity differs from their key (worktrees) would not match.
@@ -35,17 +38,17 @@ internal data class ActiveListGap(
     override val disabled: Boolean get() = true
 }
 
-internal fun activeListGapRows(rows: List<ActiveListItem>, key: String, index: Int, height: Int): List<ActiveListItem> {
+internal fun activeListGapRows(rows: List<ActiveItem>, key: String, index: Int, height: Int): List<ActiveItem> {
     val from = rows.indexOfFirst { it.key == key }
     if (from < 0) return rows
     val source = rows[from]
     val out = rows.toMutableList()
     out.removeAt(from)
-    out.add(index.coerceIn(0, out.size), ActiveListGap(source, height))
+    out.add(index.coerceIn(0, out.size), ActiveGap(source, height))
     return out
 }
 
-internal fun activeListSectionRun(rows: List<ActiveListItem>, index: Int): IntRange {
+internal fun activeListSectionRun(rows: List<ActiveItem>, index: Int): IntRange {
     if (index !in rows.indices) return 0 until 0
     val section = rows[index].section
     val start = generateSequence(index) { it - 1 }.takeWhile { it >= 0 && rows[it].section == section }.last()
@@ -53,7 +56,7 @@ internal fun activeListSectionRun(rows: List<ActiveListItem>, index: Int): IntRa
     return start..end
 }
 
-internal fun installActiveListReorder(view: ActiveListView, list: JBList<ActiveListItem>, reorder: ActiveListReorder) {
+internal fun installActiveListReorder(view: ActiveListView, list: JBList<ActiveItem>, reorder: ActiveReorder) {
     if (GraphicsEnvironment.isHeadless()) return
     list.transferHandler = TransferHandler(null)
     list.dragEnabled = true

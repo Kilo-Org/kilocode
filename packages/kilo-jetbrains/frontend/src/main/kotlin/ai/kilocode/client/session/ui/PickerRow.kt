@@ -9,6 +9,7 @@ import com.intellij.ui.popup.list.SelectablePanel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
+import java.awt.Color
 import javax.swing.JComponent
 import javax.swing.JList
 import javax.swing.border.Border
@@ -28,9 +29,23 @@ internal class PickerRow : SelectablePanel() {
     }
 
     fun update(list: JList<*>, selected: Boolean, focused: Boolean) {
-        background = list.background
-        selectionColor = if (selected) UIUtil.getListBackground(true, focused) else null
-        if (NewUI.isEnabled()) {
+        update(
+            background = list.background,
+            selectionColor = if (selected) UIUtil.getListBackground(true, focused) else null,
+            opaque = true,
+            paintSelection = true,
+        )
+    }
+
+    /**
+     * Container-neutral update for hosts that already know their backdrop and selection color, such
+     * as the native tree, where the tree itself paints the selection and the row must stay transparent.
+     */
+    fun update(background: Color?, selectionColor: Color?, opaque: Boolean, paintSelection: Boolean) {
+        this.background = background
+        isOpaque = opaque
+        this.selectionColor = if (paintSelection) selectionColor else null
+        if (opaque && NewUI.isEnabled()) {
             PopupUtil.configListRendererFlexibleHeight(this)
             return
         }

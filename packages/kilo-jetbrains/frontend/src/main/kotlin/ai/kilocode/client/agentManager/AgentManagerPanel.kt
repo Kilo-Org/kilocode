@@ -49,17 +49,18 @@ import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.list.ActiveList
-import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListDeleteOptions
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListMenu
-import ai.kilocode.client.ui.list.ActiveListMetrics
-import ai.kilocode.client.ui.list.ActiveListReorder
-import ai.kilocode.client.ui.list.ActiveListSelection
-import ai.kilocode.client.ui.list.ActiveListSurface
-import ai.kilocode.client.ui.list.ActiveListWeight
+import ai.kilocode.client.ui.tree.ActiveTree
+import ai.kilocode.client.ui.tree.ActiveTreeNode
+import ai.kilocode.client.ui.active.ActiveBadge
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveDeleteOptions
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveMenu
+import ai.kilocode.client.ui.active.ActiveMetrics
+import ai.kilocode.client.ui.active.ActiveReorder
+import ai.kilocode.client.ui.active.ActiveSelection
+import ai.kilocode.client.ui.active.ActiveSurface
+import ai.kilocode.client.ui.active.ActiveWeight
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
@@ -126,34 +127,33 @@ class AgentManagerPanel(
     private val provider = WorktreeDeleteProvider()
     private val edit = RenameAction()
     private val group = ActionManager.getInstance().getAction("Kilo.Worktree.RowMenu") as? ActionGroup ?: DefaultActionGroup()
-    private val list = ActiveList(
+    private val groupRow = LocalWorktreesRow()
+    private val tree = ActiveTree(
         KiloBundle.message("worktree.empty"),
-        cfg = ActiveListConfig(
+        cfg = ActiveConfig(
             hoverActions = true,
-            title = ActiveListWeight.PLAIN,
-            header = ActiveListWeight.PLAIN,
+            title = ActiveWeight.PLAIN,
             // The review and CI glyphs are read as a column down the list, so they line up with the
             // changes summary and PR pill below them rather than following each title's own width.
             badgesRight = true,
         ),
-        surface = ActiveListSurface.ToolWindow,
-        showSearch = false,
-        onCell = { _, _ -> },
-        onOpen = { row, focus ->
-            val item = (row as? WorktreeRow)?.dto ?: return@ActiveList
-            open(item, focus)
-        },
-        menu = ActiveListMenu(WorktreeDataKeys.WORKTREE, group, element = { row ->
+        surface = ActiveSurface.ToolWindow,
+        actions = ai.kilocode.client.ui.tree.ActiveTreeActions(
+            open = { row, focus -> (row as? WorktreeRow)?.dto?.let { open(it, focus) } },
+            hover = { row -> hover(row) },
+        ),
+        menu = ActiveMenu(WorktreeDataKeys.WORKTREE, group, element = { row ->
             (row as? WorktreeRow)?.dto?.takeIf {
                 canRename(it) || canDelete(it) || canOpenPr(it) || canOpenDiff(it) || canOpenLocalDiff(it) ||
                     canOpenSetupScript(it) || canRunSetup(it) || canCopyBranch(it)
             }
-        }),
-        reorder = ActiveListReorder(
+        },
+            eligible = { it is WorktreeRow },
+        ),
+        reorder = ActiveReorder(
             movable = { row -> row is WorktreeRow && !row.current && row.progress == null },
             onMove = { move -> controller.reorder(move.keys) },
         ),
-        onHover = { row -> hover(row) },
     )
     // Rows are dense and neighbours are only ever passed over on the way somewhere else, so the dwell is
     // longer here than for a transcript card the pointer goes to on purpose.
@@ -170,7 +170,7 @@ class AgentManagerPanel(
         Disposer.register(this, popup)
         // A row that scrolls or gets selected is no longer under the balloon that points at it, and a
         // busy list or a rebuilt model has already dropped the hover the popup was opened from.
-        list.onScroll = { popup.hideAll() }
+        tree.onScroll = { popup.hideAll() }
         isOpaque = true
         project?.let {
             val orphan = OrphanBanner(it, controller, this)
@@ -178,13 +178,13 @@ class AgentManagerPanel(
             addToTop(Stack.vertical().next(GhBanner(it, this)).next(orphan))
         }
         addToCenter(body())
-        list.installPopup(group)
+        tree.installPopup(group)
         sync()
         bindModel()
         controller.onSelect = { key ->
             // Focus the list so the freshly created worktree renders as an active selection rather
             // than the inactive highlight it would get while focus stays on the toolbar.
-            if (list.select(key)) list.focusList()
+            if (tree.select(key)) tree.focus()
             item(key)?.takeIf { controller.progress(it.id) == null }?.let { open(it, focus = false) }
         }
         // A fresh worktree changes what git reports, so bypass both the refresh throttle and the
@@ -211,7 +211,7 @@ class AgentManagerPanel(
             project?.service<KiloVfsManager>()?.updatePresentation(WorktreeSessionEditorKind.ID, mapOf("path" to path))
         }
         ActionManager.getInstance().getAction("RenameElement")?.shortcutSet?.let { set ->
-            edit.registerCustomShortcutSet(set, list, this)
+            edit.registerCustomShortcutSet(set, tree, this)
         }
     }
 
@@ -224,12 +224,12 @@ class AgentManagerPanel(
             override fun getBackground(): Color = activeListToolWindowBackground()
         }.apply {
             border = JBUI.Borders.empty(UiStyle.Gap.SM)
-            addToCenter(list)
+            addToCenter(tree)
         }
     }
 
     fun refresh() {
-        if (list.selectedKeys().isEmpty()) currentEditorWorktree()?.let { list.select(it, scroll = false) }
+        if (tree.selectedKeys().isEmpty()) currentEditorWorktree()?.let { tree.select(it, scroll = false) }
         controller.reload()
         project?.service<WorktreeStatusService>()?.refreshStats()
         project?.service<WorktreeStatusService>()?.refreshPr()
@@ -273,7 +273,7 @@ class AgentManagerPanel(
     internal fun canShowRename(item: WorktreeDto?): Boolean = renameVisible(item)
 
     private fun beginRename(item: WorktreeDto, cell: String? = null) {
-        list.rename(
+        tree.rename(
             item.id,
             cell,
             current = { key -> item(key)?.takeIf(::renameable)?.name },
@@ -392,12 +392,13 @@ class AgentManagerPanel(
     }
 
     private fun showDeletePopup(item: WorktreeDto, cell: String? = null) {
-        val opts = ActiveListDeleteOptions(
+        val opts = ActiveDeleteOptions(
             message = KiloBundle.message("worktree.delete.confirm.message", item.name),
             detail = KiloBundle.message("worktree.delete.confirm.detail"),
             gate = if (item.locked) KiloBundle.message("worktree.delete.locked.confirm") else null,
         )
-        list.confirmDelete(list.point(item.id, cell), opts) { force ->
+        val anchor = tree.point(item.id, cell) ?: return
+        tree.confirmDelete(anchor, opts) { force ->
             controller.remove(
                 item,
                 force,
@@ -441,10 +442,10 @@ class AgentManagerPanel(
      */
     private fun advance(next: WorktreeDto?) {
         if (next == null) {
-            list.clearSelection()
+            tree.clearSelection()
             return
         }
-        if (list.select(next.id)) list.focusList()
+        if (tree.select(next.id)) tree.focus()
         open(next, focus = false)
     }
 
@@ -552,23 +553,27 @@ class AgentManagerPanel(
                 running = running.contains(normalizeWorktreePath(item.path)),
             )
         }
-        list.update(
-            listOfNotNull(current) + (0 until controller.model.size).map {
-                val item = controller.model.getElementAt(it)
-                val key = normalizeWorktreePath(item.path)
-                val pull = prs[key]
-                service<WorktreeNameCache>().putPr(item.path, pull)
-                WorktreeRow(
-                    item,
-                    controller.progress(item.id),
-                    controller.kind(item.path),
-                    stats[key],
-                    pull,
-                    dirty[key],
-                    running = running.contains(key),
-                )
+        val local = (0 until controller.model.size).map {
+            val item = controller.model.getElementAt(it)
+            val key = normalizeWorktreePath(item.path)
+            val pull = prs[key]
+            service<WorktreeNameCache>().putPr(item.path, pull)
+            WorktreeRow(
+                item,
+                controller.progress(item.id),
+                controller.kind(item.path),
+                stats[key],
+                pull,
+                dirty[key],
+                running = running.contains(key),
+            )
+        }
+        tree.update(
+            buildList {
+                current?.let { add(ActiveTreeNode(it)) }
+                add(ActiveTreeNode(groupRow, local.map { ActiveTreeNode(it) }))
             },
-            ActiveListSelection.Preserve,
+            ActiveSelection.Preserve,
         )
     }
 
@@ -576,13 +581,13 @@ class AgentManagerPanel(
     private fun track(file: VirtualFile?) {
         val key = project?.service<WorktreeEditorMatchers>()?.match(file)
         if (key != null) {
-            list.select(key, scroll = false)
+            tree.select(key, scroll = false)
             return
         }
         // A null active editor is a transient state (e.g. a tab closing during a delete); keep the
         // current selection. Only a real, non-worktree editor clears the worktree row selection.
         if (file == null) return
-        list.clearSelection()
+        tree.clearSelection()
     }
 
     @RequiresEdt
@@ -603,7 +608,7 @@ class AgentManagerPanel(
      * worktree path so a model rebuild that replaces row objects does not read as a different row.
      */
     @RequiresEdt
-    private fun hover(row: ActiveListItem?) {
+    private fun hover(row: ActiveItem?) {
         val item = row as? WorktreeRow
         if (item == null) {
             popup.notifyExit(hovered ?: return)
@@ -651,9 +656,9 @@ class AgentManagerPanel(
      */
     @RequiresEdt
     private fun place(built: SidePopupContent): SidePopupSpot? {
-        val pane = SwingUtilities.getRootPane(list)?.layeredPane ?: return null
-        val subject = list.hoveredBounds(pane) ?: return null
-        val area = list.visibleBounds(pane) ?: return null
+        val pane = SwingUtilities.getRootPane(tree)?.layeredPane ?: return null
+        val subject = tree.hoveredBounds(pane) ?: return null
+        val area = tree.visibleBounds(pane) ?: return null
         val gap = UiStyle.Gap.pad()
         val insets = UiStyle.Balloon.insets()
         // The shadow is reserved on every side, so it counts twice on each axis.
@@ -714,7 +719,7 @@ class AgentManagerPanel(
         sink[PlatformDataKeys.DELETE_ELEMENT_PROVIDER] = provider
     }
 
-    private fun selectedRow(): WorktreeRow? = list.selected() as? WorktreeRow
+    private fun selectedRow(): WorktreeRow? = tree.selected() as? WorktreeRow
 
     private inner class WorktreeDeleteProvider : DeleteProvider {
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
@@ -756,6 +761,12 @@ class AgentManagerPanel(
         const val POPUP_HEIGHT = 320
     }
 
+    private inner class LocalWorktreesRow : ActiveItem {
+        override val key: String get() = "kilo:worktree-group:local"
+        override val identity: Any get() = key
+        override val title: String get() = KiloBundle.message("worktree.section.local")
+    }
+
     private inner class WorktreeRow(
         val dto: WorktreeDto,
         override val progress: String?,
@@ -765,7 +776,7 @@ class AgentManagerPanel(
         val dirty: WorktreeDirtyDto? = null,
         val current: Boolean = false,
         val running: Boolean = false,
-    ) : ActiveListItem {
+    ) : ActiveItem {
         override val key: String get() = dto.id
         override val identity: Any get() = if (current) "local:${dto.path}" else "worktree:${dto.path}"
         override val title: String get() = if (current) dto.branch else WorktreeTitle.text(dto.name, dto.path, pr)
@@ -773,7 +784,6 @@ class AgentManagerPanel(
         override val tooltip: String? get() = null
         override val icon = WorktreeIcons.forRow(progress != null, kind, dto.locked, current, running)
         override val tinted: Boolean get() = WorktreeIcons.neutral(icon)
-        override val section: String? get() = if (current) null else KiloBundle.message("worktree.section.local")
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
 
         /**
@@ -786,16 +796,16 @@ class AgentManagerPanel(
          * carries a number for the same reason — "waiting on a reply" is not worth acting on until you know
          * whether that is one comment or twelve.
          */
-        override val badges: List<ActiveListBadge>
+        override val badges: List<ActiveBadge>
             get() {
                 if (progress != null) return emptyList()
                 val p = pr ?: return emptyList()
                 return listOfNotNull(commentsBadge(p), reviewBadge(p), checksBadge(p))
             }
 
-        private fun reviewBadge(p: WorktreePrDto): ActiveListBadge? {
+        private fun reviewBadge(p: WorktreePrDto): ActiveBadge? {
             val glyph = PrIcons.review(p.review) ?: return null
-            return ActiveListBadge(
+            return ActiveBadge(
                 "",
                 id = "pr-review",
                 tooltip = reviewTooltip(p.review),
@@ -804,9 +814,9 @@ class AgentManagerPanel(
             )
         }
 
-        private fun checksBadge(p: WorktreePrDto): ActiveListBadge? {
+        private fun checksBadge(p: WorktreePrDto): ActiveBadge? {
             val glyph = PrIcons.checks(p.checks) ?: return null
-            return ActiveListBadge(
+            return ActiveBadge(
                 "",
                 id = "pr-checks",
                 tooltip = checksTooltip(p.checks),
@@ -816,9 +826,9 @@ class AgentManagerPanel(
             )
         }
 
-        private fun commentsBadge(p: WorktreePrDto): ActiveListBadge? {
+        private fun commentsBadge(p: WorktreePrDto): ActiveBadge? {
             val glyph = PrIcons.comments(p.comments) ?: return null
-            return ActiveListBadge(
+            return ActiveBadge(
                 commentsCount(p.comments),
                 id = "pr-comments",
                 tooltip = commentsTooltip(p.comments),
@@ -828,12 +838,12 @@ class AgentManagerPanel(
             )
         }
 
-        override val secondaryBadges: List<ActiveListBadge>
+        override val secondaryBadges: List<ActiveBadge>
             get() {
                 if (progress != null) return emptyList()
                 val p = pr ?: return emptyList()
                 return listOf(
-                    ActiveListBadge(
+                    ActiveBadge(
                         "#${p.number}",
                         style(p.state),
                         id = "pull-request",
@@ -847,11 +857,11 @@ class AgentManagerPanel(
          * whose agent has not committed yet still says what it changed. A row that showed nothing until
          * the first commit reads as "no changes here", which is the state this summary exists to deny.
          */
-        override val metrics: ActiveListMetrics?
+        override val metrics: ActiveMetrics?
             get() {
                 if (progress != null) return null
                 if ((stats?.files ?: 0) == 0 && (dirty?.files ?: 0) == 0) return null
-                return ActiveListMetrics(
+                return ActiveMetrics(
                     files = stats?.files ?: 0,
                     additions = stats?.additions ?: 0,
                     deletions = stats?.deletions ?: 0,

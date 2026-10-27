@@ -14,16 +14,16 @@ import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.util.edt
 import ai.kilocode.client.ui.list.ActiveList
-import ai.kilocode.client.ui.list.ActiveListBadge
-import ai.kilocode.client.ui.list.ActiveListConfig
-import ai.kilocode.client.ui.list.ActiveListDeleteOptions
-import ai.kilocode.client.ui.list.ActiveListEditOptions
-import ai.kilocode.client.ui.list.ActiveListItem
-import ai.kilocode.client.ui.list.ActiveListMenu
-import ai.kilocode.client.ui.list.ActiveListRowHeight
-import ai.kilocode.client.ui.list.ActiveListSelection
-import ai.kilocode.client.ui.list.ActiveListSurface
-import ai.kilocode.client.ui.list.ActiveListWeight
+import ai.kilocode.client.ui.active.ActiveBadge
+import ai.kilocode.client.ui.active.ActiveConfig
+import ai.kilocode.client.ui.active.ActiveDeleteOptions
+import ai.kilocode.client.ui.active.ActiveEditOptions
+import ai.kilocode.client.ui.active.ActiveItem
+import ai.kilocode.client.ui.active.ActiveMenu
+import ai.kilocode.client.ui.active.ActiveRowHeight
+import ai.kilocode.client.ui.active.ActiveSelection
+import ai.kilocode.client.ui.active.ActiveSurface
+import ai.kilocode.client.ui.active.ActiveWeight
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
@@ -93,8 +93,8 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
     private val controller: WorktreeSessionListController,
     private val worktree: ai.kilocode.client.app.Workspace,
     private val project: Project? = null,
-    private val confirm: ((RelativePoint, ActiveListDeleteOptions, () -> Unit) -> Unit)? = null,
-    private val edit: ((RelativePoint, ActiveListEditOptions, (String) -> Unit) -> Unit)? = null,
+    private val confirm: ((RelativePoint, ActiveDeleteOptions, () -> Unit) -> Unit)? = null,
+    private val edit: ((RelativePoint, ActiveEditOptions, (String) -> Unit) -> Unit)? = null,
     private val openWorktree: ((String) -> Unit)? = null,
     // Persisted per-worktree session list visibility; null means the user has not chosen yet.
     private val load: ((Boolean?) -> Unit) -> Unit = { done ->
@@ -119,19 +119,19 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
     private val group = ActionManager.getInstance().getAction("Kilo.WorktreeSession.RowMenu") as? ActionGroup ?: DefaultActionGroup()
     private val list = ActiveList(
         KiloBundle.message("worktree.session.list.empty"),
-        cfg = ActiveListConfig(
-            ActiveListRowHeight.EQUAL,
+        cfg = ActiveConfig(
+            ActiveRowHeight.EQUAL,
             description = false,
-            selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
             hoverActions = true,
-            title = ActiveListWeight.PLAIN,
+            title = ActiveWeight.PLAIN,
         ),
-        surface = ActiveListSurface.ToolWindow,
+        surface = ActiveSurface.ToolWindow,
+        options = ai.kilocode.client.ui.list.ActiveListOptions(selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION),
         showSearch = false,
         enter = { true },
         onCell = { _, _ -> },
         onOpen = { row, focus -> open(row, focus) },
-        menu = ActiveListMenu(WorktreeSessionDataKeys.SESSION, group, element = { row ->
+        menu = ActiveMenu(WorktreeSessionDataKeys.SESSION, group, element = { row ->
             (row as? SessionRow)?.session?.takeIf { canFork(it) || canMove(it) || canRename(it) || canDelete(it) }
         }),
     )
@@ -204,7 +204,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         if (keys.isEmpty()) return
         val view = UIUtil.findComponentOfType(list, com.intellij.ui.components.JBList::class.java) ?: return
         val indexes = keys.mapNotNull { key ->
-            (0 until view.model.size).firstOrNull { idx -> (view.model.getElementAt(idx) as? ActiveListItem)?.key == key }
+            (0 until view.model.size).firstOrNull { idx -> (view.model.getElementAt(idx) as? ActiveItem)?.key == key }
         }
         view.selectedIndices = indexes.toIntArray()
     }
@@ -277,11 +277,11 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         } else {
             KiloBundle.message("worktree.session.delete.confirm.message.multiple", active.size)
         }
-        val opts = ActiveListDeleteOptions(
+        val opts = ActiveDeleteOptions(
             message = msg,
             detail = KiloBundle.message("worktree.session.delete.confirm.detail"),
         )
-        val handler = confirm ?: { anchor: RelativePoint, options: ActiveListDeleteOptions, run: () -> Unit ->
+        val handler = confirm ?: { anchor: RelativePoint, options: ActiveDeleteOptions, run: () -> Unit ->
             list.confirmDelete(anchor, options) { run() }
         }
         handler(list.point(active[0], cell), opts) { manager.deleteSessions(active) }
@@ -292,10 +292,10 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         if (key == SessionHost.NEW || key in manager.deleting()) return
         val value = title(key)
         if (!list.select(key)) return
-        val handler = edit ?: { anchor: RelativePoint, opts: ActiveListEditOptions, commit: (String) -> Unit ->
+        val handler = edit ?: { anchor: RelativePoint, opts: ActiveEditOptions, commit: (String) -> Unit ->
             list.editName(anchor, opts, commit)
         }
-        handler(list.point(key, cell), ActiveListEditOptions(value)) { name ->
+        handler(list.point(key, cell), ActiveEditOptions(value)) { name ->
             manager.renameSession(key, name)
         }
     }
@@ -536,7 +536,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
     }
 
     @RequiresEdt
-    private fun open(row: ActiveListItem, focus: Boolean) {
+    private fun open(row: ActiveItem, focus: Boolean) {
         if (row.key == SessionHost.NEW) {
             manager.newSession()
             return
@@ -547,7 +547,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
 
     @RequiresEdt
     private fun sync() {
-        val rows = mutableListOf<ActiveListItem>()
+        val rows = mutableListOf<ActiveItem>()
         val key = manager.currentKey()
         val pending = manager.hasPendingNew()
         val kinds = manager.activity()
@@ -559,7 +559,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         // The host owns which session is shown, so it also owns the selection: name the row and let
         // the list hold that key until a refresh brings it in.
         val shown = if (pending) SessionHost.NEW else key
-        list.update(rows, shown?.let { ActiveListSelection.Key(it) } ?: ActiveListSelection.Preserve)
+        list.update(rows, shown?.let { ActiveSelection.Key(it) } ?: ActiveSelection.Preserve)
         syncToggle()
     }
 
@@ -690,7 +690,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         }
     }
 
-    private object NewRow : ActiveListItem {
+    private object NewRow : ai.kilocode.client.ui.list.ActiveSection {
         override val key: String get() = SessionHost.NEW
         override val title: String get() = KiloBundle.message("worktree.session.new")
         // Group the pending session under Today so it appears inside the list right away instead of
@@ -713,7 +713,7 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         // Live title of the open session, if any; reflects the agent-generated name as it streams in
         // before the listed snapshot catches up.
         private val live: String? = null,
-    ) : ActiveListItem {
+    ) : ai.kilocode.client.ui.list.ActiveSection {
         private val item = LocalHistoryItem(session)
         override val key: String get() = session.id
         override val title: String get() {
@@ -725,8 +725,8 @@ class WorktreeSessionEditorPanel @RequiresEdt constructor(
         }
         override val tooltip: String get() = title
         override val progress: String? get() = if (deleting) KiloBundle.message("common.deleting") else null
-        override val badges: List<ActiveListBadge>
-            get() = listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
+        override val badges: List<ActiveBadge>
+            get() = listOfNotNull(kind?.let { ActiveBadge(it.label(), it.style()) })
         override val section: String get() = HistoryTime.title(HistoryTime.section(item))
         override val search: String get() = listOf(session.title, session.id, session.directory).joinToString(" ")
     }
