@@ -118,7 +118,12 @@ export function resolve(
       const attached = yield* entry.provider.attach({
         id: entry.session,
         ...(entry.organizationID ? { organizationID: entry.organizationID } : {}),
-      }).pipe(Effect.catch(() => Effect.succeed(undefined)))
+      }).pipe(
+        Effect.catch((error) => {
+          if (error.code === "not_found") store.dispose(entry.id)
+          return Effect.succeed(undefined)
+        }),
+      )
       if (!attached) return { type: "fail", reason: "unavailable" } satisfies Plan
       store.renew(entry, { expiresAt: attached.expiresAt })
     } else {
@@ -147,10 +152,31 @@ export function respond(plan: Routed, request: ServerRequest): Effect.Effect<Htt
       ...(plan.entry.organizationID ? { organizationID: plan.entry.organizationID } : {}),
     }
     return yield* route(native).pipe(
-      Effect.flatMap(forwardResponse),
-      Effect.catch((error) => Effect.succeed(failure(error.code))),
+      Effect.flatMap((response) => {
+        if (response.status !== 404) return forwardResponse(response)
+        return Effect.tryPromise({
+          try: () => response.clone().json(),
+          catch: () => undefined,
+        }).pipe(
+          Effect.catch(() => Effect.succeed(undefined)),
+          Effect.flatMap((body) => {
+            if (deletedSession(body)) Attachments.store.dispose(plan.entry.id)
+            return forwardResponse(response)
+          }),
+        )
+      }),
+      Effect.catch((error) => {
+        if (error.code === "not_found") Attachments.store.dispose(plan.entry.id)
+        return Effect.succeed(failure(error.code))
+      }),
     )
   })
+}
+
+function deletedSession(value: unknown) {
+  if (value === null || typeof value !== "object") return false
+  const record: Record<string, unknown> = Object.fromEntries(Object.entries(value))
+  return record.error === "KILO_SESSION_NOT_FOUND" || record.code === "KILO_SESSION_NOT_FOUND"
 }
 
 function forward(headers: Headers) {

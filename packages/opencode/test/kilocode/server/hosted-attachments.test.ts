@@ -113,6 +113,55 @@ describe("hosted attachments", () => {
     expect(store.lookup(active.id).kind).toBe("found")
   })
 
+  test("disposes workspace and remote-session scopes without touching sibling workspaces", () => {
+    const store = Attachments.create()
+    const fake = provider("alpha")
+    const first = {
+      id: { providerID: fake.value.id, workspaceID: "worktree_one" },
+      remoteSessionID: "workspace_remote_one",
+    }
+    const second = {
+      id: { providerID: fake.value.id, workspaceID: "worktree_one" },
+      remoteSessionID: "workspace_remote_two",
+    }
+    const other = {
+      id: { providerID: fake.value.id, workspaceID: "worktree_two" },
+      remoteSessionID: "workspace_remote_one",
+    }
+    const one = store.mint({
+      provider: fake.value,
+      session: hosted("alpha", "ses_00000000000000000000000001"),
+      workspace: first,
+      expiresAt: Date.now() + 60_000,
+    })
+    const two = store.mint({
+      provider: fake.value,
+      session: hosted("alpha", "ses_00000000000000000000000002"),
+      workspace: second,
+      expiresAt: Date.now() + 60_000,
+    })
+    const three = store.mint({
+      provider: fake.value,
+      session: hosted("alpha", "ses_00000000000000000000000003"),
+      workspace: other,
+      expiresAt: Date.now() + 60_000,
+    })
+
+    expect(store.countWorkspace(first.id)).toBe(2)
+    store.disposeRemoteSession(first.id, first.remoteSessionID)
+    expect(store.lookup(one.id).kind).toBe("disposed")
+    expect(store.lookup(two.id).kind).toBe("found")
+    expect(store.lookup(three.id).kind).toBe("found")
+
+    store.disposeWorkspace(first.id)
+    expect(store.lookup(two.id).kind).toBe("disposed")
+    expect(store.lookup(three.id).kind).toBe("found")
+    expect(store.countWorkspace(first.id)).toBe(0)
+
+    store.disposeWorkspace(other.id)
+    expect(store.lookup(three.id).kind).toBe("disposed")
+  })
+
   test("counts only live attachments for one hosted session", () => {
     const store = Attachments.create()
     const fake = provider("alpha")

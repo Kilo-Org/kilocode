@@ -249,6 +249,49 @@ describe("hosted attachment routing", () => {
     expect(fake.calls).toHaveLength(1)
   })
 
+  test("disposes a workspace attachment when the provider reports its session deleted", async () => {
+    const api = app()
+    const fake = provider("alpha", {
+      route: () => Effect.succeed(Response.json({ error: "KILO_SESSION_NOT_FOUND" }, { status: 404 })),
+    })
+    const entry = Attachments.store.mint({
+      provider: fake.value,
+      session: hosted(fake.value.id, SESSION),
+      workspace: {
+        id: { providerID: fake.value.id, workspaceID: "worktree_workspace_one" },
+        remoteSessionID: "workspace_remote_one",
+      },
+      expiresAt: Date.now() + 60_000,
+    })
+
+    const missing = await api.request(`/session/${SESSION}/message?workspace=${entry.id}`)
+    expect(missing.status).toBe(404)
+    expect(Attachments.store.lookup(entry.id)).toEqual({ kind: "disposed" })
+
+    const stale = await api.request(`/session/${SESSION}/message?workspace=${entry.id}`)
+    expect(stale.status).toBe(410)
+  })
+
+  test("keeps a workspace attachment when a 404 is not a deleted-session response", async () => {
+    const api = app()
+    const fake = provider("alpha", {
+      route: () => Effect.succeed(Response.json({ error: "MESSAGE_NOT_FOUND" }, { status: 404 })),
+    })
+    const entry = Attachments.store.mint({
+      provider: fake.value,
+      session: hosted(fake.value.id, SESSION),
+      workspace: {
+        id: { providerID: fake.value.id, workspaceID: "worktree_workspace_two" },
+        remoteSessionID: "workspace_remote_two",
+      },
+      expiresAt: Date.now() + 60_000,
+    })
+
+    const response = await api.request(`/session/${SESSION}/message?workspace=${entry.id}`)
+    expect(response.status).toBe(404)
+    expect(Attachments.store.lookup(entry.id)).toMatchObject({ kind: "found" })
+  })
+
   test("streams the session-scoped event source without rewriting fence or resnapshot frames", async () => {
     const api = app()
     const encoder = new TextEncoder()

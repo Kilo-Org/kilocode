@@ -5,12 +5,26 @@ import {
   HostedSessionID,
   HostedSessionPage,
   HostedTranscriptPage,
+  HostedWorkspaceID,
+  HostedWorkspaceSessionID,
   OrganizationID,
   ProviderID,
   RemoteSessionID,
   StartInput,
   StartResult,
   Transport,
+  OperationKey,
+  Workspace,
+  WorkspaceAgent,
+  WorkspaceCreateInput,
+  WorkspaceCreateResult,
+  WorkspaceDeleteResult,
+  WorkspaceID,
+  WorkspacePage,
+  WorkspaceProfilePage,
+  WorkspaceSessionCreateResult,
+  WorkspaceSessionPage,
+  WorkspaceStatus,
 } from "@/kilocode/session-hosting/types"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 import {
@@ -34,6 +48,12 @@ export const SessionHostPaths = {
   message: `${root}/session/:providerID/:sessionID/message`,
   attach: `${root}/session/:providerID/:sessionID/attach`,
   attachment: `${root}/attachment/:attachmentID`,
+  workspace: `${root}/workspace`,
+  workspaceProfiles: `${root}/workspace/profiles`,
+  workspaceDetail: `${root}/workspace/:providerID/:workspaceID`,
+  workspaceStatus: `${root}/workspace/:providerID/:workspaceID/status`,
+  workspaceSessions: `${root}/workspace/:providerID/:workspaceID/session`,
+  workspaceSessionAttach: `${root}/workspace/:providerID/:workspaceID/session/:remoteSessionID/attach`,
 } as const
 
 export class SessionHostPaymentRequiredError extends Schema.ErrorClass<SessionHostPaymentRequiredError>(
@@ -61,6 +81,13 @@ export const SessionHostAttached = Schema.Struct({
   session: HostedSessionID,
   expiresAt: Schema.Finite,
 }).annotate({ identifier: "SessionHostAttached" })
+
+export const SessionHostWorkspaceAttached = Schema.Struct({
+  attachmentID: AttachmentID,
+  workspace: HostedWorkspaceID,
+  session: HostedWorkspaceSessionID,
+  expiresAt: Schema.Finite,
+}).annotate({ identifier: "SessionHostWorkspaceAttached" })
 
 export const SessionHostDetached = Schema.Struct({ detached: Schema.Boolean }).annotate({
   identifier: "SessionHostDetached",
@@ -91,9 +118,61 @@ const TranscriptQuery = Schema.Struct({
 
 const AttachQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
 
+const WorkspaceListQuery = Schema.Struct({
+  limit: Schema.optional(
+    Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 50 })),
+  ),
+  sessionLimit: Schema.optional(
+    Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 })),
+  ),
+  cursor: Schema.optional(Schema.String.check(Schema.isMaxLength(256))),
+  repositoryUrl: Schema.optional(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(2048))),
+  organizationID: Schema.optional(OrganizationID),
+})
+
+const WorkspaceDetailQuery = Schema.Struct({
+  sessionLimit: Schema.optional(
+    Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 })),
+  ),
+  sessionCursor: Schema.optional(Schema.String.check(Schema.isMaxLength(256))),
+  organizationID: Schema.optional(OrganizationID),
+})
+
+const WorkspaceStatusQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
+
+const WorkspaceSessionListQuery = Schema.Struct({
+  limit: Schema.optional(
+    Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 })),
+  ),
+  cursor: Schema.optional(Schema.String.check(Schema.isMaxLength(256))),
+  organizationID: Schema.optional(OrganizationID),
+})
+
+const WorkspaceAttachQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
+
+const WorkspaceProfilesQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
+
+const WorkspaceSessionCreateBody = Schema.Struct({
+  prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)),
+  agent: WorkspaceAgent,
+  organizationID: Schema.optional(OrganizationID),
+  operationKey: OperationKey,
+  messageID: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
+}).annotate({ identifier: "SessionHostWorkspaceSessionCreateBody" })
+
 const Params = {
   providerID: ProviderID,
   sessionID: RemoteSessionID,
+}
+
+const WorkspaceParams = {
+  providerID: ProviderID,
+  workspaceID: WorkspaceID,
+}
+
+const WorkspaceSessionParams = {
+  ...WorkspaceParams,
+  remoteSessionID: RemoteSessionID,
 }
 
 /**
@@ -186,6 +265,117 @@ export const SessionHostApi = HttpApi.make("session-host")
             identifier: "sessionHost.detach",
             summary: "Detach a hosted session",
             description: "Dispose a local attachment. This never changes Cloud lifecycle.",
+          }),
+        ),
+        HttpApiEndpoint.get("workspaces", SessionHostPaths.workspace, {
+          query: WorkspaceListQuery,
+          success: described(WorkspacePage, "Hosted workspaces"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.workspaces",
+            summary: "List hosted workspaces",
+            description: "List durable hosted workspaces with their nested root sessions without waking compute.",
+          }),
+        ),
+        HttpApiEndpoint.get("workspaceProfiles", SessionHostPaths.workspaceProfiles, {
+          query: WorkspaceProfilesQuery,
+          success: described(WorkspaceProfilePage, "Authorized workspace profiles"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.workspaceProfiles",
+            summary: "List workspace creation profiles",
+            description:
+              "List authorized profile summaries for workspace creation. Secret and environment values are never returned.",
+          }),
+        ),
+        HttpApiEndpoint.get("workspace", SessionHostPaths.workspaceDetail, {
+          params: WorkspaceParams,
+          query: WorkspaceDetailQuery,
+          success: described(Workspace, "Hosted workspace"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.workspace",
+            summary: "Get a hosted workspace",
+            description: "Read one hosted workspace, its metadata, and a page of its nested root sessions.",
+          }),
+        ),
+        HttpApiEndpoint.get("workspaceStatus", SessionHostPaths.workspaceStatus, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(WorkspaceStatus, "Hosted workspace status"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.workspaceStatus",
+            summary: "Read hosted workspace status",
+            description:
+              "Read passive compute, activity, wake, billing, and deletion progress without waking compute.",
+          }),
+        ),
+        HttpApiEndpoint.get("workspaceSessions", SessionHostPaths.workspaceSessions, {
+          params: WorkspaceParams,
+          query: WorkspaceSessionListQuery,
+          success: described(WorkspaceSessionPage, "Hosted workspace sessions"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.workspaceSessions",
+            summary: "List hosted workspace sessions",
+            description: "List a page of root sessions in one hosted workspace.",
+          }),
+        ),
+        HttpApiEndpoint.post("createWorkspace", SessionHostPaths.workspace, {
+          payload: WorkspaceCreateInput,
+          success: described(WorkspaceCreateResult, "Hosted workspace created"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.createWorkspace",
+            summary: "Create a hosted workspace",
+            description:
+              "Create a hosted workspace and its first root session. Reuse the same operation key and message ID to retry safely.",
+          }),
+        ),
+        HttpApiEndpoint.delete("deleteWorkspace", SessionHostPaths.workspaceDetail, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(WorkspaceDeleteResult, "Hosted workspace deleted"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.deleteWorkspace",
+            summary: "Delete a hosted workspace",
+            description:
+              "Destructively delete a hosted workspace and every remaining root session. Progress is available from the workspace status route.",
+          }),
+        ),
+        HttpApiEndpoint.post("createWorkspaceSession", SessionHostPaths.workspaceSessions, {
+          params: WorkspaceParams,
+          payload: WorkspaceSessionCreateBody,
+          success: described(WorkspaceSessionCreateResult, "Hosted workspace session created"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.createWorkspaceSession",
+            summary: "Create a session in a hosted workspace",
+            description:
+              "Create a root session in an existing hosted workspace, inheriting its repository, ref, profile, and environment.",
+          }),
+        ),
+        HttpApiEndpoint.post("attachWorkspaceSession", SessionHostPaths.workspaceSessionAttach, {
+          params: WorkspaceSessionParams,
+          query: WorkspaceAttachQuery,
+          success: described(SessionHostWorkspaceAttached, "Hosted workspace session attached"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.attachWorkspaceSession",
+            summary: "Attach to a hosted workspace session",
+            description:
+              "Mint an opaque local attachment scoped to one hosted workspace session. No provider origin, credential, or selector is exposed.",
           }),
         ),
       )

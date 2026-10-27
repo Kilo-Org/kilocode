@@ -109,17 +109,6 @@ export const HostedTranscriptPage = Schema.Struct({
 }).annotate({ identifier: "SessionHostTranscriptPage" })
 export type HostedTranscriptPage = Schema.Schema.Type<typeof HostedTranscriptPage>
 
-/**
- * Opaque attachment validity window. Provider routing material (target origin,
- * selector, credential, fence) is deliberately absent: the local attachment
- * API and its proxy hooks are introduced by the next issue.
- */
-export const Attachment = Schema.Struct({
-  session: HostedSessionID,
-  expiresAt: Schema.Finite,
-}).annotate({ identifier: "SessionHostAttachment" })
-export type Attachment = Schema.Schema.Type<typeof Attachment>
-
 export const Repository = Schema.Union([
   Schema.Struct({ type: Schema.Literal("github"), repo: Schema.String, branch: Schema.optional(Schema.String) }),
   Schema.Struct({ type: Schema.Literal("gitlab"), url: Schema.String, branch: Schema.optional(Schema.String) }),
@@ -134,6 +123,329 @@ export const OrganizationID = Schema.String.check(Schema.isMinLength(1), Schema.
   identifier: "SessionHostOrganizationID",
 })
 export type OrganizationID = Schema.Schema.Type<typeof OrganizationID>
+
+export const WorkspaceID = Schema.String.check(
+  Schema.isMinLength(1),
+  Schema.isMaxLength(255),
+  Schema.isPattern(/^[A-Za-z0-9_][A-Za-z0-9_.-]*$/),
+).annotate({ identifier: "SessionHostWorkspaceIDValue" })
+export type WorkspaceID = Schema.Schema.Type<typeof WorkspaceID>
+
+/**
+ * Hosted workspace identity is composite for the same reason session identity
+ * is: a provider's bare workspace id is never an identity on its own.
+ */
+export const HostedWorkspaceID = Schema.Struct({
+  providerID: ProviderID,
+  workspaceID: WorkspaceID,
+}).annotate({ identifier: "SessionHostWorkspaceIdentity" })
+export type HostedWorkspaceID = Schema.Schema.Type<typeof HostedWorkspaceID>
+
+export function workspaceKey(id: HostedWorkspaceID) {
+  return `${id.providerID}:${id.workspaceID}`
+}
+
+/**
+ * A hosted root session inside a workspace. `remoteSessionID` is the provider's
+ * durable session identifier; `nativeSessionID` is the native Kilo session the
+ * attachment routes to. Both are scoped by workspace and provider.
+ */
+export const HostedWorkspaceSessionID = Schema.Struct({
+  providerID: ProviderID,
+  workspaceID: WorkspaceID,
+  remoteSessionID: RemoteSessionID,
+  nativeSessionID: RemoteSessionID,
+}).annotate({ identifier: "SessionHostWorkspaceSessionIdentity" })
+export type HostedWorkspaceSessionID = Schema.Schema.Type<typeof HostedWorkspaceSessionID>
+
+export function workspaceSessionKey(id: HostedWorkspaceSessionID) {
+  return `${workspaceKey(id)}:${id.remoteSessionID}:${id.nativeSessionID}`
+}
+
+export const WorkspaceRepositoryProvider = Schema.NullOr(
+  Schema.Literals(["github", "gitlab", "bitbucket", "git"]),
+).annotate({ identifier: "SessionHostWorkspaceRepositoryProvider" })
+export type WorkspaceRepositoryProvider = Schema.Schema.Type<typeof WorkspaceRepositoryProvider>
+
+export const WorkspaceRepository = Schema.Struct({
+  type: WorkspaceRepositoryProvider,
+  url: Schema.NullOr(Schema.String),
+  branch: Schema.NullOr(Schema.String),
+}).annotate({ identifier: "SessionHostWorkspaceRepository" })
+export type WorkspaceRepository = Schema.Schema.Type<typeof WorkspaceRepository>
+
+export const WorkspaceDeletionState = Schema.Literals(["active", "deleting", "deleted"]).annotate({
+  identifier: "SessionHostWorkspaceDeletionState",
+})
+export type WorkspaceDeletionState = Schema.Schema.Type<typeof WorkspaceDeletionState>
+
+export const WorkspaceSession = Schema.Struct({
+  id: HostedWorkspaceSessionID,
+  title: Schema.NullOr(Schema.String),
+  organizationID: Schema.NullOr(OrganizationID),
+  profileID: Schema.NullOr(Schema.String),
+  created: Schema.Finite,
+  updated: Schema.Finite,
+}).annotate({ identifier: "SessionHostWorkspaceSession" })
+export type WorkspaceSession = Schema.Schema.Type<typeof WorkspaceSession>
+
+export const WorkspaceSessionPage = Schema.Struct({
+  items: Schema.Array(WorkspaceSession),
+  nextCursor: Schema.NullOr(Schema.String),
+}).annotate({ identifier: "SessionHostWorkspaceSessionPage" })
+export type WorkspaceSessionPage = Schema.Schema.Type<typeof WorkspaceSessionPage>
+
+export const Workspace = Schema.Struct({
+  id: HostedWorkspaceID,
+  name: Schema.NullOr(Schema.String),
+  repository: WorkspaceRepository,
+  profileID: Schema.NullOr(Schema.String),
+  organizationID: Schema.NullOr(OrganizationID),
+  deletionState: WorkspaceDeletionState,
+  created: Schema.Finite,
+  updated: Schema.Finite,
+  lastActivity: Schema.Finite,
+  sessions: Schema.Array(WorkspaceSession),
+  nextSessionCursor: Schema.NullOr(Schema.String),
+}).annotate({ identifier: "SessionHostWorkspace" })
+export type Workspace = Schema.Schema.Type<typeof Workspace>
+
+export const WorkspacePage = Schema.Struct({
+  items: Schema.Array(Workspace),
+  nextCursor: Schema.NullOr(Schema.String),
+}).annotate({ identifier: "SessionHostWorkspacePage" })
+export type WorkspacePage = Schema.Schema.Type<typeof WorkspacePage>
+
+export const WorkspaceComputeStatus = Schema.Literals([
+  "active",
+  "sleeping",
+  "starting",
+  "stopping",
+  "error",
+  "unreachable",
+  "unknown",
+]).annotate({ identifier: "SessionHostWorkspaceComputeStatus" })
+export type WorkspaceComputeStatus = Schema.Schema.Type<typeof WorkspaceComputeStatus>
+
+export const WorkspaceComputeDetail = Schema.Literals([
+  "sandbox_ready",
+  "sandbox_stopped",
+  "sandbox_starting",
+  "sandbox_stopping",
+  "sandbox_failed",
+  "connection_unavailable",
+  "status_unavailable",
+  "insufficient_evidence",
+  "check_needed",
+]).annotate({ identifier: "SessionHostWorkspaceComputeDetail" })
+export type WorkspaceComputeDetail = Schema.Schema.Type<typeof WorkspaceComputeDetail>
+
+export const WorkspaceDeletionPhase = Schema.Literals([
+  "not_started",
+  "runtime_cleanup",
+  "finalizing",
+  "completed",
+]).annotate({ identifier: "SessionHostWorkspaceDeletionPhase" })
+export type WorkspaceDeletionPhase = Schema.Schema.Type<typeof WorkspaceDeletionPhase>
+
+export const WorkspaceWakeBlockedReason = Schema.Literals([
+  "deleting",
+  "deleted",
+  "billing_blocked",
+  "billing_status_unavailable",
+]).annotate({ identifier: "SessionHostWorkspaceWakeBlockedReason" })
+export type WorkspaceWakeBlockedReason = Schema.Schema.Type<typeof WorkspaceWakeBlockedReason>
+
+export const WorkspaceStatus = Schema.Struct({
+  id: HostedWorkspaceID,
+  deletionState: WorkspaceDeletionState,
+  observedAt: Schema.Finite,
+  compute: Schema.Struct({
+    status: WorkspaceComputeStatus,
+    detailCode: WorkspaceComputeDetail,
+    observedAt: Schema.Finite,
+    estimatedSleepAt: Schema.NullOr(Schema.Finite),
+  }),
+  activity: Schema.Struct({
+    activeSessionCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+    hasActiveTurn: Schema.Boolean,
+  }),
+  wakeOnInput: Schema.Struct({
+    available: Schema.Boolean,
+    blockedReason: Schema.NullOr(WorkspaceWakeBlockedReason),
+  }),
+  billing: Schema.Struct({
+    payer: Schema.NullOr(Schema.Literals(["user", "org"])),
+    sku: Schema.NullOr(Schema.String),
+    blocked: Schema.NullOr(Schema.Boolean),
+    enforcementRequested: Schema.Boolean,
+    intervalStartedAt: Schema.NullOr(Schema.Finite),
+    rate: Schema.NullOr(
+      Schema.Struct({
+        rateCentsPerSecond: Schema.String,
+        estimatedHourlyMicrodollars: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+      }),
+    ),
+  }),
+  deletion: Schema.Struct({
+    started: Schema.Boolean,
+    completed: Schema.Boolean,
+    startedAt: Schema.NullOr(Schema.Finite),
+    phase: WorkspaceDeletionPhase,
+    sessionCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+    runtimeLocationCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+    completedRuntimeLocationCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+    remainingRuntimeLocationCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+    deletedSessionIDs: Schema.Array(Schema.String),
+  }),
+}).annotate({ identifier: "SessionHostWorkspaceStatus" })
+export type WorkspaceStatus = Schema.Schema.Type<typeof WorkspaceStatus>
+
+export const WorkspaceAgent = Schema.Struct({
+  mode: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(50)),
+  model: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
+  variant: Schema.optional(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(50))),
+}).annotate({ identifier: "SessionHostWorkspaceAgent" })
+export type WorkspaceAgent = Schema.Schema.Type<typeof WorkspaceAgent>
+
+export const OperationKey = Schema.String.check(
+  Schema.isPattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/),
+).annotate({ identifier: "SessionHostOperationKey" })
+export type OperationKey = Schema.Schema.Type<typeof OperationKey>
+
+export const WorkspaceProfileInput = Schema.Struct({
+  organizationID: Schema.optional(OrganizationID),
+}).annotate({ identifier: "SessionHostWorkspaceProfileInput" })
+export type WorkspaceProfileInput = Schema.Schema.Type<typeof WorkspaceProfileInput>
+
+export const WorkspaceListInput = Schema.Struct({
+  limit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 50 }))),
+  sessionLimit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))),
+  cursor: Schema.optional(Schema.String.check(Schema.isMaxLength(256))),
+  repositoryUrl: Schema.optional(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(2048))),
+  organizationID: Schema.optional(OrganizationID),
+}).annotate({ identifier: "SessionHostWorkspaceListInput" })
+export type WorkspaceListInput = Schema.Schema.Type<typeof WorkspaceListInput>
+
+export const WorkspaceGetInput = Schema.Struct({
+  id: HostedWorkspaceID,
+  sessionLimit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))),
+  sessionCursor: Schema.optional(Schema.String.check(Schema.isMaxLength(256))),
+  organizationID: Schema.optional(OrganizationID),
+}).annotate({ identifier: "SessionHostWorkspaceGetInput" })
+export type WorkspaceGetInput = Schema.Schema.Type<typeof WorkspaceGetInput>
+
+export const WorkspaceStatusInput = Schema.Struct({
+  id: HostedWorkspaceID,
+  organizationID: Schema.optional(OrganizationID),
+}).annotate({ identifier: "SessionHostWorkspaceStatusInput" })
+export type WorkspaceStatusInput = Schema.Schema.Type<typeof WorkspaceStatusInput>
+
+export const WorkspaceSessionListInput = Schema.Struct({
+  id: HostedWorkspaceID,
+  limit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))),
+  cursor: Schema.optional(Schema.String.check(Schema.isMaxLength(256))),
+  organizationID: Schema.optional(OrganizationID),
+}).annotate({ identifier: "SessionHostWorkspaceSessionListInput" })
+export type WorkspaceSessionListInput = Schema.Schema.Type<typeof WorkspaceSessionListInput>
+
+export const WorkspaceCreateInput = Schema.Struct({
+  repository: Repository,
+  profileID: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
+  prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)),
+  agent: WorkspaceAgent,
+  organizationID: Schema.optional(OrganizationID),
+  operationKey: OperationKey,
+  messageID: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
+}).annotate({ identifier: "SessionHostWorkspaceCreateInput" })
+export type WorkspaceCreateInput = Schema.Schema.Type<typeof WorkspaceCreateInput>
+
+export const WorkspaceCreateResult = Schema.Struct({
+  workspace: HostedWorkspaceID,
+  session: HostedWorkspaceSessionID,
+  messageID: Schema.String,
+  replayed: Schema.Boolean,
+}).annotate({ identifier: "SessionHostWorkspaceCreateResult" })
+export type WorkspaceCreateResult = Schema.Schema.Type<typeof WorkspaceCreateResult>
+
+export const WorkspaceSessionCreateInput = Schema.Struct({
+  id: HostedWorkspaceID,
+  prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)),
+  agent: WorkspaceAgent,
+  organizationID: Schema.optional(OrganizationID),
+  operationKey: OperationKey,
+  messageID: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
+}).annotate({ identifier: "SessionHostWorkspaceSessionCreateInput" })
+export type WorkspaceSessionCreateInput = Schema.Schema.Type<typeof WorkspaceSessionCreateInput>
+
+export const WorkspaceSessionCreateResult = WorkspaceCreateResult.annotate({
+  identifier: "SessionHostWorkspaceSessionCreateResult",
+})
+export type WorkspaceSessionCreateResult = Schema.Schema.Type<typeof WorkspaceSessionCreateResult>
+
+export const WorkspaceDeleteResult = Schema.Struct({
+  workspace: HostedWorkspaceID,
+  success: Schema.Literal(true),
+  deletedSessionIDs: Schema.Array(Schema.String),
+}).annotate({ identifier: "SessionHostWorkspaceDeleteResult" })
+export type WorkspaceDeleteResult = Schema.Schema.Type<typeof WorkspaceDeleteResult>
+
+export const WorkspaceSessionRef = Schema.Struct({
+  providerID: ProviderID,
+  workspaceID: WorkspaceID,
+  remoteSessionID: RemoteSessionID,
+}).annotate({ identifier: "SessionHostWorkspaceSessionRef" })
+export type WorkspaceSessionRef = Schema.Schema.Type<typeof WorkspaceSessionRef>
+
+export const WorkspaceSessionAttachInput = Schema.Struct({
+  id: WorkspaceSessionRef,
+  organizationID: Schema.optional(OrganizationID),
+}).annotate({ identifier: "SessionHostWorkspaceSessionAttachInput" })
+export type WorkspaceSessionAttachInput = Schema.Schema.Type<typeof WorkspaceSessionAttachInput>
+
+export const WorkspaceAttachment = Schema.Struct({
+  session: HostedWorkspaceSessionID,
+  expiresAt: Schema.Finite,
+}).annotate({ identifier: "SessionHostWorkspaceAttachment" })
+export type WorkspaceAttachment = Schema.Schema.Type<typeof WorkspaceAttachment>
+
+export const WorkspaceProfile = Schema.Struct({
+  id: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
+  name: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200)),
+  description: Schema.NullOr(Schema.String.check(Schema.isMaxLength(1000))),
+  isDefault: Schema.Boolean,
+}).annotate({ identifier: "SessionHostWorkspaceProfile" })
+export type WorkspaceProfile = Schema.Schema.Type<typeof WorkspaceProfile>
+
+export const WorkspaceProfilePage = Schema.Struct({
+  items: Schema.Array(WorkspaceProfile),
+}).annotate({ identifier: "SessionHostWorkspaceProfilePage" })
+export type WorkspaceProfilePage = Schema.Schema.Type<typeof WorkspaceProfilePage>
+
+export interface WorkspaceProvider {
+  readonly list: (input?: WorkspaceListInput) => Effect.Effect<WorkspacePage, HostedFailure>
+  readonly get: (input: WorkspaceGetInput) => Effect.Effect<Workspace, HostedFailure>
+  readonly status: (input: WorkspaceStatusInput) => Effect.Effect<WorkspaceStatus, HostedFailure>
+  readonly sessions: (input: WorkspaceSessionListInput) => Effect.Effect<WorkspaceSessionPage, HostedFailure>
+  readonly create: (input: WorkspaceCreateInput) => Effect.Effect<WorkspaceCreateResult, HostedFailure>
+  readonly createSession: (
+    input: WorkspaceSessionCreateInput,
+  ) => Effect.Effect<WorkspaceSessionCreateResult, HostedFailure>
+  readonly delete: (input: WorkspaceGetInput) => Effect.Effect<WorkspaceDeleteResult, HostedFailure>
+  readonly attach: (input: WorkspaceSessionAttachInput) => Effect.Effect<WorkspaceAttachment, HostedFailure>
+  readonly profiles: (input?: WorkspaceProfileInput) => Effect.Effect<WorkspaceProfilePage, HostedFailure>
+}
+
+/**
+ * Opaque attachment validity window. Provider routing material (target origin,
+ * selector, credential, fence) is deliberately absent: the local attachment
+ * API and its proxy hooks are introduced by the next issue.
+ */
+export const Attachment = Schema.Struct({
+  session: HostedSessionID,
+  expiresAt: Schema.Finite,
+}).annotate({ identifier: "SessionHostAttachment" })
+export type Attachment = Schema.Schema.Type<typeof Attachment>
 
 export const ListInput = Schema.Struct({
   limit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))),
@@ -222,4 +534,9 @@ export interface Provider {
    * the implementation. Omitted by providers without native routing.
    */
   readonly route?: (input: NativeRequest) => Effect.Effect<Response, HostedFailure>
+  /**
+   * Durable workspace catalog and nested root sessions. Omitted by providers
+   * that only expose flat sessions.
+   */
+  readonly workspace?: WorkspaceProvider
 }

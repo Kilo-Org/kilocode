@@ -414,6 +414,14 @@ import type {
   SessionGetResponses,
   SessionHostAttachErrors,
   SessionHostAttachResponses,
+  SessionHostAttachWorkspaceSessionErrors,
+  SessionHostAttachWorkspaceSessionResponses,
+  SessionHostCreateWorkspaceErrors,
+  SessionHostCreateWorkspaceResponses,
+  SessionHostCreateWorkspaceSessionErrors,
+  SessionHostCreateWorkspaceSessionResponses,
+  SessionHostDeleteWorkspaceErrors,
+  SessionHostDeleteWorkspaceResponses,
   SessionHostDetachErrors,
   SessionHostDetachResponses,
   SessionHostGetErrors,
@@ -424,11 +432,25 @@ import type {
   SessionHostProviderId,
   SessionHostProvidersErrors,
   SessionHostProvidersResponses,
+  SessionHostRemoteSessionId,
   SessionHostStartErrors,
   SessionHostStartInput,
   SessionHostStartResponses,
   SessionHostTranscriptErrors,
   SessionHostTranscriptResponses,
+  SessionHostWorkspaceCreateInput,
+  SessionHostWorkspaceErrors,
+  SessionHostWorkspaceIdValue,
+  SessionHostWorkspaceProfilesErrors,
+  SessionHostWorkspaceProfilesResponses,
+  SessionHostWorkspaceResponses,
+  SessionHostWorkspacesErrors,
+  SessionHostWorkspaceSessionCreateBody,
+  SessionHostWorkspaceSessionsErrors,
+  SessionHostWorkspaceSessionsResponses,
+  SessionHostWorkspacesResponses,
+  SessionHostWorkspaceStatusErrors,
+  SessionHostWorkspaceStatusResponses,
   SessionInitErrors,
   SessionInitResponses,
   SessionListErrors,
@@ -9707,6 +9729,331 @@ export class SessionHost extends HeyApiClient {
     const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "attachmentID" }] }])
     return (options?.client ?? this.client).delete<SessionHostDetachResponses, SessionHostDetachErrors, ThrowOnError>({
       url: "/kilocode/session-host/attachment/{attachmentID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List hosted workspaces
+   *
+   * List durable hosted workspaces with their nested root sessions without waking compute.
+   */
+  public workspaces<ThrowOnError extends boolean = false>(
+    parameters?: {
+      limit?: string
+      sessionLimit?: string
+      cursor?: string
+      repositoryUrl?: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "limit" },
+            { in: "query", key: "sessionLimit" },
+            { in: "query", key: "cursor" },
+            { in: "query", key: "repositoryUrl" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostWorkspacesResponses,
+      SessionHostWorkspacesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Create a hosted workspace
+   *
+   * Create a hosted workspace and its first root session. Reuse the same operation key and message ID to retry safely.
+   */
+  public createWorkspace<ThrowOnError extends boolean = false>(
+    parameters?: {
+      sessionHostWorkspaceCreateInput?: SessionHostWorkspaceCreateInput
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [{ args: [{ key: "sessionHostWorkspaceCreateInput", map: "body" }] }],
+    )
+    return (options?.client ?? this.client).post<
+      SessionHostCreateWorkspaceResponses,
+      SessionHostCreateWorkspaceErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * List workspace creation profiles
+   *
+   * List authorized profile summaries for workspace creation. Secret and environment values are never returned.
+   */
+  public workspaceProfiles<ThrowOnError extends boolean = false>(
+    parameters?: {
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "organizationID" }] }])
+    return (options?.client ?? this.client).get<
+      SessionHostWorkspaceProfilesResponses,
+      SessionHostWorkspaceProfilesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/profiles",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Delete a hosted workspace
+   *
+   * Destructively delete a hosted workspace and every remaining root session. Progress is available from the workspace status route.
+   */
+  public deleteWorkspace<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceIdValue
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<
+      SessionHostDeleteWorkspaceResponses,
+      SessionHostDeleteWorkspaceErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get a hosted workspace
+   *
+   * Read one hosted workspace, its metadata, and a page of its nested root sessions.
+   */
+  public workspace<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceIdValue
+      sessionLimit?: string
+      sessionCursor?: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "sessionLimit" },
+            { in: "query", key: "sessionCursor" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostWorkspaceResponses,
+      SessionHostWorkspaceErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read hosted workspace status
+   *
+   * Read passive compute, activity, wake, billing, and deletion progress without waking compute.
+   */
+  public workspaceStatus<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceIdValue
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostWorkspaceStatusResponses,
+      SessionHostWorkspaceStatusErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/status",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List hosted workspace sessions
+   *
+   * List a page of root sessions in one hosted workspace.
+   */
+  public workspaceSessions<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceIdValue
+      limit?: string
+      cursor?: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "cursor" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostWorkspaceSessionsResponses,
+      SessionHostWorkspaceSessionsErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/session",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Create a session in a hosted workspace
+   *
+   * Create a root session in an existing hosted workspace, inheriting its repository, ref, profile, and environment.
+   */
+  public createWorkspaceSession<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceIdValue
+      sessionHostWorkspaceSessionCreateBody?: SessionHostWorkspaceSessionCreateBody
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { key: "sessionHostWorkspaceSessionCreateBody", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      SessionHostCreateWorkspaceSessionResponses,
+      SessionHostCreateWorkspaceSessionErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/session",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Attach to a hosted workspace session
+   *
+   * Mint an opaque local attachment scoped to one hosted workspace session. No provider origin, credential, or selector is exposed.
+   */
+  public attachWorkspaceSession<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceIdValue
+      remoteSessionID: SessionHostRemoteSessionId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "path", key: "remoteSessionID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      SessionHostAttachWorkspaceSessionResponses,
+      SessionHostAttachWorkspaceSessionErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/session/{remoteSessionID}/attach",
       ...options,
       ...params,
     })

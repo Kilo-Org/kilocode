@@ -118,6 +118,7 @@ function matchLegacyOpenApi(input: Record<string, unknown>) {
   normalizeComponentNames(spec)
   collapseDuplicateComponents(spec)
   restoreAgentManagerNulls(spec) // kilocode_change
+  restoreSessionHostNulls(spec) // kilocode_change - preserve nullable hosted workspace metadata
   applyLegacySchemaOverrides(spec)
   normalizeComponentDescriptions(spec)
   addLegacyErrorSchemas(spec)
@@ -530,6 +531,49 @@ function restoreAgentManagerNulls(spec: OpenApiSpec) {
     if (!schema?.properties?.sectionID) continue
     schema.properties.sectionID = {
       anyOf: [schema.properties.sectionID, { type: "null" }],
+    }
+  }
+}
+// kilocode_change end
+
+// kilocode_change start - preserve nullable Session Host workspace metadata in generated SDK schemas
+function restoreSessionHostNulls(spec: OpenApiSpec) {
+  const schemas = spec.components?.schemas
+  if (!schemas) return
+
+  const nullable: Record<string, string[]> = {
+    SessionHostWorkspaceRepository: ["url", "branch"],
+    SessionHostWorkspace: ["name", "profileID", "organizationID", "nextSessionCursor"],
+    SessionHostWorkspaceSession: ["title", "organizationID", "profileID"],
+    SessionHostWorkspacePage: ["nextCursor"],
+    SessionHostWorkspaceSessionPage: ["nextCursor"],
+    SessionHostWorkspaceProfile: ["description"],
+  }
+
+  for (const [name, fields] of Object.entries(nullable)) {
+    const schema = schemas[name]
+    if (!schema?.properties) continue
+    for (const field of fields) {
+      const value = schema.properties[field]
+      if (value) schema.properties[field] = { anyOf: [value, { type: "null" }] }
+    }
+  }
+
+  const provider = schemas.SessionHostWorkspaceRepositoryProvider
+  if (provider) schemas.SessionHostWorkspaceRepositoryProvider = { anyOf: [provider, { type: "null" }] }
+
+  const status = schemas.SessionHostWorkspaceStatus?.properties
+  const nullablePaths: Array<[Record<string, OpenApiSchema> | undefined, string[]]> = [
+    [status?.compute?.properties, ["estimatedSleepAt"]],
+    [status?.wakeOnInput?.properties, ["blockedReason"]],
+    [status?.billing?.properties, ["payer", "sku", "blocked", "intervalStartedAt", "rate"]],
+    [status?.deletion?.properties, ["startedAt"]],
+  ]
+  for (const [properties, fields] of nullablePaths) {
+    if (!properties) continue
+    for (const field of fields) {
+      const value = properties[field]
+      if (value) properties[field] = { anyOf: [value, { type: "null" }] }
     }
   }
 }

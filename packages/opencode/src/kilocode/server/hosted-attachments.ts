@@ -1,4 +1,4 @@
-import type { HostedSessionID, Provider } from "@/kilocode/session-hosting/types"
+import type { HostedSessionID, HostedWorkspaceID, Provider } from "@/kilocode/session-hosting/types"
 import { ascending } from "@opencode-ai/schema/identifier"
 import { Schema } from "effect"
 
@@ -31,10 +31,17 @@ export function createID(): ID {
   return ID.make(`${PREFIX}${ascending()}`)
 }
 
+export interface WorkspaceScope {
+  readonly id: HostedWorkspaceID
+  readonly remoteSessionID: string
+}
+
 export interface Entry {
   readonly id: ID
   readonly provider: Provider
   readonly session: HostedSessionID
+  /** Set for attachments minted through a workspace-scoped session route. */
+  readonly workspace?: WorkspaceScope
   readonly organizationID?: string
   /** Provider-declared validity. A lapsed descriptor is re-attached before use. */
   expiresAt: number
@@ -51,6 +58,7 @@ export type Lookup =
 export interface Mint {
   readonly provider: Provider
   readonly session: HostedSessionID
+  readonly workspace?: WorkspaceScope
   readonly organizationID?: string
   readonly expiresAt: number
 }
@@ -85,6 +93,7 @@ export function create(options: Options = {}) {
       id: createID(),
       provider: input.provider,
       session: input.session,
+      ...(input.workspace ? { workspace: input.workspace } : {}),
       ...(input.organizationID ? { organizationID: input.organizationID } : {}),
       expiresAt: input.expiresAt,
       leaseExpiresAt: now() + LEASE_MS,
@@ -137,12 +146,57 @@ export function create(options: Options = {}) {
     return true
   }
 
+  const matching = (predicate: (entry: Entry) => boolean) => {
+    for (const entry of Array.from(live.values())) {
+      if (predicate(entry)) end(entry.id, "disposed")
+    }
+  }
+
+  const disposeWorkspace = (workspace: HostedWorkspaceID) => {
+    matching(
+      (entry) =>
+        entry.workspace?.id.providerID === workspace.providerID &&
+        entry.workspace.id.workspaceID === workspace.workspaceID,
+    )
+  }
+
+  const disposeRemoteSession = (workspace: HostedWorkspaceID, remoteSessionID: string) => {
+    matching(
+      (entry) =>
+        entry.workspace?.id.providerID === workspace.providerID &&
+        entry.workspace.id.workspaceID === workspace.workspaceID &&
+        entry.workspace.remoteSessionID === remoteSessionID,
+    )
+  }
+
+  const countWorkspace = (workspace: HostedWorkspaceID) => {
+    const current = now()
+    for (const entry of live.values()) {
+      if (entry.leaseExpiresAt <= current) end(entry.id, "expired")
+    }
+    return Array.from(live.values()).filter(
+      (entry) =>
+        entry.workspace?.id.providerID === workspace.providerID &&
+        entry.workspace.id.workspaceID === workspace.workspaceID,
+    ).length
+  }
+
   const clear = () => {
     live.clear()
     ended.clear()
   }
 
-  return { mint, lookup, count, renew, dispose, clear }
+  return {
+    mint,
+    lookup,
+    count,
+    countWorkspace,
+    renew,
+    dispose,
+    disposeWorkspace,
+    disposeRemoteSession,
+    clear,
+  }
 }
 
 export type Store = ReturnType<typeof create>

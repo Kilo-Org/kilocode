@@ -71,6 +71,23 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "get" as const, path: SessionHostPaths.message, id: "sessionHost.transcript" },
       { method: "post" as const, path: SessionHostPaths.attach, id: "sessionHost.attach" },
       { method: "delete" as const, path: SessionHostPaths.attachment, id: "sessionHost.detach" },
+      { method: "get" as const, path: SessionHostPaths.workspace, id: "sessionHost.workspaces" },
+      { method: "post" as const, path: SessionHostPaths.workspace, id: "sessionHost.createWorkspace" },
+      { method: "get" as const, path: SessionHostPaths.workspaceProfiles, id: "sessionHost.workspaceProfiles" },
+      { method: "get" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.workspace" },
+      { method: "delete" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.deleteWorkspace" },
+      { method: "get" as const, path: SessionHostPaths.workspaceStatus, id: "sessionHost.workspaceStatus" },
+      { method: "get" as const, path: SessionHostPaths.workspaceSessions, id: "sessionHost.workspaceSessions" },
+      {
+        method: "post" as const,
+        path: SessionHostPaths.workspaceSessions,
+        id: "sessionHost.createWorkspaceSession",
+      },
+      {
+        method: "post" as const,
+        path: SessionHostPaths.workspaceSessionAttach,
+        id: "sessionHost.attachWorkspaceSession",
+      },
     ]
 
     for (const route of routes) {
@@ -84,7 +101,7 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       type: "string",
     })
 
-    // The hosted surface must not grow M2 contracts.
+    // Keep the hosted surface limited to the flat facade plus workspace operations.
     const hosted = Object.entries(spec.paths)
       .filter(([path]) => path.startsWith("/kilocode/session-host"))
       .flatMap(([, item]) => Object.values(item as Record<string, { operationId?: string }>))
