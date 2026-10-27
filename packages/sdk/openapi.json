@@ -20260,6 +20260,109 @@
         ]
       }
     },
+    "/kilocode/session-host/workspace/profiles": {
+      "get": {
+        "tags": ["session-host"],
+        "operationId": "sessionHost.listWorkspaceProfiles",
+        "parameters": [
+          {
+            "name": "organizationID",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostOrganizationID"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized workspace profiles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostWorkspaceProfilePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "SessionHostPaymentRequiredError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostPaymentRequiredError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "UpstreamError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpstreamError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
+                }
+              }
+            }
+          }
+        },
+        "description": "List authorized profile summaries for workspace creation. Secret and environment values are never returned.",
+        "summary": "List workspace creation profiles",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sessionHost.listWorkspaceProfiles({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/session-host/workspace/{providerID}/{workspaceID}": {
       "get": {
         "tags": ["session-host"],
@@ -44923,6 +45026,50 @@
           }
         },
         "required": ["workspace", "session", "messageID", "replayed"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspaceProfileSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        },
+        "required": ["id", "name", "description", "isDefault"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspaceProfilePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionHostWorkspaceProfileSummary"
+            }
+          }
+        },
+        "required": ["items"],
         "additionalProperties": false
       },
       "SessionHostWorkspaceSessionStartBody": {

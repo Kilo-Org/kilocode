@@ -5054,6 +5054,17 @@ export type SessionHostCreateWorkspaceResult = {
   replayed: boolean
 }
 
+export type SessionHostWorkspaceProfileSummary = {
+  id: string
+  name: string
+  description: string | null
+  isDefault: boolean
+}
+
+export type SessionHostWorkspaceProfilePage = {
+  items: Array<SessionHostWorkspaceProfileSummary>
+}
+
 export type SessionHostWorkspaceSessionStartBody = {
   prompt: string
   agent: SessionHostAgent
@@ -19293,6 +19304,55 @@ export type SessionHostCreateWorkspaceResponses = {
 
 export type SessionHostCreateWorkspaceResponse =
   SessionHostCreateWorkspaceResponses[keyof SessionHostCreateWorkspaceResponses]
+
+export type SessionHostListWorkspaceProfilesData = {
+  body?: never
+  path?: never
+  query?: {
+    organizationID?: SessionHostOrganizationId
+  }
+  url: "/kilocode/session-host/workspace/profiles"
+}
+
+export type SessionHostListWorkspaceProfilesErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostListWorkspaceProfilesError =
+  SessionHostListWorkspaceProfilesErrors[keyof SessionHostListWorkspaceProfilesErrors]
+
+export type SessionHostListWorkspaceProfilesResponses = {
+  /**
+   * Authorized workspace profiles
+   */
+  200: SessionHostWorkspaceProfilePage
+}
+
+export type SessionHostListWorkspaceProfilesResponse =
+  SessionHostListWorkspaceProfilesResponses[keyof SessionHostListWorkspaceProfilesResponses]
 
 export type SessionHostGetWorkspaceData = {
   body?: never

@@ -214,6 +214,29 @@ export const Profile = Schema.Struct({
 }).annotate({ identifier: "SessionHostProfile" })
 export type Profile = Schema.Schema.Type<typeof Profile>
 
+/**
+ * Authorized profile summaries available for workspace creation. Only the
+ * display fields are exposed; provider-private secrets and setup inputs stay
+ * behind the API origin.
+ */
+export const WorkspaceProfileListInput = Schema.Struct({
+  organizationID: Schema.optional(OrganizationID),
+}).annotate({ identifier: "SessionHostWorkspaceProfileListInput" })
+export type WorkspaceProfileListInput = Schema.Schema.Type<typeof WorkspaceProfileListInput>
+
+export const WorkspaceProfileSummary = Schema.Struct({
+  id: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
+  name: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200)),
+  description: Schema.NullOr(Schema.String.check(Schema.isMaxLength(1000))),
+  isDefault: Schema.Boolean,
+}).annotate({ identifier: "SessionHostWorkspaceProfileSummary" })
+export type WorkspaceProfileSummary = Schema.Schema.Type<typeof WorkspaceProfileSummary>
+
+export const WorkspaceProfilePage = Schema.Struct({
+  items: Schema.Array(WorkspaceProfileSummary),
+}).annotate({ identifier: "SessionHostWorkspaceProfilePage" })
+export type WorkspaceProfilePage = Schema.Schema.Type<typeof WorkspaceProfilePage>
+
 export const WorkspaceListInput = Schema.Struct({
   limit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 50 }))),
   sessionLimit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))),
@@ -368,6 +391,9 @@ export interface Provider {
   readonly startWorkspaceSession: (
     input: WorkspaceSessionStartInput,
   ) => Effect.Effect<WorkspaceSessionStartResult, HostedFailure>
+  readonly listWorkspaceProfiles: (
+    input?: WorkspaceProfileListInput,
+  ) => Effect.Effect<WorkspaceProfilePage, HostedFailure>
   /**
    * Provider-owned request mapping for the proven native allowlist. Provider
    * origin, credentials, control identities, selectors, and fences stay inside

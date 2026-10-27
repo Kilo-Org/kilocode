@@ -428,6 +428,8 @@ import type {
   SessionHostGetWorkspaceResponses,
   SessionHostListErrors,
   SessionHostListResponses,
+  SessionHostListWorkspaceProfilesErrors,
+  SessionHostListWorkspaceProfilesResponses,
   SessionHostListWorkspacesErrors,
   SessionHostListWorkspacesResponses,
   SessionHostOrganizationId,
@@ -9830,6 +9832,29 @@ export class SessionHost extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+
+  /**
+   * List workspace creation profiles
+   *
+   * List authorized profile summaries for workspace creation. Secret and environment values are never returned.
+   */
+  public listWorkspaceProfiles<ThrowOnError extends boolean = false>(
+    parameters?: {
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "organizationID" }] }])
+    return (options?.client ?? this.client).get<
+      SessionHostListWorkspaceProfilesResponses,
+      SessionHostListWorkspaceProfilesErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/profiles",
+      ...options,
+      ...params,
     })
   }
 

@@ -4,7 +4,7 @@ import { AgentStartRequestSchema, AgentStartResponseSchema } from "@/kilocode/cl
 import { ControlTokenError, createControlTokenClient, type ControlTokenClient } from "@/kilocode/cloud/control-token"
 import { createBearerHttpClient, type BearerRequest } from "@/kilocode/cloud/http"
 import { createMessageId } from "@/kilocode/cloud/message-id"
-import { resolveCloudAgentOrigin, resolveWebAppOrigin } from "@/kilocode/cloud/origin"
+import { resolveCloudAgentOrigin, resolveKiloApiOrigin, resolveWebAppOrigin } from "@/kilocode/cloud/origin"
 import { readBoundedJson } from "@/kilocode/cloud/response-json"
 import { buildKiloHeaders } from "@kilocode/kilo-gateway"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
@@ -23,6 +23,7 @@ import {
   TranscriptInput,
   WorkspaceGetInput,
   WorkspaceListInput,
+  WorkspaceProfileListInput,
   WorkspaceSessionStartInput,
   type Attachment,
   type Availability,
@@ -39,6 +40,7 @@ import {
   type Profile,
   type StartResult,
   type Transport,
+  type WorkspaceProfilePage,
   type WorkspaceSessionStartResult,
 } from "./types"
 import { classify } from "./native-routes"
@@ -92,6 +94,13 @@ const WorkspaceCreate = z.object({
   kiloSessionId: z.string().min(1),
   messageId: z.string().min(1),
   replayed: z.boolean().optional(),
+})
+
+const CloudProfile = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().nullable(),
+  isDefault: z.boolean(),
 })
 
 export interface Options {
@@ -165,6 +174,11 @@ export function provider(options: Options): Provider {
     catch: () => new HostedFailure({ code: "rejected", message: "Kilo web app URL is invalid", retryable: false }),
   })
 
+  const apiOrigin = Effect.try({
+    try: () => resolveKiloApiOrigin(env),
+    catch: () => new HostedFailure({ code: "rejected", message: "Kilo API base URL is invalid", retryable: false }),
+  })
+
   const controlTokens: ControlTokenClient = createControlTokenClient({
     ...(options.fetch ? { fetch: options.fetch } : {}),
     clock,
@@ -221,6 +235,33 @@ export function provider(options: Options): Provider {
               ? "Kilo Cloud is unreachable"
               : "Kilo Cloud start outcome is unknown; retry with the same operation key and message ID",
             retryable,
+          })
+        },
+      })
+      reachable()
+      return response
+    })
+
+  /**
+   * Account API calls use the source credential directly at the API origin.
+   * They never pass through the Worker control-token exchange.
+   */
+  const apiRequest = (auth: CloudAuth.Resolved, req: BearerRequest) =>
+    Effect.gen(function* () {
+      const base = yield* apiOrigin
+      const response = yield* Effect.tryPromise({
+        try: () =>
+          createBearerHttpClient({
+            origin: base,
+            apiKey: Redacted.value(auth.token),
+            ...(options.fetch ? { fetch: options.fetch } : {}),
+          }).request(req),
+        catch: () => {
+          unreachable()
+          return new HostedFailure({
+            code: "unavailable",
+            message: "Kilo API is unreachable",
+            retryable: true,
           })
         },
       })
@@ -597,6 +638,39 @@ export function provider(options: Options): Provider {
       }
     })
 
+  const unwrap = (value: unknown) =>
+    value !== null && typeof value === "object" && "json" in value ? (value as { json: unknown }).json : value
+
+  const listWorkspaceProfiles = (
+    raw: WorkspaceProfileListInput = {},
+  ): Effect.Effect<WorkspaceProfilePage, HostedFailure> =>
+    Effect.gen(function* () {
+      const input = yield* check(WorkspaceProfileListInput, raw)
+      const auth = yield* resolve(input.organizationID)
+      const params = new URLSearchParams()
+      params.set(
+        "input",
+        JSON.stringify(input.organizationID === undefined ? {} : { organizationId: input.organizationID }),
+      )
+      const response = yield* apiRequest(auth, {
+        method: "GET",
+        path: `/api/trpc/agentProfiles.list?${params.toString()}`,
+        headers: headers(auth),
+      })
+      const body = yield* consume(response)
+      const value = unwrap(yield* data(body))
+      const parsed = z.array(CloudProfile).safeParse(value)
+      if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned unsupported profile summaries"))
+      return {
+        items: parsed.data.map((profile) => ({
+          id: profile.id,
+          name: profile.name,
+          description: profile.description,
+          isDefault: profile.isDefault,
+        })),
+      }
+    })
+
   /**
    * Maps one allowlisted native request onto the merged `/kilo` facade. Cloud
    * control identities, origin, bearer, selector, and fence never leave this
@@ -656,6 +730,7 @@ export function provider(options: Options): Provider {
     getWorkspace,
     createWorkspace,
     startWorkspaceSession,
+    listWorkspaceProfiles,
     route: native,
   }
 }

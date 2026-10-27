@@ -20,8 +20,8 @@ export function provider(id: string, options: { attach?: Provider["attach"]; rou
     start: () =>
       Effect.fail(new HostedFailure({ code: "invalid_request", message: "start is not supported", retryable: false })),
     listWorkspaces: () => Effect.succeed({ items: [] }),
-    getWorkspace: () =>
-      Effect.fail(new HostedFailure({ code: "not_found", message: "not found", retryable: false })),
+    listWorkspaceProfiles: () => Effect.succeed({ items: [] }),
+    getWorkspace: () => Effect.fail(new HostedFailure({ code: "not_found", message: "not found", retryable: false })),
     createWorkspace: () =>
       Effect.fail(
         new HostedFailure({ code: "invalid_request", message: "createWorkspace is not supported", retryable: false }),
@@ -43,7 +43,10 @@ export function provider(id: string, options: { attach?: Provider["attach"]; rou
           route: (input: NativeRequest) => {
             calls.push(input)
             return Effect.succeed(
-              Response.json({ ok: true, path: input.path }, { status: 200, headers: { "content-type": "application/json" } }),
+              Response.json(
+                { ok: true, path: input.path },
+                { status: 200, headers: { "content-type": "application/json" } },
+              ),
             )
           },
         }

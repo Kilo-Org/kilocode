@@ -545,6 +545,10 @@ export const kiloScenarios: Scenario[] = [
     .at((ctx) => ({ path: "/kilocode/session-host/workspace", headers: ctx.headers() }))
     .status(401),
   http.protected
+    .get("/kilocode/session-host/workspace/profiles", "sessionHost.listWorkspaceProfiles")
+    .probe({ path: "/path" })
+    .status(401),
+  http.protected
     .post("/kilocode/session-host/workspace", "sessionHost.createWorkspace")
     .at((ctx) => ({
       path: "/kilocode/session-host/workspace",

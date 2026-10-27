@@ -32,6 +32,7 @@ type State = {
   detail: "ok" | "null" | "mismatch" | "invalid"
   create: "ok" | "forbidden" | "conflict" | "notfound" | "payment" | "unavailable" | "mismatch"
   session: "ok" | "mismatch"
+  profiles: "ok" | "direct" | "unauthorized" | "unavailable" | "invalid"
   creates: number
 }
 
@@ -74,7 +75,7 @@ function workspaceSummary(overrides: Record<string, unknown> = {}) {
 
 function harness() {
   const calls: Call[] = []
-  const state: State = { page: "ok", detail: "ok", create: "ok", session: "ok", creates: 0 }
+  const state: State = { page: "ok", detail: "ok", create: "ok", session: "ok", profiles: "ok", creates: 0 }
 
   const error = (code: string, status: number) => Response.json({ error: code }, { status })
   const envelope = (data: unknown) => Response.json({ result: { data } })
@@ -96,6 +97,32 @@ function harness() {
         org: request.headers.get("x-kilocode-organizationid"),
         body,
       })
+
+      if (url.pathname === "/api/trpc/agentProfiles.list") {
+        if (state.profiles === "unauthorized") return error("UNAUTHORIZED", 401)
+        if (state.profiles === "unavailable") return error("SERVICE_UNAVAILABLE", 503)
+        if (state.profiles === "invalid") return envelope({ json: [{ nope: true }] })
+        if (state.profiles === "direct") {
+          return Response.json({
+            result: { data: [{ id: "profile_2", name: "Direct", description: "Visible", isDefault: false }] },
+          })
+        }
+        return envelope({
+          json: [
+            {
+              id: "profile_1",
+              name: "Default",
+              description: null,
+              isDefault: true,
+              varCount: 2,
+              varValues: ["SECRET_VALUE"],
+              envVars: { SECRET: "SECRET_VALUE" },
+              setupCommands: ["echo SECRET_VALUE"],
+              appendSystemPrompt: "SECRET_VALUE",
+            },
+          ],
+        })
+      }
 
       if (url.pathname === "/trpc/listHostedWorkspaces") {
         if (state.page === "unauthorized") return error("UNAUTHORIZED", 401)
@@ -161,7 +188,10 @@ function auth(info: Auth.Info | undefined) {
 
 const signedIn = () => new Auth.Api({ type: "api", key: TOKEN })
 const client = (url: string, info: Auth.Info | undefined = signedIn()) =>
-  kiloCloud({ auth: auth(info), env: { CLOUD_AGENT_NEXT_BASE_URL: url, KILO_WEB_APP_URL: url } })
+  kiloCloud({
+    auth: auth(info),
+    env: { CLOUD_AGENT_NEXT_BASE_URL: url, KILO_WEB_APP_URL: url, KILO_API_URL: url },
+  })
 
 const repo = { type: "github" as const, repo: "Kilo-Org/kilocode", branch: "main" }
 const agent = { mode: "build", model: "test/fake" }
@@ -361,6 +391,67 @@ it.effect("maps membership, payment, conflict, not-found and unavailable failure
     expect(yield* cloud.listWorkspaces().pipe(Effect.flip)).toMatchObject({ code: "unauthorized", retryable: false })
     app.state.page = "invalid"
     expect(yield* cloud.listWorkspaces().pipe(Effect.flip)).toMatchObject({
+      code: "invalid_response",
+      retryable: false,
+    })
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("lists authorized profile summaries with the resolved organization and no secret inputs", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+    const page = yield* cloud.listWorkspaceProfiles({ organizationID: ORG })
+    expect(page).toEqual({
+      items: [{ id: "profile_1", name: "Default", description: null, isDefault: true }],
+    })
+
+    expect(app.calls).toHaveLength(1)
+    const scoped = app.calls[0]
+    expect(scoped).toMatchObject({
+      method: "GET",
+      path: "/api/trpc/agentProfiles.list",
+      auth: `Bearer ${TOKEN}`,
+      org: ORG,
+    })
+    expect(JSON.parse(new URL(scoped.search, app.url).searchParams.get("input")!)).toEqual({ organizationId: ORG })
+
+    const unscoped = yield* cloud.listWorkspaceProfiles()
+    expect(unscoped.items).toEqual(page.items)
+    expect(JSON.parse(new URL(app.calls[1].search, app.url).searchParams.get("input")!)).toEqual({})
+    expect(app.calls[1].org).toBe(null)
+
+    const text = JSON.stringify(page)
+    for (const secret of ["SECRET_VALUE", "varCount", "varValues", "envVars", "setupCommands", "appendSystemPrompt"]) {
+      expect(text).not.toContain(secret)
+    }
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("accepts a result.data profile array and maps profile failures", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+
+    app.state.profiles = "direct"
+    expect((yield* cloud.listWorkspaceProfiles()).items).toEqual([
+      { id: "profile_2", name: "Direct", description: "Visible", isDefault: false },
+    ])
+
+    app.state.profiles = "unauthorized"
+    expect(yield* cloud.listWorkspaceProfiles().pipe(Effect.flip)).toMatchObject({
+      code: "unauthorized",
+      retryable: false,
+    })
+
+    app.state.profiles = "unavailable"
+    expect(yield* cloud.listWorkspaceProfiles().pipe(Effect.flip)).toMatchObject({
+      code: "unavailable",
+      retryable: true,
+    })
+
+    app.state.profiles = "invalid"
+    expect(yield* cloud.listWorkspaceProfiles().pipe(Effect.flip)).toMatchObject({
       code: "invalid_response",
       retryable: false,
     })

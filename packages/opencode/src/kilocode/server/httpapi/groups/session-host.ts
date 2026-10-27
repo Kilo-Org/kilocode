@@ -16,6 +16,7 @@ import {
   StartResult,
   Transport,
   WorkspaceID,
+  WorkspaceProfilePage,
   WorkspaceSessionStartBody,
   WorkspaceSessionStartResult,
 } from "@/kilocode/session-hosting/types"
@@ -42,6 +43,7 @@ export const SessionHostPaths = {
   attach: `${root}/session/:providerID/:sessionID/attach`,
   attachment: `${root}/attachment/:attachmentID`,
   workspace: `${root}/workspace`,
+  workspaceProfiles: `${root}/workspace/profiles`,
   workspaceDetail: `${root}/workspace/:providerID/:workspaceID`,
   workspaceSession: `${root}/workspace/:providerID/:workspaceID/session`,
 } as const
@@ -87,24 +89,18 @@ const SessionErrors = [
 ] as const
 
 const ListQuery = Schema.Struct({
-  limit: Schema.optional(
-    Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 })),
-  ),
+  limit: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 }))),
 })
 
 const TranscriptQuery = Schema.Struct({
-  limit: Schema.optional(
-    Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 })),
-  ),
+  limit: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 }))),
   before: Schema.optional(Schema.String),
 })
 
 const AttachQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
 
 const WorkspaceListQuery = Schema.Struct({
-  limit: Schema.optional(
-    Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 50 })),
-  ),
+  limit: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 50 }))),
   sessionLimit: Schema.optional(
     Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 })),
   ),
@@ -120,6 +116,8 @@ const WorkspaceGetQuery = Schema.Struct({
   sessionCursor: Schema.optional(Schema.String),
   organizationID: Schema.optional(OrganizationID),
 })
+
+const WorkspaceProfilesQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
 
 const Params = {
   providerID: ProviderID,
@@ -245,6 +243,18 @@ export const SessionHostApi = HttpApi.make("session-host")
             summary: "Create a hosted workspace",
             description:
               "Create a hosted workspace and its root session. Reuse the same operation key and message ID to retry safely.",
+          }),
+        ),
+        HttpApiEndpoint.get("listWorkspaceProfiles", SessionHostPaths.workspaceProfiles, {
+          query: WorkspaceProfilesQuery,
+          success: described(WorkspaceProfilePage, "Authorized workspace profiles"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.listWorkspaceProfiles",
+            summary: "List workspace creation profiles",
+            description:
+              "List authorized profile summaries for workspace creation. Secret and environment values are never returned.",
           }),
         ),
         HttpApiEndpoint.get("getWorkspace", SessionHostPaths.workspaceDetail, {

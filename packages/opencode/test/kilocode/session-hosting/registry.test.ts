@@ -36,10 +36,10 @@ function provider(name: string, session: string, options: { default?: boolean; a
     transcript: () => Effect.succeed({ items: [] }),
     start: () => Effect.fail(new HostedFailure({ code: "rejected", message: "unused", retryable: false })),
     listWorkspaces: () => Effect.succeed({ items: [] }),
+    listWorkspaceProfiles: () => Effect.succeed({ items: [] }),
     getWorkspace: (input) =>
       Effect.fail(new HostedFailure({ code: "not_found", message: input.id.workspaceID, retryable: false })),
-    createWorkspace: () =>
-      Effect.fail(new HostedFailure({ code: "rejected", message: "unused", retryable: false })),
+    createWorkspace: () => Effect.fail(new HostedFailure({ code: "rejected", message: "unused", retryable: false })),
     startWorkspaceSession: () =>
       Effect.fail(new HostedFailure({ code: "rejected", message: "unused", retryable: false })),
     attach: (input) => Effect.succeed({ session: input.id, expiresAt: 1 }),

@@ -135,6 +135,24 @@ function harness() {
           },
         })
       }
+      if (url.pathname === "/api/trpc/agentProfiles.list") {
+        return Response.json({
+          result: {
+            data: {
+              json: [
+                {
+                  id: PROFILE,
+                  name: "Default",
+                  description: null,
+                  isDefault: true,
+                  varCount: 2,
+                  varValues: ["SECRET_VALUE"],
+                },
+              ],
+            },
+          },
+        })
+      }
       if (url.pathname === "/trpc/listHostedWorkspaces") {
         return Response.json({ result: { data: { items: [workspaceSummary()], nextCursor: "cursor-2" } } })
       }
@@ -188,9 +206,9 @@ function auth() {
 }
 
 function layer(url: string) {
-  const host = SessionHost.layer({ env: { CLOUD_AGENT_NEXT_BASE_URL: url, KILO_WEB_APP_URL: url } }).pipe(
-    Layer.provide(Layer.succeed(Auth.Service, auth())),
-  )
+  const host = SessionHost.layer({
+    env: { CLOUD_AGENT_NEXT_BASE_URL: url, KILO_WEB_APP_URL: url, KILO_API_URL: url },
+  }).pipe(Layer.provide(Layer.succeed(Auth.Service, auth())))
   return HttpRouter.serve(
     HttpApiBuilder.layer(TestHttpApi).pipe(
       Layer.provide(sessionHostHandlers),
@@ -400,6 +418,22 @@ describe("session host HttpApi", () => {
           .replace(":workspaceID", "worktree_00000000-0000-4000-8000-000000000000"),
       )
       expect(missing.status).toBe(404)
+    }),
+  )
+
+  it.live("lists authorized workspace profiles without profile secret inputs", () =>
+    Effect.gen(function* () {
+      const response = yield* HttpClient.get(`${SessionHostPaths.workspaceProfiles}?organizationID=${PROFILE}`)
+      expect(response.status).toBe(200)
+      const body: unknown = yield* response.json
+      expect(body).toEqual({
+        items: [{ id: PROFILE, name: "Default", description: null, isDefault: true }],
+      })
+      expect(JSON.stringify(body)).not.toContain("SECRET_VALUE")
+      expect(JSON.stringify(body)).not.toContain("varCount")
+      const call = app.calls.at(-1)
+      expect(call?.path).toBe("/api/trpc/agentProfiles.list")
+      expect(call?.auth).toBe(`Bearer ${TOKEN}`)
     }),
   )
 

@@ -51,6 +51,9 @@ export function matchLegacyKiloOpenApi(input: Record<string, unknown>) {
   )
   if (limit) limit.schema = { type: "integer", minimum: 1, maximum: 50 }
 
+  const profileSummary = spec.components?.schemas?.SessionHostWorkspaceProfileSummary?.properties
+  if (profileSummary?.description) profileSummary.description = nullable(profileSummary.description)
+
   const body = spec.paths?.["/kilo/organization"]?.post?.requestBody?.content?.["application/json"]?.schema
   const ref = body?.$ref?.replace("#/components/schemas/", "")
   const props = ref ? spec.components?.schemas?.[ref]?.properties : body?.properties

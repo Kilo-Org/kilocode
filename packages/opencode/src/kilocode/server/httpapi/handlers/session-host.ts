@@ -70,7 +70,9 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
           state,
           ...(reason ? { reason } : {}),
         })
-        .pipe(Effect.catchCause((cause) => Effect.sync(() => log.error("availability event publish failed", { cause }))))
+        .pipe(
+          Effect.catchCause((cause) => Effect.sync(() => log.error("availability event publish failed", { cause }))),
+        )
 
     const require = (id: ProviderID) => host.registry.require(id).pipe(Effect.mapError(mapFailure))
 
@@ -224,6 +226,17 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
         .pipe(Effect.mapError(mapFailure))
     })
 
+    const listWorkspaceProfiles = Effect.fn("SessionHostHttpApi.listWorkspaceProfiles")(function* (ctx: {
+      query: { organizationID?: OrganizationID }
+    }) {
+      const provider = yield* resolveDefault.pipe(Effect.mapError(mapFailure))
+      return yield* provider
+        .listWorkspaceProfiles(
+          ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID },
+        )
+        .pipe(Effect.mapError(mapFailure))
+    })
+
     const createWorkspace = Effect.fn("SessionHostHttpApi.createWorkspace")(function* (ctx: {
       payload: CreateWorkspaceInput
     }) {
@@ -268,6 +281,7 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       .handle("attach", attach)
       .handle("detach", detach)
       .handle("listWorkspaces", listWorkspaces)
+      .handle("listWorkspaceProfiles", listWorkspaceProfiles)
       .handle("createWorkspace", createWorkspace)
       .handle("getWorkspace", getWorkspace)
       .handle("startWorkspaceSession", startWorkspaceSession)
