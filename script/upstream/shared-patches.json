@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 54,
-    "markedLines": 424,
+    "files": 56,
+    "markedLines": 447,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -17,15 +17,23 @@
     },
     ".github/actions/setup-bun/action.yml": {
       "rung": 3,
-      "seam": "Windows CI setup: exclude the workspace, temp and Bun directories from Defender real-time scanning before the install. Carried over from v1 (`main`). The Windows Bun cache skip that Kilo also carried is upstream since v2.0.31 (anomalyco/opencode#55866). No seam: the composite action has no input to run a step before the install, and every job that installs dependencies uses it."
+      "seam": "Windows CI setup: exclude the workspace, temp and Bun directories from Defender real-time scanning before the install. Carried over from v1 (`main`). The Windows Bun cache skip that Kilo also carried is upstream since v2.0.31 (anomalyco/opencode#55866). No seam: the composite action has no input to run a step before the install, and every job that installs dependencies uses it. Also pins `actions/setup-node` (v7.1.0) and `actions/cache` (v6.1.0) to current releases; upstream's pins lag and an action reference cannot be overridden from outside the composite action."
+    },
+    ".github/actions/setup-git-committer/action.yml": {
+      "rung": 3,
+      "seam": "CI authentication: pin `actions/create-github-app-token` to the current release (v3.3.0) so Kilo CI uses a supported action. Upstream's pin lags, and an action reference cannot be overridden from outside the composite action."
+    },
+    ".github/publish-python-sdk.yml": {
+      "rung": 3,
+      "seam": "Disabled Python SDK publish workflow: track the current `actions/checkout` (v7.0.1) and `oven-sh/setup-bun` (v2.2.0) releases, and read the Bun version from the root `package.json` (`packageManager`, currently 1.4.4) instead of a hardcoded 1.2.21. The workflow remains commented out, so this is pin hygiene only. No seam: a workflow cannot take its action references from another file."
     },
     ".github/workflows/check.yml": {
       "rung": 3,
-      "seam": "CI triggers and gates: run `check` on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`) and for every pull request, so stacked v2 PRs that target another PR branch are checked; skip `lint:changed` on upstream sync PRs (branch `sync-v*`), whose changed files are upstream's and fail upstream's lint too. No seam: workflow triggers and step conditions cannot be extended from outside the file."
+      "seam": "CI triggers and gates: run `check` on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`) and for every pull request, so stacked v2 PRs that target another PR branch are checked; skip `lint:changed` on upstream sync PRs (branch `sync-v*`), whose changed files are upstream's and fail upstream's lint too. No seam: workflow triggers and step conditions cannot be extended from outside the file. Also pins `actions/checkout` (v7.0.1) to the current release; upstream's pin lags."
     },
     ".github/workflows/test.yml": {
       "rung": 3,
-      "seam": "CI triggers: run the unit and e2e matrix on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`). Skip the `affected` job, and with it the `e2e-suite` jobs that need it and the `e2e` result check that requires `affected` to succeed: they test only `packages/app` and `packages/session-ui`, which Kilo removed (`skipFiles` in script/upstream/utils/config.ts). Job-level lines, so upstream changes to the e2e steps still merge cleanly. `Build workspace libraries` in upstream's `build` job filters only on `@opencode/cli^...`, because turbo fails on the `@opencode/app^...` filter when the package does not exist. CI speed: `Verify packed workerd SDK` runs in its own `sdk` job (at the end of the file), so it no longer waits for the unit tests in `unit`. The Turbo cache step (upstream removed its broken one in v2.0.31) uses `.turbo/cache` (where Turborepo 2.x writes), keys on turbo.json and bun.lock, and carries the shard. Test shards: a `shard` matrix dimension in `unit` (2 Linux, 3 Windows) sets `KILO_TEST_SHARD` and `KILO_TEST_CONCURRENCY`; core, tui and cli run `test:ci` (the Kilo runner, script/kilocode/test/test-runner.ts), the other packages run `test` once, in shard 1; failing cases from the runner's JUnit reports become annotations, and the reports are an artifact that refreshes the shard weights. No seam: workflow triggers, job conditions, jobs, steps, matrix dimensions and cache keys cannot be extended from outside the file. Upstream has no cache key input or test shard option."
+      "seam": "CI triggers: run the unit and e2e matrix on push to Kilo's `v2` integration branch (upstream's v2 line is `dev`). Skip the `affected` job, and with it the `e2e-suite` jobs that need it and the `e2e` result check that requires `affected` to succeed: they test only `packages/app` and `packages/session-ui`, which Kilo removed (`skipFiles` in script/upstream/utils/config.ts). Job-level lines, so upstream changes to the e2e steps still merge cleanly. `Build workspace libraries` in upstream's `build` job filters only on `@opencode/cli^...`, because turbo fails on the `@opencode/app^...` filter when the package does not exist. CI speed: `Verify packed workerd SDK` runs in its own `sdk` job (at the end of the file), so it no longer waits for the unit tests in `unit`. The Turbo cache step (upstream removed its broken one in v2.0.31) uses `.turbo/cache` (where Turborepo 2.x writes), keys on turbo.json and bun.lock, and carries the shard. Test shards: a `shard` matrix dimension in `unit` (2 Linux, 3 Windows) sets `KILO_TEST_SHARD` and `KILO_TEST_CONCURRENCY`; core, tui and cli run `test:ci` (the Kilo runner, script/kilocode/test/test-runner.ts), the other packages run `test` once, in shard 1; failing cases from the runner's JUnit reports become annotations, and the reports are an artifact that refreshes the shard weights. No seam: workflow triggers, job conditions, jobs, steps, matrix dimensions and cache keys cannot be extended from outside the file. Upstream has no cache key input or test shard option. Action pins track current releases (`actions/checkout` v7.0.1, `actions/setup-node` v7.1.0, `actions/cache` v6.1.0, `actions/upload-artifact` v7.0.2, `mikepenz/action-junit-report` v6.6.1), and the generated protocol client is checked next to the generated client and docs."
     },
     ".gitignore": {
       "rung": 3,
