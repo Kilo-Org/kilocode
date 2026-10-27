@@ -373,8 +373,20 @@ export function isLoopbackProvider(provider: {
 
 function isLoopbackURL(raw: string) {
   try {
-    const host = new URL(raw).hostname.toLowerCase()
-    return host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]"
+    // URL keeps IPv6 brackets, so normalize before comparing hostnames.
+    const host = new URL(raw).hostname.toLowerCase().replace(/^\[|\]$/g, "")
+    if (host === "localhost" || host === "0.0.0.0" || host === "::" || host === "::1") return true
+    if (host === "host.docker.internal" || host.endsWith(".local") || host.endsWith(".internal")) return true
+    // Private, link-local, and loopback IPv4 ranges. Treating a company endpoint
+    // on these ranges as local only skips the cheap pick: callers keep the
+    // session model, so the conservative classification is safe.
+    return (
+      /^127\./.test(host) ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(?:1[6-9]|2\d|3[01])\./.test(host) ||
+      /^169\.254\./.test(host)
+    )
   } catch {
     return false
   }

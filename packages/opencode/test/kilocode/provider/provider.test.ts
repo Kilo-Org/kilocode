@@ -341,4 +341,18 @@ describe("isLoopbackProvider", () => {
       false,
     )
   })
+
+  test("unknown ids on private hosts are treated as local", () => {
+    for (const baseURL of [
+      "http://192.168.1.50:1234/v1",
+      "http://10.0.0.12:1234/v1",
+      "http://172.16.4.2:1234/v1",
+      "http://host.docker.internal:11434/v1",
+      "http://ollama.local:11434/v1",
+      "http://0.0.0.0:1234/v1",
+      "http://[::]:1234/v1",
+    ]) {
+      expect(isLoopbackProvider({ id: "my-local-server", options: { baseURL }, models: {} })).toBe(true)
+    }
+  })
 })
