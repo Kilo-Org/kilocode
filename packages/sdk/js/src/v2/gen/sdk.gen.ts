@@ -433,6 +433,8 @@ import type {
   SessionHostListWorkspaceProfilesErrors,
   SessionHostListWorkspaceProfilesResponses,
   SessionHostListWorkspacesErrors,
+  SessionHostListWorkspaceSessionsErrors,
+  SessionHostListWorkspaceSessionsResponses,
   SessionHostListWorkspacesResponses,
   SessionHostOrganizationId,
   SessionHostProviderId,
@@ -9931,6 +9933,46 @@ export class SessionHost extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/status",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * List hosted workspace sessions
+   *
+   * List a bounded page of a hosted workspace's root sessions.
+   */
+  public listWorkspaceSessions<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      limit?: string
+      cursor?: string
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "cursor" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostListWorkspaceSessionsResponses,
+      SessionHostListWorkspaceSessionsErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/session",
       ...options,
       ...params,
     })

@@ -190,6 +190,12 @@ export const HostedWorkspacePage = Schema.Struct({
 }).annotate({ identifier: "SessionHostWorkspacePage" })
 export type HostedWorkspacePage = Schema.Schema.Type<typeof HostedWorkspacePage>
 
+export const HostedWorkspaceSessionPage = Schema.Struct({
+  items: Schema.Array(HostedWorkspaceSession),
+  cursor: Schema.optional(Schema.String),
+}).annotate({ identifier: "SessionHostWorkspaceSessionPage" })
+export type HostedWorkspaceSessionPage = Schema.Schema.Type<typeof HostedWorkspaceSessionPage>
+
 export const WorkspaceComputeStatus = Schema.Literals([
   "active",
   "sleeping",

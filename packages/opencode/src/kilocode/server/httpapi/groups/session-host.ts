@@ -9,6 +9,7 @@ import {
   HostedTranscriptPage,
   HostedWorkspace,
   HostedWorkspacePage,
+  HostedWorkspaceSessionPage,
   HostedWorkspaceStatus,
   OrganizationID,
   ProviderID,
@@ -122,6 +123,12 @@ const WorkspaceGetQuery = Schema.Struct({
 const WorkspaceProfilesQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
 
 const WorkspaceStatusQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
+
+const WorkspaceSessionListQuery = Schema.Struct({
+  limit: Schema.optional(Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 }))),
+  cursor: Schema.optional(Schema.String),
+  organizationID: Schema.optional(OrganizationID),
+})
 
 const Params = {
   providerID: ProviderID,
@@ -283,6 +290,18 @@ export const SessionHostApi = HttpApi.make("session-host")
             identifier: "sessionHost.getWorkspaceStatus",
             summary: "Read hosted workspace status",
             description: "Read passive compute, activity, wake, billing, and deletion progress without waking compute.",
+          }),
+        ),
+        HttpApiEndpoint.get("listWorkspaceSessions", SessionHostPaths.workspaceSession, {
+          params: WorkspaceParams,
+          query: WorkspaceSessionListQuery,
+          success: described(HostedWorkspaceSessionPage, "Hosted workspace sessions"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.listWorkspaceSessions",
+            summary: "List hosted workspace sessions",
+            description: "List a bounded page of a hosted workspace's root sessions.",
           }),
         ),
         HttpApiEndpoint.post("startWorkspaceSession", SessionHostPaths.workspaceSession, {

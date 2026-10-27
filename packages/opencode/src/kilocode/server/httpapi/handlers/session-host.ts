@@ -272,6 +272,25 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
         .pipe(Effect.mapError(mapFailure))
     })
 
+    const listWorkspaceSessions = Effect.fn("SessionHostHttpApi.listWorkspaceSessions")(function* (ctx: {
+      params: { providerID: ProviderID; workspaceID: WorkspaceID }
+      query: { limit?: number; cursor?: string; organizationID?: OrganizationID }
+    }) {
+      const provider = yield* require(ctx.params.providerID)
+      const workspace = yield* provider
+        .getWorkspace({
+          id: { providerID: ctx.params.providerID, workspaceID: ctx.params.workspaceID },
+          ...(ctx.query.limit === undefined ? {} : { sessionLimit: ctx.query.limit }),
+          ...(ctx.query.cursor === undefined ? {} : { sessionCursor: ctx.query.cursor }),
+          ...(ctx.query.organizationID === undefined ? {} : { organizationID: ctx.query.organizationID }),
+        })
+        .pipe(Effect.mapError(mapFailure))
+      return {
+        items: workspace.sessions,
+        ...(workspace.cursor === undefined ? {} : { cursor: workspace.cursor }),
+      }
+    })
+
     const startWorkspaceSession = Effect.fn("SessionHostHttpApi.startWorkspaceSession")(function* (ctx: {
       params: { providerID: ProviderID; workspaceID: WorkspaceID }
       payload: WorkspaceSessionStartBody
@@ -298,6 +317,7 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
       .handle("createWorkspace", createWorkspace)
       .handle("getWorkspace", getWorkspace)
       .handle("getWorkspaceStatus", getWorkspaceStatus)
+      .handle("listWorkspaceSessions", listWorkspaceSessions)
       .handle("startWorkspaceSession", startWorkspaceSession)
   }),
 )

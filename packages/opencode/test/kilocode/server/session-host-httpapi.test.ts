@@ -462,6 +462,49 @@ describe("session host HttpApi", () => {
     }),
   )
 
+  it.live("lists workspace sessions as a projection of the workspace detail read", () =>
+    Effect.gen(function* () {
+      const path = SessionHostPaths.workspaceSession
+        .replace(":providerID", "kilo-cloud")
+        .replace(":workspaceID", WORKSPACE)
+      const response = yield* HttpClient.get(`${path}?limit=2&cursor=session-cursor-0&organizationID=${PROFILE}`)
+      expect(response.status).toBe(200)
+      const body: unknown = yield* response.json
+      expect(body).toEqual({
+        items: [
+          {
+            id: { providerID: "kilo-cloud", sessionID: SESSION },
+            title: "Root chat",
+            createdOnPlatform: "agent-manager",
+            created: 100,
+            updated: 200,
+          },
+        ],
+        cursor: "session-cursor-1",
+      })
+
+      const text = JSON.stringify(body)
+      for (const secret of [app.url, TOKEN, CLOUD, "cloudAgentSessionId", "kiloSessionId"]) {
+        expect(text).not.toContain(secret)
+      }
+
+      const call = app.calls.at(-1)
+      expect(call?.path).toBe("/trpc/getHostedWorkspace")
+      expect(Object(parse(new URL(call?.search ?? "", app.url).searchParams.get("input") ?? "{}"))).toEqual({
+        workspaceId: WORKSPACE,
+        sessionLimit: 2,
+        sessionCursor: "session-cursor-0",
+      })
+
+      const missing = yield* HttpClient.get(
+        SessionHostPaths.workspaceSession
+          .replace(":providerID", "kilo-cloud")
+          .replace(":workspaceID", "worktree_00000000-0000-4000-8000-000000000000"),
+      )
+      expect(missing.status).toBe(404)
+    }),
+  )
+
   it.live("reads passive workspace status without waking compute or leaking payer identity", () =>
     Effect.gen(function* () {
       const path = SessionHostPaths.workspaceStatus

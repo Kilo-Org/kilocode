@@ -584,6 +584,23 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(401),
   http.protected
+    .get("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", "sessionHost.listWorkspaceSessions")
+    .probe({
+      path:
+        route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", {
+          providerID: "kilo-cloud",
+          workspaceID: "httpapi-missing",
+        }) + "?limit=0",
+    })
+    .at((ctx) => ({
+      path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", {
+        providerID: "kilo-cloud",
+        workspaceID: "httpapi-missing",
+      }),
+      headers: ctx.headers(),
+    }))
+    .status(401),
+  http.protected
     .post("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", "sessionHost.startWorkspaceSession")
     .at((ctx) => ({
       path: route("/kilocode/session-host/workspace/{providerID}/{workspaceID}/session", {

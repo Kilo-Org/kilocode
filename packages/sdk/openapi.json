@@ -20618,6 +20618,139 @@
       }
     },
     "/kilocode/session-host/workspace/{providerID}/{workspaceID}/session": {
+      "get": {
+        "tags": ["session-host"],
+        "operationId": "sessionHost.listWorkspaceSessions",
+        "parameters": [
+          {
+            "name": "providerID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostProviderID"
+            },
+            "required": true
+          },
+          {
+            "name": "workspaceID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostWorkspaceID"
+            },
+            "required": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "organizationID",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostOrganizationID"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hosted workspace sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostWorkspaceSessionPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "SessionHostPaymentRequiredError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostPaymentRequiredError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "UpstreamError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpstreamError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
+                }
+              }
+            }
+          }
+        },
+        "description": "List a bounded page of a hosted workspace's root sessions.",
+        "summary": "List hosted workspace sessions",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sessionHost.listWorkspaceSessions({\n  ...\n})"
+          }
+        ]
+      },
       "post": {
         "tags": ["session-host"],
         "operationId": "sessionHost.startWorkspaceSession",
@@ -45415,6 +45548,22 @@
           }
         },
         "required": ["id", "deletionState", "observedAt", "compute", "activity", "wakeOnInput", "billing", "deletion"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspaceSessionPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionHostWorkspaceSession"
+            }
+          },
+          "cursor": {
+            "type": "string"
+          }
+        },
+        "required": ["items"],
         "additionalProperties": false
       },
       "SessionHostWorkspaceSessionStartBody": {
