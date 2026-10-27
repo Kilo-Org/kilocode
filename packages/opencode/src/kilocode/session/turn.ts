@@ -12,12 +12,15 @@ import type { SessionID } from "@/session/schema"
  * Kilo process on the same data directory reads these markers to tell a live reply from one that a
  * crashed process left behind.
  *
- * A marker is a file named `<sessionID>.<pid>` that holds the host name. The files are written and removed
- * synchronously, so a release and the next hold for the same session cannot reorder on disk.
+ * A marker is a file named `<sessionID>.<pid>` that holds the host name. The holder refreshes its mtime
+ * while the turn runs. The files are written and removed synchronously, so a release and the next hold for
+ * the same session cannot reorder on disk.
  */
 export namespace KiloSessionTurn {
   const log = Log.create({ service: "session-turn" })
-  const counts = new Map<SessionID, number>()
+  // A marker that the holder has not refreshed for this long belongs to a dead process.
+  const ttl = 60_000
+  const held = new Map<SessionID, { count: number; timer?: ReturnType<typeof setInterval> }>()
 
   function dir() {
     return path.join(Global.Path.state, "session-turn")
@@ -40,27 +43,32 @@ export namespace KiloSessionTurn {
   export function hold(id: SessionID, lease: Effect.Effect<() => void>) {
     return Effect.gen(function* () {
       const release = yield* lease
-      const count = counts.get(id) ?? 0
-      counts.set(id, count + 1)
-      if (count === 0) {
+      const entry = held.get(id) ?? { count: 0 }
+      held.set(id, entry)
+      entry.count++
+      if (entry.count === 1) {
+        const marker = file(id, process.pid)
         try {
           mkdirSync(dir(), { recursive: true })
-          writeFileSync(file(id, process.pid), os.hostname())
+          writeFileSync(marker, os.hostname())
         } catch (err) {
           log.warn("failed to mark session turn", { err, id })
         }
+        entry.timer = setInterval(() => {
+          const now = new Date()
+          fs.utimes(marker, now, now).catch((err) => log.warn("failed to refresh session turn", { err, id }))
+        }, ttl / 3)
+        entry.timer.unref?.()
       }
-      let held = true
+      let active = true
       return () => {
-        if (!held) return
-        held = false
+        if (!active) return
+        active = false
         release()
-        const left = (counts.get(id) ?? 1) - 1
-        if (left > 0) {
-          counts.set(id, left)
-          return
-        }
-        counts.delete(id)
+        entry.count--
+        if (entry.count > 0) return
+        held.delete(id)
+        clearInterval(entry.timer)
         try {
           rmSync(file(id, process.pid), { force: true })
         } catch (err) {
@@ -72,7 +80,7 @@ export namespace KiloSessionTurn {
 
   /**
    * Returns true when another live Kilo process runs a turn on the session. A marker from another host
-   * counts as live, because its process cannot be checked. Markers of dead processes are removed.
+   * counts as live until its holder stops refreshing it. The scan removes stale markers of every session.
    */
   export const foreign = Effect.fn("KiloSessionTurn.foreign")(function* (id: SessionID) {
     const names = yield* Effect.promise(() =>
@@ -81,21 +89,29 @@ export namespace KiloSessionTurn {
         return [] as string[]
       }),
     )
+    const host = os.hostname()
+    let live = false
     for (const name of names) {
-      if (!name.startsWith(`${id}.`)) continue
-      const pid = Number(name.slice(id.length + 1))
-      if (!Number.isInteger(pid) || pid === process.pid) continue
-      const host = yield* Effect.promise(() =>
-        fs.readFile(path.join(dir(), name), "utf8").catch(() => undefined),
+      const at = name.lastIndexOf(".")
+      const pid = Number(name.slice(at + 1))
+      if (at < 0 || !Number.isInteger(pid)) continue
+      const marker = path.join(dir(), name)
+      const found = yield* Effect.promise(() =>
+        Promise.all([fs.stat(marker), fs.readFile(marker, "utf8")]).catch(() => undefined),
       )
-      if (host === undefined) continue
-      if (host !== os.hostname() || alive(pid)) return true
+      if (!found) continue
+      const local = found[1] === host
+      // This process tracks its own turns through session status.
+      if (local && pid === process.pid) continue
+      const stale = Date.now() - found[0].mtimeMs > ttl || (local && !alive(pid))
+      if (!stale) {
+        if (name.slice(0, at) === id) live = true
+        continue
+      }
       yield* Effect.promise(() =>
-        fs
-          .rm(path.join(dir(), name), { force: true })
-          .catch((err) => log.warn("failed to remove stale session turn", { err, id, pid })),
+        fs.rm(marker, { force: true }).catch((err) => log.warn("failed to remove stale session turn", { err, pid })),
       )
     }
-    return false
+    return live
   })
 }
