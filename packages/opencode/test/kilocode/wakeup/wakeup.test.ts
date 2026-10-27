@@ -615,4 +615,31 @@ describe("Wakeup", () => {
       }).pipe(Effect.scoped),
     20_000,
   )
+
+  it.live(
+    "still fires an armed wakeup whose stored record became unreadable",
+    () =>
+      Effect.gen(function* () {
+        const wake = yield* Wakeup.Service
+        const recorder = yield* Recorder
+        const dir = (yield* TestDir).dir
+
+        const info = yield* wake.schedule({
+          sessionID: session(),
+          directory: dir,
+          prompt: "read failed",
+          when: new Date(Date.now() + 1200).toISOString(),
+        })
+        // Only a missing record means another process took the wakeup.
+        fs.writeFileSync(path.join(dir, "storage", "wakeup", String(info.sessionID), `${info.id}.json`), "{ not json")
+
+        const fired = yield* pollWithTimeout(
+          Effect.sync(() => recorder.calls[0]),
+          "unreadable wakeup never fired",
+          "8 seconds",
+        )
+        expect(fired.id).toBe(info.id)
+      }),
+    20_000,
+  )
 })

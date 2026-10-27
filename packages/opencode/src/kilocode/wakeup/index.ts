@@ -172,11 +172,19 @@ export namespace Wakeup {
             timers.delete(info.id)
             // Drop the persistence before the resume: the model turn can be slow,
             // and a concurrent `adopt` that still sees the file would fire twice.
-            // A missing record means another process fired or cancelled it.
+            // A missing record means another process fired or cancelled it. An
+            // unreadable record still fires: a duplicate beats a lost turn.
             const claimed = yield* claim(
               key(info),
               Effect.gen(function* () {
-                if (!(yield* read(key(info)))) return false
+                const found = yield* storage.read<Info>(key(info)).pipe(
+                  Effect.as(true),
+                  Effect.catchTag("NotFoundError", () => Effect.succeed(false)),
+                  Effect.catch((err) =>
+                    Effect.logWarning("wakeup claim read failed", { id: info.id, err }).pipe(Effect.as(true)),
+                  ),
+                )
+                if (!found) return false
                 yield* storage.remove(key(info)).pipe(Effect.ignore)
                 return true
               }),
@@ -230,10 +238,16 @@ export namespace Wakeup {
           // not lose the schedule. The stored record decides the claim: if it
           // is gone, the task was cancelled; if its window moved, another
           // process already fired this occurrence, so follow its next window.
+          // An unreadable record falls back to this timer's copy and fires.
           const claimed = yield* claim(
             cronKey(task),
             Effect.gen(function* () {
-              const stored = yield* readCron(cronKey(task))
+              const stored = yield* storage.read<CronInfo>(cronKey(task)).pipe(
+                Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)),
+                Effect.catch((err) =>
+                  Effect.logWarning("cron claim read failed", { id: task.id, err }).pipe(Effect.as(task)),
+                ),
+              )
               if (!stored) {
                 cronEntries.delete(task.id)
                 cronTimers.delete(task.id)
