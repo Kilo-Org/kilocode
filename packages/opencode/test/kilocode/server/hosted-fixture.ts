@@ -1,14 +1,17 @@
 import {
   HostedFailure,
   ProviderID,
-  type AttachmentResult,
+  type Attachment,
   type AttachInput,
   type NativeRequest,
   type Provider,
 } from "../../../src/kilocode/session-hosting/types"
 import { Effect, Schema } from "effect"
 
-export function provider(id: string, options: { attach?: Provider["attach"]; route?: Provider["route"] } = {}) {
+export function provider(
+  id: string,
+  options: { attach?: Provider["attach"]; membership?: Provider["membership"]; route?: Provider["route"] } = {},
+) {
   const calls: NativeRequest[] = []
   const value: Provider = {
     id: Schema.decodeUnknownSync(ProviderID)(id),
@@ -39,8 +42,9 @@ export function provider(id: string, options: { attach?: Provider["attach"]; rou
       ),
     attach:
       options.attach ??
-      ((input: AttachInput): Effect.Effect<AttachmentResult> =>
+      ((input: AttachInput): Effect.Effect<Attachment> =>
         Effect.succeed({ session: input.id, expiresAt: Date.now() + 60_000 })),
+    ...(options.membership === undefined ? {} : { membership: options.membership }),
     ...(options.route === undefined
       ? {
           route: (input: NativeRequest) => {

@@ -184,16 +184,18 @@ export const sessionHostHandlers = HttpApiBuilder.group(InstanceHttpApi, "sessio
     }) {
       const provider = yield* require(ctx.params.providerID)
       const organizationID = ctx.query.organizationID
-      const descriptor = yield* provider
-        .attach({
-          id: identity(ctx.params),
-          ...(organizationID ? { organizationID } : {}),
-        })
-        .pipe(Effect.mapError(mapFailure))
+      const input = {
+        id: identity(ctx.params),
+        ...(organizationID ? { organizationID } : {}),
+      }
+      const descriptor = yield* provider.attach(input).pipe(Effect.mapError(mapFailure))
+      const workspace = provider.membership
+        ? yield* provider.membership(input).pipe(Effect.mapError(mapFailure))
+        : undefined
       const entry = Attachments.store.mint({
         provider,
         session: descriptor.session,
-        ...(descriptor.workspace ? { workspace: descriptor.workspace } : {}),
+        ...(workspace ? { workspace } : {}),
         ...(organizationID ? { organizationID } : {}),
         expiresAt: descriptor.expiresAt,
       })

@@ -270,13 +270,18 @@ describe("hosted attachment routing", () => {
     expect(fake.calls).toHaveLength(0)
   })
 
-  test("renews a lapsed provider descriptor before routing", async () => {
+  test("renews a lapsed provider descriptor before routing without resolving membership again", async () => {
     const api = app()
     let attaches = 0
+    let scans = 0
     const fake = provider("alpha", {
       attach: (input) => {
         attaches += 1
         return Effect.succeed({ session: input.id, expiresAt: Date.now() + 60_000 })
+      },
+      membership: () => {
+        scans += 1
+        return Effect.succeed(undefined)
       },
     })
     const entry = attach(fake, SESSION, 1)
@@ -285,6 +290,7 @@ describe("hosted attachment routing", () => {
 
     expect(response.status).toBe(200)
     expect(attaches).toBe(1)
+    expect(scans).toBe(0)
     expect(fake.calls).toHaveLength(1)
   })
 

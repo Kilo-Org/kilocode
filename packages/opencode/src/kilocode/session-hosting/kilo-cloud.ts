@@ -28,7 +28,7 @@ import {
   WorkspaceSessionStartInput,
   WorkspaceStatusInput,
   markDeletionDispatched,
-  type AttachmentResult,
+  type Attachment,
   type Availability,
   type CreateWorkspaceResult,
   type DeleteWorkspaceResult,
@@ -546,17 +546,11 @@ export function provider(options: Options): Provider {
       }
     })
 
-  const attach = (raw: AttachInput): Effect.Effect<AttachmentResult, HostedFailure> =>
+  const attach = (raw: AttachInput): Effect.Effect<Attachment, HostedFailure> =>
     Effect.gen(function* () {
       const input = yield* check(AttachInput, raw)
       const session = yield* get(input)
-      const auth = yield* resolve(input.organizationID)
-      const workspace = yield* membership(auth, input.id.sessionID)
-      return {
-        session: session.id,
-        expiresAt: clock() + ATTACHMENT_TTL_MS,
-        ...(workspace === undefined ? {} : { workspace }),
-      }
+      return { session: session.id, expiresAt: clock() + ATTACHMENT_TTL_MS }
     })
 
   const data = (value: unknown) =>
@@ -588,17 +582,18 @@ export function provider(options: Options): Provider {
     raw.sessions.some((session) => session.kiloSessionId === kiloSessionID)
 
   /**
-   * Resolves workspace membership from the existing workspace catalog. A
-   * session that no catalog page mentions is a legacy flat session, so the
-   * attachment stays valid without workspace-scoped invalidation. A catalog
-   * larger than the scan bound also yields no membership so attach keeps
-   * working; routed session-not-found responses still invalidate it.
+   * Resolves workspace membership from the existing workspace catalog, once
+   * per new attachment. A session that no catalog page mentions is a legacy
+   * flat session, so the attachment stays valid without workspace-scoped
+   * invalidation. A catalog larger than the scan bound, or a workspace that
+   * disappears during the scan, also yields no membership; routed
+   * session-not-found responses still invalidate the attachment.
    */
-  const membership = (
-    auth: CloudAuth.Resolved,
-    kiloSessionID: string,
-  ): Effect.Effect<HostedWorkspaceID | undefined, HostedFailure> =>
+  const membership = (raw: AttachInput): Effect.Effect<HostedWorkspaceID | undefined, HostedFailure> =>
     Effect.gen(function* () {
+      const input = yield* check(AttachInput, raw)
+      const auth = yield* resolve(input.organizationID)
+      const kiloSessionID = input.id.sessionID
       let cursor: string | undefined
       for (let page = 0; page < MEMBERSHIP_PAGE_LIMIT; page++) {
         const payload: Record<string, unknown> = {
@@ -637,11 +632,8 @@ export function provider(options: Options): Provider {
           sessionLimit: MEMBERSHIP_SESSION_LIMIT,
           sessionCursor: cursor,
         })
-        if (body === null) {
-          return yield* Effect.fail(
-            new HostedFailure({ code: "not_found", message: "Kilo Cloud workspace was not found", retryable: false }),
-          )
-        }
+        // This workspace disappeared during the scan; it says nothing about the session.
+        if (body === null) return undefined
         const parsed = WorkspaceSummary.safeParse(body)
         if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported workspace"))
         if (parsed.data.workspaceId !== raw.workspaceId) {
@@ -960,6 +952,7 @@ export function provider(options: Options): Provider {
     transcript,
     start,
     attach,
+    membership,
     listWorkspaces,
     getWorkspace,
     getWorkspaceStatus,

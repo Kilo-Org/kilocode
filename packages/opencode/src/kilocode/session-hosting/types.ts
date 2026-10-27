@@ -135,14 +135,6 @@ export const Attachment = Schema.Struct({
 }).annotate({ identifier: "SessionHostAttachment" })
 export type Attachment = Schema.Schema.Type<typeof Attachment>
 
-/**
- * Internal attach result. Workspace membership is local routing state and is
- * deliberately absent from the public attach response.
- */
-export type AttachmentResult = Attachment & {
-  readonly workspace?: HostedWorkspaceID
-}
-
 export const Repository = Schema.Union([
   Schema.Struct({ type: Schema.Literal("github"), repo: Schema.String, branch: Schema.optional(Schema.String) }),
   Schema.Struct({ type: Schema.Literal("gitlab"), url: Schema.String, branch: Schema.optional(Schema.String) }),
@@ -519,7 +511,14 @@ export interface Provider {
   readonly get: (input: GetInput) => Effect.Effect<HostedSession, HostedFailure>
   readonly transcript: (input: TranscriptInput) => Effect.Effect<HostedTranscriptPage, HostedFailure>
   readonly start: (input: StartInput) => Effect.Effect<StartResult, HostedFailure>
-  readonly attach: (input: AttachInput) => Effect.Effect<AttachmentResult, HostedFailure>
+  /** Validates the session and returns a fresh validity window. Runs on every renewal, so it stays cheap. */
+  readonly attach: (input: AttachInput) => Effect.Effect<Attachment, HostedFailure>
+  /**
+   * Resolves the workspace that holds a session, once per new attachment.
+   * Workspace membership is local routing state and is absent from the public
+   * attach response. Omitted by providers without workspaces.
+   */
+  readonly membership?: (input: AttachInput) => Effect.Effect<HostedWorkspaceID | undefined, HostedFailure>
   readonly listWorkspaces: (input?: WorkspaceListInput) => Effect.Effect<HostedWorkspacePage, HostedFailure>
   readonly getWorkspace: (input: WorkspaceGetInput) => Effect.Effect<HostedWorkspace, HostedFailure>
   readonly getWorkspaceStatus: (input: WorkspaceStatusInput) => Effect.Effect<HostedWorkspaceStatus, HostedFailure>

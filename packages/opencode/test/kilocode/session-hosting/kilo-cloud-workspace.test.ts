@@ -321,6 +321,11 @@ const client = (url: string, info: Auth.Info | undefined = signedIn()) =>
     env: { CLOUD_AGENT_NEXT_BASE_URL: url, KILO_WEB_APP_URL: url, KILO_API_URL: url },
   })
 
+const membership = (cloud: ReturnType<typeof client>) => {
+  if (!cloud.membership) throw new Error("Kilo Cloud must resolve workspace membership")
+  return cloud.membership({ id: { providerID: PROVIDER, sessionID: SESSION } })
+}
+
 const repo = { type: "github" as const, repo: "Kilo-Org/kilocode", branch: "main" }
 const agent = { mode: "build", model: "test/fake" }
 
@@ -577,6 +582,26 @@ it.effect("starts another session in a workspace and rejects a mismatched worksp
       message: { prompt: "More work", id: MESSAGE },
       agent,
     })
+    expect(body).not.toHaveProperty("kilocodeOrganizationId")
+    expect(body).not.toHaveProperty("options")
+
+    // The Cloud input is strict and carries the organization at the top level, unlike start and createWorkspace.
+    app.calls.length = 0
+    yield* cloud.startWorkspaceSession({
+      id: { providerID: PROVIDER, workspaceID: WORKSPACE },
+      prompt: "More work",
+      agent,
+      operationKey: OPERATION,
+      messageID: MESSAGE,
+      organizationID: ORG,
+    })
+    const scoped = app.calls.find((call) => call.path === "/trpc/createHostedWorkspaceSession")
+    expect(Object(JSON.parse(scoped?.body ?? "{}"))).toMatchObject({
+      workspaceId: WORKSPACE,
+      kilocodeOrganizationId: ORG,
+    })
+    expect(Object(JSON.parse(scoped?.body ?? "{}"))).not.toHaveProperty("options")
+    expect(scoped?.org).toBe(ORG)
 
     app.state.session = "mismatch"
     expect(
@@ -717,19 +742,28 @@ it.effect("reports a signed-out host and performs no Cloud request", () => {
   })
 })
 
-it.effect("resolves cold attach membership without a prior workspace list", () => {
+it.effect("attaches by session validity alone without walking the workspace catalog", () => {
   const app = harness()
   return Effect.gen(function* () {
     const cloud = client(app.url)
     const result = yield* cloud.attach({ id: { providerID: PROVIDER, sessionID: SESSION } })
     expect(result).toEqual({
       session: { providerID: PROVIDER, sessionID: SESSION },
-      workspace: { providerID: PROVIDER, workspaceID: WORKSPACE },
       expiresAt: expect.any(Number),
     })
-    expect(app.calls.map((call) => call.path)).toEqual([`/kilo/session/${SESSION}`, "/trpc/listHostedWorkspaces"])
-    expect(app.calls[1]?.search).toContain("limit%22%3A50")
-    expect(app.calls[1]?.search).toContain("sessionLimit%22%3A100")
+    expect(app.calls.map((call) => call.path)).toEqual([`/kilo/session/${SESSION}`])
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("resolves cold membership without a prior workspace list", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+    const result = yield* membership(cloud)
+    expect(result).toEqual({ providerID: PROVIDER, workspaceID: WORKSPACE })
+    expect(app.calls.map((call) => call.path)).toEqual(["/trpc/listHostedWorkspaces"])
+    expect(app.calls[0]?.search).toContain("limit%22%3A50")
+    expect(app.calls[0]?.search).toContain("sessionLimit%22%3A100")
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 
@@ -739,14 +773,12 @@ it.effect("follows outer and nested workspace pages to find membership", () => {
     const cloud = client(app.url)
 
     app.state.membership = "outer"
-    const outer = yield* cloud.attach({ id: { providerID: PROVIDER, sessionID: SESSION } })
-    expect(outer.workspace).toEqual({ providerID: PROVIDER, workspaceID: WORKSPACE })
+    expect(yield* membership(cloud)).toEqual({ providerID: PROVIDER, workspaceID: WORKSPACE })
     expect(app.calls.filter((call) => call.path === "/trpc/listHostedWorkspaces")).toHaveLength(2)
 
     app.calls.length = 0
     app.state.membership = "nested"
-    const nested = yield* cloud.attach({ id: { providerID: PROVIDER, sessionID: SESSION } })
-    expect(nested.workspace).toEqual({ providerID: PROVIDER, workspaceID: WORKSPACE })
+    expect(yield* membership(cloud)).toEqual({ providerID: PROVIDER, workspaceID: WORKSPACE })
     const detail = app.calls.find((call) => call.path === "/trpc/getHostedWorkspace")
     expect(Object(JSON.parse(new URL(detail?.search ?? "", app.url).searchParams.get("input") ?? "{}"))).toEqual({
       workspaceId: WORKSPACE,
@@ -756,12 +788,23 @@ it.effect("follows outer and nested workspace pages to find membership", () => {
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 
+it.effect("skips a workspace that disappears during the membership scan", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+    app.state.membership = "nested"
+    app.state.detail = "null"
+    expect(yield* membership(cloud)).toBeUndefined()
+    expect(app.calls.map((call) => call.path)).toEqual(["/trpc/listHostedWorkspaces", "/trpc/getHostedWorkspace"])
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
 it.effect("rejects a nested session that belongs to another workspace", () => {
   const app = harness()
   return Effect.gen(function* () {
     const cloud = client(app.url)
     app.state.membership = "wrong"
-    expect(yield* cloud.attach({ id: { providerID: PROVIDER, sessionID: SESSION } }).pipe(Effect.flip)).toMatchObject({
+    expect(yield* membership(cloud).pipe(Effect.flip)).toMatchObject({
       code: "invalid_response",
       retryable: false,
     })
@@ -773,12 +816,7 @@ it.effect("allows a legacy flat session without workspace membership", () => {
   return Effect.gen(function* () {
     const cloud = client(app.url)
     app.state.membership = "flat"
-    const result = yield* cloud.attach({ id: { providerID: PROVIDER, sessionID: SESSION } })
-    expect(result).toEqual({
-      session: { providerID: PROVIDER, sessionID: SESSION },
-      expiresAt: expect.any(Number),
-    })
-    expect("workspace" in result).toBe(false)
+    expect(yield* membership(cloud)).toBeUndefined()
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 
@@ -787,7 +825,7 @@ it.effect("propagates a membership lookup failure instead of treating it as lega
   return Effect.gen(function* () {
     const cloud = client(app.url)
     app.state.membership = "failure"
-    expect(yield* cloud.attach({ id: { providerID: PROVIDER, sessionID: SESSION } }).pipe(Effect.flip)).toMatchObject({
+    expect(yield* membership(cloud).pipe(Effect.flip)).toMatchObject({
       code: "unavailable",
       retryable: true,
     })
