@@ -39,6 +39,8 @@ kilo --help
 
 After installation, run `kilo` and use the `/connect` command to add your first provider credentials. This is the interactive way to configure API keys for model providers.
 
+The dialog lists each provider with a short description — Kilo Gateway is marked **Recommended**. When the Kilo Gateway model list cannot load, its row shows a red `!` with the reason, such as credentials rejected, not signed in, no connection, or a provider error, so you can fix the connection before starting a session.
+
 ## Opening Links
 
 Links in agent responses use terminal hyperlink metadata when the terminal supports it. Kilo also handles links inside the TUI, so mouse capture does not make supported HTTP(S) links inactive. Move the pointer over a link to see the hover underline, then click it to open the default browser.
