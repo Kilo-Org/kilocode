@@ -330,12 +330,15 @@ const layer = Layer.effect(
       loop: for (let msgIndex = msgs.length - 1; msgIndex >= 0; msgIndex--) {
         const msg = msgs[msgIndex]
         if (msg.info.role === "user") turns++
+        // A failed or interrupted summary hides nothing, so it is not a prune boundary.
+        const summary =
+          msg.info.role === "assistant" && msg.info.summary === true && !!msg.info.finish && !msg.info.error
         if (msg.info.role === "assistant") {
-          if (msg.info.summary) recent = false
+          if (summary) recent = false
           if (msg.info.time.completed && msg.info.finish && msg.info.finish !== "error" && !msg.info.error) steps++
         }
         if (turns < 2 && (!recent || steps <= 2)) continue
-        if (msg.info.role === "assistant" && msg.info.summary) break loop
+        if (summary) break loop
         for (let partIndex = msg.parts.length - 1; partIndex >= 0; partIndex--) {
           const part = msg.parts[partIndex]
           if (part.type !== "tool") continue
