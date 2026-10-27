@@ -363,6 +363,79 @@ describe("tool.apply_patch freeform", () => {
       expect(yield* readText(path.join(test.directory, name ?? "report.txt"))).toBe("kept\n")
     }),
   )
+
+  it.instance("recreates a file deleted earlier in the same patch", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const target = path.join(test.directory, "config.json")
+      yield* writeText(target, "old\n")
+
+      const patchText = "*** Begin Patch\n*** Delete File: config.json\n*** Add File: config.json\n+new\n*** End Patch"
+
+      yield* execute({ patchText }, ctx)
+      expect(yield* readText(target)).toBe("new\n")
+    }),
+  )
+
+  it.instance("moves onto a path deleted earlier in the same patch", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      yield* writeText(path.join(test.directory, "a.txt"), "from\n")
+      yield* writeText(path.join(test.directory, "b.txt"), "old\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Delete File: b.txt\n*** Update File: a.txt\n*** Move to: b.txt\n@@\n-from\n+moved\n*** End Patch"
+
+      yield* execute({ patchText }, ctx)
+      yield* expectReadFailure(path.join(test.directory, "a.txt"))
+      expect(yield* readText(path.join(test.directory, "b.txt"))).toBe("moved\n")
+    }),
+  )
+
+  it.instance("adds a path vacated by an earlier move in the same patch", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      yield* writeText(path.join(test.directory, "a.txt"), "from\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Update File: a.txt\n*** Move to: b.txt\n@@\n-from\n+moved\n*** Add File: a.txt\n+fresh\n*** End Patch"
+
+      yield* execute({ patchText }, ctx)
+      expect(yield* readText(path.join(test.directory, "b.txt"))).toBe("moved\n")
+      expect(yield* readText(path.join(test.directory, "a.txt"))).toBe("fresh\n")
+    }),
+  )
+
+  it.instance("does not replace a symlink target when the move names that target", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const target = path.join(test.directory, "target.txt")
+      const link = path.join(test.directory, "link.txt")
+      yield* writeText(target, "safe\n")
+      const made = yield* Effect.promise(async () => {
+        try {
+          await fs.symlink(target, link)
+          return true
+        } catch (err) {
+          const code = err && typeof err === "object" && "code" in err ? err.code : undefined
+          if (code === "EPERM" || code === "ENOTSUP") return false
+          throw err
+        }
+      })
+      if (!made) return
+
+      const patchText =
+        "*** Begin Patch\n*** Update File: link.txt\n*** Move to: target.txt\n@@\n-safe\n+replaced\n*** End Patch"
+
+      yield* expectFailure(execute({ patchText }, ctx), "destination already exists")
+      expect(yield* readText(target)).toBe("safe\n")
+      expect((yield* Effect.promise(() => fs.lstat(link))).isSymbolicLink()).toBe(true)
+    }),
+  )
   // kilocode_change end
 
   it.instance("rejects update when target file is missing", () =>

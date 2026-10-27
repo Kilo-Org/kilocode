@@ -1,4 +1,5 @@
 import * as path from "path"
+import { lstat } from "fs/promises"
 import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -32,16 +33,34 @@ export const ApplyPatchTool = Tool.define(
     const events = yield* EventV2Bridge.Service
 
     // kilocode_change start - refuse a destination that is a different existing file
+    const cased = (source: string, dest: string) => {
+      const left = path.resolve(source)
+      const right = path.resolve(dest)
+      if (path.dirname(left) !== path.dirname(right)) return false
+      const from = path.basename(left)
+      const to = path.basename(right)
+      return from !== to && from.toLowerCase() === to.toLowerCase()
+    }
+
+    const stat = Effect.fn("ApplyPatchTool.stat")(function* (target: string) {
+      return yield* Effect.tryPromise({
+        try: () => lstat(target),
+        catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+      }).pipe(
+        Effect.catch((err) => {
+          if ("code" in err && err.code === "ENOENT") return Effect.succeed(undefined)
+          return Effect.fail(err)
+        }),
+      )
+    })
+
     const same = Effect.fn("ApplyPatchTool.same")(function* (source: string, dest: string) {
       if (path.resolve(source) === path.resolve(dest)) return true
-      const left = yield* afs
-        .realPath(source)
-        .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)))
-      if (left == null) return false
-      const right = yield* afs
-        .realPath(dest)
-        .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)))
-      return left === right
+      if (!cased(source, dest)) return false
+      const left = yield* stat(source)
+      const right = yield* stat(dest)
+      if (!left || !right || left.isSymbolicLink() || right.isSymbolicLink()) return false
+      return left.dev === right.dev && left.ino === right.ino
     })
 
     const guard = Effect.fn("ApplyPatchTool.guard")(function* (source: string | undefined, dest: string) {
@@ -105,7 +124,6 @@ export const ApplyPatchTool = Tool.define(
             const newContent =
               hunk.contents.length === 0 || hunk.contents.endsWith("\n") ? hunk.contents : `${hunk.contents}\n`
             const next = Bom.split(newContent)
-            yield* guard(undefined, filePath) // kilocode_change - add must not replace an existing file
             const diff = trimDiff(createTwoFilesPatch(filePath, filePath, oldContent, next.text))
 
             let additions = 0
@@ -183,7 +201,6 @@ export const ApplyPatchTool = Tool.define(
 
             const movePath = hunk.move_path ? path.resolve(instance.directory, hunk.move_path) : undefined
             yield* assertExternalDirectoryEffect(ctx, movePath)
-            if (movePath) yield* guard(filePath, movePath) // kilocode_change - move must not clobber another file
 
             fileChanges.push({
               filePath,
@@ -293,8 +310,15 @@ export const ApplyPatchTool = Tool.define(
                   yield* afs.rename(hop, change.movePath).pipe(
                     Effect.catch((err) =>
                       afs.rename(hop, change.filePath).pipe(
-                        Effect.ignore,
-                        Effect.flatMap(() => Effect.fail(err)),
+                        Effect.matchEffect({
+                          onFailure: () =>
+                            Effect.fail(
+                              new Error(
+                                `apply_patch verification failed: rename left the file at ${hop}: ${err instanceof Error ? err.message : String(err)}`,
+                              ),
+                            ),
+                          onSuccess: () => Effect.fail(err),
+                        }),
                       ),
                     ),
                   )
