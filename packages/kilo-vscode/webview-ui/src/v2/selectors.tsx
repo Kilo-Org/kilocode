@@ -28,11 +28,27 @@ export function createSelection(session: Accessor<string | undefined>) {
         v2.data.location.agent.sync(),
         v2.data.location.model.sync(),
         v2.data.location.provider.sync(),
-        v2.api.model.default({ location: { directory: v2.directory } }).then((response) => {
-          setFallback(response.data ? { id: response.data.id, providerID: response.data.providerID } : undefined)
-        }),
       ]).catch(v2.report)
     }),
+  )
+  // Sign-in, sign-out and a team switch reload the catalog through createData, and can change the default model and
+  // the models a draft may use. A draft model that left the catalog falls back to the default, as on v1.
+  createEffect(
+    on(
+      () => v2.data.location.model.list(),
+      (list) => {
+        if (!list) return
+        const draft = draftModel()
+        if (draft && !list.some((item) => item.providerID === draft.providerID && item.id === draft.id))
+          setDraftModel(undefined)
+        void v2.api.model
+          .default({ location: { directory: v2.directory } })
+          .then((response) => {
+            setFallback(response.data ? { id: response.data.id, providerID: response.data.providerID } : undefined)
+          })
+          .catch(v2.report)
+      },
+    ),
   )
 
   const info = () => {
