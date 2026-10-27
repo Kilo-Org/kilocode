@@ -126,7 +126,7 @@
     "ignore": "7.0.5",
     "turndown": "7.2.0",
     "which": "6.0.1",
-    "@ff-labs/fff-bun": "0.10.5",
+    "@ff-labs/fff-bun": "0.9.4",
     "@silvia-odwyer/photon-node": "0.3.4",
     "@opencode-ai/schema": "workspace:*",
     "@kilocode/plugin": "workspace:*",
