@@ -297,7 +297,8 @@ describe("tool.apply_patch freeform", () => {
     }),
   )
 
-  it.instance("moves file overwriting existing destination", () =>
+  // kilocode_change start - refuse clobber and keep a case-only move
+  it.instance("rejects a move onto an existing file", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
       const { ctx } = makeCtx()
@@ -311,14 +312,13 @@ describe("tool.apply_patch freeform", () => {
       const patchText =
         "*** Begin Patch\n*** Update File: old/name.txt\n*** Move to: renamed/dir/name.txt\n@@\n-from\n+new\n*** End Patch"
 
-      yield* execute({ patchText }, ctx)
-
-      yield* expectReadFailure(original)
-      expect(yield* readText(destination)).toBe("new\n")
+      yield* expectFailure(execute({ patchText }, ctx), "destination already exists")
+      expect(yield* readText(original)).toBe("from\n")
+      expect(yield* readText(destination)).toBe("existing\n")
     }),
   )
 
-  it.instance("adds file overwriting existing file", () =>
+  it.instance("rejects an add onto an existing file", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
       const { ctx } = makeCtx()
@@ -327,10 +327,43 @@ describe("tool.apply_patch freeform", () => {
 
       const patchText = "*** Begin Patch\n*** Add File: duplicate.txt\n+new content\n*** End Patch"
 
-      yield* execute({ patchText }, ctx)
-      expect(yield* readText(target)).toBe("new content\n")
+      yield* expectFailure(execute({ patchText }, ctx), "destination already exists")
+      expect(yield* readText(target)).toBe("old content\n")
     }),
   )
+
+  it.instance("keeps the file when a move resolves to the same path", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const target = path.join(test.directory, "same.txt")
+      yield* writeText(target, "from\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Update File: same.txt\n*** Move to: same.txt\n@@\n-from\n+kept\n*** End Patch"
+
+      yield* execute({ patchText }, ctx)
+      expect(yield* readText(target)).toBe("kept\n")
+    }),
+  )
+
+  it.instance("keeps the file when a move only changes case", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      yield* writeText(path.join(test.directory, "Report.txt"), "from\n")
+
+      const patchText =
+        "*** Begin Patch\n*** Update File: Report.txt\n*** Move to: report.txt\n@@\n-from\n+kept\n*** End Patch"
+
+      yield* execute({ patchText }, ctx)
+      const names = yield* Effect.promise(() => fs.readdir(test.directory))
+      const name = names.find((item) => item.toLowerCase() === "report.txt")
+      expect(names.filter((item) => item.toLowerCase() === "report.txt")).toHaveLength(1)
+      expect(yield* readText(path.join(test.directory, name ?? "report.txt"))).toBe("kept\n")
+    }),
+  )
+  // kilocode_change end
 
   it.instance("rejects update when target file is missing", () =>
     Effect.gen(function* () {

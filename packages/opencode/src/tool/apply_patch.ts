@@ -31,6 +31,26 @@ export const ApplyPatchTool = Tool.define(
     const format = yield* Format.Service
     const events = yield* EventV2Bridge.Service
 
+    // kilocode_change start - refuse a destination that is a different existing file
+    const same = Effect.fn("ApplyPatchTool.same")(function* (source: string, dest: string) {
+      if (path.resolve(source) === path.resolve(dest)) return true
+      const left = yield* afs
+        .realPath(source)
+        .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)))
+      if (left == null) return false
+      const right = yield* afs
+        .realPath(dest)
+        .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)))
+      return left === right
+    })
+
+    const guard = Effect.fn("ApplyPatchTool.guard")(function* (source: string | undefined, dest: string) {
+      if (source && (yield* same(source, dest))) return
+      if (!(yield* afs.exists(dest))) return
+      return yield* Effect.fail(new Error(`apply_patch verification failed: destination already exists: ${dest}`))
+    })
+    // kilocode_change end
+
     const run = Effect.fn("ApplyPatchTool.execute")(function* (
       params: Schema.Schema.Type<typeof Parameters>,
       ctx: Tool.Context,
@@ -85,6 +105,7 @@ export const ApplyPatchTool = Tool.define(
             const newContent =
               hunk.contents.length === 0 || hunk.contents.endsWith("\n") ? hunk.contents : `${hunk.contents}\n`
             const next = Bom.split(newContent)
+            yield* guard(undefined, filePath) // kilocode_change - add must not replace an existing file
             const diff = trimDiff(createTwoFilesPatch(filePath, filePath, oldContent, next.text))
 
             let additions = 0
@@ -162,6 +183,7 @@ export const ApplyPatchTool = Tool.define(
 
             const movePath = hunk.move_path ? path.resolve(instance.directory, hunk.move_path) : undefined
             yield* assertExternalDirectoryEffect(ctx, movePath)
+            if (movePath) yield* guard(filePath, movePath) // kilocode_change - move must not clobber another file
 
             fileChanges.push({
               filePath,
@@ -247,6 +269,7 @@ export const ApplyPatchTool = Tool.define(
         const edited = change.type === "delete" ? undefined : (change.movePath ?? change.filePath)
         switch (change.type) {
           case "add":
+            yield* guard(undefined, change.filePath) // kilocode_change
             // Create parent directories (recursive: true is safe on existing/root dirs)
             yield* EncodedIO.write(afs, change.filePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
             updates.push({ file: change.filePath, event: "add" })
@@ -259,6 +282,31 @@ export const ApplyPatchTool = Tool.define(
 
           case "move":
             if (change.movePath) {
+              yield* guard(change.filePath, change.movePath) // kilocode_change
+              // kilocode_change start - a case-only rename is the same inode; write then remove deletes it
+              const identical = path.resolve(change.filePath) === path.resolve(change.movePath)
+              const alias = !identical && (yield* same(change.filePath, change.movePath))
+              if (identical || alias) {
+                if (alias) {
+                  const hop = `${change.movePath}.${process.pid}.hop`
+                  yield* afs.rename(change.filePath, hop)
+                  yield* afs.rename(hop, change.movePath).pipe(
+                    Effect.catch((err) =>
+                      afs.rename(hop, change.filePath).pipe(
+                        Effect.ignore,
+                        Effect.flatMap(() => Effect.fail(err)),
+                      ),
+                    ),
+                  )
+                }
+                yield* EncodedIO.write(afs, change.movePath, Bom.join(change.newContent, change.bom), change.encoding)
+                updates.push(
+                  identical ? { file: change.movePath, event: "change" } : { file: change.filePath, event: "unlink" },
+                )
+                if (!identical) updates.push({ file: change.movePath, event: "add" })
+                break
+              }
+              // kilocode_change end
               // Create parent directories (recursive: true is safe on existing/root dirs)
               yield* EncodedIO.write(afs, change.movePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
               yield* afs.remove(change.filePath)
