@@ -116,7 +116,8 @@ describe("Kilo PublicApi OpenAPI contract", () => {
 
   test("keeps passive hosted workspace status fields nullable", () => {
     const spec = OpenApi.fromApi(PublicApi)
-    const status = spec.components?.schemas?.SessionHostWorkspaceStatus?.properties
+    type Node = { properties?: Record<string, Node>; anyOf?: unknown[] }
+    const status = (spec.components?.schemas?.SessionHostWorkspaceStatus as Node | undefined)?.properties
     const nullable = { anyOf: [expect.objectContaining({}), { type: "null" }] }
 
     expect(status?.compute?.properties?.estimatedSleepAt).toEqual(nullable)
