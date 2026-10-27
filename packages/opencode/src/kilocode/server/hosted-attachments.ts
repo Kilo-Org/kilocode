@@ -112,15 +112,15 @@ export function create(options: Options = {}) {
     return { kind: "unknown" }
   }
 
+  const same = (entry: Entry, session: HostedSessionID) =>
+    entry.session.providerID === session.providerID && entry.session.sessionID === session.sessionID
+
   const count = (session: HostedSessionID) => {
     const current = now()
     for (const entry of live.values()) {
       if (entry.leaseExpiresAt <= current) end(entry.id, "expired")
     }
-    return Array.from(live.values()).filter(
-      (entry) =>
-        entry.session.providerID === session.providerID && entry.session.sessionID === session.sessionID,
-    ).length
+    return Array.from(live.values()).filter((entry) => same(entry, session)).length
   }
 
   const renew = (entry: Entry, input: { expiresAt: number }) => {
@@ -137,12 +137,23 @@ export function create(options: Options = {}) {
     return true
   }
 
+  /**
+   * Disposes every attachment bound to one composite native session identity.
+   * Stale provider sessions invalidate all of their attachments at once, while
+   * other sessions and providers keep theirs. Repeated disposal is safe.
+   */
+  const disposeSession = (session: HostedSessionID) => {
+    for (const entry of Array.from(live.values())) {
+      if (same(entry, session)) end(entry.id, "disposed")
+    }
+  }
+
   const clear = () => {
     live.clear()
     ended.clear()
   }
 
-  return { mint, lookup, count, renew, dispose, clear }
+  return { mint, lookup, count, renew, dispose, disposeSession, clear }
 }
 
 export type Store = ReturnType<typeof create>

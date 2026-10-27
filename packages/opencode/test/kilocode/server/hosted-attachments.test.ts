@@ -126,4 +126,36 @@ describe("hosted attachments", () => {
     store.dispose(second.id)
     expect(store.count(session)).toBe(0)
   })
+
+  test("disposes every attachment for one composite native session identity", () => {
+    const store = Attachments.create()
+    const alpha = provider("alpha")
+    const beta = provider("beta")
+    const session = hosted("alpha", "ses_00000000000000000000000001")
+    const first = store.mint({ provider: alpha.value, session, expiresAt: Date.now() + 60_000 })
+    const second = store.mint({ provider: alpha.value, session, expiresAt: Date.now() + 60_000 })
+    const other = store.mint({
+      provider: alpha.value,
+      session: hosted("alpha", "ses_00000000000000000000000002"),
+      expiresAt: Date.now() + 60_000,
+    })
+    const foreign = store.mint({
+      provider: beta.value,
+      session: hosted("beta", "ses_00000000000000000000000001"),
+      expiresAt: Date.now() + 60_000,
+    })
+
+    store.disposeSession(session)
+
+    expect(store.lookup(first.id).kind).toBe("disposed")
+    expect(store.lookup(second.id).kind).toBe("disposed")
+    expect(store.lookup(other.id).kind).toBe("found")
+    expect(store.lookup(foreign.id).kind).toBe("found")
+
+    store.disposeSession(session)
+    expect(store.lookup(first.id).kind).toBe("disposed")
+    expect(store.lookup(second.id).kind).toBe("disposed")
+    expect(store.lookup(other.id).kind).toBe("found")
+    expect(store.lookup(foreign.id).kind).toBe("found")
+  })
 })

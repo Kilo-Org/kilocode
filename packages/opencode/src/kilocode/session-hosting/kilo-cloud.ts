@@ -42,6 +42,7 @@ import {
   type WorkspaceSessionStartResult,
 } from "./types"
 import { classify } from "./native-routes"
+import { errorCode } from "./response"
 
 export const PROVIDER = Schema.decodeUnknownSync(ProviderID)("kilo-cloud")
 export const ATTACHMENT_TTL_MS = 60_000
@@ -675,12 +676,6 @@ function profilePayload(profile: Profile): Record<string, unknown> {
 
 function route(base: `/${string}`, query: URLSearchParams): `/${string}` {
   return query.size === 0 ? base : `${base}?${query.toString()}`
-}
-
-function errorCode(value: unknown) {
-  if (value === null || typeof value !== "object") return undefined
-  const record: Record<string, unknown> = Object.fromEntries(Object.entries(value))
-  return typeof record.error === "string" ? record.error : undefined
 }
 
 function omittedCount(value: string | null) {
