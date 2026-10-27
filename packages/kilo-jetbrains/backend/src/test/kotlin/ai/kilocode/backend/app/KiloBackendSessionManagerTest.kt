@@ -15,6 +15,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.launch
@@ -31,6 +32,10 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class KiloBackendSessionManagerTest {
+
+    companion object {
+        private const val WAIT_MS = 10_000L
+    }
 
     private val mock = MockCliServer()
     private val log = TestLog()
@@ -582,6 +587,36 @@ class KiloBackendSessionManagerTest {
     // ------ SSE status tracking ------
 
     @Test
+    fun `start subscribes before returning and preserves immediate session events`() = runBlocking {
+        val app = setup()
+        ready(app)
+        val events = MutableSharedFlow<SseEvent>(extraBufferCapacity = 2)
+        // This scope queues dispatched coroutines until the test suspends.
+        val manager = KiloBackendSessionManager(this, log)
+        try {
+            manager.start(app.api!!, app.http!!, app.port, events)
+            assertEquals(1, events.subscriptionCount.value, "start must subscribe before returning")
+
+            assertTrue(events.tryEmit(
+                SseEvent("session.created", lifecycle("session.created", "ses_immediate", "/repo/wt")),
+            ))
+            assertTrue(events.tryEmit(
+                SseEvent(
+                    "session.status",
+                    """{"type":"session.status","properties":{"sessionID":"ses_immediate","status":{"type":"busy"}}}""",
+                ),
+            ))
+
+            withTimeout(WAIT_MS) {
+                manager.statuses.first { it["ses_immediate"]?.type == "busy" }
+            }
+            assertEquals("/repo/wt", manager.sessionDirectory("ses_immediate"))
+        } finally {
+            manager.stop()
+        }
+    }
+
+    @Test
     fun `SSE session status events update status map`() = runBlocking {
         val app = setup()
         ready(app)
@@ -669,7 +704,7 @@ class KiloBackendSessionManagerTest {
     fun `activity badges a session this frame only learned about from events`() = runBlocking {
         val app = setup()
         ready(app)
-        mock.awaitSseConnection()
+        assertTrue(mock.awaitSseConnection(), "SSE client did not connect")
 
         mock.pushEvent("session.created", lifecycle("session.created", "ses_other_frame", "/repo/wt"))
         mock.pushEvent(
@@ -677,7 +712,7 @@ class KiloBackendSessionManagerTest {
             """{"type":"session.status","properties":{"sessionID":"ses_other_frame","status":{"type":"busy"}}}""",
         )
 
-        val snap = withTimeout(10_000) {
+        val snap = withTimeout(WAIT_MS) {
             app.activity.activity.first { it.containsKey("ses_other_frame") }
         }
         assertEquals("/repo/wt", snap["ses_other_frame"]?.directory)

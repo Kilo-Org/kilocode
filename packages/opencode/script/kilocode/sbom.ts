@@ -21,6 +21,7 @@ import { Artifact, Deps, Manifest, Policy, Scan, compose, serialize } from "../.
 import type { Component, Gap, Tool } from "../../../../script/kilocode/sbom/index"
 import { LanceDBRuntime } from "../../src/kilocode/lancedb"
 import { ValkeyRuntime } from "../../src/kilocode/valkey"
+import { pin, target as artifact } from "../../../../script/kilocode/bun"
 
 const root = path.resolve(import.meta.dir, "../..")
 const repo = path.resolve(root, "../..")
@@ -76,16 +77,24 @@ function platform(input: Target) {
  */
 function explicit(input: Target): Component[] {
   const linux = input.os === "linux"
+  const bun = artifact({ ...input, ...(input.baseline ? { avx2: false } : {}) })
   return [
     {
       type: "framework",
       name: "bun",
-      version: Bun.version,
-      purl: `pkg:generic/bun@${Bun.version}`,
+      version: pin.runtime,
+      purl: `pkg:generic/bun@${pin.runtime}`,
       supplier: "Oven",
       licenses: ["MIT"],
       delivery: "contained",
       description: "Bun runtime compiled into the Kilo CLI executable",
+      properties: {
+        "bun:revision": pin.revision,
+        "bun:runtime-version": pin.runtime,
+        "bun:package-version": pin.version,
+        "bun:artifact": bun.name,
+        "bun:integrity": bun.integrity,
+      },
     },
     ...(linux
       ? [

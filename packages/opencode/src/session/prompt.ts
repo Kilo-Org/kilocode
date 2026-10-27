@@ -1647,13 +1647,21 @@ export const layer = Layer.effect(
         }
 
         if (task?.type === "compaction") {
-          const result = yield* compaction.process({
-            messages: msgs,
-            parentID: task.messageID, // kilocode_change
-            sessionID,
-            auto: task.auto,
-            overflow: task.overflow,
-          })
+          // kilocode_change start - an interrupted compaction must not stay pending
+          const result = yield* compaction
+            .process({
+              messages: msgs,
+              parentID: task.messageID,
+              sessionID,
+              auto: task.auto,
+              overflow: task.overflow,
+            })
+            .pipe(
+              Effect.onInterrupt(() =>
+                KiloSessionPrompt.settleCompaction({ sessions, sessionID, parentID: task.messageID }),
+              ),
+            )
+          // kilocode_change end
           // kilocode_change start - compaction.process returns "stop" after
           // setting a terminal error on the summary message: either a
           // ContextOverflowError or the empty-summary APIError; surface as turn error
@@ -2376,7 +2384,7 @@ export const layer = Layer.effect(
         template = template + "\n\n" + input.arguments
       }
 
-      const shellMatches = ConfigMarkdown.shell(template)
+      const shellMatches = cmd.source === "mcp" ? [] : ConfigMarkdown.shell(template) // kilocode_change - MCP prompt text is not a local shell template
       // kilocode_change start - skill templates run !`cmd`` only when trusted and the kill-switch is off,
       // mirroring the skill tool's gate (the slash-command path is user-initiated, so it is not prompted).
       const skillTemplate = cmd.source === "skill"

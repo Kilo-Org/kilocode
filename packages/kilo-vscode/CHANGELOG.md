@@ -1,5 +1,15 @@
 # kilo-code
 
+## 7.8.18
+
+### Patch Changes
+
+- [#15410](https://github.com/Kilo-Org/kilocode/pull/15410) [`5f2aa0b`](https://github.com/Kilo-Org/kilocode/commit/5f2aa0b32fa4fafe1c544ac4a5203fc913e36225) Thanks [@WebReflection](https://github.com/WebReflection)! - Update DOMPurify to 3.4.17 to fix sanitization issues flagged by Dependabot alerts.
+
+- [#15412](https://github.com/Kilo-Org/kilocode/pull/15412) [`0377248`](https://github.com/Kilo-Org/kilocode/commit/0377248fb9af4ba12d04521821372a4d95cb1f6a) Thanks [@WebReflection](https://github.com/WebReflection)! - Update vite to 7.3.7 to fix the launch-editor editor CLI flag misinterpretation flagged by Dependabot (CVE-2026-112944).
+
+## 7.8.16
+
 ## 7.8.15
 
 ### Patch Changes
