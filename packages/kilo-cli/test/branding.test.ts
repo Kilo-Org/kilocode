@@ -4,6 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
+import { RGBA, TextAttributes } from "@opentui/core"
 import { brandingPlugin } from "../src/branding/plugin"
 import { KiloBranding } from "../src/branding/text"
 import { KiloLogo } from "../src/branding/logo-art"
@@ -152,7 +153,13 @@ for (const hosted of [false, true]) {
 
 function checkLogos(output: string, hosted: boolean, modern: boolean) {
   const result = JSON.parse(output) as {
-    frames: { width: number; height: number; mode: string; frame: string }[]
+    frames: {
+      width: number
+      height: number
+      mode: "dark" | "light"
+      frame: string
+      spans: { text: string; fg: number[]; attributes: number }[]
+    }[]
     assets: { logo: typeof logo; go: typeof go; compact?: string[]; widths?: { split: number; full: number } }
   }
   const art = KiloLogo.art({ KILO_UNICODE_LOGO: modern ? "1" : "0" })
@@ -161,7 +168,7 @@ function checkLogos(output: string, hosted: boolean, modern: boolean) {
   expect(result.assets.compact).toEqual(hosted ? art.compact : undefined)
   expect(result.assets.widths).toEqual(hosted ? art.widths : undefined)
   expect(result.frames).toHaveLength(14)
-  for (const { width, height, frame } of result.frames) {
+  for (const { width, height, frame, spans } of result.frames) {
     if (height < 12) {
       expect(frame.trim()).toBe("")
       continue
@@ -171,7 +178,33 @@ function checkLogos(output: string, hosted: boolean, modern: boolean) {
     const full = (hosted ? art.logo : logo).left.map(
       (line, index) => `${line} ${(hosted ? art.logo : logo).right[index]}`,
     )
-    const rows = width < (hosted ? 30 : 22) ? compact : width < (hosted ? 55 : 44) ? split : full
+    const rows =
+      width < (hosted ? art.widths.split + 2 : 22)
+        ? compact
+        : width < (hosted ? art.widths.full + 4 : 44)
+          ? split
+          : full
+    if (hosted) {
+      const ink = RGBA.fromHex("#FFDD00").toInts()
+      expect(frame.match(/v2/g) ?? []).toHaveLength(rows === compact ? 0 : 1)
+      const suffix = spans.find((span) => span.text.includes("v2"))
+      if (rows !== compact) {
+        expect(suffix?.fg).toEqual(ink)
+        expect(suffix!.attributes & TextAttributes.BOLD).toBe(0)
+      }
+      const strokes = spans.filter((span) => span.text.includes("█"))
+      expect(strokes.length).toBeGreaterThan(0)
+      for (const span of strokes) {
+        expect(span.fg).toEqual(ink)
+        expect(span.attributes & TextAttributes.BOLD).toBe(0)
+      }
+      const shadows = spans.filter((span) => span.fg.some((value, index) => value !== ink[index]))
+      expect(shadows.length > 0).toBe(rows !== compact)
+      for (const span of shadows) {
+        expect(span.text.trim()).toMatch(/^▀+$/)
+        expect(span.fg).not.toEqual(ink)
+      }
+    }
     for (const line of rows) {
       const visible = line.replaceAll("_", " ").replaceAll("^", "▀").replaceAll("~", "▀").replaceAll(",", "▄").trimEnd()
       if (visible.trim()) expect(frame).toContain(visible)
@@ -182,7 +215,7 @@ function checkLogos(output: string, hosted: boolean, modern: boolean) {
 }
 
 for (const hosted of [false, true]) {
-  for (const columns of [0, 44, 48, 52, 53, 72, 120]) {
+  for (const columns of [0, 44, 48, 52, 53, 55, 56, 72, 120]) {
     test(`source epilogue: ${hosted ? "Kilo" : "upstream"}, ${columns} columns`, async () => {
       await using root = await temporary()
       const fixture = path.join(import.meta.dir, "fixtures/epilogue.ts")
@@ -209,6 +242,8 @@ for (const hosted of [false, true]) {
     [120, 48],
     [48, 120],
     [48, 53],
+    [55, 56],
+    [56, 55],
     [120, 48, 120, 48],
   ]) {
     test(`source resize epilogue: ${hosted ? "Kilo" : "upstream"}, ${columns.join("-")}`, async () => {
@@ -233,6 +268,8 @@ for (const hosted of [false, true]) {
       [120, 48],
       [48, 120],
       [48, 53],
+      [55, 56],
+      [56, 55],
     ]) {
       const output = await run([outfile, ...columns.map(String)], root.path, !hosted)
       checkEpilogue(output, hosted, columns.at(-1)!)
@@ -246,7 +283,9 @@ function checkEpilogue(output: string, hosted: boolean, columns: number) {
   const art = KiloLogo.art({})
   const full = hosted ? art.logo : logo
   const expected =
-    hosted && columns > 0 && columns < 53 ? art.compact : full.left.map((line, index) => `${line} ${full.right[index]}`)
+    hosted && columns > 0 && columns < art.widths.full + 2
+      ? art.compact
+      : full.left.map((line, index) => `${line} ${full.right[index]}`)
   expect(artLines).toEqual(
     expected.map((line) => `  ${line.replaceAll("_", " ").replaceAll("^", "▀").replaceAll("~", "▀")}`),
   )

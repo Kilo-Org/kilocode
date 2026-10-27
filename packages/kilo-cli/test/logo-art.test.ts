@@ -38,8 +38,12 @@ test("invalid overrides fall through to terminal detection", () => {
   expect(KiloLogo.supports({ KILO_UNICODE_LOGO: "invalid" }, "linux")).toBe(true)
 })
 
+test("uses the exact Kilo yellow", () => {
+  expect(KiloLogo.palette.ink).toBe("#FFDD00")
+})
+
 for (const modern of [false, true]) {
-  test(`preserves v1 ${modern ? "modern" : "fallback"} artwork and safe compact mark`, () => {
+  test(`uses thick ${modern ? "modern" : "fallback"} artwork with a small v2 suffix and a safe compact mark`, () => {
     const art = KiloLogo.art({ KILO_UNICODE_LOGO: modern ? "1" : "0" })
     const rows = art.logo.left.map((line, index) => `${line} ${art.logo.right[index]}`)
     expect(rows).toEqual(
@@ -47,20 +51,22 @@ for (const modern of [false, true]) {
         ? [
             "██  ██ ██🬺🬏   ██  ██   ██🬺🬏     ████ ██     ██🬺🬏   ",
             "████🬺🬏 ~~██   ██  ~~ ██~~██   ██~~~~ ██     ~~██   ",
-            "██  ██ ██████ 🬁🬬████ 🬁🬬██~~   🬁🬬████ 🬁🬬████ ██████ ",
+            "██  ██ ██████ 🬁🬬████ 🬁🬬██~~   🬁🬬████ 🬁🬬████ ██████  v2",
             "~~  ~~ ~~~~~~   ~~~~   ~~       ~~~~   ~~~~ ~~~~~~ ",
           ]
         : [
             "██  ██ ████   ██  ██   ██       ████ ██     ████   ",
             "████   ~~██   ██  ~~ ██~~██   ██~~~~ ██     ~~██   ",
-            "██  ██ ██████ ██████   ██~~     ████   ████ ██████ ",
+            "██  ██ ██████ ██████   ██~~     ████   ████ ██████  v2",
             "~~  ~~ ~~~~~~  ~~~~~   ~~       ~~~~   ~~~~ ~~~~~~ ",
           ],
     )
-    expect(art.widths).toEqual({ split: 28, full: 51 })
-    expect(rows.map((line) => Bun.stringWidth(line))).toEqual([51, 51, 51, 51])
+    expect(art.widths).toEqual({ split: 28, full: 54 })
+    expect(rows.map((line) => Bun.stringWidth(line))).toEqual([51, 51, 54, 51])
     expect(art.compact).toEqual(["██  ██", modern ? "████🬺🬏" : "████  ", "██  ██"])
     expect(art.compact.map((line) => Bun.stringWidth(line))).toEqual([6, 6, 6])
+    expect(rows.filter((line) => line.includes("v2"))).toEqual([rows[2]])
+    expect(art.compact.join("")).not.toContain("v2")
     expect(art.compact.join("")).not.toMatch(/[_^~,]/)
     expect(/[🬀-🬿]/u.test(rows.join(""))).toBe(modern)
   })

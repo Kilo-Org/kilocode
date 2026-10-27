@@ -45,15 +45,26 @@ export const replacements = {
   "cli/src/services/update-preflight.tsx": [
     ["Loading OpenCode", "Loading Kilo"],
     product,
-    ['import { go } from "@opencode/tui/logo"', 'import { compact } from "@opencode/tui/logo"'],
+    ['import { go } from "@opencode/tui/logo"', 'import { compact, palette } from "@opencode/tui/logo"'],
     ["const monogram = go.right.slice(1)", "const monogram = compact"],
+    [
+      "const monogramRamp = ramp(colors.muted, colors.accent)",
+      "const monogramRamp = ramp(RGBA.fromHex(palette.dim), RGBA.fromHex(palette.ink))",
+    ],
+    [
+      "shade(monogramRamp, smoothstep(headerFade.progress())) : colors.muted",
+      "shade(monogramRamp, smoothstep(headerFade.progress())) : monogramRamp[rampSteps]",
+    ],
     [
       '<box flexDirection="column">\n      <For each={monogram}>',
       '<box flexDirection="column" flexShrink={0} width={Math.max(...monogram.map((line) => Bun.stringWidth(line)))}>\n      <For each={monogram}>',
     ],
   ],
   "tui/src/component/logo.tsx": [
-    ['import { go, logo } from "../logo"', 'import { compact, logo, widths } from "../logo"'],
+    ['import { go, logo } from "../logo"', 'import { compact, logo, widths, palette } from "../logo"'],
+    ["const theme = useTheme()", "const theme = useTheme()\n  const ink = RGBA.fromHex(palette.ink)"],
+    ["theme.text.muted, false", "ink, false"],
+    ["theme.text.base, true", "ink, false"],
     ["dimensions().width < 22", "dimensions().width < widths.split + 2"],
     ["dimensions().width < 44", "dimensions().width < widths.full + 4"],
     ["go.right.slice(1)", "compact"],

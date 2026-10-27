@@ -1,32 +1,20 @@
 export * as KiloLogo from "./logo-art"
 
-const modern = {
-  tui: [
-    "██  ██ ██🬺🬏   ██  ██   ██🬺🬏     ████ ██     ██🬺🬏   ",
-    "████🬺🬏 ~~██   ██  ~~ ██~~██   ██~~~~ ██     ~~██   ",
-    "██  ██ ██████ 🬁🬬████ 🬁🬬██~~   🬁🬬████ 🬁🬬████ ██████ ",
-    "~~  ~~ ~~~~~~   ~~~~   ~~       ~~~~   ~~~~ ~~~~~~ ",
-  ],
-  plain: [
-    "██  ██ ██🬺🬏   ██  ██   ██🬺🬏     ████ ██     ██🬺🬏   ",
-    "████🬺🬏   ██   ██     ██  ██   ██     ██       ██   ",
-    "██  ██ ██████ 🬁🬬████ 🬁🬬██     🬁🬬████ 🬁🬬████ ██████ ",
-  ],
-}
+export const palette = { ink: "#FFDD00", dim: "#736400" }
 
-const fallback = {
-  tui: [
-    "██  ██ ████   ██  ██   ██       ████ ██     ████   ",
-    "████   ~~██   ██  ~~ ██~~██   ██~~~~ ██     ~~██   ",
-    "██  ██ ██████ ██████   ██~~     ████   ████ ██████ ",
-    "~~  ~~ ~~~~~~  ~~~~~   ~~       ~~~~   ~~~~ ~~~~~~ ",
-  ],
-  plain: [
-    "██  ██ ████   ██  ██   ███      ████ ██     ████   ",
-    "████     ██   ██     ██  ██   ██     ██       ██   ",
-    "██  ██ ██████ ██████   ██       ████ ██████ ██████ ",
-  ],
-}
+const modern = [
+  "██  ██ ██🬺🬏   ██  ██   ██🬺🬏     ████ ██     ██🬺🬏   ",
+  "████🬺🬏 ~~██   ██  ~~ ██~~██   ██~~~~ ██     ~~██   ",
+  "██  ██ ██████ 🬁🬬████ 🬁🬬██~~   🬁🬬████ 🬁🬬████ ██████ ",
+  "~~  ~~ ~~~~~~   ~~~~   ~~       ~~~~   ~~~~ ~~~~~~ ",
+]
+
+const fallback = [
+  "██  ██ ████   ██  ██   ██       ████ ██     ████   ",
+  "████   ~~██   ██  ~~ ██~~██   ██~~~~ ██     ~~██   ",
+  "██  ██ ██████ ██████   ██~~     ████   ████ ██████ ",
+  "~~  ~~ ~~~~~~  ~~~~~   ~~       ~~~~   ~~~~ ~~~~~~ ",
+]
 
 export function supports(env = process.env, platform = process.platform) {
   const override = env.KILO_UNICODE_LOGO?.toLowerCase()
@@ -41,12 +29,14 @@ export function supports(env = process.env, platform = process.platform) {
 }
 
 export function art(env = process.env, platform = process.platform) {
-  const selected = supports(env, platform) ? modern : fallback
+  const selected = (supports(env, platform) ? modern : fallback).map((line, index) =>
+    index === 2 ? `${line} v2` : line,
+  )
   const logo = {
-    left: selected.tui.map((line) => Array.from(line).slice(0, 28).join("")),
-    right: selected.tui.map((line) => Array.from(line).slice(29).join("")),
+    left: selected.map((line) => Array.from(line).slice(0, 28).join("")),
+    right: selected.map((line) => Array.from(line).slice(29).join("")),
   }
-  const compact = selected.plain.map((line) => Array.from(line).slice(0, 6).join(""))
+  const compact = selected.slice(0, 3).map((line) => Array.from(line).slice(0, 6).join(""))
   return {
     logo,
     compact,
@@ -55,7 +45,7 @@ export function art(env = process.env, platform = process.platform) {
         ...logo.left.map((line) => Bun.stringWidth(line)),
         ...logo.right.map((line) => Bun.stringWidth(line)),
       ),
-      full: Math.max(...selected.tui.map((line) => Bun.stringWidth(line))),
+      full: Math.max(...selected.map((line) => Bun.stringWidth(line))),
     },
   }
 }

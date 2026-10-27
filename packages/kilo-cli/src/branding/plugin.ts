@@ -29,7 +29,7 @@ export const brandingPlugin: BunPlugin = {
         loader: "ts",
         contents:
           source.slice(0, declaration.start) +
-          `export { logo, compact, widths } from ${JSON.stringify(path.join(import.meta.dir, "logo-art.ts"))}\n` +
+          `export { logo, compact, widths, palette } from ${JSON.stringify(path.join(import.meta.dir, "logo-art.ts"))}\n` +
           source.slice(declaration.end),
       }
     })

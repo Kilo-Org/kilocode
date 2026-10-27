@@ -87,7 +87,9 @@ try {
         !openedUpdate &&
         /\x1b\](?:0|2);Kilo(?:\x07|\x1b\\)/.test(output) &&
         screen.includes("ctrl+p commands") &&
-        screen.includes(wordmark)
+        screen.includes(wordmark) &&
+        screen.includes(" v2") &&
+        output.includes("38;2;255;221;0")
       ) {
         openedUpdate = true
         terminal.write("/update")

@@ -20,7 +20,7 @@ const cases = [
 test("preflight branding keeps all compact rows and brands the loading stage", async () => {
   const filename = path.join(repo, "packages/cli/src/services/update-preflight.tsx")
   const source = KiloBranding.transform(filename, await Bun.file(filename).text())
-  expect(source).toContain('import { compact } from "@opencode/tui/logo"')
+  expect(source).toContain('import { compact, palette } from "@opencode/tui/logo"')
   expect(source).toContain("const monogram = compact\n")
   expect(source).toContain("Loading Kilo")
   expect(source).toContain("flexShrink={0} width={Math.max(...monogram.map((line) => Bun.stringWidth(line)))}")
@@ -65,6 +65,7 @@ for (const compiled of [false, true]) {
           if (scenario.unicode === "0") expect(text).not.toMatch(/[\u{1FB00}-\u{1FBFF}]/u)
           if (scenario.width === 120) expect(text).toContain("fixture-old")
           expect(text).toMatch(scenario.unicode === "1" ? /██  ██.*?████🬺🬏.*?██  ██/s : /██  ██.*?████  .*?██  ██/s)
+          expect(output).toContain("38;2;255;221;0")
           if (scenario.outcome === "finish") expect(text).toContain("Kilo updated")
           if (scenario.outcome === "fail") expect(text).toContain("Kilo update paused")
         },

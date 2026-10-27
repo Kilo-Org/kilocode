@@ -11,13 +11,19 @@ const { ConfigProvider, resolve } = await import("../../../tui/src/config")
 const { ThemeProvider } = await import("../../../tui/src/context/theme")
 const { Logo } = await import("../../../tui/src/component/logo")
 const assets = await import("../../../tui/src/logo")
-const frames: { width: number; height: number; mode: "dark" | "light"; frame: string }[] = []
+const frames: {
+  width: number
+  height: number
+  mode: "dark" | "light"
+  frame: string
+  spans: { text: string; fg: number[]; attributes: number }[]
+}[] = []
 
 for (const mode of ["dark", "light"] as const) {
   for (const [width, height] of [
     [80, 30],
-    [55, 30],
-    [54, 30],
+    [58, 30],
+    [57, 30],
     [30, 30],
     [29, 30],
     [12, 30],
@@ -44,7 +50,19 @@ for (const mode of ["dark", "light"] as const) {
     try {
       await app.waitForFrame(() => ready, { maxPasses: 20 })
       await app.renderOnce()
-      frames.push({ width, height, mode, frame: app.captureCharFrame() })
+      frames.push({
+        width,
+        height,
+        mode,
+        frame: app.captureCharFrame(),
+        spans: app
+          .captureSpans()
+          .lines.flatMap((line) =>
+            line.spans
+              .filter((span) => span.text.trim())
+              .map((span) => ({ text: span.text, fg: span.fg.toInts(), attributes: span.attributes })),
+          ),
+      })
     } finally {
       app.renderer.destroy()
     }
