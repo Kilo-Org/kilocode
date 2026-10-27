@@ -48,6 +48,13 @@ export const replacements = {
     ["this OpenCode component", "this Kilo component"],
     ["global OpenCode configuration", "global Kilo configuration"],
   ],
+  "tui/src/theme/index.ts": [
+    [
+      'import opencode from "./assets/v2/opencode.json" with { type: "json" }',
+      'import kilo from "../../../kilo-cli/src/theme.json" with { type: "json" }\nimport opencode from "./assets/v2/opencode.json" with { type: "json" }',
+    ],
+    ["    ...customThemes,", "    kilo,\n    ...customThemes,"],
+  ],
   "tui/src/util/presentation.ts": [commands],
   "tui/src/attention.ts": [product],
   "tui/src/app.tsx": [

@@ -16,7 +16,7 @@ import { OPENCODE_CHANNEL, OPENCODE_LOCAL, OPENCODE_VERSION } from "@opencode/cl
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { Global } from "@opencode/util/global"
 import { AppProcess } from "@opencode/util/process"
-import { Config } from "@opencode/cli/config/index"
+import { KiloTheme } from "./theme"
 import { Npm } from "@opencode/util/npm"
 import { EffectFlock } from "@opencode/util/effect-flock"
 import { Heap } from "@opencode/cli/heap"
@@ -135,7 +135,7 @@ Effect.gen(function* () {
     }).pipe(Effect.andThen(Effect.failCause(cause))),
   ),
   Effect.annotateLogs({ role: "cli" }),
-  Effect.provide(Config.layer),
+  Effect.provide(KiloTheme.layer),
   Effect.provide(KiloUpdater.layer),
   Effect.provide(
     LayerNode.compile(LayerNode.group([Global.node, AppProcess.node, Npm.node, EffectFlock.node]), {

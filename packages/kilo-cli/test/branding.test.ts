@@ -16,7 +16,7 @@ for (const [file, replacements] of Object.entries(KiloBranding.replacements)) {
     const original = await Bun.file(filename).text()
     const branded = KiloBranding.transform(filename, original)
     for (const [from, to] of replacements) {
-      expect(branded).not.toContain(from)
+      expect(branded.split(from).length - 1).toBe((original.split(from).length - 1) * (to.split(from).length - 1))
       expect(branded).toContain(to)
     }
     expect(branded.match(/@opencode\/[\w/.-]+/g)).toEqual(original.match(/@opencode\/[\w/.-]+/g))
