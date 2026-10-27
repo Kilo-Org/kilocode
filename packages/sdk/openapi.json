@@ -20498,6 +20498,125 @@
         ]
       }
     },
+    "/kilocode/session-host/workspace/{providerID}/{workspaceID}/status": {
+      "get": {
+        "tags": ["session-host"],
+        "operationId": "sessionHost.getWorkspaceStatus",
+        "parameters": [
+          {
+            "name": "providerID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostProviderID"
+            },
+            "required": true
+          },
+          {
+            "name": "workspaceID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostWorkspaceID"
+            },
+            "required": true
+          },
+          {
+            "name": "organizationID",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SessionHostOrganizationID"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hosted workspace status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostWorkspaceStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "SessionHostPaymentRequiredError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionHostPaymentRequiredError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "UpstreamError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpstreamError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailableError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Read passive compute, activity, wake, billing, and deletion progress without waking compute.",
+        "summary": "Read hosted workspace status",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sessionHost.getWorkspaceStatus({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/session-host/workspace/{providerID}/{workspaceID}/session": {
       "post": {
         "tags": ["session-host"],
@@ -45070,6 +45189,232 @@
           }
         },
         "required": ["items"],
+        "additionalProperties": false
+      },
+      "SessionHostWorkspaceComputeStatus": {
+        "type": "string",
+        "enum": ["active", "sleeping", "starting", "stopping", "error", "unreachable", "unknown"]
+      },
+      "SessionHostWorkspaceComputeDetail": {
+        "type": "string",
+        "enum": [
+          "sandbox_ready",
+          "sandbox_stopped",
+          "sandbox_starting",
+          "sandbox_stopping",
+          "sandbox_failed",
+          "connection_unavailable",
+          "status_unavailable",
+          "insufficient_evidence",
+          "check_needed"
+        ]
+      },
+      "SessionHostWorkspaceWakeBlockedReason": {
+        "type": "string",
+        "enum": ["deleting", "deleted", "billing_blocked", "billing_status_unavailable"]
+      },
+      "SessionHostWorkspaceDeletionPhase": {
+        "type": "string",
+        "enum": ["not_started", "runtime_cleanup", "finalizing", "completed"]
+      },
+      "SessionHostWorkspaceStatus": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/SessionHostWorkspaceIdentity"
+          },
+          "deletionState": {
+            "type": "string",
+            "enum": ["active", "deleting", "deleted"]
+          },
+          "observedAt": {
+            "type": "number"
+          },
+          "compute": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "$ref": "#/components/schemas/SessionHostWorkspaceComputeStatus"
+              },
+              "detailCode": {
+                "$ref": "#/components/schemas/SessionHostWorkspaceComputeDetail"
+              },
+              "observedAt": {
+                "type": "number"
+              },
+              "estimatedSleepAt": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": ["status", "detailCode", "observedAt", "estimatedSleepAt"],
+            "additionalProperties": false
+          },
+          "activity": {
+            "type": "object",
+            "properties": {
+              "activeSessionCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "hasActiveTurn": {
+                "type": "boolean"
+              }
+            },
+            "required": ["activeSessionCount", "hasActiveTurn"],
+            "additionalProperties": false
+          },
+          "wakeOnInput": {
+            "type": "object",
+            "properties": {
+              "available": {
+                "type": "boolean"
+              },
+              "blockedReason": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/SessionHostWorkspaceWakeBlockedReason"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": ["available", "blockedReason"],
+            "additionalProperties": false
+          },
+          "billing": {
+            "type": "object",
+            "properties": {
+              "payer": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["user", "org"]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sku": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "blocked": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "enforcementRequested": {
+                "type": "boolean"
+              },
+              "intervalStartedAt": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "rate": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "rateCentsPerSecond": {
+                        "type": "string"
+                      },
+                      "estimatedHourlyMicrodollars": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["rateCentsPerSecond", "estimatedHourlyMicrodollars"],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": ["payer", "sku", "blocked", "enforcementRequested", "intervalStartedAt", "rate"],
+            "additionalProperties": false
+          },
+          "deletion": {
+            "type": "object",
+            "properties": {
+              "started": {
+                "type": "boolean"
+              },
+              "completed": {
+                "type": "boolean"
+              },
+              "startedAt": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "phase": {
+                "$ref": "#/components/schemas/SessionHostWorkspaceDeletionPhase"
+              },
+              "sessionCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "runtimeLocationCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "completedRuntimeLocationCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "remainingRuntimeLocationCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "started",
+              "completed",
+              "startedAt",
+              "phase",
+              "sessionCount",
+              "runtimeLocationCount",
+              "completedRuntimeLocationCount",
+              "remainingRuntimeLocationCount"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "deletionState", "observedAt", "compute", "activity", "wakeOnInput", "billing", "deletion"],
         "additionalProperties": false
       },
       "SessionHostWorkspaceSessionStartBody": {

@@ -41,6 +41,42 @@ function sessionInfo(id: string) {
   })
 }
 
+function workspaceStatus(overrides: Record<string, unknown> = {}) {
+  return {
+    workspaceId: WORKSPACE,
+    deletionState: "active",
+    observedAt: 500,
+    compute: {
+      status: "sleeping",
+      detailCode: "sandbox_stopped",
+      observedAt: 490,
+      estimatedSleepAt: null,
+    },
+    activity: { activeSessionCount: 2, hasActiveTurn: false },
+    wakeOnInput: { available: true, blockedReason: null },
+    billing: {
+      payer: { type: "org", id: "org_private_payer_identifier" },
+      sku: "hosted-workspace",
+      blocked: false,
+      enforcementRequested: false,
+      intervalStartedAt: 400,
+      rate: { rateCentsPerSecond: "0.0125", estimatedHourlyMicrodollars: 450 },
+    },
+    deletion: {
+      started: false,
+      completed: false,
+      startedAt: null,
+      phase: "not_started",
+      sessionCount: 2,
+      runtimeLocationCount: 2,
+      completedRuntimeLocationCount: 0,
+      remainingRuntimeLocationCount: 2,
+      deletedSessionIds: ["ses_private_deleted_identifier"],
+    },
+    ...overrides,
+  }
+}
+
 function workspaceSummary(overrides: Record<string, unknown> = {}) {
   return {
     workspaceId: WORKSPACE,
@@ -160,6 +196,11 @@ function harness() {
         const input = Object(parse(url.searchParams.get("input") ?? "{}"))
         if (input.workspaceId !== WORKSPACE) return Response.json({ result: { data: null } })
         return Response.json({ result: { data: workspaceSummary({ nextSessionCursor: "session-cursor-1" }) } })
+      }
+      if (url.pathname === "/trpc/getHostedWorkspaceStatus") {
+        const input = Object(parse(url.searchParams.get("input") ?? "{}"))
+        if (input.workspaceId !== WORKSPACE) return Response.json({ error: "NOT_FOUND" }, { status: 404 })
+        return Response.json({ result: { data: workspaceStatus() } })
       }
       if (url.pathname === "/trpc/createHostedWorkspace") {
         const input = Object(parse(body))
@@ -414,6 +455,52 @@ describe("session host HttpApi", () => {
 
       const missing = yield* HttpClient.get(
         SessionHostPaths.workspaceDetail
+          .replace(":providerID", "kilo-cloud")
+          .replace(":workspaceID", "worktree_00000000-0000-4000-8000-000000000000"),
+      )
+      expect(missing.status).toBe(404)
+    }),
+  )
+
+  it.live("reads passive workspace status without waking compute or leaking payer identity", () =>
+    Effect.gen(function* () {
+      const path = SessionHostPaths.workspaceStatus
+        .replace(":providerID", "kilo-cloud")
+        .replace(":workspaceID", WORKSPACE)
+      const response = yield* HttpClient.get(`${path}?organizationID=${PROFILE}`)
+      expect(response.status).toBe(200)
+      const body: unknown = yield* response.json
+      expect(body).toMatchObject({
+        id: { providerID: "kilo-cloud", workspaceID: WORKSPACE },
+        deletionState: "active",
+        compute: { status: "sleeping", detailCode: "sandbox_stopped", estimatedSleepAt: null },
+        activity: { activeSessionCount: 2, hasActiveTurn: false },
+        wakeOnInput: { available: true, blockedReason: null },
+        billing: { payer: "org", sku: "hosted-workspace", blocked: false, intervalStartedAt: 400 },
+        deletion: { phase: "not_started", startedAt: null, remainingRuntimeLocationCount: 2 },
+      })
+
+      const text = JSON.stringify(body)
+      for (const secret of [
+        app.url,
+        TOKEN,
+        CLOUD,
+        "org_private_payer_identifier",
+        "ses_private_deleted_identifier",
+        "deletedSessionIds",
+      ]) {
+        expect(text).not.toContain(secret)
+      }
+
+      const call = app.calls.at(-1)
+      expect(call?.path).toBe("/trpc/getHostedWorkspaceStatus")
+      expect(Object(parse(new URL(call?.search ?? "", app.url).searchParams.get("input") ?? "{}"))).toEqual({
+        workspaceId: WORKSPACE,
+        kilocodeOrganizationId: PROFILE,
+      })
+
+      const missing = yield* HttpClient.get(
+        SessionHostPaths.workspaceStatus
           .replace(":providerID", "kilo-cloud")
           .replace(":workspaceID", "worktree_00000000-0000-4000-8000-000000000000"),
       )

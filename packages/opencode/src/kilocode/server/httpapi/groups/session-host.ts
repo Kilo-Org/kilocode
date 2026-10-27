@@ -9,6 +9,7 @@ import {
   HostedTranscriptPage,
   HostedWorkspace,
   HostedWorkspacePage,
+  HostedWorkspaceStatus,
   OrganizationID,
   ProviderID,
   RemoteSessionID,
@@ -45,6 +46,7 @@ export const SessionHostPaths = {
   workspace: `${root}/workspace`,
   workspaceProfiles: `${root}/workspace/profiles`,
   workspaceDetail: `${root}/workspace/:providerID/:workspaceID`,
+  workspaceStatus: `${root}/workspace/:providerID/:workspaceID/status`,
   workspaceSession: `${root}/workspace/:providerID/:workspaceID/session`,
 } as const
 
@@ -118,6 +120,8 @@ const WorkspaceGetQuery = Schema.Struct({
 })
 
 const WorkspaceProfilesQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
+
+const WorkspaceStatusQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
 
 const Params = {
   providerID: ProviderID,
@@ -267,6 +271,18 @@ export const SessionHostApi = HttpApi.make("session-host")
             identifier: "sessionHost.getWorkspace",
             summary: "Get a hosted workspace",
             description: "Read one hosted workspace with a bounded page of its root sessions.",
+          }),
+        ),
+        HttpApiEndpoint.get("getWorkspaceStatus", SessionHostPaths.workspaceStatus, {
+          params: WorkspaceParams,
+          query: WorkspaceStatusQuery,
+          success: described(HostedWorkspaceStatus, "Hosted workspace status"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.getWorkspaceStatus",
+            summary: "Read hosted workspace status",
+            description: "Read passive compute, activity, wake, billing, and deletion progress without waking compute.",
           }),
         ),
         HttpApiEndpoint.post("startWorkspaceSession", SessionHostPaths.workspaceSession, {

@@ -79,6 +79,7 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       },
       { method: "post" as const, path: SessionHostPaths.workspace, id: "sessionHost.createWorkspace" },
       { method: "get" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.getWorkspace" },
+      { method: "get" as const, path: SessionHostPaths.workspaceStatus, id: "sessionHost.getWorkspaceStatus" },
       { method: "post" as const, path: SessionHostPaths.workspaceSession, id: "sessionHost.startWorkspaceSession" },
     ]
 
@@ -108,6 +109,29 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     const description = summary ? Object.entries(summary).find(([field]) => field === "description")?.[1] : undefined
     expect(description).toEqual({
       anyOf: [expect.objectContaining({ type: "string" }), { type: "null" }],
+    })
+  })
+
+  test("keeps passive hosted workspace status fields nullable", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const status = spec.components?.schemas?.SessionHostWorkspaceStatus?.properties
+    const nullable = { anyOf: [expect.objectContaining({}), { type: "null" }] }
+
+    expect(status?.compute?.properties?.estimatedSleepAt).toEqual(nullable)
+    expect(status?.wakeOnInput?.properties?.blockedReason).toEqual(nullable)
+    expect(status?.billing?.properties?.payer).toEqual({
+      anyOf: [{ type: "string", enum: ["user", "org"] }, { type: "null" }],
+    })
+    expect(status?.billing?.properties?.sku).toEqual(nullable)
+    expect(status?.billing?.properties?.blocked).toEqual({
+      anyOf: [{ type: "boolean" }, { type: "null" }],
+    })
+    expect(status?.billing?.properties?.intervalStartedAt).toEqual({
+      anyOf: [{ type: "number" }, { type: "null" }],
+    })
+    expect(status?.billing?.properties?.rate).toEqual(nullable)
+    expect(status?.deletion?.properties?.startedAt).toEqual({
+      anyOf: [{ type: "number" }, { type: "null" }],
     })
   })
 

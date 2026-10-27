@@ -190,6 +190,94 @@ export const HostedWorkspacePage = Schema.Struct({
 }).annotate({ identifier: "SessionHostWorkspacePage" })
 export type HostedWorkspacePage = Schema.Schema.Type<typeof HostedWorkspacePage>
 
+export const WorkspaceComputeStatus = Schema.Literals([
+  "active",
+  "sleeping",
+  "starting",
+  "stopping",
+  "error",
+  "unreachable",
+  "unknown",
+]).annotate({ identifier: "SessionHostWorkspaceComputeStatus" })
+export type WorkspaceComputeStatus = Schema.Schema.Type<typeof WorkspaceComputeStatus>
+
+export const WorkspaceComputeDetail = Schema.Literals([
+  "sandbox_ready",
+  "sandbox_stopped",
+  "sandbox_starting",
+  "sandbox_stopping",
+  "sandbox_failed",
+  "connection_unavailable",
+  "status_unavailable",
+  "insufficient_evidence",
+  "check_needed",
+]).annotate({ identifier: "SessionHostWorkspaceComputeDetail" })
+export type WorkspaceComputeDetail = Schema.Schema.Type<typeof WorkspaceComputeDetail>
+
+export const WorkspaceDeletionPhase = Schema.Literals([
+  "not_started",
+  "runtime_cleanup",
+  "finalizing",
+  "completed",
+]).annotate({ identifier: "SessionHostWorkspaceDeletionPhase" })
+export type WorkspaceDeletionPhase = Schema.Schema.Type<typeof WorkspaceDeletionPhase>
+
+export const WorkspaceWakeBlockedReason = Schema.Literals([
+  "deleting",
+  "deleted",
+  "billing_blocked",
+  "billing_status_unavailable",
+]).annotate({ identifier: "SessionHostWorkspaceWakeBlockedReason" })
+export type WorkspaceWakeBlockedReason = Schema.Schema.Type<typeof WorkspaceWakeBlockedReason>
+
+/**
+ * Passive workspace status. Fees are reduced to the payer class: the provider's
+ * payer identity never crosses the boundary.
+ */
+export const HostedWorkspaceStatus = Schema.Struct({
+  id: HostedWorkspaceID,
+  deletionState: Schema.Literals(["active", "deleting", "deleted"]),
+  observedAt: Schema.Finite,
+  compute: Schema.Struct({
+    status: WorkspaceComputeStatus,
+    detailCode: WorkspaceComputeDetail,
+    observedAt: Schema.Finite,
+    estimatedSleepAt: Schema.NullOr(Schema.Finite),
+  }),
+  activity: Schema.Struct({
+    activeSessionCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+    hasActiveTurn: Schema.Boolean,
+  }),
+  wakeOnInput: Schema.Struct({
+    available: Schema.Boolean,
+    blockedReason: Schema.NullOr(WorkspaceWakeBlockedReason),
+  }),
+  billing: Schema.Struct({
+    payer: Schema.NullOr(Schema.Literals(["user", "org"])),
+    sku: Schema.NullOr(Schema.String),
+    blocked: Schema.NullOr(Schema.Boolean),
+    enforcementRequested: Schema.Boolean,
+    intervalStartedAt: Schema.NullOr(Schema.Finite),
+    rate: Schema.NullOr(
+      Schema.Struct({
+        rateCentsPerSecond: Schema.String,
+        estimatedHourlyMicrodollars: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+      }),
+    ),
+  }),
+  deletion: Schema.Struct({
+    started: Schema.Boolean,
+    completed: Schema.Boolean,
+    startedAt: Schema.NullOr(Schema.Finite),
+    phase: WorkspaceDeletionPhase,
+    sessionCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+    runtimeLocationCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+    completedRuntimeLocationCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+    remainingRuntimeLocationCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  }),
+}).annotate({ identifier: "SessionHostWorkspaceStatus" })
+export type HostedWorkspaceStatus = Schema.Schema.Type<typeof HostedWorkspaceStatus>
+
 export const Agent = Schema.Struct({
   mode: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(50)),
   model: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
@@ -253,6 +341,12 @@ export const WorkspaceGetInput = Schema.Struct({
   organizationID: Schema.optional(OrganizationID),
 }).annotate({ identifier: "SessionHostWorkspaceGetInput" })
 export type WorkspaceGetInput = Schema.Schema.Type<typeof WorkspaceGetInput>
+
+export const WorkspaceStatusInput = Schema.Struct({
+  id: HostedWorkspaceID,
+  organizationID: Schema.optional(OrganizationID),
+}).annotate({ identifier: "SessionHostWorkspaceStatusInput" })
+export type WorkspaceStatusInput = Schema.Schema.Type<typeof WorkspaceStatusInput>
 
 /**
  * Create a hosted workspace and its root session. `operationKey` is required so
@@ -387,6 +481,7 @@ export interface Provider {
   readonly attach: (input: AttachInput) => Effect.Effect<Attachment, HostedFailure>
   readonly listWorkspaces: (input?: WorkspaceListInput) => Effect.Effect<HostedWorkspacePage, HostedFailure>
   readonly getWorkspace: (input: WorkspaceGetInput) => Effect.Effect<HostedWorkspace, HostedFailure>
+  readonly getWorkspaceStatus: (input: WorkspaceStatusInput) => Effect.Effect<HostedWorkspaceStatus, HostedFailure>
   readonly createWorkspace: (input: CreateWorkspaceInput) => Effect.Effect<CreateWorkspaceResult, HostedFailure>
   readonly startWorkspaceSession: (
     input: WorkspaceSessionStartInput,

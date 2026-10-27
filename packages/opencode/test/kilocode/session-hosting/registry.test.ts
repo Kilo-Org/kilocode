@@ -39,6 +39,8 @@ function provider(name: string, session: string, options: { default?: boolean; a
     listWorkspaceProfiles: () => Effect.succeed({ items: [] }),
     getWorkspace: (input) =>
       Effect.fail(new HostedFailure({ code: "not_found", message: input.id.workspaceID, retryable: false })),
+    getWorkspaceStatus: (input) =>
+      Effect.fail(new HostedFailure({ code: "not_found", message: input.id.workspaceID, retryable: false })),
     createWorkspace: () => Effect.fail(new HostedFailure({ code: "rejected", message: "unused", retryable: false })),
     startWorkspaceSession: () =>
       Effect.fail(new HostedFailure({ code: "rejected", message: "unused", retryable: false })),

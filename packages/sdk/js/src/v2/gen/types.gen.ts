@@ -5065,6 +5065,75 @@ export type SessionHostWorkspaceProfilePage = {
   items: Array<SessionHostWorkspaceProfileSummary>
 }
 
+export type SessionHostWorkspaceComputeStatus =
+  | "active"
+  | "sleeping"
+  | "starting"
+  | "stopping"
+  | "error"
+  | "unreachable"
+  | "unknown"
+
+export type SessionHostWorkspaceComputeDetail =
+  | "sandbox_ready"
+  | "sandbox_stopped"
+  | "sandbox_starting"
+  | "sandbox_stopping"
+  | "sandbox_failed"
+  | "connection_unavailable"
+  | "status_unavailable"
+  | "insufficient_evidence"
+  | "check_needed"
+
+export type SessionHostWorkspaceWakeBlockedReason =
+  | "deleting"
+  | "deleted"
+  | "billing_blocked"
+  | "billing_status_unavailable"
+
+export type SessionHostWorkspaceDeletionPhase = "not_started" | "runtime_cleanup" | "finalizing" | "completed"
+
+export type SessionHostWorkspaceStatus = {
+  id: SessionHostWorkspaceIdentity
+  deletionState: "active" | "deleting" | "deleted"
+  observedAt: number
+  compute: {
+    status: SessionHostWorkspaceComputeStatus
+    detailCode: SessionHostWorkspaceComputeDetail
+    observedAt: number
+    estimatedSleepAt: number | null
+  }
+  activity: {
+    activeSessionCount: number
+    hasActiveTurn: boolean
+  }
+  wakeOnInput: {
+    available: boolean
+    blockedReason: SessionHostWorkspaceWakeBlockedReason | null
+  }
+  billing: {
+    payer: "user" | "org" | null
+    sku: string | null
+    blocked: boolean | null
+    enforcementRequested: boolean
+    intervalStartedAt: number | null
+    rate: {
+      rateCentsPerSecond: string
+      estimatedHourlyMicrodollars: number
+    } | null
+  }
+  deletion: {
+    started: boolean
+    completed: boolean
+    startedAt: number | null
+    phase: SessionHostWorkspaceDeletionPhase
+    sessionCount: number
+    runtimeLocationCount: number
+    completedRuntimeLocationCount: number
+    remainingRuntimeLocationCount: number
+  }
+}
+
 export type SessionHostWorkspaceSessionStartBody = {
   prompt: string
   agent: SessionHostAgent
@@ -19405,6 +19474,58 @@ export type SessionHostGetWorkspaceResponses = {
 }
 
 export type SessionHostGetWorkspaceResponse = SessionHostGetWorkspaceResponses[keyof SessionHostGetWorkspaceResponses]
+
+export type SessionHostGetWorkspaceStatusData = {
+  body?: never
+  path: {
+    providerID: SessionHostProviderId
+    workspaceID: SessionHostWorkspaceId
+  }
+  query?: {
+    organizationID?: SessionHostOrganizationId
+  }
+  url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/status"
+}
+
+export type SessionHostGetWorkspaceStatusErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * SessionHostPaymentRequiredError
+   */
+  402: SessionHostPaymentRequiredError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+  /**
+   * UpstreamError
+   */
+  502: UpstreamError
+  /**
+   * ServiceUnavailableError
+   */
+  503: ServiceUnavailableError
+}
+
+export type SessionHostGetWorkspaceStatusError =
+  SessionHostGetWorkspaceStatusErrors[keyof SessionHostGetWorkspaceStatusErrors]
+
+export type SessionHostGetWorkspaceStatusResponses = {
+  /**
+   * Hosted workspace status
+   */
+  200: SessionHostWorkspaceStatus
+}
+
+export type SessionHostGetWorkspaceStatusResponse =
+  SessionHostGetWorkspaceStatusResponses[keyof SessionHostGetWorkspaceStatusResponses]
 
 export type SessionHostStartWorkspaceSessionData = {
   body?: SessionHostWorkspaceSessionStartBody

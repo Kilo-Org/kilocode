@@ -25,6 +25,7 @@ import {
   WorkspaceListInput,
   WorkspaceProfileListInput,
   WorkspaceSessionStartInput,
+  WorkspaceStatusInput,
   type Attachment,
   type Availability,
   type CreateWorkspaceResult,
@@ -33,6 +34,7 @@ import {
   type HostedTranscriptPage,
   type HostedWorkspace,
   type HostedWorkspacePage,
+  type HostedWorkspaceStatus,
   type NativeRequest,
   type Provider,
   type Repository,
@@ -86,6 +88,60 @@ const WorkspaceSummary = z.object({
 const WorkspacePage = z.object({
   items: z.array(WorkspaceSummary),
   nextCursor: z.string().nullable(),
+})
+
+const CloudWorkspaceStatus = z.object({
+  workspaceId: z.string().min(1),
+  deletionState: z.enum(["active", "deleting", "deleted"]),
+  observedAt: z.number(),
+  compute: z.object({
+    status: z.enum(["active", "sleeping", "starting", "stopping", "error", "unreachable", "unknown"]),
+    detailCode: z.enum([
+      "sandbox_ready",
+      "sandbox_stopped",
+      "sandbox_starting",
+      "sandbox_stopping",
+      "sandbox_failed",
+      "connection_unavailable",
+      "status_unavailable",
+      "insufficient_evidence",
+      "check_needed",
+    ]),
+    observedAt: z.number(),
+    estimatedSleepAt: z.number().nullable(),
+  }),
+  activity: z.object({
+    activeSessionCount: z.number(),
+    hasActiveTurn: z.boolean(),
+  }),
+  wakeOnInput: z.object({
+    available: z.boolean(),
+    blockedReason: z.enum(["deleting", "deleted", "billing_blocked", "billing_status_unavailable"]).nullable(),
+  }),
+  billing: z.object({
+    payer: z.object({ type: z.enum(["user", "org"]), id: z.string() }).nullable(),
+    sku: z.string().nullable(),
+    blocked: z.boolean().nullable(),
+    enforcementRequested: z.boolean(),
+    intervalStartedAt: z.number().nullable(),
+    rate: z
+      .object({
+        rateCentsPerSecond: z.string(),
+        estimatedHourlyMicrodollars: z.number(),
+      })
+      .nullable(),
+  }),
+  deletion: z.object({
+    started: z.boolean(),
+    completed: z.boolean(),
+    startedAt: z.number().nullable(),
+    phase: z.enum(["not_started", "runtime_cleanup", "finalizing", "completed"]),
+    sessionCount: z.number(),
+    runtimeLocationCount: z.number(),
+    completedRuntimeLocationCount: z.number(),
+    remainingRuntimeLocationCount: z.number(),
+    deletedSessionIds: z.array(z.string()),
+  }),
 })
 
 const WorkspaceCreate = z.object({
@@ -582,6 +638,59 @@ export function provider(options: Options): Provider {
       return yield* workspace(parsed.data)
     })
 
+  const getWorkspaceStatus = (raw: WorkspaceStatusInput): Effect.Effect<HostedWorkspaceStatus, HostedFailure> =>
+    Effect.gen(function* () {
+      const input = yield* check(WorkspaceStatusInput, raw)
+      const auth = yield* resolve(input.organizationID)
+      const body = yield* query(auth, "getHostedWorkspaceStatus", {
+        workspaceId: input.id.workspaceID,
+        ...(input.organizationID === undefined ? {} : { kilocodeOrganizationId: input.organizationID }),
+      })
+      const parsed = CloudWorkspaceStatus.safeParse(body)
+      if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported workspace status"))
+      if (parsed.data.workspaceId !== input.id.workspaceID) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned a status for a different workspace"))
+      }
+      const id = yield* workspaceIdentity(parsed.data.workspaceId)
+      return {
+        id,
+        deletionState: parsed.data.deletionState,
+        observedAt: parsed.data.observedAt,
+        compute: {
+          status: parsed.data.compute.status,
+          detailCode: parsed.data.compute.detailCode,
+          observedAt: parsed.data.compute.observedAt,
+          estimatedSleepAt: parsed.data.compute.estimatedSleepAt,
+        },
+        activity: {
+          activeSessionCount: parsed.data.activity.activeSessionCount,
+          hasActiveTurn: parsed.data.activity.hasActiveTurn,
+        },
+        wakeOnInput: {
+          available: parsed.data.wakeOnInput.available,
+          blockedReason: parsed.data.wakeOnInput.blockedReason,
+        },
+        billing: {
+          payer: parsed.data.billing.payer?.type ?? null,
+          sku: parsed.data.billing.sku,
+          blocked: parsed.data.billing.blocked,
+          enforcementRequested: parsed.data.billing.enforcementRequested,
+          intervalStartedAt: parsed.data.billing.intervalStartedAt,
+          rate: parsed.data.billing.rate,
+        },
+        deletion: {
+          started: parsed.data.deletion.started,
+          completed: parsed.data.deletion.completed,
+          startedAt: parsed.data.deletion.startedAt,
+          phase: parsed.data.deletion.phase,
+          sessionCount: parsed.data.deletion.sessionCount,
+          runtimeLocationCount: parsed.data.deletion.runtimeLocationCount,
+          completedRuntimeLocationCount: parsed.data.deletion.completedRuntimeLocationCount,
+          remainingRuntimeLocationCount: parsed.data.deletion.remainingRuntimeLocationCount,
+        },
+      } satisfies HostedWorkspaceStatus
+    })
+
   const createWorkspace = (raw: CreateWorkspaceInput): Effect.Effect<CreateWorkspaceResult, HostedFailure> =>
     Effect.gen(function* () {
       const input = yield* check(CreateWorkspaceInput, raw)
@@ -728,6 +837,7 @@ export function provider(options: Options): Provider {
     attach,
     listWorkspaces,
     getWorkspace,
+    getWorkspaceStatus,
     createWorkspace,
     startWorkspaceSession,
     listWorkspaceProfiles,

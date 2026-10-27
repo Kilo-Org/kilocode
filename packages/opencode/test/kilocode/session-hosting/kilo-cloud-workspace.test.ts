@@ -30,6 +30,7 @@ type Call = {
 type State = {
   page: "ok" | "unauthorized" | "unavailable" | "invalid"
   detail: "ok" | "null" | "mismatch" | "invalid"
+  status: "ok" | "mismatch" | "invalid" | "unauthorized" | "conflict" | "unavailable"
   create: "ok" | "forbidden" | "conflict" | "notfound" | "payment" | "unavailable" | "mismatch"
   session: "ok" | "mismatch"
   profiles: "ok" | "direct" | "unauthorized" | "unavailable" | "invalid"
@@ -73,9 +74,53 @@ function workspaceSummary(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function workspaceStatus(overrides: Record<string, unknown> = {}) {
+  return {
+    workspaceId: WORKSPACE,
+    deletionState: "active",
+    observedAt: 500,
+    compute: {
+      status: "sleeping",
+      detailCode: "sandbox_stopped",
+      observedAt: 490,
+      estimatedSleepAt: null,
+    },
+    activity: { activeSessionCount: 2, hasActiveTurn: false },
+    wakeOnInput: { available: true, blockedReason: null },
+    billing: {
+      payer: { type: "org", id: "org_private_payer_identifier" },
+      sku: "hosted-workspace",
+      blocked: false,
+      enforcementRequested: false,
+      intervalStartedAt: 400,
+      rate: { rateCentsPerSecond: "0.0125", estimatedHourlyMicrodollars: 450 },
+    },
+    deletion: {
+      started: false,
+      completed: false,
+      startedAt: null,
+      phase: "not_started",
+      sessionCount: 2,
+      runtimeLocationCount: 2,
+      completedRuntimeLocationCount: 0,
+      remainingRuntimeLocationCount: 2,
+      deletedSessionIds: ["ses_private_deleted_identifier"],
+    },
+    ...overrides,
+  }
+}
+
 function harness() {
   const calls: Call[] = []
-  const state: State = { page: "ok", detail: "ok", create: "ok", session: "ok", profiles: "ok", creates: 0 }
+  const state: State = {
+    page: "ok",
+    detail: "ok",
+    status: "ok",
+    create: "ok",
+    session: "ok",
+    profiles: "ok",
+    creates: 0,
+  }
 
   const error = (code: string, status: number) => Response.json({ error: code }, { status })
   const envelope = (data: unknown) => Response.json({ result: { data } })
@@ -140,6 +185,14 @@ function harness() {
             nextSessionCursor: "session-cursor-1",
           }),
         )
+      }
+
+      if (url.pathname === "/trpc/getHostedWorkspaceStatus") {
+        if (state.status === "unauthorized") return error("UNAUTHORIZED", 401)
+        if (state.status === "conflict") return error("CONFLICT", 409)
+        if (state.status === "unavailable") return error("SERVICE_UNAVAILABLE", 503)
+        if (state.status === "invalid") return envelope({ nope: true })
+        return envelope(workspaceStatus({ workspaceId: state.status === "mismatch" ? OTHER_WORKSPACE : WORKSPACE }))
       }
 
       if (url.pathname === "/trpc/createHostedWorkspace") {
@@ -252,6 +305,108 @@ it.effect("reads a workspace, preserves its nested session cursor, and rejects a
     expect(
       yield* cloud.getWorkspace({ id: { providerID: PROVIDER, workspaceID: WORKSPACE } }).pipe(Effect.flip),
     ).toMatchObject({ code: "invalid_response", retryable: false })
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("reads passive workspace status with the exact organization input and no private identifiers", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+    const status = yield* cloud.getWorkspaceStatus({
+      id: { providerID: PROVIDER, workspaceID: WORKSPACE },
+      organizationID: ORG,
+    })
+    expect(status).toEqual({
+      id: { providerID: PROVIDER, workspaceID: WORKSPACE },
+      deletionState: "active",
+      observedAt: 500,
+      compute: { status: "sleeping", detailCode: "sandbox_stopped", observedAt: 490, estimatedSleepAt: null },
+      activity: { activeSessionCount: 2, hasActiveTurn: false },
+      wakeOnInput: { available: true, blockedReason: null },
+      billing: {
+        payer: "org",
+        sku: "hosted-workspace",
+        blocked: false,
+        enforcementRequested: false,
+        intervalStartedAt: 400,
+        rate: { rateCentsPerSecond: "0.0125", estimatedHourlyMicrodollars: 450 },
+      },
+      deletion: {
+        started: false,
+        completed: false,
+        startedAt: null,
+        phase: "not_started",
+        sessionCount: 2,
+        runtimeLocationCount: 2,
+        completedRuntimeLocationCount: 0,
+        remainingRuntimeLocationCount: 2,
+      },
+    })
+
+    expect(app.calls).toHaveLength(1)
+    expect(app.calls[0]).toMatchObject({
+      method: "GET",
+      path: "/trpc/getHostedWorkspaceStatus",
+      auth: `Bearer ${CONTROL}`,
+      org: ORG,
+    })
+    expect(JSON.parse(new URL(app.calls[0].search, app.url).searchParams.get("input")!)).toEqual({
+      workspaceId: WORKSPACE,
+      kilocodeOrganizationId: ORG,
+    })
+
+    const text = JSON.stringify(status)
+    for (const secret of [
+      app.url,
+      TOKEN,
+      CLOUD,
+      "org_private_payer_identifier",
+      "ses_private_deleted_identifier",
+      "deletedSessionIds",
+    ]) {
+      expect(text).not.toContain(secret)
+    }
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("omits the organization input when unscoped and rejects a mismatched status identity", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const cloud = client(app.url)
+    yield* cloud.getWorkspaceStatus({ id: { providerID: PROVIDER, workspaceID: WORKSPACE } })
+    expect(JSON.parse(new URL(app.calls[0].search, app.url).searchParams.get("input")!)).toEqual({
+      workspaceId: WORKSPACE,
+    })
+
+    app.state.status = "mismatch"
+    expect(
+      yield* cloud.getWorkspaceStatus({ id: { providerID: PROVIDER, workspaceID: WORKSPACE } }).pipe(Effect.flip),
+    ).toMatchObject({ code: "invalid_response", retryable: false })
+  }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
+})
+
+it.effect("maps signed-out, unauthorized, conflict, unavailable and malformed status failures", () => {
+  const app = harness()
+  return Effect.gen(function* () {
+    const signedOut = kiloCloud({
+      auth: auth(undefined),
+      env: { CLOUD_AGENT_NEXT_BASE_URL: app.url, KILO_WEB_APP_URL: app.url, KILO_API_URL: app.url },
+    })
+    expect(
+      yield* signedOut.getWorkspaceStatus({ id: { providerID: PROVIDER, workspaceID: WORKSPACE } }).pipe(Effect.flip),
+    ).toMatchObject({ code: "signed_out", retryable: false })
+    expect(app.calls).toHaveLength(0)
+
+    const cloud = client(app.url)
+    const status = (state: State["status"]) => {
+      app.state.status = state
+      return cloud.getWorkspaceStatus({ id: { providerID: PROVIDER, workspaceID: WORKSPACE } }).pipe(Effect.flip)
+    }
+
+    expect(yield* status("unauthorized")).toMatchObject({ code: "unauthorized", retryable: false })
+    expect(yield* status("conflict")).toMatchObject({ code: "rejected", retryable: false })
+    expect(yield* status("unavailable")).toMatchObject({ code: "unavailable", retryable: true })
+    expect(yield* status("invalid")).toMatchObject({ code: "invalid_response", retryable: false })
   }).pipe(Effect.ensuring(Effect.sync(() => app.stop())))
 })
 

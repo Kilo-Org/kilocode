@@ -22,6 +22,8 @@ export function provider(id: string, options: { attach?: Provider["attach"]; rou
     listWorkspaces: () => Effect.succeed({ items: [] }),
     listWorkspaceProfiles: () => Effect.succeed({ items: [] }),
     getWorkspace: () => Effect.fail(new HostedFailure({ code: "not_found", message: "not found", retryable: false })),
+    getWorkspaceStatus: () =>
+      Effect.fail(new HostedFailure({ code: "not_found", message: "not found", retryable: false })),
     createWorkspace: () =>
       Effect.fail(
         new HostedFailure({ code: "invalid_request", message: "createWorkspace is not supported", retryable: false }),

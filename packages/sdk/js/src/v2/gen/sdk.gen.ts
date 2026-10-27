@@ -426,6 +426,8 @@ import type {
   SessionHostGetResponses,
   SessionHostGetWorkspaceErrors,
   SessionHostGetWorkspaceResponses,
+  SessionHostGetWorkspaceStatusErrors,
+  SessionHostGetWorkspaceStatusResponses,
   SessionHostListErrors,
   SessionHostListResponses,
   SessionHostListWorkspaceProfilesErrors,
@@ -9893,6 +9895,42 @@ export class SessionHost extends HeyApiClient {
       ThrowOnError
     >({
       url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Read hosted workspace status
+   *
+   * Read passive compute, activity, wake, billing, and deletion progress without waking compute.
+   */
+  public getWorkspaceStatus<ThrowOnError extends boolean = false>(
+    parameters: {
+      providerID: SessionHostProviderId
+      workspaceID: SessionHostWorkspaceId
+      organizationID?: SessionHostOrganizationId
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "providerID" },
+            { in: "path", key: "workspaceID" },
+            { in: "query", key: "organizationID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      SessionHostGetWorkspaceStatusResponses,
+      SessionHostGetWorkspaceStatusErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/session-host/workspace/{providerID}/{workspaceID}/status",
       ...options,
       ...params,
     })
