@@ -98,6 +98,7 @@ export const iconNames = [
   "deepseek",
   "deepinfra",
   "cortecs",
+  "commandcode",
   "cohere",
   "cloudflare-workers-ai",
   "cloudflare-ai-gateway",
