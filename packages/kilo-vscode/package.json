@@ -1430,7 +1430,6 @@
     "lru-cache": "^11.0.2",
     "marked": "catalog:",
     "minimatch": "10.2.6",
-    "openai": "^4.85.4",
     "playwright-core": "1.57.0",
     "quick-lru": "^7.0.0",
     "simple-git": "4.0.2",
@@ -1440,7 +1439,7 @@
     "web-tree-sitter": "^0.24.7",
     "ws": "8.21.0",
     "yaml": "2.8.3",
-    "zod": "^3.24.2"
+    "zod": "^4.6.6"
   },
   "peerDependencies": {}
 }
