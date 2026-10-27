@@ -173,6 +173,11 @@ jobs:
         working-directory: packages/client
         run: bun run check:generated
 
+      - name: Check generated OpenAPI document
+        if: runner.os == 'Linux'
+        working-directory: packages/protocol
+        run: bun run check:generated
+
       - name: Check generated documentation
         if: runner.os == 'Linux' && matrix.shard == 'packages' # kilocode_change
         working-directory: services/www

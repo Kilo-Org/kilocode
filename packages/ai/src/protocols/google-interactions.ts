@@ -236,7 +236,7 @@ const signature = (metadata: ProviderMetadata | undefined, key: string) => {
 
 const lowerMessages = Effect.fnUntraced(function* (request: LLMRequest) {
   const steps: InputStep[] = []
-  const key = request.model.route.providerMetadataKey ?? String(request.model.provider)
+  const key = request.model.route.providerMetadataKey ?? request.model.provider
   for (const message of request.messages) {
     if (message.role === "system") {
       const part = yield* ProviderShared.wrappedSystemUpdate("Google Interactions", message)
@@ -562,7 +562,7 @@ export const protocol = Protocol.make({
     event: Protocol.jsonEvent(Event),
     initial: (request): ParserState => ({
       route: `${request.model.provider}/${ADAPTER}`,
-      metadataKey: request.model.route.providerMetadataKey ?? String(request.model.provider),
+      metadataKey: request.model.route.providerMetadataKey ?? request.model.provider,
       lifecycle: Lifecycle.initial(),
       steps: {},
       tools: ToolStream.empty<number>(),

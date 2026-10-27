@@ -17,7 +17,9 @@ import { isRecord } from "./utils/record.js"
 
 const patterns = [
   /prompt is too long/i,
-  /input is too long for requested model/i,
+  /input is too long for (?:the )?(?:requested|selected) model/i,
+  // OpenCode Go
+  /too large for the model'?s configured input limit/i,
   // Cloudflare Workers AI reports this as HTTP 413.
   /exceeded this model context window limit/i,
   /exceeds the context window/i,
@@ -44,8 +46,8 @@ const patterns = [
   /context[_ ]length[_ ]exceeded/i,
   /context length is only \d+ tokens/i,
   /input length.*exceeds.*context length/i,
-  // Z.ai code 1261 arrives as `Prompt too long` or `Prompt 超长`.
-  /prompt (?:too long|超长)/i,
+  // Z.ai code 1261 arrives as `Prompt too long`, `Prompt exceeds max length` or `Prompt 超长`.
+  /prompt (?:too long|exceeds max length|超长)/i,
   /too large for model with \d+ maximum context length/i,
   /prompt has [\d,]+ tokens?, but the configured context size is [\d,]+ tokens?/i,
   /model_context_window_exceeded/i,

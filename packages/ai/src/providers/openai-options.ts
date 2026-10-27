@@ -62,5 +62,3 @@ export const withOpenAIOptions = <Options extends { readonly providerOptions?: P
     providerOptions: mergeProviderOptions(openAIDefaultOptions(modelID), options.providerOptions),
   }
 }
-
-export * as OpenAIProviderOptions from "./openai-options.js"

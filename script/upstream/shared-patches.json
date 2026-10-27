@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 54,
-    "markedLines": 424,
+    "files": 56,
+    "markedLines": 436,
     "unmarkedLines": 39,
     "deletedFiles": 0
   },
@@ -120,6 +120,14 @@
       "rung": 4,
       "seam": "Model picker (U-E9-07, #15242): the connected picker returns the Kilo option list (Kilo Gateway order from `recommendedIndex`, Recommended and Kilo Gateway sections, `Free` from Gateway `isFree`, `BYOK` and `May train` labels, v1 search over provider and model IDs) from the first line of its options memo, keeps section headers while searching (`flat={false}`), follows the highlight with `onMove`, and wraps the list with the model info panel. Seven call-out lines; the logic is in tui/src/kilocode/dialog-model.tsx and tui/src/kilocode/model-picker.ts. The upstream option code below the early return, `sortModelOptions` and `prioritizeFavorites` stay unchanged, so upstream syncs merge cleanly and upstream's model-options tests pass. Rungs 1 and 2 cannot reach it: the TUI plugin API has no model picker hook, and the host runs in the server process. A generic seam (an option-list and side-panel hook) would need the same lines here plus a new plugin API surface for one consumer."
     },
+    "packages/tui/src/context/client-mcp.tsx": {
+      "rung": 4,
+      "seam": "Reject MCP terminal writes when no TUI input connection can accept them. The client MCP domain does not expose a hook for terminal input policy, and a plugin cannot replace this provider. Keeps upstream's immediate false return instead of silently queueing commands for a hidden or inactive terminal."
+    },
+    "packages/tui/src/context/session-terminals.tsx": {
+      "rung": 4,
+      "seam": "Return whether an attached terminal input writer accepted the data. Terminal input is a TUI-local persistent connection; no TUI plugin editor or server hook can replace the provider or receive a detached input safely."
+    },
     "packages/tui/src/context/local.tsx": {
       "rung": 4,
       "seam": "Full TUI default selection (Gateway): call the Kilo-owned default-model loader, then use SDK model.default after CLI/config and recent models, within the existing user/agent selection precedence. Keep the first catalog model when the server supplies no valid default. Without a higher-priority selection, catalog readiness waits for the default request so --prompt cannot submit the catalog's first model before the recommendation arrives. Rungs 1 and 2 cannot reach LocalProvider's private fallback memo or readiness flag; the TUI plugin API has no model-default resolver, and the host runs in the server process. A generic seam would add a resolver registration API for this single SDK read instead of these small call-outs. Loading, refresh and location isolation stay in tui/src/kilocode/default-model.ts."
@@ -175,7 +183,7 @@
     },
     "packages/core/src/session/compaction.ts": {
       "rung": 4,
-      "seam": "Native and streamed compaction settle their usage through static SessionUsage.record outside the step runner. Pass the selected provider ID to the same Kilo-owned policy. A compaction transform replaces the operation, not these settlement calls, and would duplicate upstream compaction."
+      "seam": "Native and streamed compaction settle their usage through static SessionUsage.record outside the step runner. Pass the selected provider ID to the same Kilo-owned policy. The v2.1.4 resolution adds one marked line to retain upstream's background usage callback in the multiline billing call. A compaction transform replaces the operation, not these settlement calls, and would duplicate upstream compaction."
     },
     "packages/core/src/session/stats.ts": {
       "rung": 4,

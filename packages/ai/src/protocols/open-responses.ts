@@ -774,7 +774,7 @@ export const lowerConversation = Effect.fnUntraced(function* (
 export const lowerGeneration = (request: LLMRequest, options = OpenResponsesOptions.resolve(request)) => {
   const generation = request.generation
   const cacheKey = ProviderShared.promptCacheKey(request)
-  const parallelToolCalls = resolveParallelToolCalls(request)
+  const parallelToolCalls = resolveParallelToolCalls(request, options)
   return {
     stream: true as const,
     max_output_tokens: generation?.maxTokens,
@@ -802,15 +802,15 @@ export const lowerGeneration = (request: LLMRequest, options = OpenResponsesOpti
   }
 }
 
-export const resolveParallelToolCalls = (request: LLMRequest) => {
-  const configured = OpenResponsesOptions.resolve(request).parallelToolCalls
+export const resolveParallelToolCalls = (request: LLMRequest, options = OpenResponsesOptions.resolve(request)) => {
+  const configured = options.parallelToolCalls
   if (configured !== undefined) return configured
   const disabled = request.toolChoice?.disableParallelToolUse
   return disabled === undefined ? undefined : !disabled
 }
 
-export const allowedToolChoice = (request: LLMRequest) => {
-  const allowed = OpenResponsesOptions.resolve(request).allowedTools
+export const allowedToolChoice = (request: LLMRequest, options = OpenResponsesOptions.resolve(request)) => {
+  const allowed = options.allowedTools
   if (!allowed) return undefined
   return {
     type: "allowed_tools" as const,
@@ -824,12 +824,13 @@ export const fromRequestWithAdapter = Effect.fn("OpenResponses.fromRequestWithAd
   adapter: ProviderAdapter,
 ) {
   const projected = ProviderShared.flattenToolRequest(request)
+  const options = OpenResponsesOptions.resolve(request)
   return {
     ...(yield* lowerConversation(projected.request, adapter)),
-    ...lowerGeneration(request),
+    ...lowerGeneration(request, options),
     tools: projected.tools.length === 0 ? undefined : yield* lowerTools(projected.tools, adapter),
     tool_choice:
-      allowedToolChoice(request) ??
+      allowedToolChoice(request, options) ??
       (request.toolChoice ? yield* lowerToolChoice(adapter.name, request.toolChoice) : undefined),
   }
 })

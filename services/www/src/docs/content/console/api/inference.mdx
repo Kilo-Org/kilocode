@@ -11,7 +11,7 @@ curl -X POST "https://opencode.ai/inference/openai/v1/chat/completions" \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "kimi-k2.6",
+    "model": "kimi-k3",
     "messages": [{ "role": "user", "content": "Say hi" }]
   }'
 ```
@@ -19,7 +19,8 @@ curl -X POST "https://opencode.ai/inference/openai/v1/chat/completions" \
 ## Authentication
 
 Replace `<token>` with a [personal API key](/console/api#personal-api-keys) or a [service account key](/console/api#service-accounts) created in the [Console](https://opencode.ai/console). Paid models
-require the header; free chat models can be called without it.
+require the header. Free-tier chat models are only available from within OpenCode; other clients receive HTTP `403`,
+even with an API key. Use paid models or a [Go](/console/go) subscription from other clients.
 
 ```text
 Authorization: Bearer <token>
@@ -43,14 +44,14 @@ curl https://opencode.ai/inference/v1/models
 
 ### OpenAI Chat Completions
 
-Open models such as `kimi-k2.6`, `glm-5.1`, `minimax-m2.7`, and the free models use the Chat Completions API.
+Open models such as `kimi-k3`, `glm-5.3`, `minimax-m3`, and the free models use the Chat Completions API.
 
 ```bash
 curl -X POST "https://opencode.ai/inference/openai/v1/chat/completions" \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "glm-5.1",
+    "model": "glm-5.3",
     "messages": [{ "role": "user", "content": "Say hi" }]
   }'
 ```
@@ -64,7 +65,7 @@ curl -X POST "https://opencode.ai/inference/openai/v1/responses" \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gpt-5.5",
+    "model": "gpt-6.1-sol",
     "input": "Say hi"
   }'
 ```
@@ -78,7 +79,7 @@ curl -X POST "https://opencode.ai/inference/anthropic/v1/messages" \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "claude-sonnet-4-6",
+    "model": "claude-sonnet-5-5",
     "max_tokens": 1024,
     "messages": [{ "role": "user", "content": "Say hi" }]
   }'
@@ -90,7 +91,7 @@ Gemini models take the model and method in the path. Replace `:generateContent` 
 stream the response.
 
 ```bash
-curl -X POST "https://opencode.ai/inference/google/v1beta/models/gemini-3.1-pro:generateContent" \
+curl -X POST "https://opencode.ai/inference/google/v1beta/models/gemini-4-argon:generateContent" \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
