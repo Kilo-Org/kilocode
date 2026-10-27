@@ -40,6 +40,29 @@ Kilo moves onto upstream OpenCode v2 from a clean base, one feature at a time. V
 - One plan unit per PR. Never push directly to `v2`. A human merges.
 - Short hyphenated branch names, no slashes. Titles `type(scope): summary`.
 
+## Preserve migrated features at every upstream sync
+
+A clean merge, a fresh progress map and passing marker checks do not prove that migrated behavior still works. The map measures inventory coverage. Use `migration-tracking/progress/progress.json`, `features.json` and `dispositions.json` as the inventory, not the rendered `progress.svg` or its percentage.
+
+This is a required review procedure, not an implemented feature-level CI gate. Current tooling checks proofs, generated output and shared patches; the sync report names conflicts and shared files touched by upstream. It does not link every migrated feature to its upstream dependencies or tests. A machine-readable sync contract, lost-cell gate and feature-impact report remain follow-up tooling. Do not claim that they already run, or invent commands for them.
+
+Before resolving a sync:
+
+1. Record the pre-sync Kilo commit and the old and new upstream pins. Keep the pre-sync inventory available through Git; do not replace it with regenerated output.
+2. List the previously completed cell IDs by feature, including `ported`, `native` and `facade` dispositions. Keep dropped cells separate. Supplement this list with branding, host mirrors and runtime/build wiring that the tracker does not cover.
+3. Compare the upstream pins for changes, renames and deletions. Match them to each feature's recorded upstream dependencies, implementation and tests. Include clean changes, plugin APIs, service contracts, package exports, configuration defaults, dependency versions and CI test selection, not only conflicting or marked files. Check host mirrors against their upstream sources even when the Kilo-owned copy did not change.
+4. Read the affected implementation and its callers. Preserve old defaults, precedence, billing, permissions and failure paths. When no dependency record exists, inspect the feature and record the gap; missing coverage does not mean the feature is safe.
+
+Before declaring the sync ready:
+
+1. Compare pre-sync and post-sync completed cell IDs and their dispositions, not only counts. Flag lost proofs, removed implementations, completed-to-open or completed-to-dropped changes and changed proof targets. Explain renames or reclassification with evidence that behavior remains. A deliberate behavior removal needs explicit user approval; changing a disposition or regenerating the map is not approval.
+2. Run each affected feature's recorded regression checks and affected package typechecks. Confirm that CI still selects the Kilo packages and tests. Self-test changed user-visible paths under the isolation rules below. Preserve unhosted controls where the feature depends on a host override.
+3. Fix unintended regressions and add focused Kilo-owned regression tests. Do not weaken assertions, drop proofs or raise patch limits just to clear a check. For a test failure, distinguish a regression from a verified pre-sync failure or a compiler mismatch; state which check actually failed.
+4. Record the dependency inventory and repeatable checks in the feature's existing migration plan or technical note, as required by `v2-feature-placement`. Backfill missing records for affected migrated features. Do not put hand-written records into generated tracker files or add unsupported fields to the tracker schema.
+5. Add `## Migrated feature preservation` to the sync PR. Record the base commit and upstream pins, affected feature/cell IDs, clean-change and mirror review, adaptations, commands, self-test results and any missing coverage. Use pass, fail or blocked per feature. Link the committed dependency records. Do not report preservation as passed when a regression or required check remains unresolved.
+
+This process can flag known dependencies and observed regressions; it cannot prove the absence of indirect semantic changes. A later automated gate must keep that limit explicit and flag missing coverage rather than treating it as success. Continue the branding-specific review below as part of this general check.
+
 ## Branding and upstream drift
 
 Decision: keep the approach in PR #15417 as an **interim adapter**, not a permanent branding API. Its reference implementation is `packages/kilo-cli/src/branding/`; check whether the PR is merged before assuming those files exist on your branch.

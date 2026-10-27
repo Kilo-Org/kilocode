@@ -147,6 +147,21 @@ Every v1 cell you replace gets a proof in the same PR:
 
 Close a cell only after you compared the v1 hunk with the v2 code behavior by behavior; a cell with a known gap stays open, with the gap in the PR. The full rules are in the `v2-migration` skill, section "Progress map".
 
+#### Record how to preserve the port
+
+Before closing a cell, persist a small dependency and verification record in the feature's existing migration plan or technical note. Link it from the PR's placement/progress statement. Use the existing disposition `note` for a cell-specific pointer when appropriate; do not add unsupported schema fields or edit generated tracker output by hand.
+
+Record:
+
+- Feature and completed cell IDs, plus the v2 implementation and proof targets. Include behavior supplied by `native` and `facade` dispositions, not only Kilo code.
+- Upstream dependency paths and the symbols or contracts used: plugin hooks, service overrides, API shapes, defaults and package exports. For each host mirror, name both the Kilo copy and upstream source. Include runtime/build entrypoints and branding mappings even when the tracker has no cell for them.
+- Existing regression test paths and exact commands, with the package working directory and test isolation. State what behavior each check protects and which upstream/unhosted controls must remain unchanged.
+- A repeatable self-test scenario and expected result for user-visible behavior. List credentials, platform needs, missing coverage and other limits; a filename or marker alone is not behavioral evidence.
+
+Keep this record current when dependencies or proof targets change. For an affected older port without a record, backfill it before claiming that an upstream sync preserves the feature. Follow `v2-migration`, section "Preserve migrated features at every upstream sync", when reviewing a sync or rebasing a port on a newer `v2`.
+
+These records support manual review now. A machine-readable sync-contract schema, feature-impact check and completed-cell regression gate are not yet implemented. Do not claim that placement, marker or progress checks provide those guarantees. Watch paths alone also cannot detect every indirect behavior change.
+
 Then regenerate and verify:
 
 ```sh
