@@ -43,7 +43,9 @@ test("the art stops every frame when hidden, closed, or still, and leaves nothin
     // Each frame is one direct write into the art's own buffer, never a draw call per cell.
     expect(draws).toHaveBeenCalledTimes(1)
     expect(setCell).not.toHaveBeenCalled()
-    expect(app.captureCharFrame()).toContain("█▀▀▀ █▀▀█")
+    // kilocode_change start - testing: RGB renders the logo using half blocks.
+    expect(app.captureCharFrame()).toContain(app.renderer.capabilities?.rgb ? "▀▀▀▀ ▀▀▀▀" : "█▀▀▀ █▀▀█")
+    // kilocode_change end
 
     setVisible(false)
     expect(app.renderer.liveRequestCount).toBe(0)

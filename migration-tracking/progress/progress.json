@@ -4,7 +4,7 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 157,
+    "done": 158,
     "total": 9828,
     "percent": 1.6,
     "dropped": 26,
@@ -16,7 +16,7 @@
       },
       {
         "kind": "api",
-        "done": 2,
+        "done": 3,
         "total": 39
       },
       {
@@ -36,10 +36,10 @@
       "seam": 3,
       "patch": 6
     },
-    "coreImports": 26,
+    "coreImports": 27,
     "sharedPatches": {
-      "seam": 33,
-      "patch": 21
+      "seam": 35,
+      "patch": 22
     }
   },
   "notCounted": {
@@ -58,6 +58,7 @@
     "@opencode/core/config",
     "@opencode/core/config/discovery",
     "@opencode/core/config/normalize",
+    "@opencode/core/config/plugin/skill-file",
     "@opencode/core/effect/app-node-platform",
     "@opencode/core/model",
     "@opencode/core/model-resolver",
@@ -1146,7 +1147,7 @@
     },
     {
       "feature": "marketplace",
-      "done": 0,
+      "done": 1,
       "total": 20,
       "dropped": 0,
       "kinds": {
@@ -1155,7 +1156,7 @@
           "total": 10
         },
         "api": {
-          "done": 0,
+          "done": 1,
           "total": 3
         },
         "patch": {
@@ -6199,6 +6200,7 @@
     "patch:unattributed:tui/ui:acda41f897d2": "patch"
   },
   "done": [
+    "api:GET /kilocode/marketplace",
     "api:GET /kilocode/provider-usage",
     "api:POST /kilocode/provider-usage/refresh",
     "module:packages/core/src/kilocode/oauth/page.ts",

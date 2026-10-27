@@ -5,6 +5,7 @@ import { OpencodeFreeTier } from "./gateway/opencode"
 import { KiloGatewayPolicyPlugin } from "./gateway/policy"
 import { GatewayOptions } from "./gateway/options"
 import { KiloHandshakePlugin } from "./handshake"
+import { KiloMarketplacePlugin } from "./marketplace"
 // kilo_port(provider-usage:ce8e021f1ef6) v1 imported the ProviderUsage Location service into location-services.ts.
 import { KiloProviderUsagePlugin } from "./provider-usage"
 import { KiloOpenAIPlugin } from "./openai"
@@ -28,6 +29,7 @@ export const KiloPlugins = [
   KiloGatewayPlugin,
   // v1 listed the ProviderUsage node in the Location services. kilo_port(provider-usage:b0945f511fb3)
   KiloProviderUsagePlugin,
+  KiloMarketplacePlugin,
   KiloOpenAIPlugin,
 ] as const
 

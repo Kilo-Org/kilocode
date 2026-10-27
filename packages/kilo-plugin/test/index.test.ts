@@ -1,12 +1,13 @@
 import { expect, test } from "bun:test"
 import { KiloPlugins, KiloPostPlugins } from "../src/index"
 
-test("Gateway modes override built-in agents before config, and post-config steps keep policy, the ceiling, options and the free-tier filter", () => {
+test("Gateway modes override built-in agents before config, marketplace is registered, and post-config steps keep policy, the ceiling, options and the free-tier filter", () => {
   expect(KiloPlugins.map((plugin) => plugin.id)).toEqual([
     "kilocode.handshake",
     "kilo.agent",
     "kilocode.gateway",
     "kilocode.provider-usage",
+    "kilocode.marketplace",
     "kilocode.openai",
   ])
   expect(KiloPostPlugins.map((plugin) => plugin.id)).toEqual([
