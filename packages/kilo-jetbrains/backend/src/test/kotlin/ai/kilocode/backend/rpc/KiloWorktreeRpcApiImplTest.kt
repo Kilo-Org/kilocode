@@ -45,6 +45,7 @@ import java.util.concurrent.TimeUnit
 import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -2533,25 +2534,98 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
-    fun `moveToWorktree rejects an unsupported untracked directory symlink`() = runBlocking {
+    fun `moveToWorktree preserves an untracked file symlink`() = runBlocking {
         assumeFalse(SystemInfo.isWindows, "creating symbolic links on Windows may require elevated privileges")
         initRepo()
-        Files.createSymbolicLink(repo.resolve("unsupported"), Path.of("."))
+        Files.writeString(repo.resolve("settings.txt"), "original\n")
+        git(repo, "add", "settings.txt")
+        git(repo, "commit", "-m", "settings")
+        Files.writeString(repo.resolve("plain.txt"), "plain\n")
+        Files.createSymbolicLink(repo.resolve("active.txt"), Path.of("settings.txt"))
 
-        rejected {
-            assertTrue(it.contains("Failed to capture untracked file unsupported"), it)
-            assertTrue(it.contains("Not a regular file"), it)
+        preserved {
+            val target = moved()
+            val link = target.resolve("active.txt")
+            assertTrue(Files.isSymbolicLink(link))
+            assertEquals("settings.txt", Files.readSymbolicLink(link).toString())
+            assertEquals("original\n", Files.readString(link))
+            Files.writeString(target.resolve("settings.txt"), "changed\n")
+            assertEquals("changed\n", Files.readString(link))
+            assertFalse(Files.isSymbolicLink(target.resolve("settings.txt")))
+            assertEquals("plain\n", Files.readString(target.resolve("plain.txt")))
+            assertFalse(Files.isSymbolicLink(target.resolve("plain.txt")))
         }
     }
 
     @Test
-    fun `moveToWorktree rejects untracked content that cannot be read through a dangling symlink`() = runBlocking {
+    fun `moveToWorktree preserves an untracked directory symlink`() = runBlocking {
+        assumeFalse(SystemInfo.isWindows, "creating symbolic links on Windows may require elevated privileges")
+        initRepo()
+        Files.createSymbolicLink(repo.resolve("unsupported"), Path.of("."))
+
+        preserved {
+            val link = moved().resolve("unsupported")
+            assertTrue(Files.isSymbolicLink(link))
+            assertEquals(".", Files.readSymbolicLink(link).toString())
+            assertFalse(Files.isRegularFile(link, LinkOption.NOFOLLOW_LINKS))
+        }
+    }
+
+    @Test
+    fun `moveToWorktree preserves a dangling untracked symlink`() = runBlocking {
         assumeFalse(SystemInfo.isWindows, "creating symbolic links on Windows may require elevated privileges")
         initRepo()
         Files.createSymbolicLink(repo.resolve("unreadable.txt"), Path.of("missing.txt"))
 
-        rejected {
-            assertTrue(it.contains("Failed to capture untracked file unreadable.txt"), it)
+        preserved {
+            val link = moved().resolve("unreadable.txt")
+            assertTrue(Files.isSymbolicLink(link))
+            assertEquals("missing.txt", Files.readSymbolicLink(link).toString())
+            assertFalse(Files.exists(link))
+        }
+    }
+
+    @Test
+    fun `moveToWorktree preserves an untracked symlink that points outside the repo`() = runBlocking {
+        assumeFalse(SystemInfo.isWindows, "creating symbolic links on Windows may require elevated privileges")
+        initRepo()
+        val outside = Files.createTempFile("kilo-secret", ".txt")
+        Files.writeString(outside, "secret\n")
+        val rel = repo.relativize(outside).toString()
+        try {
+            Files.createSymbolicLink(repo.resolve("leak.txt"), Path.of(rel))
+            preserved {
+                val link = moved().resolve("leak.txt")
+                assertTrue(Files.isSymbolicLink(link))
+                assertEquals(rel, Files.readSymbolicLink(link).toString())
+                assertFalse(Files.isRegularFile(link, LinkOption.NOFOLLOW_LINKS))
+            }
+        } finally {
+            Files.deleteIfExists(outside)
+        }
+    }
+
+    @Test
+    fun `worktree transfer fails when an untracked symlink cannot be created`() = runBlocking {
+        assumeFalse(SystemInfo.isWindows, "creating symbolic links on Windows may require elevated privileges")
+        initRepo()
+        Files.createDirectories(repo.resolve("sub"))
+        Files.createSymbolicLink(repo.resolve("sub/link.txt"), Path.of("missing.txt"))
+
+        preserved {
+            captured { snapshot ->
+                assertEquals(mapOf("sub/link.txt" to "missing.txt"), snapshot.links)
+                val target = target()
+                Files.writeString(target.resolve("sub"), "blocking file\n")
+
+                preserved(target) {
+                    val result = WorktreeTransfer.apply(snapshot, target)
+
+                    assertFalse(result.ok, "apply should fail when a symlink cannot be created")
+                    assertTrue(assertNotNull(result.error).contains("sub/link.txt"), result.error)
+                    assertFalse(Files.exists(target.resolve("sub/link.txt")))
+                }
+            }
         }
     }
 
@@ -2688,6 +2762,16 @@ class KiloWorktreeRpcApiImplTest {
     private suspend fun target(): Path {
         val result = api.create(repo.toString(), CreateWorktreeRequestDto("feature/x"))
         return Path.of(assertNotNull(result.worktree, "create failed: ${result.error}").path)
+    }
+
+    private suspend fun moved(): Path {
+        val events = api.moveToWorktree(repo.toString(), null, "feature/x").toList()
+        assertEquals(
+            listOf(MoveStage.CAPTURING, MoveStage.CREATING, MoveStage.TRANSFERRING, MoveStage.DONE),
+            events.map { it.stage },
+            events.last().error,
+        )
+        return Path.of(assertNotNull(events.last().worktree).path)
     }
 
     @Test
