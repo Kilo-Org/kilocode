@@ -199,6 +199,43 @@ it.effect("forks rebuild the recent text of a summary they copied", () =>
   }),
 )
 
+it.effect("ignores non-message keepID strings when loading history or forking", () =>
+  Effect.gen(function* () {
+    const parentID = Session.ID.make("ses_invalid_keepid_parent")
+    const childID = Session.ID.make("ses_invalid_keepid_child")
+    yield* insertSession(parentID)
+    const compaction = SessionMessage.CompactionCompleted.make({
+      id: SessionMessage.ID.create(),
+      type: "compaction",
+      status: "completed",
+      reason: "manual",
+      summary: "## Objective\n- plugin summary",
+      metadata: { keepID: "not-a-msg-id" },
+      time: { created: DateTime.makeUnsafe(0) },
+    })
+    yield* storeMessages(parentID, [textUser("Earlier question"), compaction])
+
+    const store = yield* SessionStore.Service
+    const [parent] = yield* store.context(parentID)
+    expect(parent).toMatchObject({
+      type: "compaction",
+      metadata: { keepID: "not-a-msg-id" },
+    })
+
+    const bus = yield* Bus.Service
+    yield* bus.publish(SessionEvent.Forked, {
+      sessionID: childID,
+      parentID,
+      boundary: { type: "through", messageID: compaction.id },
+    })
+    const [child] = yield* store.context(childID)
+    expect(child).toMatchObject({
+      type: "compaction",
+      metadata: { keepID: "not-a-msg-id" },
+    })
+  }),
+)
+
 const textUser = (text: string) =>
   SessionMessage.User.make({
     id: SessionMessage.ID.create(),

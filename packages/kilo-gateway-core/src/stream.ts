@@ -11,14 +11,13 @@ export interface StreamMetadata {
   readonly routedModelID?: string
   readonly gateway?: Record<string, unknown>
   readonly vercelID?: string
+  readonly generationID?: string
+  readonly responseID?: string
 }
 
 // Inspects a single decoded SSE JSON payload for Kilo Gateway routing metadata
 // (ported from v1 `packages/kilo-gateway/src/gateway-metadata.ts` and `routed.ts`).
-export function extractMetadata(payload: unknown): {
-  readonly routedModelID?: string
-  readonly gateway?: Record<string, unknown>
-} {
+export function extractMetadata(payload: unknown): StreamMetadata {
   if (!isRecord(payload)) return {}
   const response = isRecord(payload.response) ? payload.response : undefined
   const message = isRecord(payload.message) ? payload.message : undefined
@@ -28,6 +27,7 @@ export function extractMetadata(payload: unknown): {
   const gateway =
     readGateway(payload.provider_metadata) ??
     readGateway(response?.provider_metadata) ??
+    readGateway(message?.provider_metadata) ??
     readGateway(delta?.provider_metadata)
 
   const routedFromGateway = gateway ? extractRoutedSlug(gateway) : undefined
@@ -40,6 +40,10 @@ export function extractMetadata(payload: unknown): {
   return {
     ...(directModel ? { routedModelID: directModel } : {}),
     ...(gateway ? { gateway } : {}),
+    ...(typeof gateway?.generationId === "string" ? { generationID: gateway.generationId } : {}),
+    ...(typeof (response?.id ?? message?.id ?? payload.id) === "string"
+      ? { responseID: String(response?.id ?? message?.id ?? payload.id) }
+      : {}),
   }
 }
 
@@ -51,8 +55,9 @@ export function extractMetadata(payload: unknown): {
 //    when present so `OpenAIChat` / `OpenRouter` `Usage.providerMetadata` retains `routedModelID`.
 export function transformSseData(
   rawData: string,
-  onMetadata?: (meta: { readonly routedModelID?: string; readonly gateway?: Record<string, unknown> }) => void,
+  onMetadata?: (meta: StreamMetadata) => void,
   currentRoutedModelID?: string,
+  currentMetadata?: StreamMetadata,
 ): string {
   const trimmed = rawData.trim()
   if (!trimmed || trimmed === "[DONE]") return rawData
@@ -61,10 +66,12 @@ export function transformSseData(
   const payload = decoded.value
 
   const meta = extractMetadata(payload)
-  if (onMetadata && (meta.routedModelID || meta.gateway)) {
+  if (onMetadata && Object.keys(meta).length > 0) {
     onMetadata(meta)
   }
-  const effectiveRoutedModelID = meta.routedModelID ?? currentRoutedModelID
+  const gateway = meta.gateway ? { ...currentMetadata?.gateway, ...meta.gateway } : currentMetadata?.gateway
+  const effectiveRoutedModelID =
+    (gateway && validModelID(extractRoutedSlug(gateway))) ?? meta.routedModelID ?? currentRoutedModelID
 
   // Only rewrite frames that represent an error (`type === "error"`, `type === "response.failed"`,
   // top-level `error` field, or bare `{ code, message }` without normal stream fields).
@@ -75,45 +82,51 @@ export function transformSseData(
     (payload.type === undefined &&
       payload.choices === undefined &&
       payload.id === undefined &&
-      payload.code !== undefined &&
-      typeof payload.message === "string")
+      typeof payload.message === "string" &&
+      (payload.code !== undefined || payload.message.trim().startsWith("{")))
   if (isErrorFrame) {
     const parsed = KiloErrors.parse(payload)
     if (!parsed) return rawData
     return JSON.stringify({
       ...payload,
       type: "error",
-      error: {
-        ...(isRecord(payload.error) ? payload.error : {}),
-        code: parsed.code,
-        type: parsed.code,
-        message: parsed.message,
-      },
+      // Anthropic reserves `message` for a message object, not a serialized error envelope.
+      message: typeof payload.message === "string" ? undefined : payload.message,
+      error: KiloErrors.toError(parsed),
     })
   }
 
-  if (effectiveRoutedModelID && isRecord(payload.usage) && payload.usage.routedModelID === undefined) {
-    return JSON.stringify({
-      ...payload,
-      usage: {
-        ...payload.usage,
-        routedModelID: effectiveRoutedModelID,
-      },
-    })
+  const identity = {
+    ...(effectiveRoutedModelID ? { routedModelID: effectiveRoutedModelID } : {}),
+    ...(gateway ? { gateway } : {}),
+    ...(currentMetadata?.vercelID ? { vercelID: currentMetadata.vercelID } : {}),
+    ...((meta.generationID ?? currentMetadata?.generationID)
+      ? { generationID: meta.generationID ?? currentMetadata?.generationID }
+      : {}),
+    ...((meta.responseID ?? currentMetadata?.responseID)
+      ? { responseID: meta.responseID ?? currentMetadata?.responseID }
+      : {}),
   }
-
-  return rawData
+  if (Object.keys(identity).length === 0) return rawData
+  // All three Gateway dialects retain their raw usage through Usage.providerMetadata.
+  const stamp = (value: Record<string, unknown>) => ({
+    ...value,
+    ...(isRecord(value.usage) ? { usage: { ...value.usage, ...identity } } : {}),
+  })
+  return JSON.stringify({
+    ...stamp(payload),
+    ...(isRecord(payload.response) ? { response: stamp(payload.response) } : {}),
+    ...(isRecord(payload.message) ? { message: stamp(payload.message) } : {}),
+  })
 }
 
 // Wraps an HTTP 200 `text/event-stream` `Response` to extract `routedModelID` / `x-vercel-id` and
 // normalize mid-stream SSE error frames on the fly.
-export function transformResponse(
-  response: Response,
-  onComplete?: (metadata: StreamMetadata) => void,
-): Response {
+export function transformResponse(response: Response, onComplete?: (metadata: StreamMetadata) => void): Response {
   const contentType = response.headers.get("content-type") ?? ""
   const vercelID = response.headers.get("x-vercel-id")?.trim() || undefined
-  if (!response.body || !contentType.includes("text/event-stream")) {
+  const sse = contentType.includes("text/event-stream")
+  if (!response.body || (!sse && !contentType.includes("application/json"))) {
     if (vercelID && onComplete) onComplete({ vercelID })
     return response
   }
@@ -123,10 +136,14 @@ export function transformResponse(
   let buffer = ""
   let routedModelID: string | undefined
   let gateway: Record<string, unknown> | undefined
+  let generationID: string | undefined
+  let responseID: string | undefined
 
-  const recordMeta = (meta: { readonly routedModelID?: string; readonly gateway?: Record<string, unknown> }) => {
-    if (meta.routedModelID) routedModelID = meta.routedModelID
+  const recordMeta = (meta: StreamMetadata) => {
     if (meta.gateway) gateway = { ...gateway, ...meta.gateway }
+    routedModelID = (gateway && validModelID(extractRoutedSlug(gateway))) ?? meta.routedModelID ?? routedModelID
+    if (meta.generationID) generationID = meta.generationID
+    if (meta.responseID) responseID = meta.responseID
   }
 
   const processLine = (line: string): string => {
@@ -134,7 +151,7 @@ export function transformResponse(
     const stripped = cr ? line.slice(0, -1) : line
     if (!stripped.startsWith("data:")) return line
     const content = stripped.slice("data:".length).replace(/^ /, "")
-    const next = transformSseData(content, recordMeta, routedModelID)
+    const next = transformSseData(content, recordMeta, routedModelID, { gateway, vercelID, generationID, responseID })
     return next === content ? line : `data: ${next}${cr}`
   }
 
@@ -142,6 +159,7 @@ export function transformResponse(
     new TransformStream<Uint8Array, Uint8Array>({
       transform(chunk, controller) {
         buffer += decoder.decode(chunk, { stream: true })
+        if (!sse) return
         const lines = buffer.split("\n")
         buffer = lines.pop() ?? ""
         if (lines.length > 0) {
@@ -151,7 +169,13 @@ export function transformResponse(
       flush(controller) {
         buffer += decoder.decode()
         if (buffer.length > 0) {
-          controller.enqueue(encoder.encode(processLine(buffer)))
+          controller.enqueue(
+            encoder.encode(
+              sse
+                ? processLine(buffer)
+                : transformSseData(buffer, recordMeta, routedModelID, { gateway, vercelID, generationID, responseID }),
+            ),
+          )
           buffer = ""
         }
         if (onComplete) {
@@ -159,6 +183,8 @@ export function transformResponse(
             ...(routedModelID ? { routedModelID } : {}),
             ...(gateway ? { gateway } : {}),
             ...(vercelID ? { vercelID } : {}),
+            ...(generationID ? { generationID } : {}),
+            ...(responseID ? { responseID } : {}),
           })
         }
       },
@@ -186,7 +212,12 @@ function extractRoutedSlug(gateway: Record<string, unknown>): string | undefined
   const attempts = Array.isArray(routing.modelAttempts) ? routing.modelAttempts : []
   for (let i = attempts.length - 1; i >= 0; i--) {
     const item = attempts[i]
-    if (isRecord(item) && item.success === true && typeof item.canonicalSlug === "string" && item.canonicalSlug.trim()) {
+    if (
+      isRecord(item) &&
+      item.success === true &&
+      typeof item.canonicalSlug === "string" &&
+      item.canonicalSlug.trim()
+    ) {
       return item.canonicalSlug.trim()
     }
   }

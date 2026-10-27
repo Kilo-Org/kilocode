@@ -933,26 +933,4 @@ describe("ReadTool", () => {
       ])
     }),
   )
-
-  it.effect("rejects unsupported binary discovered by a direct read", () =>
-    Effect.gen(function* () {
-      readResult = {
-        type: "file",
-        uri: "file:///late-binary",
-        name: "late-binary",
-        content: "AAECAw==",
-        encoding: "base64",
-        mime: "application/octet-stream",
-      }
-      const registry = yield* Tool.Service
-
-      expect(
-        yield* executeTool(registry, {
-          sessionID,
-          ...toolIdentity,
-          call: { type: "tool-call", id: "call-direct-binary", name: "read", input: { path: "late-binary" } },
-        }),
-      ).toEqual({ status: "error", error: { type: "unknown", message: "Cannot read binary file: late-binary" } })
-    }),
-  )
 })

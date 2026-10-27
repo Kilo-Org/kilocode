@@ -35,6 +35,7 @@ import { SkillDiscovery } from "@opencode/core/skill/discovery"
 import { Watcher } from "@opencode/core/filesystem/watcher"
 import { Tool } from "@opencode/core/tool"
 import { Vcs } from "@opencode/core/vcs"
+import { Voice } from "@opencode/core/voice"
 import { WebSearch } from "@opencode/core/websearch"
 import { Worktree } from "@opencode/core/worktree"
 import { WorktreeStrategies } from "@opencode/core/worktree/strategies"
@@ -107,6 +108,7 @@ export const makePluginTestLayer = (permission = permissionLayer) =>
       SkillDiscovery.node,
       Tool.node,
       Vcs.node,
+      Voice.node,
       Watcher.node,
       WebSearch.node,
       Worktree.node,

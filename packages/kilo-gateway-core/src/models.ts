@@ -12,6 +12,22 @@ const AISDKProvider = Schema.Literals(["anthropic", "openai", "openai-compatible
 export type AISDKProvider = typeof AISDKProvider.Type
 const decodeAISDKProvider = Schema.decodeUnknownOption(AISDKProvider)
 
+const Prompt = Schema.Literals([
+  "codex",
+  "gemini",
+  "beast",
+  "anthropic",
+  "trinity",
+  "anthropic_without_todo",
+  "ling",
+  "gpt55",
+])
+export type Prompt = typeof Prompt.Type
+const decodePrompt = Schema.decodeUnknownOption(Prompt)
+const decodeVariants = Schema.decodeUnknownOption(
+  Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Unknown)),
+)
+
 const AutoRouting = Schema.Struct({
   models: Schema.Array(Schema.String),
 })
@@ -78,6 +94,8 @@ const RawModel = Schema.Struct({
       family: Schema.optionalKey(Schema.NullOr(Schema.String)),
       reasoning_options: Schema.optionalKey(Schema.NullOr(Schema.Array(Schema.Unknown))),
       ai_sdk_provider: Schema.optionalKey(Schema.Unknown),
+      prompt: Schema.optionalKey(Schema.Unknown),
+      variants: Schema.optionalKey(Schema.Unknown),
     }),
   ),
 })
@@ -108,6 +126,8 @@ export interface Model {
   readonly description?: string
   readonly family?: string
   readonly aiSDKProvider?: AISDKProvider
+  readonly prompt?: Prompt
+  readonly variants?: Readonly<Record<string, Readonly<Record<string, unknown>>>>
   readonly free: boolean
   readonly recommendedIndex?: number
   readonly hasUserByokAvailable?: boolean
@@ -167,7 +187,7 @@ export { EmbeddingCatalog } from "./embedding-catalog.js"
 const decodeEmbeddingCatalog = Schema.decodeUnknownOption(EmbeddingCatalog)
 
 export interface Failure {
-  readonly kind: "unauthorized" | "network" | "schema" | "http"
+  readonly kind: "unauthorized" | "network" | "schema" | "http" | "organization_missing"
   readonly status?: number
   readonly retryAfter?: number
 }
@@ -181,6 +201,7 @@ export interface Scope {
 
 export interface Result {
   readonly models: readonly Model[]
+  /** Missing credentials or a public retry, not an explicit empty credential. */
   readonly anonymous: boolean
 }
 
@@ -193,7 +214,7 @@ export interface Result {
 export function get(scope: Scope): Effect.Effect<Result, Failure> {
   return Effect.gen(function* () {
     const server = KiloServer.normalize(scope.server)
-    const organizationID = scope.token ? (scope.organizationID ?? null) : null
+    const organizationID = scope.organizationID ?? null
     const url = KiloServer.modelsUrl(server, organizationID)
     const headers: Record<string, string> = {
       ...KiloHeaders.provider({ version: scope.version ?? "unknown", organizationID }),
@@ -219,10 +240,9 @@ export function get(scope: Scope): Effect.Effect<Result, Failure> {
     )
     const parsed = decodeEnvelope(raw)
     if (Option.isNone(parsed)) return yield* Effect.fail({ kind: "schema" } satisfies Failure)
-    const anonymous = !scope.token
     return {
-      models: catalogModels(parsed.value, anonymous),
-      anonymous,
+      models: catalogModels(parsed.value, !scope.token),
+      anonymous: scope.token === undefined,
     }
   })
 }
@@ -413,6 +433,14 @@ function toModel(model: RawModel): Model {
     ...Option.match(decodeAISDKProvider(model.opencode?.ai_sdk_provider), {
       onNone: () => ({}),
       onSome: (aiSDKProvider) => ({ aiSDKProvider }),
+    }),
+    ...Option.match(decodePrompt(model.opencode?.prompt), {
+      onNone: () => ({}),
+      onSome: (prompt) => ({ prompt }),
+    }),
+    ...Option.match(decodeVariants(model.opencode?.variants), {
+      onNone: () => ({}),
+      onSome: (variants) => ({ variants }),
     }),
     free: model.isFree === true,
     ...(model.preferredIndex !== undefined ? { recommendedIndex: model.preferredIndex } : {}),

@@ -248,8 +248,17 @@ const GeminiPromptFeedback = Schema.StructWithRest(
 )
 type GeminiPromptFeedback = Schema.Schema.Type<typeof GeminiPromptFeedback>
 
+const GeminiError = Schema.StructWithRest(
+  Schema.Struct({
+    code: lenient(Schema.Number),
+    message: lenient(Schema.String),
+    status: lenient(Schema.String),
+  }),
+  [Schema.Record(Schema.String, Schema.Unknown)],
+)
+
 const GeminiEvent = Schema.Struct({
-  error: Schema.optional(Schema.Unknown),
+  error: Schema.optional(GeminiError),
   candidates: optionalNull(Schema.Array(GeminiCandidate)),
   promptFeedback: optionalNull(GeminiPromptFeedback),
   usageMetadata: optionalNull(GeminiUsage),
@@ -302,9 +311,7 @@ const providerMetadata = (key: string, metadata: Record<string, unknown>): Provi
 
 const thoughtSignature = (metadata: ProviderMetadata | undefined, key: string) => {
   const value = metadata?.[key]
-  return ProviderShared.isRecord(value) && typeof value.thoughtSignature === "string"
-    ? value.thoughtSignature
-    : undefined
+  return typeof value?.thoughtSignature === "string" ? value.thoughtSignature : undefined
 }
 
 const lowerToolCall = (part: ToolCallPart, omitIds: boolean, metadataKey: string) => ({
@@ -637,27 +644,18 @@ const step = (state: ParserState, event: GeminiEvent | NextRequest) => {
       },
       [],
     ] as const)
-  if (ProviderShared.isRecord(event.error)) {
+  if (event.error) {
     const body = ProviderShared.encodeJson(event)
     return Effect.fail(
       new AIError({
         reason: classifyProviderFailure({
-          message:
-            typeof event.error.message === "string" && event.error.message.length > 0
-              ? event.error.message
-              : typeof event.error.status === "string" && event.error.status.length > 0
-                ? event.error.status
-                : "Gemini provider error",
-          status: typeof event.error.code === "number" ? event.error.code : undefined,
+          message: event.error.message || event.error.status || "Gemini provider error",
+          status: event.error.code,
           rawBody: body,
         }),
       }),
     )
   }
-  if ("error" in event)
-    return Effect.fail(
-      ProviderShared.eventError(state.route, `Invalid ${state.route} stream event`, ProviderShared.encodeJson(event)),
-    )
   const candidate = event.candidates?.[0]
   const nextState = {
     ...state,

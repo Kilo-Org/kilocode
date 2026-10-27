@@ -2,6 +2,7 @@ export * as KiloGatewayRpc from "./gateway.js"
 
 import { Schema } from "effect"
 import { Rpc } from "../rpc.js"
+import { optional } from "../schema.js"
 
 // The `kilocode.gateway` RPC contract: the reference Kilo RPC. The Gateway plugin in packages/kilo-plugin
 // registers the handlers; clients (TUI, VS Code, JetBrains) import this contract from
@@ -195,6 +196,9 @@ export const EditTarget = Schema.Struct({
 export const ModelEntry = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
+  recommended: Schema.optional(Schema.Boolean).annotate({
+    description: "The current Gateway scope's default model, not a catalog ranking.",
+  }),
   isFree: Schema.Boolean,
   recommendedIndex: Schema.optional(Schema.Number),
   hasUserByokAvailable: Schema.optional(Schema.Boolean),
@@ -218,12 +222,25 @@ export const ModelEntry = Schema.Struct({
 
 export type ModelEntry = typeof ModelEntry.Type
 
+export const CatalogFailure = Schema.Struct({
+  kind: Schema.Literals(["unauthorized", "network", "schema", "http", "organization_missing"]),
+  status: optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(100), Schema.isLessThanOrEqualTo(599))),
+}).annotate({ identifier: "KiloGateway.CatalogFailure" })
+
+export interface CatalogFailure extends Schema.Schema.Type<typeof CatalogFailure> {}
+
 export const SessionMetadata = Schema.Struct({
   routedModelID: Schema.optional(Schema.String),
   vercelID: Schema.optional(Schema.String),
 })
 
 export type SessionMetadata = typeof SessionMetadata.Type
+
+// kilo_port(unattributed:session:142910b3fc8c) kilo_port(unattributed:session:5dd7101d7cc6) v1 `platform` on session
+// create. A client sets this key in the session metadata on `session.create`, for example `"vscode"`,
+// `"agent-manager"` or `"cli"`. Children and forks inherit it; the Gateway reads it from the root session to set
+// `X-KILOCODE-FEATURE`.
+export const PLATFORM_METADATA_KEY = "kilocode.platform"
 
 // The TUI, VS Code, and JetBrains clients use this contract for account/profile, balance, Kilo Pass,
 // BYOK, coding plans, team modes, notifications, media and embedding models, and FIM/edit routing.
@@ -283,7 +300,7 @@ export const Definition = Rpc.define({
     models: {
       input: portable(Schema.Struct({})),
       output: portable(Schema.Array(ModelEntry)),
-      errors: Failure,
+      errors: { ...Failure, failed: portable(CatalogFailure) },
     },
     "models.images": {
       input: portable(Schema.Struct({})),

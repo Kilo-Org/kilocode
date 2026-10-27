@@ -4,9 +4,8 @@ import type { AwaitOptions, Event, Generation, Snapshot } from "./generation.js"
 import { Image, type ImageModel, type ImageRequest, type ImageRequestInput } from "./image.js"
 import { LLM } from "./index.js"
 import { Media } from "./media.js"
-import { tryRequest } from "./media-model.js"
 import { RequestExecutor } from "./route/executor.js"
-import { AIError, InvalidRequestError, LanguageModel, LLMRequest } from "./schema/index.js"
+import { AIError, InvalidRequestError, LanguageModel, type LLMRequest } from "./schema/index.js"
 import type { RequestInput } from "./llm.js"
 import { Speech, type SpeechModel, type SpeechRequest, type SpeechRequestInput } from "./speech.js"
 import {
@@ -93,9 +92,6 @@ export const make = (options: Options = {}) => {
     cancel: (options) => run(generation.cancel(), options),
   })
 
-  const llmRequest = (input: RequestInput | LLMRequest) =>
-    input instanceof LLMRequest ? Effect.succeed(input) : tryRequest(() => LLM.request(input))
-
   return {
     run,
     /** Decoded asset bytes, downloading `url` sources through the executor. */
@@ -137,9 +133,9 @@ export const make = (options: Options = {}) => {
     llm: {
       request: LLM.request,
       generate: <const Model extends LanguageModel>(input: RequestInput<Model> | LLMRequest, options?: RunOptions) =>
-        run(Effect.flatMap(llmRequest(input), LLM.generate), options),
+        run(LLM.generate(input), options),
       stream: <const Model extends LanguageModel>(input: RequestInput<Model> | LLMRequest, options?: RunOptions) =>
-        iterate(Stream.unwrap(Effect.map(llmRequest(input), LLM.stream)), options),
+        iterate(LLM.stream(input), options),
     },
     image: {
       request: Image.request,

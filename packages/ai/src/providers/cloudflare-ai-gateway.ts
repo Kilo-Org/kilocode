@@ -1,10 +1,11 @@
-import { Schema, type Config, type Redacted } from "effect"
+import type { Config, Redacted } from "effect"
 import type { ProviderPackage } from "../provider-package.js"
 import { AnthropicMessages, OpenAIChat, OpenAIResponses } from "../protocols/index.js"
 import { Auth } from "../route/auth.js"
 import type { AtLeastOne, ProviderAuthOption } from "../route/auth-options.js"
 import type { RouteDefaultsInput } from "../route/client.js"
 import { ProviderConfigurationError, ProviderID, type ModelID } from "../schema/index.js"
+import { encodeJson } from "../utils/json.js"
 import type { OpenAIProviderOptionsInput } from "./openai-options.js"
 
 export const id = ProviderID.make("cloudflare-ai-gateway")
@@ -86,9 +87,7 @@ const credential = (input: LanguageModelOptions) =>
     .orElse(Auth.config(authEnvVars[1]))
 
 const headers = (input: LanguageModelOptions) => ({
-  ...(input.metadata === undefined
-    ? {}
-    : { "cf-aig-metadata": Schema.encodeSync(Schema.fromJsonString(Schema.Unknown))(input.metadata) }),
+  ...(input.metadata === undefined ? {} : { "cf-aig-metadata": encodeJson(input.metadata) }),
   ...(input.cacheTtl === undefined ? {} : { "cf-aig-cache-ttl": String(input.cacheTtl) }),
   ...(input.cacheKey === undefined ? {} : { "cf-aig-cache-key": input.cacheKey }),
   ...(input.skipCache === undefined ? {} : { "cf-aig-skip-cache": String(input.skipCache) }),

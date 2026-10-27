@@ -25,6 +25,9 @@ const tokenSharingMessages = {
     "This ChatGPT connection isn't authorized for this request. Reconnect to ChatGPT or choose another connection.",
 }
 
+const FREE_USAGE_LIMIT_MESSAGE =
+  "Free usage limit reached. Connect a provider or subscribe to OpenCode Go to keep going, or switch models."
+
 export function toSessionError(cause: unknown): SessionError.Error {
   if (cause instanceof AIError) {
     switch (cause.reason._tag) {
@@ -33,7 +36,11 @@ export function toSessionError(cause: unknown): SessionError.Error {
       case "Authentication":
         return providerError("provider.auth", cause.reason)
       case "QuotaExceeded":
-        return providerError("provider.quota", cause.reason)
+        if (!cause.reason.body?.includes("FreeUsageLimitError")) return providerError("provider.quota", cause.reason)
+        return {
+          ...providerError("provider.free-limit", cause.reason),
+          message: FREE_USAGE_LIMIT_MESSAGE,
+        }
       case "ContentPolicy":
         return providerError("provider.content-filter", cause.reason)
       case "Transport":
@@ -96,10 +103,12 @@ export function contentFilterError(summary: string, reason: FinishReasonDetails)
 
 function providerError(type: string, reason: AIError["reason"]): SessionError.Error {
   const status = reason.http?.status
+  const retryAfterMs = "retryAfterMs" in reason ? reason.retryAfterMs : undefined
   return {
     type,
     message: Object.entries(tokenSharingMessages).find(([code]) => reason.body?.includes(code))?.[1] ?? reason.message,
     ...(status === undefined ? {} : { status }),
     ...(reason.body === undefined ? {} : { response: { body: reason.body } }),
+    ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   }
 }

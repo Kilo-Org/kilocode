@@ -136,6 +136,8 @@ export function createFetch(override?: FetchHandler, events?: ReturnType<typeof 
       })
     if (url.pathname === "/api/session") return json({ data: [], cursor: {} })
     if (url.pathname === "/api/config") return json([])
+    if (url.pathname === "/api/model/default") return json({ location: { directory } }) // kilocode_change(gateway)
+    if (url.pathname.startsWith("/api/rpc/")) return new Response(null, { status: 404 }) // kilocode_change(gateway) seam - built-in TUI plugin RPCs fail as unregistered
     if (url.pathname === "/api/session/active") return json({ data: {} })
     if (request.method === "POST" && /^\/api\/session\/[^/]+\/model$/.test(url.pathname))
       return new Response(null, { status: 204 })

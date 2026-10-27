@@ -10,10 +10,12 @@ const decodeJsonRecord = Schema.decodeUnknownOption(JsonRecord)
 export const ACCOUNT_BODY_KEYS = new Set([
   "access",
   "apiKey",
+  "kiloEmptyToken",
   "authToken",
   "email",
   "hasPersonalAccount",
   "key",
+  "kiloCredentials",
   "name",
   "organizationID",
   "organizationName",

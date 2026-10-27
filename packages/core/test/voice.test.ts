@@ -24,6 +24,29 @@ const keys: Record<string, string> = {
   GEMINI_API_KEY: "gemini-env-key",
 }
 
+const unused = () => Effect.die("unused")
+
+const mockIntegration = (
+  connections: (id: Integration.ID) => Integration.Info["connections"],
+  resolve: Integration.Interface["connection"]["resolve"] = () => Effect.die("Voice.models resolved a credential"),
+) =>
+  Layer.mock(Integration.Service, {
+    revision: () => 0,
+    get: (id) => Effect.succeed({ id, name: id, methods: [], connections: connections(id) }),
+    connection: {
+      active: unused,
+      resolve,
+      key: unused,
+      external: unused,
+      activate: unused,
+      update: unused,
+      remove: unused,
+      status: unused,
+    },
+    oauth: { connect: unused, status: unused, complete: unused, cancel: unused },
+    command: { connect: unused, status: unused, cancel: unused },
+  })
+
 it.effect("uses the first key or env connection Integration lists and never a ChatGPT sign-in", () =>
   Effect.gen(function* () {
     yield* TestClock.setTime(1760000000_000)
@@ -42,39 +65,18 @@ it.effect("uses the first key or env connection Integration lists and never a Ch
           Voice.layer.pipe(
             Layer.provide(
               Layer.merge(
-                Layer.mock(Integration.Service, {
-                  revision: () => 0,
-                  get: (id) => Effect.succeed({ id, name: id, methods: [], connections }),
-                  connection: {
-                    active: () => Effect.die("unused"),
-                    resolve: (connection) =>
-                      connection.type === "credential" && connection.method === "oauth"
-                        ? Effect.die("a ChatGPT sign-in was resolved")
-                        : Effect.succeed(
-                            Credential.Key.make({
-                              type: "key",
-                              key: keys[connection.type === "env" ? connection.name : connection.id],
-                            }),
-                          ),
-                    key: () => Effect.die("unused"),
-                    external: () => Effect.die("unused"),
-                    activate: () => Effect.die("unused"),
-                    update: () => Effect.die("unused"),
-                    remove: () => Effect.die("unused"),
-                    status: () => Effect.die("unused"),
-                  },
-                  oauth: {
-                    connect: () => Effect.die("unused"),
-                    status: () => Effect.die("unused"),
-                    complete: () => Effect.die("unused"),
-                    cancel: () => Effect.die("unused"),
-                  },
-                  command: {
-                    connect: () => Effect.die("unused"),
-                    status: () => Effect.die("unused"),
-                    cancel: () => Effect.die("unused"),
-                  },
-                }),
+                mockIntegration(
+                  () => connections,
+                  (connection) =>
+                    connection.type === "credential" && connection.method === "oauth"
+                      ? Effect.die("a ChatGPT sign-in was resolved")
+                      : Effect.succeed(
+                          Credential.Key.make({
+                            type: "key",
+                            key: keys[connection.type === "env" ? connection.name : connection.id],
+                          }),
+                        ),
+                ),
                 RequestExecutor.layer.pipe(
                   Layer.provide(
                     Layer.succeed(
@@ -107,16 +109,20 @@ it.effect("uses the first key or env connection Integration lists and never a Ch
     const gemini = yield* call("gemini-3.8-live", [{ type: "env", name: "GEMINI_API_KEY" }])
     expect(auths).toEqual(["Bearer sk-active", "Bearer sk-stored", "Bearer xai-env-key", "gemini-env-key"])
     expect(grok).toEqual({
-      type: "websocket",
-      url: "wss://api.x.ai/v1/realtime?model=grok-voice-3.0",
-      token: "ek_xai",
-      expiresAt: 1760000999,
+      transport: {
+        type: "websocket",
+        url: "wss://api.x.ai/v1/realtime?model=grok-voice-3.0",
+        token: "ek_xai",
+        expiresAt: 1760000999,
+      },
     })
     expect(gemini).toEqual({
-      type: "websocket",
-      url: "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained",
-      token: "auth_tokens/ek_gemini",
-      expiresAt: 1760000060,
+      transport: {
+        type: "websocket",
+        url: "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained",
+        token: "auth_tokens/ek_gemini",
+        expiresAt: 1760000060,
+      },
     })
 
     const signInOnly = yield* call("gpt-live-1", [credential("chatgpt", "oauth")]).pipe(Effect.flip)
@@ -128,3 +134,136 @@ it.effect("uses the first key or env connection Integration lists and never a Ch
     expect(missingGoogle.message).toContain("GEMINI_API_KEY")
   }),
 )
+
+it.effect("lists voice models with availability and default without resolving credentials", () =>
+  Effect.gen(function* () {
+    const list = (connections: Partial<Record<string, Integration.Info["connections"]>>) =>
+      Effect.flatMap(Voice.Service, (voice) => voice.models()).pipe(
+        Effect.provide(
+          Voice.layer.pipe(
+            Layer.provide(
+              Layer.merge(
+                mockIntegration((id) => connections[id] ?? []),
+                Layer.mock(RequestExecutor.Service, {}),
+              ),
+            ),
+          ),
+        ),
+      )
+
+    expect(
+      yield* list({
+        openai: [credential("chatgpt", "oauth")],
+        xai: [{ type: "env", name: "XAI_API_KEY" }],
+        google: [credential("gemini", "key")],
+      }),
+    ).toEqual({
+      models: [
+        { model: "gpt-live-1", provider: "openai", transports: ["webrtc"], available: false },
+        { model: "gpt-realtime-2.1", provider: "openai", transports: ["webrtc", "websocket"], available: false },
+        { model: "grok-voice-3.0", provider: "xai", transports: ["websocket"], available: true, integration: "xai" },
+        {
+          model: "gemini-3.8-live",
+          provider: "google",
+          transports: ["websocket"],
+          available: true,
+          integration: "google",
+        },
+      ],
+      default: "grok-voice-3.0",
+    })
+
+    const none = yield* list({ openai: [credential("chatgpt", "oauth")] })
+    expect(none).toEqual({
+      models: [
+        { model: "gpt-live-1", provider: "openai", transports: ["webrtc"], available: false },
+        { model: "gpt-realtime-2.1", provider: "openai", transports: ["webrtc", "websocket"], available: false },
+        { model: "grok-voice-3.0", provider: "xai", transports: ["websocket"], available: false },
+        { model: "gemini-3.8-live", provider: "google", transports: ["websocket"], available: false },
+      ],
+    })
+    expect("default" in none).toBe(false)
+  }),
+)
+
+// An OpenAI key the server could use instead, and the requests that reach OpenAI with it.
+const withStoredKey = (requests: string[]) =>
+  Voice.layer.pipe(
+    Layer.provide(
+      Layer.merge(
+        mockIntegration(
+          (id) => (id === "openai" ? [credential("stored", "key")] : []),
+          () => Effect.succeed(Credential.Key.make({ type: "key", key: "sk-stored" })),
+        ),
+        RequestExecutor.layer.pipe(
+          Layer.provide(
+            Layer.succeed(
+              HttpClient.HttpClient,
+              HttpClient.make((req: HttpClientRequest.HttpClientRequest) =>
+                Effect.sync(() => {
+                  requests.push(req.headers.authorization ?? "")
+                  return HttpClientResponse.fromWeb(req, Response.json({ transport: { sdp: "answer:openai" } }))
+                }),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  )
+
+const hostedLive = (instructed: Voice.InstructInput[]): Voice.Host => ({
+  integration: "opencode",
+  models: ["gpt-live-1"],
+  workspace: "Anomaly",
+  session: (input) =>
+    Effect.succeed({
+      transport: { type: "webrtc", sdp: input.transport.type === "webrtc" ? `answer:hosted:${input.transport.sdp}` : "" },
+      id: "sess_hosted",
+    }),
+  instruct: (input) =>
+    Effect.sync(() => {
+      instructed.push(input)
+    }),
+})
+
+const offer = { model: "gpt-live-1", transport: { type: "webrtc", sdp: "v=0" } } as const
+
+it.effect("starts a host's models and relays their instructions on it, even beside a stored key", () => {
+  const requests: string[] = []
+  return Effect.gen(function* () {
+    const voice = yield* Voice.Service
+    const instructed: Voice.InstructInput[] = []
+    yield* voice.host(hostedLive(instructed))
+
+    expect(yield* voice.session(offer)).toEqual({
+      transport: { type: "webrtc", sdp: "answer:hosted:v=0" },
+      id: "sess_hosted",
+    })
+    expect((yield* voice.models()).models.find((item) => item.model === "gpt-live-1")).toEqual({
+      model: "gpt-live-1",
+      provider: "openai",
+      transports: ["webrtc"],
+      available: true,
+      integration: "opencode",
+      workspace: "Anomaly",
+    })
+    yield* voice.instruct({ id: "sess_hosted", instructions: "The screen shows ses_1." })
+    expect(instructed).toEqual([{ id: "sess_hosted", instructions: "The screen shows ses_1." }])
+    expect(requests).toEqual([])
+  }).pipe(Effect.provide(withStoredKey(requests)))
+})
+
+it.effect("goes back to the stored key once the host is removed, and refuses instructions", () => {
+  const requests: string[] = []
+  return Effect.gen(function* () {
+    const voice = yield* Voice.Service
+    yield* voice.host(hostedLive([]))
+    yield* voice.host(undefined)
+
+    expect(yield* voice.session(offer)).toEqual({ transport: { type: "webrtc", sdp: "answer:openai" } })
+    expect(requests).toEqual(["Bearer sk-stored"])
+    const refused = yield* voice.instruct({ id: "sess_hosted", instructions: "Hello" }).pipe(Effect.flip)
+    expect(refused._tag).toBe("Voice.InvalidRequestError")
+  }).pipe(Effect.provide(withStoredKey(requests)))
+})
