@@ -139,6 +139,32 @@ it.instance(
   },
 )
 it.instance(
+  "getSmallModel keeps the session model for loopback providers even with kilo credentials",
+  Effect.gen(function* () {
+    for (const key of ["KILO_API_KEY", "KILO_AUTH_CONTENT", "KILO_CONFIG_CONTENT"]) {
+      yield* clearEnv(key)
+    }
+    const model = yield* Provider.use.getSmallModel(ProviderV2.ID.make("lmstudio"))
+    expect(model).toBeUndefined()
+  }),
+  {
+    config: {
+      provider: {
+        lmstudio: {
+          name: "LM Studio",
+          npm: "@ai-sdk/openai-compatible",
+          models: {
+            "openai/gpt-oss-20b": { release_date: "2026-01-01" },
+            "qwen/qwen3-30b-a3b-2507": { release_date: "2026-02-01" },
+          },
+          options: { baseURL: "http://localhost:1234/v1" },
+        },
+        kilo: { options: { apiKey: "kilo-key" } },
+      },
+    },
+  },
+)
+it.instance(
   "getSmallModel returns undefined without kilo credentials when the provider has no chat-capable model",
   Effect.gen(function* () {
     for (const key of ["KILO_API_KEY", "KILO_AUTH_CONTENT", "KILO_CONFIG_CONTENT"]) {
@@ -351,6 +377,8 @@ describe("isLoopbackProvider", () => {
       "http://ollama.local:11434/v1",
       "http://0.0.0.0:1234/v1",
       "http://[::]:1234/v1",
+      "http://[fd00::1]:1234/v1",
+      "http://[fe80::1]:1234/v1",
     ]) {
       expect(isLoopbackProvider({ id: "my-local-server", options: { baseURL }, models: {} })).toBe(true)
     }

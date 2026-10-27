@@ -2145,9 +2145,11 @@ const layer = Layer.effect(
 
       // kilocode_change start - skip local-server providers: their catalog lists
       // every known model but the server only serves installed ones, so the
-      // cheapest entry can name a model the user never installed. Returning
-      // undefined keeps the session-model fallback in the callers.
-      const cheap = isLoopbackProvider(provider) ? undefined : cheapestSmallModel(Object.values(provider.models))
+      // cheapest entry can name a model the user never installed. Return
+      // undefined before the Kilo fallback so auxiliary tasks use the session's
+      // own model; falling through would bill Kilo credits for a BYOK setup.
+      if (isLoopbackProvider(provider)) return undefined
+      const cheap = cheapestSmallModel(Object.values(provider.models))
       if (cheap) return cheap
       // kilocode_change end
 

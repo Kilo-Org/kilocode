@@ -377,15 +377,17 @@ function isLoopbackURL(raw: string) {
     const host = new URL(raw).hostname.toLowerCase().replace(/^\[|\]$/g, "")
     if (host === "localhost" || host === "0.0.0.0" || host === "::" || host === "::1") return true
     if (host === "host.docker.internal" || host.endsWith(".local") || host.endsWith(".internal")) return true
-    // Private, link-local, and loopback IPv4 ranges. Treating a company endpoint
-    // on these ranges as local only skips the cheap pick: callers keep the
-    // session model, so the conservative classification is safe.
+    // Private, link-local, and loopback IPv4 ranges, plus IPv6 ULA (fc00::/7)
+    // and link-local (fe80::/10). Treating a company endpoint on these ranges
+    // as local only skips the cheap pick: callers keep the session model, so
+    // the conservative classification is safe.
     return (
       /^127\./.test(host) ||
       /^10\./.test(host) ||
       /^192\.168\./.test(host) ||
       /^172\.(?:1[6-9]|2\d|3[01])\./.test(host) ||
-      /^169\.254\./.test(host)
+      /^169\.254\./.test(host) ||
+      /^(?:f[cd][0-9a-f]{2}|fe[89ab][0-9a-f]):/.test(host)
     )
   } catch {
     return false
