@@ -7,6 +7,7 @@ import { GatewayOptions } from "./gateway/options"
 import { KiloHandshakePlugin } from "./handshake"
 // kilo_port(provider-usage:ce8e021f1ef6) v1 imported the ProviderUsage Location service into location-services.ts.
 import { KiloProviderUsagePlugin } from "./provider-usage"
+import { KiloOpenAIPlugin } from "./openai"
 
 /**
  * The Kilo plugins on the public plugin API (plugin-first rung 1), in registration order. The Kilo host
@@ -27,6 +28,7 @@ export const KiloPlugins = [
   KiloGatewayPlugin,
   // v1 listed the ProviderUsage node in the Location services. kilo_port(provider-usage:b0945f511fb3)
   KiloProviderUsagePlugin,
+  KiloOpenAIPlugin,
 ] as const
 
 /** Kilo plugins that run after the config plugins: the host registers them with phase `post`. */

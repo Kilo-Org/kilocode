@@ -77,7 +77,7 @@ const browser = (app: App.Info) =>
             Effect.runFork(Deferred.fail(code, new Error(error)))
             response
               .writeHead(400, { "Content-Type": "text/html" })
-              .end(OauthCallbackPage.error(error, { provider: "ChatGPT" }))
+              .end(OauthCallbackPage.brand(OauthCallbackPage.error(error, { provider: "ChatGPT" }), app.product)) // kilocode_change(oauth:513c5db12e0f) seam - product brand
             return
           }
           if (!value || url.searchParams.get("state") !== state) {
@@ -85,20 +85,20 @@ const browser = (app: App.Info) =>
             Effect.runFork(Deferred.fail(code, new Error(message)))
             response
               .writeHead(400, { "Content-Type": "text/html" })
-              .end(OauthCallbackPage.error(message, { provider: "ChatGPT" }))
+              .end(OauthCallbackPage.brand(OauthCallbackPage.error(message, { provider: "ChatGPT" }), app.product)) // kilocode_change(oauth:3ad23f430831) seam - product brand
             return
           }
           Effect.runFork(Deferred.succeed(code, value))
           response
             .writeHead(200, { "Content-Type": "text/html" })
-            .end(OauthCallbackPage.success({ provider: "ChatGPT" }))
+            .end(OauthCallbackPage.brand(OauthCallbackPage.success({ provider: "ChatGPT" }), app.product)) // kilocode_change(oauth:ee5e067b8d7b) seam - product brand
         })
         const port = yield* listen(server)
         yield* Effect.addFinalizer(() => Effect.sync(() => server.close()))
         const redirect = `http://localhost:${port}/auth/callback`
         return {
           mode: "auto" as const,
-          url: authorizeURL(redirect, pkce, state),
+          url: authorizeURL(redirect, pkce, state, originator(app)), // kilocode_change(oauth) seam - product originator
           instructions: "Complete authorization in your browser. This window will close automatically.",
           callback: Deferred.await(code).pipe(
             Effect.flatMap((value) => exchange(value, redirect, pkce, app)),
@@ -269,7 +269,7 @@ export const OpenAIPlugin = define({
         })
         if (!chatgpt) return
         provider.headers = Provider.mergeHeaders(provider.headers, {
-          originator: "opencode",
+          originator: originator(ctx.app), // kilocode_change(oauth) seam - product originator
           "x-codex-beta-features": "remote_compaction_v2",
           ...(typeof account === "string" ? { "chatgpt-account-id": account } : {}),
         })
@@ -315,7 +315,7 @@ export const OpenAIPlugin = define({
           const session = yield* ctx.session
             .get({ sessionID: evt.sessionID })
             .pipe(Effect.orElseSucceed(() => undefined))
-          evt.headers.originator = "opencode"
+          evt.headers.originator = originator(ctx.app) // kilocode_change(oauth) seam - product originator
           // ChatGPT routes its prompt cache on this header, so children share the parent's.
           evt.headers["session-id"] = session ? SessionAffinity.get(session) : evt.sessionID
         }),
@@ -338,8 +338,17 @@ export const OpenAIPlugin = define({
 } satisfies PluginInternal.InternalPlugin)
 
 function headers(contentType: string, app: App.Info) {
-  return { "Content-Type": contentType, "User-Agent": App.useragent(app) }
+  // kilocode_change start - oauth seam: an embedder's product identifies the Codex sign-in requests
+  const agent = app.product ? `${app.product.id}/${app.version}` : App.useragent(app)
+  return { "Content-Type": contentType, "User-Agent": agent }
+  // kilocode_change end
 }
+
+// kilocode_change start - oauth seam: an embedder's product is the Codex originator
+function originator(app: App.Info) {
+  return app.product?.id ?? "opencode"
+}
+// kilocode_change end
 
 function exchange(code: string, redirect: string, pkce: Pkce, app: App.Info) {
   return request<TokenResponse>(`${issuer}/oauth/token`, {
@@ -406,7 +415,9 @@ function base64UrlEncode(buffer: ArrayBuffer) {
   return Buffer.from(buffer).toString("base64url")
 }
 
-function authorizeURL(redirect: string, pkce: Pkce, state: string) {
+// kilocode_change start - oauth seam: product originator
+function authorizeURL(redirect: string, pkce: Pkce, state: string, originator: string) {
+  // kilocode_change end
   return `${issuer}/oauth/authorize?${new URLSearchParams({
     response_type: "code",
     client_id: clientID,
@@ -417,7 +428,7 @@ function authorizeURL(redirect: string, pkce: Pkce, state: string) {
     id_token_add_organizations: "true",
     codex_cli_simplified_flow: "true",
     state,
-    originator: "opencode",
+    originator, // kilocode_change(oauth) seam - product originator
   })}`
 }
 
@@ -436,3 +447,5 @@ function claim(token: string) {
     claims.organizations?.[0]?.id
   )
 }
+
+export { browser, headless } // kilocode_change(oauth) seam - the Codex method registrations, so a plugin can relabel them
