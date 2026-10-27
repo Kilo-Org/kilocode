@@ -167,7 +167,7 @@ function checkLogos(output: string, hosted: boolean, modern: boolean) {
   expect(result.assets.logo).toEqual(hosted ? art.logo : logo)
   expect(result.assets.compact).toEqual(hosted ? art.compact : undefined)
   expect(result.assets.widths).toEqual(hosted ? art.widths : undefined)
-  expect(result.frames).toHaveLength(14)
+  expect(result.frames).toHaveLength(42)
   for (const { width, height, mode, frame, spans } of result.frames) {
     if (height < 12) {
       expect(frame.trim()).toBe("")
@@ -185,30 +185,27 @@ function checkLogos(output: string, hosted: boolean, modern: boolean) {
           ? split
           : full
     if (hosted) {
-      const ink = RGBA.fromHex("#FFDD00").toInts()
+      const ink = RGBA.fromHex(mode === "light" ? "#736400" : "#FFDD00").toInts()
       expect(frame.match(/v2/g) ?? []).toHaveLength(rows === compact ? 0 : 1)
       const suffix = spans.find((span) => span.text.includes("v2"))
       if (rows !== compact) {
         expect(suffix?.fg).toEqual(ink)
         expect(suffix!.attributes & TextAttributes.BOLD).toBe(0)
+        if (mode === "light") expect(contrast(suffix!.fg, suffix!.bg)).toBeGreaterThanOrEqual(4.5)
       }
       const strokes = spans.filter((span) => span.text.includes("█"))
       expect(strokes.length).toBeGreaterThan(0)
       for (const span of strokes) {
         expect(span.fg).toEqual(ink)
         expect(span.attributes & TextAttributes.BOLD).toBe(0)
+        if (mode === "light") expect(contrast(span.fg, span.bg)).toBeGreaterThanOrEqual(4.5)
       }
       const shadows = spans.filter((span) => span.fg.some((value, index) => value !== ink[index]))
       expect(shadows.length > 0).toBe(rows !== compact)
       for (const span of shadows) {
         expect(span.text.trim()).toMatch(/^▀+$/)
         expect(span.fg).not.toEqual(ink)
-        if (mode === "light") {
-          expect(span.fg).toEqual(RGBA.fromHex(KiloLogo.palette.dim).toInts())
-          const foreground = luminance(span.fg) + 0.05
-          const background = luminance(span.bg) + 0.05
-          expect(Math.max(foreground, background) / Math.min(foreground, background)).toBeGreaterThanOrEqual(3)
-        }
+        if (mode === "light") expect(contrast(span.fg, span.bg)).toBeGreaterThanOrEqual(3)
       }
     }
     for (const line of rows) {
@@ -218,6 +215,12 @@ function checkLogos(output: string, hosted: boolean, modern: boolean) {
     for (const line of frame.split("\n")) expect(Bun.stringWidth(line.trimEnd())).toBeLessThanOrEqual(width)
     if (hosted) expect(frame).not.toContain("█▀▀█ █▀▀█ █▀▀█ █▀▀▄")
   }
+}
+
+function contrast(foreground: number[], background: number[]) {
+  const fg = luminance(foreground) + 0.05
+  const bg = luminance(background) + 0.05
+  return Math.max(fg, bg) / Math.min(fg, bg)
 }
 
 function luminance(rgb: number[]) {

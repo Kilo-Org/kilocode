@@ -62,14 +62,14 @@ export const replacements = {
     ['import { useTheme } from "../context/theme"', 'import { useTheme, useThemes } from "../context/theme"'],
     [
       "const theme = useTheme()",
-      "const theme = useTheme()\n  const themes = useThemes()\n  const ink = RGBA.fromHex(palette.ink)",
+      'const theme = useTheme()\n  const themes = useThemes()\n  const ink = () => RGBA.fromHex(themes.mode() === "light" ? palette.dim : palette.ink)',
     ],
     [
       "const shadow = tint(theme.background.base, fg, 0.25)",
-      'const shadow = themes.mode() === "light" ? RGBA.fromHex(palette.dim) : tint(theme.background.base, fg, 0.25)',
+      'const shadow = tint(theme.background.base, fg, themes.mode() === "light" ? 0.75 : 0.25)',
     ],
-    ["theme.text.muted, false", "ink, false"],
-    ["theme.text.base, true", "ink, false"],
+    ["theme.text.muted, false", "ink(), false"],
+    ["theme.text.base, true", "ink(), false"],
     ["dimensions().width < 22", "dimensions().width < widths.split + 2"],
     ["dimensions().width < 44", "dimensions().width < widths.full + 4"],
     ["go.right.slice(1)", "compact"],
