@@ -10,7 +10,7 @@ const settings: Record<string, unknown>[] = []
 const copied: WebviewMessage[] = []
 const window = new Window({ url: "http://localhost" })
 Object.defineProperty(window, "origin", { value: window.location.origin })
-class CSSStyleSheetStub {
+class CSSStyleSheetStub extends window.CSSStyleSheet {
   replaceSync() {}
   replace() {
     return Promise.resolve(this)
