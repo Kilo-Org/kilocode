@@ -28,12 +28,12 @@ For current platform, inference, credit purchase, and cloud compute pricing, see
 
 ## Credit expiration and spending order
 
-The new paid-credit expiration policy is not active yet. It applies only prospectively from a future effective date announced in advance and disclosed before purchase. Until then, your existing purchase terms continue to apply. Check the terms and any expiration date shown before confirming a purchase.
+Paid credits expire. Check the terms and any expiration date shown before confirming a purchase.
 
-- **New paid credits:** Under the new policy, one-time purchases and automatic top-ups expire one calendar year after purchase, measured in UTC. A February 29 anniversary falls on February 28 in a non-leap year.
+- **Paid credits:** One-time purchases and automatic top-ups expire one calendar year after purchase, measured in UTC. A February 29 anniversary falls on February 28 in a non-leap year.
 - **Apple purchases:** Paid credits purchased through Apple in-app purchase do not expire, including paid credits from remaining Apple subscriptions.
-- **Kilo Pass:** Personal and organization Pass paid allotments expire one calendar year after each allotment is issued, including monthly allotments under an annual plan—not one year after the annual payment. Annual terms paid before the effective date keep their previously disclosed terms through the paid term; the new policy can apply at renewal.
-- **Existing balances and purchases:** Existing balances do not acquire a new expiration date. Previously disclosed paid terms also remain in force for purchases completed later, including pending store receipts. Promotional and bonus credits keep their separately disclosed deadlines.
+- **Kilo Pass:** Personal and organization Pass paid allotments expire one calendar year after each allotment is issued, including monthly allotments under an annual plan—not one year after the annual payment. Prepaid annual terms keep their previously disclosed terms through the paid term. This policy applies at renewal.
+- **Existing balances and purchases:** Existing balances do not acquire a new expiration date. Purchases already completed under previously disclosed terms, including pending store receipts, keep those terms. Promotional and bonus credits keep their separately disclosed deadlines.
 
 Credits with the earliest expiration date are used first, regardless of whether they are paid, promotional, or bonus credits. Credits without an expiration date are used last. Transfers between organizations and payment reversals preserve the original credit terms and deadlines; they do not restart the clock.
 

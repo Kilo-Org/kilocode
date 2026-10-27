@@ -63,9 +63,9 @@ Organizations have their own balance pool that members draw from. Organization b
 
 ### Credit expiration
 
-The new paid-credit expiration policy is not active yet and applies only from a future effective date announced in advance and disclosed before the affected purchase or renewal. Under that policy, new paid purchases expire one calendar year after purchase; each personal or organization Kilo Pass paid allotment expires one calendar year after issuance, including monthly allotments under annual plans. Paid Apple in-app-purchase credits do not expire, including remaining Apple subscription credits.
+Paid purchases expire one calendar year after purchase. Each personal or organization Kilo Pass paid allotment expires one calendar year after issuance, including monthly allotments under annual plans. Paid Apple in-app-purchase credits do not expire, including remaining Apple subscription credits.
 
-Existing balances and previously disclosed paid terms are preserved, including pending purchases and annual terms paid before the effective date through their renewal. Promotional and bonus deadlines are unchanged. Usage draws from the earliest-expiring credits first, with nonexpiring credits last. For details, see [credit expiration and spending order](/docs/getting-started/adding-credits#credit-expiration-and-spending-order).
+Existing balances and previously disclosed paid terms are preserved, including pending purchases and prepaid annual terms through renewal. Promotional and bonus deadlines are unchanged. Usage draws from the earliest-expiring credits first, with nonexpiring credits last. For details, see [credit expiration and spending order](/docs/getting-started/adding-credits#credit-expiration-and-spending-order).
 
 ## Organization controls
 
