@@ -4,6 +4,7 @@ import { createEffect, createMemo, createSignal, Match, on, Show, Switch } from 
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
 import { SessionList } from "./history"
+import { TaskHeader } from "../components/chat/TaskHeader"
 import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
 import { PromptInput } from "./prompt"
@@ -112,6 +113,9 @@ export function Chat() {
       </Match>
       <Match when={view() === "chat"}>
         <div class="chat-view">
+          <Show when={session()} keyed>
+            {(id) => <TaskHeader sessionID={id} />}
+          </Show>
           <div class="chat-messages-wrapper">
             <div class="chat-messages">
               <MessageList session={session()} onSelectSession={open} onShowHistory={() => setView("history")} />
