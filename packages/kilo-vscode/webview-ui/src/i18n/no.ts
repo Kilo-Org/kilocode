@@ -337,6 +337,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Les gjøremål",
   "ui.permission.toolLabel.todoWrite": "Skriv gjøremål",
   "ui.permission.toolLabel.codeSearch": "Kodesøk",
+  "ui.permission.toolLabel.browserOpen": "Integrert nettleser",
   "ui.permission.copyCommand": "Kopier",
   "ui.approval.auto": "Automatisk godkjent",
   "ui.approval.manual": "Godkjent av deg",
@@ -572,6 +573,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Hent innhold fra en URL",
   "settings.permissions.tool.websearch.description": "Søk på nettet",
   "settings.permissions.tool.codesearch.description": "Søk etter kode på nettet",
+  "settings.permissions.tool.browser_open.description": "Åpne en side i den integrerte nettleseren",
   "settings.permissions.tool.external_directory.description": "Få tilgang til filer utenfor prosjektmappen",
   "settings.permissions.tool.doom_loop.description": "Oppdager gjentatte verktøykall med identisk input",
 
@@ -729,6 +731,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code er en AI-kodingsassistent. Be den om å bygge funksjoner, fikse feil eller forklare kodebasen din.",
+  "session.workspaceScope.description":
+    "Kilo-chatten bruker bare «{{folder}}», den første mappen i dette arbeidsområdet.",
+  "session.workspaceScope.alternatives":
+    "For å jobbe med en annen mappe kan du åpne den i et eget vindu eller legge den til som et prosjekt i Agent Manager.",
+  "session.workspaceScope.dismiss": "Skjul hintet om arbeidsområdets avgrensning",
   "session.messages.scrollToBottom": "Rull til bunnen",
   "session.messages.initializing": "Initialiserer...",
   "session.messages.taskStarting": "Starter...",
@@ -1175,6 +1182,8 @@ export const dict = {
     "Administrer oppgaveliste. Tillater lesing og oppdatering av den interne oppgavelisten.",
   "settings.autoApprove.tool.webfetch": "Hent en URL. Tillater henting av innhold fra en spesifikk URL.",
   "settings.autoApprove.tool.websearch": "Søk på nettet. Tillater å utføre eksterne nettsøk.",
+  "settings.autoApprove.tool.browser_open":
+    "Åpne sider i den integrerte nettleseren. Dette er forhåndsvisningen i appen, ikke Playwright-browserautomatisering.",
   "settings.autoApprove.tool.external_directory":
     "Få tilgang til filer utenfor arbeidsområdet. Utløses ved tilgang til filer utenfor gjeldende prosjektkatalog.",
   "settings.autoApprove.tool.doom_loop":

@@ -315,6 +315,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "读取待办",
   "ui.permission.toolLabel.todoWrite": "更新待办",
   "ui.permission.toolLabel.codeSearch": "代码搜索",
+  "ui.permission.toolLabel.browserOpen": "集成浏览器",
   "ui.permission.copyCommand": "复制",
   "ui.approval.auto": "已自动批准",
   "ui.approval.manual": "由你批准",
@@ -583,6 +584,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "从 URL 获取内容",
   "settings.permissions.tool.websearch.description": "搜索网页",
   "settings.permissions.tool.codesearch.description": "在网上搜索代码",
+  "settings.permissions.tool.browser_open.description": "在集成浏览器中打开页面",
   "settings.permissions.tool.external_directory.description": "访问项目目录之外的文件",
   "settings.permissions.tool.doom_loop.description": "检测具有相同输入的重复工具调用",
 
@@ -738,6 +740,10 @@ export const dict = {
   "settings.aboutKiloCode.title": "关于 Kilo Code",
 
   "session.messages.welcome": "Kilo Code 是一个 AI 编程助手。让它帮你构建功能、修复 bug 或解释代码库。",
+  "session.workspaceScope.description": "Kilo 聊天仅使用此工作区中的第一个文件夹“{{folder}}”。",
+  "session.workspaceScope.alternatives":
+    "要使用其他文件夹，请在单独的窗口中打开它，或将其作为项目添加到 Agent Manager。",
+  "session.workspaceScope.dismiss": "关闭工作区范围提示",
   "session.messages.scrollToBottom": "滚动到底部",
   "session.messages.initializing": "初始化中...",
   "session.messages.taskStarting": "启动中...",
@@ -1114,6 +1120,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "管理任务列表。允许读取和更新内部任务列表。",
   "settings.autoApprove.tool.webfetch": "获取 URL。允许从特定 URL 检索内容。",
   "settings.autoApprove.tool.websearch": "搜索网页。允许执行外部 Web 搜索。",
+  "settings.autoApprove.tool.browser_open": "在集成浏览器中打开页面。这是应用内预览，不是 Playwright 浏览器自动化。",
   "settings.autoApprove.tool.external_directory": "访问工作区外部的文件。访问当前项目目录之外的文件时触发。",
   "settings.autoApprove.tool.doom_loop": "防止重复相同操作。当相同的工具调用以相同的输入重复时触发。",
   "settings.checkpoints.enable.title": "启用快照",

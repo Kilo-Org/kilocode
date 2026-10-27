@@ -329,6 +329,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Görev Oku",
   "ui.permission.toolLabel.todoWrite": "Görev Yaz",
   "ui.permission.toolLabel.codeSearch": "Kod Araması",
+  "ui.permission.toolLabel.browserOpen": "Entegre Tarayıcı",
   "ui.permission.copyCommand": "Kopyala",
   "ui.approval.auto": "Otomatik onaylandı",
   "ui.approval.manual": "Sizin tarafınızdan onaylandı",
@@ -557,6 +558,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Bir URL'den içerik getir",
   "settings.permissions.tool.websearch.description": "Web'de ara",
   "settings.permissions.tool.codesearch.description": "Web'de kod ara",
+  "settings.permissions.tool.browser_open.description": "Sayfayı Entegre Tarayıcıda aç",
   "settings.permissions.tool.external_directory.description": "Proje dizini dışındaki dosyalara eriş",
   "settings.permissions.tool.doom_loop.description": "Aynı girdiyle tekrarlanan araç çağrılarını algıla",
 
@@ -755,6 +757,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code bir yapay zeka kodlama asistanıdır. Özellik geliştirmesini, hata düzeltmesini veya kod tabanınızı açıklamasını isteyin.",
+  "session.workspaceScope.description":
+    "Kilo sohbeti yalnızca bu çalışma alanındaki ilk klasör olan “{{folder}}” klasörünü kullanır.",
+  "session.workspaceScope.alternatives":
+    "Başka bir klasörde çalışmak için klasörü ayrı bir pencerede açın veya Agent Manager'a proje olarak ekleyin.",
+  "session.workspaceScope.dismiss": "Çalışma alanı kapsamı ipucunu kapat",
   "session.messages.scrollToBottom": "En alta kaydır",
   "session.messages.initializing": "Başlatılıyor...",
   "session.messages.taskStarting": "Başlıyor...",
@@ -1135,6 +1142,8 @@ export const dict = {
     "Görev listesini yönet. Dahili görev listesini okuma ve güncellemeye izin verir.",
   "settings.autoApprove.tool.webfetch": "URL getir. Belirli bir URL'den içerik almaya izin verir.",
   "settings.autoApprove.tool.websearch": "Web'de ara. Harici web aramaları yapmaya izin verir.",
+  "settings.autoApprove.tool.browser_open":
+    "Sayfaları Entegre Tarayıcıda aç. Bu, uygulama içi önizlemedir, Playwright tarayıcı otomasyonu değildir.",
   "settings.autoApprove.tool.doom_loop":
     "Tekrarlanan aynı eylemleri önle. Aynı araç çağrısı aynı girdiyle tekrarlandığında tetiklenir.",
 

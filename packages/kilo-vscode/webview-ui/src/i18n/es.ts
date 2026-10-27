@@ -334,6 +334,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Leer Todo",
   "ui.permission.toolLabel.todoWrite": "Escribir Todo",
   "ui.permission.toolLabel.codeSearch": "Búsqueda de Código",
+  "ui.permission.toolLabel.browserOpen": "Navegador integrado",
   "ui.permission.copyCommand": "Copiar",
   "ui.approval.auto": "Aprobado automáticamente",
   "ui.approval.manual": "Aprobado por ti",
@@ -614,6 +615,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Obtener contenido de una URL",
   "settings.permissions.tool.websearch.description": "Buscar en la web",
   "settings.permissions.tool.codesearch.description": "Buscar código en la web",
+  "settings.permissions.tool.browser_open.description": "Abrir una página en el Navegador integrado",
   "settings.permissions.tool.external_directory.description": "Acceder a archivos fuera del directorio del proyecto",
   "settings.permissions.tool.doom_loop.description": "Detectar llamadas a herramientas repetidas con entrada idéntica",
 
@@ -774,6 +776,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code es un asistente de programación con IA. Pídele que cree funcionalidades, corrija errores o explique tu código.",
+  "session.workspaceScope.description":
+    "El chat de Kilo solo usa «{{folder}}», la primera carpeta de este espacio de trabajo.",
+  "session.workspaceScope.alternatives":
+    "Para trabajar con otra carpeta, ábrela en su propia ventana o añádela como proyecto en Agent Manager.",
+  "session.workspaceScope.dismiss": "Ocultar aviso sobre el alcance del espacio de trabajo",
   "session.messages.scrollToBottom": "Desplazar al final",
   "session.messages.initializing": "Inicializando...",
   "session.messages.taskStarting": "Iniciando...",
@@ -1192,6 +1199,8 @@ export const dict = {
     "Administrar lista de tareas. Permite leer y actualizar la lista de tareas interna.",
   "settings.autoApprove.tool.webfetch": "Obtener una URL. Permite recuperar contenido de una URL específica.",
   "settings.autoApprove.tool.websearch": "Buscar en la web. Permite realizar búsquedas externas en la web.",
+  "settings.autoApprove.tool.browser_open":
+    "Abrir páginas en el Navegador integrado. Es la vista previa integrada, no la automatización con Playwright.",
   "settings.autoApprove.tool.external_directory":
     "Acceder a archivos fuera del espacio de trabajo. Se activa al acceder a archivos fuera del directorio del proyecto actual.",
   "settings.autoApprove.tool.doom_loop":
