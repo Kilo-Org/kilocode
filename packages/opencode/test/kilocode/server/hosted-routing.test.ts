@@ -49,6 +49,37 @@ afterEach(async () => {
 })
 
 describe("hosted attachment routing", () => {
+  test("routes the registered system feed through the hosted provider", async () => {
+    const calls: NativeRequest[] = []
+    const fake = provider("alpha", {
+      route: (request) => {
+        calls.push(request)
+        return Effect.succeed(
+          new Response('data: {"type":"preparing","properties":{}}\n\n', {
+            headers: { "content-type": "text/event-stream" },
+          }),
+        )
+      },
+    })
+    const entry = attach(fake)
+    const response = await app().request(`/cloud-agent/event?workspace=${entry.id}`)
+    expect(response.status).toBe(200)
+    expect(response.headers.get("content-type")).toContain("text/event-stream")
+    expect(await response.text()).toContain('"type":"preparing"')
+    expect(calls[0]?.path).toBe("/cloud-agent/event")
+    expect(calls[0]?.session.sessionID).toBe(SESSION)
+  })
+
+  test("rejects system feeds without a live hosted attachment", async () => {
+    const api = app()
+    const local = await api.request("/cloud-agent/event")
+    expect(local.status).toBe(400)
+    expect(await local.json()).toMatchObject({ message: "A hosted attachment is required for Cloud Agent events" })
+    const unknown = await api.request(`/cloud-agent/event?workspace=${Attachments.createID()}`)
+    expect(unknown.status).toBe(404)
+    expect(await unknown.json()).toMatchObject({ code: "unknown" })
+  })
+
   test("routes a native read to the provider and strips local credentials and selectors", async () => {
     const api = app()
     const fake = provider("alpha")
@@ -71,7 +102,14 @@ describe("hosted attachment routing", () => {
     const call = fake.calls[0]
     expect(call.session.sessionID).toBe(SESSION)
     expect(call.headers.get("accept")).toBe("application/json")
-    for (const stripped of ["authorization", "cookie", "x-kilo-directory", "x-kilo-workspace", "x-kilo-ticket", "host"]) {
+    for (const stripped of [
+      "authorization",
+      "cookie",
+      "x-kilo-directory",
+      "x-kilo-workspace",
+      "x-kilo-ticket",
+      "host",
+    ]) {
       expect(call.headers.get(stripped)).toBeNull()
     }
   })

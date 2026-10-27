@@ -19,6 +19,12 @@ import { testEffect, pollWithTimeout } from "../../lib/effect"
 import { parse } from "../../server/httpapi-exercise/assertions"
 
 const SESSION = "ses_00000000000000000000000001"
+const OTHER = "ses_00000000000000000000000002"
+const WORKSPACE = "worktree_12345678-1234-1234-1234-123456789abc"
+const CLOUD = "workspace_12345678-1234-1234-1234-123456789abc"
+const CONTROL = "kilo-test-control-value"
+const PROFILE = "33333333-3333-4333-8333-333333333333"
+const MESSAGE = "msg_00000000000000000000000009"
 const TOKEN = "kilo-test-bearer-value"
 
 const TestHttpApi = HttpApi.make("opencode-instance").addHttpApi(SessionHostApi)
@@ -35,8 +41,43 @@ function sessionInfo(id: string) {
   })
 }
 
+function workspaceSummary(overrides: Record<string, unknown> = {}) {
+  return {
+    workspaceId: WORKSPACE,
+    userId: "user_1",
+    organizationId: null,
+    name: "Fix the thing",
+    repositoryProvider: "github",
+    gitUrl: "https://github.com/Kilo-Org/kilocode",
+    gitBranch: "main",
+    profileId: PROFILE,
+    deletionState: "active",
+    created: 100,
+    updated: 200,
+    lastActivity: 300,
+    sessions: [
+      {
+        kiloSessionId: SESSION,
+        cloudAgentSessionId: CLOUD,
+        workspaceId: WORKSPACE,
+        userId: "user_1",
+        organizationId: null,
+        title: "Root chat",
+        gitUrl: "https://github.com/Kilo-Org/kilocode",
+        gitBranch: "main",
+        profileId: PROFILE,
+        createdOnPlatform: "agent-manager",
+        created: 100,
+        updated: 200,
+      },
+    ],
+    nextSessionCursor: null,
+    ...overrides,
+  }
+}
+
 function harness() {
-  const calls: Array<{ method: string; path: string; search: string; body: string }> = []
+  const calls: Array<{ method: string; path: string; search: string; auth: string | null; body: string }> = []
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
@@ -47,8 +88,12 @@ function harness() {
         method: request.method,
         path: url.pathname,
         search: url.search,
+        auth: request.headers.get("authorization"),
         body,
       })
+      if (url.pathname === "/api/cloud-agent-next/token") {
+        return Response.json({ token: CONTROL, expiresAt: new Date(Date.now() + 600_000).toISOString() })
+      }
       if (url.pathname === "/kilo/session" && request.method === "GET") {
         return Response.json([sessionInfo(SESSION)])
       }
@@ -90,6 +135,42 @@ function harness() {
           },
         })
       }
+      if (url.pathname === "/trpc/listHostedWorkspaces") {
+        return Response.json({ result: { data: { items: [workspaceSummary()], nextCursor: "cursor-2" } } })
+      }
+      if (url.pathname === "/trpc/getHostedWorkspace") {
+        const input = Object(parse(url.searchParams.get("input") ?? "{}"))
+        if (input.workspaceId !== WORKSPACE) return Response.json({ result: { data: null } })
+        return Response.json({ result: { data: workspaceSummary({ nextSessionCursor: "session-cursor-1" }) } })
+      }
+      if (url.pathname === "/trpc/createHostedWorkspace") {
+        const input = Object(parse(body))
+        return Response.json({
+          result: {
+            data: {
+              workspaceId: WORKSPACE,
+              cloudAgentSessionId: CLOUD,
+              kiloSessionId: SESSION,
+              messageId: input.message?.id,
+              replayed: false,
+            },
+          },
+        })
+      }
+      if (url.pathname === "/trpc/createHostedWorkspaceSession") {
+        const input = Object(parse(body))
+        return Response.json({
+          result: {
+            data: {
+              workspaceId: input.workspaceId,
+              cloudAgentSessionId: CLOUD,
+              kiloSessionId: OTHER,
+              messageId: input.message?.id,
+              replayed: false,
+            },
+          },
+        })
+      }
       return Response.json({ error: "KILO_SESSION_NOT_FOUND" }, { status: 404 })
     },
   })
@@ -107,7 +188,7 @@ function auth() {
 }
 
 function layer(url: string) {
-  const host = SessionHost.layer({ env: { CLOUD_AGENT_NEXT_BASE_URL: url } }).pipe(
+  const host = SessionHost.layer({ env: { CLOUD_AGENT_NEXT_BASE_URL: url, KILO_WEB_APP_URL: url } }).pipe(
     Layer.provide(Layer.succeed(Auth.Service, auth())),
   )
   return HttpRouter.serve(
@@ -115,7 +196,10 @@ function layer(url: string) {
       Layer.provide(sessionHostHandlers),
       Layer.provide(schemaErrorLayer),
       Layer.provide([
-        Layer.succeed(Authorization, Authorization.of((effect) => effect)),
+        Layer.succeed(
+          Authorization,
+          Authorization.of((effect) => effect),
+        ),
         host,
         AppNodeBuilder.build(EventV2Bridge.node),
       ]),
@@ -253,9 +337,13 @@ describe("session host HttpApi", () => {
       const first = Object(yield* (yield* HttpClient.post(path)).json)
       const second = Object(yield* (yield* HttpClient.post(path)).json)
 
-      yield* HttpClient.execute(HttpClientRequest.delete(SessionHostPaths.attachment.replace(":attachmentID", first.attachmentID)))
+      yield* HttpClient.execute(
+        HttpClientRequest.delete(SessionHostPaths.attachment.replace(":attachmentID", first.attachmentID)),
+      )
       expect(events).toEqual([])
-      yield* HttpClient.execute(HttpClientRequest.delete(SessionHostPaths.attachment.replace(":attachmentID", second.attachmentID)))
+      yield* HttpClient.execute(
+        HttpClientRequest.delete(SessionHostPaths.attachment.replace(":attachmentID", second.attachmentID)),
+      )
       yield* pollWithTimeout(
         Effect.sync(() => (events.length === 1 ? true : undefined)),
         "the final detach should publish unavailable",
@@ -277,6 +365,96 @@ describe("session host HttpApi", () => {
       )
       expect(response.status).toBe(200)
       expect(yield* response.json).toMatchObject({ session: { sessionID: SESSION }, replayed: false })
+    }),
+  )
+
+  it.live("lists and reads hosted workspaces with cursor preservation and no private identity", () =>
+    Effect.gen(function* () {
+      const list = yield* HttpClient.get(`${SessionHostPaths.workspace}?limit=5&sessionLimit=2`)
+      expect(list.status).toBe(200)
+      const page: unknown = yield* list.json
+      expect(page).toMatchObject({
+        items: [
+          {
+            id: { providerID: "kilo-cloud", workspaceID: WORKSPACE },
+            repository: { provider: "github", url: "https://github.com/Kilo-Org/kilocode", branch: "main" },
+            profileID: PROFILE,
+            deletionState: "active",
+            sessions: [{ id: { providerID: "kilo-cloud", sessionID: SESSION } }],
+          },
+        ],
+        cursor: "cursor-2",
+      })
+      const text = JSON.stringify(page)
+      for (const secret of [app.url, TOKEN, CLOUD, "cloudAgentSessionId"]) expect(text).not.toContain(secret)
+
+      const detail = yield* HttpClient.get(
+        SessionHostPaths.workspaceDetail.replace(":providerID", "kilo-cloud").replace(":workspaceID", WORKSPACE),
+      )
+      expect(detail.status).toBe(200)
+      expect(yield* detail.json).toMatchObject({ id: { workspaceID: WORKSPACE }, cursor: "session-cursor-1" })
+
+      const missing = yield* HttpClient.get(
+        SessionHostPaths.workspaceDetail
+          .replace(":providerID", "kilo-cloud")
+          .replace(":workspaceID", "worktree_00000000-0000-4000-8000-000000000000"),
+      )
+      expect(missing.status).toBe(404)
+    }),
+  )
+
+  it.live("creates a workspace and starts another session in it with caller-supplied idempotency", () =>
+    Effect.gen(function* () {
+      const created = yield* HttpClientRequest.post(SessionHostPaths.workspace).pipe(
+        HttpClientRequest.bodyJson({
+          repository: { type: "github", repo: "Kilo-Org/kilocode", branch: "main" },
+          profile: { id: PROFILE },
+          prompt: "hello",
+          agent: { mode: "build", model: "test/fake" },
+          operationKey: "11111111-1111-4111-8111-111111111111",
+          messageID: MESSAGE,
+        }),
+        Effect.flatMap(HttpClient.execute),
+      )
+      expect(created.status).toBe(200)
+      const result: unknown = yield* created.json
+      expect(result).toMatchObject({
+        workspace: { providerID: "kilo-cloud", workspaceID: WORKSPACE },
+        session: { providerID: "kilo-cloud", sessionID: SESSION },
+        messageID: MESSAGE,
+        replayed: false,
+      })
+      expect(JSON.stringify(result)).not.toContain(CLOUD)
+
+      const call = app.calls.find((item) => item.path === "/trpc/createHostedWorkspace")
+      expect(call?.body).toContain('"clientProvenance":"agent-manager"')
+      expect(call?.body).toContain(`"id":"${MESSAGE}"`)
+      // The issuer sees the source credential; the Worker sees only the control token.
+      const issued = app.calls.find((item) => item.path === "/api/cloud-agent-next/token")
+      expect(issued?.auth).toBe(`Bearer ${TOKEN}`)
+      expect(issued?.body).toBe("{}")
+      expect(call?.auth).toBe(`Bearer ${CONTROL}`)
+
+      const started = yield* HttpClientRequest.post(
+        SessionHostPaths.workspaceSession.replace(":providerID", "kilo-cloud").replace(":workspaceID", WORKSPACE),
+      ).pipe(
+        HttpClientRequest.bodyJson({
+          prompt: "again",
+          agent: { mode: "build", model: "test/fake" },
+          operationKey: "22222222-2222-4222-8222-222222222222",
+          messageID: "msg_0000000000000000000000000a",
+        }),
+        Effect.flatMap(HttpClient.execute),
+      )
+      expect(started.status).toBe(200)
+      expect(yield* started.json).toMatchObject({
+        workspace: { providerID: "kilo-cloud", workspaceID: WORKSPACE },
+        session: { providerID: "kilo-cloud", sessionID: OTHER },
+        messageID: "msg_0000000000000000000000000a",
+      })
+
+      const sessionCall = app.calls.find((item) => item.path === "/trpc/createHostedWorkspaceSession")
+      expect(sessionCall?.body).toContain(`"workspaceId":"${WORKSPACE}"`)
     }),
   )
 })

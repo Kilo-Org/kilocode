@@ -18,6 +18,7 @@ const WORKSPACE = "workspace_12345678-1234-1234-1234-123456789abc"
 const OPERATION = "11111111-1111-4111-8111-111111111111"
 const ORG = "22222222-2222-4222-8222-222222222222"
 const TOKEN = "kilo-test-bearer-value"
+const CONTROL = "kilo-test-control-value"
 
 type Call = {
   readonly method: string
@@ -45,6 +46,9 @@ function harness() {
     port: 0,
     async fetch(request) {
       const url = new URL(request.url)
+      if (url.pathname === "/api/cloud-agent-next/token") {
+        return Response.json({ token: CONTROL, expiresAt: new Date(Date.now() + 600_000).toISOString() })
+      }
       const body = request.method === "POST" ? await request.text() : ""
       calls.push({
         method: request.method,
@@ -143,7 +147,7 @@ function auth(info: Auth.Info | undefined) {
 const signedIn = () => new Auth.Api({ type: "api", key: TOKEN })
 
 function client(url: string, info: Auth.Info | undefined) {
-  return kiloCloud({ auth: auth(info), env: { CLOUD_AGENT_NEXT_BASE_URL: url } })
+  return kiloCloud({ auth: auth(info), env: { CLOUD_AGENT_NEXT_BASE_URL: url, KILO_WEB_APP_URL: url } })
 }
 
 const hosted: HostedSessionID = { providerID: PROVIDER, sessionID: SESSION }
@@ -183,7 +187,7 @@ it.effect("normalizes an idle-stopped transcript into native models without a li
       method: "GET",
       path: "/kilo/session",
       search: "?limit=2",
-      auth: `Bearer ${TOKEN}`,
+      auth: `Bearer ${CONTROL}`,
     })
     expect(app.calls[1]).toMatchObject({
       path: `/kilo/session/${SESSION}/message`,
@@ -216,7 +220,7 @@ it.effect("reports signed-out state as actionable and performs no Cloud request"
   let requests = 0
   const cloud = kiloCloud({
     auth: auth(undefined),
-    env: { CLOUD_AGENT_NEXT_BASE_URL: "http://127.0.0.1:1" },
+    env: { CLOUD_AGENT_NEXT_BASE_URL: "http://127.0.0.1:1", KILO_WEB_APP_URL: "http://127.0.0.1:1" },
     fetch: Object.assign(
       () => {
         requests += 1
@@ -274,7 +278,7 @@ it.effect("starts the proven flow with a retry-safe key and never returns a Clou
     expect(JSON.stringify(first)).not.toContain(TOKEN)
 
     const call = app.calls[0]
-    expect(call).toMatchObject({ method: "POST", path: "/trpc/start", auth: `Bearer ${TOKEN}`, org: ORG })
+    expect(call).toMatchObject({ method: "POST", path: "/trpc/start", auth: `Bearer ${CONTROL}`, org: ORG })
     const body = Schema.decodeUnknownSync(StartBody)(JSON.parse(call.body))
     expect(body).toMatchObject({
       message: { prompt: "Do the thing", id: MESSAGE },
@@ -320,7 +324,7 @@ it.effect("keeps durable reads while a later operation failure exposes retryabil
 it.effect("keeps transport state separate from provider availability", () => {
   const unreachable = kiloCloud({
     auth: auth(signedIn()),
-    env: { CLOUD_AGENT_NEXT_BASE_URL: "http://127.0.0.1:1" },
+    env: { CLOUD_AGENT_NEXT_BASE_URL: "http://127.0.0.1:1", KILO_WEB_APP_URL: "http://127.0.0.1:1" },
   })
   return Effect.gen(function* () {
     const failure = yield* unreachable.list().pipe(Effect.flip)
@@ -334,7 +338,7 @@ it.effect("marks an ambiguous start as non-retryable without an idempotency key"
   const app = harness()
   const cloud = kiloCloud({
     auth: auth(signedIn()),
-    env: { CLOUD_AGENT_NEXT_BASE_URL: "http://127.0.0.1:1" },
+    env: { CLOUD_AGENT_NEXT_BASE_URL: "http://127.0.0.1:1", KILO_WEB_APP_URL: "http://127.0.0.1:1" },
   })
   return Effect.gen(function* () {
     const failure = yield* cloud
@@ -412,7 +416,7 @@ it.effect("returns an attachment descriptor with no provider-private material", 
   const now = 1_000_000
   const cloud = kiloCloud({
     auth: auth(signedIn()),
-    env: { CLOUD_AGENT_NEXT_BASE_URL: app.url },
+    env: { CLOUD_AGENT_NEXT_BASE_URL: app.url, KILO_WEB_APP_URL: app.url },
     clock: () => now,
   })
   return Effect.gen(function* () {

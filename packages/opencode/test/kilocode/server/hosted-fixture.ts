@@ -19,6 +19,21 @@ export function provider(id: string, options: { attach?: Provider["attach"]; rou
     transcript: () => Effect.succeed({ items: [] }),
     start: () =>
       Effect.fail(new HostedFailure({ code: "invalid_request", message: "start is not supported", retryable: false })),
+    listWorkspaces: () => Effect.succeed({ items: [] }),
+    getWorkspace: () =>
+      Effect.fail(new HostedFailure({ code: "not_found", message: "not found", retryable: false })),
+    createWorkspace: () =>
+      Effect.fail(
+        new HostedFailure({ code: "invalid_request", message: "createWorkspace is not supported", retryable: false }),
+      ),
+    startWorkspaceSession: () =>
+      Effect.fail(
+        new HostedFailure({
+          code: "invalid_request",
+          message: "startWorkspaceSession is not supported",
+          retryable: false,
+        }),
+      ),
     attach:
       options.attach ??
       ((input: AttachInput): Effect.Effect<Attachment> =>

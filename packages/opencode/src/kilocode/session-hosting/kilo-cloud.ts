@@ -1,9 +1,10 @@
 import { Auth } from "@/auth"
 import { CloudAuth } from "@/kilocode/cloud/auth"
 import { AgentStartRequestSchema, AgentStartResponseSchema } from "@/kilocode/cloud/contracts"
+import { ControlTokenError, createControlTokenClient, type ControlTokenClient } from "@/kilocode/cloud/control-token"
 import { createBearerHttpClient, type BearerRequest } from "@/kilocode/cloud/http"
 import { createMessageId } from "@/kilocode/cloud/message-id"
-import { resolveCloudAgentOrigin } from "@/kilocode/cloud/origin"
+import { resolveCloudAgentOrigin, resolveWebAppOrigin } from "@/kilocode/cloud/origin"
 import { readBoundedJson } from "@/kilocode/cloud/response-json"
 import { buildKiloHeaders } from "@kilocode/kilo-gateway"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
@@ -11,29 +12,86 @@ import { Effect, Redacted, Schema } from "effect"
 import z from "zod"
 import {
   AttachInput,
+  CreateWorkspaceInput,
   GetInput,
   HostedFailure,
   HostedSessionID,
+  HostedWorkspaceID,
   ListInput,
   ProviderID,
   StartInput,
   TranscriptInput,
+  WorkspaceGetInput,
+  WorkspaceListInput,
+  WorkspaceSessionStartInput,
   type Attachment,
   type Availability,
+  type CreateWorkspaceResult,
   type HostedSession,
   type HostedSessionPage,
   type HostedTranscriptPage,
+  type HostedWorkspace,
+  type HostedWorkspacePage,
   type NativeRequest,
   type Provider,
+  type Repository,
+  type Agent,
+  type Profile,
   type StartResult,
   type Transport,
+  type WorkspaceSessionStartResult,
 } from "./types"
 import { classify } from "./native-routes"
 
 export const PROVIDER = Schema.decodeUnknownSync(ProviderID)("kilo-cloud")
 export const ATTACHMENT_TTL_MS = 60_000
 
-const StartEnvelope = z.object({ result: z.object({ data: z.unknown() }) })
+const Envelope = z.object({ result: z.object({ data: z.unknown() }) })
+
+const WorkspaceSessionSummary = z.object({
+  kiloSessionId: z.string().min(1),
+  cloudAgentSessionId: z.string().min(1),
+  workspaceId: z.string().min(1).nullable(),
+  userId: z.string().min(1),
+  organizationId: z.string().nullable(),
+  title: z.string().nullable(),
+  gitUrl: z.string().nullable(),
+  gitBranch: z.string().nullable(),
+  profileId: z.string().nullable(),
+  createdOnPlatform: z.string().min(1),
+  created: z.number(),
+  updated: z.number(),
+})
+
+const WorkspaceSummary = z.object({
+  workspaceId: z.string().min(1),
+  userId: z.string().min(1),
+  organizationId: z.string().nullable(),
+  name: z.string().nullable(),
+  repositoryProvider: z.enum(["github", "gitlab", "bitbucket", "git"]).nullable(),
+  gitUrl: z.string().nullable(),
+  gitBranch: z.string().nullable(),
+  profileId: z.string().nullable(),
+  deletionState: z.enum(["active", "deleting", "deleted"]),
+  created: z.number(),
+  updated: z.number(),
+  lastActivity: z.number(),
+  sessions: z.array(WorkspaceSessionSummary),
+  nextSessionCursor: z.string().nullable(),
+})
+
+const WorkspacePage = z.object({
+  items: z.array(WorkspaceSummary),
+  nextCursor: z.string().nullable(),
+})
+
+const WorkspaceCreate = z.object({
+  workspaceId: z.string().min(1),
+  cloudAgentSessionId: z.string().min(1),
+  kiloSessionId: z.string().min(1),
+  messageId: z.string().min(1),
+  replayed: z.boolean().optional(),
+})
 
 export interface Options {
   readonly auth: Auth.Interface
@@ -101,14 +159,57 @@ export function provider(options: Options): Provider {
     catch: () => new HostedFailure({ code: "rejected", message: "Kilo Cloud base URL is invalid", retryable: false }),
   })
 
+  const webOrigin = Effect.try({
+    try: () => resolveWebAppOrigin(env),
+    catch: () => new HostedFailure({ code: "rejected", message: "Kilo web app URL is invalid", retryable: false }),
+  })
+
+  const controlTokens: ControlTokenClient = createControlTokenClient({
+    ...(options.fetch ? { fetch: options.fetch } : {}),
+    clock,
+  })
+
+  const controlError = (error: unknown): HostedFailure => {
+    if (error instanceof ControlTokenError) {
+      if (error.reason === "unauthorized") {
+        return new HostedFailure({ code: "unauthorized", message: error.message, retryable: false })
+      }
+      if (error.reason === "invalid_response") {
+        return new HostedFailure({ code: "invalid_response", message: error.message, retryable: false })
+      }
+    }
+    unreachable()
+    return new HostedFailure({
+      code: "unavailable",
+      message: error instanceof ControlTokenError ? error.message : "Kilo control token could not be issued",
+      retryable: true,
+    })
+  }
+
+  /**
+   * Every Worker call exchanges the original user source credential for a
+   * short-lived control token first. The source credential is presented only to
+   * the issuer; the Worker sees only the control token.
+   */
   const request = (auth: CloudAuth.Resolved, req: BearerRequest) =>
     Effect.gen(function* () {
       const base = yield* origin
+      const issuer = yield* webOrigin
+      const control = yield* Effect.tryPromise({
+        try: () =>
+          controlTokens.exchange({
+            source: auth.token,
+            ...(auth.organizationID ? { organizationID: auth.organizationID } : {}),
+            issuer,
+            worker: base,
+          }),
+        catch: controlError,
+      })
       const response = yield* Effect.tryPromise({
         try: () =>
           createBearerHttpClient({
             origin: base,
-            apiKey: Redacted.value(auth.token),
+            apiKey: Redacted.value(control.token),
             ...(options.fetch ? { fetch: options.fetch } : {}),
           }).request(req),
         catch: () => {
@@ -306,7 +407,7 @@ export function provider(options: Options): Provider {
         }),
       )
       const body = yield* consume(response)
-      const envelope = StartEnvelope.safeParse(body)
+      const envelope = Envelope.safeParse(body)
       const parsedResult = envelope.success ? AgentStartResponseSchema.safeParse(envelope.data.result.data) : envelope
       if (!parsedResult.success) {
         return yield* Effect.fail(
@@ -338,6 +439,160 @@ export function provider(options: Options): Provider {
       const input = yield* check(AttachInput, raw)
       const session = yield* get(input)
       return { session: session.id, expiresAt: clock() + ATTACHMENT_TTL_MS }
+    })
+
+  const data = (value: unknown) =>
+    Effect.gen(function* () {
+      const envelope = Envelope.safeParse(value)
+      if (!envelope.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported response"))
+      return envelope.data.result.data
+    })
+
+  const query = (auth: CloudAuth.Resolved, procedure: string, input: unknown) =>
+    request(auth, {
+      method: "GET",
+      path: `/trpc/${procedure}?input=${encodeURIComponent(JSON.stringify(input))}`,
+      headers: headers(auth),
+    }).pipe(Effect.flatMap(consume), Effect.flatMap(data))
+
+  const mutation = (auth: CloudAuth.Resolved, procedure: string, input: unknown) =>
+    request(auth, {
+      method: "POST",
+      path: `/trpc/${procedure}`,
+      headers: { ...headers(auth), "content-type": "application/json" },
+      body: JSON.stringify(input),
+    }).pipe(Effect.flatMap(consume), Effect.flatMap(data))
+
+  const workspaceIdentity = (workspaceID: unknown) =>
+    decode(
+      HostedWorkspaceID,
+      { providerID: PROVIDER, workspaceID },
+      "Kilo Cloud returned an unsupported workspace identity",
+    )
+
+  const workspace = (raw: z.infer<typeof WorkspaceSummary>): Effect.Effect<HostedWorkspace, HostedFailure> =>
+    Effect.gen(function* () {
+      const id = yield* workspaceIdentity(raw.workspaceId)
+      const sessions = yield* Effect.forEach(raw.sessions, (session) =>
+        identity(session.kiloSessionId).pipe(
+          Effect.map((sessionID) => ({
+            id: sessionID,
+            ...(session.title == null ? {} : { title: session.title }),
+            createdOnPlatform: session.createdOnPlatform,
+            created: session.created,
+            updated: session.updated,
+          })),
+        ),
+      )
+      return {
+        id,
+        ...(raw.name == null ? {} : { name: raw.name }),
+        repository: {
+          ...(raw.repositoryProvider == null ? {} : { provider: raw.repositoryProvider }),
+          ...(raw.gitUrl == null ? {} : { url: raw.gitUrl }),
+          ...(raw.gitBranch == null ? {} : { branch: raw.gitBranch }),
+        },
+        ...(raw.profileId == null ? {} : { profileID: raw.profileId }),
+        deletionState: raw.deletionState,
+        created: raw.created,
+        updated: raw.updated,
+        lastActivity: raw.lastActivity,
+        sessions,
+        ...(raw.nextSessionCursor == null ? {} : { cursor: raw.nextSessionCursor }),
+      }
+    })
+
+  const listWorkspaces = (raw: WorkspaceListInput = {}): Effect.Effect<HostedWorkspacePage, HostedFailure> =>
+    Effect.gen(function* () {
+      const input = yield* check(WorkspaceListInput, raw)
+      const auth = yield* resolve(input.organizationID)
+      const payload: Record<string, unknown> = {}
+      if (input.limit !== undefined) payload.limit = input.limit
+      if (input.sessionLimit !== undefined) payload.sessionLimit = input.sessionLimit
+      if (input.cursor !== undefined) payload.cursor = input.cursor
+      if (input.repositoryUrl !== undefined) payload.repositoryUrl = input.repositoryUrl
+      const body = yield* query(auth, "listHostedWorkspaces", payload)
+      const parsed = WorkspacePage.safeParse(body)
+      if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported workspace page"))
+      const items = yield* Effect.forEach(parsed.data.items, workspace)
+      return { items, ...(parsed.data.nextCursor == null ? {} : { cursor: parsed.data.nextCursor }) }
+    })
+
+  const getWorkspace = (raw: WorkspaceGetInput): Effect.Effect<HostedWorkspace, HostedFailure> =>
+    Effect.gen(function* () {
+      const input = yield* check(WorkspaceGetInput, raw)
+      const auth = yield* resolve(input.organizationID)
+      const payload: Record<string, unknown> = { workspaceId: input.id.workspaceID }
+      if (input.sessionLimit !== undefined) payload.sessionLimit = input.sessionLimit
+      if (input.sessionCursor !== undefined) payload.sessionCursor = input.sessionCursor
+      const body = yield* query(auth, "getHostedWorkspace", payload)
+      if (body === null) {
+        return yield* Effect.fail(
+          new HostedFailure({ code: "not_found", message: "Kilo Cloud workspace was not found", retryable: false }),
+        )
+      }
+      const parsed = WorkspaceSummary.safeParse(body)
+      if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported workspace"))
+      if (parsed.data.workspaceId !== input.id.workspaceID) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned a different workspace identity"))
+      }
+      return yield* workspace(parsed.data)
+    })
+
+  const createWorkspace = (raw: CreateWorkspaceInput): Effect.Effect<CreateWorkspaceResult, HostedFailure> =>
+    Effect.gen(function* () {
+      const input = yield* check(CreateWorkspaceInput, raw)
+      const auth = yield* resolve(input.organizationID)
+      const body = yield* mutation(auth, "createHostedWorkspace", {
+        operationKey: input.operationKey,
+        clientProvenance: "agent-manager",
+        repository: repositoryPayload(input.repository),
+        profile: profilePayload(input.profile),
+        message: { prompt: input.prompt, id: input.messageID },
+        agent: agentPayload(input.agent),
+        ...(auth.organizationID ? { options: { kilocodeOrganizationId: auth.organizationID } } : {}),
+      })
+      const parsed = WorkspaceCreate.safeParse(body)
+      if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported workspace result"))
+      if (parsed.data.messageId !== input.messageID) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned a different message identity"))
+      }
+      return {
+        workspace: yield* workspaceIdentity(parsed.data.workspaceId),
+        session: yield* identity(parsed.data.kiloSessionId),
+        messageID: input.messageID,
+        replayed: parsed.data.replayed === true,
+      }
+    })
+
+  const startWorkspaceSession = (
+    raw: WorkspaceSessionStartInput,
+  ): Effect.Effect<WorkspaceSessionStartResult, HostedFailure> =>
+    Effect.gen(function* () {
+      const input = yield* check(WorkspaceSessionStartInput, raw)
+      const auth = yield* resolve(input.organizationID)
+      const body = yield* mutation(auth, "createHostedWorkspaceSession", {
+        workspaceId: input.id.workspaceID,
+        operationKey: input.operationKey,
+        clientProvenance: "agent-manager",
+        message: { prompt: input.prompt, id: input.messageID },
+        agent: agentPayload(input.agent),
+        ...(auth.organizationID ? { kilocodeOrganizationId: auth.organizationID } : {}),
+      })
+      const parsed = WorkspaceCreate.safeParse(body)
+      if (!parsed.success) return yield* Effect.fail(invalid("Kilo Cloud returned an unsupported workspace result"))
+      if (parsed.data.workspaceId !== input.id.workspaceID) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned a different workspace identity"))
+      }
+      if (parsed.data.messageId !== input.messageID) {
+        return yield* Effect.fail(invalid("Kilo Cloud returned a different message identity"))
+      }
+      return {
+        workspace: { providerID: PROVIDER, workspaceID: parsed.data.workspaceId },
+        session: yield* identity(parsed.data.kiloSessionId),
+        messageID: input.messageID,
+        replayed: parsed.data.replayed === true,
+      }
     })
 
   /**
@@ -379,8 +634,8 @@ export function provider(options: Options): Provider {
         ...(input.body && input.body.length > 0
           ? { body: new Blob([new Uint8Array(input.body).buffer]) }
           : {}),
-        // The native event stream is long-lived; every other call keeps the default bound.
-        ...(mapped.remote === "/kilo/event" ? { timeoutMs: 0 } : {}),
+        // Both native event streams are long-lived; every other call keeps the default bound.
+        ...(mapped.remote === "/kilo/event" || mapped.remote === "/kilo/cloud-agent/event" ? { timeoutMs: 0 } : {}),
       })
     })
 
@@ -394,8 +649,26 @@ export function provider(options: Options): Provider {
     transcript,
     start,
     attach,
+    listWorkspaces,
+    getWorkspace,
+    createWorkspace,
+    startWorkspaceSession,
     route: native,
   }
+}
+
+function repositoryPayload(repo: Repository): Record<string, unknown> {
+  if (repo.type === "github") return { type: "github", repo: repo.repo, branch: repo.branch }
+  if (repo.type === "gitlab") return { type: "gitlab", url: repo.url, branch: repo.branch }
+  return { type: "git", url: repo.url, branch: repo.branch }
+}
+
+function agentPayload(agent: Agent): Record<string, unknown> {
+  return { mode: agent.mode, model: agent.model, ...(agent.variant ? { variant: agent.variant } : {}) }
+}
+
+function profilePayload(profile: Profile): Record<string, unknown> {
+  return { id: profile.id, ...(profile.overrides ? { overrides: profile.overrides } : {}) }
 }
 
 function route(base: `/${string}`, query: URLSearchParams): `/${string}` {

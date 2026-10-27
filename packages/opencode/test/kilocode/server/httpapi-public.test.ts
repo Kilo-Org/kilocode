@@ -71,6 +71,10 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "get" as const, path: SessionHostPaths.message, id: "sessionHost.transcript" },
       { method: "post" as const, path: SessionHostPaths.attach, id: "sessionHost.attach" },
       { method: "delete" as const, path: SessionHostPaths.attachment, id: "sessionHost.detach" },
+      { method: "get" as const, path: SessionHostPaths.workspace, id: "sessionHost.listWorkspaces" },
+      { method: "post" as const, path: SessionHostPaths.workspace, id: "sessionHost.createWorkspace" },
+      { method: "get" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.getWorkspace" },
+      { method: "post" as const, path: SessionHostPaths.workspaceSession, id: "sessionHost.startWorkspaceSession" },
     ]
 
     for (const route of routes) {

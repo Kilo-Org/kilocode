@@ -1,16 +1,23 @@
 import { ID as AttachmentID } from "@/kilocode/server/hosted-attachments"
 import {
   Availability,
+  CreateWorkspaceInput,
+  CreateWorkspaceResult,
   HostedSession,
   HostedSessionID,
   HostedSessionPage,
   HostedTranscriptPage,
+  HostedWorkspace,
+  HostedWorkspacePage,
   OrganizationID,
   ProviderID,
   RemoteSessionID,
   StartInput,
   StartResult,
   Transport,
+  WorkspaceID,
+  WorkspaceSessionStartBody,
+  WorkspaceSessionStartResult,
 } from "@/kilocode/session-hosting/types"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 import {
@@ -34,6 +41,9 @@ export const SessionHostPaths = {
   message: `${root}/session/:providerID/:sessionID/message`,
   attach: `${root}/session/:providerID/:sessionID/attach`,
   attachment: `${root}/attachment/:attachmentID`,
+  workspace: `${root}/workspace`,
+  workspaceDetail: `${root}/workspace/:providerID/:workspaceID`,
+  workspaceSession: `${root}/workspace/:providerID/:workspaceID/session`,
 } as const
 
 export class SessionHostPaymentRequiredError extends Schema.ErrorClass<SessionHostPaymentRequiredError>(
@@ -91,9 +101,34 @@ const TranscriptQuery = Schema.Struct({
 
 const AttachQuery = Schema.Struct({ organizationID: Schema.optional(OrganizationID) })
 
+const WorkspaceListQuery = Schema.Struct({
+  limit: Schema.optional(
+    Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 50 })),
+  ),
+  sessionLimit: Schema.optional(
+    Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 })),
+  ),
+  cursor: Schema.optional(Schema.String),
+  repositoryUrl: Schema.optional(Schema.String),
+  organizationID: Schema.optional(OrganizationID),
+})
+
+const WorkspaceGetQuery = Schema.Struct({
+  sessionLimit: Schema.optional(
+    Schema.NumberFromString.check(Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 100 })),
+  ),
+  sessionCursor: Schema.optional(Schema.String),
+  organizationID: Schema.optional(OrganizationID),
+})
+
 const Params = {
   providerID: ProviderID,
   sessionID: RemoteSessionID,
+}
+
+const WorkspaceParams = {
+  providerID: ProviderID,
+  workspaceID: WorkspaceID,
 }
 
 /**
@@ -186,6 +221,55 @@ export const SessionHostApi = HttpApi.make("session-host")
             identifier: "sessionHost.detach",
             summary: "Detach a hosted session",
             description: "Dispose a local attachment. This never changes Cloud lifecycle.",
+          }),
+        ),
+        HttpApiEndpoint.get("listWorkspaces", SessionHostPaths.workspace, {
+          query: WorkspaceListQuery,
+          success: described(HostedWorkspacePage, "Hosted workspaces"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.listWorkspaces",
+            summary: "List hosted workspaces",
+            description:
+              "List workspaces from the authenticated default session host provider. A workspace is the shared compute and repository identity that groups root sessions.",
+          }),
+        ),
+        HttpApiEndpoint.post("createWorkspace", SessionHostPaths.workspace, {
+          payload: CreateWorkspaceInput,
+          success: described(CreateWorkspaceResult, "Hosted workspace created"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.createWorkspace",
+            summary: "Create a hosted workspace",
+            description:
+              "Create a hosted workspace and its root session. Reuse the same operation key and message ID to retry safely.",
+          }),
+        ),
+        HttpApiEndpoint.get("getWorkspace", SessionHostPaths.workspaceDetail, {
+          params: WorkspaceParams,
+          query: WorkspaceGetQuery,
+          success: described(HostedWorkspace, "Hosted workspace"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.getWorkspace",
+            summary: "Get a hosted workspace",
+            description: "Read one hosted workspace with a bounded page of its root sessions.",
+          }),
+        ),
+        HttpApiEndpoint.post("startWorkspaceSession", SessionHostPaths.workspaceSession, {
+          params: WorkspaceParams,
+          payload: WorkspaceSessionStartBody,
+          success: described(WorkspaceSessionStartResult, "Hosted workspace session started"),
+          error: SessionErrors,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sessionHost.startWorkspaceSession",
+            summary: "Start a session in a hosted workspace",
+            description:
+              "Add a root session to an existing hosted workspace. The workspace supplies repository, environment, and compute; reuse the same operation key and message ID to retry safely.",
           }),
         ),
       )

@@ -127,13 +127,159 @@ export const Repository = Schema.Union([
 ]).annotate({ identifier: "SessionHostRepository" })
 export type Repository = Schema.Schema.Type<typeof Repository>
 
-export const Origin = Schema.Literals(["cli", "desktop"]).annotate({ identifier: "SessionHostOrigin" })
-export type Origin = Schema.Schema.Type<typeof Origin>
-
 export const OrganizationID = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)).annotate({
   identifier: "SessionHostOrganizationID",
 })
 export type OrganizationID = Schema.Schema.Type<typeof OrganizationID>
+
+/**
+ * Hosted workspace identity. Like a hosted session, a provider workspace id is
+ * only meaningful inside its provider, so the public identity is composite.
+ */
+export const WorkspaceID = Schema.String.check(
+  Schema.isMinLength(1),
+  Schema.isMaxLength(255),
+  Schema.isPattern(/^[A-Za-z0-9_][A-Za-z0-9_.-]*$/),
+).annotate({ identifier: "SessionHostWorkspaceID" })
+export type WorkspaceID = Schema.Schema.Type<typeof WorkspaceID>
+
+export const HostedWorkspaceID = Schema.Struct({
+  providerID: ProviderID,
+  workspaceID: WorkspaceID,
+}).annotate({ identifier: "SessionHostWorkspaceIdentity" })
+export type HostedWorkspaceID = Schema.Schema.Type<typeof HostedWorkspaceID>
+
+/** The repository a workspace was created from, normalized across providers. */
+export const WorkspaceRepository = Schema.Struct({
+  provider: Schema.optional(Schema.Literals(["github", "gitlab", "bitbucket", "git"])),
+  url: Schema.optional(Schema.String),
+  branch: Schema.optional(Schema.String),
+}).annotate({ identifier: "SessionHostWorkspaceRepository" })
+export type WorkspaceRepository = Schema.Schema.Type<typeof WorkspaceRepository>
+
+/**
+ * A root session that belongs to a workspace. Its identity is the local-native
+ * session identity; the provider's routing session id is never exposed.
+ */
+export const HostedWorkspaceSession = Schema.Struct({
+  id: HostedSessionID,
+  title: Schema.optional(Schema.String),
+  createdOnPlatform: Schema.String,
+  created: Schema.Finite,
+  updated: Schema.Finite,
+}).annotate({ identifier: "SessionHostWorkspaceSession" })
+export type HostedWorkspaceSession = Schema.Schema.Type<typeof HostedWorkspaceSession>
+
+export const HostedWorkspace = Schema.Struct({
+  id: HostedWorkspaceID,
+  name: Schema.optional(Schema.String),
+  repository: WorkspaceRepository,
+  profileID: Schema.optional(Schema.String),
+  deletionState: Schema.Literals(["active", "deleting", "deleted"]),
+  created: Schema.Finite,
+  updated: Schema.Finite,
+  lastActivity: Schema.Finite,
+  sessions: Schema.Array(HostedWorkspaceSession),
+  cursor: Schema.optional(Schema.String),
+}).annotate({ identifier: "SessionHostWorkspace" })
+export type HostedWorkspace = Schema.Schema.Type<typeof HostedWorkspace>
+
+export const HostedWorkspacePage = Schema.Struct({
+  items: Schema.Array(HostedWorkspace),
+  cursor: Schema.optional(Schema.String),
+}).annotate({ identifier: "SessionHostWorkspacePage" })
+export type HostedWorkspacePage = Schema.Schema.Type<typeof HostedWorkspacePage>
+
+export const Agent = Schema.Struct({
+  mode: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(50)),
+  model: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
+  variant: Schema.optional(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(50))),
+}).annotate({ identifier: "SessionHostAgent" })
+export type Agent = Schema.Schema.Type<typeof Agent>
+
+export const ProfileOverrides = Schema.Struct({
+  envVars: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+  setupCommands: Schema.optional(Schema.Array(Schema.String)),
+  appendSystemPrompt: Schema.optional(Schema.String),
+}).annotate({ identifier: "SessionHostProfileOverrides" })
+export type ProfileOverrides = Schema.Schema.Type<typeof ProfileOverrides>
+
+/**
+ * Cloud resolves this profile server-side. The id is required because an
+ * Agent Manager workspace must resolve to a named Cloud profile.
+ */
+export const Profile = Schema.Struct({
+  id: Schema.String.check(Schema.isUUID()),
+  overrides: Schema.optional(ProfileOverrides),
+}).annotate({ identifier: "SessionHostProfile" })
+export type Profile = Schema.Schema.Type<typeof Profile>
+
+export const WorkspaceListInput = Schema.Struct({
+  limit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 50 }))),
+  sessionLimit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))),
+  cursor: Schema.optional(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256))),
+  repositoryUrl: Schema.optional(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(2048))),
+  organizationID: Schema.optional(OrganizationID),
+}).annotate({ identifier: "SessionHostWorkspaceListInput" })
+export type WorkspaceListInput = Schema.Schema.Type<typeof WorkspaceListInput>
+
+export const WorkspaceGetInput = Schema.Struct({
+  id: HostedWorkspaceID,
+  sessionLimit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))),
+  sessionCursor: Schema.optional(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256))),
+  organizationID: Schema.optional(OrganizationID),
+}).annotate({ identifier: "SessionHostWorkspaceGetInput" })
+export type WorkspaceGetInput = Schema.Schema.Type<typeof WorkspaceGetInput>
+
+/**
+ * Create a hosted workspace and its root session. `operationKey` is required so
+ * a retried request is admitted once, and `messageID` names the root initial
+ * message so an ambiguous failure can be retried without a duplicate turn.
+ */
+export const CreateWorkspaceInput = Schema.Struct({
+  repository: Repository,
+  profile: Profile,
+  prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)),
+  agent: Agent,
+  operationKey: Schema.String.check(Schema.isUUID()),
+  messageID: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
+  organizationID: Schema.optional(OrganizationID),
+}).annotate({ identifier: "SessionHostCreateWorkspaceInput" })
+export type CreateWorkspaceInput = Schema.Schema.Type<typeof CreateWorkspaceInput>
+
+export const CreateWorkspaceResult = Schema.Struct({
+  workspace: HostedWorkspaceID,
+  session: HostedSessionID,
+  messageID: Schema.String,
+  replayed: Schema.Boolean,
+}).annotate({ identifier: "SessionHostCreateWorkspaceResult" })
+export type CreateWorkspaceResult = Schema.Schema.Type<typeof CreateWorkspaceResult>
+
+export const WorkspaceSessionStartBody = Schema.Struct({
+  prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)),
+  agent: Agent,
+  operationKey: Schema.String.check(Schema.isUUID()),
+  messageID: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(255)),
+  organizationID: Schema.optional(OrganizationID),
+}).annotate({ identifier: "SessionHostWorkspaceSessionStartBody" })
+export type WorkspaceSessionStartBody = Schema.Schema.Type<typeof WorkspaceSessionStartBody>
+
+export const WorkspaceSessionStartInput = Schema.Struct({
+  ...WorkspaceSessionStartBody.fields,
+  id: HostedWorkspaceID,
+}).annotate({ identifier: "SessionHostWorkspaceSessionStartInput" })
+export type WorkspaceSessionStartInput = Schema.Schema.Type<typeof WorkspaceSessionStartInput>
+
+export const WorkspaceSessionStartResult = Schema.Struct({
+  workspace: HostedWorkspaceID,
+  session: HostedSessionID,
+  messageID: Schema.String,
+  replayed: Schema.Boolean,
+}).annotate({ identifier: "SessionHostWorkspaceSessionStartResult" })
+export type WorkspaceSessionStartResult = Schema.Schema.Type<typeof WorkspaceSessionStartResult>
+
+export const Origin = Schema.Literals(["cli", "desktop"]).annotate({ identifier: "SessionHostOrigin" })
+export type Origin = Schema.Schema.Type<typeof Origin>
 
 export const ListInput = Schema.Struct({
   limit: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))),
@@ -216,6 +362,12 @@ export interface Provider {
   readonly transcript: (input: TranscriptInput) => Effect.Effect<HostedTranscriptPage, HostedFailure>
   readonly start: (input: StartInput) => Effect.Effect<StartResult, HostedFailure>
   readonly attach: (input: AttachInput) => Effect.Effect<Attachment, HostedFailure>
+  readonly listWorkspaces: (input?: WorkspaceListInput) => Effect.Effect<HostedWorkspacePage, HostedFailure>
+  readonly getWorkspace: (input: WorkspaceGetInput) => Effect.Effect<HostedWorkspace, HostedFailure>
+  readonly createWorkspace: (input: CreateWorkspaceInput) => Effect.Effect<CreateWorkspaceResult, HostedFailure>
+  readonly startWorkspaceSession: (
+    input: WorkspaceSessionStartInput,
+  ) => Effect.Effect<WorkspaceSessionStartResult, HostedFailure>
   /**
    * Provider-owned request mapping for the proven native allowlist. Provider
    * origin, credentials, control identities, selectors, and fences stay inside
