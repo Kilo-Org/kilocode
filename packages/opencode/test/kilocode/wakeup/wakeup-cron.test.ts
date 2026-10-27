@@ -641,6 +641,34 @@ describe("Wakeup cron", () => {
       }).pipe(Effect.scoped),
     20_000,
   )
+
+  it.live(
+    "still fires an armed task whose stored record became unreadable and re-arms it",
+    () =>
+      Effect.gen(function* () {
+        const wake = yield* Wakeup.Service
+        const recorder = yield* Recorder
+        const dir = (yield* TestDir).dir
+        const persisted = cronInfo({ directory: dir, schedule: "* * * * *", dueAt: Date.now() + 1_200 })
+        persistCron(dir, persisted)
+        yield* wake.adopt(dir)
+        // Only a missing record means another process took or cancelled the task.
+        const file = path.join(dir, "storage", "cron", String(persisted.sessionID), `${persisted.id}.json`)
+        fs.writeFileSync(file, "{ not json")
+
+        yield* pollWithTimeout(
+          Effect.sync(() => (recorder.calls.length > 0 ? true : undefined)),
+          "unreadable cron task never fired",
+          "8 seconds",
+        )
+        expect(recorder.calls.map((item) => item.id)).toEqual([persisted.id])
+        // The fire wrote the next window back over the unreadable record.
+        const stored = JSON.parse(fs.readFileSync(file, "utf8")) as Wakeup.CronInfo
+        expect(stored.id).toBe(persisted.id)
+        expect(stored.dueAt).toBeGreaterThan(Date.now())
+      }),
+    20_000,
+  )
 })
 
 const model = {
