@@ -2,7 +2,7 @@
 // existing session commits each change with switchAgent/switchModel and shows the server's value. Before a session
 // exists, the choice is a local draft that `create` passes to session.create.
 import type { ModelRef } from "@opencode/client"
-import { createEffect, createSignal, on, type Accessor } from "solid-js"
+import { createEffect, createSignal, on, onCleanup, onMount, type Accessor } from "solid-js"
 import { PromptSelectors } from "../components/chat/PromptSelectors"
 import { ModelSelectorBase } from "../components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../components/shared/ModeSwitcher"
@@ -11,6 +11,34 @@ import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
 
 const DEFAULT = "default"
+
+// v1 kept the effort across a model change, on the same effort ranking (session-variant-store.ts).
+const EFFORT = ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
+
+/** Keep the effort when the new model has it, else the nearest known effort. Undefined when neither exists. */
+function preserveVariant(current: string | undefined, variants: string[]) {
+  if (!current || variants.length === 0) return undefined
+  if (variants.includes(current)) return current
+  const rank = EFFORT.indexOf(current)
+  if (rank === -1) return undefined
+  return variants
+    .map((value, index) => ({
+      value,
+      index,
+      rank: EFFORT.indexOf(value),
+      distance: Math.abs(EFFORT.indexOf(value) - rank),
+    }))
+    .filter((item) => EFFORT.includes(item.value))
+    .sort((a, b) => a.distance - b.distance || b.rank - a.rank || a.index - b.index)[0]?.value
+}
+
+/** Next effort in the list, back to the default after the last; an unknown or missing value starts at the first. */
+function cycleVariant(current: string | undefined, variants: string[]) {
+  if (variants.length === 0) return undefined
+  const idx = current ? variants.indexOf(current) : -1
+  if (idx === variants.length - 1) return undefined
+  return variants[(idx + 1) % variants.length]
+}
 
 export function createSelection(session: Accessor<string | undefined>) {
   const v2 = useV2()
@@ -109,8 +137,8 @@ export function createSelection(session: Accessor<string | undefined>) {
     selectModel(providerID: string, modelID: string) {
       const current = model()
       const found = models()?.find((item) => item.providerID === providerID && item.id === modelID)
-      // A variant carries over only when the new model has it.
-      const variant = found?.variants.some((item) => item.id === current?.variant) ? current?.variant : undefined
+      // Carry the effort to the new model when it has it or a nearby effort, as v1; otherwise fall back to default.
+      const variant = preserveVariant(current?.variant, found?.variants.map((item) => item.id) ?? [])
       setModel({ id: modelID, providerID, ...(variant ? { variant } : {}) })
     },
     selectVariant(variant: string | undefined) {
@@ -139,6 +167,20 @@ export function Selectors(props: { selection: Selection; blocked: boolean }) {
     const current = props.selection.model()
     return current ? { providerID: current.providerID, modelID: current.id } : null
   }
+  // Shift+Tab cycles the effort while the prompt input has focus, as v1 (chat.shiftTabCyclesVariant, on by default).
+  onMount(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Tab" || !event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return
+      const active = document.activeElement
+      if (!(active instanceof HTMLTextAreaElement) || !active.classList.contains("prompt-input")) return
+      const variants = props.selection.variants()
+      if (variants.length === 0) return
+      event.preventDefault()
+      props.selection.selectVariant(cycleVariant(props.selection.model()?.variant, variants))
+    }
+    window.addEventListener("keydown", onKeyDown, true)
+    onCleanup(() => window.removeEventListener("keydown", onKeyDown, true))
+  })
   return (
     <PromptSelectors
       agent={
@@ -171,6 +213,7 @@ export function Selectors(props: { selection: Selection; blocked: boolean }) {
           allowClear
           clearLabel={language.t("common.default")}
           heading={language.t("prompt.thinking.tooltip")}
+          cycleHint
         />
       }
     />

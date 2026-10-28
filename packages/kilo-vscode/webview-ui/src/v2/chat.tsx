@@ -83,6 +83,8 @@ export function Chat() {
 
   // A pending permission or question blocks new prompts, as on v1; Stop stays available.
   const blocked = () => permissions().length > 0 || forms().length > 0
+  // The prompt selectors block only while a permission owns the prompt, as v1; a pending question does not.
+  const selectorsBlocked = () => permissions().length > 0
   const selection = createSelection(session)
 
   const send = (text: string) => {
@@ -150,7 +152,7 @@ export function Chat() {
               disabled={v2.connection.status() !== "connected" || !!v2.handshake() || blocked()}
               onSend={send}
               onStop={stop}
-              selectors={<Selectors selection={selection} blocked={blocked()} />}
+              selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
             />
           </div>
         </div>
