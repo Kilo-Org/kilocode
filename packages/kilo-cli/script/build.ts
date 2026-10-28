@@ -231,7 +231,8 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
   verifySimulationGraph(simulationInputs)
   await NativeArch.verify(path.join(outdir, name, "bin", item.os === "win32" ? `${binary}.exe` : binary), item.arch)
 
-  // Kilo: the package.json describes an unpublished artifact. This build publishes nothing.
+  // Kilo: the platform packages have the same names as v1's. script/publish.ts publishes them with the `kilo-v2` npm
+  // dist-tag, so v1's `latest` and `rc` tags do not change.
   await Bun.write(
     path.join(outdir, name, "package.json"),
     JSON.stringify(
@@ -239,7 +240,7 @@ export default { path: file, version: ${JSON.stringify(opencodePty.version)}, sh
         name: `@kilocode/${name}`,
         version: Script.version,
         license: "MIT",
-        private: true,
+        repository: { type: "git", url: "git+https://github.com/Kilo-Org/kilocode.git" },
         os: [item.os],
         cpu: [item.arch],
       },

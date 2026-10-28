@@ -1,0 +1,201 @@
+name: kilo-v2-publish
+run-name: "${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'publish v2 (dry run)' || 'publish v2') || github.event.pull_request.title }}"
+
+# Publishes the Kilo v2 CLI (packages/kilo-cli) to npm as `@kilocode/cli` with the `kilo-v2` dist-tag. v1 owns the
+# `latest` and `rc` dist-tags of the same packages. The build channel stays `v2` (npm rejects `v2` as a dist-tag because
+# it is a semver range), so the database and service files match the `bun run install:alpha` builds.
+#
+# Start a publish from the v2 branch: `gh workflow run kilo-v2-publish.yml --ref v2`. This file is not on the default
+# branch, so the GitHub UI shows no "Run workflow" button.
+#
+# npm trusted publishing (OIDC) must trust this workflow file for `@kilocode/cli` and each `@kilocode/cli-<target>`
+# package. That is a second trusted publisher next to v1's `publish.yml`.
+#
+# Pull requests that change the publish flow build every target, smoke test the executables and run a dry-run publish.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build, test and pack, but do not publish to npm"
+        required: false
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - .github/workflows/kilo-v2-publish.yml
+      - packages/kilo-cli/script/build.ts
+      - packages/kilo-cli/script/publish.ts
+      - packages/cli/script/postinstall.mjs
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  OPENCODE_CHANNEL: v2
+
+jobs:
+  build:
+    name: build
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Bun and install dependencies
+        uses: ./.github/actions/setup-bun
+
+      # All targets on one runner. Bun cross-compiles, and the build installs the native packages of every target.
+      # The version is 0.0.0-v2-<run number>.
+      - name: Build the Kilo host for all targets
+        working-directory: packages/kilo-cli
+        run: bun run script/build.ts
+
+      - name: Read the version
+        id: version
+        run: echo "version=$(jq -r .version packages/kilo-cli/dist/cli-linux-x64/package.json)" >> "$GITHUB_OUTPUT"
+
+      # A tarball keeps the executable bit, which a zipped artifact loses.
+      - name: Archive CLI
+        working-directory: packages/kilo-cli/dist
+        run: tar -czf "$GITHUB_WORKSPACE/kilo-v2-npm.tar.gz" cli-*
+
+      - name: Upload CLI artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: kilo-v2-npm.tar.gz
+          archive: false
+          if-no-files-found: error
+          retention-days: 7
+
+      # Checks the npm package contents on every run. It comes after the upload, so the artifact has no tarballs.
+      - name: Pack (dry run)
+        working-directory: packages/kilo-cli
+        run: bun run script/publish.ts --dry-run
+        env:
+          OPENCODE_VERSION: ${{ steps.version.outputs.version }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+  smoke:
+    name: smoke (${{ matrix.target }})
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            host: ubuntu-24.04
+          - target: linux-arm64
+            host: ubuntu-24.04-arm
+          - target: darwin-arm64
+            host: macos-15
+          - target: darwin-x64
+            host: macos-15-intel
+    runs-on: ${{ matrix.host }}
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - name: Download CLI artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-v2-npm.tar.gz
+          path: ${{ runner.temp }}
+          skip-decompress: true
+
+      - name: Unpack CLI
+        run: mkdir -p dist && tar -xzf "$RUNNER_TEMP/kilo-v2-npm.tar.gz" -C dist
+
+      - name: Check the Kilo host
+        run: bun script/kilocode/smoke-host.ts dist/cli-${{ matrix.target }}/bin/kilo2
+
+  smoke-windows:
+    name: smoke (windows-x64)
+    needs: build
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - name: Download CLI artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-v2-npm.tar.gz
+          path: ${{ runner.temp }}
+          skip-decompress: true
+
+      - name: Unpack CLI
+        shell: bash
+        run: mkdir -p dist && tar --force-local -xzf "$RUNNER_TEMP/kilo-v2-npm.tar.gz" -C dist
+
+      - name: Check the Kilo host version
+        shell: bash
+        run: test "$(dist/cli-windows-x64/bin/kilo2.exe --version)" = "kilo2 v${{ needs.build.outputs.version }}"
+
+  publish:
+    name: publish to npm
+    needs:
+      - build
+      - smoke
+      - smoke-windows
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/v2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    concurrency:
+      group: kilo-v2-publish-npm
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun and install dependencies
+        uses: ./.github/actions/setup-bun
+
+      # npm trusted publishing needs npm 11.5.1 or later, which Node 24 includes.
+      - name: Setup Node for npm
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: Download CLI artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kilo-v2-npm.tar.gz
+          path: ${{ runner.temp }}
+          skip-decompress: true
+
+      - name: Unpack CLI
+        run: mkdir -p packages/kilo-cli/dist && tar -xzf "$RUNNER_TEMP/kilo-v2-npm.tar.gz" -C packages/kilo-cli/dist
+
+      - name: Publish
+        working-directory: packages/kilo-cli
+        run: bun run script/publish.ts ${{ inputs.dry_run && '--dry-run' || '' }}
+        env:
+          OPENCODE_VERSION: ${{ needs.build.outputs.version }}
+          NPM_CONFIG_PROVENANCE: true
+
+      - name: Summary
+        if: ${{ !inputs.dry_run }}
+        run: |
+          {
+            echo "Published \`@kilocode/cli@${{ needs.build.outputs.version }}\` with dist-tag \`kilo-v2\`."
+            echo ""
+            echo "Install: \`npm i -g @kilocode/cli@kilo-v2\`"
+          } >> "$GITHUB_STEP_SUMMARY"
