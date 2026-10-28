@@ -231,6 +231,9 @@ class SessionController(
     // reason may land before or after the error and both orders have to end up in the same place.
     private var cancelReason: String? = null
     private val snapshots = mutableMapOf<PartKey, String>()
+    private var replay: MutableList<ChatEventDto>? = null
+    private var epoch = 0L
+    private var hydration: Job? = null
 
     val ready: Boolean get() = model.isReady()
     val autoApprove: Boolean get() = KiloPluginSettings.getAutoApprove()
@@ -1296,6 +1299,7 @@ class SessionController(
         val target = ref ?: return
         val id = target.id
         val revision = promptRevision
+        val generation = epoch
         cs.launch {
             try {
                 val session = (target as? SessionRef.Local)?.session
@@ -1306,6 +1310,7 @@ class SessionController(
                 runEdt {
                     if (disposed) return@runEdt
                     if (sid != id) return@runEdt
+                    if (ref is SessionRef.Hosted && epoch != generation) return@runEdt
                     updateModel {
                         snapshots.clear()
                         childParts.clear()
@@ -1853,6 +1858,15 @@ class SessionController(
     }
 
     private fun handle(event: ChatEventDto) {
+        if (event is ChatEventDto.Resnapshot && ref is SessionRef.Hosted) {
+            resnapshot(event.phase)
+            return
+        }
+        replay?.let {
+            it.add(event)
+            return
+        }
+        if (ref is SessionRef.Hosted) promptRevision++
         LOG.debug { ChatLogSummary.event(event) }
         when (event) {
             is ChatEventDto.MessageUpdated -> {
@@ -2001,36 +2015,98 @@ class SessionController(
             is ChatEventDto.SessionDiffChanged -> model.setDiff(event.diff)
             is ChatEventDto.TodoUpdated -> model.setTodos(event.todos)
             is ChatEventDto.SessionInterrupted -> interrupted(event)
-            is ChatEventDto.Resnapshot -> if (ref is SessionRef.Hosted) resnapshot()
+            is ChatEventDto.Resnapshot -> Unit
         }
     }
 
-    /**
-     * Replaces hosted history after the backend's event stream reconnected. Ordinary event replay
-     * cannot close the gap left by a dropped SSE connection, so the backend asks for a full reload
-     * and this method rebuilds the transcript before pending prompts are re-probed.
-     */
-    private fun resnapshot() {
+    /** Commit a materialized hosted replay at its fence, before applying the buffered live tail. */
+    @RequiresEdt
+    private fun resnapshot(phase: String) {
         val target = ref as? SessionRef.Hosted ?: return
         val id = target.id
+        if (phase == "start") {
+            epoch++
+            hydration?.cancel()
+            hydration = null
+            updates.holdFlush(false)
+            replay = mutableListOf()
+            return
+        }
+        if (hydration?.isActive == true) return
+        val events = replay
+        if (events != null) {
+            replay = null
+            val messages = linkedMapOf<String, MessageDto>()
+            val parts = linkedMapOf<PartKey, PartDto>()
+            events.forEach { event ->
+                when (event) {
+                    is ChatEventDto.MessageUpdated -> messages[event.info.id] = event.info
+                    is ChatEventDto.PartUpdated -> parts[PartKey(event.part.messageID, event.part.id)] = event.part
+                    is ChatEventDto.MessageRemoved -> {
+                        messages.remove(event.messageID)
+                        parts.keys.removeIf { it.messageId == event.messageID }
+                    }
+                    is ChatEventDto.PartRemoved -> parts.remove(PartKey(event.messageID, event.partID))
+                    else -> Unit
+                }
+            }
+            val items = messages.values.sortedBy { it.time.created }.map { message ->
+                MessageWithPartsDto(message, parts.filterKeys { it.messageId == message.id }.values.toList())
+            }
+            snapshots.clear()
+            pending.entries.removeIf { it.value.sessionId == id }
+            childParts.clear()
+            childParts.putAll(children(items))
+            model.loadHistory(items)
+            syncHistoryAgent(items)
+            events.filterIsInstance<ChatEventDto.SessionDiffChanged>().lastOrNull()?.let { model.setDiff(it.diff) }
+            events.filterIsInstance<ChatEventDto.TodoUpdated>().lastOrNull()?.let { model.setTodos(it.todos) }
+            val dto = events.filterIsInstance<ChatEventDto.SessionStatusChanged>().lastOrNull()
+            if (dto != null) status(dto.status)
+            events.filterIsInstance<ChatEventDto.SessionUpdated>().lastOrNull()?.let { model.setSession(it.session) }
+            if (sessionLoadState is SessionLoadState.Loading) setSessionLoadState(SessionLoadState.Idle)
+            showSession()
+            promptRevision++
+            val revision = promptRevision
+            cs.launch { recoverPending(id, revision, "hosted-fence") }
+            return
+        }
+        val generation = ++epoch
         val revision = promptRevision
-        cs.launch {
+        replay = mutableListOf()
+        updates.holdFlush(true)
+        hydration = cs.launch {
             try {
                 val session = runCatching { sessions.get(id, directory) }.getOrNull()
                 val items = sessions.messages(id, directory)
                 runEdt {
                     if (disposed) return@runEdt
                     if (sid != id) return@runEdt
+                    if (generation != epoch) return@runEdt
+                    val tail = replay.orEmpty().toList()
+                    replay = null
                     updateModel {
                         snapshots.clear()
                         this@SessionController.model.loadHistory(items)
                         if (session != null) this@SessionController.model.setSession(session)
+                        tail.forEach(::handle)
                     }
                     showSession()
                 }
                 recoverPending(id, revision, "hosted-reconnect")
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 LOG.warn("${ChatLogSummary.sid(id)} kind=hosted-resnapshot failed message=${e.message}", e)
+            } finally {
+                runEdt {
+                    if (generation == epoch) {
+                        val tail = replay.orEmpty().toList()
+                        replay = null
+                        if (!disposed) updateModel { tail.forEach(::handle) }
+                        updates.holdFlush(false)
+                        updates.requestFlush(true)
+                    }
+                }
             }
         }
     }
@@ -2055,25 +2131,29 @@ class SessionController(
         else -> null
     }
 
-    private fun handleHidden(event: ChatEventDto): Boolean = when (event) {
-        is ChatEventDto.Error,
-        is ChatEventDto.SessionInterrupted,
-        is ChatEventDto.PermissionAsked,
-        is ChatEventDto.PermissionReplied,
-        is ChatEventDto.QuestionAsked,
-        is ChatEventDto.QuestionReplied,
-        is ChatEventDto.QuestionRejected,
-        is ChatEventDto.SessionStatusChanged,
-        is ChatEventDto.SessionUpdated,
-        is ChatEventDto.SessionIdle,
-        is ChatEventDto.SessionQueueChanged -> {
-            edt {
-                if (disposed) return@edt
-                updateModel { handleMetadata(event) }
+    private fun handleHidden(event: ChatEventDto): Boolean {
+        return when (event) {
+            is ChatEventDto.Error,
+            is ChatEventDto.SessionInterrupted,
+            is ChatEventDto.PermissionAsked,
+            is ChatEventDto.PermissionReplied,
+            is ChatEventDto.QuestionAsked,
+            is ChatEventDto.QuestionReplied,
+            is ChatEventDto.QuestionRejected,
+            is ChatEventDto.SessionStatusChanged,
+            is ChatEventDto.SessionUpdated,
+            is ChatEventDto.SessionIdle,
+            is ChatEventDto.SessionQueueChanged -> {
+                edt {
+                    if (disposed) return@edt
+                    updateModel {
+                        if (ref is SessionRef.Hosted) handle(event) else handleMetadata(event)
+                    }
+                }
+                true
             }
-            true
+            else -> false
         }
-        else -> false
     }
 
     private fun handleMetadata(event: ChatEventDto) {
@@ -3075,6 +3155,9 @@ class SessionController(
         runEdt {
             if (disposed) return@runEdt
             disposed = true
+            replay = null
+            hydration?.cancel()
+            hydration = null
             connectionDelay.dispose()
             cancelSubscriptions()
             promptRecoveryJob?.cancel()

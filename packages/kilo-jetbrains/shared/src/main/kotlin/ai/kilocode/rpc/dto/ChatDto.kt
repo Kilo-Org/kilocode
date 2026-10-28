@@ -335,6 +335,7 @@ sealed class ChatEventDto {
     @SerialName("hosted.resnapshot")
     data class Resnapshot(
         val sessionID: String,
+        val phase: String = "complete",
     ) : ChatEventDto()
 
     @Serializable

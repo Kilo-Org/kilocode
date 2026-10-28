@@ -12,9 +12,12 @@ import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -22,8 +25,11 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.assertNull
+import com.intellij.openapi.util.Disposer
 
 class KiloHostedServiceTest {
+    companion object { private const val WAIT = 5_000L }
     private val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @AfterTest
@@ -123,6 +129,337 @@ class KiloHostedServiceTest {
         assertEquals(2L, service.refreshes.value)
     }
 
+    @Test
+    fun `live status is ordered independently from preparation and preserves billing`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "wrk_1")
+        val key = "${ref.key}:same"
+        val rpc = FakeRpc()
+        rpc.status = HostedWorkspaceStatusDto(ref, "active", "sleeping", "sandbox_stopped", 100.0,
+            estimatedSleepAt = 500.0, wakeAvailable = true, rateMicrodollarsPerHour = 123, billingBlocked = false)
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.status(ref)
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            rpc.events.emit(HostedSystemEventDto(key, "cloud.status", cloudStatus = "preparing", observedAt = 110.0))
+            withTimeout(WAIT) { service.state.first { it.presentation(ref)?.computeStatus == "starting" } }
+            assertEquals("sleeping", service.state.value.statuses[ref.key]?.computeStatus)
+            rpc.events.emit(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "running",
+                sandboxDetail = "ready", observedAt = 200.0))
+            withTimeout(WAIT) { service.state.first { it.statuses[ref.key]?.computeStatus == "running" } }
+            rpc.events.emit(HostedSystemEventDto(key, "cloud.status", cloudStatus = "idle", observedAt = 120.0))
+            withTimeout(WAIT) { service.state.first { it.preparations[key]?.cloudStatus == "idle" } }
+            rpc.events.emit(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "sleeping", observedAt = 150.0))
+            rpc.status = rpc.status!!.copy(observedAt = 160.0)
+            assertEquals("running", service.status(ref).computeStatus)
+            val live = service.state.value.statuses.getValue(ref.key)
+            assertEquals(500.0, live.estimatedSleepAt)
+            assertEquals(123L, live.rateMicrodollarsPerHour)
+            assertTrue(live.wakeAvailable)
+            assertEquals(false, live.billingBlocked)
+            rpc.events.emit(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "sleeping",
+                sandboxDetail = "sandbox_stopped", observedAt = 300.0))
+            withTimeout(WAIT) { service.state.first { it.presentation(ref)?.computeStatus == "sleeping" } }
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `colliding native IDs and stale replay remain isolated with unknown baseline`() = runBlocking {
+        val one = HostedWorkspaceRefDto("cloud", "one")
+        val two = HostedWorkspaceRefDto("cloud", "two")
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(one, "same", parent)
+            service.observe(two, "same", parent)
+            repeat(2) { withTimeout(WAIT) { rpc.opened.receive() } }
+            rpc.events.emit(HostedSystemEventDto("${one.key}:same", "cloud.status", cloudStatus = "preparing", observedAt = 100.0))
+            rpc.events.emit(HostedSystemEventDto("${two.key}:same", "cloud.status", cloudStatus = "idle", observedAt = 20.0))
+            withTimeout(WAIT) { service.state.first { it.preparations.size == 2 } }
+            assertEquals("unknown", service.state.value.statuses[one.key]?.computeStatus)
+            rpc.events.emit(HostedSystemEventDto("${one.key}:same", "cloud.status", cloudStatus = "idle", observedAt = 90.0))
+            rpc.events.emit(HostedSystemEventDto("${two.key}:same", "cloud.sandbox.status", sandboxStatus = "sleeping", observedAt = 30.0))
+            withTimeout(WAIT) { service.state.first { it.statuses[two.key]?.computeStatus == "sleeping" } }
+            assertEquals("preparing", service.state.value.preparations["${one.key}:same"]?.cloudStatus)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `preparation progresses by attempt revision independently of lifecycle and sandbox timestamps`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = "${ref.key}:same"
+        val rpc = FakeRpc()
+        rpc.status = HostedWorkspaceStatusDto(ref, "active", "sleeping", "sandbox_stopped", 1000.0,
+            wakeAvailable = true, rateMicrodollarsPerHour = 123, billingBlocked = false)
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.status(ref)
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "preparing", observedAt = 900.0))
+            val started = HostedSystemEventDto(key, "preparing", step = "cloning", action = "step_started",
+                message = "Cloning repo", observedAt = 110.0, attemptID = "attempt_1", revision = 2)
+            rpc.send(started)
+            assertEquals("Cloning repo", service.state.value.preparation(key)?.message)
+            val progress = started.copy(action = "step_progress", message = "Receiving objects: 33%",
+                observedAt = 120.0, revision = 3)
+            rpc.send(progress)
+            assertEquals("Receiving objects: 33%", service.state.value.preparation(key)?.message)
+            rpc.send(started.copy(action = "running", message = "Old snapshot", observedAt = 9999.0))
+            rpc.send(progress.copy(message = "Duplicate must not replace detail", observedAt = 10000.0))
+            assertEquals("Receiving objects: 33%", service.state.value.preparation(key)?.message)
+            rpc.send(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "running", observedAt = 2000.0))
+            rpc.send(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "sleeping", observedAt = 1500.0))
+            assertEquals("running", service.state.value.statuses[ref.key]?.computeStatus)
+            rpc.send(progress.copy(message = "Receiving objects: 66%", observedAt = 0.0, revision = 6))
+            assertEquals("Receiving objects: 66%", service.state.value.preparation(key)?.message)
+            assertEquals(120.0, service.state.value.preparation(key)?.observedAt)
+            rpc.send(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "sleeping", observedAt = 3000.0))
+            assertEquals("starting", service.state.value.presentation(ref)?.computeStatus)
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "idle"))
+            assertNull(service.state.value.preparation(key))
+            assertEquals("Receiving objects: 66%", service.state.value.preparations[key]?.message)
+            assertEquals("sleeping", service.state.value.presentation(ref)?.computeStatus)
+            val status = service.state.value.statuses.getValue(ref.key)
+            assertTrue(status.wakeAvailable)
+            assertEquals(123L, status.rateMicrodollarsPerHour)
+            assertEquals(false, status.billingBlocked)
+            rpc.send(progress.copy(message = "Stale replay", revision = 6))
+            assertNull(service.state.value.preparation(key))
+            rpc.send(progress.copy(message = "Receiving objects: 90%", observedAt = 0.0, revision = 7))
+            assertEquals("Receiving objects: 90%", service.state.value.preparation(key)?.message)
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "idle"))
+            assertNull(service.state.value.preparation(key))
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `untimed progress supersedes an old idle snapshot without an invented timestamp`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = "${ref.key}:same"
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "idle", observedAt = 900.0))
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "preparing"))
+            val progress = HostedSystemEventDto(key, "preparing", step = "cloning", action = "step_progress",
+                message = "Receiving objects: 33%")
+            rpc.send(progress)
+            rpc.send(progress.copy(message = "Receiving objects: 66%"))
+            assertEquals("Receiving objects: 66%", service.state.value.preparation(key)?.message)
+            assertEquals(0.0, service.state.value.preparation(key)?.observedAt)
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "idle"))
+            assertNull(service.state.value.preparation(key))
+            rpc.send(progress.copy(message = "Receiving objects: 90%"))
+            assertEquals("Receiving objects: 90%", service.state.value.preparation(key)?.message)
+            assertEquals(0.0, service.state.value.preparation(key)?.observedAt)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `attempt snapshots enrich equal revision steps and do not reopen a completed attempt`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = "${ref.key}:same"
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            val attempt = HostedSystemEventDto(key, "preparing", action = "attempt_started", observedAt = 100.0,
+                attemptID = "attempt_1", revision = 5)
+            rpc.send(attempt)
+            rpc.send(attempt.copy(step = "cloning", action = "running", message = "Receiving objects: 66%"))
+            assertEquals("Receiving objects: 66%", service.state.value.preparation(key)?.message)
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "idle", observedAt = 90.0))
+            assertEquals("Receiving objects: 66%", service.state.value.preparation(key)?.message)
+            rpc.send(attempt.copy(action = "attempt_completed", observedAt = 110.0, revision = 6))
+            assertNull(service.state.value.preparation(key))
+            rpc.send(attempt.copy(step = "cloning", action = "completed", message = "Cloned",
+                observedAt = 110.0, revision = 6))
+            assertNull(service.state.value.preparation(key))
+            assertEquals("attempt_completed", service.state.value.preparations[key]?.action)
+            assertEquals("Cloned", service.state.value.preparations[key]?.message)
+            val fresh = attempt.copy(attemptID = "attempt_2", observedAt = 200.0, revision = 1)
+            rpc.send(fresh)
+            assertEquals("attempt_2", service.state.value.preparation(key)?.attemptID)
+            assertNull(service.state.value.preparation(key)?.message)
+            rpc.send(attempt.copy(step = "cloning", action = "running", message = "Old attempt",
+                observedAt = 9999.0, revision = 100))
+            assertEquals("attempt_2", service.state.value.preparation(key)?.attemptID)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `step completion stays visible until whole attempt terminal or Cloud lifecycle ends`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val key = "${ref.key}:same"
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            val step = HostedSystemEventDto(key, "preparing", step = "cloning", action = "step_completed",
+                message = "Cloned", observedAt = 100.0, attemptID = "attempt_1", revision = 3)
+            rpc.send(step)
+            assertEquals("Cloned", service.state.value.preparation(key)?.message)
+            rpc.send(step.copy(step = "setup_commands", action = "step_started", message = "Setting up",
+                observedAt = 110.0, revision = 4))
+            rpc.send(step.copy(step = null, action = "attempt_failed", message = "Setup failed",
+                observedAt = 120.0, revision = 5))
+            assertNull(service.state.value.preparation(key))
+            assertEquals("error", service.state.value.preparations[key]?.cloudStatus)
+            assertEquals("Setup failed", service.state.value.preparations[key]?.message)
+            rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = "preparing"))
+            rpc.send(step.copy(attemptID = "attempt_2", action = "step_started", message = "Cloning repo",
+                observedAt = 200.0, revision = 1))
+            for (status in listOf("ready", "running", "idle")) {
+                rpc.send(HostedSystemEventDto(key, "cloud.status", cloudStatus = status))
+                assertNull(service.state.value.preparation(key))
+            }
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `progress with colliding session and attempt IDs stays isolated between workspaces`() = runBlocking {
+        val one = HostedWorkspaceRefDto("cloud", "one")
+        val two = HostedWorkspaceRefDto("cloud", "two")
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(one, "same", parent)
+            service.observe(two, "same", parent)
+            repeat(2) { withTimeout(WAIT) { rpc.opened.receive() } }
+            withTimeout(WAIT) { rpc.events.subscriptionCount.first { it == 2 } }
+            val progress = HostedSystemEventDto("${one.key}:same", "preparing", step = "cloning",
+                action = "step_progress", message = "Receiving objects: 33%", attemptID = "same", revision = 3)
+            rpc.send(progress)
+            rpc.send(progress.copy(sessionID = "${two.key}:same", message = "Receiving objects: 66%", revision = 6))
+            rpc.send(HostedSystemEventDto("${one.key}:same", "cloud.status", cloudStatus = "idle"))
+            assertNull(service.state.value.preparation("${one.key}:same"))
+            assertEquals("Receiving objects: 66%", service.state.value.preparation("${two.key}:same")?.message)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `equal timestamp probe refreshes billing without replacing live compute`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ref, "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            rpc.events.emit(HostedSystemEventDto("${ref.key}:same", "cloud.sandbox.status",
+                sandboxStatus = "running", sandboxDetail = "ready", observedAt = 100.0))
+            withTimeout(WAIT) { service.state.first { it.statuses[ref.key]?.observedAt == 100.0 } }
+            rpc.status = HostedWorkspaceStatusDto(ref, "active", "sleeping", "sandbox_stopped", 100.0,
+                rateMicrodollarsPerHour = 321, wakeAvailable = true)
+            val status = service.status(ref)
+            assertEquals("running", status.computeStatus)
+            assertEquals("ready", status.computeDetail)
+            assertEquals(321L, status.rateMicrodollarsPerHour)
+            assertTrue(status.wakeAvailable)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `discovery and consumers share one feed and removal releases it`() = runBlocking {
+        val ws = workspace("1")
+        val pages = mutableMapOf<String?, HostedWorkspaceListDto>(null to HostedWorkspaceListDto(items = listOf(ws)))
+        val rpc = FakeRpc(pages)
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog(), repo = { "repo" })
+        service.refresh("/repo")
+        withTimeout(WAIT) { service.state.first { !it.loading && it.items.isNotEmpty() } }
+        withTimeout(WAIT) { rpc.opened.receive() }
+        val parent = Disposer.newDisposable()
+        service.observe(ws.ref, ws.sessions.single().nativeSessionID, parent)
+        Disposer.dispose(parent)
+        assertTrue(rpc.closed.tryReceive().isFailure)
+        assertTrue(rpc.opened.tryReceive().isFailure)
+        pages[null] = HostedWorkspaceListDto()
+        service.refresh("/repo")
+        withTimeout(WAIT) { rpc.closed.receive() }
+        withTimeout(WAIT) { service.state.first { !it.loading && it.items.isEmpty() } }
+        assertTrue(service.state.value.statuses.isEmpty())
+    }
+
+    @Test
+    fun `slow discovery snapshot cannot replace newer live status`() = runBlocking {
+        val ws = workspace("1")
+        val rpc = FakeRpc(mapOf(null to HostedWorkspaceListDto(items = listOf(ws))))
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog(), repo = { "repo" })
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ws.ref, "ses_1", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            rpc.gate = CompletableDeferred()
+            service.refresh("/repo")
+            withTimeout(WAIT) { rpc.reading.receive() }
+            rpc.events.emit(HostedSystemEventDto("${ws.ref.key}:ses_1", "cloud.sandbox.status",
+                sandboxStatus = "sleeping", observedAt = 100.0))
+            withTimeout(WAIT) { service.state.first { it.statuses[ws.ref.key]?.observedAt == 100.0 } }
+            rpc.gate!!.complete(Unit)
+            val state = withTimeout(WAIT) { service.state.first { !it.loading && it.items.isNotEmpty() } }
+            assertEquals("sleeping", state.statuses[ws.ref.key]?.computeStatus)
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `collection failures reconnect and consumer disposal cancels the recovered feed`() = runBlocking {
+        val rpc = FakeRpc().also { it.fail = true }
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        service.observe(HostedWorkspaceRefDto("cloud", "one"), "same", parent)
+        withTimeout(WAIT) { rpc.opened.receive(); rpc.closed.receive(); rpc.opened.receive() }
+        Disposer.dispose(parent)
+        withTimeout(WAIT) { rpc.closed.receive() }
+        assertTrue(rpc.opened.tryReceive().isFailure)
+    }
+
+    @Test
+    fun `project scope cancellation closes owned collection`() = runBlocking {
+        val rpc = FakeRpc()
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(HostedWorkspaceRefDto("cloud", "one"), "same", parent)
+            withTimeout(WAIT) { rpc.opened.receive() }
+            cs.cancel()
+            withTimeout(WAIT) { rpc.closed.receive() }
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
+    fun `gate disable and signout clear observers and cached state`() = runBlocking {
+        val pages = mutableMapOf<String?, HostedWorkspaceListDto>(null to HostedWorkspaceListDto(items = listOf(workspace("1"))))
+        val rpc = FakeRpc(pages)
+        var enabled = true
+        val service = KiloHostedService(cs, rpc, gate = { enabled }, log = TestLog(), repo = { "repo" })
+        service.refresh("/repo")
+        withTimeout(WAIT) { rpc.opened.receive() }
+        pages[null] = HostedWorkspaceListDto(signedOut = true)
+        service.refresh("/repo")
+        withTimeout(WAIT) { rpc.closed.receive() }
+        withTimeout(WAIT) { service.state.first { it.signedOut } }
+        assertTrue(service.state.value.statuses.isEmpty())
+        pages[null] = HostedWorkspaceListDto(items = listOf(workspace("1")))
+        service.refresh("/repo")
+        withTimeout(WAIT) { rpc.opened.receive() }
+        enabled = false
+        service.refresh("/repo")
+        withTimeout(WAIT) { rpc.closed.receive() }
+        assertEquals(false, service.state.value.enabled)
+    }
+
     private fun workspace(id: String): HostedWorkspaceDto = HostedWorkspaceDto(
         ref = HostedWorkspaceRefDto("cloud", "wrk_$id"),
         name = "Repo $id",
@@ -151,6 +488,20 @@ class KiloHostedServiceTest {
     ) : KiloHostedRpcApi {
         var workspaceCalls = 0
             private set
+        val events = MutableSharedFlow<HostedSystemEventDto>(extraBufferCapacity = 16, replay = 16)
+        val opened = Channel<Unit>(Channel.UNLIMITED)
+        val closed = Channel<Unit>(Channel.UNLIMITED)
+        val reading = Channel<Unit>(Channel.UNLIMITED)
+        val received = Channel<HostedSystemEventDto>(Channel.UNLIMITED)
+        var gate: CompletableDeferred<Unit>? = null
+        var status: HostedWorkspaceStatusDto? = null
+        var fail = false
+
+        suspend fun send(event: HostedSystemEventDto) {
+            val count = withTimeout(WAIT) { events.subscriptionCount.first { it > 0 } }
+            events.emit(event)
+            repeat(count) { withTimeout(WAIT) { assertEquals(event, received.receive()) } }
+        }
 
         override suspend fun providers(): List<HostedProviderDto> =
             pages.values.firstOrNull()?.providers ?: emptyList()
@@ -173,7 +524,10 @@ class KiloHostedServiceTest {
         override suspend fun workspaceStatus(
             ref: HostedWorkspaceRefDto,
             organizationID: String?,
-        ): HostedWorkspaceStatusDto = HostedWorkspaceStatusDto(
+        ): HostedWorkspaceStatusDto {
+            reading.send(Unit)
+            gate?.await()
+            return status ?: HostedWorkspaceStatusDto(
             ref = ref,
             deletionState = "active",
             computeStatus = "running",
@@ -182,11 +536,18 @@ class KiloHostedServiceTest {
             activeSessionCount = 1,
             rateMicrodollarsPerHour = 1_000_000,
         )
+        }
 
         override suspend fun systemEvents(
             ref: HostedWorkspaceRefDto,
             sessionID: String,
             organizationID: String?,
-        ): Flow<HostedSystemEventDto> = emptyFlow()
+        ): Flow<HostedSystemEventDto> = flow {
+            try {
+                opened.send(Unit)
+                if (fail) { fail = false; error("connection lost during collection") }
+                events.collect { emit(it); received.send(it) }
+            } finally { closed.trySend(Unit) }
+        }
     }
 }

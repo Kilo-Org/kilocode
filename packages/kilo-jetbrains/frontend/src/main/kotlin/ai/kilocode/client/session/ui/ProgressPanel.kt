@@ -15,6 +15,7 @@ import ai.kilocode.client.util.UiTimers
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Color
@@ -49,6 +50,7 @@ class ProgressPanel(
 
     private var style = SessionEditorStyle.current()
     private var state: SessionState = SessionState.Idle
+    private var preparation: String? = null
 
     // Elapsed time is tracked as banked time from previous running stretches
     // (`accrued`) plus the start of the current stretch (`began`, `null` when
@@ -100,8 +102,20 @@ class ProgressPanel(
 
     override fun getBackground(): Color = SessionUiStyle.Colors.sessionBackground()
 
-    private fun onState(state: SessionState) {
-        this.state = state
+    @RequiresEdt
+    fun setPreparation(value: String?) {
+        val text = value?.takeIf { it.isNotBlank() }
+        if (preparation == text) return
+        preparation = text
+        onState(state)
+    }
+
+    @RequiresEdt
+    private fun onState(value: SessionState) {
+        this.state = value
+        val state = preparation?.takeUnless {
+            value is SessionState.AwaitingPermission || value is SessionState.AwaitingQuestion || value is SessionState.Error
+        }?.let { SessionState.Busy(it) } ?: value
         when (state) {
             is SessionState.Busy -> {
                 text = state.text
@@ -204,7 +218,7 @@ class ProgressPanel(
         status.font = style.regularFont
         elapsed.font = style.regularFont
         elapsed.foreground = SessionUiStyle.Text.Secondary.foreground()
-        if (state is SessionState.Busy) busy.foreground = style.editorForeground
+        if (state is SessionState.Busy || preparation != null) busy.foreground = style.editorForeground
         revalidate()
         repaint()
     }

@@ -75,6 +75,77 @@ class HostedSystemEventParserTest {
     }
 
     @Test
+    fun `canonical progress detail and timestamp take precedence over generic labels and other clocks`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"sessionID":"ses_cloud","observedAt":9000,
+                "sandbox":{"status":"sleeping","observedAt":10000},"preparation":{"version":2,"attemptId":"attempt_1",
+                "triggerMessageId":"msg_1","revision":3,"timestamp":1234,"action":"step_progress",
+                "step":"cloning","stepId":"clone_1","message":"Cloning repo","detail":"Receiving objects: 33%"}}}
+        """.trimIndent()))
+        assertEquals("Receiving objects: 33%", event.message)
+        assertEquals("step_progress", event.action)
+        assertEquals("cloning", event.step)
+        assertEquals(1234.0, event.observedAt)
+        assertEquals("attempt_1", event.attemptID)
+        assertEquals(3L, event.revision)
+        assertNull(event.sandboxStatus)
+    }
+
+    @Test
+    fun `materialized step snapshot prefers latest detail then label with its real revision`() {
+        for (detail in listOf("\"Receiving objects: 66%\"", "null")) {
+            val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+                {"type":"preparing","properties":{"preparation":{"version":2,"attemptId":"attempt_1",
+                    "triggerMessageId":"msg_1","revision":6,"timestamp":2345,"action":"step_snapshot",
+                    "step":"cloning","message":"Preparation snapshot","stepSnapshot":{"id":"clone_1",
+                    "key":"cloning","label":"Cloning repo","status":"running","startedAt":1200,
+                    "revision":6,"latestDetail":$detail}}}}
+            """.trimIndent()))
+            assertEquals(if (detail == "null") "Cloning repo" else "Receiving objects: 66%", event.message)
+            assertEquals("running", event.action)
+            assertEquals(2345.0, event.observedAt)
+            assertEquals("attempt_1", event.attemptID)
+            assertEquals(6L, event.revision)
+        }
+    }
+
+    @Test
+    fun `attempt snapshots distinguish whole preparation completion from step completion`() {
+        for ((status, action) in listOf("running" to "attempt_started", "completed" to "attempt_completed",
+            "failed" to "attempt_failed")) {
+            val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+                {"type":"preparing","properties":{"preparation":{"version":2,"attemptId":"attempt_1",
+                    "triggerMessageId":"msg_1","revision":7,"timestamp":3456,"action":"attempt_snapshot",
+                    "step":"workspace_setup","message":"Preparation snapshot","attempt":{"id":"attempt_1",
+                    "triggerMessageId":"msg_1","status":"$status","startedAt":1000,"revision":7}}}}
+            """.trimIndent()))
+            assertEquals(action, event.action)
+            assertNull(event.step)
+            assertNull(event.message)
+            assertEquals(3456.0, event.observedAt)
+            assertEquals(7L, event.revision)
+        }
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"preparation":{"version":2,"attemptId":"attempt_1",
+                "revision":8,"timestamp":4567,"action":"step_completed","step":"cloning","message":"Cloned"}}}
+        """.trimIndent()))
+        assertEquals("step_completed", event.action)
+        assertEquals("Cloned", event.message)
+    }
+
+    @Test
+    fun `absent preparation timestamps stay unknown and never borrow sandbox clock`() {
+        val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """
+            {"type":"preparing","properties":{"sandbox":{"observedAt":9999},"preparation":{
+                "version":2,"attemptId":"attempt_1","revision":2,"action":"step_progress",
+                "step":"cloning","message":"Cloning repo","detail":"Receiving objects: 33%"}}}
+        """.trimIndent()))
+        assertEquals(0.0, event.observedAt)
+        assertEquals("Receiving objects: 33%", event.message)
+        assertEquals(2L, event.revision)
+    }
+
+    @Test
     fun `sandbox states and details use nested observation time and preserve workspace identity`() {
         for (state in listOf("running", "starting", "unavailable", "idle")) {
             val event = assertNotNull(HostedSystemEventParser.parse(session, native, null, """

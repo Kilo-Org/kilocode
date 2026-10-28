@@ -591,7 +591,7 @@ class AgentManagerPanel(
                     running = running.contains(key),
                 )
             } + if (hostedState.enabled) {
-                hostedState.items.map { HostedWorkspaceRow(HostedWorkspaceRowData(it, hostedState.statuses[it.ref.key])) }
+                hostedState.items.map { HostedWorkspaceRow(HostedWorkspaceRowData(it, hostedState.presentation(it.ref))) }
             } else {
                 emptyList()
             },

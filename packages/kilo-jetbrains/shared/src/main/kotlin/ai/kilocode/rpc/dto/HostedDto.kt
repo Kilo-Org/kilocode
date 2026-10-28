@@ -139,6 +139,8 @@ data class HostedCapabilitiesDto(
 /**
  * Decoded `cloudAgent.systemEvents` preparation/status event. [sessionID] is the composite hosted
  * identity; the raw provider session id and directory never cross the backend boundary.
+ * [observedAt] belongs only to [kind]'s clock: preparation timestamp or sandbox observation.
+ * A zero clock is unknown; [revision] orders progress within [attemptID].
  */
 @Serializable
 data class HostedSystemEventDto(
@@ -151,4 +153,6 @@ data class HostedSystemEventDto(
     val sandboxStatus: String? = null,
     val sandboxDetail: String? = null,
     val observedAt: Double = 0.0,
+    val attemptID: String? = null,
+    val revision: Long? = null,
 )

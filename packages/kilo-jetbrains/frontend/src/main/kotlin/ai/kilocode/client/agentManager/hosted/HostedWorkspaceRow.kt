@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.rpc.dto.HostedWorkspaceDto
@@ -28,7 +29,6 @@ internal class HostedWorkspaceRow(
     override val description: String?
         get() = listOfNotNull(
             dto.branch?.takeIf { it.isNotBlank() },
-            status?.computeStatus?.takeIf { it.isNotBlank() },
             dto.sessions.size.takeIf { it > 0 }?.let { KiloBundle.message("hosted.workspace.session.count", it) },
         ).joinToString(" · ").takeIf { it.isNotBlank() }
     override val tooltip: String?
@@ -41,12 +41,15 @@ internal class HostedWorkspaceRow(
     override val badges: List<ActiveListBadge>
         get() = listOfNotNull(
             status?.computeStatus?.takeIf { it.isNotBlank() }?.let {
-                ActiveListBadge(it, id = "cloud-compute")
-            },
-            status?.rateMicrodollarsPerHour?.let {
+                val label = when (it) {
+                    "running" -> "active"
+                    "sleeping", "starting", "stopping", "stopped", "unavailable" -> it
+                    else -> "unknown"
+                }
                 ActiveListBadge(
-                    "$" + String.format(java.util.Locale.US, "%.2f", it / 1_000_000.0) + "/h",
-                    id = "cloud-rate",
+                    KiloBundle.message("hosted.workspace.status.$label"),
+                    if (it == "running") UiStyle.Badge.ActivityRunning else UiStyle.Badge.Secondary,
+                    id = "cloud-compute",
                 )
             },
         )

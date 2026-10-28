@@ -28,6 +28,11 @@ import ai.kilocode.rpc.dto.SessionStatusDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -36,6 +41,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -74,7 +80,6 @@ class KiloBackendHostedManager(
     companion object {
         private const val WORKSPACE_LIMIT = "50"
         private const val SESSION_LIMIT = "50"
-        private const val RENEW_WINDOW_MS = 5_000L
         private const val MAX_BACKOFF_MS = 10_000L
         private const val INITIAL_BACKOFF_MS = 500L
         private val MODEL = Regex("[a-zA-Z0-9._/\\-:~]{1,255}")
@@ -93,14 +98,27 @@ class KiloBackendHostedManager(
     ) {
         var events: Job? = null
         var system: Job? = null
+        var recovery: Job? = null
+        @Volatile var invalid = false
+    }
+
+    private class Continuity {
+        var retained = false
+        var subscribers = 0
+        var snapshot = false
+        var generation: String? = null
+        val revision = java.util.concurrent.atomic.AtomicLong()
     }
 
     private class HostedHttpException(val code: Int, message: String) : RuntimeException(message)
+    private class Resnapshot : RuntimeException()
 
     private val json = Json { ignoreUnknownKeys = true }
     private val media = "application/json".toMediaType()
     private val lock = Mutex()
     private val attachments = ConcurrentHashMap<String, Attachment>()
+    private val continuity = ConcurrentHashMap<String, Continuity>()
+    private var lifecycle: CoroutineScope? = null
     private val sessions = ConcurrentHashMap<String, HostedWorkspaceSessionDto>()
     private val permissionOwner = ConcurrentHashMap<String, String>()
     private val questionOwner = ConcurrentHashMap<String, String>()
@@ -128,7 +146,8 @@ class KiloBackendHostedManager(
         this.base = "http://127.0.0.1:$port"
         this.chat = chat
         started = true
-        statusJob = cs.launch {
+        lifecycle = CoroutineScope(cs.coroutineContext + SupervisorJob(cs.coroutineContext[Job]))
+        statusJob = lifecycle!!.launch {
             chat.events.collect { event ->
                 when (event) {
                     is ChatEventDto.SessionStatusChanged -> if (HostedIDs.isSession(event.sessionID)) {
@@ -160,6 +179,9 @@ class KiloBackendHostedManager(
         statusJob = null
         attachments.values.forEach { close(it) }
         attachments.clear()
+        continuity.clear()
+        lifecycle?.cancel()
+        lifecycle = null
         sessions.clear()
         permissionOwner.clear()
         questionOwner.clear()
@@ -244,8 +266,25 @@ class KiloBackendHostedManager(
 
     suspend fun systemEvents(ref: HostedWorkspaceRefDto, native: String, organizationID: String?): Flow<HostedSystemEventDto> {
         val composite = HostedIDs.session(ref.providerID, ref.workspaceID, native)
-        ensure(composite, organizationID)
-        return systemEvents.filter { it.sessionID == composite }
+        return flow {
+            val state = lock.withLock {
+                continuity.computeIfAbsent(composite) { Continuity() }.also { it.subscribers++ }
+            }
+            try {
+                ensure(composite, organizationID, retained = false)
+                systemEvents.filter { it.sessionID == composite }.collect { emit(it) }
+            } finally {
+                withContext(kotlinx.coroutines.NonCancellable) {
+                    lock.withLock {
+                        state.subscribers--
+                        if (!state.retained && state.subscribers == 0) {
+                            attachments.remove(composite)?.let { close(it) }
+                            continuity.remove(composite, state)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // ------ hosted session routing ------
@@ -258,7 +297,10 @@ class KiloBackendHostedManager(
         val cached = sessions[id] ?: runCatching {
             val dto = workspace(HostedWorkspaceRefDto(provider, workspace), null, organizationID)
             dto.sessions.firstOrNull { it.nativeSessionID == native }
-        }.getOrNull()
+        }.getOrElse {
+            if (it is CancellationException) throw it
+            null
+        }
         HostedEventMapper.session(
             composite = id,
             directory = marker,
@@ -329,6 +371,7 @@ class KiloBackendHostedManager(
     suspend fun abort(id: String, organizationID: String?) {
         attached(id, organizationID) { attachment ->
             post("/session/${attachment.native}/abort?workspace=${encode(attachment.id)}", "", "abort")
+            refresh(attachment)
         }
     }
 
@@ -350,14 +393,15 @@ class KiloBackendHostedManager(
         return withContext(Dispatchers.IO) {
             attachments.values
                 .filter { it.ref == ref }
-                .flatMap { attachment ->
+                .flatMap { candidate -> attached(candidate.session, organizationID) { attachment ->
+                    refresh(attachment)
                     val raw = get("/permission?workspace=${encode(attachment.id)}", "pendingPermissions")
-                        ?: return@flatMap emptyList()
+                        ?: return@attached emptyList()
                     KiloCliDataParser.parsePermissionRequests(raw).map { request ->
                         permissionOwner[request.id] = attachment.session
                         request.copy(sessionID = attachment.session)
                     }
-                }
+                } }
         }
     }
 
@@ -367,14 +411,14 @@ class KiloBackendHostedManager(
         return withContext(Dispatchers.IO) {
             attachments.values
                 .filter { it.ref == ref }
-                .flatMap { attachment ->
+                .flatMap { candidate -> attached(candidate.session, organizationID) { attachment ->
                     val raw = get("/question?workspace=${encode(attachment.id)}", "pendingQuestions")
-                        ?: return@flatMap emptyList()
+                        ?: return@attached emptyList()
                     KiloCliDataParser.parseQuestionRequests(raw).map { request ->
                         questionOwner[request.id] = attachment.session
                         request.copy(sessionID = attachment.session)
                     }
-                }
+                } }
         }
     }
 
@@ -425,13 +469,22 @@ class KiloBackendHostedManager(
 
     // ------ attachments and streams ------
 
-    private suspend fun ensure(id: String, organizationID: String?): Attachment {
+    private suspend fun ensure(id: String, organizationID: String?, retained: Boolean = true, expected: Attachment? = null): Attachment =
+        (lifecycle ?: throw IllegalStateException("Hosted session manager not started")).async {
         val (provider, workspace, native) = parse(id)
         lock.withLock {
-            val now = System.currentTimeMillis()
+            check(started) { "Hosted session manager not started" }
+            if (expected != null && attachments[id] !== expected) {
+                return@withLock attachments[id] ?: throw CancellationException("Hosted attachment released")
+            }
+            val state = continuity.computeIfAbsent(id) { Continuity() }
+            state.retained = state.retained || retained
             val existing = attachments[id]
-            if (existing != null && existing.expiresAt - now > RENEW_WINDOW_MS) return existing
-            if (existing != null) close(existing)
+            // expiresAt describes the provider descriptor, not the opaque CLI attachment lease.
+            if (existing != null && !existing.invalid) {
+                if (state.retained && existing.events == null) startNative(existing)
+                return@withLock existing
+            }
             val attached = withContext(Dispatchers.IO) {
                 requireApi().sessionHostAttach(provider, native, organizationID)
             }
@@ -451,10 +504,11 @@ class KiloBackendHostedManager(
             )
             attachments[id] = attachment
             startStreams(attachment)
+            if (existing != null) close(existing)
             log.info("hosted attach session=${ChatLogSummary.sid(id)} attachment=${attachment.id} expiresAt=$expires")
-            return attachment
+            attachment
         }
-    }
+    }.await()
 
     private suspend fun <T> attached(id: String, organizationID: String?, block: suspend (Attachment) -> T): T {
         val (provider, workspace, _) = parse(id)
@@ -467,16 +521,14 @@ class KiloBackendHostedManager(
                 failure = e
                 if (attempt == 0 && (e.code == 404 || e.code == 410)) {
                     log.info("hosted attachment expired session=${ChatLogSummary.sid(id)} code=${e.code} reattach=true")
-                    close(attachment)
-                    attachments.remove(id, attachment)
+                    attachment.invalid = true
                     return@repeat
                 }
                 throw e
             } catch (e: ClientException) {
                 failure = e
                 if (attempt == 0 && e.statusCode in setOf(404, 410)) {
-                    close(attachment)
-                    attachments.remove(id, attachment)
+                    attachment.invalid = true
                     return@repeat
                 }
                 throw e
@@ -486,24 +538,68 @@ class KiloBackendHostedManager(
     }
 
     private fun startStreams(attachment: Attachment) {
-        attachment.events = cs.launch(Dispatchers.IO) { eventLoop(attachment) }
-        attachment.system = cs.launch(Dispatchers.IO) { systemLoop(attachment) }
+        if (continuity[attachment.session]?.retained == true) startNative(attachment)
+        attachment.system = lifecycle?.launch(Dispatchers.IO) { systemLoop(attachment) }
+    }
+
+    private fun startNative(attachment: Attachment) {
+        attachment.events = lifecycle?.launch(Dispatchers.IO) { eventLoop(attachment) }
+    }
+
+    private fun recover(attachment: Attachment) {
+        synchronized(attachment) {
+            if (attachment.recovery?.isActive == true) return
+            attachment.invalid = true
+            attachment.recovery = lifecycle?.launch(Dispatchers.IO) {
+                var backoff = INITIAL_BACKOFF_MS
+                while (started && attachments[attachment.session] === attachment) {
+                    try {
+                        ensure(attachment.session, attachment.organizationID, retained = false, expected = attachment)
+                        return@launch
+                    } catch (err: CancellationException) {
+                        throw err
+                    } catch (err: Exception) {
+                        log.warn("hosted reattach failed session=${ChatLogSummary.sid(attachment.session)} message=${err.message}")
+                    }
+                    delay(backoff)
+                    backoff = (backoff * 2).coerceAtMost(MAX_BACKOFF_MS)
+                }
+            }
+        }
     }
 
     private suspend fun eventLoop(attachment: Attachment) {
-        val normalizer = KiloCliDataParser.ChatEventNormalizer()
         var backoff = INITIAL_BACKOFF_MS
-        var connected = false
+        val state = continuity[attachment.session] ?: return
         while (started && attachments[attachment.session] === attachment) {
+            val normalizer = KiloCliDataParser.ChatEventNormalizer()
             val opened = stream(
                 "/event?workspace=${encode(attachment.id)}",
                 onOpen = {
-                    if (connected) chat?.publish(ChatEventDto.Resnapshot(attachment.session))
-                    connected = true
+                    state.snapshot = true
+                    chat?.publishAwait(ChatEventDto.Resnapshot(attachment.session, phase = "start"))
                     backoff = INITIAL_BACKOFF_MS
                 },
             ) { type, data ->
-                val kind = type ?: KiloCliDataParser.extractEventType(data)
+                if (attachments[attachment.session] !== attachment) return@stream
+                val obj = json.parseToJsonElement(data) as? JsonObject
+                val payload = obj?.get("payload") as? JsonObject ?: obj
+                val kind = payload?.string("type") ?: type ?: KiloCliDataParser.extractEventType(data)
+                if (kind == "kilo.native.resnapshot") {
+                    state.snapshot = true
+                    throw Resnapshot()
+                }
+                if (kind == "kilo.native.fence") {
+                    val props = payload?.get("properties") as? JsonObject
+                    if (state.snapshot && (props?.get("snapshotComplete") as? JsonPrimitive)?.contentOrNull == "true") {
+                        state.generation = (props["generation"] as? JsonPrimitive)?.contentOrNull
+                        refresh(attachment)
+                        if (attachments[attachment.session] !== attachment) return@stream
+                        state.snapshot = false
+                        chat?.publishAwait(ChatEventDto.Resnapshot(attachment.session))
+                    }
+                    return@stream
+                }
                 val parsed = runCatching { normalizer.parse(kind, data) }.getOrElse {
                     log.warn("hosted event parse failed kind=$kind message=${it.message}")
                     null
@@ -515,16 +611,17 @@ class KiloBackendHostedManager(
                     return@stream
                 }
                 parsed.forEach { event ->
-                    chat?.publish(HostedEventMapper.event(event, attachment.session, attachment.ref.key))
+                    val mapped = HostedEventMapper.event(event, attachment.session, attachment.ref.key)
+                    if (mapped is ChatEventDto.SessionStatusChanged || mapped is ChatEventDto.SessionIdle) state.revision.incrementAndGet()
+                    chat?.publishAwait(mapped)
                 }
             }
             if (!started || attachments[attachment.session] !== attachment) return
-            if (!opened) backoff = (backoff * 2).coerceAtMost(MAX_BACKOFF_MS)
-            if (System.currentTimeMillis() >= attachment.expiresAt - RENEW_WINDOW_MS) {
-                runCatching { ensure(attachment.session, attachment.organizationID) }
-                    .onFailure { log.warn("hosted reattach failed session=${ChatLogSummary.sid(attachment.session)} message=${it.message}") }
-                if (attachments[attachment.session] !== attachment) return
+            if (opened in setOf(404, 410)) {
+                recover(attachment)
+                return
             }
+            if (opened !in 200..299) backoff = (backoff * 2).coerceAtMost(MAX_BACKOFF_MS)
             delay(backoff)
         }
     }
@@ -538,24 +635,30 @@ class KiloBackendHostedManager(
                     .getOrNull()?.let { _system.tryEmit(it) }
             }
             if (!started || attachments[attachment.session] !== attachment) return
-            backoff = if (opened) INITIAL_BACKOFF_MS else (backoff * 2).coerceAtMost(MAX_BACKOFF_MS)
+            if (opened in setOf(404, 410)) {
+                recover(attachment)
+                return
+            }
+            backoff = if (opened in 200..299) INITIAL_BACKOFF_MS else (backoff * 2).coerceAtMost(MAX_BACKOFF_MS)
             delay(backoff)
         }
     }
 
     /**
-     * Opens one SSE stream and suspends until it closes. Returns whether the stream ever opened, so
-     * the caller can distinguish a dropped connection from a route the provider does not serve.
+     * Consume callbacks in wire order, including the status read at the snapshot fence. A bounded
+     * overflow closes the stream so the next full snapshot recovers rather than losing live events.
      */
     private suspend fun stream(
         path: String,
-        onOpen: () -> Unit = {},
-        onEvent: (String?, String) -> Unit,
-    ): Boolean {
-        val client = http ?: return false
-        val url = base ?: return false
+        onOpen: suspend () -> Unit = {},
+        onEvent: suspend (String?, String) -> Unit,
+    ): Int {
+        val client = http ?: return 0
+        val url = base ?: return 0
         val source = java.util.concurrent.atomic.AtomicReference<EventSource?>(null)
-        val done = kotlinx.coroutines.CompletableDeferred<Boolean>()
+        data class Frame(val type: String?, val data: String?)
+        val frames = Channel<Frame>(256)
+        val code = java.util.concurrent.atomic.AtomicInteger()
         val factory = EventSources.createFactory(
             client.newBuilder()
                 .callTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS)
@@ -565,25 +668,41 @@ class KiloBackendHostedManager(
         val listener = object : EventSourceListener() {
             override fun onOpen(eventSource: EventSource, response: okhttp3.Response) {
                 source.set(eventSource)
-                onOpen()
+                code.set(response.code)
+                frames.trySend(Frame(null, null))
             }
 
             override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
-                onEvent(type, data)
+                if (frames.trySend(Frame(type, data)).isFailure) {
+                    frames.close()
+                    eventSource.cancel()
+                }
             }
 
             override fun onClosed(eventSource: EventSource) {
-                done.complete(true)
+                frames.close()
             }
 
             override fun onFailure(eventSource: EventSource, t: Throwable?, response: okhttp3.Response?) {
                 if (t != null) log.debug { "hosted stream closed path=$path message=${t.message}" }
-                done.complete(response?.isSuccessful == true)
+                response?.let { code.set(it.code) }
+                frames.close()
             }
         }
         val eventSource = factory.newEventSource(Request.Builder().url("$url$path").build(), listener)
         return try {
-            done.await()
+            for (frame in frames) {
+                try {
+                    if (frame.data == null) onOpen() else onEvent(frame.type, frame.data)
+                } catch (err: CancellationException) {
+                    throw err
+                } catch (_: Resnapshot) {
+                    return code.get()
+                } catch (err: Exception) {
+                    log.warn("hosted stream event failed path=$path message=${err.message}")
+                }
+            }
+            code.get()
         } finally {
             (source.get() ?: eventSource).cancel()
         }
@@ -592,18 +711,42 @@ class KiloBackendHostedManager(
     private fun close(attachment: Attachment) {
         attachment.events?.cancel()
         attachment.system?.cancel()
+        attachment.recovery?.cancel()
         attachment.events = null
         attachment.system = null
-        _statuses.update { it - attachment.session }
         if (started) {
-            cs.launch(Dispatchers.IO) {
+            lifecycle?.launch(Dispatchers.IO) {
                 runCatching { requireApi().sessionHostDetach(attachment.id) }
-                    .onFailure { log.debug { "hosted detach failed attachment=${attachment.id} message=${it.message}" } }
+                    .onFailure {
+                        if (it is CancellationException) throw it
+                        log.debug { "hosted detach failed attachment=${attachment.id} message=${it.message}" }
+                    }
             }
         }
     }
 
     // ------ helpers ------
+
+    private suspend fun refresh(attachment: Attachment) {
+        val state = continuity[attachment.session] ?: return
+        val revision = state.revision.get()
+        try {
+            val raw = withContext(Dispatchers.IO) {
+                get("/session/status?workspace=${encode(attachment.id)}", "statuses")
+            } ?: return
+            val status = (json.parseToJsonElement(raw) as? JsonObject)?.get(attachment.native) as? JsonObject ?: return
+            if (attachments[attachment.session] !== attachment || state.revision.get() != revision) return
+            val parsed = KiloCliDataParser.parseStatus(status)
+            _statuses.update { it + (attachment.session to parsed) }
+            chat?.publishAwait(ChatEventDto.SessionStatusChanged(attachment.session, parsed))
+        } catch (err: CancellationException) {
+            throw err
+        } catch (err: HostedHttpException) {
+            recover(attachment)
+        } catch (err: Exception) {
+            log.warn("hosted status refresh failed session=${ChatLogSummary.sid(attachment.session)} message=${err.message}")
+        }
+    }
 
     private fun parse(id: String): Triple<String, String, String> =
         HostedIDs.parseSession(id) ?: throw IllegalArgumentException("Not a hosted session id")

@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.longOrNull
 
 /** Projects the provider's structured system feed onto the attached hosted identity. */
 internal object HostedSystemEventParser {
@@ -20,6 +21,7 @@ internal object HostedSystemEventParser {
         if (id != null && id != JsonNull && props.string("sessionID") != native) return null
         val cloud = props["cloudStatus"] as? JsonObject
         val preparation = props["preparation"] as? JsonObject
+        val attempt = preparation?.get("attempt") as? JsonObject
         val sandbox = props["sandbox"] as? JsonObject
         val steps = ((preparation?.get("steps") ?: cloud?.get("steps")) as? JsonArray)
             ?.mapNotNull { it as? JsonObject }
@@ -28,17 +30,34 @@ internal object HostedSystemEventParser {
         val step = (preparation?.get("stepSnapshot") as? JsonObject)
             ?: steps.lastOrNull { it.string("status") in setOf("in_progress", "running") }
             ?: steps.lastOrNull { it.string("status") in setOf("completed", "failed") }
+        val action = when (attempt?.string("status")) {
+            "running" -> "attempt_started"
+            "completed" -> "attempt_completed"
+            "failed" -> "attempt_failed"
+            else -> step?.string("status") ?: preparation?.string("action")
+        }
         return HostedSystemEventDto(
             sessionID = session,
             kind = kind,
-            step = step?.string("step") ?: step?.string("key") ?: preparation?.string("step") ?: cloud?.string("step"),
-            action = step?.string("status") ?: preparation?.string("action"),
-            message = step?.string("message") ?: step?.string("latestDetail") ?: step?.string("safeError")
-                ?: preparation?.string("message") ?: cloud?.string("message"),
+            step = if (attempt != null) null else step?.string("step") ?: step?.string("key")
+                ?: preparation?.string("step") ?: cloud?.string("step"),
+            action = action,
+            message = step?.string("latestDetail") ?: preparation?.string("detail")
+                ?: step?.string("safeError") ?: preparation?.string("safeError") ?: attempt?.string("safeError")
+                ?: step?.string("message") ?: step?.string("label")
+                ?: preparation?.string("message")?.takeIf { attempt == null } ?: cloud?.string("message"),
             cloudStatus = cloud?.string("type"),
-            sandboxStatus = sandbox?.string("state") ?: sandbox?.string("status"),
-            sandboxDetail = sandbox?.string("detailCode"),
-            observedAt = sandbox?.number("observedAt") ?: props.number("observedAt") ?: 0.0,
+            sandboxStatus = (sandbox?.string("state") ?: sandbox?.string("status"))
+                ?.takeIf { kind == "cloud.sandbox.status" },
+            sandboxDetail = sandbox?.string("detailCode")?.takeIf { kind == "cloud.sandbox.status" },
+            observedAt = when (kind) {
+                "preparing" -> preparation?.number("timestamp") ?: props.number("observedAt")
+                "cloud.sandbox.status" -> sandbox?.number("observedAt") ?: props.number("observedAt")
+                else -> props.number("observedAt")
+            } ?: 0.0,
+            attemptID = preparation?.string("attemptId") ?: attempt?.string("id"),
+            revision = ((preparation?.get("revision") ?: step?.get("revision") ?: attempt?.get("revision"))
+                as? JsonPrimitive)?.longOrNull?.takeIf { it >= 0 },
         )
     }
 

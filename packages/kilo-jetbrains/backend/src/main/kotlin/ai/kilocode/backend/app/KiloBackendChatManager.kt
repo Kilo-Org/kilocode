@@ -158,6 +158,11 @@ class KiloBackendChatManager(
         }
     }
 
+    /** Hosted replay boundaries and materialized snapshots must not lose events under backpressure. */
+    suspend fun publishAwait(event: ChatEventDto) {
+        _events.emit(event)
+    }
+
     // ------ prompt ------
 
     suspend fun enhancePrompt(dir: String, text: String): String {

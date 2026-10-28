@@ -1,6 +1,7 @@
 package ai.kilocode.client.agentManager.hosted
 
 import ai.kilocode.client.app.KiloHostedService
+import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.agentManager.worktree.WorktreeEditorMatchers
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionHost
@@ -16,7 +17,6 @@ import ai.kilocode.client.ui.list.ActiveListSurface
 import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.HostedWorkspaceSessionDto
-import ai.kilocode.rpc.dto.HostedWorkspaceStatusDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
@@ -30,10 +30,10 @@ import com.intellij.util.ui.components.BorderLayoutPanel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
@@ -63,12 +63,12 @@ class HostedWorkspaceEditorPanel(
     private val empty = JBLabel(KiloBundle.message("hosted.workspace.empty"))
     private val title = JBLabel(name?.takeIf { it.isNotBlank() } ?: ref.workspaceID)
     private val compute = JBLabel(KiloBundle.message("hosted.workspace.status.loading"))
-    private val preparation = JBLabel()
     private val manager = HostedWorkspaceEditorManager(
-        parent = parent,
+        parent = this,
         project = project,
         workspace = hostedWorkspaceRoot(project),
         presentUi = { ui -> present(ui) },
+        changed = { if (started) sync(select = false) },
     )
     private val list = ActiveList(
         KiloBundle.message("hosted.workspace.sessions.empty"),
@@ -84,8 +84,7 @@ class HostedWorkspaceEditorPanel(
     )
 
     private var sessions: List<HostedWorkspaceSessionDto> = emptyList()
-    private var status: HostedWorkspaceStatusDto? = null
-    private var systemJob: Job? = null
+    private var observation: Disposable? = null
     private var selected: String? = null
     private var started = false
 
@@ -94,7 +93,6 @@ class HostedWorkspaceEditorPanel(
         project.service<WorktreeEditorMatchers>().register(HostedWorkspaceEditorMatcher)
         title.toolTipText = ref.key
         compute.toolTipText = KiloBundle.message("hosted.workspace.status.tooltip")
-        preparation.isVisible = false
         val splitter = OnePixelSplitter(false, 0.25f)
         splitter.setHonorComponentsMinimumSize(true)
         list.minimumSize = Dimension(0, 0)
@@ -104,16 +102,33 @@ class HostedWorkspaceEditorPanel(
         addToCenter(splitter)
         present(null)
         cs.launch {
+            hosted.state.collect { state ->
+                withContext(Dispatchers.Main) {
+                    if (Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) return@withContext
+                    if (state.signedOut || !hosted.enabled()) {
+                        observation?.let(Disposer::dispose)
+                        observation = null
+                    }
+                    applyStatus()
+                }
+            }
+        }
+        cs.launch {
+            val service = project.service<KiloSessionService>()
+            combine(service.activity, service.statuses) { _, _ -> Unit }.collect {
+                withContext(Dispatchers.Main) {
+                    if (started && !Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) sync(select = false)
+                }
+            }
+        }
+        cs.launch {
             hosted.refreshes.drop(1).collect {
                 withContext(Dispatchers.Main) {
                     if (started && !Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) reload()
                 }
             }
         }
-        addHierarchyListener { event ->
-            if (event.changeFlags and java.awt.event.HierarchyEvent.SHOWING_CHANGED.toLong() == 0L) return@addHierarchyListener
-            if (isShowing) start()
-        }
+        start()
     }
 
     override fun getBackground(): Color = activeListToolWindowBackground()
@@ -138,11 +153,10 @@ class HostedWorkspaceEditorPanel(
         cs.launch {
             try {
                 val loaded = hosted.sessions(ref)
-                val next = runCatching { hosted.status(ref) }.getOrNull()
+                hosted.status(ref)
                 withContext(Dispatchers.Main) {
                     if (Disposer.isDisposed(this@HostedWorkspaceEditorPanel)) return@withContext
                     sessions = loaded
-                    status = next
                     applyStatus()
                     sync()
                 }
@@ -159,7 +173,9 @@ class HostedWorkspaceEditorPanel(
 
     @RequiresEdt
     private fun applyStatus() {
-        val item = status ?: run {
+        val state = hosted.state.value
+        manager.setPreparation(selected?.let { state.preparation(it) })
+        val item = state.presentation(ref) ?: run {
             compute.text = KiloBundle.message("hosted.workspace.status.unknown")
             return
         }
@@ -174,53 +190,28 @@ class HostedWorkspaceEditorPanel(
         "$" + String.format("%.2f", microdollars / 1_000_000.0) + "/h"
 
     @RequiresEdt
-    private fun sync() {
+    private fun sync(select: Boolean = true) {
         val kinds = manager.activity()
         val titles = manager.titles()
         val rows = sessions.map { HostedSessionRow(it, kinds[it.id], titles[it.id]) }
         val current = manager.currentKey()?.takeIf { it != SessionHost.NEW }
-        val initial = current ?: sessions.maxByOrNull { it.updated }?.id
+        val initial = current ?: if (select) sessions.maxByOrNull { it.updated }?.id else null
         list.update(rows, initial?.let { ActiveListSelection.Key(it) } ?: ActiveListSelection.Preserve)
-        if (initial != null && manager.currentKey() != initial) open(sessions.first { it.id == initial }, focus = false)
+        if (select && initial != null && manager.currentKey() != initial) {
+            sessions.firstOrNull { it.id == initial }?.let { open(it, focus = false) }
+        }
     }
 
     @RequiresEdt
     private fun open(item: HostedWorkspaceSessionDto, focus: Boolean) {
+        if (selected != item.id || observation == null) {
+            observation?.let(Disposer::dispose)
+            observation = hosted.observe(ref, item.nativeSessionID, this)
+        }
         selected = item.id
         val ref = SessionRef.Hosted(ref.providerID, ref.workspaceID, item.nativeSessionID, item.title)
         manager.show(ref, focus)
-        bindSystem(item)
-    }
-
-    private fun bindSystem(item: HostedWorkspaceSessionDto) {
-        systemJob?.cancel()
-        preparation.isVisible = false
-        systemJob = cs.launch {
-            try {
-                hosted.systemEvents(ref, item.nativeSessionID).collect { event ->
-                    val text = listOfNotNull(
-                        event.step?.takeIf { it.isNotBlank() },
-                        event.message?.takeIf { it.isNotBlank() },
-                        event.cloudStatus?.takeIf { it.isNotBlank() },
-                        event.sandboxStatus?.takeIf { it.isNotBlank() },
-                        event.sandboxDetail?.takeIf { it.isNotBlank() },
-                    ).distinct().joinToString(" · ")
-                    withContext(Dispatchers.Main) {
-                        if (selected != item.id) return@withContext
-                        preparation.text = text
-                        preparation.isVisible = text.isNotBlank()
-                    }
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // System status is supplementary; the transcript and native events still work.
-                withContext(Dispatchers.Main) {
-                    if (selected != item.id) return@withContext
-                    preparation.isVisible = false
-                }
-            }
-        }
+        applyStatus()
     }
 
     @RequiresEdt
@@ -231,18 +222,15 @@ class HostedWorkspaceEditorPanel(
         right.repaint()
     }
 
+    @RequiresEdt
     private fun header(): JComponent = BorderLayoutPanel().apply {
         isOpaque = false
         border = JBUI.Borders.empty(UiStyle.Gap.SM)
         addToLeft(title)
-        addToCenter(JPanel(BorderLayout()).apply {
-            isOpaque = false
-            add(compute, BorderLayout.WEST)
-        })
+        addToCenter(compute)
         addToRight(
             ActionLink(KiloBundle.message("hosted.workspace.refresh")) {
                 hosted.refresh(project.basePath.orEmpty())
-                reload()
             },
         )
     }

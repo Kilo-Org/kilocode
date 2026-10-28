@@ -258,6 +258,7 @@ object ChatLogSummary {
         is ChatEventDto.Resnapshot -> join(
             sid(event.sessionID),
             "evt=hosted.resnapshot",
+            "phase=${event.phase}",
         )
     }
 

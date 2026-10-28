@@ -51,6 +51,39 @@ class ProgressPanelTest : BasePlatformTestCase() {
         assertFalse(panel.isVisible)
     }
 
+    fun `test preparation displays before native turn and restores native status afterward`() {
+        panel.setPreparation("Cloning repository... Receiving objects: 33%")
+        assertTrue(panel.isVisible)
+        assertEquals("Cloning repository... Receiving objects: 33%", panel.labelText())
+        assertTrue(model.state is SessionState.Idle)
+        model.setState(SessionState.Busy("Running commands"))
+        assertEquals("Cloning repository... Receiving objects: 33%", panel.labelText())
+        panel.setPreparation(null)
+        assertEquals("Running commands", panel.labelText())
+        model.setState(SessionState.Idle)
+        assertFalse(panel.isVisible)
+    }
+
+    fun `test streaming preparation retains components and releases progress timer`() {
+        val clock = FakeClock()
+        replace(clock)
+        val before = components(panel)
+        val count = before.size
+        repeat(500) { index ->
+            panel.setPreparation("Receiving objects: $index")
+            assertEquals(count, components(panel).size)
+        }
+        assertEquals("Receiving objects: 499", panel.labelText())
+        assertTrue(clock.timer.isRunning())
+        before.zip(components(panel)).forEach { (first, after) -> assertSame(first, after) }
+        panel.setPreparation(null)
+        assertFalse(panel.isVisible)
+        assertFalse(clock.timer.isRunning())
+        assertEquals(count, components(panel).size)
+        Disposer.dispose(parent)
+        assertFalse(clock.timer.isRunning())
+    }
+
     fun `test panel paints the session background`() {
         assertTrue(panel.isOpaque)
         assertEquals(SessionUiStyle.Colors.sessionBackground().rgb, panel.background.rgb)

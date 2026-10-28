@@ -101,6 +101,7 @@ import ai.kilocode.rpc.dto.GhAvailability
 import ai.kilocode.rpc.dto.ModelLimitDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.HostedSystemEventDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.WorktreePrDto
@@ -179,6 +180,7 @@ class SessionUi(
     private val workspace = workspace
     private var opening = ref != null
     private var pending = false
+    private var preparation: String? = null
     private var loaded: Boolean? = null
     private var revertDraft: Pair<String, List<PromptAttachment>>? = null
     private var pendingRollback: String? = null
@@ -495,6 +497,18 @@ class SessionUi(
                 IdeFocusManager.getInstance(project).requestFocusInProject(target, project)
             }
         }, ModalityState.defaultModalityState())
+    }
+
+    @RequiresEdt
+    internal fun setHostedPreparation(event: HostedSystemEventDto?) {
+        if (!hosted) return
+        val text = event?.message?.takeIf { it.isNotBlank() }
+            ?: event?.let { KiloBundle.message("hosted.workspace.preparing") }
+        if (preparation == text) return
+        preparation = text
+        messageBody.progress.setPreparation(text)
+        scroll.show(body(controller.model.state))
+        messageBody.revalidate()
     }
 
     internal fun setModalContent(content: JComponent?, maxW: (() -> Int)? = null, focus: (() -> JComponent)? = null) {
@@ -1025,6 +1039,7 @@ class SessionUi(
     }
 
     private fun body(state: SessionState): JPanel {
+        if (preparation != null) return messageBody
         if (controller.model.showSession) return messageBody
         if (state is SessionState.Retry || state is SessionState.Offline) return progressBody
         if (state is SessionState.Loading) return progressBody

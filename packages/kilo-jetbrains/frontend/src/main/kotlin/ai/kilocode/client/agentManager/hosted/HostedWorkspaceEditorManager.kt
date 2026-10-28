@@ -6,6 +6,7 @@ import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionHost
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
+import ai.kilocode.rpc.dto.HostedSystemEventDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -29,6 +30,7 @@ class HostedWorkspaceEditorManager(
     project: Project,
     workspace: Workspace,
     private val presentUi: (SessionUi?) -> Unit,
+    private val changed: () -> Unit = {},
 ) : SessionHost(
     project = project,
     root = workspace,
@@ -69,7 +71,18 @@ class HostedWorkspaceEditorManager(
     }
 
     @RequiresEdt
+    override fun activityChanged() {
+        super.activityChanged()
+        changed()
+    }
+
+    @RequiresEdt
     fun show(ref: SessionRef.Hosted, focus: Boolean = true) {
         openSession(ref, focus)
+    }
+
+    @RequiresEdt
+    fun setPreparation(event: HostedSystemEventDto?) {
+        currentUi()?.setHostedPreparation(event)
     }
 }
