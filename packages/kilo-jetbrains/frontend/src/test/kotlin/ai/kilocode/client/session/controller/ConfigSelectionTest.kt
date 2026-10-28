@@ -13,6 +13,40 @@ import ai.kilocode.rpc.dto.ProviderDto
 
 class ConfigSelectionTest : SessionControllerTestBase() {
 
+    fun `test hosted model selection excludes other providers and reasoning variants`() {
+        projectRpc.state.value = workspaceReady(
+            providers = listOf(
+                ProviderDto(id = "kilo", name = "Kilo", models = mapOf(
+                    "opus" to ModelDto(id = "opus", name = "Opus", variants = listOf("high")),
+                )),
+                ProviderDto(id = "other", name = "Other", models = mapOf("model" to ModelDto(id = "model", name = "Other"))),
+            ),
+            connected = listOf("other"),
+        )
+        appRpc.models = ModelStateDto(model = mapOf("code" to ModelSelectionDto("other", "model")))
+        appRpc.state.value = KiloAppStateDto(
+            status = KiloAppStatusDto.READY,
+            config = ConfigDto(model = "other/model"),
+        )
+        val hosted = controller("hosted:kilo-cloud:worktree_1:ses_one")
+        collect(hosted)
+        flush()
+        assertEquals(listOf("kilo"), hosted.model.models.map { it.provider }.distinct())
+        assertEquals("kilo/opus", hosted.model.model)
+        assertTrue(hosted.model.variants.isEmpty())
+        assertNull(hosted.model.variant)
+        edt {
+            hosted.selectModel("other", "model")
+            hosted.selectVariant("high")
+            hosted.prompt("hello")
+        }
+        flush()
+        val sent = rpc.prompts.single().third
+        assertEquals("kilo", sent.providerID)
+        assertNull(sent.variant)
+        assertNull(sent.noReply)
+    }
+
     fun `test selectModel stays in its session`() {
         projectRpc.state.value = workspaceReady(
             providers = listOf(

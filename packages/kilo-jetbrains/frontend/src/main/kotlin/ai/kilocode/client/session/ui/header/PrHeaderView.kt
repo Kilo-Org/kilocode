@@ -46,6 +46,7 @@ internal class PrHeaderView @RequiresEdt constructor(
      * a long line of counters.
      */
     stacked: Boolean = false,
+    private val fallback: Boolean = false,
     openDiff: () -> Unit,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
     private val status = JBLabel()
@@ -188,9 +189,9 @@ internal class PrHeaderView @RequiresEdt constructor(
     @RequiresEdt
     private fun applyPr(pull: WorktreePrDto?, name: String) {
         if (pull == null) {
-            syncPr(false)
+            syncPr(fallback && name.isNotBlank())
             syncStatus(null)
-            clearTitle()
+            if (fallback && name.isNotBlank()) syncTitle(name, null, name) else clearTitle()
             syncClick(null)
             syncVerdicts(null)
             return

@@ -212,15 +212,19 @@
         default =
           final: _prev:
           let
+            # kilocode_change start - match the Kilo package and its pinned dependency builder
+            bun = final.callPackage ./nix/bun.nix { };
             node_modules = final.callPackage ./nix/node_modules.nix {
-              inherit rev;
+              inherit bun rev;
             };
-            opencode = final.callPackage ./nix/opencode.nix {
-              inherit node_modules;
+            kilo = final.callPackage ./nix/kilo.nix {
+              inherit bun node_modules;
             };
           in
           {
-            inherit opencode;
+            inherit kilo;
+            opencode = kilo; # Preserve the existing overlay attribute for consumers.
+            # kilocode_change end
           };
       };
 
