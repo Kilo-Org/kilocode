@@ -23,8 +23,13 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
         fetch: local,
       })
       const post = (message: ToWebview) => void view.webview.postMessage(message)
+      // The cycle keybindings are active only while the webview has focus, as on v1 (`sidebarFocused`):
+      // the webview reports its focus, so `ctrl+.` stays free for the editor quick-fix.
+      const focus = (focused: boolean) =>
+        void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", focused)
       const subscription = view.webview.onDidReceiveMessage((message: ToHost) => {
         if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
+        if (message.type === "webviewFocusChanged") return focus(message.focused === true)
         if (message.type === "copyToClipboard")
           return void env.clipboard.writeText(message.text).then(
             () => post({ type: "clipboardWriteResult", id: message.id, ok: true }),
@@ -36,11 +41,8 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
           return void input.context.globalState.update(EXPANDED, message.value)
         if (message.type === "saveImage") return saveImage(input.directory, message)
       })
-      // The cycle keybindings are active while the sidebar is visible, as on v1 (`sidebarFocused`).
-      const focus = (visible: boolean) => void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", visible)
-      focus(view.visible)
       const visibility = view.onDidChangeVisibility(() => {
-        focus(view.visible)
+        if (!view.visible) focus(false)
         post({ type: "webviewActiveChanged", active: view.visible })
       })
       // The prompt hint shows the same keybind as the cycle command, so send it on load and when the
