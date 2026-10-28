@@ -45,6 +45,7 @@ export type Settings =
   | { type: "updateVSCodeSettings"; values: Record<string, unknown> }
   | { type: "openFile"; path: string }
   | { type: "openVSCodeSettings"; query: string }
+  | { type: "resetAllSettings" }
 
 export type ToWebview =
   | { type: "response"; id: number; status: number; statusText: string; headers: [string, string][] }

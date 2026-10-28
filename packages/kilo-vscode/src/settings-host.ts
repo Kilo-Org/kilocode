@@ -28,6 +28,9 @@ export function readKiloSettings(): Record<string, unknown> {
   return Object.fromEntries(KILO_SETTING_KEYS.map((key) => [key, config.get(key)]))
 }
 
+/** webview globalState keys that are not configuration, cleared by Reset All Settings. */
+const GLOBAL_STATE_KEYS = ["kilo-code.v2.modelSelectorExpanded", "kilo-code.v2.autoApprove"]
+
 interface ConfigEntry {
   type: "document" | "directory"
   path?: string
@@ -125,9 +128,27 @@ export function settingsHost(input: {
     }
   }
 
+  const resetAllSettings = async () => {
+    const confirmed = await window.showWarningMessage(
+      "Reset all Kilo Code extension settings to defaults?",
+      { modal: true },
+      "Reset",
+    )
+    if (confirmed !== "Reset") return
+    const config = workspace.getConfiguration(NAMESPACE)
+    for (const key of KILO_SETTING_KEYS) await config.update(key, undefined, true)
+    for (const key of GLOBAL_STATE_KEYS) await input.context.globalState.update(key, undefined)
+    input.post({ type: "vscodeSettingsLoaded", values: readKiloSettings() })
+    void window.showInformationMessage("Kilo Code settings have been reset to defaults.")
+  }
+
   const handle = (message: ToHost) => {
     if (message.type === "configRead") {
       void readConfig()
+      return true
+    }
+    if (message.type === "resetAllSettings") {
+      void resetAllSettings()
       return true
     }
     if (message.type === "configWrite") {

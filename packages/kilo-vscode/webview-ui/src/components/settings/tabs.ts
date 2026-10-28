@@ -65,7 +65,7 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     id: "display",
     icon: "eye",
     title: "settings.display.title",
-    ready: false,
+    ready: true,
     component: lazy(() => import("./DisplayTab")),
   },
   {
@@ -86,7 +86,7 @@ export const SETTINGS_TABS_V2: SettingsTabV2[] = [
     id: "language",
     icon: "speech-bubble",
     title: "settings.language.title",
-    ready: false,
+    ready: true,
     component: lazy(() => import("./LanguageTab")),
   },
   {
