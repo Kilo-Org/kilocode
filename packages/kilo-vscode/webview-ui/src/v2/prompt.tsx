@@ -9,6 +9,10 @@ export function PromptInput(props: {
   session?: string
   running: boolean
   disabled: boolean
+  /** A pending permission blocks sending. Drives the blocked Send tooltip. */
+  blocked?: boolean
+  /** A pending question tool call. The composer waits for an answer, so Send replaces Stop. */
+  questioning?: boolean
   onSend: (text: string) => Promise<boolean>
   onStop: () => void
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
@@ -20,7 +24,13 @@ export function PromptInput(props: {
   const [sending, setSending] = createSignal(false)
   const refs = { input: undefined as HTMLTextAreaElement | undefined, overlay: undefined as HTMLDivElement | undefined }
   const ready = () => !props.disabled && !sending() && !!text().trim()
-  const stopping = () => props.running && !text().trim()
+  // The label is the pending-permission hint while blocked, otherwise Send.
+  const sendLabel = () =>
+    props.blocked ? language.t("prompt.action.send.blocked") : language.t("prompt.action.send")
+  // Stop replaces Send while the agent runs and the draft is empty. Typing during a run turns it back into Send,
+  // whose prompt queues behind the running turn. A pending question is not running work. Stop is not shown while the
+  // prompt is still being admitted, because an unadmitted prompt has no execution for Stop to interrupt.
+  const showStop = () => props.running && !text().trim() && !props.questioning
 
   const scroll = () => {
     if (!refs.input || !refs.overlay) return
@@ -44,13 +54,19 @@ export function PromptInput(props: {
   const send = () => {
     if (!ready()) return
     const draft = text()
+    // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
+    // if the send fails and the user has not typed something new.
+    setText("")
     setSending(true)
     void props
       .onSend(draft.trim())
       .then((ok) => {
-        if (ok && text() === draft) setText("")
+        if (!ok && !text().trim()) setText(draft)
       })
-      .catch(v2.report)
+      .catch((err: unknown) => {
+        v2.report(err)
+        if (!text().trim()) setText(draft)
+      })
       .finally(() => setSending(false))
   }
 
@@ -94,22 +110,28 @@ export function PromptInput(props: {
         <div class="prompt-input-hint-actions">
           <div class="prompt-input-hint-pinned">
             <Show
-              when={stopping()}
+              when={showStop()}
               fallback={
-                <Tooltip value={language.t("prompt.action.send")} placement="top" openDelay={0}>
+                <Tooltip value={sendLabel()} placement="top" openDelay={0}>
                   <IconButton
                     icon="send"
                     variant="ghost"
                     size="small"
                     onClick={send}
                     disabled={!ready()}
-                    aria-label="Send"
+                    aria-label={sendLabel()}
                   />
                 </Tooltip>
               }
             >
               <Tooltip value={language.t("prompt.action.stop")} placement="top" openDelay={0}>
-                <IconButton icon="stop" variant="ghost" size="small" onClick={props.onStop} aria-label="Stop" />
+                <IconButton
+                  icon="stop"
+                  variant="ghost"
+                  size="small"
+                  onClick={props.onStop}
+                  aria-label={language.t("prompt.action.stop")}
+                />
               </Tooltip>
             </Show>
           </div>
