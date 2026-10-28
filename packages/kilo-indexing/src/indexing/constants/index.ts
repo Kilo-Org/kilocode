@@ -46,6 +46,16 @@ export const INITIAL_RETRY_DELAY_MS = 500
 export const PARSING_CONCURRENCY = 10
 export const MAX_PENDING_BATCHES = 20 // Maximum number of batches to accumulate before waiting
 
+/**LanceDB maintenance */
+// Compact after this many modification operations (each upsert is a delete+add,
+// so this fires roughly every 20 upserts). LanceDB recommends optimizing after
+// ~20 modifications; keeping the backlog small avoids heavy compactions.
+export const LANCEDB_COMPACT_EVERY_WRITES = 40
+// Grace period before old versions may be pruned. Pruning with a zero-length
+// window (new Date()) installs an auto-cleanup that races concurrent writers and
+// logs "manifest not found"; keep recent versions available for active readers.
+export const LANCEDB_CLEANUP_RETENTION_MS = 10 * 60_000
+
 /**Manager Recovery */
 export const MAX_MANAGER_RECOVERY_ATTEMPTS = 3
 export const INITIAL_MANAGER_RECOVERY_DELAY_MS = 500
