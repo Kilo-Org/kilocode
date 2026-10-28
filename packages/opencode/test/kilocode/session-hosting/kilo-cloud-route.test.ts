@@ -10,6 +10,7 @@ const it = testEffect(Layer.empty)
 const SESSION = "ses_00000000000000000000000001"
 const OTHER = "ses_00000000000000000000000002"
 const TOKEN = "kilo-test-bearer-value"
+const CONTROL = "kilo-test-control-value"
 
 type Call = { method: string; path: string; search: URLSearchParams; auth: string | null; body: string }
 
@@ -20,6 +21,9 @@ function harness() {
     port: 0,
     async fetch(request) {
       const url = new URL(request.url)
+      if (url.pathname === "/api/cloud-agent-next/token") {
+        return Response.json({ token: CONTROL, expiresAt: new Date(Date.now() + 600_000).toISOString() })
+      }
       calls.push({
         method: request.method,
         path: url.pathname,
@@ -61,7 +65,7 @@ function native(path: string, options: { method?: string; query?: string; body?:
 
 it.effect("maps only the proven native allowlist onto the Cloud facade", () => {
   const app = harness()
-  const cloud = kiloCloud({ auth: auth(), env: { CLOUD_AGENT_NEXT_BASE_URL: app.url } })
+  const cloud = kiloCloud({ auth: auth(), env: { CLOUD_AGENT_NEXT_BASE_URL: app.url, KILO_WEB_APP_URL: app.url } })
   return Effect.gen(function* () {
     const route = cloud.route
     if (!route) throw new Error("kilo-cloud must implement native routing")
@@ -117,8 +121,8 @@ it.effect("maps only the proven native allowlist onto the Cloud facade", () => {
       `directory=${encodeURIComponent(`/cloud-agent/sessions/${SESSION}`)}`,
     ])
 
-    // Fresh provider auth, never the local client's.
-    expect(app.calls.map((call) => call.auth)).toEqual(app.calls.map(() => `Bearer ${TOKEN}`))
+    // Fresh provider auth: the Worker sees only the exchanged control token.
+    expect(app.calls.map((call) => call.auth)).toEqual(app.calls.map(() => `Bearer ${CONTROL}`))
     expect(app.calls.map((call) => call.body)).toEqual([
       "",
       "",
@@ -140,7 +144,7 @@ it.effect("maps only the proven native allowlist onto the Cloud facade", () => {
 
 it.effect("rejects unsupported and mismatched native requests without a Cloud request", () => {
   const app = harness()
-  const cloud = kiloCloud({ auth: auth(), env: { CLOUD_AGENT_NEXT_BASE_URL: app.url } })
+  const cloud = kiloCloud({ auth: auth(), env: { CLOUD_AGENT_NEXT_BASE_URL: app.url, KILO_WEB_APP_URL: app.url } })
   return Effect.gen(function* () {
     const route = cloud.route
     if (!route) throw new Error("kilo-cloud must implement native routing")
