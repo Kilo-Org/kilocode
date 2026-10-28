@@ -1,5 +1,35 @@
 # @kilocode/cli
 
+## 7.8.21
+
+### Minor Changes
+
+- [#15509](https://github.com/Kilo-Org/kilocode/pull/15509) [`307ff45`](https://github.com/Kilo-Org/kilocode/commit/307ff45f27ec796309ffb4e2f00f8dab85db3838) - Add hosted workspace operations and a Cloud system feed to the local session-host API. List, create, read, check the status of, and delete hosted workspaces, list their sessions, list available workspace profiles, and start another session in a workspace through the local Kilo API, and follow Cloud session preparation and status events through a local system feed route. Hosted operations now exchange the stored user credential for a short-lived Cloud Agent control token before any Worker call, so the original credential is never sent to the Worker. Hosted attachments stop working once their session or workspace is deleted.
+
+## 7.8.20
+
+### Minor Changes
+
+- [#15482](https://github.com/Kilo-Org/kilocode/pull/15482) [`ab43c7d`](https://github.com/Kilo-Org/kilocode/commit/ab43c7d4ed670fb77302087d6e47ac1959f0e699) - Let agents choose the base branch when they start Agent Manager worktree sessions.
+
+- [#14465](https://github.com/Kilo-Org/kilocode/pull/14465) [`3ac0983`](https://github.com/Kilo-Org/kilocode/commit/3ac0983c7d7b4d2fcb0371e3aac02edfe3cde7de) Thanks [@zfralish](https://github.com/zfralish)! - Publish the CLI as a `kilo-cli` conda package on Anaconda.org, built with rattler-build for linux-64, linux-aarch64, osx-64, osx-arm64, and win-64 on every release (pre-releases publish to the `rc` label). Install with any conda-compatible package manager (e.g. `pixi add kilo-cli` or `conda install -c anaconda-cloud kilo-cli`).
+
+- [#15440](https://github.com/Kilo-Org/kilocode/pull/15440) [`6c0d427`](https://github.com/Kilo-Org/kilocode/commit/6c0d4273f1b1b7fa85d562c699e7210f90b365b9) - Reuse platform benchmarks for linked custom auto router entries, with confirmed model suggestions, explicit linking controls, and per-variant link status.
+
+### Patch Changes
+
+- [#15483](https://github.com/Kilo-Org/kilocode/pull/15483) [`f9e7774`](https://github.com/Kilo-Org/kilocode/commit/f9e77749281ede26a550149aff283fc0101a8143) - Upgrade zod in the VS Code extension to a patched release that fixes a memory-exhaustion advisory when validating oversized constrained collections.
+
+- [#15479](https://github.com/Kilo-Org/kilocode/pull/15479) [`ccf958a`](https://github.com/Kilo-Org/kilocode/commit/ccf958a1d2a4fa8b5136f228939daa975d0c8feb) - Fix auto-compaction starting well before the configured context threshold, and stop compaction from looping on models without a known context size or after you stop a compaction.
+
+- Updated dependencies [[`6c0d427`](https://github.com/Kilo-Org/kilocode/commit/6c0d4273f1b1b7fa85d562c699e7210f90b365b9)]:
+  - @kilocode/kilo-gateway@7.9.0
+  - @kilocode/kilo-indexing@7.8.19
+  - @kilocode/kilo-telemetry@7.8.19
+  - @opencode-ai/server@7.8.19
+  - @opencode-ai/tui@7.8.19
+  - @opencode-ai/ui@7.8.19
+
 ## 7.8.18
 
 ### Minor Changes
