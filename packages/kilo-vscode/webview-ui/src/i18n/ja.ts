@@ -290,6 +290,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Codex モデルを引き続き使用するには、ChatGPT に再度ログインしてから、メッセージを再送信してください。",
 
+  "provider.failure.unauthorized": "認証情報が拒否されました (HTTP {{status}})。再度サインインしてください。",
+  "provider.failure.unauthorizedNoStatus": "認証情報が拒否されました。再度サインインしてください。",
+  "provider.failure.unauthenticated": "サインインしていません。",
+  "provider.failure.network": "プロバイダーに接続できませんでした。接続を確認してください。",
+  "provider.failure.http": "プロバイダーエラー (HTTP {{status}})。",
+  "provider.failure.httpNoStatus": "プロバイダーエラー。",
+  "provider.failure.schema": "プロバイダーから予期しない応答がありました。",
+
   "notification.permission.title": "権限が必要です",
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
   "notification.permission.titleSkillShell": "スキル「{{skill}}」のシェルコマンドを実行しますか？",
@@ -323,6 +331,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Todo読み込み",
   "ui.permission.toolLabel.todoWrite": "Todo書き込み",
   "ui.permission.toolLabel.codeSearch": "コード検索",
+  "ui.permission.toolLabel.browserOpen": "統合ブラウザー",
   "ui.permission.copyCommand": "コピー",
   "ui.approval.auto": "自動承認されました",
   "ui.approval.manual": "あなたが承認しました",
@@ -597,6 +606,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "URLからコンテンツを取得",
   "settings.permissions.tool.websearch.description": "ウェブを検索",
   "settings.permissions.tool.codesearch.description": "ウェブ上のコードを検索",
+  "settings.permissions.tool.browser_open.description": "統合ブラウザーでページを開く",
   "settings.permissions.tool.external_directory.description": "プロジェクトディレクトリ外のファイルへのアクセス",
   "settings.permissions.tool.doom_loop.description": "同一入力による繰り返しのツール呼び出しを検出",
 
@@ -754,6 +764,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo CodeはAIコーディングアシスタントです。機能の構築、バグの修正、コードベースの説明を依頼できます。",
+  "session.workspaceScope.description":
+    "Kilo チャットは、このワークスペースの最初のフォルダー「{{folder}}」のみを使用します。",
+  "session.workspaceScope.alternatives":
+    "別のフォルダーで作業するには、そのフォルダーを別のウィンドウで開くか、Agent Manager にプロジェクトとして追加してください。",
+  "session.workspaceScope.dismiss": "ワークスペースの範囲に関するヒントを閉じる",
   "session.messages.scrollToBottom": "下にスクロール",
   "session.messages.initializing": "初期化中...",
   "session.messages.taskStarting": "開始中...",
@@ -940,6 +955,9 @@ export const dict = {
   "settings.experimental.nativeNotebookTools.title": "ネイティブノートブックツール",
   "settings.experimental.nativeNotebookTools.description":
     "VS Codeノートブックの読み取り、編集、実行を行う実験的なツールを有効にします",
+  "settings.experimental.globIncludeIgnored.title": "無視されたパスを検索",
+  "settings.experimental.globIncludeIgnored.description":
+    ".gitignore などの無視ファイルで除外されていても glob ツールが検索するフォルダーまたはファイル。ワークスペースを基準とした gitignore 形式のパターンを使用します。その中にある無視されたフォルダーは引き続きスキップされます。",
   "settings.experimental.continueOnDeny.title": "拒否時に続行",
   "settings.experimental.continueOnDeny.description": "権限が拒否された場合にエージェントループを続行",
   "settings.sandboxing.title": "サンドボックス化",
@@ -1159,6 +1177,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "タスクリストの管理。内部タスクリストの読み取りと更新を許可します。",
   "settings.autoApprove.tool.webfetch": "URLをフェッチ。特定のURLからコンテンツを取得することを許可します。",
   "settings.autoApprove.tool.websearch": "ウェブを検索。外部のWeb検索の実行を許可します。",
+  "settings.autoApprove.tool.browser_open":
+    "統合ブラウザーでページを開きます。これはアプリ内プレビューであり、Playwright のブラウザー自動化ではありません。",
   "settings.autoApprove.tool.external_directory":
     "ワークスペース外のファイルにアクセス。現在のプロジェクトディレクトリ外のファイルにアクセスしたときにトリガーされます。",
   "settings.autoApprove.tool.doom_loop":

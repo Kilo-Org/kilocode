@@ -52,6 +52,7 @@ class FakeAppRpcApi : KiloAppRpcApi {
         private set
     var models = ModelStateDto()
     val selections = mutableListOf<ModelSelectionUpdateDto>()
+    val cleared = mutableListOf<String>()
     val variants = mutableListOf<ModelVariantUpdateDto>()
     val configPatches = mutableListOf<ConfigPatchDto>()
     var retention = RetentionStatusDto()
@@ -150,6 +151,13 @@ class FakeAppRpcApi : KiloAppRpcApi {
         assertNotEdt("updateModelSelection")
         selections.add(update)
         models = models.copy(model = models.model + (update.agent to ModelSelectionDto(update.providerID, update.modelID)))
+        return models
+    }
+
+    override suspend fun clearModelSelection(agent: String): ModelStateDto {
+        assertNotEdt("clearModelSelection")
+        cleared.add(agent)
+        models = models.copy(model = models.model - agent)
         return models
     }
 

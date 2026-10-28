@@ -22,8 +22,12 @@ import ai.kilocode.client.plugin.KiloDocs
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.board.SessionBoardDialog
 import ai.kilocode.client.session.model.FileAttachment
+import ai.kilocode.client.session.model.Notice
+import ai.kilocode.client.session.model.PromptAttachment
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.model.Text
+import ai.kilocode.client.session.model.toPromptAttachment
 import ai.kilocode.client.session.scroll.SessionScroll
 import ai.kilocode.client.session.subagent.SubagentSessionEditorKind
 import ai.kilocode.client.session.subagent.SubagentTitleCache
@@ -46,9 +50,11 @@ import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
 import ai.kilocode.client.session.ui.rail.PromptRailController
 import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
+import ai.kilocode.client.session.settings.TranscriptDisplayListener
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.popup.HeaderPopupController
 import ai.kilocode.client.session.ui.SessionDropOverlay
+import ai.kilocode.client.session.ui.SessionHighlightOverlay
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.attachment.AttachmentEditorKind
@@ -132,6 +138,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
+import java.awt.Rectangle
 import java.awt.datatransfer.StringSelection
 import java.awt.event.HierarchyEvent
 import java.net.URI
@@ -172,15 +179,15 @@ class SessionUi(
     private var opening = ref != null
     private var pending = false
     private var loaded: Boolean? = null
-    private var revertPrompt: String? = null
+    private var revertDraft: Pair<String, List<PromptAttachment>>? = null
     private var pendingRollback: String? = null
     private var pendingRedo: String? = null
-    // See sendPrompt()/onStateChanged(): the number of user messages present when a prompt was
-    // dispatched, or null when nothing is in flight. Comparing against a baseline rather than
-    // using a plain boolean is what makes the restore reliable while a turn is streaming: the
-    // prompt box stays enabled during a busy turn, so a queued send must not treat the *previous*
-    // turn's message as confirmation of its own.
-    private var pendingSend: Int? = null
+    // See sendPrompt()/onStateChanged(): the ids of the user messages present when a prompt was
+    // dispatched, or null when nothing is in flight. Tracking identity rather than a count is what
+    // makes the restore reliable while a turn is streaming and across a revert: a queued send must
+    // not treat the *previous* turn's message as confirmation, and a revert removes a message, so a
+    // count baseline would be permanently too high for the next send.
+    private var pendingSend: Set<String>? = null
     private val flushMs =
         Registry.intValue("kilo.session.flushMs", EVENT_FLUSH_MS.toInt())
             .takeIf { it > 0 }
@@ -212,6 +219,7 @@ class SessionUi(
     private lateinit var account: SessionAccountOverlay
     private lateinit var drop: SessionDropOverlay
     private lateinit var overlay: SessionHoverCopyOverlay
+    internal lateinit var highlight: SessionHighlightOverlay
     internal lateinit var promptRail: PromptRailController
     private val hide = timers.timer(HIDE_MS, repeats = false) {
         if (disposed || !this::drop.isInitialized) return@timer
@@ -579,6 +587,7 @@ class SessionUi(
                 available = { app.state.value.backgroundSubagents },
                 promote = controller::promoteBackgroundAgent,
             ),
+            visible = { isShowing },
         ).also {
             it.outcome = outcome
             it.setDiffOpener(::openInlineDiff, controller.id)
@@ -591,7 +600,7 @@ class SessionUi(
             boardVisible = { board },
             onShowBoard = ::showBoard,
             onOpenSubagent = ::openSubagent,
-            onNavigate = { item -> scroll.scrollPart(item.id.substringBefore('/'), item.part.id) },
+            onJumpTimeline = { message, part -> jumpTimeline(message, part) },
         )
         if (!readonly && showBranchDock()) {
             val owner = manager
@@ -613,11 +622,22 @@ class SessionUi(
         root.addOverlay(overlay) { pane, child ->
             overlay.bounds(pane, child)
         }
+        highlight = SessionHighlightOverlay(scroll.component, this)
+        // Full pane: the outline is positioned by painting against live turn bounds, not by layout.
+        root.addOverlay(highlight) { pane, _ ->
+            Rectangle(0, 0, pane.width, pane.height)
+        }
         messageBody.onReflow = { on -> if (on && !opening) scroll.followTail() }
+        // A chunked rebuild drains across EDT turns; the open handshake must wait for it or it would
+        // scroll to the bottom of a transcript that is still assembling.
+        messageBody.onRebuilt = { if (opening) resumeOpen() }
         scroll.onScroll = {
             overlay.clear()
             popup.hideAll()
         }
+        // Only a deliberate scroll clears the outline: onScroll also fires for the jump's own
+        // programmatic passes, which would clear the outline the jump just drew.
+        scroll.onGesture = { highlight.clear() }
 
         completion = KiloPromptCompletionProvider(
             workspace = workspace,
@@ -681,6 +701,7 @@ class SessionUi(
             scroll = scroll,
             parent = this,
             timers = timers,
+            onReveal = ::revealPrompt,
         )
         if (!readonly) {
             prompt.onFileDrag = ::syncDrop
@@ -829,6 +850,12 @@ class SessionUi(
                     prompt.setReady(controller.model.isReady())
                 }
 
+                is SessionControllerEvent.RecentsChanged -> {
+                    // The empty panel is reused across view refreshes, so push the new snapshot into it
+                    // in place. Null when the transcript (not the empty view) is showing.
+                    empty?.setRecents(controller.recents())
+                }
+
                 is SessionControllerEvent.ConnectionChanged -> Unit
 
                 is SessionControllerEvent.AccountOverlayChanged -> account.onEvent(event)
@@ -965,6 +992,13 @@ class SessionUi(
                 messageBody.syncApprovalReasons(visible)
             }
         })
+        bus.subscribe(TranscriptDisplayListener.TOPIC, TranscriptDisplayListener { display ->
+            ApplicationManager.getApplication().invokeLater {
+                if (disposed) return@invokeLater
+                if (!this::messageBody.isInitialized) return@invokeLater
+                messageBody.syncTranscriptDisplay(display)
+            }
+        })
         // refreshBranch cancels the in-flight lookup first, so a flip both drops a running gh call
         // and re-reads the branch without one.
         bus.subscribe(GithubIntegrationListener.TOPIC, GithubIntegrationListener {
@@ -1004,6 +1038,9 @@ class SessionUi(
         if (!pending || !opening || !this::scroll.isInitialized) return
         if (width <= 0 || height <= 0) return
         if (body(controller.model.state) !== messageBody) return
+        // A chunked history rebuild assembles the transcript over several EDT turns; wait for it so
+        // openBottom lands on the finished transcript instead of a partial one.
+        if (messageBody.rebuilding) return
         pending = false
         messageBody.reflow()
         scroll.openBottom {
@@ -1028,41 +1065,49 @@ class SessionUi(
             scroll.followBottom(follow)
             return
         }
-        // Only the prompt path uses editor context; gather after the command branches so slash
-        // commands and client actions don't pay the editor-context cost or hit its failure modes.
-        val editor = EditorContextGatherer.gather(project, workspace.directory)
-        val allFiles = files + editor.selection
-        LOG.debug {
-            val parts = buildList {
-                text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
-                addAll(allFiles)
+        cs.launch(Dispatchers.Main) {
+            // Only the prompt path uses editor context; gather after the command branches so slash
+            // commands and client actions don't pay the editor-context cost or hit its failure modes.
+            // Ignore-file VFS reads suspend on Dispatchers.IO before returning to the EDT.
+            val editor = EditorContextGatherer.gather(project, workspace.directory)
+            if (disposed || project.isDisposed) return@launch
+            val allFiles = files + editor.selection
+            LOG.debug {
+                val parts = buildList {
+                    text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
+                    addAll(allFiles)
+                }
+                val agent = controller.model.agent ?: "none"
+                val model = controller.model.model ?: "none"
+                "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
             }
-            val agent = controller.model.agent ?: "none"
-            val model = controller.model.model ?: "none"
-            "${ChatLogSummary.prompt(PromptDto(parts = parts, editorContext = editor.context))} agent=$agent model=$model ready=${controller.ready}"
+            // Baseline the user-message ids for this send. onStateChanged uses it to tell a prompt
+            // that failed before the server ever created its message (restore the draft) apart from a
+            // turn that failed after the message was already persisted (nothing to restore -- it's in
+            // the transcript already). A queued send baselines the in-flight turn's message, so that
+            // turn cannot be mistaken for confirmation of this one.
+            pendingSend = userMessageIds()
+            controller.prompt(text, allFiles, editor.context, select)
+            scroll.followBottom(follow)
         }
-        // Baseline the user-message count for this send. onStateChanged uses it to tell a prompt
-        // that failed before the server ever created its message (restore the draft) apart from a
-        // turn that failed after the message was already persisted (nothing to restore -- it's in
-        // the transcript already). A queued send baselines above the in-flight turn's message, so
-        // that turn cannot be mistaken for confirmation of this one.
-        pendingSend = userMessages()
-        controller.prompt(text, allFiles, editor.context, select)
-        scroll.followBottom(follow)
     }
 
     @RequiresEdt
-    private fun userMessages() = controller.model.messages().count { it.info.role == "user" }
+    private fun userMessageIds() = controller.model.messages()
+        .filter { it.info.role == "user" }
+        .map { it.info.id }
+        .toSet()
 
     /**
      * Marks the in-flight send as accepted once its own user message is persisted, which releases
      * the retained draft. Scoped by the dispatch-time baseline so a message belonging to an earlier,
-     * still-streaming turn cannot confirm a queued send that has not landed yet.
+     * still-streaming turn cannot confirm a queued send that has not landed yet. Keyed by id rather
+     * than count, so a revert removing a message cannot strand the next send above its baseline.
      */
     @RequiresEdt
     private fun confirmPendingSend() {
         val baseline = pendingSend ?: return
-        if (userMessages() <= baseline) return
+        if (userMessageIds().all { it in baseline }) return
         pendingSend = null
         prompt.clearLastSubmission()
     }
@@ -1111,24 +1156,37 @@ class SessionUi(
         if (revert != null) pendingRedo = null
     }
 
+    // Refills the prompt box from the message a revert landed on: its text plus every attachment it
+    // carried, including files the CLI could not read (their path survives in the notice). Stops
+    // managing the box once the user edits the draft, so a manual change is never overwritten.
     @RequiresEdt
     private fun syncPromptRevert() {
-        val saved = revertPrompt
-        if (saved != null && (prompt.text() != saved || prompt.hasAttachments())) {
-            revertPrompt = null
+        val saved = revertDraft
+        if (saved != null && (prompt.text() != saved.first || prompt.attachments() != saved.second)) {
+            revertDraft = null
             return
         }
         if (saved == null && prompt.hasDraft()) return
         val mark = controller.model.revert()
         if (mark == null) {
             prompt.clear()
-            revertPrompt = null
+            revertDraft = null
             return
         }
         val msg = controller.model.message(mark.messageID) ?: return
-        val text = msg.parts.values.filterIsInstance<ai.kilocode.client.session.model.Text>().firstOrNull()?.content?.toString() ?: return
-        prompt.setText(text)
-        revertPrompt = prompt.text()
+        val text = msg.parts.values.filterIsInstance<Text>().firstOrNull()?.content?.toString() ?: ""
+        val items = msg.parts.values.mapNotNull { part ->
+            when (part) {
+                is FileAttachment -> part.toPromptAttachment()
+                is Notice -> part.toPromptAttachment()
+                else -> null
+            }
+        }
+        prompt.setDraft(text, items)
+        // Store what the box actually holds, not the raw part text: prompt.text() is trimmed, so a
+        // message whose text carries surrounding whitespace would otherwise never match the guard
+        // above and the revert would stop being tracked after the first sync.
+        revertDraft = prompt.text() to items
     }
 
     private fun slashActions(): List<SlashAction> {
@@ -1240,6 +1298,29 @@ class SessionUi(
             subagentSessionParams(sessionId, workspace.directory),
         )
         Telemetry.send("Subagent Session Opened", mapOf("sessionId" to sessionId))
+    }
+
+    /**
+     * Jumps the transcript to a header-timeline step and outlines that step.
+     *
+     * The outline wraps the clicked part, not its turn: a turn is one user message plus the whole
+     * assistant response, which can span dozens of messages and every bar in it, so outlining the
+     * turn would draw the same box for almost every bar. The target resolution mirrors
+     * [ai.kilocode.client.session.scroll.SessionScroll.scrollPartTop] exactly — the part, or its
+     * message when the part has no renderer — so the outline always wraps what the scroll aimed at.
+     */
+    @RequiresEdt
+    private fun jumpTimeline(message: String, part: String) {
+        if (!scroll.scrollPartTop(message, part)) return
+        val step = messageBody.findPart(message, part) ?: messageBody.findMessage(message) ?: return
+        highlight.show(step)
+    }
+
+    /** Marks only the user prompt bubble a prompt-navigator jump landed on. */
+    @RequiresEdt
+    private fun revealPrompt(id: String) {
+        val prompt = messageBody.findPrompt(id) ?: return
+        highlight.show(prompt)
     }
 
     @RequiresEdt
@@ -1458,21 +1539,21 @@ class SessionUi(
             pendingRollback = null
             pendingRedo = null
         }
-        // Restore the typed prompt when the send never produced a persisted message (rejected
-        // synchronously, or prompt_async's 204-then-session.error case). A turn that fails after its
-        // user message was already persisted has nothing to restore -- it's in the transcript -- so
-        // this only fires while a send is still pending.
-        //
-        // TurnEnded deliberately does not participate. It is session-scoped with no turn identity,
-        // and clearing on it is never correct: if the pending send's own message is persisted,
-        // confirmPendingSend() has already released it, and if it is not, the turn that just ended
-        // belongs to an earlier send (a turn only starts once its user message exists). Acting here
-        // would destroy the draft of a send queued behind a still-streaming turn, since the prompt
-        // box stays enabled while busy.
+        // Give the typed prompt back when a send errors before its message is persisted (rejected
+        // synchronously, or prompt_async's 204-then-session.error case). pendingSend is deliberately
+        // kept: some errors -- an unreadable attachment, for one -- are reported before the user
+        // message is written but the send still lands, so the draft has to be droppable again once
+        // that is confirmed (see the turn-open branch below). A genuine failure never persists a
+        // message, so its draft stays put.
         if (pendingSend != null && state is SessionState.Error) {
-            pendingSend = null
             prompt.restoreLastSubmission()
         }
+        // A restored draft is a duplicate only once this send's own message landed. That is exactly
+        // when pendingSend is released (confirmPendingSend saw a user message id that was not in the
+        // dispatch baseline), so gate the discard on that rather than on any Busy. A retry, a login
+        // resume, or an auto-approval also enters Busy but proves nothing about this send, and must
+        // not drop the draft; a genuine failure never persists a message, so its draft stays put too.
+        if (state is SessionState.Busy && pendingSend == null) prompt.discardRestoredSubmission()
         prompt.setBusy(busy)
         dock?.setBusy(busy)
         load.setState(state)
@@ -1578,12 +1659,16 @@ class SessionUi(
         return SessionIssue(
             id = "mcp-auth:$name",
             title = KiloBundle.message("prompt.mcp.provider", display),
-            actions = listOf(
+            actions = listOfNotNull(
                 SessionIssueAction(
                     title = KiloBundle.message(if (busy) "prompt.mcp.needsAuth.busy" else "settings.agentBehavior.mcp.signIn"),
                     enabled = !busy,
                     action = { signInFromPrompt(name) },
                 ),
+                SessionIssueAction(
+                    title = KiloBundle.message("settings.agentBehavior.mcp.signIn.cancel"),
+                    action = { cancelFromPrompt(name) },
+                ).takeIf { busy },
                 SessionIssueAction(
                     title = KiloBundle.message("prompt.mcp.openSettings"),
                     action = { openMcpSettings(name) },
@@ -1607,6 +1692,10 @@ class SessionUi(
             val result = auth.signIn(workspace.directory, name)
             withContext(Dispatchers.EDT) { auth.report(name, result) }
         }
+    }
+
+    private fun cancelFromPrompt(name: String) {
+        cs.launch { service<KiloMcpAuthService>().cancel(workspace.directory, name) }
     }
 
     private fun openKiloSettings() {

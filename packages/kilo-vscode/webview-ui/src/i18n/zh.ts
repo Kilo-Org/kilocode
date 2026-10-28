@@ -274,6 +274,14 @@ export const dict = {
   "error.providerAuth.chatgpt.title": "OpenAI 已将您登出",
   "error.providerAuth.chatgpt.description": "请再次登录 ChatGPT，然后重新发送消息以继续使用 Codex 模型。",
 
+  "provider.failure.unauthorized": "凭据被拒绝（HTTP {{status}}）。请重新登录。",
+  "provider.failure.unauthorizedNoStatus": "凭据被拒绝。请重新登录。",
+  "provider.failure.unauthenticated": "尚未登录。",
+  "provider.failure.network": "无法连接到提供方。请检查您的网络连接。",
+  "provider.failure.http": "提供方错误（HTTP {{status}}）。",
+  "provider.failure.httpNoStatus": "提供方错误。",
+  "provider.failure.schema": "提供方返回了意外的响应。",
+
   "notification.permission.title": "需要权限",
   "notification.permission.titleSubagent": "需要权限（子代理）",
   "notification.permission.titleSkillShell": "要执行技能「{{skill}}」的 shell 命令吗？",
@@ -307,6 +315,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "读取待办",
   "ui.permission.toolLabel.todoWrite": "更新待办",
   "ui.permission.toolLabel.codeSearch": "代码搜索",
+  "ui.permission.toolLabel.browserOpen": "集成浏览器",
   "ui.permission.copyCommand": "复制",
   "ui.approval.auto": "已自动批准",
   "ui.approval.manual": "由你批准",
@@ -575,6 +584,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "从 URL 获取内容",
   "settings.permissions.tool.websearch.description": "搜索网页",
   "settings.permissions.tool.codesearch.description": "在网上搜索代码",
+  "settings.permissions.tool.browser_open.description": "在集成浏览器中打开页面",
   "settings.permissions.tool.external_directory.description": "访问项目目录之外的文件",
   "settings.permissions.tool.doom_loop.description": "检测具有相同输入的重复工具调用",
 
@@ -730,6 +740,10 @@ export const dict = {
   "settings.aboutKiloCode.title": "关于 Kilo Code",
 
   "session.messages.welcome": "Kilo Code 是一个 AI 编程助手。让它帮你构建功能、修复 bug 或解释代码库。",
+  "session.workspaceScope.description": "Kilo 聊天仅使用此工作区中的第一个文件夹“{{folder}}”。",
+  "session.workspaceScope.alternatives":
+    "要使用其他文件夹，请在单独的窗口中打开它，或将其作为项目添加到 Agent Manager。",
+  "session.workspaceScope.dismiss": "关闭工作区范围提示",
   "session.messages.scrollToBottom": "滚动到底部",
   "session.messages.initializing": "初始化中...",
   "session.messages.taskStarting": "启动中...",
@@ -904,6 +918,9 @@ export const dict = {
   "settings.models.speechToTextModel.description": "选择用于语音输入的 Kilo Gateway 转录模型。",
   "settings.experimental.nativeNotebookTools.title": "原生笔记本工具",
   "settings.experimental.nativeNotebookTools.description": "启用用于读取、编辑和执行 VS Code 笔记本的实验性工具",
+  "settings.experimental.globIncludeIgnored.title": "搜索被忽略的路径",
+  "settings.experimental.globIncludeIgnored.description":
+    "即使被 .gitignore 或其他忽略文件排除，glob 工具仍应搜索的文件夹或文件。使用相对于工作区的 gitignore 风格模式；其中被忽略的子文件夹仍会被跳过。",
   "settings.experimental.continueOnDeny.title": "拒绝后继续",
   "settings.experimental.continueOnDeny.description": "权限被拒绝时继续智能体循环",
   "settings.sandboxing.title": "沙盒",
@@ -1103,6 +1120,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "管理任务列表。允许读取和更新内部任务列表。",
   "settings.autoApprove.tool.webfetch": "获取 URL。允许从特定 URL 检索内容。",
   "settings.autoApprove.tool.websearch": "搜索网页。允许执行外部 Web 搜索。",
+  "settings.autoApprove.tool.browser_open": "在集成浏览器中打开页面。这是应用内预览，不是 Playwright 浏览器自动化。",
   "settings.autoApprove.tool.external_directory": "访问工作区外部的文件。访问当前项目目录之外的文件时触发。",
   "settings.autoApprove.tool.doom_loop": "防止重复相同操作。当相同的工具调用以相同的输入重复时触发。",
   "settings.checkpoints.enable.title": "启用快照",
