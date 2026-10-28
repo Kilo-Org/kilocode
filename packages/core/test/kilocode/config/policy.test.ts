@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import path from "path"
 import { Config } from "@opencode/core/config"
 import { ConfigNormalize } from "@opencode/core/config/normalize"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
@@ -99,7 +100,7 @@ test("agent plugin settings merge across documents and resolve relative paths fr
       document({ hide_prompt_training_models: true }),
     ]),
   ).toEqual({
-    paths: ["/home/me/.config/kilo2/a", "/abs/b", "~/c", "/repo/d", "./inline"],
+    paths: [path.join("/home/me/.config/kilo2", "a"), "/abs/b", "~/c", path.join("/repo", "d"), "./inline"],
     disabled: ["x", "y"],
   })
   expect(KiloConfigPolicy.agentPlugins([])).toEqual({ paths: [], disabled: [] })
