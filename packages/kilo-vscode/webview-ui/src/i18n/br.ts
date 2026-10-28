@@ -293,6 +293,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "Faça login no ChatGPT novamente e envie sua mensagem de novo para continuar usando os modelos Codex.",
 
+  "provider.failure.unauthorized": "Credenciais rejeitadas (HTTP {{status}}). Faça login novamente.",
+  "provider.failure.unauthorizedNoStatus": "Credenciais rejeitadas. Faça login novamente.",
+  "provider.failure.unauthenticated": "Não conectado.",
+  "provider.failure.network": "Não foi possível acessar o provedor. Verifique sua conexão.",
+  "provider.failure.http": "Erro do provedor (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "Erro do provedor.",
+  "provider.failure.schema": "Resposta inesperada do provedor.",
+
   "notification.permission.title": "Permissão necessária",
   "notification.permission.titleSubagent": "Permissão necessária (subagente)",
   "notification.permission.titleSkillShell": "Executar comandos de shell da skill “{{skill}}”?",
@@ -326,6 +334,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "Ler Tarefas",
   "ui.permission.toolLabel.todoWrite": "Escrever Tarefas",
   "ui.permission.toolLabel.codeSearch": "Pesquisa de Código",
+  "ui.permission.toolLabel.browserOpen": "Navegador Integrado",
   "ui.permission.copyCommand": "Copiar",
   "ui.approval.auto": "Aprovado automaticamente",
   "ui.approval.manual": "Aprovado por você",
@@ -563,6 +572,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Buscar conteúdo de uma URL",
   "settings.permissions.tool.websearch.description": "Pesquisar na web",
   "settings.permissions.tool.codesearch.description": "Pesquisar código na web",
+  "settings.permissions.tool.browser_open.description": "Abrir uma página no Navegador Integrado",
   "settings.permissions.tool.external_directory.description": "Acessar arquivos fora do diretório do projeto",
   "settings.permissions.tool.doom_loop.description": "Detectar chamadas de ferramentas repetidas com entrada idêntica",
 
@@ -762,6 +772,11 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code é um assistente de programação com IA. Peça para criar funcionalidades, corrigir bugs ou explicar sua base de código.",
+  "session.workspaceScope.description":
+    "O chat do Kilo usa apenas “{{folder}}”, a primeira pasta deste espaço de trabalho.",
+  "session.workspaceScope.alternatives":
+    "Para trabalhar com outra pasta, abra-a em uma janela própria ou adicione-a como um projeto no Agent Manager.",
+  "session.workspaceScope.dismiss": "Ocultar dica sobre o escopo do espaço de trabalho",
   "session.messages.scrollToBottom": "Rolar para o final",
   "session.messages.initializing": "O teraouiñ...",
   "session.messages.taskStarting": "O kregiñ...",
@@ -1182,6 +1197,8 @@ export const dict = {
     "Gerenciar lista de tarefas. Permite ler e atualizar a lista de tarefas interna.",
   "settings.autoApprove.tool.webfetch": "Buscar uma URL. Permite recuperar o conteúdo de uma URL específica.",
   "settings.autoApprove.tool.websearch": "Pesquisar na web. Permite realizar pesquisas externas na web.",
+  "settings.autoApprove.tool.browser_open":
+    "Abrir páginas no Navegador Integrado. Esta é a pré-visualização no aplicativo, não a automação de navegador do Playwright.",
   "settings.autoApprove.tool.external_directory":
     "Acessar arquivos fora do workspace. Acionado ao acessar arquivos fora do diretório do projeto atual.",
   "settings.autoApprove.tool.doom_loop":

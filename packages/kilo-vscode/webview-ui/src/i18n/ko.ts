@@ -290,6 +290,14 @@ export const dict = {
   "error.providerAuth.chatgpt.description":
     "ChatGPT에 다시 로그인한 후 메시지를 다시 보내 Codex 모델을 계속 사용하세요.",
 
+  "provider.failure.unauthorized": "자격 증명이 거부되었습니다 (HTTP {{status}}). 다시 로그인하세요.",
+  "provider.failure.unauthorizedNoStatus": "자격 증명이 거부되었습니다. 다시 로그인하세요.",
+  "provider.failure.unauthenticated": "로그인되어 있지 않습니다.",
+  "provider.failure.network": "공급자에 연결할 수 없습니다. 연결 상태를 확인하세요.",
+  "provider.failure.http": "공급자 오류 (HTTP {{status}}).",
+  "provider.failure.httpNoStatus": "공급자 오류.",
+  "provider.failure.schema": "공급자로부터 예기치 않은 응답을 받았습니다.",
+
   "notification.permission.title": "권한 필요",
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
   "notification.permission.titleSkillShell": '스킬 "{{skill}}"의 셸 명령을 실행할까요?',
@@ -323,6 +331,7 @@ export const dict = {
   "ui.permission.toolLabel.todoRead": "할 일 읽기",
   "ui.permission.toolLabel.todoWrite": "할 일 쓰기",
   "ui.permission.toolLabel.codeSearch": "코드 검색",
+  "ui.permission.toolLabel.browserOpen": "통합 브라우저",
   "ui.permission.copyCommand": "복사",
   "ui.approval.auto": "자동 승인됨",
   "ui.approval.manual": "사용자가 승인함",
@@ -557,6 +566,7 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "URL에서 콘텐츠 가져오기",
   "settings.permissions.tool.websearch.description": "웹 검색",
   "settings.permissions.tool.codesearch.description": "웹에서 코드 검색",
+  "settings.permissions.tool.browser_open.description": "통합 브라우저에서 페이지 열기",
   "settings.permissions.tool.external_directory.description": "프로젝트 디렉터리 외부의 파일에 액세스",
   "settings.permissions.tool.doom_loop.description": "동일한 입력으로 반복되는 도구 호출 감지",
 
@@ -754,6 +764,10 @@ export const dict = {
 
   "session.messages.welcome":
     "Kilo Code는 AI 코딩 어시스턴트입니다. 기능 구축, 버그 수정 또는 코드베이스 설명을 요청하세요.",
+  "session.workspaceScope.description": "Kilo 채팅은 이 작업 영역의 첫 번째 폴더인 “{{folder}}”만 사용합니다.",
+  "session.workspaceScope.alternatives":
+    "다른 폴더에서 작업하려면 해당 폴더를 별도 창에서 열거나 Agent Manager에 프로젝트로 추가하세요.",
+  "session.workspaceScope.dismiss": "작업 영역 범위 안내 닫기",
   "session.messages.scrollToBottom": "하단으로 스크롤",
   "session.messages.initializing": "초기화 중...",
   "session.messages.taskStarting": "시작 중...",
@@ -1150,6 +1164,8 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite": "작업 목록 관리. 내부 작업 목록을 읽고 업데이트할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.webfetch": "URL 가져오기. 특정 URL에서 콘텐츠를 검색할 수 있도록 허용합니다.",
   "settings.autoApprove.tool.websearch": "웹 검색. 외부 웹 검색을 수행할 수 있도록 허용합니다.",
+  "settings.autoApprove.tool.browser_open":
+    "통합 브라우저에서 페이지를 엽니다. 앱 내 미리보기이며 Playwright 브라우저 자동화가 아닙니다.",
   "settings.autoApprove.tool.external_directory":
     "작업 공간 외부 파일 접근. 현재 프로젝트 디렉토리 외부의 파일에 접근할 때 트리거됩니다.",
   "settings.autoApprove.tool.doom_loop":

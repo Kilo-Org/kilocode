@@ -1,5 +1,88 @@
 # kilo-code
 
+## 7.8.21
+
+## 7.8.20
+
+### Minor Changes
+
+- [#15482](https://github.com/Kilo-Org/kilocode/pull/15482) [`ab43c7d`](https://github.com/Kilo-Org/kilocode/commit/ab43c7d4ed670fb77302087d6e47ac1959f0e699) - Let agents choose the base branch when they start Agent Manager worktree sessions.
+
+### Patch Changes
+
+- [#15483](https://github.com/Kilo-Org/kilocode/pull/15483) [`f9e7774`](https://github.com/Kilo-Org/kilocode/commit/f9e77749281ede26a550149aff283fc0101a8143) - Upgrade zod in the VS Code extension to a patched release that fixes a memory-exhaustion advisory when validating oversized constrained collections.
+
+- [#15479](https://github.com/Kilo-Org/kilocode/pull/15479) [`ccf958a`](https://github.com/Kilo-Org/kilocode/commit/ccf958a1d2a4fa8b5136f228939daa975d0c8feb) - Fix auto-compaction starting well before the configured context threshold, and stop compaction from looping on models without a known context size or after you stop a compaction.
+
+- Updated dependencies [[`6c0d427`](https://github.com/Kilo-Org/kilocode/commit/6c0d4273f1b1b7fa85d562c699e7210f90b365b9)]:
+  - @kilocode/kilo-gateway@7.9.0
+  - @opencode-ai/core@7.8.19
+  - @kilocode/kilo-indexing@7.8.19
+  - @kilocode/kilo-ui@7.8.19
+  - @opencode-ai/ui@7.8.19
+
+## 7.8.18
+
+### Patch Changes
+
+- [#15410](https://github.com/Kilo-Org/kilocode/pull/15410) [`5f2aa0b`](https://github.com/Kilo-Org/kilocode/commit/5f2aa0b32fa4fafe1c544ac4a5203fc913e36225) Thanks [@WebReflection](https://github.com/WebReflection)! - Update DOMPurify to 3.4.17 to fix sanitization issues flagged by Dependabot alerts.
+
+- [#15412](https://github.com/Kilo-Org/kilocode/pull/15412) [`0377248`](https://github.com/Kilo-Org/kilocode/commit/0377248fb9af4ba12d04521821372a4d95cb1f6a) Thanks [@WebReflection](https://github.com/WebReflection)! - Update vite to 7.3.7 to fix the launch-editor editor CLI flag misinterpretation flagged by Dependabot (CVE-2026-112944).
+
+## 7.8.16
+
+## 7.8.15
+
+### Patch Changes
+
+- [#15235](https://github.com/Kilo-Org/kilocode/pull/15235) [`c61a974`](https://github.com/Kilo-Org/kilocode/commit/c61a974f983c0ff7853b776781945856dbf28dbf) - Let the `browser_open` permission prompt remember your choice. The prompt now offers the current origin and all origins as always-allow rules, and Auto-Approve settings list `browser_open` so you can allow Integrated Browser navigation without answering each request.
+
+## 7.8.13
+
+### Minor Changes
+
+- [#14866](https://github.com/Kilo-Org/kilocode/pull/14866) [`f01b273`](https://github.com/Kilo-Org/kilocode/commit/f01b273c1343538764c6f1fe43feee41b5521863) - Let a primary agent choose which agent runs an Agent Manager session it starts, so a session fanned out through Agent Manager can run a custom agent (and its edit/bash/MCP permission rules) instead of always falling back to the workspace default agent.
+
+- [#15119](https://github.com/Kilo-Org/kilocode/pull/15119) [`cbdb045`](https://github.com/Kilo-Org/kilocode/commit/cbdb0459c84d28884ab3eb280c9611750090771b) - Redesign the Agent Manager New Worktree dialog. Pick the base branch next to the project, set an optional branch name next to the worktree name, and choose versions next to the Create button. The Advanced options section is gone. The base branch pick is kept as a draft until you create the worktree, and you can make it the project default from the branch picker. Branch pickers also open faster in repositories with many branches.
+
+### Patch Changes
+
+- [#14866](https://github.com/Kilo-Org/kilocode/pull/14866) [`e703b56`](https://github.com/Kilo-Org/kilocode/commit/e703b5637b35f46a992fc79923468ec43e4488ed) - Reject internal agents when an agent starts an Agent Manager session for a named agent, and list the selectable agents on every rejection so a wrong name can be corrected without guessing.
+
+- [#15118](https://github.com/Kilo-Org/kilocode/pull/15118) [`33e6701`](https://github.com/Kilo-Org/kilocode/commit/33e670164675d8e4a59b803bdafa68a75b0947d3) - Align brand yellow hover colors with Anaconda.
+
+- [#15104](https://github.com/Kilo-Org/kilocode/pull/15104) [`0f4936d`](https://github.com/Kilo-Org/kilocode/commit/0f4936df112d1f4b6d1b319c8c9eb2fc55ed957c) - Keep Gemini thought signatures and other OpenRouter reasoning details that arrive late in a response, so later requests in the conversation replay them
+
+- [#14942](https://github.com/Kilo-Org/kilocode/pull/14942) [`b7672ae`](https://github.com/Kilo-Org/kilocode/commit/b7672ae502af111048191119d61cea62157291f5) - Show why a provider failed to load — such as rejected credentials or a network error — instead of silently hiding it from the provider list. The CLI, TUI, and VS Code model picker now surface the reason and offer to sign in again when credentials were rejected.
+
+- [#15041](https://github.com/Kilo-Org/kilocode/pull/15041) [`32bc724`](https://github.com/Kilo-Org/kilocode/commit/32bc7248ea08066475b16c94d8b9864addcbd00f) Thanks [@hdcodedev](https://github.com/hdcodedev)! - Send review comments from the Changes view to the chat when the sidebar is showing History.
+
+- [#14774](https://github.com/Kilo-Org/kilocode/pull/14774) [`0913273`](https://github.com/Kilo-Org/kilocode/commit/09132736d7905647679acd1f8d788aae36165e1a) Thanks [@LEN5010](https://github.com/LEN5010)! - Prevent restarted Agent Manager terminals from lingering after closing the terminal or reloading the panel.
+
+- [#15113](https://github.com/Kilo-Org/kilocode/pull/15113) [`ba0410f`](https://github.com/Kilo-Org/kilocode/commit/ba0410fbdd54b5c787080cc73c38a6d5aadc9d44) - Update the VS Code extension brand yellow to #FFDD00.
+
+- [#14925](https://github.com/Kilo-Org/kilocode/pull/14925) [`4516a48`](https://github.com/Kilo-Org/kilocode/commit/4516a48321acdd7a5ddd8437a5ae29a4b6e646ca) Thanks [@abdulhusainahk](https://github.com/abdulhusainahk)! - Show a dismissible hint naming the first workspace folder used by chat in multi-root windows, with guidance for working on another folder. The hint is available in all supported sidebar languages.
+
+- [#15045](https://github.com/Kilo-Org/kilocode/pull/15045) [`6fcbc66`](https://github.com/Kilo-Org/kilocode/commit/6fcbc6683fba96b6a22ead1b67017a8ba715463e) Thanks [@hdcodedev](https://github.com/hdcodedev)! - Keep new files with accented or non-Latin names, such as `résumé.txt`, when moving a chat to a worktree
+
+## 7.8.12
+
+### Minor Changes
+
+- [#15030](https://github.com/Kilo-Org/kilocode/pull/15030) [`d749650`](https://github.com/Kilo-Org/kilocode/commit/d7496501c6fcbe22efdbec353551ad511669ee6f) - Route Kilo Gateway traffic (chat, models, embeddings, autocomplete, transcription) through `https://ai-gateway.kilo.ai/api/v1` by default, and support a `KILO_AI_GATEWAY_URL` environment variable to override it. Setting only `KILO_API_URL` keeps routing gateway traffic through that server.
+
+## 7.8.10
+
+### Minor Changes
+
+- [#14988](https://github.com/Kilo-Org/kilocode/pull/14988) [`9a55ea4`](https://github.com/Kilo-Org/kilocode/commit/9a55ea4f0fd9255d1c736882bf3aa804b5b9c172) Thanks [@WebReflection](https://github.com/WebReflection)! - Add an experimental Search Ignored Paths setting that lists ignored folders or files, such as build output, that the agent's glob tool should still search
+
+### Patch Changes
+
+- [#15017](https://github.com/Kilo-Org/kilocode/pull/15017) [`e48c978`](https://github.com/Kilo-Org/kilocode/commit/e48c9785c74940ff3318dc52e1b66346b764e8d4) Thanks [@WebReflection](https://github.com/WebReflection)! - Keep `.gitignore`d files and folders, such as `node_modules`, out of glob results and grep `include` searches, even when the pattern matches folder names, like `**/*`
+
+- [#15056](https://github.com/Kilo-Org/kilocode/pull/15056) [`0e6da31`](https://github.com/Kilo-Org/kilocode/commit/0e6da3104dd91d2c97bfe6fdc3e04bee6b811f43) - Fix grep failing with "Invalid ripgrep match output" when matched lines aren't valid UTF-8, such as in ISO-8859-1 / Windows-1252 encoded files
+
 ## 7.8.9
 
 ### Minor Changes

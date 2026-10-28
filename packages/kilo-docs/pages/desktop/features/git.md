@@ -17,7 +17,7 @@ Controls at the top of the tab let you:
 
 - {% svgIcon src="/docs/img/desktop/list-chevrons-down-up.svg" /%} **Collapse all files** to their headers, then expand just the ones you want.
 - {% svgIcon src="/docs/img/desktop/settings.svg" /%} **Diff settings** control how diffs are displayed, such as switching between a unified and split layout.
-- {% svgIcon src="/docs/img/desktop/panel-right-close.svg" /%} **Hide file tree** to give the diff more room, and show it again when you need it. Select a file in the file tree to jump to it in the diff.
+- {% svgIcon src="/docs/img/desktop/panel-right-close.svg" /%} **Hide file tree** to give the diff more room, and show it again when you need it; Kilo Desktop remembers your choice. Select a file in the file tree to jump to it in the diff.
 
 The tab also handles the cases where there's nothing to show:
 
@@ -27,11 +27,15 @@ The tab also handles the cases where there's nothing to show:
 
 ## Commit, push, and open a pull request
 
-The commit control in the top toolbar turns your reviewed changes into commits and shares them. Its main button is a **quick action** that adapts to your branch's state, so it always offers the next sensible step. Open its dropdown to choose an action directly:
+The commit control in the top toolbar turns your changes into commits and shares them. Its main button adapts to your branch's state and offers the next step: **Commit**, **Commit & push**, **Commit, push & PR**, **Push**, **Pull**, **Create PR**, or **View PR**. Open its dropdown to choose **Commit**, **Push**, or **Create PR** directly.
 
-- **Commit** — commit your current changes. Unavailable when the working tree is clean.
-- **Push** — push your commits to the remote. Needs a checked-out branch with an `origin` remote and local commits to send.
-- **Create PR** — open a pull request for the current branch. Needs committed work on a feature branch (not the default branch) with a GitHub `origin` remote. When a pull request already exists, the menu links to it as **PR #N**, color-coded by its state.
+- **Commit** — stages all your changes and commits them. Kilo writes a one-line commit message using the model selected in the chat, matching your repository's recent commit style. Unavailable when the working tree is clean.
+- **Push** — pushes your commits to the remote. It needs a checked-out branch with an `origin` remote and local commits to send.
+- **Create PR** — writes a pull request title and description with the selected model, creates a **draft** pull request, and opens it in your browser. If your repository has a PR template, Kilo fills it in. It needs the GitHub CLI (`gh`), committed work on a feature branch, and a GitHub `origin` remote. When a pull request already exists, the menu links to it as **PR #N**, colored by its state.
+
+While an action runs, the button shows its progress (for example *Generating commit message...* or *Creating draft PR...*). If the button is disabled, hover it to see why (for example *Branch is behind its upstream. Pull or rebase first.*). Select a model in the chat before committing.
+
+If a push fails, the error opens in a dialog where you can read the full git output. Select **Fix in chat** to add the error to your chat draft so the agent can help.
 
 ## Switch and create branches
 
@@ -46,7 +50,7 @@ Beside the workspace in the chat, a mode control sets where a session's changes 
 - **Local repository** — work in the repository already on your machine, on whatever branch is checked out. This is the default.
 - **New worktree** — create a separate copy for the session, based on a branch you pick, so your main checkout stays untouched while the agent works.
 
-Kilo Desktop remembers your choice per workspace.
+Kilo Desktop remembers your choice per workspace. Worktree sessions created in Kilo Desktop also appear in the [VS Code extension](/docs/code-with-ai/platforms/vscode)'s Agent Manager.
 
 ## Set up git for a folder
 

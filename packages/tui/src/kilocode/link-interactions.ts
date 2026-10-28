@@ -1,7 +1,7 @@
 import { getLinkId, MouseButton, TextAttributes, type MouseEvent, type OptimizedBuffer } from "@opentui/core"
 import { useRenderer } from "@opentui/solid"
 import { onCleanup } from "solid-js"
-import open from "open"
+import { openUrl } from "@opencode-ai/core/open"
 import { useToast } from "../ui/toast"
 
 const clickDelay = 250
@@ -37,7 +37,7 @@ export function isOpenableLink(url: string | null): url is string {
 export function installLinkInteractions(
   renderer: LinkRenderer,
   notice: LinkNotice,
-  opener: LinkOpener = open,
+  opener: LinkOpener = openUrl,
   delay = clickDelay,
 ) {
   let hovered = 0

@@ -18,6 +18,7 @@ import ai.kilocode.client.session.model.Compaction
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.Generic
+import ai.kilocode.client.session.model.Notice
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.StepFinish
 import ai.kilocode.client.session.model.Text
@@ -89,6 +90,7 @@ object ViewFactory {
         }
         is Compaction -> CompactionView(content)
         is StepFinish -> error("step-finish is timeline-only")
+        is Notice -> NoticeView(content)
         is Generic -> GenericView(content)
     }
 
