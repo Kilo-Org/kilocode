@@ -1037,8 +1037,13 @@ it.live("a missing logical instruction blob is not JSON null, while an actual na
     const s = yield* boot(f.root)
     yield* signIn(s.credentials)
     yield* seed(s.db, f.directory)
-    yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
-    yield* Store.reconcile(s.db, f.directory, true)
+    const enabled = yield* s.sync.enable({
+      directory: f.directory,
+      destination: f.backend.url,
+      local: true,
+      organizationID: null,
+    })
+    expect(enabled).toMatchObject({ sessions: 1, pending: 1 })
     const hash = Instruction.Hash.make("d".repeat(64))
     yield* s.db
       .insert(InstructionStateTable)
@@ -1121,7 +1126,7 @@ it.live("the flush deadline aborts a hanging HTTP pass without changing its froz
   }),
 )
 
-it.live("the flush deadline includes waiting for another operation's synchronization semaphore", () =>
+it.live("the flush deadline starts after another operation releases the synchronization semaphore", () =>
   Effect.gen(function* () {
     const f = yield* fixture
     const s = yield* boot(f.root, { flushTimeout: 200 })
@@ -1134,15 +1139,13 @@ it.live("the flush deadline includes waiting for another operation's synchroniza
       .enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
       .pipe(Effect.result, Effect.forkScoped)
     yield* Effect.promise(() => f.backend.entered.promise)
-    const start = Date.now()
-    expect(yield* s.sync.flush({ directory: f.directory }).pipe(Effect.result)).toMatchObject({
-      _tag: "Failure",
-      failure: { code: "flush_timeout" },
-    })
-    expect(Date.now() - start).toBeLessThan(3000)
+    yield* signIn(s.credentials)
+    const flush = yield* s.sync.flush({ directory: f.directory }).pipe(Effect.result, Effect.forkScoped)
+    yield* Effect.sleep(300)
     f.backend.control.hangExchange = false
     f.backend.gate.resolve()
     expect(yield* Fiber.join(holder)).toMatchObject({ _tag: "Failure", failure: { code: "consent_conflict" } })
+    expect(yield* Fiber.join(flush)).toMatchObject({ _tag: "Success", success: { pending: 0 } })
     expect((yield* s.sync.status({ directory: f.directory })).userID).toBe("alice")
   }),
 )
@@ -1611,7 +1614,7 @@ it.live("unused provenance is bounded while dirty native references keep their e
       INSERT INTO _kilo_sync_owned_asset(path,directory,observed_at)
       SELECT 'unused-'||i,${f.directory},${Date.now()} FROM n`)
     yield* output.save(Buffer.from("new unused allocation"), ".txt")
-    expect(yield* s.db.get(sql`SELECT count(*) AS count FROM _kilo_sync_owned_asset`)).toEqual({ count: 4097 })
+    expect(yield* s.db.get(sql`SELECT count(*) AS count FROM _kilo_sync_owned_asset`)).toEqual({ count: 4096 })
     expect(yield* s.db.get(sql`SELECT path FROM _kilo_sync_owned_asset WHERE path=${file}`)).toEqual({ path: file })
     yield* s.db.run(sql`UPDATE _kilo_sync_owned_asset SET observed_at=1 WHERE path LIKE 'unused-%'`)
     yield* Assets.prune(s.db, s.global)

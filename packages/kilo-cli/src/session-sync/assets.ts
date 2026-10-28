@@ -29,6 +29,7 @@ const pool = (directory: string) => `workspace:${directory}`
 const retention = Semaphore.makeUnsafe(1)
 const provenanceLimit = 4096
 const provenanceAge = 7 * 24 * 60 * 60 * 1000
+let trimmed = 0
 
 export function filename(global: Global.Interface, sessionID: string, hash: string) {
   return path.join(global.data, "session-sync", "spool", digest(sessionID), hash)
@@ -176,6 +177,7 @@ const pendingPaths = Effect.fn("SessionSync.Assets.pendingPaths")(function* (db:
 })
 
 const trimProvenance = Effect.fn("SessionSync.Assets.trimProvenance")(function* (db: DB) {
+  if (Date.now() < trimmed) return
   const cutoff = Date.now() - provenanceAge
   const count = yield* db
     .get<{
@@ -189,20 +191,32 @@ const trimProvenance = Effect.fn("SessionSync.Assets.trimProvenance")(function* 
     .all<{ locator: string }>(sql`SELECT DISTINCT locator FROM _kilo_sync_asset_reference WHERE locator<>'@body'`)
     .pipe(Effect.orDie)
   const current = new Set(references.map((reference) => reference.locator))
-  const rows = yield* db
-    .all<{
-      path: string
-      observed_at: number
-    }>(sql`SELECT path,observed_at FROM _kilo_sync_owned_asset ORDER BY observed_at DESC,path DESC`)
-    .pipe(Effect.orDie)
-  for (const [index, row] of rows.entries())
-    if (
-      (index >= provenanceLimit || row.observed_at < cutoff) &&
-      !pending.has(row.path) &&
-      !current.has(digest(row.path)) &&
-      !current.has(digest(pathToFileURL(row.path).href))
-    )
+  while (true) {
+    const rows = yield* db
+      .all<{ path: string }>(
+        sql`SELECT path FROM _kilo_sync_owned_asset
+        WHERE observed_at<${cutoff} OR path NOT IN (
+          SELECT path FROM _kilo_sync_owned_asset ORDER BY observed_at DESC,path DESC LIMIT ${provenanceLimit}
+        ) ORDER BY observed_at,path LIMIT 256`,
+      )
+      .pipe(Effect.orDie)
+    if (!rows.length) return
+    let removed = 0
+    for (const row of rows) {
+      if (pending.has(row.path) || current.has(digest(row.path)) || current.has(digest(pathToFileURL(row.path).href))) {
+        yield* db
+          .run(sql`UPDATE _kilo_sync_owned_asset SET observed_at=${Date.now()} WHERE path=${row.path}`)
+          .pipe(Effect.orDie)
+        continue
+      }
       yield* db.run(sql`DELETE FROM _kilo_sync_owned_asset WHERE path=${row.path}`).pipe(Effect.orDie)
+      removed++
+    }
+    if (!removed) {
+      trimmed = Date.now() + 60_000
+      return
+    }
+  }
 })
 
 // Called solely by the native allocation wrapper, never by transcript discovery. Before opt-in,

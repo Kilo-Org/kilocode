@@ -522,6 +522,22 @@ export const make = Effect.fn("SessionSync.make")(function* (
                 )
               }),
             )
+            yield* Store.reconcile(db, directory, true).pipe(
+              Effect.tap(() =>
+                Effect.sync(() => {
+                  backgroundError = undefined
+                }),
+              ),
+              Effect.catchCause((cause) => {
+                if (Cause.hasInterrupts(cause)) return Effect.failCause(cause)
+                backgroundError = fail(
+                  "background_error",
+                  "Initial capture is incomplete; pending work is retained and will be retried",
+                  true,
+                )
+                return Effect.logError("Session synchronization initial capture failed", cause)
+              }),
+            )
             return yield* status({ directory })
           }).pipe(Effect.scoped),
         )
@@ -540,21 +556,18 @@ export const make = Effect.fn("SessionSync.make")(function* (
       }),
     status,
     flush: (input) =>
-      lock
-        .withPermit(
-          Effect.gen(function* () {
-            const current = yield* status(input)
-            if (!current.enabled)
-              return yield* fail("sync_disabled", "Enable synchronization for this workspace before flushing")
-            const deadline = Date.now() + (options.flushTimeout ?? 30_000)
-            while (true) {
-              const progressed = yield* runPass(current.directory, true, deadline)
-              const next = yield* status({ directory: current.directory })
-              if (!next.pending || next.error || !progressed || Date.now() >= deadline) return next
-            }
-          }),
-        )
-        .pipe(
+      lock.withPermit(
+        Effect.gen(function* () {
+          const current = yield* status(input)
+          if (!current.enabled)
+            return yield* fail("sync_disabled", "Enable synchronization for this workspace before flushing")
+          const deadline = Date.now() + (options.flushTimeout ?? 30_000)
+          while (true) {
+            const progressed = yield* runPass(current.directory, true, deadline)
+            const next = yield* status({ directory: current.directory })
+            if (!next.pending || next.error || !progressed || Date.now() >= deadline) return next
+          }
+        }).pipe(
           Effect.timeoutOption(options.flushTimeout ?? 30_000),
           Effect.flatMap((result) =>
             result._tag === "Some"
@@ -568,6 +581,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
                 ),
           ),
         ),
+      ),
   })
   if (options.background !== false) {
     const background = lock.withPermit(runPass()).pipe(Effect.catch(() => Effect.void))
