@@ -42,6 +42,7 @@ function serveOAuthMcp(mode: Mode) {
   return Effect.acquireRelease(
     Effect.promise(async () => {
       let anonymous = false
+      let bare = false
       const protocol = new Server({ name: "auth-telemetry", version: "1.0.0" }, { capabilities: { tools: {} } })
       protocol.setRequestHandler(ListToolsRequestSchema, () => Promise.resolve({ tools: [] }))
       const transport = new WebStandardStreamableHTTPServerTransport({
@@ -56,6 +57,7 @@ function serveOAuthMcp(mode: Mode) {
         async fetch(request) {
           const url = new URL(request.url)
           const origin = url.origin
+          if (bare && url.pathname.startsWith("/.well-known/")) return new Response("Not found", { status: 404 })
           if (url.pathname === "/mcp") {
             if (anonymous || request.headers.get("authorization") === "Bearer secret-access-token")
               return transport.handleRequest(request)
@@ -115,6 +117,9 @@ function serveOAuthMcp(mode: Mode) {
         url: new URL("/mcp", http.url).toString(),
         allowAnonymous: () => {
           anonymous = true
+        },
+        hideOAuth: () => {
+          bare = true
         },
         close: async () => {
           await http.stop(true)
@@ -208,20 +213,22 @@ describe("MCP auth telemetry: real sign-in flows", () => {
     }),
   )
 
-  mcpTest.instance("a connection that needs no redirect is not counted as an OAuth success", () =>
+  mcpTest.instance("a connection that obtains no credentials is not counted as a sign-in success", () =>
     Effect.gen(function* () {
       yield* stopCallback
       const rec = yield* record()
       const server = yield* serveOAuthMcp("ok")
       const mcp = yield* addServer("anonymous-server", server.url)
       server.allowAnonymous()
+      server.hideOAuth()
 
-      expect((yield* mcp.authenticate("anonymous-server")).status).toBe("connected")
+      expect((yield* mcp.authenticate("anonymous-server")).status).toBe("failed")
       expect(yield* completion(rec)).toMatchObject({
-        outcome: "success",
-        phase: "tool_discovery",
+        outcome: "failure",
+        phase: "prepare",
         oauthOutcome: "not_performed",
-        connectionOutcome: "connected",
+        connectionOutcome: "not_attempted",
+        errorCode: "no_credentials",
         redirect: false,
       })
     }),
