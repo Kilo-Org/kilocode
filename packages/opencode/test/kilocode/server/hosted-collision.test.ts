@@ -39,6 +39,9 @@ function cloud(name: string) {
     port: 0,
     fetch(request) {
       const url = new URL(request.url)
+      if (url.pathname === "/api/cloud-agent-next/token") {
+        return Response.json({ token: `${name}-control`, expiresAt: new Date(Date.now() + 600_000).toISOString() })
+      }
       calls.push(`${request.method} ${url.pathname}`)
       return Response.json({ provider: name })
     },
@@ -51,7 +54,13 @@ function cloud(name: string) {
     remove: () => Effect.void,
   } satisfies Auth.Interface
   return {
-    provider: kiloCloud({ auth, env: { CLOUD_AGENT_NEXT_BASE_URL: `http://127.0.0.1:${server.port}` } }),
+    provider: kiloCloud({
+      auth,
+      env: {
+        CLOUD_AGENT_NEXT_BASE_URL: `http://127.0.0.1:${server.port}`,
+        KILO_WEB_APP_URL: `http://127.0.0.1:${server.port}`,
+      },
+    }),
     calls,
     stop: () => server.stop(true),
   }

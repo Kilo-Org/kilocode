@@ -16,6 +16,7 @@ import type { EventV2 } from "@opencode-ai/core/event"
 import { Interrupted } from "@opencode-ai/schema/kilocode/session-drain"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import { KiloSessionTurn } from "@/kilocode/session/turn"
 import { Permission } from "@/permission"
 import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { Question } from "@/question"
@@ -219,6 +220,9 @@ export namespace KiloSessionPrompt {
     const prev = msgs.at(-2)
     if (!prev || prev.info.role !== "user") return
     if (tail.info.parentID !== prev.info.id) return
+
+    // Status is per process: another Kilo process on the same data directory can still be waiting on this reply.
+    if (yield* KiloSessionTurn.foreign(input.sessionID)) return
 
     yield* input.sessions.removeMessage({ sessionID: input.sessionID, messageID: tail.info.id })
   })

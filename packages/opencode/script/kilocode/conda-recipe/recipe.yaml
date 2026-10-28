@@ -22,6 +22,11 @@ build:
   script:
     file: build.sh
     interpreter: bash
+  # The archives contain prebuilt binaries that need no prefix relocation.
+  # Relinking would also require platform tools (install_name_tool for
+  # Mach-O) that do not exist on the Linux runner cross-building osx-*.
+  dynamic_linking:
+    binary_relocation: false
 
 requirements:
   run:
