@@ -1,6 +1,7 @@
 // Main's settings search box. v2: the shortcut hint is the webview shortcut, the host forwards no keybindings.
 import { Component, Show, createEffect } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useLanguage } from "../../context/language"
 import { ShortcutKeys } from "../shared/ShortcutKeys"
@@ -45,6 +46,8 @@ const SettingsSearch: Component<SettingsSearchProps> = (props) => {
   })
 
   const onKeyDown = (event: KeyboardEvent) => {
+    // A CJK IME uses Enter and the arrow keys to pick glyphs; they must not drive the search.
+    if (event.isComposing || event.keyCode === 229) return
     if (event.key === "ArrowDown") {
       event.preventDefault()
       event.stopPropagation()
@@ -57,7 +60,7 @@ const SettingsSearch: Component<SettingsSearchProps> = (props) => {
       props.onMove(-1)
       return
     }
-    if (event.key === "Enter") {
+    if (isEnterKeyCommitNotIme(event)) {
       event.preventDefault()
       event.stopPropagation()
       props.onChoose()

@@ -1,19 +1,29 @@
 // Main's provider connect dialog on v2 integrations. The v1 auth methods are the integration's methods: an API key
 // is `api.integration.connect.key`, OAuth is `api.integration.oauth.*` (an automatic attempt is polled until it
 // settles), and an external method is `api.integration.connect.external`. Method form fields replace the v1
-// prompts. v1's client-side method fallbacks for Bedrock and Vertex and the Anaconda Desktop dialog are not here:
-// the v2 server describes every method itself, and v2 has no Anaconda Desktop integration.
+// prompts and are validated with `v2/form.ts` (`formAnswer`), the same answer shape the question dock sends.
+// v1's client-side method fallbacks for Bedrock and Vertex and the Anaconda Desktop dialog are not here: the v2
+// server describes every method itself, and v2 has no Anaconda Desktop integration.
 import { Button } from "@kilocode/kilo-ui/button"
+import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import type { FormAnswer, FormField, IntegrationAttempt, IntegrationInfo } from "@opencode/client"
-import { Component, For, Match, Show, Switch, createMemo, createSignal, onCleanup, onMount } from "solid-js"
+import type {
+  FormAnswer,
+  FormField,
+  FormOption,
+  FormValue,
+  IntegrationAttempt,
+  IntegrationInfo,
+} from "@opencode/client"
+import { Component, For, Match, Show, Switch, createMemo, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useLanguage } from "../../context/language"
+import { type Draft, formAnswer } from "../../v2/form"
 import type { SettingsData } from "../../v2/settings"
 
 interface ProviderConnectDialogProps {
@@ -33,8 +43,6 @@ interface ViewState {
   failed?: string
 }
 
-type Prompt = Extract<FormField, { type: "string" }>
-
 /**
  * The methods that the v1 dialog has a view for. Environment variables cannot be set from the dialog. v1 listed the
  * sign-in methods before the API key, while the v2 server lists the key first, so the key goes last.
@@ -48,6 +56,10 @@ export function connectMethods(integration: IntegrationInfo | undefined): Connec
     .toSorted((a, b) => Number(a.type === "key") - Number(b.type === "key"))
 }
 
+export function methodFields(method: ConnectMethod | undefined): FormField[] {
+  return method?.form ?? []
+}
+
 function formatError(value: unknown, fallback: string): string {
   if (value && typeof value === "object" && "message" in value) {
     const message = (value as { message?: unknown }).message
@@ -55,19 +67,6 @@ function formatError(value: unknown, fallback: string): string {
   }
   if (typeof value === "string" && value) return value
   return fallback
-}
-
-function prompts(method: ConnectMethod | undefined): Prompt[] {
-  const fields: FormField[] = method?.form ?? []
-  return fields.filter((field): field is Prompt => field.type === "string" && !field.hidden)
-}
-
-function visible(prompt: Prompt, values: Record<string, string>) {
-  return (prompt.when ?? []).every((rule) => {
-    const value = values[rule.key] ?? ""
-    if (rule.op === "eq") return value === String(rule.value)
-    return value !== String(rule.value)
-  })
 }
 
 const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => {
@@ -79,6 +78,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
 
   const item = createMemo(() => props.settings.integration(props.integrationID))
   const name = () => item()?.name ?? props.integrationID
+  const heading = () => language.t("provider.connect.title", { provider: name() })
   const methods = createMemo<ConnectMethod[]>(() => {
     const list = connectMethods(item())
     if (props.oauthOnly) return list.filter((item) => item.type === "oauth")
@@ -89,116 +89,16 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     return index === undefined ? undefined : methods()[index]
   })
 
-  function optional(prompt: Prompt) {
-    return !prompt.required
-  }
-
-  function promptLabel(prompt: Prompt) {
-    return prompt.title ?? prompt.key
+  function label(field: FormField) {
+    return field.title ?? field.key
   }
 
   function optionText(option: { label: string; value: string; description?: string }) {
     return option.description ? `${option.label} (${option.description})` : option.label
   }
 
-  const PromptField: Component<{
-    prompt: Prompt
-    fields: Record<string, string>
-    setField: (key: string, value: string) => void
-    invalid?: boolean
-    error?: string
-  }> = (props) => {
-    return (
-      <Switch>
-        <Match when={!props.prompt.options?.length}>
-          <TextField
-            type="text"
-            autocomplete="off"
-            spellcheck={false}
-            label={promptLabel(props.prompt)}
-            placeholder={props.prompt.placeholder}
-            value={props.fields[props.prompt.key] ?? ""}
-            onChange={(next) => props.setField(props.prompt.key, next)}
-            validationState={props.invalid ? "invalid" : undefined}
-            error={props.invalid ? props.error : undefined}
-          />
-        </Match>
-        <Match when={props.prompt.options?.length}>
-          <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
-            <label
-              style={{
-                "font-size": "var(--kilo-font-size-12)",
-                "font-weight": "500",
-                color: "var(--text-weak-base)",
-              }}
-            >
-              {promptLabel(props.prompt)}
-            </label>
-            <Select
-              options={props.prompt.options ?? []}
-              current={props.prompt.options?.find((item) => item.value === props.fields[props.prompt.key])}
-              value={(item) => item.value}
-              label={(item) => optionText(item)}
-              onSelect={(item) => props.setField(props.prompt.key, item?.value ?? "")}
-              variant="secondary"
-              size="small"
-              triggerVariant="settings"
-            />
-            <Show when={props.invalid && props.error}>
-              <span style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--vscode-errorForeground)" }}>
-                {props.error}
-              </span>
-            </Show>
-          </div>
-        </Match>
-      </Switch>
-    )
-  }
-
-  const PromptFields: Component<{
-    prompts: Prompt[]
-    fields: Record<string, string>
-    setField: (key: string, value: string) => void
-    invalidKey?: string
-    error?: string
-  }> = (props) => (
-    <>
-      <For each={props.prompts}>
-        {(prompt) => (
-          <PromptField
-            prompt={prompt}
-            fields={props.fields}
-            setField={props.setField}
-            invalid={props.invalidKey === prompt.key}
-            error={props.error}
-          />
-        )}
-      </For>
-      <Show when={props.error && !props.invalidKey}>
-        <div style={{ color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-13)" }}>
-          {props.error}
-        </div>
-      </Show>
-    </>
-  )
-
-  /** Reads the visible prompts into an answer, or reports the first missing required field. */
-  function answer(list: Prompt[], fields: Record<string, string>): FormAnswer | undefined | false {
-    const inputs: Record<string, string> = {}
-    for (const prompt of list) {
-      const value = (fields[prompt.key] ?? "").trim()
-      if (!value && !optional(prompt)) {
-        setState({
-          ...state,
-          error: language.t("provider.connect.prompt.required", { field: promptLabel(prompt) }),
-          field: prompt.key,
-        })
-        return false
-      }
-      if (!value) continue
-      inputs[prompt.key] = value
-    }
-    return Object.keys(inputs).length > 0 ? inputs : undefined
+  function openExternal(url: string) {
+    props.settings.open(url)
   }
 
   const stop = () => {
@@ -212,10 +112,6 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     if (methods().length !== 1) return
     selectMethod(0)
   })
-
-  function openExternal(url: string) {
-    props.settings.open(url)
-  }
 
   function reset() {
     stop()
@@ -258,9 +154,13 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     dialog.close()
   }
 
+  /** `false` means the work stopped without a result (a cancelled OAuth attempt), so nothing was connected. */
   function run(task: () => Promise<unknown>) {
     task().then(
-      () => succeed(),
+      (result) => {
+        if (result === false) return
+        succeed()
+      },
       (err: unknown) => fail(formatError(err, language.t("common.requestFailed"))),
     )
   }
@@ -299,7 +199,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
   function selectMethod(index: number) {
     const current = methods()[index]
     stop()
-    const needsPrompts = current?.type !== "key" && prompts(current).length > 0
+    const needsPrompts = current?.type !== "key" && methodFields(current).length > 0
     setState({
       methodIndex: index,
       authorization: undefined,
@@ -342,7 +242,216 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     run(() => props.settings.complete(props.integrationID, current.attemptID, code))
   }
 
-  const title = () => language.t("provider.connect.title", { provider: name() })
+  /**
+   * The method's form fields, as `Form.Fields` describes them. A `custom` text field takes a value outside the
+   * discovered options, and `formAnswer` seeds defaults, resolves `when` on the answers and types the values.
+   */
+  const MethodForm: Component<{
+    fields: FormField[]
+    busy?: boolean
+    leading?: JSX.Element
+    footer?: JSX.Element
+    beforeSubmit?: () => boolean
+    onSubmit: (answer: FormAnswer | undefined) => void
+  }> = (form) => {
+    const [values, setValues] = createSignal<Draft>({})
+    const [custom, setCustom] = createStore<Record<string, string>>({})
+    const [error, setError] = createSignal<string>()
+
+    const result = createMemo(() => formAnswer(form.fields, values(), custom))
+    const visible = () => result().visible
+
+    const value = (field: FormField) => {
+      const current = values()[field.key]
+      if (current !== undefined) return current
+      if (field.type === "boolean") return field.default ?? false
+      if (field.type === "external") return undefined
+      return field.default
+    }
+
+    const set = (field: FormField, next: FormValue | undefined) => {
+      setError(undefined)
+      setValues({ ...values(), [field.key]: next })
+    }
+
+    const invalid = (field: FormField) => {
+      const message = error()
+      return !!message && message.startsWith(field.title ?? field.key)
+    }
+
+    function submit(e: SubmitEvent) {
+      e.preventDefault()
+      if (form.beforeSubmit && !form.beforeSubmit()) return
+      if (result().errors.length) {
+        setError(result().errors[0])
+        return
+      }
+      form.onSubmit(Object.keys(result().answer).length > 0 ? result().answer : undefined)
+    }
+
+    const Field: Component<{ field: FormField }> = (props) => {
+      const field = () => props.field
+      const string = () => {
+        const current = field()
+        return current.type === "string" ? current : undefined
+      }
+      const multiple = () => {
+        const current = field()
+        return current.type === "multiselect" ? current : undefined
+      }
+      const external = () => {
+        const current = field()
+        return current.type === "external" ? current : undefined
+      }
+      const free = () => string()?.custom === true
+      const options = (): FormOption[] => string()?.options ?? []
+
+      return (
+        <Switch>
+          <Match when={external()}>
+            <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
+              <Button
+                variant="secondary"
+                size="large"
+                type="button"
+                onClick={() => {
+                  set(field(), true)
+                  if (external()?.url) openExternal(external()!.url)
+                }}
+              >
+                {label(field())}
+              </Button>
+              <Show when={external()?.description}>
+                <span style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--text-weak-base)" }}>
+                  {external()?.description}
+                </span>
+              </Show>
+              <Show when={invalid(field()) && error()}>
+                <span style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--vscode-errorForeground)" }}>
+                  {error()}
+                </span>
+              </Show>
+            </div>
+          </Match>
+          <Match when={field().type === "boolean"}>
+            <Checkbox checked={!!value(field())} onChange={(checked) => set(field(), checked)}>
+              {label(field())}
+            </Checkbox>
+          </Match>
+          <Match when={multiple()}>
+            <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
+              <span
+                style={{
+                  "font-size": "var(--kilo-font-size-12)",
+                  "font-weight": "500",
+                  color: "var(--text-weak-base)",
+                }}
+              >
+                {label(field())}
+              </span>
+              <For each={multiple()?.options ?? []}>
+                {(option) => {
+                  const selected = () => (Array.isArray(value(field())) ? (value(field()) as string[]) : [])
+                  return (
+                    <Checkbox
+                      checked={selected().includes(option.value)}
+                      onChange={(checked) =>
+                        set(
+                          field(),
+                          checked
+                            ? [...selected(), option.value]
+                            : selected().filter((value) => value !== option.value),
+                        )
+                      }
+                    >
+                      {optionText(option)}
+                    </Checkbox>
+                  )
+                }}
+              </For>
+              <Show when={multiple()?.custom}>
+                <TextField
+                  type="text"
+                  label={label(field())}
+                  value={custom[field().key] ?? ""}
+                  onChange={(next) => {
+                    setError(undefined)
+                    setCustom(field().key, next)
+                  }}
+                />
+              </Show>
+              <Show when={invalid(field()) && error()}>
+                <span style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--vscode-errorForeground)" }}>
+                  {error()}
+                </span>
+              </Show>
+            </div>
+          </Match>
+          <Match when={free() || options().length === 0}>
+            <TextField
+              type={field().type === "number" || field().type === "integer" ? "number" : "text"}
+              autocomplete="off"
+              spellcheck={false}
+              label={label(field())}
+              placeholder={string()?.placeholder}
+              value={String(value(field()) ?? "")}
+              onChange={(next) => set(field(), next)}
+              validationState={invalid(field()) ? "invalid" : undefined}
+              error={invalid(field()) ? error() : undefined}
+            />
+          </Match>
+          <Match when={options().length > 0}>
+            <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
+              <span
+                style={{
+                  "font-size": "var(--kilo-font-size-12)",
+                  "font-weight": "500",
+                  color: "var(--text-weak-base)",
+                }}
+              >
+                {label(field())}
+              </span>
+              <Select
+                options={options()}
+                current={options().find((option: FormOption) => option.value === value(field()))}
+                value={(option: FormOption) => option.value}
+                label={(option: FormOption) => optionText(option)}
+                onSelect={(option: FormOption | undefined) => set(field(), option?.value)}
+                variant="secondary"
+                size="small"
+                triggerVariant="settings"
+              />
+              <Show when={invalid(field()) && error()}>
+                <span style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--vscode-errorForeground)" }}>
+                  {error()}
+                </span>
+              </Show>
+            </div>
+          </Match>
+        </Switch>
+      )
+    }
+
+    return (
+      <form
+        class="dialog-confirm-body"
+        style={{ display: "flex", "flex-direction": "column", gap: "16px" }}
+        onSubmit={submit}
+      >
+        {form.leading}
+        <For each={visible()}>{(field) => <Field field={field} />}</For>
+        {form.footer ?? undefined}
+        <div class="dialog-confirm-actions provider-connect-actions">
+          <Button variant="ghost" size="large" type="button" onClick={back}>
+            {language.t("common.goBack")}
+          </Button>
+          <Button variant="primary" size="large" type="submit" disabled={form.busy}>
+            {language.t("common.submit")}
+          </Button>
+        </div>
+      </form>
+    )
+  }
 
   const MethodSelection: Component = () => {
     return (
@@ -350,9 +459,9 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         <div class="provider-connect-body">{language.t("provider.connect.selectMethod", { provider: name() })}</div>
         <div style={{ display: "flex", "flex-direction": "column", gap: "8px" }}>
           <For each={methods()}>
-            {(item, index) => (
+            {(method, index) => (
               <Button variant="secondary" size="large" onClick={() => selectMethod(index())}>
-                {item.type === "key" ? item.label || language.t("provider.connect.method.apiKey") : item.label}
+                {method.type === "key" ? method.label || language.t("provider.connect.method.apiKey") : method.label}
               </Button>
             )}
           </For>
@@ -368,50 +477,38 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
 
   const ApiView: Component = () => {
     const [value, setValue] = createSignal("")
-    const [fields, setFields] = createStore<Record<string, string>>({})
-    const list = createMemo(() => prompts(method()).filter((prompt) => visible(prompt, fields)))
 
-    function submit(e: SubmitEvent) {
-      e.preventDefault()
-      const apiKey = value().trim()
-      if (!apiKey) {
-        setState({ ...state, error: language.t("provider.connect.apiKey.required"), field: "apiKey" })
-        return
-      }
-      const metadata = answer(list(), fields)
-      if (metadata === false) return
-      connect(apiKey, metadata)
+    function submit(answer: FormAnswer | undefined) {
+      connect(value().trim(), answer)
     }
 
     return (
-      <form
-        class="dialog-confirm-body"
-        style={{ display: "flex", "flex-direction": "column", gap: "16px" }}
-        onSubmit={submit}
-      >
-        <div class="provider-connect-body">
-          {language.t("provider.connect.apiKey.description", { provider: name() })}
-        </div>
-        <TextField
-          autofocus
-          type="password"
-          autocomplete="off"
-          spellcheck={false}
-          label={language.t("provider.connect.apiKey.label", { provider: name() })}
-          placeholder={language.t("provider.connect.apiKey.placeholder")}
-          value={value()}
-          onChange={setValue}
-          validationState={state.field === "apiKey" ? "invalid" : undefined}
-          error={state.field === "apiKey" ? state.error : undefined}
-        />
-        <PromptFields
-          prompts={list()}
-          fields={fields}
-          setField={(key, value) => setFields(key, value)}
-          invalidKey={state.field}
-          error={state.error}
-        />
-        <div class="dialog-confirm-actions provider-connect-actions">
+      <MethodForm
+        fields={methodFields(method())}
+        busy={state.phase === "connecting"}
+        leading={
+          <>
+            <div class="provider-connect-body">
+              {language.t("provider.connect.apiKey.description", { provider: name() })}
+            </div>
+            <TextField
+              autofocus
+              type="password"
+              autocomplete="off"
+              spellcheck={false}
+              label={language.t("provider.connect.apiKey.label", { provider: name() })}
+              placeholder={language.t("provider.connect.apiKey.placeholder")}
+              value={value()}
+              onChange={(next) => {
+                setValue(next)
+                if (state.field === "apiKey") setState({ ...state, error: undefined, field: undefined })
+              }}
+              validationState={state.field === "apiKey" ? "invalid" : undefined}
+              error={state.field === "apiKey" ? state.error : undefined}
+            />
+          </>
+        }
+        footer={
           <div class="provider-connect-byok">
             {language.t("provider.connect.kiloGateway.byok.prefix")}
             <a
@@ -427,14 +524,17 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
             </a>
             {language.t("provider.connect.kiloGateway.byok.suffix")}
           </div>
-          <Button variant="ghost" size="large" type="button" onClick={back}>
-            {language.t("common.goBack")}
-          </Button>
-          <Button variant="primary" size="large" type="submit" disabled={state.phase === "connecting"}>
-            {language.t("common.submit")}
-          </Button>
-        </div>
-      </form>
+        }
+        beforeSubmit={() => {
+          if (value().trim()) {
+            if (state.field === "apiKey") setState({ ...state, error: undefined, field: undefined })
+            return true
+          }
+          setState({ ...state, error: language.t("provider.connect.apiKey.required"), field: "apiKey" })
+          return false
+        }}
+        onSubmit={submit}
+      />
     )
   }
 
@@ -483,7 +583,10 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
           label={language.t("provider.connect.oauth.code.label", { method: method()?.label ?? "" })}
           placeholder={language.t("provider.connect.oauth.code.placeholder")}
           value={value()}
-          onChange={setValue}
+          onChange={(next) => {
+            setValue(next)
+            if (state.error) setState({ ...state, error: undefined })
+          }}
           validationState={state.error ? "invalid" : undefined}
           error={state.error}
         />
@@ -499,41 +602,13 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     )
   }
 
-  const OAuthPromptsView: Component = () => {
-    const [fields, setFields] = createStore<Record<string, string>>({})
-    const list = createMemo(() => prompts(method()).filter((prompt) => visible(prompt, fields)))
-
-    function submit(e: SubmitEvent) {
-      e.preventDefault()
-      const inputs = answer(list(), fields)
-      if (inputs === false) return
-      authorize(inputs)
-    }
-
-    return (
-      <form
-        class="dialog-confirm-body"
-        style={{ display: "flex", "flex-direction": "column", gap: "16px" }}
-        onSubmit={submit}
-      >
-        <PromptFields
-          prompts={list()}
-          fields={fields}
-          setField={(key, value) => setFields(key, value)}
-          invalidKey={state.field}
-          error={state.error}
-        />
-        <div class="dialog-confirm-actions">
-          <Button variant="ghost" size="large" type="button" onClick={back}>
-            {language.t("common.goBack")}
-          </Button>
-          <Button variant="primary" size="large" type="submit">
-            {language.t("common.submit")}
-          </Button>
-        </div>
-      </form>
-    )
-  }
+  const OAuthPromptsView: Component = () => (
+    <MethodForm
+      fields={methodFields(method())}
+      busy={state.phase === "authorizing"}
+      onSubmit={(answer) => authorize(answer)}
+    />
+  )
 
   const OAuthAutoView: Component = () => {
     const code = createMemo(() => {
@@ -589,7 +664,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
   }
 
   return (
-    <Dialog title={title()} fit>
+    <Dialog title={heading()} fit>
       <Switch>
         <Match when={state.methodIndex === undefined}>
           <MethodSelection />

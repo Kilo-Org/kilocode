@@ -4,7 +4,7 @@ import { searchSettings, type SettingsEntry, type SettingsSearchResult, type Set
 /** Search state, keyboard navigation, and result reveal for the settings page. */
 export function useSettingsSearch(opts: {
   tabs: () => SettingsTab[]
-  /** v2: only the rows the v2 Settings view renders. */
+  /** v2: the indexable rows the v2 Settings view renders. */
   entries?: () => SettingsEntry[]
   translate: (key: string) => string
   onSelectTab: (tab: string) => void

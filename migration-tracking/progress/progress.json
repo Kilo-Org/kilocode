@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 588,
+    "done": 589,
     "total": 9819,
     "percent": 6,
     "dropped": 35,
     "kinds": [
       {
         "kind": "module",
-        "done": 480,
+        "done": 481,
         "total": 3543
       },
       {
@@ -2371,12 +2371,12 @@
     },
     {
       "feature": "ui",
-      "done": 137,
+      "done": 138,
       "total": 267,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 137,
+          "done": 138,
           "total": 248
         },
         "api": {
@@ -6290,6 +6290,7 @@
     "module:packages/kilo-ui/src/components/chart.css",
     "module:packages/kilo-ui/src/components/chat-input.css",
     "module:packages/kilo-ui/src/components/checkbox.css",
+    "module:packages/kilo-ui/src/components/checkbox.tsx",
     "module:packages/kilo-ui/src/components/code.css",
     "module:packages/kilo-ui/src/components/code.tsx",
     "module:packages/kilo-ui/src/components/collapsible.css",

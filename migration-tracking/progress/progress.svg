@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 334" width="1000" height="334">
 <style>rect{stroke:#0d1117;stroke-width:.5}.d{fill:#2ea043}.o{fill:#6e7681}.x{fill:#d29922}.b{fill:none;stroke-width:2}text{font-family:sans-serif;fill:#fff;stroke:#0d1117;stroke-width:3;paint-order:stroke}</style>
 <rect x="0" y="0" width="1000" height="334" fill="#0d1117" stroke="none"/>
-<text x="4.00" y="21.00" font-size="16">Features: 9.6% (543/5668)</text>
+<text x="4.00" y="21.00" font-size="16">Features: 9.6% (544/5668)</text>
 <g><title>vscode: 265/2057 (12.9%)</title>
 <rect class="d" x="1.00" y="31.00" width="14.74" height="15.44"/>
 <rect class="d" x="15.74" y="31.00" width="14.74" height="15.44"/>
@@ -410,7 +410,7 @@
 <rect class="b" x="178.92" y="30.00" width="107.16" height="280.00"/>
 <text x="183.92" y="46.00" font-size="12">jetbrains</text>
 </g>
-<g><title>ui: 137/267 (51.3%)</title>
+<g><title>ui: 138/267 (51.7%)</title>
 <rect class="d" x="287.08" y="31.00" width="5.64" height="5.37"/>
 <rect class="d" x="292.71" y="31.00" width="5.64" height="5.37"/>
 <rect class="d" x="298.35" y="31.00" width="5.64" height="5.37"/>

@@ -17,25 +17,39 @@ import { saveImage } from "./save-image"
 import type { Manager } from "./server"
 
 export function chat(input: { context: ExtensionContext; server: Manager; directory: string }) {
-  const state: { view?: WebviewView } = {}
+  // Commands sent before the webview bundle listens are lost, and a resolved view is not yet loaded. Keep them until
+  // the webview sends its first message, which it does on mount.
+  const state: { view?: WebviewView; loaded: boolean; queued: ToWebview[] } = { loaded: false, queued: [] }
+  const flush = () => {
+    if (!state.view) return
+    state.loaded = true
+    for (const message of state.queued.splice(0)) void state.view.webview.postMessage(message)
+  }
   const provider: WebviewViewProvider = {
     resolveWebviewView(view) {
       state.view = view
-      const surface = wire({ ...input, webview: view.webview, view: "chat" })
+      state.loaded = false
+      const surface = wire({ ...input, webview: view.webview, view: "chat", onMessage: flush })
       const visibility = view.onDidChangeVisibility(() =>
         surface.post({ type: "webviewActiveChanged", active: view.visible }),
       )
       view.onDidDispose(() => {
         surface.dispose()
         visibility.dispose()
-        if (state.view === view) state.view = undefined
+        if (state.view !== view) return
+        state.view = undefined
+        state.loaded = false
       })
     },
   }
   return {
     provider,
     post(message: ToWebview) {
-      return state.view?.webview.postMessage(message)
+      if (!state.view || !state.loaded) {
+        state.queued.push(message)
+        return Promise.resolve(true)
+      }
+      return state.view.webview.postMessage(message)
     },
   }
 }
@@ -50,6 +64,8 @@ export function wire(input: {
   directory: string
   webview: Webview
   view: "chat" | "settings"
+  /** Called on every message from the webview, before it is handled. */
+  onMessage?: () => void
 }) {
   const webview = input.webview
   const root = input.context.extensionUri
@@ -63,6 +79,7 @@ export function wire(input: {
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
   const subscription = webview.onDidReceiveMessage((message: ToHost) => {
+    input.onMessage?.()
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
     if (message.type === "copyToClipboard")
       return void env.clipboard.writeText(message.text).then(

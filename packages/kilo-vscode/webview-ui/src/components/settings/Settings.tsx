@@ -12,7 +12,7 @@ import { useLanguage } from "../../context/language"
 import type { SettingsData } from "../../v2/settings"
 import SettingsSearch from "./SettingsSearch"
 import SettingsSearchResults from "./SettingsSearchResults"
-import { SETTINGS_ENTRIES, SETTINGS_TABS, type SettingsEntry, type SettingsTab } from "./settings-search"
+import { SETTINGS_TABS, type SettingsEntry, type SettingsTab } from "./settings-search"
 import { useSettingsSearch } from "./useSettingsSearch"
 
 const ProvidersTab = lazy(() => import("./ProvidersTab"))
@@ -20,12 +20,6 @@ const AboutKiloCodeTab = lazy(() => import("./AboutKiloCodeTab"))
 
 /** The v1 tabs that the v2 Settings view renders. */
 const TABS = new Set(["providers", "aboutKiloCode"])
-/** v1 rows of a rendered tab that have no v2 contract, so the v2 view does not render them. */
-const OMITTED = new Set([
-  "settings.aboutKiloCode.resetSettings.title",
-  "settings.aboutKiloCode.settingsTransfer.title",
-  "settings.aboutKiloCode.telemetry.title",
-])
 
 export interface SettingsProps {
   settings: SettingsData
@@ -64,10 +58,10 @@ const Settings: Component<SettingsProps> = (props) => {
     })
   }
 
+  // v2 renders no row that carries a `data-search-label`, so the index holds no rows and search returns the tabs
+  // themselves. The v1 rows without a v2 contract must not appear as results that cannot be revealed.
   const searchTabs = createMemo<SettingsTab[]>(() => SETTINGS_TABS.filter((tab) => TABS.has(tab.id)))
-  const searchEntries = createMemo<SettingsEntry[]>(() =>
-    SETTINGS_ENTRIES.filter((entry) => TABS.has(entry.tab) && !OMITTED.has(entry.titleKey)),
-  )
+  const searchEntries = createMemo<SettingsEntry[]>(() => [])
 
   const search = useSettingsSearch({
     tabs: searchTabs,

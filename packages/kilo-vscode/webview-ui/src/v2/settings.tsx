@@ -53,16 +53,17 @@ export function createSettings() {
     complete(integrationID: string, attemptID: string, code: string) {
       return v2.api.integration.oauth.complete({ integrationID, attemptID, location, code })
     },
+    /** Resolves `true` when the attempt completed and `false` when it was cancelled, as v1 did not connect then. */
     wait(integrationID: string, attemptID: string, signal: { cancelled: boolean }) {
-      return new Promise<void>((resolve, reject) => {
+      return new Promise<boolean>((resolve, reject) => {
         const poll = () => {
-          if (signal.cancelled) return resolve()
+          if (signal.cancelled) return resolve(false)
           void v2.api.integration.oauth
             .status({ integrationID, attemptID, location })
             .then((result) => {
-              if (signal.cancelled) return resolve()
+              if (signal.cancelled) return resolve(false)
               if (result.data.status === "pending") return void setTimeout(poll, POLL)
-              if (result.data.status === "complete") return resolve()
+              if (result.data.status === "complete") return resolve(true)
               reject(new Error(result.data.status === "failed" ? result.data.message : "Authorization expired"))
             })
             .catch(reject)
