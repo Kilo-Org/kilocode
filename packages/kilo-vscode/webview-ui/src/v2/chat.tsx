@@ -1,4 +1,4 @@
-// The sidebar: history, profile, or one session laid out like main's ChatView (transcript, docks, prompt).
+// The sidebar: history, profile, settings, or one session laid out like main's ChatView (transcript, docks, prompt).
 import { Button } from "@kilocode/kilo-ui/button"
 import { createEffect, createMemo, createSignal, Match, on, Show, Switch } from "solid-js"
 import { useLanguage } from "../context/language"
@@ -12,12 +12,13 @@ import { PromptInput } from "./prompt"
 import { QuestionDock } from "./question"
 import { createProfile } from "./profile"
 import { createSelection, Selectors } from "./selectors"
+import { SettingsView } from "./settings"
 
 export function Chat() {
   const v2 = useV2()
   const language = useLanguage()
   const [session, setSession] = createSignal<string>()
-  const [view, setView] = createSignal<"chat" | "history" | "profile">("chat")
+  const [view, setView] = createSignal<"chat" | "history" | "profile" | "settings">("chat")
   // Owned here, so a running sign-in survives switching views.
   const profile = createProfile()
   v2.onCommand((name) => {
@@ -27,6 +28,7 @@ export function Chat() {
     }
     if (name === "history") setView("history")
     if (name === "profile") setView("profile")
+    if (name === "settings") setView("settings")
   })
 
   const open = (id: string) => {
@@ -118,6 +120,9 @@ export function Chat() {
       </Match>
       <Match when={view() === "profile"}>
         <ProfileView profile={profile} />
+      </Match>
+      <Match when={view() === "settings"}>
+        <SettingsView onLogin={() => setView("profile")} />
       </Match>
       <Match when={view() === "chat"}>
         <div class="chat-view">

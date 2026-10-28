@@ -54,6 +54,12 @@
         "icon": "$(account)"
       },
       {
+        "command": "kilo-code.v2.settings",
+        "title": "Settings",
+        "category": "Kilo Code (v2)",
+        "icon": "$(settings-gear)"
+      },
+      {
         "command": "kilo-code.v2.restartServer",
         "title": "Restart Server",
         "category": "Kilo Code (v2)"
@@ -73,6 +79,11 @@
         },
         {
           "command": "kilo-code.v2.profile",
+          "when": "view == kilo-code.v2.chat",
+          "group": "navigation"
+        },
+        {
+          "command": "kilo-code.v2.settings",
           "when": "view == kilo-code.v2.chat",
           "group": "navigation"
         }
