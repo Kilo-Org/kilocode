@@ -54,7 +54,7 @@ The current list of models includes:
 - **MiMo-V2.6-Pro**
 - **MiMo-V2.5**
 - **MiMo-V2.5-Pro**
-- **MiniMax M3.1 Flash Free** (limited time)
+- **MiniMax M3.1 Flash**
 - **MiniMax M3**
 - **Muse Spark 1.3 Contributor** ([limited regions](https://ai.developer.meta.com/legal/geographic-use-policy))
 - **Muse Spark 1.2 Contributor** ([limited regions](https://ai.developer.meta.com/legal/geographic-use-policy))
@@ -67,6 +67,19 @@ The current list of models includes:
 - **Hy3**
 
 The list of models may change as we test and add new ones.
+
+### Enable restricted models
+
+Workspace privacy settings apply to Go. By default, paid endpoints that train on request data are blocked, and
+allowed regions are **Europe & United States**. Workspaces without saved privacy settings also allow **Global**
+for requests from China.
+
+In **Settings › Privacy**, an owner or admin can enable:
+
+- **DeepSeek V4.1 Flash and V4 Pro:** select **Global** under **Regions**.
+- **Gemini 4 Argon Contributor, Muse Spark 1.3 Contributor, and Muse Spark 1.2 Contributor:** turn on **Allow paid endpoints that train on request data**.
+
+See [Privacy](#privacy) for each model's training and retention terms.
 
 ## Where can I use it?
 
@@ -108,8 +121,8 @@ investigated. The linked reports track fixes and workarounds.
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **DeepSeek Harness**    | Session information arrives on some model paths, but is missing on others. We recognize its native header; the remaining work is to send it across all adapters. [Discussion #5495](https://github.com/deepseek-ai/deepseek-harness/discussions/5495). |
 | **GitHub Copilot Chat** | Automatic session-header support is requested in [VS Code issue #334186](https://github.com/microsoft/vscode/issues/334186).                                                                                                                           |
-| **Kimi Code**           | Automatic session-header support is requested in [issue #3506](https://github.com/MoonshotAI/kimi-code/issues/3506).                                                                                                                                   |
-| **MiMo Code**           | [Issue #2317](https://github.com/XiaomiMiMo/MiMo-Code/issues/2317) has a proposed fix in [PR #2327](https://github.com/XiaomiMiMo/MiMo-Code/pull/2327), which has not yet merged.                                                                      |
+| **Kimi Code**           | The session-header request in [issue #3506](https://github.com/MoonshotAI/kimi-code/issues/3506) was closed as not planned.                                                                                                                            |
+| **MiMo Code**           | [Issue #2317](https://github.com/XiaomiMiMo/MiMo-Code/issues/2317) is closed, and [PR #2327](https://github.com/XiaomiMiMo/MiMo-Code/pull/2327) was closed without merging.                                                                            |
 
 ## Usage limits
 
@@ -142,7 +155,7 @@ Token prices are per 1M tokens.
     | MiMo-V2.6-Pro                           | $0.435 | $0.87  | $0.003625   | -            | **$15**                                               |
     | MiMo-V2.5                               | $0.14  | $0.28  | $0.0028     | -            | **$60**                                               |
     | MiMo-V2.5-Pro                           | $0.435 | $0.87  | $0.003625   | -            | **$15**                                               |
-    | MiniMax M3.1 Flash Free                 | Free   | Free   | Free        | -            | **Unlimited**<br /><small>limited time</small>        |
+    | MiniMax M3.1 Flash                      | $0.15  | $0.60  | $0.015      | -            | **$20**                                               |
     | MiniMax M3                              | $0.30  | $1.20  | $0.06       | -            | **$60**                                               |
     | Muse Spark 1.3 Contributor              | $0.10  | $0.20  | $0.002      | -            | **$60**                                               |
     | Muse Spark 1.2 Contributor              | $0.10  | $0.20  | $0.002      | -            | **$60**                                               |
@@ -184,7 +197,7 @@ Token prices are per 1M tokens.
     | MiMo-V2.6-Pro                           | $0.435 | $0.87  | $0.003625   | -            | **$60**                                                 |
     | MiMo-V2.5                               | $0.14  | $0.28  | $0.0028     | -            | **$120**                                                |
     | MiMo-V2.5-Pro                           | $0.435 | $0.87  | $0.003625   | -            | **$60**                                                 |
-    | MiniMax M3.1 Flash Free                 | Free   | Free   | Free        | -            | **Unlimited**<br /><small>limited time</small>          |
+    | MiniMax M3.1 Flash                      | $0.15  | $0.60  | $0.015      | -            | **$80**                                                 |
     | MiniMax M3                              | $0.30  | $1.20  | $0.06       | -            | **$180**                                                |
     | Muse Spark 1.3 Contributor              | $0.10  | $0.20  | $0.002      | -            | **$120**                                                |
     | Muse Spark 1.2 Contributor              | $0.10  | $0.20  | $0.002      | -            | **$120**                                                |
@@ -213,8 +226,6 @@ Token prices are per 1M tokens.
 
 **LongCat 2.5 Preview Free:** Free for a limited time.
 
-**MiniMax M3.1 Flash Free:** Free for a limited time.
-
 **Beam Free:** Free for a limited time. Not available in Angola, Belarus, Cambodia, China (including Hong Kong and Macau), Cuba, the Democratic Republic of the Congo, Equatorial Guinea, Iran, Iraq, Laos, Libya, Nigeria, North Korea, Russia, Syria, Turkmenistan, Uzbekistan, Venezuela, or the Crimea, Donetsk, and Luhansk regions of Ukraine.
 
 **DeepSeek V4.1 Flash / V4 Pro:** Peak hours are 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday; all other hours, including weekends, are Off-Peak. [Learn more](https://api-docs.deepseek.com/quick_start/pricing/).
@@ -242,7 +253,7 @@ Plus estimates scale with each model's higher usage limit.
     | MiMo-V2.6-Pro                                                    | 3,250                | 8,150                  | 16,300                   |
     | MiMo-V2.5                                                        | 30,100               | 75,200                 | 150,400                  |
     | MiMo-V2.5-Pro                                                    | 3,250                | 8,150                  | 16,300                   |
-    | MiniMax M3.1 Flash Free                                          | Unlimited            | Unlimited              | Unlimited                |
+    | MiniMax M3.1 Flash                                               | 3,880                | 9,690                  | 19,380                   |
     | MiniMax M3                                                       | 3,200                | 8,000                  | 16,000                   |
     | Muse Spark 1.3 Contributor                                       | 45,300               | 113,300                | 226,600                  |
     | Muse Spark 1.2 Contributor                                       | 45,300               | 113,300                | 226,600                  |
@@ -277,7 +288,7 @@ Plus estimates scale with each model's higher usage limit.
     | MiMo-V2.6-Pro                                                    | 13,000                 | 32,600                   | 65,200                   |
     | MiMo-V2.5                                                        | 60,200                 | 150,400                  | 300,800                  |
     | MiMo-V2.5-Pro                                                    | 13,000                 | 32,600                   | 65,200                   |
-    | MiniMax M3.1 Flash Free                                          | Unlimited              | Unlimited                | Unlimited                |
+    | MiniMax M3.1 Flash                                               | 15,500                 | 38,760                   | 77,520                   |
     | MiniMax M3                                                       | 9,600                  | 24,000                   | 48,000                   |
     | Muse Spark 1.3 Contributor                                       | 90,600                 | 226,600                  | 453,200                  |
     | Muse Spark 1.2 Contributor                                       | 90,600                 | 226,600                  | 453,200                  |
@@ -311,6 +322,7 @@ The estimates use the following token counts per request; actual usage varies.
 - Step 5 Preview — 1,000 input, 55,000 cached, 200 output tokens per request
 - DeepSeek V4.1 Flash — 410 input, 71,300 cached, 310 output tokens per request
 - DeepSeek V4 Pro — 750 input, 82,000 cached, 290 output tokens per request
+- MiniMax M3.1 Flash — 500 input, 49,400 cached, 360 output tokens per request
 - MiniMax M3 — 510 input, 56,000 cached, 190 output tokens per request
 - Muse Spark 1.3 Contributor — 620 input, 71,400 cached, 300 output tokens per request
 - Muse Spark 1.2 Contributor — 620 input, 71,400 cached, 300 output tokens per request
@@ -334,8 +346,8 @@ Usage limits may change as we learn from early usage and feedback.
 
 ### Usage beyond limits
 
-If you also have credits in your Console balance, you can turn on **Extra usage** on the
-**Overview** credits card. When enabled, Go will fall back to your [pay-as-you-go balance](/console/models#pricing)
+If you also have credits in your Console balance, you can turn on **Extra Usage** on the
+**Go** page. When enabled, Go will fall back to your [pay-as-you-go balance](/console/models#pricing)
 after you've reached your usage limits instead of blocking requests.
 
 ### Why some models have lower usage
@@ -373,6 +385,7 @@ You can also access Go models through the following API endpoints.
 | MiMo-V2.6-Pro              | mimo-v2.6-pro              | `https://opencode.ai/inference/go/openai/v1/chat/completions`                      | `@ai-sdk/openai-compatible` |
 | MiMo-V2.5                  | mimo-v2.5                  | `https://opencode.ai/inference/go/openai/v1/chat/completions`                      | `@ai-sdk/openai-compatible` |
 | MiMo-V2.5-Pro              | mimo-v2.5-pro              | `https://opencode.ai/inference/go/openai/v1/chat/completions`                      | `@ai-sdk/openai-compatible` |
+| MiniMax M3.1 Flash         | minimax-m3.1-flash         | `https://opencode.ai/inference/go/openai/v1/chat/completions`                      | `@ai-sdk/openai-compatible` |
 | MiniMax M3                 | minimax-m3                 | `https://opencode.ai/inference/go/anthropic/v1/messages`                           | `@ai-sdk/anthropic`         |
 | Muse Spark 1.3 Contributor | muse-spark-1.3-contributor | `https://opencode.ai/inference/go/openai/v1/responses`                             | `@ai-sdk/openai`            |
 | Muse Spark 1.2 Contributor | muse-spark-1.2-contributor | `https://opencode.ai/inference/go/openai/v1/responses`                             | `@ai-sdk/openai`            |
@@ -381,7 +394,6 @@ You can also access Go models through the following API endpoints.
 | Qwen3.7 Plus               | qwen3.7-plus               | `https://opencode.ai/inference/go/anthropic/v1/messages`                           | `@ai-sdk/anthropic`         |
 | Hy4 preview                | hy4-preview                | `https://opencode.ai/inference/go/openai/v1/chat/completions`                      | `@ai-sdk/openai-compatible` |
 | Hy3                        | hy3                        | `https://opencode.ai/inference/go/openai/v1/chat/completions`                      | `@ai-sdk/openai-compatible` |
-| MiniMax M3.1 Flash Free    | minimax-m3.1-flash-free    | `https://opencode.ai/inference/go/openai/v1/chat/completions`                      | `@ai-sdk/openai-compatible` |
 | LongCat 2.5 Preview Free   | longcat-2.5-preview-free   | `https://opencode.ai/inference/go/openai/v1/chat/completions`                      | `@ai-sdk/openai-compatible` |
 | Step 5 Preview             | step-5-preview             | `https://opencode.ai/inference/go/openai/v1/chat/completions`                      | `@ai-sdk/openai-compatible` |
 | Beam Free                  | beam-free                  | `https://opencode.ai/inference/go/openai/v1/chat/completions`                      | `@ai-sdk/openai-compatible` |
@@ -428,6 +440,7 @@ curl https://opencode.ai/inference/go/v1/models
 | Qwen3.8 Max                  | Not used       | 0 days         |
 | Qwen3.8 Flash                | Not used       | 0 days         |
 | Qwen3.7 Plus                 | Not used       | 0 days         |
+| MiniMax M3.1 Flash           | Not used       | 0 days         |
 | MiniMax M3                   | Not used       | 0 days         |
 | Muse Spark 1.3 Contributor   | Yes            | Not ZDR        |
 | Muse Spark 1.2 Contributor   | Yes            | Not ZDR        |
@@ -435,7 +448,6 @@ curl https://opencode.ai/inference/go/v1/models
 | DeepSeek V4 Pro              | Not used       | 0 days\*       |
 | Hy4 preview                  | Not used       | 0 days         |
 | Hy3                          | Not used       | 0 days         |
-| MiniMax M3.1 Flash Free      | Not used       | 0 days         |
 | LongCat 2.5 Preview Free     | Not used       | 0 days         |
 | Step 5 Preview               | Not used       | 0 days         |
 | Beam Free                    | Not used       | 30 days        |

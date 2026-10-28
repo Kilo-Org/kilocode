@@ -1,10 +1,59 @@
 # Pinned upstream v2 baseline
 
-Status: living. Refreshed 2026-10-23 on the `v2.1.3` sync branch `sync-v2-1-3`, synced to upstream `v2.1.3` (the sync includes `v2.1.2`). The base moves with every upstream sync (plan A4), so re-measure after each sync. The `v2.1.1` capture (2026-10-23), the 2026-10-16 capture at `v2.0.30` and the 2026-10-11 capture at the initial base are kept below as previous captures. The 2026-08-13 capture at `76dbaf20` (old branch `johnnyeric/v2-baseline`) survives in git history only.
+Status: living. Refreshed 2026-10-27 on the `v2.1.4` sync branch `upstream-merge-2-1-4` (#15500). This capture describes the proposed sync, not a merge into `origin/v2`. It includes `v2.1.4` only, not `2.2`. The base moves with every upstream sync (plan A4), so re-measure after each sync. The earlier captures remain below. The 2026-08-13 capture at `76dbaf20` (old branch `johnnyeric/v2-baseline`) survives in git history only.
 
 This file records the upstream release `origin/v2` is synced to, the validation commands that this tree defines, and the result of running them. Compare any failing check against this file, and against `origin/v2` before your change, before you attribute it to a change (`migration-context.md`, Conventions).
 
-## Current capture: `v2.1.3` (2026-10-23)
+## Current capture: `v2.1.4` (2026-10-27)
+
+### Refs and method
+
+| Ref | SHA | Note |
+|---|---|---|
+| Sync branch (measured) | `7bb3cc3fdba7e1a50258f74f7f1cd91f9c9fcd49` | `upstream-merge-2-1-4`, PR #15500; sync merge `d8a8941f87`, Kilo plugin type annotation `f93d652376`, patch-limit correction `7bb3cc3fdb` |
+| Pre-sync Kilo base | `80b01782c0` | Includes the branding work from #15417 |
+| Previous upstream base | `37d973754ba6cc31732f93421c0c18b675841573` | Parent of `v2.1.3` |
+| New upstream base | `74f8d4860f49c563909e6b039b0cc8b454ebce72` | Parent of `v2.1.4`; selected release target, not the tag or `2.2` |
+
+Evidence combines isolated local checks during this sync with GitHub Actions on the measured commit. The full `v2-baseline.ts --checks` script was **not** rerun; this is not a fresh full local baseline capture. Local commands used Bun 1.4.4 through `npx` because the shell's Bun was 1.4.2. The current local host is macOS arm64 with Node v24.18.0. Tests used temporary `OPENCODE_TEST_HOME` and `XDG_*` directories. CLI self-tests used fresh `KILO_V2_PROFILE` directories and `--standalone`.
+
+### Results
+
+| Check | Result | Detail |
+|---|---|---|
+| `install --frozen-lockfile` | pass | Local; lockfile accepted after the merge |
+| `bun run check` | pass | Local and pre-push hook with Bun 1.4.4: 28 typecheck tasks, lint 208 warnings and 0 errors. The explicit effect return type in the existing Kilo seam fixes Bun TS7023; no suppression or hook bypass |
+| Official `typecheck:tsc` | pass | 28 local tasks, including all three Kilo packages. Their CI scripts were added because upstream's new official TypeScript task otherwise skipped them |
+| Linux and Windows unit shards | pass, CI | [Test workflow at `7bb3cc3fdb`](https://github.com/Kilo-Org/kilocode/actions/runs/40521909682); all Linux and Windows unit jobs pass. This does not establish that every local macOS test passes |
+| Kilo packages and macOS platform tests | pass, CI | [Kilo workflow at `7bb3cc3fdb`](https://github.com/Kilo-Org/kilocode/actions/runs/40521909666) |
+| Core plugin/Kilo regressions | pass, local | 467 tests. Additional focused compaction, runner and changed-core suites passed during the sync |
+| Kilo host regressions | pass, local | Full suite: 169 tests before the type-only seam annotation; plugin/RPC/updater rerun after the annotation: 38 tests |
+| Gateway and Kilo plugin suites | pass, local | Gateway core 124, Kilo plugin 206 |
+| AI suite | pass, local | 1,828 pass, 28 existing upstream skips; no skips added by this sync |
+| Server suite and client checks | pass, local | Full server suite 95 tests; focused client suite 45 tests; client generation left no additional drift |
+| Terminal MCP input lifecycle | pass, local | Four upstream MCP/Kilo lifecycle tests. Detached writes return an error and do not queue input for a later attachment |
+| Source and compiled branding | pass, local | 51 branding tests include OAuth escaping, upstream controls, real TSX rendering and compiled fixtures. Smoke checks cover Kilo help, terminal title, update instructions and blocked OpenCode upgrades |
+| Live CLI self-test | pass, local | Isolated Gateway request returned `SYNC_214_OK`. `debug heap-dump --help` and its no-server guard behaved as expected |
+| Native Kilo build | pass, local and CI | Local `--single --skip-install`; CI builds `darwin-arm64` and `linux-x64` |
+| CLI Linux/Windows builds and SDK package | pass, CI | Test workflow linked above |
+| Sync tooling | pass | 89 local tests; CI sync-tooling job passes. The manifest transform now preserves Kilo scripts and exports with a three-way merge |
+| Workflow allowlist, annotations, shared patches and progress map | pass | CI and local checks. Shared patches: 56 files, 437 marked and 39 unmarked lines against `74f8d4860f4` |
+| Full local turbo test run, baseline script, effect-pattern audit and all generated-file checks | not rerun | Earlier captures are historical evidence, not results for this pin |
+| Live browser sign-in and cross-platform binary execution | not run locally | OAuth rendering tests are not proof of live browser sign-in |
+
+### CI failures resolved and remaining limits
+
+- The first Linux unit run timed out in `config plugin reloads > loads skills when .agents appears after startup`. The test and reload code were unchanged by this sync. The isolated file passed 12/12, the exact failed 19-file batch passed 195/195, and one CI retry passed. All unit jobs also pass on `7bb3cc3fdb`; no test timeout or assertion was weakened.
+- The shared-patch guard failed after the type annotation added one marked line. The limit was corrected from 436 to 437 in `7bb3cc3fdb`; the guard now passes. No additional shared behavior was added by that correction.
+- A broad local TUI run with Bun's default timeout did not complete. Its two reported timeout cases passed in the isolated six-test file with the package's 30-second timeout. Focused changed-surface tests and Linux/Windows CI pass; do not describe this as a full local TUI pass.
+- The 13 macOS shell/login-shell failures in the 2.1.3 capture were not remeasured as a set. They are historical platform notes, not newly verified failures or fixes at this pin.
+- At this capture all executed build, unit, typecheck and Kilo guard jobs on #15500 pass. E2E jobs remain skipped by the existing fork workflow; Kilo Code Review is pending. A skipped job is not a pass.
+
+### Migrated feature preservation
+
+The compaction conflict keeps both Kilo provider billing and upstream background usage accounting. The branding adapter from #15417 stays in Kilo-owned code; its docs URL, restart sentence and update epilogue were adapted to the new upstream text. Host mirrors gained the new heap-dump handler and cross-libc install flag. The manifest export regression, missing Kilo CI typechecks and detached-terminal false-success path were fixed with regression coverage. Tracker output was regenerated without intentionally removing a completed feature or changing a completed disposition to dropped. These checks cover the affected paths; they are not an automated guarantee for every migrated feature or indirect dependency.
+
+## Previous capture: `v2.1.3` (2026-10-23)
 
 ### Refs
 
@@ -119,13 +168,14 @@ None is attributable to a Kilo change. The failing tests do not exercise the 14 
 
 ## Validation commands defined by this tree
 
-Derived from the root `package.json`, `.github/workflows/check.yml`, `.github/workflows/test.yml` and per-package scripts. Checked again at `v2.0.30`: unchanged except where noted.
+Derived from the root `package.json`, `.github/workflows/check.yml`, `.github/workflows/test.yml` and per-package scripts. The local/official compiler distinction below was refreshed for `v2.1.4`; result coverage is stated in the current capture.
 
 | Purpose | Command | Working dir | Run by upstream CI |
 |---|---|---|---|
 | Install | `bun install` | root | yes |
-| Lint and typecheck (pre-push hook, `check.yml`) | `bun run check` (= `bun run lint && bun run typecheck`; `lint` is `oxlint` since #15151) | root | yes |
-| Typecheck all packages | `bun typecheck` (= `bun turbo typecheck --concurrency=3`) | root | yes, inside `check` |
+| Local lint and typecheck (pre-push hook) | `bun run check` (= `bun run lint && bun run typecheck`) | root | CI runs lint and official TypeScript separately |
+| Local typecheck all packages | `bun typecheck` (= `bun turbo typecheck --concurrency=3`) | root | no; upstream packages use Bun's checker locally |
+| Official TypeScript for all packages | `bun run typecheck:tsc` | root | yes, `check.yml`; Kilo packages define this script too |
 | Unit tests | `GITHUB_ACTIONS=false bun turbo test --continue` (CI adds `--affected --concurrency=3`) | root (turbo runs each package's own `test`) | yes |
 | Effect simplification lint | `bun run lint:effect-simplifications`, `bun run test:effect-simplification-rules` | root | yes |
 | Effect pattern lint | `bun run lint:effect-patterns` | root | no |
@@ -139,7 +189,7 @@ Derived from the root `package.json`, `.github/workflows/check.yml`, `.github/wo
 Constraints:
 
 - Tests cannot run from the root (`bunfig.toml` test root `do-not-run-tests-from-root`). Run them from a package directory or through turbo.
-- Never run `tsc`. Packages use `tsgo` through `bun typecheck`.
+- Use package scripts, not direct compiler invocations. `bun typecheck` uses Bun's checker in upstream packages and official TypeScript in Kilo packages. `bun run typecheck:tsc` uses official TypeScript; it is the source of truth when the compilers disagree.
 - `.husky/pre-push` checks the bun version, then runs `bun run check`.
 - `check.yml` and `test.yml` run on pushes to branches named `dev` or `v2`, and on every pull request. Upstream's `check.yml` filters pushes and pull requests by branch (`[dev, v2]` at the initial base, `[dev]` at `v2.0.30`). Kilo changed it on 2026-10-13 (#15016; `.github/workflows/check.yml:5-7`, marked): `v2` is in the push branches and the pull-request trigger is unfiltered, so a PR into `v2` or into a stacked PR branch is checked. `test.yml` already runs on every pull request upstream; Kilo added `v2` to its push branches. **Verified 2026-10-16:** `typecheck` (`check.yml`), `unit (linux)` and `unit (windows)` (`test.yml`) and the `kilo-v2.yml` jobs run on the fork; `typecheck` ran and passed on #15192, whose base is `fold-plan-delta`. `e2e` is skipped on the fork since #15151 (`affected` in `test.yml` is `if: false`); it still ran on #15136, where Windows failed and Linux passed. The 2026-10-11 capture had found no pull request targeting the integration branch or `kilo-v2-clean-bootstrap` (`gh pr list`).
 - `packages/www` no longer exists. Generated docs live in `services/www`, and `typecheck.yml` was replaced by `check.yml`.

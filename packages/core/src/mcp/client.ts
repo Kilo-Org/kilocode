@@ -34,6 +34,7 @@ import { McpStdio } from "./stdio.js"
 const DEFAULT_STARTUP_TIMEOUT = 30_000
 const DEFAULT_CATALOG_TIMEOUT = 30_000
 const DEFAULT_EXECUTION_TIMEOUT = 12 * 60 * 60 * 1_000 // 12 hours
+const ATTACHED_EXECUTION_TIMEOUT = 10 * 60 * 1_000 // 10 minutes
 const TERMINATE_TIMEOUT = 1_000
 const toError = (error: unknown) => (error instanceof Error ? error : new Error(String(error)))
 
@@ -137,6 +138,12 @@ export interface Connection {
   readonly onResourcesChanged: (callback: () => void) => void
 }
 
+/** An MCP server reached over a transport someone else already opened, such as a client socket. */
+export interface Attached {
+  readonly type: "attached"
+  readonly transport: Transport
+}
+
 /**
  * Connects an MCP server; closing the calling scope tears down the transport and any spawned process.
  * A stdio server is spawned through the location's `Environment`, so it runs wherever the location's
@@ -144,7 +151,7 @@ export interface Connection {
  */
 export const connect = Effect.fnUntraced(function* (
   server: string,
-  config: typeof ConfigMCP.Server.Type,
+  config: typeof ConfigMCP.Server.Type | Attached,
   directory: string,
   // Remote only. A provider with no stored token and a no-op redirect ends in UnauthorizedError → needs_auth.
   authProvider?: OAuthClientProvider,
@@ -153,6 +160,10 @@ export const connect = Effect.fnUntraced(function* (
 ) {
   // The SDK takes list-changed handlers at construction, but consumers register after connect. On a
   // modern connection the SDK opens the subscriptions/listen stream behind these itself.
+  const timeout: (typeof ConfigMCP.Server.Type)["timeout"] =
+    config.type === "attached" ? { execution: ATTACHED_EXECUTION_TIMEOUT } : config.timeout
+  // Attached clients run ordinary SDK servers over the initialize handshake.
+  const protocol = config.type === "attached" ? "legacy" : config.protocol
   const changed = { tools: () => {}, prompts: () => {}, resources: () => {} }
   const listChanged = (key: keyof typeof changed) => ({
     autoRefresh: false,
@@ -182,7 +193,11 @@ export const connect = Effect.fnUntraced(function* (
     )
 
   const initialize = Effect.fnUntraced(function* (transport: Transport) {
-    const runFork = Effect.runForkWith(yield* Effect.context())
+    // SDK callbacks run outside any fiber. They must run with this context so events they publish keep
+    // the server's Location; clients drop unlocated `form.created` events and elicitations then hang.
+    const context = yield* Effect.context()
+    const runFork = Effect.runForkWith(context)
+    const runPromise = Effect.runPromiseWith(context)
     const client = new Client(clientInfo, {
       capabilities: {
         ...(elicitation ? { elicitation: { form: {}, url: {} } } : {}),
@@ -190,7 +205,7 @@ export const connect = Effect.fnUntraced(function* (
         // Some legacy servers refuse to run without one (https://github.com/anomalyco/opencode/issues/2308).
         roots: {},
       },
-      versionNegotiation: negotiation(config.protocol),
+      versionNegotiation: negotiation(protocol),
       listChanged: {
         tools: listChanged("tools"),
         prompts: listChanged("prompts"),
@@ -206,16 +221,15 @@ export const connect = Effect.fnUntraced(function* (
     client.setRequestHandler("roots/list", () => ({ roots: [{ uri: pathToFileURL(directory).href }] }))
     if (elicitation) {
       client.setRequestHandler("elicitation/create", (request, ctx) =>
-        Effect.runPromise(elicitation.create({ server, params: request.params, signal: ctx.mcpReq.signal })),
+        runPromise(elicitation.create({ server, params: request.params, signal: ctx.mcpReq.signal })),
       )
       client.setNotificationHandler("notifications/elicitation/complete", (notification) =>
-        Effect.runPromise(elicitation.complete({ server, elicitationID: notification.params.elicitationId })),
+        runPromise(elicitation.complete({ server, elicitationID: notification.params.elicitationId })),
       )
     }
 
     yield* Effect.tryPromise({
-      try: (signal) =>
-        client.connect(transport, { timeout: config.timeout?.startup ?? DEFAULT_STARTUP_TIMEOUT, signal }),
+      try: (signal) => client.connect(transport, { timeout: timeout?.startup ?? DEFAULT_STARTUP_TIMEOUT, signal }),
       catch: (error) => error,
     }).pipe(Effect.onError(() => Effect.promise(() => transport.close()).pipe(Effect.ignore)))
     return client
@@ -244,6 +258,7 @@ export const connect = Effect.fnUntraced(function* (
   }
 
   const exit = yield* Effect.gen(function* () {
+    if (config.type === "attached") return yield* initialize(config.transport)
     if (config.type === "local") {
       const [command, ...args] = config.command
       const transport = yield* McpStdio.make({
@@ -265,8 +280,7 @@ export const connect = Effect.fnUntraced(function* (
     // Servers that bundle their own Code Mode (Cloudflare and others) expose raw tools when asked
     // with ?codemode=false, which is what our Code Mode wants. The configured URL stays the OAuth identity.
     const url = new URL(config.url)
-    const addedCodemode =
-      config.codemode !== false && !url.searchParams.has("codemode") && !rejectsUnknownQuery(url)
+    const addedCodemode = config.codemode !== false && !url.searchParams.has("codemode") && !rejectsUnknownQuery(url)
     if (addedCodemode) url.searchParams.set("codemode", "false")
     const open = Effect.fnUntraced(function* (url: URL) {
       session.transport = new StreamableHTTPClientTransport(url, {
@@ -278,7 +292,7 @@ export const connect = Effect.fnUntraced(function* (
     })
 
     // Every attempt opens a fresh transport; no retry starts once the startup timeout has passed.
-    const deadline = (yield* Clock.currentTimeMillis) + (config.timeout?.startup ?? DEFAULT_STARTUP_TIMEOUT)
+    const deadline = (yield* Clock.currentTimeMillis) + (timeout?.startup ?? DEFAULT_STARTUP_TIMEOUT)
     return yield* retrying(
       "MCP connect",
       open(url).pipe(
@@ -315,14 +329,14 @@ export const connect = Effect.fnUntraced(function* (
         yield* Effect.tryPromise(() => client.close()).pipe(Effect.ignore)
       }),
     )
-    const catalog = { timeout: config.timeout?.catalog ?? DEFAULT_CATALOG_TIMEOUT }
-    const execution = config.timeout?.execution ?? DEFAULT_EXECUTION_TIMEOUT
+    const catalog = { timeout: timeout?.catalog ?? DEFAULT_CATALOG_TIMEOUT }
+    const execution = timeout?.execution ?? DEFAULT_EXECUTION_TIMEOUT
     const request = <A>(what: string, run: (signal: AbortSignal) => Promise<A>) =>
       Effect.tryPromise({ try: run, catch: failure }).pipe(
         Effect.tapError((error) => Effect.logWarning(`failed to ${what}`, { server, error: error.message })),
       )
     // Listing is read-only, so a transient failure is safe to retry.
-    const list = <A>(what: string, run: () => Promise<A>) =>
+    const list = <A>(what: string, run: (signal: AbortSignal) => Promise<A>) =>
       retrying(what, Effect.tryPromise({ try: run, catch: (error) => error })).pipe(
         Effect.mapError(failure),
         Effect.tapError((error) => Effect.logWarning(`failed to ${what}`, { server, error: error.message })),
@@ -333,28 +347,33 @@ export const connect = Effect.fnUntraced(function* (
     const advertised = (capability: "tools" | "prompts" | "resources") =>
       Boolean(client.getServerCapabilities()?.[capability])
 
-    return {
+    // Annotated rather than `satisfies`: the inferred SDK types are cyclic, so declaration emit needs the named type.
+    const connection: Connection = {
       modern: client.getProtocolEra() === "modern",
       instructions: client.getInstructions()?.trim() || undefined,
       tools: () =>
         advertised("tools")
-          ? list("list MCP tools", () => client.listTools(undefined, catalog)).pipe(Effect.map((r) => r.tools))
+          ? list("list MCP tools", (signal) => client.listTools(undefined, { ...catalog, signal })).pipe(
+              Effect.map((r) => r.tools),
+            )
           : Effect.succeed([]),
       prompts: () =>
         advertised("prompts")
-          ? list("list MCP prompts", () => client.listPrompts(undefined, catalog)).pipe(Effect.map((r) => r.prompts))
+          ? list("list MCP prompts", (signal) => client.listPrompts(undefined, { ...catalog, signal })).pipe(
+              Effect.map((r) => r.prompts),
+            )
           : Effect.succeed([]),
       resources: () =>
         advertised("resources")
-          ? list("list MCP resources", () => client.listResources(undefined, catalog)).pipe(
+          ? list("list MCP resources", (signal) => client.listResources(undefined, { ...catalog, signal })).pipe(
               Effect.map((r) => r.resources),
             )
           : Effect.succeed([]),
       resourceTemplates: () =>
         advertised("resources")
-          ? list("list MCP resource templates", () => client.listResourceTemplates(undefined, catalog)).pipe(
-              Effect.map((r) => r.resourceTemplates),
-            )
+          ? list("list MCP resource templates", (signal) =>
+              client.listResourceTemplates(undefined, { ...catalog, signal }),
+            ).pipe(Effect.map((r) => r.resourceTemplates))
           : Effect.succeed([]),
       readResource: (input) => {
         if (!client.getServerCapabilities()?.resources) return Effect.succeed(undefined)
@@ -393,7 +412,8 @@ export const connect = Effect.fnUntraced(function* (
       onResourcesChanged: (callback) => {
         changed.resources = callback
       },
-    } satisfies Connection
+    }
+    return connection
   }
 
   const error = Cause.squash(exit.cause)

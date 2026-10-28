@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import {
   assertBunPackageManager,
   fixCatalog,
+  fixExports,
   fixPackageManager,
   fixRepository,
   fixScripts,
@@ -20,7 +21,7 @@ test("fixScripts preserves Kilo's root dev and lint scripts from base", () => {
   }
   const changes: string[] = []
 
-  fixScripts(pkg, "package.json", ours, changes)
+  fixScripts(pkg, "package.json", ours, null, changes)
 
   const scripts = pkg.scripts as Record<string, string>
   expect(scripts.dev).toBe("bun script/dev-isolated.ts")
@@ -32,9 +33,39 @@ test("fixScripts preserves Kilo's root dev and lint scripts from base", () => {
 test("fixScripts leaves other packages untouched", () => {
   const pkg: Record<string, unknown> = { scripts: { build: "tsc" } }
   const changes: string[] = []
-  fixScripts(pkg, "packages/core/package.json", null, changes)
+  fixScripts(pkg, "packages/core/package.json", null, null, changes)
   expect((pkg.scripts as Record<string, string>).build).toBe("tsc")
   expect(changes.length).toBe(0)
+})
+
+test("fixScripts and fixExports keep Kilo additions and upstream changes", () => {
+  const base = {
+    scripts: { test: "bun test", typecheck: "tsc -b" },
+    exports: { "./run": "./src/run/index.ts" },
+  }
+  const ours = {
+    scripts: { test: "bun test", "test:ci": "bun script/test-ci.ts", typecheck: "tsc -b" },
+    exports: { "./*": "./src/*.ts", "./run": "./src/run/index.ts" },
+  }
+  const pkg: Record<string, unknown> = {
+    scripts: { test: "bun test", typecheck: "bun check -b", "typecheck:tsc": "tsc -b" },
+    exports: { "./run": "./src/run/index.ts" },
+  }
+  const changes: string[] = []
+
+  fixScripts(pkg, "packages/cli/package.json", ours, base, changes)
+  fixExports(pkg, ours, base, changes)
+
+  expect(pkg.scripts).toEqual({
+    test: "bun test",
+    "test:ci": "bun script/test-ci.ts",
+    typecheck: "bun check -b",
+    "typecheck:tsc": "tsc -b",
+  })
+  expect(pkg.exports).toEqual({ "./run": "./src/run/index.ts", "./*": "./src/*.ts" })
+  expect(Object.keys(pkg.exports as Record<string, string>)).toEqual(["./*", "./run"])
+  expect(Object.keys(pkg.scripts as Record<string, string>)).toEqual(["test", "test:ci", "typecheck", "typecheck:tsc"])
+  expect(changes).toEqual(["scripts.test:ci: preserved Kilo change", "exports../*: preserved Kilo change"])
 })
 
 test("fixRepository keeps Kilo metadata only when Kilo changed it from base", () => {

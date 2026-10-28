@@ -2,6 +2,62 @@
 
 Release notes for OpenCode V2, newest first.
 
+## v2.1.3 — 2026-10-22
+
+### Highlights
+
+- **Bun 1.4.4 Security Fixes**: OpenCode now runs on Bun 1.4.4, which includes security fixes for Brotli, TLS, HTTP/3, WebSocket, and more, along with updated root certificates. ([#58087](https://github.com/anomalyco/opencode/pull/58087))
+- **Faster Code Display**: Code blocks, file views, and review diffs in Desktop now use Pierre Highlights, reducing highlighting time and memory use for large files and diffs. ([#57937](https://github.com/anomalyco/opencode/pull/57937))
+- **Discover and Start Voice Models**: SDK clients can call `client.voice.models()` to find available experimental voice models and supported transports. Connected OpenCode Console workspaces can also host GPT-Live sessions through `client.voice.session()`. ([#57194](https://github.com/anomalyco/opencode/pull/57194), [#57735](https://github.com/anomalyco/opencode/pull/57735))
+
+### Core
+
+#### Improvements
+
+- Upgraded the bundled Bun runtime to 1.4.4, which includes [security fixes](https://bun.com/blog/bun-v1.4.4#security) for Brotli, TLS, HTTP/1.1, HTTP/2, HTTP/3, WebSocket, and `fetch`, and updates root certificates to NSS 3.131.1. ([#58087](https://github.com/anomalyco/opencode/pull/58087))
+- Generated session titles now use the lowest suitable model variant and more focused naming instructions. ([#51939](https://github.com/anomalyco/opencode/pull/51939), [#57648](https://github.com/anomalyco/opencode/pull/57648))
+- Windows managed services now use port `28894`, avoiding ranges reserved by Windows and WSL mirrored networking. ([#57428](https://github.com/anomalyco/opencode/pull/57428))
+
+#### Bug fixes
+
+- Custom provider `baseURL` settings now override catalog model endpoints as expected. Thanks [@Tarquinen](https://github.com/Tarquinen) and [@bercedev](https://github.com/bercedev). ([#57810](https://github.com/anomalyco/opencode/pull/57810))
+- Compaction summaries can use the same model output limit as normal responses, preventing incomplete summaries. ([#57564](https://github.com/anomalyco/opencode/pull/57564))
+- Legacy `apply_patch` permissions now migrate to the `edit` permission. ([#57900](https://github.com/anomalyco/opencode/pull/57900))
+- V1 sessions with relative working directories now migrate using their project worktree. Thanks [@MohammadAlMasalmeh](https://github.com/MohammadAlMasalmeh). ([#57618](https://github.com/anomalyco/opencode/pull/57618))
+- Unsupported legacy agent colors no longer prevent agents from loading. Thanks [@4sDriven](https://github.com/4sDriven). ([#57910](https://github.com/anomalyco/opencode/pull/57910))
+
+### TUI
+
+#### Bug fixes
+
+- The TUI no longer crashes when file watchers are unavailable or system watch limits are exhausted. Thanks [@ANSHSINGH050404](https://github.com/ANSHSINGH050404). ([#51536](https://github.com/anomalyco/opencode/pull/51536))
+
+### Desktop
+
+#### Improvements
+
+- Code blocks, streaming output, file views, and review diffs now use Pierre Highlights for faster highlighting and lower memory use on large inputs. ([#57937](https://github.com/anomalyco/opencode/pull/57937))
+
+#### Bug fixes
+
+- Renaming a session tab now pastes plain text instead of formatted content. ([#58036](https://github.com/anomalyco/opencode/pull/58036))
+- Dragging the session scrollbar no longer forces the timeline back to its end. ([#57831](https://github.com/anomalyco/opencode/pull/57831))
+- RPM packages no longer conflict with build-ID links installed by other Electron applications. ([#58093](https://github.com/anomalyco/opencode/pull/58093))
+
+### SDK
+
+#### Improvements
+
+- Added `client.voice.models()` to list experimental voice models, availability, and supported WebRTC or WebSocket transports. ([#57194](https://github.com/anomalyco/opencode/pull/57194))
+- Voice sessions can now use GPT-Live hosted by a connected OpenCode Console workspace. Hosted sessions expose an ID and support instruction updates through `client.voice.instructions()`. ([#57735](https://github.com/anomalyco/opencode/pull/57735))
+
+### Extensions
+
+#### Bug fixes
+
+- MCP results now keep supported media inline, decode textual resources, and save unsupported binary resources to files instead of creating invalid model attachments. ([#57640](https://github.com/anomalyco/opencode/pull/57640))
+- Updates to MCP instructions, skills, and project references now send only changed entries instead of repeating the full list. ([#57626](https://github.com/anomalyco/opencode/pull/57626))
+
 ## v2.1.2 — 2026-10-21
 
 ### Highlights
