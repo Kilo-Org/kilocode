@@ -795,6 +795,11 @@ export const dict = {
   "context.usage.sessionCost": "会话费用",
   "context.usage.olderSessions": "{{count}} 个较早的会话",
   "context.stats.thisSession": "此会话",
+  "context.limits.missing.title": "模型限制未配置",
+  "context.limits.missing.context":
+    "此模型未设置上下文窗口，因此无法显示上下文使用百分比，自动压缩可能无法运行。手动压缩在大型会话中也可能失败。请在提供商配置中为此模型设置 limit.context。",
+  "context.limits.missing.both":
+    "此模型未设置上下文窗口或最大输出限制。自动压缩可能无法运行，且无法显示上下文使用百分比。手动压缩在大型会话中也可能失败。请在提供商配置中为此模型设置 limit.context 和 limit.output。",
 
   "time.today": "今天",
   "time.yesterday": "昨天",

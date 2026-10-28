@@ -816,6 +816,11 @@ export const dict = {
   "context.usage.sessionCost": "Sessiekosten",
   "context.usage.olderSessions": "{{count}} oudere sessies",
   "context.stats.thisSession": "Deze sessie",
+  "context.limits.missing.title": "Modellimieten niet geconfigureerd",
+  "context.limits.missing.context":
+    "Voor dit model is geen contextvenster ingesteld, dus het contextgebruikpercentage is niet beschikbaar en automatische comprimering wordt mogelijk niet uitgevoerd. Handmatige comprimering kan ook mislukken bij grote sessies. Stel limit.context in voor dit model in de providerconfiguratie.",
+  "context.limits.missing.both":
+    "Voor dit model zijn geen contextvenster en geen maximale uitvoerlimiet ingesteld. Automatische comprimering wordt mogelijk niet uitgevoerd en het contextgebruikpercentage is niet beschikbaar. Handmatige comprimering kan ook mislukken bij grote sessies. Stel limit.context en limit.output in voor dit model in de providerconfiguratie.",
 
   "time.today": "Vandaag",
   "time.yesterday": "Gisteren",

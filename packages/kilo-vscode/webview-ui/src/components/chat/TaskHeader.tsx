@@ -9,6 +9,7 @@
  */
 
 import { Component, For, Show, createMemo, createSignal, createEffect, on, onMount, onCleanup } from "solid-js"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
@@ -94,6 +95,31 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     })
     const variant = sel.variant ? sel.variant.charAt(0).toUpperCase() + sel.variant.slice(1) : undefined
     return { name, variant, id: `${sel.providerID}/${sel.modelID}` }
+  })
+
+  const limits = createMemo(() => {
+    // Read-only subagent viewers may not have the child session info loaded, so
+    // use the model recorded on the messages instead of the picker selection.
+    const sel = props.readonly ? sessionModel(session.messages()) : session.selected()
+    const info = sel ? provider.findModel(sel) : undefined
+    if (!info) return undefined
+    // Context is what drives compaction and the usage percentage. Models in the
+    // catalog can omit or zero the output limit without disabling compaction.
+    const context = info.limit?.context ?? info.contextLength ?? 0
+    if (context > 0) return undefined
+    return { output: (info.limit?.output ?? 0) <= 0 }
+  })
+
+  const limitsTooltip = createMemo(() => {
+    const m = limits()
+    if (!m) return ""
+    const key = m.output ? "context.limits.missing.both" : "context.limits.missing.context"
+    return (
+      <div style={{ "text-align": "left", "max-width": "280px", "white-space": "normal" }}>
+        <div>{language.t("context.limits.missing.title")}</div>
+        <div>{language.t(key)}</div>
+      </div>
+    )
   })
 
   const hasTimeline = createMemo(() => {
@@ -239,6 +265,18 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 <span>{c()}</span>
               </Tooltip>
             )}
+          </Show>
+          <Show when={limits()}>
+            <Tooltip value={limitsTooltip()} placement="bottom">
+              <span
+                class="task-header-warning"
+                role="img"
+                tabIndex={0}
+                aria-label={language.t("context.limits.missing.title")}
+              >
+                <Icon name="warning" size="small" />
+              </span>
+            </Tooltip>
           </Show>
           <Show when={context()}>
             {(ctx) => (
