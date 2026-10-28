@@ -92,7 +92,9 @@ export function PromptInput(props: {
         v2.report(new Error(normalizeEnhancePromptErrorMessage(message(err))))
       })
       .finally(() => {
-        if (token === enhanceToken) setEnhancing(false)
+        // Clear unconditionally: an edit invalidates the token, and two Enhance requests cannot overlap
+        // because canEnhance() blocks while enhancing() is true.
+        setEnhancing(false)
       })
   }
 
