@@ -13,6 +13,11 @@ import type { Entry } from "./registry"
 import { SkillError, safe } from "./skill"
 
 const CATALOG_TTL = 10 * 60 * 1000
+
+// Versioned so a changed snapshot shape can be left behind instead of misread. Snapshots are a cache: old rows are
+// never read again and cost nothing. The gateway plugin scans its own `catalog:personal:` rows under the same
+// prefix, so a registry must never be named "personal".
+const catalogKey = (registry: string, kind: KiloMarketplaceRpc.Kind) => `catalog:v1:${registry}:${kind}`
 const decodeInstalled = Schema.decodeUnknownOption(Schema.fromJsonString(KiloMarketplaceRpc.Installed))
 const decodeSnapshot = Schema.decodeUnknownOption(
   Schema.fromJsonString(
@@ -164,7 +169,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
 
     const list = (kind: KiloMarketplaceRpc.Kind, refresh: boolean, query?: string) =>
       Effect.gen(function* () {
-        const key = `${registry.id}:${kind}:`
+        const key = catalogKey(registry.id, kind)
         const cached = catalog.get(kind)
         const loaded =
           !refresh && cached && Date.now() - cached.at < CATALOG_TTL
@@ -176,7 +181,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                 if (Result.isSuccess(fetched)) {
                   catalog.set(kind, { at: Date.now(), entries: fetched.success })
                   yield* storage(
-                    ctx.storage.set(`catalog:${key}`, JSON.stringify(fetched.success)),
+                    ctx.storage.set(key, JSON.stringify(fetched.success)),
                     "write_failed",
                     "Couldn't cache marketplace catalog",
                   ).pipe(Effect.ignore)
@@ -185,7 +190,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                 const failure = `Couldn't load ${registry.name}: ${fetched.failure}`
                 if (cached) return { entries: cached.entries, failure }
                 const stored = yield* storage(
-                  ctx.storage.get(`catalog:${key}`),
+                  ctx.storage.get(key),
                   "fetch_failed",
                   "Couldn't read cached marketplace catalog",
                 ).pipe(Effect.orElseSucceed(() => undefined))

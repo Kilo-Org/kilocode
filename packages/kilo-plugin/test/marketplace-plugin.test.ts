@@ -167,6 +167,48 @@ for (const cached of ["memory", "persisted"] as const) {
     }),
   )
 }
+it.live("stores the catalog snapshot under a versioned key and ignores the unversioned legacy row", () =>
+  Effect.gen(function* () {
+    const test = yield* fixture()
+    // A row from before the key was versioned must never be read: it is an inert leftover.
+    yield* test.host.storage.set("catalog:kilo:mcp:", JSON.stringify([{ id: "legacy", name: "Legacy" }]))
+    yield* test.start()
+    expect(yield* test.rpc.call("kilocode.marketplace", "list", { kind: "mcp" })).toMatchObject({
+      items: [{ id: "demo" }],
+      failures: [],
+    })
+    const stored = yield* test.host.storage.get("catalog:v1:kilo:mcp")
+    // A snapshot holds full catalog entries, not the flattened items the RPC returns.
+    expect(JSON.parse(String(stored))).toMatchObject([{ item: { id: "demo" } }])
+    // The leftover row is untouched, and with the network down a restart serves the versioned snapshot, not it.
+    expect(JSON.parse(String(yield* test.host.storage.get("catalog:kilo:mcp:")))).toEqual([
+      { id: "legacy", name: "Legacy" },
+    ])
+    test.failCatalog()
+    yield* test.start()
+    expect(yield* test.rpc.call("kilocode.marketplace", "list", { kind: "mcp", refresh: true })).toMatchObject({
+      items: [{ id: "demo" }],
+      failures: [{ registry: "kilo" }],
+    })
+  }),
+)
+it.live("a catalog with no versioned snapshot reports the failure instead of serving a valid legacy row", () =>
+  Effect.gen(function* () {
+    const test = yield* fixture()
+    // Build a legacy row that decodes, so the key alone decides whether it could be served.
+    yield* test.start()
+    yield* test.rpc.call("kilocode.marketplace", "list", { kind: "mcp" })
+    const snapshot = JSON.parse(String(yield* test.host.storage.get("catalog:v1:kilo:mcp")))
+    snapshot[0].item.id = "legacy"
+    yield* test.host.storage.remove("catalog:v1:kilo:mcp")
+    yield* test.host.storage.set("catalog:kilo:mcp:", JSON.stringify(snapshot))
+    test.failCatalog()
+    yield* test.start()
+    expect(
+      yield* test.rpc.call("kilocode.marketplace", "list", { kind: "mcp", refresh: true }).pipe(Effect.flip),
+    ).toMatchObject({ type: "fetch_failed" })
+  }),
+)
 it.live("cache write defects do not discard a successful catalog response; excluded methods are absent", () =>
   Effect.gen(function* () {
     const test = yield* fixture()
