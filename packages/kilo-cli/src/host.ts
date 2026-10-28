@@ -1,6 +1,6 @@
 export * as KiloHost from "./host"
 
-import { KiloPlugins, KiloPostPlugins } from "@kilocode/kilo-plugin"
+import { KiloPlugins, KiloPostPlugins, KiloSessionSync } from "@kilocode/kilo-plugin"
 import { App } from "@opencode/core/app"
 import { Bus } from "@opencode/core/bus"
 import { ConfigDiscovery } from "@opencode/core/config/discovery"
@@ -10,6 +10,8 @@ import { KiloConfigDiscovery } from "@opencode/core/kilocode/config/discovery"
 import { Model } from "@opencode/core/model"
 import { SdkPlugins } from "@opencode/core/plugin/sdk"
 import { SessionRunnerModel } from "@opencode/core/session/runner/model"
+import { SessionProjector } from "@opencode/core/session/projector"
+import { ToolOutput } from "@opencode/core/tool-output"
 import type { Plugin } from "@opencode/plugin/effect/plugin"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import type { LayerNode } from "@opencode/util/effect/layer-node"
@@ -19,6 +21,8 @@ import { KiloApp } from "./app"
 import { KiloGatewayErrors } from "./gateway-errors"
 import { KiloGatewayModel } from "./gateway-model"
 import { KiloSmallModel } from "./small-model"
+import { SessionSync } from "./session-sync"
+import { SessionSyncOutput } from "./session-sync/tool-output"
 
 /**
  * The duration in milliseconds of the last activation of each Kilo plugin, by plugin ID. The startup ratchet
@@ -35,8 +39,15 @@ const plugins = makeGlobalNode({
   layer: Layer.effectDiscard(
     Effect.gen(function* () {
       const sdk = yield* SdkPlugins.Service
-      const services = Context.pick(Bus.Service, Global.Service)(yield* Effect.context<Bus.Service | Global.Service>())
-      const register = (plugin: Plugin<Bus.Service | Global.Service | Scope.Scope>, phase?: "post") =>
+      const services = Context.pick(
+        Bus.Service,
+        Global.Service,
+        KiloSessionSync.Service,
+      )(yield* Effect.context<Bus.Service | Global.Service | KiloSessionSync.Service>())
+      const register = (
+        plugin: Plugin<Bus.Service | Global.Service | KiloSessionSync.Service | Scope.Scope>,
+        phase?: "post",
+      ) =>
         sdk.register(
           {
             id: plugin.id,
@@ -55,7 +66,7 @@ const plugins = makeGlobalNode({
       yield* Effect.forEach(KiloPostPlugins, (plugin) => register(plugin, "post"))
     }),
   ).pipe(Layer.provideMerge(SdkPlugins.layer)),
-  deps: [Bus.node, Global.node],
+  deps: [Bus.node, Global.node, SessionSync.node],
 })
 
 /**
@@ -65,6 +76,8 @@ const plugins = makeGlobalNode({
  */
 export const overrides: LayerNode.Replacements = [
   LayerNodePlatform.llmClient.replace(LayerNodePlatform.llmClient.mapLayer(KiloGatewayErrors.layer)),
+  SessionProjector.node.replace(SessionProjector.node.mapLayer(SessionSync.captureLayer)),
+  ToolOutput.node.replace(SessionSyncOutput.node),
   SdkPlugins.node.replace(plugins),
   App.node.replace(App.configured(KiloApp)),
   Model.node.replace(
