@@ -370,8 +370,11 @@ class KiloSessionRpcApiImpl internal constructor(
                 gate.receive()
                 if (remote) {
                     app.requireReady()
-                    retained = true
+                    // Set the flag only after retain returns: retain already decrements its own count
+                    // when attachment setup fails or is cancelled, and a flag set earlier would make
+                    // the finally block release a second time and drop another live subscriber.
                     hosted.retain(id, organization())
+                    retained = true
                 }
                 replayPending(id, directory)
 

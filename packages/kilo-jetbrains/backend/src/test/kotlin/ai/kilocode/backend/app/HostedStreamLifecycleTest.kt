@@ -374,6 +374,59 @@ class HostedStreamLifecycleTest {
         }
     }
 
+    @Test
+    fun `stop then start reopens streams for collectors that survived a CLI restart`() = runBlocking(Dispatchers.Default) {
+        mock.profile = """{"profile":{"email":"test@test.com","name":"Test"},"balance":null,"currentOrgId":"org_1"}"""
+        ready()
+        val received = Channel<ChatEventDto>(Channel.UNLIMITED)
+        val systems = Channel<String>(Channel.UNLIMITED)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = TestLog())
+        val systemJob = scope.launch {
+            app.hosted.systemEvents(HostedWorkspaceRefDto("cloud", "wrk_1"), "ses_cloud", "org_1").collect {
+                systems.send(it.sessionID)
+            }
+        }
+        val nativeJob = scope.launch {
+            api.events(session, HostedIDs.workspace("cloud", "wrk_1")).collect { received.send(it) }
+        }
+        assertTrue(mock.awaitFeed(path), "initial native stream did not open")
+        assertTrue(mock.awaitFeed(system), "initial system stream did not open")
+        next(received) { it is ChatEventDto.Resnapshot && it.phase == "start" }
+        mock.pushFeed(path, """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""")
+        next(received) { it is ChatEventDto.SessionStatusChanged }
+
+        // Production restart/reinstall calls stop() before start(); the RPC collectors above stay
+        // subscribed throughout, so retained ownership must not be erased with the transport.
+        app.hosted.stop()
+        assertTrue(mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1))
+
+        val replacement = MockCliServer()
+        val http = KiloBackendHttpClients.api("")
+        try {
+            replacement.hostedAttach = """{"attachmentID":"wrk_att_next","session":{"providerID":"cloud","sessionID":"ses_cloud"},"expiresAt":1}"""
+            val port = replacement.start()
+            val client = DefaultApi(basePath = "http://127.0.0.1:$port", client = http)
+            app.hosted.start(client, http, port, app.chat)
+
+            val native = "/event?workspace=wrk_att_next"
+            val cloud = "/cloud-agent/event?workspace=wrk_att_next"
+            assertTrue(replacement.awaitFeed(native), "native stream was not restored after stop/start")
+            assertTrue(replacement.awaitFeed(cloud), "system stream was not restored after stop/start")
+            next(received) { it is ChatEventDto.Resnapshot && it.phase == "start" }
+            replacement.pushFeed(native, """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""")
+            assertEquals("busy", (next(received) { it is ChatEventDto.SessionStatusChanged } as ChatEventDto.SessionStatusChanged).status.type)
+            replacement.pushFeed(cloud, """{"type":"cloud.status","properties":{"sessionId":"ses_cloud","cloudStatus":{"type":"running"}}}""")
+            assertEquals(session, withTimeout(TIMEOUT) { systems.receive() })
+            assertTrue(replacement.lastHostedAttachPath.orEmpty().contains("organizationID=org_1"))
+        } finally {
+            systemJob.cancel()
+            nativeJob.cancel()
+            app.hosted.stop()
+            KiloBackendHttpClients.shutdown(http)
+            replacement.close()
+        }
+    }
+
     private companion object {
         const val TIMEOUT = 10_000L
         const val PERMISSION = """{"id":"per_1","sessionID":"ses_cloud","permission":"bash","patterns":["pwd"],"always":[],"metadata":{}}"""

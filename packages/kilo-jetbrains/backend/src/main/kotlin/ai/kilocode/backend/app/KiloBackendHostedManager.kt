@@ -180,14 +180,26 @@ class KiloBackendHostedManager(
                 }
             }
         }
-        if (changed) continuity.entries.forEach { restore(it.key, it.value) }
+        // A restart calls stop() first, which keeps retained owners but closes transports. Reattach
+        // them here even though the manager was not "started" at entry.
+        if (changed || continuity.isNotEmpty()) continuity.entries.forEach { restore(it.key, it.value) }
         log.info("Hosted session manager started")
     }
 
+    /**
+     * Stops a CLI transport without forgetting live ownership. RPC collectors survive a backend
+     * restart, so continuity retainers and subscribers must survive too; [start] reattaches them to
+     * the replacement transport. Cached transcript/status data is dropped and rebuilt from the new
+     * CLI. Use [reset] only when ownership itself is gone.
+     */
     fun stop() {
         if (!started && attachments.isEmpty()) return
         started = false
-        reset(detach = true)
+        rebind(api)
+        sessions.clear()
+        permissionOwner.clear()
+        questionOwner.clear()
+        _statuses.value = emptyMap()
         api = null
         http = null
         base = null
