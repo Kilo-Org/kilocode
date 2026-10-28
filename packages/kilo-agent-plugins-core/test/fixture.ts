@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, realpath, rm, stat, symlink, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { afterAll } from "bun:test"
@@ -19,16 +19,26 @@ export async function temp() {
 
 export type Tree = Record<string, string | object | { symlink: string }>
 
-/** Writes files below `root`; objects become JSON, `{ symlink }` becomes a link to that target. */
+/**
+ * Writes files below `root`; objects become JSON, `{ symlink }` becomes a link to that target. Links are created
+ * after the files, with the target's kind, because Windows needs a directory link for a directory target.
+ */
 export async function write(root: string, tree: Tree) {
-  for (const [file, content] of Object.entries(tree)) {
+  const entries = Object.entries(tree)
+  const links = entries.flatMap(([file, content]): [string, string][] =>
+    typeof content === "object" && content !== null && "symlink" in content ? [[file, String(content.symlink)]] : [],
+  )
+  for (const [file, content] of entries) {
+    if (links.some(([link]) => link === file)) continue
     const target = path.join(root, file)
     await mkdir(path.dirname(target), { recursive: true })
-    if (typeof content === "object" && content !== null && "symlink" in content) {
-      await symlink(String(content.symlink), target)
-      continue
-    }
     await writeFile(target, typeof content === "string" ? content : JSON.stringify(content, null, 2))
+  }
+  for (const [file, to] of links) {
+    const target = path.join(root, file)
+    await mkdir(path.dirname(target), { recursive: true })
+    const info = await stat(path.resolve(path.dirname(target), to)).catch(() => undefined)
+    await symlink(to, target, info?.isDirectory() ? "dir" : "file")
   }
 }
 
