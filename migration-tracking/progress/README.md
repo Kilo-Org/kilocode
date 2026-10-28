@@ -8,14 +8,14 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**589 / 9819 cells done (6%)**, 35 dropped. `█░░░░░░░░░░░░░░░`
+**590 / 9819 cells done (6%)**, 35 dropped. `█░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
 | module | 481 | 3543 | 13.6% |
 | api | 5 | 39 | 12.8% |
 | patch | 70 | 3443 | 2% |
-| test | 33 | 2794 | 1.2% |
+| test | 34 | 2794 | 1.2% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
@@ -38,8 +38,8 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-22 | 93 | 9829 | 0.9% |
 | 2026-10-23 | 150 | 9828 | 1.5% |
 | 2026-10-26 | 157 | 9828 | 1.6% |
-| 2026-10-28 | 573 | 9819 | 5.8% |
-| now | 589 | 9819 | 6% |
+| 2026-10-28 | 589 | 9819 | 6% |
+| now | 590 | 9819 | 6% |
 
 ## Features
 
@@ -72,7 +72,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | database | 0/3 |  | 0/4 | 0/5 | 0/12 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | db-preflight | 0/1 |  | 0/1 | 0/1 | 0/3 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | effect | 0/4 |  | 0/2 | 0/3 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| enhance-prompt | 0/1 |  |  | 0/1 | 0/2 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| enhance-prompt | 0/1 |  |  | 1/1 | 1/2 | 50% | `████████░░░░░░░░` |  |
 | event-service | 0/1 |  |  | 0/1 | 0/2 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | event-storage | 0/5 |  | 0/8 | 0/3 | 0/16 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | exit-code | 0/1 |  | 0/3 | 0/1 | 0/5 | 0% | `░░░░░░░░░░░░░░░░` |  |

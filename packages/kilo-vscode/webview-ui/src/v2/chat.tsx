@@ -157,6 +157,7 @@ export function Chat() {
               disabled={v2.connection.status() !== "connected" || !!v2.handshake() || blocked()}
               blocked={permissions().length > 0}
               questioning={questioning()}
+              model={selection.model()}
               onSend={send}
               onStop={stop}
               selectors={<Selectors selection={selection} blocked={blocked()} />}
