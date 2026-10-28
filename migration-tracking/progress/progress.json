@@ -38,7 +38,7 @@
     },
     "coreImports": 26,
     "sharedPatches": {
-      "seam": 33,
+      "seam": 35,
       "patch": 21
     }
   },
