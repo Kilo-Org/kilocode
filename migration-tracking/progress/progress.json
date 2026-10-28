@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 573,
+    "done": 575,
     "total": 9819,
-    "percent": 5.8,
+    "percent": 5.9,
     "dropped": 35,
     "kinds": [
       {
         "kind": "module",
-        "done": 465,
+        "done": 467,
         "total": 3543
       },
       {
@@ -6049,12 +6049,12 @@
     },
     {
       "feature": "vscode",
-      "done": 253,
+      "done": 255,
       "total": 2057,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 252,
+          "done": 254,
           "total": 1439
         },
         "api": {
@@ -6577,7 +6577,9 @@
     "module:packages/kilo-vscode/webview-ui/src/components/shared/ModelSelector.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/PopupSelector.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/SessionRenameEditor.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/shared/StatusText.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/ThinkingSelector.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/shared/WorkingIndicator.tsx",
     "module:packages/kilo-vscode/webview-ui/src/context/language-dictionaries/ar.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/language-dictionaries/br.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/language-dictionaries/bs.ts",

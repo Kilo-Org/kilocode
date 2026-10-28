@@ -5,6 +5,7 @@ import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
 import { SessionList } from "./history"
 import { TaskHeader } from "../components/chat/TaskHeader"
+import { WorkingIndicator, type Retry } from "../components/shared/WorkingIndicator"
 import ProfileView from "../components/profile/ProfileView"
 import { MessageList } from "./messages"
 import { PermissionDock } from "./permission"
@@ -81,6 +82,21 @@ export function Chat() {
     return !!id && v2.data.session.status(id) === "running"
   }
 
+  // The turn's scheduled retry, carried by the running assistant row, drives the working indicator's countdown.
+  const retry = () => {
+    const id = session()
+    if (!id) return undefined
+    const list = v2.data.session.message.list(id)
+    for (let index = list.length - 1; index >= 0; index--) {
+      const message = list[index]
+      if (message.type === "assistant" && message.retry) return message.retry as Retry
+    }
+    return undefined
+  }
+
+  // MessageList owns the transcript scroller; the working indicator's scroll button calls back into it.
+  const [scrollToBottom, setScrollToBottom] = createSignal<() => void>(() => {})
+
   // A pending permission or question blocks new prompts, as on v1; Stop stays available.
   const blocked = () => permissions().length > 0 || forms().length > 0
   const selection = createSelection(session)
@@ -126,7 +142,12 @@ export function Chat() {
           </Show>
           <div class="chat-messages-wrapper">
             <div class="chat-messages">
-              <MessageList session={session()} onSelectSession={open} onShowHistory={() => setView("history")} />
+              <MessageList
+                session={session()}
+                onSelectSession={open}
+                onShowHistory={() => setView("history")}
+                onScrollToBottomReady={setScrollToBottom}
+              />
             </div>
           </div>
           <div class="chat-input">
@@ -143,6 +164,10 @@ export function Chat() {
             </Show>
             <Show when={forms()[0]} keyed>
               {(form) => <QuestionDock form={form} />}
+            </Show>
+            {/* The working indicator sits in the dock, directly above the composer, as on v1. */}
+            <Show when={running() || retry()}>
+              <WorkingIndicator session={session() ?? ""} retry={retry()} onScrollToBottom={() => scrollToBottom()()} />
             </Show>
             <PromptInput
               session={session()}
