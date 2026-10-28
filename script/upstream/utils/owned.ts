@@ -25,6 +25,7 @@ export const owned = [
   // Kilo CI tooling, for example the sharded test runner (script/kilocode/test/).
   "script/kilocode/**",
   ".github/workflows/kilo-v2.yml",
+  ".github/workflows/kilo-v2-publish.yml",
   // Review policy for the Kilo review bot. Upstream has no REVIEW.md.
   "REVIEW.md",
 ]

@@ -13,7 +13,8 @@
   },
   "main": "./dist/extension.js",
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onWebviewPanel:kilo-code.v2.settingsPanel"
   ],
   "contributes": {
     "viewsContainers": {
@@ -54,9 +55,39 @@
         "icon": "$(account)"
       },
       {
+        "command": "kilo-code.v2.settings",
+        "title": "Settings",
+        "category": "Kilo Code (v2)",
+        "icon": "$(settings-gear)"
+      },
+      {
         "command": "kilo-code.v2.restartServer",
         "title": "Restart Server",
         "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.cycleAgentMode",
+        "title": "Cycle Agent Mode",
+        "category": "Kilo Code (v2)"
+      },
+      {
+        "command": "kilo-code.v2.cyclePreviousAgentMode",
+        "title": "Cycle Previous Agent Mode",
+        "category": "Kilo Code (v2)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "kilo-code.v2.cycleAgentMode",
+        "key": "ctrl+.",
+        "mac": "cmd+.",
+        "when": "kilo-code.v2.sidebarFocused"
+      },
+      {
+        "command": "kilo-code.v2.cyclePreviousAgentMode",
+        "key": "ctrl+shift+.",
+        "mac": "cmd+shift+.",
+        "when": "kilo-code.v2.sidebarFocused"
       }
     ],
     "menus": {
@@ -73,6 +104,11 @@
         },
         {
           "command": "kilo-code.v2.profile",
+          "when": "view == kilo-code.v2.chat",
+          "group": "navigation"
+        },
+        {
+          "command": "kilo-code.v2.settings",
           "when": "view == kilo-code.v2.chat",
           "group": "navigation"
         }

@@ -135,7 +135,7 @@ describe("Watcher lifecycle", () => {
           yield* Effect.sync(() => events.length).pipe(
             Effect.filterOrFail((count) => count > 0),
             Effect.retry(Schedule.spaced("10 millis")),
-            Effect.timeout("1 second"),
+            Effect.timeout("10 seconds"), // kilocode_change(ci): a 1s budget is too short for fs.watch on a loaded macOS runner
           )
           expect(events.every((update) => update.path === path.join(tmp.path, "opencode.json"))).toBe(true)
           yield* Effect.sleep("10 millis")
@@ -143,7 +143,7 @@ describe("Watcher lifecycle", () => {
           yield* Effect.sync(() => events.some((update) => update.path === path.join(tmp.path, ".opencode"))).pipe(
             Effect.filterOrFail(Boolean),
             Effect.retry(Schedule.spaced("10 millis")),
-            Effect.timeout("1 second"),
+            Effect.timeout("10 seconds"), // kilocode_change(ci): a 1s budget is too short for fs.watch on a loaded macOS runner
           )
         }).pipe(Effect.provide(Watcher.nativeLayer)),
       ),

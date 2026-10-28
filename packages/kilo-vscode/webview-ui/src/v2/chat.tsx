@@ -1,5 +1,6 @@
 // The sidebar: history, profile, or one session laid out like main's ChatView (transcript, docks, prompt).
 import { Button } from "@kilocode/kilo-ui/button"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { createEffect, createMemo, createSignal, Match, on, Show, Switch } from "solid-js"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
@@ -12,6 +13,8 @@ import { PromptInput } from "./prompt"
 import { QuestionDock } from "./question"
 import { createProfile } from "./profile"
 import { createSelection, Selectors } from "./selectors"
+import { SessionDock } from "../components/chat/SessionDockWorking"
+import { createWorking } from "./working"
 
 export function Chat() {
   const v2 = useV2()
@@ -20,11 +23,12 @@ export function Chat() {
   const [view, setView] = createSignal<"chat" | "history" | "profile">("chat")
   // Owned here, so a running sign-in survives switching views.
   const profile = createProfile()
+  const startSession = () => {
+    setSession(undefined)
+    setView("chat")
+  }
   v2.onCommand((name) => {
-    if (name === "newSession") {
-      setSession(undefined)
-      setView("chat")
-    }
+    if (name === "newSession") startSession()
     if (name === "history") setView("history")
     if (name === "profile") setView("profile")
   })
@@ -81,9 +85,47 @@ export function Chat() {
     return !!id && v2.data.session.status(id) === "running"
   }
 
-  // A pending permission or question blocks new prompts, as on v1; Stop stays available.
+  // A pending permission or question blocks new prompts.
   const blocked = () => permissions().length > 0 || forms().length > 0
+  // The prompt selectors block only while a permission owns the prompt, as v1; a pending question does not.
+  const selectorsBlocked = () => permissions().length > 0
+  // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
+  const questioning = () => permissions().length === 0 && forms().length > 0
   const selection = createSelection(session)
+  // The host sends the cycle action for the cycleAgentMode/cyclePreviousAgentMode commands, as in main.
+  v2.onCommand((name) => {
+    if (name === "cycleAgentMode") selection.cycleAgent(1)
+    if (name === "cyclePreviousAgentMode") selection.cycleAgent(-1)
+  })
+  const working = createWorking(session)
+  let scrollToBottom: (() => void) | undefined
+  // Counts the in-flight first message too, so the dock reserves the same row on the very first send, as on main.
+  // A memo, so the actions row rebuilds only when this flips.
+  const hasMessages = createMemo(() => {
+    const id = session()
+    return !!id && (v2.data.session.message.list(id).length > 0 || working.submitting())
+  })
+  // main's ChatView actions row. Only New Session has a v2 counterpart: the worktree, changes and fork actions need
+  // the Agent Manager and the diff viewer, which v2 does not have yet.
+  const actions = (
+    <Show when={hasMessages()}>
+      <div class="new-task-button-wrapper">
+        <div class="session-actions-row">
+          <Tooltip value={language.t("sidebar.session.newSession.tooltip")} placement="top">
+            <Button
+              variant="secondary"
+              size="small"
+              class="session-new-button"
+              onClick={startSession}
+              aria-label={language.t("sidebar.session.newSession")}
+            >
+              {language.t("sidebar.session.newSession")}
+            </Button>
+          </Tooltip>
+        </div>
+      </div>
+    </Show>
+  )
 
   const send = (text: string) => {
     const id = session() ?? selection.create()
@@ -126,7 +168,12 @@ export function Chat() {
           </Show>
           <div class="chat-messages-wrapper">
             <div class="chat-messages">
-              <MessageList session={session()} onSelectSession={open} onShowHistory={() => setView("history")} />
+              <MessageList
+                session={session()}
+                onSelectSession={open}
+                onShowHistory={() => setView("history")}
+                onScrollToBottomReady={(fn) => (scrollToBottom = fn)}
+              />
             </div>
           </div>
           <div class="chat-input">
@@ -144,13 +191,27 @@ export function Chat() {
             <Show when={forms()[0]} keyed>
               {(form) => <QuestionDock form={form} />}
             </Show>
+            <SessionDock
+              blocked={blocked()}
+              actions={actions}
+              hasActions={hasMessages()}
+              status={working.status()}
+              submitting={working.submitting()}
+              timing={working.timing()}
+              text={working.text()}
+              retry={working.retry()}
+              onCancel={stop}
+              onScrollToBottom={() => scrollToBottom?.()}
+            />
             <PromptInput
               session={session()}
               running={running()}
               disabled={v2.connection.status() !== "connected" || !!v2.handshake() || blocked()}
+              blocked={permissions().length > 0}
+              questioning={questioning()}
               onSend={send}
               onStop={stop}
-              selectors={<Selectors selection={selection} blocked={blocked()} />}
+              selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
             />
           </div>
         </div>
