@@ -2,7 +2,7 @@ import { expect } from "bun:test"
 import { KiloSessionSync } from "@kilocode/kilo-plugin"
 import { Context, Effect, Fiber, Layer, Schedule, Schema } from "effect"
 import { eq, sql } from "drizzle-orm"
-import { mkdtemp, mkdir, readFile, readdir, rm, symlink, unlink, utimes, writeFile } from "node:fs/promises"
+import { mkdtemp, mkdir, readFile, readdir, realpath, rm, symlink, unlink, utimes, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { randomUUID } from "node:crypto"
@@ -213,7 +213,7 @@ const peer = () => {
 
 const fixture = Effect.gen(function* () {
   const root = yield* Effect.acquireRelease(
-    Effect.promise(() => mkdtemp(path.join(os.tmpdir(), "kilo-sync-consumer-"))),
+    Effect.promise(async () => realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-sync-consumer-")))),
     (root) => Effect.promise(() => rm(root, { recursive: true, force: true })),
   )
   const backend = yield* Effect.acquireRelease(Effect.sync(peer), (backend) =>

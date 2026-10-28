@@ -851,11 +851,14 @@ export const spool = Effect.fn("SessionSync.Assets.spool")(function* (
       }
       try {
         await rename(temporary, target)
-        const parent = await open(directory, "r")
-        try {
-          await parent.sync()
-        } finally {
-          await parent.close()
+        // Node cannot open a directory for fsync on Windows; NTFS journals the rename metadata.
+        if (process.platform !== "win32") {
+          const parent = await open(directory, "r")
+          try {
+            await parent.sync()
+          } finally {
+            await parent.close()
+          }
         }
       } finally {
         await unlink(temporary).catch((error: NodeJS.ErrnoException) => {
