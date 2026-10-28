@@ -74,26 +74,30 @@ export function AssistantMessage(props: { message: SessionMessageAssistant; sess
             </div>
           )}
         </Show>
-        <Show when={props.message.error}>
-          {(error) => (
-            <Card variant="error" class="error-card" role="alert">
-              <div class="error-card-body">
-                <Icon name="warning" size="small" />
-                <div class="error-card-message">{error().message}</div>
-              </div>
-              <Collapsible variant="ghost">
-                <Collapsible.Trigger class="error-details-trigger">
-                  <span>{language.t("error.details.show")}</span>
-                  <Collapsible.Arrow />
-                </Collapsible.Trigger>
-                <Collapsible.Content>
-                  <pre>{JSON.stringify(error(), null, 2)}</pre>
-                </Collapsible.Content>
-              </Collapsible>
-            </Card>
-          )}
-        </Show>
+        <Show when={props.message.error}>{(error) => <ErrorCard error={error()} />}</Show>
       </div>
     </div>
+  )
+}
+
+/** The error card of an assistant step. The message list also uses it for a run that fails before a step. */
+export function ErrorCard(props: { error: { message: string } }) {
+  const language = useLanguage()
+  return (
+    <Card variant="error" class="error-card" role="alert">
+      <div class="error-card-body">
+        <Icon name="warning" size="small" />
+        <div class="error-card-message">{props.error.message}</div>
+      </div>
+      <Collapsible variant="ghost">
+        <Collapsible.Trigger class="error-details-trigger">
+          <span>{language.t("error.details.show")}</span>
+          <Collapsible.Arrow />
+        </Collapsible.Trigger>
+        <Collapsible.Content>
+          <pre>{JSON.stringify(props.error, null, 2)}</pre>
+        </Collapsible.Content>
+      </Collapsible>
+    </Card>
   )
 }

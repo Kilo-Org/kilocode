@@ -1,11 +1,12 @@
 // main's MessageList markup (components/chat/MessageList.tsx) over v2 messages: list, load-earlier, queued prompts,
 // working line and the scroll-to-bottom button. Virtualization, the prompt rail and search come later.
+import type { SessionMessageInfo } from "@opencode/client"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { createSignal, For, Match, Show, Switch } from "solid-js"
 import { useLanguage } from "../context/language"
-import { AssistantMessage } from "./assistant"
+import { AssistantMessage, ErrorCard } from "./assistant"
 import { useV2 } from "./client"
 import { UserMessage } from "./user"
 import { Welcome } from "./welcome"
@@ -79,13 +80,22 @@ export function MessageList(props: {
                 </Show>
                 <div class="message-list-turns" data-loaded-messages={messages().length}>
                   <For each={messages()}>
-                    {(message) => (
+                    {(message, index) => (
                       <Switch>
                         <Match when={message.type === "user" && message}>
                           {(user) => <UserMessage message={user()} />}
                         </Match>
                         <Match when={message.type === "assistant" && message}>
                           {(assistant) => <AssistantMessage message={assistant()} session={id()} />}
+                        </Match>
+                        {/* A run can fail before any step, for example without a usable model. As the TUI, the idle
+                            row carries that error. A failed step already shows its error on the assistant row. */}
+                        <Match when={message.type === "idle" && !stepFailed(messages()[index() - 1]) && message.error}>
+                          {(error) => (
+                            <div class="vscode-session-turn" data-row="error" data-message={message.id}>
+                              <ErrorCard error={error()} />
+                            </div>
+                          )}
                         </Match>
                       </Switch>
                     )}
@@ -123,4 +133,8 @@ export function MessageList(props: {
       </Show>
     </div>
   )
+}
+
+function stepFailed(message: SessionMessageInfo | undefined) {
+  return message?.type === "assistant" && !!message.error
 }
