@@ -12,6 +12,7 @@ import { readdir } from "node:fs/promises"
 import path from "node:path"
 import { Effect, FiberMap, Option, PubSub, Scope, Semaphore, Stream } from "effect"
 import type { Diagnostic } from "./diagnostic"
+import { KiloExtension } from "./extension"
 import { Paths } from "./paths"
 import { AgentPlugin } from "./plugin"
 
@@ -218,6 +219,9 @@ export function map(plugin: AgentPlugin.Loaded, scope: Loaded["scope"]) {
       content: skill.body,
     }),
   )
+  // OAuth settings from the plugin's ai.kilo extension, for servers that need a pre-registered client.
+  const extension = KiloExtension.read(plugin.manifest!.extensions, plugin.servers)
+  diagnostics.push(...extension.diagnostics)
   const servers = new Map<string, Mcp.ServerConfig>()
   for (const server of plugin.servers) {
     const id = `${name}:${server.name}`
@@ -246,7 +250,15 @@ export function map(plugin: AgentPlugin.Loaded, scope: Loaded["scope"]) {
       })
       continue
     }
-    servers.set(id, new Mcp.RemoteConfig({ type: "remote", url: server.url }))
+    const oauth = extension.oauth.get(server.name)
+    servers.set(
+      id,
+      new Mcp.RemoteConfig({
+        type: "remote",
+        url: server.url,
+        ...(oauth ? { oauth: new Mcp.OAuthConfig(oauth) } : {}),
+      }),
+    )
   }
   return { loaded: { plugin, scope, skills, servers }, diagnostics }
 }

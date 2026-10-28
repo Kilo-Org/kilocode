@@ -32,6 +32,7 @@ export type Code =
   | "server-unsupported-transport"
   | "data-unavailable"
   // Reported by clients for their own decisions, not by the loader.
+  | "extension-invalid"
   | "plugin-shadowed"
   | "server-unsupported"
 

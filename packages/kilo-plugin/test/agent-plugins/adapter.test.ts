@@ -330,6 +330,43 @@ describe("Agent Plugins loading rules", () => {
     }),
   )
 
+  it.live("OAuth settings from the ai.kilo extension reach the remote server; invalid ones are reported", () =>
+    Effect.promise(async () => {
+      const base = await temp()
+      const servers = {
+        slack: { type: "streamable-http", url: "https://mcp.slack.com/mcp" },
+        other: { type: "streamable-http", url: "https://mcp.example.com/mcp" },
+      }
+      await write(path.join(base, "p"), {
+        "plugin.json": {
+          $schema: PLUGIN,
+          name: "slack",
+          extensions: {
+            "ai.kilo": {
+              mcp: {
+                slack: { oauth: { client_id: "9876543210.1234567890123", callback_port: 3119 } },
+                other: { oauth: { client_id: "x", redirect_uri: "https://evil.example/cb" } },
+              },
+            },
+          },
+        },
+        "mcp.json": { $schema: MCP, mcpServers: servers },
+      })
+      const { loaded, reported } = await run([{ path: path.join(base, "p"), scope: "explicit" }])
+      const slack = loaded[0]!.servers.get("slack:slack")
+      expect(slack).toBeInstanceOf(Mcp.RemoteConfig)
+      expect(slack).toMatchObject({
+        type: "remote",
+        url: "https://mcp.slack.com/mcp",
+        oauth: { client_id: "9876543210.1234567890123", callback_port: 3119 },
+      })
+      expect(loaded[0]!.servers.get("slack:other")).toEqual(
+        new Mcp.RemoteConfig({ type: "remote", url: "https://mcp.example.com/mcp" }),
+      )
+      expect(reported.map(([, item]) => [item.code, item.item])).toEqual([["extension-invalid", "other"]])
+    }),
+  )
+
   it.live("an opt-out in skill metadata turns off autoinvoke", () =>
     Effect.promise(async () => {
       const base = await temp()

@@ -8,6 +8,7 @@ test("the Agent Plugins loader has no OpenCode imports", async () => {
   const files = (await Array.fromAsync(new Bun.Glob("*.ts").scan({ cwd: root }))).filter((file) => file !== "index.ts")
   expect(files.toSorted()).toEqual([
     "diagnostic.ts",
+    "extension.ts",
     "manifest.ts",
     "mcp.ts",
     "paths.ts",
