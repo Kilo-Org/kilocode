@@ -827,7 +827,10 @@ describe("MCP companion lifecycle", () => {
         config: path.join(directory, "config.json"),
       }),
     ).rejects.toBeInstanceOf(Installer.FetchError)
-    expect(pulls).toBeLessThan(80)
+    // The consumer stops at the 32 MiB limit; `pulls` also counts producer read-ahead through the socket, which
+    // varies with runner speed (36 to 40 locally, 90 once on CI). The exact cut-off is asserted without sockets
+    // in "cancels bounded streams immediately". Here the point is that an endless stream is not read to the end.
+    expect(pulls).toBeLessThan(400)
     const broken = createServer((request, response) => {
       if (request.url === "/header") {
         response.writeHead(200, { "content-length": String(33 * 1024 * 1024) })
