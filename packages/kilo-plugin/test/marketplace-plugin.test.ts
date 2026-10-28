@@ -180,6 +180,13 @@ it.live("stores the catalog snapshot under a versioned key and ignores the unver
     const stored = yield* test.host.storage.get("catalog:v1:kilo:mcp")
     // A snapshot holds full catalog entries, not the flattened items the RPC returns.
     expect(JSON.parse(String(stored))).toMatchObject([{ item: { id: "demo" } }])
+    // The gateway plugin removes every `catalog:personal:` row it did not just write and owns `catalog:anonymous:`,
+    // so marketplace snapshots must stay out of both whatever the registry is called.
+    const written = (yield* test.host.storage.scan({ prefix: "catalog:" })).entries.map((entry) => entry.key)
+    expect(written).toContain("catalog:v1:kilo:mcp")
+    expect(written.filter((key) => key.startsWith("catalog:v1:")).length).toBeGreaterThan(0)
+    for (const key of written.filter((key) => key !== "catalog:kilo:mcp:"))
+      expect(key.startsWith("catalog:personal:") || key.startsWith("catalog:anonymous:")).toBe(false)
     // The leftover row is untouched, and with the network down a restart serves the versioned snapshot, not it.
     expect(JSON.parse(String(yield* test.host.storage.get("catalog:kilo:mcp:")))).toEqual([
       { id: "legacy", name: "Legacy" },

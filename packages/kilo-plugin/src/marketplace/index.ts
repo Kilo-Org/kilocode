@@ -15,8 +15,8 @@ import { SkillError, safe } from "./skill"
 const CATALOG_TTL = 10 * 60 * 1000
 
 // Versioned so a changed snapshot shape can be left behind instead of misread. Snapshots are a cache: old rows are
-// never read again and cost nothing. The gateway plugin scans its own `catalog:personal:` rows under the same
-// prefix, so a registry must never be named "personal".
+// never read again and cost nothing. The gateway plugin removes every `catalog:personal:` row it did not just write,
+// and the version segment keeps these keys out of that prefix whatever the registry is called.
 const catalogKey = (registry: string, kind: KiloMarketplaceRpc.Kind) => `catalog:v1:${registry}:${kind}`
 const decodeInstalled = Schema.decodeUnknownOption(Schema.fromJsonString(KiloMarketplaceRpc.Installed))
 const decodeSnapshot = Schema.decodeUnknownOption(
