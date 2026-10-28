@@ -1,10 +1,12 @@
 // Builds the extension and opens it in a separate VS Code instance: own user data, own extensions, and a server
-// profile under the state directory (or `--fresh` for a temporary one). Usage: bun run extension [--fresh] [workspace]
+// profile under the state directory (or `--fresh` for a temporary one). The installed Kilo CLI login is reused.
+// Usage: bun run extension [--fresh] [workspace]
 import { createHash } from "node:crypto"
 import { existsSync } from "node:fs"
 import { mkdir, mkdtemp } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { reuse } from "./cli-login"
 
 const root = path.resolve(import.meta.dir, "..")
 const args = Bun.argv.slice(2)
@@ -19,6 +21,14 @@ await mkdir(state, { recursive: true })
 
 const build = Bun.spawn([process.execPath, path.join(root, "script/build.ts")], { stdout: "inherit", stderr: "inherit" })
 if ((await build.exited) !== 0) process.exit(1)
+
+const profile = process.env.KILO_V2_PROFILE ?? path.join(state, "profile")
+try {
+  if (await reuse({ profile, workspace, script: path.resolve(root, "..", "..", "script", "dev-isolated.ts") }))
+    console.log("auth: reusing the installed Kilo CLI login")
+} catch (error) {
+  console.warn(`auth: could not reuse the Kilo CLI login: ${error instanceof Error ? error.message : String(error)}`)
+}
 
 const code = [
   process.env.VSCODE_EXEC_PATH,
@@ -42,7 +52,7 @@ const child = Bun.spawn(
     workspace,
   ],
   {
-    env: { ...env, KILO_V2_PROFILE: process.env.KILO_V2_PROFILE ?? path.join(state, "profile") },
+    env: { ...env, KILO_V2_PROFILE: profile },
     stdout: "inherit",
     stderr: "inherit",
   },
