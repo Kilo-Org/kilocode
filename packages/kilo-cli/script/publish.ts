@@ -27,8 +27,9 @@ const name = "@kilocode/cli"
 const tag = "kilo-v2"
 const repository = { type: "git", url: "git+https://github.com/Kilo-Org/kilocode.git" }
 const dryRun = process.argv.includes("--dry-run")
-// Every target that script/build.ts builds without --single or --target. The launcher lists the platform packages it
-// finds, so a partial build would publish a launcher that has no binary on the other platforms.
+// Every target that script/build.ts builds without --single or --target (`allTargets`). The launcher lists the platform
+// packages it finds, so a partial build would publish a launcher that has no binary on the other platforms. CI checks
+// this list against the full build in the dry run of every PR that changes script/build.ts.
 const targets = [
   "darwin-arm64",
   "darwin-x64",
@@ -58,10 +59,21 @@ if (versions.size === 0) throw new Error(`No platform packages in ${root}. Run s
 if (versions.size > 1) throw new Error(`Platform package versions do not match: ${[...versions].join(", ")}`)
 const version = [...versions][0]
 if (version !== Script.version) throw new Error(`Expected version ${Script.version}, the build has ${version}`)
-const missing = targets.filter((target) => !binaries[`@kilocode/cli-${target}`])
-// A dry run of a local --single build is fine. A publish needs every platform.
-if (missing.length > 0 && !dryRun)
-  throw new Error(`Missing platform packages for ${missing.join(", ")}. Run script/build.ts without --single.`)
+const built = Object.keys(binaries).map((pkg) => pkg.slice("@kilocode/cli-".length))
+const missing = targets.filter((target) => !built.includes(target))
+const unexpected = built.filter((target) => !targets.includes(target))
+// A local dry run of a --single build is fine. A publish and every CI run need exactly the targets above.
+if ((missing.length > 0 || unexpected.length > 0) && (!dryRun || process.env.CI))
+  throw new Error(
+    [
+      missing.length > 0 &&
+        `Missing platform packages for ${missing.join(", ")}. Run script/build.ts without --single.`,
+      unexpected.length > 0 &&
+        `Unexpected platform packages for ${unexpected.join(", ")}. Update targets in this script.`,
+    ]
+      .filter(Boolean)
+      .join(" "),
+  )
 
 const launcher = path.join(root, "cli")
 await rm(launcher, { recursive: true, force: true })
