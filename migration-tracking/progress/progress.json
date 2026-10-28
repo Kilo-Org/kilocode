@@ -4,7 +4,7 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 591,
+    "done": 592,
     "total": 9819,
     "percent": 6,
     "dropped": 35,
@@ -26,7 +26,7 @@
       },
       {
         "kind": "test",
-        "done": 33,
+        "done": 34,
         "total": 2794
       }
     ],
@@ -727,7 +727,7 @@
     },
     {
       "feature": "enhance-prompt",
-      "done": 0,
+      "done": 1,
       "total": 2,
       "dropped": 0,
       "kinds": {
@@ -744,7 +744,7 @@
           "total": 0
         },
         "test": {
-          "done": 0,
+          "done": 1,
           "total": 1
         }
       }
@@ -6706,6 +6706,7 @@
     "module:packages/opencode/test/kilocode/agent-skill-permissions.test.ts",
     "module:packages/opencode/test/kilocode/ask-agent-permissions.test.ts",
     "module:packages/opencode/test/kilocode/config/hide-prompt-training-models.test.ts",
+    "module:packages/opencode/test/kilocode/enhance-prompt.test.ts",
     "module:packages/opencode/test/kilocode/free-model-disclosure.test.ts",
     "module:packages/opencode/test/kilocode/kilo-errors.test.ts",
     "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts",
