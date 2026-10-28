@@ -143,6 +143,11 @@ export function patchId(added: string[]) {
   return new Bun.CryptoHasher("sha256").update(normalized).digest("hex").slice(0, 12)
 }
 
+/** Import-path suffixes are not evidence that an HTTP route exists. */
+export function apiLiterals(source: string) {
+  return new Set([...source.matchAll(/(["'`])(\/kilocode\/[^"'`\r\n]+)\1/g)].map((match) => match[2]))
+}
+
 export type Hunk = { file: string; line: number; added: string[]; removed: string[] }
 
 export function parseHunks(diff: string) {
@@ -315,20 +320,17 @@ async function collect(config: Config, dispositions: Record<string, Disposition>
     .filter((p) => p.startsWith("/kilocode/"))
     .sort()
   const literals = routes.length
-    ? new Set(
-        (
-          await git([
-            "grep",
-            "-h",
-            "-o",
-            "-F",
-            ...routes.flatMap((r) => ["-e", r]),
-            "--",
-            "packages/protocol/src",
-            "packages/server/src",
-            ...v2Files,
-          ]).catch(() => "")
-        ).split("\n"),
+    ? apiLiterals(
+        await git([
+          "grep",
+          "-h",
+          "-F",
+          ...routes.flatMap((r) => ["-e", r]),
+          "--",
+          "packages/protocol/src",
+          "packages/server/src",
+          ...v2Files,
+        ]).catch(() => ""),
       )
     : new Set<string>()
   for (const route of routes) {

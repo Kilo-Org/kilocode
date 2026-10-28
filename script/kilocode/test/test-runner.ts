@@ -261,7 +261,8 @@ async function run(item: string): Promise<Result> {
   const begin = performance.now()
   const proc = Bun.spawn(cmd, {
     cwd,
-    env: process.env,
+    // Render tests must not inherit truecolor capabilities from the caller's terminal.
+    env: { ...process.env, COLORTERM: "", WT_SESSION: undefined },
     stdout: "pipe",
     stderr: "pipe",
     windowsHide: true,

@@ -530,7 +530,7 @@ Every E2 unit except U-E2-18, -21, -28 (SMALL) and U-E2-29 (EMPTY) re-derives be
 | Unit | Title | Issue | Gate | Deps | Delta | Stale | Donor | Acceptance | Status |
 |---|---|---|---|---|---|---|---|---|---|
 | U-E2-22 | MCP deltas (OAuth callback handoff, issuer discovery, auth-failure surfacing, SSE probe, jsonc writes) and `git:` plugin sources | new | G1 | U-E0-02 | partial | NEW | partial L | Each delta tested against BASE MCP (gap narrowed upstream; port only what is missing); `git:` sources install | todo |
-| U-E2-23 | Marketplace (MCP servers, skills, modes, plugins) | new | G1 | U-E2-22 | needs-port | NEW | no | Marketplace lists and installs each item type through the CLI API | todo |
+| U-E2-23 | Marketplace (MCP servers, skills, modes, plugins) | new | G1 | U-E2-22 | needs-port | NEW | no | Marketplace lists and installs each item type through the CLI API | partial: default Kilo skills/MCP RPC and TUI; modes/plugins and IDE consumers remain open |
 
 ### Workstream: agent coordination
 

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import {
+  apiLiterals,
   areaOf,
   canon,
   classify,
@@ -19,6 +20,13 @@ import {
 } from "./progress"
 
 const split = { "session/steering": "steering", "kilo-ui": "ui", plugins: "plugin" }
+
+test("API proofs match standalone route literals, not schema imports", () => {
+  expect(apiLiterals('import { Rpc } from "@opencode/schema/kilocode/marketplace"')).toEqual(new Set())
+  expect(apiLiterals('"/kilocode/marketplace/install"\n\'/kilocode/example\'\n`/kilocode/usage`')).toEqual(
+    new Set(["/kilocode/marketplace/install", "/kilocode/example", "/kilocode/usage"]),
+  )
+})
 
 test("history uses v2 rather than feature-branch or synthetic merge ancestry", async () => {
   const current = JSON.stringify({ summary: { done: 92, total: 9829, percent: 0.9 }, coreImports: 12 }) + "\n"

@@ -36,10 +36,10 @@
       "seam": 3,
       "patch": 6
     },
-    "coreImports": 26,
+    "coreImports": 27,
     "sharedPatches": {
-      "seam": 33,
-      "patch": 21
+      "seam": 32,
+      "patch": 22
     }
   },
   "notCounted": {
@@ -58,6 +58,7 @@
     "@opencode/core/config",
     "@opencode/core/config/discovery",
     "@opencode/core/config/normalize",
+    "@opencode/core/config/plugin/skill-file",
     "@opencode/core/effect/app-node-platform",
     "@opencode/core/model",
     "@opencode/core/model-resolver",
