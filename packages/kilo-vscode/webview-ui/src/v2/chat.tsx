@@ -94,14 +94,14 @@ export function Chat() {
     return undefined
   }
 
-  // Start of the running turn: the first assistant row after the last user row, so every step of one turn shares a
-  // start and a previous turn's row cannot leak in before this turn produces one.
+  // Start of the running turn: the last user row's `time.created`. It is the turn's own anchor, so it exists from the
+  // moment the prompt is admitted, before the first assistant row, and it covers every step of the turn.
   const started = () => {
     const id = session()
     if (!id) return undefined
     const list = v2.data.session.message.list(id)
-    const first = list[list.findLastIndex((item) => item.type === "user") + 1]
-    return first?.type === "assistant" ? first.time.created : undefined
+    const user = list.findLast((item) => item.type === "user")
+    return user?.time.created
   }
 
   // MessageList owns the transcript scroller; the working indicator's scroll button calls back into it.

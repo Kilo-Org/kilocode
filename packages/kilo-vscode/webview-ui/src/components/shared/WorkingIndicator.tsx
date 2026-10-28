@@ -19,7 +19,7 @@ export type Retry = { attempt: number; at: number; error: { message: string } }
 
 export const WorkingIndicator = (props: {
   session: string
-  // Start of the running turn, from the assistant row's `time.created`, so a remount mid-turn keeps the real elapsed
+  // Start of the running turn, from the last user row's `time.created`, so a remount mid-turn keeps the real elapsed
   // time instead of restarting at zero (v1 reads it from the session's busy timing).
   start?: number
   // The dock shows the working indicator only while the turn runs and nothing is blocked (v1 `showsWorking`).
@@ -33,16 +33,17 @@ export const WorkingIndicator = (props: {
   const language = useLanguage()
   const [elapsed, setElapsed] = createSignal(0)
   const [retryCountdown, setRetryCountdown] = createSignal(0)
-  const mountedAt = Date.now()
   // v1's `activeTiming`: the time since the turn began, less the stretches it sat parked on a permission or question.
+  // Without a known turn start the counter reads zero; measuring from mount would leak the whole chat view's age into
+  // a new turn, since this row stays mounted across turns.
   let paused = 0
   let pauseAt: number | undefined
   let lastStart: number | undefined
 
   const activeElapsed = () => {
-    const start = props.start ?? mountedAt
+    if (props.start === undefined) return 0
     const parked = pauseAt === undefined ? 0 : Date.now() - pauseAt
-    return Math.max(0, Date.now() - start - paused - parked)
+    return Math.max(0, Date.now() - props.start - paused - parked)
   }
 
   createEffect(
