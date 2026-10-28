@@ -38,6 +38,19 @@ class KiloHostedServiceTest {
     }
 
     @Test
+    fun `failed workspace status reads settle as unavailable rather than loading indefinitely`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val rpc = object : KiloHostedRpcApi by FakeRpc(mapOf(null to HostedWorkspaceListDto(listOf(HostedWorkspaceDto(ref))))) {
+            override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspaceStatusDto =
+                error("status unavailable")
+        }
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog(), repo = { "repo" })
+        service.refresh("/repo")
+        val state = withTimeout(WAIT) { service.state.first { it.items.isNotEmpty() && !it.loading } }
+        assertEquals("unavailable", state.presentation(ref)?.computeStatus)
+    }
+
+    @Test
     fun `failure survives idle replay and newer attempt retires the failed attempt`() = runBlocking {
         val ref = HostedWorkspaceRefDto("cloud", "one")
         val key = "${ref.key}:same"
@@ -169,6 +182,54 @@ class KiloHostedServiceTest {
     }
 
     @Test
+    fun `discovers repository workspaces across branches beyond ten pages`() = runBlocking(Dispatchers.Default) {
+        val remote = "https://example.test/owner/repository"
+        val pages = (0 until 12).associate { page ->
+            val cursor = page.toString().takeUnless { page == 0 }
+            cursor to HostedWorkspaceListDto(
+                items = listOf(workspace(page.toString()).copy(
+                    repositoryUrl = remote,
+                    branch = "feature/$page",
+                    sessions = emptyList(),
+                )),
+                cursor = (page + 1).toString().takeUnless { page == 11 },
+            )
+        }
+        val rpc = FakeRpc(pages = pages)
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog(), repo = { remote })
+
+        service.refresh("/repo")
+        val state = withTimeout(WAIT) { service.state.first { !it.loading && it.items.isNotEmpty() } }
+
+        assertEquals((0 until 12).map { "feature/$it" }, state.items.map { it.branch })
+        assertEquals(pages.keys.map { remote to it }, rpc.requests.toList())
+        assertNull(state.cursor)
+        assertNull(state.error)
+    }
+
+    @Test
+    fun `workspace discovery stops before requesting a repeated cursor again`() = runBlocking(Dispatchers.Default) {
+        for (next in listOf("one", "two")) {
+            val rpc = FakeRpc(pages = mapOf(
+                null to HostedWorkspaceListDto(items = listOf(workspace("0")), cursor = "one"),
+                "one" to HostedWorkspaceListDto(items = listOf(workspace("1")), cursor = "two"),
+                "two" to HostedWorkspaceListDto(items = listOf(workspace("2")), cursor = next),
+            ))
+            val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog(), repo = { "repo" })
+
+            service.refresh("/repo")
+            val state = withTimeout(WAIT) { service.state.first { !it.loading && it.items.isNotEmpty() } }
+
+            assertEquals(listOf("wrk_0", "wrk_1", "wrk_2"), state.items.map { it.ref.workspaceID })
+            assertEquals(listOf(null, "one", "two"), rpc.requests.map { it.second })
+            assertNull(state.cursor)
+            assertNull(state.error)
+            service.loadMore()
+            assertEquals(3, rpc.requests.size)
+        }
+    }
+
+    @Test
     fun `pagination follows the session cursor`() = runBlocking(Dispatchers.Default) {
         val ref = HostedWorkspaceRefDto("cloud", "wrk_1")
         val rpc = FakeRpc(
@@ -182,6 +243,52 @@ class KiloHostedServiceTest {
         val sessions = service.sessions(ref)
 
         assertEquals(listOf("s1", "s2", "s3"), sessions.map { it.nativeSessionID })
+    }
+
+    @Test
+    fun `root session discovery follows every page beyond ten pages`() = runBlocking(Dispatchers.Default) {
+        val pages = (0 until 12).associate { page ->
+            val cursor = page.toString().takeUnless { page == 0 }
+            cursor to sessionPage("s$page", cursor = (page + 1).toString().takeUnless { page == 11 })
+        }
+        val rpc = FakeRpc(sessionPages = pages)
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+
+        val sessions = withTimeout(WAIT) { service.sessions(HostedWorkspaceRefDto("cloud", "wrk_1")) }
+
+        assertEquals((0 until 12).map { "s$it" }, sessions.map { it.nativeSessionID })
+        assertEquals(pages.keys.toList(), rpc.cursors)
+    }
+
+    @Test
+    fun `root session discovery stops before requesting repeated cursors again`() = runBlocking(Dispatchers.Default) {
+        for (next in listOf("one", "two")) {
+            val rpc = FakeRpc(sessionPages = mapOf(
+                null to sessionPage("s0", cursor = "one"),
+                "one" to sessionPage("s0", "s1", cursor = "two"),
+                "two" to sessionPage("s2", cursor = next),
+            ))
+            val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+
+            val sessions = withTimeout(WAIT) { service.sessions(HostedWorkspaceRefDto("cloud", "wrk_1")) }
+
+            assertEquals(listOf("s0", "s1", "s2"), sessions.map { it.nativeSessionID })
+            assertEquals(listOf(null, "one", "two"), rpc.cursors)
+        }
+    }
+
+    @Test
+    fun `root session discovery reuses an already loaded first page`() = runBlocking(Dispatchers.Default) {
+        val first = sessionPage("s0", "s1", cursor = "next")
+        val rpc = FakeRpc(sessionPages = mapOf("next" to sessionPage("s1", "s2", cursor = null)))
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
+
+        val sessions = service.sessions(first.ref, first)
+
+        assertEquals(listOf("s0", "s1", "s2"), sessions.map { it.nativeSessionID })
+        assertEquals(listOf<String?>("next"), rpc.cursors.toList())
+        assertEquals(first.sessions, service.sessions(first.ref, first.copy(sessionCursor = null)))
+        assertEquals(1, rpc.workspaceCalls)
     }
 
     @Test
@@ -241,8 +348,10 @@ class KiloHostedServiceTest {
             rpc.events.emit(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "running",
                 sandboxDetail = "ready", observedAt = 200.0))
             withTimeout(WAIT) { service.state.first { it.statuses[ref.key]?.computeStatus == "running" } }
+            assertEquals("setting_up", service.state.value.presentation(ref)?.computeStatus)
             rpc.events.emit(HostedSystemEventDto(key, "cloud.status", cloudStatus = "idle", observedAt = 120.0))
             withTimeout(WAIT) { service.state.first { it.preparations[key]?.cloudStatus == "idle" } }
+            assertEquals("running", service.state.value.presentation(ref)?.computeStatus)
             rpc.events.emit(HostedSystemEventDto(key, "cloud.sandbox.status", sandboxStatus = "sleeping", observedAt = 150.0))
             rpc.status = rpc.status!!.copy(observedAt = 160.0)
             assertEquals("running", service.status(ref).computeStatus)
@@ -272,10 +381,14 @@ class KiloHostedServiceTest {
             rpc.events.emit(HostedSystemEventDto("${two.key}:same", "cloud.status", cloudStatus = "idle", observedAt = 20.0))
             withTimeout(WAIT) { service.state.first { it.preparations.size == 2 } }
             assertEquals("unknown", service.state.value.statuses[one.key]?.computeStatus)
+            assertEquals("starting", service.state.value.presentation(one)?.computeStatus)
             rpc.events.emit(HostedSystemEventDto("${one.key}:same", "cloud.status", cloudStatus = "idle", observedAt = 90.0))
             rpc.events.emit(HostedSystemEventDto("${two.key}:same", "cloud.sandbox.status", sandboxStatus = "sleeping", observedAt = 30.0))
             withTimeout(WAIT) { service.state.first { it.statuses[two.key]?.computeStatus == "sleeping" } }
             assertEquals("preparing", service.state.value.preparations["${one.key}:same"]?.cloudStatus)
+            rpc.events.emit(HostedSystemEventDto("${one.key}:same", "cloud.status", cloudStatus = "idle", observedAt = 110.0))
+            withTimeout(WAIT) { service.state.first { it.preparations["${one.key}:same"]?.cloudStatus == "idle" } }
+            assertEquals("unknown", service.state.value.presentation(one)?.computeStatus)
         } finally { Disposer.dispose(parent) }
     }
 
@@ -581,6 +694,8 @@ class KiloHostedServiceTest {
     ) : KiloHostedRpcApi {
         var workspaceCalls = 0
             private set
+        val requests = mutableListOf<Pair<String?, String?>>()
+        val cursors = mutableListOf<String?>()
         val events = MutableSharedFlow<HostedSystemEventDto>(extraBufferCapacity = 16, replay = 16)
         val opened = Channel<Unit>(Channel.UNLIMITED)
         val closed = Channel<Unit>(Channel.UNLIMITED)
@@ -603,7 +718,10 @@ class KiloHostedServiceTest {
             repositoryUrl: String?,
             cursor: String?,
             organizationID: String?,
-        ): HostedWorkspaceListDto = pages.getValue(cursor)
+        ): HostedWorkspaceListDto {
+            requests += repositoryUrl to cursor
+            return pages.getValue(cursor)
+        }
 
         override suspend fun workspace(
             ref: HostedWorkspaceRefDto,
@@ -611,6 +729,7 @@ class KiloHostedServiceTest {
             organizationID: String?,
         ): HostedWorkspaceDto {
             workspaceCalls++
+            cursors += sessionCursor
             return sessionPages.getValue(sessionCursor)
         }
 

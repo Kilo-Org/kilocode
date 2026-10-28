@@ -1,6 +1,9 @@
 package ai.kilocode.client.actions
 
 import ai.kilocode.client.agentManager.worktree.WorktreeDataKeys
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
+import ai.kilocode.rpc.dto.HostedWorkspaceDto
+import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloHostedService
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -558,6 +561,23 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         update(action, event)
 
         assertFalse(event.presentation.isEnabledAndVisible)
+    }
+
+    fun `test setup script action never offers local setup for a cloud workspace`() {
+        val action = OpenSetupScriptAction()
+        val dto = HostedWorkspaceDto(HostedWorkspaceRefDto("cloud", "one"))
+        val event = AnActionEvent.createFromDataContext("", action.templatePresentation.clone(), DataContext { id ->
+            when {
+                CommonDataKeys.PROJECT.`is`(id) -> project
+                SessionManager.WORKSPACE_KEY.`is`(id) -> workspace("/test")
+                HostedWorkspaceDataKeys.WORKSPACE.`is`(id) -> dto
+                else -> null
+            }
+        })
+        update(action, event)
+        assertFalse(event.presentation.isEnabledAndVisible)
+        action.actionPerformed(event)
+        assertTrue(rpc.setupScriptTargetCalls.isEmpty())
     }
 
     fun `test setup script action visible on a non-main worktree row`() {

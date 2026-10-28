@@ -28,7 +28,11 @@ import ai.kilocode.client.agentManager.worktree.openWorktreeSession
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceEditorMatcher
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRow
 import ai.kilocode.client.agentManager.hosted.HostedWorkspaceRowData
+import ai.kilocode.client.agentManager.hosted.HostedWorkspaceDataKeys
 import ai.kilocode.client.agentManager.hosted.openHostedWorkspace
+import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.agentManager.worktree.aggregateSessionActivity
+import ai.kilocode.rpc.dto.HostedIDs
 import ai.kilocode.client.agentManager.worktree.normalizeWorktreePath
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
@@ -83,6 +87,7 @@ import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.PlatformDataKeys
@@ -99,6 +104,13 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
+import ai.kilocode.client.util.edt
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import java.awt.Color
 import java.awt.Component
 import java.awt.Point
@@ -148,7 +160,7 @@ class AgentManagerPanel(
         onOpen = { row, focus ->
             when (row) {
                 is WorktreeRow -> open(row.dto, focus)
-                is HostedWorkspaceRow -> project?.let { openHostedWorkspace(it, row.data.dto.ref, row.data.dto.name, focus) }
+                is HostedWorkspaceRow -> project?.let { openHostedWorkspace(it, row.data.dto, focus) }
                 else -> Unit
             }
         },
@@ -157,7 +169,9 @@ class AgentManagerPanel(
                 canRename(it) || canDelete(it) || canOpenPr(it) || canOpenDiff(it) || canOpenLocalDiff(it) ||
                     canOpenSetupScript(it) || canRunSetup(it) || canCopyBranch(it)
             }
-        }),
+        }, alternate = ActiveListMenu(HostedWorkspaceDataKeys.WORKSPACE, group, element = { row ->
+            (row as? HostedWorkspaceRow)?.data?.dto
+        })),
         reorder = ActiveListReorder(
             movable = { row -> row is WorktreeRow && !row.current && row.progress == null },
             onMove = { move -> controller.reorder(move.keys) },
@@ -172,6 +186,8 @@ class AgentManagerPanel(
     private var dirty: Map<String, WorktreeDirtyDto> = emptyMap()
     private var running: Set<String> = emptySet()
     private var hostedState = KiloHostedService.HostedState()
+    private var activity = emptyMap<String, SessionActivityKind>()
+    private var observed = emptySet<String>()
     private var hovered: String? = null
     private var orphanBanner: OrphanBanner? = null
 
@@ -226,6 +242,7 @@ class AgentManagerPanel(
             project?.service<WorktreeStatusService>()?.refreshStats()
         }
         bindStatus()
+        bindActivity()
         bindEditorSelection()
         // Reflect names adopted or renamed in a worktree session editor tab in the list live.
         service<WorktreeNameCache>().addListener(this) { path, name ->
@@ -591,7 +608,18 @@ class AgentManagerPanel(
                     running = running.contains(key),
                 )
             } + if (hostedState.enabled) {
-                hostedState.items.map { HostedWorkspaceRow(HostedWorkspaceRowData(it, hostedState.presentation(it.ref))) }
+                hostedState.items.map { dto ->
+                    val kinds = activity.filterKeys { id -> HostedIDs.parseSession(id)?.let {
+                        it.first == dto.ref.providerID && it.second == dto.ref.workspaceID
+                    } == true }.values
+                    val status = hostedState.presentation(dto.ref)
+                    val known = dto.sessionCursor == null && dto.sessions.isNotEmpty() &&
+                        dto.sessions.all { it.id in observed }
+                    val kind = aggregateSessionActivity(kinds) ?: SessionActivityKind.RUNNING.takeIf {
+                        !known && status?.hasActiveTurn == true
+                    }
+                    HostedWorkspaceRow(HostedWorkspaceRowData(dto, status, kind))
+                }
             } else {
                 emptyList()
             },
@@ -711,6 +739,24 @@ class AgentManagerPanel(
         return SidePopupSpot(pane, Point(spot.x, aim.y), spot.position, aim.distance)
     }
 
+    private fun bindActivity() {
+        val target = project ?: return
+        val sessions = target.service<KiloSessionService>()
+        val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        Disposer.register(this) { cs.cancel() }
+        cs.launch {
+            combine(sessions.activity, sessions.statuses) { _, statuses ->
+                sessions.activitySnapshot() to statuses.keys
+            }.collect { (kinds, known) ->
+                edt({ !target.isDisposed && !Disposer.isDisposed(this@AgentManagerPanel) }) {
+                    activity = kinds
+                    observed = known
+                    sync()
+                }
+            }
+        }
+    }
+
     private fun bindStatus() {
         val target = project ?: return
         WorktreeStatusBinding(
@@ -736,8 +782,10 @@ class AgentManagerPanel(
     }
 
     override fun uiDataSnapshot(sink: DataSink) {
+        project?.let { sink[CommonDataKeys.PROJECT] = it }
         sink[SidePanelKeys.WORKTREE_PANEL] = this
         selectedRow()?.dto?.let { sink[WorktreeDataKeys.WORKTREE] = it }
+        (list.selected() as? HostedWorkspaceRow)?.data?.dto?.let { sink[HostedWorkspaceDataKeys.WORKSPACE] = it }
         sink[PlatformDataKeys.DELETE_ELEMENT_PROVIDER] = provider
     }
 

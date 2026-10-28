@@ -1,22 +1,14 @@
 package ai.kilocode.client.agentManager.hosted
 
-import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.agentManager.WorkspaceSessionEditorManager
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.session.SessionActivityKind
-import ai.kilocode.client.session.SessionHost
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
 import ai.kilocode.rpc.dto.HostedSystemEventDto
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ModalityState
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import javax.swing.JComponent
-import javax.swing.JPanel
 
 /**
  * Hosts the ordinary [SessionUi] for one Cloud workspace.
@@ -29,29 +21,13 @@ class HostedWorkspaceEditorManager(
     parent: Disposable,
     project: Project,
     workspace: Workspace,
-    private val presentUi: (SessionUi?) -> Unit,
-    private val changed: () -> Unit = {},
-) : SessionHost(
-    project = project,
-    root = workspace,
-    status = { project.service<KiloSessionService>().activitySnapshot() },
-    request = { focus ->
-        ApplicationManager.getApplication().invokeLater({
-            IdeFocusManager.getInstance(project).requestFocusInProject(focus, project)
-        }, ModalityState.defaultModalityState())
-    },
-) {
-    private val right = JPanel(java.awt.BorderLayout())
-
+) : WorkspaceSessionEditorManager(project, workspace) {
     init {
         Disposer.register(parent, this)
     }
 
-    val component: JPanel get() = right
-
     override val hosted: Boolean get() = true
     override val showsBranchDock: Boolean get() = false
-    override val hostedInEditorTab: Boolean get() = true
     override val supportsFork: Boolean get() = false
     override val supportsNewWorktree: Boolean get() = false
     override val supportsMoveToWorktree: Boolean get() = false
@@ -66,14 +42,9 @@ class HostedWorkspaceEditorManager(
     }
 
     @RequiresEdt
-    override fun present(ui: SessionUi?) {
-        presentUi(ui)
-    }
-
-    @RequiresEdt
     override fun activityChanged() {
         super.activityChanged()
-        changed()
+        onListChanged?.invoke()
     }
 
     @RequiresEdt

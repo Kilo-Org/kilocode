@@ -61,7 +61,6 @@ class KiloHostedService internal constructor(
 
     companion object {
         private val LOG = KiloLog.create(KiloHostedService::class.java)
-        private const val PAGE_LIMIT = 10
         private const val WATCH_LIMIT = 50
     }
 
@@ -88,14 +87,21 @@ class KiloHostedService internal constructor(
 
         /** Preparation is presentation only; native idle never changes canonical compute state. */
         fun presentation(ref: HostedWorkspaceRefDto): HostedWorkspaceStatusDto? {
-            val status = statuses[ref.key] ?: return null
+            val status = statuses[ref.key]
             val starting = preparations.values.any {
                 HostedIDs.parseSession(it.sessionID)?.let { id ->
                     id.first == ref.providerID && id.second == ref.workspaceID
                 } == true && preparation(it.sessionID) != null
             }
-            return if (status.computeStatus == "sleeping" && starting
-            ) status.copy(computeStatus = "starting") else status
+            if (!starting) return status
+            if (status == null) return HostedWorkspaceStatusDto(ref, "active", "starting", "", 0.0)
+            return when (status.computeStatus) {
+                "sleeping", "unknown", "stopped" -> status.copy(computeStatus = "starting")
+                // Compute is up but the workspace is still running its setup command, so the chat is
+                // not usable yet. Presentation-only: canonical compute status stays active.
+                "active", "running" -> status.copy(computeStatus = "setting_up")
+                else -> status
+            }
         }
     }
 
@@ -144,7 +150,7 @@ class KiloHostedService internal constructor(
     fun enabled(): Boolean = gate()
 
     /**
-     * Reloads the first page for [directory]'s repository. A no-op while the gate is off, so the
+     * Reloads all workspaces for [directory]'s repository. A no-op while the gate is off, so the
      * feature can still be explicitly disabled in the Registry.
      */
     fun refresh(directory: String) {
@@ -171,26 +177,33 @@ class KiloHostedService internal constructor(
                 _state.update { it.copy(repositoryUrl = remote) }
                 log.info("hosted workspace discovery started")
                 val items = mutableListOf<HostedWorkspaceDto>()
+                val seen = mutableSetOf<String?>()
                 var cursor: String? = null
                 var providers: List<HostedProviderDto> = emptyList()
                 var signedOut = false
-                for (page in 0 until PAGE_LIMIT) {
+                do {
+                    if (run != generation) return@launch
+                    if (!seen.add(cursor)) {
+                        log.warn("hosted workspace discovery stopped after repeated cursor")
+                        cursor = null
+                        break
+                    }
                     val result = call { workspaces(remote, cursor, null) }
                     providers = result.providers
                     signedOut = result.signedOut
                     items += result.items
                     cursor = result.cursor
-                    if (cursor == null) break
-                }
+                } while (cursor != null)
                 if (run != generation) return@launch
                 val unique = dedupe(items)
-                val statuses = unique.mapNotNull { ws ->
-                    runCatching { status(ws.ref) }.onFailure {
+                val statuses = unique.associate { ws ->
+                    val status = runCatching { status(ws.ref) }.getOrElse {
                         if (it is CancellationException) throw it
                         log.warn("hosted workspace status unavailable workspace=${ws.ref.key}", it)
-                    }.getOrNull()
-                        ?.let { ws.ref.key to it }
-                }.toMap()
+                        HostedWorkspaceStatusDto(ws.ref, ws.deletionState, "unavailable", "", 0.0)
+                    }
+                    ws.ref.key to status
+                }
                 if (run != generation) return@launch
                 _state.update { current -> HostedState(
                     enabled = true,
@@ -261,16 +274,25 @@ class KiloHostedService internal constructor(
     suspend fun workspace(ref: HostedWorkspaceRefDto): HostedWorkspaceDto =
         call { workspace(ref, null, null) }
 
-    /** All root sessions in one workspace, following the provider session cursor. */
-    suspend fun sessions(ref: HostedWorkspaceRefDto): List<HostedWorkspaceSessionDto> {
-        val out = mutableListOf<HostedWorkspaceSessionDto>()
-        var cursor: String? = null
-        for (page in 0 until PAGE_LIMIT) {
+    /** All root sessions in one workspace, optionally reusing an already fetched first page. */
+    suspend fun sessions(
+        ref: HostedWorkspaceRefDto,
+        first: HostedWorkspaceDto? = null,
+    ): List<HostedWorkspaceSessionDto> {
+        require(first == null || first.ref == ref)
+        val out = first?.sessions?.toMutableList() ?: mutableListOf()
+        val seen = mutableSetOf<String?>()
+        var cursor = first?.sessionCursor
+        if (first != null && cursor == null) return dedupeSessions(out)
+        do {
+            if (!seen.add(cursor)) {
+                log.warn("hosted session discovery stopped after repeated cursor workspace=${ref.key}")
+                break
+            }
             val result = call { workspace(ref, cursor, null) }
             out += result.sessions
             cursor = result.sessionCursor
-            if (cursor == null) break
-        }
+        } while (cursor != null)
         return dedupeSessions(out)
     }
 

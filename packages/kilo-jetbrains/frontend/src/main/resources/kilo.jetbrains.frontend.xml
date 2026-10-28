@@ -434,6 +434,9 @@
         <action id="Kilo.Worktree.RunSetupScript"
                 class="ai.kilocode.client.actions.RunWorktreeSetupScriptAction"/>
 
+        <action id="Kilo.HostedWorkspace.Refresh"
+                class="ai.kilocode.client.actions.RefreshHostedWorkspaceAction"/>
+
         <action id="Kilo.WorktreeSession.Rename"
                 class="ai.kilocode.client.actions.RenameWorktreeSessionAction"/>
 
@@ -447,6 +450,7 @@
                 class="ai.kilocode.client.actions.ForkWorktreeSessionAction"/>
 
         <group id="Kilo.Worktree.RowMenu">
+            <reference ref="Kilo.HostedWorkspace.Refresh"/>
             <reference ref="Kilo.Worktree.Rename"/>
             <separator/>
             <reference ref="Kilo.Worktree.OpenPr"/>
