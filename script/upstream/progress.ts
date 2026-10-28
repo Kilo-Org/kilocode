@@ -674,7 +674,11 @@ type Point = { date: string; done: number; total: number; percent: number }
  * is the same before and after the commit that stores it, which keeps `--check` stable.
  */
 export async function history(current: string, read = git) {
-  const log = await read(["log", "--first-parent", "--format=%H %cs", "origin/v2", "--", "migration-tracking/progress/progress.json"]).catch(() => "")
+  // Kilo-owned checkout note: CI's origin/v2 is the integration line, but dedicated fork
+  // checkouts can diverge their own origin/v2. Override the base ref for regeneration so the
+  // artifacts match what CI computes, without touching per-remote state.
+  const base = process.env.KILO_PROGRESS_BASE_V2 || "origin/v2"
+  const log = await read(["log", "--first-parent", "--format=%H %cs", base, "--", "migration-tracking/progress/progress.json"]).catch(() => "")
   const points: Point[] = []
   const seen = new Set<string>()
   for (const line of log.split("\n").filter(Boolean)) {
