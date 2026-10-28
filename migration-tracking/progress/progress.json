@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 591,
+    "done": 590,
     "total": 9819,
     "percent": 6,
     "dropped": 35,
     "kinds": [
       {
         "kind": "module",
-        "done": 482,
+        "done": 481,
         "total": 3543
       },
       {
@@ -727,12 +727,12 @@
     },
     {
       "feature": "enhance-prompt",
-      "done": 2,
+      "done": 1,
       "total": 2,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 1,
+          "done": 0,
           "total": 1
         },
         "api": {
@@ -6687,7 +6687,6 @@
     "module:packages/opencode/src/kilocode/components/model-info-panel.tsx",
     "module:packages/opencode/src/kilocode/components/news.ts",
     "module:packages/opencode/src/kilocode/components/notification-banner.tsx",
-    "module:packages/opencode/src/kilocode/enhance-prompt.ts",
     "module:packages/opencode/src/kilocode/kilo-commands.tsx",
     "module:packages/opencode/src/kilocode/kilo-errors.ts",
     "module:packages/opencode/src/kilocode/marketplace/api.ts",
