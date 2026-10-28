@@ -41,6 +41,7 @@ try {
   await setup.waitForFrame(() => served, { maxPasses: 100 })
   await setup.flush()
   for (const width of columns.slice(1)) {
+    Object.defineProperty(process.stdout, "columns", { value: width, configurable: true })
     setup.resize(width, 30)
     await setup.waitForFrame(() => setup.renderer.width === width, { maxPasses: 100 })
     await setup.flush()

@@ -251,7 +251,25 @@ for (const hosted of [false, true]) {
     })
     expect(result.success, result.logs.map(String).join("\n")).toBe(true)
     checkEpilogue(await run([outfile, "48"], root.path, !hosted), hosted, 48)
+    for (const scenario of ["update", "both", "none"] as const) {
+      checkEpilogue(await run([outfile, "48", scenario], root.path, !hosted), hosted, 48, scenario)
+    }
   }, 60_000)
+
+  for (const scenario of ["update", "both", "none"] as const) {
+    test(`source ${scenario} epilogue: ${hosted ? "Kilo" : "upstream"}`, async () => {
+      await using root = await temporary()
+      const fixture = path.join(import.meta.dir, "fixtures/epilogue.ts")
+      for (const columns of hosted ? [20, 120] : [48, 120]) {
+        checkEpilogue(
+          await run([process.execPath, fixture, String(columns), scenario], root.path, hosted),
+          hosted,
+          columns,
+          scenario,
+        )
+      }
+    }, 30_000)
+  }
 }
 
 for (const hosted of [false, true]) {
@@ -294,7 +312,11 @@ for (const hosted of [false, true]) {
   }, 60_000)
 }
 
-function checkEpilogue(output: string, hosted: boolean, columns: number) {
+function checkEpilogue(output: string, hosted: boolean, columns: number, scenario = "session") {
+  if (scenario === "none") {
+    expect(output).toBe("")
+    return
+  }
   const lines = Bun.stripANSI(output.trimEnd()).split("\n")
   const artLines = lines.filter((line) => /[█▀▄]/.test(line))
   const art = KiloLogo.art({})
@@ -306,8 +328,13 @@ function checkEpilogue(output: string, hosted: boolean, columns: number) {
   expect(artLines).toEqual(
     expected.map((line) => `  ${line.replaceAll("_", " ").replaceAll("^", "▀").replaceAll("~", "▀")}`),
   )
-  expect(output).toContain("Session")
-  expect(output).toContain(`${hosted ? "kilo2" : "opencode"} -s ses_example`)
+  if (scenario === "session" || scenario === "both") {
+    expect(output).toContain("Session")
+    expect(output).toContain(`${hosted ? "kilo2" : "opencode"} -s ses_example`)
+  }
+  if (scenario === "update" || scenario === "both") {
+    expect(Bun.stripANSI(output)).toContain(`Run ${hosted ? "kilo2" : "opencode"} to use 2.1.4`)
+  }
   if (columns > 0) for (const line of artLines) expect(Bun.stringWidth(line)).toBeLessThanOrEqual(columns)
 }
 
@@ -344,7 +371,15 @@ function checkPages(output: string, hosted: boolean) {
     error: string
     bootstrap: string
     modelError: string
+    update: string
+    updateSession: string
   }
+  for (const output of [pages.update, pages.updateSession]) {
+    const text = Bun.stripANSI(output)
+    expect(text).toContain(`Run ${hosted ? "kilo2" : "opencode"} to use 2.1.4`)
+    expect(text).not.toContain(hosted ? "opencode" : "kilo2")
+  }
+  expect(Bun.stripANSI(pages.updateSession)).toContain(`${hosted ? "kilo2" : "opencode"} -s test-session`)
   expect(pages.relative).toBe(pages.success)
   for (const html of [pages.success, pages.error, pages.bootstrap]) {
     expect(html).toContain(hosted ? "· Kilo</title>" : "· OpenCode</title>")

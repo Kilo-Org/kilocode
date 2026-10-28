@@ -82,16 +82,11 @@ export const replacements = {
   ],
   "tui/src/util/presentation.ts": [
     commands,
+    ["${bold}opencode${reset}", "${bold}kilo2${reset}"],
     ['import { logo } from "../logo"', 'import { compact, logo, widths } from "../logo"'],
-    ['function wordmark(pad = "") {', 'function wordmark(pad = "", columns = process.stdout.columns) {'],
-    [
-      "sessionEpilogue(input: { title: string; sessionID?: string })",
-      "sessionEpilogue(input: { title: string; sessionID?: string; columns?: number })",
-    ],
-    ['...wordmark("  "),', '...wordmark("  ", input.columns),'],
     [
       "  return logo.left.map((line, index) => {\n    const left",
-      '  if ((columns ?? widths.full + pad.length) < widths.full + pad.length)\n    return compact.map((line) => `${pad}${draw(line, dim, "\\x1b[38;5;235m", "\\x1b[48;5;235m")}`)\n\n  return logo.left.map((line, index) => {\n    const left',
+      '  if ((process.stdout.columns ?? widths.full + pad.length) < widths.full + pad.length)\n    return compact.map((line) => `${pad}${draw(line, dim, "\\x1b[38;5;235m", "\\x1b[48;5;235m")}`)\n\n  return logo.left.map((line, index) => {\n    const left',
     ],
   ],
   "tui/src/attention.ts": [product],
@@ -99,15 +94,9 @@ export const replacements = {
     product,
     title,
     ["Update OpenCode", "Kilo update instructions"],
-    ["https://opencode.ai/docs", "https://kilo.ai/docs"],
+    ["https://opencode.ai/v2/docs", "https://kilo.ai/docs"],
   ],
   "tui/src/mini/runtime.lifecycle.ts": [product, title],
-  "tui/src/routes/session/index.tsx": [
-    [
-      "setEpilogue(sessionEpilogue({ title, sessionID: session()?.id }))",
-      "setEpilogue(sessionEpilogue({ title, sessionID: session()?.id, columns: dimensions().width }))",
-    ],
-  ],
   "tui/src/routes/session/permission.tsx": [
     ["Tell OpenCode what to do differently", "Tell Kilo what to do differently"],
   ],
@@ -116,6 +105,10 @@ export const replacements = {
   "tui/src/mini/splash.ts": [commands],
   "tui/src/component/dialog-update.tsx": [
     ["Updating OpenCode", "Updating Kilo"],
+    [
+      "Update successful! Restart closes OpenCode, then run opencode to use the new version.",
+      "Update successful! Restart closes Kilo, then run kilo2 to use the new version.",
+    ],
     ["restart OpenCode", "restart Kilo"],
     ["Installing OpenCode", "Installing Kilo"],
     ["OpenCode is already up to date", "Kilo is already up to date"],

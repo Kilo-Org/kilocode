@@ -476,6 +476,15 @@ function normalizeExperimental(
         )
         if (value !== undefined) result.todo = value
       }
+      if (own(experimental, "background_compaction")) {
+        const value = decodeEncoded(
+          ConfigExperimental.Info.fields.background_compaction,
+          experimental.background_compaction,
+          ["experimental", "background_compaction"],
+          diagnostics,
+        )
+        if (value !== undefined) result.background_compaction = value
+      }
       if (own(experimental, "subagent_depth")) {
         const value = decodeEncoded(
           ConfigExperimental.Info.fields.subagent_depth,

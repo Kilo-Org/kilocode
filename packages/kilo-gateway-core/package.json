@@ -15,7 +15,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "bun test --timeout 30000 --only-failures",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "typecheck:tsc": "tsc --noEmit"
   },
   "dependencies": {
     "effect": "catalog:"

@@ -292,7 +292,8 @@ export const list = Effect.fn("PluginInternal.list")(function* () {
     // kilocode_change start - gateway seam: Location services for embedder plugins
     provide: <T extends Plugin>(plugin: T) => ({
       ...plugin,
-      effect: (host: Parameters<Plugin["effect"]>[0]) => plugin.effect(host).pipe(Effect.provide(context)),
+      effect: (host: Parameters<Plugin["effect"]>[0]): ReturnType<Plugin["effect"]> =>
+        plugin.effect(host).pipe(Effect.provide(context)),
     }),
     // kilocode_change end
     pre: resolve(pre),

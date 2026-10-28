@@ -17,6 +17,9 @@ describe("provider error classification", () => {
       "Too many tokens",
       "Input validation error: `inputs` tokens + `max_new_tokens` must be <= 131073. Given: 600035 `inputs` tokens and 16 `max_new_tokens`",
       "Token limit exceeded",
+      "Prompt exceeds max length",
+      "The input is too long for the selected model.",
+      "This text request is too large for the model's configured input limit.",
     ]
 
     expect(messages.every(isContextOverflow)).toBe(true)
