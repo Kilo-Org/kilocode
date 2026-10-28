@@ -88,7 +88,7 @@ export function Chat() {
   // A pending permission or question blocks new prompts, as on v1; Stop stays available.
   const blocked = () => permissions().length > 0 || forms().length > 0
   const selection = createSelection(session)
-  const working = createWorking(session, blocked)
+  const working = createWorking(session)
   let scrollToBottom: (() => void) | undefined
   // Counts the in-flight first message too, so the dock reserves the same row on the very first send, as on main.
   // A memo, so the actions row rebuilds only when this flips.

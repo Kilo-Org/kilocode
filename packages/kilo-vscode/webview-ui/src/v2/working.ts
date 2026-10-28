@@ -7,7 +7,7 @@ import { useLanguage } from "../context/language"
 import { hold, statusText, type Timing } from "../components/shared/working-indicator-utils"
 import { useV2 } from "./client"
 
-export function createWorking(session: () => string | undefined, blocked: () => boolean) {
+export function createWorking(session: () => string | undefined) {
   const v2 = useV2()
   const language = useLanguage()
   // Active time per session, kept while another session is open, as main's timingMap.
@@ -20,20 +20,32 @@ export function createWorking(session: () => string | undefined, blocked: () => 
       .list(id)
       .some((item) => item.type === "user" && v2.data.session.pending.status(id, item.id) === "starting")
   const busy = (id: string) => v2.data.session.status(id) !== "idle" || submitting(id)
-  // The open family waits on a permission or question: the clock holds, as main's `parked`.
-  const parked = (id: string) => id === session() && blocked()
+  // A pending permission or question in this session's own family: the clock holds, as main's `parked`. Read from
+  // the session itself, not from the open one, so switching away from a parked session cannot bank its wait time.
+  const parked = (id: string) =>
+    [id, ...v2.data.session.family(id).filter((item) => item !== id)].some(
+      (member) =>
+        (v2.data.session.permission.list(member)?.length ?? 0) > 0 ||
+        (v2.data.session.form.list(member)?.length ?? 0) > 0,
+    )
 
   createComputed(() => {
     const now = Date.now()
     const open = session()
     const ids = new Set([...v2.data.session.active(), ...(open ? [open] : []), ...untrack(() => Object.keys(timing))])
     for (const id of ids) {
-      const current = untrack(() => timing[id])
+      // Read the clock untracked, as main's createTiming does: a copy, so writes below cannot make this computed
+      // depend on itself through the store proxy.
+      const current = untrack(() => {
+        const entry = timing[id]
+        if (!entry) return undefined
+        return { active: entry.active, since: entry.since }
+      })
       if (!busy(id)) {
         if (current) setTiming(produce((map) => delete map[id]))
         continue
       }
-      const next = current ?? { active: 0 }
+      const next: Timing = current ?? { active: 0 }
       // Solid merges clock objects, so clear the running stretch explicitly.
       if (parked(id)) setTiming(id, { ...hold(next, now), since: undefined })
       else setTiming(id, { active: next.active, since: next.since ?? now })

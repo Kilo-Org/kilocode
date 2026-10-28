@@ -60,6 +60,24 @@ describe("statusText", () => {
     expect(label({ type: "text", text: "hi" })).toBe("session.status.writingResponse")
   })
 
+  test("follows the last part of the newest step", () => {
+    expect(statusText([user("u"), assistant([tool("read"), tool("shell")])], new Set(), t)).toBe(
+      "ui.sessionTurn.status.runningCommands",
+    )
+    expect(statusText([user("u"), assistant([tool("read")]), assistant([tool("shell")])], new Set(), t)).toBe(
+      "ui.sessionTurn.status.runningCommands",
+    )
+  })
+
+  test("starts the turn at the newest delivered user message", () => {
+    expect(
+      statusText([user("u1"), assistant([tool("read")]), user("u2"), assistant([tool("shell")])], new Set(), t),
+    ).toBe("ui.sessionTurn.status.runningCommands")
+    expect(statusText([user("u1"), assistant([tool("read")]), user("u2")], new Set(), t)).toBe(
+      "ui.sessionTurn.status.thinking",
+    )
+  })
+
   test("thinks before the first step and ignores undelivered input", () => {
     expect(statusText([user("u")], new Set(), t)).toBe("ui.sessionTurn.status.thinking")
     expect(statusText([user("u"), assistant([])], new Set(), t)).toBe("ui.sessionTurn.status.thinking")
