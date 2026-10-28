@@ -217,6 +217,10 @@ Cloud Agents support project-level [skills](/docs/code-with-ai/platforms/cli#ski
 Global skills (`~/.kilo/skills/`) are not available in Cloud Agents since there is no persistent user home directory.
 {% /callout %}
 
+### Skills from skills.sh
+
+An [agent environment profile](#agent-environment-profiles) can also install public skills from [skills.sh](https://skills.sh). Open the profile's **Skills** tab and add a qualified reference such as `anthropics/skills@frontend-design` or a skills.sh skill URL. Cloud Agent installs the referenced skill and its companion files when it prepares a session, so the contents always come from upstream rather than a snapshot saved in the profile. Because there is no Markdown snapshot to edit, you enable, disable, or delete a referenced skill instead of editing it. Manual skills and ZIP uploads work the same as before.
+
 ## Remote Connections
 
 Remote Connections let you access and control local CLI sessions from the Cloud Agents web interface. Your computer handles the compute; the cloud gives you a window into it from any device.
