@@ -29,6 +29,7 @@ class KiloBackendActivityManagerTest {
     private val events = MutableSharedFlow<ChatEventDto>(extraBufferCapacity = 16)
     private val statuses = MutableStateFlow<Map<String, SessionStatusDto>>(emptyMap())
     private val directories = mutableMapOf<String, String>()
+    private val parents = mutableMapOf<String, String>()
     private val manager = KiloBackendActivityManager(scope, TestLog())
 
     @AfterTest
@@ -42,7 +43,7 @@ class KiloBackendActivityManagerTest {
      * replay, so an emit before that point is silently discarded and the test hangs.
      */
     private suspend fun start() {
-        manager.start(statuses, { directories[it] }, events)
+        manager.start(statuses, { directories[it] }, { parents[it] }, events)
         withTimeout(5_000) { events.subscriptionCount.first { it > 0 } }
     }
 
@@ -206,6 +207,18 @@ class KiloBackendActivityManagerTest {
         assertFalse("ses_1" in manager.activity.value)
     }
 
+    @Test
+    fun `activity identifies an errored subagent session`() = runBlocking {
+        directories["ses_child"] = "/repo/wt"
+        parents["ses_child"] = "ses_root"
+        start()
+
+        events.emit(ChatEventDto.Error("ses_child"))
+
+        val snap = await("ses_child", SessionActivityKindDto.ERROR)
+        assertEquals("ses_root", snap["ses_child"]?.parentID)
+    }
+
     /**
      * A provider that ends the response in error writes the failure onto the message and reports it
      * only through the close reason, so the badge cannot depend on a session error event.
@@ -331,7 +344,7 @@ class KiloBackendActivityManagerTest {
         directories["ses_new"] = "/repo/new"
         start()
 
-        manager.start(nextStatuses, { directories[it] }, nextEvents)
+        manager.start(nextStatuses, { directories[it] }, { parents[it] }, nextEvents)
         statuses.value = mapOf("ses_old" to SessionStatusDto("busy"))
         nextStatuses.value = mapOf("ses_new" to SessionStatusDto("busy"))
 
@@ -367,7 +380,7 @@ class KiloBackendActivityManagerTest {
 
         // What load() does after a disposal: same flows, fresh collectors.
         val reloaded = MutableStateFlow(mapOf("ses_1" to SessionStatusDto("idle")))
-        manager.start(reloaded, { directories[it] }, events)
+        manager.start(reloaded, { directories[it] }, { parents[it] }, events)
 
         await("ses_1", SessionActivityKindDto.ERROR)
     }

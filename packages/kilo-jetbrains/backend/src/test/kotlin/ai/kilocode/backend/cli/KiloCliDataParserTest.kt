@@ -1139,6 +1139,22 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseSessionChange - carries the parent session id`() {
+            val data = globalEvent("""
+                "type": "session.created",
+                "properties": {
+                    "info": {
+                        "id": "ses_child",
+                        "directory": "/repo",
+                        "parentID": "ses_root"
+                    }
+                }
+            """)
+
+            assertEquals("ses_root", KiloCliDataParser.parseSessionChange("session.created", data)?.parentID)
+        }
+
+        @Test
         fun `parseSessionChange - updated and deleted map to their kinds`() {
             val updated = KiloCliDataParser.parseSessionChange(
                 "session.updated",

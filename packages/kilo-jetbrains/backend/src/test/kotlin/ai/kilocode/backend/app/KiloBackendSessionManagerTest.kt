@@ -719,6 +719,29 @@ class KiloBackendSessionManagerTest {
     }
 
     @Test
+    fun `SSE session lifecycle records the parent and direct delete clears every cache`() = runBlocking {
+        val app = setup()
+        ready(app)
+        mock.awaitSseConnection()
+
+        awaitChange(app) {
+            mock.pushEvent(
+                "session.created",
+                """{"type":"session.created","properties":{"sessionID":"ses_child","info":""" +
+                    """{"id":"ses_child","projectID":"prj","directory":"/repo/wt","title":"T","version":"1",""" +
+                    """"parentID":"ses_root","time":{"created":1,"updated":2}}}}""",
+            )
+        }
+        assertEquals("ses_root", app.sessions.sessionParent("ses_child"))
+        assertEquals("/repo/wt", app.sessions.sessionDirectory("ses_child"))
+
+        // Deleting through the RPC path must not wait for the echoed SSE event to drop the parent.
+        app.sessions.delete("ses_child", "/repo/wt")
+        assertNull(app.sessions.sessionParent("ses_child"))
+        assertNull(app.sessions.sessionDirectory("ses_child"))
+    }
+
+    @Test
     fun `seed populates status map from server`() = runBlocking {
         mock.sessionStatuses = """{
             "ses_a": {"type":"idle","attempt":0,"message":"","next":0,"requestID":""},
