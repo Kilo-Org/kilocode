@@ -50,7 +50,7 @@ async function eventually<A>(read: () => Promise<A>, ready: (value: A) => boolea
 
 test("a project Agent Plugin's skill and stdio MCP server reach the server API", async () => {
   const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), "kilo-agent-plugins-")))
-  const root = path.join(directory, ".agents/plugins/demo")
+  const root = path.join(directory, ".kilo2/plugins/demo")
   await mkdir(path.join(root, "skills/summarize"), { recursive: true })
   await mkdir(path.join(root, "bin"), { recursive: true })
   await writeFile(path.join(root, "plugin.json"), JSON.stringify({ $schema: PLUGIN, name: "demo" }))

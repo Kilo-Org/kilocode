@@ -11,7 +11,7 @@ import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Skill } from "@opencode/core/skill"
 import type { MCPEditor } from "@opencode/plugin/effect/mcp"
-import { Document, Info, type Entry } from "@opencode/schema/config"
+import { Directory, Document, Info, type Entry } from "@opencode/schema/config"
 import { Mcp } from "@opencode/schema/mcp"
 import { LayerNode } from "@opencode/util/effect/layer-node"
 import { FSUtil } from "@opencode/util/fs-util"
@@ -93,19 +93,24 @@ const start = Effect.fnUntraced(function* (input: {
 }) {
   const skills = yield* Skill.Service
   const mcp = mcpHost(input.servers)
-  const agents = [path.join(input.home, ".agents"), ...(input.project ? [path.join(input.project, ".agents")] : [])]
+  // The global Kilo config directory, then the project's .kilo2, as config discovery orders them.
+  const roots = [path.join(input.home, ".config/kilo2"), ...(input.project ? [path.join(input.project, ".kilo2")] : [])]
+  const directories = roots.map((root) => new Directory({ type: "directory", path: AbsolutePath.make(root) }))
   yield* KiloAgentPlugins.Plugin.effect(
     host({
       skill: { list: () => Effect.die("unused skill.list"), transform: skills.transform, reload: skills.reload },
       mcp: mcp.domain,
     }),
   ).pipe(
-    Effect.provide(
-      Config.testLayer(input.entries ?? [], { claude: [], agents: agents.map((item) => AbsolutePath.make(item)) }),
-    ),
+    Effect.provide(Config.testLayer([...directories, ...(input.entries ?? [])])),
     Effect.provideService(
       Global.Service,
-      Global.Service.of({ ...Global.make(), home: input.home, data: path.join(input.home, "data") }),
+      Global.Service.of({
+        ...Global.make(),
+        home: input.home,
+        config: path.join(input.home, ".config/kilo2"),
+        data: path.join(input.home, "data"),
+      }),
     ),
   )
   return { skills, mcp }
@@ -121,7 +126,7 @@ describe("Agent Plugins adapter", () => {
       yield* Effect.promise(() =>
         Promise.all([
           write(
-            path.join(home, ".agents/plugins/tools"),
+            path.join(home, ".config/kilo2/plugins/tools"),
             plugin("acme.tools", {
               "skills/summarize/SKILL.md": skill("summarize"),
               "bin/server": "#!/bin/sh",
@@ -137,14 +142,14 @@ describe("Agent Plugins adapter", () => {
             }),
           ),
           write(
-            path.join(project, ".agents/plugins/review"),
+            path.join(project, ".kilo2/plugins/review"),
             plugin("review", { "skills/review/SKILL.md": skill("review") }),
           ),
-          write(path.join(project, ".agents/plugins/not-a-plugin"), { "README.md": "no manifest" }),
+          write(path.join(project, ".kilo2/plugins/not-a-plugin"), { "README.md": "no manifest" }),
           write(path.join(project, "vendor/deploy"), plugin("deploy", { "skills/ship/SKILL.md": skill("ship") })),
         ]),
       )
-      const root = path.join(home, ".agents/plugins/tools")
+      const root = path.join(home, ".config/kilo2/plugins/tools")
       const { skills, mcp } = yield* start({
         home,
         project,
@@ -182,9 +187,9 @@ describe("Agent Plugins adapter", () => {
       const mcpJson = { $schema: MCP, mcpServers: { db: { type: "stdio", command: "node" } } }
       yield* Effect.promise(() =>
         Promise.all([
-          write(path.join(home, ".agents/plugins/a"), plugin("alpha", { "mcp.json": mcpJson })),
+          write(path.join(home, ".config/kilo2/plugins/a"), plugin("alpha", { "mcp.json": mcpJson })),
           write(
-            path.join(home, ".agents/plugins/b"),
+            path.join(home, ".config/kilo2/plugins/b"),
             plugin("beta", { "mcp.json": mcpJson, "skills/x/SKILL.md": skill("x") }),
           ),
         ]),
@@ -209,7 +214,7 @@ describe("Agent Plugins adapter", () => {
       const home = yield* Effect.promise(temp)
       yield* Effect.promise(() =>
         write(
-          path.join(home, ".agents/plugins/a"),
+          path.join(home, ".config/kilo2/plugins/a"),
           plugin("alpha", { "mcp.json": { $schema: MCP, mcpServers: { db: { type: "stdio", command: "node" } } } }),
         ),
       )
@@ -229,7 +234,7 @@ describe("Agent Plugins adapter", () => {
   it.live("a watched change reloads the plugins", () =>
     Effect.gen(function* () {
       const home = yield* Effect.promise(temp)
-      const root = path.join(home, ".agents/plugins/live")
+      const root = path.join(home, ".config/kilo2/plugins/live")
       yield* Effect.promise(() => write(root, plugin("live", { "skills/one/SKILL.md": skill("one") })))
       const { skills } = yield* start({ home })
       expect(ids(yield* skills.list())).toEqual(["live:one"])

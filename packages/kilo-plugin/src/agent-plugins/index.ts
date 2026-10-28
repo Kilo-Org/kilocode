@@ -4,7 +4,7 @@ import { Config } from "@opencode/core/config"
 import { Watcher } from "@opencode/core/filesystem/watcher"
 import { KiloConfigPolicy } from "@opencode/core/kilocode/config/policy"
 import { define } from "@opencode/plugin/effect/plugin"
-import { Document } from "@opencode/schema/config"
+import { Directory, Document } from "@opencode/schema/config"
 import { Mcp } from "@opencode/schema/mcp"
 import { Skill } from "@opencode/schema/skill"
 import { FSUtil } from "@opencode/util/fs-util"
@@ -36,8 +36,9 @@ interface Candidate {
 
 /**
  * Loads Agent Plugins (agent-plugins.org) and contributes their skills and MCP servers. Plugins come from the
- * `plugins/` directory of every `.agents` root (`~/.agents` and the project's, nearest last) and from the
- * `agent_plugins.paths` config setting. User config wins: a config skill with the same ID replaces a plugin skill,
+ * `plugins/` directory of every Kilo config directory (the global one, then each project `.kilo2`, nearest last) and
+ * from the `agent_plugins.paths` config setting. That directory is shared with JS plugins, which load only from a
+ * child with a `server` or `index` module; a child with `plugin.json` is an Agent Plugin. User config wins: a config skill with the same ID replaces a plugin skill,
  * and a configured MCP server with the same name is never overwritten.
  */
 export const Plugin = define<Global.Service | Scope.Scope>({
@@ -45,7 +46,7 @@ export const Plugin = define<Global.Service | Scope.Scope>({
   effect: Effect.fn(function* (ctx) {
     const global = yield* Global.Service
     // Location services reach host plugins through the supervisor; a bare SDK embed has neither and gets only the
-    // global ~/.agents root and no watching.
+    // global config directory and no watching.
     const config = Option.getOrUndefined(yield* Effect.serviceOption(Config.Service))
     const watcher = Option.getOrUndefined(yield* Effect.serviceOption(Watcher.Service))
     const dataRoot = path.join(global.data, "agent-plugins")
@@ -103,11 +104,12 @@ export const Plugin = define<Global.Service | Scope.Scope>({
         yield* FiberMap.clear(watches)
         const entries = config ? yield* config.entries() : []
         state.entries = entries.filter((entry): entry is Document => entry.type === "document")
-        const agents = config?.compatibility
-          ? (yield* config.compatibility()).agents
-          : [path.join(global.home, ".agents")]
+        // Config directories come in precedence order: the global directory first, then project ones, nearest last.
+        const roots = config
+          ? entries.filter((entry): entry is Directory => entry.type === "directory").map((entry) => entry.path)
+          : [global.config]
         const settings = KiloConfigPolicy.agentPlugins(entries)
-        const directories = agents.map((root) => path.join(root, "plugins"))
+        const directories = roots.map((root) => path.join(root, "plugins"))
         yield* Effect.forEach(directories, (directory) => watch(directory), { discard: true })
         const explicit = settings.paths.map((item) =>
           item.startsWith("~/") ? path.join(global.home, item.slice(2)) : path.resolve(ctx.location.directory, item),
@@ -118,7 +120,10 @@ export const Plugin = define<Global.Service | Scope.Scope>({
             Promise.all(
               directories.map(async (directory, index) =>
                 (await children(directory)).map(
-                  (child): Candidate => ({ path: child, scope: scope(agents[index]!, global.home) }),
+                  (child): Candidate => ({
+                    path: child,
+                    scope: path.resolve(roots[index]!) === path.resolve(global.config) ? "global" : "project",
+                  }),
                 ),
               ),
             ),
@@ -268,10 +273,6 @@ export function map(plugin: AgentPlugin.Loaded, scope: Loaded["scope"]) {
     )
   }
   return { loaded: { plugin, scope, skills, servers }, diagnostics }
-}
-
-function scope(root: string, home: string): Loaded["scope"] {
-  return path.resolve(root) === path.join(home, ".agents") ? "global" : "project"
 }
 
 async function children(directory: string) {
