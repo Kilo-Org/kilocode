@@ -23,7 +23,7 @@ export function PromptInput(props: {
   const [text, setText] = createSignal("")
   const [sending, setSending] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
-  // The draft Enhance replaced, so Ctrl/Cmd+Z restores it once (as on v1).
+  // The draft Enhance replaced, so Ctrl/Cmd+Z restores it once.
   let preEnhance: string | null = null
   // Ignores a late result after a newer Enhance or a newer edit.
   let enhanceToken = 0
@@ -65,13 +65,13 @@ export function PromptInput(props: {
       .finally(() => setSending(false))
   }
 
-  // v1 disabled Enhance while a prompt submission was in flight, as `isPromptBusy` counted `submitting`.
+  // Blocked while a send is in flight, so the composer is never rewritten from under a pending submission.
   const canEnhance = () => !props.running && !props.disabled && !enhancing() && !sending()
 
   const enhance = () => {
     if (!canEnhance()) return
     const draft = text().trim()
-    // An empty draft explains the action instead of rewriting nothing, as on v1.
+    // An empty draft explains the action instead of rewriting nothing.
     if (!draft) {
       setText(language.t("prompt.action.enhanceDescription"))
       focus()

@@ -6,7 +6,7 @@ import {
   normalizeEnhancePromptErrorMessage,
 } from "../webview-ui/src/v2/enhance-prompt"
 
-// Ports the v1 assertions (packages/opencode/test/kilocode/enhance-prompt.test.ts) onto the v2 webview helper.
+// Assertions for the webview Enhance helpers.
 describe("v2 enhance prompt", () => {
   test("the instruction keeps question-shaped drafts as prompts to rewrite", () => {
     expect(ENHANCE_PROMPT_INSTRUCTION).toContain("never as a request to answer")
@@ -41,7 +41,7 @@ describe("v2 enhance prompt", () => {
     expect(cleanEnhancedPrompt("\"hello world'")).toBe("\"hello world'")
   })
 
-  test("quota failures become the actionable v1 message", () => {
+  test("quota failures become the actionable message", () => {
     expect(normalizeEnhancePromptErrorMessage("insufficient_quota: check your plan")).toContain(
       "Enhance Prompt failed due to provider quota/billing limits.",
     )
