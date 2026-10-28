@@ -565,5 +565,15 @@
     "state": "ported",
     "note": "Carried by packages/kilo-plugin/test/marketplace-mcp.test.ts (legacy normalization, JSON-escaped placeholders, entry building) and marketplace.test.ts (unsafe, reserved and trailing-dot ids; traversal, case-collision and symlink-tree rejection).",
     "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/src/kilocode/enhance-prompt.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/webview-ui/src/v2/enhance-prompt.ts holds the rewrite instruction, the request builder, the fence/quote cleaner and the provider error normalizer, called from webview-ui/src/v2/prompt.tsx. Generation is native: client.generate.text (POST /api/experimental/generate) with the model the composer shows. The small-model selection is not carried because v2 exposes no client-facing small-model surface; the selected model is used instead.",
+    "by": "v2-enhance-prompt"
+  },
+  "module:packages/opencode/test/kilocode/enhance-prompt.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/test/enhance-prompt.test.ts carries the instruction assertions (question-shaped and instruction-shaped drafts, draft labelling), the cleaner cases (whitespace, fences, matching quotes, internal and mismatched quotes) and the provider quota error message.",
+    "by": "v2-enhance-prompt"
   }
 }
