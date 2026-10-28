@@ -21,7 +21,7 @@ Kilo is the host, OpenCode is a library. Code moves one way: from upstream files
 | Host composition (rung 2) | Plugin registration, service replacement, environment translation or boot option in the Kilo host; a Kilo-owned mirror of an upstream file (host entry, replaced tool), listed in `mirroredFiles` once U-L3-01 lands it, named in the PR until then | none |
 | Seam (rung 3) | One to three generic lines you add to an upstream file so that a plugin hook becomes possible. Carries no Kilo value: no `kilocode/` path, `Kilo*` identifier or Kilo string literal | `kilocode_change(<feature>) seam` |
 | Patch (rung 4) | A Kilo-specific line inside an upstream file, including a registration or import of a Kilo module. One line thick; behavior lives in a Kilo module | `kilocode_change(<feature>)` |
-| Branding (rung 5) | Automated product-text/artwork renaming supplied by Kilo-owned code; PR #15417 uses an interim source/build adapter | none in Kilo-owned files |
+| Branding (rung 5) | Product-text and artwork transforms supplied by Kilo-owned source/build code | none in Kilo-owned files |
 
 "Hook" alone means plugin hook. A Kilo edit in an upstream file is a patch, not a hook. The rung 3 and 4 distinction is mechanical: any Kilo reference in the marked lines makes it rung 4.
 
@@ -109,17 +109,17 @@ Only when a seam makes no sense (a defect fix, or a Kilo-specific decision no kn
 - `shared-patches.json` entry with `rung: 4` and the reason rungs 1 to 3 do not work. The PR repeats the reason.
 - A patch adds, it never changes an upstream default. Run the upstream test files of the module you touched, byte-identical from the pin, against the code without the host: they must pass. Never edit an upstream test file to make a Kilo change pass; put the Kilo behavior test under `test/kilocode/` and compose the host's values there.
 
-### Branding: interim adapter and sync review
+### Branding: source/build transform and sync review
 
-PR #15417 is the reference for the current interim approach. Verify its merge state before assuming `packages/kilo-cli/src/branding/` exists on the integration branch. Branding is rung 5; loader/bootstrap wiring and updater service replacement are host composition, rung 2. A Bun loader is not a public `@opencode/plugin` hook.
+Branding is rung 5; loader/bootstrap wiring and updater service replacement are host composition, rung 2. A Bun loader is not a public `@opencode/plugin` hook. The Kilo-owned transform lives in `packages/kilo-cli/src/branding/`.
 
 - Keep replacements and artwork in Kilo-owned code. Apply the same transformation in source and compiled builds, leaving upstream source, default behavior and upstream tests unchanged. Do not reintroduce v1-style Kilo imports into shared files just to restore constants/wrappers.
-- Treat the path/text mapping as a maintained adapter, not a stable API or translation system. A mapped file move/deletion fails the file-inventory tests; changed wording fails strict anchor checks. Runtime path filters do not automatically follow renames, and source loading can fail when a known anchor changes.
-- Preserve fail-on-drift assertions. Tests must read every mapped file, require every replacement to apply, and check source and compiled behavior. Include a real branded TSX component through the loader/Solid compiler, not only plain TypeScript fixtures or substring tests. Preserve OAuth escaping and unhosted/upstream controls.
-- When upstream moves or rewrites a target, inspect the new implementation, update the path/anchor, then rerun tests. Drop a mapping only with evidence that the behavior is obsolete or covered elsewhere. Record the adaptation in the PR; do not suppress the check to clear CI.
-- Review newly introduced branding text during each sync, including clean merges. New unlisted text is **not** covered by existing anchor tests. A dedicated sync-time branding audit/report remains proposed; do not claim it already runs in CI or invent a command for it.
+- Treat the text rules and structural adapters as maintained code, not a stable API or translation system. Structural targets still depend on paths and anchors; source loading can fail when an anchor changes.
+- Preserve structural fail-on-drift assertions and test source and compiled behavior. Include a real branded TSX component through the loader/Solid compiler, not only plain TypeScript fixtures or substring tests. Preserve OAuth escaping and unhosted/upstream controls.
+- When upstream moves or rewrites a structural target, inspect the new implementation, update the adapter, then rerun tests. Remove behavior only with evidence that it is obsolete or covered elsewhere. Record the adaptation in the PR; do not suppress the check to clear CI.
+- Review newly introduced branding text during each sync, including clean merges. Run `bun run packages/kilo-cli/script/branding-audit.ts <previous-v2-commit>` from the root. Context-aware rules cannot prove that every occurrence is classified; audit results support review but do not replace it.
 - Never apply a blanket OpenCode-to-Kilo replacement. Real provider names/IDs, imports, protocol/keybind IDs and schema URLs are not host branding. Derive config hints from the actual host config filename definition, such as `KiloConfigFiles.newFile`.
-- Do not enable the disabled legacy conflict-only branding passes as a replacement for this process. Nor does generation into separate files remove the mapping dependency. An API/generator redesign requires approval and must preserve the direction and upstream-default rules above.
+- Do not enable the disabled legacy conflict-only branding passes as a replacement for this process. A generator redesign requires approval and must preserve the direction and upstream-default rules above.
 
 For the per-sync checklist, load `v2-migration`, section "Branding and upstream drift". Keep this limitation explicit in placement statements: fewer shared patches does not remove upstream coupling.
 
@@ -184,4 +184,4 @@ Plus: shared files touched with rung, core-internal imports added and mirrored f
 | register a TUI plugin | 4 | one marked call-out line in `tui/src/plugin/builtins.ts` |
 | a knob upstream does not expose yet | 3 | seam, generic, tagged, `shared-patches.json` |
 | a defect fix or a Kilo decision inside upstream logic with no knob | 4 | one tagged line, policy in a Kilo module |
-| product strings, names, logos | 5 | Kilo-owned automated renaming; interim source/build adapter from #15417, mapping reviewed at every sync; never hand-edit upstream |
+| product strings, names, logos | 5 | Kilo-owned source/build transforms; review text rules and structural adapters at every sync; never hand-edit upstream |

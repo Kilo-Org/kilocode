@@ -4,7 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 import { brandingPlugin } from "../src/branding/plugin"
-import { KiloBranding } from "../src/branding/text"
+import { KiloBranding } from "../src/branding/transform"
 
 const repo = path.resolve(import.meta.dir, "../../..")
 const entry = path.join(import.meta.dir, "fixtures/logo-preflight.ts")

@@ -270,6 +270,15 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
+      - name: Audit new branding candidates
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        continue-on-error: true
+        env:
+          BRANDING_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BRANDING_BASE"
+          bun run packages/kilo-cli/script/branding-audit.ts "$BRANDING_BASE"
+
       # Turborepo runs only the package tests that turbo.json lists. The Kilo packages run here instead, so
       # adding one needs no shared upstream patch. `@kilocode/gateway-core` stays in turbo.json.
       - name: Test the Kilo plugin
