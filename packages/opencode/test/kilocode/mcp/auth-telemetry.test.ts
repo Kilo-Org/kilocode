@@ -57,7 +57,9 @@ function serveOAuthMcp(mode: Mode) {
         async fetch(request) {
           const url = new URL(request.url)
           const origin = url.origin
-          if (bare && url.pathname.startsWith("/.well-known/")) return new Response("Not found", { status: 404 })
+          // Without metadata the SDK falls back to the legacy default endpoints, so hide those too.
+          if (bare && (url.pathname.startsWith("/.well-known/") || url.pathname === "/register"))
+            return new Response("Not found", { status: 404 })
           if (url.pathname === "/mcp") {
             if (anonymous || request.headers.get("authorization") === "Bearer secret-access-token")
               return transport.handleRequest(request)

@@ -996,23 +996,24 @@ const layer = Layer.effect(
           const client = createClient(directory)
           return client.connect(transport).then(async (): Promise<AuthResult> => { // kilocode_change
             // kilocode_change start - a connection that obtained no credentials is not a sign-in
-            const outcome = await KiloSignIn.settle({ name: mcpName, url, provider: authProvider })
+            const outcome = await KiloSignIn.settle({
+              name: mcpName,
+              url,
+              provider: authProvider,
+              scope: oauthConfig?.scope,
+            })
             if (outcome.type !== "authorized") {
+              // The token exchange needs no open session, so the closed transport still completes the flow.
               await client.close().catch(() => undefined)
               if (outcome.type === "failed") return { authorizationUrl: "", oauthState, error: outcome.error }
               if (!capturedUrl)
-                return { authorizationUrl: "", oauthState, error: "OAuth authorization did not produce a URL" }
-              const pending = new StreamableHTTPClientTransport(url, {
-                authProvider,
-                requestInit: mcpConfig.headers ? { headers: mcpConfig.headers } : undefined,
-              })
-              pendingOAuthTransports.set(mcpName, { transport: pending, provider: authProvider })
-              return {
-                authorizationUrl: capturedUrl.toString(),
-                oauthState,
-                provider: authProvider,
-                transport: pending,
-              }
+                return {
+                  authorizationUrl: "",
+                  oauthState,
+                  error: `MCP server "${mcpName}" did not provide an authorization URL`,
+                }
+              pendingOAuthTransports.set(mcpName, { transport, provider: authProvider })
+              return { authorizationUrl: capturedUrl.toString(), oauthState, provider: authProvider, transport }
             }
             // kilocode_change end
             await authProvider.commit()

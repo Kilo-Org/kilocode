@@ -1,4 +1,4 @@
-import { auth, discoverOAuthServerInfo, type OAuthClientProvider } from "@modelcontextprotocol/sdk/client/auth.js"
+import { auth, type OAuthClientProvider } from "@modelcontextprotocol/sdk/client/auth.js"
 
 // An explicit sign-in must end with credentials, not merely with a connected transport.
 //
@@ -8,12 +8,10 @@ import { auth, discoverOAuthServerInfo, type OAuthClientProvider } from "@modelc
 // server does exactly this). An explicit sign-in against such a server connects without ever
 // seeing a challenge and obtains no credentials.
 //
-// When the connection succeeded without credentials, look for the server's OAuth discovery
-// metadata (RFC 9728 protected resource metadata, or the legacy authorization server metadata
-// the SDK falls back to). If it is advertised, start the authorization flow through the SDK's
-// own `auth()` orchestrator, which applies the same discovery, registration, scope, resource,
-// and PKCE handling as a 401-triggered flow. Otherwise the server cannot issue credentials, and
-// the sign-in is reported as failed instead of successful.
+// Like opencode v2's `McpOAuth.authorize`, start the authorization flow directly with the SDK's
+// `auth()` orchestrator instead of waiting for a challenge. It performs the same discovery,
+// registration, scope, resource, and PKCE handling as a 401-triggered flow. A server that offers
+// no way to sign in fails that flow, and the sign-in is reported as failed.
 
 export type Outcome =
   /** The flow already holds credentials; the connection is authenticated. */
@@ -22,22 +20,19 @@ export type Outcome =
   | { type: "redirect" }
   | { type: "failed"; error: string }
 
-export async function settle(input: { name: string; url: URL; provider: OAuthClientProvider }): Promise<Outcome> {
+export async function settle(input: {
+  name: string
+  url: URL
+  provider: OAuthClientProvider
+  scope?: string
+}): Promise<Outcome> {
   if (await input.provider.tokens()) return { type: "authorized" }
 
-  const info = await discoverOAuthServerInfo(input.url).catch(() => undefined)
-  const advertised = !!info?.resourceMetadata?.authorization_servers?.length || !!info?.authorizationServerMetadata
-  if (!advertised)
-    return {
-      type: "failed",
-      error: `MCP server "${input.name}" accepted the connection without requesting authorization and does not advertise OAuth metadata, so no credentials were obtained`,
-    }
-
-  const result = await auth(input.provider, { serverUrl: input.url }).catch((err: unknown) =>
+  const result = await auth(input.provider, { serverUrl: input.url, scope: input.scope }).catch((err: unknown) =>
     err instanceof Error ? err : new Error(String(err)),
   )
   if (result instanceof Error)
-    return { type: "failed", error: `OAuth authorization could not start: ${result.message}` }
+    return { type: "failed", error: `MCP server "${input.name}" could not start OAuth sign-in: ${result.message}` }
   if (result === "AUTHORIZED") return { type: "authorized" }
   return { type: "redirect" }
 }

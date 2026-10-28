@@ -112,8 +112,9 @@ function serve(protect: Protect) {
 
           if (url.pathname === "/register") {
             seen.register++
-            const body = await request.json()
-            return Response.json({ ...(body as object), client_id: "sign-in-client" }, { status: 201 })
+            const body: unknown = await request.json()
+            if (!body || typeof body !== "object") return new Response("Invalid metadata", { status: 400 })
+            return Response.json({ ...body, client_id: "sign-in-client" }, { status: 201 })
           }
 
           if (url.pathname === "/authorize") {
@@ -153,12 +154,12 @@ function serve(protect: Protect) {
   )
 }
 
-const setup = Effect.fnUntraced(function* (name: string, protect: Protect) {
+const setup = Effect.fnUntraced(function* (name: string, protect: Protect, scope?: string) {
   opened.length = 0
   yield* Effect.addFinalizer(() => Effect.promise(() => McpOAuthCallback.stop()).pipe(Effect.ignore))
   const server = yield* serve(protect)
   const mcp = yield* MCP.Service
-  const added = yield* mcp.add(name, { type: "remote", url: server.url })
+  const added = yield* mcp.add(name, { type: "remote", url: server.url, ...(scope ? { oauth: { scope } } : {}) })
   return { server, mcp, added: added.status }
 })
 
@@ -206,6 +207,18 @@ it.instance("explicit sign-in runs OAuth when the connection itself was not chal
   }),
 )
 
+it.instance("explicit sign-in requests the configured scope instead of the advertised scopes", () =>
+  Effect.gen(function* () {
+    const name = "socket-like-scope"
+    const ctx = yield* setup(name, "tools", "packages:list")
+
+    const status = yield* awaitWithTimeout(ctx.mcp.authenticate(name), "Timed out signing in", "10 seconds")
+
+    expect(status).toEqual({ status: "connected" })
+    expect(ctx.server.seen.authorize.at(0)?.get("scope")).toBe("packages:list")
+  }),
+)
+
 it.instance("explicit sign-in fails when the server offers no way to obtain credentials", () =>
   Effect.gen(function* () {
     const name = "no-oauth"
@@ -214,10 +227,10 @@ it.instance("explicit sign-in fails when the server offers no way to obtain cred
 
     const status = yield* ctx.mcp.authenticate(name)
 
-    expect(status).toEqual({
-      status: "failed",
-      error: `MCP server "${name}" accepted the connection without requesting authorization and does not advertise OAuth metadata, so no credentials were obtained`,
-    })
+    expect(status.status).toBe("failed")
+    expect(status.status === "failed" ? status.error : "").toStartWith(
+      `MCP server "${name}" could not start OAuth sign-in:`,
+    )
     expect(opened).toHaveLength(0)
     expect(yield* ctx.mcp.getAuthStatus(name)).toBe("not_authenticated")
     expect(yield* ctx.mcp.hasStoredTokens(name)).toBe(false)
