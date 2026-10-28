@@ -1,10 +1,10 @@
-// main's MessageList markup (components/chat/MessageList.tsx) over v2 messages: list, load-earlier, queued prompts,
-// working line and the scroll-to-bottom button. Virtualization, the prompt rail and search come later.
+// main's MessageList markup (components/chat/MessageList.tsx) over v2 messages: list, load-earlier, queued prompts
+// and the scroll-to-bottom button. The working indicator is in the session dock, as on main. Virtualization, the prompt rail and search come later.
 import type { SessionMessageInfo } from "@opencode/client"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { createSignal, For, Match, Show, Switch } from "solid-js"
+import { createSignal, For, Match, onCleanup, Show, Switch } from "solid-js"
 import { useLanguage } from "../context/language"
 import { AssistantMessage, ErrorCard } from "./assistant"
 import { useV2 } from "./client"
@@ -15,6 +15,8 @@ export function MessageList(props: {
   session?: string
   onSelectSession: (id: string) => void
   onShowHistory: () => void
+  /** Receives the handler the session dock calls to scroll to the bottom, as on main. */
+  onScrollToBottomReady?: (handler: (() => void) | undefined) => void
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -35,6 +37,8 @@ export function MessageList(props: {
   const working = () => !!props.session && v2.data.session.status(props.session) === "running"
   const empty = () => !props.session || (messages().length === 0 && queued().length === 0)
   const autoScroll = createAutoScroll({ working })
+  props.onScrollToBottomReady?.(() => autoScroll.resume())
+  onCleanup(() => props.onScrollToBottomReady?.(undefined))
 
   const loadOlder = () => {
     const id = props.session
@@ -110,12 +114,6 @@ export function MessageList(props: {
                     )}
                   </For>
                 </div>
-                <Show when={working()}>
-                  <div class="message-list-loading working-status-line" role="status">
-                    <Spinner />
-                    <span>{language.t("session.status.working")}</span>
-                  </div>
-                </Show>
               </>
             )}
           </Show>
