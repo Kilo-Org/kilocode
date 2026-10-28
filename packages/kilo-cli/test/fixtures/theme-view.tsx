@@ -1,6 +1,7 @@
 import type { Interface, Resolved } from "../../../tui/src/config"
 import { ConfigProvider, useConfig } from "../../../tui/src/config"
 import { ThemeProvider, useTheme, useThemes, type ThemeSource } from "../../../tui/src/context/theme"
+import { Logo } from "../../../tui/src/component/logo"
 import { testRender } from "@opentui/solid"
 
 export async function mount(config: Resolved, service: Interface, source: ThemeSource) {
@@ -21,6 +22,7 @@ export async function mount(config: Resolved, service: Interface, source: ThemeS
         </text>
         <text fg={theme.text.feedback.error.base}>Error feedback</text>
         <text fg={theme.markdown.link}>Markdown link</text>
+        <Logo />
       </box>
     )
   }
@@ -32,7 +34,7 @@ export async function mount(config: Resolved, service: Interface, source: ThemeS
         </ThemeProvider>
       </ConfigProvider>
     ),
-    { width: 60, height: 10 },
+    { width: 80, height: 16 },
   )
   app.renderer.start()
   await app.waitForFrame(() => themes?.ready === true)

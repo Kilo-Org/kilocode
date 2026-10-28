@@ -22,6 +22,7 @@ import { ShellSelect } from "@opencode/core/shell/select"
 import { Job } from "@opencode/core/job"
 import { Mcp } from "@opencode/core/mcp/index"
 import { Global } from "@opencode/util/global"
+import { FSUtil } from "@opencode/util/fs-util"
 import { InstructionDiscovery } from "@opencode/core/instruction-discovery"
 import { LocationServiceMap } from "@opencode/core/location-service-map"
 import { LocationActivity } from "@opencode/core/location-activity"
@@ -41,7 +42,6 @@ import { CorsConfig } from "./cors"
 import { handlers } from "./handlers"
 import { authorizationLayer } from "./middleware/authorization"
 import { schemaErrorLayer } from "./middleware/schema-error"
-import { PtyEnvironment } from "./pty-environment"
 import { ServerPairing } from "./pairing"
 import { layer } from "./location"
 import { formLocationLayer } from "./middleware/form-location"
@@ -51,6 +51,7 @@ import type { ServerOptions } from "./options"
 
 const applicationServiceNodes = [
   Global.node,
+  FSUtil.node,
   Database.node,
   Bus.node,
   EventLogger.node,
@@ -69,7 +70,6 @@ const applicationServiceNodes = [
   PersistentPty.node,
   Credential.node,
   WellKnown.node,
-  PtyEnvironment.node,
   ServerPairing.node,
   LocationServiceMap.node,
   LocationActivity.node,

@@ -1,0 +1,1200 @@
+/* ============================================
+   Prompt Input
+   ============================================ */
+
+:root {
+  --prompt-min-gutter: 6px;
+}
+
+.prompt-input-container {
+  position: relative;
+  margin: var(--prompt-min-gutter);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.prompt-review-comments {
+  margin: 6px 6px 0;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 6px;
+  background: var(--vscode-editorWidget-background, var(--vscode-input-background));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+}
+
+.prompt-review-comments--message {
+  margin: 0 0 6px;
+}
+
+.prompt-review-comments-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+}
+
+.prompt-review-comments-toggle {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  cursor: pointer;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+}
+
+.prompt-review-comments-toggle:focus-visible {
+  outline: 1px solid var(--border-focus, var(--vscode-focusBorder));
+  border-radius: 4px;
+}
+
+.prompt-review-comments-title {
+  flex-shrink: 0;
+  font-size: var(--kilo-font-size-11);
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+/* The file summary is the first thing to give up room in a narrow sidebar. */
+.prompt-review-comments-meta {
+  min-width: 0;
+  font-size: var(--kilo-font-size-10);
+  color: var(--text-weaker, var(--vscode-descriptionForeground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prompt-review-comments-meta::before {
+  content: "·";
+  margin-right: 4px;
+}
+
+.prompt-review-comments-header [data-component="button"] {
+  min-height: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: var(--kilo-font-size-10);
+}
+
+.prompt-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.prompt-review-list--scroll {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.prompt-review-row {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--surface-inset-base, rgba(127, 127, 127, 0.08));
+  min-width: 0;
+}
+
+.prompt-review-row:hover {
+  border-color: var(--border-weak-base, var(--vscode-panel-border));
+}
+
+.prompt-review-row--full {
+  border-color: var(--border-weak-base, var(--vscode-panel-border));
+  background: var(--vscode-editor-background, rgba(127, 127, 127, 0.12));
+}
+
+.prompt-review-row-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px;
+}
+
+.prompt-review-row-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.prompt-review-row-main {
+  all: unset;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.prompt-review-row-main:focus-visible {
+  outline: 1px solid var(--border-focus, var(--vscode-focusBorder));
+  border-radius: 4px;
+}
+
+.prompt-review-row-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.prompt-review-row-label {
+  min-width: 0;
+  font-size: var(--kilo-font-size-10);
+  font-weight: 600;
+  color: var(--vscode-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prompt-review-row-line,
+.prompt-review-row-author {
+  flex-shrink: 0;
+  font-size: var(--kilo-font-size-10);
+  font-weight: 600;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+}
+
+.prompt-review-row-badge {
+  flex-shrink: 0;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--surface-inset-base-hover, rgba(127, 127, 127, 0.2));
+  font-size: var(--kilo-font-size-10);
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  white-space: nowrap;
+}
+
+.prompt-review-row-preview {
+  font-size: var(--kilo-font-size-11);
+  line-height: 1.35;
+  color: var(--vscode-foreground);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  text-align: start;
+  white-space: pre-wrap;
+}
+
+.prompt-review-row-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 6px 6px 30px;
+  min-width: 0;
+}
+
+.prompt-review-comments [data-component="avatar"] {
+  border-radius: 50%;
+}
+
+.prompt-review-row-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-inline-start: 8px;
+  border-inline-start: 2px solid var(--border-weak-base, var(--vscode-panel-border));
+}
+
+.prompt-review-row-path {
+  font-family: var(--vscode-editor-font-family, var(--vscode-font-family));
+  font-size: var(--kilo-font-size-10);
+  color: var(--text-weaker, var(--vscode-descriptionForeground));
+  overflow-wrap: anywhere;
+}
+
+.prompt-review-row-text {
+  font-size: var(--kilo-font-size-11);
+  line-height: 1.4;
+  color: var(--vscode-foreground);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Markdown bodies are authored for full-width panels; keep them compact here.
+   Flex on the root also drops the whitespace line box the renderer emits. */
+.prompt-review-row-text [data-component="markdown"] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--kilo-font-size-11);
+  line-height: 1.4;
+}
+
+.prompt-review-row-text :where(p, ul, ol, pre, blockquote, h1, h2, h3, h4, h5, h6) {
+  margin: 0 0 4px;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.prompt-review-row-text :where(p, ul, ol, pre, blockquote, h1, h2, h3, h4, h5, h6):last-child {
+  margin-bottom: 0;
+}
+
+.prompt-review-row-text :where(code) {
+  font-size: var(--kilo-font-size-10);
+}
+
+.prompt-review-row-snippet {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.12));
+  font-family: var(--vscode-editor-font-family, var(--vscode-font-family));
+  font-size: var(--kilo-font-size-10);
+  line-height: 1.35;
+  max-height: 160px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.prompt-review-row-remove {
+  flex-shrink: 0;
+  margin-inline-start: 4px;
+}
+
+.prompt-review-more {
+  all: unset;
+  align-self: flex-start;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: var(--kilo-font-size-10);
+  font-weight: 600;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  cursor: pointer;
+}
+
+.prompt-review-more:hover {
+  color: var(--vscode-foreground);
+}
+
+.prompt-review-more:focus-visible {
+  outline: 1px solid var(--border-focus, var(--vscode-focusBorder));
+}
+
+/* Image Attachments */
+.image-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 8px 0;
+}
+
+.image-attachment {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.image-attachment img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
+  display: block;
+  cursor: pointer;
+}
+
+.image-attachment-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+
+  &:focus-visible {
+    opacity: 1;
+  }
+}
+
+.image-attachment:hover .image-attachment-remove {
+  opacity: 1;
+}
+
+.prompt-input-container--dragging {
+  border-color: var(--border-focus, var(--vscode-focusBorder, #007fd4));
+  border-style: dashed;
+}
+
+.prompt-input-container--mention-drop {
+  border-color: var(--border-focus, var(--vscode-focusBorder, #007fd4));
+}
+
+.prompt-input-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.prompt-input {
+  flex: 1;
+  min-height: 54px;
+  max-height: 200px;
+  padding: 8px 8px calc(8px + 1.4em);
+  color: transparent;
+  caret-color: var(--vscode-input-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: var(--font-size-base);
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+  scrollbar-gutter: stable;
+}
+
+.prompt-input:focus {
+  border-color: var(--vscode-focusBorder);
+}
+
+.prompt-input--disabled {
+  opacity: 0.5;
+}
+
+.prompt-input::placeholder {
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
+}
+
+/* The keycap copy below draws the placeholder, so hide the native one. */
+.prompt-input--keycaps::placeholder {
+  color: transparent;
+}
+
+/* Placeholder with the suggested shortcut as keycaps. Same box and font as the
+   textarea, so the text sits where the native placeholder would. */
+.prompt-input-placeholder {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  padding: 8px 8px calc(8px + 1.4em);
+  font-family: var(--vscode-font-family);
+  font-size: var(--font-size-base);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  unicode-bidi: plaintext;
+  word-wrap: break-word;
+  overflow: hidden;
+  scrollbar-gutter: stable;
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
+  animation: prompt-hint-in 0.18s ease-out;
+}
+
+/* Same height as one text line, so keycaps never make the line taller. */
+.prompt-input-keys-wrap {
+  white-space: nowrap;
+}
+
+.prompt-input-keys-wrap .shortcut-keys {
+  height: 1.4em;
+}
+
+@keyframes prompt-hint-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prompt-input-placeholder {
+    animation: none;
+  }
+}
+
+/* Input overlay (highlight + ghost text) */
+.prompt-input-ghost-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.prompt-input-ghost-wrapper .prompt-input {
+  display: block;
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.prompt-input-highlight-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  padding: 8px 8px calc(8px + 1.4em);
+  font-family: var(--vscode-font-family);
+  font-size: var(--font-size-base);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  /* Match textarea plaintext bidi behavior for each hard-newline paragraph. */
+  unicode-bidi: plaintext;
+  word-wrap: break-word;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  z-index: 2;
+  color: var(--vscode-input-foreground);
+}
+
+.prompt-input-file-mention {
+  color: var(--vscode-textLink-foreground, #3794ff);
+  background-color: color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 15%, transparent);
+  border-radius: 3px;
+  box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 25%, transparent);
+}
+
+.prompt-input-file-mention--file {
+  pointer-events: auto;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.prompt-input-file-mention--file:hover {
+  background-color: color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 25%, transparent);
+  box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-textLink-foreground, #3794ff) 40%, transparent);
+  text-decoration: underline;
+}
+
+/* Collapsed large paste. The text is identical to the textarea's placeholder, so
+   the overlay stays aligned; only the chip decoration is added here. */
+.prompt-input-paste {
+  color: var(--vscode-textPreformat-foreground, var(--vscode-foreground));
+  background-color: color-mix(
+    in srgb,
+    var(--vscode-textPreformat-foreground, var(--vscode-foreground)) 12%,
+    transparent
+  );
+  border-radius: 3px;
+  box-shadow: 0 0 0 0.5px
+    color-mix(in srgb, var(--vscode-textPreformat-foreground, var(--vscode-foreground)) 30%, transparent);
+  pointer-events: auto;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.prompt-input-paste:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--vscode-textPreformat-foreground, var(--vscode-foreground)) 22%,
+    transparent
+  );
+  box-shadow: 0 0 0 0.5px
+    color-mix(in srgb, var(--vscode-textPreformat-foreground, var(--vscode-foreground)) 45%, transparent);
+  text-decoration: underline;
+}
+
+.prompt-input-ghost-text {
+  color: var(--vscode-editorGhostText-foreground, rgba(255, 255, 255, 0.35));
+  display: inline-flex;
+}
+
+.prompt-input-hint {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--kilo-font-size-11);
+  color: var(--vscode-descriptionForeground);
+  padding: 6px;
+}
+
+.prompt-input-hint-selectors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Agent | Model | Reasoning as one split control, styled like the Agent
+   Manager terminal split button (.am-split-button): ghost segments sit flush,
+   only the outer corners are rounded, and the hovered segment fills up to its
+   square inner edge. Short separators and one trailing arrow show at rest that
+   these are controls, not status text. The toolbar stays one row at every
+   width: only the model label truncates, so a pick never changes the prompt
+   height. */
+.prompt-input-hint:has(> .prompt-selectors) {
+  align-items: center;
+}
+
+.prompt-selectors {
+  --prompt-selectors-ease: cubic-bezier(0.2, 0.9, 0.3, 1);
+  display: flex;
+  align-items: stretch;
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 24px;
+  border-radius: 5px;
+}
+
+.prompt-selector {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.prompt-selector:not(:has([data-slot="popover-trigger"])) {
+  display: none;
+}
+
+.prompt-selector[data-part="model"] {
+  flex: 0 1 auto;
+  min-width: 6em;
+}
+
+/* A long agent name truncates. It is capped, and it shrinks much slower than
+   the model, so the model gives up its room first and a short agent name like
+   "Code" stays readable. */
+.prompt-selector[data-part="agent"] {
+  flex: 0 0.1 auto;
+  min-width: 3em;
+}
+
+.prompt-selectors .prompt-selector[data-part="agent"] [data-slot="popover-trigger"] {
+  max-width: 10em;
+}
+
+.prompt-selector > [data-component="tooltip-trigger"] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Separator before every visible part that follows another. It hides next to
+   a filled part, so the fill reads as one clean segment. */
+.prompt-selector:has([data-slot="popover-trigger"]) ~ .prompt-selector:has([data-slot="popover-trigger"])::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  inset-inline-start: 0;
+  z-index: 1;
+  width: 1px;
+  background: color-mix(in srgb, var(--vscode-foreground) 22%, transparent);
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.prompt-selector:is(:hover, :has([data-slot="popover-trigger"]:is([data-expanded], :focus-visible)))::before,
+.prompt-selector:is(:hover, :has([data-slot="popover-trigger"]:is([data-expanded], :focus-visible)))
+  + .prompt-selector::before {
+  opacity: 0;
+}
+
+.prompt-selectors .prompt-selector [data-slot="popover-trigger"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  height: 24px;
+  min-height: 24px;
+  padding: 0 7px;
+  gap: 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-base, var(--vscode-foreground));
+  font-size: var(--kilo-font-size-12);
+  line-height: normal;
+  white-space: nowrap;
+  transition: background-color 120ms ease;
+}
+
+.prompt-selectors .prompt-selector [data-slot="popover-trigger"]:hover:not(:disabled) {
+  background: var(--button-ghost-hover, var(--surface-base-hover, rgba(128, 128, 128, 0.2)));
+}
+
+.prompt-selectors .prompt-selector [data-slot="popover-trigger"][data-expanded]:not(:disabled) {
+  background: var(--vscode-toolbar-activeBackground, var(--button-ghost-hover, var(--surface-base-hover)));
+}
+
+.prompt-selectors .prompt-selector [data-slot="popover-trigger"]:active:not(:disabled) {
+  opacity: 0.8;
+}
+
+/* Focus shows only the ring. The outer parts take the group radius, so the
+   ring and the fills follow the rounded corners instead of being clipped. */
+.prompt-selectors .prompt-selector [data-slot="popover-trigger"]:focus-visible {
+  position: relative;
+  z-index: 2;
+  outline: 1px solid var(--border-focus);
+  outline-offset: -1px;
+}
+
+.prompt-selector:not(.prompt-selector:has([data-slot="popover-trigger"]) ~ .prompt-selector)
+  [data-slot="popover-trigger"] {
+  border-start-start-radius: 5px;
+  border-end-start-radius: 5px;
+}
+
+.prompt-selector:not(:has(~ .prompt-selector [data-slot="popover-trigger"])) [data-slot="popover-trigger"] {
+  border-start-end-radius: 5px;
+  border-end-end-radius: 5px;
+}
+
+.prompt-selectors .prompt-selector[data-part="variant"] [data-slot="popover-trigger"] {
+  padding: 0 6px;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+}
+
+/* One trailing arrow: on the reasoning part, or on the model part when the
+   model has no reasoning levels. It turns while its popover is open. */
+.prompt-selectors .selector-trigger-chevron,
+.prompt-selectors .model-selector-trigger-chevron {
+  display: none;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  transition: transform 160ms var(--prompt-selectors-ease);
+}
+
+.prompt-selectors .prompt-selector[data-part="variant"] .selector-trigger-chevron,
+.prompt-selectors:not(:has([data-part="variant"] [data-slot="popover-trigger"])) .model-selector-trigger-chevron,
+.prompt-selectors:not(:has(:is([data-part="model"], [data-part="variant"]) [data-slot="popover-trigger"]))
+  [data-part="agent"]
+  .selector-trigger-chevron {
+  display: block;
+}
+
+.prompt-selectors
+  [data-slot="popover-trigger"][data-expanded]
+  :is(.selector-trigger-chevron, .model-selector-trigger-chevron) {
+  transform: rotate(180deg);
+}
+
+/* A changed value rises in, so a change made with a shortcut is easy to see. */
+.prompt-selectors :is(.mode-switcher-trigger-label, .model-selector-trigger-label, .thinking-selector-trigger-label) {
+  display: inline-block;
+  min-width: 0;
+  animation: prompt-selector-value-in 200ms var(--prompt-selectors-ease);
+}
+
+@keyframes prompt-selector-value-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+
+/* The reasoning label collapses into the arrow when it says nothing useful
+   ("Default"), or before the model name would truncate (data-tight, set by
+   PromptSelectors). A changed value, for example from Shift+Tab, peeks out for
+   a moment (data-peek). The label stays in the accessibility tree, and the
+   tooltip names the value. */
+.prompt-selectors .thinking-selector-trigger-label {
+  max-width: 8em;
+  transition:
+    max-width 200ms var(--prompt-selectors-ease),
+    opacity 160ms ease,
+    margin 200ms var(--prompt-selectors-ease);
+}
+
+.prompt-selectors[data-tight] .thinking-selector-trigger-label,
+.prompt-selectors .thinking-selector-trigger-label[data-unset] {
+  max-width: 0;
+  margin-inline-end: -4px;
+  opacity: 0;
+}
+
+.prompt-selectors[data-peek] .thinking-selector-trigger-label {
+  max-width: 8em;
+  margin-inline-end: 0;
+  opacity: 1;
+}
+
+body.vscode-reduce-motion .prompt-selectors,
+body.vscode-reduce-motion .prompt-selectors *,
+body.vscode-reduce-motion .prompt-selectors *::before,
+body.vscode-reduce-motion .prompt-action {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prompt-selectors,
+  .prompt-selectors *,
+  .prompt-selectors *::before,
+  .prompt-action {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Remote Settings */
+[data-component="remote-settings"] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+[data-slot="remote-settings-header"] {
+  margin-bottom: 4px;
+
+  [data-slot="settings-row-label-title"] {
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  [data-slot="settings-row-label-subtitle"] {
+    font-size: var(--kilo-font-size-12);
+    color: var(--text-weak-base, var(--vscode-descriptionForeground));
+  }
+}
+
+[data-slot="remote-settings-row"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+[data-slot="remote-settings-label"] {
+  font-size: var(--kilo-font-size-12);
+  color: var(--text-weak);
+  white-space: nowrap;
+}
+
+[data-slot="remote-settings-block"] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+[data-slot="remote-settings-status"] {
+  font-size: var(--kilo-font-size-12);
+  font-weight: 500;
+  color: var(--text-weak);
+}
+
+[data-slot="remote-settings-status"][data-active="true"] {
+  color: var(--vscode-testing-iconPassed, #5cb85c);
+}
+
+[data-slot="remote-settings-hint"] {
+  font-size: var(--kilo-font-size-11);
+  color: var(--text-weak);
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.prompt-input-hint-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.prompt-input-hint-pinned {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Foldable prompt action. Folding collapses the width, so the actions to the
+   right keep their place. The -4px margin removes the flex gap of a folded
+   action. Folded actions are hidden, so they leave the tab order. */
+.prompt-action {
+  display: flex;
+  flex-shrink: 0;
+  max-width: 24px;
+  overflow: clip;
+  overflow-clip-margin: 3px;
+  transition:
+    max-width 180ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    margin 180ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    opacity 140ms ease,
+    visibility 0s linear 0s;
+}
+
+.prompt-action[data-folded] {
+  max-width: 0;
+  margin-inline-start: -4px;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    max-width 180ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    margin 180ms cubic-bezier(0.2, 0.9, 0.3, 1),
+    opacity 100ms ease,
+    visibility 0s linear 180ms;
+}
+
+.prompt-action:first-child[data-folded] {
+  margin-inline-start: 0;
+  margin-inline-end: -4px;
+}
+
+.prompt-more-button {
+  position: relative;
+}
+
+/* A folded action is on (auto-approve, sandbox). Same dot as the status buttons. */
+/* A folded action has state (a toggle that is on, indexing progress or an
+   error). Same dot as the status buttons, colored by the most important state. */
+.prompt-more-button:is([data-dot], [data-busy])::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--vscode-testing-iconPassed, #73c991);
+  box-shadow: 0 0 0 1px var(--surface-base, var(--vscode-editor-background));
+}
+
+.prompt-more-button[data-dot="warning"]::after {
+  background: var(--vscode-charts-yellow, #cca700);
+}
+
+.prompt-more-button[data-dot="error"]::after {
+  background: var(--vscode-errorForeground, #f48771);
+}
+
+/* A folded action is working (for example enhance). The dot pulses. */
+.prompt-more-button[data-busy]:not([data-dot])::after {
+  background: var(--border-focus, var(--vscode-focusBorder));
+}
+
+.prompt-more-button[data-busy]::after {
+  animation: prompt-more-pulse 1200ms ease-in-out infinite;
+}
+
+@keyframes prompt-more-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.prompt-more-menu[data-component="dropdown-menu-content"] {
+  min-width: 200px;
+  max-width: min(300px, calc(100vw - 16px));
+}
+
+.prompt-more-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"] {
+  gap: 8px;
+  padding: 6px 10px;
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-disabled] {
+  opacity: 0.5;
+}
+
+.prompt-more-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  color: var(--icon-base, var(--vscode-descriptionForeground));
+}
+
+.prompt-more-icon [data-component="icon"],
+.prompt-more-icon [data-slot="icon-svg"] {
+  width: 16px;
+  height: 16px;
+  color: inherit;
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-highlighted] .prompt-more-icon {
+  color: inherit;
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-tone="success"] .prompt-more-icon {
+  color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-tone="warning"] .prompt-more-icon {
+  color: var(--vscode-charts-yellow, #cca700);
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-tone="error"] .prompt-more-icon {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"] {
+  align-items: flex-start;
+}
+
+.prompt-more-icon {
+  margin-top: 1px;
+}
+
+.prompt-more-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* The tooltip text of the folded button, so the menu keeps its hint. */
+.prompt-more-menu [data-slot="dropdown-menu-item-description"] {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: var(--kilo-font-size-11);
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  white-space: normal;
+}
+
+.prompt-more-menu [data-slot="dropdown-menu-item"][data-highlighted] [data-slot="dropdown-menu-item-description"] {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.prompt-indexing-button {
+  position: relative;
+}
+
+/* Shared status dot for prompt hint controls. Pin it to the icon corner and
+   give it a surface-colored ring so it reads as a badge instead of sitting on
+   the glyph. The same size, ring, and corner offset are used for the indexing,
+   auto-approve, sandbox, and speech controls. */
+.prompt-indexing-button::after,
+.prompt-status-button--active::after,
+.prompt-speech-button--recording::after {
+  content: "";
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 1px var(--surface-base, var(--vscode-editor-background));
+}
+
+.prompt-indexing-button::after {
+  top: 1px;
+  right: 1px;
+}
+
+/* Overlaid in the top-right corner of the text input, above the typed text,
+   matching the JetBrains session-issues icon's placement over the editor
+   rather than in the bottom toolbar row. The top inset matches the typed
+   text's own top padding (.prompt-input-highlight-overlay); the right inset
+   matches the bottom toolbar's padding (.prompt-input-hint) so the icon lines
+   up with the toolbar's rightmost control. */
+.prompt-input-issues-overlay {
+  position: absolute;
+  top: 8px;
+  right: 6px;
+  z-index: 3;
+}
+
+/* Only shown when the session has an actionable issue (e.g. an MCP server
+   needing sign-in), so it is always rendered in the warning tone. The icon's
+   own color token (set by [data-component="icon"]) takes priority over the
+   inherited currentColor, so it is overridden explicitly here too. */
+.prompt-issues-button,
+.prompt-issues-button [data-component="icon"] {
+  color: var(--vscode-charts-yellow, #cca700);
+}
+
+/* Match VS Code's native menu chrome so the session-issues popup reads as a
+   platform menu rather than a webview surface. Items span the full width and
+   the container carries no horizontal padding, as in the editor's own menus. */
+.prompt-issues-menu[data-component="dropdown-menu-content"] {
+  min-width: 180px;
+  max-width: calc(100vw - 24px);
+  padding: 4px 0;
+  border-radius: 5px;
+  border: 1px solid var(--vscode-menu-border, var(--vscode-editorWidget-border, transparent));
+  background-color: var(--vscode-menu-background, var(--vscode-editorWidget-background));
+  color: var(--vscode-menu-foreground, var(--vscode-editorWidget-foreground));
+  box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgb(0 0 0 / 36%));
+}
+
+.prompt-issues-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"] {
+  min-height: 22px;
+  padding: 2px 10px;
+  border-radius: 0;
+  font-size: var(--kilo-font-size-13);
+  font-weight: var(--font-weight-normal);
+  color: var(--vscode-menu-foreground, var(--vscode-editorWidget-foreground));
+}
+
+.prompt-issues-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"][data-highlighted] {
+  background-color: var(--vscode-menu-selectionBackground, var(--vscode-list-activeSelectionBackground));
+  color: var(--vscode-menu-selectionForeground, var(--vscode-list-activeSelectionForeground));
+  outline: 1px solid var(--vscode-menu-selectionBorder, transparent);
+  outline-offset: -1px;
+}
+
+.prompt-issues-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-item"][data-disabled] {
+  color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
+}
+
+/* VS Code labels menu sections in the description tone, not as a clickable row. */
+.prompt-issues-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-group-label"] {
+  padding: 2px 10px;
+  font-size: var(--kilo-font-size-10);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.prompt-issues-menu[data-component="dropdown-menu-content"] [data-slot="dropdown-menu-separator"] {
+  margin: 4px 0;
+  border-top-color: var(--vscode-menu-separatorBackground, var(--vscode-editorWidget-border));
+}
+
+body.vscode-reduce-motion .prompt-issues-menu {
+  animation: none;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prompt-issues-menu {
+    animation: none;
+    transition: none;
+  }
+}
+
+.prompt-indexing-button--muted {
+  color: var(--vscode-descriptionForeground);
+}
+
+.prompt-indexing-button--warning {
+  color: var(--vscode-charts-yellow, #cca700);
+}
+
+.prompt-indexing-button--success {
+  color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.prompt-indexing-button--error {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.prompt-status-button {
+  position: relative;
+}
+
+.prompt-sandbox-tooltip-content {
+  width: 260px;
+  padding: 10px 12px;
+  white-space: normal;
+}
+
+.prompt-sandbox-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prompt-sandbox-tooltip-title {
+  color: var(--text-invert-strong);
+  font-weight: var(--font-weight-medium);
+}
+
+.prompt-sandbox-tooltip-row {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-invert-base);
+
+  [data-component="icon"] {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.prompt-sandbox-tooltip-state {
+  color: var(--text-invert-strong);
+  font-weight: var(--font-weight-medium);
+}
+
+.prompt-sandbox-tooltip-description {
+  padding-top: 8px;
+  border-top: 1px solid var(--border-weak-base);
+  color: var(--text-invert-base);
+  font-weight: var(--font-weight-normal);
+}
+
+.prompt-status-button--active {
+  color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.prompt-status-button--active::after {
+  right: 1px;
+  bottom: 1px;
+}
+
+.prompt-speech-button {
+  position: relative;
+}
+
+.prompt-speech-button--recording {
+  color: var(--vscode-errorForeground, #f48771);
+
+  [data-component="icon"] {
+    animation: prompt-speech-recording-pulse 1.1s ease-in-out infinite;
+  }
+}
+
+.prompt-speech-button--starting {
+  opacity: 0.7;
+}
+
+.prompt-speech-button[data-loading] {
+  cursor: pointer;
+}
+
+.prompt-speech-button--recording::after {
+  right: 1px;
+  top: 1px;
+}
+
+.prompt-speech-button--error {
+  color: var(--vscode-charts-yellow, #cca700);
+}
+
+@keyframes prompt-speech-recording-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(0.94);
+  }
+}

@@ -23,16 +23,19 @@ import { Project } from "@opencode/core/project"
 import { ProjectTable } from "@opencode/core/project/sql"
 import { App } from "@opencode/core/app"
 import { Agent } from "@opencode/core/agent"
+import { Model } from "@opencode/core/model"
 import { Provider } from "@opencode/core/provider"
 import { AbsolutePath } from "@opencode/core/schema"
 import { Money } from "@opencode/schema/money"
 import { Skill } from "@opencode/schema/skill"
 import { Shell } from "@opencode/schema/shell"
-import { DateTime, Effect, Fiber, Layer, Schema, Stream } from "effect"
+import { DateTime, Deferred, Effect, Fiber, Layer, Schema, Stream } from "effect"
 import { asc, eq } from "drizzle-orm"
 import { testEffect } from "./lib/effect"
 
 let requests: LLMRequest[] = []
+/** Runs before a request's response streams; tests hold it back to keep a background summary in flight. */
+let beforeResponse: Effect.Effect<void> = Effect.void
 const model = LanguageModel.make({
   id: "summary-model",
   provider: "test",
@@ -51,23 +54,28 @@ const cost = [
 const client = Layer.mock(LLMClient.Service)({
   stream: (request: LLMRequest) => {
     requests.push(request)
-    return Stream.make(
-      LLMEvent.textDelta({ id: "summary", text: "## Objective\n- manual summary" }),
-      LLMEvent.stepFinish({
-        index: 0,
-        reason: { normalized: "stop" },
-        usage: {
-          inputTokens: 15,
-          outputTokens: 6,
-          nonCachedInputTokens: 10,
-          cacheReadInputTokens: 3,
-          cacheWriteInputTokens: 2,
-          reasoningTokens: 2,
-        },
-      }),
-      LLMEvent.finish({
-        reason: { normalized: "stop" },
-      }),
+    return Stream.fromEffect(beforeResponse).pipe(
+      Stream.drain,
+      Stream.concat(
+        Stream.make(
+          LLMEvent.textDelta({ id: "summary", text: "## Objective\n- manual summary" }),
+          LLMEvent.stepFinish({
+            index: 0,
+            reason: { normalized: "stop" },
+            usage: {
+              inputTokens: 15,
+              outputTokens: 6,
+              nonCachedInputTokens: 10,
+              cacheReadInputTokens: 3,
+              cacheWriteInputTokens: 2,
+              reasoningTokens: 2,
+            },
+          }),
+          LLMEvent.finish({
+            reason: { normalized: "stop" },
+          }),
+        ),
+      ),
     )
   },
   generate: () => Effect.die("unused"),
@@ -331,6 +339,15 @@ it.effect("auto compaction estimates current content against the buffered prompt
     const outputLimited = { context: 100_000, output: 30_000 }
     expect(yield* due(input(83_999, outputLimited))).toBe(false)
     expect(yield* due(input(84_000, outputLimited))).toBe(true)
+
+    // A buffer that leaves the model no room, such as one set for a larger model, falls back to the default reserve.
+    yield* Effect.scoped(
+      Effect.gen(function* () {
+        yield* compaction.transform((editor) => editor.configure({ buffer: 100_000 }))
+        expect(yield* due(input(60_000, contextLimited))).toBe(false)
+        expect(yield* due(input(84_000, contextLimited))).toBe(true)
+      }),
+    )
 
     const assistant = input(89_000, contextLimited).messages[0]
     const tool = SessionMessage.AssistantTool.make({
@@ -714,14 +731,17 @@ it.effect("compaction lowers the output limit when it sends a request it could n
   Effect.gen(function* () {
     requests = []
     const session = yield* insertSession(Session.ID.make("ses_unshrinkable_compaction"))
-    // One exchange estimated at 250k tokens, past the 200k window, so no older exchange can be dropped.
+    // A previous summary estimated at 250k tokens, past the 200k window; it always stays whole.
     const messages = [
-      SessionMessage.User.make({
+      SessionMessage.CompactionCompleted.make({
         id: SessionMessage.ID.create(),
-        type: "user",
-        text: "x".repeat(1_000_000),
+        type: "compaction",
+        status: "completed",
+        reason: "manual",
+        summary: "x".repeat(1_000_000),
         time: { created: DateTime.makeUnsafe(0) },
       }),
+      textUser("Next question"),
     ]
 
     expect(yield* compactManually(session, messages)).toEqual({ status: "completed" })
@@ -854,5 +874,232 @@ it.effect("forked session compaction reuses the fork root prompt cache key", () 
 
     expect(requests).toHaveLength(1)
     expect(requests[0]?.promptCacheKey).toBe(rootID)
+  }),
+)
+
+const measured = (text: string, input: number) =>
+  Schema.decodeUnknownSync(SessionMessage.Assistant)({
+    id: SessionMessage.ID.create(),
+    type: "assistant",
+    agent: Agent.defaultID,
+    model: { id: "summary-model", providerID: "test" },
+    content: [{ type: "text", text }],
+    tokens: { input, output: 100, reasoning: 0, cache: { read: 0, write: 0 } },
+    time: { created: 0, completed: 1 },
+  })
+
+/**
+ * A 200k window compacts at 170k and starts a background summary at 85% of that, 144.5k. `near` ends past that
+ * point; `due` continues it past the threshold.
+ */
+const precomputeHistory = () => {
+  const near = [textUser("First question"), measured("First answer", 80_000), textUser("Second question")]
+  const anchor = measured("Second answer", 156_000)
+  const due = [...near, anchor, textUser("Third question"), measured("Third answer", 182_000)]
+  return { near: [...near, anchor], due, anchor }
+}
+
+const enablePrecompute = Effect.gen(function* () {
+  const compaction = yield* SessionCompaction.Service
+  yield* compaction.transform((editor) => editor.configure({ precompute: true }))
+  return compaction
+})
+
+it.effect("background summaries stay off unless enabled", () =>
+  Effect.gen(function* () {
+    requests = []
+    const compaction = yield* SessionCompaction.Service
+    const session = yield* insertSession(Session.ID.make("ses_precompute_off"))
+    const history = precomputeHistory()
+
+    yield* compaction.precompute(Effect.succeed(loaded(session, history.near)))
+    expect(yield* compaction.compact({ reason: "auto", context: loaded(session, history.due) })).toEqual({
+      status: "completed",
+    })
+    expect(requests).toHaveLength(1)
+    expect(JSON.stringify(requests[0].messages)).toContain("Third answer")
+  }),
+)
+
+it.effect("automatic compaction swaps in the background summary without another model call", () =>
+  Effect.gen(function* () {
+    requests = []
+    const db = (yield* Database.Service).db
+    const store = yield* SessionStore.Service
+    const compaction = yield* enablePrecompute
+    const sessionID = Session.ID.make("ses_precompute_swap")
+    const session = yield* insertSession(sessionID)
+    const history = precomputeHistory()
+    yield* storeMessages(sessionID, history.due)
+
+    yield* compaction.precompute(Effect.succeed(loaded(session, history.near)))
+    expect(yield* compaction.compact({ reason: "auto", context: loaded(session, history.due) })).toEqual({
+      status: "completed",
+    })
+
+    // The one request summarized the prefix the latest response was generated from.
+    expect(requests).toHaveLength(1)
+    expect(JSON.stringify(requests[0].messages)).toContain("Second question")
+    expect(JSON.stringify(requests[0].messages)).not.toContain("Second answer")
+    expect(yield* store.context(sessionID)).toMatchObject([
+      {
+        type: "compaction",
+        reason: "auto",
+        summary: "## Objective\n- manual summary",
+        metadata: {
+          keepID: history.anchor.id,
+          recent: "[Assistant]: Second answer\n\n[User]: Third question\n\n[Assistant]: Third answer",
+        },
+        tokens: { input: 10, output: 4, reasoning: 2, cache: { read: 3, write: 2 } },
+      },
+    ])
+    // The background call is billed once, when it finishes, and the compaction ends after it.
+    const types = (yield* db
+      .select({ type: EventTable.type })
+      .from(EventTable)
+      .where(eq(EventTable.aggregate_id, sessionID))
+      .orderBy(asc(EventTable.seq))
+      .all()
+      .pipe(Effect.orDie)).map((row) => row.type)
+    expect(types.at(-1)).toBe(Bus.versionedType(SessionEvent.Compaction.Ended.type, 1))
+    expect(types.toSorted()).toEqual(
+      [
+        Bus.versionedType(SessionEvent.UsageRecorded.type, 1),
+        Bus.versionedType(SessionEvent.Compaction.Started.type, 1),
+        Bus.versionedType(SessionEvent.Compaction.Ended.type, 1),
+      ].toSorted(),
+    )
+  }),
+)
+
+it.effect("automatic compaction waits for a background summary still being written", () =>
+  Effect.gen(function* () {
+    requests = []
+    const release = yield* Deferred.make<void>()
+    beforeResponse = Deferred.await(release)
+    const bus = yield* Bus.Service
+    const compaction = yield* enablePrecompute
+    const session = yield* insertSession(Session.ID.make("ses_precompute_join"))
+    const history = precomputeHistory()
+    const started = yield* bus
+      .subscribe(SessionEvent.Compaction.Started)
+      .pipe(Stream.take(1), Stream.runCollect, Effect.forkChild({ startImmediately: true }))
+
+    yield* compaction.precompute(Effect.succeed(loaded(session, history.near)))
+    const compacting = yield* compaction
+      .compact({ reason: "auto", context: loaded(session, history.due) })
+      .pipe(Effect.forkChild({ startImmediately: true }))
+
+    // The compaction shows as running while the summary it waits for is still being written.
+    expect(yield* Fiber.join(started)).toHaveLength(1)
+    expect(compacting.pollUnsafe()).toBeUndefined()
+    yield* Deferred.succeed(release, undefined)
+
+    expect(yield* Fiber.join(compacting)).toEqual({ status: "completed" })
+    expect(requests).toHaveLength(1)
+  }).pipe(Effect.ensuring(Effect.sync(() => (beforeResponse = Effect.void)))),
+)
+
+it.effect("a model switch waits for the new model's first response before summarizing in the background", () =>
+  Effect.gen(function* () {
+    requests = []
+    const compaction = yield* enablePrecompute
+    const session = yield* insertSession(Session.ID.make("ses_precompute_switch"))
+    const history = precomputeHistory()
+    const switched = (messages: readonly SessionMessage.Info[]) => ({
+      ...loaded(session, messages),
+      model: { ...resolved, ref: { ...resolved.ref, id: Model.ID.make("other") } },
+    })
+
+    // The latest response came from the previous model, so the new one has no cached prefix to summarize from.
+    yield* compaction.precompute(Effect.succeed(switched(history.near)))
+    expect(yield* compaction.compact({ reason: "auto", context: switched(history.due) })).toEqual({
+      status: "completed",
+    })
+    expect(requests).toHaveLength(1)
+    expect(JSON.stringify(requests[0].messages)).toContain("Third answer")
+  }),
+)
+
+it.effect("a background summary that fell too far behind is replaced from a newer response", () =>
+  Effect.gen(function* () {
+    requests = []
+    const compaction = yield* enablePrecompute
+    const session = yield* insertSession(Session.ID.make("ses_precompute_behind"))
+    const history = precomputeHistory()
+    // About 35k tokens arrived after the summarized prefix, past the 30k that may stay verbatim beside it.
+    const behind = [...history.near, textUser("x".repeat(140_000)), measured("Burst handled", 160_000)]
+
+    yield* compaction.precompute(Effect.succeed(loaded(session, history.near)))
+    yield* compaction.precompute(Effect.succeed(loaded(session, behind)))
+    const due = [...behind, textUser("Next question"), measured("Next answer", 182_000)]
+    expect(yield* compaction.compact({ reason: "auto", context: loaded(session, due) })).toEqual({
+      status: "completed",
+    })
+
+    // Compaction swapped in the newer summary, which ends before the latest response, instead of writing one.
+    const summarized = JSON.stringify(requests.at(-1)?.messages)
+    expect(summarized).toContain("x".repeat(1_000))
+    expect(summarized).not.toContain("Burst handled")
+  }),
+)
+
+it.effect("a failed background summary is retried from a newer response, then left until compaction", () =>
+  Effect.gen(function* () {
+    requests = []
+    const compaction = yield* enablePrecompute
+    const session = yield* insertSession(Session.ID.make("ses_precompute_failed"))
+    const history = precomputeHistory()
+    const later = [...history.near, textUser("Third question"), measured("Third answer", 160_000)]
+    const latest = [...later, textUser("Fourth question"), measured("Fourth answer", 165_000)]
+    const precomputeFailing = (messages: readonly SessionMessage.Info[]) =>
+      Effect.gen(function* () {
+        const reached = yield* Deferred.make<void>()
+        beforeResponse = Deferred.succeed(reached, undefined).pipe(Effect.andThen(Effect.die("provider down")))
+        yield* compaction.precompute(Effect.succeed(loaded(session, messages)))
+        yield* Deferred.await(reached)
+        yield* Effect.yieldNow
+      })
+
+    yield* precomputeFailing(history.near)
+    expect(requests).toHaveLength(1)
+    // The same response would send the same request again.
+    yield* compaction.precompute(Effect.succeed(loaded(session, history.near)))
+    expect(requests).toHaveLength(1)
+
+    yield* precomputeFailing(later)
+    expect(requests).toHaveLength(2)
+    expect(JSON.stringify(requests[1].messages)).toContain("Second answer")
+
+    // Two failures in a row stop background summaries until the next compaction.
+    yield* compaction.precompute(Effect.succeed(loaded(session, latest)))
+    expect(requests).toHaveLength(2)
+  }).pipe(Effect.ensuring(Effect.sync(() => (beforeResponse = Effect.void)))),
+)
+
+it.effect("compaction summarizes as usual when the background summary no longer fits the conversation", () =>
+  Effect.gen(function* () {
+    const compaction = yield* enablePrecompute
+    const session = yield* insertSession(Session.ID.make("ses_precompute_stale"))
+    const history = precomputeHistory()
+    const compactAfterPrecompute = (due: readonly SessionMessage.Info[], context = loaded(session, due)) =>
+      Effect.gen(function* () {
+        requests = []
+        yield* compaction.precompute(Effect.succeed(loaded(session, history.near)))
+        expect(yield* compaction.compact({ reason: "auto", context })).toEqual({ status: "completed" })
+        // The background summary is stopped; the summary that is kept covers the whole conversation.
+        return JSON.stringify(requests.at(-1)?.messages)
+      })
+
+    // About 35k tokens arrived after the summarized prefix, past the 30k that may stay verbatim beside it.
+    const burst = [...history.near, textUser("x".repeat(140_000)), measured("Burst handled", 182_000)]
+    expect(yield* compactAfterPrecompute(burst)).toContain("Burst handled")
+
+    // A different model would replay a summary written for the previous one.
+    const switched = {
+      ...loaded(session, history.due),
+      model: { ...resolved, ref: { ...resolved.ref, id: Model.ID.make("other") } },
+    }
+    expect(yield* compactAfterPrecompute(history.due, switched)).toContain("Third answer")
   }),
 )

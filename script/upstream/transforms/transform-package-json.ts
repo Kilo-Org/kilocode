@@ -343,6 +343,28 @@ const DELETE_UPSTREAM_CATALOG: Record<string, string[]> = {}
 
 const DELETE_UPSTREAM_DEPENDENCIES = new Set<string>()
 
+function mergeKiloChanges(
+  ours: Record<string, unknown>,
+  theirs: Record<string, unknown>,
+  base: Record<string, unknown> | undefined,
+  section: string,
+  changes: string[],
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+  const names = new Set([...Object.keys(ours), ...Object.keys(theirs), ...Object.keys(base ?? {})])
+  for (const name of names) {
+    const preserve = base && !same(ours[name], base[name]) && same(theirs[name], base[name])
+    const value = preserve ? ours[name] : theirs[name]
+    if (value === undefined) {
+      if (preserve && !same(ours[name], theirs[name])) changes.push(`${section}.${name}: preserved Kilo removal`)
+      continue
+    }
+    result[name] = value
+    if (preserve && !same(ours[name], theirs[name])) changes.push(`${section}.${name}: preserved Kilo change`)
+  }
+  return result
+}
+
 /**
  * Re-apply Kilo-specific scripts on top of the upstream-shaped scripts block,
  * and prune upstream-only scripts that target packages Kilo doesn't ship.
@@ -351,9 +373,16 @@ export function fixScripts(
   pkg: Record<string, unknown>,
   path: string,
   ours: Record<string, unknown> | null,
+  base: Record<string, unknown> | null,
   changes: string[],
 ): void {
-  const theirs = (pkg.scripts as Record<string, string> | undefined) || {}
+  const theirs = mergeKiloChanges(
+    (ours?.scripts as Record<string, unknown> | undefined) || {},
+    (pkg.scripts as Record<string, unknown> | undefined) || {},
+    base ? ((base.scripts as Record<string, unknown> | undefined) || {}) : undefined,
+    "scripts",
+    changes,
+  ) as Record<string, string>
   const oursScripts = (ours?.scripts as Record<string, string> | undefined) || {}
 
   for (const name of PRESERVE_SCRIPTS[path] || []) {
@@ -372,6 +401,22 @@ export function fixScripts(
   }
 
   if (Object.keys(theirs).length > 0) pkg.scripts = theirs
+}
+
+export function fixExports(
+  pkg: Record<string, unknown>,
+  ours: Record<string, unknown> | null,
+  base: Record<string, unknown> | null,
+  changes: string[],
+): void {
+  if (!ours?.exports) return
+  pkg.exports = mergeKiloChanges(
+    ours.exports as Record<string, unknown>,
+    (pkg.exports as Record<string, unknown> | undefined) || {},
+    base ? ((base.exports as Record<string, unknown> | undefined) || {}) : undefined,
+    "exports",
+    changes,
+  )
 }
 
 /**
@@ -615,7 +660,8 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
 
       preserveWorkspacePackages(pkg, ourPkg, basePkg, relativePath, changes)
 
-      fixScripts(pkg, relativePath, ourPkg, changes)
+      fixScripts(pkg, relativePath, ourPkg, basePkg, changes)
+      fixExports(pkg, ourPkg, basePkg, changes)
 
       // Merge catalog with "newest wins" strategy
       if (ourWorkspaces?.catalog || theirWorkspaces?.catalog) {
@@ -835,7 +881,8 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
 
         preserveWorkspacePackages(pkg, kiloPkg, null, path, changes)
 
-        fixScripts(pkg, path, kiloPkg, changes)
+        fixScripts(pkg, path, kiloPkg, null, changes)
+        fixExports(pkg, kiloPkg, null, changes)
 
         // Merge catalog with "newest wins" strategy
         if (kiloWorkspaces?.catalog || upstreamWorkspaces?.catalog) {
@@ -1025,7 +1072,8 @@ export async function reconcilePackageJsonFromRefs(
 
     preserveWorkspacePackages(pkg, ourPkg, basePkg, relativePath, changes)
 
-    fixScripts(pkg, relativePath, ourPkg, changes)
+    fixScripts(pkg, relativePath, ourPkg, basePkg, changes)
+    fixExports(pkg, ourPkg, basePkg, changes)
 
     if (ourWs?.catalog || theirWs?.catalog) {
       pkg.workspaces = (pkg.workspaces as Record<string, unknown>) || {}

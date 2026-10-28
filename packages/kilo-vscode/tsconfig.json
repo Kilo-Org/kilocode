@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@tsconfig/bun/tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "bun",
+      "node"
+    ],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable",
+      "DOM.AsyncIterable"
+    ],
+    "noUncheckedIndexedAccess": false,
+    "noUnusedLocals": true
+  },
+  "include": [
+    "src",
+    "script",
+    "test"
+  ],
+  "exclude": [
+    "src/shared"
+  ]
+}

@@ -75,6 +75,12 @@ for (const scenario of ["default", "opencode", "unknown", "invalid", "custom"]) 
           `${scenario}/${mode}/${label} background`,
         )
       }
+      const strokes = spans.filter((span) => span.text.includes("█"))
+      assert.ok(strokes.length > 0, `Missing logo: ${scenario}/${mode}`)
+      if (hosted) {
+        const ink = RGBA.fromHex(mode === "light" ? "#736400" : "#FFDD00").toInts()
+        for (const span of strokes) assert.deepEqual(span.fg.toInts(), ink, `${scenario}/${mode}/logo`)
+      }
       if (scenario === "default" || scenario === "opencode") {
         const mini = await resolveRunTheme(view.app.renderer, { ...initial.theme, mode })
         assert.ok(mini.footer.text instanceof RGBA)

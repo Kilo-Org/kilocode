@@ -1,9 +1,9 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 56,
-    "markedLines": 447,
-    "unmarkedLines": 39,
+    "files": 59,
+    "markedLines": 461,
+    "unmarkedLines": 40,
     "deletedFiles": 0
   },
   "files": {
@@ -54,7 +54,7 @@
     },
     "package.json": {
       "rung": 3,
-      "seam": "Root `dev` script runs script/dev-isolated.ts, which starts the Kilo host entry (packages/kilo-cli) with an isolated profile, so `bun dev` never uses the installed OpenCode or Kilo data. Stays after U-E0-01: `bun dev` from the root reads the upstream root package.json, and upstream's script runs the upstream CLI with the real data. Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check `packages/gui-extensions`, which Kilo removed (`skipFiles`). Root `install:alpha` script runs script/kilocode/install-alpha.ts (Kilo-owned), which installs the host executable built by the `kilo-v2` workflow; it goes away when v2 is mainline.",
+      "seam": "Root `dev` script runs script/dev-isolated.ts, which starts the Kilo host entry (packages/kilo-cli) with an isolated profile, so `bun dev` never uses the installed OpenCode or Kilo data. Stays after U-E0-01: `bun dev` from the root reads the upstream root package.json, and upstream's script runs the upstream CLI with the real data. Root `extension` script runs packages/kilo-vscode/script/launch.ts (Kilo-owned), which builds the v2 VS Code extension and opens it in a separate VS Code instance with an isolated profile, as `bun run extension` does on v1. Root `lint` script runs only `oxlint`: its ast-grep and `script/sdk-docs.ts` steps check `packages/gui-extensions`, which Kilo removed (`skipFiles`). Root `install:alpha` script runs script/kilocode/install-alpha.ts (Kilo-owned), which installs the host executable built by the `kilo-v2` workflow; it goes away when v2 is mainline.",
       "unmarked": "JSON has no comments."
     },
     "packages/cli/package.json": {
@@ -111,6 +111,10 @@
       "rung": 3,
       "seam": "Appends the embedder plugins registered with phase `post` (`SdkPlugins.all(\"post\")`) after the internal post plugins, so they see the result of config. Provides the existing Location-service context to embedder plugins in both phases, as internal plugins already receive it. No boot-order or upstream default change. Rungs 1 and 2 cannot supply it: the supervisor builds the boot order itself, and host-global registration cannot supply Location-scoped services such as Config."
     },
+    "packages/core/test/plugin/supervisor-reload.test.ts": {
+      "rung": 3,
+      "seam": "Test timing only: the organization integration test waits up to 5 s (500 retries of 10 ms) for each plugin reload instead of 2 s, the same budget as the other reload wait in the file (200 retries of 25 ms). The 2 s budget ran out on loaded CI runners. No product code changes. No seam: the retry budget is a literal inside the upstream test."
+    },
     "packages/server/src/process.ts": {
       "rung": 3,
       "seam": "`ServerProcess.start` takes `overrides` (service replacements) and passes them to `createRoutes`, which already takes them (as `ServerFetch.BootOptions.overrides` does for the embedded server). Three lines, no Kilo value. Rungs 1 and 2 cannot supply it: the process server built its routes without replacements, so a host could not register plugins (`SdkPlugins`) or replace services in the server the CLI spawns."
@@ -127,6 +131,14 @@
     "packages/tui/src/component/dialog-model.tsx": {
       "rung": 4,
       "seam": "Model picker (U-E9-07, #15242): the connected picker returns the Kilo option list (Kilo Gateway order from `recommendedIndex`, Recommended and Kilo Gateway sections, `Free` from Gateway `isFree`, `BYOK` and `May train` labels, v1 search over provider and model IDs) from the first line of its options memo, keeps section headers while searching (`flat={false}`), follows the highlight with `onMove`, and wraps the list with the model info panel. Seven call-out lines; the logic is in tui/src/kilocode/dialog-model.tsx and tui/src/kilocode/model-picker.ts. The upstream option code below the early return, `sortModelOptions` and `prioritizeFavorites` stay unchanged, so upstream syncs merge cleanly and upstream's model-options tests pass. Rungs 1 and 2 cannot reach it: the TUI plugin API has no model picker hook, and the host runs in the server process. A generic seam (an option-list and side-panel hook) would need the same lines here plus a new plugin API surface for one consumer."
+    },
+    "packages/tui/src/context/client-mcp.tsx": {
+      "rung": 4,
+      "seam": "Reject MCP terminal writes when no TUI input connection can accept them. The client MCP domain does not expose a hook for terminal input policy, and a plugin cannot replace this provider. Keeps upstream's immediate false return instead of silently queueing commands for a hidden or inactive terminal."
+    },
+    "packages/tui/src/context/session-terminals.tsx": {
+      "rung": 4,
+      "seam": "Return whether an attached terminal input writer accepted the data. Terminal input is a TUI-local persistent connection; no TUI plugin editor or server hook can replace the provider or receive a detached input safely."
     },
     "packages/tui/src/context/local.tsx": {
       "rung": 4,
@@ -183,7 +195,7 @@
     },
     "packages/core/src/session/compaction.ts": {
       "rung": 4,
-      "seam": "Native and streamed compaction settle their usage through static SessionUsage.record outside the step runner. Pass the selected provider ID to the same Kilo-owned policy. A compaction transform replaces the operation, not these settlement calls, and would duplicate upstream compaction."
+      "seam": "Native and streamed compaction settle their usage through static SessionUsage.record outside the step runner. Pass the selected provider ID to the same Kilo-owned policy. The v2.1.4 resolution adds one marked line to retain upstream's background usage callback in the multiline billing call. A compaction transform replaces the operation, not these settlement calls, and would duplicate upstream compaction."
     },
     "packages/core/src/session/stats.ts": {
       "rung": 4,
