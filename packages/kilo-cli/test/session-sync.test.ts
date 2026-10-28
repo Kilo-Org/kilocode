@@ -1530,7 +1530,11 @@ it.live("parent-only reconciliation cannot steal enabled or disabled nested acco
     yield* seed(s.db, child, newChild)
     expect((yield* Store.sessions(s.db, child)).map((row) => row.id)).toEqual([childID, newChild].sort())
     expect((yield* Store.dirty(s.db, childID)).map((row) => row.value).join()).toContain("child retains capture")
-    expect(yield* s.db.get(sql`SELECT directory FROM _kilo_sync_directory WHERE alias=${child}`)).toEqual({
+    expect(
+      yield* s.db.get(
+        sql`SELECT directory FROM _kilo_sync_directory WHERE alias=${storedAbsolutePath(child) ?? child}`,
+      ),
+    ).toEqual({
       directory: child,
     })
     expect(f.backend.states.has(childID)).toBe(false)
