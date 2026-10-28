@@ -94,15 +94,33 @@ export function Chat() {
     return undefined
   }
 
-  // Start of the running turn: the last user row's `time.created`. It is the turn's own anchor, so it exists from the
-  // moment the prompt is admitted, before the first assistant row, and it covers every step of the turn.
-  const started = () => {
+  // Start of the running turn. A prompt admitted while the turn already runs is a new `user` row (a steer), so anchor
+  // on the first user row after the last `idle` row, not the last user row: that is the turn's first prompt and it
+  // stays put for every step of the turn, steers included. The data layer inserts the `idle` row on execution end.
+  const turnStart = () => {
     const id = session()
     if (!id) return undefined
     const list = v2.data.session.message.list(id)
-    const user = list.findLast((item) => item.type === "user")
+    const idle = list.findLastIndex((item) => item.type === "idle")
+    const user =
+      idle === -1
+        ? list.findLast((item) => item.type === "user")
+        : list.slice(idle + 1).find((item) => item.type === "user")
     return user?.time.created
   }
+
+  // A run can start without a new user row (a subagent completion resumes a session). It has no turn start in the
+  // transcript, so remember when the status flipped to running, as v1 restarts its busy period there.
+  const [runStart, setRunStart] = createSignal<number>()
+  let lastRun: { id: string | undefined; active: boolean } | undefined
+  createEffect(
+    on([session, running] as const, ([id, active]) => {
+      if (active && (!lastRun || lastRun.id !== id || !lastRun.active)) setRunStart(Date.now())
+      lastRun = { id, active }
+    }),
+  )
+
+  const started = () => turnStart() ?? runStart()
 
   // MessageList owns the transcript scroller; the working indicator's scroll button calls back into it.
   const [scrollToBottom, setScrollToBottom] = createSignal<() => void>(() => {})
