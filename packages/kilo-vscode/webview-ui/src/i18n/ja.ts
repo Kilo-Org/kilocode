@@ -1220,6 +1220,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "自動圧縮の上限",
   "settings.context.compactionLimit.description":
     "コンテキストがモデルウィンドウのこの割合に達したら圧縮します。安全バッファーのみを使用するには空欄のままにしてください。",
+  "settings.context.compactionKeep.title": "最近のトークンを保持",
+  "settings.context.compactionKeep.description":
+    "コンテキストの圧縮時にそのまま保持する最近のトークン数。空欄にすると 15,000 を保持します。",
+  "settings.context.compactionBuffer.title": "圧縮バッファー",
+  "settings.context.compactionBuffer.description":
+    "圧縮前にモデルのコンテキスト上限より下で空けておくトークン数。空欄にすると 15%（最低 16,000 トークン）を空けます。",
   "settings.context.prune.title": "古い出力を削除",
   "settings.context.prune.description": "圧縮時に古いツール出力を削除",
   "settings.context.watcherPatterns": "ファイルウォッチャー無視パターン",

@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 597,
+    "done": 607,
     "total": 9819,
-    "percent": 6.1,
+    "percent": 6.2,
     "dropped": 35,
     "kinds": [
       {
         "kind": "module",
-        "done": 486,
+        "done": 496,
         "total": 3543
       },
       {
@@ -6049,12 +6049,12 @@
     },
     {
       "feature": "vscode",
-      "done": 272,
+      "done": 282,
       "total": 2057,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 269,
+          "done": 279,
           "total": 1439
         },
         "api": {
@@ -6581,6 +6581,16 @@
     "module:packages/kilo-vscode/webview-ui/src/components/profile/ProfileView.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/profile/ProviderUsageCards.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/AgentBehaviourTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/AutoApproveTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/BrowserTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/CheckpointsTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/ContextTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/DisplayTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/ExperimentalTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/LanguageTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/ModelsTab.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/PermissionEditor.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/ProviderConnectDialog.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/ProviderSelectDialog.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/ProvidersTab.tsx",

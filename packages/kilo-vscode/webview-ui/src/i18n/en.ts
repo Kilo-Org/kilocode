@@ -1216,6 +1216,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Auto Compaction Limit",
   "settings.context.compactionLimit.description":
     "Compact when context reaches this percentage of the model window. Leave blank to use the safety buffer only.",
+  "settings.context.compactionKeep.title": "Keep Recent Tokens",
+  "settings.context.compactionKeep.description":
+    "Recent tokens kept verbatim when the context is compacted. Leave blank to keep 15,000.",
+  "settings.context.compactionBuffer.title": "Compaction Buffer",
+  "settings.context.compactionBuffer.description":
+    "Tokens kept free below the model context limit before compacting. Leave blank to keep 15% free, at least 16,000.",
   "settings.context.prune.title": "Prune Old Outputs",
   "settings.context.prune.description": "Remove old tool outputs during compaction",
   "settings.context.watcherPatterns": "File Watcher Ignore Patterns",

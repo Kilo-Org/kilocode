@@ -1242,6 +1242,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limite de compactação automática",
   "settings.context.compactionLimit.description":
     "Compacte quando o contexto atingir esta porcentagem da janela do modelo. Deixe em branco para usar apenas a margem de segurança.",
+  "settings.context.compactionKeep.title": "Manter tokens recentes",
+  "settings.context.compactionKeep.description":
+    "Tokens recentes mantidos literalmente quando o contexto é compactado. Deixe em branco para manter 15.000.",
+  "settings.context.compactionBuffer.title": "Buffer de compactação",
+  "settings.context.compactionBuffer.description":
+    "Tokens mantidos livres abaixo do limite de contexto antes da compactação. Deixe em branco para manter 15% livre, no mínimo 16.000.",
   "settings.context.prune.title": "Remover saídas antigas",
   "settings.context.prune.description": "Remover saídas antigas de ferramentas durante a compactação",
   "settings.context.watcherPatterns": "Padrões de ignorar do observador",

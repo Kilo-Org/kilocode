@@ -1203,6 +1203,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "ขีดจำกัดการบีบอัดอัตโนมัติ",
   "settings.context.compactionLimit.description":
     "บีบอัดเมื่อบริบทถึงเปอร์เซ็นต์นี้ของหน้าต่างโมเดล เว้นว่างไว้เพื่อใช้เฉพาะบัฟเฟอร์ความปลอดภัย",
+  "settings.context.compactionKeep.title": "เก็บโทเคนล่าสุด",
+  "settings.context.compactionKeep.description":
+    "โทเคนล่าสุดที่เก็บไว้ตามเดิมเมื่อบีบอัดบริบท เว้นว่างเพื่อเก็บ 15,000",
+  "settings.context.compactionBuffer.title": "บัฟเฟอร์การบีบอัด",
+  "settings.context.compactionBuffer.description":
+    "โทเคนที่เว้นว่างไว้ต่ำกว่าขีดจำกัดบริบทของโมเดลก่อนบีบอัด เว้นว่างเพื่อเว้น 15% ว่าง อย่างน้อย 16,000",
   "settings.context.prune.title": "ตัดผลลัพธ์เก่า",
   "settings.context.prune.description": "ลบผลลัพธ์เครื่องมือเก่าระหว่างการบีบอัด",
   "settings.context.watcherPatterns": "รูปแบบการละเว้นตัวเฝ้าดูไฟล์",

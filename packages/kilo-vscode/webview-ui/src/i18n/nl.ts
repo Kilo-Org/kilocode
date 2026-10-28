@@ -1198,6 +1198,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
   "settings.context.compactionLimit.description":
     "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",
+  "settings.context.compactionKeep.title": "Recente tokens behouden",
+  "settings.context.compactionKeep.description":
+    "Recente tokens die letterlijk behouden blijven bij het comprimeren van de context. Laat leeg om 15.000 te behouden.",
+  "settings.context.compactionBuffer.title": "Compressiebuffer",
+  "settings.context.compactionBuffer.description":
+    "Tokens die vrij blijven onder de contextlimiet voordat er wordt gecomprimeerd. Laat leeg om 15% vrij te houden, minimaal 16.000.",
   "settings.context.prune.title": "Oude Uitvoer Opschonen",
   "settings.context.prune.description": "Verwijder oude tool uitvoer tijdens compactie",
   "settings.context.watcherPatterns": "File Watcher Negeer Patronen",

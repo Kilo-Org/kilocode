@@ -1195,6 +1195,12 @@ export const dict = {
   "settings.context.compactionLimit.title": "حد الضغط التلقائي",
   "settings.context.compactionLimit.description":
     "اضغط عندما يصل السياق إلى هذه النسبة المئوية من نافذة النموذج. اتركه فارغاً لاستخدام هامش الأمان فقط.",
+  "settings.context.compactionKeep.title": "الاحتفاظ بالرموز الأخيرة",
+  "settings.context.compactionKeep.description":
+    "الرموز الأخيرة التي تُحفظ نصًا أثناء ضغط السياق. اتركه فارغًا للاحتفاظ بـ 15,000.",
+  "settings.context.compactionBuffer.title": "مخزن الضغط المؤقت",
+  "settings.context.compactionBuffer.description":
+    "الرموز التي تُترك فارغة تحت حد سياق النموذج قبل الضغط. اتركه فارغًا لإبقاء 15% فارغة، على الأقل 16,000.",
   "settings.context.prune.title": "تقليم المخرجات القديمة",
   "settings.context.prune.description": "إزالة مخرجات الأدوات القديمة أثناء الضغط",
   "settings.context.watcherPatterns": "أنماط تجاهل مراقب الملفات",
