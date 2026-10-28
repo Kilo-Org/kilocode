@@ -1,0 +1,159 @@
+/**
+ * WorkingIndicator component
+ * Shows a spinner, status text, and elapsed time counter while the agent is active.
+ *
+ * Main's component on native v2 session data. The label falls back to the "thinking" text because v2 exposes only the
+ * session status, not a live status text, and the retry countdown comes from the scheduled retry the assistant row
+ * carries. Markup, classes and timing match v1, so the label shimmer, the swap and the elapsed fade animate as there.
+ */
+
+import { Button } from "@kilocode/kilo-ui/button"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { createEffect, createMemo, createSignal, on, onCleanup, Show } from "solid-js"
+import { useLanguage } from "../../context/language"
+import { useV2 } from "../../v2/client"
+import { StatusText } from "./StatusText"
+
+/** The retry state of the running turn, from the assistant message's `session.retry.scheduled` data. */
+export type Retry = { attempt: number; at: number; error: { message: string } }
+
+export const WorkingIndicator = (props: {
+  session: string
+  // Start of the running turn, from the last user row's `time.created`, so a remount mid-turn keeps the real elapsed
+  // time instead of restarting at zero (v1 reads it from the session's busy timing).
+  start?: number
+  // The dock shows the working indicator only while the turn runs and nothing is blocked (v1 `showsWorking`).
+  active: boolean
+  // A permission or question parks the turn: the counter holds its value instead of resetting, as on v1.
+  blocked: boolean
+  retry?: Retry
+  onScrollToBottom?: () => void
+}) => {
+  const v2 = useV2()
+  const language = useLanguage()
+  const [elapsed, setElapsed] = createSignal(0)
+  const [retryCountdown, setRetryCountdown] = createSignal(0)
+  // v1's `activeTiming`: the time since the turn began, less the stretches it sat parked on a permission or question.
+  // Without a known turn start the counter reads zero; measuring from mount would leak the whole chat view's age into
+  // a new turn, since this row stays mounted across turns.
+  let paused = 0
+  let pauseAt: number | undefined
+  let lastStart: number | undefined
+
+  const activeElapsed = () => {
+    if (props.start === undefined) return 0
+    const parked = pauseAt === undefined ? 0 : Date.now() - pauseAt
+    return Math.max(0, Date.now() - props.start - paused - parked)
+  }
+
+  createEffect(
+    on(
+      () => [props.session, props.start, props.active, props.blocked] as const,
+      ([, start, active, blocked]) => {
+        // A new turn (or session) resets the pause accounting and restarts the counter from its own start time.
+        if (start !== lastStart) {
+          lastStart = start
+          paused = 0
+          pauseAt = undefined
+        }
+        if (active) {
+          if (pauseAt !== undefined) {
+            paused += Date.now() - pauseAt
+            pauseAt = undefined
+          }
+          setElapsed(Math.floor(activeElapsed() / 1000))
+          const id = setInterval(() => setElapsed(Math.floor(activeElapsed() / 1000)), 1000)
+          onCleanup(() => clearInterval(id))
+          return
+        }
+        if (blocked) {
+          pauseAt ??= Date.now()
+          setElapsed(Math.floor(activeElapsed() / 1000))
+          return
+        }
+        // The turn ended: hold the slot at zero, as v1 does when it stops tracking the elapsed time.
+        paused = 0
+        pauseAt = undefined
+        setElapsed(0)
+      },
+    ),
+  )
+
+  createEffect(
+    on(
+      () => props.retry,
+      (retry) => {
+        if (!retry) {
+          setRetryCountdown(0)
+          return
+        }
+        const target = retry.at
+        const tick = () => setRetryCountdown(Math.max(0, Math.ceil((target - Date.now()) / 1000)))
+        tick()
+        const id = setInterval(() => {
+          const remaining = Math.max(0, Math.ceil((target - Date.now()) / 1000))
+          setRetryCountdown(remaining)
+          if (remaining <= 0) clearInterval(id)
+        }, 1000)
+        onCleanup(() => clearInterval(id))
+      },
+    ),
+  )
+
+  // Memoized so a value equal to the previous one never reaches `StatusText` on a re-render, which would replay the
+  // swap animation. Only a real change (the turn starts or stops retrying) swaps the label.
+  const statusText = createMemo(() => {
+    const retry = props.retry
+    if (retry) return retry.error.message || language.t("session.status.retry")
+    return language.t("ui.sessionTurn.status.thinking")
+  })
+
+  const isRetrying = () => !!props.retry
+
+  const formatElapsed = () => {
+    const s = elapsed()
+    if (s < 60) return `${s}s`
+    const m = Math.floor(s / 60)
+    const rem = s % 60
+    return `${m}m ${rem}s`
+  }
+
+  const cancelRetry = () => {
+    void v2.api.session.interrupt({ sessionID: props.session }).catch(v2.report)
+  }
+
+  return (
+    // A live region so the turn start, the retry switch and the retry error are announced; the ticking counters below
+    // are hidden from it so they do not announce every second.
+    <div class="working-indicator" role="status" aria-live="polite">
+      <Button variant="ghost" size="small" class="working-indicator-scroll" onClick={() => props.onScrollToBottom?.()}>
+        <Spinner />
+        <StatusText text={statusText()} />
+        {/* Kept out of the label: a countdown inside the morphing text would swap it
+            once a second, and every tick would read as a new status. */}
+        <Show when={isRetrying() && retryCountdown() > 0}>
+          <span class="working-count" aria-hidden="true">
+            ({retryCountdown()}s)
+          </span>
+        </Show>
+        {/* Laid out for the whole turn and only faded until the first tick: mounting
+            the counter a second in shifted the whole cluster sideways. */}
+        <span class="working-elapsed" aria-hidden="true" data-empty={elapsed() > 0 ? undefined : ""}>
+          {formatElapsed()}
+        </span>
+        <span class="sr-only">{language.t("session.messages.scrollToBottom")}</span>
+      </Button>
+      <Show when={isRetrying()}>
+        <Button
+          variant="secondary"
+          size="small"
+          onClick={cancelRetry}
+          class="working-cancel"
+          style={{ "font-weight": "600", color: "var(--vscode-errorForeground, #f85149)" }}
+        >
+          {language.t("ui.sessionTurn.cancel") || "Cancel"}
+        </Button>
+      </Show>
+    </div>
+  )
+}
