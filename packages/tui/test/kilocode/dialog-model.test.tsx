@@ -2,6 +2,8 @@ import { expect, test } from "bun:test"
 import type { ModelInfo } from "@opencode/client"
 import type { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
 import { DialogModel } from "../../src/component/dialog-model"
+import { TuiAppProvider } from "../../src/context/runtime"
+import { createKiloModelPicker } from "../../src/kilocode/dialog-model"
 import { renderLocal } from "../fixture/local"
 import { directory, json } from "../fixture/tui-client"
 
@@ -50,7 +52,7 @@ const entries: KiloGatewayRpc.ModelEntry[] = [
   { id: "openai/gpt-5", name: "OpenAI: GPT-5", isFree: false },
 ]
 
-async function open(connected: boolean, recent?: { providerID: string; modelID: string }) {
+async function open(connected: boolean, recent?: { providerID: string; modelID: string }, hosted = true) {
   const rpc: unknown[] = []
   const setup = await renderLocal({
     models,
@@ -79,9 +81,37 @@ async function open(connected: boolean, recent?: { providerID: string; modelID: 
   })
   setup.resize(130, 40)
   if (recent) setup.local.model.set(recent, { recent: true })
-  setup.dialog.replace(() => <DialogModel />)
+  setup.dialog.replace(() => (
+    <TuiAppProvider
+      value={{
+        name: "test",
+        version: "test",
+        channel: "test",
+        capabilities: hosted ? { modelPicker: createKiloModelPicker } : undefined,
+      }}
+    >
+      <DialogModel />
+    </TuiAppProvider>
+  ))
   return { setup, rpc }
 }
+
+test("unhosted picker uses upstream order and search without Gateway metadata or panel", async () => {
+  const { setup, rpc } = await open(true, undefined, false)
+  await using _ = setup
+  const frame = await setup.waitForFrame((frame) => frame.includes("Zen Sonnet") && frame.includes("Grok Code Fast"))
+  expect(frame).not.toContain("Recommended")
+  expect(frame).not.toContain("May train")
+  expect(frame).not.toContain("Terminal Bench 2.0")
+  expect(frame.indexOf("OpenCode Zen")).toBeLessThan(frame.indexOf("Kilo Gateway"))
+  expect(rpc).toEqual([])
+  await setup.mockInput.typeText("grok")
+  const filtered = await setup.waitForFrame(
+    (frame) => frame.includes("Grok Code Fast") && !frame.includes("Zen Sonnet"),
+  )
+  expect(filtered.split("\n").filter((line) => line.includes("Kilo Gateway"))).toHaveLength(1)
+  expect(filtered.split("\n").find((line) => line.includes("Kilo Gateway"))).toContain("Grok Code Fast")
+})
 
 test("connected picker shows Gateway sections, labels and the info panel", async () => {
   const { setup, rpc } = await open(true)

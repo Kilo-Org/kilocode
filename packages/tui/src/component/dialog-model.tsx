@@ -1,5 +1,6 @@
 import type { ModelInfo } from "@opencode/client"
 import { createMemo, createSignal, Show } from "solid-js"
+import type { Accessor, JSX } from "solid-js" // kilocode_change(tui) seam
 import { useLocal } from "../context/local"
 import { DialogSelect } from "../ui/dialog-select"
 import { useDialog } from "../ui/dialog"
@@ -13,7 +14,23 @@ import { useLocation } from "../context/location"
 import { useNewDesigns } from "../config"
 import { DialogFreeModels } from "./dialog-model-free"
 import { FavoriteMarker, ModelDetail, isFreeModel, prioritizeFavorites, sortModelOptions } from "./model-options"
-import { createKiloModelPicker } from "../kilocode/dialog-model" // kilocode_change(components:06ac8868d98e)
+import { useTuiApp } from "../context/runtime" // kilocode_change(tui) seam
+import type { DialogSelectOption } from "../ui/dialog-select" // kilocode_change(tui) seam
+
+// kilocode_change start - tui seam: optional model picker implementation
+export type ModelPickerFactory = (input: {
+  providerID?: string
+  query: Accessor<string>
+  connected: Accessor<boolean>
+  showExtra: Accessor<boolean>
+  onSelect: (providerID: string, modelID: string) => void
+}) => {
+  options: Accessor<DialogSelectOption<{ providerID: string; modelID: string }>[]>
+  flat?: boolean
+  move: (option: DialogSelectOption<{ providerID: string; modelID: string }>) => void
+  frame: (list: JSX.Element) => JSX.Element
+}
+// kilocode_change end
 
 export function DialogModel(props: { providerID?: string }) {
   const local = useLocal()
@@ -84,10 +101,18 @@ function DialogConnectedModels(props: {
   const models = createMemo(() => data.location.model.list(location.ref) ?? [])
 
   const showExtra = createMemo(() => connected() && !props.providerID)
-  const kilo = createKiloModelPicker({ providerID: props.providerID, query, connected, showExtra, onSelect: props.onSelect }) // kilocode_change(tui)
+  // kilocode_change start - tui seam: optional picker factory
+  const picker = useTuiApp().capabilities?.modelPicker?.({
+    providerID: props.providerID,
+    query,
+    connected,
+    showExtra,
+    onSelect: props.onSelect,
+  })
+  // kilocode_change end
 
   const options = createMemo(() => {
-    if (kilo) return kilo.options() // kilocode_change(tui) - Kilo list replaces the upstream list, which stays unchanged for syncs
+    if (picker) return picker.options() // kilocode_change(tui) seam
     const needle = query().trim()
     const showSections = showExtra() && needle.length === 0
     const favorites = connected() ? (newDesigns() ? favoritesAtOpen : local.model.favorite()) : []
@@ -197,7 +222,9 @@ function DialogConnectedModels(props: {
     return value.name
   })
 
-  return kilo.frame( // kilocode_change(tui) - Kilo: info panel next to the list
+  // kilocode_change start - tui seam: optional picker frame
+  return (picker?.frame ?? ((list) => list))(
+    // kilocode_change end
     <DialogSelect<ReturnType<typeof options>[number]["value"]>
       searchInTitle
       titlePlaceholder="Search models"
@@ -225,11 +252,11 @@ function DialogConnectedModels(props: {
         },
       ]}
       onFilter={setQuery}
-      flat={false} // kilocode_change(tui) - Kilo: keep section headers while searching, as v1
+      flat={picker?.flat ?? true} // kilocode_change(tui) seam
       skipFilter={true}
       title={title()}
       current={local.model.current()}
-      onMove={kilo.move} // kilocode_change(tui) - Kilo: info panel follows the highlighted model
-    />, // kilocode_change(tui)
+      onMove={picker?.move} // kilocode_change(tui) seam
+    />, // kilocode_change(tui) seam
   )
 }

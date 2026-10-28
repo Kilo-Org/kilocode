@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 59,
-    "markedLines": 463,
+    "files": 58,
+    "markedLines": 500,
     "unmarkedLines": 40,
     "deletedFiles": 0
   },
@@ -18,14 +18,6 @@
     ".github/actions/setup-bun/action.yml": {
       "rung": 3,
       "seam": "Windows CI setup: exclude the workspace, temp and Bun directories from Defender real-time scanning before the install. Carried over from v1 (`main`). The Windows Bun cache skip that Kilo also carried is upstream since v2.0.31 (anomalyco/opencode#55866). No seam: the composite action has no input to run a step before the install, and every job that installs dependencies uses it. Also pins `actions/setup-node` (v7.1.0) and `actions/cache` (v6.1.0) to current releases; upstream's pins lag and an action reference cannot be overridden from outside the composite action."
-    },
-    ".github/actions/setup-git-committer/action.yml": {
-      "rung": 3,
-      "seam": "CI authentication: pin `actions/create-github-app-token` to the current release (v3.3.0) so Kilo CI uses a supported action. Upstream's pin lags, and an action reference cannot be overridden from outside the composite action."
-    },
-    ".github/publish-python-sdk.yml": {
-      "rung": 3,
-      "seam": "Disabled Python SDK publish workflow: track the current `actions/checkout` (v7.0.1) and `oven-sh/setup-bun` (v2.2.0) releases, and read the Bun version from the root `package.json` (`packageManager`, currently 1.4.4) instead of a hardcoded 1.2.21. The workflow remains commented out, so this is pin hygiene only. No seam: a workflow cannot take its action references from another file."
     },
     ".github/workflows/check.yml": {
       "rung": 3,
@@ -130,15 +122,19 @@
     },
     "packages/tui/src/component/dialog-model.tsx": {
       "rung": 4,
-      "seam": "Model picker (U-E9-07, #15242): the connected picker returns the Kilo option list (Kilo Gateway order from `recommendedIndex`, Recommended and Kilo Gateway sections, `Free` from Gateway `isFree`, `BYOK` and `May train` labels, v1 search over provider and model IDs) from the first line of its options memo, keeps section headers while searching (`flat={false}`), follows the highlight with `onMove`, and wraps the list with the model info panel. Seven call-out lines; the logic is in tui/src/kilocode/dialog-model.tsx and tui/src/kilocode/model-picker.ts. The upstream option code below the early return, `sortModelOptions` and `prioritizeFavorites` stay unchanged, so upstream syncs merge cleanly and upstream's model-options tests pass. Rungs 1 and 2 cannot reach it: the TUI plugin API has no model picker hook, and the host runs in the server process. A generic seam (an option-list and side-panel hook) would need the same lines here plus a new plugin API surface for one consumer."
+      "seam": "Model picker: use an optional host-supplied picker to select option construction, search headings, highlight and info panel; absent a picker, retain upstream behavior. Kilo behavior lives in tui/src/kilocode/dialog-model.tsx and model-picker.ts. The TUI plugin API has no model picker hook, so the host supplies the factory through the runtime capability seam."
     },
     "packages/tui/src/context/client-mcp.tsx": {
       "rung": 4,
-      "seam": "Reject MCP terminal writes when no TUI input connection can accept them. The client MCP domain does not expose a hook for terminal input policy, and a plugin cannot replace this provider. Keeps upstream's immediate false return instead of silently queueing commands for a hidden or inactive terminal."
+      "seam": "Report a rejected terminal write only when the selected input policy returns false. The upstream default queues input; the Kilo host selects attached-only delivery. The client MCP domain has no terminal-input policy hook, and a plugin cannot replace this provider."
     },
     "packages/tui/src/context/session-terminals.tsx": {
       "rung": 4,
-      "seam": "Return whether an attached terminal input writer accepted the data. Terminal input is a TUI-local persistent connection; no TUI plugin editor or server hook can replace the provider or receive a detached input safely."
+      "seam": "Select terminal input delivery from the host-supplied policy. Upstream queues input until a writer attaches; the Kilo host rejects unattached writes. No TUI plugin editor can replace this local provider."
+    },
+    "packages/tui/src/context/runtime.tsx": {
+      "rung": 3,
+      "seam": "Expose optional model-picker and terminal-input capabilities to the TUI host. Without them the upstream picker and queued terminal input remain the defaults. Existing TUI plugin hooks cannot reach these private providers; the host supplies Kilo values in its handler mirror."
     },
     "packages/tui/src/context/local.tsx": {
       "rung": 4,

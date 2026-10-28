@@ -86,6 +86,7 @@ export function createKiloModelPicker(input: {
 
   return {
     options,
+    flat: false,
     move: (option: DialogSelectOption<Ref>) => setMoved(option.value),
     // kilo_port(unattributed:tui/component:361708efa0db)
     frame: (list: JSX.Element) => (

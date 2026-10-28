@@ -37,7 +37,7 @@ if (process.env.OPENCODE_SSH_ASKPASS_PORT) {
 const KiloCommands = { ...Commands, commands: { ...Commands.commands, auto: AutoCommand } }
 
 const Handlers = Runtime.handlers(KiloCommands, {
-  $: () => import("@opencode/cli/commands/handlers/default"),
+  $: () => import("./tui-handler"),
   upgrade: () => import("./upgrade"),
   uninstall: () => import("@opencode/cli/commands/handlers/uninstall"),
   acp: () => import("@opencode/cli/commands/handlers/acp"),

@@ -7,6 +7,7 @@ import { useLocation } from "./location"
 import { useRoute } from "./route"
 import { useSessionTabs } from "./session-tabs"
 import { useSessionTerminals } from "./session-terminals"
+import { useTuiApp } from "./runtime" // kilocode_change(client-mcp) seam - host-selected terminal input policy
 
 // Serves TUI tools to the server as the client MCP server "tui", so the model sees them as `tui_<tool>`.
 export function ClientMcp() {
@@ -17,6 +18,7 @@ export function ClientMcp() {
   const route = useRoute()
   const tabs = useSessionTabs()
   const terminals = useSessionTerminals()
+  const rejectDetached = useTuiApp().capabilities?.terminalInput === "attached-only" // kilocode_change(client-mcp) seam
   const state: { key?: string; connection?: ClientMcpConnection } = {}
 
   const openTerminal = async (calledBy: string | undefined) => {
@@ -29,8 +31,9 @@ export function ClientMcp() {
     if (typeof text !== "string") return failure("text must be a string")
     const result = await terminalFor(calledBy)
     if (typeof result !== "string") return result
-    // kilocode_change start - client-mcp: Return an error when no terminal input connection can accept the write.
-    if (!terminals.write(result, new TextEncoder().encode(text)))
+    // kilocode_change start - client-mcp: report a rejected terminal write
+    const written = terminals.write(result, new TextEncoder().encode(text))
+    if (rejectDetached && written === false)
       return failure("Terminal is not attached; select the session's terminal pane and try again")
     // kilocode_change end
     return { content: [{ type: "text" as const, text: `Wrote to terminal ${result}` }] }

@@ -1,4 +1,5 @@
 import { createComponent, createContext, type JSX, useContext } from "solid-js"
+import type { ModelPickerFactory } from "../component/dialog-model" // kilocode_change(tui) seam
 
 export type TuiHighlight = Readonly<{
   title: string
@@ -11,6 +12,12 @@ export type TuiApp = Readonly<{
   channel: string
   /** The current release's highlights, embedded only in stable release builds. */
   highlights?: ReadonlyArray<TuiHighlight>
+  // kilocode_change start - tui seam: host-selected UI capabilities
+  capabilities?: Readonly<{
+    modelPicker?: ModelPickerFactory
+    terminalInput?: "queue" | "attached-only"
+  }>
+  // kilocode_change end
 }>
 
 export type TuiPaths = Readonly<{
