@@ -2,6 +2,8 @@ package ai.kilocode.client.agentManager.worktree
 import ai.kilocode.client.ui.list.section
 
 import ai.kilocode.client.util.edtWait
+import ai.kilocode.client.agentManager.WorkspaceSessionListToggle
+import ai.kilocode.client.agentManager.WorkspaceSessionRow
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
@@ -36,7 +38,7 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.active.ActiveItem
 import ai.kilocode.client.ui.list.activeListSectionTitle
-import ai.kilocode.client.ui.list.activeListToolWindowBackground
+import ai.kilocode.client.ui.active.activeToolWindowBackground
 import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -174,15 +176,15 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         val toolbarPanel = edt { toolbar.parent as JComponent }
         val header = edt { UIUtil.findComponentOfType(panel, WorktreePrHeaderView::class.java)!!.parent as JComponent }
 
-        assertEquals(activeListToolWindowBackground(), edt { panel.background })
+        assertEquals(activeToolWindowBackground(), edt { panel.background })
         assertNull(edt { panel.border })
-        assertEquals(activeListToolWindowBackground(), edt { list.background })
-        assertEquals(activeListToolWindowBackground(), edt { scroll.background })
-        assertEquals(activeListToolWindowBackground(), edt { scroll.viewport.background })
-        assertEquals(activeListToolWindowBackground(), edt { (scroll.viewport.view as JComponent).background })
+        assertEquals(activeToolWindowBackground(), edt { list.background })
+        assertEquals(activeToolWindowBackground(), edt { scroll.background })
+        assertEquals(activeToolWindowBackground(), edt { scroll.viewport.background })
+        assertEquals(activeToolWindowBackground(), edt { (scroll.viewport.view as JComponent).background })
         assertFalse(edt { toolbar.isOpaque })
-        assertEquals(activeListToolWindowBackground(), edt { toolbarPanel.background })
-        assertEquals(activeListToolWindowBackground(), edt { header.background })
+        assertEquals(activeToolWindowBackground(), edt { toolbarPanel.background })
+        assertEquals(activeToolWindowBackground(), edt { header.background })
         assertEquals(0, edt { scroll.border.getBorderInsets(scroll).left })
         assertEquals(0, edt { scroll.viewportBorder.getBorderInsets(scroll).left })
         assertTrue(edt { toolbarPanel.border.getBorderInsets(toolbarPanel).right > 0 })
@@ -562,6 +564,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         val row = row("ses_1")
 
         assertEquals("Session ses_1", row.title)
+        assertTrue(row is WorkspaceSessionRow)
         assertNull(row.icon)
         assertNull(row.description)
         assertEquals(KiloBundle.message("session.part.tool.running"), row.badges.single().text)
@@ -1176,8 +1179,8 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         return out
     }
 
-    private fun toggle(root: java.awt.Component = panel): WorktreeSessionListToggle =
-        components(root).filterIsInstance<WorktreeSessionListToggle>().single()
+    private fun toggle(root: java.awt.Component = panel): WorkspaceSessionListToggle =
+        components(root).filterIsInstance<WorkspaceSessionListToggle>().single()
 
     /** The row holding the toggle and its separator, left of the toolbar. */
     private fun row(): JPanel = edt { toggle().parent.parent as JPanel }

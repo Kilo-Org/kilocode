@@ -14,14 +14,24 @@ internal class ActiveMenu<T : Any>(
     private val element: (ActiveItem) -> T?,
     val place: String = ActionPlaces.POPUP,
     private val eligible: ((ActiveItem) -> Boolean)? = null,
+    private val alternate: ActiveMenu<*>? = null,
 ) {
-    fun available(item: ActiveItem): Boolean = (eligible?.invoke(item) ?: true) && element(item) != null
+    fun available(item: ActiveItem): Boolean =
+        (eligible?.invoke(item) ?: true) && (element(item) != null || alternate?.available(item) == true)
+
+    private fun fallback(item: ActiveItem): ActiveMenu<*>? =
+        alternate?.takeIf { alternate -> (eligible?.invoke(item) ?: true) && alternate.available(item) }
 
     fun context(anchor: JComponent, item: ActiveItem): DataContext {
-        val data = element(item)
+        val data = if (eligible?.invoke(item) ?: true) element(item) else null
+        val alternate = fallback(item)
+        if (data == null && alternate != null) {
+            return SimpleDataContext.builder().setParent(alternate.context(anchor, item)).addNull(key).build()
+        }
         val builder = SimpleDataContext.builder()
             .setParent(DataManager.getInstance().getDataContext(anchor))
         if (data != null) builder.add(key, data)
+        alternate?.key?.let { builder.addNull(it) }
         return builder.build()
     }
 }

@@ -36,7 +36,7 @@ import javax.swing.ScrollPaneConstants
 import javax.swing.UIManager
 import javax.swing.event.DocumentEvent
 
-internal fun activeListToolWindowBackground(): Color = activeToolWindowBackground()
+internal fun activeToolWindowBackground(): Color = activeToolWindowBackground()
 
 internal class ActiveList(
     emptyText: String,
@@ -64,13 +64,13 @@ internal class ActiveList(
     private val search: SearchTextField? = if (showSearch) SearchTextField(false) else null
     private val scroll = object : JBScrollPane(view) {
         override fun getBackground(): Color {
-            if (surface == ActiveSurface.ToolWindow) return activeListToolWindowBackground()
+            if (surface == ActiveSurface.ToolWindow) return activeToolWindowBackground()
             return super.getBackground() ?: UIUtil.getPanelBackground()
         }
     }.apply {
         horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
         viewportBorder = JBUI.Borders.empty()
-        if (surface == ActiveSurface.ToolWindow) viewport.background = activeListToolWindowBackground()
+        if (surface == ActiveSurface.ToolWindow) viewport.background = activeToolWindowBackground()
     }
 
     /**
@@ -96,7 +96,7 @@ internal class ActiveList(
     }
 
     override fun getBackground(): Color {
-        if (surface == ActiveSurface.ToolWindow) return activeListToolWindowBackground()
+        if (surface == ActiveSurface.ToolWindow) return activeToolWindowBackground()
         return super.getBackground() ?: UIUtil.getPanelBackground()
     }
 

@@ -59,16 +59,28 @@ class WorktreePrHeaderViewTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test no PR hides status and title`() {
+    fun `test no PR shows workspace name without clickable PR state`() {
         val view = edt { WorktreePrHeaderView {} }
 
         edt { view.update(null, null, "feature-x") }
 
         assertNull(edt { components(view).filterIsInstance<JBLabel>().firstOrNull { it.icon is FilledBadgeIcon } })
         val title = edt { title(view) }
-        assertFalse(edt { title.isVisible })
-        assertTrue(edt { fragments(title).isEmpty() })
+        assertTrue(edt { title.isVisible })
+        assertEquals(listOf("feature-x"), edt { fragments(title).map { it.text } })
         assertEquals(Cursor.DEFAULT_CURSOR, title.cursor.type)
+    }
+
+    fun `test clearing a PR restores name using the retained title component`() {
+        val view = edt { WorktreePrHeaderView {} }
+        val title = edt { title(view) }
+        edt {
+            view.update(null, pull(GhState.OPEN), "feature-x")
+            view.update(null, null, "feature-x")
+            assertSame(title, title(view))
+            assertEquals(listOf("feature-x"), fragments(title).map { it.text })
+            assertEquals(Cursor.DEFAULT_CURSOR, title.cursor.type)
+        }
     }
 
     fun `test no PR keeps changes badge on the right`() {

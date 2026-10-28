@@ -89,7 +89,7 @@ internal class ActiveListView(
         }
 
         override fun getBackground(): Color {
-            if (surface == ActiveSurface.ToolWindow) return activeListToolWindowBackground()
+            if (surface == ActiveSurface.ToolWindow) return activeToolWindowBackground()
             return super.getBackground() ?: UIUtil.getListBackground(false, false)
         }
 
@@ -1029,7 +1029,7 @@ internal class ActiveListView(
     }
 
     override fun getBackground(): Color {
-        if (surface == ActiveSurface.ToolWindow) return activeListToolWindowBackground()
+        if (surface == ActiveSurface.ToolWindow) return activeToolWindowBackground()
         return super.getBackground() ?: UIUtil.getPanelBackground()
     }
 
