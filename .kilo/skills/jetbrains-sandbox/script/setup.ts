@@ -66,6 +66,7 @@ function options(args: string[], cwd = process.cwd(), saved: Record<string, unkn
       display: { type: "string" },
       "vnc-port": { type: "string" },
       "mcp-port": { type: "string" },
+      "with-kilo": { type: "boolean" },
       "kilo-zip": { type: "string" },
       "steroid-zip": { type: "string" },
       ca: { type: "string" },
@@ -85,7 +86,7 @@ function options(args: string[], cwd = process.cwd(), saved: Record<string, unkn
     return result
   }
   const cmd = parsed.positionals.at(0) ?? "help"
-  const user = values.user ?? String(saved.user ?? (process.getuid?.() === 0 ? "kiloide" : userInfo().username))
+  const user = values.user ?? String(saved.user ?? (process.getuid?.() === 0 ? "ideuser" : userInfo().username))
   if (user === "root" || !/^[a-z_][a-z0-9_-]*[$]?$/.test(user)) throw new Error(`A non-root user is required: ${user}`)
   const display = Number(values.display ?? saved.display ?? 99)
   if (!Number.isInteger(display) || display < 1 || display > 999) throw new Error("Display must be between 1 and 999")
@@ -119,6 +120,7 @@ function options(args: string[], cwd = process.cwd(), saved: Record<string, unkn
     project: path(values.project ?? saved.project) ?? join(dir, "project"),
     host: values.host ?? String(saved.host ?? "127.0.0.1"),
     origin: trusted?.origin,
+    addon: values["with-kilo"] ?? (values["kilo-zip"] != null || saved.addon === true || saved.kilo != null),
     kilo: path(values["kilo-zip"] ?? saved.kilo),
     steroid: path(values["steroid-zip"] ?? saved.steroid),
     ca: path(values.ca ?? saved.ca ?? process.env.NODE_EXTRA_CA_CERTS),
@@ -246,6 +248,7 @@ async function install(config: Config) {
     ["kilo", "kilo.jetbrains", config.kilo],
     ["steroid", "mcp-steroid", config.steroid],
   ] as const) {
+    if (key === "kilo" && !config.addon) continue
     const archive = supplied ?? (await download(config, key))
     const hash = await checksum(archive, supplied ? undefined : artifacts[key].sha)
     const marker = join(config.dir, `${key}.sha256`)
@@ -311,8 +314,7 @@ async function install(config: Config) {
       "platform.feedback=false",
       "csat.survey.enabled=false",
       "editor.ux.survey.enabled=false",
-      "kilo.dev.storage.isolated=true",
-      `kilo.dev.worktree.root=${join(config.dir, "home")}`,
+      ...(config.addon ? ["kilo.dev.storage.isolated=true", `kilo.dev.worktree.root=${join(config.dir, "home")}`] : []),
       ...(config.ca ? [`javax.net.ssl.trustStore=${join(config.dir, "cacerts")}`] : []),
       "mcp.steroid.server.host=127.0.0.1",
       `mcp.steroid.server.port=${config.mcp}`,
@@ -320,12 +322,6 @@ async function install(config: Config) {
       "",
     ].join("\n"),
   )
-  if (config.project === join(config.dir, "project") && !(await Bun.file(join(config.project, "main.ts")).exists())) {
-    await Bun.write(
-      join(config.project, "main.ts"),
-      'export function greet(name: string) {\n  return `Hello, ${name}!`\n}\n\nconsole.log(greet("IntelliJ"))\n',
-    )
-  }
   if (!(await Bun.file(join(config.project, ".")).stat()).isDirectory())
     throw new Error(`Project is not a directory: ${config.project}`)
   if (process.getuid?.() === 0) {
@@ -349,7 +345,7 @@ async function install(config: Config) {
   await chmod(join(config.dir, "run"), 0o700)
   await Bun.write(join(config.dir, "config.json"), JSON.stringify(config, null, 2))
   console.log(
-    `Installed IDEA ${product.version}, Kilo ${config.kilo ?? "7.1.12"} and MCP Steroid ${config.steroid ?? "0.102"} in ${config.dir}`,
+    `Installed IDEA ${product.version} and MCP Steroid ${config.steroid ?? "0.102"}${config.addon ? `, with Kilo ${config.kilo ?? "7.1.12"}` : ""} in ${config.dir}`,
   )
 }
 
@@ -408,7 +404,7 @@ async function run(config: Config) {
       "tcp",
       "-AlwaysShared",
       "-desktop",
-      "Kilo Sandbox",
+      "IntelliJ Sandbox",
     ])
     const deadline = Date.now() + 15_000
     while (true) {
@@ -476,14 +472,15 @@ Commands:
 Options:
   --dir <path>       Isolated state (default .kilo-dev/jetbrains-sandbox)
   --ide <path>       Reuse an existing IDEA 2026.1 instead of downloading it
-  --project <path>   Open an existing workspace; default is an isolated sample
+  --project <path>   Open an existing workspace; default is an empty isolated directory
   --host <address>   Default 127.0.0.1; use 0.0.0.0 behind secure sandbox forwarding
   --origin <url>     Explicit trusted preview origin if forwarding rewrites Host
   --port <number>    Viewer port 6080; screenshot server port 6083
   --display <n>      X display number (99); --vnc-port defaults 5999
   --mcp-port <n>     Local-only MCP port (6315)
-  --user <name>     Non-root IDE user; root creates/reuses kiloide
-  --kilo-zip <path>  Install a trusted local Kilo build rather than release 7.1.12
+  --user <name>     Non-root IDE user; root creates/reuses ideuser
+  --with-kilo       Also install the optional signed Kilo 7.1.12 plugin
+  --kilo-zip <path>  Enable Kilo using a trusted local plugin build
   --steroid-zip <path>  Override the pinned MCP Steroid archive
   --ca <path>       Trust a sandbox PEM CA (defaults NODE_EXTRA_CA_CERTS)
   --skip-deps       Skip apt; required tools must already be installed

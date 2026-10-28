@@ -61,7 +61,7 @@ describe("desktop", () => {
     expect(index.status).toBe(200)
     expect(index.headers.get("content-type")).toContain("text/html")
     const html = await index.text()
-    expect(html).toContain("Kilo Desktop")
+    expect(html).toContain("IntelliJ Desktop")
     expect(html).toContain("/core/rfb.js")
     expect(html).toContain("/http.js")
     expect(html).not.toContain("websocket")
