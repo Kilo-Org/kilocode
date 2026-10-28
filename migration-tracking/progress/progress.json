@@ -32,13 +32,13 @@
     ],
     "landed": {
       "plugin": 42,
-      "host": 4,
+      "host": 5,
       "seam": 3,
-      "patch": 6
+      "patch": 5
     },
     "coreImports": 27,
     "sharedPatches": {
-      "seam": 35,
+      "seam": 34,
       "patch": 24
     }
   },
@@ -527,9 +527,9 @@
       },
       "landed": {
         "plugin": 0,
-        "host": 0,
+        "host": 1,
         "seam": 0,
-        "patch": 1
+        "patch": 0
       }
     },
     {
@@ -6147,7 +6147,7 @@
   "landed": {
     "patch:agent:2e5632e7bfc6": "plugin",
     "patch:cli:66a6b3781917": "patch",
-    "patch:components:06ac8868d98e": "patch",
+    "patch:components:06ac8868d98e": "host",
     "patch:gateway:0278ba0eb6aa": "plugin",
     "patch:gateway:17e39e074eaf": "plugin",
     "patch:gateway:1995b11b5cdd": "plugin",

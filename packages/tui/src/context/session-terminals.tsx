@@ -5,6 +5,7 @@ import { useClient } from "./client"
 import { useData } from "./data"
 import { useEvent } from "./event"
 import { useStorage } from "./storage"
+import { useTuiApp } from "./runtime" // kilocode_change(client-mcp) seam - host-selected terminal input policy
 
 type SessionTerminalsState = {
   sessions: Record<string, string | null>
@@ -18,8 +19,10 @@ export const { use: useSessionTerminals, provider: SessionTerminalsProvider } = 
     const event = useEvent()
     const [available, setAvailable] = createSignal(false)
     const [focus, setFocus] = createSignal<string>()
-    // kilocode_change start - client-mcp: Only attached terminals accept input; do not queue commands for hidden panes.
+    // kilocode_change start - client-mcp: host-selected terminal input policy
     const writers = new Map<string, (data: Uint8Array) => void>()
+    const pending = new Map<string, Uint8Array[]>()
+    const rejectDetached = useTuiApp().capabilities?.terminalInput === "attached-only"
     // kilocode_change end
     // Settles once the latest terminal support check finishes; pending until the first connection.
     const initial = Promise.withResolvers<void>()
@@ -113,15 +116,21 @@ export const { use: useSessionTerminals, provider: SessionTerminalsProvider } = 
         return terminal
       },
       write(ptyID: string, data: Uint8Array) {
-        // kilocode_change start - client-mcp: Report unattached terminal writes instead of queueing invisible commands.
+        // kilocode_change start - client-mcp: honor the terminal input policy
         const writer = writers.get(ptyID)
-        if (!writer) return false
-        writer(data)
-        return true
+        if (writer) {
+          if (!rejectDetached) return writer(data)
+          writer(data)
+          return true
+        }
+        if (rejectDetached) return false
+        pending.set(ptyID, [...(pending.get(ptyID) ?? []), data])
         // kilocode_change end
       },
       attachWriter(ptyID: string, writer: (data: Uint8Array) => void) {
         writers.set(ptyID, writer)
+        pending.get(ptyID)?.forEach(writer)
+        pending.delete(ptyID)
         return () => {
           if (writers.get(ptyID) === writer) writers.delete(ptyID)
         }
