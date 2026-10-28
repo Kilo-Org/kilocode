@@ -48,13 +48,13 @@ export const replacements = {
     ["this OpenCode component", "this Kilo component"],
     ["global OpenCode configuration", "global Kilo configuration"],
   ],
-  "tui/src/util/presentation.ts": [commands],
+  "tui/src/util/presentation.ts": [commands, ["${bold}opencode${reset}", "${bold}kilo2${reset}"]],
   "tui/src/attention.ts": [product],
   "tui/src/app.tsx": [
     product,
     title,
     ["Update OpenCode", "Kilo update instructions"],
-    ["https://opencode.ai/docs", "https://kilo.ai/docs"],
+    ["https://opencode.ai/v2/docs", "https://kilo.ai/docs"],
   ],
   "tui/src/mini/runtime.lifecycle.ts": [product, title],
   "tui/src/routes/session/permission.tsx": [
@@ -65,6 +65,10 @@ export const replacements = {
   "tui/src/mini/splash.ts": [commands],
   "tui/src/component/dialog-update.tsx": [
     ["Updating OpenCode", "Updating Kilo"],
+    [
+      "Update successful! Restart closes OpenCode, then run opencode to use the new version.",
+      "Update successful! Restart closes Kilo, then run kilo2 to use the new version.",
+    ],
     ["restart OpenCode", "restart Kilo"],
     ["Installing OpenCode", "Installing Kilo"],
     ["OpenCode is already up to date", "Kilo is already up to date"],

@@ -210,7 +210,7 @@ const fromRequest = Effect.fn("OpenAIResponses.fromRequest")(function* (request:
     tool_choice:
       request.tools.length === 0
         ? undefined
-        : (OpenResponses.allowedToolChoice(request) ??
+        : (OpenResponses.allowedToolChoice(request, options) ??
           (request.toolChoice ? yield* lowerToolChoice(request.toolChoice, request.tools) : undefined)),
   }
 })
