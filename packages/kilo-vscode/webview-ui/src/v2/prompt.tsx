@@ -27,9 +27,10 @@ export function PromptInput(props: {
   // The label is the pending-permission hint while blocked, otherwise Send.
   const sendLabel = () =>
     props.blocked ? language.t("prompt.action.send.blocked") : language.t("prompt.action.send")
-  // Stop replaces Send while the agent runs or a send is in flight, and the draft is empty. Typing during a run
-  // turns it back into Send, whose prompt queues behind the running turn. A pending question is not running work.
-  const showStop = () => (props.running || sending()) && !text().trim() && !props.questioning
+  // Stop replaces Send while the agent runs and the draft is empty. Typing during a run turns it back into Send,
+  // whose prompt queues behind the running turn. A pending question is not running work. Stop is not shown while the
+  // prompt is still being admitted, because an unadmitted prompt has no execution for Stop to interrupt.
+  const showStop = () => props.running && !text().trim() && !props.questioning
 
   const scroll = () => {
     if (!refs.input || !refs.overlay) return
@@ -53,8 +54,8 @@ export function PromptInput(props: {
   const send = () => {
     if (!ready()) return
     const draft = text()
-    // Clear the draft as soon as it is sent, so the composer is empty and Stop replaces Send while the send is
-    // in flight. Restore it only if the send fails and the user has not typed something new.
+    // Clear the draft as soon as it is sent, so the composer is empty while the prompt is admitted. Restore it only
+    // if the send fails and the user has not typed something new.
     setText("")
     setSending(true)
     void props
