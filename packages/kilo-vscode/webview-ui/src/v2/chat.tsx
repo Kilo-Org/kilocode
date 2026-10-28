@@ -94,17 +94,14 @@ export function Chat() {
     return undefined
   }
 
-  // Start of the running turn, from the assistant row's `time.created`, so the elapsed counter keeps the real turn time
-  // across remounts, as v1 reads it from the session's busy timing.
+  // Start of the running turn: the first assistant row after the last user row, so every step of one turn shares a
+  // start and a previous turn's row cannot leak in before this turn produces one.
   const started = () => {
     const id = session()
     if (!id) return undefined
     const list = v2.data.session.message.list(id)
-    for (let index = list.length - 1; index >= 0; index--) {
-      const message = list[index]
-      if (message.type === "assistant") return message.time.created
-    }
-    return undefined
+    const first = list[list.findLastIndex((item) => item.type === "user") + 1]
+    return first?.type === "assistant" ? first.time.created : undefined
   }
 
   // MessageList owns the transcript scroller; the working indicator's scroll button calls back into it.
