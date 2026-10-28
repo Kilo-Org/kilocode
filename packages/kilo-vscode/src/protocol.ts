@@ -27,7 +27,8 @@ export type ToWebview =
   | { type: "chunk"; id: number; data: Uint8Array }
   | { type: "end"; id: number }
   | { type: "error"; id: number; message: string }
-  | { type: "command"; name: "newSession" | "history" | "profile" }
+  | { type: "command"; name: "newSession" | "history" | "profile" | "cycleAgentMode" | "cyclePreviousAgentMode" }
+  | { type: "keybindings"; bindings: Record<string, string> }
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
   | { type: "webviewActiveChanged"; active: boolean }

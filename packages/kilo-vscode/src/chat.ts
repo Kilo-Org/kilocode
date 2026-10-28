@@ -1,11 +1,12 @@
 // The chat webview view. The webview talks to the server only through the relay, so it never sees the password.
 import { randomBytes } from "node:crypto"
-import { env, Uri, workspace, type ExtensionContext, type WebviewView, type WebviewViewProvider } from "vscode"
+import { commands, env, Uri, workspace, type ExtensionContext, type WebviewView, type WebviewViewProvider } from "vscode"
 import { local } from "./local"
 import type { ToHost, ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
+import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 
 export function chat(input: { context: ExtensionContext; server: Manager; directory: string }) {
   const state: { view?: WebviewView } = {}
@@ -22,8 +23,13 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
         fetch: local,
       })
       const post = (message: ToWebview) => void view.webview.postMessage(message)
+      // The cycle keybindings are active only while the webview has focus, as on v1 (`sidebarFocused`):
+      // the webview reports its focus, so `ctrl+.` stays free for the editor quick-fix.
+      const focus = (focused: boolean) =>
+        void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", focused)
       const subscription = view.webview.onDidReceiveMessage((message: ToHost) => {
         if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
+        if (message.type === "webviewFocusChanged") return focus(message.focused === true)
         if (message.type === "copyToClipboard")
           return void env.clipboard.writeText(message.text).then(
             () => post({ type: "clipboardWriteResult", id: message.id, ok: true }),
@@ -35,11 +41,22 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
           return void input.context.globalState.update(EXPANDED, message.value)
         if (message.type === "saveImage") return saveImage(input.directory, message)
       })
-      const visibility = view.onDidChangeVisibility(() => post({ type: "webviewActiveChanged", active: view.visible }))
+      const visibility = view.onDidChangeVisibility(() => {
+        if (!view.visible) focus(false)
+        post({ type: "webviewActiveChanged", active: view.visible })
+      })
+      // The prompt hint shows the same keybind as the cycle command, so send it on load and when the
+      // user's keybindings.json changes.
+      const keybindings = watchKeybindings(input.context, () =>
+        post({ type: "keybindings", bindings: promptKeybindings(input.context) }),
+      )
+      post({ type: "keybindings", bindings: promptKeybindings(input.context) })
       view.onDidDispose(() => {
         link.dispose()
         subscription.dispose()
         visibility.dispose()
+        keybindings.dispose()
+        focus(false)
         if (state.view === view) state.view = undefined
       })
       const uri = (...parts: string[]) => view.webview.asWebviewUri(Uri.joinPath(root, ...parts)).toString()
@@ -118,7 +135,14 @@ export function html(input: {
 <title>Kilo Code</title>
 <style>
   :root { ${vars} --kilo-font-scale: ${input.size / 13}; --font-size-x-small: var(--kilo-font-size-10); --font-size-small: var(--kilo-font-size-11); --font-size-base: var(--kilo-font-size-13); --font-size-large: var(--kilo-font-size-16); }
-  html { scrollbar-color: auto; }
+  html {
+    scrollbar-color: auto;
+
+    ::-webkit-scrollbar-thumb {
+      border: 3px solid transparent !important;
+      background-clip: padding-box !important;
+    }
+  }
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
   body { background-color: var(--vscode-sideBar-background, var(--vscode-editor-background)); color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
   #root { height: 100%; }

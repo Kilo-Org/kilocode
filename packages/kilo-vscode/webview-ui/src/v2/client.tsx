@@ -17,6 +17,7 @@ function create(directory: string) {
   const [version, setVersion] = createSignal("")
   const [handshake, setHandshake] = createSignal("")
   const [loading, setLoading] = createSignal(true)
+  const [bindings, setBindings] = createSignal<Record<string, string>>({})
   const commands = new Set<(name: string) => void>()
   const connection = createClientConnection(api, { onEvent: event.emit, pageLifecycle: true })
   const data = createData({ api: () => api, directory, connection, event, onError: (err) => setError(message(err)) })
@@ -25,6 +26,7 @@ function create(directory: string) {
     const message = event.data
     if (!message || typeof message !== "object" || !("type" in message)) return
     if (message.type === "command") return commands.forEach((handler) => handler(message.name))
+    if (message.type === "keybindings") return setBindings(message.bindings)
     bridge.receive(message)
   }
   window.addEventListener("message", receive)
@@ -57,6 +59,7 @@ function create(directory: string) {
     directory,
     connection,
     loading,
+    bindings,
     version,
     handshake,
     error,
