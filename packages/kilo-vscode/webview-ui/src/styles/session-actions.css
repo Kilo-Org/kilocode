@@ -1,0 +1,953 @@
+/* New Task Button */
+.new-task-button-wrapper {
+  padding: 6px 12px;
+  container-type: inline-size;
+}
+
+.new-task-button-wrapper--empty {
+  width: 100%;
+}
+
+/* Inside the dock the row is a flex item. Keep it full width so the container
+   query below still measures the dock instead of the buttons' own width. */
+.session-dock-state > .new-task-button-wrapper {
+  width: 100%;
+}
+
+/* A visible dock owns the spacing above the composer, so both of its states sit
+   flush on the prompt and swapping the working indicator for the actions row
+   cannot move either of them. The dock is hidden rather than unmounted while
+   idle, so this must not match the inactive row: the composer keeps its own
+   gutter there. */
+.chat-input > .session-dock[data-active] + .prompt-input-container {
+  margin-top: 0;
+}
+
+:root {
+  --session-action-radius: 6px;
+}
+
+.session-actions-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+  min-height: 22px;
+  justify-content: center;
+}
+
+.session-actions-row > * {
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.session-actions-row > [data-component="tooltip-trigger"] {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.session-actions-row > [data-component="tooltip-trigger"] > [data-component="button"] {
+  flex: 0 0 auto;
+  border-radius: var(--session-action-radius);
+  min-height: 22px;
+  height: auto;
+  padding: 4px 6px !important;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  font-family: var(--font-family-sans);
+  font-size: var(--kilo-font-size-12);
+  font-style: normal;
+  font-weight: var(--font-weight-medium);
+  line-height: normal;
+  letter-spacing: var(--letter-spacing-normal);
+  color: var(--vscode-descriptionForeground);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.session-actions-row > [data-component="tooltip-trigger"] > [data-component="button"]:hover:not(:disabled),
+.session-actions-row > [data-component="tooltip-trigger"] > [data-component="button"]:focus-visible:not(:disabled),
+.session-actions-row > [data-component="tooltip-trigger"] > [data-component="button"]:active:not(:disabled) {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  color: var(--vscode-foreground);
+}
+
+.session-actions-row > [data-component="tooltip-trigger"] > [data-component="button"].session-new-button:disabled {
+  cursor: default;
+}
+
+.session-worktree-split {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  align-items: stretch;
+  gap: 2px;
+  border-radius: var(--session-action-radius);
+  box-shadow: none;
+  overflow: hidden;
+  color: var(--vscode-descriptionForeground);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.session-worktree-split:hover,
+.session-worktree-split:has(.session-worktree-main:focus-visible),
+.session-worktree-split:has(.session-worktree-split-arrow:focus-visible),
+.session-worktree-split:has(.session-worktree-split-arrow[data-expanded]) {
+  color: var(--vscode-foreground);
+}
+
+.session-worktree-split:hover > [data-component="tooltip-trigger"] > .session-worktree-main,
+.session-worktree-split:hover .session-worktree-split-arrow,
+.session-worktree-split:has(.session-worktree-main:focus-visible)
+  > [data-component="tooltip-trigger"]
+  > .session-worktree-main,
+.session-worktree-split:has(.session-worktree-main:focus-visible) .session-worktree-split-arrow,
+.session-worktree-split:has(.session-worktree-split-arrow:focus-visible)
+  > [data-component="tooltip-trigger"]
+  > .session-worktree-main,
+.session-worktree-split:has(.session-worktree-split-arrow:focus-visible) .session-worktree-split-arrow,
+.session-worktree-split:has(.session-worktree-split-arrow[data-expanded])
+  > [data-component="tooltip-trigger"]
+  > .session-worktree-main,
+.session-worktree-split:has(.session-worktree-split-arrow[data-expanded]) .session-worktree-split-arrow {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+}
+
+.session-worktree-split > [data-component="tooltip-trigger"] {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.session-worktree-split > [data-component="tooltip-trigger"] > [data-component="button"] {
+  flex: 0 0 auto;
+  border-radius: var(--session-action-radius) 0 0 var(--session-action-radius);
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  padding: 4px 6px !important;
+}
+
+.session-worktree-split > [data-component="tooltip-trigger"] > [data-component="button"]:hover:not(:disabled),
+.session-worktree-split > [data-component="tooltip-trigger"] > [data-component="button"]:focus-visible:not(:disabled),
+.session-worktree-split > [data-component="tooltip-trigger"] > [data-component="button"]:active:not(:disabled) {
+  background: var(--surface-base-hover);
+  box-shadow: none;
+}
+
+.session-worktree-split-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 12px;
+  padding: 0 3px;
+  border: none;
+  border-radius: 0 var(--session-action-radius) var(--session-action-radius) 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.session-worktree-split-arrow:focus-visible {
+  outline: none;
+  background: inherit;
+}
+
+.session-worktree-split > [data-component="tooltip-trigger"] > [data-component="button"],
+.session-worktree-split-arrow {
+  height: 24px;
+}
+
+.session-worktree-main {
+  padding-right: 6px !important;
+}
+
+.session-worktree-split-menu {
+  min-width: 250px;
+}
+
+.session-worktree-split-menu [data-slot="dropdown-menu-item"] {
+  padding: 6px 10px;
+}
+
+.session-worktree-menu-gap {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.session-worktree-menu-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.session-worktree-menu-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.session-worktree-menu-branch strong {
+  font-weight: 600;
+}
+
+.session-move-action {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: var(--session-action-radius);
+  color: var(--vscode-descriptionForeground);
+  padding: 4px 6px !important;
+  background: transparent;
+  box-shadow: none;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.session-move-action:hover:not(:disabled),
+.session-move-action:focus-visible:not(:disabled),
+.session-move-action:active:not(:disabled) {
+  color: var(--vscode-foreground);
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  box-shadow: none;
+}
+
+.session-move-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-move-action [data-component="icon"],
+.session-move-changes [data-component="icon"] {
+  opacity: 0.7;
+}
+
+.session-move-changes {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  position: relative;
+  border-radius: var(--session-action-radius);
+  color: var(--vscode-descriptionForeground);
+  padding: 4px 6px !important;
+  background: transparent;
+  box-shadow: none;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.session-move-changes:hover:not(:disabled),
+.session-move-changes:focus-visible:not(:disabled),
+.session-move-changes:active:not(:disabled) {
+  color: var(--vscode-foreground);
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  box-shadow: none;
+}
+
+.session-move-changes {
+  font-family: var(--font-family-sans);
+  font-size: var(--kilo-font-size-12);
+  font-variant-numeric: tabular-nums;
+}
+
+.session-move-changes--empty {
+  opacity: 0.7;
+}
+
+.session-move-dot {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #34d399;
+  opacity: 0;
+}
+
+.session-diff-add {
+  color: #34d399;
+}
+
+.session-diff-del {
+  color: #f87171;
+}
+
+.session-changes-tooltip {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 4px;
+  row-gap: 2px;
+}
+
+.session-changes-tooltip-separator {
+  color: var(--vscode-descriptionForeground);
+}
+
+/* Collapse diff stats to icon-only before the row wraps. */
+@container (max-width: 420px) {
+  .session-actions-row {
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .session-actions-row > *,
+  .session-worktree-split {
+    flex-basis: auto;
+  }
+
+  .session-move-action {
+    padding-right: 5px !important;
+  }
+
+  .session-move-changes {
+    gap: 0;
+    width: 26px;
+    min-width: 26px;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+  }
+
+  .session-diff-add,
+  .session-diff-del {
+    width: 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+
+  .session-move-dot {
+    opacity: 1;
+  }
+}
+
+/* ============================================
+   Background agent stack
+   ============================================ */
+
+/* The mirror of the goal badge: the stack sits out of flow in front of the
+   centered spinner. The lane reserves the measured stack width on both sides,
+   so the spinner stays centered and the label truncates first. */
+.session-working-lead {
+  position: absolute;
+  inset-inline-end: calc(100% - 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  width: max-content;
+}
+
+/* The stack usually needs more room than the goal badge reserves (28px per
+   side in goal.css, loaded later), so this rule outranks it. Both badges then
+   fit: the goal compacts itself into whatever the reserve leaves on its side. */
+/* The reserve follows the stack width while it opens and collapses. */
+.session-dock-state .session-working {
+  transition: max-width 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.session-dock-state .session-working[data-agents] {
+  max-width: min(var(--session-dock-lane), calc(100% - 2 * max(var(--session-lead, 64px), 28px)));
+}
+
+/* Surfaces without session actions keep the dock for the stack alone. */
+.session-agents {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: 6px 12px;
+}
+
+/* Status, not a button: no border and no fill at rest. Hover matches the
+   working indicator next to it.
+
+   Every size change animates, so nothing next to the stack jumps: the stack
+   opens from zero width, collapses to zero before it unmounts, and each avatar
+   grows in and collapses out. The one-column grid is what lets the width
+   animate between zero and the content width without measuring it. */
+[data-component="agent-stack"] {
+  --agent-stack-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --agent-stack-open: 260ms;
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  height: 24px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--session-action-radius);
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  font-family: var(--font-family-sans);
+  font-size: var(--kilo-font-size-12);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    opacity 200ms ease,
+    color 150ms ease,
+    background-color 150ms ease,
+    grid-template-columns var(--agent-stack-open) var(--agent-stack-ease),
+    padding var(--agent-stack-open) var(--agent-stack-ease),
+    margin var(--agent-stack-open) var(--agent-stack-ease);
+
+  /* Opens once. A moved node would replay it, so it stops once ready.
+     Backwards fill only: a held final keyframe would block the idle collapse. */
+  &:not([data-ready]) {
+    animation: agent-stack-in var(--agent-stack-open) var(--agent-stack-ease) backwards;
+  }
+
+  /* Same hover as the working indicator next to it, which also reveals
+     something on click. */
+  &:hover,
+  &:focus-visible {
+    background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+    color: var(--vscode-foreground);
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+  }
+
+  /* Every agent left the run: fade and collapse to zero width before the
+     stack unmounts. A new agent reopens it at once. */
+  &[data-idle="true"] {
+    grid-template-columns: 0fr;
+    padding-inline: 0;
+    margin-inline: 0;
+    opacity: 0;
+    transition:
+      opacity 200ms ease,
+      grid-template-columns var(--agent-stack-open) var(--agent-stack-ease),
+      padding var(--agent-stack-open) var(--agent-stack-ease),
+      margin var(--agent-stack-open) var(--agent-stack-ease);
+  }
+}
+
+[data-slot="agent-stack-body"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* A thin rule separates a leading stack from the spinner or the first action.
+   It sits in the gap after the stack, outside the hover area. */
+[data-component="agent-stack"][data-rule] {
+  margin-inline-end: 4px;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: -3px;
+    top: 50%;
+    width: 1px;
+    height: 14px;
+    transform: translateY(-50%);
+    background: var(--border-weak-base, var(--vscode-panel-border));
+  }
+}
+
+/* The action buttons are 22px tall. A taller stack would make its line 2px
+   taller than the same line without it. */
+.session-actions-row [data-component="agent-stack"] {
+  height: 22px;
+}
+
+/* At the end of an actions line the rule moves in front of the stack. */
+[data-component="agent-stack"][data-rule][data-place="end"] {
+  margin-inline: 4px 0;
+
+  &::after {
+    inset-inline: -3px auto;
+  }
+}
+
+/* The idle collapse also closes the rule margin, whichever side it is on. */
+[data-component="agent-stack"][data-rule][data-idle="true"] {
+  margin-inline: 0;
+}
+
+/* In the actions row, the row gap next to the stack opens and closes with it,
+   so the actions beside it slide instead of jumping by the gap. */
+.session-actions-row > [data-component="agent-stack"] {
+  &:not([data-ready]) {
+    animation-name: agent-stack-in, agent-stack-gap-end;
+  }
+
+  &[data-place="end"]:not([data-ready]) {
+    animation-name: agent-stack-in, agent-stack-gap-start;
+  }
+
+  &[data-idle="true"] {
+    margin-inline: 0 -4px;
+  }
+
+  &[data-place="end"][data-idle="true"] {
+    margin-inline: -4px 0;
+  }
+}
+
+/* Waiting on the user: a small dot marks the stack. */
+[data-component="agent-stack"][data-attention]::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  inset-inline-end: 1px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--icon-warning-base, var(--vscode-editorWarning-foreground));
+}
+
+/* A small gap keeps each dot glyph separate. Overlapping glyphs merge into one
+   dot field and lose the identity that links them to their cards. */
+[data-slot="agent-stack-avatars"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+[data-slot="agent-stack-avatar"] {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  overflow: hidden;
+  transition:
+    opacity 300ms ease,
+    width 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    margin 240ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  &[data-done="true"] {
+    opacity: 0.4;
+  }
+
+  /* A new avatar in a visible stack grows in from zero width. One that only
+     replaces another fades in, so the width does not change. */
+  &[data-enter="grow"] {
+    animation: agent-stack-avatar-in 240ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  &[data-enter="fade"] {
+    animation: agent-stack-avatar-fade 240ms ease-out backwards;
+  }
+
+  /* A finished avatar collapses, taking its 3px gap with it. */
+  &[data-leaving] {
+    width: 0;
+    margin-inline-start: -3px;
+    opacity: 0;
+  }
+}
+
+/* Same surface as the Goal menu in this row. */
+.agent-panel[data-component="popover-content"] {
+  box-sizing: border-box;
+  width: 300px;
+  max-width: calc(100vw - 24px);
+  padding: 6px;
+  border-radius: var(--radius-xl);
+}
+
+[data-slot="agent-panel"] {
+  display: grid;
+  gap: 4px;
+  font-size: var(--kilo-font-size-12);
+}
+
+[data-slot="agent-panel-header"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-inline-start: 8px;
+}
+
+[data-slot="agent-panel-title"] {
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-10);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+[data-slot="agent-panel-attention"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: var(--radius-lg);
+  color: var(--text-warning-base, var(--vscode-editorWarning-foreground));
+  background: var(--surface-warning-weak, transparent);
+}
+
+[data-slot="agent-panel-list"] {
+  display: grid;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+
+  /* A rule separates finished agents only from active ones above them. */
+  & + &[data-finished],
+  [data-slot="agent-panel-stop-all"] + &[data-finished] {
+    padding-top: 4px;
+    border-top: 1px solid var(--border-weak-base, var(--vscode-panel-border));
+  }
+}
+
+[data-slot="agent-panel-row"] {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: var(--radius-lg);
+
+  &:hover,
+  &:focus-within {
+    background: var(--surface-raised-base-hover);
+  }
+
+  &:not([data-status="running"], [data-status="waiting"]) [data-slot="agent-panel-main"] {
+    opacity: 0.6;
+  }
+}
+
+[data-slot="agent-panel-main"] {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: var(--text-base);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+  }
+}
+
+[data-slot="agent-panel-label"] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-slot="agent-panel-status"] {
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
+
+  [data-status="waiting"] & {
+    color: var(--text-warning-base, var(--vscode-editorWarning-foreground));
+  }
+
+  [data-status="error"] & {
+    color: var(--text-critical-base, var(--vscode-errorForeground));
+  }
+}
+
+[data-slot="agent-panel-stop-all"],
+[data-slot="agent-panel-clear"] {
+  justify-self: end;
+}
+
+/* ============================================
+   Board button
+   ============================================ */
+
+/* The same quiet surface as the agent stack it follows. */
+[data-component="board-trigger"] {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--session-action-radius);
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  animation: board-trigger-in 200ms ease-out backwards;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+
+  &:hover,
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+    color: var(--vscode-foreground);
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+  }
+}
+
+.session-actions-row > [data-component="board-trigger"] {
+  height: 22px;
+  overflow: visible;
+}
+
+/* At the end of an actions line nothing follows the button, so it drops its rule. */
+.session-actions-row > [data-component="board-trigger"][data-place="end"] {
+  margin-inline-end: 0;
+
+  &::after {
+    display: none;
+  }
+}
+
+/* The rule after the stack moves here when the button follows it. */
+[data-component="board-trigger"][data-rule] {
+  margin-inline-end: 4px;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: -3px;
+    top: 50%;
+    width: 1px;
+    height: 14px;
+    transform: translateY(-50%);
+    background: var(--border-weak-base, var(--vscode-panel-border));
+  }
+}
+
+/* With agents, the button joins the stack like the New Worktree split
+   button: the stack keeps its look, and the posts open from the narrow part
+   on its right, 2px apart. At rest nothing changes. Hovering either part
+   shades both, so they read as one control with two targets. */
+[data-component="agent-stack"]:not([data-idle]):has(+ [data-component="board-trigger"]) {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+[data-component="agent-stack"]:not([data-idle]) + [data-component="board-trigger"] {
+  width: 20px;
+  margin-inline-start: 2px;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+[data-component="agent-stack"]:not([data-idle]):is(:hover, :focus-visible, [aria-expanded="true"])
+  + [data-component="board-trigger"],
+[data-component="agent-stack"]:not([data-idle]):has(
+    + [data-component="board-trigger"]:is(:hover, :focus-visible, [aria-expanded="true"])
+  ) {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  color: var(--vscode-foreground);
+}
+
+/* The rows put a gap between their items. The split keeps only its 2px. */
+.session-actions-row > [data-component="agent-stack"]:not([data-idle]) + [data-component="board-trigger"] {
+  margin-inline-start: -2px;
+}
+
+.session-agents > [data-component="agent-stack"]:not([data-idle]) + [data-component="board-trigger"] {
+  margin-inline-start: -4px;
+}
+
+/* New posts since the user last looked. Blue, not the warning color of the
+   stack: posts are for the main agent, not a request to the user. */
+[data-component="board-trigger"][data-unread]::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  inset-inline-end: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vscode-activityBarBadge-background, var(--icon-info-base));
+}
+
+/* Same surface as the agent panel. */
+.board-panel[data-component="popover-content"] {
+  box-sizing: border-box;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  padding: 6px;
+  border-radius: var(--radius-xl);
+}
+
+[data-slot="board-panel"] {
+  display: grid;
+  gap: 4px;
+  font-size: var(--kilo-font-size-12);
+}
+
+[data-slot="board-panel-header"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-inline-start: 8px;
+}
+
+[data-slot="board-panel-actions"] {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+[data-slot="board-panel-title"] {
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-10);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Recent posts only, so each body stays short. The full board shows all. */
+[data-slot="board-panel-list"][data-component="board-messages"] {
+  gap: 10px;
+  max-height: min(360px, 50vh);
+  padding: 2px 8px 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  container-type: inline-size;
+
+  [data-slot="board-message"] {
+    gap: 4px;
+  }
+
+  [data-slot="board-message"] + [data-slot="board-message"] {
+    padding-top: 10px;
+  }
+
+  [data-slot="board-message-body"] {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+  }
+}
+
+/* The full board dialog, opened from the panel. */
+.task-board[data-slot="dialog-content"] {
+  height: 100%;
+  min-height: 0;
+}
+
+.task-board [data-slot="dialog-body"] {
+  min-height: 0;
+}
+
+.task-board-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.task-board-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 0 20px 20px;
+}
+
+.task-board-list {
+  container-type: inline-size;
+}
+
+.task-board [role="alert"] {
+  margin: 0 20px 12px;
+}
+
+@keyframes board-trigger-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes agent-stack-in {
+  from {
+    grid-template-columns: 0fr;
+    padding-inline: 0;
+    margin-inline: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes agent-stack-gap-end {
+  from {
+    margin-inline-end: -4px;
+  }
+}
+
+@keyframes agent-stack-gap-start {
+  from {
+    margin-inline-start: -4px;
+  }
+}
+
+@keyframes agent-stack-avatar-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes agent-stack-avatar-in {
+  from {
+    width: 0;
+    margin-inline-start: -3px;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-component="agent-stack"],
+  [data-slot="agent-stack-avatar"] {
+    animation: none;
+    transition: none;
+  }
+
+  /* Without motion, keep the finished stack at full size until it unmounts. */
+  [data-component="agent-stack"][data-idle="true"] {
+    grid-template-columns: 1fr;
+    padding-inline: 4px;
+    opacity: 1;
+  }
+
+  [data-component="agent-stack"][data-rule][data-idle="true"] {
+    margin-inline: 0 4px;
+  }
+
+  [data-component="agent-stack"][data-rule][data-place="end"][data-idle="true"] {
+    margin-inline: 4px 0;
+  }
+
+  .session-actions-row > [data-component="agent-stack"]:not([data-rule])[data-idle="true"] {
+    margin-inline: 0;
+  }
+}
