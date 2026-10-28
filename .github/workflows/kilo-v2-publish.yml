@@ -8,8 +8,12 @@ run-name: "${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'p
 # Start a publish from the v2 branch: `gh workflow run kilo-v2-publish.yml --ref v2`. This file is not on the default
 # branch, so the GitHub UI shows no "Run workflow" button.
 #
-# npm trusted publishing (OIDC) must trust this workflow file for `@kilocode/cli` and each `@kilocode/cli-<target>`
-# package. That is a second trusted publisher next to v1's `publish.yml`.
+# It also publishes the v2 client packages with the same version and dist-tag (script/kilocode/publish-client.ts):
+# `@kilocode/schema`, `@kilocode/protocol` and `@kilocode/client`, built from packages/{schema,protocol,client}.
+#
+# npm trusted publishing (OIDC) must trust this workflow file for `@kilocode/cli`, each `@kilocode/cli-<target>`
+# package (a second trusted publisher next to v1's `publish.yml`) and the three client packages. Trusted publishing
+# needs an existing package, so the client packages need one first publish with a local npm login.
 #
 # Pull requests that change the publish flow build every target, smoke test the executables and run a dry-run publish.
 
@@ -27,6 +31,7 @@ on:
       - packages/kilo-cli/script/build.ts
       - packages/kilo-cli/script/publish.ts
       - packages/cli/script/postinstall.mjs
+      - script/kilocode/publish-client.ts
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -77,6 +82,11 @@ jobs:
       - name: Pack (dry run)
         working-directory: packages/kilo-cli
         run: bun run script/publish.ts --dry-run
+        env:
+          OPENCODE_VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Pack client packages (dry run)
+        run: bun script/kilocode/publish-client.ts --dry-run
         env:
           OPENCODE_VERSION: ${{ steps.version.outputs.version }}
     outputs:
@@ -198,4 +208,51 @@ jobs:
             echo "Published \`@kilocode/cli@${{ needs.build.outputs.version }}\` with dist-tag \`kilo-v2\`."
             echo ""
             echo "Install: \`npm i -g @kilocode/cli@kilo-v2\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Separate from the CLI publish, so a problem with one does not block the other. A rerun publishes only what is missing.
+  publish-client:
+    name: publish client packages to npm
+    needs:
+      - build
+      - smoke
+      - smoke-windows
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/v2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    concurrency:
+      group: kilo-v2-publish-npm-client
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun and install dependencies
+        uses: ./.github/actions/setup-bun
+
+      - name: Setup Node for npm
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: Publish
+        run: bun script/kilocode/publish-client.ts ${{ inputs.dry_run && '--dry-run' || '' }}
+        env:
+          OPENCODE_VERSION: ${{ needs.build.outputs.version }}
+          NPM_CONFIG_PROVENANCE: true
+
+      - name: Summary
+        if: ${{ !inputs.dry_run }}
+        run: |
+          {
+            echo "Published \`@kilocode/schema\`, \`@kilocode/protocol\` and \`@kilocode/client\` \`${{ needs.build.outputs.version }}\` with dist-tag \`kilo-v2\`."
+            echo ""
+            echo "Install: \`npm i @kilocode/client@kilo-v2\`, or \`npm i @opencode/client@npm:@kilocode/client@kilo-v2\` to keep the upstream import name."
           } >> "$GITHUB_STEP_SUMMARY"
