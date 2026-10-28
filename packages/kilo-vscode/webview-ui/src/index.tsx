@@ -9,4 +9,4 @@ if (!root) {
   throw new Error("Root element not found")
 }
 
-render(() => <App directory={root.dataset.directory ?? ""} />, root)
+render(() => <App directory={root.dataset.directory ?? ""} view={root.dataset.view ?? "chat"} />, root)

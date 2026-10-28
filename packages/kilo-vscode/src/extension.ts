@@ -2,6 +2,7 @@ import { homedir } from "node:os"
 import { commands, ExtensionMode, window, workspace, type ExtensionContext } from "vscode"
 import { chat } from "./chat"
 import { command, manager } from "./server"
+import { settings } from "./settings-panel"
 
 export function activate(context: ExtensionContext) {
   const output = window.createOutputChannel("Kilo Code (v2)")
@@ -20,6 +21,7 @@ export function activate(context: ExtensionContext) {
     },
   })
   const view = chat({ context, server, directory })
+  const panel = settings({ context, server, directory })
 
   context.subscriptions.push(
     output,
@@ -38,6 +40,8 @@ export function activate(context: ExtensionContext) {
       await commands.executeCommand("kilo-code.v2.chat.focus")
       await view.post({ type: "command", name: "profile" })
     }),
+    commands.registerCommand("kilo-code.v2.settings", () => panel.open()),
+    panel,
     // The host sends the action and the webview decides the next agent, as in main: the agent list and
     // the selection live in the webview, and only the server owns the committed value.
     commands.registerCommand("kilo-code.v2.cycleAgentMode", async () => {
