@@ -2,6 +2,7 @@
 // existing session commits each change with switchAgent/switchModel and shows the server's value. Before a session
 // exists, the choice is a local draft that `create` passes to session.create.
 import type { ModelRef } from "@opencode/client"
+import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { createEffect, createSignal, on, type Accessor } from "solid-js"
 import { PromptSelectors } from "../components/chat/PromptSelectors"
 import { ModelSelectorBase } from "../components/shared/ModelSelector"
@@ -93,6 +94,15 @@ export function createSelection(session: Accessor<string | undefined>) {
     )
   }
 
+  // The same writer for a click and a cycle: a draft keeps the value locally, an existing session commits
+  // it to the server, and an unchanged value is a no-op (as on v1).
+  const selectAgent = (value: string) => {
+    const id = session()
+    if (!id) return void setDraftAgent(value)
+    if (value === agent()?.id) return
+    commit(id, () => v2.api.session.switchAgent({ sessionID: id, agent: value }))
+  }
+
   return {
     agents,
     agent,
@@ -100,11 +110,16 @@ export function createSelection(session: Accessor<string | undefined>) {
     models,
     providers: () => v2.data.location.provider.list(),
     variants,
-    selectAgent(value: string) {
-      const id = session()
-      if (!id) return void setDraftAgent(value)
-      if (value === agent()?.id) return
-      commit(id, () => v2.api.session.switchAgent({ sessionID: id, agent: value }))
+    selectAgent,
+    /** Cycle to the next or previous visible agent, as main's cycleAgent (wraps at both ends). */
+    cycleAgent(direction: 1 | -1) {
+      const list = agents()
+      if (list.length <= 1) return
+      const index = list.findIndex((item) => item.id === agent()?.id)
+      const raw = index + direction
+      const next = raw < 0 ? list.length - 1 : raw >= list.length ? 0 : raw
+      const value = list[next]?.id
+      if (value) selectAgent(value)
     },
     selectModel(providerID: string, modelID: string) {
       const current = model()
@@ -134,23 +149,35 @@ export function createSelection(session: Accessor<string | undefined>) {
 export type Selection = ReturnType<typeof createSelection>
 
 export function Selectors(props: { selection: Selection; blocked: boolean }) {
+  const v2 = useV2()
   const language = useLanguage()
   const model = () => {
     const current = props.selection.model()
     return current ? { providerID: current.providerID, modelID: current.id } : null
   }
+  // The cycle shortcut label the host resolved, as main's modeHint(): the keybind shows next to the title,
+  // and an empty keybind hides the tooltip.
+  const keybind = () => v2.bindings().cycleAgentMode ?? ""
   return (
     <PromptSelectors
       agent={
-        <ModeSwitcherBase
-          agents={props.selection.agents()}
-          value={props.selection.agent()?.id ?? ""}
-          blocked={props.blocked}
-          onSelect={(id) => {
-            props.selection.selectAgent(id)
-            requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
-          }}
-        />
+        <TooltipKeybind
+          title={language.t("prompt.shortcutHint.mode")}
+          keybind={keybind()}
+          placement="top"
+          openDelay={0}
+          inactive={!keybind()}
+        >
+          <ModeSwitcherBase
+            agents={props.selection.agents()}
+            value={props.selection.agent()?.id ?? ""}
+            blocked={props.blocked}
+            onSelect={(id) => {
+              props.selection.selectAgent(id)
+              requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
+            }}
+          />
+        </TooltipKeybind>
       }
       model={
         <ModelSelectorBase
