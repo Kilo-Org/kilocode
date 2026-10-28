@@ -36,10 +36,10 @@
       "seam": 3,
       "patch": 6
     },
-    "coreImports": 27,
+    "coreImports": 34,
     "sharedPatches": {
-      "seam": 35,
-      "patch": 25
+      "seam": 36,
+      "patch": 26
     }
   },
   "notCounted": {
@@ -59,7 +59,11 @@
     "@opencode/core/config/discovery",
     "@opencode/core/config/normalize",
     "@opencode/core/config/plugin/skill-file",
+    "@opencode/core/credential",
+    "@opencode/core/database/database",
+    "@opencode/core/database/path",
     "@opencode/core/effect/app-node-platform",
+    "@opencode/core/location",
     "@opencode/core/model",
     "@opencode/core/model-resolver",
     "@opencode/core/permission",
@@ -73,10 +77,13 @@
     "@opencode/core/provider",
     "@opencode/core/rpc",
     "@opencode/core/schema",
+    "@opencode/core/session/event",
+    "@opencode/core/session/projector",
     "@opencode/core/session/runner/model",
     "@opencode/core/session/runner/prompt/system.txt",
     "@opencode/core/session/system-prompt",
     "@opencode/core/shell",
+    "@opencode/core/tool",
     "@opencode/core/tool-output",
     "@opencode/core/util/wildcard",
     "@opencode/core/variant"

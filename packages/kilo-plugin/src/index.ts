@@ -9,6 +9,9 @@ import { KiloHandshakePlugin } from "./handshake"
 import { KiloProviderUsagePlugin } from "./provider-usage"
 import { KiloOpenAIPlugin } from "./openai"
 import { KiloMarketplacePlugin } from "./marketplace"
+import { KiloSessionSync } from "./session-sync"
+
+export { KiloSessionSync }
 
 /**
  * The Kilo plugins on the public plugin API (plugin-first rung 1), in registration order. The Kilo host
@@ -31,6 +34,7 @@ export const KiloPlugins = [
   KiloProviderUsagePlugin,
   KiloOpenAIPlugin,
   KiloMarketplacePlugin,
+  KiloSessionSync.plugin,
 ] as const
 
 /** Kilo plugins that run after the config plugins: the host registers them with phase `post`. */

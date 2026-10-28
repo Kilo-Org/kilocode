@@ -1,12 +1,20 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 60,
-    "markedLines": 465,
+    "files": 62,
+    "markedLines": 641,
     "unmarkedLines": 40,
     "deletedFiles": 0
   },
   "files": {
+    "packages/core/src/tool-output.ts": {
+      "rung": 3,
+      "seam": "Export the existing layer and cleanup node so the Kilo host can decorate native file allocations while preserving native truncation and cleanup. A plugin cannot observe allocation provenance, and replacing the service without these exports would duplicate the upstream implementation. No algorithm or upstream default changes."
+    },
+    "specs/v2/session-sync.md": {
+      "rung": 4,
+      "seam": "Repository-specific native session sync design and operator commands. The v2 specification directory holds the producer contract; the cloud repository holds service admission, storage, and rollout. No runtime change."
+    },
     "packages/cli/src/commands/commands.ts": {
       "rung": 3,
       "seam": "Optional full-TUI --model/-m argument, passed to the existing TUI Args.model selector. The CLI command specification is closed and has no host extension for root parameters; no default changes when omitted. Two generic lines across the root specification and default handler replace a custom argument parser or a second host command mirror."

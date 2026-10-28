@@ -277,6 +277,7 @@
         "@opentui/core": "catalog:",
         "@opentui/solid": "catalog:",
         "babel-preset-solid": "1.9.12",
+        "drizzle-orm": "catalog:",
         "effect": "catalog:",
       },
       "devDependencies": {
