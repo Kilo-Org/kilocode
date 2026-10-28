@@ -131,10 +131,12 @@
     "@opencode-ai/ui": "workspace:*",
     "@opencode/client": "workspace:*",
     "@opencode/schema": "workspace:*",
+    "@opencode/util": "workspace:*",
     "@pierre/diffs": "1.2.10",
     "@thisbeyond/solid-dnd": "0.7.5",
     "diff": "catalog:",
     "fuzzysort": "catalog:",
+    "jsonc-parser": "3.3.1",
     "marked": "catalog:",
     "solid-js": "catalog:",
     "virtua": "0.49.1"

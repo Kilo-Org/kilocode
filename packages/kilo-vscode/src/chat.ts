@@ -15,6 +15,7 @@ import type { ToHost, ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
+import { readKiloSettings, settingsHost } from "./settings-host"
 import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 
 export function chat(input: { context: ExtensionContext; server: Manager; directory: string }) {
@@ -92,9 +93,15 @@ export function wire(input: {
     fetch: local,
   })
   const post = (message: ToWebview) => void webview.postMessage(message)
+  // Config read and write are host-side: only the Settings panel uses them.
+  const settings =
+    input.view === "settings"
+      ? settingsHost({ context: input.context, server: input.server, directory: input.directory, post })
+      : undefined
   const subscription = webview.onDidReceiveMessage((message: ToHost) => {
     input.onMessage?.()
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
+    if (settings?.handle(message)) return
     // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
     if (message.type === "webviewFocusChanged" && input.view === "chat")
       return void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", message.focused === true)
@@ -128,11 +135,13 @@ export function wire(input: {
     size: size(),
     language: env.language,
     view: input.view,
+    settings: readKiloSettings(),
   })
   return {
     post,
     dispose() {
       link.dispose()
+      settings?.dispose()
       subscription.dispose()
     },
   }
@@ -158,6 +167,7 @@ export function html(input: {
   size: number
   language: string
   view?: "chat" | "settings"
+  settings: Record<string, unknown>
 }) {
   const nonce = randomBytes(16).toString("hex")
   const policy = [
@@ -179,7 +189,7 @@ export function html(input: {
     KILO_AGENT_MANAGER_SETTINGS: false,
     KILO_BROWSER_AUTOMATION: false,
     KILO_AGENT_MANAGER_INTRO_DISMISSED: true,
-    KILO_SETTINGS: {},
+    KILO_SETTINGS: input.settings,
   }
   const script = Object.entries(globals)
     .map(([key, value]) => `window.${key} = ${JSON.stringify(value).replace(/</g, "\\u003c")};`)

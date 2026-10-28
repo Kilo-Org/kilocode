@@ -1,8 +1,6 @@
-// Main's Settings view on native v2 data (v2/settings.tsx). Only tabs with a v2 contract are here: Providers
-// (`api.integration.*`, `api.credential.*`) and About Kilo Code. The other v1 tabs, the Open Config buttons and the
-// save bar have no v2 contract yet: `api.config.update` patches only `shell`, and the v2 extension contributes no
-// VS Code settings. The Reload button is `api.location.reload`.
-import { Component, createSignal, createEffect, createMemo, lazy, on, Show } from "solid-js"
+// Main's Settings view on native v2 data (v2/settings.tsx). The rail and the contents come from SETTINGS_TABS_V2; only
+// the tabs marked ready render. Search indexes the i18n rows of the ready tabs, so a result always has a row to reveal.
+import { Component, createSignal, createEffect, createMemo, on, Show } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -12,14 +10,9 @@ import { useLanguage } from "../../context/language"
 import type { SettingsData } from "../../v2/settings"
 import SettingsSearch from "./SettingsSearch"
 import SettingsSearchResults from "./SettingsSearchResults"
-import { SETTINGS_TABS, type SettingsEntry, type SettingsTab } from "./settings-search"
+import { SETTINGS_ENTRIES, SETTINGS_TABS, type SettingsEntry, type SettingsTab } from "./settings-search"
+import { SETTINGS_TABS_V2 } from "./tabs"
 import { useSettingsSearch } from "./useSettingsSearch"
-
-const ProvidersTab = lazy(() => import("./ProvidersTab"))
-const AboutKiloCodeTab = lazy(() => import("./AboutKiloCodeTab"))
-
-/** The v1 tabs that the v2 Settings view renders. */
-const TABS = new Set(["providers", "aboutKiloCode"])
 
 export interface SettingsProps {
   settings: SettingsData
@@ -29,9 +22,12 @@ export interface SettingsProps {
   onLogin: () => void
 }
 
+const READY_TABS = SETTINGS_TABS_V2.filter((tab) => tab.ready)
+const READY_IDS = new Set(READY_TABS.map((tab) => tab.id))
+
 const Settings: Component<SettingsProps> = (props) => {
   const language = useLanguage()
-  const [active, setActive] = createSignal(props.tab ?? "providers")
+  const [active, setActive] = createSignal(props.tab ?? READY_TABS[0]?.id ?? "providers")
 
   // Sync when the parent changes the tab prop (e.g. via navigate message)
   createEffect(
@@ -58,10 +54,9 @@ const Settings: Component<SettingsProps> = (props) => {
     })
   }
 
-  // v2 renders no row that carries a `data-search-label`, so the index holds no rows and search returns the tabs
-  // themselves. The v1 rows without a v2 contract must not appear as results that cannot be revealed.
-  const searchTabs = createMemo<SettingsTab[]>(() => SETTINGS_TABS.filter((tab) => TABS.has(tab.id)))
-  const searchEntries = createMemo<SettingsEntry[]>(() => [])
+  // Search covers the ready tabs only, so every result opens a tab that renders.
+  const searchTabs = createMemo<SettingsTab[]>(() => SETTINGS_TABS.filter((tab) => READY_IDS.has(tab.id)))
+  const searchEntries = createMemo<SettingsEntry[]>(() => SETTINGS_ENTRIES.filter((entry) => READY_IDS.has(entry.tab)))
 
   const search = useSettingsSearch({
     tabs: searchTabs,
@@ -122,24 +117,23 @@ const Settings: Component<SettingsProps> = (props) => {
               onDismiss={search.clear}
             />
           </div>
-          <Tabs.Trigger value="providers" aria-label={language.t("settings.providers.title")}>
-            <Icon name="providers" />
-            <span class="label">{language.t("settings.providers.title")}</span>
-          </Tabs.Trigger>
-          <Tabs.Trigger value="aboutKiloCode" aria-label={language.t("settings.aboutKiloCode.title")}>
-            <Icon name="help" />
-            <span class="label">{language.t("settings.aboutKiloCode.title")}</span>
-          </Tabs.Trigger>
+          {READY_TABS.map((tab) => (
+            <Tabs.Trigger value={tab.id} aria-label={language.t(tab.title)}>
+              <Icon name={tab.icon} />
+              <span class="label">{language.t(tab.title)}</span>
+            </Tabs.Trigger>
+          ))}
         </Tabs.List>
 
-        <Tabs.Content value="providers">
-          <h3>{language.t("settings.providers.title")}</h3>
-          <ProvidersTab settings={props.settings} onLogin={props.onLogin} />
-        </Tabs.Content>
-        <Tabs.Content value="aboutKiloCode">
-          <h3>{language.t("settings.aboutKiloCode.title")}</h3>
-          <AboutKiloCodeTab settings={props.settings} />
-        </Tabs.Content>
+        {READY_TABS.map((tab) => {
+          const Content = tab.component
+          return (
+            <Tabs.Content value={tab.id}>
+              <h3>{language.t(tab.title)}</h3>
+              <Content settings={props.settings} onLogin={props.onLogin} />
+            </Tabs.Content>
+          )
+        })}
 
         <Show when={search.searching()}>
           <SettingsSearchResults
