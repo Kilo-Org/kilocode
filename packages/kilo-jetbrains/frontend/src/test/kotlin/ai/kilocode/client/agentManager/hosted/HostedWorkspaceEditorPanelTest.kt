@@ -270,6 +270,52 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
         }
     }
 
+    fun testPreferredFocusAlwaysBelongsToTheAttachedSharedEditorSurface() {
+        edtWait {
+            assertTrue(SwingUtilities.isDescendingFrom(panel.preferredFocus(), panel))
+            toggle()
+            val splitter = descendants(panel).filterIsInstance<OnePixelSplitter>().single()
+            assertNull(splitter.firstComponent)
+            assertSame(splitter.secondComponent, panel.preferredFocus())
+            assertTrue(SwingUtilities.isDescendingFrom(panel.preferredFocus(), panel))
+            assertTrue(descendants(splitter.secondComponent).any { it is SessionUi })
+            toggle()
+        }
+    }
+
+    fun testMissingCurrentSessionFallsBackToTheLatestAvailableSession() {
+        rpc.rootSessions = listOf(rpc.rootSessions.last())
+
+        hosted.refresh("/renamed-repository")
+
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<JBList<*>>().single().selectedValue
+                ?.let { (it as ActiveListItem).key == rpc.rootSessions.single().id } == true
+        } })
+        edtWait {
+            assertEquals(rpc.rootSessions.single().id,
+                (descendants(panel).filterIsInstance<JBList<*>>().single().selectedValue as ActiveListItem).key)
+            assertEquals(1, descendants(panel).filterIsInstance<SessionUi>().size)
+        }
+    }
+
+    fun testCurrentSessionIsReobservedAfterSignInRestoresTheGate() {
+        val initial = rpc.collectors
+        rpc.list = HostedWorkspaceListDto(signedOut = true)
+        hosted.refresh("/signed-out")
+        assertTrue(coroutines.pumpUntil { hosted.state.value.signedOut && rpc.active == 0 })
+
+        rpc.list = HostedWorkspaceListDto(items = listOf(HostedWorkspaceDto(ref)))
+        hosted.refresh("/signed-in")
+
+        assertTrue(coroutines.pumpUntil { rpc.collectors > initial && rpc.active == 1 })
+        emit(HostedSystemEventDto(key, "cloud.status", message = "Preparing after sign-in",
+            cloudStatus = "preparing", observedAt = 500.0))
+        assertTrue(coroutines.pumpUntil { edtWait {
+            descendants(panel).filterIsInstance<ProgressPanel>().single().labelText() == "Preparing after sign-in"
+        } })
+    }
+
     fun testWorkspaceHeaderPullsBranchAndCustomNameFromWorkspaceMetadata() {
         val title = edtWait { descendants(panel).filterIsInstance<SimpleColoredComponent>().first() }
         edtWait { assertEquals("feature/cloud", title.getCharSequence(true).toString()) }
@@ -323,22 +369,30 @@ class HostedWorkspaceEditorPanelTest : BasePlatformTestCase() {
     private class FakeHosted(private val ref: HostedWorkspaceRefDto) : KiloHostedRpcApi {
         val events = MutableSharedFlow<HostedSystemEventDto>(replay = 16)
         var collectors = 0
+        var active = 0
         var workspaceCalls = 0
         var name: String? = null
+        var list = HostedWorkspaceListDto()
+        var rootSessions = listOf(
+            HostedWorkspaceSessionDto("${ref.key}:selected", "selected", "Selected session", updated = 2.0),
+            HostedWorkspaceSessionDto("${ref.key}:other", "other", "New session - 2026-07-30T19:01:40.945Z", updated = 1.0),
+        )
         override suspend fun providers(): List<HostedProviderDto> = emptyList()
-        override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) = HostedWorkspaceListDto()
+        override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) = list
         override suspend fun workspace(ref: HostedWorkspaceRefDto, sessionCursor: String?, organizationID: String?): HostedWorkspaceDto {
             workspaceCalls++
-            return HostedWorkspaceDto(ref, name = name, branch = "feature/cloud", sessions = listOf(
-                HostedWorkspaceSessionDto("${ref.key}:selected", "selected", "Selected session", updated = 2.0),
-                HostedWorkspaceSessionDto("${ref.key}:other", "other", "New session - 2026-07-30T19:01:40.945Z", updated = 1.0),
-            ))
+            return HostedWorkspaceDto(ref, name = name, branch = "feature/cloud", sessions = rootSessions)
         }
         override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?) =
             HostedWorkspaceStatusDto(ref, "active", "sleeping", "sandbox_stopped", 100.0, rateMicrodollarsPerHour = 1_200_000)
         override suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto> = flow {
             collectors++
-            events.collect { emit(it) }
+            active++
+            try {
+                events.collect { emit(it) }
+            } finally {
+                active--
+            }
         }
     }
 }

@@ -48,7 +48,7 @@ import ai.kilocode.client.session.ui.prompt.SessionIssue
 import ai.kilocode.client.session.ui.prompt.SessionIssueAction
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
-import ai.kilocode.client.session.ui.prompt.promptMentions
+import ai.kilocode.client.session.ui.prompt.fileMentions
 import ai.kilocode.client.session.ui.rail.PromptRailController
 import ai.kilocode.client.session.settings.ApprovalReasonVisibilityListener
 import ai.kilocode.client.session.settings.TranscriptDisplayListener
@@ -621,6 +621,7 @@ class SessionUi(
             controller,
             this,
             readonly,
+            compactVisible = { manager?.supportsCompact != false },
             boardVisible = { board },
             onShowBoard = ::showBoard,
             onOpenSubagent = ::openSubagent,
@@ -1081,29 +1082,32 @@ class SessionUi(
     private fun sendPrompt(text: String, files: List<PromptPartDto>, select: PromptSelection? = null) {
         if (readonly) return
         if (text.isBlank() && files.isEmpty()) return
-        if (hosted && (files.isNotEmpty() || promptMentions(text).isNotEmpty())) {
-            com.intellij.notification.Notification(
-                "Kilo Code",
-                KiloBundle.message("hosted.prompt.textOnly"),
-                com.intellij.notification.NotificationType.WARNING,
-            ).notify(project)
-            return
-        }
-        prompt.clear()
         val follow = scroll.following()
         val action = completion.clientAction(text)
         if (action != null) {
+            prompt.clear()
             action.action()
             scroll.followBottom(follow)
             return
         }
         val command = completion.serverCommand(text)
         if (command != null) {
+            prompt.clear()
             controller.command(command.first, command.second, files)
             scroll.followBottom(follow)
             return
         }
         cs.launch(Dispatchers.Main) {
+            val mentioned = hosted && files.isEmpty() && withContext(Dispatchers.IO) { hostedFileMentions(text) }
+            if (hosted && (files.isNotEmpty() || mentioned)) {
+                com.intellij.notification.Notification(
+                    "Kilo Code",
+                    KiloBundle.message("hosted.prompt.textOnly"),
+                    com.intellij.notification.NotificationType.WARNING,
+                ).notify(project)
+                return@launch
+            }
+            prompt.clear()
             // Only the prompt path uses editor context; gather after the command branches so slash
             // commands and client actions don't pay the editor-context cost or hit its failure modes.
             // Ignore-file VFS reads suspend on Dispatchers.IO before returning to the EDT.
@@ -1275,6 +1279,14 @@ class SessionUi(
             resolve = { path -> workspaces.files(workspace.directory, path).isNotEmpty() },
             gitChanges = { workspaces.gitChanges(workspace.directory) },
         )
+    }
+
+    private suspend fun hostedFileMentions(text: String): Boolean {
+        val reserved = MentionAction.ALL.mapTo(mutableSetOf()) { it.name }
+        val mentions = fileMentions(text, emptySet())
+        if (mentions.any { it.value in reserved }) return true
+        return mentions.filter { it.value !in reserved }
+            .any { workspaces.files(workspace.directory, it.value).isNotEmpty() }
     }
 
     private fun openUrl(url: String) {

@@ -10,13 +10,16 @@ import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
 import ai.kilocode.rpc.dto.EditorContextDto
 import ai.kilocode.rpc.dto.PartSourceDto
 import ai.kilocode.rpc.dto.PartSourceTextDto
+import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
@@ -63,6 +66,8 @@ class KiloHostedRoutingTest {
         val app = app(TestLog())
         ready(app)
         val api = KiloSessionRpcApiImpl(appOverride = app, log = TestLog())
+        val events = launch { api.events(session, ref.key).collect {} }
+        assertTrue(mock.awaitFeed("/event?workspace=wrk_att_test"))
 
         val items = api.messages(session, ref.key)
         val again = api.messages(session, ref.key)
@@ -76,6 +81,9 @@ class KiloHostedRoutingTest {
         assertTrue(mock.lastHostedMessagePath.orEmpty().contains("workspace=wrk_att_test"))
         // A second read reuses the live attachment instead of minting another one.
         assertEquals(1, mock.requestCount("/kilocode/session-host/session/cloud/ses_cloud/attach"))
+        events.cancelAndJoin()
+        assertTrue(mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1))
+        assertTrue(app.hosted.statuses.value[session] == null)
     }
 
     @Test
@@ -195,7 +203,7 @@ class KiloHostedRoutingTest {
             Json.parseToJsonElement("""{"command":"review","arguments":""}"""),
             Json.parseToJsonElement(assertNotNull(mock.lastHostedCommandBody)),
         )
-        assertEquals(1, mock.requestCount("/kilocode/session-host/session/cloud/ses_cloud/attach"))
+        assertEquals(2, mock.requestCount("/kilocode/session-host/session/cloud/ses_cloud/attach"))
     }
 
     @Test
@@ -232,12 +240,15 @@ class KiloHostedRoutingTest {
         val app = app(TestLog())
         ready(app)
         val api = KiloSessionRpcApiImpl(appOverride = app, log = TestLog())
+        val events = launch { api.events(session, ref.key).collect {} }
+        assertTrue(mock.awaitFeed("/event?workspace=wrk_att_test"))
 
         api.messages(session, ref.key)
         val pending = api.pendingPermissions(ref.key)
 
         assertEquals(session, pending.single().sessionID)
         assertTrue(mock.paths.any { it.contains("/permission?workspace=wrk_att_test") })
+        events.cancelAndJoin()
     }
 
     @Test
@@ -259,6 +270,7 @@ class KiloHostedRoutingTest {
         ready(app)
         val api = KiloSessionRpcApiImpl(appOverride = app, log = TestLog())
 
+        withTimeout(5_000) { app.chat.subscriptionCount.first { it > 0 } }
         app.chat.publish(
             ai.kilocode.rpc.dto.ChatEventDto.SessionStatusChanged(
                 session,
@@ -269,6 +281,17 @@ class KiloHostedRoutingTest {
         val statuses = withTimeout(5_000) { api.statuses().first { it[session] != null } }
         assertEquals("busy", statuses[session]?.type)
         assertNotNull(HostedWorkspaceRefDto.parse(ref.key))
+    }
+
+    @Test
+    fun `hosted permission rules are ignored so the reply can continue`() = runBlocking(Dispatchers.Default) {
+        val app = app(TestLog())
+        ready(app)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = TestLog())
+
+        api.savePermissionRules("per_1", ref.key, PermissionAlwaysRulesDto(approvedAlways = listOf("pwd")))
+
+        assertEquals(0, mock.requestCount("/permission/per_1/always-rules"))
     }
 
     @Test

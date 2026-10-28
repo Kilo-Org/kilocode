@@ -26,6 +26,7 @@ import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
@@ -104,11 +105,16 @@ class KiloBackendHostedManager(
     }
 
     private class Continuity {
-        var retained = false
+        var retainers = 0
         var subscribers = 0
+        var calls = 0
+        var organizationID: String? = null
         var snapshot = false
         var generation: String? = null
         val revision = java.util.concurrent.atomic.AtomicLong()
+
+        val retained: Boolean get() = retainers > 0
+        val unused: Boolean get() = retainers == 0 && subscribers == 0 && calls == 0
     }
 
     private class HostedHttpException(val code: Int, message: String) : RuntimeException(message)
@@ -141,14 +147,18 @@ class KiloBackendHostedManager(
     private var started = false
 
     fun start(api: DefaultApi, http: OkHttpClient, port: Int, chat: KiloBackendChatManager) {
-        if (started) return
+        val endpoint = "http://127.0.0.1:$port"
+        val changed = started && (this.api !== api || this.http !== http || base != endpoint || this.chat !== chat)
+        val previous = this.api
         this.api = api
         this.http = http
-        this.base = "http://127.0.0.1:$port"
+        this.base = endpoint
         this.chat = chat
+        if (started && !changed) return
+        if (started) rebind(previous)
         started = true
         lifecycle = CoroutineScope(cs.coroutineContext + SupervisorJob(cs.coroutineContext[Job]))
-        statusJob = lifecycle!!.launch {
+        statusJob = lifecycle!!.launch(start = CoroutineStart.UNDISPATCHED) {
             chat.events.collect { event ->
                 when (event) {
                     is ChatEventDto.SessionStatusChanged -> if (HostedIDs.isSession(event.sessionID)) {
@@ -170,23 +180,14 @@ class KiloBackendHostedManager(
                 }
             }
         }
+        if (changed) continuity.entries.forEach { restore(it.key, it.value) }
         log.info("Hosted session manager started")
     }
 
     fun stop() {
         if (!started && attachments.isEmpty()) return
         started = false
-        statusJob?.cancel()
-        statusJob = null
-        attachments.values.forEach { close(it) }
-        attachments.clear()
-        continuity.clear()
-        lifecycle?.cancel()
-        lifecycle = null
-        sessions.clear()
-        permissionOwner.clear()
-        questionOwner.clear()
-        _statuses.value = emptyMap()
+        reset(detach = true)
         api = null
         http = null
         base = null
@@ -269,19 +270,25 @@ class KiloBackendHostedManager(
         val composite = HostedIDs.session(ref.providerID, ref.workspaceID, native)
         return flow {
             val state = lock.withLock {
-                continuity.computeIfAbsent(composite) { Continuity() }.also { it.subscribers++ }
+                continuity.computeIfAbsent(composite) { Continuity() }.also {
+                    it.subscribers++
+                    it.organizationID = organizationID ?: it.organizationID
+                }
             }
             try {
-                ensure(composite, organizationID, retained = false)
+                ensure(composite, organizationID)
                 systemEvents.filter { it.sessionID == composite }.collect { emit(it) }
             } finally {
                 withContext(kotlinx.coroutines.NonCancellable) {
                     lock.withLock {
                         state.subscribers--
-                        if (!state.retained && state.subscribers == 0) {
-                            attachments.remove(composite)?.let { close(it) }
-                            continuity.remove(composite, state)
+                        if (state.subscribers == 0) {
+                            attachments[composite]?.let { attachment ->
+                                attachment.system?.cancel()
+                                attachment.system = null
+                            }
                         }
+                        discard(composite, state)
                     }
                 }
             }
@@ -489,7 +496,46 @@ class KiloBackendHostedManager(
 
     // ------ attachments and streams ------
 
-    private suspend fun ensure(id: String, organizationID: String?, retained: Boolean = true, expected: Attachment? = null): Attachment =
+    suspend fun retain(id: String, organizationID: String?) {
+        parse(id)
+        val state = lock.withLock {
+            continuity.computeIfAbsent(id) { Continuity() }.also {
+                it.retainers++
+                it.organizationID = organizationID ?: it.organizationID
+            }
+        }
+        try {
+            ensure(id, organizationID)
+        } catch (err: Throwable) {
+            withContext(kotlinx.coroutines.NonCancellable) {
+                lock.withLock {
+                    state.retainers--
+                    discard(id, state)
+                }
+            }
+            throw err
+        }
+    }
+
+    /** Releases one native transcript stream owner while leaving passive system observation intact. */
+    suspend fun release(id: String) = withContext(kotlinx.coroutines.NonCancellable) {
+        lock.withLock {
+            val state = continuity[id] ?: return@withLock
+            if (state.retainers == 0) return@withLock
+            state.retainers--
+            if (state.retainers > 0) return@withLock
+            attachments[id]?.let { attachment ->
+                attachment.events?.cancel()
+                attachment.events = null
+            }
+            permissionOwner.entries.removeIf { it.value == id }
+            questionOwner.entries.removeIf { it.value == id }
+            _statuses.update { it - id }
+            discard(id, state)
+        }
+    }
+
+    private suspend fun ensure(id: String, organizationID: String?, expected: Attachment? = null): Attachment =
         (lifecycle ?: throw IllegalStateException("Hosted session manager not started")).async {
         val (provider, workspace, native) = parse(id)
         lock.withLock {
@@ -498,11 +544,11 @@ class KiloBackendHostedManager(
                 return@withLock attachments[id] ?: throw CancellationException("Hosted attachment released")
             }
             val state = continuity.computeIfAbsent(id) { Continuity() }
-            state.retained = state.retained || retained
             val existing = attachments[id]
             // expiresAt describes the provider descriptor, not the opaque CLI attachment lease.
             if (existing != null && !existing.invalid) {
                 if (state.retained && existing.events == null) startNative(existing)
+                if (state.subscribers > 0 && existing.system == null) startSystem(existing)
                 return@withLock existing
             }
             val attached = withContext(Dispatchers.IO) {
@@ -524,7 +570,13 @@ class KiloBackendHostedManager(
             )
             attachments[id] = attachment
             startStreams(attachment)
-            if (existing != null) close(existing)
+            if (existing != null) close(existing, recovery = expected == null)
+            if (state.unused) {
+                attachments.remove(id, attachment)
+                continuity.remove(id, state)
+                close(attachment)
+                throw CancellationException("Hosted attachment released")
+            }
             log.info("hosted attach session=${ChatLogSummary.sid(id)} attachment=${attachment.id} expiresAt=$expires")
             attachment
         }
@@ -532,38 +584,59 @@ class KiloBackendHostedManager(
 
     private suspend fun <T> attached(id: String, organizationID: String?, block: suspend (Attachment) -> T): T {
         val (provider, workspace, _) = parse(id)
-        var failure: Throwable? = null
-        repeat(2) { attempt ->
-            val attachment = ensure(id, organizationID)
-            try {
-                return block(attachment)
-            } catch (e: HostedHttpException) {
-                failure = e
-                if (attempt == 0 && (e.code == 404 || e.code == 410)) {
-                    log.info("hosted attachment expired session=${ChatLogSummary.sid(id)} code=${e.code} reattach=true")
-                    attachment.invalid = true
-                    return@repeat
-                }
-                throw e
-            } catch (e: ClientException) {
-                failure = e
-                if (attempt == 0 && e.statusCode in setOf(404, 410)) {
-                    attachment.invalid = true
-                    return@repeat
-                }
-                throw e
+        val state = lock.withLock {
+            continuity.computeIfAbsent(id) { Continuity() }.also {
+                it.calls++
+                it.organizationID = organizationID ?: it.organizationID
             }
         }
-        throw failure ?: IllegalStateException("Hosted session call failed for $provider/$workspace")
+        try {
+            var failure: Throwable? = null
+            repeat(2) { attempt ->
+                val attachment = ensure(id, organizationID)
+                try {
+                    return block(attachment)
+                } catch (e: HostedHttpException) {
+                    failure = e
+                    if (attempt == 0 && (e.code == 404 || e.code == 410)) {
+                        log.info("hosted attachment expired session=${ChatLogSummary.sid(id)} code=${e.code} reattach=true")
+                        attachment.invalid = true
+                        return@repeat
+                    }
+                    throw e
+                } catch (e: ClientException) {
+                    failure = e
+                    if (attempt == 0 && e.statusCode in setOf(404, 410)) {
+                        attachment.invalid = true
+                        return@repeat
+                    }
+                    throw e
+                }
+            }
+            throw failure ?: IllegalStateException("Hosted session call failed for $provider/$workspace")
+        } finally {
+            withContext(kotlinx.coroutines.NonCancellable) {
+                lock.withLock {
+                    state.calls--
+                    discard(id, state)
+                }
+            }
+        }
     }
 
     private fun startStreams(attachment: Attachment) {
         if (continuity[attachment.session]?.retained == true) startNative(attachment)
-        attachment.system = lifecycle?.launch(Dispatchers.IO) { systemLoop(attachment) }
+        if ((continuity[attachment.session]?.subscribers ?: 0) > 0) startSystem(attachment)
     }
 
     private fun startNative(attachment: Attachment) {
+        if (attachment.events?.isActive == true) return
         attachment.events = lifecycle?.launch(Dispatchers.IO) { eventLoop(attachment) }
+    }
+
+    private fun startSystem(attachment: Attachment) {
+        if (attachment.system?.isActive == true) return
+        attachment.system = lifecycle?.launch(Dispatchers.IO) { systemLoop(attachment) }
     }
 
     private fun recover(attachment: Attachment) {
@@ -574,7 +647,7 @@ class KiloBackendHostedManager(
                 var backoff = INITIAL_BACKOFF_MS
                 while (started && attachments[attachment.session] === attachment) {
                     try {
-                        ensure(attachment.session, attachment.organizationID, retained = false, expected = attachment)
+                        ensure(attachment.session, attachment.organizationID, expected = attachment)
                         return@launch
                     } catch (err: CancellationException) {
                         throw err
@@ -584,6 +657,24 @@ class KiloBackendHostedManager(
                     delay(backoff)
                     backoff = (backoff * 2).coerceAtMost(MAX_BACKOFF_MS)
                 }
+            }
+        }
+    }
+
+    private fun restore(id: String, state: Continuity) {
+        lifecycle?.launch(Dispatchers.IO) {
+            var backoff = INITIAL_BACKOFF_MS
+            while (started && continuity[id] === state && !state.unused && attachments[id] == null) {
+                try {
+                    ensure(id, state.organizationID)
+                    return@launch
+                } catch (err: CancellationException) {
+                    throw err
+                } catch (err: Exception) {
+                    log.warn("hosted reconnect failed session=${ChatLogSummary.sid(id)} message=${err.message}")
+                }
+                delay(backoff)
+                backoff = (backoff * 2).coerceAtMost(MAX_BACKOFF_MS)
             }
         }
     }
@@ -728,21 +819,54 @@ class KiloBackendHostedManager(
         }
     }
 
-    private fun close(attachment: Attachment) {
+    private fun close(
+        attachment: Attachment,
+        detach: Boolean = true,
+        recovery: Boolean = true,
+        client: DefaultApi? = api,
+    ) {
         attachment.events?.cancel()
         attachment.system?.cancel()
-        attachment.recovery?.cancel()
+        if (recovery) attachment.recovery?.cancel()
         attachment.events = null
         attachment.system = null
-        if (started) {
-            lifecycle?.launch(Dispatchers.IO) {
-                runCatching { requireApi().sessionHostDetach(attachment.id) }
-                    .onFailure {
-                        if (it is CancellationException) throw it
-                        log.debug { "hosted detach failed attachment=${attachment.id} message=${it.message}" }
-                    }
+        attachment.recovery = null
+        if (detach && client != null) {
+            cs.launch(Dispatchers.IO) {
+                runCatching { client.sessionHostDetach(attachment.id) }
+                    .onFailure { log.debug { "hosted detach failed attachment=${attachment.id} message=${it.message}" } }
             }
         }
+    }
+
+    private fun discard(id: String, state: Continuity) {
+        if (!state.unused) return
+        attachments.remove(id)?.let { close(it) }
+        continuity.remove(id, state)
+        _statuses.update { it - id }
+    }
+
+    private fun reset(detach: Boolean, client: DefaultApi? = api) {
+        statusJob?.cancel()
+        statusJob = null
+        attachments.values.forEach { close(it, detach, client = client) }
+        attachments.clear()
+        continuity.clear()
+        lifecycle?.cancel()
+        lifecycle = null
+        sessions.clear()
+        permissionOwner.clear()
+        questionOwner.clear()
+        _statuses.value = emptyMap()
+    }
+
+    private fun rebind(client: DefaultApi?) {
+        statusJob?.cancel()
+        statusJob = null
+        lifecycle?.cancel()
+        lifecycle = null
+        attachments.values.forEach { close(it, client = client) }
+        attachments.clear()
     }
 
     // ------ helpers ------

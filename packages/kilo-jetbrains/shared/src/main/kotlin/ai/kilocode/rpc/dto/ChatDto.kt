@@ -331,13 +331,6 @@ sealed class ChatEventDto {
     ) : ChatEventDto()
 
     /**
-     * The CLI cancelled this session's turn on its own, for [reason].
-     *
-     * Synthesized by the backend, never parsed from a CLI event. The CLI reports a server-side
-     * cancellation as `MessageAbortedError` — byte-identical to what a user Stop produces — so
-     * without this signal the UI silently renders "Stopped" for work nobody asked to stop.
-     */
-    /**
      * The hosted event stream reconnected after a gap. Backend-synthesized, never parsed from a CLI
      * event. The controller reloads hosted history and pending prompts so events missed during the
      * gap cannot leave the transcript or question cards stale.
@@ -349,6 +342,13 @@ sealed class ChatEventDto {
         val phase: String = "complete",
     ) : ChatEventDto()
 
+    /**
+     * The CLI cancelled this session's turn on its own, for [reason].
+     *
+     * Synthesized by the backend, never parsed from a CLI event. The CLI reports a server-side
+     * cancellation as `MessageAbortedError` — byte-identical to what a user Stop produces — so
+     * without this signal the UI silently renders "Stopped" for work nobody asked to stop.
+     */
     @Serializable
     @SerialName("session.interrupted")
     data class SessionInterrupted(

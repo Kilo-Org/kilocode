@@ -38,6 +38,9 @@ interface KiloHostedRpcApi : RemoteApi<Unit> {
     /** Passive compute/billing status. Reads never wake compute. */
     suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspaceStatusDto
 
-    /** Decoded preparation/cloud/sandbox status for one attached hosted session. */
+    /**
+     * Decoded preparation/cloud/sandbox status for one attached hosted session. [sessionID] is the
+     * provider-native session ID, not its composite hosted identity.
+     */
     suspend fun systemEvents(ref: HostedWorkspaceRefDto, sessionID: String, organizationID: String?): Flow<HostedSystemEventDto>
 }

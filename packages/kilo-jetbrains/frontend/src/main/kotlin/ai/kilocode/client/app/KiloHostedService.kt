@@ -25,9 +25,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -50,6 +51,7 @@ class KiloHostedService internal constructor(
     private val gate: () -> Boolean = { Registry.`is`("kilo.cloudWorkspaces.enabled", true) },
     private val log: KiloLog = LOG,
     private val repo: (String) -> String? = ::resolveGitRemoteUrl,
+    private val pause: suspend (Long) -> Unit = { delay(it) },
 ) {
     constructor(project: Project, cs: CoroutineScope) : this(cs, null, service<KiloAppService>()) {
         Registry.get("kilo.cloudWorkspaces.enabled").addListener(object : RegistryValueListener {
@@ -62,6 +64,8 @@ class KiloHostedService internal constructor(
     companion object {
         private val LOG = KiloLog.create(KiloHostedService::class.java)
         private const val WATCH_LIMIT = 50
+        private const val INITIAL_BACKOFF_MS = 1_000L
+        private const val MAX_BACKOFF_MS = 10_000L
     }
 
     data class HostedState(
@@ -196,33 +200,28 @@ class KiloHostedService internal constructor(
                 } while (cursor != null)
                 if (run != generation) return@launch
                 val unique = dedupe(items)
-                val statuses = unique.associate { ws ->
-                    val status = runCatching { status(ws.ref) }.getOrElse {
-                        if (it is CancellationException) throw it
-                        log.warn("hosted workspace status unavailable workspace=${ws.ref.key}", it)
-                        HostedWorkspaceStatusDto(ws.ref, ws.deletionState, "unavailable", "", 0.0)
-                    }
-                    ws.ref.key to status
+                _state.update { current ->
+                    if (run != generation) return@update current
+                    HostedState(
+                        enabled = true,
+                        loading = !signedOut,
+                        items = unique,
+                        providers = providers,
+                        signedOut = signedOut,
+                        statuses = if (signedOut) emptyMap() else current.statuses.filterKeys { key ->
+                            unique.any { it.ref.key == key }
+                        },
+                        preparations = if (signedOut) emptyMap() else current.preparations.filterKeys { key ->
+                            unique.any { key.startsWith(it.ref.key + ":") }
+                        },
+                        cursor = cursor,
+                        repositoryUrl = remote,
+                    )
                 }
-                if (run != generation) return@launch
-                _state.update { current -> HostedState(
-                    enabled = true,
-                    items = unique,
-                    providers = providers,
-                    signedOut = signedOut,
-                    statuses = if (signedOut) emptyMap() else unique.mapNotNull { ws ->
-                        val fresh = statuses[ws.ref.key]
-                        val live = current.statuses[ws.ref.key]
-                        (if (live != null && (fresh == null || live.observedAt >= fresh.observedAt)) live else fresh)
-                            ?.let { ws.ref.key to it }
-                    }.toMap(),
-                    preparations = if (signedOut) emptyMap() else current.preparations.filterKeys { key ->
-                        unique.any { key.startsWith(it.ref.key + ":") }
-                    },
-                    cursor = cursor,
-                    repositoryUrl = remote,
-                ) }
                 reconcile(unique, signedOut)
+                if (!signedOut) refreshStatuses(unique, run)
+                if (run != generation) return@launch
+                _state.update { if (run == generation) it.copy(loading = false) else it }
                 log.info("hosted workspace discovery completed workspaces=${unique.size} signedOut=$signedOut")
             } catch (e: CancellationException) {
                 throw e
@@ -368,25 +367,52 @@ class KiloHostedService internal constructor(
                     item.closed = cached.cloudStatus != "preparing"
                 }
                 item.job = cs.launch {
-                    flow {
-                        // The durable boundary must include collection, not just Flow acquisition.
-                        while (true) {
-                            call { systemEvents(ref, session, null).collect { emit(it) } }
-                            delay(1_000)
+                    var failures = 0
+                    while (true) {
+                        try {
+                            // The durable boundary must include collection, not just Flow acquisition.
+                            call { systemEvents(ref, session, null).collect { event ->
+                                failures = 0
+                                synchronized(lock) {
+                                    if (watches[key] === item && event.sessionID == key && gate()) fold(item, event)
+                                }
+                            } }
+                            failures = 0
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            failures++
+                            val msg = "hosted system observation failed session=$key attempt=$failures"
+                            if (failures == 1) log.warn(msg, e) else log.debug { "$msg message=${e.message}" }
                         }
-                    }.retryWhen { err, _ ->
-                        if (err is CancellationException) return@retryWhen false
-                        log.warn("hosted system observation failed session=$key", err)
-                        delay(1_000)
-                        true
-                    }.collect { event ->
-                        synchronized(lock) {
-                            if (watches[key] === item && event.sessionID == key && gate()) fold(item, event)
-                        }
+                        val backoff = (INITIAL_BACKOFF_MS * (1L shl (failures - 1).coerceIn(0, 4)))
+                            .coerceAtMost(MAX_BACKOFF_MS)
+                        pause(backoff)
                     }
                 }
             }
         }
+    }
+
+    private suspend fun refreshStatuses(items: List<HostedWorkspaceDto>, run: Long) = coroutineScope {
+        items.map { ws ->
+            async {
+                if (run != generation) return@async
+                val status = runCatching { status(ws.ref) }.getOrElse {
+                    if (it is CancellationException) throw it
+                    log.warn("hosted workspace status unavailable workspace=${ws.ref.key}", it)
+                    HostedWorkspaceStatusDto(ws.ref, ws.deletionState, "unavailable", "", 0.0)
+                }
+                if (run != generation) return@async
+                _state.update { current ->
+                    if (run != generation) return@update current
+                    if (current.signedOut || current.items.none { it.ref == ws.ref }) return@update current
+                    val live = current.statuses[ws.ref.key]
+                    val next = if (live != null && live.observedAt >= status.observedAt) live else status
+                    current.copy(statuses = current.statuses + (ws.ref.key to next))
+                }
+            }
+        }.awaitAll()
     }
 
     private fun prune(key: String, item: Watch) {

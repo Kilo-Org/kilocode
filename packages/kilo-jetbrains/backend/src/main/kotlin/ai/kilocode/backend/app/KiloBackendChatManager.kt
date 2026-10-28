@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -85,6 +86,7 @@ class KiloBackendChatManager(
 
     private val _events = MutableSharedFlow<ChatEventDto>(extraBufferCapacity = 128)
     val events: SharedFlow<ChatEventDto> = _events.asSharedFlow()
+    internal val subscriptionCount: StateFlow<Int> = _events.subscriptionCount
 
     private var client: OkHttpClient? = null
     private var base: String? = null

@@ -99,6 +99,8 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
                     if (state.signedOut || !hosted.enabled()) {
                         observation?.let(Disposer::dispose)
                         observation = null
+                        selected = null
+                        return@withContext
                     }
                     applyStatus()
                 }
@@ -196,13 +198,14 @@ class HostedWorkspaceEditorPanel @RequiresEdt constructor(
             WorkspaceSessionRow(it, kinds[it.id], live = titles[it.id],
                 search = listOfNotNull(it.title, it.id, it.session.nativeSessionID).joinToString(" "))
         }
-        val current = manager.currentKey()?.takeIf { it != SessionHost.NEW }
+        val current = manager.currentKey()?.takeIf { key -> key != SessionHost.NEW && sessions.any { it.id == key } }
         val initial = current ?: if (select) sessions.maxByOrNull { it.updated }?.id else null
         list.update(rows, initial?.let { ActiveListSelection.Key(it) } ?: ActiveListSelection.Preserve)
         syncToggle(sessions.mapTo(mutableSetOf()) { it.id }, kinds, current)
-        if (select && initial != null && manager.currentKey() != initial) {
-            sessions.firstOrNull { it.id == initial }?.let { open(it, focus = false) }
-        }
+        if (!select || initial == null) return
+        sessions.firstOrNull { it.id == initial }?.takeIf {
+            manager.currentKey() != initial || observation == null
+        }?.let { open(it, focus = false) }
     }
 
     @RequiresEdt

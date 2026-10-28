@@ -331,44 +331,55 @@ class KiloSessionRpcApiImpl internal constructor(
     override suspend fun events(id: String, directory: String): Flow<ChatEventDto> =
         channelFlow {
             log.info("${ChatLogSummary.sid(id)} kind=subscription route=rpc-events start=true dir=${ChatLogSummary.dir(directory)}")
+            val remote = source == null && hosted.isHosted(id)
+            var retained = false
 
-            // Gate: the live SharedFlow subscription must be established before the replay runs, so
-            // the pending-prompt fetch cannot open a window where an event is in neither the
-            // snapshot nor the live stream. For the real SharedFlow path, onSubscription fires after
-            // the subscriber is registered; for the injected test source, onStart is sufficient.
-            val gate = Channel<Unit>(Channel.RENDEZVOUS)
-            val upstream = source
-                ?.onStart { gate.send(Unit) }
-                ?: chat.events.onSubscription { gate.send(Unit) }
+            try {
+                // Gate: the live SharedFlow subscription must be established before the replay runs, so
+                // the pending-prompt fetch cannot open a window where an event is in neither the
+                // snapshot nor the live stream. For the real SharedFlow path, onSubscription fires after
+                // the subscriber is registered; for the injected test source, onStart is sufficient.
+                val gate = Channel<Unit>(Channel.RENDEZVOUS)
+                val upstream = source
+                    ?.onStart { gate.send(Unit) }
+                    ?: chat.events.onSubscription { gate.send(Unit) }
 
-            // 1. Start collecting the live stream immediately.
-            val live = launch {
-                upstream
-                    .filter { event ->
-                        val sid = ChatLogSummary.sid(event)
-                        val passes = event is ChatEventDto.SessionCreated || sid == null || sid == id
-                        if (passes) logEvent(id, "pass=true", event, null)
-                        else logEvent(id, "pass=false", event, sid)
-                        if (passes) {
-                            ChatLogSummary.error(event)?.let { log.warn("${ChatLogSummary.sid(id)} route=rpc-events pass=true $it") }
+                // 1. Start collecting the live stream immediately.
+                val live = launch {
+                    upstream
+                        .filter { event ->
+                            val sid = ChatLogSummary.sid(event)
+                            val passes = event is ChatEventDto.SessionCreated || sid == null || sid == id
+                            if (passes) logEvent(id, "pass=true", event, null)
+                            else logEvent(id, "pass=false", event, sid)
+                            if (passes) {
+                                ChatLogSummary.error(event)?.let { log.warn("${ChatLogSummary.sid(id)} route=rpc-events pass=true $it") }
+                            }
+                            if (passes && event is ChatEventDto.SessionStatusChanged && event.status.type != "busy") {
+                                log.info(
+                                    "${ChatLogSummary.sid(id)} kind=status route=rpc-events pass=true " +
+                                        ChatLogSummary.status(event.status),
+                                )
+                            }
+                            passes
                         }
-                        if (passes && event is ChatEventDto.SessionStatusChanged && event.status.type != "busy") {
-                            log.info(
-                                "${ChatLogSummary.sid(id)} kind=status route=rpc-events pass=true " +
-                                    ChatLogSummary.status(event.status),
-                            )
-                        }
-                        passes
-                    }
-                    .collect { send(it) }
+                        .collect { send(it) }
+                }
+
+                // 2. Wait for the live subscriber to be registered, then replay any pending prompts.
+                gate.receive()
+                if (remote) {
+                    app.requireReady()
+                    retained = true
+                    hosted.retain(id, organization())
+                }
+                replayPending(id, directory)
+
+                // Keep the channelFlow alive until the live collector completes or is cancelled.
+                live.join()
+            } finally {
+                if (retained) hosted.release(id)
             }
-
-            // 2. Wait for the live subscriber to be registered, then replay any pending prompts.
-            gate.receive()
-            replayPending(id, directory)
-
-            // Keep the channelFlow alive until the live collector completes or is cancelled.
-            live.join()
         }
             .onCompletion { cause ->
                 if (cause == null || cause is CancellationException) {
@@ -394,7 +405,7 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun savePermissionRules(requestId: String, directory: String, rules: PermissionAlwaysRulesDto) {
         app.requireReady()
-        if (HostedIDs.isWorkspace(directory)) throw UnsupportedOperationException("Hosted sessions cannot save local permission rules")
+        if (HostedIDs.isWorkspace(directory)) return
         log.info("savePermissionRules: requestId=$requestId")
         chat.savePermissionRules(requestId, directory, rules)
     }

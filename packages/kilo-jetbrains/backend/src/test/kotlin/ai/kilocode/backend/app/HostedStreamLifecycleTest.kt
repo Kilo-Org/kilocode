@@ -3,6 +3,9 @@ package ai.kilocode.backend.app
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.backend.cli.KiloBackendHttpClients
+import ai.kilocode.backend.rpc.KiloSessionRpcApiImpl
+import ai.kilocode.jetbrains.api.client.DefaultApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.HostedIDs
 import ai.kilocode.rpc.dto.HostedWorkspaceRefDto
@@ -49,15 +52,22 @@ class HostedStreamLifecycleTest {
         }
     }
 
-    private suspend fun next(predicate: (ChatEventDto) -> Boolean): ChatEventDto = withTimeout(TIMEOUT) {
+    private suspend fun next(
+        source: Channel<ChatEventDto> = events,
+        predicate: (ChatEventDto) -> Boolean,
+    ): ChatEventDto = withTimeout(TIMEOUT) {
         while (true) {
-            val event = events.receive()
+            val event = source.receive()
             if (predicate(event)) return@withTimeout event
         }
         error("unreachable")
     }
 
     private suspend fun open() {
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            app.hosted.systemEvents(HostedWorkspaceRefDto("cloud", "wrk_1"), "ses_cloud", null).collect {}
+        }
+        app.hosted.retain(session, null)
         app.hosted.messages(session, null)
         assertTrue(mock.awaitFeed(path), "native stream did not open")
         assertTrue(mock.awaitFeed(system), "system stream did not open")
@@ -114,6 +124,9 @@ class HostedStreamLifecycleTest {
         open()
         mock.hostedStreamStatus[path] = 410
         mock.hostedAttachStatuses.add(500)
+        mock.pushFeed(path, """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""")
+        assertEquals("busy", (next { it is ChatEventDto.SessionStatusChanged } as ChatEventDto.SessionStatusChanged).status.type)
+        withTimeout(TIMEOUT) { app.hosted.statuses.first { it[session]?.type == "busy" } }
         mock.closeFeed(path)
         assertTrue(mock.awaitRequestCount(attach, 2))
         mock.pushFeed(system, """{"type":"cloud.status","properties":{"sessionId":"ses_cloud","cloudStatus":{"type":"running"}}}""")
@@ -121,6 +134,7 @@ class HostedStreamLifecycleTest {
         val renewed = "/event?workspace=wrk_att_next"
         assertTrue(mock.awaitFeed(renewed), "replacement stream never recovered")
         next { it is ChatEventDto.Resnapshot && it.phase == "start" }
+        assertEquals("busy", app.hosted.statuses.value[session]?.type)
         fence(renewed)
         next { it is ChatEventDto.Resnapshot && it.phase == "complete" }
         app.hosted.messages(session, null)
@@ -150,6 +164,7 @@ class HostedStreamLifecycleTest {
         job.cancel()
         job.join()
         assertTrue(mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_next", 1))
+        assertEquals(0, mock.requestCount("/event"), "passive renewal unexpectedly opened native stream")
     }
 
     @Test
@@ -281,6 +296,7 @@ class HostedStreamLifecycleTest {
         open()
         val other = HostedIDs.session("cloud", "wrk_2", "ses_cloud")
         mock.hostedAttach = """{"attachmentID":"wrk_att_other","session":{"providerID":"cloud","sessionID":"ses_cloud"},"expiresAt":1}"""
+        app.hosted.retain(other, null)
         app.hosted.messages(other, null)
         val feed = "/event?workspace=wrk_att_other"
         assertTrue(mock.awaitFeed(feed))
@@ -296,7 +312,66 @@ class HostedStreamLifecycleTest {
         assertEquals("idle", app.hosted.statuses.value[session]?.type)
         assertEquals("busy", app.hosted.statuses.value[other]?.type)
         app.hosted.stop()
+        assertTrue(mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1))
+        assertTrue(mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_other", 1))
         assertTrue(app.hosted.statuses.value.isEmpty())
+    }
+
+    @Test
+    fun `start reopens owned streams on a replacement CLI without an external read`() = runBlocking(Dispatchers.Default) {
+        mock.profile = """{"profile":{"email":"test@test.com","name":"Test"},"balance":null,"currentOrgId":"org_1"}"""
+        ready()
+        val systems = Channel<String>(Channel.UNLIMITED)
+        val received = Channel<ChatEventDto>(Channel.UNLIMITED)
+        val api = KiloSessionRpcApiImpl(appOverride = app, log = TestLog())
+        val systemJob = scope.launch {
+            app.hosted.systemEvents(HostedWorkspaceRefDto("cloud", "wrk_1"), "ses_cloud", "org_1").collect {
+                systems.send(it.sessionID)
+            }
+        }
+        val nativeJob = scope.launch {
+            api.events(session, HostedIDs.workspace("cloud", "wrk_1")).collect { received.send(it) }
+        }
+        assertTrue(mock.awaitFeed(path), "initial native stream did not open")
+        assertTrue(mock.awaitFeed(system), "initial system stream did not open")
+        next(received) { it is ChatEventDto.Resnapshot && it.phase == "start" }
+        mock.pushFeed(path, """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"busy"}}}""")
+        assertEquals("busy", (next(received) { it is ChatEventDto.SessionStatusChanged } as ChatEventDto.SessionStatusChanged).status.type)
+        withTimeout(TIMEOUT) { app.hosted.statuses.first { it[session]?.type == "busy" } }
+        val replacement = MockCliServer()
+        val http = KiloBackendHttpClients.api("")
+        try {
+            replacement.hostedAttach = """{"attachmentID":"wrk_att_next","session":{"providerID":"cloud","sessionID":"ses_cloud"},"expiresAt":1}"""
+            val port = replacement.start()
+            val api = DefaultApi(basePath = "http://127.0.0.1:$port", client = http)
+            app.hosted.start(api, http, port, app.chat)
+
+            assertTrue(mock.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_test", 1))
+            val native = "/event?workspace=wrk_att_next"
+            val cloud = "/cloud-agent/event?workspace=wrk_att_next"
+            assertTrue(replacement.awaitFeed(native), "replacement native stream did not reopen")
+            assertTrue(replacement.awaitFeed(cloud), "replacement system stream did not reopen")
+            assertEquals("busy", app.hosted.statuses.value[session]?.type)
+            next(received) { it is ChatEventDto.Resnapshot && it.phase == "start" }
+            replacement.pushFeed(native, """{"type":"session.status","properties":{"sessionID":"ses_cloud","status":{"type":"idle"}}}""")
+            assertEquals("idle", (next(received) { it is ChatEventDto.SessionStatusChanged } as ChatEventDto.SessionStatusChanged).status.type)
+            replacement.pushFeed(cloud, """{"type":"cloud.status","properties":{"sessionId":"ses_cloud","cloudStatus":{"type":"running"}}}""")
+            assertEquals(session, withTimeout(TIMEOUT) { systems.receive() })
+            assertEquals(1, replacement.requestCount(attach))
+            assertEquals(1, mock.requestCount(attach))
+            assertEquals(0, replacement.requestCount("/session/ses_cloud/message"))
+            assertTrue(replacement.lastHostedAttachPath.orEmpty().contains("organizationID=org_1"))
+
+            systemJob.cancel()
+            systemJob.join()
+            nativeJob.cancel()
+            nativeJob.join()
+            assertTrue(replacement.awaitRequestCount("/kilocode/session-host/attachment/wrk_att_next", 1))
+        } finally {
+            app.hosted.stop()
+            KiloBackendHttpClients.shutdown(http)
+            replacement.close()
+        }
     }
 
     private companion object {

@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
@@ -21,6 +22,8 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.awt.EventQueue
+import javax.swing.SwingUtilities
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -38,6 +41,19 @@ class KiloHostedServiceTest {
     }
 
     @Test
+    fun `repository resolution runs off the EDT`() = runBlocking {
+        val thread = CompletableDeferred<Boolean>()
+        val service = KiloHostedService(cs, FakeRpc(), gate = { true }, log = TestLog(), repo = {
+            thread.complete(EventQueue.isDispatchThread())
+            "repo"
+        })
+
+        SwingUtilities.invokeAndWait { service.refresh("/repo") }
+
+        assertEquals(false, withTimeout(WAIT) { thread.await() })
+    }
+
+    @Test
     fun `failed workspace status reads settle as unavailable rather than loading indefinitely`() = runBlocking {
         val ref = HostedWorkspaceRefDto("cloud", "one")
         val rpc = object : KiloHostedRpcApi by FakeRpc(mapOf(null to HostedWorkspaceListDto(listOf(HostedWorkspaceDto(ref))))) {
@@ -48,6 +64,61 @@ class KiloHostedServiceTest {
         service.refresh("/repo")
         val state = withTimeout(WAIT) { service.state.first { it.items.isNotEmpty() && !it.loading } }
         assertEquals("unavailable", state.presentation(ref)?.computeStatus)
+    }
+
+    @Test
+    fun `workspace rows publish before parallel status reads settle`() = runBlocking {
+        val one = workspace("1")
+        val two = workspace("2")
+        val gates = mapOf(one.ref to CompletableDeferred<Unit>(), two.ref to CompletableDeferred<Unit>())
+        val rpc = object : KiloHostedRpcApi by FakeRpc(mapOf(null to HostedWorkspaceListDto(listOf(one, two)))) {
+            val reading = Channel<HostedWorkspaceRefDto>(Channel.UNLIMITED)
+            override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspaceStatusDto {
+                reading.send(ref)
+                gates.getValue(ref).await()
+                return HostedWorkspaceStatusDto(ref, "active", "running", "ready", 1.0)
+            }
+        }
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog(), repo = { "repo" })
+
+        service.refresh("/repo")
+        val first = withTimeout(WAIT) { service.state.first { it.items.size == 2 } }
+        assertTrue(first.loading)
+        assertTrue(first.statuses.isEmpty())
+        val started = setOf(withTimeout(WAIT) { rpc.reading.receive() }, withTimeout(WAIT) { rpc.reading.receive() })
+        assertEquals(setOf(one.ref, two.ref), started)
+
+        gates.getValue(one.ref).complete(Unit)
+        withTimeout(WAIT) { service.state.first { it.statuses.keys == setOf(one.ref.key) } }
+        gates.getValue(two.ref).complete(Unit)
+        val complete = withTimeout(WAIT) { service.state.first { !it.loading && it.statuses.size == 2 } }
+        assertEquals(setOf(one.ref.key, two.ref.key), complete.statuses.keys)
+    }
+
+    @Test
+    fun `superseded status fanout cannot publish or finish the newer refresh`() = runBlocking {
+        val old = workspace("old")
+        val fresh = workspace("fresh")
+        val gate = CompletableDeferred<Unit>()
+        val pages = mutableMapOf<String?, HostedWorkspaceListDto>(null to HostedWorkspaceListDto(listOf(old)))
+        val rpc = object : KiloHostedRpcApi by FakeRpc(pages) {
+            override suspend fun workspaces(repositoryUrl: String?, cursor: String?, organizationID: String?) = pages.getValue(cursor)
+            override suspend fun workspaceStatus(ref: HostedWorkspaceRefDto, organizationID: String?): HostedWorkspaceStatusDto {
+                if (ref == old.ref) gate.await()
+                return HostedWorkspaceStatusDto(ref, "active", "running", "ready", 1.0)
+            }
+        }
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog(), repo = { "repo" })
+
+        service.refresh("/repo-old")
+        withTimeout(WAIT) { service.state.first { it.items.singleOrNull()?.ref == old.ref } }
+        pages[null] = HostedWorkspaceListDto(listOf(fresh))
+        service.refresh("/repo-new")
+        withTimeout(WAIT) { service.state.first { !it.loading && it.items.singleOrNull()?.ref == fresh.ref } }
+        gate.complete(Unit)
+
+        assertEquals(setOf(fresh.ref.key), service.state.value.statuses.keys)
+        assertEquals(fresh.ref, service.state.value.statuses.values.single().ref)
     }
 
     @Test
@@ -632,6 +703,52 @@ class KiloHostedServiceTest {
     }
 
     @Test
+    fun `collection failures back off and log repeated attempts at debug until connection`() = runBlocking {
+        val ref = HostedWorkspaceRefDto("cloud", "one")
+        val waits = Channel<Pair<Long, CompletableDeferred<Unit>>>(Channel.UNLIMITED)
+        val calls = Channel<Int>(Channel.UNLIMITED)
+        val log = TestLog()
+        var count = 0
+        val rpc = object : KiloHostedRpcApi by FakeRpc() {
+            override suspend fun systemEvents(
+                ref: HostedWorkspaceRefDto,
+                sessionID: String,
+                organizationID: String?,
+            ): Flow<HostedSystemEventDto> = flow {
+                count++
+                calls.send(count)
+                if (count <= 3) error("failure $count")
+                emit(HostedSystemEventDto("${ref.key}:$sessionID", "cloud.sandbox.status",
+                    sandboxStatus = "running", observedAt = 4.0))
+                awaitCancellation()
+            }
+        }
+        val service = KiloHostedService(cs, rpc, gate = { true }, log = log, pause = { ms ->
+            CompletableDeferred<Unit>().also { waits.send(ms to it) }.await()
+        })
+        val parent = Disposer.newDisposable()
+        try {
+            service.observe(ref, "same", parent)
+            assertEquals(1, withTimeout(WAIT) { calls.receive() })
+            val first = withTimeout(WAIT) { waits.receive() }
+            assertEquals(1_000L, first.first)
+            first.second.complete(Unit)
+            assertEquals(2, withTimeout(WAIT) { calls.receive() })
+            val second = withTimeout(WAIT) { waits.receive() }
+            assertEquals(2_000L, second.first)
+            second.second.complete(Unit)
+            assertEquals(3, withTimeout(WAIT) { calls.receive() })
+            val third = withTimeout(WAIT) { waits.receive() }
+            assertEquals(4_000L, third.first)
+            third.second.complete(Unit)
+            assertEquals(4, withTimeout(WAIT) { calls.receive() })
+            withTimeout(WAIT) { service.state.first { it.statuses[ref.key]?.computeStatus == "running" } }
+            assertEquals(1, log.messages.count { it.startsWith("WARN: hosted system observation failed") })
+            assertEquals(2, log.messages.count { it.startsWith("DEBUG: hosted system observation failed") })
+        } finally { Disposer.dispose(parent) }
+    }
+
+    @Test
     fun `project scope cancellation closes owned collection`() = runBlocking {
         val rpc = FakeRpc()
         val service = KiloHostedService(cs, rpc, gate = { true }, log = TestLog())
@@ -650,18 +767,18 @@ class KiloHostedServiceTest {
         val rpc = FakeRpc(pages)
         var enabled = true
         val service = KiloHostedService(cs, rpc, gate = { enabled }, log = TestLog(), repo = { "repo" })
-        service.refresh("/repo")
+        service.refresh("/repo-active")
         withTimeout(WAIT) { rpc.opened.receive() }
         pages[null] = HostedWorkspaceListDto(signedOut = true)
-        service.refresh("/repo")
+        service.refresh("/repo-signed-out")
         withTimeout(WAIT) { rpc.closed.receive() }
         withTimeout(WAIT) { service.state.first { it.signedOut } }
         assertTrue(service.state.value.statuses.isEmpty())
         pages[null] = HostedWorkspaceListDto(items = listOf(workspace("1")))
-        service.refresh("/repo")
+        service.refresh("/repo-signed-in")
         withTimeout(WAIT) { rpc.opened.receive() }
         enabled = false
-        service.refresh("/repo")
+        service.refresh("/repo-disabled")
         withTimeout(WAIT) { rpc.closed.receive() }
         assertEquals(false, service.state.value.enabled)
     }

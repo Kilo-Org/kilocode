@@ -25,11 +25,9 @@ object HostedIDs {
         value != null && parseSession(value) != null
 
     fun parseWorkspace(value: String): Pair<String, String>? {
-        val parts = value.split(":", limit = 3)
-        if (parts.size != 3 || parts[0] != PREFIX) return null
-        val provider = parts[1].takeIf { it.isNotBlank() } ?: return null
-        val workspace = parts[2].takeIf { it.isNotBlank() } ?: return null
-        return provider to workspace
+        val parts = value.split(":")
+        if (parts.size != 3 || parts.any { it.isBlank() } || parts[0] != PREFIX) return null
+        return parts[1] to parts[2]
     }
 
     fun parseSession(value: String): Triple<String, String, String>? {

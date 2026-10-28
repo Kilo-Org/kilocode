@@ -81,7 +81,6 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.ide.DeleteProvider
 import com.intellij.ide.actions.RevealFileAction
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -209,7 +208,7 @@ class AgentManagerPanel(
             target.service<WorktreeEditorMatchers>().register(HostedWorkspaceEditorMatcher)
             target.service<KiloHostedService>().let { hosted ->
                 hosted.observe(this) { state ->
-                    ApplicationManager.getApplication().invokeLater {
+                    edt({ !target.isDisposed && !Disposer.isDisposed(this) }) {
                         hostedState = state
                         sync()
                     }

@@ -88,6 +88,21 @@ class HostedWorkspaceRowTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test editor metadata cache is bounded and readable off the EDT`() {
+        val cache = HostedWorkspaceCache()
+        repeat(257) { index ->
+            cache.put(HostedWorkspaceDto(HostedWorkspaceRefDto("cloud", "wrk_$index"), name = "Workspace $index"))
+        }
+        val first = java.util.concurrent.CompletableFuture.supplyAsync {
+            cache.get(HostedWorkspaceRefDto("cloud", "wrk_0"))
+        }.get()
+        val latest = java.util.concurrent.CompletableFuture.supplyAsync {
+            cache.get(HostedWorkspaceRefDto("cloud", "wrk_256"))
+        }.get()
+        assertNull(first)
+        assertEquals("Workspace 256", latest?.name)
+    }
+
     fun `test workspace has only a standard themed status badge and no cost or duplicate description`() {
         val sleeping = row("sleeping")
         assertEquals(listOf("cloud-compute"), sleeping.badges.map { it.id })

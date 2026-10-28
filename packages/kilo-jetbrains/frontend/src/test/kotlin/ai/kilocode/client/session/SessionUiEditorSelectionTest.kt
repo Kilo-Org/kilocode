@@ -4,7 +4,9 @@ import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.controller.PromptSelection
 import ai.kilocode.client.util.edtWait
 import ai.kilocode.rpc.dto.PromptPartDto
+import ai.kilocode.rpc.dto.WorkspaceFileDto
 import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.util.ui.UIUtil
 
@@ -47,11 +49,31 @@ class SessionUiEditorSelectionTest : SessionUiTestBase() {
         assertNull(sent.third.noReply)
         assertFalse(panel.reasoning.isVisible)
         assertFalse(panel.reasoning.canCycle())
+        val header = find(ui, SessionHeaderPanel::class.java)!!
+        assertFalse(header.compactButton().isVisible)
+        val send = SessionUi::class.java.getDeclaredMethod(
+            "sendPrompt",
+            String::class.java,
+            List::class.java,
+            PromptSelection::class.java,
+        ).apply { isAccessible = true }
+        fun submit(text: String) = edtWait { send.invoke(ui, text, emptyList<PromptPartDto>(), null) }
+        workspaceRpc.fileResolver = { path ->
+            listOf(WorkspaceFileDto(path, path.substringAfterLast('/'))).takeIf { path == "Selected.kt" }.orEmpty()
+        }
+        submit("Check @Override and ping @handle")
+        assertTrue(pumpUntil { rpc.prompts.size == 2 })
+        assertEquals("Check @Override and ping @handle", rpc.prompts.last().third.parts.single().text)
         panel.setText("Check @Selected.kt")
-        panel.send()
+        submit("Check @Selected.kt")
         settle()
-        assertEquals("Mention must not dispatch silently without its content", 1, rpc.prompts.size)
+        assertEquals("Mention must not dispatch silently without its content", 2, rpc.prompts.size)
         assertEquals("Check @Selected.kt", panel.text())
+        panel.setText("Review @git-changes")
+        submit("Review @git-changes")
+        settle()
+        assertEquals("Reserved file actions must not dispatch without their content", 2, rpc.prompts.size)
+        assertEquals("Review @git-changes", panel.text())
     }
 
     override fun tearDown() {
