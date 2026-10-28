@@ -1,5 +1,29 @@
 # @kilocode/cli
 
+## 7.8.23
+
+### Patch Changes
+
+- [#15081](https://github.com/Kilo-Org/kilocode/pull/15081) [`8862849`](https://github.com/Kilo-Org/kilocode/commit/8862849483c1e61e0dce04cdbee106e4986ea313) Thanks [@mardausdennis](https://github.com/mardausdennis)! - Preserve the real exit code or signal of background jobs owned by Kilo instead of recording a failed job as successful.
+
+- [#14976](https://github.com/Kilo-Org/kilocode/pull/14976) [`b209860`](https://github.com/Kilo-Org/kilocode/commit/b209860c3f957332563164efb63052babd7be04e) Thanks [@mardausdennis](https://github.com/mardausdennis)! - Give large-session compaction enough output space for thinking and a complete summary. Reject cut-off summaries without losing conversation history and explain how to retry.
+
+- [#15515](https://github.com/Kilo-Org/kilocode/pull/15515) [`26662b5`](https://github.com/Kilo-Org/kilocode/commit/26662b5edb68f5947b9de7d9d68e7ce0fa387551) - Keep a reply that another Kilo process on the same data directory is still writing, instead of deleting it when a message arrives through a second process.
+
+- [#15516](https://github.com/Kilo-Org/kilocode/pull/15516) [`58a856e`](https://github.com/Kilo-Org/kilocode/commit/58a856ecd40f7ddfb5e4bc6e0cca1c7c4b79cd91) - Fire each scheduled wakeup and cron task once when several Kilo processes open the same workspace, and keep a cancelled task from firing or coming back in another process.
+
+- Updated dependencies [[`0c1d8dd`](https://github.com/Kilo-Org/kilocode/commit/0c1d8dd89ee725e952ad402535c57447e098bb29)]:
+  - @kilocode/kilo-indexing@7.8.23
+  - @opencode-ai/server@7.8.23
+  - @opencode-ai/tui@7.8.23
+  - @opencode-ai/ui@7.8.23
+
+## 7.8.21
+
+### Minor Changes
+
+- [#15509](https://github.com/Kilo-Org/kilocode/pull/15509) [`307ff45`](https://github.com/Kilo-Org/kilocode/commit/307ff45f27ec796309ffb4e2f00f8dab85db3838) - Add hosted workspace operations and a Cloud system feed to the local session-host API. List, create, read, check the status of, and delete hosted workspaces, list their sessions, list available workspace profiles, and start another session in a workspace through the local Kilo API, and follow Cloud session preparation and status events through a local system feed route. Hosted operations now exchange the stored user credential for a short-lived Cloud Agent control token before any Worker call, so the original credential is never sent to the Worker. Hosted attachments stop working once their session or workspace is deleted.
+
 ## 7.8.20
 
 ### Minor Changes
