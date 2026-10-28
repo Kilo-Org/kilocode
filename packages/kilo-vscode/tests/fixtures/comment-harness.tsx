@@ -33,7 +33,7 @@ export async function harness<T extends { type: string }>() {
     Object.assign(globalThis, { [name]: window[name] })
   Object.assign(globalThis, {
     window,
-    CSSStyleSheet: class {
+    CSSStyleSheet: class extends window.CSSStyleSheet {
       replaceSync() {}
       replace() {
         return Promise.resolve(this)

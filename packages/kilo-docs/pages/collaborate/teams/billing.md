@@ -89,14 +89,14 @@ Ensure your team has uninterrupted access to Kilo Code by enabling [Automatic To
 ### How It Works
 
 - **Initial Verification** — To verify your payment method, a one-time charge for your selected top-up amount will be processed immediately upon enabling this feature.
-- **Automatic Thresholds** — Once enabled, Kilo Code will automatically recharge your balance whenever it falls below $50.00.
+- **Automatic Thresholds** — Once enabled, usage or a requested credit-funded service can trigger a recharge when your balance falls below $50.00. Viewing the balance or credit expiration alone never triggers a charge.
 
 {% callout type="warning" title="Payment Failure" %}
 If a payment fails, we will notify you via email and automatically pause auto-top-ups to prevent repeated billing attempts. You can resume this feature at any time from your settings.
 {% /callout %}
 
 - **Flexibility** — You can disable automatic top-ups at any time.
-- **No Expiration** — Any credits you purchase will never expire; they remain available in your account until used.
+- **Credit terms** — Paid purchases expire one calendar year after purchase, and each organization Pass paid allotment expires one calendar year after issuance, including allotments under annual plans. Existing balances and previously disclosed purchase terms are preserved; prepaid annual terms keep their terms until renewal. Promotional and bonus deadlines are unchanged. Credits are spent earliest-expiring first, with nonexpiring credits last. See [credit expiration and spending order](/docs/getting-started/adding-credits#credit-expiration-and-spending-order).
 
 ### Configuring Automatic Top-Up
 
