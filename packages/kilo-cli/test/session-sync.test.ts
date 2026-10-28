@@ -829,7 +829,9 @@ it.live("disable stops transport immediately but retains semantic journal update
     expect(f.backend.states.get(id)?.entities.get(`message/${messageID}`)).toMatchObject({
       message: { text: "first admitted message" },
     })
-    yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null })
+    expect(
+      yield* s.sync.enable({ directory: f.directory, destination: f.backend.url, local: true, organizationID: null }),
+    ).toMatchObject({ pending: 1 })
     expect((yield* s.sync.flush({ directory: f.directory })).pending).toBe(0)
     expect(f.backend.states.get(id)?.entities.get(`message/${messageID}`)).toMatchObject({
       message: { text: "edited while disabled" },

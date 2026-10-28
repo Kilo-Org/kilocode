@@ -522,7 +522,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
                 )
               }),
             )
-            yield* Store.reconcile(db, directory, true).pipe(
+            yield* Store.reconcile(db, directory).pipe(
               Effect.tap(() =>
                 Effect.sync(() => {
                   backgroundError = undefined
