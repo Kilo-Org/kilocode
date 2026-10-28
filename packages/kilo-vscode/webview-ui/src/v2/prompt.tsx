@@ -13,6 +13,8 @@ export function PromptInput(props: {
   onStop: () => void
   /** Agent, model and variant controls, before the actions as in main's PromptInput. */
   selectors?: JSX.Element
+  /** Prompt toolbar actions (auto-approve, and later indexing, sandbox and enhance as on main). */
+  actions?: JSX.Element
 }) {
   const v2 = useV2()
   const language = useLanguage()
@@ -92,6 +94,7 @@ export function PromptInput(props: {
       <div class="prompt-input-hint">
         {props.selectors}
         <div class="prompt-input-hint-actions">
+          {props.actions}
           <div class="prompt-input-hint-pinned">
             <Show
               when={stopping()}

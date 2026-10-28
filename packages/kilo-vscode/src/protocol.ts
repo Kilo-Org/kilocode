@@ -18,6 +18,8 @@ export type Ui =
   | { type: "copyToClipboard"; id: string; text: string }
   | { type: "requestModelSelectorExpanded" }
   | { type: "persistModelSelectorExpanded"; value: boolean }
+  | { type: "requestAutoApproveState" }
+  | { type: "persistAutoApproveState"; value: boolean }
   | { type: "webviewFocusChanged"; focused: boolean }
   | { type: "setLanguage"; locale: string }
   | { type: "saveImage"; dataUrl: string; filename: string }
@@ -30,4 +32,5 @@ export type ToWebview =
   | { type: "command"; name: "newSession" | "history" | "profile" }
   | { type: "clipboardWriteResult"; id: string; ok: boolean; error?: string }
   | { type: "modelSelectorExpandedLoaded"; value: boolean }
+  | { type: "autoApproveStateLoaded"; value: boolean }
   | { type: "webviewActiveChanged"; active: boolean }

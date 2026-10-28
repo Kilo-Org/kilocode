@@ -33,6 +33,11 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
           return post({ type: "modelSelectorExpandedLoaded", value: input.context.globalState.get(EXPANDED, true) })
         if (message.type === "persistModelSelectorExpanded")
           return void input.context.globalState.update(EXPANDED, message.value)
+        // Auto-approve is a client-side reaction to permission requests, so the host only persists its state.
+        if (message.type === "requestAutoApproveState")
+          return post({ type: "autoApproveStateLoaded", value: input.context.globalState.get(AUTO_APPROVE, false) })
+        if (message.type === "persistAutoApproveState")
+          return void input.context.globalState.update(AUTO_APPROVE, message.value)
         if (message.type === "saveImage") return saveImage(input.directory, message)
       })
       const visibility = view.onDidChangeVisibility(() => post({ type: "webviewActiveChanged", active: view.visible }))
@@ -65,6 +70,7 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
 }
 
 const EXPANDED = "kilo-code.v2.modelSelectorExpanded"
+const AUTO_APPROVE = "kilo-code.v2.autoApprove"
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
 function size() {

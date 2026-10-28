@@ -12,6 +12,7 @@ import { PromptInput } from "./prompt"
 import { QuestionDock } from "./question"
 import { createProfile } from "./profile"
 import { createSelection, Selectors } from "./selectors"
+import { AutoApproveAction, createAutoApprove } from "./auto-approve"
 
 export function Chat() {
   const v2 = useV2()
@@ -84,6 +85,7 @@ export function Chat() {
   // A pending permission or question blocks new prompts, as on v1; Stop stays available.
   const blocked = () => permissions().length > 0 || forms().length > 0
   const selection = createSelection(session)
+  const autoApprove = createAutoApprove()
 
   const send = (text: string) => {
     const id = session() ?? selection.create()
@@ -151,6 +153,7 @@ export function Chat() {
               onSend={send}
               onStop={stop}
               selectors={<Selectors selection={selection} blocked={blocked()} />}
+              actions={<AutoApproveAction enabled={autoApprove.enabled()} onToggle={autoApprove.toggle} />}
             />
           </div>
         </div>
