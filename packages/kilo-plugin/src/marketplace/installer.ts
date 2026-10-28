@@ -1,13 +1,21 @@
 export * as Installer from "./installer"
 
-import type { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
 import { MarketplaceMcp, McpError } from "./mcp"
 import type { Entry } from "./registry"
 import { Skill, SkillError } from "./skill"
 
 export class FetchError extends Error {}
 export type Failure = SkillError | McpError | FetchError
-type Resource = KiloMarketplaceRpc.Resource
+
+/** An owned resource at its current absolute location; the stored record keeps only ids and server names. */
+export type Resource =
+  | { readonly path: string; readonly fingerprints?: readonly string[] }
+  | {
+      readonly config: string
+      readonly server: string
+      readonly target?: string
+      readonly fingerprints?: readonly string[]
+    }
 
 export interface Written {
   readonly paths: readonly string[]
@@ -23,7 +31,7 @@ export async function install(input: {
   config: string
   option?: string
   params?: Readonly<Record<string, string>>
-  previous?: KiloMarketplaceRpc.Installed
+  previous?: Written & { readonly id: string; readonly recovering?: boolean }
   beforeWrite?: (intent: Written) => Promise<void>
 }): Promise<Written> {
   const item = input.entry.item
@@ -61,11 +69,15 @@ export async function install(input: {
     await checkTarget(resource)
   const allowed = (resource: Resource) =>
     prior.filter((old) => same(old, resource)).flatMap((old) => old.fingerprints ?? [])
+  // Content that already equals what this install writes is adopted: stored ownership can be lost (a reset
+  // database, a renamed project), and rewriting identical content never destroys anything. Differing
+  // content stays protected unless an earlier record owned it.
+  const accepted = (resource: Resource) => [...new Set([...allowed(resource), ...(resource.fingerprints ?? [])])]
   // Preparation and ownership preflight finish before durable intent and target writes.
   for (const resource of resources) {
-    if ("path" in resource) await Skill.preflight(resource.path, allowed(resource))
+    if ("path" in resource) await Skill.preflight(resource.path, accepted(resource))
     else
-      await MarketplaceMcp.preflight({ file: resource.config, name: resource.server, fingerprints: allowed(resource) })
+      await MarketplaceMcp.preflight({ file: resource.config, name: resource.server, fingerprints: accepted(resource) })
   }
   const pending = prior.filter((old) => !resources.some((resource) => same(old, resource)))
   const written: Written = {
@@ -86,7 +98,7 @@ export async function install(input: {
     for (const skill of skills) {
       const resource = resources.find((resource) => "path" in resource && resource.path === skill.target)!
       const existed = (await resourceFingerprint(resource)) !== undefined
-      await Skill.write(skill, allowed(resource))
+      await Skill.write(skill, accepted(resource))
       // Never roll back another concurrent install's tree merely because its fingerprint matches.
       if (!existed) created.push(resource)
     }
@@ -96,7 +108,7 @@ export async function install(input: {
         name: config.server,
         server,
         replace: true,
-        fingerprints: allowed(config),
+        fingerprints: accepted(config),
         secret: configuration?.parameters.some(
           (parameter) => parameter.secret && input.params?.[parameter.key]?.trim(),
         ),

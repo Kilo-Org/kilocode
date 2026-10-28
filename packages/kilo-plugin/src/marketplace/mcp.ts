@@ -92,20 +92,13 @@ function optionalRecord(key: string, value: unknown) {
   return entries.length > 0 ? { [key]: Object.fromEntries(entries) } : {}
 }
 
-export async function configFile(
-  directory: string,
-  global: boolean,
-  owned: readonly KiloMarketplaceRpc.Resource[] = [],
-) {
+export async function configFile(directory: string, global: boolean) {
   const checked = async (file: string) => {
     if (global) return file
     const target = await resolveFile(file)
     // Repository-controlled symlinks cannot authorize writes outside the project's native config locations.
-    if (
-      !KiloConfigFiles.writeCandidates(await resolveFile(directory), false).includes(target) &&
-      !owned.some((resource) => "config" in resource && resource.config === file && resource.target === target)
-    )
-      throw new McpError("conflict", `Project MCP config target has no machine-local ownership: ${file}`)
+    if (!KiloConfigFiles.writeCandidates(await resolveFile(directory), false).includes(target))
+      throw new McpError("conflict", `Project MCP config resolves outside its native config locations: ${file}`)
     return file
   }
   for (const candidate of KiloConfigFiles.writeCandidates(directory, global)) {

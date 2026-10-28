@@ -34,9 +34,9 @@ const record: KiloMarketplaceRpc.Installed = {
   id: "demo",
   scope: "project",
   project: directory,
-  paths: ["/owned/companion"],
-  config: `${directory}/kilo2.json`,
+  config: "kilo2.json",
   server: "demo",
+  resources: [{ id: "companion" }, { server: "demo" }],
   installedAt: 1,
   status: "ready",
 }
@@ -219,9 +219,15 @@ test("production browser groups both kinds and selection changes details without
   const frame = await app.waitForFrame((frame) => frame.includes("Writing Skill") && frame.includes("Demo MCP"))
   const left = frame.split("\n").map((line) => line.split("│")[0]!.trim())
   const row = (text: string) => left.findIndex((line) => line.startsWith(text))
-  expect(row("Installed")).toBeLessThan(row("All"))
+  const strip = left.find((line) => ["All", "Installed", "Skills", "MCPs"].every((title) => line.includes(title)))
+  expect(strip).toBeDefined()
+  for (const [before, after] of [
+    ["All", "Installed"],
+    ["Installed", "Skills"],
+    ["Skills", "MCPs"],
+  ] as const)
+    expect(strip!.indexOf(before)).toBeLessThan(strip!.indexOf(after))
   expect(row("Skills")).toBeLessThan(row("Writing Skill"))
-  expect(row("Writing Skill")).toBeLessThan(row("MCPs"))
   expect(row("MCPs")).toBeLessThan(row("Demo MCP"))
   app.mockInput.pressArrow("down")
   app.mockInput.pressArrow("down")
@@ -308,7 +314,7 @@ test.each([70, 120])(
         {
           ...record,
           registry: "retained-source",
-          resources: [{ path: "/owned/companion", fingerprints: ["private-evidence"] }],
+          resources: [{ id: "companion", fingerprints: ["private-evidence"] }],
         },
       ],
     })
@@ -316,7 +322,7 @@ test.each([70, 120])(
     await app.waitForFrame((frame) => frame.includes("No installed skills") && frame.includes("demo"))
     app.mockInput.pressKey("d", { ctrl: true })
     await app.waitForFrame(
-      (frame) => frame.includes("Source: retained-source") && frame.includes("Path: /owned/companion"),
+      (frame) => frame.includes("Source: retained-source") && frame.includes("Skill: companion"),
     )
     expect(app.captureCharFrame()).not.toContain("private-evidence")
     app.mockInput.pressEscape()
@@ -359,7 +365,7 @@ test("Installed keeps duplicate source/scope identities and failed removal retai
     uninstallFailed: true,
     records: [
       record,
-      { ...record, scope: "global", status: "modified", pending: [{ path: "/old/skill" }] },
+      { ...record, scope: "global", status: "modified", pending: [{ id: "skill" }] },
       { ...record, registry: "retained-source" },
     ],
   })
@@ -470,7 +476,7 @@ test.each(["missing", "incomplete", "modified"] as const)(
           ...record,
           status,
           recovering: status === "incomplete",
-          pending: [{ path: "/old/skill", fingerprints: ["private-evidence"] }],
+          pending: [{ id: "skill", fingerprints: ["private-evidence"] }],
         },
       ],
     })
@@ -480,7 +486,7 @@ test.each(["missing", "incomplete", "modified"] as const)(
     expect(frame).not.toContain("Reinstall (project)")
     await choose(app, "Details")
     await app.waitForFrame(
-      (frame) => frame.includes(`Status: ${status}`) && frame.includes("Pending cleanup: /old/skill"),
+      (frame) => frame.includes(`Status: ${status}`) && frame.includes("Pending cleanup: skill skill"),
     )
     expect(app.captureCharFrame()).not.toContain("private-evidence")
     expect(app.calls.some((call) => call.path.endsWith("/install"))).toBe(false)

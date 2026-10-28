@@ -251,7 +251,7 @@ export function DialogMarketplace(props: {
                   record.project,
                   record.config,
                   record.server,
-                  ...record.paths,
+                  ...skillIds(record),
                   ...recordNotes(record),
                   item?.name,
                   item?.description,
@@ -494,7 +494,7 @@ function entryDetails(entry: Entry, records: readonly Installed[]) {
       `Scope: ${record.scope}`,
       `Status: ${record.status ?? (record.recovering ? "incomplete" : "installed")}`,
       ...(record.project ? [`Project: ${record.project}`] : []),
-      ...record.paths.map((path) => `Path: ${path}`),
+      ...skillIds(record).map((id) => `Skill: ${id}`),
       ...(record.config ? [`Config: ${record.config}`] : []),
       ...(record.server ? [`MCP server: ${record.server}`] : []),
       ...recordNotes(record),
@@ -858,9 +858,12 @@ function recordNotes(record: Installed) {
     ...(record.warnings?.length
       ? record.warnings
       : (record.pending ?? []).map((resource) =>
-          "path" in resource
-            ? `Pending cleanup: ${resource.path}`
-            : `Pending cleanup: ${resource.config} (MCP server ${resource.server})`,
+          "id" in resource ? `Pending cleanup: skill ${resource.id}` : `Pending cleanup: MCP server ${resource.server}`,
         )),
   ]
+}
+
+/** Skill trees owned by a record: the item itself plus any MCP companion skills. */
+function skillIds(record: Installed) {
+  return (record.resources ?? []).flatMap((resource) => ("id" in resource ? [resource.id] : []))
 }

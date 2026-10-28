@@ -4,21 +4,16 @@ import { KiloMarketplaceRpc } from "@opencode/schema/kilocode/marketplace"
 import { ProjectID } from "@opencode/schema/project-id"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
 import { Global } from "@opencode/util/global"
-import fs from "node:fs/promises"
-import { randomUUID } from "node:crypto"
 import path from "node:path"
 import { Effect, Exit, Option, Result, Schema, Scope } from "effect"
 import { KiloMarketplaceRegistry } from "./kilo"
 import { Installer } from "./installer"
-import { McpError, configFile, resolveFile, serverName } from "./mcp"
+import { MarketplaceMcp, McpError, configFile } from "./mcp"
 import type { Entry } from "./registry"
 import { SkillError, safe } from "./skill"
 
 const CATALOG_TTL = 10 * 60 * 1000
 const decodeInstalled = Schema.decodeUnknownOption(Schema.fromJsonString(KiloMarketplaceRpc.Installed))
-const decodeLocal = Schema.decodeUnknownOption(
-  Schema.fromJsonString(Schema.Struct({ directory: Schema.String, record: KiloMarketplaceRpc.Installed })),
-)
 const decodeSnapshot = Schema.decodeUnknownOption(
   Schema.fromJsonString(
     Schema.Array(
@@ -67,20 +62,79 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
         }),
       )
 
+    // The database is the single record of ownership. Intent is written here before every mutation.
     const save = (record: KiloMarketplaceRpc.Installed) =>
-      Effect.gen(function* () {
-        // Scope-local intent precedes every mutation and survives a reset database or a moved project.
-        yield* Effect.tryPromise({
-          try: () => writeLocal(roots(record.scope), directory(record.scope), record),
-          catch: (error) =>
-            new StorageError("write_failed", `Couldn't save marketplace recovery record: ${message(error)}`),
-        })
-        yield* storage(
-          ctx.storage.set(manifestKey(record), JSON.stringify(record)),
-          "write_failed",
-          "Couldn't save marketplace installation; the recovery record was retained. Retry install or uninstall",
+      storage(
+        ctx.storage.set(manifestKey(record), JSON.stringify(record)),
+        "write_failed",
+        "Couldn't save marketplace installation. Retry install or uninstall",
+      )
+
+    // Absolute resources exist only in memory; stored records keep skill ids, server names and a scope-relative config.
+    const store = (resource: Installer.Resource): KiloMarketplaceRpc.Resource =>
+      "path" in resource
+        ? { id: path.basename(resource.path), fingerprints: resource.fingerprints }
+        : { server: resource.server, fingerprints: resource.fingerprints }
+
+    const configs = (scope: KiloMarketplaceRpc.Scope) =>
+      KiloConfigFiles.writeCandidates(directory(scope), scope === "global")
+
+    // An MCP entry lives in the first native config that holds its server. A missing one is placed where a
+    // new install would write it, so repair and cleanup agree on a single resource.
+    const locate = async (scope: KiloMarketplaceRpc.Scope, server: string) => {
+      // An unreadable candidate is not "entry absent": the entry may be in it, so it is returned and the
+      // caller fails on the real read error instead of silently dropping owned content.
+      let unreadable: string | undefined
+      for (const candidate of configs(scope)) {
+        const found = await MarketplaceMcp.fingerprint(candidate, server).then(
+          (fingerprint) => fingerprint !== undefined,
+          () => {
+            unreadable ??= candidate
+            return false
+          },
         )
-      })
+        if (found) return candidate
+      }
+      return unreadable ?? configFile(directory(scope), scope === "global")
+    }
+
+    const restore = async (
+      record: KiloMarketplaceRpc.Installed,
+    ): Promise<Installer.Written & { id: string; recovering?: boolean }> => {
+      // Active entries prefer the recorded config; pending ones may live elsewhere, so they are always located.
+      const owned = async (resource: KiloMarketplaceRpc.Resource, preferred?: string): Promise<Installer.Resource> => {
+        if ("id" in resource)
+          return { path: path.join(roots(record.scope), "skills", resource.id), fingerprints: resource.fingerprints }
+        const hinted =
+          preferred &&
+          (await MarketplaceMcp.fingerprint(preferred, resource.server).catch(() => undefined)) !== undefined
+        const config = hinted ? preferred : await locate(record.scope, resource.server)
+        // The canonical file is derived here, never stored, so aliases of one file stay one resource.
+        const target = await MarketplaceMcp.resolveFile(config).catch(() => undefined)
+        return { config, server: resource.server, ...(target ? { target } : {}), fingerprints: resource.fingerprints }
+      }
+      const recorded = record.config ? path.join(directory(record.scope), record.config) : undefined
+      const resources = await Promise.all((record.resources ?? []).map((resource) => owned(resource, recorded)))
+      // The record-level config must name the same file as its MCP resource, or they read as two resources.
+      const resolved = resources.find((resource) => "config" in resource)
+      const config = resolved && "config" in resolved ? resolved.config : recorded
+      return {
+        id: record.id,
+        paths: resources.flatMap((resource) => ("path" in resource ? [resource.path] : [])),
+        ...(config ? { config } : {}),
+        ...(record.server ? { server: record.server } : {}),
+        resources,
+        pending: record.pending ? await Promise.all(record.pending.map((resource) => owned(resource))) : undefined,
+        recovering: record.recovering,
+      }
+    }
+
+    // Clients get the config location resolved for the current scope; the stored record keeps it scope-relative.
+    const present = async (record: KiloMarketplaceRpc.Installed): Promise<KiloMarketplaceRpc.Installed> => ({
+      ...record,
+      ...(record.config ? { config: path.join(directory(record.scope), record.config) } : {}),
+      ...(await Installer.inspect(await restore(record))),
+    })
 
     const manifestKey = (input: {
       registry: string
@@ -156,87 +210,37 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
         return (yield* list(kind, false)).entries.find((entry) => entry.item.id === id)
       })
 
-    const local = (scope: KiloMarketplaceRpc.Scope, migrate = true) =>
+    // A stored record names locations. Anything that could point outside the scope is rejected, not trusted.
+    const valid = (record: KiloMarketplaceRpc.Installed) => {
+      const inside = (value: string) => {
+        const relative = path.relative(directory(record.scope), path.join(directory(record.scope), value))
+        return !path.isAbsolute(value) && relative !== ".." && !relative.startsWith(`..${path.sep}`)
+      }
+      return (
+        (record.config === undefined ||
+          (inside(record.config) &&
+            configs(record.scope).includes(path.join(directory(record.scope), record.config)))) &&
+        [...(record.resources ?? []), ...(record.pending ?? [])].every(
+          (resource) => !("id" in resource) || safe(resource.id),
+        )
+      )
+    }
+
+    // Unreadable or untrustworthy rows are skipped so one bad record cannot hide the others; installs stay
+    // protected by fingerprints and conflict checks.
+    const decode = (value: unknown, key: string) =>
       Effect.gen(function* () {
-        const entries = yield* Effect.tryPromise({
-          try: (signal) =>
-            readLocal(roots(scope), directory(scope), scope, (record) =>
-              Effect.runPromise(
-                storage(
-                  ctx.storage.get(manifestKey(record)),
-                  "fetch_failed",
-                  "Couldn't verify external config ownership",
-                ).pipe(
-                  Effect.map((value) => (value === undefined ? undefined : decodeRecord(value, manifestKey(record)))),
-                ),
-                { signal },
-              ),
-            ),
-          catch: (error) => new StorageError("fetch_failed", message(error)),
-        })
-        const records = entries.map((entry) => entry.record)
-        if (!migrate) return records
-        for (const entry of entries) {
-          const key = manifestKey(entry.record)
-          const retirementKey = `retiring:${key}`
-          if (manifestKey(entry.original) !== key) {
-            yield* storage(
-              ctx.storage.set(key, JSON.stringify(entry.record)),
-              "write_failed",
-              "Couldn't migrate marketplace ownership",
-            )
-            const copied =
-              entry.original.project &&
-              (yield* Effect.tryPromise({
-                try: () => directoryExists(entry.original.project!),
-                catch: (error) => new StorageError("fetch_failed", message(error)),
-              }))
-            // Retirement intent is separate so rewriting the journal cannot erase a failed cleanup's identity.
-            if (!copied)
-              yield* storage(
-                ctx.storage.set(retirementKey, JSON.stringify(entry.original)),
-                "write_failed",
-                "Couldn't save marketplace ownership retirement",
-              )
-            yield* Effect.tryPromise({
-              try: () => writeLocal(roots(scope), directory(scope), entry.record),
-              catch: (error) =>
-                new StorageError("write_failed", `Couldn't migrate marketplace journal: ${message(error)}`),
-            })
-          }
-          const retiring = yield* storage(
-            ctx.storage.get(retirementKey),
-            "fetch_failed",
-            "Couldn't read marketplace ownership retirement",
-          )
-          if (retiring === undefined) continue
-          yield* storage(
-            ctx.storage.remove(manifestKey(decodeRecord(retiring, retirementKey))),
-            "write_failed",
-            "Couldn't remove stale marketplace index",
-          )
-          yield* storage(
-            ctx.storage.remove(retirementKey),
-            "write_failed",
-            "Couldn't clear marketplace ownership retirement; retry install or uninstall",
-          )
-        }
-        return records
+        const decoded = typeof value === "string" ? decodeInstalled(value) : Option.none()
+        if (Option.isSome(decoded) && valid(decoded.value)) return decoded.value
+        yield* Effect.logWarning(`Skipping invalid marketplace record ${key}; no files were removed`)
+        return undefined
       })
 
-    const read = (
-      input: { registry: string; kind: string; id: string; scope: KiloMarketplaceRpc.Scope },
-      migrate = true,
-    ) =>
+    const read = (input: { registry: string; kind: string; id: string; scope: KiloMarketplaceRpc.Scope }) =>
       Effect.gen(function* () {
-        const stored = yield* storage(
-          ctx.storage.get(manifestKey(input)),
-          "fetch_failed",
-          "Couldn't read marketplace installation",
-        )
-        const decoded = stored === undefined ? undefined : decodeRecord(stored, manifestKey(input))
-        const records = yield* local(input.scope, migrate)
-        return records.find((record) => manifestKey(record) === manifestKey(input)) ?? decoded
+        const key = manifestKey(input)
+        const stored = yield* storage(ctx.storage.get(key), "fetch_failed", "Couldn't read marketplace installation")
+        return stored === undefined ? undefined : yield* decode(stored, key)
       })
 
     const installed = Effect.gen(function* () {
@@ -249,17 +253,15 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
           "Couldn't list marketplace installations",
         )
         for (const entry of scanned.entries) {
-          const decoded = decodeRecord(entry.value, entry.key)
-          if (decoded.scope === "project" && decoded.project !== project) continue
+          const decoded = yield* decode(entry.value, entry.key)
+          if (!decoded || (decoded.scope === "project" && decoded.project !== project)) continue
           records.push(decoded)
         }
         after = scanned.next
       } while (after !== undefined)
-      const disk = [...(yield* local("global")), ...(yield* local("project"))]
-      const merged = [...new Map([...records, ...disk].map((record) => [manifestKey(record), record])).values()]
-      return yield* Effect.forEach(merged, (record) =>
+      return yield* Effect.forEach(records, (record) =>
         Effect.tryPromise({
-          try: async () => ({ ...record, ...(await Installer.inspect(record)) }),
+          try: () => present(record),
           catch: (error) => new StorageError("fetch_failed", `Couldn't inspect ${record.id}: ${message(error)}`),
         }),
       )
@@ -286,14 +288,10 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                 return yield* Effect.fail(
                   new McpError("not_found", `No ${input.kind} ${input.id} in ${input.registry}`),
                 )
-              const previous = yield* read(input, false)
               return yield* Effect.tryPromise({
                 try: async () => ({
                   ...Installer.preview({ entry, option: input.option, params: input.params }),
-                  config: await configFile(directory(input.scope), input.scope === "global", [
-                    ...(previous?.resources ?? []),
-                    ...(previous?.pending ?? []),
-                  ]),
+                  config: await configFile(directory(input.scope), input.scope === "global"),
                 }),
                 catch: (error) => error,
               })
@@ -310,14 +308,21 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                 return yield* Effect.fail(
                   new McpError("not_found", `No ${input.kind} ${input.id} in ${input.registry}`),
                 )
-              const previous = yield* read(input)
+              const stored = yield* read(input)
+              const previous = stored
+                ? yield* Effect.tryPromise({ try: () => restore(stored), catch: (error) => error })
+                : undefined
               const recordOf = (written: Installer.Written, recovering = false): KiloMarketplaceRpc.Installed => ({
+                version: 1,
                 registry: input.registry,
                 kind: input.kind,
                 id: input.id,
                 scope: input.scope,
                 project: input.scope === "project" ? project : undefined,
-                ...written,
+                ...(written.config ? { config: path.relative(directory(input.scope), written.config) } : {}),
+                ...(written.server ? { server: written.server } : {}),
+                resources: written.resources?.map(store),
+                pending: written.pending?.length ? written.pending.map(store) : undefined,
                 recovering: recovering || undefined,
                 installedAt: Date.now(),
               })
@@ -329,10 +334,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                     config:
                       input.kind === "skill"
                         ? path.join(directory(input.scope), KiloConfigFiles.newFile)
-                        : await configFile(directory(input.scope), input.scope === "global", [
-                            ...(previous?.resources ?? []),
-                            ...(previous?.pending ?? []),
-                          ]),
+                        : await configFile(directory(input.scope), input.scope === "global"),
                     option: input.option,
                     params: input.params,
                     previous,
@@ -347,7 +349,10 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
               })
               let record = recordOf(written)
               yield* save(record)
-              for (const resource of written.pending ?? []) {
+              // Stored pending entries keep the order of written.pending, so progress is tracked by position.
+              const retained = record.pending ?? []
+              const settled = new Set<number>()
+              for (const [index, resource] of (written.pending ?? []).entries()) {
                 const cleaned = yield* Effect.tryPromise(() => Installer.cleanup(resource)).pipe(Effect.result)
                 if (Result.isFailure(cleaned)) {
                   yield* Effect.logWarning(
@@ -357,8 +362,9 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                   )
                   continue
                 }
-                const pending = record.pending?.filter((entry) => entry !== resource)
-                const next = { ...record, pending: pending?.length ? pending : undefined }
+                settled.add(index)
+                const pending = retained.filter((_, position) => !settled.has(position))
+                const next = { ...record, pending: pending.length ? pending : undefined }
                 const saved = yield* save(next).pipe(Effect.exit)
                 if (Exit.isFailure(saved)) {
                   yield* Effect.logWarning(
@@ -370,7 +376,7 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                 record = next
               }
               return yield* Effect.tryPromise({
-                try: async () => ({ ...record, ...(await Installer.inspect(record)) }),
+                try: () => present(record),
                 catch: (error) => error,
               })
             }),
@@ -385,16 +391,15 @@ export const KiloMarketplacePlugin = define<Global.Service | Scope.Scope>({
                 return yield* Effect.fail(
                   new McpError("not_found", `${input.id} was not installed from the marketplace`),
                 )
-              yield* Effect.tryPromise({ try: () => Installer.uninstall(record), catch: (error) => error })
+              yield* Effect.tryPromise({
+                try: async () => Installer.uninstall(await restore(record)),
+                catch: (error) => error,
+              })
               yield* storage(
                 ctx.storage.remove(key),
                 "write_failed",
                 "Installation files were removed, but the database record could not be cleared; retry uninstall",
               )
-              yield* Effect.tryPromise({
-                try: () => fs.rm(localFile(roots(input.scope), record), { force: true }),
-                catch: (error) => error,
-              })
               return {}
             }),
             context,
@@ -423,148 +428,6 @@ class StorageError extends Error {
   }
 }
 
-async function directoryExists(directory: string) {
-  return fs.stat(directory).then(
-    (entry) => entry.isDirectory(),
-    (error: NodeJS.ErrnoException) => {
-      if (error.code === "ENOENT") return false
-      throw error
-    },
-  )
-}
-
 function message(error: unknown) {
   return error instanceof Error ? error.message : String(error)
-}
-
-function decodeRecord(value: unknown, key: string) {
-  const decoded = typeof value === "string" ? decodeInstalled(value) : Option.none()
-  if (Option.isNone(decoded))
-    throw new StorageError(
-      "fetch_failed",
-      `Invalid marketplace record ${key}; restore its recovery metadata or repair the record before continuing. No files were removed.`,
-    )
-  return decoded.value
-}
-
-function localFile(root: string, record: Pick<KiloMarketplaceRpc.Installed, "registry" | "kind" | "id">) {
-  return path.join(
-    root,
-    ".marketplace",
-    "installed",
-    `${new Bun.CryptoHasher("sha256").update(JSON.stringify([record.registry, record.kind, record.id])).digest("hex")}.json`,
-  )
-}
-
-async function writeLocal(root: string, directory: string, record: KiloMarketplaceRpc.Installed) {
-  const file = localFile(root, record)
-  await fs.mkdir(path.dirname(file), { recursive: true })
-  const temporary = `${file}.${randomUUID()}.tmp`
-  try {
-    await fs.writeFile(temporary, JSON.stringify({ directory, record }), { mode: 0o600, flag: "wx" })
-    await fs.rename(temporary, file)
-  } finally {
-    await fs.rm(temporary, { force: true })
-  }
-}
-
-async function readLocal(
-  root: string,
-  directory: string,
-  scope: KiloMarketplaceRpc.Scope,
-  trusted: (record: KiloMarketplaceRpc.Installed) => Promise<KiloMarketplaceRpc.Installed | undefined>,
-) {
-  const files = await fs.readdir(path.join(root, ".marketplace", "installed")).catch((error: NodeJS.ErrnoException) => {
-    if (error.code === "ENOENT") return []
-    throw error
-  })
-  for (const candidate of scope === "project" ? [root, path.join(root, "skills")] : [path.join(root, "skills")]) {
-    const info = await fs.lstat(candidate).catch((error: NodeJS.ErrnoException) => {
-      if (error.code === "ENOENT") return undefined
-      throw error
-    })
-    if (info?.isSymbolicLink()) throw new Error(`Unsafe marketplace recovery directory: ${candidate}`)
-  }
-  return Promise.all(
-    files
-      .filter((file) => file.endsWith(".json"))
-      .map(async (file) => {
-        const target = path.join(root, ".marketplace", "installed", file)
-        const decoded = decodeLocal(await fs.readFile(target, "utf8"))
-        if (Option.isNone(decoded))
-          throw new Error(
-            `Invalid marketplace recovery record ${target}; restore or repair this file before continuing`,
-          )
-        const stored = decoded.value
-        if (stored.record.scope !== scope || path.basename(localFile(root, stored.record)) !== file)
-          throw new Error(`Marketplace recovery record does not match its scope or filename: ${target}`)
-        const rebase = (original: string, kind: "skill" | "config") => {
-          const relative = path.relative(stored.directory, original)
-          if (
-            !path.isAbsolute(stored.directory) ||
-            !path.isAbsolute(original) ||
-            relative === ".." ||
-            relative.startsWith(`..${path.sep}`) ||
-            path.isAbsolute(relative)
-          )
-            throw new Error(`Marketplace recovery path is outside its installation scope: ${target}`)
-          const rebased = path.join(directory, relative)
-          const allowed =
-            kind === "skill"
-              ? path.dirname(rebased) === path.join(root, "skills") && safe(path.basename(rebased))
-              : KiloConfigFiles.writeCandidates(directory, scope === "global").includes(rebased)
-          if (!allowed) throw new Error(`Marketplace recovery path is outside its installation scope: ${target}`)
-          return rebased
-        }
-        const configs = KiloConfigFiles.writeCandidates(await resolveFile(directory), scope === "global")
-        const originals = KiloConfigFiles.writeCandidates(await resolveFile(stored.directory), scope === "global")
-        const ownership = async (
-          entry: Extract<KiloMarketplaceRpc.Resource, { config: string }>,
-          destination: string,
-        ) => {
-          const owned = await trusted(stored.record)
-          const resource = [...(owned?.resources ?? []), ...(owned?.pending ?? [])].find(
-            (resource) =>
-              "config" in resource &&
-              resource.config === path.join(stored.directory, path.relative(directory, entry.config)) &&
-              resource.server === entry.server &&
-              resource.target === destination,
-          )
-          if (!resource || !("config" in resource))
-            throw new Error(`Marketplace recovery config target has no machine-local ownership: ${entry.config}`)
-          return { ...entry, target: destination, fingerprints: resource.fingerprints }
-        }
-        const external = async (entry: Extract<KiloMarketplaceRpc.Resource, { config: string }>) => {
-          const destination = await resolveFile(entry.config)
-          if (scope === "global" || configs.includes(destination)) {
-            // Only scope relocation may rebase ownership, never a changed config symlink.
-            const rebased =
-              stored.directory !== directory && entry.target && originals.includes(entry.target)
-                ? { ...entry, target: configs[originals.indexOf(entry.target)] }
-                : entry
-            if (scope === "project" && rebased.target && !configs.includes(rebased.target))
-              return ownership(rebased, rebased.target)
-            return rebased
-          }
-          return ownership(entry, destination)
-        }
-        const resource = async (entry: KiloMarketplaceRpc.Resource): Promise<KiloMarketplaceRpc.Resource> =>
-          "path" in entry
-            ? { ...entry, path: rebase(entry.path, "skill") }
-            : external({ ...entry, config: rebase(entry.config, "config") })
-        const config = stored.record.config ? rebase(stored.record.config, "config") : undefined
-        if (config) await external({ config, server: stored.record.server ?? serverName(stored.record.id) })
-        return {
-          original: stored.record,
-          record: {
-            ...stored.record,
-            project: scope === "project" ? directory : undefined,
-            paths: stored.record.paths.map((entry) => rebase(entry, "skill")),
-            config,
-            resources: stored.record.resources ? await Promise.all(stored.record.resources.map(resource)) : undefined,
-            pending: stored.record.pending ? await Promise.all(stored.record.pending.map(resource)) : undefined,
-          },
-        }
-      }),
-  )
 }

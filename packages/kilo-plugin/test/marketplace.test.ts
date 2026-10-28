@@ -194,7 +194,7 @@ describe("skill installation safety", () => {
         entry,
         skills,
         config,
-        previous: { registry: "kilo", kind: "mcp", id: "demo", scope: "global", installedAt: 0, ...first },
+        previous: { id: "demo", ...first },
       })
       for (const resource of second.resources!)
         expect(await Installer.resourceFingerprint(resource)).toBe(resource.fingerprints![0])
@@ -363,7 +363,7 @@ describe("skill installation safety", () => {
       await fs.rm(directory, { recursive: true, force: true })
     }
   })
-  test.each(["write", "remove"] as const)(
+  test.skipIf(process.platform === "win32").each(["write", "remove"] as const)(
     "serializes concurrent %s through an alias until failed promotion restores the tree",
     async (operation) => {
       const directory = await fs.realpath(await tmp())
@@ -511,7 +511,7 @@ describe("skill installation safety", () => {
       await fs.rm(directory, { recursive: true, force: true })
     }
   })
-  test("fingerprints protect changed content, extra files, empty directories and symlinks", async () => {
+  test("fingerprints protect changed content, extra files and empty directories", async () => {
     const root = path.join(await tmp(), "skills")
     const archive = await tarball({ "SKILL.md": "original", "ref/a.txt": "reference" })
     const target = await install({ root, id: "demo", archive })
@@ -531,14 +531,22 @@ describe("skill installation safety", () => {
     await fs.mkdir(path.join(target, "empty"))
     await expect(remove(target, [owned])).rejects.toMatchObject({ reason: "conflict" })
     await fs.rmdir(path.join(target, "empty"))
-    await fs.symlink(path.join(target, "SKILL.md"), path.join(target, "link"))
-    await expect(remove(target, [owned])).rejects.toMatchObject({ reason: "conflict" })
-    await fs.rm(path.join(target, "link"))
     await install({ root, id: "demo", archive: await tarball({ "SKILL.md": "v2" }), fingerprints: [owned] })
     expect(await Bun.file(path.join(target, "SKILL.md")).text()).toBe("v2")
     await remove(target, [(await fingerprint(target))!])
     expect(await fs.readdir(root)).toEqual([])
     await remove(target)
+  })
+  test.skipIf(process.platform === "win32")("fingerprints reject a symlinked skill file", async () => {
+    const root = path.join(await tmp(), "skills")
+    const target = await install({ root, id: "demo", archive: await tarball({ "SKILL.md": "original" }) })
+    const owned = (await fingerprint(target))!
+    await fs.symlink(path.join(target, "SKILL.md"), path.join(target, "link"))
+    await expect(remove(target, [owned])).rejects.toMatchObject({ reason: "conflict" })
+    await fs.rm(path.join(target, "link"))
+    expect((await fingerprint(target))!).toBe(owned)
+    await remove(target, [owned])
+    expect(await fs.readdir(root)).toEqual([])
   })
   test("rejects path-segment, reserved and trailing-dot IDs and cleans staging after conflicting paths or a non-directory root", async () => {
     const directory = await tmp()

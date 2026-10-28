@@ -57,28 +57,27 @@ export const Item = Schema.Struct({
 })
 export type Item = typeof Item.Type
 
-/** During recovery both previous and planned contents may be owned. */
+/**
+ * Owned resources are located from the current scope, never from stored paths: a skill tree is
+ * `<skills root>/<id>` and an MCP entry is found by server name in the scope's native config files.
+ * During recovery both previous and planned contents may be owned.
+ */
 export const Resource = Schema.Union([
-  Schema.Struct({ path: Schema.String, fingerprints: optional(Schema.Array(Schema.String)) }),
-  Schema.Struct({
-    config: Schema.String,
-    server: Schema.String,
-    /** External project targets require matching machine-local ownership. */
-    target: optional(Schema.String),
-    fingerprints: optional(Schema.Array(Schema.String)),
-  }),
+  Schema.Struct({ id: Schema.String, fingerprints: optional(Schema.Array(Schema.String)) }),
+  Schema.Struct({ server: Schema.String, fingerprints: optional(Schema.Array(Schema.String)) }),
 ])
 export type Resource = typeof Resource.Type
 
 /** A managed installation, authorizing removal of exactly the resources it wrote. */
 export const Installed = Schema.Struct({
+  /** Stored record format; an unknown version is skipped instead of being misread. */
+  version: optional(Schema.Literal(1)),
   registry: Schema.String,
   kind: Kind,
   id: Schema.String,
   scope: Scope,
   project: optional(Schema.String),
-  /** Skill directory and any MCP companion skills. */
-  paths: Schema.Array(Schema.String),
+  /** MCP config file relative to the scope root, so records survive moving the project. */
   config: optional(Schema.String),
   /** Native mcp.servers key, used for status and sign-in handoff. */
   server: optional(Schema.String),

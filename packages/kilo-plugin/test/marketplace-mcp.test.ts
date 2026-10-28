@@ -652,6 +652,7 @@ describe("MCP companion lifecycle", () => {
     })
     await Bun.write(broken, "{ malformed")
     const record = { id: "demo", ...written, pending: [{ config: broken, server: "demo" }] }
+    const before = structuredClone(written.resources)
     expect((await Installer.inspect(record)).status).toBe("ready")
     await Bun.write(path.join(skills, "guide", "added.txt"), "keep")
     const result = await Installer.uninstall(record).catch((error: unknown) => error)
@@ -661,7 +662,7 @@ describe("MCP companion lifecycle", () => {
     expect(await Bun.file(path.join(skills, "guide", "added.txt")).text()).toBe("keep")
     expect((await Installer.inspect(record)).status).toBe("modified")
     expect((await Installer.inspect(record)).warnings.join(" ")).toContain("awaiting cleanup")
-    expect(record.resources).toEqual(written.resources)
+    expect(record.resources).toEqual(before)
   })
   test("MCP replacement checkpoints both versions and refuses changed entries", async () => {
     const directory = await tmp()
@@ -772,6 +773,35 @@ describe("MCP companion lifecycle", () => {
     await fs.rm(path.join(skills, "new-a", "user.txt"))
     await Installer.uninstall({ id: "demo", ...intent! })
     expect(await fs.readdir(skills)).toEqual([])
+  })
+  test("adopts fingerprint-equal content without prior ownership but protects divergent content", async () => {
+    let content = "guide"
+    using server = Bun.serve({
+      port: 0,
+      fetch: async () => new Response(await new Bun.Archive({ "SKILL.md": content }).bytes()),
+    })
+    const directory = await tmp()
+    const skills = path.join(directory, "skills")
+    const config = path.join(directory, "config.json")
+    const entry = { ...mcpEntry, companions: [{ id: "guide", archive: server.url.href }] }
+    const first = await Installer.install({ entry, skills, config })
+    // Ownership is lost (a reset database): the same install adopts identical files and entry.
+    const adopted = await Installer.install({ entry, skills, config })
+    expect(adopted.resources).toEqual(first.resources)
+    expect(await Installer.inspect({ id: "demo", ...adopted })).toEqual({ status: "ready", warnings: [] })
+    await Installer.uninstall({ id: "demo", ...adopted })
+    expect(await fs.readdir(skills)).toEqual([])
+    expect((await Bun.file(config).json()).mcp.servers).toEqual({})
+    // Divergent skill content without ownership remains protected and untouched.
+    await Installer.install({ entry, skills, config })
+    content = "newer"
+    await expect(Installer.install({ entry, skills, config })).rejects.toMatchObject({ reason: "conflict" })
+    expect(await Bun.file(path.join(skills, "guide", "SKILL.md")).text()).toBe("guide")
+    // Divergent MCP entry without ownership remains protected and untouched.
+    content = "guide"
+    await Bun.write(config, '{"mcp":{"servers":{"demo":{"type":"local","command":["user-edited"]}}}}')
+    await expect(Installer.install({ entry, skills, config })).rejects.toMatchObject({ reason: "conflict" })
+    expect((await Bun.file(config).json()).mcp.servers.demo.command).toEqual(["user-edited"])
   })
   test("bounds streamed downloads, rejects oversized headers and wraps broken bodies", async () => {
     const chunk = new Uint8Array(1024 * 1024)
@@ -894,7 +924,7 @@ describe("MCP companion lifecycle", () => {
       entry: { ...mcpEntry, companions: [companion("guide")] },
       skills,
       config: second,
-      previous: { registry: "kilo", kind: "mcp", id: "demo", scope: "global", installedAt: 0, ...written },
+      previous: { id: "demo", ...written },
     })
     expect(again).toMatchObject({
       paths: [path.join(skills, "guide")],
