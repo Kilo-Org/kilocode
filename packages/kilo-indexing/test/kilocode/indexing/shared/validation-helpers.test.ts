@@ -1,5 +1,6 @@
 import { describe, test, expect } from "bun:test"
 import {
+  extractStatusCode,
   formatEmbeddingError,
   isContextOverflowError,
   isNonRetryableEmbeddingError,
@@ -97,6 +98,32 @@ describe("sanitizeErrorMessage", () => {
   })
 })
 
+describe("extractStatusCode", () => {
+  test("reads a direct status property", () => {
+    expect(extractStatusCode({ status: 404 })).toBe(404)
+  })
+
+  test("reads a nested response.status property", () => {
+    expect(extractStatusCode({ response: { status: 500 } })).toBe(500)
+  })
+
+  test("reads AWS SDK v3 $metadata.httpStatusCode", () => {
+    expect(extractStatusCode({ $metadata: { httpStatusCode: 400 } })).toBe(400)
+  })
+
+  test("reads a status embedded in the error message", () => {
+    expect(extractStatusCode(new Error("HTTP 429: Too Many Requests"))).toBe(429)
+  })
+
+  test("prefers direct status over $metadata", () => {
+    expect(extractStatusCode({ status: 401, $metadata: { httpStatusCode: 400 } })).toBe(401)
+  })
+
+  test("returns undefined when no status is present", () => {
+    expect(extractStatusCode(new Error("ECONNREFUSED"))).toBeUndefined()
+  })
+})
+
 describe("isContextOverflowError", () => {
   const withStatus = (message: string, status: number): any => Object.assign(new Error(message), { status })
 
@@ -124,7 +151,7 @@ describe("isContextOverflowError", () => {
     ["Rate limit exceeded", 429],
     ["Internal server error", 500],
     ["Input had invalid characters", 400],
-  ])("does not treat a non-overflow %d as a context overflow: %s", (message, status) => {
+  ])("does not treat a non-overflow %s as a context overflow: %d", (message, status) => {
     expect(isContextOverflowError(withStatus(message, status))).toBe(false)
   })
 
@@ -147,7 +174,9 @@ describe("isNonRetryableEmbeddingError", () => {
     expect(isNonRetryableEmbeddingError(withStatus(status))).toBe(true)
   })
 
-  test("keeps 429 and 5xx retryable", () => {
+  test("keeps 408, 425, 429 and 5xx retryable", () => {
+    expect(isNonRetryableEmbeddingError(withStatus(408))).toBe(false)
+    expect(isNonRetryableEmbeddingError(withStatus(425))).toBe(false)
     expect(isNonRetryableEmbeddingError(withStatus(429))).toBe(false)
     expect(isNonRetryableEmbeddingError(withStatus(500))).toBe(false)
     expect(isNonRetryableEmbeddingError(withStatus(503))).toBe(false)

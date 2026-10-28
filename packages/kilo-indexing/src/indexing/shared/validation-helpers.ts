@@ -98,6 +98,9 @@ export function extractStatusCode(error: any): number | undefined {
   // Response status property
   if (error?.response?.status) return error.response.status
 
+  // AWS SDK v3 (e.g. Bedrock) exposes the HTTP status via $metadata.httpStatusCode
+  if (error?.$metadata?.httpStatusCode) return error.$metadata.httpStatusCode
+
   // Extract from error message (e.g., "HTTP 404: Not Found")
   if (error?.message) {
     const match = error.message.match(/HTTP (\d+):/)
@@ -264,6 +267,7 @@ export function isContextOverflowError(error: unknown): boolean {
 export function isNonRetryableEmbeddingError(error: unknown): boolean {
   const status = extractStatusCode(error)
   if (status === undefined) return false
-  if (status === 429) return false
+  // 408 (Request Timeout), 425 (Too Early), and 429 (rate limit) are retryable 4xx codes
+  if (status === 408 || status === 425 || status === 429) return false
   return status >= 400 && status < 500
 }

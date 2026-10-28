@@ -670,14 +670,14 @@ export class DirectoryScanner implements IDirectoryScanner {
     }
 
     if (!success && lastError) {
-      log.error(`Failed to process batch after ${this.maxBatchRetries} attempts`)
-      this.emitError(mode, "scanner:processBatch", lastError, this.maxBatchRetries)
+      log.error(`Failed to process batch after ${attempts} attempt(s)`)
+      this.emitError(mode, "scanner:processBatch", lastError, attempts)
       onBatchFailed?.()
       if (onError) {
         // Preserve the original error message from embedders which now have detailed messages
         const errorMessage = lastError.message || "Unknown error"
 
-        onError(new Error(`Failed to process batch after ${this.maxBatchRetries} retries: ${errorMessage}`))
+        onError(new Error(`Failed to process batch after ${attempts} retries: ${errorMessage}`))
       }
     }
   }
