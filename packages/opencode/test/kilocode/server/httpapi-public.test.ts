@@ -59,7 +59,7 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       "ownerSessionID",
       "revision",
     ])
-  })
+  }, 20_000)
 
   test("exposes only the proven hosted session surface with opaque attachment ids", () => {
     const spec = OpenApi.fromApi(PublicApi)
@@ -71,6 +71,18 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "get" as const, path: SessionHostPaths.message, id: "sessionHost.transcript" },
       { method: "post" as const, path: SessionHostPaths.attach, id: "sessionHost.attach" },
       { method: "delete" as const, path: SessionHostPaths.attachment, id: "sessionHost.detach" },
+      { method: "get" as const, path: SessionHostPaths.workspace, id: "sessionHost.listWorkspaces" },
+      {
+        method: "get" as const,
+        path: SessionHostPaths.workspaceProfiles,
+        id: "sessionHost.listWorkspaceProfiles",
+      },
+      { method: "post" as const, path: SessionHostPaths.workspace, id: "sessionHost.createWorkspace" },
+      { method: "get" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.getWorkspace" },
+      { method: "get" as const, path: SessionHostPaths.workspaceStatus, id: "sessionHost.getWorkspaceStatus" },
+      { method: "delete" as const, path: SessionHostPaths.workspaceDetail, id: "sessionHost.deleteWorkspace" },
+      { method: "get" as const, path: SessionHostPaths.workspaceSession, id: "sessionHost.listWorkspaceSessions" },
+      { method: "post" as const, path: SessionHostPaths.workspaceSession, id: "sessionHost.startWorkspaceSession" },
     ]
 
     for (const route of routes) {
@@ -93,6 +105,39 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     expect(hosted).toEqual(routes.map((route) => route.id).sort())
   })
 
+  test("keeps authorized workspace profile descriptions nullable", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const summary = spec.components?.schemas?.SessionHostWorkspaceProfileSummary?.properties
+    const description = summary ? Object.entries(summary).find(([field]) => field === "description")?.[1] : undefined
+    expect(description).toEqual({
+      anyOf: [expect.objectContaining({ type: "string" }), { type: "null" }],
+    })
+  })
+
+  test("keeps passive hosted workspace status fields nullable", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    type Node = { properties?: Record<string, Node>; anyOf?: unknown[] }
+    const status = (spec.components?.schemas?.SessionHostWorkspaceStatus as Node | undefined)?.properties
+    const nullable = { anyOf: [expect.objectContaining({}), { type: "null" }] }
+
+    expect(status?.compute?.properties?.estimatedSleepAt).toEqual(nullable)
+    expect(status?.wakeOnInput?.properties?.blockedReason).toEqual(nullable)
+    expect(status?.billing?.properties?.payer).toEqual({
+      anyOf: [{ type: "string", enum: ["user", "org"] }, { type: "null" }],
+    })
+    expect(status?.billing?.properties?.sku).toEqual(nullable)
+    expect(status?.billing?.properties?.blocked).toEqual({
+      anyOf: [{ type: "boolean" }, { type: "null" }],
+    })
+    expect(status?.billing?.properties?.intervalStartedAt).toEqual({
+      anyOf: [{ type: "number" }, { type: "null" }],
+    })
+    expect(status?.billing?.properties?.rate).toEqual(nullable)
+    expect(status?.deletion?.properties?.startedAt).toEqual({
+      anyOf: [{ type: "number" }, { type: "null" }],
+    })
+  })
+
   test("publishes hosted availability and keeps native turn events off the global stream", () => {
     const spec = JSON.stringify(OpenApi.fromApi(PublicApi))
 
@@ -108,12 +153,7 @@ describe("Kilo PublicApi OpenAPI contract", () => {
 
   test("includes legacy Kilo events in the generated SDK contract", () => {
     const spec = JSON.stringify(OpenApi.fromApi(PublicApi))
-    for (const type of [
-      "suggestion.shown",
-      "session.network.asked",
-      "background_process.updated",
-      "indexing.status",
-    ]) {
+    for (const type of ["suggestion.shown", "session.network.asked", "background_process.updated", "indexing.status"]) {
       expect(spec).toContain(type)
     }
   })

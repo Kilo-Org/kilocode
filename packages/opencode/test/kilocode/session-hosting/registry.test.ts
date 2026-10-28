@@ -35,6 +35,16 @@ function provider(name: string, session: string, options: { default?: boolean; a
     get: (input) => Effect.succeed({ id: input.id, session: sessionInfo(input.id.sessionID, name) }),
     transcript: () => Effect.succeed({ items: [] }),
     start: () => Effect.fail(new HostedFailure({ code: "rejected", message: "unused", retryable: false })),
+    listWorkspaces: () => Effect.succeed({ items: [] }),
+    listWorkspaceProfiles: () => Effect.succeed({ items: [] }),
+    getWorkspace: (input) =>
+      Effect.fail(new HostedFailure({ code: "not_found", message: input.id.workspaceID, retryable: false })),
+    getWorkspaceStatus: (input) =>
+      Effect.fail(new HostedFailure({ code: "not_found", message: input.id.workspaceID, retryable: false })),
+    deleteWorkspace: (input) => Effect.succeed({ workspace: input.id, success: true }),
+    createWorkspace: () => Effect.fail(new HostedFailure({ code: "rejected", message: "unused", retryable: false })),
+    startWorkspaceSession: () =>
+      Effect.fail(new HostedFailure({ code: "rejected", message: "unused", retryable: false })),
     attach: (input) => Effect.succeed({ session: input.id, expiresAt: 1 }),
   }
   return { value, availability }
