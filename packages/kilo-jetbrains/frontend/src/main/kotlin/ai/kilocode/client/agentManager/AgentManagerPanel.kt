@@ -397,7 +397,7 @@ class AgentManagerPanel(
             detail = KiloBundle.message("worktree.delete.confirm.detail"),
             gate = if (item.locked) KiloBundle.message("worktree.delete.locked.confirm") else null,
         )
-        tree.select(item.id)
+        tree.reveal(item.id)
         val anchor = tree.point(item.id, cell) ?: return
         tree.confirmDelete(anchor, opts) { force ->
             controller.remove(

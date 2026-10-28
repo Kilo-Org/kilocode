@@ -150,6 +150,9 @@ internal class ActiveTree(
     fun select(key: String, scroll: Boolean = true): Boolean = view.select(key, scroll)
 
     @RequiresEdt
+    fun reveal(key: String): Boolean = view.reveal(key)
+
+    @RequiresEdt
     fun selected(): ActiveItem? = view.selected()
 
     @RequiresEdt
@@ -249,6 +252,7 @@ internal class ActiveTreeView(
     private var hoveredKey: String? = null
     private var anchorKey: String? = null
     private var pending: String? = null
+    private var pendingRefresh = false
     private var pendingScroll = true
     private var revision = 0
     private var popups = 0
@@ -395,6 +399,9 @@ internal class ActiveTreeView(
         checkEdt()
         val keys = hierarchy.keys(nodes)
         require(keys.size == keys.toSet().size) { "ActiveTree keys must be unique" }
+        // A refresh preference bridges one empty snapshot, not a permanently removed row.
+        if (pendingRefresh && pending !in keys) pending = null
+        pendingRefresh = false
         if (nodes == snapshot && selection == ActiveSelection.Preserve && pending == null) return
         revision++
         setHovered(null)
@@ -466,6 +473,7 @@ internal class ActiveTreeView(
             val empty = entries.values.all { it.allowsChildren } ||
                 parent?.let { entries[it]?.childCount == 0 } == true
             pending = if (empty) previous.firstOrNull() else null
+            pendingRefresh = empty
             selectionModel.clearSelection()
             anchorKey = null
         }
@@ -499,6 +507,7 @@ internal class ActiveTreeView(
     fun select(key: String, scroll: Boolean = true): Boolean {
         checkEdt()
         revision++
+        pendingRefresh = false
         val entry = entries[key] ?: run {
             pending = key
             pendingScroll = scroll
@@ -510,7 +519,15 @@ internal class ActiveTreeView(
         return true
     }
 
-    private fun reveal(entry: ActiveEntry, scroll: Boolean) {
+    @RequiresEdt
+    fun reveal(key: String): Boolean {
+        checkEdt()
+        val entry = entries[key] ?: return false
+        reveal(entry, scroll = true, selected = false)
+        return true
+    }
+
+    private fun reveal(entry: ActiveEntry, scroll: Boolean, selected: Boolean = true) {
         revision++
         val port = parent as? JViewport
         val viewport = port?.viewPosition
@@ -524,7 +541,7 @@ internal class ActiveTreeView(
                 path = path.parentPath
                 if (path != null) expandPath(path)
             }
-            selectionModel.selectionPath = TreePath(entry.path)
+            if (selected) selectionModel.selectionPath = TreePath(entry.path)
         } finally {
             expandsSelectedPaths = expands
             scrollsOnExpand = scrolls
@@ -534,7 +551,7 @@ internal class ActiveTreeView(
             val stamp = revision
             SwingUtilities.invokeLater { if (stamp == revision) port.viewPosition = viewport }
         }
-        anchorKey = entry.key
+        if (selected) anchorKey = entry.key
     }
 
     @RequiresEdt

@@ -176,6 +176,40 @@ class ActiveTreeTest : BasePlatformTestCase() {
         assertEquals("a", tree.selected()?.key)
     }
 
+    fun `test permanently empty group expires removed selection before no op polls`() {
+        val tree = ActiveTree("")
+        val empty = listOf(ActiveTreeNode(Row("group", "Local"), emptyList()))
+        val nodes = listOf(ActiveTreeNode(Row("group", "Local"), listOf(ActiveTreeNode(Row("a", "A")))))
+        tree.update(nodes)
+        tree.select("a", false)
+        tree.update(empty)
+        com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
+        var calls = 0
+        (tree.preferredFocus() as ActiveTreeView).onGeometry = { calls++ }
+        repeat(3) { tree.update(empty) }
+        assertEquals(0, calls)
+        tree.update(nodes)
+        assertNull(tree.selected())
+    }
+
+    fun `test reveal background descendant anchors without changing selection`() {
+        val tree = ActiveTree("")
+        val main = ActiveTreeNode(Row("main", "Main"))
+        val empty = ActiveTreeNode(Row("group", "Local"), emptyList())
+        tree.update(listOf(main, empty.copy(children = listOf(ActiveTreeNode(Row("a", "A"))))))
+        val view = tree.preferredFocus() as ActiveTreeView
+        view.setSize(400, 200)
+        tree.select("main", false)
+        val path = view.getPathForRow(1)
+        view.collapsePath(path)
+        assertTrue(tree.reveal("a"))
+        assertTrue(view.isExpanded(path))
+        assertNotNull(tree.point("a"))
+        assertEquals(listOf("main"), tree.selectedKeys())
+        tree.update(listOf(main, empty))
+        assertEquals(listOf("main"), tree.selectedKeys())
+    }
+
     fun `test later reveal wins over queued refresh viewport restoration`() {
         val tree = ActiveTree("")
         val nodes = (0 until 30).map { ActiveTreeNode(Row("k$it", "Row $it")) }
