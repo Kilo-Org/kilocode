@@ -4,9 +4,9 @@
 // entries, then reads and writes them with `jsonc-parser` so comments survive.
 import { readFile, writeFile, mkdir } from "node:fs/promises"
 import path from "node:path"
-import { applyEdits, modify } from "jsonc-parser"
 import { commands, workspace, Uri, window, type ExtensionContext } from "vscode"
 import { KiloConfigFiles } from "@opencode/util/kilocode/config/files"
+import { applyConfigEdits, isKiloConfigFile } from "./config-file-edit"
 import { local } from "./local"
 import type { ConfigEdit, ConfigScope, ToHost, ToWebview } from "./protocol"
 import type { Manager } from "./server"
@@ -21,8 +21,6 @@ export const KILO_SETTING_KEYS = [
   "claudeCodeCompat",
   "extraCaCerts",
 ] as const
-
-const MODIFY = { formattingOptions: { tabSize: 2, insertSpaces: true, eol: "\n" } }
 
 /** The config values the webview reads at boot; the same shape as `vscodeSettingsLoaded`. */
 export function readKiloSettings(): Record<string, unknown> {
@@ -105,23 +103,14 @@ export function settingsHost(input: {
     try {
       const files = await targets()
       const file = files[scope]
-      if (!KiloConfigFiles.names.includes(path.basename(file)))
-        throw new Error(`Refused a config write outside a Kilo config file: ${file}`)
+      if (!isKiloConfigFile(file)) throw new Error(`Refused a config write outside a Kilo config file: ${file}`)
       const existing = await read(file)
-      const base = existing.trim().length > 0 ? existing : "{\n}\n"
-      let text = base
-      for (const edit of edits) {
-        if (!Array.isArray(edit.path) || edit.path.length === 0) continue
-        text = applyEdits(text, modify(text, edit.path, edit.value, MODIFY))
-        const alias = aliasOf(edit.path)
-        if (alias) text = applyEdits(text, modify(text, alias, undefined, MODIFY))
-      }
       if (existing.trim().length === 0 && edits.every((edit) => edit.value === undefined)) {
         input.post({ type: "configWritten", ok: true })
         return
       }
       await mkdir(path.dirname(file), { recursive: true })
-      await writeFile(file, text)
+      await writeFile(file, applyConfigEdits(existing, edits))
       input.post({ type: "configWritten", ok: true })
     } catch (error) {
       input.post({ type: "configWritten", ok: false, error: error instanceof Error ? error.message : String(error) })
@@ -170,28 +159,4 @@ export function settingsHost(input: {
       listener.dispose()
     },
   }
-}
-
-/**
- * The v1 key that a written v2 path replaces, so both spellings never define the same setting. The v2 file keeps
- * the newer key; the v1 alias is removed in the same write. Mirrors the normalization in `core/config/normalize.ts`.
- */
-export function aliasOf(path: string[]): string[] | undefined {
-  if (path.length === 0) return undefined
-  if (path[0] === "agents") {
-    if (path.length === 3 && path[1] === "title" && path[2] === "model") return ["small_model"]
-    const tail = path.slice(2)
-    if (tail.length === 1 && tail[0] === "system") return ["agent", path[1]!, "prompt"]
-    if (tail.length === 1 && tail[0] === "disabled") return ["agent", path[1]!, "disable"]
-    return ["agent", ...path.slice(1)]
-  }
-  if (path[0] === "mcp" && path[1] === "servers" && path.length >= 3) return ["mcp", ...path.slice(2)]
-  const top: Record<string, string> = {
-    permissions: "permission",
-    commands: "command",
-    providers: "provider",
-    snapshots: "snapshot",
-  }
-  const mapped = top[path[0]!]
-  return mapped ? [mapped, ...path.slice(1)] : undefined
 }
