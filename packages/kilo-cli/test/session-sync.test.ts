@@ -12,6 +12,7 @@ import { Location } from "@opencode/core/location"
 import { ToolOutput } from "@opencode/core/tool-output"
 import { Workspace } from "@opencode/schema/workspace"
 import { AppNodeBuilder } from "@opencode/core/effect/app-node-builder"
+import { storedAbsolutePath } from "@opencode/core/database/path"
 import { Database } from "@opencode/core/database/database"
 import { Bus } from "@opencode/core/bus"
 import { Credential } from "@opencode/core/credential"
@@ -412,7 +413,7 @@ it.live("consent excludes another clone and bootstraps existing native sessions 
     expect(row && Store.value(row)).toMatchObject({
       cost: 1.25,
       tokens: { input: 17, output: 9, reasoning: 2, cache: { read: 3, write: 4 } },
-      origin: { directory: f.directory },
+      origin: { directory: storedAbsolutePath(f.directory) },
     })
     expect(row?.value).not.toContain("time_suspended")
     expect(row && Store.value(row)).not.toHaveProperty("location")
@@ -949,7 +950,9 @@ it.live("restart completes an enrolled-but-incomplete bootstrap and commits its 
         yield* s.db
           .run(sql`INSERT INTO _kilo_sync_consent(directory,enabled,destination,local,organization_id,tenant_type,tenant_id,user_id,source_id)
       VALUES(${f.directory},1,${f.backend.url},1,NULL,'user','alice','alice',${randomUUID()})`)
-        yield* s.db.run(sql`INSERT INTO _kilo_sync_directory(alias,directory) VALUES(${f.directory},${f.directory})`)
+        yield* s.db.run(
+          sql`INSERT INTO _kilo_sync_directory(alias,directory) VALUES(${storedAbsolutePath(f.directory) ?? f.directory},${f.directory})`,
+        )
         yield* s.db
           .update(SessionTable)
           .set({ title: "mutation during initial scan" })
@@ -1776,7 +1779,11 @@ it.live("a new nested permission cannot steal a previously enrolled ancestor his
     ).toMatchObject({ _tag: "Failure", failure: { code: "consent_conflict" } })
     expect(yield* Store.consent(s.db, child)).toBeUndefined()
     expect(yield* Store.consent(s.db, f.directory)).toEqual(before)
-    expect(yield* s.db.get(sql`SELECT directory FROM _kilo_sync_directory WHERE alias=${child}`)).toEqual({
+    expect(
+      yield* s.db.get(
+        sql`SELECT directory FROM _kilo_sync_directory WHERE alias=${storedAbsolutePath(child) ?? child}`,
+      ),
+    ).toEqual({
       directory: f.directory,
     })
     yield* writeMessage(s.db, "still parent capture")

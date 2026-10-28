@@ -1,6 +1,7 @@
 export * as Store from "./store"
 
 import type { Database } from "@opencode/core/database/database"
+import { storedAbsolutePath } from "@opencode/core/database/path"
 import { Effect, Schema } from "effect"
 import { sql } from "drizzle-orm"
 import { randomUUID } from "node:crypto"
@@ -367,7 +368,7 @@ export const enable = Effect.fn("SessionSync.Store.enable")(function* (
       VALUES(${input.directory},1,${input.destination},${Number(input.local)},${input.organizationID},${input.tenant.type},${input.tenant.id},${input.userID},${previous?.source_id ?? randomUUID()})
       ON CONFLICT(directory) DO UPDATE SET enabled=1`)
         yield* tx.run(sql`INSERT OR REPLACE INTO _kilo_sync_directory(alias,directory,canonical)
-      VALUES(${input.directory},${input.directory},${input.directory})`)
+      VALUES(${storedAbsolutePath(input.directory) ?? input.directory},${input.directory},${input.directory})`)
         for (const approval of approvals)
           yield* tx.run(sql`INSERT INTO _kilo_sync_allowed_asset(directory,path,hash,bytes)
         VALUES(${input.directory},${approval.path},${approval.hash},${approval.bytes})
