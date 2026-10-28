@@ -1,5 +1,5 @@
 import { Component } from "solid-js"
-import { Switch } from "@opencode-ai/ui/switch"
+import Switch from "./Switch"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useLanguage } from "../../context/language"
 import { useSettingsConfig } from "../../v2/settings-config"
