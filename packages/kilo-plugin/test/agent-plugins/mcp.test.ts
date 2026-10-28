@@ -51,7 +51,7 @@ describe("mcp.json", () => {
       spec: "2.0.0" as "1.0.0",
       platform: "linux",
       transports: ["stdio"],
-      data: async () => "/data",
+      data: { path: "/data", create: async () => "/data" },
     })
     expect(result.diagnostics.map((item) => item.code)).toEqual(["mcp-version-mismatch"])
   })
@@ -152,6 +152,21 @@ describe("stdio servers", () => {
 
   test("the data directory is not created for a plugin without stdio servers", async () => {
     const { loaded } = await load({ "skills/a/SKILL.md": skill("a") })
+    expect(
+      await access(loaded.data!).then(
+        () => true,
+        () => false,
+      ),
+    ).toBe(false)
+  })
+
+  test.each([
+    ["a command that escapes the root", { command: "./../outside" }],
+    ["a cwd that escapes the data directory", { command: "node", cwd: "${PLUGIN_DATA}/../.." }],
+    ["a cwd in another form", { command: "node", cwd: "/tmp" }],
+  ])("a stdio server rejected for %s does not create the data directory", async (_, fields) => {
+    const { loaded } = await load({ "mcp.json": mcp({ s: { type: "stdio", ...fields } }) })
+    expect(codes(loaded)).toEqual(["server-invalid"])
     expect(
       await access(loaded.data!).then(
         () => true,

@@ -37,7 +37,10 @@ export async function discover(root: string): Promise<Result> {
   if (found === "missing") return { skills: [], diagnostics: [] }
   if (found !== "directory")
     return { skills: [], diagnostics: [Diagnostic.error("skills-invalid", '"skills" is not a directory', scope)] }
-  const directory = await realpath(location)
+  // Each resolve can still fail if the plugin changes while it loads; that makes the item invalid, never a throw.
+  const directory = await realpath(location).catch(() => undefined)
+  if (!directory)
+    return { skills: [], diagnostics: [Diagnostic.error("skills-invalid", '"skills" could not be resolved', scope)] }
   if (!Paths.contains(root, directory))
     return {
       skills: [],
@@ -64,7 +67,9 @@ async function load(
   const file = path.join(folder, "SKILL.md")
   if ((await Paths.kind(file)) !== "file") return
   const item = { ...scope, item: child }
-  const resolved = await realpath(file)
+  const resolved = await realpath(file).catch(() => undefined)
+  if (!resolved)
+    return { diagnostic: Diagnostic.error("skill-invalid", `Skill "${child}" could not be resolved`, item) }
   if (!Paths.contains(root, resolved))
     return {
       diagnostic: Diagnostic.error("skill-outside-root", `Skill "${child}" resolves outside the plugin root`, item),

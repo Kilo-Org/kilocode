@@ -2,7 +2,7 @@ export * as KiloExtension from "./extension"
 
 import { Diagnostic } from "./diagnostic"
 import { isRecord } from "./manifest"
-import { Mcp } from "./mcp"
+import type { Mcp } from "./mcp"
 
 /**
  * The Agent Plugins client extension namespace Kilo implements (spec §8). Other clients ignore it; Kilo validates it
@@ -99,7 +99,7 @@ function decodeOAuth(value: unknown): { oauth: OAuth; unknown: string[] } | stri
     return "callback_port must be an integer from 1 to 65535"
   if (value.redirect_uri !== undefined) {
     if (typeof value.redirect_uri !== "string" || !loopbackRedirect(value.redirect_uri))
-      return "redirect_uri must be an http URL on 127.0.0.1, localhost or [::1]"
+      return "redirect_uri must be http://127.0.0.1:<port>/… or http://localhost:<port>/…"
     const redirect = new URL(value.redirect_uri)
     // Core listens on callback_port when both are set; a different redirect port would strand the browser.
     if (typeof port === "number" && redirect.port !== String(port))
@@ -111,8 +111,18 @@ function decodeOAuth(value: unknown): { oauth: OAuth; unknown: string[] } | stri
   }
 }
 
+/**
+ * Only redirects core's callback listener can serve: it binds 127.0.0.1 on the redirect's port, so an IPv6-only
+ * host or a URL without a port would send the browser somewhere nothing listens.
+ */
 function loopbackRedirect(value: string) {
   if (!URL.canParse(value)) return false
   const url = new URL(value)
-  return url.protocol === "http:" && !url.username && !url.password && Mcp.loopback(url.hostname)
+  return (
+    url.protocol === "http:" &&
+    !url.username &&
+    !url.password &&
+    url.port !== "" &&
+    (url.hostname === "127.0.0.1" || url.hostname === "localhost")
+  )
 }

@@ -7,6 +7,7 @@ import { define } from "@opencode/plugin/effect/plugin"
 import { Document } from "@opencode/schema/config"
 import { Mcp } from "@opencode/schema/mcp"
 import { Skill } from "@opencode/schema/skill"
+import { FSUtil } from "@opencode/util/fs-util"
 import { Global } from "@opencode/util/global"
 import { readdir } from "node:fs/promises"
 import path from "node:path"
@@ -23,6 +24,10 @@ export interface Loaded {
   readonly skills: readonly Skill.Info[]
   readonly servers: ReadonlyMap<string, Mcp.ServerConfig>
 }
+
+// Recursive watches skip dependency, VCS and dot directories, as the config skill watchers do: a plugin's own
+// node_modules or a server writing state into its root must not trigger refreshes.
+const IGNORE = [...FSUtil.ignoreGlobs, "**/.*", "**/.*/**"]
 
 interface Candidate {
   readonly path: string
@@ -55,7 +60,9 @@ export const Plugin = define<Global.Service | Scope.Scope>({
       const found = yield* Effect.promise(() => nearest(target))
       if (!found) return
       const updates = yield* watcher.subscribe(
-        typeof found === "string" ? { path: found, type: "directory" } : { path: found.missing, type: "file" },
+        typeof found === "string"
+          ? { path: found, type: "directory", ignore: IGNORE }
+          : { path: found.missing, type: "file" },
       )
       yield* FiberMap.run(
         watches,

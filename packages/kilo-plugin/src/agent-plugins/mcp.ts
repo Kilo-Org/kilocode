@@ -42,8 +42,12 @@ export interface Input {
   readonly spec: Version.Id
   readonly platform: NodeJS.Platform
   readonly transports: readonly Transport[]
-  /** Creates the plugin data directory on first use and returns its resolved path, or undefined when that fails. */
-  readonly data: () => Promise<string | undefined>
+  readonly data: {
+    /** The plugin's `PLUGIN_DATA` directory, which may not exist yet. */
+    readonly path: string
+    /** Creates the directory once and returns its resolved path, or undefined when that fails. */
+    readonly create: () => Promise<string | undefined>
+  }
 }
 
 const scope = { component: "mcp" } as const
@@ -65,7 +69,8 @@ export async function read(input: Input): Promise<Result> {
   const found = await Paths.kind(location)
   if (found === "missing") return { servers: [], diagnostics: [] }
   if (found !== "file") return disabled("mcp-invalid", '"mcp.json" is not a regular file')
-  const file = await realpath(location)
+  const file = await realpath(location).catch(() => undefined)
+  if (!file) return disabled("mcp-invalid", '"mcp.json" could not be resolved')
   if (!Paths.contains(input.root, file)) return disabled("mcp-invalid", '"mcp.json" resolves outside the plugin root')
   const value = await readFile(file, "utf8").then(
     (text) => {
@@ -127,16 +132,22 @@ async function server(name: string, config: unknown, input: Input): Promise<Serv
       item,
     )
   if (checked.transport !== "stdio") return { name, ...checked }
-  const data = await input.data()
+  // Validate against where the data directory will be, and create it only for an entry that passes, so a rejected
+  // server never leaves a directory behind.
+  const planned = await Paths.resolve(input.data.path)
+  const resolved = await launch(checked, input.root, planned)
+  if (typeof resolved === "string") return invalid(resolved)
+  const data = await input.data.create()
   if (!data)
     return Diagnostic.error(
       "data-unavailable",
       `Skipped server "${name}": the plugin data directory could not be created`,
       item,
     )
-  const resolved = await launch(checked, input.root, data)
-  if (typeof resolved === "string") return invalid(resolved)
-  return { name, ...resolved }
+  if (data === planned) return { name, ...resolved }
+  const relaunched = await launch(checked, input.root, data)
+  if (typeof relaunched === "string") return invalid(relaunched)
+  return { name, ...relaunched }
 }
 
 interface StdioConfig {

@@ -53,7 +53,7 @@ describe("ai.kilo extension", () => {
     )
   })
 
-  test.each(["http://localhost:7777/callback", "http://[::1]:7777/cb", "http://127.0.0.1:7777/"])(
+  test.each(["http://localhost:7777/callback", "http://127.0.0.1:7777/cb", "http://127.0.0.1:7777/"])(
     "a loopback redirect %p is accepted",
     (redirect_uri) => {
       expect(read({ mcp: { slack: { oauth: { client_id: "x", redirect_uri } } } }).oauth.get("slack")).toEqual({
@@ -67,6 +67,10 @@ describe("ai.kilo extension", () => {
     ["a remote redirect", { client_id: "x", redirect_uri: "https://evil.example/cb" }, "redirect_uri must be"],
     ["an https loopback redirect", { client_id: "x", redirect_uri: "https://127.0.0.1:1/cb" }, "redirect_uri must be"],
     ["a redirect with user info", { client_id: "x", redirect_uri: "http://me@127.0.0.1:1/cb" }, "redirect_uri must be"],
+    // Core's callback listener binds 127.0.0.1 on the redirect's port; these would reach nothing.
+    ["an IPv6 loopback redirect", { client_id: "x", redirect_uri: "http://[::1]:7777/cb" }, "redirect_uri must be"],
+    ["another 127/8 address", { client_id: "x", redirect_uri: "http://127.0.0.2:7777/cb" }, "redirect_uri must be"],
+    ["a redirect without a port", { client_id: "x", redirect_uri: "http://127.0.0.1/cb" }, "redirect_uri must be"],
     ["a client secret", { client_id: "x", client_secret: "s3cret" }, "client_secret is not accepted from plugins"],
     [
       "an authorization server metadata URL",

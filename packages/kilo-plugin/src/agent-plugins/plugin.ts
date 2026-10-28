@@ -45,19 +45,37 @@ export async function load(input: string, options: Options): Promise<Loaded> {
     return { root, status: "rejected", skills: [], servers: [], diagnostics: manifest.diagnostics }
   const data = directory(options.dataRoot, manifest.manifest.name, root)
   let created: Promise<string | undefined> | undefined
+  // Each component is caught on its own: an unexpected failure in one is reported and never hides the other.
   const [skills, mcp] = await Promise.all([
-    Skills.discover(root),
+    Skills.discover(root).catch(
+      (error: unknown): Skills.Result => ({
+        skills: [],
+        diagnostics: [
+          Diagnostic.error("skills-invalid", `Skills could not be loaded: ${String(error)}`, { component: "skills" }),
+        ],
+      }),
+    ),
     Mcp.read({
       root,
       spec: manifest.manifest.spec,
       platform: options.platform ?? process.platform,
       transports: options.transports ?? defaultTransports,
-      data: () =>
-        (created ??= mkdir(data, { recursive: true }).then(
-          () => realpath(data),
-          () => undefined,
-        )),
-    }),
+      data: {
+        path: data,
+        create: () =>
+          (created ??= mkdir(data, { recursive: true }).then(
+            () => realpath(data),
+            () => undefined,
+          )),
+      },
+    }).catch(
+      (error: unknown): Mcp.Result => ({
+        servers: [],
+        diagnostics: [
+          Diagnostic.error("mcp-invalid", `MCP servers could not be loaded: ${String(error)}`, { component: "mcp" }),
+        ],
+      }),
+    ),
   ])
   return {
     root,
@@ -94,7 +112,8 @@ async function readManifest(root: string): Promise<Manifest.Result> {
   const found = await Paths.kind(location)
   if (found === "missing") return reject("manifest-missing", `No plugin.json in ${root}`)
   if (found !== "file") return reject("manifest-invalid", "plugin.json is not a regular file")
-  const file = await realpath(location)
+  const file = await realpath(location).catch(() => undefined)
+  if (!file) return reject("manifest-invalid", "plugin.json could not be resolved")
   if (!Paths.contains(root, file))
     return reject("manifest-outside-root", "plugin.json resolves outside the plugin root")
   const text = await readFile(file, "utf8").catch(() => undefined)
