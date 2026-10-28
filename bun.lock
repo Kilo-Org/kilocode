@@ -318,6 +318,7 @@
         "@opencode/schema": "workspace:*",
         "@opencode/util": "workspace:*",
         "effect": "catalog:",
+        "jsonc-parser": "3.3.1",
       },
       "devDependencies": {
         "@opencode/ai": "workspace:*",

@@ -4,30 +4,30 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 564,
-    "total": 9828,
-    "percent": 5.7,
-    "dropped": 26,
+    "done": 573,
+    "total": 9819,
+    "percent": 5.8,
+    "dropped": 35,
     "kinds": [
       {
         "kind": "module",
-        "done": 461,
-        "total": 3547
+        "done": 465,
+        "total": 3543
       },
       {
         "kind": "api",
-        "done": 2,
+        "done": 5,
         "total": 39
       },
       {
         "kind": "patch",
         "done": 70,
-        "total": 3444
+        "total": 3443
       },
       {
         "kind": "test",
-        "done": 31,
-        "total": 2798
+        "done": 33,
+        "total": 2794
       }
     ],
     "landed": {
@@ -36,10 +36,10 @@
       "seam": 3,
       "patch": 6
     },
-    "coreImports": 26,
+    "coreImports": 27,
     "sharedPatches": {
-      "seam": 36,
-      "patch": 23
+      "seam": 35,
+      "patch": 24
     }
   },
   "notCounted": {
@@ -58,6 +58,7 @@
     "@opencode/core/config",
     "@opencode/core/config/discovery",
     "@opencode/core/config/normalize",
+    "@opencode/core/config/plugin/skill-file",
     "@opencode/core/effect/app-node-platform",
     "@opencode/core/model",
     "@opencode/core/model-resolver",
@@ -1146,25 +1147,25 @@
     },
     {
       "feature": "marketplace",
-      "done": 0,
-      "total": 20,
-      "dropped": 0,
+      "done": 9,
+      "total": 11,
+      "dropped": 9,
       "kinds": {
         "module": {
-          "done": 0,
-          "total": 10
+          "done": 4,
+          "total": 6
         },
         "api": {
-          "done": 0,
+          "done": 3,
           "total": 3
         },
         "patch": {
           "done": 0,
-          "total": 1
+          "total": 0
         },
         "test": {
-          "done": 0,
-          "total": 6
+          "done": 2,
+          "total": 2
         }
       }
     },
@@ -6199,7 +6200,10 @@
     "patch:unattributed:tui/ui:acda41f897d2": "patch"
   },
   "done": [
+    "api:GET /kilocode/marketplace",
     "api:GET /kilocode/provider-usage",
+    "api:POST /kilocode/marketplace/install",
+    "api:POST /kilocode/marketplace/remove",
     "api:POST /kilocode/provider-usage/refresh",
     "module:packages/core/src/kilocode/oauth/page.ts",
     "module:packages/core/src/kilocode/provider-usage.ts",
@@ -6669,6 +6673,10 @@
     "module:packages/opencode/src/kilocode/components/notification-banner.tsx",
     "module:packages/opencode/src/kilocode/kilo-commands.tsx",
     "module:packages/opencode/src/kilocode/kilo-errors.ts",
+    "module:packages/opencode/src/kilocode/marketplace/api.ts",
+    "module:packages/opencode/src/kilocode/marketplace/companions.ts",
+    "module:packages/opencode/src/kilocode/marketplace/paths.ts",
+    "module:packages/opencode/src/kilocode/marketplace/skill-archive.ts",
     "module:packages/opencode/src/kilocode/plugins/home-news.tsx",
     "module:packages/opencode/src/kilocode/plugins/model-usage.ts",
     "module:packages/opencode/src/kilocode/plugins/sidebar-footer.tsx",
@@ -6683,6 +6691,8 @@
     "module:packages/opencode/test/kilocode/free-model-disclosure.test.ts",
     "module:packages/opencode/test/kilocode/kilo-errors.test.ts",
     "module:packages/opencode/test/kilocode/kilo-gateway-headers.test.ts",
+    "module:packages/opencode/test/kilocode/marketplace-companions.test.ts",
+    "module:packages/opencode/test/kilocode/marketplace-installer.test.ts",
     "module:packages/opencode/test/kilocode/model-info-panel-utils.test.ts",
     "module:packages/opencode/test/kilocode/model-info-panel.types.test.ts",
     "module:packages/opencode/test/kilocode/news.test.ts",
@@ -6776,9 +6786,18 @@
     "module:packages/kilo-gateway/src/types/tui.d.ts",
     "module:packages/kilo-gateway/test/provider.test.ts",
     "module:packages/opencode/src/kilocode/agent/scout.txt",
+    "module:packages/opencode/src/kilocode/marketplace/detection.ts",
+    "module:packages/opencode/src/kilocode/marketplace/plugin-config.ts",
+    "module:packages/opencode/src/kilocode/marketplace/plugin-spec.ts",
+    "module:packages/opencode/src/kilocode/marketplace/relevance.ts",
+    "module:packages/opencode/test/kilocode/marketplace-api.test.ts",
+    "module:packages/opencode/test/kilocode/marketplace-plugin-http.test.ts",
+    "module:packages/opencode/test/kilocode/marketplace-plugin.test.ts",
+    "module:packages/opencode/test/kilocode/marketplace-relevance.test.ts",
     "patch:agent:063e034b577a",
     "patch:gateway:0468bd6d3d9e",
     "patch:gateway:d783ce7945b8",
+    "patch:marketplace:5fc326e8ea39",
     "patch:unattributed:agent:09375914c157",
     "patch:unattributed:agent:0faa6c731275",
     "patch:unattributed:agent:1b8fe669272e",

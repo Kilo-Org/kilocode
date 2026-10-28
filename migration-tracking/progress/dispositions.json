@@ -475,5 +475,95 @@
     "state": "ported",
     "note": "packages/tui/src/kilocode/kilo-news.tsx kilocode.news TUI plugin, registered in packages/tui/src/plugin/builtins.ts. Same frame as v1 home_bottom (centered, maxWidth 75, paddingTop 2) through the new generic home.bottom slot below the home prompt (seam in packages/tui/src/routes/home.tsx and packages/plugin/src/tui/context.ts). Palette command kilo.news.toggle (Hide news / Show news, only on home) persists the hidden flag.",
     "by": "kilo-gateway-news"
+  },
+  "module:packages/opencode/src/kilocode/marketplace/detection.ts": {
+    "state": "dropped",
+    "note": "Runtime detection of installed marketplace items (skill/MCP/agent/plugin scans) is intentionally replaced: v2 lists only marketplace-managed records from the server database (the `kv` table) and reports their status by comparing content fingerprints with the files on disk (packages/kilo-plugin/src/marketplace/index.ts installed/restore, installer.ts inspect). Native/manual items are not adopted, and agent/plugin detection re-lands with their content units. Decision recorded in kilo-v2-migration-plan.md U-E2-23.",
+    "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/src/kilocode/marketplace/plugin-config.ts": {
+    "state": "dropped",
+    "note": "Plugin config patching (patchPlugin) is not carried on v2: plugin/bundle marketplace content is out of scope for the default skills/MCP unit and re-lands with the plugin content unit. Decision recorded in kilo-v2-migration-plan.md U-E2-23.",
+    "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/src/kilocode/marketplace/plugin-spec.ts": {
+    "state": "dropped",
+    "note": "Plugin identity resolution (pluginIdentity) is not carried on v2: plugin/bundle marketplace content is out of scope for the default skills/MCP unit and re-lands with the plugin content unit. Decision recorded in kilo-v2-migration-plan.md U-E2-23.",
+    "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/src/kilocode/marketplace/relevance.ts": {
+    "state": "dropped",
+    "note": "Workspace suggest_for.filename relevance scanning (ripgrep budget/skip rules) is not carried on v2: browse/search filter the catalog client-side by text match; relevance ranking re-lands with its own unit if wanted. Decision recorded in kilo-v2-migration-plan.md U-E2-23.",
+    "by": "kilo-new-marketplace"
+  },
+  "patch:marketplace:5fc326e8ea39": {
+    "state": "dropped",
+    "note": "The v1 kilocode_change in packages/opencode/src/plugin/install.ts (import of marketplace pluginIdentity for upstream plugin patching) serves plugin installs, which v2 does not carry for the default skills/MCP unit. The TUI registration patch is tracked by the updated shared-patches entry; plugin content re-lands with its unit.",
+    "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/test/kilocode/marketplace-api.test.ts": {
+    "state": "dropped",
+    "note": "The carried assertions (YAML response parsing, item normalization, per-kind fetch failure aggregation, cached fallback with warning) are covered by packages/kilo-plugin/test/marketplace.test.ts and packages/kilo-plugin/test/marketplace-plugin.test.ts. Dropped on purpose: kebab display-name synthesis (the Kilo catalog ships display names) and JSON-only endpoints (the Kilo catalog serves YAML).",
+    "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/test/kilocode/marketplace-plugin-http.test.ts": {
+    "state": "dropped",
+    "note": "v1 tested the plugin HTTP install endpoints (refresh-cached config, partial removal, malformed config kept). Plugin marketplace content and the HTTP surface are not carried on v2; the skills/MCP API is covered by the kilocode.marketplace RPC round trips in packages/kilo-cli/test/marketplace.test.ts and the OAuth flow in packages/kilo-cli/test/marketplace-oauth.test.ts. Decision recorded in kilo-v2-migration-plan.md U-E2-23.",
+    "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/test/kilocode/marketplace-plugin.test.ts": {
+    "state": "dropped",
+    "note": "v1 tested plugin identity parsing and nested/global plugin source removal helpers. Plugin marketplace content is not carried on v2 (re-lands with the plugin content unit). The same-named v2 file hosts the replacement RPC-plugin lifecycle coverage, not a port of these assertions.",
+    "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/test/kilocode/marketplace-relevance.test.ts": {
+    "state": "dropped",
+    "note": "v1 tested the relevance ranking and exclusion rules; relevance scanning is not carried on v2 (see the relevance module disposition). The client-side text filter is exercised by the TUI browser tests in packages/tui/test/kilocode/marketplace.test.ts.",
+    "by": "kilo-new-marketplace"
+  },
+  "api:GET /kilocode/marketplace": {
+    "state": "ported",
+    "note": "Served by the typed kilocode.marketplace RPC `list` and `installed` methods (packages/schema/src/kilocode/marketplace.ts, handlers in packages/kilo-plugin/src/marketplace/index.ts). v2 has no HTTP parity by design; skills and MCPs only, agent/plugin kinds are dropped with their content units. Round trip: packages/kilo-cli/test/marketplace.test.ts.",
+    "by": "kilo-new-marketplace"
+  },
+  "api:POST /kilocode/marketplace/install": {
+    "state": "ported",
+    "note": "Served by the `install` and `preview` RPC methods (packages/kilo-plugin/src/marketplace/index.ts install/preview handlers over Installer.install). Skills and MCPs only; install intent is saved to the database before any file changes. Round trips: packages/kilo-cli/test/marketplace.test.ts, marketplace-oauth.test.ts.",
+    "by": "kilo-new-marketplace"
+  },
+  "api:POST /kilocode/marketplace/remove": {
+    "state": "ported",
+    "note": "Served by the `uninstall` RPC method (packages/kilo-plugin/src/marketplace/index.ts uninstall handler over Installer.uninstall); modified or unowned resources are refused and shared OAuth sign-in is retained. Round trip: packages/kilo-cli/test/marketplace.test.ts.",
+    "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/src/kilocode/marketplace/api.ts": {
+    "state": "ported",
+    "note": "Catalog client ported as packages/kilo-plugin/src/marketplace/kilo.ts make() plus list() in index.ts (YAML decode, per-item skip on decode failure, per-kind failures, TTL cache). Deliberate differences: v1 retries/KILO_MARKETPLACE_BASE_URL are replaced by the persisted-snapshot fallback and KiloServer.fromEnv; kebab display synthesis and JSON-only parsing are dropped because the Kilo catalog ships named YAML.",
+    "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/src/kilocode/marketplace/companions.ts": {
+    "state": "ported",
+    "note": "MCP companion skills are provisioned by Installer.install (packages/kilo-plugin/src/marketplace/installer.ts) with atomic Skill.write promotion. The v1 receipt/token files are replaced by the ownership record in the server database (index.ts save/restore: skill ids, server names and content fingerprints; locations are derived from the current scope, so records survive moving a project). Tested by packages/kilo-plugin/test/marketplace.test.ts and marketplace-plugin.test.ts.",
+    "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/src/kilocode/marketplace/paths.ts": {
+    "state": "ported",
+    "note": "Scope paths are KiloConfigFiles candidates plus the roots/directory helpers in packages/kilo-plugin/src/marketplace/index.ts; isSafeId is restored as Skill.safe in packages/kilo-plugin/src/marketplace/skill.ts (reserved device names, trailing dot, double dot) and tested in marketplace.test.ts. The v1 worktree-depth plugin layout helpers are not needed without plugin content.",
+    "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/src/kilocode/marketplace/skill-archive.ts": {
+    "state": "ported",
+    "note": "stageSkill and findEscapedPaths are ported as bounded Skill.extract/prepare/write in packages/kilo-plugin/src/marketplace/skill.ts (byte and entry caps, traversal and case-collision rejection, symlink-tree conflicts, atomic promotion, fingerprint-guarded trash). The v1 owner marker file is replaced by the ownership record in the server database plus fingerprint-equal adoption.",
+    "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/test/kilocode/marketplace-companions.test.ts": {
+    "state": "ported",
+    "note": "Carried by packages/kilo-plugin/test/marketplace.test.ts (replaces two owned companions with nested resources and cleans staging and backups), marketplace-plugin.test.ts (invalid later companion preserves files and ownership; reset database adopts identical files) and marketplace-mcp.test.ts (JSONC preservation, adoption of fingerprint-equal content). v1 receipt-token assertions are replaced by database record and fingerprint assertions.",
+    "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/test/kilocode/marketplace-installer.test.ts": {
+    "state": "ported",
+    "note": "Carried by packages/kilo-plugin/test/marketplace-mcp.test.ts (legacy normalization, JSON-escaped placeholders, entry building) and marketplace.test.ts (unsafe, reserved and trailing-dot ids; traversal, case-collision and symlink-tree rejection).",
+    "by": "kilo-new-marketplace"
   }
 }

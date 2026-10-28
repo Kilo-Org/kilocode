@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import {
+  apiLiterals,
   areaOf,
   canon,
   classify,
@@ -7,6 +8,7 @@ import {
   featureOf,
   grid,
   history,
+  historyBase,
   importBindings,
   knownFeatures,
   parseHunks,
@@ -20,9 +22,17 @@ import {
 
 const split = { "session/steering": "steering", "kilo-ui": "ui", plugins: "plugin" }
 
+test("API proofs match standalone route literals, not schema imports", () => {
+  expect(apiLiterals('import { Rpc } from "@opencode/schema/kilocode/marketplace"')).toEqual(new Set())
+  expect(apiLiterals('"/kilocode/marketplace/install"\n\'/kilocode/example\'\n`/kilocode/usage`')).toEqual(
+    new Set(["/kilocode/marketplace/install", "/kilocode/example", "/kilocode/usage"]),
+  )
+})
+
 test("history uses v2 rather than feature-branch or synthetic merge ancestry", async () => {
   const current = JSON.stringify({ summary: { done: 92, total: 9829, percent: 0.9 }, coreImports: 12 }) + "\n"
   const points = await history(current, async (args) => {
+    if (args[0] === "rev-parse") return "resolved"
     if (args[0] === "log") {
       expect(args).toEqual(["log", "--first-parent", "--format=%H %cs", "origin/v2", "--", "migration-tracking/progress/progress.json"])
       return "current 2026-10-22\nbase 2026-10-22\nolder 2026-10-21"
@@ -37,6 +47,31 @@ test("history uses v2 rather than feature-branch or synthetic merge ancestry", a
     { date: "2026-10-21", done: 90, total: 9829, percent: 0.9 },
     { date: "2026-10-22", done: 92, total: 9829, percent: 0.9 },
   ])
+})
+
+test("history walks the base it is given and fails loudly when that ref does not resolve", async () => {
+  const seen: string[][] = []
+  const current = JSON.stringify({ summary: { done: 1, total: 2, percent: 50 }, coreImports: 1 }) + "\n"
+  await history(current, async (args) => {
+    seen.push(args)
+    return args[0] === "log" ? "" : "resolved"
+  }, "fork/v2")
+  expect(seen[0]).toEqual(["rev-parse", "--verify", "fork/v2^{commit}"])
+  expect(seen[1]).toContain("fork/v2")
+  await expect(
+    history(current, async (args) => {
+      if (args[0] === "rev-parse") throw new Error("unknown revision")
+      return ""
+    }, "typo/v2"),
+  ).rejects.toThrow("Progress history base ref not found: typo/v2")
+})
+
+test("historyBase defaults to origin/v2 and takes only the explicit override, never remote names", () => {
+  expect(historyBase({})).toBe("origin/v2")
+  expect(historyBase({ KILO_PROGRESS_BASE_V2: "" })).toBe("origin/v2")
+  expect(historyBase({ KILO_PROGRESS_BASE_V2: "fork/v2" })).toBe("fork/v2")
+  // An `upstream` remote is OpenCode's frozen v2 in the standard layout, so its presence changes nothing.
+  expect(historyBase({ GIT_REMOTES: "origin\nupstream" })).toBe("origin/v2")
 })
 
 test("featureOf: packages, directories, split table and loose files", () => {

@@ -143,6 +143,11 @@ export function patchId(added: string[]) {
   return new Bun.CryptoHasher("sha256").update(normalized).digest("hex").slice(0, 12)
 }
 
+/** Import-path suffixes are not evidence that an HTTP route exists. */
+export function apiLiterals(source: string) {
+  return new Set([...source.matchAll(/(["'`])(\/kilocode\/[^"'`\r\n]+)\1/g)].map((match) => match[2]))
+}
+
 export type Hunk = { file: string; line: number; added: string[]; removed: string[] }
 
 export function parseHunks(diff: string) {
@@ -315,20 +320,17 @@ async function collect(config: Config, dispositions: Record<string, Disposition>
     .filter((p) => p.startsWith("/kilocode/"))
     .sort()
   const literals = routes.length
-    ? new Set(
-        (
-          await git([
-            "grep",
-            "-h",
-            "-o",
-            "-F",
-            ...routes.flatMap((r) => ["-e", r]),
-            "--",
-            "packages/protocol/src",
-            "packages/server/src",
-            ...v2Files,
-          ]).catch(() => "")
-        ).split("\n"),
+    ? apiLiterals(
+        await git([
+          "grep",
+          "-h",
+          "-F",
+          ...routes.flatMap((r) => ["-e", r]),
+          "--",
+          "packages/protocol/src",
+          "packages/server/src",
+          ...v2Files,
+        ]).catch(() => ""),
       )
     : new Set<string>()
   for (const route of routes) {
@@ -671,8 +673,14 @@ type Point = { date: string; done: number; total: number; percent: number }
  * (the last commit of the day). A commit whose file equals the current output is skipped, so the result
  * is the same before and after the commit that stores it, which keeps `--check` stable.
  */
-export async function history(current: string, read = git) {
-  const log = await read(["log", "--first-parent", "--format=%H %cs", "origin/v2", "--", "migration-tracking/progress/progress.json"]).catch(() => "")
+export async function history(current: string, read = git, base = "origin/v2") {
+  // Kilo-owned checkout note: CI's origin/v2 is the integration line, but dedicated fork
+  // checkouts can diverge their own origin/v2. The base ref is a plain parameter; main()
+  // resolves the KILO_PROGRESS_BASE_V2 override so committed artifacts match what CI computes.
+  // An unresolved base must fail loudly; an empty history would silently erase past points.
+  if (!(await read(["rev-parse", "--verify", `${base}^{commit}`]).catch(() => null)))
+    throw new Error(`Progress history base ref not found: ${base}`)
+  const log = await read(["log", "--first-parent", "--format=%H %cs", base, "--", "migration-tracking/progress/progress.json"]).catch(() => "")
   const points: Point[] = []
   const seen = new Set<string>()
   for (const line of log.split("\n").filter(Boolean)) {
@@ -883,7 +891,7 @@ async function main() {
     return
   }
 
-  const past = await history(render(config, data, dispositions).json)
+  const past = await history(render(config, data, dispositions).json, git, historyBase(process.env))
   const out = render(config, data, dispositions, past)
   const files = { "progress.json": out.json, "README.md": out.md, "progress.svg": out.svg, "history.svg": out.history, "badge.svg": out.badge }
   if (args.includes("--check")) {
@@ -902,6 +910,15 @@ async function main() {
   for (const [name, content] of Object.entries(files)) await Bun.write(path.join(DIR, name), content)
   const summary = JSON.parse(out.json).summary
   console.log(`${summary.done}/${summary.total} cells done (${summary.percent}%), ${summary.dropped} dropped -> migration-tracking/progress/`)
+}
+
+/**
+ * The ref whose first-parent history supplies past progress points: `origin/v2`, the integration line, unless
+ * KILO_PROGRESS_BASE_V2 names another. Checkouts whose `origin` is a fork need the override; remote names are
+ * never guessed, because `upstream` is OpenCode's frozen v2 in the standard clone layout.
+ */
+export function historyBase(env: Readonly<Record<string, string | undefined>>) {
+  return env.KILO_PROGRESS_BASE_V2 || "origin/v2"
 }
 
 if (import.meta.main) await main()
