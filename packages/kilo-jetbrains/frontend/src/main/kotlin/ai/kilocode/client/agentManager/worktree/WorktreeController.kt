@@ -18,8 +18,10 @@ import com.intellij.ui.CollectionListModel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 
 enum class CreateKind { CREATE, BRANCH, PR }
@@ -37,6 +39,9 @@ class WorktreeController(
     activity: StateFlow<Map<String, SessionActivityDto>> = MutableStateFlow(emptyMap()),
     private val abort: suspend (String, String) -> Unit = { _, _ -> },
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
+    // Ticks on a worktree-list mutation this controller's own calls did not make — currently, only
+    // the `agent_manager` tool's host-initiated worktree creation (see `KiloWorktreeRpcApi.changes`).
+    changes: Flow<Unit> = emptyFlow(),
 ) {
     companion object {
         private val LOG = KiloLog.create(WorktreeController::class.java)
@@ -81,6 +86,9 @@ class WorktreeController(
                     onActivityChanged?.invoke()
                 }
             }
+        }
+        cs.launch {
+            changes.collect { reload() }
         }
     }
 
