@@ -19,6 +19,9 @@ export type Retry = { attempt: number; at: number; error: { message: string } }
 
 export const WorkingIndicator = (props: {
   session: string
+  // Start of the running turn, from the assistant row's `time.created`, so a remount mid-turn keeps the real elapsed
+  // time instead of restarting at zero (v1 reads it from the session's busy timing).
+  start?: number
   // The dock shows the working indicator only while the turn runs and nothing is blocked (v1 `showsWorking`).
   active: boolean
   // A permission or question parks the turn: the counter holds its value instead of resetting, as on v1.
@@ -30,19 +33,47 @@ export const WorkingIndicator = (props: {
   const language = useLanguage()
   const [elapsed, setElapsed] = createSignal(0)
   const [retryCountdown, setRetryCountdown] = createSignal(0)
+  const mountedAt = Date.now()
+  // v1's `activeTiming`: the time since the turn began, less the stretches it sat parked on a permission or question.
+  let paused = 0
+  let pauseAt: number | undefined
+  let lastStart: number | undefined
 
-  // The interval runs only while the turn is timed, so the counter holds while a permission or question parks the
-  // turn and resets once the turn ends. A session change also restarts it.
+  const activeElapsed = () => {
+    const start = props.start ?? mountedAt
+    const parked = pauseAt === undefined ? 0 : Date.now() - pauseAt
+    return Math.max(0, Date.now() - start - paused - parked)
+  }
+
   createEffect(
     on(
-      () => [props.session, props.active, props.blocked] as const,
-      ([, active, blocked]) => {
-        if (!active) {
-          if (!blocked) setElapsed(0)
+      () => [props.session, props.start, props.active, props.blocked] as const,
+      ([, start, active, blocked]) => {
+        // A new turn (or session) resets the pause accounting and restarts the counter from its own start time.
+        if (start !== lastStart) {
+          lastStart = start
+          paused = 0
+          pauseAt = undefined
+        }
+        if (active) {
+          if (pauseAt !== undefined) {
+            paused += Date.now() - pauseAt
+            pauseAt = undefined
+          }
+          setElapsed(Math.floor(activeElapsed() / 1000))
+          const id = setInterval(() => setElapsed(Math.floor(activeElapsed() / 1000)), 1000)
+          onCleanup(() => clearInterval(id))
           return
         }
-        const id = setInterval(() => setElapsed((value) => value + 1), 1000)
-        onCleanup(() => clearInterval(id))
+        if (blocked) {
+          pauseAt ??= Date.now()
+          setElapsed(Math.floor(activeElapsed() / 1000))
+          return
+        }
+        // The turn ended: hold the slot at zero, as v1 does when it stops tracking the elapsed time.
+        paused = 0
+        pauseAt = undefined
+        setElapsed(0)
       },
     ),
   )
@@ -91,18 +122,22 @@ export const WorkingIndicator = (props: {
   }
 
   return (
-    <div class="working-indicator">
+    // A live region so the turn start, the retry switch and the retry error are announced; the ticking counters below
+    // are hidden from it so they do not announce every second.
+    <div class="working-indicator" role="status" aria-live="polite">
       <Button variant="ghost" size="small" class="working-indicator-scroll" onClick={() => props.onScrollToBottom?.()}>
         <Spinner />
         <StatusText text={statusText()} />
         {/* Kept out of the label: a countdown inside the morphing text would swap it
             once a second, and every tick would read as a new status. */}
         <Show when={isRetrying() && retryCountdown() > 0}>
-          <span class="working-count">({retryCountdown()}s)</span>
+          <span class="working-count" aria-hidden="true">
+            ({retryCountdown()}s)
+          </span>
         </Show>
         {/* Laid out for the whole turn and only faded until the first tick: mounting
             the counter a second in shifted the whole cluster sideways. */}
-        <span class="working-elapsed" data-empty={elapsed() > 0 ? undefined : ""}>
+        <span class="working-elapsed" aria-hidden="true" data-empty={elapsed() > 0 ? undefined : ""}>
           {formatElapsed()}
         </span>
         <span class="sr-only">{language.t("session.messages.scrollToBottom")}</span>

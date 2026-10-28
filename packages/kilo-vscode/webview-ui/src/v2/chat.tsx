@@ -94,6 +94,19 @@ export function Chat() {
     return undefined
   }
 
+  // Start of the running turn, from the assistant row's `time.created`, so the elapsed counter keeps the real turn time
+  // across remounts, as v1 reads it from the session's busy timing.
+  const started = () => {
+    const id = session()
+    if (!id) return undefined
+    const list = v2.data.session.message.list(id)
+    for (let index = list.length - 1; index >= 0; index--) {
+      const message = list[index]
+      if (message.type === "assistant") return message.time.created
+    }
+    return undefined
+  }
+
   // MessageList owns the transcript scroller; the working indicator's scroll button calls back into it.
   const [scrollToBottom, setScrollToBottom] = createSignal<() => void>(() => {})
 
@@ -149,7 +162,7 @@ export function Chat() {
                 session={session()}
                 onSelectSession={open}
                 onShowHistory={() => setView("history")}
-                onScrollToBottomReady={setScrollToBottom}
+                onScrollToBottomReady={(scroll) => setScrollToBottom(() => scroll)}
               />
             </div>
           </div>
@@ -175,6 +188,7 @@ export function Chat() {
                 <div class="session-working">
                   <WorkingIndicator
                     session={session() ?? ""}
+                    start={started()}
                     active={working()}
                     blocked={blocked()}
                     retry={retry()}
