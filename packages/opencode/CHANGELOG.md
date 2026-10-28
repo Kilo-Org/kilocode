@@ -1,5 +1,60 @@
 # @kilocode/cli
 
+## 7.8.21
+
+### Minor Changes
+
+- [#15509](https://github.com/Kilo-Org/kilocode/pull/15509) [`307ff45`](https://github.com/Kilo-Org/kilocode/commit/307ff45f27ec796309ffb4e2f00f8dab85db3838) - Add hosted workspace operations and a Cloud system feed to the local session-host API. List, create, read, check the status of, and delete hosted workspaces, list their sessions, list available workspace profiles, and start another session in a workspace through the local Kilo API, and follow Cloud session preparation and status events through a local system feed route. Hosted operations now exchange the stored user credential for a short-lived Cloud Agent control token before any Worker call, so the original credential is never sent to the Worker. Hosted attachments stop working once their session or workspace is deleted.
+
+## 7.8.20
+
+### Minor Changes
+
+- [#15482](https://github.com/Kilo-Org/kilocode/pull/15482) [`ab43c7d`](https://github.com/Kilo-Org/kilocode/commit/ab43c7d4ed670fb77302087d6e47ac1959f0e699) - Let agents choose the base branch when they start Agent Manager worktree sessions.
+
+- [#14465](https://github.com/Kilo-Org/kilocode/pull/14465) [`3ac0983`](https://github.com/Kilo-Org/kilocode/commit/3ac0983c7d7b4d2fcb0371e3aac02edfe3cde7de) Thanks [@zfralish](https://github.com/zfralish)! - Publish the CLI as a `kilo-cli` conda package on Anaconda.org, built with rattler-build for linux-64, linux-aarch64, osx-64, osx-arm64, and win-64 on every release (pre-releases publish to the `rc` label). Install with any conda-compatible package manager (e.g. `pixi add kilo-cli` or `conda install -c anaconda-cloud kilo-cli`).
+
+- [#15440](https://github.com/Kilo-Org/kilocode/pull/15440) [`6c0d427`](https://github.com/Kilo-Org/kilocode/commit/6c0d4273f1b1b7fa85d562c699e7210f90b365b9) - Reuse platform benchmarks for linked custom auto router entries, with confirmed model suggestions, explicit linking controls, and per-variant link status.
+
+### Patch Changes
+
+- [#15483](https://github.com/Kilo-Org/kilocode/pull/15483) [`f9e7774`](https://github.com/Kilo-Org/kilocode/commit/f9e77749281ede26a550149aff283fc0101a8143) - Upgrade zod in the VS Code extension to a patched release that fixes a memory-exhaustion advisory when validating oversized constrained collections.
+
+- [#15479](https://github.com/Kilo-Org/kilocode/pull/15479) [`ccf958a`](https://github.com/Kilo-Org/kilocode/commit/ccf958a1d2a4fa8b5136f228939daa975d0c8feb) - Fix auto-compaction starting well before the configured context threshold, and stop compaction from looping on models without a known context size or after you stop a compaction.
+
+- Updated dependencies [[`6c0d427`](https://github.com/Kilo-Org/kilocode/commit/6c0d4273f1b1b7fa85d562c699e7210f90b365b9)]:
+  - @kilocode/kilo-gateway@7.9.0
+  - @kilocode/kilo-indexing@7.8.19
+  - @kilocode/kilo-telemetry@7.8.19
+  - @opencode-ai/server@7.8.19
+  - @opencode-ai/tui@7.8.19
+  - @opencode-ai/ui@7.8.19
+
+## 7.8.18
+
+### Minor Changes
+
+- [#15358](https://github.com/Kilo-Org/kilocode/pull/15358) [`f96361f`](https://github.com/Kilo-Org/kilocode/commit/f96361fe1470239a30be2633940160fc38c9030a) - Expose hosted cloud sessions through the local Kilo API, so editors can discover, read, and interact with a hosted session without ever handling its provider credentials.
+
+### Patch Changes
+
+- [#15430](https://github.com/Kilo-Org/kilocode/pull/15430) [`ef2f6d9`](https://github.com/Kilo-Org/kilocode/commit/ef2f6d9c7a30b1fc1791bf71f40803aa0ff96975) Thanks [@WebReflection](https://github.com/WebReflection)! - Update the MCP TypeScript SDK to 1.32.1 to fix security issues flagged by Dependabot, including MCP HTTP and OAuth requests following cross-origin redirects. Remote MCP servers whose URL redirects to another origin, or answers `POST` with a `301`, `302` or `303` redirect, no longer connect; use the server's final URL instead.
+
+## 7.8.16
+
+### Patch Changes
+
+- [#15383](https://github.com/Kilo-Org/kilocode/pull/15383) [`82926fb`](https://github.com/Kilo-Org/kilocode/commit/82926fb30e3dab7e3f07bd437bc898dc5385cb00) - Restrict browser links and MCP OAuth authorization URLs to HTTP(S), and fix unsafe URL handling on Windows and WSL.
+
+- [#15365](https://github.com/Kilo-Org/kilocode/pull/15365) [`c7b9c36`](https://github.com/Kilo-Org/kilocode/commit/c7b9c36961e2902a0b8de18dcb782a64d6dcef8b) - Block compromised eMudhra certificate chains with a fixed, pinned Bun runtime on all CLI platforms.
+  Keep Nix CLI builds compatible with the pinned runtime.
+
+- [#15293](https://github.com/Kilo-Org/kilocode/pull/15293) [`2e17931`](https://github.com/Kilo-Org/kilocode/commit/2e1793154f6bef7632516a75a53d421a2e96b718) - Treat shell expressions in MCP prompts as literal text instead of executing them locally.
+
+- [#15350](https://github.com/Kilo-Org/kilocode/pull/15350) [`4481e06`](https://github.com/Kilo-Org/kilocode/commit/4481e06d8af12857097fdeaea4e84e8ea363304b) - Restore session pull request badges when remote control is disabled.
+
+- [#15351](https://github.com/Kilo-Org/kilocode/pull/15351) [`2f452d7`](https://github.com/Kilo-Org/kilocode/commit/2f452d7a5fded651d5ef8d0decbd68d09c867887) - Add an internal Session Host registry and the built-in Kilo Cloud provider that lists, reads, starts, and describes cloud-hosted sessions.
+
 ## 7.8.15
 
 ### Minor Changes

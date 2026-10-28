@@ -1,5 +1,36 @@
 # kilo-code
 
+## 7.8.21
+
+## 7.8.20
+
+### Minor Changes
+
+- [#15482](https://github.com/Kilo-Org/kilocode/pull/15482) [`ab43c7d`](https://github.com/Kilo-Org/kilocode/commit/ab43c7d4ed670fb77302087d6e47ac1959f0e699) - Let agents choose the base branch when they start Agent Manager worktree sessions.
+
+### Patch Changes
+
+- [#15483](https://github.com/Kilo-Org/kilocode/pull/15483) [`f9e7774`](https://github.com/Kilo-Org/kilocode/commit/f9e77749281ede26a550149aff283fc0101a8143) - Upgrade zod in the VS Code extension to a patched release that fixes a memory-exhaustion advisory when validating oversized constrained collections.
+
+- [#15479](https://github.com/Kilo-Org/kilocode/pull/15479) [`ccf958a`](https://github.com/Kilo-Org/kilocode/commit/ccf958a1d2a4fa8b5136f228939daa975d0c8feb) - Fix auto-compaction starting well before the configured context threshold, and stop compaction from looping on models without a known context size or after you stop a compaction.
+
+- Updated dependencies [[`6c0d427`](https://github.com/Kilo-Org/kilocode/commit/6c0d4273f1b1b7fa85d562c699e7210f90b365b9)]:
+  - @kilocode/kilo-gateway@7.9.0
+  - @opencode-ai/core@7.8.19
+  - @kilocode/kilo-indexing@7.8.19
+  - @kilocode/kilo-ui@7.8.19
+  - @opencode-ai/ui@7.8.19
+
+## 7.8.18
+
+### Patch Changes
+
+- [#15410](https://github.com/Kilo-Org/kilocode/pull/15410) [`5f2aa0b`](https://github.com/Kilo-Org/kilocode/commit/5f2aa0b32fa4fafe1c544ac4a5203fc913e36225) Thanks [@WebReflection](https://github.com/WebReflection)! - Update DOMPurify to 3.4.17 to fix sanitization issues flagged by Dependabot alerts.
+
+- [#15412](https://github.com/Kilo-Org/kilocode/pull/15412) [`0377248`](https://github.com/Kilo-Org/kilocode/commit/0377248fb9af4ba12d04521821372a4d95cb1f6a) Thanks [@WebReflection](https://github.com/WebReflection)! - Update vite to 7.3.7 to fix the launch-editor editor CLI flag misinterpretation flagged by Dependabot (CVE-2026-112944).
+
+## 7.8.16
+
 ## 7.8.15
 
 ### Patch Changes
