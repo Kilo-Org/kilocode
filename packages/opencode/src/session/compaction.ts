@@ -20,6 +20,8 @@ import { isOverflow as overflow, usable } from "./overflow"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
 // kilocode_change start
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
 import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery"
 import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks"
 import { SessionExport } from "@/kilocode/session-export"
@@ -382,7 +384,23 @@ const layer = Layer.effect(
       if (!parent || parent.info.role !== "user") {
         throw new Error(`Compaction parent must be a user message: ${input.parentID}`)
       }
-      const userMessage = parent.info
+      // kilocode_change start - checkpoint static context before compaction discards its source
+      const parentIndex = input.messages.indexOf(parent)
+      const context = KiloSessionMessageOrder.latest(
+        input.messages.filter((msg, index) => KiloSessionMessageOrder.compare(msg, parent, index, parentIndex) <= 0),
+      ).context
+      const recovered = KiloSessionPrompt.inheritContext(parent.info, context)
+      // An empty system value also checkpoints a real input that cleared both fields.
+      const userMessage = {
+        ...recovered,
+        editorContext: KiloSessionPrompt.staticContext(recovered.editorContext),
+        system: recovered.system ?? "",
+      }
+      if (userMessage.editorContext !== parent.info.editorContext || userMessage.system !== parent.info.system) {
+        yield* session.updateMessage(userMessage)
+        parent.info = userMessage
+      }
+      // kilocode_change end
       const compactionPart = parent.parts.find((part): part is SessionV1.CompactionPart => part.type === "compaction")
 
       let messages = input.messages
