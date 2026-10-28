@@ -18,22 +18,23 @@
 // to `dist/`, pack with `bun pm pack` (it resolves `workspace:` and `catalog:`), publish. The package.json files are
 // restored afterwards.
 //
-// Usage: OPENCODE_CHANNEL=v2 OPENCODE_VERSION=<version> bun script/kilocode/publish-client.ts [--dry-run]
+// Usage: KILO_VERSION=<version> bun script/kilocode/publish-client.ts [--dry-run]
 // --dry-run packs every package and runs `npm publish --dry-run`. It publishes nothing.
 // Provenance comes from NPM_CONFIG_PROVENANCE, which the publish workflow sets. Without it the script also works
 // with a local npm login, for example for the first publish of a new package name.
+// release-env copies KILO_VERSION to OPENCODE_VERSION, which `@opencode/script` reads, so it is imported first.
+import "./release-env"
 import { $ } from "bun"
 import { mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { Script } from "@opencode/script"
+import { ClientManifest } from "./client-manifest"
 
 const root = path.resolve(import.meta.dirname, "..", "..")
 const tag = "kilo-v2"
 const dryRun = process.argv.includes("--dry-run")
-// Dependency order: protocol depends on schema, client depends on both.
-const packages = ["schema", "protocol", "client"]
-const kilo = (name: string) => name.replace(/^@opencode\//, "@kilocode/")
+const packages = ClientManifest.packages
 
 const out = await mkdtemp(path.join(os.tmpdir(), "kilo-client-"))
 try {
@@ -49,11 +50,11 @@ async function publish(name: string) {
   const dir = path.join(root, "packages", name)
   const file = path.join(dir, "package.json")
   const original = await Bun.file(file).text()
-  const pkg: Manifest = JSON.parse(original)
-  const target = kilo(pkg.name)
+  const pkg: ClientManifest.Manifest = JSON.parse(original)
+  const target = ClientManifest.kilo(pkg.name)
   await $`bun run build`.cwd(dir)
   try {
-    await Bun.write(file, JSON.stringify(manifest(pkg, name), null, 2) + "\n")
+    await Bun.write(file, JSON.stringify(ClientManifest.manifest(pkg, name, Script.version), null, 2) + "\n")
     const destination = path.join(out, name)
     await $`bun pm pack --quiet --destination ${destination}`.cwd(dir)
     const tarball = Array.from(new Bun.Glob("*.tgz").scanSync({ cwd: destination, absolute: true }))[0]
@@ -70,37 +71,5 @@ async function publish(name: string) {
     await $`npm publish ${tarball} --access public --tag ${tag}`
   } finally {
     await Bun.write(file, original)
-  }
-}
-
-type Manifest = {
-  name: string
-  exports: Record<string, string | object>
-  dependencies?: Record<string, string>
-}
-
-function manifest(pkg: Manifest, name: string) {
-  return {
-    ...pkg,
-    name: kilo(pkg.name),
-    version: Script.version,
-    repository: { type: "git", url: "git+https://github.com/Kilo-Org/kilocode.git", directory: `packages/${name}` },
-    exports: Object.fromEntries(
-      Object.entries(pkg.exports).map(([key, value]) => [
-        key,
-        typeof value === "string"
-          ? {
-              import: value.replace("./src/", "./dist/").replace(/\.ts$/, ".js"),
-              types: value.replace("./src/", "./dist/").replace(/\.ts$/, ".d.ts"),
-            }
-          : value,
-      ]),
-    ),
-    dependencies: Object.fromEntries(
-      Object.entries(pkg.dependencies ?? {}).map(([dep, range]) => [
-        dep,
-        dep.startsWith("@opencode/") ? `npm:${kilo(dep)}@${Script.version}` : range,
-      ]),
-    ),
   }
 }

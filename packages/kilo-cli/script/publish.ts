@@ -11,8 +11,11 @@
 // so a v2 build never replaces what v1 users install. Upstream uses the build channel as the dist-tag, but npm rejects
 // `v2` because it is also a semver range, so the dist-tag is fixed here.
 //
-// Usage: OPENCODE_CHANNEL=v2 OPENCODE_VERSION=<version> bun script/publish.ts [--dry-run]
+// Usage: KILO_VERSION=<version> bun script/publish.ts [--dry-run]
 // --dry-run packs every package and runs `npm publish --dry-run`. It publishes nothing.
+// KILO_VERSION must be the version that script/build.ts built. release-env copies it to OPENCODE_VERSION, which
+// `@opencode/script` reads, so it is imported first.
+import "../../../script/kilocode/release-env"
 import { $ } from "bun"
 import { mkdir, rm } from "node:fs/promises"
 import path from "node:path"
@@ -24,6 +27,22 @@ const name = "@kilocode/cli"
 const tag = "kilo-v2"
 const repository = { type: "git", url: "git+https://github.com/Kilo-Org/kilocode.git" }
 const dryRun = process.argv.includes("--dry-run")
+// Every target that script/build.ts builds without --single or --target. The launcher lists the platform packages it
+// finds, so a partial build would publish a launcher that has no binary on the other platforms.
+const targets = [
+  "darwin-arm64",
+  "darwin-x64",
+  "darwin-x64-baseline",
+  "linux-arm64",
+  "linux-arm64-musl",
+  "linux-x64",
+  "linux-x64-baseline",
+  "linux-x64-musl",
+  "linux-x64-baseline-musl",
+  "windows-arm64",
+  "windows-x64",
+  "windows-x64-baseline",
+]
 
 const binaries: Record<string, string> = Object.fromEntries(
   await Promise.all(
@@ -39,6 +58,10 @@ if (versions.size === 0) throw new Error(`No platform packages in ${root}. Run s
 if (versions.size > 1) throw new Error(`Platform package versions do not match: ${[...versions].join(", ")}`)
 const version = [...versions][0]
 if (version !== Script.version) throw new Error(`Expected version ${Script.version}, the build has ${version}`)
+const missing = targets.filter((target) => !binaries[`@kilocode/cli-${target}`])
+// A dry run of a local --single build is fine. A publish needs every platform.
+if (missing.length > 0 && !dryRun)
+  throw new Error(`Missing platform packages for ${missing.join(", ")}. Run script/build.ts without --single.`)
 
 const launcher = path.join(root, "cli")
 await rm(launcher, { recursive: true, force: true })
