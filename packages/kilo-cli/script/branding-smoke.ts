@@ -2,12 +2,15 @@ import { fixture } from "@kilocode/gateway-core/testing"
 import { mkdir, mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
+import { KiloLogo } from "../src/branding/logo-art"
 
-// TODO(rebrand, #15324): Before merging #15417, refresh its verification evidence with the current
+// TODO(rebrand, #15324): Before merging a rebrand PR, refresh its verification evidence with the current
 // head/base, generated progress totals and test results. Recheck CI, including the automated reviewer;
 // pending/running check status belongs in the PR, not in a permanent runtime-bug claim.
 const repo = path.resolve(import.meta.dir, "../../..")
 const binary = process.argv[2] && path.resolve(process.argv[2])
+const unicode = process.env.KILO_UNICODE_LOGO ?? "0"
+const wordmark = KiloLogo.art({ KILO_UNICODE_LOGO: unicode }).logo.left[0].trimEnd()
 if (process.argv.length > 3) throw new Error("Usage: bun script/branding-smoke.ts [compiled-binary-path]")
 const root = await mkdtemp(path.join(os.tmpdir(), "kilo-branding-smoke-"))
 const profile = path.join(root, "profile")
@@ -42,6 +45,7 @@ try {
     KILO_V2_PROFILE: profile,
     KILO_API_URL: backend.url,
     KILO_DISABLE_AUTOUPDATE: "1",
+    KILO_UNICODE_LOGO: unicode,
     OPENCODE_DISABLE_AUTOUPDATE: "1",
     OPENCODE_CONFIG_CONTENT: JSON.stringify({ model: "kilo/kilo-auto/free", enabled_providers: ["kilo"] }),
     TERM: "xterm-256color",
@@ -79,11 +83,23 @@ try {
       output = (output + text).slice(-200_000)
       if (text.includes("\x1b[6n")) terminal.write("\x1b[1;1R")
       const screen = Bun.stripANSI(output)
-      if (!openedUpdate && /\x1b\](?:0|2);Kilo(?:\x07|\x1b\\)/.test(output) && screen.includes("ctrl+p commands")) {
+      if (
+        !openedUpdate &&
+        /\x1b\](?:0|2);Kilo(?:\x07|\x1b\\)/.test(output) &&
+        screen.includes("ctrl+p commands") &&
+        screen.includes(wordmark) &&
+        screen.includes(" v2") &&
+        output.includes("38;2;255;221;0")
+      ) {
         openedUpdate = true
         terminal.write("/update")
       }
-      if (openedUpdate && !confirmedUpdate && screen.includes("/update") && screen.includes("Kilo update instructions")) {
+      if (
+        openedUpdate &&
+        !confirmedUpdate &&
+        screen.includes("/update") &&
+        screen.includes("Kilo update instructions")
+      ) {
         confirmedUpdate = true
         terminal.write("\r")
       }
@@ -108,7 +124,9 @@ try {
           throw new Error(`CLI exited before the Kilo home screen appeared (code ${code})`)
         }),
       ])
-      console.log(`PASS: ${binary ? "compiled" : "source"} Kilo help, blocked upgrades, terminal title and update instructions`)
+      console.log(
+        `PASS: ${binary ? "compiled" : "source"} Kilo logo, help, blocked upgrades, terminal title and update instructions`,
+      )
     } finally {
       clearTimeout(timeout)
       terminal.write("\x03")
