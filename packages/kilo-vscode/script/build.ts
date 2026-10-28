@@ -65,6 +65,7 @@ const markdown: Plugin = {
   },
 }
 
+// One hidden element per sprite (file icons, provider icons), so a second sprite is not skipped.
 const sprite: Plugin = {
   name: "svg-sprite-inline",
   setup(build) {
@@ -72,9 +73,9 @@ const sprite: Plugin = {
       contents: `
         const svg = ${JSON.stringify(await Bun.file(args.path).text())};
         const inject = () => {
-          if (document.getElementById("kilo-sprite")) return;
+          if (document.getElementById(${JSON.stringify(`kilo-sprite-${path.basename(path.dirname(args.path))}`)})) return;
           const el = document.createElement("div");
-          el.id = "kilo-sprite";
+          el.id = ${JSON.stringify(`kilo-sprite-${path.basename(path.dirname(args.path))}`)};
           el.style.display = "none";
           el.innerHTML = svg;
           document.body.appendChild(el);
