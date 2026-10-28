@@ -1,8 +1,8 @@
 {
   "$comment": "Shared-patch baseline (U-L3-01). Read by script/check-shared-patches.ts and script/check-opencode-annotations.ts. Each shared upstream file that Kilo adds or changes needs an entry: rung (3 = seam patch, 4 = feature patch) and the missing seam. `unmarked` allows lines without markers and states why. Raise a limit only in the PR that adds the patch, and lower it when a patch goes away.",
   "limits": {
-    "files": 61,
-    "markedLines": 639,
+    "files": 62,
+    "markedLines": 641,
     "unmarkedLines": 40,
     "deletedFiles": 0
   },
@@ -122,6 +122,10 @@
     "packages/core/test/plugin/supervisor-reload.test.ts": {
       "rung": 3,
       "seam": "Test timing only: the organization integration test waits up to 5 s (500 retries of 10 ms) for each plugin reload instead of 2 s, the same budget as the other reload wait in the file (200 retries of 25 ms). The 2 s budget ran out on loaded CI runners. No product code changes. No seam: the retry budget is a literal inside the upstream test."
+    },
+    "packages/core/test/filesystem/watcher.test.ts": {
+      "rung": 4,
+      "seam": "Test timing only, the same kind of patch as packages/core/test/plugin/supervisor-reload.test.ts: the two event-arrival waits in the entries watcher test go from 1 s to 10 s. The macOS platform job timed out at 1018 ms with 218 other core tests passing, because fs.watch can deliver an entries event after 1 s on a loaded shared runner. The 10 ms retry cadence is unchanged, so a passing run returns as soon as the event arrives. No product code changes. Rung 4: the deadline is a literal inside the upstream test and no seam can parameterize it from Kilo code."
     },
     "packages/server/src/process.ts": {
       "rung": 3,

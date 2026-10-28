@@ -565,5 +565,10 @@
     "state": "ported",
     "note": "Carried by packages/kilo-plugin/test/marketplace-mcp.test.ts (legacy normalization, JSON-escaped placeholders, entry building) and marketplace.test.ts (unsafe, reserved and trailing-dot ids; traversal, case-collision and symlink-tree rejection).",
     "by": "kilo-new-marketplace"
+  },
+  "module:packages/opencode/test/kilocode/enhance-prompt.test.ts": {
+    "state": "ported",
+    "note": "packages/kilo-vscode/test/enhance-prompt.test.ts carries the instruction assertions (question-shaped and instruction-shaped drafts, draft labelling), the cleaner cases (whitespace, fences, matching quotes, internal and mismatched quotes) and the provider quota error message.",
+    "by": "v2-enhance-prompt"
   }
 }

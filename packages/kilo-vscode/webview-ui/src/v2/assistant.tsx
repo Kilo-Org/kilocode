@@ -1,17 +1,15 @@
 import type { SessionMessageAssistant } from "@opencode/client"
 import { createSignal, For, Show } from "solid-js"
-import { ContentPart } from "@kilocode/kilo-ui/message-part"
+import { ContentPart, useGrowIn } from "@kilocode/kilo-ui/message-part"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useToolMotion, useToolSize } from "@kilocode/kilo-ui/tool-motion"
 import { useLanguage } from "../context/language"
 import { useV2 } from "./client"
 
 export function AssistantMessage(props: { message: SessionMessageAssistant; session: string }) {
   const v2 = useV2()
-  const language = useLanguage()
   const done = () => props.message.time.completed !== undefined
   const copy = () =>
     done() ? props.message.content.findLastIndex((item) => item.type === "text" && !!item.text.trim()) : -1
@@ -31,6 +29,8 @@ export function AssistantMessage(props: { message: SessionMessageAssistant; sess
             const motion =
               item.type === "tool" ? useToolMotion({ id: item.id, status: () => item.state.status }) : undefined
             if (motion) useToolSize({ el, body, active: () => motion.live() && !done(), motion })
+            // As on v1: a live text part reveals with a grow-in; reasoning and tool parts animate their own height.
+            useGrowIn(el, item.type === "text" && !done())
             return (
               <div
                 ref={setEl}
@@ -65,15 +65,6 @@ export function AssistantMessage(props: { message: SessionMessageAssistant; sess
             )
           }}
         </For>
-        <Show when={props.message.retry}>
-          {(retry) => (
-            <div class="working-indicator" role="status" title={retry().error.message}>
-              <Spinner />
-              <span>{language.t("session.status.retry")}</span>
-              <span>{retry().attempt}</span>
-            </div>
-          )}
-        </Show>
         <Show when={props.message.error}>{(error) => <ErrorCard error={error()} />}</Show>
       </div>
     </div>
