@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 595,
+    "done": 597,
     "total": 9819,
     "percent": 6.1,
     "dropped": 35,
     "kinds": [
       {
         "kind": "module",
-        "done": 485,
+        "done": 486,
         "total": 3543
       },
       {
@@ -26,7 +26,7 @@
       },
       {
         "kind": "test",
-        "done": 35,
+        "done": 36,
         "total": 2794
       }
     ],
@@ -6049,12 +6049,12 @@
     },
     {
       "feature": "vscode",
-      "done": 270,
+      "done": 272,
       "total": 2057,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 268,
+          "done": 269,
           "total": 1439
         },
         "api": {
@@ -6066,7 +6066,7 @@
           "total": 0
         },
         "test": {
-          "done": 2,
+          "done": 3,
           "total": 618
         }
       }
@@ -6538,6 +6538,7 @@
     "module:packages/kilo-vscode/src/util/process.ts",
     "module:packages/kilo-vscode/tests/unit/auto-approve.test.ts",
     "module:packages/kilo-vscode/tests/unit/image-preview.test.ts",
+    "module:packages/kilo-vscode/tests/unit/working-indicator.test.ts",
     "module:packages/kilo-vscode/webview-ui/agent-manager/focus.ts",
     "module:packages/kilo-vscode/webview-ui/agent-manager/i18n/ar.ts",
     "module:packages/kilo-vscode/webview-ui/agent-manager/i18n/br.ts",
@@ -6598,6 +6599,7 @@
     "module:packages/kilo-vscode/webview-ui/src/components/shared/StatusText.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/ThinkingSelector.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/shared/WorkingIndicator.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/shared/working-indicator-utils.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/language-dictionaries/ar.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/language-dictionaries/br.ts",
     "module:packages/kilo-vscode/webview-ui/src/context/language-dictionaries/bs.ts",
