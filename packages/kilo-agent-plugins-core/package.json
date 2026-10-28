@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/agent-plugins-core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Agent Plugins (agent-plugins.org) loader: validates plugin packages and resolves their skills and MCP servers. No OpenCode dependency.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test --timeout 30000",
+    "typecheck": "tsc --noEmit",
+    "typecheck:tsc": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "@typescript/native": "catalog:"
+  }
+}
