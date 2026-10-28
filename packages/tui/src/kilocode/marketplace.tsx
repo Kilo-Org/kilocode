@@ -223,7 +223,10 @@ export function DialogMarketplace(props: {
   void load()
 
   const visibleKinds = () =>
-    kinds.filter(({ kind }) => tab() === "all" || tab() === "installed" || (tab() === "skills" ? kind === "skill" : kind === "mcp"))
+    kinds.filter(
+      ({ kind }) =>
+        tab() === "all" || tab() === "installed" || (tab() === "skills" ? kind === "skill" : kind === "mcp"),
+    )
   const entries = createMemo(() => {
     const text = query().trim().toLowerCase()
     const matches = (values: (string | undefined)[]) => values.some((value) => value?.toLowerCase().includes(text))
@@ -331,10 +334,7 @@ export function DialogMarketplace(props: {
             <box flexDirection="row" gap={2}>
               <For each={tabs}>
                 {(item) => (
-                  <Show
-                    when={tab() === item.id}
-                    fallback={<text fg={theme.text.muted}>{item.title}</text>}
-                  >
+                  <Show when={tab() === item.id} fallback={<text fg={theme.text.muted}>{item.title}</text>}>
                     <text fg={theme.text.formfield.selected} attributes={TextAttributes.BOLD}>
                       {item.title}
                     </text>

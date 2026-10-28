@@ -260,7 +260,12 @@ test("unified external search retains headings, provenance and category empty st
 test("tabs filter by kind with arrow keys and list rows omit descriptions", async () => {
   await using app = await mount()
   await app.waitForFrame((frame) => frame.includes("Writing Skill") && frame.includes("Demo MCP"))
-  const list = () => app.captureCharFrame().split("\n").map((line) => line.split("│")[0]!).join("\n")
+  const list = () =>
+    app
+      .captureCharFrame()
+      .split("\n")
+      .map((line) => line.split("│")[0]!)
+      .join("\n")
   expect(list()).not.toContain("Polish documents")
   expect(app.captureCharFrame()).toContain("Polish documents")
   app.mockInput.pressArrow("right")

@@ -163,7 +163,9 @@ await Promise.all(
 
 const elapsed = (performance.now() - start) / 1000
 const failures = results.filter((result) => !result.passed).sort((a, b) => a.item.localeCompare(b.item))
-const flaky = results.filter((result) => result.passed && result.attempts > 1).sort((a, b) => a.item.localeCompare(b.item))
+const flaky = results
+  .filter((result) => result.passed && result.attempts > 1)
+  .sort((a, b) => a.item.localeCompare(b.item))
 
 if (failures.length > 0 && !verbose) {
   console.log("\n--- FAILURES ---\n")
@@ -188,7 +190,9 @@ if (flaky.length > 0) {
   console.log("--- FLAKY (passed on retry) ---\n")
   for (const result of flaky) {
     const members = flakyMembers.get(result.item)
-    console.log(`  ${result.item} (attempt ${result.attempts}/${retries + 1})${members?.length ? `: ${members.join(", ")}` : ""}`)
+    console.log(
+      `  ${result.item} (attempt ${result.attempts}/${retries + 1})${members?.length ? `: ${members.join(", ")}` : ""}`,
+    )
   }
   console.log()
 }
@@ -275,7 +279,10 @@ async function run(item: string): Promise<Result> {
   if (ended === timer) await terminate(proc)
   active.delete(proc.pid)
   // A process that a test left running can keep the pipes open. Wait a moment, then keep what arrived.
-  const closed = await Promise.race([Promise.all(streams.map((stream) => stream.done)).then(() => true), Bun.sleep(2_000)])
+  const closed = await Promise.race([
+    Promise.all(streams.map((stream) => stream.done)).then(() => true),
+    Bun.sleep(2_000),
+  ])
   if (closed !== true) streams.forEach((stream) => stream.cancel())
   return {
     item,
@@ -318,12 +325,17 @@ async function failedMembers(item: string) {
   const xml = await Bun.file(xmlOf(item))
     .text()
     .catch(() => "")
-  return [...xml.matchAll(/<testsuite\b[^>]*>/g)]
-    // Bun writes the path as `file` on every suite, with backslashes on Windows.
-    .map((match) => ({ file: attr(match[0], "file").replaceAll("\\", "/"), failed: Number(attr(match[0], "failures")) > 0 }))
-    .filter((suite) => suite.failed && suite.file)
-    .map((suite) => suite.file)
-    .filter((file, i, all) => all.indexOf(file) === i)
+  return (
+    [...xml.matchAll(/<testsuite\b[^>]*>/g)]
+      // Bun writes the path as `file` on every suite, with backslashes on Windows.
+      .map((match) => ({
+        file: attr(match[0], "file").replaceAll("\\", "/"),
+        failed: Number(attr(match[0], "failures")) > 0,
+      }))
+      .filter((suite) => suite.failed && suite.file)
+      .map((suite) => suite.file)
+      .filter((file, i, all) => all.indexOf(file) === i)
+  )
 }
 
 function report(result: Result) {
@@ -333,7 +345,9 @@ function report(result: Result) {
   const status = result.timedout ? "TIME" : !result.passed ? "FAIL" : result.attempts > 1 ? "FLAKY" : "PASS"
   const extra = result.timedout ? `, killed after ${deadline / 1000}s` : ""
   const tries = result.attempts > 1 ? ` [attempt ${result.attempts}/${retries + 1}]` : ""
-  console.log(`[${String(state.done).padStart(pad)}/${selected.length}] ${status} ${label} (${(result.duration / 1000).toFixed(1)}s${extra})${tries}`)
+  console.log(
+    `[${String(state.done).padStart(pad)}/${selected.length}] ${status} ${label} (${(result.duration / 1000).toFixed(1)}s${extra})${tries}`,
+  )
   if (verbose && result.output.trim()) console.log(result.output)
 }
 
@@ -355,7 +369,9 @@ async function merge() {
       if (result.passed) return undefined
       // A process that crashed or timed out wrote no report: record one failed case for it.
       const secs = (result.duration / 1000).toFixed(3)
-      const message = result.timedout ? `Timed out after ${deadline / 1000}s` : `Test process exited with code ${result.code}`
+      const message = result.timedout
+        ? `Timed out after ${deadline / 1000}s`
+        : `Test process exited with code ${result.code}`
       return {
         body:
           `  <testsuite name="${esc(result.item)}" tests="1" failures="1" time="${secs}">\n` +
@@ -369,7 +385,12 @@ async function merge() {
     }),
   )
   const found = suites.filter((suite) => suite !== undefined)
-  const file = path.join(ROOT, "artifacts", "unit", `${path.basename(cwd)}${shard ? `-${shard.index}of${shard.total}` : ""}.xml`)
+  const file = path.join(
+    ROOT,
+    "artifacts",
+    "unit",
+    `${path.basename(cwd)}${shard ? `-${shard.index}of${shard.total}` : ""}.xml`,
+  )
   await fs.mkdir(path.dirname(file), { recursive: true })
   await Bun.write(
     file,
@@ -391,7 +412,9 @@ async function store() {
     return
   }
   const fresh = Object.fromEntries(
-    results.filter((result) => !result.timedout).map((result) => [`${pkg}/${result.item}`, Math.round(result.duration)]),
+    results
+      .filter((result) => !result.timedout)
+      .map((result) => [`${pkg}/${result.item}`, Math.round(result.duration)]),
   )
   const current = new Set(candidates.map((file) => `${pkg}/${file}`))
   const merged = Object.fromEntries(
@@ -400,7 +423,9 @@ async function store() {
       .sort(([a], [b]) => a.localeCompare(b)),
   )
   await Bun.write(DURATIONS, JSON.stringify({ ...sections, [process.platform]: merged }, null, 1) + "\n")
-  console.log(`Updated ${path.relative(ROOT, DURATIONS)} (${process.platform}): ${Object.keys(fresh).length} measured in ${pkg}`)
+  console.log(
+    `Updated ${path.relative(ROOT, DURATIONS)} (${process.platform}): ${Object.keys(fresh).length} measured in ${pkg}`,
+  )
 }
 
 function xmlOf(item: string) {
