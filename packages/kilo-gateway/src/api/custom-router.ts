@@ -11,6 +11,7 @@ export const MAX_CUSTOM_ROUTER_ENTRIES = 20
 export const CUSTOM_ROUTER_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/
 
 export const AUTO_ROUTING_CUSTOM_ROUTERS_PATH = "/api/auto-routing/custom-routers"
+export const AUTO_ROUTING_PLATFORM_MEASUREMENTS_PATH = "/api/auto-routing/platform-measurements"
 export const CUSTOM_ROUTER_DECIDE_PATH = "/v1/decide"
 export const CUSTOM_ROUTER_EVAL_PLAN_PATH = "/v1/eval/plan"
 export const CUSTOM_ROUTER_EVAL_CASE_PATH = "/v1/eval/case"
@@ -61,16 +62,6 @@ export const ClientModelPricingSchema = z.object({
 })
 export type ClientModelPricing = z.infer<typeof ClientModelPricingSchema>
 
-export const ClientCustomRouterEntrySchema = z.object({
-  kind: z.literal("client"),
-  provider: z.string().min(1),
-  model: z.string().min(1),
-  variants: z.array(z.string()),
-  capabilities: ClientModelCapabilitiesSchema,
-  pricing: ClientModelPricingSchema.nullable(),
-})
-export type ClientCustomRouterEntry = z.infer<typeof ClientCustomRouterEntrySchema>
-
 export const CLIENT_CANDIDATE_PREFIX = "client:"
 
 const GatewayModelIdSchema = z
@@ -79,14 +70,40 @@ const GatewayModelIdSchema = z
   .min(1)
   .refine((model) => !model.startsWith(CLIENT_CANDIDATE_PREFIX), "Gateway model ID must not start with the client prefix")
 
+export const MeasuredAsModelIdSchema = GatewayModelIdSchema.refine(
+  (model) => !model.toLowerCase().startsWith("kilo-auto/"),
+  "measuredAs must name a concrete platform model",
+)
+
+const GatewayCustomRouterEntryRefSchema = z.object({
+  kind: z.literal("gateway"),
+  model: GatewayModelIdSchema,
+})
+
+export const GatewayCustomRouterEntrySchema = GatewayCustomRouterEntryRefSchema.extend({
+  measuredAs: MeasuredAsModelIdSchema.optional(),
+})
+export type GatewayCustomRouterEntry = z.infer<typeof GatewayCustomRouterEntrySchema>
+
+export const ClientCustomRouterEntrySchema = z.object({
+  kind: z.literal("client"),
+  provider: z.string().min(1),
+  model: z.string().min(1),
+  variants: z.array(z.string()),
+  capabilities: ClientModelCapabilitiesSchema,
+  pricing: ClientModelPricingSchema.nullable(),
+  measuredAs: MeasuredAsModelIdSchema.optional(),
+})
+export type ClientCustomRouterEntry = z.infer<typeof ClientCustomRouterEntrySchema>
+
 export const CustomRouterEntryRefSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("gateway"), model: GatewayModelIdSchema }),
+  GatewayCustomRouterEntryRefSchema,
   z.object({ kind: z.literal("client"), provider: z.string().min(1), model: z.string().min(1) }),
 ])
 export type CustomRouterEntryRef = z.infer<typeof CustomRouterEntryRefSchema>
 
 export const CustomRouterEntrySchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("gateway"), model: GatewayModelIdSchema }),
+  GatewayCustomRouterEntrySchema,
   ClientCustomRouterEntrySchema,
 ])
 export type CustomRouterEntry = z.infer<typeof CustomRouterEntrySchema>
@@ -179,8 +196,38 @@ export const CustomRouterVariantStatusSchema = z.object({
   variant: VariantSchema,
   status: z.enum(["missing", "pending", "running", "ready", "stale", "failed"]),
   failureReason: z.string().nullable(),
+  linked: z.boolean().default(false),
 })
 export type CustomRouterVariantStatus = z.infer<typeof CustomRouterVariantStatusSchema>
+
+export const PlatformMeasurementsResponseSchema = z.object({
+  baseRouter: AutoRouterSchema,
+  models: z.array(
+    z.object({
+      model: MeasuredAsModelIdSchema,
+      variants: z.array(VariantSchema),
+    }),
+  ),
+})
+export type PlatformMeasurementsResponse = z.infer<typeof PlatformMeasurementsResponseSchema>
+
+function linkKey(id: string): string {
+  return id.toLowerCase().replace(/[._:]/g, '-');
+}
+
+export function suggestMeasuredAs(
+  entry: { provider: string | null; model: string },
+  platformModels: readonly string[]
+): string | null {
+  const full = linkKey(entry.provider === null ? entry.model : `${entry.provider}/${entry.model}`);
+  const exact = platformModels.find(model => linkKey(model) === full);
+  if (exact) return exact;
+  const name = linkKey(entry.model.slice(entry.model.lastIndexOf('/') + 1));
+  const byName = platformModels.filter(
+    model => linkKey(model.slice(model.lastIndexOf('/') + 1)) === name
+  );
+  return byName.length === 1 ? (byName[0] ?? null) : null;
+}
 
 export const CustomRouterListEntrySchema = z.object({
   key: z.string().min(1),
