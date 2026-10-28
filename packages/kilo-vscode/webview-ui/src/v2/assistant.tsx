@@ -1,6 +1,6 @@
 import type { SessionMessageAssistant } from "@opencode/client"
 import { createSignal, For, Show } from "solid-js"
-import { ContentPart } from "@kilocode/kilo-ui/message-part"
+import { ContentPart, useGrowIn } from "@kilocode/kilo-ui/message-part"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -29,6 +29,8 @@ export function AssistantMessage(props: { message: SessionMessageAssistant; sess
             const motion =
               item.type === "tool" ? useToolMotion({ id: item.id, status: () => item.state.status }) : undefined
             if (motion) useToolSize({ el, body, active: () => motion.live() && !done(), motion })
+            // As on v1: a live text part reveals with a grow-in; reasoning and tool parts animate their own height.
+            useGrowIn(el, item.type === "text" && !done())
             return (
               <div
                 ref={setEl}
