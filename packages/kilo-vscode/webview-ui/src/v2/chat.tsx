@@ -81,8 +81,10 @@ export function Chat() {
     return !!id && v2.data.session.status(id) === "running"
   }
 
-  // A pending permission or question blocks new prompts, as on v1; Stop stays available.
+  // A pending permission or question blocks new prompts.
   const blocked = () => permissions().length > 0 || forms().length > 0
+  // Only a pending permission changes the Send label. A pending question leaves Send in place instead of Stop.
+  const questioning = () => permissions().length === 0 && forms().length > 0
   const selection = createSelection(session)
 
   const send = (text: string) => {
@@ -148,6 +150,8 @@ export function Chat() {
               session={session()}
               running={running()}
               disabled={v2.connection.status() !== "connected" || !!v2.handshake() || blocked()}
+              blocked={permissions().length > 0}
+              questioning={questioning()}
               onSend={send}
               onStop={stop}
               selectors={<Selectors selection={selection} blocked={blocked()} />}
