@@ -8,20 +8,20 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**166 / 9819 cells done (1.7%)**, 35 dropped. `░░░░░░░░░░░░░░░░`
+**573 / 9819 cells done (5.8%)**, 35 dropped. `█░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
-| module | 59 | 3543 | 1.7% |
+| module | 465 | 3543 | 13.1% |
 | api | 5 | 39 | 12.8% |
 | patch | 70 | 3443 | 2% |
-| test | 32 | 2794 | 1.1% |
+| test | 33 | 2794 | 1.2% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
 Landed by rung, for patch cells closed by a done-proof: 42 plugin, 4 host, 3 seam, 6 patch.
 
-Ratchets: 27 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 58 shared patches by rung: 34 seam, 24 patch (`script/upstream/shared-patches.json`).
+Ratchets: 27 core-internal upstream modules imported by Kilo packages and adapters (`@opencode/core/app`, `@opencode/core/bus`, `@opencode/core/config`, `@opencode/core/config/discovery`, `@opencode/core/config/normalize`, `@opencode/core/config/plugin/skill-file`, `@opencode/core/effect/app-node-platform`, `@opencode/core/model`, `@opencode/core/model-resolver`, `@opencode/core/permission`, `@opencode/core/plugin/provider/openai`, `@opencode/core/plugin/sdk`, `@opencode/core/plugin/system-prompt/anthropic.txt`, `@opencode/core/plugin/system-prompt/gpt-astra.txt`, `@opencode/core/plugin/system-prompt/gpt.txt`, `@opencode/core/plugin/system-prompt/kimi.txt`, `@opencode/core/plugin/system-prompt/trinity.txt`, `@opencode/core/provider`, `@opencode/core/rpc`, `@opencode/core/schema`, `@opencode/core/session/runner/model`, `@opencode/core/session/runner/prompt/system.txt`, `@opencode/core/session/system-prompt`, `@opencode/core/shell`, `@opencode/core/tool-output`, `@opencode/core/util/wildcard`, `@opencode/core/variant`); 59 shared patches by rung: 35 seam, 24 patch (`script/upstream/shared-patches.json`).
 
 ## History
 
@@ -38,8 +38,8 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-22 | 93 | 9829 | 0.9% |
 | 2026-10-23 | 150 | 9828 | 1.5% |
 | 2026-10-26 | 157 | 9828 | 1.6% |
-| 2026-10-28 | 157 | 9828 | 1.6% |
-| now | 166 | 9819 | 1.7% |
+| 2026-10-28 | 564 | 9828 | 5.7% |
+| now | 573 | 9819 | 5.8% |
 
 ## Features
 
@@ -82,7 +82,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | gateway | 31/35 |  | 13/18 | 18/22 | 62/75 | 82.7% | `█████████████░░░` | 12 plugin |
 | global | 0/2 |  | 1/4 | 0/1 | 1/7 | 14.3% | `██░░░░░░░░░░░░░░` | 1 host |
 | goals | 0/9 |  | 0/6 | 0/6 | 0/21 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| i18n | 0/20 |  |  |  | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| i18n | 20/20 |  |  |  | 20/20 | 100% | `████████████████` |  |
 | image-size | 0/1 |  | 0/2 | 0/1 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | indexing | 0/99 |  | 0/6 | 0/44 | 0/149 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | installation | 0/2 |  | 0/2 | 0/1 | 0/5 | 0% | `░░░░░░░░░░░░░░░░` |  |
@@ -139,10 +139,10 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | ts-check | 0/2 |  | 0/2 | 0/3 | 0/7 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | tui | 2/15 |  | 1/6 | 2/24 | 5/45 | 11.1% | `██░░░░░░░░░░░░░░` | 1 plugin |
 | tui-sync | 0/1 |  | 0/1 | 0/2 | 0/4 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| ui | 0/248 |  | 0/1 | 0/18 | 0/267 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| ui | 134/248 |  | 0/1 | 0/18 | 134/267 | 50.2% | `████████░░░░░░░░` |  |
 | usage-cost | 0/4 |  |  | 0/5 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | util | 0/8 |  | 0/4 | 0/8 | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| vscode | 0/1439 |  |  | 0/618 | 0/2057 | 0% | `░░░░░░░░░░░░░░░░` |  |
+| vscode | 252/1439 |  |  | 1/618 | 253/2057 | 12.3% | `██░░░░░░░░░░░░░░` |  |
 | wakeup | 0/5 | 0/1 | 0/1 | 0/4 | 0/11 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | web-ui | 0/154 |  |  |  | 0/154 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | worktree | 0/4 | 0/1 | 0/1 | 0/6 | 0/12 | 0% | `░░░░░░░░░░░░░░░░` |  |

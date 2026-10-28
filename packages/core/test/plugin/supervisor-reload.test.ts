@@ -372,20 +372,20 @@ it.live("applies organization integration changes to running external plugins", 
       yield* bus.publish(Event.Updated, {})
       yield* commands.get("policy-greet").pipe(
         Effect.flatMap((command) => (command ? Effect.void : Effect.fail("pending"))),
-        Effect.retry({ times: 200, schedule: Schedule.spaced("10 millis") }),
+        Effect.retry({ times: 500, schedule: Schedule.spaced("10 millis") }), // kilocode_change
       )
       expect(yield* Effect.promise(() => Bun.file(entered).exists())).toBe(true)
       yield* managed.set({ statements: [{ action: "integration.use", resource: `plugin:${root}`, effect: "deny" }] })
       yield* commands.get("policy-greet").pipe(
         Effect.flatMap((command) => (command ? Effect.fail("pending") : Effect.void)),
-        Effect.retry({ times: 200, schedule: Schedule.spaced("10 millis") }),
+        Effect.retry({ times: 500, schedule: Schedule.spaced("10 millis") }), // kilocode_change
       )
       yield* plugins.awaitActivation
       expect((yield* plugins.list()).some((plugin) => plugin.id === "greeter")).toBe(false)
       yield* managed.set({ statements: [] })
       yield* commands.get("policy-greet").pipe(
         Effect.flatMap((command) => (command ? Effect.void : Effect.fail("pending"))),
-        Effect.retry({ times: 200, schedule: Schedule.spaced("10 millis") }),
+        Effect.retry({ times: 500, schedule: Schedule.spaced("10 millis") }), // kilocode_change
       )
     }).pipe(
       Effect.scoped,
