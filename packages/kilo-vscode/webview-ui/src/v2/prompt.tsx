@@ -3,7 +3,8 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { createEffect, createSignal, onCleanup, onMount, Show, type JSX } from "solid-js"
 import { useLanguage } from "../context/language"
 import { isEnterKeyCommitNotIme } from "../utils/ime-enter"
-import { useV2 } from "./client"
+import { message, useV2 } from "./client"
+import { cleanEnhancedPrompt, enhancePromptRequest, normalizeEnhancePromptErrorMessage } from "./enhance-prompt"
 
 export function PromptInput(props: {
   session?: string
@@ -18,6 +19,11 @@ export function PromptInput(props: {
   const language = useLanguage()
   const [text, setText] = createSignal("")
   const [sending, setSending] = createSignal(false)
+  const [enhancing, setEnhancing] = createSignal(false)
+  // The draft Enhance replaced, so Ctrl/Cmd+Z restores it once (as on v1).
+  let preEnhance: string | null = null
+  // Ignores a late result after a newer Enhance or a newer edit.
+  let enhanceToken = 0
   const refs = { input: undefined as HTMLTextAreaElement | undefined, overlay: undefined as HTMLDivElement | undefined }
   const ready = () => !props.disabled && !sending() && !!text().trim()
   const stopping = () => props.running && !text().trim()
@@ -48,10 +54,62 @@ export function PromptInput(props: {
     void props
       .onSend(draft.trim())
       .then((ok) => {
-        if (ok && text() === draft) setText("")
+        if (!ok) return
+        preEnhance = null
+        if (text() === draft) setText("")
       })
       .catch(v2.report)
       .finally(() => setSending(false))
+  }
+
+  const canEnhance = () => !props.running && !props.disabled && !enhancing()
+
+  const enhance = () => {
+    if (!canEnhance()) return
+    const draft = text().trim()
+    // An empty draft explains the action instead of rewriting nothing, as on v1.
+    if (!draft) {
+      setText(language.t("prompt.action.enhanceDescription"))
+      focus()
+      return
+    }
+    preEnhance = text()
+    const token = ++enhanceToken
+    setEnhancing(true)
+    void v2.api.generate
+      .text({ prompt: enhancePromptRequest(draft) })
+      .then((response) => {
+        if (token !== enhanceToken) return
+        setText(cleanEnhancedPrompt(response.text))
+        focus()
+      })
+      .catch((err: unknown) => {
+        if (token !== enhanceToken) return
+        v2.report(new Error(normalizeEnhancePromptErrorMessage(message(err))))
+      })
+      .finally(() => {
+        if (token === enhanceToken) setEnhancing(false)
+      })
+  }
+
+  // VS Code's webview preload forwards Ctrl/Cmd+Z to the workbench, so the keydown must stop it. Only an
+  // Enhance result is reverted here; any other undo keeps its native behavior.
+  const undoKey = (e: KeyboardEvent) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return
+    const z = e.keyCode === 90 || e.key.toLowerCase() === "z"
+    const y = e.keyCode === 89 || e.key.toLowerCase() === "y"
+    if (z) return e.shiftKey ? "redo" : "undo"
+    if (y && !e.shiftKey) return "redo"
+  }
+
+  const undoEnhance = (e: KeyboardEvent) => {
+    if (preEnhance === null || undoKey(e) !== "undo") return false
+    e.preventDefault()
+    e.stopPropagation()
+    const restored = preEnhance
+    preEnhance = null
+    setText(restored)
+    return true
   }
 
   return (
@@ -75,8 +133,12 @@ export function PromptInput(props: {
             }
             aria-label={language.t("prompt.placeholder.plain")}
             value={text()}
-            onInput={(e) => setText(e.currentTarget.value)}
+            onInput={(e) => {
+              preEnhance = null
+              setText(e.currentTarget.value)
+            }}
             onKeyDown={(e) => {
+              if (undoEnhance(e)) return
               if (!isEnterKeyCommitNotIme(e) || e.shiftKey) return
               e.preventDefault()
               send()
@@ -92,6 +154,19 @@ export function PromptInput(props: {
       <div class="prompt-input-hint">
         {props.selectors}
         <div class="prompt-input-hint-actions">
+          <div class="prompt-action">
+            <Tooltip value={language.t("prompt.action.enhance")} placement="top" openDelay={0}>
+              <IconButton
+                icon="wand-sparkles"
+                variant="ghost"
+                size="small"
+                onClick={enhance}
+                disabled={!canEnhance()}
+                loading={enhancing()}
+                aria-label={language.t("prompt.action.enhance")}
+              />
+            </Tooltip>
+          </div>
           <div class="prompt-input-hint-pinned">
             <Show
               when={stopping()}
