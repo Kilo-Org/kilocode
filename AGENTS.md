@@ -4,13 +4,14 @@
 This checkout is Kilo-Org/kilocode, a fork of OpenCode. The rules in this section override any upstream rule further down that contradicts them.
 
 - **Branches.** The integration branch is `origin/v2`. Base worktrees and branches on `origin/v2`, target PRs at `v2` and diff against `origin/v2`. Never target `main` (Kilo v1) or upstream's `dev`. `upstream/dev` is the sync source; `upstream/v2` is frozen. Use `gh -R Kilo-Org/kilocode`: without it, `gh` resolves to upstream.
-- **Base.** The upstream base moves with every sync. Read it from `pinned()` in `script/upstream/utils/upstream.ts` or from `migration-tracking/plans/migration-context.md`; do not copy the SHA.
+- **Base.** The upstream base moves with every sync. Read it from `pinned()` in `script/upstream/utils/upstream.ts`; do not copy the SHA.
 - **Names.** Branch names stay short and hyphenated, at most three words, no slashes or prefixes. Commits and PR titles use `type(scope): summary`. No Changesets.
 - **Running the CLI.** Only through `bun dev` (`script/dev-isolated.ts`, isolated profile; `KILO_V2_PROFILE=$(mktemp -d)` for a fresh one). Never `bun run dev:live`, `opencode` or `bun run --cwd packages/cli`: they use the installed OpenCode data and service. This replaces "Live TUI Testing" below, including `dev:live` for TUI stories.
-- **Placement.** Plugin first, then host. Kilo server plugins go into `KiloPlugins` (`packages/kilo-plugin/src/index.ts`); the host (`packages/kilo-cli`) registers them. An edit in a shared upstream file carries a `kilocode_change(<feature>)` marker and an entry in `script/upstream/shared-patches.json`. Load the `v2-migration` and `v2-feature-placement` skills (`.kilo/skills/`) before any migration change. Source of truth: `migration-tracking/plans/v2-host-strategy.md` section 5.
-- **Direction.** Kilo is the host, OpenCode is a library. Code moves from upstream files into Kilo-owned files, never the reverse: a Kilo-owned mirror beats a seam, and a patch never changes an upstream default. Rules and reasons: `migration-tracking/plans/v2-host-strategy.md` section 5.
+- **Placement.** Plugin first, then host. Kilo server plugins go into `KiloPlugins` (`packages/kilo-plugin/src/index.ts`); the host (`packages/kilo-cli`) registers them. An edit in a shared upstream file carries a `kilocode_change(<feature>)` marker and an entry in `script/upstream/shared-patches.json`. Load the `v2-migration` and `v2-feature-placement` skills (`.kilo/skills/`) before any migration change.
+- **Direction.** Kilo is the host, OpenCode is a library. Code moves from upstream files into Kilo-owned files, never the reverse: a Kilo-owned mirror beats a seam, and a patch never changes an upstream default.
 - **Checks.** `bun run check` from the root; `bun typecheck` and `bun test` from package directories. Never run tests from the root.
-- **References.** Context and decisions: `migration-tracking/plans/migration-context.md`. Plan: `migration-tracking/plans/kilo-v2-migration-plan.md`. Fork rules: `migration-tracking/technical-notes/v2-fork-conventions.md`. Known upstream failures: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`.
+- **Principles.** Before any v2 change, read `migration-tracking/principles.md`; it overrides any other doc.
+- **References.** Plan: `migration-tracking/plan.md`. Live state: issue #15297 and its epics. Procedure: the skills in `.kilo/skills/`. Known upstream failures: `migration-tracking/technical-notes/baseline/pinned-v2-baseline.md`.
 <!-- kilocode_change end - agents-md -->
 
 - After changing the public Protocol or Server `HttpApi`, run `bun run generate` from `packages/client`. Do not edit generated client files directly.

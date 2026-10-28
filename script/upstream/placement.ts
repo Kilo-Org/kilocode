@@ -7,7 +7,7 @@
  * service node that the Kilo host can replace (rung 2), or an existing seam or patch. An agent then
  * starts on the lowest rung that has something.
  *
- * `--imports` checks import rule 2 (`migration-tracking/plans/v2-host-strategy.md`, section 6):
+ * `--imports` checks the import rule (`.kilo/skills/v2-feature-placement/SKILL.md`, step 6):
  * logic packages (`packages/kilo-*-core`) import no `@opencode/*`, and each adapter lists the
  * core-internal modules it imports. It fails only on a logic package violation.
  *
@@ -611,7 +611,7 @@ function suggest(report: Facts) {
       .map((name) => `ctx.${item.domain}.hook("${name.slice(5)}", ...)`),
   )
   const transforms = report.plugins.filter((item) => item.use === "transform")
-  // The host gives a registered plugin global services only (v2-host-strategy.md section 4, "What landed").
+  // The host gives a registered plugin global services only (`v2-feature-placement` skill, step 2).
   const location = report.nodes.some((item) => item.kind === "location")
     ? " (a Location service: a plugin that the host registers cannot read it until a seam in `core/src/plugin/supervisor.ts` provides it)"
     : ""

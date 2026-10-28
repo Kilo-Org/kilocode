@@ -29,7 +29,7 @@ test("Kilo-owned paths", () => {
     "packages/core/src/kilocode/a.ts",
     "packages/cli/test/kilocode/a.test.ts",
     ".kilo/skills/x/SKILL.md",
-    "migration-tracking/plans/a.md",
+    "migration-tracking/plan.md",
     "script/upstream/merge.ts",
     "script/check-workflows.ts",
     "script/dev-isolated.ts",

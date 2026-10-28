@@ -60,7 +60,7 @@ console.error(
     "  JSX {/* kilocode_change */}, YAML/shell # kilocode_change, Markdown <!-- kilocode_change -->",
     "",
     "Before you add a patch to a shared file, try the plugin-first order: 1 Kilo plugin, 2 Kilo host,",
-    "3 small seam patch, 4 feature patch (last resort). See .kilo/skills/v2-migration/SKILL.md.",
+    "3 small seam patch, 4 feature patch (last resort). See migration-tracking/principles.md, section 2.",
     "A file that cannot carry markers (JSON) needs an `unmarked` reason in script/upstream/shared-patches.json.",
     "",
     "Kilo-owned paths (no markers needed):",
