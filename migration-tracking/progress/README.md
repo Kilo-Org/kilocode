@@ -8,14 +8,14 @@ Measures Kilo's v1 delta: Kilo `main` pinned at `fb7e96eda540` (the v1 target) c
 
 ## Summary
 
-**563 / 9828 cells done (5.7%)**, 26 dropped. `█░░░░░░░░░░░░░░░`
+**564 / 9828 cells done (5.7%)**, 26 dropped. `█░░░░░░░░░░░░░░░`
 
 | Kind | Done | Total | % |
 |---|---:|---:|---:|
 | module | 461 | 3547 | 13% |
 | api | 2 | 39 | 5.1% |
 | patch | 70 | 3444 | 2% |
-| test | 30 | 2798 | 1.1% |
+| test | 31 | 2798 | 1.1% |
 
 Not counted: 1428 branding-only hunks (rename script territory), 561 marker-only hunks (block boundaries), generated files. Patch attribution: 0 by tag, 261 by import, 97 by identifier, 4163 unattributed (see below).
 
@@ -39,7 +39,7 @@ One point per day from the committed `progress.json` on v2's first-parent histor
 | 2026-10-23 | 150 | 9828 | 1.5% |
 | 2026-10-26 | 157 | 9828 | 1.6% |
 | 2026-10-28 | 157 | 9828 | 1.6% |
-| now | 563 | 9828 | 5.7% |
+| now | 564 | 9828 | 5.7% |
 
 ## Features
 
@@ -142,7 +142,7 @@ Cells per kind as done/total. A cell is done when it exists on v2 by the rules b
 | ui | 134/248 |  | 0/1 | 0/18 | 134/267 | 50.2% | `████████░░░░░░░░` |  |
 | usage-cost | 0/4 |  |  | 0/5 | 0/9 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | util | 0/8 |  | 0/4 | 0/8 | 0/20 | 0% | `░░░░░░░░░░░░░░░░` |  |
-| vscode | 252/1439 |  |  | 0/618 | 252/2057 | 12.3% | `██░░░░░░░░░░░░░░` |  |
+| vscode | 252/1439 |  |  | 1/618 | 253/2057 | 12.3% | `██░░░░░░░░░░░░░░` |  |
 | wakeup | 0/5 | 0/1 | 0/1 | 0/4 | 0/11 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | web-ui | 0/154 |  |  |  | 0/154 | 0% | `░░░░░░░░░░░░░░░░` |  |
 | worktree | 0/4 | 0/1 | 0/1 | 0/6 | 0/12 | 0% | `░░░░░░░░░░░░░░░░` |  |
