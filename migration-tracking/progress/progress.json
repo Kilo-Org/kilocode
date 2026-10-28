@@ -4,14 +4,14 @@
     "v1Base": "8100c68b507b53aac6b891edbc3040a6011d8969"
   },
   "summary": {
-    "done": 607,
+    "done": 608,
     "total": 9819,
     "percent": 6.2,
     "dropped": 35,
     "kinds": [
       {
         "kind": "module",
-        "done": 496,
+        "done": 497,
         "total": 3543
       },
       {
@@ -6049,12 +6049,12 @@
     },
     {
       "feature": "vscode",
-      "done": 282,
+      "done": 283,
       "total": 2057,
       "dropped": 0,
       "kinds": {
         "module": {
-          "done": 279,
+          "done": 280,
           "total": 1439
         },
         "api": {
@@ -6595,6 +6595,7 @@
     "module:packages/kilo-vscode/webview-ui/src/components/settings/ProviderSelectDialog.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/ProvidersTab.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/Settings.tsx",
+    "module:packages/kilo-vscode/webview-ui/src/components/settings/SettingsRow.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/SettingsSearch.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/SettingsSearchResults.tsx",
     "module:packages/kilo-vscode/webview-ui/src/components/settings/provider-catalog.ts",
