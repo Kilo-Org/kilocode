@@ -51,10 +51,21 @@ index a66d061f466c89a57efec33f37b7daabaaba2892..15f1b2aca0c0b43e5e1f8baddd2669c0
          type: z.ZodLiteral<"disabled">;
      }, z.core.$strip>]>>;
 diff --git a/dist/index.js b/dist/index.js
-index 88c1aa865339baa320cf80ec543bed865825bc61..5006e82b0edd9676d1650cc94ecb573a2810acce 100644
+index 88c1aa865339baa320cf80ec543bed865825bc61..2d23ed03831c4a81d56231f00f264453d65ff69a 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -85,6 +85,13 @@ var anthropicMessagesResponseSchema = (0, import_provider_utils2.lazySchema)(
+@@ -79,12 +79,24 @@ var anthropicToolCallCallerSchema = import_v42.z.union([
+     type: import_v42.z.literal("direct")
+   })
+ ]);
++var anthropicFallbackContentSchema = import_v42.z.object({
++  type: import_v42.z.literal("fallback"),
++  from: import_v42.z.object({ model: import_v42.z.string() }),
++  to: import_v42.z.object({ model: import_v42.z.string() })
++});
+ var anthropicMessagesResponseSchema = (0, import_provider_utils2.lazySchema)(
+   () => (0, import_provider_utils2.zodSchema)(
+     import_v42.z.object({
        type: import_v42.z.literal("message"),
        id: import_v42.z.string().nullish(),
        model: import_v42.z.string().nullish(),
@@ -68,6 +79,20 @@ index 88c1aa865339baa320cf80ec543bed865825bc61..5006e82b0edd9676d1650cc94ecb573a
        content: import_v42.z.array(
          import_v42.z.discriminatedUnion("type", [
            import_v42.z.object({
+@@ -347,12 +359,7 @@ var anthropicMessagesResponseSchema = (0, import_provider_utils2.lazySchema)(
+               })
+             ])
+           }),
+-          // Server-side fallback marker. Parsed so the response validates, but
+-          // dropped from the content output (the AI SDK has no model-hop
+-          // primitive). The hop remains observable via usage.iterations.
+-          import_v42.z.object({
+-            type: import_v42.z.literal("fallback")
+-          })
++          anthropicFallbackContentSchema
+         ])
+       ),
+       stop_reason: import_v42.z.string().nullish(),
 @@ -424,6 +431,13 @@ var anthropicMessagesChunkSchema = (0, import_provider_utils2.lazySchema)(
            id: import_v42.z.string().nullish(),
            model: import_v42.z.string().nullish(),
@@ -82,7 +107,20 @@ index 88c1aa865339baa320cf80ec543bed865825bc61..5006e82b0edd9676d1650cc94ecb573a
            usage: import_v42.z.looseObject({
              input_tokens: import_v42.z.number(),
              cache_creation_input_tokens: import_v42.z.number().nullish(),
-@@ -923,12 +937,18 @@ var anthropicLanguageModelOptions = import_v43.z.object({
+@@ -685,11 +699,7 @@ var anthropicMessagesChunkSchema = (0, import_provider_utils2.lazySchema)(
+               })
+             ])
+           }),
+-          // Server-side fallback marker; dropped from content output (see the
+-          // response schema). The hop remains observable via usage.iterations.
+-          import_v42.z.object({
+-            type: import_v42.z.literal("fallback")
+-          })
++          anthropicFallbackContentSchema
+         ])
+       }),
+       import_v42.z.object({
+@@ -923,12 +933,18 @@ var anthropicLanguageModelOptions = import_v43.z.object({
         * - `"omitted"`: Thinking blocks are present but text is empty (default for Opus 4.7+).
         * - `"summarized"`: Thinking content is returned. Required to see reasoning output.
         */
@@ -103,7 +141,41 @@ index 88c1aa865339baa320cf80ec543bed865825bc61..5006e82b0edd9676d1650cc94ecb573a
      }),
      import_v43.z.object({
        type: import_v43.z.literal("disabled")
-@@ -3568,6 +3588,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -2553,7 +2569,15 @@ async function convertToAnthropicMessagesPrompt({
+             switch (part.type) {
+               case "text": {
+                 const textMetadata = (_j = part.providerOptions) == null ? void 0 : _j.anthropic;
+-                if ((textMetadata == null ? void 0 : textMetadata.type) === "compaction") {
++                if ((textMetadata == null ? void 0 : textMetadata.type) === "fallback") {
++                  const fallbackMetadata = await (0, import_provider_utils14.safeValidateTypes)({ value: part.providerOptions.anthropic, schema: anthropicFallbackContentSchema });
++                  if (!fallbackMetadata.success) {
++                    warnings.push({ type: "other", message: "anthropic fallback metadata must include from.model and to.model" });
++                    break;
++                  }
++                  betas.add("server-side-fallback-2026-06-01");
++                  anthropicContent.push({ type: "fallback", from: fallbackMetadata.value.from, to: fallbackMetadata.value.to });
++                } else if ((textMetadata == null ? void 0 : textMetadata.type) === "compaction") {
+                   anthropicContent.push({
+                     type: "compaction",
+                     content: part.text,
+@@ -3047,6 +3071,7 @@ async function convertToAnthropicMessagesPrompt({
+             }
+           }
+         }
++        if (anthropicContent.length === 0 && block.messages.some((message) => message.role === "assistant" && message.content.some((part) => part.type === "text" && part.providerOptions?.anthropic?.type === "fallback"))) break;
+         messages.push({
+           role: "assistant",
+           content: moveToolUseBlocksToEnd(anthropicContent)
+@@ -3121,7 +3146,7 @@ function moveToolUseBlocksToEnd(content) {
+     segment = [];
+   }
+   for (const part of content) {
+-    if (part.type === "thinking" || part.type === "redacted_thinking") {
++    if (part.type === "thinking" || part.type === "redacted_thinking" || part.type === "fallback") {
+       flushSegment();
+       result.push(part);
+     } else {
+@@ -3568,6 +3593,7 @@ var AnthropicMessagesLanguageModel = class {
      const sendThinking = isThinking || thinkingType === "disabled";
      let thinkingBudget = thinkingType === "enabled" ? (_g = anthropicOptions == null ? void 0 : anthropicOptions.thinking) == null ? void 0 : _g.budgetTokens : void 0;
      const thinkingDisplay = thinkingType === "adaptive" ? (_h = anthropicOptions == null ? void 0 : anthropicOptions.thinking) == null ? void 0 : _h.display : void 0;
@@ -111,7 +183,7 @@ index 88c1aa865339baa320cf80ec543bed865825bc61..5006e82b0edd9676d1650cc94ecb573a
      const maxTokens = maxOutputTokens != null ? maxOutputTokens : maxOutputTokensForModel;
      const baseArgs = {
        // model id:
-@@ -3583,7 +3604,12 @@ var AnthropicMessagesLanguageModel = class {
+@@ -3583,7 +3609,12 @@ var AnthropicMessagesLanguageModel = class {
          thinking: {
            type: thinkingType,
            ...thinkingBudget != null && { budget_tokens: thinkingBudget },
@@ -125,7 +197,7 @@ index 88c1aa865339baa320cf80ec543bed865825bc61..5006e82b0edd9676d1650cc94ecb573a
          }
        },
        ...((anthropicOptions == null ? void 0 : anthropicOptions.effort) || (anthropicOptions == null ? void 0 : anthropicOptions.taskBudget) || useStructuredOutput && (responseFormat == null ? void 0 : responseFormat.type) === "json" && responseFormat.schema != null) && {
-@@ -3798,6 +3824,9 @@ var AnthropicMessagesLanguageModel = class {
+@@ -3798,6 +3829,9 @@ var AnthropicMessagesLanguageModel = class {
      } else if ((anthropicOptions == null ? void 0 : anthropicOptions.fallbacks) && anthropicOptions.fallbacks.length > 0) {
        betas.add("server-side-fallback-2026-06-01");
      }
@@ -135,7 +207,19 @@ index 88c1aa865339baa320cf80ec543bed865825bc61..5006e82b0edd9676d1650cc94ecb573a
      const defaultEagerInputStreaming = stream && ((_j = anthropicOptions == null ? void 0 : anthropicOptions.toolStreaming) != null ? _j : true);
      const {
        tools: anthropicTools2,
-@@ -4364,6 +4393,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -4330,10 +4364,8 @@ var AnthropicMessagesLanguageModel = class {
+           }
+           break;
+         }
+-        // Server-side fallback marker: the AI SDK has no content primitive for
+-        // a model hop, so drop it. The hop is still observable via
+-        // usage.iterations.
+         case "fallback": {
++          content.push({ type: "text", text: "", providerMetadata: { anthropic: { type: "fallback", from: part.from, to: part.to } } });
+           break;
+         }
+       }
+@@ -4364,6 +4396,7 @@ var AnthropicMessagesLanguageModel = class {
            cacheCreationInputTokens: (_a2 = response.usage.cache_creation_input_tokens) != null ? _a2 : null,
            stopSequence: (_b2 = response.stop_sequence) != null ? _b2 : null,
            ...stopDetails != null ? { stopDetails } : {},
@@ -143,7 +227,7 @@ index 88c1aa865339baa320cf80ec543bed865825bc61..5006e82b0edd9676d1650cc94ecb573a
            iterations: response.usage.iterations ? response.usage.iterations.map(
              (iter) => ({
                type: iter.type,
-@@ -4453,6 +4483,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -4453,6 +4486,7 @@ var AnthropicMessagesLanguageModel = class {
      let cacheCreationInputTokens = null;
      let stopSequence = null;
      let stopDetails = void 0;
@@ -151,7 +235,17 @@ index 88c1aa865339baa320cf80ec543bed865825bc61..5006e82b0edd9676d1650cc94ecb573a
      let container = null;
      let isJsonResponseFromTool = false;
      let isMessageOpen = false;
-@@ -5111,6 +5142,9 @@ var AnthropicMessagesLanguageModel = class {
+@@ -4486,6 +4520,9 @@ var AnthropicMessagesLanguageModel = class {
+               const part = value.content_block;
+               const contentBlockType = part.type;
+               if (contentBlockType === "fallback") {
++                const providerMetadata = { anthropic: { type: "fallback", from: part.from, to: part.to } };
++                controller.enqueue({ type: "text-start", id: String(value.index), providerMetadata });
++                controller.enqueue({ type: "text-end", id: String(value.index), providerMetadata });
+                 return;
+               }
+               blockType = contentBlockType;
+@@ -5111,6 +5148,9 @@ var AnthropicMessagesLanguageModel = class {
                isMessageOpen = true;
                activeMessageId = value.message.id;
                usage.input_tokens = value.message.usage.input_tokens;
@@ -161,7 +255,7 @@ index 88c1aa865339baa320cf80ec543bed865825bc61..5006e82b0edd9676d1650cc94ecb573a
                usage.cache_read_input_tokens = (_e = value.message.usage.cache_read_input_tokens) != null ? _e : 0;
                usage.cache_creation_input_tokens = (_f = value.message.usage.cache_creation_input_tokens) != null ? _f : 0;
                rawUsage = {
-@@ -5231,6 +5265,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -5231,6 +5271,7 @@ var AnthropicMessagesLanguageModel = class {
                  cacheCreationInputTokens,
                  stopSequence,
                  ...stopDetails != null ? { stopDetails } : {},
@@ -170,10 +264,21 @@ index 88c1aa865339baa320cf80ec543bed865825bc61..5006e82b0edd9676d1650cc94ecb573a
                    (iter) => ({
                      type: iter.type,
 diff --git a/dist/index.mjs b/dist/index.mjs
-index 593b030c7f2adbe0cd38556b7a74f5ede6a5435e..1fa36ccb119715df3cd00976e479c679c66d2261 100644
+index 593b030c7f2adbe0cd38556b7a74f5ede6a5435e..d8f8604c4ea02c1a5c7f585cf2602bcc592b2096 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
-@@ -85,6 +85,13 @@ var anthropicMessagesResponseSchema = lazySchema2(
+@@ -79,12 +79,24 @@ var anthropicToolCallCallerSchema = z2.union([
+     type: z2.literal("direct")
+   })
+ ]);
++var anthropicFallbackContentSchema = z2.object({
++  type: z2.literal("fallback"),
++  from: z2.object({ model: z2.string() }),
++  to: z2.object({ model: z2.string() })
++});
+ var anthropicMessagesResponseSchema = lazySchema2(
+   () => zodSchema2(
+     z2.object({
        type: z2.literal("message"),
        id: z2.string().nullish(),
        model: z2.string().nullish(),
@@ -187,6 +292,20 @@ index 593b030c7f2adbe0cd38556b7a74f5ede6a5435e..1fa36ccb119715df3cd00976e479c679
        content: z2.array(
          z2.discriminatedUnion("type", [
            z2.object({
+@@ -347,12 +359,7 @@ var anthropicMessagesResponseSchema = lazySchema2(
+               })
+             ])
+           }),
+-          // Server-side fallback marker. Parsed so the response validates, but
+-          // dropped from the content output (the AI SDK has no model-hop
+-          // primitive). The hop remains observable via usage.iterations.
+-          z2.object({
+-            type: z2.literal("fallback")
+-          })
++          anthropicFallbackContentSchema
+         ])
+       ),
+       stop_reason: z2.string().nullish(),
 @@ -424,6 +431,13 @@ var anthropicMessagesChunkSchema = lazySchema2(
            id: z2.string().nullish(),
            model: z2.string().nullish(),
@@ -201,7 +320,20 @@ index 593b030c7f2adbe0cd38556b7a74f5ede6a5435e..1fa36ccb119715df3cd00976e479c679
            usage: z2.looseObject({
              input_tokens: z2.number(),
              cache_creation_input_tokens: z2.number().nullish(),
-@@ -923,12 +937,18 @@ var anthropicLanguageModelOptions = z3.object({
+@@ -685,11 +699,7 @@ var anthropicMessagesChunkSchema = lazySchema2(
+               })
+             ])
+           }),
+-          // Server-side fallback marker; dropped from content output (see the
+-          // response schema). The hop remains observable via usage.iterations.
+-          z2.object({
+-            type: z2.literal("fallback")
+-          })
++          anthropicFallbackContentSchema
+         ])
+       }),
+       z2.object({
+@@ -923,12 +933,18 @@ var anthropicLanguageModelOptions = z3.object({
         * - `"omitted"`: Thinking blocks are present but text is empty (default for Opus 4.7+).
         * - `"summarized"`: Thinking content is returned. Required to see reasoning output.
         */
@@ -222,7 +354,49 @@ index 593b030c7f2adbe0cd38556b7a74f5ede6a5435e..1fa36ccb119715df3cd00976e479c679
      }),
      z3.object({
        type: z3.literal("disabled")
-@@ -3620,6 +3640,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -1897,6 +1913,7 @@ import {
+   convertToBase64,
+   parseProviderOptions,
+   safeParseJSON,
++  safeValidateTypes,
+   isNonNullable,
+   secureJsonParse,
+   validateTypes as validateTypes2
+@@ -2605,7 +2622,15 @@ async function convertToAnthropicMessagesPrompt({
+             switch (part.type) {
+               case "text": {
+                 const textMetadata = (_j = part.providerOptions) == null ? void 0 : _j.anthropic;
+-                if ((textMetadata == null ? void 0 : textMetadata.type) === "compaction") {
++                if ((textMetadata == null ? void 0 : textMetadata.type) === "fallback") {
++                  const fallbackMetadata = await safeValidateTypes({ value: part.providerOptions.anthropic, schema: anthropicFallbackContentSchema });
++                  if (!fallbackMetadata.success) {
++                    warnings.push({ type: "other", message: "anthropic fallback metadata must include from.model and to.model" });
++                    break;
++                  }
++                  betas.add("server-side-fallback-2026-06-01");
++                  anthropicContent.push({ type: "fallback", from: fallbackMetadata.value.from, to: fallbackMetadata.value.to });
++                } else if ((textMetadata == null ? void 0 : textMetadata.type) === "compaction") {
+                   anthropicContent.push({
+                     type: "compaction",
+                     content: part.text,
+@@ -3099,6 +3124,7 @@ async function convertToAnthropicMessagesPrompt({
+             }
+           }
+         }
++        if (anthropicContent.length === 0 && block.messages.some((message) => message.role === "assistant" && message.content.some((part) => part.type === "text" && part.providerOptions?.anthropic?.type === "fallback"))) break;
+         messages.push({
+           role: "assistant",
+           content: moveToolUseBlocksToEnd(anthropicContent)
+@@ -3173,7 +3199,7 @@ function moveToolUseBlocksToEnd(content) {
+     segment = [];
+   }
+   for (const part of content) {
+-    if (part.type === "thinking" || part.type === "redacted_thinking") {
++    if (part.type === "thinking" || part.type === "redacted_thinking" || part.type === "fallback") {
+       flushSegment();
+       result.push(part);
+     } else {
+@@ -3620,6 +3646,7 @@ var AnthropicMessagesLanguageModel = class {
      const sendThinking = isThinking || thinkingType === "disabled";
      let thinkingBudget = thinkingType === "enabled" ? (_g = anthropicOptions == null ? void 0 : anthropicOptions.thinking) == null ? void 0 : _g.budgetTokens : void 0;
      const thinkingDisplay = thinkingType === "adaptive" ? (_h = anthropicOptions == null ? void 0 : anthropicOptions.thinking) == null ? void 0 : _h.display : void 0;
@@ -230,7 +404,7 @@ index 593b030c7f2adbe0cd38556b7a74f5ede6a5435e..1fa36ccb119715df3cd00976e479c679
      const maxTokens = maxOutputTokens != null ? maxOutputTokens : maxOutputTokensForModel;
      const baseArgs = {
        // model id:
-@@ -3635,7 +3656,12 @@ var AnthropicMessagesLanguageModel = class {
+@@ -3635,7 +3662,12 @@ var AnthropicMessagesLanguageModel = class {
          thinking: {
            type: thinkingType,
            ...thinkingBudget != null && { budget_tokens: thinkingBudget },
@@ -244,7 +418,7 @@ index 593b030c7f2adbe0cd38556b7a74f5ede6a5435e..1fa36ccb119715df3cd00976e479c679
          }
        },
        ...((anthropicOptions == null ? void 0 : anthropicOptions.effort) || (anthropicOptions == null ? void 0 : anthropicOptions.taskBudget) || useStructuredOutput && (responseFormat == null ? void 0 : responseFormat.type) === "json" && responseFormat.schema != null) && {
-@@ -3850,6 +3876,9 @@ var AnthropicMessagesLanguageModel = class {
+@@ -3850,6 +3882,9 @@ var AnthropicMessagesLanguageModel = class {
      } else if ((anthropicOptions == null ? void 0 : anthropicOptions.fallbacks) && anthropicOptions.fallbacks.length > 0) {
        betas.add("server-side-fallback-2026-06-01");
      }
@@ -254,7 +428,19 @@ index 593b030c7f2adbe0cd38556b7a74f5ede6a5435e..1fa36ccb119715df3cd00976e479c679
      const defaultEagerInputStreaming = stream && ((_j = anthropicOptions == null ? void 0 : anthropicOptions.toolStreaming) != null ? _j : true);
      const {
        tools: anthropicTools2,
-@@ -4416,6 +4445,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -4382,10 +4417,8 @@ var AnthropicMessagesLanguageModel = class {
+           }
+           break;
+         }
+-        // Server-side fallback marker: the AI SDK has no content primitive for
+-        // a model hop, so drop it. The hop is still observable via
+-        // usage.iterations.
+         case "fallback": {
++          content.push({ type: "text", text: "", providerMetadata: { anthropic: { type: "fallback", from: part.from, to: part.to } } });
+           break;
+         }
+       }
+@@ -4416,6 +4449,7 @@ var AnthropicMessagesLanguageModel = class {
            cacheCreationInputTokens: (_a2 = response.usage.cache_creation_input_tokens) != null ? _a2 : null,
            stopSequence: (_b2 = response.stop_sequence) != null ? _b2 : null,
            ...stopDetails != null ? { stopDetails } : {},
@@ -262,7 +448,7 @@ index 593b030c7f2adbe0cd38556b7a74f5ede6a5435e..1fa36ccb119715df3cd00976e479c679
            iterations: response.usage.iterations ? response.usage.iterations.map(
              (iter) => ({
                type: iter.type,
-@@ -4505,6 +4535,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -4505,6 +4539,7 @@ var AnthropicMessagesLanguageModel = class {
      let cacheCreationInputTokens = null;
      let stopSequence = null;
      let stopDetails = void 0;
@@ -270,7 +456,17 @@ index 593b030c7f2adbe0cd38556b7a74f5ede6a5435e..1fa36ccb119715df3cd00976e479c679
      let container = null;
      let isJsonResponseFromTool = false;
      let isMessageOpen = false;
-@@ -5163,6 +5194,9 @@ var AnthropicMessagesLanguageModel = class {
+@@ -4538,6 +4573,9 @@ var AnthropicMessagesLanguageModel = class {
+               const part = value.content_block;
+               const contentBlockType = part.type;
+               if (contentBlockType === "fallback") {
++                const providerMetadata = { anthropic: { type: "fallback", from: part.from, to: part.to } };
++                controller.enqueue({ type: "text-start", id: String(value.index), providerMetadata });
++                controller.enqueue({ type: "text-end", id: String(value.index), providerMetadata });
+                 return;
+               }
+               blockType = contentBlockType;
+@@ -5163,6 +5201,9 @@ var AnthropicMessagesLanguageModel = class {
                isMessageOpen = true;
                activeMessageId = value.message.id;
                usage.input_tokens = value.message.usage.input_tokens;
@@ -280,7 +476,7 @@ index 593b030c7f2adbe0cd38556b7a74f5ede6a5435e..1fa36ccb119715df3cd00976e479c679
                usage.cache_read_input_tokens = (_e = value.message.usage.cache_read_input_tokens) != null ? _e : 0;
                usage.cache_creation_input_tokens = (_f = value.message.usage.cache_creation_input_tokens) != null ? _f : 0;
                rawUsage = {
-@@ -5283,6 +5317,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -5283,6 +5324,7 @@ var AnthropicMessagesLanguageModel = class {
                  cacheCreationInputTokens,
                  stopSequence,
                  ...stopDetails != null ? { stopDetails } : {},
@@ -289,10 +485,21 @@ index 593b030c7f2adbe0cd38556b7a74f5ede6a5435e..1fa36ccb119715df3cd00976e479c679
                    (iter) => ({
                      type: iter.type,
 diff --git a/dist/internal/index.js b/dist/internal/index.js
-index 701ca5a333d83d384f682667b9976b7f72b0de37..ce53d0c9fe5c00a092b0347b45d61d8ce9c3a79a 100644
+index 701ca5a333d83d384f682667b9976b7f72b0de37..d8b1961987627f604494c43453c7bc3bfdaebbce 100644
 --- a/dist/internal/index.js
 +++ b/dist/internal/index.js
-@@ -79,6 +79,13 @@ var anthropicMessagesResponseSchema = (0, import_provider_utils2.lazySchema)(
+@@ -73,12 +73,24 @@ var anthropicToolCallCallerSchema = import_v42.z.union([
+     type: import_v42.z.literal("direct")
+   })
+ ]);
++var anthropicFallbackContentSchema = import_v42.z.object({
++  type: import_v42.z.literal("fallback"),
++  from: import_v42.z.object({ model: import_v42.z.string() }),
++  to: import_v42.z.object({ model: import_v42.z.string() })
++});
+ var anthropicMessagesResponseSchema = (0, import_provider_utils2.lazySchema)(
+   () => (0, import_provider_utils2.zodSchema)(
+     import_v42.z.object({
        type: import_v42.z.literal("message"),
        id: import_v42.z.string().nullish(),
        model: import_v42.z.string().nullish(),
@@ -306,6 +513,20 @@ index 701ca5a333d83d384f682667b9976b7f72b0de37..ce53d0c9fe5c00a092b0347b45d61d8c
        content: import_v42.z.array(
          import_v42.z.discriminatedUnion("type", [
            import_v42.z.object({
+@@ -341,12 +353,7 @@ var anthropicMessagesResponseSchema = (0, import_provider_utils2.lazySchema)(
+               })
+             ])
+           }),
+-          // Server-side fallback marker. Parsed so the response validates, but
+-          // dropped from the content output (the AI SDK has no model-hop
+-          // primitive). The hop remains observable via usage.iterations.
+-          import_v42.z.object({
+-            type: import_v42.z.literal("fallback")
+-          })
++          anthropicFallbackContentSchema
+         ])
+       ),
+       stop_reason: import_v42.z.string().nullish(),
 @@ -418,6 +425,13 @@ var anthropicMessagesChunkSchema = (0, import_provider_utils2.lazySchema)(
            id: import_v42.z.string().nullish(),
            model: import_v42.z.string().nullish(),
@@ -320,7 +541,20 @@ index 701ca5a333d83d384f682667b9976b7f72b0de37..ce53d0c9fe5c00a092b0347b45d61d8c
            usage: import_v42.z.looseObject({
              input_tokens: import_v42.z.number(),
              cache_creation_input_tokens: import_v42.z.number().nullish(),
-@@ -917,12 +931,18 @@ var anthropicLanguageModelOptions = import_v43.z.object({
+@@ -679,11 +693,7 @@ var anthropicMessagesChunkSchema = (0, import_provider_utils2.lazySchema)(
+               })
+             ])
+           }),
+-          // Server-side fallback marker; dropped from content output (see the
+-          // response schema). The hop remains observable via usage.iterations.
+-          import_v42.z.object({
+-            type: import_v42.z.literal("fallback")
+-          })
++          anthropicFallbackContentSchema
+         ])
+       }),
+       import_v42.z.object({
+@@ -917,12 +927,18 @@ var anthropicLanguageModelOptions = import_v43.z.object({
         * - `"omitted"`: Thinking blocks are present but text is empty (default for Opus 4.7+).
         * - `"summarized"`: Thinking content is returned. Required to see reasoning output.
         */
@@ -341,7 +575,41 @@ index 701ca5a333d83d384f682667b9976b7f72b0de37..ce53d0c9fe5c00a092b0347b45d61d8c
      }),
      import_v43.z.object({
        type: import_v43.z.literal("disabled")
-@@ -3562,6 +3582,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -2547,7 +2563,15 @@ async function convertToAnthropicMessagesPrompt({
+             switch (part.type) {
+               case "text": {
+                 const textMetadata = (_j = part.providerOptions) == null ? void 0 : _j.anthropic;
+-                if ((textMetadata == null ? void 0 : textMetadata.type) === "compaction") {
++                if ((textMetadata == null ? void 0 : textMetadata.type) === "fallback") {
++                  const fallbackMetadata = await (0, import_provider_utils14.safeValidateTypes)({ value: part.providerOptions.anthropic, schema: anthropicFallbackContentSchema });
++                  if (!fallbackMetadata.success) {
++                    warnings.push({ type: "other", message: "anthropic fallback metadata must include from.model and to.model" });
++                    break;
++                  }
++                  betas.add("server-side-fallback-2026-06-01");
++                  anthropicContent.push({ type: "fallback", from: fallbackMetadata.value.from, to: fallbackMetadata.value.to });
++                } else if ((textMetadata == null ? void 0 : textMetadata.type) === "compaction") {
+                   anthropicContent.push({
+                     type: "compaction",
+                     content: part.text,
+@@ -3041,6 +3065,7 @@ async function convertToAnthropicMessagesPrompt({
+             }
+           }
+         }
++        if (anthropicContent.length === 0 && block.messages.some((message) => message.role === "assistant" && message.content.some((part) => part.type === "text" && part.providerOptions?.anthropic?.type === "fallback"))) break;
+         messages.push({
+           role: "assistant",
+           content: moveToolUseBlocksToEnd(anthropicContent)
+@@ -3115,7 +3140,7 @@ function moveToolUseBlocksToEnd(content) {
+     segment = [];
+   }
+   for (const part of content) {
+-    if (part.type === "thinking" || part.type === "redacted_thinking") {
++    if (part.type === "thinking" || part.type === "redacted_thinking" || part.type === "fallback") {
+       flushSegment();
+       result.push(part);
+     } else {
+@@ -3562,6 +3587,7 @@ var AnthropicMessagesLanguageModel = class {
      const sendThinking = isThinking || thinkingType === "disabled";
      let thinkingBudget = thinkingType === "enabled" ? (_g = anthropicOptions == null ? void 0 : anthropicOptions.thinking) == null ? void 0 : _g.budgetTokens : void 0;
      const thinkingDisplay = thinkingType === "adaptive" ? (_h = anthropicOptions == null ? void 0 : anthropicOptions.thinking) == null ? void 0 : _h.display : void 0;
@@ -349,7 +617,7 @@ index 701ca5a333d83d384f682667b9976b7f72b0de37..ce53d0c9fe5c00a092b0347b45d61d8c
      const maxTokens = maxOutputTokens != null ? maxOutputTokens : maxOutputTokensForModel;
      const baseArgs = {
        // model id:
-@@ -3577,7 +3598,12 @@ var AnthropicMessagesLanguageModel = class {
+@@ -3577,7 +3603,12 @@ var AnthropicMessagesLanguageModel = class {
          thinking: {
            type: thinkingType,
            ...thinkingBudget != null && { budget_tokens: thinkingBudget },
@@ -363,7 +631,7 @@ index 701ca5a333d83d384f682667b9976b7f72b0de37..ce53d0c9fe5c00a092b0347b45d61d8c
          }
        },
        ...((anthropicOptions == null ? void 0 : anthropicOptions.effort) || (anthropicOptions == null ? void 0 : anthropicOptions.taskBudget) || useStructuredOutput && (responseFormat == null ? void 0 : responseFormat.type) === "json" && responseFormat.schema != null) && {
-@@ -3792,6 +3818,9 @@ var AnthropicMessagesLanguageModel = class {
+@@ -3792,6 +3823,9 @@ var AnthropicMessagesLanguageModel = class {
      } else if ((anthropicOptions == null ? void 0 : anthropicOptions.fallbacks) && anthropicOptions.fallbacks.length > 0) {
        betas.add("server-side-fallback-2026-06-01");
      }
@@ -373,7 +641,19 @@ index 701ca5a333d83d384f682667b9976b7f72b0de37..ce53d0c9fe5c00a092b0347b45d61d8c
      const defaultEagerInputStreaming = stream && ((_j = anthropicOptions == null ? void 0 : anthropicOptions.toolStreaming) != null ? _j : true);
      const {
        tools: anthropicTools2,
-@@ -4358,6 +4387,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -4324,10 +4358,8 @@ var AnthropicMessagesLanguageModel = class {
+           }
+           break;
+         }
+-        // Server-side fallback marker: the AI SDK has no content primitive for
+-        // a model hop, so drop it. The hop is still observable via
+-        // usage.iterations.
+         case "fallback": {
++          content.push({ type: "text", text: "", providerMetadata: { anthropic: { type: "fallback", from: part.from, to: part.to } } });
+           break;
+         }
+       }
+@@ -4358,6 +4390,7 @@ var AnthropicMessagesLanguageModel = class {
            cacheCreationInputTokens: (_a2 = response.usage.cache_creation_input_tokens) != null ? _a2 : null,
            stopSequence: (_b2 = response.stop_sequence) != null ? _b2 : null,
            ...stopDetails != null ? { stopDetails } : {},
@@ -381,7 +661,7 @@ index 701ca5a333d83d384f682667b9976b7f72b0de37..ce53d0c9fe5c00a092b0347b45d61d8c
            iterations: response.usage.iterations ? response.usage.iterations.map(
              (iter) => ({
                type: iter.type,
-@@ -4447,6 +4477,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -4447,6 +4480,7 @@ var AnthropicMessagesLanguageModel = class {
      let cacheCreationInputTokens = null;
      let stopSequence = null;
      let stopDetails = void 0;
@@ -389,7 +669,17 @@ index 701ca5a333d83d384f682667b9976b7f72b0de37..ce53d0c9fe5c00a092b0347b45d61d8c
      let container = null;
      let isJsonResponseFromTool = false;
      let isMessageOpen = false;
-@@ -5105,6 +5136,9 @@ var AnthropicMessagesLanguageModel = class {
+@@ -4480,6 +4514,9 @@ var AnthropicMessagesLanguageModel = class {
+               const part = value.content_block;
+               const contentBlockType = part.type;
+               if (contentBlockType === "fallback") {
++                const providerMetadata = { anthropic: { type: "fallback", from: part.from, to: part.to } };
++                controller.enqueue({ type: "text-start", id: String(value.index), providerMetadata });
++                controller.enqueue({ type: "text-end", id: String(value.index), providerMetadata });
+                 return;
+               }
+               blockType = contentBlockType;
+@@ -5105,6 +5142,9 @@ var AnthropicMessagesLanguageModel = class {
                isMessageOpen = true;
                activeMessageId = value.message.id;
                usage.input_tokens = value.message.usage.input_tokens;
@@ -399,7 +689,7 @@ index 701ca5a333d83d384f682667b9976b7f72b0de37..ce53d0c9fe5c00a092b0347b45d61d8c
                usage.cache_read_input_tokens = (_e = value.message.usage.cache_read_input_tokens) != null ? _e : 0;
                usage.cache_creation_input_tokens = (_f = value.message.usage.cache_creation_input_tokens) != null ? _f : 0;
                rawUsage = {
-@@ -5225,6 +5259,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -5225,6 +5265,7 @@ var AnthropicMessagesLanguageModel = class {
                  cacheCreationInputTokens,
                  stopSequence,
                  ...stopDetails != null ? { stopDetails } : {},
@@ -408,10 +698,21 @@ index 701ca5a333d83d384f682667b9976b7f72b0de37..ce53d0c9fe5c00a092b0347b45d61d8c
                    (iter) => ({
                      type: iter.type,
 diff --git a/dist/internal/index.mjs b/dist/internal/index.mjs
-index c11f29fa42a9ce6a5681d43c609020f1f4a616da..df7f7a01992a56826eb809e6cdfb1e50a87a1b90 100644
+index c11f29fa42a9ce6a5681d43c609020f1f4a616da..ffd9ad3619122d098eeebc1abede2d139aad50f0 100644
 --- a/dist/internal/index.mjs
 +++ b/dist/internal/index.mjs
-@@ -69,6 +69,13 @@ var anthropicMessagesResponseSchema = lazySchema2(
+@@ -63,12 +63,24 @@ var anthropicToolCallCallerSchema = z2.union([
+     type: z2.literal("direct")
+   })
+ ]);
++var anthropicFallbackContentSchema = z2.object({
++  type: z2.literal("fallback"),
++  from: z2.object({ model: z2.string() }),
++  to: z2.object({ model: z2.string() })
++});
+ var anthropicMessagesResponseSchema = lazySchema2(
+   () => zodSchema2(
+     z2.object({
        type: z2.literal("message"),
        id: z2.string().nullish(),
        model: z2.string().nullish(),
@@ -425,6 +726,20 @@ index c11f29fa42a9ce6a5681d43c609020f1f4a616da..df7f7a01992a56826eb809e6cdfb1e50
        content: z2.array(
          z2.discriminatedUnion("type", [
            z2.object({
+@@ -331,12 +343,7 @@ var anthropicMessagesResponseSchema = lazySchema2(
+               })
+             ])
+           }),
+-          // Server-side fallback marker. Parsed so the response validates, but
+-          // dropped from the content output (the AI SDK has no model-hop
+-          // primitive). The hop remains observable via usage.iterations.
+-          z2.object({
+-            type: z2.literal("fallback")
+-          })
++          anthropicFallbackContentSchema
+         ])
+       ),
+       stop_reason: z2.string().nullish(),
 @@ -408,6 +415,13 @@ var anthropicMessagesChunkSchema = lazySchema2(
            id: z2.string().nullish(),
            model: z2.string().nullish(),
@@ -439,7 +754,20 @@ index c11f29fa42a9ce6a5681d43c609020f1f4a616da..df7f7a01992a56826eb809e6cdfb1e50
            usage: z2.looseObject({
              input_tokens: z2.number(),
              cache_creation_input_tokens: z2.number().nullish(),
-@@ -907,12 +921,18 @@ var anthropicLanguageModelOptions = z3.object({
+@@ -669,11 +683,7 @@ var anthropicMessagesChunkSchema = lazySchema2(
+               })
+             ])
+           }),
+-          // Server-side fallback marker; dropped from content output (see the
+-          // response schema). The hop remains observable via usage.iterations.
+-          z2.object({
+-            type: z2.literal("fallback")
+-          })
++          anthropicFallbackContentSchema
+         ])
+       }),
+       z2.object({
+@@ -907,12 +917,18 @@ var anthropicLanguageModelOptions = z3.object({
         * - `"omitted"`: Thinking blocks are present but text is empty (default for Opus 4.7+).
         * - `"summarized"`: Thinking content is returned. Required to see reasoning output.
         */
@@ -460,7 +788,49 @@ index c11f29fa42a9ce6a5681d43c609020f1f4a616da..df7f7a01992a56826eb809e6cdfb1e50
      }),
      z3.object({
        type: z3.literal("disabled")
-@@ -3604,6 +3624,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -1881,6 +1897,7 @@ import {
+   convertToBase64,
+   parseProviderOptions,
+   safeParseJSON,
++  safeValidateTypes,
+   isNonNullable,
+   secureJsonParse,
+   validateTypes as validateTypes2
+@@ -2589,7 +2606,15 @@ async function convertToAnthropicMessagesPrompt({
+             switch (part.type) {
+               case "text": {
+                 const textMetadata = (_j = part.providerOptions) == null ? void 0 : _j.anthropic;
+-                if ((textMetadata == null ? void 0 : textMetadata.type) === "compaction") {
++                if ((textMetadata == null ? void 0 : textMetadata.type) === "fallback") {
++                  const fallbackMetadata = await safeValidateTypes({ value: part.providerOptions.anthropic, schema: anthropicFallbackContentSchema });
++                  if (!fallbackMetadata.success) {
++                    warnings.push({ type: "other", message: "anthropic fallback metadata must include from.model and to.model" });
++                    break;
++                  }
++                  betas.add("server-side-fallback-2026-06-01");
++                  anthropicContent.push({ type: "fallback", from: fallbackMetadata.value.from, to: fallbackMetadata.value.to });
++                } else if ((textMetadata == null ? void 0 : textMetadata.type) === "compaction") {
+                   anthropicContent.push({
+                     type: "compaction",
+                     content: part.text,
+@@ -3083,6 +3108,7 @@ async function convertToAnthropicMessagesPrompt({
+             }
+           }
+         }
++        if (anthropicContent.length === 0 && block.messages.some((message) => message.role === "assistant" && message.content.some((part) => part.type === "text" && part.providerOptions?.anthropic?.type === "fallback"))) break;
+         messages.push({
+           role: "assistant",
+           content: moveToolUseBlocksToEnd(anthropicContent)
+@@ -3157,7 +3183,7 @@ function moveToolUseBlocksToEnd(content) {
+     segment = [];
+   }
+   for (const part of content) {
+-    if (part.type === "thinking" || part.type === "redacted_thinking") {
++    if (part.type === "thinking" || part.type === "redacted_thinking" || part.type === "fallback") {
+       flushSegment();
+       result.push(part);
+     } else {
+@@ -3604,6 +3630,7 @@ var AnthropicMessagesLanguageModel = class {
      const sendThinking = isThinking || thinkingType === "disabled";
      let thinkingBudget = thinkingType === "enabled" ? (_g = anthropicOptions == null ? void 0 : anthropicOptions.thinking) == null ? void 0 : _g.budgetTokens : void 0;
      const thinkingDisplay = thinkingType === "adaptive" ? (_h = anthropicOptions == null ? void 0 : anthropicOptions.thinking) == null ? void 0 : _h.display : void 0;
@@ -468,7 +838,7 @@ index c11f29fa42a9ce6a5681d43c609020f1f4a616da..df7f7a01992a56826eb809e6cdfb1e50
      const maxTokens = maxOutputTokens != null ? maxOutputTokens : maxOutputTokensForModel;
      const baseArgs = {
        // model id:
-@@ -3619,7 +3640,12 @@ var AnthropicMessagesLanguageModel = class {
+@@ -3619,7 +3646,12 @@ var AnthropicMessagesLanguageModel = class {
          thinking: {
            type: thinkingType,
            ...thinkingBudget != null && { budget_tokens: thinkingBudget },
@@ -482,7 +852,7 @@ index c11f29fa42a9ce6a5681d43c609020f1f4a616da..df7f7a01992a56826eb809e6cdfb1e50
          }
        },
        ...((anthropicOptions == null ? void 0 : anthropicOptions.effort) || (anthropicOptions == null ? void 0 : anthropicOptions.taskBudget) || useStructuredOutput && (responseFormat == null ? void 0 : responseFormat.type) === "json" && responseFormat.schema != null) && {
-@@ -3834,6 +3860,9 @@ var AnthropicMessagesLanguageModel = class {
+@@ -3834,6 +3866,9 @@ var AnthropicMessagesLanguageModel = class {
      } else if ((anthropicOptions == null ? void 0 : anthropicOptions.fallbacks) && anthropicOptions.fallbacks.length > 0) {
        betas.add("server-side-fallback-2026-06-01");
      }
@@ -492,7 +862,19 @@ index c11f29fa42a9ce6a5681d43c609020f1f4a616da..df7f7a01992a56826eb809e6cdfb1e50
      const defaultEagerInputStreaming = stream && ((_j = anthropicOptions == null ? void 0 : anthropicOptions.toolStreaming) != null ? _j : true);
      const {
        tools: anthropicTools2,
-@@ -4400,6 +4429,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -4366,10 +4401,8 @@ var AnthropicMessagesLanguageModel = class {
+           }
+           break;
+         }
+-        // Server-side fallback marker: the AI SDK has no content primitive for
+-        // a model hop, so drop it. The hop is still observable via
+-        // usage.iterations.
+         case "fallback": {
++          content.push({ type: "text", text: "", providerMetadata: { anthropic: { type: "fallback", from: part.from, to: part.to } } });
+           break;
+         }
+       }
+@@ -4400,6 +4433,7 @@ var AnthropicMessagesLanguageModel = class {
            cacheCreationInputTokens: (_a2 = response.usage.cache_creation_input_tokens) != null ? _a2 : null,
            stopSequence: (_b2 = response.stop_sequence) != null ? _b2 : null,
            ...stopDetails != null ? { stopDetails } : {},
@@ -500,7 +882,7 @@ index c11f29fa42a9ce6a5681d43c609020f1f4a616da..df7f7a01992a56826eb809e6cdfb1e50
            iterations: response.usage.iterations ? response.usage.iterations.map(
              (iter) => ({
                type: iter.type,
-@@ -4489,6 +4519,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -4489,6 +4523,7 @@ var AnthropicMessagesLanguageModel = class {
      let cacheCreationInputTokens = null;
      let stopSequence = null;
      let stopDetails = void 0;
@@ -508,7 +890,17 @@ index c11f29fa42a9ce6a5681d43c609020f1f4a616da..df7f7a01992a56826eb809e6cdfb1e50
      let container = null;
      let isJsonResponseFromTool = false;
      let isMessageOpen = false;
-@@ -5147,6 +5178,9 @@ var AnthropicMessagesLanguageModel = class {
+@@ -4522,6 +4557,9 @@ var AnthropicMessagesLanguageModel = class {
+               const part = value.content_block;
+               const contentBlockType = part.type;
+               if (contentBlockType === "fallback") {
++                const providerMetadata = { anthropic: { type: "fallback", from: part.from, to: part.to } };
++                controller.enqueue({ type: "text-start", id: String(value.index), providerMetadata });
++                controller.enqueue({ type: "text-end", id: String(value.index), providerMetadata });
+                 return;
+               }
+               blockType = contentBlockType;
+@@ -5147,6 +5185,9 @@ var AnthropicMessagesLanguageModel = class {
                isMessageOpen = true;
                activeMessageId = value.message.id;
                usage.input_tokens = value.message.usage.input_tokens;
@@ -518,7 +910,7 @@ index c11f29fa42a9ce6a5681d43c609020f1f4a616da..df7f7a01992a56826eb809e6cdfb1e50
                usage.cache_read_input_tokens = (_e = value.message.usage.cache_read_input_tokens) != null ? _e : 0;
                usage.cache_creation_input_tokens = (_f = value.message.usage.cache_creation_input_tokens) != null ? _f : 0;
                rawUsage = {
-@@ -5267,6 +5301,7 @@ var AnthropicMessagesLanguageModel = class {
+@@ -5267,6 +5308,7 @@ var AnthropicMessagesLanguageModel = class {
                  cacheCreationInputTokens,
                  stopSequence,
                  ...stopDetails != null ? { stopDetails } : {},
