@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 7.8.25
+
+### Patch Changes
+
+- [#15274](https://github.com/Kilo-Org/kilocode/pull/15274) [`57d4c30`](https://github.com/Kilo-Org/kilocode/commit/57d4c307253364344157ecbb0f90f157518bd48c) Thanks [@Uddoo](https://github.com/Uddoo)! - Preserve the existing package-manager user-agent when reading npm configuration.
+
 ## 7.8.23
 
 ### Patch Changes
