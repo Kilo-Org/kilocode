@@ -22,7 +22,7 @@ const layer = Layer.effect(
       location.workspaceID !== undefined
         ? Effect.void
         : Assets.owned(db, global, location.directory, file).pipe(
-            Effect.catchDefect(() =>
+            Effect.catchCause(() =>
               Effect.logWarning("Session synchronization could not record native output provenance"),
             ),
           )

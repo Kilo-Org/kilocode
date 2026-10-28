@@ -11,7 +11,7 @@ import { IntegrationID } from "@opencode/schema/integration-id"
 import { KiloSessionSyncRpc } from "@opencode/schema/kilocode/session-sync"
 import { makeGlobalNode } from "@opencode/util/effect/app-node"
 import { Global } from "@opencode/util/global"
-import { Effect, Layer, Schedule, Schema, Semaphore } from "effect"
+import { Cause, Effect, Layer, Schedule, Schema, Semaphore } from "effect"
 import { sql } from "drizzle-orm"
 import path from "node:path"
 import { Store } from "./store"
@@ -97,6 +97,10 @@ export const make = Effect.fn("SessionSync.make")(function* (
   const global = yield* Global.Service
   const bus = yield* Bus.Service
   const lock = Semaphore.makeUnsafe(1)
+  const consentLock = Semaphore.makeUnsafe(1)
+  const disabledAt = new Map<string, number>()
+  let consentIntent = 0
+  let backgroundError: { code: string; message: string } | undefined
   const grants = new Map<string, { credential: string; value: Grant }>()
   let observedCredential: string | undefined
 
@@ -245,7 +249,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
       const encoded = JSON.stringify(value)
       const blob =
         Buffer.byteLength(encoded) > limits.inline
-          ? yield* Assets.spool(global, session.id, Buffer.from(encoded))
+          ? yield* Assets.body(db, global, row, Buffer.from(encoded))
           : undefined
       const addition: Change[] = [
         ...assets.changes,
@@ -334,6 +338,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
       last.digest === pending.digest
     ) {
       yield* Store.acknowledge(db, pending, last)
+      yield* Assets.prune(db, global)
       return true
     }
     if (
@@ -347,6 +352,7 @@ export const make = Effect.fn("SessionSync.make")(function* (
         "Cloud and local acknowledgement history disagree; synchronization is paused instead of overwriting cloud state",
       )
     for (const blob of decodeBlobs(pending.blobs)) {
+      if (yield* Store.blobAcknowledged(db, pending, blob)) continue
       const bytes = yield* Assets.read(global, session.id, blob)
       const ack = yield* authenticated(c, `${url}/blobs/${blob.hash}`, "PUT", bytes)
       const verified = yield* decode(
@@ -355,11 +361,13 @@ export const make = Effect.fn("SessionSync.make")(function* (
       )
       if (verified.hash !== blob.hash || verified.bytes !== blob.bytes)
         return yield* fail("asset_error", "The service did not acknowledge the required asset hash and length")
+      yield* Store.acknowledgeBlob(db, pending, blob)
     }
     const receipt = yield* authenticated(c, `${url}/batches`, "POST", pending.body).pipe(
       Effect.flatMap((value) => decode(Receipt, value)),
     )
     yield* Store.acknowledge(db, pending, receipt)
+    yield* Assets.prune(db, global)
     return true
   })
 
@@ -395,12 +403,16 @@ export const make = Effect.fn("SessionSync.make")(function* (
             ...(c.last_success === null ? {} : { lastSuccess: c.last_success }),
           }
         : {}),
-      ...(error ? { error } : {}),
+      ...(backgroundError || error ? { error: backgroundError ?? error } : {}),
     })
   })
 
-  const tick = Effect.fn("SessionSync.tick")(function* (only?: string, force = false) {
-    const passDeadline = Date.now() + 30_000
+  const tick = Effect.fn("SessionSync.tick")(function* (
+    only?: string,
+    force = false,
+    passDeadline = Date.now() + 6 * 60_000,
+  ) {
+    yield* Assets.prune(db, global)
     const current = yield* credential().pipe(
       Effect.map(digest),
       Effect.catch(() => Effect.succeed("signed-out")),
@@ -446,6 +458,10 @@ export const make = Effect.fn("SessionSync.make")(function* (
         continue
       }
       const error = result.failure
+      if (error.code === "capture_changed") {
+        progressed = true
+        continue
+      }
       const retryAt = error.retryable
         ? Math.max(error.retryAt ?? 0, Date.now() + Math.min(60_000, 1000 * 2 ** Math.min(session.attempts, 6)))
         : Number.MAX_SAFE_INTEGER
@@ -458,42 +474,69 @@ export const make = Effect.fn("SessionSync.make")(function* (
     return progressed
   })
 
-  const service = KiloSessionSync.Service.of({
-    enable: (input) =>
-      lock.withPermit(
-        Effect.gen(function* () {
-          const directory = yield* Store.canonical(input.directory)
-          const origin = yield* destination(input.destination, input.local)
-          const grant = yield* exchange({ ...input, destination: origin })
-          const previous = yield* Store.consent(db, directory)
-          yield* Effect.gen(function* () {
-            yield* Store.enable(db, {
-              ...input,
-              directory,
-              destination: origin,
-              tenant: grant.tenant,
-              userID: grant.userID,
-            })
-            yield* Assets.approve(db, global, directory, input.assets ?? [])
-          }).pipe(
-            Effect.onError(() =>
-              previous?.enabled
-                ? Effect.void
-                : db
-                    .run(sql`UPDATE _kilo_sync_consent SET enabled=0 WHERE directory=${directory}`)
-                    .pipe(Effect.orDie, Effect.asVoid),
-            ),
-          )
-          return yield* status({ directory })
+  const runPass = (only?: string, force = false, deadline?: number) =>
+    tick(only, force, deadline).pipe(
+      Effect.tap(() =>
+        Effect.sync(() => {
+          backgroundError = undefined
         }),
       ),
+      Effect.catchCause((cause) => {
+        if (Cause.hasInterrupts(cause)) return Effect.failCause(cause)
+        const error = fail(
+          "background_error",
+          "The synchronization pass failed; pending work is retained and will be retried",
+          true,
+        )
+        backgroundError = error
+        return Effect.logError("Session synchronization pass failed", cause).pipe(Effect.andThen(Effect.fail(error)))
+      }),
+    )
+
+  const service = KiloSessionSync.Service.of({
+    enable: (input) =>
+      Effect.gen(function* () {
+        const intent = ++consentIntent
+        return yield* lock.withPermit(
+          Effect.gen(function* () {
+            const directory = yield* Store.canonical(input.directory)
+            const epoch = yield* Store.epoch(db, directory)
+            const origin = yield* destination(input.destination, input.local)
+            const grant = yield* exchange({ ...input, destination: origin })
+            const approvals = yield* Assets.prepareApproval(db, global, directory, input.assets ?? [])
+            yield* consentLock.withPermit(
+              Effect.gen(function* () {
+                if ((disabledAt.get(directory) ?? 0) > intent)
+                  return yield* fail("sync_disabled", "Synchronization was disabled while enable was in progress")
+                yield* Store.enable(
+                  db,
+                  {
+                    ...input,
+                    directory,
+                    destination: origin,
+                    tenant: grant.tenant,
+                    userID: grant.userID,
+                  },
+                  approvals,
+                  epoch,
+                )
+              }),
+            )
+            return yield* status({ directory })
+          }).pipe(Effect.scoped),
+        )
+      }),
     disable: (input) =>
       Effect.gen(function* () {
+        const intent = ++consentIntent
         const current = yield* status(input)
-        yield* db
-          .run(sql`UPDATE _kilo_sync_consent SET enabled=0 WHERE directory=${current.directory}`)
-          .pipe(Effect.orDie)
-        return yield* status({ directory: current.directory })
+        return yield* consentLock.withPermit(
+          Effect.gen(function* () {
+            disabledAt.set(current.directory, Math.max(intent, disabledAt.get(current.directory) ?? 0))
+            yield* Store.disable(db, current.directory)
+            return yield* status({ directory: current.directory })
+          }),
+        )
       }),
     status,
     flush: (input) =>
@@ -503,9 +546,9 @@ export const make = Effect.fn("SessionSync.make")(function* (
             const current = yield* status(input)
             if (!current.enabled)
               return yield* fail("sync_disabled", "Enable synchronization for this workspace before flushing")
-            const deadline = Date.now() + 30_000
+            const deadline = Date.now() + (options.flushTimeout ?? 30_000)
             while (true) {
-              const progressed = yield* tick(current.directory, true)
+              const progressed = yield* runPass(current.directory, true, deadline)
               const next = yield* status({ directory: current.directory })
               if (!next.pending || next.error || !progressed || Date.now() >= deadline) return next
             }
@@ -527,8 +570,9 @@ export const make = Effect.fn("SessionSync.make")(function* (
         ),
   })
   if (options.background !== false) {
-    yield* lock.withPermit(tick()).pipe(Effect.repeat(Schedule.spaced(1000)), Effect.forkScoped)
-    yield* Effect.addFinalizer(() => lock.withPermit(tick()).pipe(Effect.timeoutOption(1500), Effect.asVoid))
+    const background = lock.withPermit(runPass()).pipe(Effect.catch(() => Effect.void))
+    yield* background.pipe(Effect.repeat(Schedule.spaced(1000)), Effect.forkScoped)
+    yield* Effect.addFinalizer(() => background.pipe(Effect.timeoutOption(1500), Effect.asVoid))
   }
   return service
 })

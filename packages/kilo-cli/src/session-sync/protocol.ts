@@ -152,37 +152,48 @@ export const request = Effect.fn("SessionSync.request")(function* (
   method = "GET",
   body?: string | Uint8Array<ArrayBuffer>,
 ) {
+  const bytes = body === undefined ? 0 : typeof body === "string" ? Buffer.byteLength(body) : body.byteLength
+  // Allow 32 KiB/s plus handshake time, bounded by the service's five-minute blob lease.
+  const timeout = Math.min(300_000, 30_000 + Math.ceil(bytes / (32 * 1024)) * 1000)
   const response = yield* Effect.tryPromise({
-    try: (signal) =>
-      fetch(url, {
+    try: async (signal) => {
+      const deadline = AbortSignal.any([signal, AbortSignal.timeout(timeout)])
+      const response = await fetch(url, {
         method,
         redirect: "error",
-        signal: AbortSignal.any([signal, AbortSignal.timeout(30_000)]),
+        signal: deadline,
         headers: {
           authorization: `Bearer ${token}`,
           ...(body === undefined
             ? {}
             : {
                 "content-type": typeof body === "string" ? "application/json" : "application/octet-stream",
-                "content-length": String(typeof body === "string" ? Buffer.byteLength(body) : body.byteLength),
+                "content-length": String(bytes),
               }),
         },
         body,
-      }),
-    catch: () => fail("network_error", "The sync service is unreachable; pending changes are retained", true),
-  })
-  const text = yield* Effect.tryPromise({
-    try: async () => {
-      if (!response.body) return ""
+      })
+      if (!response.body) return { ok: response.ok, status: response.status, text: "" }
       const reader = response.body.getReader()
+      const cancel = () => {
+        void reader.cancel().catch(() => undefined)
+      }
+      deadline.addEventListener("abort", cancel, { once: true })
       // These responses contain only grants, state, or acknowledgements, never entity/blob downloads.
-      const bytes = new Uint8Array(64 * 1024)
+      const buffer = new Uint8Array(64 * 1024)
       let length = 0
       try {
+        deadline.throwIfAborted()
         while (true) {
           const chunk = await reader.read()
-          if (chunk.done) return new TextDecoder().decode(bytes.subarray(0, length))
-          if (chunk.value.byteLength > bytes.byteLength - length) {
+          deadline.throwIfAborted()
+          if (chunk.done)
+            return {
+              ok: response.ok,
+              status: response.status,
+              text: new TextDecoder().decode(buffer.subarray(0, length)),
+            }
+          if (chunk.value.byteLength > buffer.byteLength - length) {
             await reader.cancel().catch(() => undefined)
             throw fail(
               "response_too_large",
@@ -190,17 +201,20 @@ export const request = Effect.fn("SessionSync.request")(function* (
               response.status >= 500 || response.status === 408 || response.status === 429,
             )
           }
-          bytes.set(chunk.value, length)
+          buffer.set(chunk.value, length)
           length += chunk.value.byteLength
         }
       } finally {
+        deadline.removeEventListener("abort", cancel)
         reader.releaseLock()
       }
     },
     catch: (cause) =>
-      cause instanceof Failure ? cause : fail("network_error", "The sync response was interrupted", true),
+      cause instanceof Failure
+        ? cause
+        : fail("network_error", "The sync service is unreachable; pending changes are retained", true),
   })
-  const decoded = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))(text)
+  const decoded = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Unknown))(response.text)
   if (!response.ok) {
     const error = decoded._tag === "Some" ? decodeError(decoded.value) : undefined
     const raw = error?._tag === "Some" ? error.value.error.code : `http_${response.status}`

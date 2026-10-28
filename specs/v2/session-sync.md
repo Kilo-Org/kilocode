@@ -153,6 +153,18 @@ Missing, changed, oversized, symbolic-link, and special-file assets pause synchr
 Required bytes must fit the service blob bound.
 The command does not silently upload an incomplete portable entity.
 
+Local spooling retains only bytes that a pending packet, current portable entity, exact approval, or active preparation pin requires.
+Bytes for superseded acknowledged generations become reclaimable.
+Cleanup rechecks every durable pin inside a short database transaction before moving a candidate aside; deletion happens after commit.
+Before the first enable, native output records metadata only and does not read file contents.
+Unreferenced provenance metadata is bounded by a seven-day age and a 4096-path cap.
+After that metadata expires, an earlier output requires explicit exact-file approval.
+
+Each request deadline scales with body size and has a five-minute cap.
+A background pass can run for six minutes; an explicit flush keeps its shorter command deadline.
+Packet-scoped blob acknowledgements let an interrupted large packet resume without retransmitting uploaded blobs.
+Consent changes use a durable epoch, so a concurrent disable in another local process fences an enable that has not committed.
+
 Keep live text, controls, and metadata separate from bulk transfer scheduling.
 A historical import or large attachment must not create an unbounded foreground queue.
 A cloud quota failure pauses synchronization visibly while local execution can continue.

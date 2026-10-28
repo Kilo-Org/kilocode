@@ -12,6 +12,7 @@ import {
   type Receipt,
   type BlobRef,
   type Change,
+  Failure,
   fail,
   digest,
   parse,
@@ -24,6 +25,7 @@ const decodeRevert = Schema.decodeUnknownSync(PersistedRevert)
 const encodeRevert = Schema.encodeSync(Revert)
 
 export type DB = Database.Interface["db"]
+type SQL = Pick<DB, "get" | "all" | "run">
 export type Consent = {
   directory: string
   enabled: number
@@ -77,7 +79,8 @@ const tables = [
     directory TEXT PRIMARY KEY, enabled INTEGER NOT NULL, destination TEXT NOT NULL, local INTEGER NOT NULL,
     organization_id TEXT, tenant_type TEXT NOT NULL, tenant_id TEXT NOT NULL, user_id TEXT NOT NULL,
     source_id TEXT NOT NULL, last_success INTEGER)`,
-  `CREATE TABLE IF NOT EXISTS _kilo_sync_directory (alias TEXT PRIMARY KEY, directory TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS _kilo_sync_consent_epoch (directory TEXT PRIMARY KEY, epoch INTEGER NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS _kilo_sync_directory (alias TEXT PRIMARY KEY, directory TEXT NOT NULL, canonical TEXT)`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_session (
     id TEXT PRIMARY KEY, directory TEXT NOT NULL, source_id TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0,
     acknowledged INTEGER NOT NULL DEFAULT 0, ack_batch TEXT, ack_digest TEXT, local_deleted INTEGER NOT NULL DEFAULT 0,
@@ -90,16 +93,27 @@ const tables = [
   `CREATE TABLE IF NOT EXISTS _kilo_sync_packet (
     session_id TEXT PRIMARY KEY, batch_id TEXT NOT NULL, after INTEGER NOT NULL, through INTEGER NOT NULL,
     body TEXT NOT NULL, digest TEXT NOT NULL, blobs TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS _kilo_sync_blob_ack (
+    session_id TEXT NOT NULL, batch_id TEXT NOT NULL, hash TEXT NOT NULL, bytes INTEGER NOT NULL,
+    PRIMARY KEY(session_id,batch_id,hash))`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_reference (session_id TEXT NOT NULL, hash TEXT NOT NULL, PRIMARY KEY(session_id,hash))`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_intent (session_id TEXT PRIMARY KEY, cause TEXT NOT NULL, target_id TEXT)`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_asset (
     session_id TEXT NOT NULL, locator TEXT NOT NULL, hash TEXT NOT NULL, bytes INTEGER NOT NULL,
     PRIMARY KEY(session_id,locator))`,
+  `CREATE TABLE IF NOT EXISTS _kilo_sync_asset_reference (
+    session_id TEXT NOT NULL, kind TEXT NOT NULL, entity_id TEXT NOT NULL,
+    locator TEXT NOT NULL, hash TEXT NOT NULL, bytes INTEGER NOT NULL,
+    PRIMARY KEY(session_id,kind,entity_id,locator))`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_owned_asset (
-    path TEXT PRIMARY KEY, directory TEXT NOT NULL, hash TEXT, bytes INTEGER, identity TEXT, error_message TEXT)`,
+    path TEXT PRIMARY KEY, directory TEXT NOT NULL, hash TEXT, bytes INTEGER, identity TEXT,
+    error_message TEXT, observed_at INTEGER NOT NULL DEFAULT 0, captured INTEGER NOT NULL DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS _kilo_sync_allowed_asset (
     directory TEXT NOT NULL, path TEXT NOT NULL, hash TEXT NOT NULL, bytes INTEGER NOT NULL,
     PRIMARY KEY(directory,path))`,
+  `CREATE TABLE IF NOT EXISTS _kilo_sync_preparation (
+    token TEXT NOT NULL, namespace TEXT NOT NULL, hash TEXT NOT NULL, bytes INTEGER NOT NULL,
+    deadline INTEGER NOT NULL, PRIMARY KEY(token,namespace,hash))`,
 ]
 
 // Disabling pauses transport, not the already-consented local journal. This retains semantic
@@ -162,9 +176,17 @@ export const initialize = Effect.fn("SessionSync.Store.initialize")(function* (d
         const columns = yield* tx.all<{ name: string }>("PRAGMA table_info(_kilo_sync_session)")
         if (!columns.some((column) => column.name === "bootstrap_complete"))
           yield* tx.run("ALTER TABLE _kilo_sync_session ADD COLUMN bootstrap_complete INTEGER NOT NULL DEFAULT 0")
+        const directories = yield* tx.all<{ name: string }>("PRAGMA table_info(_kilo_sync_directory)")
+        if (!directories.some((column) => column.name === "canonical"))
+          yield* tx.run("ALTER TABLE _kilo_sync_directory ADD COLUMN canonical TEXT")
         const ownedColumns = yield* tx.all<{ name: string }>("PRAGMA table_info(_kilo_sync_owned_asset)")
         if (!ownedColumns.some((column) => column.name === "identity"))
           yield* tx.run("ALTER TABLE _kilo_sync_owned_asset ADD COLUMN identity TEXT")
+        if (!ownedColumns.some((column) => column.name === "observed_at"))
+          yield* tx.run("ALTER TABLE _kilo_sync_owned_asset ADD COLUMN observed_at INTEGER NOT NULL DEFAULT 0")
+        if (!ownedColumns.some((column) => column.name === "captured"))
+          yield* tx.run("ALTER TABLE _kilo_sync_owned_asset ADD COLUMN captured INTEGER NOT NULL DEFAULT 0")
+        yield* tx.run("CREATE INDEX IF NOT EXISTS _kilo_sync_owned_observed ON _kilo_sync_owned_asset(observed_at)")
         yield* tx.run(`DROP TRIGGER IF EXISTS _kilo_sync_reference_insert`)
         yield* tx.run(`CREATE TRIGGER _kilo_sync_reference_insert AFTER INSERT ON _kilo_sync_reference BEGIN
       ${capture("NEW.session_id", "instruction-blob", "NEW.hash", "(CASE WHEN EXISTS(SELECT 1 FROM instruction_blob WHERE hash=NEW.hash) THEN (SELECT coalesce(value,'null') FROM instruction_blob WHERE hash=NEW.hash) ELSE NULL END)")}
@@ -245,8 +267,23 @@ export function contains(root: string, directory: string) {
   return relative === "" || (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(".." + path.sep))
 }
 
-export const consent = (db: DB, directory: string) =>
+export const consent = (db: SQL, directory: string) =>
   db.get<Consent>(sql`SELECT * FROM _kilo_sync_consent WHERE directory=${directory}`).pipe(Effect.orDie)
+export const epoch = (db: SQL, directory: string) =>
+  db.get<{ epoch: number }>(sql`SELECT epoch FROM _kilo_sync_consent_epoch WHERE directory=${directory}`).pipe(
+    Effect.orDie,
+    Effect.map((row) => row?.epoch ?? 0),
+  )
+export const disable = (db: DB, directory: string) =>
+  db
+    .transaction((tx) =>
+      Effect.gen(function* () {
+        yield* tx.run(sql`INSERT INTO _kilo_sync_consent_epoch(directory,epoch) VALUES(${directory},1)
+      ON CONFLICT(directory) DO UPDATE SET epoch=epoch+1`)
+        yield* tx.run(sql`UPDATE _kilo_sync_consent SET enabled=0 WHERE directory=${directory}`)
+      }),
+    )
+    .pipe(Effect.orDie)
 export const sessions = (db: DB, directory?: string) =>
   db
     .all<SessionRow>(
@@ -255,7 +292,7 @@ export const sessions = (db: DB, directory?: string) =>
         : sql`SELECT * FROM _kilo_sync_session WHERE directory=${directory} ORDER BY id`,
     )
     .pipe(Effect.orDie)
-export const packet = (db: DB, id: string) =>
+export const packet = (db: SQL, id: string) =>
   db.get<Packet>(sql`SELECT * FROM _kilo_sync_packet WHERE session_id=${id}`).pipe(Effect.orDie)
 export const dirty = (db: DB, id: string) =>
   db
@@ -272,35 +309,74 @@ export const enable = Effect.fn("SessionSync.Store.enable")(function* (
     tenant: Tenant
     userID: string
   },
+  approvals: readonly (BlobRef & { path: string; pin: string })[] = [],
+  expected?: number,
 ) {
-  const previous = yield* consent(db, input.directory)
-  if (
-    previous &&
-    (previous.destination !== input.destination ||
-      previous.user_id !== input.userID ||
-      previous.tenant_type !== input.tenant.type ||
-      previous.tenant_id !== input.tenant.id)
-  )
-    return yield* fail(
-      "consent_conflict",
-      "This workspace is pinned to another destination or account; its retained sync history cannot be reassigned",
-    )
   yield* db
     .transaction((tx) =>
       Effect.gen(function* () {
+        if (expected !== undefined) {
+          const current = yield* epoch(tx, input.directory)
+          if (current !== expected)
+            return yield* fail(
+              "capture_changed",
+              "Synchronization was disabled while enabling; retry enabling synchronization",
+              true,
+            )
+        }
+        const previous = yield* consent(tx, input.directory)
+        if (
+          previous &&
+          (previous.destination !== input.destination ||
+            previous.user_id !== input.userID ||
+            previous.tenant_type !== input.tenant.type ||
+            previous.tenant_id !== input.tenant.id)
+        )
+          return yield* fail(
+            "consent_conflict",
+            "This workspace is pinned to another destination or account; its retained sync history cannot be reassigned",
+          )
+        const enrolled = yield* tx.all<{ owner: string; location: string | null }>(
+          sql`SELECT DISTINCT s.directory AS owner,d.canonical AS location FROM _kilo_sync_session s
+        JOIN session_v2 n ON n.id=s.id LEFT JOIN _kilo_sync_directory d ON d.alias=n.directory
+        WHERE s.directory!=${input.directory} AND s.local_deleted=0 AND n.workspace_id IS NULL`,
+        )
+        if (
+          enrolled.some(
+            (row) =>
+              contains(row.owner, input.directory) &&
+              (row.location === null || contains(input.directory, row.location)),
+          )
+        )
+          return yield* fail(
+            "consent_conflict",
+            "A nested consent cannot reassign existing session history from its original workspace",
+          )
+        for (const approval of approvals) {
+          const pin = yield* tx.get(sql`SELECT 1 FROM _kilo_sync_preparation
+        WHERE token=${approval.pin} AND namespace=${digest(`workspace:${input.directory}`)}
+        AND hash=${approval.hash} AND bytes=${approval.bytes} AND deadline>${Date.now()}`)
+          if (!pin)
+            return yield* fail(
+              "capture_changed",
+              "The prepared asset approval expired; retry enabling synchronization",
+              true,
+            )
+        }
         yield* tx.run(sql`INSERT INTO _kilo_sync_consent(directory,enabled,destination,local,organization_id,tenant_type,tenant_id,user_id,source_id)
       VALUES(${input.directory},1,${input.destination},${Number(input.local)},${input.organizationID},${input.tenant.type},${input.tenant.id},${input.userID},${previous?.source_id ?? randomUUID()})
       ON CONFLICT(directory) DO UPDATE SET enabled=1`)
-        yield* tx.run(
-          sql`INSERT OR REPLACE INTO _kilo_sync_directory(alias,directory) VALUES(${input.directory},${input.directory})`,
-        )
-        yield* tx.run(
-          sql`UPDATE _kilo_sync_session SET retry_at=0,attempts=0,error_code=NULL,error_message=NULL WHERE directory=${input.directory} AND error_code NOT IN ('unclassified_removal','identity_conflict')`,
-        )
+        yield* tx.run(sql`INSERT OR REPLACE INTO _kilo_sync_directory(alias,directory,canonical)
+      VALUES(${input.directory},${input.directory},${input.directory})`)
+        for (const approval of approvals)
+          yield* tx.run(sql`INSERT INTO _kilo_sync_allowed_asset(directory,path,hash,bytes)
+        VALUES(${input.directory},${approval.path},${approval.hash},${approval.bytes})
+        ON CONFLICT(directory,path) DO UPDATE SET hash=excluded.hash,bytes=excluded.bytes`)
+        yield* tx.run(sql`UPDATE _kilo_sync_session SET retry_at=0,attempts=0,error_code=NULL,error_message=NULL
+      WHERE directory=${input.directory} AND error_code NOT IN ('unclassified_removal','identity_conflict')`)
       }),
     )
-    .pipe(Effect.orDie)
-  yield* reconcile(db, input.directory, true)
+    .pipe(Effect.catch((error) => (error instanceof Failure ? Effect.fail(error) : Effect.die(error))))
 })
 
 // Realpath, not project.worktree: two clones can share a project identity but never share consent.
@@ -308,11 +384,7 @@ export const enable = Effect.fn("SessionSync.Store.enable")(function* (
 // enroll newly discovered sessions/aliases; the SQL triggers own every subsequent version.
 export const reconcile = Effect.fn("SessionSync.Store.reconcile")(function* (db: DB, only?: string, bootstrap = false) {
   const consents = yield* db
-    .all<Consent>(
-      only === undefined
-        ? sql`SELECT * FROM _kilo_sync_consent WHERE enabled=1`
-        : sql`SELECT * FROM _kilo_sync_consent WHERE enabled=1 AND directory=${only}`,
-    )
+    .all<Consent>(sql`SELECT * FROM _kilo_sync_consent ORDER BY length(directory) DESC,directory`)
     .pipe(Effect.orDie)
   if (!consents.length) return
   const directories = yield* db
@@ -321,17 +393,17 @@ export const reconcile = Effect.fn("SessionSync.Store.reconcile")(function* (db:
   for (const row of directories) {
     const resolved = yield* canonical(row.directory).pipe(Effect.option)
     if (resolved._tag === "None") continue
-    const owner = consents
-      .filter((c) => contains(c.directory, resolved.value))
-      .sort((a, b) => b.directory.length - a.directory.length)[0]
+    const owner = consents.find((c) => contains(c.directory, resolved.value))
     if (!owner) continue
     yield* db
       .run(
-        sql`INSERT OR REPLACE INTO _kilo_sync_directory(alias,directory) VALUES(${row.directory},${owner.directory})`,
+        sql`INSERT OR REPLACE INTO _kilo_sync_directory(alias,directory,canonical)
+          VALUES(${row.directory},${owner.directory},${resolved.value})`,
       )
       .pipe(Effect.orDie)
   }
   for (const c of consents) {
+    if (!c.enabled || (only !== undefined && c.directory !== only)) continue
     let cursor = ""
     while (true) {
       const rows = yield* db
@@ -387,16 +459,64 @@ export const freeze = Effect.fn("SessionSync.Store.freeze")(function* (
   })
   if (Buffer.byteLength(body) > limits.batch)
     return yield* fail("packet_too_large", "The captured packet exceeds the service packet limit")
-  yield* db
-    .run(
-      sql`INSERT OR IGNORE INTO _kilo_sync_packet(session_id,batch_id,after,through,body,digest,blobs)
-    VALUES(${session.id},${batchID},${session.acknowledged},${through},${body},${digest(body)},${JSON.stringify(blobs)})`,
+  return yield* db
+    .transaction((tx) =>
+      Effect.gen(function* () {
+        const existing = yield* packet(tx, session.id)
+        if (existing) return existing
+        const current = yield* tx.get<SessionRow>(sql`SELECT * FROM _kilo_sync_session WHERE id=${session.id}`)
+        if (!current || current.acknowledged !== session.acknowledged || current.source_id !== session.source_id)
+          return yield* fail(
+            "capture_changed",
+            "Another uploader advanced the local session; prepare its current state",
+            true,
+          )
+        for (const blob of blobs) {
+          const reference = yield* tx.get(sql`SELECT 1 FROM _kilo_sync_asset_reference
+        WHERE session_id=${session.id} AND hash=${blob.hash} AND bytes=${blob.bytes} LIMIT 1`)
+          if (!reference)
+            return yield* fail(
+              "capture_changed",
+              "Prepared bytes no longer have a current reservation; prepare the current state",
+              true,
+            )
+        }
+        const frozen = {
+          session_id: session.id,
+          batch_id: batchID,
+          after: session.acknowledged,
+          through,
+          body,
+          digest: digest(body),
+          blobs: JSON.stringify(blobs),
+        }
+        yield* tx.run(sql`INSERT INTO _kilo_sync_packet(session_id,batch_id,after,through,body,digest,blobs)
+      VALUES(${frozen.session_id},${frozen.batch_id},${frozen.after},${frozen.through},${frozen.body},${frozen.digest},${frozen.blobs})`)
+        return frozen
+      }),
     )
-    .pipe(Effect.orDie)
-  const frozen = yield* packet(db, session.id)
-  if (!frozen) return yield* Effect.die("Failed to persist the session sync packet")
-  return frozen
+    .pipe(Effect.catch((error) => (error instanceof Failure ? Effect.fail(error) : Effect.die(error))))
 })
+
+export const blobAcknowledged = (db: DB, pending: Packet, blob: BlobRef) =>
+  db
+    .get(
+      sql`SELECT 1 FROM _kilo_sync_blob_ack a JOIN _kilo_sync_packet p
+    ON p.session_id=a.session_id AND p.batch_id=a.batch_id
+    WHERE a.session_id=${pending.session_id} AND a.batch_id=${pending.batch_id}
+    AND p.digest=${pending.digest} AND a.hash=${blob.hash} AND a.bytes=${blob.bytes}`,
+    )
+    .pipe(Effect.orDie, Effect.map(Boolean))
+
+export const acknowledgeBlob = (db: DB, pending: Packet, blob: BlobRef) =>
+  db
+    .run(
+      sql`INSERT OR REPLACE INTO _kilo_sync_blob_ack(session_id,batch_id,hash,bytes)
+    SELECT ${pending.session_id},${pending.batch_id},${blob.hash},${blob.bytes}
+    WHERE EXISTS(SELECT 1 FROM _kilo_sync_packet WHERE session_id=${pending.session_id}
+      AND batch_id=${pending.batch_id} AND digest=${pending.digest})`,
+    )
+    .pipe(Effect.orDie, Effect.asVoid)
 
 export const acknowledge = Effect.fn("SessionSync.Store.acknowledge")(function* (
   db: DB,
@@ -428,6 +548,8 @@ export const acknowledge = Effect.fn("SessionSync.Store.acknowledge")(function* 
         yield* tx.run(
           sql`UPDATE _kilo_sync_consent SET last_success=${Date.now()} WHERE directory=(SELECT directory FROM _kilo_sync_session WHERE id=${pending.session_id})`,
         )
+        yield* tx.run(sql`DELETE FROM _kilo_sync_blob_ack
+          WHERE session_id=${pending.session_id} AND batch_id=${pending.batch_id}`)
         yield* tx.run(
           sql`DELETE FROM _kilo_sync_packet WHERE session_id=${pending.session_id} AND batch_id=${pending.batch_id}`,
         )

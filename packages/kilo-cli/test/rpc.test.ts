@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import { fixture } from "@kilocode/gateway-core/testing"
 import { OpenCode } from "@opencode/client"
 import { KiloGatewayRpc } from "@opencode/schema/kilocode/gateway"
+import { KiloSessionSyncRpc } from "@opencode/schema/kilocode/session-sync"
 import { createRoutes } from "@opencode/server/routes"
 import { Context, Effect, Layer, References } from "effect"
 import { HttpEffect, HttpRouter, HttpServer } from "effect/http"
@@ -77,7 +78,12 @@ function apply(variables: Record<string, string | undefined>) {
 }
 
 function gateway(client: ReturnType<typeof OpenCode.make>, directory: string, server: string) {
-  return { rpc: client.rpc(KiloGatewayRpc.Definition), options: { location: { directory } }, server }
+  return {
+    rpc: client.rpc(KiloGatewayRpc.Definition),
+    sync: client.rpc(KiloSessionSyncRpc.Definition),
+    options: { location: { directory } },
+    server,
+  }
 }
 
 test(
@@ -89,7 +95,10 @@ test(
       server: gateway.server,
     })
     const models = await gateway.rpc.models({}, gateway.options)
-    expect(models.find((model) => model.id === "kilo-auto/free")).toMatchObject({ name: "Kilo Auto Free", isFree: true })
+    expect(models.find((model) => model.id === "kilo-auto/free")).toMatchObject({
+      name: "Kilo Auto Free",
+      isFree: true,
+    })
     // A handler error keeps its contract name through the HTTP route.
     await expect(gateway.rpc.profile({}, gateway.options)).rejects.toMatchObject({
       type: "unauthorized",
@@ -130,6 +139,56 @@ test(
       message: "The selected Kilo team is no longer available. Select another team or clear the team selection.",
       data: { kind: "organization_missing" },
     })
+  }),
+  30_000,
+)
+
+test(
+  "sync RPC refuses an insecure destination without retaining workspace consent",
+  boot({}, async (gateway) => {
+    const directory = gateway.options.location.directory
+    await expect(
+      gateway.sync.enable(
+        {
+          directory,
+          destination: "http://sync.example",
+          local: false,
+          organizationID: null,
+        },
+        gateway.options,
+      ),
+    ).rejects.toMatchObject({
+      type: "failed",
+      data: { code: "invalid_destination" },
+    })
+    expect((await gateway.sync.status({ directory }, gateway.options)).enabled).toBe(false)
+    await expect(gateway.sync.flush({ directory }, gateway.options)).rejects.toMatchObject({
+      type: "failed",
+      data: { code: "sync_disabled" },
+    })
+  }),
+  30_000,
+)
+
+test(
+  "sync RPC requires a credential before accepting workspace consent",
+  boot({}, async (gateway) => {
+    const directory = gateway.options.location.directory
+    await expect(
+      gateway.sync.enable(
+        {
+          directory,
+          destination: "https://sync.example",
+          local: false,
+          organizationID: null,
+        },
+        gateway.options,
+      ),
+    ).rejects.toMatchObject({
+      type: "failed",
+      data: { code: "credential_unavailable" },
+    })
+    expect((await gateway.sync.status({ directory }, gateway.options)).enabled).toBe(false)
   }),
   30_000,
 )
