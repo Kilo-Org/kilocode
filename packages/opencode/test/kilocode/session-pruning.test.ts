@@ -276,6 +276,27 @@ describe("single-turn tool-output pruning", () => {
   )
 
   it.instance(
+    "does not treat a failed compaction summary as a prune boundary",
+    Effect.gen(function* () {
+      // Regression for #15165: a failed summary hides no history, so stopping at it
+      // left old outputs in the payload and every payload-limit prune found nothing.
+      const parent = yield* setup
+      const compact = yield* SessionCompaction.Service
+      for (const output of outputs.slice(0, 2)) yield* step(parent, output)
+      yield* assistant(parent, {
+        summary: true,
+        finish: "error",
+        error: new MessageV2.AbortedError({ message: "aborted" }).toObject(),
+      })
+      for (const output of outputs.slice(2)) yield* step(parent, output)
+
+      yield* compact.prune({ sessionID: parent.sessionID, reason: "payload-limit" })
+
+      expect(marked(yield* tools(parent.sessionID))).toEqual([true, true, false, false, false, false])
+    }),
+  )
+
+  it.instance(
     "stops at an already compacted tool output",
     Effect.gen(function* () {
       const parent = yield* setup

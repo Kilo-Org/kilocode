@@ -46,6 +46,12 @@ The most durable approach is to have the agent write an `environment.yml` into t
 
 The agent can create environments and install, update, or remove packages for you. It asks you to approve each change and shows the channels it will use. It won't install packages from local files or from URL or local-path channels. When you're signed in, the agent prefers Anaconda's channels (`defaults` or your organization's channels) and uses `conda-forge` only when a package isn't available there.
 
+The agent can also add or remove conda channels for you, but only named channels (such as `defaults` or `conda-forge`). It changes your user conda settings (`~/.condarc`). If no channels are configured and you haven't named one, the agent asks whether to use Anaconda's `defaults` channel before it continues. It doesn't pick a channel on its own.
+
+## If installs fail
+
+Conda needs at least one channel to install from. If an install runs without one — for example, your conda settings list no channels and you turned off every channel in the Channels control, or you declined the agent's suggestion — it fails with *No conda channels are configured, so there is nothing to install from.* To fix it, select a channel in the Channels control, ask the agent to use Anaconda's `defaults` channel, or add a channel to your conda settings.
+
 ## Browse your conda environments
 
 The page lists your conda environments by **name** and **prefix** (the full path on disk). Search by name or path, sort the list, and page through it. Click the {% svgIcon src="/docs/img/desktop/ellipsis.svg" /%} actions menu on an environment's row to **Clone** or **Delete** an environment. Select a row to open the environment and work with its packages.
@@ -88,7 +94,7 @@ Before anything is applied, the **Dependency changes** panel previews the depend
 
 When you select packages, you choose which channels they install from with the {% svgIcon src="/docs/img/desktop/list-filter.svg" /%} **Channels** control:
 
-- **Anaconda `Main`** — secure, vetted packages; requires accepting Anaconda's terms of service.
-- **conda-forge** — community-maintained and open-source.
+- **conda-forge** — community-maintained, open-source.
+- **Anaconda** (**Main**) — secure, vetted packages hosted by Anaconda.
 
-Any channels configured in your conda settings appear here too.
+Other channels configured in your conda settings are listed too. All channels are selected by default.

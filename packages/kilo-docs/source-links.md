@@ -11,6 +11,7 @@
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://api.kilo.ai>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
+  <!-- packages/opencode/src/kilocode/cloud/origin.ts -->
 - <https://api.x.ai/v1>
   <!-- packages/opencode/src/plugin/xai.ts -->
 - <https://app.kilo.ai>

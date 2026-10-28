@@ -1,6 +1,6 @@
 import type { JSX } from "solid-js"
 import type { RGBA } from "@opentui/core"
-import open from "open"
+import { openUrl } from "@opencode-ai/core/open" // kilocode_change - backport upstream browser URL validation
 
 export interface LinkProps {
   href: string
@@ -25,7 +25,7 @@ export function Link(props: LinkProps) {
       width={props.width}
       wrapMode={props.wrapMode}
       onMouseUp={() => {
-        open(props.href).catch(() => {})
+        openUrl(props.href).catch(() => {}) // kilocode_change
       }}
     >
       {displayText}
