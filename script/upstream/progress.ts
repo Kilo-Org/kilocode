@@ -673,11 +673,13 @@ type Point = { date: string; done: number; total: number; percent: number }
  * (the last commit of the day). A commit whose file equals the current output is skipped, so the result
  * is the same before and after the commit that stores it, which keeps `--check` stable.
  */
-export async function history(current: string, read = git) {
+export async function history(current: string, read = git, base = "origin/v2") {
   // Kilo-owned checkout note: CI's origin/v2 is the integration line, but dedicated fork
-  // checkouts can diverge their own origin/v2. Override the base ref for regeneration so the
-  // artifacts match what CI computes, without touching per-remote state.
-  const base = process.env.KILO_PROGRESS_BASE_V2 || "origin/v2"
+  // checkouts can diverge their own origin/v2. The base ref is a plain parameter; main()
+  // resolves the KILO_PROGRESS_BASE_V2 override so committed artifacts match what CI computes.
+  // An unresolved base must fail loudly; an empty history would silently erase past points.
+  if (!(await read(["rev-parse", "--verify", `${base}^{commit}`]).catch(() => null)))
+    throw new Error(`Progress history base ref not found: ${base}`)
   const log = await read(["log", "--first-parent", "--format=%H %cs", base, "--", "migration-tracking/progress/progress.json"]).catch(() => "")
   const points: Point[] = []
   const seen = new Set<string>()
@@ -889,7 +891,7 @@ async function main() {
     return
   }
 
-  const past = await history(render(config, data, dispositions).json)
+  const past = await history(render(config, data, dispositions).json, git, await base())
   const out = render(config, data, dispositions, past)
   const files = { "progress.json": out.json, "README.md": out.md, "progress.svg": out.svg, "history.svg": out.history, "badge.svg": out.badge }
   if (args.includes("--check")) {
@@ -908,6 +910,17 @@ async function main() {
   for (const [name, content] of Object.entries(files)) await Bun.write(path.join(DIR, name), content)
   const summary = JSON.parse(out.json).summary
   console.log(`${summary.done}/${summary.total} cells done (${summary.percent}%), ${summary.dropped} dropped -> migration-tracking/progress/`)
+}
+
+/**
+ * The integration v2 for history and walk. Fork checkouts keep their own divergent origin/v2;
+ * when an upstream remote exists, its v2 is the line CI compares against. KILO_PROGRESS_BASE_V2 wins.
+ */
+async function base() {
+  const override = process.env.KILO_PROGRESS_BASE_V2
+  if (override) return override
+  const remotes = await git(["remote"]).catch(() => "")
+  return remotes.split("\n").includes("upstream") ? "upstream/v2" : "origin/v2"
 }
 
 if (import.meta.main) await main()
