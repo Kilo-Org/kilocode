@@ -29,6 +29,21 @@ test("does not rewrite the upstream theme registry", async () => {
   expect(KiloBranding.transform(filename, original)).toBe(original)
 })
 
+test("does not rewrite CLI or ACP executable selection", async () => {
+  for (const [file, anchor] of [
+    ["cli/src/commands/commands.ts", 'typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME : "opencode"'],
+    ["cli/src/acp/service.ts", 'command: "opencode"'],
+  ] as const) {
+    const filename = path.join(repo, "packages", file)
+    const original = await Bun.file(filename).text()
+    expect(original).toContain(anchor)
+    expect(KiloBranding.transform(filename, original)).toContain(anchor)
+  }
+  const filename = path.join(repo, "packages/cli/src/acp/agent.ts")
+  const original = await Bun.file(filename).text()
+  expect(KiloBranding.transform(filename, original)).toBe(original)
+})
+
 test("does not rename provider identities, theme schemas or wire identifiers", async () => {
   for (const file of [
     "tui/src/util/tool-display.ts",
