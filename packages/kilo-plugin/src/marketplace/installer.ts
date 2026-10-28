@@ -36,18 +36,17 @@ export async function install(input: {
     : (input.entry.companions ?? [])) {
     skills.push(await Skill.prepare({ root: input.skills, ...companion, archive: await download(companion.archive) }))
   }
+  const config = server
+    ? {
+        config: input.config,
+        server: MarketplaceMcp.serverName(item.id),
+        target: await MarketplaceMcp.resolveFile(input.config),
+        fingerprints: [MarketplaceMcp.serverFingerprint(server)],
+      }
+    : undefined
   const resources: Resource[] = [
     ...skills.map((skill) => ({ path: skill.target, fingerprints: [skill.fingerprint] })),
-    ...(server
-      ? [
-          {
-            config: input.config,
-            server: MarketplaceMcp.serverName(item.id),
-            target: await MarketplaceMcp.resolveFile(input.config),
-            fingerprints: [MarketplaceMcp.serverFingerprint(server)],
-          },
-        ]
-      : []),
+    ...(config ? [config] : []),
   ]
   if (new Set(resources.map(key)).size !== resources.length)
     throw new SkillError("invalid", "Duplicate install resources")
@@ -91,14 +90,13 @@ export async function install(input: {
       // Never roll back another concurrent install's tree merely because its fingerprint matches.
       if (!existed) created.push(resource)
     }
-    if (server) {
-      const resource = resources[resources.length - 1]
+    if (server && config) {
       await MarketplaceMcp.write({
         file: input.config,
-        name: MarketplaceMcp.serverName(item.id),
+        name: config.server,
         server,
         replace: true,
-        fingerprints: allowed(resource),
+        fingerprints: allowed(config),
         secret: configuration?.parameters.some(
           (parameter) => parameter.secret && input.params?.[parameter.key]?.trim(),
         ),

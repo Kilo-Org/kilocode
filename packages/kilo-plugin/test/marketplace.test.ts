@@ -540,11 +540,16 @@ describe("skill installation safety", () => {
     expect(await fs.readdir(root)).toEqual([])
     await remove(target)
   })
-  test("rejects path-segment IDs and cleans staging after conflicting paths or a non-directory root", async () => {
+  test("rejects path-segment, reserved and trailing-dot IDs and cleans staging after conflicting paths or a non-directory root", async () => {
     const directory = await tmp()
     await expect(
       install({ root: path.join(directory, "skills"), id: "../x", archive: await tarball({ "SKILL.md": "x" }) }),
     ).rejects.toMatchObject({ reason: "invalid" })
+    for (const id of ["com1", "nul.txt", "period.", "a..b"]) {
+      await expect(
+        install({ root: path.join(directory, "skills"), id, archive: await tarball({ "SKILL.md": "x" }) }),
+      ).rejects.toMatchObject({ reason: "invalid", message: `Invalid skill id: ${id}` })
+    }
     await expect(
       install({
         root: path.join(directory, "skills"),

@@ -12,7 +12,7 @@ import { KiloMarketplaceRegistry } from "./kilo"
 import { Installer } from "./installer"
 import { McpError, configFile, resolveFile, serverName } from "./mcp"
 import type { Entry } from "./registry"
-import { SkillError } from "./skill"
+import { SkillError, safe } from "./skill"
 
 const CATALOG_TTL = 10 * 60 * 1000
 const decodeInstalled = Schema.decodeUnknownOption(Schema.fromJsonString(KiloMarketplaceRpc.Installed))
@@ -511,8 +511,7 @@ async function readLocal(
           const rebased = path.join(directory, relative)
           const allowed =
             kind === "skill"
-              ? path.dirname(rebased) === path.join(root, "skills") &&
-                /^[a-z0-9][a-z0-9._-]*$/i.test(path.basename(rebased))
+              ? path.dirname(rebased) === path.join(root, "skills") && safe(path.basename(rebased))
               : KiloConfigFiles.writeCandidates(directory, scope === "global").includes(rebased)
           if (!allowed) throw new Error(`Marketplace recovery path is outside its installation scope: ${target}`)
           return rebased

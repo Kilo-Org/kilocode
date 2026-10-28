@@ -15,8 +15,15 @@ export class SkillError extends Error {
 }
 
 const ID = /^[a-z0-9][a-z0-9._-]*$/i
+// Windows reserves device names for directories, and a trailing or internal double
+// dot would escape or shadow the managed skills layout. Rejected values match v1.
+const RESERVED_ID = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i
 const MAX_BYTES = 32 * 1024 * 1024
 const MAX_ENTRIES = 4096
+
+export function safe(id: string) {
+  return ID.test(id) && !id.includes("..") && !id.endsWith(".") && !RESERVED_ID.test(id)
+}
 
 // Cleanup must not delete another operation's live rollback backup. Aliases share a process-local queue.
 const queues = new Map<string, Promise<unknown>>()
@@ -38,7 +45,7 @@ async function resolveDirectory(directory: string): Promise<string> {
 }
 
 export async function prepare(input: { root: string; id: string; archive: Uint8Array; select?: string }) {
-  if (!ID.test(input.id)) throw new SkillError("invalid", `Invalid skill id: ${input.id}`)
+  if (!safe(input.id)) throw new SkillError("invalid", `Invalid skill id: ${input.id}`)
   const files = await extract(input.archive, input.select)
   const { SkillFile } = await import("@opencode/core/config/plugin/skill-file")
   const parsed = SkillFile.parse(
