@@ -127,6 +127,8 @@ export function Chat() {
 
   // A pending permission or question blocks new prompts.
   const blocked = () => permissions().length > 0 || forms().length > 0
+  // The prompt selectors block only while a permission owns the prompt, as v1; a pending question does not.
+  const selectorsBlocked = () => permissions().length > 0
   // v1's SessionDock `showsWorking`: the dock shows the working indicator only while the turn runs or retries and
   // nothing is blocked. The blocked case hides the row and hands the spacing back to the composer.
   const working = () => !blocked() && (running() || !!retry())
@@ -228,7 +230,7 @@ export function Chat() {
               model={selection.model()}
               onSend={send}
               onStop={stop}
-              selectors={<Selectors selection={selection} blocked={blocked()} />}
+              selectors={<Selectors selection={selection} blocked={selectorsBlocked()} />}
             />
           </div>
         </div>
