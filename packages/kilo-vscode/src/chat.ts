@@ -15,27 +15,47 @@ import type { ToHost, ToWebview } from "./protocol"
 import { bridge } from "./relay"
 import { saveImage } from "./save-image"
 import type { Manager } from "./server"
+import { promptKeybindings, watchKeybindings } from "./prompt-keybindings"
 
 export function chat(input: { context: ExtensionContext; server: Manager; directory: string }) {
   // Commands sent before the webview bundle listens are lost, and a resolved view is not yet loaded. Keep them until
   // the webview sends its first message, which it does on mount.
   const state: { view?: WebviewView; loaded: boolean; queued: ToWebview[] } = { loaded: false, queued: [] }
+  const send = (message: ToWebview) => {
+    if (!state.view || !state.loaded) {
+      state.queued.push(message)
+      return Promise.resolve(true)
+    }
+    return state.view.webview.postMessage(message)
+  }
   const flush = () => {
     if (!state.view) return
     state.loaded = true
     for (const message of state.queued.splice(0)) void state.view.webview.postMessage(message)
   }
+  // The cycle keybindings are active only while the webview has focus, as on v1 (`sidebarFocused`).
+  const focus = (focused: boolean) => void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", focused)
   const provider: WebviewViewProvider = {
     resolveWebviewView(view) {
       state.view = view
       state.loaded = false
       const surface = wire({ ...input, webview: view.webview, view: "chat", onMessage: flush })
-      const visibility = view.onDidChangeVisibility(() =>
-        surface.post({ type: "webviewActiveChanged", active: view.visible }),
+      const visibility = view.onDidChangeVisibility(() => {
+        if (!view.visible) focus(false)
+        surface.post({ type: "webviewActiveChanged", active: view.visible })
+      })
+      // The prompt hint shows the same keybind as the cycle command, so send it on load and when the
+      // user's keybindings.json changes.
+      const keybindings = watchKeybindings(
+        input.context,
+        () => void send({ type: "keybindings", bindings: promptKeybindings(input.context) }),
       )
+      void send({ type: "keybindings", bindings: promptKeybindings(input.context) })
       view.onDidDispose(() => {
         surface.dispose()
         visibility.dispose()
+        keybindings.dispose()
+        focus(false)
         if (state.view !== view) return
         state.view = undefined
         state.loaded = false
@@ -44,13 +64,7 @@ export function chat(input: { context: ExtensionContext; server: Manager; direct
   }
   return {
     provider,
-    post(message: ToWebview) {
-      if (!state.view || !state.loaded) {
-        state.queued.push(message)
-        return Promise.resolve(true)
-      }
-      return state.view.webview.postMessage(message)
-    },
+    post: send,
   }
 }
 
@@ -81,6 +95,9 @@ export function wire(input: {
   const subscription = webview.onDidReceiveMessage((message: ToHost) => {
     input.onMessage?.()
     if (message.type === "fetch" || message.type === "abort" || message.type === "open") return link.receive(message)
+    // Only the sidebar carries the cycle keybindings; the Settings panel must not change their context.
+    if (message.type === "webviewFocusChanged" && input.view === "chat")
+      return void commands.executeCommand("setContext", "kilo-code.v2.sidebarFocused", message.focused === true)
     if (message.type === "copyToClipboard")
       return void env.clipboard.writeText(message.text).then(
         () => post({ type: "clipboardWriteResult", id: message.id, ok: true }),
@@ -171,7 +188,14 @@ export function html(input: {
 <title>Kilo Code</title>
 <style>
   :root { ${vars} --kilo-font-scale: ${input.size / 13}; --font-size-x-small: var(--kilo-font-size-10); --font-size-small: var(--kilo-font-size-11); --font-size-base: var(--kilo-font-size-13); --font-size-large: var(--kilo-font-size-16); }
-  html { scrollbar-color: auto; }
+  html {
+    scrollbar-color: auto;
+
+    ::-webkit-scrollbar-thumb {
+      border: 3px solid transparent !important;
+      background-clip: padding-box !important;
+    }
+  }
   html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
   body { background-color: ${input.view === "settings" ? "var(--vscode-editor-background)" : "var(--vscode-sideBar-background, var(--vscode-editor-background))"}; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
   #root { height: 100%; }
